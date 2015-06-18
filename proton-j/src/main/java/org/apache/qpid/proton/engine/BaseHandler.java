@@ -32,6 +32,14 @@ import java.util.Iterator;
 public class BaseHandler implements Handler
 {
 
+    public static Handler getHandler(Record r) {
+        return r.get(Handler.class, Handler.class);
+    }
+
+    public static void setHandler(Record r, Handler handler) {
+        r.set(Handler.class, Handler.class, handler);
+    }
+
     public static Handler getHandler(Extendable ext) {
         return ext.attachments().get(Handler.class, Handler.class);
     }

@@ -78,6 +78,9 @@ class pn_message_wrapper:
       bod = AmqpValue(bod)
     self.impl.setBody(bod)
 
+  def __repr__(self):
+    return self.impl.toString()
+
 def pn_message():
   return pn_message_wrapper()
 

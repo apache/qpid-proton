@@ -27,6 +27,7 @@ against both the C and Java protocol implementations.
 PN_VERSION_MAJOR = 0
 PN_VERSION_MINOR = 0
 
+from ctypes import *
 from cobject import *
 from cerror import *
 from ccodec import *

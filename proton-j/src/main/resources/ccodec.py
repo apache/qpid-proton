@@ -23,7 +23,7 @@ from org.apache.qpid.proton.codec.Data import DataType
 
 from java.util import UUID as JUUID, Date as JDate
 from java.nio import ByteBuffer
-from jarray import array, zeros
+from compat import array, zeros
 
 # from proton/codec.h
 PN_NULL = 1

@@ -27,6 +27,7 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.reactor.Reactor;
@@ -44,6 +45,7 @@ class EventImpl implements Event
     Type type;
     Object context;
     EventImpl next;
+    RecordImpl attachments = new RecordImpl();
 
     EventImpl()
     {
@@ -54,12 +56,14 @@ class EventImpl implements Event
     {
         this.type = type;
         this.context = context;
+        this.attachments.clear();
     }
 
     void clear()
     {
         type = null;
         context = null;
+        attachments.clear();
     }
 
     @Override
@@ -318,10 +322,16 @@ class EventImpl implements Event
     }
 
     @Override
+    public Record attachments() {
+        return attachments;
+    }
+
+    @Override
     public Event copy()
     {
        EventImpl newEvent = new EventImpl();
        newEvent.init(type, context);
+       newEvent.attachments.copy(attachments);
        return newEvent;
     }
 

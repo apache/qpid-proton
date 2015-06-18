@@ -18,9 +18,70 @@
 #
 
 from cerror import Skipped
+from cengine import wrap, pn_connection_wrapper
+
+from org.apache.qpid.proton.reactor import Reactor
+from org.apache.qpid.proton.engine import BaseHandler
 
 # from proton/reactor.h
 def pn_reactor():
-    raise Skipped()
+    return Reactor.Factory.create()
 def pn_reactor_attachments(r):
-    raise Skipped()
+    return r.attachments()
+def pn_reactor_get_global_handler(r):
+    return r.getGlobalHandler()
+def pn_reactor_set_global_handler(r, h):
+    r.setGlobalHandler(h)
+def pn_reactor_get_handler(r):
+    return r.getHandler()
+def pn_reactor_set_handler(r, h):
+    r.setHandler(h)
+def pn_reactor_set_timeout(r, t):
+    r.setTimeout(t)
+def pn_reactor_get_timeout(r):
+    return r.getTimeout()
+def pn_reactor_schedule(r, t, h):
+    return r.schedule(t, h)
+def pn_reactor_yield(r):
+    getattr(r, "yield")()
+def pn_reactor_start(r):
+    r.start()
+def pn_reactor_process(r):
+    return r.process()
+def pn_reactor_stop(r):
+    return r.stop()
+def pn_reactor_selectable(r):
+    return r.selectable()
+def pn_reactor_connection(r, h):
+    return wrap(r.connection(h), pn_connection_wrapper)
+def pn_reactor_acceptor(r, host, port, handler):
+    return r.acceptor(host, int(port), handler)
+
+def pn_handler_add(h, c):
+    h.add(c)
+def pn_handler_dispatch(h, ev, et):
+    ev.impl.dispatch(h)
+def pn_record_set_handler(r, h):
+    BaseHandler.setHandler(r, h)
+def pn_record_get_handler(r):
+    return BaseHandler.getHandler(r)
+
+def pn_task_attachments(t):
+    return t.attachments()
+
+def pn_selectable_attachments(s):
+    return s.attachments()
+
+def pn_acceptor_close(a):
+    a.close()
+
+def pn_object_reactor(o):
+    if hasattr(o, "impl"):
+        if hasattr(o.impl, "getSession"):
+            return o.impl.getSession().getConnection().getReactor()
+        elif hasattr(o.impl, "getConnection"):
+            return o.impl.getConnection().getReactor()
+        else:
+            return o.impl.getReactor()
+    else:
+        return o.getReactor()

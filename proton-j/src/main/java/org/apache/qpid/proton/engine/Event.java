@@ -30,7 +30,7 @@ import org.apache.qpid.proton.reactor.Task;
  *
  */
 
-public interface Event
+public interface Event extends Extendable
 {
 
     public enum Type {

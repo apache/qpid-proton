@@ -31,5 +31,6 @@ public interface Record
 
     <T> T get(Object key, Class<T> klass);
     <T> void set(Object key, Class<T> klass, T value);
+    void clear();
 
 }

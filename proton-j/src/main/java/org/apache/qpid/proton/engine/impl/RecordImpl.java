@@ -43,4 +43,12 @@ public class RecordImpl implements Record
         return klass.cast(values.get(key));
     }
 
+    public void clear() {
+        values.clear();
+    }
+
+    void copy(RecordImpl src) {
+        values.putAll(src.values);
+    }
+
 }

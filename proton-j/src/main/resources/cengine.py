@@ -28,7 +28,7 @@ from org.apache.qpid.proton.engine import EndpointState, Sender, \
   Receiver, Transport as _Transport, TransportException
 
 from java.util import EnumSet
-from jarray import array, zeros
+from compat import array, zeros
 
 from cerror import *
 from ccodec import *
@@ -143,7 +143,6 @@ class endpoint_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
-    self.attachments = {}
     self.condition = pn_condition()
     self.remote_condition = pn_condition()
 
@@ -215,7 +214,7 @@ def pn_connection_remote_desired_capabilities(conn):
   return array2dat(conn.impl.getRemoteDesiredCapabilities(), PN_SYMBOL)
 
 def pn_connection_attachments(conn):
-  return conn.attachments
+  return conn.impl.attachments()
 
 def pn_connection_set_container(conn, name):
   conn.impl.setContainer(name)
@@ -264,7 +263,7 @@ def pn_session(conn):
   return wrap(conn.impl.session(), pn_session_wrapper)
 
 def pn_session_attachments(ssn):
-  return ssn.attachments
+  return ssn.impl.attachments()
 
 def pn_session_state(ssn):
   return endpoint_state(ssn.impl)
@@ -524,7 +523,7 @@ class pn_link_wrapper(endpoint_wrapper):
     self.impl.setTarget(self.target.encode())
 
 def pn_link_attachments(link):
-  return link.attachments
+  return link.impl.attachments()
 
 def pn_link_source(link):
   link.source.decode(link.impl.getSource())
@@ -801,7 +800,6 @@ class pn_delivery_wrapper:
 
   def __init__(self, impl):
     self.impl = impl
-    self.attachments = {}
     self.local = pn_disposition()
     self.remote = pn_disposition()
 
@@ -812,7 +810,7 @@ def pn_delivery_tag(dlv):
   return dlv.impl.getTag().tostring()
 
 def pn_delivery_attachments(dlv):
-  return dlv.attachments
+  return dlv.impl.attachments()
 
 def pn_delivery_partial(dlv):
   return dlv.impl.isPartial()
@@ -861,7 +859,6 @@ def pn_delivery_settle(dlv):
 class pn_transport_wrapper:
   def __init__(self, impl):
     self.impl = impl
-    self.attachments = {}
     self.server = False
     self.condition = pn_condition()
 
@@ -869,7 +866,7 @@ def pn_transport():
   return wrap(Proton.transport(), pn_transport_wrapper)
 
 def pn_transport_attachments(trans):
-  return trans.attachments
+  return trans.impl.attachments()
 
 def pn_transport_set_server(trans):
   trans.server = True;
@@ -1021,7 +1018,6 @@ class pn_event:
 
   def __init__(self, impl):
     self.impl = impl
-    self.attachments = {}
 
 def pn_collector_peek(coll):
   ev = coll.peek()
@@ -1037,7 +1033,7 @@ def pn_collector_free(coll):
   pass
 
 def pn_event_reactor(event):
-  return None
+  return event.impl.getReactor()
 
 def pn_event_connection(event):
   return wrap(event.impl.getConnection(), pn_connection_wrapper)
@@ -1056,6 +1052,7 @@ def pn_event_transport(event):
 
 from org.apache.qpid.proton.engine.impl import ConnectionImpl, SessionImpl, \
   SenderImpl, ReceiverImpl, DeliveryImpl, TransportImpl
+from org.apache.qpid.proton.reactor.impl import TaskImpl
 
 J2C = {
   ConnectionImpl: "pn_connection",
@@ -1063,7 +1060,8 @@ J2C = {
   SenderImpl: "pn_link",
   ReceiverImpl: "pn_link",
   DeliveryImpl: "pn_delivery",
-  TransportImpl: "pn_transport"
+  TransportImpl: "pn_transport",
+  TaskImpl: "pn_task"
 }
 
 wrappers = {
@@ -1072,6 +1070,7 @@ wrappers = {
   "pn_link": lambda x: wrap(x, pn_link_wrapper),
   "pn_delivery": lambda x: wrap(x, pn_delivery_wrapper),
   "pn_transport": lambda x: wrap(x, pn_transport_wrapper),
+  "pn_task": lambda x: x,
   "pn_void": lambda x: x
 }
 
@@ -1092,4 +1091,4 @@ def pn_event_category(event):
   return event.impl.getCategory()
 
 def pn_event_attachments(event):
-  return event.attachments
+  return event.impl.attachments()
