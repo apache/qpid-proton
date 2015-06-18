@@ -178,8 +178,20 @@ struct pn_transport_t {
 
   pn_trace_t trace;
 
-  uint16_t channel_max;
+  /*
+   * The maximum channel number can be constrained in several ways:
+   *   1. an unchangeable limit imposed by this library code
+   *   2. a limit imposed by the remote peer when the connection is opened,
+   *      which this app must honor
+   *   3. a limit imposed by this app, which may be raised and lowered
+   *      until the OPEN frame is sent.
+   * These constraints are all summed up in channel_max, below.
+   */
+  #define PN_IMPL_CHANNEL_MAX  32767
+  uint16_t local_channel_max;
   uint16_t remote_channel_max;
+  uint16_t channel_max;
+
   bool freed;
   bool open_sent;
   bool open_rcvd;

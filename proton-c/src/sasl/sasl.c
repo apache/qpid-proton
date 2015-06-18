@@ -366,7 +366,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->included_mechanisms = NULL;
     sasl->username = NULL;
     sasl->password = NULL;
-    sasl->config_name = pn_strdup(sasl->client ? "proton-client" : "proton-server");
+    sasl->config_name = NULL;
     sasl->config_dir =  sasl_config_path ? pn_strdup(sasl_config_path) : NULL;
     sasl->remote_fqdn = NULL;
     sasl->external_auth = NULL;

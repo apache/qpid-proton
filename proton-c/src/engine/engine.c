@@ -953,12 +953,26 @@ static void pn_session_finalize(void *object)
 pn_session_t *pn_session(pn_connection_t *conn)
 {
   assert(conn);
+
+
+  pn_transport_t * transport = pn_connection_transport(conn);
+
+  if(transport) {
+    // channel_max is an index, not a count.  
+    if(pn_hash_size(transport->local_channels) > (size_t)transport->channel_max) {
+      pn_transport_logf(transport, 
+                        "pn_session: too many sessions: %d  channel_max is %d",
+                        pn_hash_size(transport->local_channels),
+                        transport->channel_max);
+      return (pn_session_t *) 0;
+    }
+  }
+
 #define pn_session_free pn_object_free
   static const pn_class_t clazz = PN_METACLASS(pn_session);
 #undef pn_session_free
   pn_session_t *ssn = (pn_session_t *) pn_class_new(&clazz, sizeof(pn_session_t));
   if (!ssn) return NULL;
-
   pn_endpoint_init(&ssn->endpoint, SESSION, conn);
   pni_add_session(conn, ssn);
   ssn->links = pn_list(PN_WEAKREF, 0);

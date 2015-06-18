@@ -2516,7 +2516,11 @@ class Connection(Wrapper, Endpoint):
     """
     Returns a new session on this connection.
     """
-    return Session(pn_session(self._impl))
+    ssn = pn_session(self._impl)
+    if ssn is None:
+      raise(SessionException("Session allocation failed."))
+    else:
+      return Session(ssn)
 
   def session_head(self, mask):
     return Session.wrap(pn_session_head(self._impl, mask))
@@ -4022,6 +4026,7 @@ __all__ = [
            "SASL",
            "Sender",
            "Session",
+           "SessionException",
            "SSL",
            "SSLDomain",
            "SSLSessionDetails",

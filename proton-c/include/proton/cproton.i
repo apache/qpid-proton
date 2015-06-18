@@ -210,8 +210,6 @@ typedef unsigned long int uintptr_t;
 {
  require:
   connection != NULL;
- ensure:
-  pn_session != NULL;
 }
 
 %contract pn_transport(pn_connection_t *connection)

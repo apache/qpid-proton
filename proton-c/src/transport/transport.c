@@ -43,6 +43,33 @@ static ssize_t transport_consume(pn_transport_t *transport);
 
 // delivery buffers
 
+/*
+ * Call this any time anything happens that may affect channel_max:
+ * i.e. when the app indicates a preference, or when we receive the
+ * OPEN frame from the remote peer.  And call it to do the final 
+ * calculation just before we communicate our limit to the remote 
+ * peer by sending our OPEN frame.
+ */
+static void pni_calculate_channel_max(pn_transport_t *transport) {
+  /*
+   * The application cannot make the limit larger than 
+   * what this library will allow.
+   */
+  transport->channel_max = (PN_IMPL_CHANNEL_MAX < transport->local_channel_max)
+                           ? PN_IMPL_CHANNEL_MAX
+                           : transport->local_channel_max;
+
+  /*
+   * The remote peer's constraint is not valid until the 
+   * peer's open frame has been received.
+   */
+  if(transport->open_rcvd) {
+    transport->channel_max = (transport->channel_max < transport->remote_channel_max)
+                             ? transport->channel_max
+                             : transport->remote_channel_max;
+  }
+}
+
 void pn_delivery_map_init(pn_delivery_map_t *db, pn_sequence_t next)
 {
   db->deliveries = pn_hash(PN_WEAKREF, 0, 0.75);
@@ -168,6 +195,13 @@ const pn_io_layer_t pni_passthru_layer = {
     NULL
 };
 
+const pn_io_layer_t pni_header_error_layer = {
+    pn_io_layer_input_error,
+    pn_output_write_amqp_header,
+    NULL,
+    NULL
+};
+
 const pn_io_layer_t pni_error_layer = {
     pn_io_layer_input_error,
     pn_io_layer_output_error,
@@ -286,7 +320,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
   pn_do_error(transport, "amqp:connection:framing-error",
               "%s: '%s'%s", error, quoted,
               !eos ? "" : " (connection aborted)");
-  pn_set_error_layer(transport);
+  transport->io_layers[layer] = &pni_header_error_layer;
   return 0;
 }
 
@@ -363,7 +397,23 @@ static void pn_transport_initialize(void *object)
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
   transport->remote_max_frame = 0;
-  transport->channel_max = 0;
+
+  /*
+   * We set the local limit on channels to 2^15, because 
+   * parts of the code use the topmost bit (of a short)
+   * as a flag.
+   * The peer that this transport connects to may also 
+   * place its own limit on max channel number, and the
+   * application may also set a limit.
+   * The maximum that we use will be the minimum of all 
+   * these constraints.
+   */
+  // There is no constraint yet from remote peer, 
+  // so set to max possible.
+  transport->remote_channel_max = 65535;  
+  transport->local_channel_max  = PN_IMPL_CHANNEL_MAX;
+  transport->channel_max        = transport->local_channel_max;
+
   transport->remote_channel_max = 0;
   transport->local_idle_timeout = 0;
   transport->dead_remote_deadline = 0;
@@ -1091,6 +1141,7 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
     transport->halt = true;
   }
   transport->open_rcvd = true;
+  pni_calculate_channel_max(transport);
   return 0;
 }
 
@@ -1101,6 +1152,18 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   pn_sequence_t next;
   int err = pn_data_scan(args, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
+
+  // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max -- 
+  // express our displeasure by closing the connection with a framing error.
+  if (remote_channel > transport->channel_max) {
+    pn_do_error(transport,
+                "amqp:connection:framing-error",
+                "remote channel %d is above negotiated channel_max %d.",
+                remote_channel,
+                transport->channel_max
+               );
+    return PN_TRANSPORT_ERROR;
+  }
 
   pn_session_t *ssn;
   if (reply) {
@@ -1767,6 +1830,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
           : 0;
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       const char *cid = pn_string_get(connection->container);
+      pni_calculate_channel_max(transport);
       int err = pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[SS?I?H?InnCCC]", OPEN,
                               cid ? cid : "",
                               pn_string_get(connection->hostname),
@@ -1785,15 +1849,16 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
   return 0;
 }
 
-static uint16_t allocate_alias(pn_hash_t *aliases)
+static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * valid)
 {
-  for (uint32_t i = 0; i < 65536; i++) {
+  for (uint32_t i = 0; i <= max_index; i++) {
     if (!pn_hash_get(aliases, i)) {
+      * valid = 1;
       return i;
     }
   }
 
-  assert(false);
+  * valid = 0;
   return 0;
 }
 
@@ -1821,14 +1886,19 @@ static size_t pni_session_incoming_window(pn_session_t *ssn)
   }
 }
 
-static void pni_map_local_channel(pn_session_t *ssn)
+static int pni_map_local_channel(pn_session_t *ssn)
 {
   pn_transport_t *transport = ssn->connection->transport;
   pn_session_state_t *state = &ssn->state;
-  uint16_t channel = allocate_alias(transport->local_channels);
+  int valid;
+  uint16_t channel = allocate_alias(transport->local_channels, transport->channel_max, & valid);
+  if (!valid) {
+    return 0;
+  }
   state->local_channel = channel;
   pn_hash_put(transport->local_channels, channel, ssn);
   pn_ep_incref(&ssn->endpoint);
+  return 1;
 }
 
 static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -1839,7 +1909,10 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
     pn_session_state_t *state = &ssn->state;
     if (!(endpoint->state & PN_LOCAL_UNINIT) && state->local_channel == (uint16_t) -1)
     {
-      pni_map_local_channel(ssn);
+      if (! pni_map_local_channel(ssn)) {
+        pn_transport_logf(transport, "unable to find an open available channel within limit of %d", transport->channel_max );
+        return PN_ERR;
+      }
       state->incoming_window = pni_session_incoming_window(ssn);
       state->outgoing_window = pni_session_outgoing_window(ssn);
       pn_post_frame(transport, AMQP_FRAME_TYPE, state->local_channel, "DL[?HIII]", BEGIN,
@@ -1869,12 +1942,17 @@ static const char *expiry_symbol(pn_expiry_policy_t policy)
   return NULL;
 }
 
-static void pni_map_local_handle(pn_link_t *link) {
+static int pni_map_local_handle(pn_link_t *link) {
   pn_link_state_t *state = &link->state;
   pn_session_state_t *ssn_state = &link->session->state;
-  state->local_handle = allocate_alias(ssn_state->local_handles);
+  int valid;
+  // XXX TODO MICK: once changes are made to handle_max, change this hardcoded value to something reasonable.
+  state->local_handle = allocate_alias(ssn_state->local_handles, 65536, & valid);
+  if ( ! valid )
+    return 0;
   pn_hash_put(ssn_state->local_handles, state->local_handle, link);
   pn_ep_incref(&link->endpoint);
+  return 1;
 }
 
 static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
@@ -2397,7 +2475,9 @@ static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned i
     pn_transport_logf(transport, "  -> %s", "AMQP");
   assert(available >= 8);
   memmove(bytes, AMQP_HEADER, 8);
-  if (transport->io_layers[layer] == &amqp_write_header_layer) {
+  if (transport->io_layers[layer] == &pni_header_error_layer) {
+    transport->io_layers[layer] = &pni_error_layer;
+  }else if (transport->io_layers[layer] == &amqp_write_header_layer) {
     transport->io_layers[layer] = &amqp_layer;
   } else {
     transport->io_layers[layer] = &amqp_read_header_layer;
@@ -2565,9 +2645,27 @@ uint16_t pn_transport_get_channel_max(pn_transport_t *transport)
   return transport->channel_max;
 }
 
-void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max)
+void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_channel_max)
 {
-  transport->channel_max = channel_max;
+  /*
+   * Once the OPEN frame has been sent, we have communicated our 
+   * wishes to the remote client and there is no way to renegotiate.
+   * After that point, we do not allow the application to make changes.
+   * Before that point, however, the app is free to either raise or 
+   * lower our local limit.  (But the app cannot raise it above the 
+   * limit imposed by this library.)
+   * The channel-max value will be finalized just before the OPEN frame
+   * is sent.
+   */
+  if(transport->open_sent) {
+    pn_transport_logf(transport, "Cannot change local channel-max after OPEN frame sent.");
+  }
+  else {
+    transport->local_channel_max = (requested_channel_max < PN_IMPL_CHANNEL_MAX)
+                                   ? requested_channel_max
+                                   : PN_IMPL_CHANNEL_MAX;
+    pni_calculate_channel_max(transport);
+  }
 }
 
 uint16_t pn_transport_remote_channel_max(pn_transport_t *transport)
