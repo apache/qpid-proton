@@ -315,7 +315,7 @@ class Configure(build_ext):
 
         _cproton.runtime_library_dirs.extend([install_lib])
 
-        if sys.version_info.major >= 3:
+        if sys.version_info[0] >= 3:
             _cproton.libraries[0] = "qpid-proton%s" % ds_sys.get_config_var('EXT_SUFFIX')[:-3]
 
         # Register this new extension and make
@@ -335,8 +335,9 @@ class Configure(build_ext):
         return not self.check_qpid_proton_version()
 
     def run(self):
-        # linux2 for python<3.0
-        if sys.platform in ['linux', 'linux2']:
+        # linux2 for python<2.7
+        # linux4 for python<2.6
+        if sys.platform in ['linux', 'linux2', 'linux4']:
             if self.bundle_proton:
                 self.bundle_libqpid_proton_extension()
 
