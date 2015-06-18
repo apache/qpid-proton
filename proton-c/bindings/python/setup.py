@@ -335,7 +335,8 @@ class Configure(build_ext):
         return not self.check_qpid_proton_version()
 
     def run(self):
-        if sys.platform == 'linux2':
+        # linux2 for python<3.0
+        if sys.platform in ['linux', 'linux2']:
             if self.bundle_proton:
                 self.bundle_libqpid_proton_extension()
 
