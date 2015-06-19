@@ -381,6 +381,21 @@ void pni_sasl_impl_free(pn_transport_t *transport)
     }
 }
 
+bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
+{
+  return false;
+}
+
+ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out)
+{
+  return 0;
+}
+
+ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out)
+{
+  return 0;
+}
+
 bool pn_sasl_extended(void)
 {
   return true;

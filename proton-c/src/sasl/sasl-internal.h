@@ -22,8 +22,11 @@
 #ifndef PROTON_SASL_INTERNAL_H
 #define PROTON_SASL_INTERNAL_H 1
 
+#include "buffer.h"
 #include "proton/types.h"
 #include "proton/sasl.h"
+
+#include "engine/engine-internal.h"
 
 // SASL APIs used by transport code
 void pn_sasl_free(pn_transport_t *transport);
@@ -33,14 +36,20 @@ void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const ch
 
 // Internal SASL authenticator interface
 void pni_sasl_impl_free(pn_transport_t *transport);
-int pni_sasl_impl_list_mechs(pn_transport_t* transport, char** mechlist);
-bool pni_init_server(pn_transport_t* transport);
+int  pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist);
+bool pni_init_server(pn_transport_t *transport);
 void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
 void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv);
 
-bool pni_init_client(pn_transport_t* transport);
+bool pni_init_client(pn_transport_t *transport);
 bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs);
 void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
+
+// Internal SASL security layer interface
+bool pni_sasl_impl_can_encrypt(pn_transport_t *transport);
+ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out);
+ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out);
+
 
 // Shared SASL API used by the actual SASL authenticators
 enum pni_sasl_state {
@@ -56,7 +65,6 @@ enum pni_sasl_state {
 
 struct pni_sasl_t {
   void *impl_context;
-  // Client selected mechanism
   char *selected_mechanism;
   char *included_mechanisms;
   const char *username;
@@ -67,14 +75,15 @@ struct pni_sasl_t {
   char *external_auth;
   int external_ssf;
   pn_sasl_outcome_t outcome;
+  pn_buffer_t* decoded_buffer;
+  pn_buffer_t* encoded_buffer;
   pn_bytes_t bytes_out;
   enum pni_sasl_state desired_state;
   enum pni_sasl_state last_state;
   bool client;
-  bool input_bypass;
-  bool output_bypass;
 };
 
+// Shared Utility used by sasl implementations
 void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count);
 bool pni_included_mech(const char *included_mech_list, pn_bytes_t s);
 void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state);

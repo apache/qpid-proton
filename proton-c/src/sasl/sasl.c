@@ -25,6 +25,7 @@
 #include "engine/engine-internal.h"
 #include "protocol.h"
 #include "proton/ssl.h"
+#include "proton/types.h"
 #include "util.h"
 #include "transport/autodetect.h"
 
@@ -44,8 +45,10 @@ static inline pni_sasl_t *get_sasl_internal(pn_sasl_t *sasl)
 
 static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available);
 static ssize_t pn_input_read_sasl(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
+static ssize_t pn_input_read_sasl_encrypt(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available);
 static ssize_t pn_output_write_sasl_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t size);
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+static ssize_t pn_output_write_sasl_encrypt(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 
 const pn_io_layer_t sasl_header_layer = {
     pn_input_read_sasl_header,
@@ -71,6 +74,13 @@ const pn_io_layer_t sasl_read_header_layer = {
 const pn_io_layer_t sasl_layer = {
     pn_input_read_sasl,
     pn_output_write_sasl,
+    NULL,
+    NULL
+};
+
+const pn_io_layer_t sasl_encrypt_layer = {
+    pn_input_read_sasl_encrypt,
+    pn_output_write_sasl_encrypt,
     NULL,
     NULL
 };
@@ -262,21 +272,32 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
     return PN_EOS;
   }
 
-  if (!transport->sasl->input_bypass) {
-    pni_sasl_start_server_if_needed(transport);
+  pni_sasl_start_server_if_needed(transport);
 
-    bool dummy = false;
-    ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &dummy);
+  bool dummy = false;
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &dummy);
 
-    if (n!=0 || !pni_sasl_is_final_input_state(transport->sasl)) {
-      return n;
-    }
+  if (n!=0 || !pni_sasl_is_final_input_state(transport->sasl)) {
+    return n;
+  }
 
-    transport->sasl->input_bypass = true;
-    if (transport->sasl->output_bypass)
-        transport->io_layers[layer] = &pni_passthru_layer;
+  if (pni_sasl_impl_can_encrypt(transport)) {
+    transport->io_layers[layer] = &sasl_encrypt_layer;
+    return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
+  } else if (transport->sasl->client) {
+    transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_input(transport, layer, bytes, available );
+}
+
+static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
+{
+  pn_buffer_t *in = transport->sasl->decoded_buffer;
+  pni_sasl_impl_decode(transport, pn_bytes(available, bytes), in);
+  pn_bytes_t decoded = pn_buffer_bytes(in);
+  ssize_t size = pni_passthru_layer.process_input(transport, layer, decoded.start, decoded.size );
+  pn_buffer_trim(in, size, 0);
+  return size;
 }
 
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t size)
@@ -295,28 +316,41 @@ static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned i
 
 static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  if (!transport->sasl->output_bypass) {
-    // this accounts for when pn_do_error is invoked, e.g. by idle timeout
-    if (!transport->close_sent) {
-      pni_sasl_start_server_if_needed(transport);
+  // this accounts for when pn_do_error is invoked, e.g. by idle timeout
+  if (!transport->close_sent) {
+    pni_sasl_start_server_if_needed(transport);
 
-      pni_post_sasl_frame(transport);
+    pni_post_sasl_frame(transport);
 
-      pni_sasl_t *sasl = transport->sasl;
-      if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
-        return pn_dispatcher_output(transport, bytes, available);
-      } else {
-        if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
-          pn_transport_close_tail(transport);
-        }
+    pni_sasl_t *sasl = transport->sasl;
+    if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
+      return pn_dispatcher_output(transport, bytes, available);
+    } else {
+      if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
+        pn_transport_close_tail(transport);
       }
     }
+  }
 
-    transport->sasl->output_bypass = true;
-    if (transport->sasl->input_bypass)
-        transport->io_layers[layer] = &pni_passthru_layer;
+  if (pni_sasl_impl_can_encrypt(transport)) {
+    transport->io_layers[layer] = &sasl_encrypt_layer;
+    return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
+  } else if (!transport->sasl->client) {
+    transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_output(transport, layer, bytes, available );
+}
+
+static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
+{
+  ssize_t size = pni_passthru_layer.process_output(transport, layer, bytes, available );
+  if (size<=0) return size;
+
+  pn_buffer_t *out = transport->sasl->encoded_buffer;
+  pni_sasl_impl_encode(transport, pn_bytes(size, bytes), out);
+  size = pn_buffer_get(out, 0, available, bytes);
+  pn_buffer_trim(out, size, 0);
+  return size;
 }
 
 // Look for symbol in the mech include list - not particlarly efficient,
@@ -394,12 +428,12 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->external_ssf = 0;
     sasl->outcome = PN_SASL_NONE;
     sasl->impl_context = NULL;
+    sasl->decoded_buffer = pn_buffer(0);
+    sasl->encoded_buffer = pn_buffer(0);
     sasl->bytes_out.size = 0;
     sasl->bytes_out.start = NULL;
     sasl->desired_state = SASL_NONE;
     sasl->last_state = SASL_NONE;
-    sasl->input_bypass = false;
-    sasl->output_bypass = false;
 
     transport->sasl = sasl;
   }
@@ -424,7 +458,8 @@ void pn_sasl_free(pn_transport_t *transport)
       if (sasl->impl_context) {
           pni_sasl_impl_free(transport);
       }
-
+      pn_buffer_free(sasl->decoded_buffer);
+      pn_buffer_free(sasl->encoded_buffer);
       free(sasl);
     }
   }
