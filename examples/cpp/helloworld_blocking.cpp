@@ -19,32 +19,29 @@
  *
  */
 
-#include "proton/Container.hpp"
-#include "proton/MessagingHandler.hpp"
-#include "proton/BlockingSender.hpp"
+#include "proton/container.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/blocking_sender.hpp"
 
 #include <iostream>
 
-
-using namespace proton;
-using namespace proton::reactor;
-
-class HelloWorldBlocking : public MessagingHandler {
+class hello_world_blocking : public proton::messaging_handler {
   private:
     std::string server;
     std::string address;
   public:
 
-    HelloWorldBlocking(const std::string &s, const std::string &addr) : server(s), address(addr) {}
+    hello_world_blocking(const std::string &s, const std::string &addr) : server(s), address(addr) {}
 
-    void onStart(Event &e) {
-        Connection conn = e.getContainer().connect(server);
-        e.getContainer().createReceiver(conn, address);
+    void on_start(proton::event &e) {
+        proton::connection conn = e.container().connect(server);
+        e.container().create_receiver(conn, address);
     }
 
-    void onMessage(Event &e) {
-        std::cout << e.getMessage().body().get<String>() << std::endl;
-        e.getConnection().close();
+    void on_message(proton::event &e) {
+        proton::value v(e.message().body());
+        std::cout << v.get<std::string>() << std::endl;
+        e.connection().close();
     }
 
 };
@@ -53,16 +50,16 @@ int main(int argc, char **argv) {
     try {
         std::string server = argc > 1 ? argv[1] : ":5672";
         std::string addr = argc > 2 ? argv[2] : "examples";
-        BlockingConnection conn = BlockingConnection(server);
-        BlockingSender sender = conn.createSender(addr);
-        Message m;
+        proton::blocking_connection conn(server);
+        proton::blocking_sender sender = conn.create_sender(addr);
+        proton::message m;
         m.body("Hello World!");
         sender.send(m);
         conn.close();
 
         // TODO Temporary hack until blocking receiver available
-        HelloWorldBlocking hw(server, addr);
-        Container(hw).run();
+        hello_world_blocking hw(server, addr);
+        proton::container(hw).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

@@ -24,45 +24,28 @@
 
 namespace proton {
 
-Uuid::Uuid() { std::fill(bytes, bytes+SIZE, 0); }
-Uuid::Uuid(const pn_uuid_t& u) { std::copy(u.bytes, u.bytes+SIZE, bytes); }
-
-Uuid::operator pn_uuid_t() const {
-    pn_uuid_t u;
-    std::copy(begin(), end(), u.bytes);
-    return u;
-}
-
-bool Uuid::operator==(const Uuid& x) const {
-    return std::equal(begin(), end(), x.begin());
-}
-
-bool Uuid::operator<(const Uuid& x) const {
-    return std::lexicographical_compare(begin(), end(), x.begin(), x.end()) < 0;
-}
-
 namespace {
-inline std::ostream& printSegment(std::ostream& o, const Uuid& u, size_t begin, size_t end, const char* sep="") {
+inline std::ostream& print_segment(std::ostream& o, const amqp_uuid& u, size_t begin, size_t end, const char* sep="") {
     for (const char* p = &u[begin]; p < &u[end]; ++p) o << *p;
     return o << sep;
 }
 }
 
-std::ostream& operator<<(std::ostream& o, const Uuid& u) {
+std::ostream& operator<<(std::ostream& o, const amqp_uuid& u) {
     std::ios_base::fmtflags ff = o.flags();
     o.flags(std::ios_base::hex);
-    printSegment(o, u, 0, 4, "-");
-    printSegment(o, u, 4, 6, "-");
-    printSegment(o, u, 6, 8, "-");
-    printSegment(o, u, 8, 10, "-");
-    printSegment(o, u, 10, 16);
+    print_segment(o, u, 0, 4, "-");
+    print_segment(o, u, 4, 6, "-");
+    print_segment(o, u, 6, 8, "-");
+    print_segment(o, u, 8, 10, "-");
+    print_segment(o, u, 10, 16);
     o.flags(ff);
     return o;
 }
 
-std::string typeName(TypeId t) {
+std::string type_name(type_id t) {
     switch (t) {
-      case NULL_: return "null";
+      case NULl_: return "null";
       case BOOL: return "bool";
       case UBYTE: return "ubyte";
       case BYTE: return "byte";
@@ -91,9 +74,9 @@ std::string typeName(TypeId t) {
     }
 }
 
-std::ostream& operator<<(std::ostream& o,TypeId t) { return o << typeName(t); }
+std::ostream& operator<<(std::ostream& o,type_id t) { return o << type_name(t); }
 
-PN_CPP_EXTERN bool isContainer(TypeId t) {
+PN_CPP_EXTERN bool is_container(type_id t) {
     return (t == LIST || t == MAP || t == ARRAY || t == DESCRIBED);
 }
 
@@ -104,10 +87,10 @@ pn_bytes_t pn_bytes(const std::string& s) {
 
 std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
 
-Start::Start(TypeId t, TypeId e, bool d, size_t s) : type(t), element(e), isDescribed(d), size(s) {}
-Start Start::array(TypeId element, bool described) { return Start(ARRAY, element, described); }
-Start Start::list() { return Start(LIST); }
-Start Start::map() { return Start(MAP); }
-Start Start::described() { return Start(DESCRIBED, NULL_, true); }
+start::start(type_id t, type_id e, bool d, size_t s) : type(t), element(e), is_described(d), size(s) {}
+start start::array(type_id element, bool described) { return start(ARRAY, element, described); }
+start start::list() { return start(LIST); }
+start start::map() { return start(MAP); }
+start start::described() { return start(DESCRIBED, NULl_, true); }
 
 }

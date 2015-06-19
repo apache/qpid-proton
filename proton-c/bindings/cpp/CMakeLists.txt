@@ -39,42 +39,42 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(qpid-proton-cpp-source
-  src/Acceptor.cpp
-  src/Acking.cpp
-  src/Connection.cpp
-  src/ConnectionImpl.cpp
-  src/Connector.cpp
-  src/Container.cpp
-  src/ContainerImpl.cpp
-  src/Data.cpp
-  src/Decoder.cpp
-  src/Delivery.cpp
-  src/Duration.cpp
-  src/Encoder.cpp
-  src/Endpoint.cpp
-  src/Error.cpp
-  src/Event.cpp
-  src/Handler.cpp
-  src/Link.cpp
-  src/Message.cpp
-  src/MessagingAdapter.cpp
-  src/MessagingEvent.cpp
-  src/MessagingHandler.cpp
-  src/ProtonEvent.cpp
-  src/ProtonHandler.cpp
-  src/Receiver.cpp
-  src/Sender.cpp
-  src/Session.cpp
-  src/Terminus.cpp
-  src/Transport.cpp
-  src/Url.cpp
-  src/Value.cpp
-  src/Values.cpp
+  src/acceptor.cpp
+  src/acking.cpp
+  src/connection.cpp
+  src/connection_impl.cpp
+  src/connector.cpp
+  src/container.cpp
+  src/container_impl.cpp
+  src/data.cpp
+  src/decoder.cpp
+  src/delivery.cpp
+  src/duration.cpp
+  src/encoder.cpp
+  src/endpoint.cpp
+  src/error.cpp
+  src/event.cpp
+  src/handler.cpp
+  src/link.cpp
+  src/message.cpp
+  src/messaging_adapter.cpp
+  src/messaging_event.cpp
+  src/messaging_handler.cpp
+  src/proton_event.cpp
+  src/proton_handler.cpp
+  src/receiver.cpp
+  src/sender.cpp
+  src/session.cpp
+  src/terminus.cpp
+  src/transport.cpp
+  src/url.cpp
+  src/value.cpp
+  src/values.cpp
   src/proton_bits.cpp
-  src/BlockingConnection.cpp
-  src/BlockingConnectionImpl.cpp
-  src/BlockingLink.cpp
-  src/BlockingSender.cpp
+  src/blocking_connection.cpp
+  src/blocking_connection_impl.cpp
+  src/blocking_link.cpp
+  src/blocking_sender.cpp
   src/contexts.cpp
   src/types.cpp
   )

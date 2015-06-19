@@ -19,9 +19,9 @@
  *
  */
 
-#include "proton/Container.hpp"
-#include "proton/MessagingHandler.hpp"
-#include "proton/Link.hpp"
+#include "proton/container.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/link.hpp"
 
 #include <iostream>
 #include <map>
@@ -30,27 +30,25 @@
 #include <string.h>
 
 
-using namespace proton;
-using namespace proton::reactor;
 
-class Recv : public MessagingHandler {
+class simple_recv : public proton::messaging_handler {
   private:
     std::string url;
     int expected;
     int received;
   public:
 
-    Recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
+    simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void onStart(Event &e) {
-        e.getContainer().createReceiver(url);
+    void on_start(proton::event &e) {
+        e.container().create_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void onMessage(Event &e) {
-        Message msg = e.getMessage();
-        Value id = msg.id();
-        if (id.type() == ULONG) {
+    void on_message(proton::event &e) {
+        proton::message msg = e.message();
+        proton::value id = msg.id();
+        if (id.type() == proton::ULONG) {
             if (id.get<int>() < received)
                 return; // ignore duplicate
         }
@@ -58,8 +56,8 @@ class Recv : public MessagingHandler {
             std::cout << msg.body() << std::endl;
             received++;
             if (received == expected) {
-                e.getReceiver().close();
-                e.getConnection().close();
+                e.receiver().close();
+                e.connection().close();
             }
         }
     }
@@ -69,11 +67,11 @@ static void parse_options(int argc, char **argv, int &count, std::string &addr);
 
 int main(int argc, char **argv) {
     try {
-        int messageCount = 100;
+        int message_count = 100;
         std::string address("localhost:5672/examples");
-        parse_options(argc, argv, messageCount, address);
-        Recv recv(address, messageCount);
-        Container(recv).run();
+        parse_options(argc, argv, message_count, address);
+        simple_recv recv(address, message_count);
+        proton::container(recv).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

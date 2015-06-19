@@ -28,11 +28,11 @@ def call(*args, **kwargs):
     p = Popen(*args, stdout=PIPE, stderr=STDOUT, **kwargs)
     out, err = p.communicate()
     if p.returncode:
-        raise CalledProcessError("""%s exit code %s
-vvvvvvvvvvvvvvvv output of %s exit code %s vvvvvvvvvvvvvvvv
+        raise Exception("""%s exit code %s
+vvvvvvvvvvvvvvvv
 %s
-^^^^^^^^^^^^^^^^ output of %s exit code %s ^^^^^^^^^^^^^^^^""" % (
-    p.cmd, p.returncode, p.cmd, p.returncode, out, p.cmd, p.returncode))
+^^^^^^^^^^^^^^^^
+""" % (args[0], p.returncode, out))
     return out
 
 NULL = open(os.devnull, 'w')
@@ -55,7 +55,7 @@ class Broker(object):
     def __init__(self):
         self.port = randrange(10000, 20000)
         self.addr = ":%s" % self.port
-        self.process = Popen(["./broker", self.addr], stdout=NULL, stderr=NULL)
+        self.process = Popen([os.path.abspath("broker"), self.addr], stdout=NULL, stderr=NULL)
         # Wait 10 secs for broker to listen
         deadline = time.time() + 10
         c = None

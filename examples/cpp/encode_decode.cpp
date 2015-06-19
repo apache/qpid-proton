@@ -17,73 +17,70 @@
  * under the License.
  */
 
-#include <proton/Values.hpp>
-#include <proton/Value.hpp>
+#include <proton/value.hpp>
 #include <algorithm>
 #include <iostream>
 #include <iterator>
 #include <map>
 #include <sstream>
-#include <stdexcept>
 #include <vector>
 
 using namespace std;
-using namespace proton;
 
-// Examples of how to use the Encoder and Decoder to create and examine AMQP values.
+// Examples of how to use the encoder and decoder to create and examine AMQP values.
 //
 
 // Print is defined at the end as an example of how to query and extract complex
 // values in terms of their simple components.
-void print(Values& values);
+void print(proton::values& values);
 
 // Inserting and extracting simple C++ values.
 void simple_insert_extract() {
-    Values values;
+    proton::values vv;
     cout << endl << "== Simple values: int, string, bool" << endl;
-    values << 42 << "foo" << true;
-    print(values);
+    vv << 42 << "foo" << true;
+    print(vv);
     int i;
-    std::string s;
+    string s;
     bool b;
-    values.rewind();
-    values >> i >> s >> b;
+    vv.rewind();
+    vv >> i >> s >> b;
     cout << "Extracted: " << i << ", " << s << ", " << b << endl;
     // Encode and decode as AMQP
-    string amqpData = values.encode();
-    cout << "Encoded as AMQP in " << amqpData.size() << " bytes" << endl;
-    Values values2;
-    values.decode(amqpData);
-    values >> i >> s >> b;
+    string amqp_data = vv.encode();
+    cout << "Encoded as AMQP in " << amqp_data.size() << " bytes" << endl;
+    proton::values vv2;
+    vv2.decode(amqp_data);
+    vv2 >> i >> s >> b;
     cout << "Decoded: " << i << ", " << s << ", " << b << endl;
 }
 
 // Inserting values as a specific AMQP type
 void simple_insert_extract_exact_type() {
-    Values values;
+    proton::values vv;
     cout << endl << "== Specific AMQP types: byte, long, symbol" << endl;
-    values << Byte('x') << Long(123456789123456789) << Symbol("bar");
-    print(values);
-    values.rewind();
+    vv << proton::amqp_byte('x') << proton::amqp_long(123456789123456789) << proton::amqp_symbol("bar");
+    print(vv);
+    vv.rewind();
     // Check that we encoded the correct types, but note that decoding will
     // still convert to standard C++ types, in particular any AMQP integer type
     // can be converted to a long-enough C++ integer type..
-    std::int64_t i1, i2;
-    std::string s;
-    values >> i1 >> i2 >> s;
+    int64_t i1, i2;
+    string s;
+    vv >> i1 >> i2 >> s;
     cout << "Extracted (with conversion) " << i1 << ", " << i2 << ", " << s << endl;
 
     // Now use the as() function to fail unless we extract the exact AMQP type expected.
-    values.rewind();            // Byte(1) << Long(2) << Symbol("bar");
-    Long l;
-    // Fails, extracting Byte as Long
-    try { values >> as<LONG>(l); throw logic_error("expected error"); } catch (DecodeError) {}
-    Byte b;
-    values >> as<BYTE>(b) >> as<LONG>(l); // OK, extract Byte as Byte, Long as Long.
-    std::string str;
-    // Fails, extracting Symbol as String.
-    try { values >> as<STRING>(str); throw logic_error("expected error"); } catch (DecodeError) {}
-    values >> as<SYMBOL>(str);       // OK, extract Symbol as Symbol
+    vv.rewind();            // amqp_byte(1) << amqp_long(2) << amqp_symbol("bar");
+    proton::amqp_long l;
+    // Fails, extracting amqp_byte as amqp_long
+    try { vv >> proton::as<proton::LONG>(l); throw logic_error("expected error"); } catch (proton::decode_error) {}
+    proton::amqp_byte b;
+    vv >> proton::as<proton::BYTE>(b) >> proton::as<proton::LONG>(l); // OK, extract amqp_byte as amqp_byte, amqp_long as amqp_long.
+    string str;
+    // Fails, extracting amqp_symbol as amqp_string.
+    try { vv >> proton::as<proton::STRING>(str); throw logic_error("expected error"); } catch (proton::decode_error) {}
+    vv >> proton::as<proton::SYMBOL>(str);       // OK, extract amqp_symbol as amqp_symbol
     cout << "Extracted (exact) " << b << ", " << l << ", " << str << endl;
 }
 
@@ -121,54 +118,54 @@ void insert_extract_containers() {
     m["one"] = 1;
     m["two"] = 2;
 
-    Values values;
-    values << as<ARRAY>(a) << as<LIST>(l) << as<MAP>(m);
-    print(values);
+    proton::values vv;
+    vv << proton::as<proton::ARRAY>(a) << proton::as<proton::LIST>(l) << proton::as<proton::MAP>(m);
+    print(vv);
 
     vector<int> a1, l1;
     map<string, int> m1;
-    values.rewind();
-    values >> as<ARRAY>(a1) >> as<LIST>(l1) >> as<MAP>(m1);
+    vv.rewind();
+    vv >> proton::as<proton::ARRAY>(a1) >> proton::as<proton::LIST>(l1) >> proton::as<proton::MAP>(m1);
     cout << "Extracted: " << a1 << ", " << l1 << ", " << m1 << endl;
 }
 
-// Containers with mixed types, use Value to represent arbitrary AMQP types.
+// Containers with mixed types, use value to represent arbitrary AMQP types.
 void mixed_containers() {
     cout << endl << "== List and map of mixed type values." << endl;
-    vector<Value> l;
-    l.push_back(Value(42));
-    l.push_back(Value(String("foo")));
-    map<Value, Value> m;
-    m[Value("five")] = Value(5);
-    m[Value(4)] = Value("four");
-    Values values;
-    values << as<LIST>(l) << as<MAP>(m);
-    print(values);
+    vector<proton::value> l;
+    l.push_back(proton::value(42));
+    l.push_back(proton::value(proton::amqp_string("foo")));
+    map<proton::value, proton::value> m;
+    m[proton::value("five")] = proton::value(5);
+    m[proton::value(4)] = proton::value("four");
+    proton::values vv;
+    vv << proton::as<proton::LIST>(l) << proton::as<proton::MAP>(m);
+    print(vv);
 
-    vector<Value> l1;
-    map<Value, Value> m1;
-    values.rewind();
-    values >> as<LIST>(l1) >> as<MAP>(m1);
+    vector<proton::value> l1;
+    map<proton::value, proton::value> m1;
+    vv.rewind();
+    vv >> proton::as<proton::LIST>(l1) >> proton::as<proton::MAP>(m1);
     cout << "Extracted: " << l1 << ", " << m1 << endl;
 }
 
-// Insert using stream operators (see printNext for example of extracting with stream ops.)
+// Insert using stream operators (see print_next for example of extracting with stream ops.)
 void insert_extract_stream_operators() {
     cout << endl << "== Insert with stream operators." << endl;
-    Values values;
+    proton::values vv;
     // Note: array elements must be encoded with the exact type, they are not
     // automaticlly converted. Mismatched types for array elements will not
-    // be detected until values.encode() is called.
-    values << Start::array(INT) << Int(1) << Int(2) << Int(3) << finish();
-    print(values);
+    // be detected until vv.encode() is called.
+    vv << proton::start::array(proton::INT) << proton::amqp_int(1) << proton::amqp_int(2) << proton::amqp_int(3) << proton::finish();
+    print(vv);
 
-    values.clear();
-    values << Start::list() << Int(42) << false << Symbol("x") << finish();
-    print(values);
+    vv.clear();
+    vv << proton::start::list() << proton::amqp_int(42) << false << proton::amqp_symbol("x") << proton::finish();
+    print(vv);
 
-    values.clear();
-    values << Start::map() << "k1" << Int(42) << Symbol("k2") << false << finish();
-    print(values);
+    vv.clear();
+    vv << proton::start::map() << "k1" << proton::amqp_int(42) << proton::amqp_symbol("k2") << false << proton::finish();
+    print(vv);
 }
 
 int main(int, char**) {
@@ -184,80 +181,80 @@ int main(int, char**) {
     }
 }
 
-// printNext prints the next value from Values by recursively descending into complex values.
+// print_next prints the next value from values by recursively descending into complex values.
 //
-// NOTE this is for example puroses only: There is a built in ostream operator<< for Values.
+// NOTE this is for example puroses only: There is a built in ostream operator<< for values.
 //
 //
-void printNext(Values& values) {
-    TypeId type = values.type();
-    Start start;
+void print_next(proton::values& vv) {
+    proton::type_id type = vv.type();
+    proton::start s;
     switch (type) {
-      case ARRAY: {
-          values >> start;
-          cout << "array<" << start.element;
-          if (start.isDescribed) {
+      case proton::ARRAY: {
+          vv >> s;
+          cout << "array<" << s.element;
+          if (s.is_described) {
               cout  << ", descriptor=";
-              printNext(values);
+              print_next(vv);
           }
           cout << ">[";
-          for (size_t i = 0; i < start.size; ++i) {
+          for (size_t i = 0; i < s.size; ++i) {
               if (i) cout << ", ";
-              printNext(values);
+              print_next(vv);
           }
           cout << "]";
-          values >> finish();
+          vv >> proton::finish();
           break;
       }
-      case LIST: {
-          values >> start;
+      case proton::LIST: {
+          vv >> s;
           cout << "list[";
-          for (size_t i = 0; i < start.size; ++i) {
+          for (size_t i = 0; i < s.size; ++i) {
               if (i) cout << ", ";
-              printNext(values);
+              print_next(vv);
           }
           cout << "]";
-          values >> finish();
+          vv >> proton::finish();
           break;
       }
-      case MAP: {
-          values >> start;
+      case proton::MAP: {
+          vv >> s;
           cout << "map{";
-          for (size_t i = 0; i < start.size/2; ++i) {
+          for (size_t i = 0; i < s.size/2; ++i) {
               if (i) cout << ", ";
-              printNext(values);
+              print_next(vv);
               cout << ":";        // key:value
-              printNext(values);
+              print_next(vv);
           }
           cout << "}";
-          values >> finish();
+          vv >> proton::finish();
           break;
       }
-      case DESCRIBED: {
-          values >> start;
+      case proton::DESCRIBED: {
+          vv >> s;
           cout << "described(";
-          printNext(values);      // Descriptor
-          printNext(values);      // Value
-          values >> finish();
+          print_next(vv);      // Descriptor
+          print_next(vv);      // value
+          vv >> proton::finish();
           break;
       }
       default:
         // A simple type. We could continue the switch for all AMQP types but
-        // instead we us the `Value` type which can hold and print any AMQP
+        // instead we us the `value` type which can hold and print any AMQP
         // value.
-        Value v;
-        values >> v;
+        proton::value v;
+        vv >> v;
         cout << type << "(" << v << ")";
     }
 }
 
-// Print all the values with printNext
-void print(Values& values) {
-    values.rewind();
+// Print all the values with print_next
+void print(proton::values& vv) {
+    vv.rewind();
     cout << "Values: ";
-    while (values.more()) {
-        printNext(values);
-        if (values.more()) cout << ", ";
+    while (vv.more()) {
+        print_next(vv);
+        if (vv.more()) cout << ", ";
     }
     cout << endl;
 }

@@ -26,27 +26,26 @@
 #include "proton/message.h"
 
 namespace proton {
-namespace reactor {
 
-class ConnectionImpl;
-void setConnectionContext(pn_connection_t *pnConnection, ConnectionImpl *connection);
-ConnectionImpl *getConnectionContext(pn_connection_t *pnConnection);
+class connection_impl;
+void connection_context(pn_connection_t *pn_connection, connection_impl *connection);
+connection_impl *connection_context(pn_connection_t *pn_connection);
 
-class Session;
-void setSessionContext(pn_session_t *pnSession, Session *session);
-Session *getSessionContext(pn_session_t *pnSession);
+class session;
+void session_context(pn_session_t *pn_session, session *session);
+session *session_context(pn_session_t *pn_session);
 
-class Link;
-void setLinkContext(pn_link_t *pnLink, Link *link);
-Link *getLinkContext(pn_link_t *pnLink);
+class link;
+void link_context(pn_link_t *pn_link, link *link);
+link *link_context(pn_link_t *pn_link);
 
-class ContainerImpl;
-void setContainerContext(pn_reactor_t *pnReactor, ContainerImpl *container);
-ContainerImpl *getContainerContext(pn_reactor_t *pnReactor);
+class container_impl;
+void container_context(pn_reactor_t *pn_reactor, container_impl *container);
+container_impl *container_context(pn_reactor_t *pn_reactor);
 
-void setEventContext(pn_event_t *pnEvent, pn_message_t *m);
-pn_message_t *getEventContext(pn_event_t *pnEvent);
+void event_context(pn_event_t *pn_event, pn_message_t *m);
+pn_message_t *event_context(pn_event_t *pn_event);
 
-}} // namespace proton::reactor
+}
 
 #endif  /*!PROTON_CPP_CONTEXTS_H*/

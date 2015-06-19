@@ -20,8 +20,8 @@
  */
 
 #include "contexts.hpp"
-#include "proton/Error.hpp"
-#include "Msg.hpp"
+#include "proton/error.hpp"
+#include "msg.hpp"
 #include "proton/object.h"
 #include "proton/message.h"
 #include "proton/session.h"
@@ -32,44 +32,43 @@ PN_HANDLE(PNI_CPP_CONTAINER_CONTEXT)
 PN_HANDLE(PNI_CPP_EVENT_CONTEXT)
 
 namespace proton {
-namespace reactor {
 
-void setConnectionContext(pn_connection_t *pnConnection, ConnectionImpl *connection) {
-    pn_record_t *record = pn_connection_attachments(pnConnection);
+void connection_context(pn_connection_t *pn_connection, connection_impl *connection) {
+    pn_record_t *record = pn_connection_attachments(pn_connection);
     pn_record_def(record, PNI_CPP_CONNECTION_CONTEXT, PN_VOID);
     pn_record_set(record, PNI_CPP_CONNECTION_CONTEXT, connection);
 }
-ConnectionImpl *getConnectionContext(pn_connection_t *pnConnection) {
-    if (!pnConnection) return NULL;
-    pn_record_t *record = pn_connection_attachments(pnConnection);
-    ConnectionImpl *p = (ConnectionImpl *) pn_record_get(record, PNI_CPP_CONNECTION_CONTEXT);
+connection_impl *connection_context(pn_connection_t *pn_connection) {
+    if (!pn_connection) return NULL;
+    pn_record_t *record = pn_connection_attachments(pn_connection);
+    connection_impl *p = (connection_impl *) pn_record_get(record, PNI_CPP_CONNECTION_CONTEXT);
     return p;
 }
 
 
-void setContainerContext(pn_reactor_t *pnReactor, ContainerImpl *container) {
-    pn_record_t *record = pn_reactor_attachments(pnReactor);
+void container_context(pn_reactor_t *pn_reactor, container_impl *container) {
+    pn_record_t *record = pn_reactor_attachments(pn_reactor);
     pn_record_def(record, PNI_CPP_CONTAINER_CONTEXT, PN_VOID);
     pn_record_set(record, PNI_CPP_CONTAINER_CONTEXT, container);
 }
-ContainerImpl *getContainerContext(pn_reactor_t *pnReactor) {
-    pn_record_t *record = pn_reactor_attachments(pnReactor);
-    ContainerImpl *p = (ContainerImpl *) pn_record_get(record, PNI_CPP_CONTAINER_CONTEXT);
-    if (!p) throw Error(MSG("Reactor has no C++ container context"));
+container_impl *container_context(pn_reactor_t *pn_reactor) {
+    pn_record_t *record = pn_reactor_attachments(pn_reactor);
+    container_impl *p = (container_impl *) pn_record_get(record, PNI_CPP_CONTAINER_CONTEXT);
+    if (!p) throw error(MSG("Reactor has no C++ container context"));
     return p;
 }
 
-void setEventContext(pn_event_t *pnEvent, pn_message_t *m) {
-    pn_record_t *record = pn_event_attachments(pnEvent);
+void event_context(pn_event_t *pn_event, pn_message_t *m) {
+    pn_record_t *record = pn_event_attachments(pn_event);
     pn_record_def(record, PNI_CPP_EVENT_CONTEXT, PN_OBJECT); // refcount it for life of the event
     pn_record_set(record, PNI_CPP_EVENT_CONTEXT, m);
 }
-pn_message_t *getEventContext(pn_event_t *pnEvent) {
-    if (!pnEvent) return NULL;
-    pn_record_t *record = pn_event_attachments(pnEvent);
+pn_message_t *event_context(pn_event_t *pn_event) {
+    if (!pn_event) return NULL;
+    pn_record_t *record = pn_event_attachments(pn_event);
     pn_message_t *p = (pn_message_t *) pn_record_get(record, PNI_CPP_EVENT_CONTEXT);
     return p;
 }
 
 
-}} // namespace proton::reactor
+}

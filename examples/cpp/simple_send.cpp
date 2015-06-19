@@ -19,9 +19,9 @@
  *
  */
 
-#include "proton/Container.hpp"
-#include "proton/MessagingHandler.hpp"
-#include "proton/Connection.hpp"
+#include "proton/container.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/connection.hpp"
 
 #include <iostream>
 #include <map>
@@ -30,10 +30,8 @@
 #include <stdio.h>
 
 
-using namespace proton;
-using namespace proton::reactor;
 
-class Send : public MessagingHandler {
+class simple_send : public proton::messaging_handler {
   private:
     std::string url;
     int sent;
@@ -41,34 +39,34 @@ class Send : public MessagingHandler {
     int total;
   public:
 
-    Send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
+    simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void onStart(Event &e) {
-        e.getContainer().createSender(url);
+    void on_start(proton::event &e) {
+        e.container().create_sender(url);
     }
 
-    void onSendable(Event &e) {
-        Sender sender = e.getSender();
-        while (sender.getCredit() && sent < total) {
-            Message msg;
-            msg.id(Value(sent + 1));
+    void on_sendable(proton::event &e) {
+        proton::sender sender = e.sender();
+        while (sender.credit() && sent < total) {
+            proton::message msg;
+            msg.id(proton::value(sent + 1));
             std::map<std::string, int> m;
             m["sequence"] = sent+1;
-            msg.body(as<MAP>(m));
+            msg.body(proton::as<proton::MAP>(m));
             sender.send(msg);
             sent++;
         }
     }
 
-    void onAccepted(Event &e) {
+    void on_accepted(proton::event &e) {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-            e.getConnection().close();
+            e.connection().close();
         }
     }
 
-    void onDisconnected(Event &e) {
+    void on_disconnected(proton::event &e) {
         sent = confirmed;
     }
 };
@@ -77,11 +75,11 @@ static void parse_options(int argc, char **argv, int &count, std::string &addr);
 
 int main(int argc, char **argv) {
     try {
-        int messageCount = 100;
+        int message_count = 100;
         std::string address("localhost:5672/examples");
-        parse_options(argc, argv, messageCount, address);
-        Send send(address, messageCount);
-        Container(send).run();
+        parse_options(argc, argv, message_count, address);
+        simple_send send(address, message_count);
+        proton::container(send).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

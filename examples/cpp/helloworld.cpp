@@ -19,39 +19,37 @@
  *
  */
 
-#include "proton/Container.hpp"
-#include "proton/MessagingHandler.hpp"
+#include "proton/container.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include <iostream>
 
-
-using namespace proton;
-using namespace proton::reactor;
-
-class HelloWorld : public MessagingHandler {
+class hello_world : public proton::messaging_handler {
   private:
     std::string server;
     std::string address;
   public:
 
-    HelloWorld(const std::string &s, const std::string &addr) : server(s), address(addr) {}
+    hello_world(const std::string &s, const std::string &addr) : server(s), address(addr) {}
 
-    void onStart(Event &e) {
-        Connection conn = e.getContainer().connect(server);
-        e.getContainer().createReceiver(conn, address);
-        e.getContainer().createSender(conn, address);
+    void on_start(proton::event &e) {
+        proton::connection conn = e.container().connect(server);
+        e.container().create_receiver(conn, address);
+        e.container().create_sender(conn, address);
     }
 
-    void onSendable(Event &e) {
-        Message m;
+    void on_sendable(proton::event &e) {
+        proton::message m;
         m.body("Hello World!");
-        e.getSender().send(m);
-        e.getSender().close();
+        e.sender().send(m);
+        e.sender().close();
     }
 
-    void onMessage(Event &e) {
-        std::cout << e.getMessage().body().get<String>() << std::endl;
-        e.getConnection().close();
+    void on_message(proton::event &e) {
+        std::string s;
+        proton::value v(e.message().body());
+        std::cout << v.get<std::string>() << std::endl;
+        e.connection().close();
     }
 
 };
@@ -60,8 +58,8 @@ int main(int argc, char **argv) {
     try {
         std::string server = argc > 1 ? argv[1] : ":5672";
         std::string addr = argc > 2 ? argv[2] : "examples";
-        HelloWorld hw(server, addr);
-        Container(hw).run();
+        hello_world hw(server, addr);
+        proton::container(hw).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

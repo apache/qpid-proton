@@ -1,5 +1,5 @@
-#ifndef ENABLE_IF_HPP
-#define ENABLE_IF_HPP
+#ifndef ENABLE_If_HPP
+#define ENABLE_If_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,10 +21,6 @@
 
 #include "proton/types.hpp"
 
-/**@file
- * Type traits used for type conversions.
- * @internal
- */
 #if  defined(__cplusplus) && __cplusplus >= 201100
 #include <type_traits>
 #else
@@ -68,49 +64,49 @@ template <> struct is_signed<signed long> : public true_type {};
 namespace proton {
 
 // Metafunction returning exact AMQP type associated with a C++ type
-template <class T> struct TypeIdOf;
-template<> struct TypeIdOf<Null> { static const TypeId value=NULL_; };
-template<> struct TypeIdOf<Bool> { static const TypeId value=BOOL; };
-template<> struct TypeIdOf<Ubyte> { static const TypeId value=UBYTE; };
-template<> struct TypeIdOf<Byte> { static const TypeId value=BYTE; };
-template<> struct TypeIdOf<Ushort> { static const TypeId value=USHORT; };
-template<> struct TypeIdOf<Short> { static const TypeId value=SHORT; };
-template<> struct TypeIdOf<Uint> { static const TypeId value=UINT; };
-template<> struct TypeIdOf<Int> { static const TypeId value=INT; };
-template<> struct TypeIdOf<Char> { static const TypeId value=CHAR; };
-template<> struct TypeIdOf<Ulong> { static const TypeId value=ULONG; };
-template<> struct TypeIdOf<Long> { static const TypeId value=LONG; };
-template<> struct TypeIdOf<Timestamp> { static const TypeId value=TIMESTAMP; };
-template<> struct TypeIdOf<Float> { static const TypeId value=FLOAT; };
-template<> struct TypeIdOf<Double> { static const TypeId value=DOUBLE; };
-template<> struct TypeIdOf<Decimal32> { static const TypeId value=DECIMAL32; };
-template<> struct TypeIdOf<Decimal64> { static const TypeId value=DECIMAL64; };
-template<> struct TypeIdOf<Decimal128> { static const TypeId value=DECIMAL128; };
-template<> struct TypeIdOf<Uuid> { static const TypeId value=UUID; };
-template<> struct TypeIdOf<Binary> { static const TypeId value=BINARY; };
-template<> struct TypeIdOf<String> { static const TypeId value=STRING; };
-template<> struct TypeIdOf<Symbol> { static const TypeId value=SYMBOL; };
+template <class T> struct type_idOf;
+template<> struct type_idOf<amqp_null> { static const type_id value=NULl_; };
+template<> struct type_idOf<amqp_bool> { static const type_id value=BOOL; };
+template<> struct type_idOf<amqp_ubyte> { static const type_id value=UBYTE; };
+template<> struct type_idOf<amqp_byte> { static const type_id value=BYTE; };
+template<> struct type_idOf<amqp_ushort> { static const type_id value=USHORT; };
+template<> struct type_idOf<amqp_short> { static const type_id value=SHORT; };
+template<> struct type_idOf<amqp_uint> { static const type_id value=UINT; };
+template<> struct type_idOf<amqp_int> { static const type_id value=INT; };
+template<> struct type_idOf<amqp_char> { static const type_id value=CHAR; };
+template<> struct type_idOf<amqp_ulong> { static const type_id value=ULONG; };
+template<> struct type_idOf<amqp_long> { static const type_id value=LONG; };
+template<> struct type_idOf<amqp_timestamp> { static const type_id value=TIMESTAMP; };
+template<> struct type_idOf<amqp_float> { static const type_id value=FLOAT; };
+template<> struct type_idOf<amqp_double> { static const type_id value=DOUBLE; };
+template<> struct type_idOf<amqp_decimal32> { static const type_id value=DECIMAL32; };
+template<> struct type_idOf<amqp_decimal64> { static const type_id value=DECIMAL64; };
+template<> struct type_idOf<amqp_decimal128> { static const type_id value=DECIMAL128; };
+template<> struct type_idOf<amqp_uuid> { static const type_id value=UUID; };
+template<> struct type_idOf<amqp_binary> { static const type_id value=BINARY; };
+template<> struct type_idOf<amqp_string> { static const type_id value=STRING; };
+template<> struct type_idOf<amqp_symbol> { static const type_id value=SYMBOL; };
 
-template <class T, class Enable=void> struct HasTypeId { static const bool value = false; };
-template <class T> struct HasTypeId<T, typename std::enable_if<TypeIdOf<T>::value>::type>  {
+template <class T, class Enable=void> struct has_type_id { static const bool value = false; };
+template <class T> struct has_type_id<T, typename std::enable_if<type_idOf<T>::value>::type>  {
     static const bool value = true;
 };
 
-// Map to known integer types by sizeof and signedness.
-template<size_t N, bool S> struct IntegerType;
-template<> struct IntegerType<1, true> { typedef Byte type; };
-template<> struct IntegerType<2, true> { typedef Short type; };
-template<> struct IntegerType<4, true> { typedef Int type; };
-template<> struct IntegerType<8, true> { typedef Long type; };
-template<> struct IntegerType<1, false> { typedef Ubyte type; };
-template<> struct IntegerType<2, false> { typedef Ushort type; };
-template<> struct IntegerType<4, false> { typedef Uint type; };
-template<> struct IntegerType<8, false> { typedef Ulong type; };
+// amqp_map to known integer types by sizeof and signedness.
+template<size_t N, bool S> struct integer_type;
+template<> struct integer_type<1, true> { typedef amqp_byte type; };
+template<> struct integer_type<2, true> { typedef amqp_short type; };
+template<> struct integer_type<4, true> { typedef amqp_int type; };
+template<> struct integer_type<8, true> { typedef amqp_long type; };
+template<> struct integer_type<1, false> { typedef amqp_ubyte type; };
+template<> struct integer_type<2, false> { typedef amqp_ushort type; };
+template<> struct integer_type<4, false> { typedef amqp_uint type; };
+template<> struct integer_type<8, false> { typedef amqp_ulong type; };
 
-// True if T is an integer type that does not have a TypeId mapping.
-template <class T> struct IsUnknownInteger {
-    static const bool value = !HasTypeId<T>::value && std::is_integral<T>::value;
+// True if T is an integer type that does not have a type_id mapping.
+template <class T> struct is_unknown_integer {
+    static const bool value = !has_type_id<T>::value && std::is_integral<T>::value;
 };
 
 }
-#endif // ENABLE_IF_HPP
+#endif // ENABLE_If_HPP

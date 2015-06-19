@@ -23,7 +23,7 @@
 #include <proton/object.h>
 #include "proton_bits.hpp"
 
-std::string errorStr(int code) {
+std::string error_str(int code) {
   switch (code)
   {
   case 0: return "ok";
@@ -39,15 +39,15 @@ std::string errorStr(int code) {
   }
 }
 
-std::string errorStr(pn_error_t* err, int code) {
+std::string error_str(pn_error_t* err, int code) {
     if (err && pn_error_code(err)) {
         const char* text = pn_error_text(err);
-        return text ? std::string(text) : errorStr(pn_error_code(err));
+        return text ? std::string(text) : error_str(pn_error_code(err));
     }
-    return errorStr(code);
+    return error_str(code);
 }
 
-std::ostream& operator<<(std::ostream& o, const PnObject& object) {
+std::ostream& operator<<(std::ostream& o, const pn_object& object) {
     pn_string_t* str = pn_string("");
     pn_inspect(object.value, str);
     o << pn_string_get(str);

@@ -19,47 +19,46 @@
  *
  */
 
-#include "proton/MessagingHandler.hpp"
-#include "proton/Container.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/container.hpp"
 
-//#include "proton/Acceptor.hpp"
+//#include "proton/acceptor.hpp"
 #include <iostream>
 
 
-using namespace proton;
-using namespace proton::reactor;
 
 
-class HelloWorldDirect : public MessagingHandler {
+class hello_world_direct : public proton::messaging_handler {
   private:
-    std::string url;
-    Acceptor acceptor;
+    std::string url_;
+    proton::acceptor acceptor_;
   public:
 
-    HelloWorldDirect(const std::string &u) : url(u) {}
+    hello_world_direct(const std::string &u) : url_(u) {}
 
-    void onStart(Event &e) {
-        acceptor = e.getContainer().listen(url);
-        e.getContainer().createSender(url);
+    void on_start(proton::event &e) {
+        acceptor_ = e.container().listen(url_);
+        e.container().create_sender(url_);
     }
 
-    void onSendable(Event &e) {
-        Message m;
+    void on_sendable(proton::event &e) {
+        proton::message m;
         m.body("Hello World!");
-        e.getSender().send(m);
-        e.getSender().close();
+        e.sender().send(m);
+        e.sender().close();
     }
 
-    void onMessage(Event &e) {
-        std::cout << e.getMessage().body().get<String>() << std::endl;
+    void on_message(proton::event &e) {
+        proton::value v(e.message().body());
+        std::cout << v.get<std::string>() << std::endl;
     }
 
-    void onAccepted(Event &e) {
-        e.getConnection().close();
+    void on_accepted(proton::event &e) {
+        e.connection().close();
     }
 
-    void onConnectionClosed(Event &e) {
-        acceptor.close();
+    void on_connection_closed(proton::event &e) {
+        acceptor_.close();
     }
 
 };
@@ -67,8 +66,8 @@ class HelloWorldDirect : public MessagingHandler {
 int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : ":8888/examples";
-        HelloWorldDirect hwd(url);
-        Container(hwd).run();
+        hello_world_direct hwd(url);
+        proton::container(hwd).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;

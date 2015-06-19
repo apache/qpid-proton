@@ -19,19 +19,23 @@
  * under the License.
  */
 
+/**@file
+ * Defines C++ types representing AMQP types.
+ * @ingroup cpp
+ */
+
 #include "proton/export.hpp"
 #include <proton/codec.h>
 #include <algorithm>
 #include <bitset>
 #include <string>
 #include <memory.h>
+#include <algorithm>
 
 // Workaround for older C++ compilers
 #if  defined(__cplusplus) && __cplusplus >= 201100
 #include <cstdint>
-
 #else  // Workaround for older C++ compilers
-
 #include <proton/type_compat.h>
 namespace std {
 // Exact-size integer types.
@@ -46,16 +50,13 @@ using ::uint64_t;
 }
 #endif
 
-/**@file
- * C++ types representing AMQP types.
- * @ingroup cpp
- */
-
 namespace proton {
 
-/** TypeId identifies an AMQP type */
-enum TypeId {
-    NULL_=PN_NULL,              ///< The null type, contains no data.
+/** type_id identifies an AMQP type.
+ *@ingroup cpp
+ */
+enum type_id {
+    NULl_=PN_NULL,              ///< The null type, contains no data.
     BOOL=PN_BOOL,               ///< Boolean true or false.
     UBYTE=PN_UBYTE,             ///< Unsigned 8 bit integer.
     BYTE=PN_BYTE,               ///< Signed 8 bit integer.
@@ -83,194 +84,186 @@ enum TypeId {
 };
 
 ///@internal
-template <class T> struct Comparable {};
-template<class T> bool operator<(const Comparable<T>& a, const Comparable<T>& b) {
+template <class T> struct comparable {};
+template<class T> bool operator<(const comparable<T>& a, const comparable<T>& b) {
     return static_cast<const T&>(a) < static_cast<const T&>(b); // operator < provided by type T
 }
-template<class T> bool operator>(const Comparable<T>& a, const Comparable<T>& b) { return b < a; }
-template<class T> bool operator<=(const Comparable<T>& a, const Comparable<T>& b) { return !(a > b); }
-template<class T> bool operator>=(const Comparable<T>& a, const Comparable<T>& b) { return !(a < b); }
-template<class T> bool operator==(const Comparable<T>& a, const Comparable<T>& b) { return a <= b && b <= a; }
-template<class T> bool operator!=(const Comparable<T>& a, const Comparable<T>& b) { return !(a == b); }
+template<class T> bool operator>(const comparable<T>& a, const comparable<T>& b) { return b < a; }
+template<class T> bool operator<=(const comparable<T>& a, const comparable<T>& b) { return !(a > b); }
+template<class T> bool operator>=(const comparable<T>& a, const comparable<T>& b) { return !(a < b); }
+template<class T> bool operator==(const comparable<T>& a, const comparable<T>& b) { return a <= b && b <= a; }
+template<class T> bool operator!=(const comparable<T>& a, const comparable<T>& b) { return !(a == b); }
 
-/**
- * @name C++ types representing AMQP types.
- * @{
- * @ingroup cpp
- * These types are all distinct for overloading purposes and will insert as the
- * corresponding AMQP type with Encoder operator<<.
- */
-struct Null {};
-typedef bool Bool;
-typedef std::uint8_t Ubyte;
-typedef std::int8_t Byte;
-typedef std::uint16_t Ushort;
-typedef std::int16_t Short;
-typedef std::uint32_t Uint;
-typedef std::int32_t Int;
-typedef wchar_t Char;
-typedef std::uint64_t Ulong;
-typedef std::int64_t Long;
-typedef float Float;
-typedef double Double;
+/// AMQP NULL type. @ingroup cpp
+struct amqp_null {};
+/// AMQP boolean type. @ingroup cpp
+typedef bool amqp_bool;
+/// AMQP unsigned 8-bit type. @ingroup cpp
+typedef std::uint8_t amqp_ubyte;
+/// AMQP signed 8-bit integer type. @ingroup cpp
+typedef std::int8_t amqp_byte;
+/// AMQP unsigned 16-bit integer type. @ingroup cpp
+typedef std::uint16_t amqp_ushort;
+/// AMQP signed 16-bit integer type. @ingroup cpp
+typedef std::int16_t amqp_short;
+/// AMQP unsigned 32-bit integer type. @ingroup cpp
+typedef std::uint32_t amqp_uint;
+/// AMQP signed 32-bit integer type. @ingroup cpp
+typedef std::int32_t amqp_int;
+/// AMQP 32-bit unicode character type. @ingroup cpp
+typedef wchar_t amqp_char;
+/// AMQP unsigned 64-bit integer type. @ingroup cpp
+typedef std::uint64_t amqp_ulong;
+/// AMQP signed 64-bit integer type. @ingroup cpp
+typedef std::int64_t amqp_long;
+/// AMQP 32-bit floating-point type. @ingroup cpp
+typedef float amqp_float;
+/// AMQP 64-bit floating-point type. @ingroup cpp
+typedef double amqp_double;
 
-///@internal
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
-//@internal
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
 
-///@internal
-#define STRING_LIKE(NAME)                                               \
-    struct NAME : public std::string{                     \
-        NAME(const std::string& s=std::string()) : std::string(s) {}    \
-        NAME(const char* s) : std::string(s) {}    \
-        NAME(const pn_bytes_t& b) : std::string(b.start, b.size) {}     \
-        operator pn_bytes_t() const { return pn_bytes(*this); }         \
-    }
+/// AMQP UTF-8 encoded string. @ingroup cpp
+struct amqp_string : public std::string {
+    amqp_string(const std::string& s=std::string()) : std::string(s) {}
+    amqp_string(const char* s) : std::string(s) {}
+    amqp_string(const pn_bytes_t& b) : std::string(b.start, b.size) {}
+    operator pn_bytes_t() const { return pn_bytes(*this); }
+};
 
-/** UTF-8 encoded string */
-STRING_LIKE(String);
-/** ASCII encoded symbolic name */
-STRING_LIKE(Symbol);
-/** Binary data */
-STRING_LIKE(Binary);
+/// AMQP ASCII encoded symbolic name. @ingroup cpp
+struct amqp_symbol : public std::string {
+    amqp_symbol(const std::string& s=std::string()) : std::string(s) {}
+    amqp_symbol(const char* s) : std::string(s) {}
+    amqp_symbol(const pn_bytes_t& b) : std::string(b.start, b.size) {}
+    operator pn_bytes_t() const { return pn_bytes(*this); }
+};
+
+/// AMQP variable-length binary data. @ingroup cpp
+struct amqp_binary : public std::string {
+    amqp_binary(const std::string& s=std::string()) : std::string(s) {}
+    amqp_binary(const char* s) : std::string(s) {}
+    amqp_binary(const pn_bytes_t& b) : std::string(b.start, b.size) {}
+    operator pn_bytes_t() const { return pn_bytes(*this); }
+};
 
 // TODO aconway 2015-06-11: alternative representation of variable-length data
 // as pointer to existing buffer.
 
-/** Array of 16 bytes representing a UUID */
-struct Uuid : public Comparable<Uuid> { // FIXME aconway 2015-06-18: std::array in C++11
-  public:
-    static const size_t SIZE = 16;
+// Wrapper for opaque proton types that can be treated as byte arrays.
+template <class P> struct opaque: public comparable<opaque<P> > {
+    P value;
+    opaque(const P& p=P()) : value(p) {}
+    operator P() const { return value; }
 
-    PN_CPP_EXTERN Uuid();
-    PN_CPP_EXTERN Uuid(const pn_uuid_t& u);
-    PN_CPP_EXTERN operator pn_uuid_t() const;
-    PN_CPP_EXTERN bool operator==(const Uuid&) const;
-    PN_CPP_EXTERN bool operator<(const Uuid&) const;
+    static size_t size() { return sizeof(P); }
+    char* begin() { return reinterpret_cast<char*>(&value); }
+    char* end() { return reinterpret_cast<char*>(&value)+size(); }
+    const char* begin() const { return reinterpret_cast<const char*>(&value); }
+    const char* end() const { return reinterpret_cast<const char*>(&value)+size(); }
+    char& operator[](size_t i) { return *(begin()+i); }
+    const char& operator[](size_t i) const { return *(begin()+i); }
 
-    char* begin() { return bytes; }
-    const char* begin() const { return bytes; }
-    char* end() { return bytes + SIZE; }
-    const char* end() const { return bytes + SIZE; }
-    char& operator[](size_t i) { return bytes[i]; }
-    const char& operator[](size_t i) const { return bytes[i]; }
-    size_t size() const { return SIZE; }
-
-    // Human-readable representation.
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const Uuid&);
-  private:
-    char bytes[SIZE];
+    bool operator==(const opaque& x) const { return std::equal(begin(), end(), x.begin()); }
+    bool operator<(const opaque& x) const { return std::lexicographical_compare(begin(), end(), x.begin(), x.end()); }
 };
 
-// TODO aconway 2015-06-16: usable representation of decimal types.
-/**@internal*/
-template <class T> struct Decimal : public Comparable<Decimal<T> > {
-    char value[sizeof(T)];
-    Decimal() { ::memset(value, 0, sizeof(T)); }
-    Decimal(const T& v) { ::memcpy(value, &v, sizeof(T)); }
-    operator T() const { T x; ::memcpy(&x, value, sizeof(T)); return x; }
-    bool operator<(const Decimal<T>& x) {
-        return std::lexicographical_compare(value, value+sizeof(T), x.value, x.value+sizeof(T));
-    }
-};
+/// AMQP 16-byte UUID. @ingroup cpp
+typedef opaque<pn_uuid_t> amqp_uuid;
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_uuid&);
+/// AMQP 32-bit decimal floating point (IEEE 854). @ingroup cpp
+typedef opaque<pn_decimal32_t> amqp_decimal32;
+/// AMQP 64-bit decimal floating point (IEEE 854). @ingroup cpp
+typedef opaque<pn_decimal64_t> amqp_decimal64;
+/// AMQP 128-bit decimal floating point (IEEE 854). @ingroup cpp
+typedef opaque<pn_decimal128_t> amqp_decimal128;
 
-typedef Decimal<pn_decimal32_t> Decimal32;
-typedef Decimal<pn_decimal64_t> Decimal64;
-typedef Decimal<pn_decimal128_t> Decimal128;
-
-struct Timestamp : public Comparable<Timestamp> {
-    pn_timestamp_t milliseconds; ///< Since the epoch 00:00:00 (UTC), 1 January 1970.
-    Timestamp(std::int64_t ms=0) : milliseconds(ms) {}
+/// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970. @ingroup cpp
+struct amqp_timestamp : public comparable<amqp_timestamp> {
+    pn_timestamp_t milliseconds;
+    amqp_timestamp(std::int64_t ms=0) : milliseconds(ms) {}
     operator pn_timestamp_t() const { return milliseconds; }
-    bool operator==(const Timestamp& x) { return milliseconds == x.milliseconds; }
-    bool operator<(const Timestamp& x) { return milliseconds < x.milliseconds; }
+    bool operator==(const amqp_timestamp& x) { return milliseconds == x.milliseconds; }
+    bool operator<(const amqp_timestamp& x) { return milliseconds < x.milliseconds; }
 };
 
-///@}
-
-template<class T, TypeId A> struct TypePair {
-    typedef T CppType;
-    TypeId type;
+template<class T, type_id A> struct type_pair {
+    typedef T cpp_type;
+    type_id type;
 };
 
-template<class T, TypeId A> struct Ref : public TypePair<T, A> {
-    Ref(T& v) : value(v) {}
+template<class T, type_id A> struct ref : public type_pair<T, A> {
+    ref(T& v) : value(v) {}
     T& value;
 };
 
-template<class T, TypeId A> struct CRef : public TypePair<T, A> {
-    CRef(const T& v) : value(v) {}
-    CRef(const Ref<T,A>& ref) : value(ref.value) {}
+template<class T, type_id A> struct cref : public type_pair<T, A> {
+    cref(const T& v) : value(v) {}
+    cref(const ref<T,A>& ref) : value(ref.value) {}
     const T& value;
 };
 
-/** A holder for AMQP values. A holder is always encoded/decoded as its AmqpValue, no need
+/** A holder for AMQP values. A holder is always encoded/decoded as its amqp_value, no need
  * for the as<TYPE>() helper functions.
  *
  * For example to encode an array of arrays using std::vector:
  *
- *     typedef Holder<std::vector<String>, ARRAY> Inner;
+ *     typedef Holder<std::vector<amqp_string>, ARRAY> Inner;
  *     typedef Holder<std::vector<Inner>, ARRAY> Outer;
  *     Outer o ...
  *     encoder << o;
+ * @ingroup cpp
  */
-template<class T, TypeId A> struct Holder : public TypePair<T, A> {
+template<class T, type_id A> struct Holder : public type_pair<T, A> {
     T value;
 };
 
-/** Create a reference to value as AMQP type A for decoding. For example to decode an array of Int:
+/** Create a reference to value as AMQP type A for decoding. For example to decode an array of amqp_int:
  *
- *     std::vector<Int> v;
+ *     std::vector<amqp_int> v;
  *     decoder >> as<ARRAY>(v);
+ * @ingroup cpp
  */
-template <TypeId A, class T> Ref<T, A> as(T& value) { return Ref<T, A>(value); }
+template <type_id A, class T> ref<T, A> as(T& value) { return ref<T, A>(value); }
 
 /** Create a const reference to value as AMQP type A for encoding. */
-template <TypeId A, class T> CRef<T, A> as(const T& value) { return CRef<T, A>(value); }
+template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
 
 ///@}
 
 // TODO aconway 2015-06-16: described types.
 
-/** Return the name of a type. */
-PN_CPP_EXTERN std::string typeName(TypeId);
+/** Return the name of a type. @ingroup cpp */
+PN_CPP_EXTERN std::string type_name(type_id);
 
-/** Print the name of a type */
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, TypeId);
+/** Print the name of a type. @ingroup cpp */
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
 /** Information needed to start extracting or inserting a container type.
  *
- * With a decoder you can use `Start s = decoder.start()` or `Start s; decoder > s`
- * to get the Start for the current container.
- *
- * With an encoder use one of the member functions startArray, startList, startMap or startDescribed
- * to create an appropriate Start value, e.g. `encoder << startList() << ...`
+ * See encoder::operator<<(encoder&, const start&) and decoder::operator>>(decoder&, start&)
+ * for examples of use.
  */
-struct Start {
-    PN_CPP_EXTERN Start(TypeId type=NULL_, TypeId element=NULL_, bool described=false, size_t size=0);
-    TypeId type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
-    TypeId element;         ///< the element type for array only.
-    bool isDescribed;       ///< true if first value is a descriptor.
+struct start {
+    PN_CPP_EXTERN start(type_id type=NULl_, type_id element=NULl_, bool described=false, size_t size=0);
+    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
+    type_id element;         ///< the element type for array only.
+    bool is_described;       ///< true if first value is a descriptor.
     size_t size;            ///< the element count excluding the descriptor (if any)
 
-    /** Return a Start for an array */
-    PN_CPP_EXTERN static Start array(TypeId element, bool described=false);
-    /** Return a Start for a list */
-    PN_CPP_EXTERN static Start list();
-    /** Return a Start for a map */
-    PN_CPP_EXTERN static Start map();
-    /** Return a Start for a described type */
-    PN_CPP_EXTERN static Start described();
+    /** Return a start for an array */
+    PN_CPP_EXTERN static start array(type_id element, bool described=false);
+    /** Return a start for a list */
+    PN_CPP_EXTERN static start list();
+    /** Return a start for a map */
+    PN_CPP_EXTERN static start map();
+    /** Return a start for a described type */
+    PN_CPP_EXTERN static start described();
 };
 
 /** Finish insterting or extracting a container value. */
-struct Finish {};
-inline Finish finish() { return Finish(); }
-
-/** Skip a value */
-struct Skip{};
-inline Skip skip() { return Skip(); }
+struct finish {};
 
 }
 
