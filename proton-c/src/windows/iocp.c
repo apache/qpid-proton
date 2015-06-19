@@ -305,7 +305,7 @@ pn_socket_t pni_iocp_end_accept(iocpdesc_t *ld, sockaddr *addr, socklen_t *addrl
     pni_events_update(ld, ld->events & ~PN_READABLE);  // No pending accepts
 
   pn_socket_t accept_sock;
-  if (result->base.status) {
+  if (FAILED(result->base.status)) {
     accept_sock = INVALID_SOCKET;
     pni_win32_error(ld->error, "accept failure", result->base.status);
     if (ld->iocp->iocp_trace)
@@ -425,7 +425,7 @@ static void complete_connect(connect_result_t *result, HRESULT status)
     return;
   }
 
-  if (status) {
+  if (FAILED(status)) {
     iocpdesc_fail(iocpd, status, "Connect failure");
   } else {
     release_sys_sendbuf(iocpd->socket);
