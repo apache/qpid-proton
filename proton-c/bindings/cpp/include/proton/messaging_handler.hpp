@@ -35,7 +35,7 @@ class messaging_handler : public proton_handler , public acking
 {
   public:
     PN_CPP_EXTERN messaging_handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
-                                       bool peer_close_isError=false);
+                                       bool peer_close_is_error=false);
     PN_CPP_EXTERN virtual ~messaging_handler();
 
     PN_CPP_EXTERN virtual void on_abort(event &e);
@@ -48,7 +48,7 @@ class messaging_handler : public proton_handler , public acking
     PN_CPP_EXTERN virtual void on_connection_opened(event &e);
     PN_CPP_EXTERN virtual void on_disconnected(event &e);
     PN_CPP_EXTERN virtual void on_fetch(event &e);
-    PN_CPP_EXTERN virtual void on_idLoaded(event &e);
+    PN_CPP_EXTERN virtual void on_id_loaded(event &e);
     PN_CPP_EXTERN virtual void on_link_closed(event &e);
     PN_CPP_EXTERN virtual void on_link_closing(event &e);
     PN_CPP_EXTERN virtual void on_link_error(event &e);
@@ -85,7 +85,7 @@ class messaging_handler : public proton_handler , public acking
     handler *flow_controller_;
     PN_CPP_EXTERN messaging_handler(
         bool raw_handler, int prefetch=10, bool auto_accept=true,
-        bool auto_settle=true, bool peer_close_isError=false);
+        bool auto_settle=true, bool peer_close_is_error=false);
     friend class container_impl;
     friend class messaging_adapter;
     PN_CPP_EXTERN void create_helpers();

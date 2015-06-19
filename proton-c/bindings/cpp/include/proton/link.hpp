@@ -52,7 +52,7 @@ class link : public endpoint, public proton_handle<pn_link_t>
     PN_CPP_EXTERN std::string name();
     PN_CPP_EXTERN pn_link_t *pn_link() const;
     PN_CPP_EXTERN link next(endpoint::State mask);
-    class connection &connection();
+    PN_CPP_EXTERN class connection &connection();
 
   protected:
     PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);

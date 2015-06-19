@@ -17,29 +17,15 @@
 # under the License.
 #
 
-include_directories(
-  "${CMAKE_SOURCE_DIR}/proton-c/include"
-  "${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")
-
-foreach(example
-    broker
-    helloworld
-    helloworld_blocking
-    helloworld_direct
-    simple_recv
-    simple_send
-    encode_decode)
-  add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} qpid-proton-cpp)
-  set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
-endforeach()
-
-set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
-if (WIN32)
-  set(TEST_DIR ${TEST_DIR}/${CMAKE_BUILD_TYPE})
-endif(WIN32)
-
-add_test(
-  NAME cpp_example_test
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
-  WORKING_DIRECTORY ${TEST_DIR})
+find_package(Doxygen)
+if (DOXYGEN_FOUND)
+  configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
+                  ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
+  add_custom_target (docs-cpp COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+  add_dependencies (docs docs-cpp)
+  # HTML files are generated to ./html - put those in the install.
+  install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
+           DESTINATION "${PROTON_SHARE}/docs/api-cpp"
+           COMPONENT documentation
+           ${OPTIONAL_ARG})
+endif (DOXYGEN_FOUND)

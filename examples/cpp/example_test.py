@@ -23,10 +23,21 @@ import unittest
 import os, sys, socket, time
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
+import platform
 
-def call(*args, **kwargs):
-    p = Popen(*args, stdout=PIPE, stderr=STDOUT, **kwargs)
-    out, err = p.communicate()
+def exe_path(name):
+    path = os.path.abspath(name)
+    if platform.system() == "Windows": path += ".exe"
+    return path
+
+def execute(*args):
+    """Run executable and return its output"""
+    args = [exe_path(args[0])]+list(args[1:])
+    try:
+        p = Popen(args, stdout=PIPE, stderr=STDOUT)
+        out, err = p.communicate()
+    except Exception as e:
+        raise Exception("Error running %s: %s", args, e)
     if p.returncode:
         raise Exception("""%s exit code %s
 vvvvvvvvvvvvvvvv
@@ -55,7 +66,11 @@ class Broker(object):
     def __init__(self):
         self.port = randrange(10000, 20000)
         self.addr = ":%s" % self.port
-        self.process = Popen([os.path.abspath("broker"), self.addr], stdout=NULL, stderr=NULL)
+        cmd = [exe_path("broker"), self.addr]
+        try:
+            self.process = Popen(cmd, stdout=NULL, stderr=NULL)
+        except Exception as e:
+            raise Exception("Error running %s: %s", cmd, e)
         # Wait 10 secs for broker to listen
         deadline = time.time() + 10
         c = None
@@ -79,25 +94,25 @@ class ExampleTest(unittest.TestCase):
 
     def test_helloworld(self):
         b = Broker.get()
-        hw = call(["./helloworld", b.addr])
+        hw = execute("helloworld", b.addr)
         self.assertEqual("Hello World!\n", hw)
 
     def test_helloworld_blocking(self):
         b = Broker.get()
-        hw = call(["./helloworld_blocking", b.addr])
+        hw = execute("helloworld_blocking", b.addr)
         self.assertEqual("Hello World!\n", hw)
 
     def test_helloworld_direct(self):
         url = ":%s/examples" % randrange(10000, 20000)
-        hw = call(["./helloworld_direct", url])
+        hw = execute("helloworld_direct", url)
         self.assertEqual("Hello World!\n", hw)
 
     def test_simple_send_recv(self):
         b = Broker.get()
         n = 5
-        send = call(["./simple_send", "-a", b.addr, "-m", str(n)])
+        send = execute("simple_send", "-a", b.addr, "-m", str(n))
         self.assertEqual("all messages confirmed\n", send)
-        recv = call(["./simple_recv", "-a", b.addr, "-m", str(n)])
+        recv = execute("simple_recv", "-a", b.addr, "-m", str(n))
         recv_expect = "simple_recv listening on %s\n" % (b.addr)
         recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(n)])
         self.assertEqual(recv_expect, recv)
@@ -108,9 +123,9 @@ class ExampleTest(unittest.TestCase):
         """Start receiver first, then run sender"""
         b = Broker.get()
         n = 5
-        recv = Popen(["./simple_recv", "-a", b.addr, "-m", str(n)], stdout=PIPE)
+        recv = Popen(["simple_recv", "-a", b.addr, "-m", str(n)], stdout=PIPE)
         self.assertEqual("simple_recv listening on %s\n" % (b.addr), recv.stdout.readline())
-        send = call(["./simple_send", "-a", b.addr, "-m", str(n)])
+        send = execute("simple_send", "-a", b.addr, "-m", str(n))
         self.assertEqual("all messages confirmed\n", send)
         recv_expect = "".join(['[%d]: b"some arbitrary binary data"\n' % (i+1) for i in range(n)])
         out, err = recv.communicate()
@@ -143,6 +158,6 @@ Values: list[int(42), bool(false), symbol(:x)]
 Values: map{string("k1"):int(42), symbol(:"k2"):bool(false)}
 """
         self.maxDiff = None
-        self.assertMultiLineEqual(expect, call("./encode_decode"))
+        self.assertEqual(expect, execute("encode_decode"))
 if __name__ == "__main__":
     unittest.main()

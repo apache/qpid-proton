@@ -47,7 +47,7 @@ string read(string filename) {
     return string(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
 }
 
-template <class T> T get(decoder& d) { return d.get_as<T, type_idOf<T>::value>(); }
+template <class T> T get(decoder& d) { return d.get_as<T, type_id_of<T>::value>(); }
 
 template <class T> std::string str(const T& value) {
     ostringstream oss;

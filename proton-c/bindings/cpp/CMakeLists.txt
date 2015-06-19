@@ -17,20 +17,13 @@
 # under the License.
 #
 
-set(CPP_FLAGS ${CXX_WARNING_FLAGS})
+include(CheckCXXSourceCompiles)
 
-## Check compiler capabilities.
-macro(compiler_test RESULT_VAR NAME CODE)
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${NAME} "${CODE}")
-  try_compile(${RESULT_VAR} ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${NAME})
-endmacro()
-
-compiler_test(RESULT has_long_long.cpp "long long ll; int main(int, char**) { return 0; }")
-if (RESULT)
-  message("C++ compiler has long long")
-  set(CPP_FLAGS "${CPP_FLAGS} -DHAS_LONG_LONG")
-else()
-  message("C++ compiler does not have long long")
+# Check compiler capabilities.
+set(CMAKE_REQUIRED_FLAGS "${CXX_WARNING_FLAGS}")
+check_cxx_source_compiles("long long ll; int main(int, char**) { return 0; }" HAVE_LONG_LONG)
+if (HAVE_LONG_LONG)
+  add_definitions(-DHAVE_LONG_LONG=1)
 endif()
 
 include_directories(
@@ -82,7 +75,7 @@ set(qpid-proton-cpp-source
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CPP_FLAGS}"
+  COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -140,3 +133,5 @@ endif (MSVC)
 # Install header files
 file(GLOB headers "include/proton/cpp/*.h")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton/cpp)
+
+add_subdirectory(docs)

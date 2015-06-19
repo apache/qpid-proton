@@ -96,7 +96,7 @@ type_id pre_get(pn_data_t* data) {
 // Simple extract with no type conversion.
 template <class T, class U> void extract(pn_data_t* data, T& value, U (*get)(pn_data_t*)) {
     save_state ss(data);
-    bad_type(type_idOf<T>::value, pre_get(data));
+    bad_type(type_id_of<T>::value, pre_get(data));
     value = get(data);
     ss.cancel();                // No error, no rewind
 }

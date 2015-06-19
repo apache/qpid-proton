@@ -52,15 +52,15 @@ class Cflow_controller : public proton_handler
 
 
 
-messaging_handler::messaging_handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_isError0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_isError0)
+messaging_handler::messaging_handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0)
 {
     create_helpers();
 }
 
 messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_accept0, bool auto_settle0,
-                                   bool peer_close_isError0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_isError0)
+                                   bool peer_close_is_error0) :
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0)
 {
     if (raw_handler) {
         flow_controller_ = 0;
@@ -94,7 +94,7 @@ void messaging_handler::on_connection_opened(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_opening(event &e) { on_unhandled(e); }
 void messaging_handler::on_disconnected(event &e) { on_unhandled(e); }
 void messaging_handler::on_fetch(event &e) { on_unhandled(e); }
-void messaging_handler::on_idLoaded(event &e) { on_unhandled(e); }
+void messaging_handler::on_id_loaded(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_closed(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_closing(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_error(event &e) { on_unhandled(e); }

@@ -25,30 +25,13 @@
  */
 
 #include "proton/export.hpp"
+#include "proton/cstdint.hpp"
 #include <proton/codec.h>
 #include <algorithm>
 #include <bitset>
 #include <string>
 #include <memory.h>
 #include <algorithm>
-
-// Workaround for older C++ compilers
-#if  defined(__cplusplus) && __cplusplus >= 201100
-#include <cstdint>
-#else  // Workaround for older C++ compilers
-#include <proton/type_compat.h>
-namespace std {
-// Exact-size integer types.
-using ::int8_t;
-using ::int16_t;
-using ::int32_t;
-using ::int64_t;
-using ::uint8_t;
-using ::uint16_t;
-using ::uint32_t;
-using ::uint64_t;
-}
-#endif
 
 namespace proton {
 

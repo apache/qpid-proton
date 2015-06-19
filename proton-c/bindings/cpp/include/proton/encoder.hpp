@@ -164,7 +164,7 @@ typename std::enable_if<is_unknown_integer<T>::value, encoder&>::type operator<<
 // TODO aconway 2015-06-16: described array insertion.
 
 template <class T> encoder& operator<<(encoder& e, cref<T, ARRAY> a) {
-    e << start::array(type_idOf<typename T::value_type>::value);
+    e << start::array(type_id_of<typename T::value_type>::value);
     for (typename T::const_iterator i = a.value.begin(); i != a.value.end(); ++i)
         e << *i;
     e << finish();
