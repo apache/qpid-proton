@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Handler
 from proton_tornado import TornadoLoop
@@ -31,7 +32,7 @@ class Recurring(Handler):
         self.container.schedule(time.time() + self.period, subject=self)
 
     def on_timer(self, event):
-        print "Tick..."
+        print("Tick...")
         self.container.schedule(time.time() + self.period, subject=self)
 
 try:
@@ -39,6 +40,6 @@ try:
     container.run()
 except KeyboardInterrupt:
     container.stop()
-    print
+    print()
 
 

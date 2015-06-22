@@ -133,6 +133,7 @@ class Configure(build_ext):
         ext.swig_opts = []
 
     def bundle_libqpid_proton_extension(self):
+        setup_path = os.path.dirname(os.path.realpath(__file__))
         base = self.get_finalized_command('build').build_base
         build_include = os.path.join(base, 'include')
         install = self.get_finalized_command('install').install_base
@@ -142,11 +143,20 @@ class Configure(build_ext):
         log.info("Using bundled libqpid-proton")
 
         if 'QPID_PROTON_SRC' not in os.environ:
-            bundledir = os.path.join(base, "bundled")
-            if not os.path.exists(bundledir):
-                os.makedirs(bundledir)
-            bundle.fetch_libqpid_proton(bundledir)
-            libqpid_proton_dir = os.path.abspath(os.path.join(bundledir, 'qpid-proton'))
+            if not os.path.exists(os.path.join(setup_path, 'tox.ini')):
+                bundledir = os.path.join(base, "bundled")
+                if not os.path.exists(bundledir):
+                    os.makedirs(bundledir)
+                bundle.fetch_libqpid_proton(bundledir)
+                libqpid_proton_dir = os.path.abspath(os.path.join(bundledir, 'qpid-proton'))
+            else:
+                # This should happen just in **dev** environemnts since
+                # tox.ini is not shipped with the driver. It should only
+                # be triggered when calling `setup.py`. This can happen either
+                # manually or when calling `tox` in the **sdist** step. Tox will
+                # defined the `QPID_PROTON_SRC` itself.
+                proton_c = os.path.join(setup_path, '..', '..', '..')
+                libqpid_proton_dir = os.path.abspath(proton_c)
         else:
             libqpid_proton_dir = os.path.abspath(os.environ['QPID_PROTON_SRC'])
 
@@ -184,7 +194,7 @@ class Configure(build_ext):
 #define PN_VERSION_MINOR %i
 #endif /* version.h */
 """ % bundle.min_qpid_proton
-            ver.write(version_text)
+            ver.write(version_text.encode('utf-8'))
 
         # Collect all the C files that need to be built.
         # we could've used `glob(.., '*', '*.c')` but I preferred going
@@ -305,6 +315,9 @@ class Configure(build_ext):
 
         _cproton.runtime_library_dirs.extend([install_lib])
 
+        if sys.version_info[0] >= 3:
+            _cproton.libraries[0] = "qpid-proton%s" % ds_sys.get_config_var('EXT_SUFFIX')[:-3]
+
         # Register this new extension and make
         # sure it's built and installed *before* `_cproton`.
         self.distribution.ext_modules.insert(0, libqpid_proton)
@@ -322,7 +335,9 @@ class Configure(build_ext):
         return not self.check_qpid_proton_version()
 
     def run(self):
-        if sys.platform == 'linux2':
+        # linux2 for python<2.7
+        # linux4 for python<2.6
+        if sys.platform in ['linux', 'linux2', 'linux4']:
             if self.bundle_proton:
                 self.bundle_libqpid_proton_extension()
 

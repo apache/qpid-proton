@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import print_function
 import sys, optparse
 from proton import *
 
@@ -35,10 +36,10 @@ mng.start()
 msg = Message()
 for m in args:
   msg.address = opts.address
-  msg.body = unicode(m)
+  msg.body = str(m)
   mng.put(msg)
 
 mng.send()
-print "sent:", ", ".join(args)
+print("sent:", ", ".join(args))
 
 mng.stop()

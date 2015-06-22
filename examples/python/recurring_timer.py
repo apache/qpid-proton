@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton.reactor import Container, Handler
 
 class Recurring(Handler):
@@ -29,7 +30,7 @@ class Recurring(Handler):
         self.container.schedule(self.period, self)
 
     def on_timer_task(self, event):
-        print "Tick..."
+        print("Tick...")
         self.container.schedule(self.period, self)
 
 try:
@@ -37,6 +38,6 @@ try:
     container.run()
 except KeyboardInterrupt:
     container.stop()
-    print
+    print()
 
 

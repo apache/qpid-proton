@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Reactor
 
@@ -25,7 +26,7 @@ class Program:
 
     def on_reactor_init(self, event):
         self.start = time.time()
-        print "Hello, World!"
+        print("Hello, World!")
 
         # We can schedule a task event for some point in the future.
         # This will cause the reactor to stick around until it has a
@@ -42,10 +43,10 @@ class Program:
 
     def on_timer_task(self, event):
         task = event.context # xxx: don't have a task property on event yet
-        print task.something_to_say, "my task is complete!"
+        print(task.something_to_say, "my task is complete!")
 
     def on_reactor_final(self, event):
-        print "Goodbye, World! (after %s long seconds)" % (time.time() - self.start)
+        print("Goodbye, World! (after %s long seconds)" % (time.time() - self.start))
 
 r = Reactor(Program())
 r.run()

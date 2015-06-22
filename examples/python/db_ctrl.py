@@ -18,11 +18,12 @@
 # under the License.
 #
 
+from __future__ import print_function
 import sqlite3
 import sys
 
 if len(sys.argv) < 3:
-    print "Usage: %s [init|insert|list] db" % sys.argv[0]
+    print("Usage: %s [init|insert|list] db" % sys.argv[0])
 else:
     conn = sqlite3.connect(sys.argv[2])
     with conn:
@@ -35,7 +36,7 @@ else:
             cursor.execute("SELECT * FROM records")
             rows = cursor.fetchall()
             for r in rows:
-                print r
+                print(r)
         elif sys.argv[1] == "insert":
             while True:
                 l = sys.stdin.readline()
@@ -43,4 +44,4 @@ else:
                 conn.execute("INSERT INTO records(description) VALUES (?)", (l.rstrip(),))
             conn.commit()
         else:
-            print "Unrecognised command: %s" %  sys.argv[1]
+            print("Unrecognised command: %s" %  sys.argv[1])

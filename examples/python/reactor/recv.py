@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.reactor import Reactor
 from proton.handlers import CHandshaker, CFlowController
@@ -41,7 +42,7 @@ class Program:
         # compliment the similar thing on send
         rcv = event.receiver
         if rcv and self.message.recv(rcv):
-            print self.message
+            print(self.message)
             event.delivery.settle()
 
 r = Reactor(Program())

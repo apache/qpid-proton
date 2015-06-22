@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import optparse
 from proton.handlers import MessagingHandler
 from proton.reactor import ApplicationEvent, Container, EventInjector
@@ -58,7 +59,7 @@ class Recv(MessagingHandler):
                 self.received += 1
                 self.last_id = id
                 self.db.insert(id, event.message.body, ApplicationEvent("record_inserted", delivery=event.delivery))
-                print "inserted message %s" % id
+                print("inserted message %s" % id)
             else:
                 self.release(event.delivery)
         else:

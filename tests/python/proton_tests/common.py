@@ -28,6 +28,27 @@ from proton.reactor import Container
 from proton.handlers import CHandshaker, CFlowController
 from string import Template
 
+if sys.version_info[0] == 2 and sys.version_info[1] < 6:
+    # this is for compatibility, apparently the version of jython we
+    # use doesn't have the next() builtin.
+    # we should remove this when we upgrade to a python 2.6+ compatible version
+    # of jython
+    #_DEF = object()  This causes the test loader to fail (why?)
+    class _dummy(): pass
+    _DEF = _dummy
+
+    def next(iter, default=_DEF):
+        try:
+            return iter.next()
+        except StopIteration:
+            if default is _DEF:
+                raise
+            else:
+                return default
+    # I may goto hell for this:
+    import __builtin__
+    __builtin__.__dict__['next'] = next
+
 
 def free_tcp_ports(count=1):
   """ return a list of 'count' TCP ports that are free to used (ie. unbound)
@@ -68,9 +89,9 @@ def pump_uni(src, dst, buffer_size=1024):
   elif p == 0 or c == 0:
     return False
   else:
-    bytes = src.peek(min(c, buffer_size))
-    dst.push(bytes)
-    src.pop(len(bytes))
+    binary = src.peek(min(c, buffer_size))
+    dst.push(binary)
+    src.pop(len(binary))
 
   return True
 
@@ -251,8 +272,10 @@ class MessengerApp(object):
                     del cmd[0:1]
                     cmd.insert(0, foundfile)
                     cmd.insert(0, sys.executable)
-            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT, bufsize=4096)
-        except OSError, e:
+            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT,
+                                  bufsize=4096, universal_newlines=True)
+        except OSError:
+            e = sys.exc_info()[1]
             print("ERROR: '%s'" % e)
             msg = "Unable to execute command '%s', is it in your PATH?" % cmd[0]
 
@@ -429,7 +452,7 @@ class MessengerReceiver(MessengerApp):
     def _ready(self):
         """ wait for subscriptions to complete setup. """
         r = self._process.stdout.readline()
-        assert r == "READY" + os.linesep, "Unexpected input while waiting for receiver to initialize: %s" % r
+        assert r.strip() == "READY", "Unexpected input while waiting for receiver to initialize: %s" % r
 
 class MessengerSenderC(MessengerSender):
     def __init__(self):

@@ -17,13 +17,14 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import print_function
 import sys, optparse
 from subprocess import Popen,PIPE
 
 def run_test(cmd):
     try:
         process = Popen(cmd)
-    except OSError, e:
+    except OSError:
         assert False, "Unable to execute command '%s', is it in your PATH?" % cmd[0]
     return process.wait()
 
@@ -121,7 +122,7 @@ def main(argv=None):
                 command.append( "-Dverbose" )
             command.append( pattern )
             if verbose:
-                print "command='%s'" % str(command)
+                print("command='%s'" % str(command))
             run_test(command)
     return 0
 

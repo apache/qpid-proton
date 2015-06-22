@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time, random
 from proton.reactor import Reactor
 
@@ -34,7 +35,7 @@ class Counter:
 
     def on_timer_task(self, event):
         self.count += 1
-        print self.count
+        print(self.count)
         if not self.done():
             event.reactor.schedule(0.25, self)
 
@@ -46,7 +47,7 @@ class Program:
 
     def on_reactor_init(self, event):
         self.start = time.time()
-        print "Hello, World!"
+        print("Hello, World!")
 
         # Save the counter instance in an attribute so we can refer to
         # it later.
@@ -60,12 +61,12 @@ class Program:
 
     def on_timer_task(self, event):
         # keep on shouting until we are done counting
-        print "Yay, %s!" % random.randint(10, 100)
+        print("Yay, %s!" % random.randint(10, 100))
         if not self.counter.done():
             event.reactor.schedule(0.5, self)
 
     def on_reactor_final(self, event):
-        print "Goodbye, World! (after %s long seconds)" % (time.time() - self.start)
+        print("Goodbye, World! (after %s long seconds)" % (time.time() - self.start))
 
 # In hello-world.py we said the reactor exits when there are no more
 # events to process. While this is true, it's not actually complete.
