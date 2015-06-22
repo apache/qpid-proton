@@ -535,7 +535,7 @@ if (BUILD_PYTHON)
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
-if (RUBY_EXE)
+if (RUBY_EXE AND BUILD_RUBY)
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
@@ -569,7 +569,7 @@ if (RUBY_EXE)
   endif (DEFAULT_RUBY_TESTING)
 else (RUBY_EXE)
   message (STATUS "Cannot find ruby, skipping ruby tests")
-endif (RUBY_EXE)
+endif()
 
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
 
