@@ -236,29 +236,42 @@ class ConnectionTest(Test):
     self.pump()
     assert self.c1.transport.channel_max == value, (self.c1.transport.channel_max, value)
 
-  def test_channel_max_high(self, value=33333):
-    if "java" in sys.platform:
-      raise Skipped("Mick needs to fix me")
+  def test_channel_max_high(self, value=65535):
     self.c1.transport.channel_max = value
     self.c1.open()
     self.pump()
-    assert self.c1.transport.channel_max == 32767, (self.c1.transport.channel_max, value)
+    if "java" in sys.platform:
+      assert self.c1.transport.channel_max == 65535, (self.c1.transport.channel_max, value)
+    else:
+      assert self.c1.transport.channel_max == 32767, (self.c1.transport.channel_max, value)
 
   def test_channel_max_raise_and_lower(self):
     if "java" in sys.platform:
-      raise Skipped("Mick needs to fix me, also")
-    # It's OK to lower the max below 32767.
+      upper_limit = 65535
+    else:
+      upper_limit = 32767
+
+    # It's OK to lower the max below upper_limit.
     self.c1.transport.channel_max = 12345
     assert self.c1.transport.channel_max == 12345
-    # But it won't let us raise the limit above 32767.
-    self.c1.transport.channel_max = 33333
-    assert self.c1.transport.channel_max == 32767
+
+    # But it won't let us raise the limit above PN_IMPL_CHANNEL_MAX.
+    self.c1.transport.channel_max = 65535
+    assert self.c1.transport.channel_max == upper_limit
+
+    # send the OPEN frame
     self.c1.open()
     self.pump()
+
     # Now it's too late to make any change, because
     # we have already sent the OPEN frame.
-    self.c1.transport.channel_max = 666
-    assert self.c1.transport.channel_max == 32767
+    try:
+      self.c1.transport.channel_max = 666
+    except:
+      # The java impl will throw an exception.
+      pass
+
+    assert self.c1.transport.channel_max == upper_limit
 
 
   def test_channel_max_limits_sessions(self):

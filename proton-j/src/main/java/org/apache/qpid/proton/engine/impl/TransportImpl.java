@@ -63,6 +63,7 @@ public class TransportImpl extends EndpointImpl
         FrameHandler, TransportOutputWriter
 {
     static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
+    private static final int CHANNEL_MAX_LIMIT = 65535;
 
     private static final boolean getBooleanEnv(String name)
     {
@@ -97,8 +98,8 @@ public class TransportImpl extends EndpointImpl
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int _remoteMaxFrameSize = 512;
-    private int _channelMax = 65535;
-    private int _remoteChannelMax = 65535;
+    private int _channelMax       = CHANNEL_MAX_LIMIT;
+    private int _remoteChannelMax = CHANNEL_MAX_LIMIT;
 
     private final FrameWriter _frameWriter;
 
@@ -204,7 +205,19 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void setChannelMax(int n)
     {
-        _channelMax = n;
+        if(_isOpenSent)
+        {
+          throw new IllegalArgumentException("Cannot change channel max after open frame has been sent");
+        }
+
+        if(n < CHANNEL_MAX_LIMIT)
+        {
+            _channelMax = n;
+        }
+        else
+        {
+            _channelMax = CHANNEL_MAX_LIMIT;
+        }
     }
 
     @Override
