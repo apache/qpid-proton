@@ -34,7 +34,7 @@ module Qpid::Proton
       if url
         @url = Cproton.pn_url_parse(url)
         if @url.nil?
-          raise ArgumentError.new("invalid url: #{url}")
+          raise ::ArgumentError.new("invalid url: #{url}")
         end
       else
         @url = Cproton.pn_url

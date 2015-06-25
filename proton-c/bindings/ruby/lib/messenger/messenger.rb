@@ -313,10 +313,10 @@ module Qpid::Proton::Messenger
     #
     def put(message)
       if message.nil?
-        raise Qpid::Proton::TypeError.new("invalid message: #{message}")
+        raise TypeError.new("invalid message: #{message}")
       end
       unless message.kind_of?(Qpid::Proton::Message)
-        raise Qpid::Proton::ArgumentError.new("invalid message type: #{message.class}")
+        raise ::ArgumentError.new("invalid message type: #{message.class}")
       end
       # encode the message first
       message.pre_encode

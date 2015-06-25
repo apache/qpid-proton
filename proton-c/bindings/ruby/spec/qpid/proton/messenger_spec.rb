@@ -26,7 +26,7 @@ module Qpid
     describe "A messenger" do
 
       before (:each) do
-        @messenger = Qpid::Proton::Messenger.new
+        @messenger = Qpid::Proton::Messenger::Messenger.new
       end
 
       after (:each) do
@@ -43,7 +43,7 @@ module Qpid
 
       it "will accept an assigned name" do
         name = random_string(16)
-        msgr = Qpid::Proton::Messenger.new(name)
+        msgr = Qpid::Proton::Messenger::Messenger.new(name)
         expect(msgr.name).to eq(name)
       end
 
@@ -263,7 +263,7 @@ module Qpid
           before (:each) do
             # create a receiver
             @port = 5700 + rand(1024)
-            @receiver = Qpid::Proton::Messenger.new("receiver")
+            @receiver = Qpid::Proton::Messenger::Messenger.new("receiver")
             @receiver.subscribe("amqp://~0.0.0.0:#{@port}")
             @messenger.timeout = 0
             @receiver.timeout = 0
@@ -299,7 +299,7 @@ module Qpid
           it "raises an error when queueing an invalid object" do
             expect {
               @messenger.put("This is not a message")
-            }.to raise_error(ArgumentError)
+            }.to raise_error(::ArgumentError)
           end
 
           it "can place a message in the outgoing queue" do
