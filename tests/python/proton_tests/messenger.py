@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,11 +18,12 @@
 # under the License.
 #
 
-import os, common, sys, traceback
+import os, sys, traceback
+from . import common
 from proton import *
 from threading import Thread, Event
 from time import sleep, time
-from common import Skipped
+from .common import Skipped
 
 class Test(common.Test):
 
@@ -180,7 +182,8 @@ class MessengerTest(Test):
     try:
       self.client.put(msg)
       assert False, "Expecting MessengerException"
-    except MessengerException, exc:
+    except MessengerException:
+      exc = sys.exc_info()[1]
       err = str(exc)
       assert "unable to send to address: totally-bogus-address" in err, err
 
@@ -758,8 +761,8 @@ class NBMessengerTest(common.Test):
 
     msg = Message()
     msg.address = self.address
-    for i in xrange(16):
-      for i in xrange(1024):
+    for i in range(16):
+      for i in range(1024):
         self.client.put(msg)
       self.pump()
       if self.client.outgoing > 0:
@@ -797,7 +800,7 @@ class NBMessengerTest(common.Test):
     deadline = time() + self.timeout
     while time() < deadline:
         old = self.server.incoming
-        for j in xrange(1001):
+        for j in range(1001):
             self.client.put(msg)
         self.pump()
         if old == self.server.incoming:

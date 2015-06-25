@@ -22,7 +22,7 @@ require "spec_helper"
 describe "The extended array type" do
 
   before :each do
-    @data        = Qpid::Proton::Data.new
+    @data        = Qpid::Proton::Codec::Data.new
     @list        = random_list(rand(100))
     @undescribed = random_array(rand(100))
     @description = random_string(128)
@@ -83,7 +83,7 @@ describe "The extended array type" do
 
   it "raises an error when the elements of an Array are dissimilar and is put into a Data object" do
     value = []
-    value.proton_array_header = Qpid::Proton::ArrayHeader.new(Qpid::Proton::INT)
+    value.proton_array_header = Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::INT)
     value << random_string(16)
 
     expect {

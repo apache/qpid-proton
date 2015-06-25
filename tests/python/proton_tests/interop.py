@@ -18,7 +18,9 @@
 #
 
 from proton import *
-import os, common
+import os
+from . import common
+from proton._compat import str2bin
 
 
 def find_test_interop_dir():
@@ -98,10 +100,10 @@ class InteropTest(common.Test):
 
     def test_strings(self):
         self.decode_data_file("strings")
-        self.assert_next(Data.BINARY, "abc\0defg")
+        self.assert_next(Data.BINARY, str2bin("abc\0defg"))
         self.assert_next(Data.STRING, "abcdefg")
         self.assert_next(Data.SYMBOL, "abcdefg")
-        self.assert_next(Data.BINARY, "")
+        self.assert_next(Data.BINARY, str2bin(""))
         self.assert_next(Data.STRING, "")
         self.assert_next(Data.SYMBOL, "")
         assert self.data.next() is None

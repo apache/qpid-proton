@@ -110,6 +110,31 @@ module Qpid::Proton
       !(self.state & state_mask).zero?
     end
 
+    def handler
+      reactor = Qpid::Proton::Reactor::Reactor.wrap(Cproton.pn_object_reactor(@impl))
+      if reactor.nil?
+        on_error = nil
+      else
+        on_error = reactor.method(:on_error)
+      end
+      record = self.attachments
+      puts "record=#{record}"
+      WrappedHandler.wrap(Cproton.pn_record_get_handler(record), on_error)
+    end
+
+    def handler=(handler)
+      reactor = Qpid::Proton::Reactor::Reactor.wrap(Cproton.pn_object_reactor(@impl))
+      if reactor.nil?
+        on_error = nil
+      else
+        on_error = reactor.method(:on_error)
+      end
+      impl = chandler(handler, on_error)
+      record = self.attachments
+      Cproton.pn_record_set_handler(record, impl)
+      Cproton.pn_decref(impl)
+    end
+
   end
 
 end

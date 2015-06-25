@@ -57,7 +57,7 @@ class Array # :nodoc:
 
   # Used to declare an array as an AMQP array.
   #
-  # The value, if defined, is an instance of Qpid::Proton::ArrayHeader
+  # The value, if defined, is an instance of Qpid::Proton::Types::ArrayHeader
   attr_accessor :proton_array_header
 
   # Returns true if the array is the a Proton described type.
@@ -84,7 +84,7 @@ class Array # :nodoc:
     data.enter
     each do |element|
       # get the proton type for the element
-      mapping = Qpid::Proton::Mapping.for_class(element.class)
+      mapping = Qpid::Proton::Codec::Mapping.for_class(element.class)
       # add the element
       mapping.put(data, element)
     end
@@ -115,9 +115,9 @@ class Array # :nodoc:
 
       type = data.type
 
-      if type == Qpid::Proton::LIST
+      if type == Qpid::Proton::Codec::LIST
         result = proton_get_list(data)
-      elsif type == Qpid::Proton::ARRAY
+      elsif type == Qpid::Proton::Codec::ARRAY
         result = proton_get_array(data)
       else
         raise TypeError, "element is not a list and not an array"
@@ -153,7 +153,7 @@ class Array # :nodoc:
         descriptor = data.symbol
       end
 
-      elements.proton_array_header = Qpid::Proton::ArrayHeader.new(type, descriptor)
+      elements.proton_array_header = Qpid::Proton::Types::ArrayHeader.new(type, descriptor)
       (0...count).each do |which|
         if data.next
           etype = data.type

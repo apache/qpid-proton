@@ -5,7 +5,7 @@ require 'qpid_proton'
 
 class SmokeTest < Test::Unit::TestCase
 
-  Messenger = Qpid::Proton::Messenger
+  Messenger = Qpid::Proton::Messenger::Messenger
   Message = Qpid::Proton::Message
 
   def setup

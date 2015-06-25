@@ -1291,7 +1291,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-      pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
+      pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
       if (strheap) free(strheap);
       return PN_EOS;
   }
@@ -1407,12 +1407,18 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
                          &settled, &more, &has_type, &type, transport->disp_data);
   if (err) return err;
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
 
   if (!ssn->state.incoming_window) {
     return pn_do_error(transport, "amqp:session:window-violation", "incoming session window exceeded");
   }
 
   pn_link_t *link = pni_handle_state(ssn, handle);
+  if (!link) {
+    return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
+  }
   pn_delivery_t *delivery;
   if (link->unsettled_tail && !link->unsettled_tail->done) {
     delivery = link->unsettled_tail;
@@ -1477,6 +1483,9 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   if (err) return err;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
 
   if (inext_init) {
     ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
@@ -1486,6 +1495,9 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (handle_init) {
     pn_link_t *link = pni_handle_state(ssn, handle);
+    if (!link) {
+      return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
+    }
     if (link->endpoint.type == SENDER) {
       pn_sequence_t receiver_count;
       if (dcount_init) {
@@ -1547,6 +1559,10 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   if (!last_init) last = first;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
+
   pn_delivery_map_t *deliveries;
   if (role) {
     deliveries = &ssn->state.outgoing;
@@ -1620,7 +1636,7 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-    return pn_do_error(transport, "amqp:invalid-field", "no such channel: %u", channel);
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
   }
   pn_link_t *link = pni_handle_state(ssn, handle);
   if (!link) {
@@ -1645,6 +1661,9 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
   int err = pn_scan_error(args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);

@@ -467,22 +467,22 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 
 %inline %{
 
-#define CID_pn_rbkey CID_pn_void
+#define CID_Pn_rbkey CID_pn_void
 
 typedef struct {
   void *registry;
   char *method;
   char *key_value;
-} pn_rbkey_t;
+} Pn_rbkey_t;
 
-void pn_rbkey_initialize(pn_rbkey_t *rbkey) {
+void Pn_rbkey_initialize(Pn_rbkey_t *rbkey) {
   assert(rbkey);
   rbkey->registry = NULL;
   rbkey->method = NULL;
   rbkey->key_value = NULL;
 }
 
-void pn_rbkey_finalize(pn_rbkey_t *rbkey) {
+void Pn_rbkey_finalize(Pn_rbkey_t *rbkey) {
   if(rbkey && rbkey->registry && rbkey->method && rbkey->key_value) {
     rb_funcall((VALUE )rbkey->registry, rb_intern(rbkey->method), 1, rb_str_new2(rbkey->key_value));
   }
@@ -492,45 +492,45 @@ void pn_rbkey_finalize(pn_rbkey_t *rbkey) {
   }
 }
 
-#define pn_rbkey_inspect NULL
-#define pn_rbkey_compare NULL
-#define pn_rbkey_hashcode NULL
+#define Pn_rbkey_inspect NULL
+#define Pn_rbkey_compare NULL
+#define Pn_rbkey_hashcode NULL
 
-PN_CLASSDEF(pn_rbkey)
+PN_CLASSDEF(Pn_rbkey)
 
-void pn_rbkey_set_registry(pn_rbkey_t *rbkey, void *registry) {
+void Pn_rbkey_set_registry(Pn_rbkey_t *rbkey, void *registry) {
   assert(rbkey);
   rbkey->registry = registry;
 }
 
-void *pn_rbkey_get_registry(pn_rbkey_t *rbkey) {
+void *Pn_rbkey_get_registry(Pn_rbkey_t *rbkey) {
   assert(rbkey);
   return rbkey->registry;
 }
 
-void pn_rbkey_set_method(pn_rbkey_t *rbkey, char *method) {
+void Pn_rbkey_set_method(Pn_rbkey_t *rbkey, char *method) {
   assert(rbkey);
   rbkey->method = method;
 }
 
-char *pn_rbkey_get_method(pn_rbkey_t *rbkey) {
+char *Pn_rbkey_get_method(Pn_rbkey_t *rbkey) {
   assert(rbkey);
   return rbkey->method;
 }
 
-void pn_rbkey_set_key_value(pn_rbkey_t *rbkey, char *key_value) {
+void Pn_rbkey_set_key_value(Pn_rbkey_t *rbkey, char *key_value) {
   assert(rbkey);
   rbkey->key_value = malloc(strlen(key_value) + 1);
   strncpy(rbkey->key_value, key_value, strlen(key_value) + 1);
 }
 
-char *pn_rbkey_get_key_value(pn_rbkey_t *rbkey) {
+char *Pn_rbkey_get_key_value(Pn_rbkey_t *rbkey) {
   assert(rbkey);
   return rbkey->key_value;
 }
 
-pn_rbkey_t *pni_void2rbkey(void *object) {
-  return (pn_rbkey_t *)object;
+Pn_rbkey_t *pni_void2rbkey(void *object) {
+  return (Pn_rbkey_t *)object;
 }
 
 VALUE pn_void2rb(void *object) {
@@ -558,5 +558,58 @@ VALUE pni_address_of(void *object) {
 
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
+
+%inline %{
+
+  VALUE pni_ruby_get_proton_module() {
+    VALUE mQpid = rb_define_module("Qpid");
+    return rb_define_module_under(mQpid, "Proton");
+  }
+
+  void pni_ruby_add_to_registry(VALUE key, VALUE value) {
+    VALUE result = rb_funcall(pni_ruby_get_proton_module(), rb_intern("add_to_registry"), 2, key, value);
+  }
+
+  VALUE pni_ruby_get_from_registry(VALUE key) {
+    rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
+  }
+
+  void pni_ruby_delete_from_registry(VALUE stored_key) {
+    rb_funcall(pni_ruby_get_proton_module(), rb_intern("delete_from_registry"), 1, stored_key);
+  }
+
+  typedef struct {
+    VALUE handler_key;
+  } Pni_rbhandler_t;
+
+  static Pni_rbhandler_t *pni_rbhandler(pn_handler_t *handler) {
+    return (Pni_rbhandler_t *) pn_handler_mem(handler);
+  }
+
+  static void pni_rbdispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+    Pni_rbhandler_t *rbh = pni_rbhandler(handler);
+    VALUE rbhandler = pni_ruby_get_from_registry(rbh->handler_key);
+
+    rb_funcall(rbhandler, rb_intern("dispatch"), 2, SWIG_NewPointerObj(event, SWIGTYPE_p_pn_event_t, 0), INT2FIX(type));
+  }
+
+  static void pni_rbhandler_finalize(pn_handler_t *handler) {
+    Pni_rbhandler_t *rbh = pni_rbhandler(handler);
+    pni_ruby_delete_from_registry(rbh->handler_key);
+  }
+
+  pn_handler_t *pn_rbhandler(VALUE handler) {
+    pn_handler_t *chandler = pn_handler_new(pni_rbdispatch, sizeof(Pni_rbhandler_t), pni_rbhandler_finalize);
+    Pni_rbhandler_t *rhy = pni_rbhandler(chandler);
+
+    VALUE ruby_key = rb_class_new_instance(0, NULL, rb_cObject);
+    pni_ruby_add_to_registry(ruby_key, handler);
+
+    rhy->handler_key = ruby_key;
+
+    return chandler;
+  }
+
+%}
 
 %include "proton/cproton.i"

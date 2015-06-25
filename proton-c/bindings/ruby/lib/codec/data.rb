@@ -234,7 +234,7 @@ module Qpid::Proton::Codec
     #
     # @example
     #
-    #   data = Qpid::Proton::Data.new
+    #   data = Qpid::Proton::Codec::Data.new
     #   data.put_list
     #   data.enter
     #   data.int = 1
@@ -271,7 +271,7 @@ module Qpid::Proton::Codec
     #
     # @example
     #
-    #   data = Qpid::Proton::Data.new
+    #   data = Qpid::Proton::Codec::Data.new
     #   data.put_map
     #   data.enter
     #   data.string = "key"
@@ -324,7 +324,7 @@ module Qpid::Proton::Codec
     # @example
     #
     #   # create an array of integer values
-    #   data = Qpid::Proton::Data.new
+    #   data = Qpid::Proton::Codec::Data.new
     #   data.put_array(false, INT)
     #   data.enter
     #   data.int = 1
@@ -387,7 +387,7 @@ module Qpid::Proton::Codec
     #
     # @example
     #
-    #   data = Qpid::Proton::Data.new
+    #   data = Qpid::Proton::Codec::Data.new
     #   data.put_described
     #   data.enter
     #   data.symbol = "value-descriptor"
@@ -409,7 +409,7 @@ module Qpid::Proton::Codec
       type = self.type
       value = type.get(self)
       self.exit
-      Described.new(descriptor, value)
+      Qpid::Proton::Types::Described.new(descriptor, value)
     end
 
     # Checks if the current node is a described value.
@@ -433,7 +433,7 @@ module Qpid::Proton::Codec
       check(Cproton.pn_data_put_null(@data))
     end
 
-    # Utility method for Qpid::Proton::Mapping
+    # Utility method for Qpid::Proton::Codec::Mapping
     #
     # @private
     #
@@ -772,7 +772,7 @@ module Qpid::Proton::Codec
     #   @data.uuid = 0 # sets to 00000000-0000-0000-0000-000000000000
     #
     def uuid=(value)
-      raise ArgumentError, "invalid uuid: #{value}" if value.nil?
+      raise ::ArgumentError, "invalid uuid: #{value}" if value.nil?
 
       # if the uuid that was submitted was numeric value, then translated
       # it into a hex string, otherwise assume it was a string represtation
@@ -780,7 +780,7 @@ module Qpid::Proton::Codec
       if value.is_a? Numeric
         value = "%032x" % value
       else
-        raise ArgumentError, "invalid uuid: #{value}" if !valid_uuid?(value)
+        raise ::ArgumentError, "invalid uuid: #{value}" if !valid_uuid?(value)
 
         value = (value[0, 8]  +
                  value[9, 4]  +

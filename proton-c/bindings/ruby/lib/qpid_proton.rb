@@ -40,6 +40,9 @@ require "util/wrapper"
 require "util/class_wrapper"
 require "util/engine"
 require "util/uuid"
+require "util/timeout"
+require "util/handler"
+require "util/reactor"
 
 # Types
 require "types/strings"
@@ -58,6 +61,7 @@ require "event/event"
 require "event/collector"
 
 # Main Proton classes
+require "core/selectable"
 require "core/message"
 require "core/endpoint"
 require "core/session"
@@ -73,14 +77,37 @@ require "core/ssl_domain"
 require "core/ssl_details"
 require "core/ssl"
 require "core/transport"
+require "core/base_handler"
+require "core/url"
 
 # Messenger API classes
-require "messenger/filters"
 require "messenger/subscription"
 require "messenger/tracker_status"
 require "messenger/tracker"
-require "messenger/selectable"
 require "messenger/messenger"
+
+# Handler classes
+require "handler/c_adaptor"
+require "handler/wrapped_handler"
+require "handler/acking"
+require "handler/endpoint_state_handler"
+require "handler/incoming_message_handler"
+require "handler/outgoing_message_handler"
+require "handler/c_flow_controller"
+require "handler/messaging_handler"
+
+# Reactor classes
+require "reactor/task"
+require "reactor/acceptor"
+require "reactor/reactor"
+require "reactor/ssl_config"
+require "reactor/global_overrides"
+require "reactor/urls"
+require "reactor/connector"
+require "reactor/backoff"
+require "reactor/session_per_connection"
+require "reactor/container"
+require "reactor/link_option"
 
 module Qpid::Proton
   # @private

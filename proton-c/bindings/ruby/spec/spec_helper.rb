@@ -110,13 +110,13 @@ def random_array(length, described = false, description = nil)
 
   # create the array header
   case
-    when type == 0 then type = Qpid::Proton::INT
-    when type == 1 then type = Qpid::Proton::STRING
-    when type == 2 then type = Qpid::Proton::FLOAT
-    when type == 3 then type = Qpid::Proton::UUID
+    when type == 0 then type = Qpid::Proton::Codec::INT
+    when type == 1 then type = Qpid::Proton::Codec::STRING
+    when type == 2 then type = Qpid::Proton::Codec::FLOAT
+    when type == 3 then type = Qpid::Proton::Codec::UUID
   end
 
-  result.proton_array_header = Qpid::Proton::ArrayHeader.new(type, description)
+  result.proton_array_header = Qpid::Proton::Types::ArrayHeader.new(type, description)
 
   return result
 end

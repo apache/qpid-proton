@@ -17,8 +17,10 @@
 # under the License.
 #
 
-import os, common
+import os
+from . import common
 from proton import *
+from proton._compat import str2bin
 
 
 class Test(common.Test):
@@ -43,9 +45,9 @@ class ClientTransportTest(Test):
       if p < 0:
         return
       elif p > 0:
-        bytes = self.transport.peek(p)
-        self.peer.push(bytes)
-        self.transport.pop(len(bytes))
+        data = self.transport.peek(p)
+        self.peer.push(data)
+        self.transport.pop(len(data))
       else:
         assert False
 
@@ -60,16 +62,16 @@ class ClientTransportTest(Test):
     assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
   def testEOS(self):
-    self.transport.push("") # should be a noop
+    self.transport.push(str2bin("")) # should be a noop
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
   def testPartial(self):
-    self.transport.push("AMQ") # partial header
+    self.transport.push(str2bin("AMQ")) # partial header
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
-  def testGarbage(self, garbage="GARBAGE_"):
+  def testGarbage(self, garbage=str2bin("GARBAGE_")):
     self.transport.push(garbage)
     self.assert_error(u'amqp:connection:framing-error')
     assert self.transport.pending() < 0
@@ -77,22 +79,22 @@ class ClientTransportTest(Test):
     assert self.transport.pending() < 0
 
   def testSmallGarbage(self):
-    self.testGarbage("XXX")
+    self.testGarbage(str2bin("XXX"))
 
   def testBigGarbage(self):
-    self.testGarbage("GARBAGE_XXX")
+    self.testGarbage(str2bin("GARBAGE_XXX"))
 
   def testHeader(self):
-    self.transport.push("AMQP\x00\x01\x00\x00")
+    self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
   def testProtocolNotSupported(self):
-    self.transport.push("AMQP\x01\x01\x0a\x00")
+    self.transport.push(str2bin("AMQP\x01\x01\x0a\x00"))
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == "AMQP\x00\x01\x00\x00"
+    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
@@ -111,8 +113,8 @@ class ClientTransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert "test-container" in out, repr(out)
-    assert "test-hostname" in out, repr(out)
+    assert str2bin("test-container") in out, repr(out)
+    assert str2bin("test-hostname") in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -129,7 +131,8 @@ class ClientTransportTest(Test):
     assert n > 0, n
     try:
       self.transport.close_head()
-    except TransportException, e:
+    except TransportException:
+      e = sys.exc_info()[1]
       assert "aborted" in str(e), str(e)
     n = self.transport.pending()
     assert n < 0, n
@@ -139,7 +142,8 @@ class ClientTransportTest(Test):
     assert n > 0, n
     try:
       self.transport.close_tail()
-    except TransportException, e:
+    except TransportException:
+      e = sys.exc_info()[1]
       assert "aborted" in str(e), str(e)
     n = self.transport.capacity()
     assert n < 0, n
@@ -167,7 +171,7 @@ class ClientTransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == ""
+    assert self.transport.peek(1024) == str2bin("")
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])
@@ -210,29 +214,29 @@ class ServerTransportTest(Test):
 
   # TODO: This may no longer be testing anything
   def testEOS(self):
-    self.transport.push("") # should be a noop
+    self.transport.push(str2bin("")) # should be a noop
     self.transport.close_tail()
     p = self.transport.pending()
     self.drain()
     assert self.transport.closed
 
   def testPartial(self):
-    self.transport.push("AMQ") # partial header
+    self.transport.push(str2bin("AMQ")) # partial header
     self.transport.close_tail()
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == "AMQP\x00\x01\x00\x00"
+    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
 
   def testGarbage(self, garbage="GARBAGE_"):
-    self.transport.push(garbage)
+    self.transport.push(str2bin(garbage))
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == "AMQP\x00\x01\x00\x00"
+    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
@@ -244,16 +248,16 @@ class ServerTransportTest(Test):
     self.testGarbage("GARBAGE_XXX")
 
   def testHeader(self):
-    self.transport.push("AMQP\x00\x01\x00\x00")
+    self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
   def testProtocolNotSupported(self):
-    self.transport.push("AMQP\x01\x01\x0a\x00")
+    self.transport.push(str2bin("AMQP\x01\x01\x0a\x00"))
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == "AMQP\x00\x01\x00\x00"
+    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
@@ -272,8 +276,8 @@ class ServerTransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert "test-container" in out, repr(out)
-    assert "test-hostname" in out, repr(out)
+    assert str2bin("test-container") in out, repr(out)
+    assert str2bin("test-hostname") in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -290,7 +294,8 @@ class ServerTransportTest(Test):
     assert n >= 0, n
     try:
       self.transport.close_head()
-    except TransportException, e:
+    except TransportException:
+      e = sys.exc_info()[1]
       assert "aborted" in str(e), str(e)
     n = self.transport.pending()
     assert n < 0, n
@@ -300,7 +305,8 @@ class ServerTransportTest(Test):
     assert n > 0, n
     try:
       self.transport.close_tail()
-    except TransportException, e:
+    except TransportException:
+      e = sys.exc_info()[1]
       assert "aborted" in str(e), str(e)
     n = self.transport.capacity()
     assert n < 0, n
@@ -328,7 +334,7 @@ class ServerTransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == ""
+    assert self.transport.peek(1024) == str2bin("")
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])

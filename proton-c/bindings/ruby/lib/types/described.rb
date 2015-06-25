@@ -49,7 +49,7 @@ module Qpid::Proton::Types
     end
 
     def ==(that) # :nodoc:
-      (that.is_a?(Qpid::Proton::Described) &&
+      (that.is_a?(Qpid::Proton::Types::Described) &&
        (self.descriptor == that.descriptor) &&
        (self.value == that.value))
     end

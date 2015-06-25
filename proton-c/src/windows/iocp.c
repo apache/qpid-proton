@@ -28,7 +28,6 @@
 #include <winsock2.h>
 #include <mswsock.h>
 #include <Ws2tcpip.h>
-#define PN_WINAPI
 
 #include "platform.h"
 #include <proton/object.h>

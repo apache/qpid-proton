@@ -22,7 +22,7 @@ require "spec_helper"
 describe "The extended hash type" do
 
   before :each do
-    @data = Qpid::Proton::Data.new
+    @data = Qpid::Proton::Codec::Data.new
     @hash = random_hash(rand(128) + 64)
   end
 

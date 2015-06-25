@@ -44,9 +44,9 @@ class Hash # :nodoc:
     data.enter
 
     each_pair do |key, value|
-      type = Qpid::Proton::Mapping.for_class(key.class)
+      type = Qpid::Proton::Codec::Mapping.for_class(key.class)
       type.put(data, key)
-      type = Qpid::Proton::Mapping.for_class(value.class)
+      type = Qpid::Proton::Codec::Mapping.for_class(value.class)
       type.put(data, value)
     end
 

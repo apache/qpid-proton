@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Reactor
 
@@ -30,21 +31,21 @@ from proton.reactor import Reactor
 class Logger:
 
     def on_unhandled(self, name, event):
-        print "LOG:", name, event
+        print("LOG:", name, event)
 
 class Task:
 
     def on_timer_task(self, event):
-        print "Mission accomplished!"
+        print("Mission accomplished!")
 
 class Program:
 
     def on_reactor_init(self, event):
-        print "Hello, World!"
+        print("Hello, World!")
         event.reactor.schedule(0, Task())
 
     def on_reactor_final(self, event):
-        print "Goodbye, World!"
+        print("Goodbye, World!")
 
 r = Reactor(Program())
 

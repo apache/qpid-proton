@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 import tornado.ioloop
 import tornado.web
 from proton import Message
@@ -51,7 +52,7 @@ class Client(MessagingHandler):
     def on_message(self, event):
         if self.sent:
             request, handler = self.sent.pop(0)
-            print "%s => %s" % (request, event.message.body)
+            print("%s => %s" % (request, event.message.body))
             handler(event.message.body)
             self.do_request()
 

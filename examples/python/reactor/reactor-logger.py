@@ -18,21 +18,22 @@
 # under the License.
 #
 
+from __future__ import print_function
 import time
 from proton.reactor import Reactor
 
 class Logger:
 
     def on_unhandled(self, name, event):
-        print "LOG:", name, event
+        print("LOG:", name, event)
 
 class Program:
 
     def on_reactor_init(self, event):
-        print "Hello, World!"
+        print("Hello, World!")
 
     def on_reactor_final(self, event):
-        print "Goodbye, World!"
+        print("Goodbye, World!")
 
 # You can pass multiple handlers to a reactor when you construct it.
 # Each of these handlers will see every event the reactor sees. By
