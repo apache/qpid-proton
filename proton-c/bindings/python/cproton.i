@@ -354,7 +354,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
     return chandler;
   }
 
-  PN_HANDLE(PNI_PYTRACER)
+  PN_HANDLE(PNI_PYTRACER);
 
   void pn_pytracer(pn_transport_t *transport, const char *message) {
     PyObject *pytracer = (PyObject *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);
