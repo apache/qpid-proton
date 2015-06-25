@@ -133,6 +133,10 @@ class Configure(build_ext):
         ext.swig_opts = []
 
     def bundle_libqpid_proton_extension(self):
+        """The proper version of libqpid-proton is not present on the system,
+        so attempt to retrieve the proper libqpid-proton sources and
+        build/install them locally.
+        """
         setup_path = os.path.dirname(os.path.realpath(__file__))
         base = self.get_finalized_command('build').build_base
         build_include = os.path.join(base, 'include')
@@ -142,6 +146,9 @@ class Configure(build_ext):
 
         log.info("Using bundled libqpid-proton")
 
+        # QPID_PROTON_SRC - (optional) pathname to the Proton C sources.  Can
+        # be used to override where this setup gets the Proton C sources from
+        # (see bundle.fetch_libqpid_proton())
         if 'QPID_PROTON_SRC' not in os.environ:
             if not os.path.exists(os.path.join(setup_path, 'tox.ini')):
                 bundledir = os.path.join(base, "bundled")
@@ -331,8 +338,21 @@ class Configure(build_ext):
 
     @property
     def bundle_proton(self):
-        """Bundled proton if the conditions below are met."""
-        return not self.check_qpid_proton_version()
+        """Need to bundle proton if the conditions below are met."""
+        return ('QPID_PROTON_SRC' in os.environ) or \
+            (not self.check_qpid_proton_version())
+
+    def use_installed_proton(self):
+        """The Proton development headers and library are installed, tell swig
+        and the extension where to find them.
+        """
+        _cproton = self.distribution.ext_modules[-1]
+        incs = misc.pkg_config_get_var('includedir')
+        for i in incs.split():
+            _cproton.swig_opts.append('-I%s' % i)
+            _cproton.include_dirs.append(i)
+        ldirs = misc.pkg_config_get_var('libdir')
+        _cproton.library_dirs.extend(ldirs.split())
 
     def run(self):
         # linux2 for python<2.7
@@ -340,6 +360,8 @@ class Configure(build_ext):
         if sys.platform in ['linux', 'linux2', 'linux4']:
             if self.bundle_proton:
                 self.bundle_libqpid_proton_extension()
+            else:
+                self.use_installed_proton()
 
             # Do this just on linux since it's the only
             # platform we support building the bundle for
