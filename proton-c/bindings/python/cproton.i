@@ -134,7 +134,7 @@ int pn_message_encode(pn_message_t *msg, char *BIN_OUT, size_t *BIN_SIZE);
 %ignore pn_message_encode;
 
 int pn_message_decode(pn_message_t *msg, const char *BIN_IN, size_t BIN_LEN);
-%ignore pn_message_encode;
+%ignore pn_message_decode;
 
 ssize_t pn_link_send(pn_link_t *transport, const char *BIN_IN, size_t BIN_LEN);
 %ignore pn_link_send;
