@@ -60,6 +60,7 @@ set (pysrc
     proton/reactor.py
     proton/utils.py
     proton/wrapper.py
+    proton/_compat.py
     )
 
 macro (py_compile directory files artifacts)
