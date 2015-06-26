@@ -24,9 +24,13 @@ package org.apache.qpid.proton.reactor.impl;
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import org.apache.qpid.proton.amqp.Symbol;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selector;
 
@@ -59,14 +63,19 @@ class SelectorImpl implements Selector {
     public void update(Selectable selectable) {
         if (selectable.getChannel() != null) {
             int interestedOps = 0;
-            if (selectable.isReading()) {
-                if (selectable.getChannel() instanceof ServerSocketChannel) {
-                    interestedOps |= SelectionKey.OP_ACCEPT;
-                } else {
-                    interestedOps |= SelectionKey.OP_READ;
+            if (selectable.getChannel() instanceof SocketChannel &&
+                    ((SocketChannel)selectable.getChannel()).isConnectionPending()) {
+                interestedOps |= SelectionKey.OP_CONNECT;
+            } else {
+                if (selectable.isReading()) {
+                    if (selectable.getChannel() instanceof ServerSocketChannel) {
+                        interestedOps |= SelectionKey.OP_ACCEPT;
+                    } else {
+                        interestedOps |= SelectionKey.OP_READ;
+                    }
                 }
+                if (selectable.isWriting()) interestedOps |= SelectionKey.OP_WRITE;
             }
-            if (selectable.isWriting()) interestedOps |= SelectionKey.OP_WRITE;
             SelectionKey key = selectable.getChannel().keyFor(selector);
             key.interestOps(interestedOps);
         }
@@ -76,14 +85,18 @@ class SelectorImpl implements Selector {
     public void remove(Selectable selectable) {
         if (selectable.getChannel() != null) {
             SelectionKey key = selectable.getChannel().keyFor(selector);
-            key.cancel();
-            key.attach(null);
+            if (key != null) {
+                key.cancel();
+                key.attach(null);
+            }
         }
         selectables.remove(selectable);
     }
 
     @Override
     public void select(long timeout) throws IOException {
+
+        long now = System.currentTimeMillis();
         if (timeout > 0) {
             long deadline = 0;
             for (Selectable selectable : selectables) {    // TODO: this differs from the C code which requires a call to update() to make deadline changes take affect
@@ -94,7 +107,6 @@ class SelectorImpl implements Selector {
             }
 
             if (deadline > 0) {
-                long now = System.currentTimeMillis();
                 long delta = deadline - now;
                 if (delta < 0) {
                     timeout = 0;
@@ -104,17 +116,51 @@ class SelectorImpl implements Selector {
             }
         }
 
+        error.clear();
+
+        long awoken = 0;
         if (timeout > 0) {
-            selector.select(timeout);
+            long remainingTimeout = timeout;
+            while(remainingTimeout > 0) {
+                selector.select(remainingTimeout);
+                awoken = System.currentTimeMillis();
+
+                for (Iterator<SelectionKey> iterator = selector.selectedKeys().iterator(); iterator.hasNext();) {
+                    SelectionKey key = iterator.next();
+                    if (key.isConnectable()) {
+                        try {
+                            ((SocketChannel)key.channel()).finishConnect();
+                            update((Selectable)key.attachment());
+                        } catch(IOException ioException) {
+                            Selectable selectable = (Selectable)key.attachment();
+                            ErrorCondition condition = new ErrorCondition();
+                            condition.setCondition(Symbol.getSymbol("proton:io"));
+                            condition.setDescription(ioException.getMessage());
+                            Transport transport = selectable.getTransport();
+                            if (transport != null) {
+                                transport.setCondition(condition);
+                                transport.close_tail();
+                                transport.close_head();
+                                transport.pop(transport.pending());
+                            }
+                            error.add(selectable);
+                        }
+                        iterator.remove();
+                    }
+                }
+                if (!selector.selectedKeys().isEmpty()) {
+                    break;
+                }
+                remainingTimeout = remainingTimeout - (awoken - now);
+            }
         } else {
             selector.selectNow();
+            awoken = System.currentTimeMillis();
         }
-        long awoken = System.currentTimeMillis();
 
         readable.clear();
         writeable.clear();
         expired.clear();
-        error.clear();  // TODO: nothing ever gets put in here...
         for (SelectionKey key : selector.selectedKeys()) {
             Selectable selectable = (Selectable)key.attachment();
             if (key.isReadable()) readable.add(selectable);
