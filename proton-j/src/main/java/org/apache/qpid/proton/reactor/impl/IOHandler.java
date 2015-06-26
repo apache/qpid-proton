@@ -103,6 +103,7 @@ public class IOHandler extends BaseHandler {
         Socket socket = null;   // In this case, 'null' is the proton-j equivalent of PN_INVALID_SOCKET
         try {
             SocketChannel socketChannel = ((ReactorImpl)reactor).getIO().socketChannel();
+            socketChannel.configureBlocking(false);
             socketChannel.connect(new InetSocketAddress(hostname, port));
             socket = socketChannel.socket();
         } catch(IOException ioException) {
