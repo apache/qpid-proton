@@ -264,12 +264,11 @@ public class ReactorImpl implements Reactor, Extendable {
                     yield = false;
                     return true;
                 }
-                yield = false;  // TODO: is this required?
                 Handler handler = eventHandler(event);
                 event.dispatch(handler);
                 event.dispatch(global);
 
-                if (event.getType() == Type.CONNECTION_FINAL) { // TODO: this should be the same as the pni_reactor_dispatch_post logic...
+                if (event.getType() == Type.CONNECTION_FINAL) {
                     children.remove(event.getConnection());
                 }
                 this.previous = event.getType();
@@ -299,7 +298,7 @@ public class ReactorImpl implements Reactor, Extendable {
 
     @Override
     public void wakeup() throws IOException {
-        wakeup.sink().write(ByteBuffer.allocate(1));    // TODO: c version returns a value!
+        wakeup.sink().write(ByteBuffer.allocate(1));
     }
 
     @Override
@@ -341,6 +340,13 @@ public class ReactorImpl implements Reactor, Extendable {
         return task;
     }
 
+    private void expireSelectable(Selectable selectable) {
+        ReactorImpl reactor = (ReactorImpl) selectable.getReactor();
+        reactor.timer.tick(reactor.now);
+        selectable.setDeadline(reactor.timer.deadline());
+        reactor.update(selectable);
+    }
+
     private class TimerReadable implements Callback {
 
         @Override
@@ -350,8 +356,7 @@ public class ReactorImpl implements Reactor, Extendable {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            // TODO: this could be more elegant...
-            new TimerExpired().run(selectable);
+            expireSelectable(selectable);
         }
 
     }
@@ -359,10 +364,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private class TimerExpired implements Callback {
         @Override
         public void run(Selectable selectable) {
-            ReactorImpl reactor = (ReactorImpl) selectable.getReactor();
-            reactor.timer.tick(reactor.now);
-            selectable.setDeadline(reactor.timer.deadline());
-            reactor.update(selectable);
+            expireSelectable(selectable);
         }
     }
 
@@ -373,9 +375,8 @@ public class ReactorImpl implements Reactor, Extendable {
         public void run(Selectable selectable) {
             try {
                 selectable.getChannel().close();
-            } catch(IOException e) {
-                e.printStackTrace();
-                // TODO: what to do here...
+            } catch(IOException ioException) {
+                // Ignore
             }
         }
     }

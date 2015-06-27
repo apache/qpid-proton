@@ -95,7 +95,11 @@ public class IOHandler extends BaseHandler {
         int colonIndex = hostname.indexOf(':');
         int port = 5672;
         if (colonIndex >= 0) {
-            port = Integer.parseInt(hostname.substring(colonIndex+1));  // TODO: this can throw NumberFormatException on malformed input!
+            try {
+                port = Integer.parseInt(hostname.substring(colonIndex+1));
+            } catch(NumberFormatException nfe) {
+                throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+            }
             hostname = hostname.substring(0, colonIndex);
         }
 
@@ -160,7 +164,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_readable from connection.c
-    private static class ConnectionReadable implements Callback {
+    private static Callback connectionReadable = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -189,10 +193,10 @@ public class IOHandler extends BaseHandler {
             update(selectable);
             reactor.update(selectable);
         }
-    }
+    };
 
     // pni_connection_writable from connection.c
-    private static class ConnectionWritable implements Callback {
+    private static Callback connectionWritable = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -222,21 +226,20 @@ public class IOHandler extends BaseHandler {
                 reactor.update(selectable);
             }
         }
-    }
+    };
 
     // pni_connection_error from connection.c
-    private static class ConnectionError implements Callback {
+    private static Callback connectionError = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
             selectable.terminate();
             reactor.update(selectable);
         }
-
-    }
+    };
 
     // pni_connection_expired from connection.c
-    private static class ConnectionExpired implements Callback {
+    private static Callback connectionExpired = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
@@ -249,9 +252,9 @@ public class IOHandler extends BaseHandler {
             selectable.setWriting(p > 0);
             reactor.update(selectable);
         }
-    }
+    };
 
-    private static class ConnectionFree implements Callback {
+    private static Callback connectionFree = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Channel channel = selectable.getChannel();
@@ -259,22 +262,22 @@ public class IOHandler extends BaseHandler {
                 try {
                     channel.close();
                 } catch(IOException ioException) {
-                    throw new RuntimeException(ioException);
+                    // Ignore
                 }
             }
         }
-    }
+    };
 
     // pn_reactor_selectable_transport
     // Note the socket argument can, validly be 'null' this is the equivalent of proton-c's PN_INVALID_SOCKET
     protected static Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
         Selectable selectable = reactor.selectable();
         selectable.setChannel(socket != null ? socket.getChannel() : null);
-        selectable.onReadable(new ConnectionReadable());    // TODO: *IF* these callbacks are stateless, do we more than one instance of them?
-        selectable.onWritable(new ConnectionWritable());
-        selectable.onError(new ConnectionError());
-        selectable.onExpired(new ConnectionExpired());
-        selectable.onFree(new ConnectionFree());
+        selectable.onReadable(connectionReadable);
+        selectable.onWritable(connectionWritable);
+        selectable.onError(connectionError);
+        selectable.onExpired(connectionExpired);
+        selectable.onFree(connectionFree);
         selectable.setTransport(transport);
         ((TransportImpl)transport).setSelectable(selectable);
         ((TransportImpl)transport).setReactor(reactor);
@@ -335,9 +338,9 @@ public class IOHandler extends BaseHandler {
             default:
                 break;
             }
-        } catch(IOException e) {
-            e.printStackTrace();
-            // TODO: not clear what to do with this!
+        } catch(IOException ioException) {
+            // XXX: Might not be the right exception type, but at least the exception isn't being swallowed
+            throw new ReactorInternalException(ioException);
         }
     }
 }

@@ -99,7 +99,8 @@ class SelectorImpl implements Selector {
         long now = System.currentTimeMillis();
         if (timeout > 0) {
             long deadline = 0;
-            for (Selectable selectable : selectables) {    // TODO: this differs from the C code which requires a call to update() to make deadline changes take affect
+            // XXX: Note: this differs from the C code which requires a call to update() to make deadline changes take affect
+            for (Selectable selectable : selectables) {
                 long d = selectable.getDeadline();
                 if (d > 0) {
                     deadline = (deadline == 0) ? d : Math.min(deadline,  d);
@@ -168,7 +169,8 @@ class SelectorImpl implements Selector {
             if (key.isWritable()) writeable.add(selectable);
         }
         selector.selectedKeys().clear();
-        for (Selectable selectable : selectables) {    // TODO: this is different to the C code which evaluates expiry at the point the selectable is iterated over.
+        // XXX: Note: this is different to the C code which evaluates expiry at the point the selectable is iterated over.
+        for (Selectable selectable : selectables) {
             long deadline = selectable.getDeadline();
             if (deadline > 0 && awoken >= deadline) {
                 expired.add(selectable);
