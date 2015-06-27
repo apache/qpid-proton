@@ -25,7 +25,6 @@ import java.nio.channels.SelectableChannel;
 
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Extendable;
-import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Transport;
 
 public interface Selectable extends ReactorChild, Extendable {
