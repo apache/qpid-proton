@@ -56,6 +56,10 @@ def pn_reactor_connection(r, h):
     return wrap(r.connection(h), pn_connection_wrapper)
 def pn_reactor_acceptor(r, host, port, handler):
     return r.acceptor(host, int(port), handler)
+def pn_reactor_mark(r):
+    return r.mark()
+def pn_reactor_wakeup(r):
+    return r.wakeup()
 
 def pn_handler_add(h, c):
     h.add(c)
