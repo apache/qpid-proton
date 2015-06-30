@@ -26,6 +26,10 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 
+/**
+ * A handler that applies flow control to a connection.  This handler tops-up
+ * link credit each time credit is expended by the receipt of messages.
+ */
 public class FlowController extends BaseHandler {
 
     private int drained;

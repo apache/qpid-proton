@@ -219,18 +219,15 @@ public class SelectableImpl implements Selectable {
         return terminal;
     }
 
-    @Override
-    public Transport getTransport() {
+    protected Transport getTransport() {
         return transport;
     }
 
-    @Override
-    public void setTransport(Transport transport) {
+    protected void setTransport(Transport transport) {
         this.transport = transport;
     }
 
-    @Override
-    public void setReactor(Reactor reactor) {
+    protected void setReactor(Reactor reactor) {
         this.reactor = reactor;
     }
 

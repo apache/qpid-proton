@@ -124,7 +124,7 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_capacity from connection.c
     private static int capacity(Selectable selectable) {
-        Transport transport = selectable.getTransport();
+        Transport transport = ((SelectableImpl)selectable).getTransport();
         int capacity = transport.capacity();
         if (capacity < 0) {
             if (transport.isClosed()) {
@@ -136,7 +136,7 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_pending from connection.c
     private static int pending(Selectable selectable) {
-        Transport transport = selectable.getTransport();
+        Transport transport = ((SelectableImpl)selectable).getTransport();
         int pending = transport.pending();
         if (pending < 0) {
             if (transport.isClosed()) {
@@ -147,7 +147,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_deadline from connection.c
-    private static long deadline(Selectable selectable) {
+    private static long deadline(SelectableImpl selectable) {
         Reactor reactor = selectable.getReactor();
         Transport transport = selectable.getTransport();
         long deadline = transport.tick(reactor.now());
@@ -156,11 +156,12 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_update from connection.c
     private static void update(Selectable selectable) {
-        int c = capacity(selectable);
-        int p = pending(selectable);
+        SelectableImpl selectableImpl = (SelectableImpl)selectable;
+        int c = capacity(selectableImpl);
+        int p = pending(selectableImpl);
         selectable.setReading(c > 0);
         selectable.setWriting(p > 0);
-        selectable.setDeadline(deadline(selectable));
+        selectable.setDeadline(deadline(selectableImpl));
     }
 
     // pni_connection_readable from connection.c
@@ -168,7 +169,7 @@ public class IOHandler extends BaseHandler {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             int capacity = transport.capacity();
             if (capacity > 0) {
                 SocketChannel socketChannel = (SocketChannel)selectable.getChannel();
@@ -200,7 +201,7 @@ public class IOHandler extends BaseHandler {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             int pending = transport.pending();
             if (pending > 0) {
                 SocketChannel channel = (SocketChannel)selectable.getChannel();
@@ -243,7 +244,7 @@ public class IOHandler extends BaseHandler {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             long deadline = transport.tick(reactor.now());
             selectable.setDeadline(deadline);
             int c = capacity(selectable);
@@ -278,7 +279,7 @@ public class IOHandler extends BaseHandler {
         selectable.onError(connectionError);
         selectable.onExpired(connectionExpired);
         selectable.onFree(connectionFree);
-        selectable.setTransport(transport);
+        ((SelectableImpl)selectable).setTransport(transport);
         ((TransportImpl)transport).setSelectable(selectable);
         ((TransportImpl)transport).setReactor(reactor);
         update(selectable);

@@ -43,7 +43,7 @@ import org.apache.qpid.proton.reactor.Selectable.Callback;
 public class AcceptorImpl implements Acceptor {
 
     private Record attachments = new RecordImpl();
-    private final Selectable sel;
+    private final SelectableImpl sel;
 
     private class AcceptorReadable implements Callback {
         @Override

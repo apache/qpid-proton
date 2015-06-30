@@ -21,12 +21,26 @@
 
 package org.apache.qpid.proton.reactor;
 
+import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.Extendable;
+import org.apache.qpid.proton.engine.Handler;
 
+/**
+ * Represents work scheduled with a {@link Reactor} for execution at
+ * some point in the future.
+ * <p>
+ * Tasks are created using the {@link Reactor#schedule(int, Handler)}
+ * method.
+ */
 public interface Task extends Extendable {
 
-    public long deadline();
-    public void setReactor(Reactor reactor);
-    public Reactor getReactor();
+    /**
+     * @return the deadline at which the handler associated with the scheduled
+     *         task should be delivered a {@link Type#TIMER_TASK} event.
+     */
+    long deadline();
+
+    /** @return the reactor that created this task. */
+    Reactor getReactor();
 
 }

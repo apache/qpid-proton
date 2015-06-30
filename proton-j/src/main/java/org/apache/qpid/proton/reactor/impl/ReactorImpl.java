@@ -23,6 +23,7 @@ package org.apache.qpid.proton.reactor.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Pipe;
 import java.util.HashSet;
 import java.util.Set;
@@ -186,8 +187,8 @@ public class ReactorImpl implements Reactor, Extendable {
         return selectable(null);
     }
 
-    public Selectable selectable(ReactorChild child) {
-        Selectable result = new SelectableImpl();
+    public SelectableImpl selectable(ReactorChild child) {
+        SelectableImpl result = new SelectableImpl();
         result.setCollector(collector);
         collector.put(Type.SELECTABLE_INIT, result);
         result.setReactor(this);
@@ -295,10 +296,15 @@ public class ReactorImpl implements Reactor, Extendable {
         }
     }
 
-
     @Override
-    public void wakeup() throws IOException {
-        wakeup.sink().write(ByteBuffer.allocate(1));
+    public void wakeup() {
+        try {
+            wakeup.sink().write(ByteBuffer.allocate(1));
+        } catch(ClosedChannelException channelClosedException) {
+            // Ignore - pipe already closed by reactor being shutdown.
+        } catch(IOException ioException) {
+            throw new ReactorInternalException(ioException);
+        }
     }
 
     @Override
@@ -331,7 +337,7 @@ public class ReactorImpl implements Reactor, Extendable {
     @Override
     public Task schedule(int delay, Handler handler) {
         Task task = timer.schedule(now + delay);
-        task.setReactor(this);
+        ((TaskImpl)task).setReactor(this);
         BaseHandler.setHandler(task, handler);
         if (selectable != null) {
             selectable.setDeadline(timer.deadline());

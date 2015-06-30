@@ -21,8 +21,11 @@
 
 package org.apache.qpid.proton.reactor;
 
-// Interface used to identify classes that can be a child of a reactor.
+/**
+ * Interface used to identify classes that can be a child of a reactor.
+ */
 public interface ReactorChild {
 
+    /** Frees any resources associated with this child. */
     void free();
 }

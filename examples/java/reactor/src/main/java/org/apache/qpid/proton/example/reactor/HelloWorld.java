@@ -33,7 +33,7 @@ import org.apache.qpid.proton.reactor.Reactor;
  * The proton reactor provides a general purpose event processing
  * library for writing reactive programs. A reactive program is defined
  * by a set of event handlers. An event handler is just any class or
- * object that extends the Handler interface. For convinience, a class
+ * object that extends the Handler interface. For convenience, a class
  * can extend BaseHandler and only handle the events that it cares to
  * implement methods for.
  */
