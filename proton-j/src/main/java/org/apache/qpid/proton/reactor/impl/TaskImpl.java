@@ -33,6 +33,7 @@ public class TaskImpl implements Task, Comparable<TaskImpl> {
     private final int counter;
     private final AtomicInteger count = new AtomicInteger();
     private Record attachments = new RecordImpl();
+    private Reactor reactor;
 
     public TaskImpl(long deadline) {
         this.deadline = deadline;
@@ -57,8 +58,6 @@ public class TaskImpl implements Task, Comparable<TaskImpl> {
         return deadline;
     }
 
-    private Reactor reactor;
-    @Override
     public void setReactor(Reactor reactor) {
         this.reactor = reactor;
     }

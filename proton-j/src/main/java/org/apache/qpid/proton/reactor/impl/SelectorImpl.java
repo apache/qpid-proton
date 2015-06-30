@@ -133,7 +133,7 @@ class SelectorImpl implements Selector {
                             ((SocketChannel)key.channel()).finishConnect();
                             update((Selectable)key.attachment());
                         } catch(IOException ioException) {
-                            Selectable selectable = (Selectable)key.attachment();
+                            SelectableImpl selectable = (SelectableImpl)key.attachment();
                             ErrorCondition condition = new ErrorCondition();
                             condition.setCondition(Symbol.getSymbol("proton:io"));
                             condition.setDescription(ioException.getMessage());
