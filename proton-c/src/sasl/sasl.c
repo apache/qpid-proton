@@ -281,10 +281,13 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
     return n;
   }
 
+  pni_sasl_t *sasl = transport->sasl;
   if (pni_sasl_impl_can_encrypt(transport)) {
     transport->io_layers[layer] = &sasl_encrypt_layer;
+    sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
+    pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
     return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
-  } else if (transport->sasl->client) {
+  } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_input(transport, layer, bytes, available );
@@ -293,11 +296,28 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
   pn_buffer_t *in = transport->sasl->decoded_buffer;
-  pni_sasl_impl_decode(transport, pn_bytes(available, bytes), in);
+  const size_t max_buffer = transport->sasl->max_encrypt_size;
+  for (size_t processed = 0; processed<available;) {
+    pn_bytes_t decoded = pn_bytes(0, NULL);
+    size_t decode_size = (available-processed)<=max_buffer?(available-processed):max_buffer;
+    ssize_t size = pni_sasl_impl_decode(transport, pn_bytes(decode_size, bytes+processed), &decoded);
+    if (size<0) return size;
+    if (size>0) {
+      size = pn_buffer_append(in, decoded.start, decoded.size);
+      if (size) return size;
+    }
+    processed += decode_size;
+  }
   pn_bytes_t decoded = pn_buffer_bytes(in);
-  ssize_t size = pni_passthru_layer.process_input(transport, layer, decoded.start, decoded.size );
-  pn_buffer_trim(in, size, 0);
-  return size;
+  size_t processed_size = 0;
+  while (processed_size < decoded.size) {
+    ssize_t size = pni_passthru_layer.process_input(transport, layer, decoded.start+processed_size, decoded.size-processed_size);
+    if (size==0) break;
+    if (size<0) return size;
+    pn_buffer_trim(in, size, 0);
+    processed_size += size;
+  }
+  return available;
 }
 
 static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned int layer, char *bytes, size_t size)
@@ -316,26 +336,30 @@ static ssize_t pn_output_write_sasl_header(pn_transport_t *transport, unsigned i
 
 static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
+  pni_sasl_t *sasl = transport->sasl;
+
   // this accounts for when pn_do_error is invoked, e.g. by idle timeout
   if (!transport->close_sent) {
     pni_sasl_start_server_if_needed(transport);
 
     pni_post_sasl_frame(transport);
 
-    pni_sasl_t *sasl = transport->sasl;
     if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
       return pn_dispatcher_output(transport, bytes, available);
     } else {
       if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
         pn_transport_close_tail(transport);
+        return PN_EOS;
       }
     }
   }
 
   if (pni_sasl_impl_can_encrypt(transport)) {
     transport->io_layers[layer] = &sasl_encrypt_layer;
+    sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
+    pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
     return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
-  } else if (!transport->sasl->client) {
+  } else if (!sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
   }
   return pni_passthru_layer.process_output(transport, layer, bytes, available );
@@ -343,12 +367,23 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
 static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
-  ssize_t size = pni_passthru_layer.process_output(transport, layer, bytes, available );
-  if (size<=0) return size;
+  ssize_t clear_size = pni_passthru_layer.process_output(transport, layer, bytes, available );
+  if (clear_size<0) return clear_size;
 
+  const ssize_t max_buffer = transport->sasl->max_encrypt_size;
   pn_buffer_t *out = transport->sasl->encoded_buffer;
-  pni_sasl_impl_encode(transport, pn_bytes(size, bytes), out);
-  size = pn_buffer_get(out, 0, available, bytes);
+  for (ssize_t processed = 0; processed<clear_size;) {
+    pn_bytes_t encoded = pn_bytes(0, NULL);
+    ssize_t encode_size = (clear_size-processed)<=max_buffer?(clear_size-processed):max_buffer;
+    size_t size = pni_sasl_impl_encode(transport, pn_bytes(encode_size, bytes+processed), &encoded);
+    if (size<0) return size;
+    if (size>0) {
+      size = pn_buffer_append(out, encoded.start, encoded.size);
+      if (size) return size;
+    }
+    processed += encode_size;
+  }
+  ssize_t size = pn_buffer_get(out, 0, available, bytes);
   pn_buffer_trim(out, size, 0);
   return size;
 }

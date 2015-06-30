@@ -19,6 +19,7 @@
  *
  */
 
+#include "config.h"
 #include "sasl-internal.h"
 
 #include "engine/engine-internal.h"
@@ -125,7 +126,10 @@ bool pni_init_client(pn_transport_t* transport) {
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
     SASL_SEC_NOPLAINTEXT |
-    ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+      ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+    secprops.min_ssf = 0;
+    secprops.max_ssf = 2048;
+    secprops.maxbufsize = PN_SASL_MAX_BUFFSIZE;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) break;
@@ -256,6 +260,9 @@ bool pni_init_server(pn_transport_t* transport)
     secprops.security_flags =
       SASL_SEC_NOPLAINTEXT |
       ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+    secprops.min_ssf = 0;
+    secprops.max_ssf = 2048;
+    secprops.maxbufsize = PN_SASL_MAX_BUFFSIZE;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) break;
@@ -369,6 +376,73 @@ void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
     pni_process_server_result(transport, result);
 }
 
+bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
+{
+  if (!transport->sasl->impl_context) return false;
+
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  // Get SSF to find out if we need to encrypt or not
+  const void* value;
+  int r = sasl_getprop(cyrus_conn, SASL_SSF, &value);
+  if (r != SASL_OK) {
+    // TODO: Should log an error here too, maybe assert here
+    return false;
+  }
+  int ssf = *(int *) value;
+  if (ssf > 0) {
+    pn_transport_logf(transport, "SASL Encryption enabled: ssf=%d", ssf);
+    return true;
+  }
+  return false;
+}
+
+ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
+{
+  if (!transport->sasl->impl_context) return PN_ERR;
+
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  const void* value;
+  int r = sasl_getprop(cyrus_conn, SASL_MAXOUTBUF, &value);
+  if (r != SASL_OK) {
+    // TODO: Should log an error here too, maybe assert here
+    return PN_ERR;
+  }
+  int outbuf_size = *(int *) value;
+  return outbuf_size;
+}
+
+ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+  if ( in.size==0 ) return 0;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  const char *output;
+  unsigned int outlen;
+  int r = sasl_encode(cyrus_conn, in.start, in.size, &output, &outlen);
+  if (outlen==0) return 0;
+  if ( r==SASL_OK ) {
+    *out = pn_bytes(outlen, output);
+    return outlen;
+  }
+  pn_transport_logf(transport, "SASL encode error: %s", sasl_errdetail(cyrus_conn));
+  return PN_ERR;
+}
+
+ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+  if ( in.size==0 ) return 0;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  const char *output;
+  unsigned int outlen;
+  int r = sasl_decode(cyrus_conn, in.start, in.size, &output, &outlen);
+  if (outlen==0) return 0;
+  if ( r==SASL_OK ) {
+    *out = pn_bytes(outlen, output);
+    return outlen;
+  }
+  pn_transport_logf(transport, "SASL decode error: %s", sasl_errdetail(cyrus_conn));
+  return PN_ERR;
+}
+
 void pni_sasl_impl_free(pn_transport_t *transport)
 {
     sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
@@ -379,21 +453,6 @@ void pni_sasl_impl_free(pn_transport_t *transport)
     } else {
         sasl_server_done();
     }
-}
-
-bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
-{
-  return false;
-}
-
-ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out)
-{
-  return 0;
-}
-
-ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out)
-{
-  return 0;
 }
 
 bool pn_sasl_extended(void)

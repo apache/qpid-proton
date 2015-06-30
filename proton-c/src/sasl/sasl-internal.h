@@ -47,8 +47,9 @@ void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
 
 // Internal SASL security layer interface
 bool pni_sasl_impl_can_encrypt(pn_transport_t *transport);
-ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out);
-ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_buffer_t *out);
+ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport);
+ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
 
 
 // Shared SASL API used by the actual SASL authenticators
@@ -74,6 +75,7 @@ struct pni_sasl_t {
   const char *remote_fqdn;
   char *external_auth;
   int external_ssf;
+  size_t max_encrypt_size;
   pn_sasl_outcome_t outcome;
   pn_buffer_t* decoded_buffer;
   pn_buffer_t* encoded_buffer;
