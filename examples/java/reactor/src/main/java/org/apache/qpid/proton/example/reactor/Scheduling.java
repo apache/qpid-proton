@@ -37,7 +37,18 @@ public class Scheduling extends BaseHandler {
     public void onReactorInit(Event event) {
         startTime = System.currentTimeMillis();
         System.out.println("Hello, World!");
+
+        // We can schedule a task event for some point in the future.
+        // This will cause the reactor to stick around until it has a
+        // chance to process the event.
+
+        // The first argument is the delay. The second argument is the
+        // handler for the event. We are just using self for now, but
+        // we could pass in another object if we wanted.
         Task task = event.getReactor().schedule(1000, this);
+
+        // We can ignore the task if we want to, but we can also use it
+        // to pass stuff to the handler.
         task.attachments().set("key", String.class, "Yay");
     }
 
