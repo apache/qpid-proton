@@ -29,6 +29,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -562,5 +563,34 @@ public class ReactorTest {
         reactor.schedule(0, expectedHandler);
         assertReactorRunBarfsOnHandler(reactor, expectedBarf, expectedHandler);
         reactor.free();
+    }
+
+    @Test
+    public void connectionRefused() throws IOException {
+        final ServerSocket serverSocket = new ServerSocket(0, 0);
+
+        class ConnectionHandler extends TestHandler {
+            @Override
+            public void onConnectionInit(Event event) {
+                super.onConnectionInit(event);
+                Connection connection = event.getConnection();
+                connection.setHostname("127.0.0.1:" + serverSocket.getLocalPort());
+                connection.open();
+                try {
+                    serverSocket.close();
+                } catch(IOException e) {
+                    AssertionFailedError afe = new AssertionFailedError();
+                    afe.initCause(e);
+                    throw afe;
+                }
+            }
+        }
+        TestHandler connectionHandler = new ConnectionHandler();
+        reactor.connection(connectionHandler);
+        reactor.run();
+        reactor.free();
+        serverSocket.close();
+        connectionHandler.assertEvents(Type.CONNECTION_INIT, Type.CONNECTION_LOCAL_OPEN, Type.CONNECTION_BOUND, Type.TRANSPORT_ERROR, Type.TRANSPORT_TAIL_CLOSED,
+                Type.TRANSPORT_HEAD_CLOSED, Type.TRANSPORT_CLOSED, Type.CONNECTION_UNBOUND, Type.TRANSPORT);
     }
 }

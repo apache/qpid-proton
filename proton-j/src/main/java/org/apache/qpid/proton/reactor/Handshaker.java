@@ -26,6 +26,13 @@ import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 
+/**
+ * A handler that mirrors the actions of the remote end of a connection.  This
+ * handler responds in kind when the remote end of the connection is opened and
+ * closed.  Likewise if the remote end of the connection opens or closes
+ * sessions and links, this handler responds by opening or closing the local end
+ * of the session or link.
+ */
 public class Handshaker extends BaseHandler {
 
     private void open(Endpoint endpoint) {

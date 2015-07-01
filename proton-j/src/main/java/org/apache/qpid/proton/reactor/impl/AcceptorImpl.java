@@ -43,6 +43,7 @@ import org.apache.qpid.proton.reactor.Selectable.Callback;
 public class AcceptorImpl implements Acceptor {
 
     private Record attachments = new RecordImpl();
+    private final SelectableImpl sel;
 
     private class AcceptorReadable implements Callback {
         @Override
@@ -55,19 +56,16 @@ public class AcceptorImpl implements Acceptor {
                 }
                 Handler handler = BaseHandler.getHandler(AcceptorImpl.this);
                 if (handler == null) {
-                    // TODO: set selectable.getAttachment() to null?
                     handler = reactor.getHandler();
                 }
                 Connection conn = reactor.connection(handler);
                 Transport trans = Proton.transport();
-                // TODO: the C code calls pn_transport_set_server(trans) - is there a Java equivalent we need to worry about?
                 Sasl sasl = trans.sasl();
-                sasl.server();  // TODO: it would be nice if SASL was more pluggable than this (but this is what the C API currently does...)
-                //sasl.allowSkip(true); // TODO: this in in the C code - but the proton-j code throws a ProtonUnsupportedOperationException (as it is not implemented)
+                sasl.server();
                 sasl.setMechanisms("ANONYMOUS");
                 sasl.done(SaslOutcome.PN_SASL_OK);
                 trans.bind(conn);
-                IOHandler.selectableTransport(reactor, socketChannel.socket(), trans);  // TODO: could we pass in a channel object instead of doing socketChannel.socket()?
+                IOHandler.selectableTransport(reactor, socketChannel.socket(), trans);
             } catch(IOException ioException) {
                 sel.error();
             }
@@ -82,13 +80,10 @@ public class AcceptorImpl implements Acceptor {
                     selectable.getChannel().close();
                 }
             } catch(IOException ioException) {
-                ioException.printStackTrace();
-                // TODO: what now?
+                // Ignore - as we can't make the channel any more closed...
             }
         }
     }
-
-    private final Selectable sel;
 
     protected AcceptorImpl(Reactor reactor, String host, int port, Handler handler) throws IOException {
         ServerSocketChannel ssc = ((ReactorImpl)reactor).getIO().serverSocketChannel();
@@ -110,8 +105,7 @@ public class AcceptorImpl implements Acceptor {
             try {
                 sel.getChannel().close();
             } catch(IOException ioException) {
-                ioException.printStackTrace();
-                // TODO: what now?
+                // Ignore.
             }
             sel.setChannel(null);
             sel.terminate();

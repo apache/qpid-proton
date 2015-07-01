@@ -37,14 +37,19 @@ public class Echo extends BaseHandler {
         @Override
         public void onSelectableInit(Event event) {
             Selectable selectable = event.getSelectable();
-            Reactor reactor = event.getReactor();
+            // We can configure a selectable with any SelectableChannel we want.
+            selectable.setChannel(channel);
+            // Ask to be notified when the channel is readable
             selectable.setReading(true);
-            reactor.update(selectable);
+            event.getReactor().update(selectable);
         }
 
         @Override
         public void onSelectableReadable(Event event) {
             Selectable selectable = event.getSelectable();
+
+            // The onSelectableReadable event tells us that there is data
+            // to be read, or the end of stream has been reached.
             SourceChannel channel = (SourceChannel)selectable.getChannel();
             ByteBuffer buffer = ByteBuffer.allocate(1024);
             try {
@@ -74,10 +79,13 @@ public class Echo extends BaseHandler {
 
     @Override
     public void onReactorInit(Event event) {
+        // Every selectable is a possible source of future events. Our
+        // selectable stays alive until it reads the end of stream
+        // marker. This will keep the whole reactor running until we
+        // type Control-D.
         System.out.println("Type whatever you want and then use Control-D to exit:");
         Reactor reactor = event.getReactor();
         Selectable selectable = reactor.selectable();
-        selectable.setChannel(channel);
         setHandler(selectable, new EchoHandler());
         reactor.update(selectable);
     }

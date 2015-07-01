@@ -55,6 +55,7 @@ public class CountRandomly extends BaseHandler {
             }
         }
 
+        // Provide a method to check for doneness
         private boolean done() {
             return count >= limit;
         }

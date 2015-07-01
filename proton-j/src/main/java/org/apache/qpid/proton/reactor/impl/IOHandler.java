@@ -95,7 +95,11 @@ public class IOHandler extends BaseHandler {
         int colonIndex = hostname.indexOf(':');
         int port = 5672;
         if (colonIndex >= 0) {
-            port = Integer.parseInt(hostname.substring(colonIndex+1));  // TODO: this can throw NumberFormatException on malformed input!
+            try {
+                port = Integer.parseInt(hostname.substring(colonIndex+1));
+            } catch(NumberFormatException nfe) {
+                throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+            }
             hostname = hostname.substring(0, colonIndex);
         }
 
@@ -103,6 +107,7 @@ public class IOHandler extends BaseHandler {
         Socket socket = null;   // In this case, 'null' is the proton-j equivalent of PN_INVALID_SOCKET
         try {
             SocketChannel socketChannel = ((ReactorImpl)reactor).getIO().socketChannel();
+            socketChannel.configureBlocking(false);
             socketChannel.connect(new InetSocketAddress(hostname, port));
             socket = socketChannel.socket();
         } catch(IOException ioException) {
@@ -119,7 +124,7 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_capacity from connection.c
     private static int capacity(Selectable selectable) {
-        Transport transport = selectable.getTransport();
+        Transport transport = ((SelectableImpl)selectable).getTransport();
         int capacity = transport.capacity();
         if (capacity < 0) {
             if (transport.isClosed()) {
@@ -131,7 +136,7 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_pending from connection.c
     private static int pending(Selectable selectable) {
-        Transport transport = selectable.getTransport();
+        Transport transport = ((SelectableImpl)selectable).getTransport();
         int pending = transport.pending();
         if (pending < 0) {
             if (transport.isClosed()) {
@@ -142,7 +147,7 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_connection_deadline from connection.c
-    private static long deadline(Selectable selectable) {
+    private static long deadline(SelectableImpl selectable) {
         Reactor reactor = selectable.getReactor();
         Transport transport = selectable.getTransport();
         long deadline = transport.tick(reactor.now());
@@ -151,19 +156,20 @@ public class IOHandler extends BaseHandler {
 
     // pni_connection_update from connection.c
     private static void update(Selectable selectable) {
-        int c = capacity(selectable);
-        int p = pending(selectable);
+        SelectableImpl selectableImpl = (SelectableImpl)selectable;
+        int c = capacity(selectableImpl);
+        int p = pending(selectableImpl);
         selectable.setReading(c > 0);
         selectable.setWriting(p > 0);
-        selectable.setDeadline(deadline(selectable));
+        selectable.setDeadline(deadline(selectableImpl));
     }
 
     // pni_connection_readable from connection.c
-    private static class ConnectionReadable implements Callback {
+    private static Callback connectionReadable = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             int capacity = transport.capacity();
             if (capacity > 0) {
                 SocketChannel socketChannel = (SocketChannel)selectable.getChannel();
@@ -188,14 +194,14 @@ public class IOHandler extends BaseHandler {
             update(selectable);
             reactor.update(selectable);
         }
-    }
+    };
 
     // pni_connection_writable from connection.c
-    private static class ConnectionWritable implements Callback {
+    private static Callback connectionWritable = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             int pending = transport.pending();
             if (pending > 0) {
                 SocketChannel channel = (SocketChannel)selectable.getChannel();
@@ -221,25 +227,24 @@ public class IOHandler extends BaseHandler {
                 reactor.update(selectable);
             }
         }
-    }
+    };
 
     // pni_connection_error from connection.c
-    private static class ConnectionError implements Callback {
+    private static Callback connectionError = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
             selectable.terminate();
             reactor.update(selectable);
         }
-
-    }
+    };
 
     // pni_connection_expired from connection.c
-    private static class ConnectionExpired implements Callback {
+    private static Callback connectionExpired = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Reactor reactor = selectable.getReactor();
-            Transport transport = selectable.getTransport();
+            Transport transport = ((SelectableImpl)selectable).getTransport();
             long deadline = transport.tick(reactor.now());
             selectable.setDeadline(deadline);
             int c = capacity(selectable);
@@ -248,9 +253,9 @@ public class IOHandler extends BaseHandler {
             selectable.setWriting(p > 0);
             reactor.update(selectable);
         }
-    }
+    };
 
-    private static class ConnectionFree implements Callback {
+    private static Callback connectionFree = new Callback() {
         @Override
         public void run(Selectable selectable) {
             Channel channel = selectable.getChannel();
@@ -258,23 +263,23 @@ public class IOHandler extends BaseHandler {
                 try {
                     channel.close();
                 } catch(IOException ioException) {
-                    throw new RuntimeException(ioException);
+                    // Ignore
                 }
             }
         }
-    }
+    };
 
     // pn_reactor_selectable_transport
     // Note the socket argument can, validly be 'null' this is the equivalent of proton-c's PN_INVALID_SOCKET
     protected static Selectable selectableTransport(Reactor reactor, Socket socket, Transport transport) {
         Selectable selectable = reactor.selectable();
         selectable.setChannel(socket != null ? socket.getChannel() : null);
-        selectable.onReadable(new ConnectionReadable());    // TODO: *IF* these callbacks are stateless, do we more than one instance of them?
-        selectable.onWritable(new ConnectionWritable());
-        selectable.onError(new ConnectionError());
-        selectable.onExpired(new ConnectionExpired());
-        selectable.onFree(new ConnectionFree());
-        selectable.setTransport(transport);
+        selectable.onReadable(connectionReadable);
+        selectable.onWritable(connectionWritable);
+        selectable.onError(connectionError);
+        selectable.onExpired(connectionExpired);
+        selectable.onFree(connectionFree);
+        ((SelectableImpl)selectable).setTransport(transport);
         ((TransportImpl)transport).setSelectable(selectable);
         ((TransportImpl)transport).setReactor(reactor);
         update(selectable);
@@ -334,9 +339,9 @@ public class IOHandler extends BaseHandler {
             default:
                 break;
             }
-        } catch(IOException e) {
-            e.printStackTrace();
-            // TODO: not clear what to do with this!
+        } catch(IOException ioException) {
+            // XXX: Might not be the right exception type, but at least the exception isn't being swallowed
+            throw new ReactorInternalException(ioException);
         }
     }
 }

@@ -23,10 +23,8 @@ package org.apache.qpid.proton.reactor.impl;
 
 import java.nio.channels.SelectableChannel;
 
-import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Event.Type;
-import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.CollectorImpl;
@@ -156,7 +154,6 @@ public class SelectableImpl implements Selectable {
         }
     }
 
-    // These are equivalent to the C code's set/get file descritor functions.
     @Override
     public void setChannel(SelectableChannel channel) {
         this.channel = channel;
@@ -208,7 +205,7 @@ public class SelectableImpl implements Selectable {
     }
 
     @Override
-    public Reactor getReactor() {  // TODO: the C version uses set/getContext for this - should we do the same?
+    public Reactor getReactor() {
         return reactor;
     }
 
@@ -222,18 +219,15 @@ public class SelectableImpl implements Selectable {
         return terminal;
     }
 
-    @Override
-    public Transport getTransport() {
+    protected Transport getTransport() {
         return transport;
     }
 
-    @Override
-    public void setTransport(Transport transport) {
+    protected void setTransport(Transport transport) {
         this.transport = transport;
     }
 
-    @Override
-    public void setReactor(Reactor reactor) {
+    protected void setReactor(Reactor reactor) {
         this.reactor = reactor;
     }
 
