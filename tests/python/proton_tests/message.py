@@ -129,3 +129,16 @@ class CodecTest(Test):
     assert self.msg.address == msg2.address, (self.msg.address, msg2.address)
     assert self.msg.subject == msg2.subject, (self.msg.subject, msg2.subject)
     assert self.msg.body == msg2.body, (self.msg.body, msg2.body)
+
+  def testRoundTripWithTimes(self):
+    self.msg.expiry_time = 987654321;
+    self.msg.creation_time = 123456789;
+    self.msg.body = 'Hello World!'
+
+    data = self.msg.encode()
+
+    msg2 = Message()
+    msg2.decode(data)
+
+    assert self.msg.expiry_time == msg2.expiry_time, (self.msg.expiry_time, msg2.expiry_time)
+    assert self.msg.creation_time == msg2.creation_time, (self.msg.creation_time, msg2.creation_time)

@@ -792,7 +792,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     pn_data_exit(data);
   }
 
-  err = pn_data_fill(data, "DL[CzSSSCssttSIS]", PROPERTIES,
+  err = pn_data_fill(data, "DL[CzSSSCss?t?tSIS]", PROPERTIES,
                      msg->id,
                      pn_string_size(msg->user_id), pn_string_get(msg->user_id),
                      pn_string_get(msg->address),
@@ -802,6 +802,8 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
                      pn_string_get(msg->content_type),
                      pn_string_get(msg->content_encoding),
                      msg->expiry_time,
+                     msg->expiry_time,
+                     msg->creation_time,
                      msg->creation_time,
                      pn_string_get(msg->group_id),
                      msg->group_sequence,
