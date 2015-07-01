@@ -414,7 +414,6 @@ static void pn_transport_initialize(void *object)
   transport->local_channel_max  = PN_IMPL_CHANNEL_MAX;
   transport->channel_max        = transport->local_channel_max;
 
-  transport->remote_channel_max = 0;
   transport->local_idle_timeout = 0;
   transport->dead_remote_deadline = 0;
   transport->last_bytes_input = 0;
