@@ -23,6 +23,7 @@ package org.apache.qpid.proton.reactor.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.Pipe;
 import java.util.HashSet;
 import java.util.Set;
@@ -186,8 +187,8 @@ public class ReactorImpl implements Reactor, Extendable {
         return selectable(null);
     }
 
-    public Selectable selectable(ReactorChild child) {
-        Selectable result = new SelectableImpl();
+    public SelectableImpl selectable(ReactorChild child) {
+        SelectableImpl result = new SelectableImpl();
         result.setCollector(collector);
         collector.put(Type.SELECTABLE_INIT, result);
         result.setReactor(this);
@@ -264,12 +265,11 @@ public class ReactorImpl implements Reactor, Extendable {
                     yield = false;
                     return true;
                 }
-                yield = false;  // TODO: is this required?
                 Handler handler = eventHandler(event);
                 event.dispatch(handler);
                 event.dispatch(global);
 
-                if (event.getType() == Type.CONNECTION_FINAL) { // TODO: this should be the same as the pni_reactor_dispatch_post logic...
+                if (event.getType() == Type.CONNECTION_FINAL) {
                     children.remove(event.getConnection());
                 }
                 this.previous = event.getType();
@@ -296,10 +296,15 @@ public class ReactorImpl implements Reactor, Extendable {
         }
     }
 
-
     @Override
-    public void wakeup() throws IOException {
-        wakeup.sink().write(ByteBuffer.allocate(1));    // TODO: c version returns a value!
+    public void wakeup() {
+        try {
+            wakeup.sink().write(ByteBuffer.allocate(1));
+        } catch(ClosedChannelException channelClosedException) {
+            // Ignore - pipe already closed by reactor being shutdown.
+        } catch(IOException ioException) {
+            throw new ReactorInternalException(ioException);
+        }
     }
 
     @Override
@@ -332,13 +337,20 @@ public class ReactorImpl implements Reactor, Extendable {
     @Override
     public Task schedule(int delay, Handler handler) {
         Task task = timer.schedule(now + delay);
-        task.setReactor(this);
+        ((TaskImpl)task).setReactor(this);
         BaseHandler.setHandler(task, handler);
         if (selectable != null) {
             selectable.setDeadline(timer.deadline());
             update(selectable);
         }
         return task;
+    }
+
+    private void expireSelectable(Selectable selectable) {
+        ReactorImpl reactor = (ReactorImpl) selectable.getReactor();
+        reactor.timer.tick(reactor.now);
+        selectable.setDeadline(reactor.timer.deadline());
+        reactor.update(selectable);
     }
 
     private class TimerReadable implements Callback {
@@ -350,8 +362,7 @@ public class ReactorImpl implements Reactor, Extendable {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            // TODO: this could be more elegant...
-            new TimerExpired().run(selectable);
+            expireSelectable(selectable);
         }
 
     }
@@ -359,10 +370,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private class TimerExpired implements Callback {
         @Override
         public void run(Selectable selectable) {
-            ReactorImpl reactor = (ReactorImpl) selectable.getReactor();
-            reactor.timer.tick(reactor.now);
-            selectable.setDeadline(reactor.timer.deadline());
-            reactor.update(selectable);
+            expireSelectable(selectable);
         }
     }
 
@@ -373,9 +381,8 @@ public class ReactorImpl implements Reactor, Extendable {
         public void run(Selectable selectable) {
             try {
                 selectable.getChannel().close();
-            } catch(IOException e) {
-                e.printStackTrace();
-                // TODO: what to do here...
+            } catch(IOException ioException) {
+                // Ignore
             }
         }
     }

@@ -50,9 +50,9 @@ public class Recv extends BaseHandler {
             // There is an optional third argument to the Reactor.acceptor
             // call. Using it, we could supply a handler here that would
             // become the handler for all accepted connections. If we omit
-            // it, the reactor simply inherets all the connection events.
+            // it, the reactor simply inherits all the connection events.
         } catch(IOException ioException) {
-            ioException.printStackTrace();    // TODO: what is the right answer?
+            ioException.printStackTrace();
         }
     }
 

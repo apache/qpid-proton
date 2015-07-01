@@ -23,8 +23,17 @@ package org.apache.qpid.proton.reactor;
 
 import org.apache.qpid.proton.engine.Extendable;
 
+/**
+ * Acceptors are children of a {@link Reactor} that accept in-bound network
+ * connections.
+ */
 public interface Acceptor extends ReactorChild, Extendable {
 
+    /**
+     * Closes the acceptor, stopping it accepting any further in-bound
+     * connections.  Already accepted connections continue to be processed by
+     * the associated reactor.
+     */
     void close();
 
 }

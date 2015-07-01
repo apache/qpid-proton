@@ -45,6 +45,8 @@ public class Counter extends BaseHandler {
             count += 1;
             System.out.println(count);
             if (count < limit) {
+                // A recurring task can be accomplished by just scheduling
+                // another event.
                 event.getReactor().schedule(250, this);
             }
         }
@@ -57,8 +59,9 @@ public class Counter extends BaseHandler {
 
         // Note that unlike the previous scheduling example, we pass in
         // a separate object for the handler. This means that the timer
-        // event we just scheduled will not be seen by Program as it is
-        // being handled by the Counter instance we create.
+        // event we just scheduled will not be seen by the Counter
+        // implementation of BaseHandler as it is being handled by the
+        // CounterHandler instance we create.
         event.getReactor().schedule(250, new CounterHandler(10));
     }
 
