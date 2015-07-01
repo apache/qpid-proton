@@ -650,6 +650,12 @@ def pn_link_credit(link):
 def pn_link_queued(link):
   return link.impl.getQueued()
 
+def pn_link_get_drain(link):
+  return link.impl.getDrain();
+
+def pn_link_set_drain(link, drain):
+  return link.impl.setDrain(drain);
+
 def pn_link_unsettled(link):
   return link.impl.getUnsettled()
 
@@ -923,6 +929,10 @@ def pn_transport_bind(trans, conn):
 def pn_transport_unbind(trans):
   trans.impl.unbind()
   return 0
+
+def pn_transport_set_pytracer(trans, tracer):
+  import warnings
+  warnings.warn("TODO pn_transport_set_tracer", stacklevel=2)
 
 def pn_transport_trace(trans, n):
   trans.impl.trace(n)
