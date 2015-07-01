@@ -147,6 +147,11 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
     if (sasl->last_state==desired_state && desired_state==SASL_POSTED_CHALLENGE) {
       sasl->last_state = SASL_POSTED_MECHANISMS;
     }
+    // If we already pretended to receive outcome and we actually received outcome
+    // we must set last_state here as we'vwe already stoped outputting from this layer
+    if (sasl->last_state==SASL_PRETEND_OUTCOME && desired_state==SASL_RECVED_OUTCOME ) {
+        sasl->last_state = SASL_RECVED_OUTCOME;
+    }
     sasl->desired_state = desired_state;
     pni_emit(transport);
   }
