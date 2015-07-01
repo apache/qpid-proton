@@ -613,6 +613,17 @@ typedef unsigned long int uintptr_t;
 %include "proton/transport.h"
 %include "proton/event.h"
 
+%inline %{
+  /* assume the binding does the incref in the wrapper */
+  pn_event_t* pn_event_copy(pn_event_t *evt) { return evt; }
+%}
+
+%contract pn_event_copy(pn_event_t *evt)
+{
+ require:
+  evt != NULL;
+}
+
 %contract pn_message_free(pn_message_t *msg)
 {
  require:

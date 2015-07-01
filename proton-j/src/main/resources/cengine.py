@@ -1044,6 +1044,9 @@ class pn_event:
   def __init__(self, impl):
     self.impl = impl
 
+  def copy(self):
+    return pn_event(self.impl.copy())
+
 def pn_collector_peek(coll):
   ev = coll.peek()
   if ev:
@@ -1119,3 +1122,6 @@ def pn_event_category(event):
 
 def pn_event_attachments(event):
   return event.impl.attachments()
+
+def pn_event_copy(event):
+  return event.copy()
