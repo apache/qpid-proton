@@ -279,8 +279,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   pni_sasl_start_server_if_needed(transport);
 
-  bool dummy = false;
-  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &dummy);
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
 
   if (n!=0 || !pni_sasl_is_final_input_state(transport->sasl)) {
     return n;
@@ -288,14 +287,15 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   pni_sasl_t *sasl = transport->sasl;
   if (pni_sasl_impl_can_encrypt(transport)) {
-    transport->io_layers[layer] = &sasl_encrypt_layer;
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
-    return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
+    transport->io_layers[layer] = &sasl_encrypt_layer;
   } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
+  } else {
+    return pni_passthru_layer.process_input(transport, layer, bytes, available );
   }
-  return pni_passthru_layer.process_input(transport, layer, bytes, available );
+  return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
 }
 
 static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
@@ -360,14 +360,15 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
   }
 
   if (pni_sasl_impl_can_encrypt(transport)) {
-    transport->io_layers[layer] = &sasl_encrypt_layer;
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
-    return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
-  } else if (!sasl->client) {
+    transport->io_layers[layer] = &sasl_encrypt_layer;
+  } else if (sasl->client) {
+    return pni_passthru_layer.process_output(transport, layer, bytes, available );
+  } else {
     transport->io_layers[layer] = &pni_passthru_layer;
   }
-  return pni_passthru_layer.process_output(transport, layer, bytes, available );
+  return transport->io_layers[layer]->process_output(transport, layer, bytes, available);
 }
 
 static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
