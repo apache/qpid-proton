@@ -380,7 +380,7 @@ static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned 
   for (ssize_t processed = 0; processed<clear_size;) {
     pn_bytes_t encoded = pn_bytes(0, NULL);
     ssize_t encode_size = (clear_size-processed)<=max_buffer?(clear_size-processed):max_buffer;
-    size_t size = pni_sasl_impl_encode(transport, pn_bytes(encode_size, bytes+processed), &encoded);
+    ssize_t size = pni_sasl_impl_encode(transport, pn_bytes(encode_size, bytes+processed), &encoded);
     if (size<0) return size;
     if (size>0) {
       size = pn_buffer_append(out, encoded.start, encoded.size);
