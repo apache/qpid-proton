@@ -233,6 +233,13 @@ void pni_lnr_modified(pn_listener_ctx_t *lnr)
 
 int pn_messenger_process_events(pn_messenger_t *messenger);
 
+static void pni_connection_error(pn_selectable_t *sel)
+{
+  pn_transport_t *transport = pni_transport(sel);
+  pn_transport_close_tail(transport);
+  pn_transport_close_head(transport);
+}
+
 static void pni_connection_readable(pn_selectable_t *sel)
 {
   pn_connection_ctx_t *context = pni_context(sel);
@@ -444,6 +451,7 @@ static pn_connection_ctx_t *pn_connection_ctx(pn_messenger_t *messenger,
   ctx->connection = conn;
   pn_selectable_t *sel = pn_selectable();
   ctx->selectable = sel;
+  pn_selectable_on_error(sel, pni_connection_error);
   pn_selectable_on_readable(sel, pni_connection_readable);
   pn_selectable_on_writable(sel, pni_connection_writable);
   pn_selectable_on_expired(sel, pni_connection_expired);
@@ -1356,6 +1364,9 @@ int pn_messenger_process(pn_messenger_t *messenger)
     }
     if (events & PN_EXPIRED) {
       pn_selectable_expired(sel);
+    }
+    if (events & PN_ERROR) {
+      pn_selectable_error(sel);
     }
   }
   // ensure timer events are processed. Cannot call this inside the while loop
