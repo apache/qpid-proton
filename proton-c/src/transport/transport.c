@@ -396,7 +396,7 @@ static void pn_transport_initialize(void *object)
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
-  transport->remote_max_frame = 0;
+  transport->remote_max_frame = UINT32_MAX;
 
   /*
    * We set the local limit on channels to 2^15, because 
@@ -1101,20 +1101,37 @@ static char *pn_bytes_strdup(pn_bytes_t str)
 int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_connection_t *conn = transport->connection;
-  bool container_q, hostname_q;
+  bool container_q, hostname_q, remote_channel_max_q, remote_max_frame_q;
+  uint16_t remote_channel_max;
+  uint32_t remote_max_frame;
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
-  int err = pn_data_scan(args, "D.[?S?SIHI..CCC]", &container_q,
-                         &remote_container, &hostname_q, &remote_hostname,
-                         &transport->remote_max_frame,
-                         &transport->remote_channel_max,
+  int err = pn_data_scan(args, "D.[?S?S?I?HI..CCC]",
+                         &container_q, &remote_container,
+                         &hostname_q, &remote_hostname,
+                         &remote_max_frame_q, &remote_max_frame,
+                         &remote_channel_max_q, &remote_channel_max,
                          &transport->remote_idle_timeout,
                          transport->remote_offered_capabilities,
                          transport->remote_desired_capabilities,
                          transport->remote_properties);
   if (err) return err;
+  /*
+   * The default value is already stored in the variable.
+   * But the scanner zeroes out values if it does not
+   * find them in the args, so don't give the variable
+   * directly to the scanner.
+   */
+  if (remote_channel_max_q) {
+    transport->remote_channel_max = remote_channel_max;
+  }
+
+  if (remote_max_frame_q) {
+    transport->remote_max_frame = remote_max_frame;
+  }
+
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
       pn_transport_logf(transport, "Peer advertised bad max-frame (%u), forcing to %u",
