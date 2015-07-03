@@ -413,7 +413,7 @@ public abstract class LinkImpl extends EndpointImpl implements Link
         modified();
     }
 
-    boolean detached()
+    public boolean detached()
     {
         return _detached;
     }

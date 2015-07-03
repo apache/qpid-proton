@@ -186,5 +186,6 @@ public interface Link extends Endpoint
     public boolean getDrain();
 
     public void detach();
+    public boolean detached();
 
 }
