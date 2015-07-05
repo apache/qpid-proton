@@ -485,7 +485,17 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
-        return new SaslTransportWrapper(input, output);
+        return new SaslSniffer(new SaslTransportWrapper(input, output),
+                               new PlainTransportWrapper(output, input)) {
+            protected boolean isDeterminationMade() {
+                if (_role == Role.SERVER) {
+                    return super.isDeterminationMade();
+                } else {
+                    _selectedTransportWrapper = _wrapper1;
+                    return true;
+                }
+            }
+        };
     }
 
     @Override

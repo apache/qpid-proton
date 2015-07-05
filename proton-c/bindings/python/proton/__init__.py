@@ -3294,7 +3294,7 @@ A callback for trace logging. The callback is passed the transport and log messa
   def push(self, binary):
     n = self._check(pn_transport_push(self._impl, binary))
     if n != len(binary):
-      raise OverflowError("unable to process all bytes")
+      raise OverflowError("unable to process all bytes: %s, %s" % (n, len(binary)))
 
   def close_tail(self):
     self._check(pn_transport_close_tail(self._impl))

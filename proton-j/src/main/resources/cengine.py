@@ -940,16 +940,22 @@ def pn_transport_capacity(trans):
   return trans.impl.capacity()
 
 def pn_transport_push(trans, input):
-  cap = pn_transport_capacity(trans)
-  if cap < 0:
-    return cap
-  elif len(input) > cap:
-    input = input[:cap]
+  result = 0
+  while input:
+    cap = pn_transport_capacity(trans)
+    if cap < 0:
+      return cap
+    elif len(input) > cap:
+      trimmed = input[:cap]
+    else:
+      trimmed = input
 
-  bb = trans.impl.tail()
-  bb.put(array(input, 'b'))
-  trans.impl.process()
-  return len(input)
+    bb = trans.impl.tail()
+    bb.put(array(trimmed, 'b'))
+    trans.impl.process()
+    input = input[cap:]
+    result += len(trimmed)
+  return result
 
 def pn_transport_close_head(trans):
   trans.impl.close_head()
