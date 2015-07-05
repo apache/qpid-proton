@@ -23,9 +23,6 @@ package org.apache.qpid.proton.engine.impl;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Event;
 
-import java.util.LinkedList;
-import java.util.Queue;
-
 
 /**
  * CollectorImpl
@@ -42,11 +39,13 @@ public class CollectorImpl implements Collector
     public CollectorImpl()
     {}
 
+    @Override
     public Event peek()
     {
         return head;
     }
 
+    @Override
     public void pop()
     {
         if (head != null) {
@@ -85,6 +84,11 @@ public class CollectorImpl implements Collector
         }
 
         return event;
+    }
+
+    @Override
+    public boolean more() {
+        return head != null && head.next != null;
     }
 
 }

@@ -18,7 +18,7 @@
 #
 from org.apache.qpid.proton.engine import Sasl
 
-from jarray import array, zeros
+from compat import array, zeros
 
 from cerror import *
 

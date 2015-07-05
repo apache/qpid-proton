@@ -23,6 +23,7 @@ package org.apache.qpid.proton.engine.impl;
 import java.util.Arrays;
 
 import org.apache.qpid.proton.engine.Delivery;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
@@ -39,6 +40,7 @@ public class DeliveryImpl implements Delivery
     private DeliveryImpl _transportWorkPrev;
     boolean _transportWork;
 
+    private Record _attachments = new RecordImpl();
     private Object _context;
 
     private final byte[] _tag;
@@ -400,6 +402,11 @@ public class DeliveryImpl implements Delivery
     public void setContext(Object context)
     {
         _context = context;
+    }
+
+    public Record attachments()
+    {
+        return _attachments;
     }
 
     @Override

@@ -57,6 +57,8 @@ import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
+import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.Selectable;
 
 public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
@@ -120,6 +122,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
+    private boolean postedTransportError = false;
 
     private int _localIdleTimeout = 0;
     private int _remoteIdleTimeout = 0;
@@ -129,6 +132,9 @@ public class TransportImpl extends EndpointImpl
     private long _lastBytesInput = 0;
     private long _lastBytesOutput = 0;
     private long _remoteIdleDeadline = 0;
+
+    private Selectable _selectable;
+    private Reactor _reactor;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -599,7 +605,9 @@ public class TransportImpl extends EndpointImpl
                 session.incrementOutgoingBytes(-delta);
             }
 
-            getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            if (snd.getLocalState() != EndpointState.CLOSED) {
+                getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            }
         }
 
         if(wasDone && delivery.getLocalState() != null)
@@ -1327,8 +1335,9 @@ public class TransportImpl extends EndpointImpl
             }
             _head_closed = true;
         }
-        if (_condition != null) {
+        if (_condition != null && !postedTransportError) {
             put(Event.Type.TRANSPORT_ERROR, this);
+            postedTransportError = true;
         }
         if (!postedTailClosed) {
             put(Event.Type.TRANSPORT_TAIL_CLOSED, this);
@@ -1451,14 +1460,17 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
+    @Override
     public void setIdleTimeout(int timeout) {
         _localIdleTimeout = timeout;
     }
 
+    @Override
     public int getIdleTimeout() {
         return _localIdleTimeout;
     }
 
+    @Override
     public int getRemoteIdleTimeout() {
         return _remoteIdleTimeout;
     }
@@ -1538,6 +1550,7 @@ public class TransportImpl extends EndpointImpl
         _outputProcessor.close_head();
     }
 
+    @Override
     public boolean isClosed() {
         int p = pending();
         int c = capacity();
@@ -1601,4 +1614,20 @@ public class TransportImpl extends EndpointImpl
 
     @Override
     void localClose() {}
+
+    public void setSelectable(Selectable selectable) {
+        _selectable = selectable;
+    }
+
+    public Selectable getSelectable() {
+        return _selectable;
+    }
+
+    public void setReactor(Reactor reactor) {
+        _reactor = reactor;
+    }
+
+    public Reactor getReactor() {
+        return _reactor;
+    }
 }
