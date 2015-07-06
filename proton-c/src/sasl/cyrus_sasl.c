@@ -408,7 +408,12 @@ ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
     return PN_ERR;
   }
   int outbuf_size = *(int *) value;
-  return outbuf_size;
+  return outbuf_size -
+    // XXX: this  is a clientside workaround/hack to make GSSAPI work as the Cyrus SASL
+    // GSSAPI plugin seems to return an incorrect value for the buffer size on the client
+    // side, which is greater than the value returned on the server side. Actually using
+    // the entire client side buffer will cause a server side error due to a buffer overrun.
+    (transport->sasl->client? 60 : 0);
 }
 
 ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
