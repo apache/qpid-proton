@@ -494,8 +494,10 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (NAME python-test
             COMMAND ${env_py}
-	             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
-                    ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+            "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+            ${VALGRIND_ENV}
+            ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   else (NOT OLD_ADD_TEST_COMMAND)
   list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
