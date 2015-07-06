@@ -396,7 +396,7 @@ static void pn_transport_initialize(void *object)
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
-  transport->remote_max_frame = UINT32_MAX;
+  transport->remote_max_frame = (uint32_t) 0xffffffff;
 
   /*
    * We set the local limit on channels to 2^15, because 
