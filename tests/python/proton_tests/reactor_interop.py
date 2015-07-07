@@ -19,7 +19,7 @@
 #
 from __future__ import absolute_import
 
-from .common import Test, free_tcp_port
+from .common import Test, free_tcp_port, Skipped
 from proton import Message
 from proton.handlers import CHandshaker, CFlowController
 from proton.reactor import Reactor
@@ -101,14 +101,14 @@ class ReactorInteropTest(Test):
     classpath = ""
     if ('CLASSPATH' in os.environ):
       classpath = os.environ['CLASSPATH']
-    entries = classpath.split(os.sep)
-    self.proton_j_available = len(entries) > 0
+    entries = classpath.split(os.pathsep)
+    self.proton_j_available = False
     for entry in entries:
-      self.proton_j_available |= os.path.exists(entry)
+      self.proton_j_available |= entry != "" and os.path.exists(entry)
 
   def protonc_to_protonj(self, count):
     if (not self.proton_j_available):
-      raise Skip()
+      raise Skipped("ProtonJ not found")
 
     port = free_tcp_port()
     java_thread = JavaThread("recv", port, count)
@@ -126,7 +126,7 @@ class ReactorInteropTest(Test):
 
   def protonj_to_protonc(self, count):
     if (not self.proton_j_available):
-      raise Skip()
+      raise Skipped("ProtonJ not found")
 
     rh = ReceiveHandler(count)
     r = Reactor(rh)

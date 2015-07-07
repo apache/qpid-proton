@@ -521,10 +521,12 @@ if (BUILD_PYTHON)
          to_native_path ("${py_path}" py_path)
          to_native_path ("${py_pythonpath}" py_pythonpath)
          add_test (NAME python-tox-test
+		   WORKING_DIRECTORY ${py_src}
                    COMMAND ${env_py}
-		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../" ${VALGRIND_ENV}
-                   tox
-		   WORKING_DIRECTORY ${py_src})
+		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
+                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                   ${VALGRIND_ENV}
+                   tox)
          set_tests_properties(python-tox-test
                               PROPERTIES
                               PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
