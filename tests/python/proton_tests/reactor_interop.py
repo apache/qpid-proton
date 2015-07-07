@@ -17,8 +17,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import absolute_import
 
-from common import Test, free_tcp_port
+from .common import Test, free_tcp_port
 from proton import Message
 from proton.handlers import CHandshaker, CFlowController
 from proton.reactor import Reactor
