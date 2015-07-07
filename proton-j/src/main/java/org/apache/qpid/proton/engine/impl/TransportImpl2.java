@@ -29,6 +29,7 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.transport2.Attach;
 import org.apache.qpid.proton.transport2.Begin;
 import org.apache.qpid.proton.transport2.Close;
@@ -36,7 +37,6 @@ import org.apache.qpid.proton.transport2.ConnectionError;
 import org.apache.qpid.proton.transport2.Detach;
 import org.apache.qpid.proton.transport2.Disposition;
 import org.apache.qpid.proton.transport2.End;
-import org.apache.qpid.proton.transport2.ErrorCondition;
 import org.apache.qpid.proton.transport2.Flow;
 import org.apache.qpid.proton.transport2.Open;
 import org.apache.qpid.proton.transport2.Performative;
@@ -1656,11 +1656,11 @@ public class TransportImpl2 extends EndpointImpl
         return out;
     }
     
-    private ErrorCondition convertEndpointError(Endpoint endpoint)
+    private org.apache.qpid.proton.transport2.ErrorCondition convertEndpointError(Endpoint endpoint)
     {
         if (endpoint != null && endpoint.getCondition() != null)
         {
-            return new ErrorCondition(endpoint.getCondition().getCondition().toString(), endpoint.getCondition().getDescription());
+            return new org.apache.qpid.proton.transport2.ErrorCondition(endpoint.getCondition().getCondition().toString(), endpoint.getCondition().getDescription());
         }
         else
         {
