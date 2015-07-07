@@ -418,6 +418,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     @Override
     void localOpen()
     {
+        if (_source == null)
+            _source = _remoteSource.copy();
+        if (_target == null)
+            _target = _remoteTarget.copy();
         getConnectionImpl().put(Event.Type.LINK_LOCAL_OPEN, this);
     }
 
