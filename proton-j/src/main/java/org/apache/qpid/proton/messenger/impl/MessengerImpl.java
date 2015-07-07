@@ -790,8 +790,13 @@ public class MessengerImpl implements Messenger
         for (Link link : new Links(connection, UNINIT, ANY))
         {
             //TODO: the following is not correct; should only copy those properties that we understand
-            link.setSource(link.getRemoteSource());
-            link.setTarget(link.getRemoteTarget());
+            //TODO: is this any better:
+            if (link.getRemoteSource() != null) {
+                link.setSource(link.getRemoteSource().copy());
+            }
+            if (link.getRemoteTarget() != null) {
+                link.setTarget(link.getRemoteTarget().copy());
+            }
             linkAdded(link);
             link.open();
             _logger.log(Level.FINE, "Opened link " + link);

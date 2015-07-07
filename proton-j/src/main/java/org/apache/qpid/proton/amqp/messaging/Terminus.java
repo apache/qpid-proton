@@ -20,7 +20,9 @@
  */
 package org.apache.qpid.proton.amqp.messaging;
 
+import java.util.HashMap;
 import java.util.Map;
+
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 
@@ -36,6 +38,21 @@ public abstract class Terminus
 
     Terminus()
     {
+    }
+    
+    protected Terminus(Terminus other) {
+        _address = other._address;
+        _durable = other._durable;
+        _expiryPolicy = other._expiryPolicy;
+        _timeout = other._timeout;
+        _dynamic = other._dynamic;
+        if (other._dynamicNodeProperties != null) {
+            // TODO: Do we need to copy or can we make a simple reference?
+            _dynamicNodeProperties = new HashMap(other._dynamicNodeProperties); // FIXME
+        }
+        if (other._capabilities != null) {
+            _capabilities = other._capabilities.clone(); // FIXME?
+        }
     }
 
     public final String getAddress()

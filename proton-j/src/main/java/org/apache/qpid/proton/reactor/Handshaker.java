@@ -25,6 +25,7 @@ import org.apache.qpid.proton.engine.BaseHandler;
 import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
+import org.apache.qpid.proton.engine.Link;
 
 /**
  * A handler that mirrors the actions of the remote end of a connection.  This
@@ -59,7 +60,16 @@ public class Handshaker extends BaseHandler {
 
     @Override
     public void onLinkRemoteOpen(Event event) {
-        open(event.getLink());
+        Link link = event.getLink();
+        if (link.getLocalState() == EndpointState.UNINITIALIZED) {
+            if (link.getRemoteSource() != null) {
+                link.setSource(link.getRemoteSource().copy());
+            }
+            if (link.getRemoteTarget() != null) {
+                link.setTarget(link.getRemoteTarget().copy());
+            }
+        }
+        open(link);
     }
 
     @Override
