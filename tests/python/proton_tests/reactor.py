@@ -171,3 +171,17 @@ class ExceptionTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+
+    def test_schedule_cancel(self):
+        barf = self.reactor.schedule(10, BarfOnTask())
+        class CancelBarf:
+            def on_timer_task(self, event):
+                barf.cancel()
+        self.reactor.schedule(0, CancelBarf())
+        now = self.reactor.mark()
+        try:
+            self.reactor.run()
+            elapsed = self.reactor.mark() - now
+            assert elapsed < 10, "expected cancelled task to not delay the reactor by " + elapsed
+        except Barf:
+            assert False, "expected barf to be cancelled"

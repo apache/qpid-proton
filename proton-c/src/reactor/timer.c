@@ -27,12 +27,14 @@ struct pn_task_t {
   pn_list_t *pool;
   pn_record_t *attachments;
   pn_timestamp_t deadline;
+  bool cancelled;
 };
 
 void pn_task_initialize(pn_task_t *task) {
   task->pool = NULL;
   task->attachments = pn_record();
   task->deadline = 0;
+  task->cancelled = false;
 }
 
 void pn_task_finalize(pn_task_t *task) {
@@ -66,6 +68,11 @@ pn_task_t *pn_task(void) {
 pn_record_t *pn_task_attachments(pn_task_t *task) {
   assert(task);
   return task->attachments;
+}
+
+void pn_task_cancel(pn_task_t *task) {
+    assert(task);
+    task->cancelled = true;
 }
 
 //
@@ -113,8 +120,22 @@ pn_task_t *pn_timer_schedule(pn_timer_t *timer,  pn_timestamp_t deadline) {
   return task;
 }
 
+void pni_timer_flush_cancelled(pn_timer_t *timer) {
+    while (pn_list_size(timer->tasks)) {
+        pn_task_t *task = (pn_task_t *) pn_list_get(timer->tasks, 0);
+        if (task->cancelled) {
+            pn_task_t *min = (pn_task_t *) pn_list_minpop(timer->tasks);
+            assert(min == task);
+            pn_decref(min);
+        } else {
+            break;
+        }
+    }
+}
+
 pn_timestamp_t pn_timer_deadline(pn_timer_t *timer) {
   assert(timer);
+  pni_timer_flush_cancelled(timer);
   if (pn_list_size(timer->tasks)) {
     pn_task_t *task = (pn_task_t *) pn_list_get(timer->tasks, 0);
     return task->deadline;
@@ -130,7 +151,8 @@ void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now) {
     if (now >= task->deadline) {
       pn_task_t *min = (pn_task_t *) pn_list_minpop(timer->tasks);
       assert(min == task);
-      pn_collector_put(timer->collector, PN_OBJECT, min, PN_TIMER_TASK);
+      if (!min->cancelled)
+          pn_collector_put(timer->collector, PN_OBJECT, min, PN_TIMER_TASK);
       pn_decref(min);
     } else {
       break;
@@ -140,5 +162,6 @@ void pn_timer_tick(pn_timer_t *timer, pn_timestamp_t now) {
 
 int pn_timer_tasks(pn_timer_t *timer) {
   assert(timer);
+  pni_timer_flush_cancelled(timer);
   return pn_list_size(timer->tasks);
 }

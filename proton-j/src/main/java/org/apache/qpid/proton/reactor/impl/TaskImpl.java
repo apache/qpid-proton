@@ -31,6 +31,7 @@ import org.apache.qpid.proton.reactor.Task;
 public class TaskImpl implements Task, Comparable<TaskImpl> {
     private final long deadline;
     private final int counter;
+    private boolean cancelled = false;
     private final AtomicInteger count = new AtomicInteger();
     private Record attachments = new RecordImpl();
     private Reactor reactor;
@@ -56,6 +57,15 @@ public class TaskImpl implements Task, Comparable<TaskImpl> {
     @Override
     public long deadline() {
         return deadline;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
+
+    @Override
+    public void cancel() {
+        cancelled = true;
     }
 
     public void setReactor(Reactor reactor) {

@@ -440,6 +440,20 @@ static void test_reactor_schedule_handler(void) {
   pn_free(tevents);
 }
 
+static void test_reactor_schedule_cancel(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  pn_handler_t *root = pn_reactor_get_handler(reactor);
+  pn_list_t *events = pn_list(PN_VOID, 0);
+  pn_handler_add(root, test_handler(reactor, events));
+  pn_task_t *task = pn_reactor_schedule(reactor, 0, NULL);
+  pn_task_cancel(task);
+  pn_reactor_run(reactor);
+  pn_reactor_free(reactor);
+  expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED,
+         PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
+  pn_free(events);
+}
+
 int main(int argc, char **argv)
 {
   test_reactor();
@@ -461,5 +475,6 @@ int main(int argc, char **argv)
   test_reactor_transfer(4*1024, 1024);
   test_reactor_schedule();
   test_reactor_schedule_handler();
+  test_reactor_schedule_cancel();
   return 0;
 }

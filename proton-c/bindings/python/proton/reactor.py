@@ -53,6 +53,9 @@ class Task(Wrapper):
     def _init(self):
         pass
 
+    def cancel(self):
+        pn_task_cancel(self._impl)
+
 class Acceptor(Wrapper):
 
     def __init__(self, impl):
@@ -112,7 +115,7 @@ class Reactor(Wrapper):
         pn_reactor_yield(self._impl)
 
     def mark(self):
-        pn_reactor_mark(self._impl)
+        return pn_reactor_mark(self._impl)
 
     def _get_handler(self):
         return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)

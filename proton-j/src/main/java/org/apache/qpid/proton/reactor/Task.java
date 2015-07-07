@@ -43,4 +43,8 @@ public interface Task extends Extendable {
     /** @return the reactor that created this task. */
     Reactor getReactor();
 
+    /**
+     * Cancel the execution of this task. No-op if invoked after the task was already executed.
+     */
+    void cancel();
 }

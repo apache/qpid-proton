@@ -31,7 +31,7 @@ import org.apache.qpid.proton.reactor.Task;
 public class Timer {
 
     private CollectorImpl collector;
-    private PriorityQueue<Task> tasks = new PriorityQueue<Task>();
+    private PriorityQueue<TaskImpl> tasks = new PriorityQueue<TaskImpl>();
 
     public Timer(Collector collector) {
         this.collector = (CollectorImpl)collector;
@@ -44,6 +44,7 @@ public class Timer {
     }
 
     long deadline() {
+        flushCancelled();
         if (tasks.size() > 0) {
             Task task = tasks.peek();
             return task.deadline();
@@ -52,12 +53,23 @@ public class Timer {
         }
     }
 
+    private void flushCancelled() {
+        while (!tasks.isEmpty()) {
+            TaskImpl task = tasks.peek();
+            if (task.isCancelled())
+                tasks.poll();
+            else
+                break;
+        }
+    }
+
     void tick(long now) {
         while(!tasks.isEmpty()) {
-            Task task = tasks.peek();
+            TaskImpl task = tasks.peek();
             if (now >= task.deadline()) {
                 tasks.poll();
-                collector.put(Type.TIMER_TASK, task);
+                if (!task.isCancelled())
+                    collector.put(Type.TIMER_TASK, task);
             } else {
                 break;
             }
@@ -65,6 +77,7 @@ public class Timer {
     }
 
     int tasks() {
+        flushCancelled();
         return tasks.size();
     }
 }

@@ -78,6 +78,9 @@ def pn_selectable_set_fd(s, fd):
 def pn_acceptor_close(a):
     a.close()
 
+def pn_task_cancel(t):
+    t.cancel()
+
 def pn_object_reactor(o):
     if hasattr(o, "impl"):
         if hasattr(o.impl, "getSession"):
