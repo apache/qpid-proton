@@ -40,6 +40,7 @@ typedef struct pn_error_t pn_error_t;
 #define PN_TIMEOUT (-7)
 #define PN_INTR (-8)
 #define PN_INPROGRESS (-9)
+#define PN_OUT_OF_MEMORY (-10)
 
 PN_EXTERN const char *pn_code(int code);
 
