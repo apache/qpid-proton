@@ -20,6 +20,17 @@ echo =========================
 which python || exit 1
 which swig || exit 1
 
+# if python-pip is available, install the python tox test tool
+RUN_TOX=false
+PIP=$(type -p pip)
+if [[ -n "$PIP" ]] && [[ -x "$PIP" ]]; then
+    ldir=$(python -c 'import site; print("%s" % site.USER_BASE)')
+    PATH="$ldir/bin:$PATH"
+    echo "PATH=$PATH"
+    pip install --user -U tox
+    RUN_TOX=true
+fi
+
 ls
 
 rm -rf build testresults >/dev/null 2>&1
@@ -31,6 +42,8 @@ cmake ${CMAKE_FLAGS} ..
 cmake --build . --target install
 
 echo Running tests
+
+$RUN_TOX && ctest -V -R 'python-tox-test'
 
 source config.sh
 
