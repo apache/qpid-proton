@@ -652,11 +652,21 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
     pn_sasl(transport);
     pni_sasl_set_user_password(transport, pn_string_get(connection->auth_user), pn_string_get(connection->auth_password));
   }
-  if (transport->sasl) {
-    pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
-  }
-  if (transport->ssl) {
-    pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+
+  if (pn_string_size(connection->hostname)) {
+      if (transport->sasl) {
+          pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
+      }
+
+      // be sure not to overwrite a hostname already set by the user via
+      // pn_ssl_set_peer_hostname() called before the bind
+      if (transport->ssl) {
+          size_t name_len = 0;
+          pn_ssl_get_peer_hostname((pn_ssl_t*) transport, NULL, &name_len);
+          if (name_len == 0) {
+              pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+          }
+      }
   }
 
   if (transport->open_rcvd) {

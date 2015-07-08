@@ -53,7 +53,9 @@ class SslTest(common.Test):
     class SslTestConnection(object):
         """ Represents a single SSL connection.
         """
-        def __init__(self, domain=None, mode=Transport.CLIENT, session_details=None):
+        def __init__(self, domain=None, mode=Transport.CLIENT,
+                     session_details=None, conn_hostname=None,
+                     ssl_peername=None):
             if not common.isSSLPresent():
                 raise Skipped("No SSL libraries found.")
 
@@ -61,9 +63,14 @@ class SslTest(common.Test):
             self.domain = domain
             self.transport = Transport(mode)
             self.connection = Connection()
-            self.transport.bind(self.connection)
+            if conn_hostname:
+                self.connection.hostname = conn_hostname
             if domain:
                 self.ssl = SSL( self.transport, self.domain, session_details )
+                if ssl_peername:
+                    self.ssl.peer_hostname = ssl_peername
+            # bind last, after all configuration complete:
+            self.transport.bind(self.connection)
 
     def _pump(self, ssl_client, ssl_server, buffer_size=1024):
         pump(ssl_client.transport, ssl_server.transport, buffer_size)
@@ -691,6 +698,40 @@ class SslTest(common.Test):
         assert server.connection.state & Endpoint.REMOTE_UNINIT
         self.teardown()
 
+        # Pass: ensure that the user can give an alternate name that overrides
+        # the connection's configured hostname
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
+                                    self._testpath("server-wc-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(self.client_domain,
+                                           conn_hostname="This.Name.Does.not.Match",
+                                           ssl_peername="alternate.name.one.com")
+        self._do_handshake(client, server)
+        del client
+        del server
+        self.teardown()
+
+        # Pass: ensure that the hostname supplied by the connection is used if
+        # none has been specified for the SSL instanace
+        self.setup()
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                    self._testpath("server-private-key.pem"),
+                                    "server-password")
+        self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER_NAME )
+
+        server = SslTest.SslTestConnection(self.server_domain, mode=Transport.SERVER)
+        client = SslTest.SslTestConnection(self.client_domain,
+                                           conn_hostname="a1.good.server.domain.com")
+        self._do_handshake(client, server)
+        del client
+        del server
+        self.teardown()
 
     def test_defaults_messenger_app(self):
         """ Test an SSL connection using the Messenger apps (no certificates)

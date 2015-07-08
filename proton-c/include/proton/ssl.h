@@ -293,6 +293,10 @@ PN_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
 
 /** Set the expected identity of the remote peer.
  *
+ * By default, SSL will use the hostname associated with the connection that
+ * the transport is bound to (see ::pn_connection_set_hostname).  This method
+ * allows the caller to override that default.
+ *
  * The hostname is used for two purposes: 1) when set on an SSL client, it is sent to the
  * server during the handshake (if Server Name Indication is supported), and 2) it is used
  * to check against the identifying name provided in the peer's certificate. If the
