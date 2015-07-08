@@ -22,12 +22,16 @@ which swig || exit 1
 
 # if python-pip is available, install the python tox test tool
 RUN_TOX=false
-PIP=$(type -p pip)
-if [[ -n "$PIP" ]] && [[ -x "$PIP" ]]; then
+PIP=$(type -p pip || true)
+if [ -n $PIP ] && [ -x "$PIP" ]; then
     ldir=$(python -c 'import site; print("%s" % site.USER_BASE)')
     PATH="$ldir/bin:$PATH"
     echo "PATH=$PATH"
-    pip install --user -U tox
+    if [ $VIRTUAL_ENV ]; then
+      pip install -U tox
+    else
+      pip install --user -U tox
+    fi
     RUN_TOX=true
 fi
 

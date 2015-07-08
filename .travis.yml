@@ -1,11 +1,20 @@
 ---
-language: c
+language: python
 install:
 - sudo apt-get update -qq
 - sudo apt-get install -y -qq bash cmake libssl-dev maven ruby ruby-dev
-    python python-dev php5 openjdk-7-jdk swig uuid-dev valgrind libsasl2-dev
-    sasl2-bin
+    python python-dev python3 python3-dev php5 openjdk-7-jdk swig uuid-dev
+    valgrind libsasl2-dev sasl2-bin
+- pip install tox
 - gem install rspec simplecov
+before_script:
+- export PATH=${HOME}/.local/bin:${PATH}
+- export PYTHON_PATHS=$(ls -d /opt/python/*)
+- echo PYTHON_PATHS=${PYTHON_PATHS}
+- for PYTHON_DIR in ${PYTHON_PATHS} ;
+    do export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:${PYTHON_DIR} ;
+  done
+- echo CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
 script:
 - bin/jenkins-proton-c-build.sh
 os:
