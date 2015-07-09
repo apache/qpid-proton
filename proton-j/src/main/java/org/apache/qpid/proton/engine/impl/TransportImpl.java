@@ -841,6 +841,9 @@ public class TransportImpl extends EndpointImpl
                         {
                             begin.setRemoteChannel(UnsignedShort.valueOf((short) transportSession.getRemoteChannel()));
                         }
+
+                        transportSession.updateIncomingWindow();
+
                         begin.setHandleMax(transportSession.getHandleMax());
                         begin.setIncomingWindow(transportSession.getIncomingWindowSize());
                         begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
