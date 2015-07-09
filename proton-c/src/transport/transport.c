@@ -798,35 +798,32 @@ bool pni_disposition_batchable(pn_disposition_t *disposition)
   }
 }
 
-void pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data)
+static int pni_disposition_encode(pn_disposition_t *disposition, pn_data_t *data)
 {
   pn_condition_t *cond = &disposition->condition;
   switch (disposition->type) {
   case PN_RECEIVED:
-    pn_data_put_list(data);
+    PN_RETURN_IF_ERROR(pn_data_put_list(data));
     pn_data_enter(data);
-    pn_data_put_uint(data, disposition->section_number);
-    pn_data_put_ulong(data, disposition->section_offset);
+    PN_RETURN_IF_ERROR(pn_data_put_uint(data, disposition->section_number));
+    PN_RETURN_IF_ERROR(pn_data_put_ulong(data, disposition->section_offset));
     pn_data_exit(data);
-    break;
+    return 0;
   case PN_ACCEPTED:
   case PN_RELEASED:
-    return;
+    return 0;
   case PN_REJECTED:
-    pn_data_fill(data, "[?DL[sSC]]", pn_condition_is_set(cond), ERROR,
+    return pn_data_fill(data, "[?DL[sSC]]", pn_condition_is_set(cond), ERROR,
                  pn_condition_get_name(cond),
                  pn_condition_get_description(cond),
                  pn_condition_info(cond));
-    break;
   case PN_MODIFIED:
-    pn_data_fill(data, "[ooC]",
+    return pn_data_fill(data, "[ooC]",
                  disposition->failed,
                  disposition->undeliverable,
                  disposition->annotations);
-    break;
   default:
-    pn_data_copy(data, disposition->data);
-    break;
+    return pn_data_copy(data, disposition->data);
   }
 }
 
@@ -2133,11 +2130,11 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
 
   if (!pni_disposition_batchable(&delivery->local)) {
     pn_data_clear(transport->disp_data);
-    pni_disposition_encode(&delivery->local, transport->disp_data);
+    PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
     return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel,
-                         "DL[oIIo?DLC]", DISPOSITION,
-                         role, state->id, state->id, delivery->local.settled,
-                         (bool)code, code, transport->disp_data);
+      "DL[oIIo?DLC]", DISPOSITION,
+      role, state->id, state->id, delivery->local.settled,
+      (bool)code, code, transport->disp_data);
   }
 
   if (ssn_state->disp && code == ssn_state->disp_code &&
@@ -2186,8 +2183,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       size_t full_size = bytes.size;
       pn_bytes_t tag = pn_buffer_bytes(delivery->tag);
       pn_data_clear(transport->disp_data);
-      pni_disposition_encode(&delivery->local, transport->disp_data);
-
+      PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
       int count = pni_post_amqp_transfer_frame(transport,
                                               ssn_state->local_channel,
                                               link_state->local_handle,

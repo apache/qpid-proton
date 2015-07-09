@@ -417,8 +417,11 @@ void pn_data_clear(pn_data_t *data)
 
 static int pni_data_grow(pn_data_t *data)
 {
-  data->capacity = 2*(data->capacity ? data->capacity : 2);
-  data->nodes = (pni_node_t *) realloc(data->nodes, data->capacity * sizeof(pni_node_t));
+  pni_nid_t new_capacity = 2 * (data->capacity ? data->capacity : 2);
+  pni_node_t *new_nodes = (pni_node_t *)realloc(data->nodes, new_capacity * sizeof(pni_node_t));
+  if (new_nodes == NULL) return PN_OUT_OF_MEMORY;
+  data->capacity = new_capacity;
+  data->nodes = new_nodes;
   return 0;
 }
 
@@ -1111,9 +1114,7 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
 
 static pni_node_t *pni_data_new(pn_data_t *data)
 {
-  if (data->capacity <= data->size) {
-    pni_data_grow(data);
-  }
+  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) return NULL;
   pni_node_t *node = pn_data_node(data, ++(data->size));
   node->next = 0;
   node->down = 0;
@@ -1369,6 +1370,8 @@ static pni_node_t *pni_data_add(pn_data_t *data)
       node = pn_data_node(data, current->next);
     } else {
       node = pni_data_new(data);
+      if (!node) return NULL;
+
       // refresh the pointers in case we grew
       current = pni_data_current(data);
       parent = pn_data_node(data, data->parent);
@@ -1387,6 +1390,8 @@ static pni_node_t *pni_data_add(pn_data_t *data)
       node = pn_data_node(data, parent->down);
     } else {
       node = pni_data_new(data);
+      if (!node) return NULL;
+
       // refresh the pointers in case we grew
       parent = pn_data_node(data, data->parent);
       node->prev = 0;
@@ -1398,6 +1403,8 @@ static pni_node_t *pni_data_add(pn_data_t *data)
     node = pn_data_node(data, 1);
   } else {
     node = pni_data_new(data);
+    if (!node) return NULL;
+
     node->prev = 0;
     node->parent = 0;
   }
@@ -1429,6 +1436,7 @@ ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size)
 int pn_data_put_list(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_LIST;
   return 0;
 }
@@ -1436,6 +1444,7 @@ int pn_data_put_list(pn_data_t *data)
 int pn_data_put_map(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_MAP;
   return 0;
 }
@@ -1443,6 +1452,7 @@ int pn_data_put_map(pn_data_t *data)
 int pn_data_put_array(pn_data_t *data, bool described, pn_type_t type)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_ARRAY;
   node->described = described;
   node->type = type;
@@ -1458,6 +1468,7 @@ void pni_data_set_array_type(pn_data_t *data, pn_type_t type)
 int pn_data_put_described(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DESCRIBED;
   return 0;
 }
@@ -1465,6 +1476,7 @@ int pn_data_put_described(pn_data_t *data)
 int pn_data_put_null(pn_data_t *data)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   pni_atom_init(&node->atom, PN_NULL);
   return 0;
 }
@@ -1472,6 +1484,7 @@ int pn_data_put_null(pn_data_t *data)
 int pn_data_put_bool(pn_data_t *data, bool b)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_BOOL;
   node->atom.u.as_bool = b;
   return 0;
@@ -1480,6 +1493,7 @@ int pn_data_put_bool(pn_data_t *data, bool b)
 int pn_data_put_ubyte(pn_data_t *data, uint8_t ub)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_UBYTE;
   node->atom.u.as_ubyte = ub;
   return 0;
@@ -1488,6 +1502,7 @@ int pn_data_put_ubyte(pn_data_t *data, uint8_t ub)
 int pn_data_put_byte(pn_data_t *data, int8_t b)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_BYTE;
   node->atom.u.as_byte = b;
   return 0;
@@ -1496,6 +1511,7 @@ int pn_data_put_byte(pn_data_t *data, int8_t b)
 int pn_data_put_ushort(pn_data_t *data, uint16_t us)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_USHORT;
   node->atom.u.as_ushort = us;
   return 0;
@@ -1504,6 +1520,7 @@ int pn_data_put_ushort(pn_data_t *data, uint16_t us)
 int pn_data_put_short(pn_data_t *data, int16_t s)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_SHORT;
   node->atom.u.as_short = s;
   return 0;
@@ -1512,6 +1529,7 @@ int pn_data_put_short(pn_data_t *data, int16_t s)
 int pn_data_put_uint(pn_data_t *data, uint32_t ui)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_UINT;
   node->atom.u.as_uint = ui;
   return 0;
@@ -1520,6 +1538,7 @@ int pn_data_put_uint(pn_data_t *data, uint32_t ui)
 int pn_data_put_int(pn_data_t *data, int32_t i)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_INT;
   node->atom.u.as_int = i;
   return 0;
@@ -1528,6 +1547,7 @@ int pn_data_put_int(pn_data_t *data, int32_t i)
 int pn_data_put_char(pn_data_t *data, pn_char_t c)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_CHAR;
   node->atom.u.as_char = c;
   return 0;
@@ -1536,6 +1556,7 @@ int pn_data_put_char(pn_data_t *data, pn_char_t c)
 int pn_data_put_ulong(pn_data_t *data, uint64_t ul)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_ULONG;
   node->atom.u.as_ulong = ul;
   return 0;
@@ -1544,6 +1565,7 @@ int pn_data_put_ulong(pn_data_t *data, uint64_t ul)
 int pn_data_put_long(pn_data_t *data, int64_t l)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_LONG;
   node->atom.u.as_long = l;
   return 0;
@@ -1552,6 +1574,7 @@ int pn_data_put_long(pn_data_t *data, int64_t l)
 int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_TIMESTAMP;
   node->atom.u.as_timestamp = t;
   return 0;
@@ -1560,6 +1583,7 @@ int pn_data_put_timestamp(pn_data_t *data, pn_timestamp_t t)
 int pn_data_put_float(pn_data_t *data, float f)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_FLOAT;
   node->atom.u.as_float = f;
   return 0;
@@ -1568,6 +1592,7 @@ int pn_data_put_float(pn_data_t *data, float f)
 int pn_data_put_double(pn_data_t *data, double d)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DOUBLE;
   node->atom.u.as_double = d;
   return 0;
@@ -1576,6 +1601,7 @@ int pn_data_put_double(pn_data_t *data, double d)
 int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DECIMAL32;
   node->atom.u.as_decimal32 = d;
   return 0;
@@ -1584,6 +1610,7 @@ int pn_data_put_decimal32(pn_data_t *data, pn_decimal32_t d)
 int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DECIMAL64;
   node->atom.u.as_decimal64 = d;
   return 0;
@@ -1592,6 +1619,7 @@ int pn_data_put_decimal64(pn_data_t *data, pn_decimal64_t d)
 int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_DECIMAL128;
   memmove(node->atom.u.as_decimal128.bytes, d.bytes, 16);
   return 0;
@@ -1600,6 +1628,7 @@ int pn_data_put_decimal128(pn_data_t *data, pn_decimal128_t d)
 int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_UUID;
   memmove(node->atom.u.as_uuid.bytes, u.bytes, 16);
   return 0;
@@ -1608,6 +1637,7 @@ int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u)
 int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_BINARY;
   node->atom.u.as_bytes = bytes;
   return pni_data_intern_node(data, node);
@@ -1616,6 +1646,7 @@ int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes)
 int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_STRING;
   node->atom.u.as_bytes = string;
   return pni_data_intern_node(data, node);
@@ -1624,6 +1655,7 @@ int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom.type = PN_SYMBOL;
   node->atom.u.as_bytes = symbol;
   return pni_data_intern_node(data, node);
@@ -1632,6 +1664,7 @@ int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
 int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
 {
   pni_node_t *node = pni_data_add(data);
+  if (node == NULL) return PN_OUT_OF_MEMORY;
   node->atom = atom;
   return pni_data_intern_node(data, node);
 }

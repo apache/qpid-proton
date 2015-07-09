@@ -40,6 +40,7 @@ typedef struct pn_error_t pn_error_t;
 #define PN_TIMEOUT (-7)
 #define PN_INTR (-8)
 #define PN_INPROGRESS (-9)
+#define PN_OUT_OF_MEMORY (-10)
 
 PN_EXTERN const char *pn_code(int code);
 
@@ -52,6 +53,12 @@ PN_EXTERN int pn_error_format(pn_error_t *error, int code, const char *fmt, ...)
 PN_EXTERN int pn_error_code(pn_error_t *error);
 PN_EXTERN const char *pn_error_text(pn_error_t *error);
 PN_EXTERN int pn_error_copy(pn_error_t *error, pn_error_t *src);
+
+#define PN_RETURN_IF_ERROR(x) \
+do {\
+int r = (x);\
+if (r < 0) return r; \
+} while (0)
 
 #ifdef __cplusplus
 }
