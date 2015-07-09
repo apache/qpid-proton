@@ -172,16 +172,79 @@ class ExceptionTest(Test):
         except Barf:
             pass
 
+    def test_schedule_many_nothings(self):
+        class Nothing:
+            results = []
+            def on_timer_task(self, event):
+                self.results.append(None)
+        num = 12345
+        for a in range(num):
+            self.reactor.schedule(0, Nothing())
+        self.reactor.run()
+        assert len(Nothing.results) == num
+
+    def test_schedule_many_nothing_refs(self):
+        class Nothing:
+            results = []
+            def on_timer_task(self, event):
+                self.results.append(None)
+        num = 12345
+        tasks = []
+        for a in range(num):
+            tasks.append(self.reactor.schedule(0, Nothing()))
+        self.reactor.run()
+        assert len(Nothing.results) == num
+
+    def test_schedule_many_nothing_refs_cancel_before_run(self):
+        class Nothing:
+            results = []
+            def on_timer_task(self, event):
+                self.results.append(None)
+        num = 12345
+        tasks = []
+        for a in range(num):
+            tasks.append(self.reactor.schedule(0, Nothing()))
+        for task in tasks:
+            task.cancel()
+        self.reactor.run()
+        assert len(Nothing.results) == 0
+
     def test_schedule_cancel(self):
         barf = self.reactor.schedule(10, BarfOnTask())
         class CancelBarf:
+            def __init__(self, barf):
+                self.barf = barf
             def on_timer_task(self, event):
-                barf.cancel()
-        self.reactor.schedule(0, CancelBarf())
+                self.barf.cancel()
+                pass
+        self.reactor.schedule(0, CancelBarf(barf))
         now = self.reactor.mark()
         try:
             self.reactor.run()
             elapsed = self.reactor.mark() - now
-            assert elapsed < 10, "expected cancelled task to not delay the reactor by " + elapsed
+            assert elapsed < 10, "expected cancelled task to not delay the reactor by %s" % elapsed
+        except Barf:
+            assert False, "expected barf to be cancelled"
+
+    def test_schedule_cancel_many(self):
+        num = 12345
+        barfs = set()
+        for a in range(num):
+            barf = self.reactor.schedule(10*(a+1), BarfOnTask())
+            class CancelBarf:
+                def __init__(self, barf):
+                    self.barf = barf
+                def on_timer_task(self, event):
+                    self.barf.cancel()
+                    barfs.discard(self.barf)
+                    pass
+            self.reactor.schedule(0, CancelBarf(barf))
+            barfs.add(barf)
+        now = self.reactor.mark()
+        try:
+            self.reactor.run()
+            elapsed = self.reactor.mark() - now
+            assert elapsed < num, "expected cancelled task to not delay the reactor by %s" % elapsed
+            assert not barfs, "expected all barfs to be discarded"
         except Barf:
             assert False, "expected barf to be cancelled"
