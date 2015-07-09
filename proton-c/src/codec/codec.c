@@ -1116,15 +1116,11 @@ static size_t pni_data_id(pn_data_t *data, pni_node_t *node)
 static pni_node_t *pni_data_new(pn_data_t *data)
 {
   pni_node_t *node;
-  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) {
-    node = NULL;
-  }
-  else {
-    node = pn_data_node(data, ++(data->size));
-    node->next = 0;
-    node->down = 0;
-    node->children = 0;
-  }
+  if ((data->capacity <= data->size) && (pni_data_grow(data) != 0)) return NULL;
+  node = pn_data_node(data, ++(data->size));
+  node->next = 0;
+  node->down = 0;
+  node->children = 0;
   return node;
 }
 
@@ -1644,45 +1640,37 @@ int pn_data_put_uuid(pn_data_t *data, pn_uuid_t u)
 
 int pn_data_put_binary(pn_data_t *data, pn_bytes_t bytes)
 {
-  int result;
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_ERR;
   node->atom.type = PN_BINARY;
   node->atom.u.as_bytes = bytes;
-  result = pni_data_intern_node(data, node);
-  return result;
+  return pni_data_intern_node(data, node);
 }
 
 int pn_data_put_string(pn_data_t *data, pn_bytes_t string)
 {
-  int result;
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_ERR;
   node->atom.type = PN_STRING;
   node->atom.u.as_bytes = string;
-  result = pni_data_intern_node(data, node);
-  return result;
+  return pni_data_intern_node(data, node);
 }
 
 int pn_data_put_symbol(pn_data_t *data, pn_bytes_t symbol)
 {
-  int result;
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_ERR;
   node->atom.type = PN_SYMBOL;
   node->atom.u.as_bytes = symbol;
-  result = pni_data_intern_node(data, node);
-  return result;
+  return pni_data_intern_node(data, node);
 }
 
 int pn_data_put_atom(pn_data_t *data, pn_atom_t atom)
 {
-  int result;
   pni_node_t *node = pni_data_add(data);
   if (node == NULL) return PN_ERR;
   node->atom = atom;
-  result = pni_data_intern_node(data, node);
-  return result;
+  return pni_data_intern_node(data, node);
 }
 
 size_t pn_data_get_list(pn_data_t *data)
