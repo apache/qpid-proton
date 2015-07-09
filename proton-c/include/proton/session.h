@@ -216,6 +216,22 @@ PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *session);
 PN_EXTERN void pn_session_set_incoming_capacity(pn_session_t *session, size_t capacity);
 
 /**
+ * Get the outgoing window for a session object.
+ *
+ * @param[in] session the session object
+ * @return  the outgoing window for the session
+ */
+PN_EXTERN size_t pn_session_get_outgoing_window(pn_session_t *session);
+
+/**
+ * Set the outgoing window for a session object.
+ *
+ * @param[in] session the session object
+ * @param[in] window the outgoing window for the session
+ */
+PN_EXTERN void pn_session_set_outgoing_window(pn_session_t *session, size_t window);
+
+/**
  * Get the number of outgoing bytes currently buffered by a session.
  *
  * @param[in] session a session object

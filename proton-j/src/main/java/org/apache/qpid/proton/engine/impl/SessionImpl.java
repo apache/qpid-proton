@@ -44,6 +44,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     private int _outgoingBytes = 0;
     private int _incomingDeliveries = 0;
     private int _outgoingDeliveries = 0;
+    private long _outgoingWindow = Integer.MAX_VALUE;
 
     private LinkNode<SessionImpl> _node;
 
@@ -269,5 +270,22 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     void localClose()
     {
         getConnectionImpl().put(Event.Type.SESSION_LOCAL_CLOSE, this);
+    }
+
+    @Override
+    public void setOutgoingWindow(long outgoingWindow) {
+        if(outgoingWindow < 0 || outgoingWindow > 0xFFFFFFFFL)
+        {
+            throw new IllegalArgumentException("Value '" + outgoingWindow + "' must be in the"
+                    + " range [0 - 2^32-1]");
+        }
+
+        _outgoingWindow = outgoingWindow;
+    }
+
+    @Override
+    public long getOutgoingWindow()
+    {
+        return _outgoingWindow;
     }
 }

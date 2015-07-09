@@ -1909,16 +1909,7 @@ static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * val
 
 static size_t pni_session_outgoing_window(pn_session_t *ssn)
 {
-  uint32_t size = ssn->connection->transport->remote_max_frame;
-  if (!size) {
-    return ssn->outgoing_deliveries;
-  } else {
-    pn_sequence_t frames = ssn->outgoing_bytes/size;
-    if (ssn->outgoing_bytes % size) {
-      frames++;
-    }
-    return pn_max(frames, ssn->outgoing_deliveries);
-  }
+  return ssn->outgoing_window;
 }
 
 static size_t pni_session_incoming_window(pn_session_t *ssn)

@@ -280,6 +280,12 @@ def pn_session_incoming_bytes(ssn):
 def pn_session_outgoing_bytes(ssn):
   return ssn.impl.getOutgoingBytes()
 
+def pn_session_get_outgoing_window(ssn):
+  return ssn.impl.getOutgoingWindow()
+
+def pn_session_set_outgoing_window(ssn, window):
+  ssn.impl.setOutgoingWindow(window)
+
 def pn_session_condition(ssn):
   return ssn.condition
 

@@ -991,6 +991,7 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->outgoing_bytes = 0;
   ssn->incoming_deliveries = 0;
   ssn->outgoing_deliveries = 0;
+  ssn->outgoing_window = 2147483647;
 
   // begin transport state
   memset(&ssn->state, 0, sizeof(ssn->state));
@@ -1041,6 +1042,18 @@ void pn_session_set_incoming_capacity(pn_session_t *ssn, size_t capacity)
   assert(ssn);
   // XXX: should this trigger a flow?
   ssn->incoming_capacity = capacity;
+}
+
+size_t pn_session_get_outgoing_window(pn_session_t *ssn)
+{
+  assert(ssn);
+  return ssn->outgoing_window;
+}
+
+void pn_session_set_outgoing_window(pn_session_t *ssn, size_t window)
+{
+  assert(ssn);
+  ssn->outgoing_window = window;
 }
 
 size_t pn_session_outgoing_bytes(pn_session_t *ssn)

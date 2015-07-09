@@ -2571,6 +2571,14 @@ class Session(Wrapper, Endpoint):
 
   incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity)
 
+  def _get_outgoing_window(self):
+    return pn_session_get_outgoing_window(self._impl)
+
+  def _set_outgoing_window(self, window):
+    pn_session_set_outgoing_window(self._impl, window)
+
+  outgoing_window = property(_get_outgoing_window, _set_outgoing_window)
+
   @property
   def outgoing_bytes(self):
     return pn_session_outgoing_bytes(self._impl)

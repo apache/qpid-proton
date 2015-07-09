@@ -506,6 +506,12 @@ class SessionTest(Test):
     assert snd.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
     assert rcv.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_ACTIVE
 
+  def test_set_get_outgoing_window(self):
+    assert self.ssn.outgoing_window == 2147483647
+
+    self.ssn.outgoing_window = 1024
+    assert self.ssn.outgoing_window == 1024
+
 
 class LinkTest(Test):
 

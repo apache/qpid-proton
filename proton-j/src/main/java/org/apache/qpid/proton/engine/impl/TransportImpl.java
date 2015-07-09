@@ -448,7 +448,7 @@ public class TransportImpl extends EndpointImpl
         Flow flow = new Flow();
         flow.setNextIncomingId(ssn.getNextIncomingId());
         flow.setNextOutgoingId(ssn.getNextOutgoingId());
-        ssn.updateWindows();
+        ssn.updateIncomingWindow();
         flow.setIncomingWindow(ssn.getIncomingWindowSize());
         flow.setOutgoingWindow(ssn.getOutgoingWindowSize());
         if (link != null) {
