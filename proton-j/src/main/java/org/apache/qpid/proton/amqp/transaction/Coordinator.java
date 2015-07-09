@@ -55,10 +55,5 @@ public final class Coordinator
     {
         return null;
     }
-
-    @Override
-    public Target copy() {
-        return null;
-    }
 }
 

@@ -28,13 +28,6 @@ import java.util.Arrays;
 public final class Target extends Terminus
       implements org.apache.qpid.proton.amqp.transport.Target
 {
-    private Target(Target other) {
-        super(other);
-    }
-
-    public Target() {
-    }
-
     @Override
     public String toString()
     {
@@ -47,11 +40,6 @@ public final class Target extends Terminus
                ", dynamicNodeProperties=" + getDynamicNodeProperties() +
                ", capabilities=" + (getCapabilities() == null ? null : Arrays.asList(getCapabilities())) +
                '}';
-    }
-
-    @Override
-    public org.apache.qpid.proton.amqp.transport.Target copy() {
-        return new Target(this);
     }
 }
   

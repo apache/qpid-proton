@@ -21,9 +21,7 @@
 package org.apache.qpid.proton.amqp.messaging;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
-
 import org.apache.qpid.proton.amqp.Symbol;
 
 public final class Source extends Terminus
@@ -33,18 +31,6 @@ public final class Source extends Terminus
     private Map _filter;
     private Outcome _defaultOutcome;
     private Symbol[] _outcomes;
-
-    private Source(Source other) {
-        super(other);
-        _distributionMode = other._distributionMode;
-        if (other._filter != null)
-            _filter = new HashMap(other._filter);
-        _defaultOutcome = other._defaultOutcome;
-        if (other._outcomes != null)
-            _outcomes = other._outcomes.clone();
-    }
-    
-    public Source() {}
 
     public Symbol getDistributionMode()
     {
@@ -103,11 +89,6 @@ public final class Source extends Terminus
                ", outcomes=" + (_outcomes == null ? null : Arrays.asList(_outcomes)) +
                ", capabilities=" + (getCapabilities() == null ? null : Arrays.asList(getCapabilities())) +
                '}';
-    }
-
-    @Override
-    public org.apache.qpid.proton.amqp.transport.Source copy() {
-        return new Source(this);
     }
 }
   

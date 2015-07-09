@@ -24,6 +24,4 @@ package org.apache.qpid.proton.amqp.transport;
 public interface Target
 {
     public String getAddress();
-
-    public Target copy();
 }
