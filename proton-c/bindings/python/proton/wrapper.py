@@ -81,11 +81,15 @@ class Wrapper(object):
     def __hash__(self):
         return hash(addressof(self._impl))
 
-    def __cmp__(self, other):
+    def __eq__(self, other):
         if isinstance(other, Wrapper):
-            return cmp(addressof(self._impl), addressof(other._impl))
-        else:
-            return -1
+            return addressof(self._impl) == addressof(other._impl)
+        return False
+
+    def __ne__(self, other):
+        if isinstance(other, Wrapper):
+            return addressof(self._impl) != addressof(other._impl)
+        return True
 
     def __del__(self):
         pn_decref(self._impl)

@@ -20,150 +20,21 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
-import java.nio.ByteBuffer;
-
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.impl.HandshakeSniffingTransportWrapper;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
-public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
+
+/**
+ * SslHandshakeSniffingTransportWrapper
+ *
+ */
+
+public class SslHandshakeSniffingTransportWrapper extends HandshakeSniffingTransportWrapper<SslTransportWrapper, TransportWrapper>
+    implements SslTransportWrapper
 {
-    private static final int MINIMUM_LENGTH_FOR_DETERMINATION = 5;
-    private final SslTransportWrapper _secureTransportWrapper;
-    private final TransportWrapper _plainTransportWrapper;
 
-    private boolean _tail_closed = false;
-    private boolean _head_closed = false;
-    private TransportWrapper _selectedTransportWrapper;
-
-    private final ByteBuffer _determinationBuffer = ByteBuffer.allocate(MINIMUM_LENGTH_FOR_DETERMINATION);
-
-    SslHandshakeSniffingTransportWrapper
-        (SslTransportWrapper secureTransportWrapper,
-         TransportWrapper plainTransportWrapper)
-    {
-        _secureTransportWrapper = secureTransportWrapper;
-        _plainTransportWrapper = plainTransportWrapper;
-    }
-
-    @Override
-    public int capacity()
-    {
-        if (isDeterminationMade())
-        {
-            return _selectedTransportWrapper.capacity();
-        }
-        else
-        {
-            if (_tail_closed) { return Transport.END_OF_STREAM; }
-            return _determinationBuffer.remaining();
-        }
-    }
-
-    @Override
-    public int position()
-    {
-        if (isDeterminationMade())
-        {
-            return _selectedTransportWrapper.position();
-        }
-        else
-        {
-            if (_tail_closed) { return Transport.END_OF_STREAM; }
-            return _determinationBuffer.position();
-        }
-    }
-
-    @Override
-    public ByteBuffer tail()
-    {
-        if (isDeterminationMade())
-        {
-            return _selectedTransportWrapper.tail();
-        }
-        else
-        {
-            return _determinationBuffer;
-        }
-    }
-
-    @Override
-    public void process() throws TransportException
-    {
-        if (isDeterminationMade())
-        {
-            _selectedTransportWrapper.process();
-        }
-        else if (_determinationBuffer.remaining() == 0)
-        {
-            _determinationBuffer.flip();
-            byte[] bytesInput = new byte[_determinationBuffer.remaining()];
-            _determinationBuffer.get(bytesInput);
-            makeSslDetermination(bytesInput);
-            _determinationBuffer.rewind();
-
-            // TODO what if the selected transport has insufficient capacity?? Maybe use pour, and then try to finish pouring next time round.
-            _selectedTransportWrapper.tail().put(_determinationBuffer);
-            _selectedTransportWrapper.process();
-        } else if (_tail_closed) {
-            throw new TransportException("connection aborted");
-        }
-    }
-
-    @Override
-    public void close_tail()
-    {
-        try {
-            if (isDeterminationMade())
-            {
-                _selectedTransportWrapper.close_tail();
-            }
-        } finally {
-            _tail_closed = true;
-        }
-    }
-
-    @Override
-    public int pending()
-    {
-        if (_head_closed) { return Transport.END_OF_STREAM; }
-
-        if (isDeterminationMade()) {
-            return _selectedTransportWrapper.pending();
-        } else {
-            return 0;
-        }
-
-    }
-
-    @Override
-    public ByteBuffer head()
-    {
-        if (isDeterminationMade()) {
-            return _selectedTransportWrapper.head();
-        } else {
-            return null;
-        }
-    }
-
-    @Override
-    public void pop(int bytes)
-    {
-        if (isDeterminationMade()) {
-            _selectedTransportWrapper.pop(bytes);
-        } else if (bytes > 0) {
-            throw new IllegalStateException("no bytes have been read");
-        }
-    }
-
-    @Override
-    public void close_head()
-    {
-        if (isDeterminationMade()) {
-            _selectedTransportWrapper.close_head();
-        } else {
-            _head_closed = true;
-        }
+    SslHandshakeSniffingTransportWrapper(SslTransportWrapper ssl, TransportWrapper plain) {
+        super(ssl, plain);
     }
 
     @Override
@@ -171,7 +42,7 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     {
         if(isSecureWrapperSelected())
         {
-            return _secureTransportWrapper.getCipherName();
+            return _wrapper1.getCipherName();
         }
         else
         {
@@ -185,7 +56,7 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
     {
         if (isSecureWrapperSelected())
         {
-            return _secureTransportWrapper.getProtocolName();
+            return _wrapper1.getProtocolName();
         }
         else
         {
@@ -195,32 +66,33 @@ public class SslHandshakeSniffingTransportWrapper implements SslTransportWrapper
 
     private boolean isSecureWrapperSelected()
     {
-        return _selectedTransportWrapper == _secureTransportWrapper;
+        return _selectedTransportWrapper == _wrapper1;
     }
 
-    private boolean isDeterminationMade()
-    {
-        return _selectedTransportWrapper != null;
+    protected int bufferSize() {
+        // minimum length for determination
+        return 5;
     }
 
-    private void makeSslDetermination(byte[] bytesInput)
+    protected void makeDetermination(byte[] bytesInput)
     {
         boolean isSecure = checkForSslHandshake(bytesInput);
         if (isSecure)
         {
-            _selectedTransportWrapper = _secureTransportWrapper;
+            _selectedTransportWrapper = _wrapper1;
         }
         else
         {
-            _selectedTransportWrapper = _plainTransportWrapper;
+            _selectedTransportWrapper = _wrapper2;
         }
     }
+
     // TODO perhaps the sniffer should save up the bytes from each
     // input call until it has sufficient bytes to make the determination
     // and only then pass them to the secure or plain wrapped transport?
     private boolean checkForSslHandshake(byte[] buf)
     {
-        if (buf.length >= MINIMUM_LENGTH_FOR_DETERMINATION)
+        if (buf.length >= bufferSize())
         {
             /*
              * SSLv2 Client Hello format

@@ -25,6 +25,7 @@ import org.apache.qpid.proton.amqp.transport.ErrorCondition;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJEndpoint;
+import org.apache.qpid.proton.engine.Record;
 
 public abstract class EndpointImpl implements ProtonJEndpoint
 {
@@ -36,6 +37,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     private EndpointImpl _transportNext;
     private EndpointImpl _transportPrev;
     private Object _context;
+    private Record _attachments = new RecordImpl();
 
     private int refcount = 1;
     boolean freed = false;
@@ -211,6 +213,11 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     public void setContext(Object context)
     {
         _context = context;
+    }
+
+    public Record attachments()
+    {
+        return _attachments;
     }
 
 }

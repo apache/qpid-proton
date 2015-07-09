@@ -275,7 +275,7 @@ module Qpid::Proton
     # * count - the delivery count
     #
     def delivery_count=(count)
-      raise ArgumentError.new("invalid count: #{count}") if count.nil? || !([Float, Fixnum].include?(count.class))
+      raise ::ArgumentError.new("invalid count: #{count}") if count.nil? || !([Float, Fixnum].include?(count.class))
       raise RangeError.new("count out of range: #{count}") if count < 0
 
       Cproton.pn_message_set_delivery_count(@impl, count.floor)
@@ -465,7 +465,7 @@ module Qpid::Proton
     #
     def expires=(time)
       raise TypeError.new("invalid expiry time: #{time}") if time.nil?
-      raise ArgumentError.new("expiry time cannot be negative: #{time}") if time < 0
+      raise ::ArgumentError.new("expiry time cannot be negative: #{time}") if time < 0
       Cproton.pn_message_set_expiry_time(@impl, time)
     end
 
@@ -483,7 +483,7 @@ module Qpid::Proton
     #
     def creation_time=(time)
       raise TypeError.new("invalid time: #{time}") if time.nil?
-      raise ArgumentError.new("time cannot be negative") if time < 0
+      raise ::ArgumentError.new("time cannot be negative") if time < 0
       Cproton.pn_message_set_creation_time(@impl, time)
     end
 

@@ -57,12 +57,15 @@ import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
+import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.Selectable;
 
 public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
         FrameHandler, TransportOutputWriter
 {
     static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
+    private static final int CHANNEL_MAX_LIMIT = 65535;
 
     private static final boolean getBooleanEnv(String name)
     {
@@ -97,8 +100,8 @@ public class TransportImpl extends EndpointImpl
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
     private int _remoteMaxFrameSize = 512;
-    private int _channelMax = 65535;
-    private int _remoteChannelMax = 65535;
+    private int _channelMax       = CHANNEL_MAX_LIMIT;
+    private int _remoteChannelMax = CHANNEL_MAX_LIMIT;
 
     private final FrameWriter _frameWriter;
 
@@ -119,6 +122,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean postedHeadClosed = false;
     private boolean postedTailClosed = false;
+    private boolean postedTransportError = false;
 
     private int _localIdleTimeout = 0;
     private int _remoteIdleTimeout = 0;
@@ -128,6 +132,9 @@ public class TransportImpl extends EndpointImpl
     private long _lastBytesInput = 0;
     private long _lastBytesOutput = 0;
     private long _remoteIdleDeadline = 0;
+
+    private Selectable _selectable;
+    private Reactor _reactor;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -204,7 +211,19 @@ public class TransportImpl extends EndpointImpl
     @Override
     public void setChannelMax(int n)
     {
-        _channelMax = n;
+        if(_isOpenSent)
+        {
+          throw new IllegalArgumentException("Cannot change channel max after open frame has been sent");
+        }
+
+        if(n < CHANNEL_MAX_LIMIT)
+        {
+            _channelMax = n;
+        }
+        else
+        {
+            _channelMax = CHANNEL_MAX_LIMIT;
+        }
     }
 
     @Override
@@ -429,7 +448,7 @@ public class TransportImpl extends EndpointImpl
         Flow flow = new Flow();
         flow.setNextIncomingId(ssn.getNextIncomingId());
         flow.setNextOutgoingId(ssn.getNextOutgoingId());
-        ssn.updateWindows();
+        ssn.updateIncomingWindow();
         flow.setIncomingWindow(ssn.getIncomingWindowSize());
         flow.setOutgoingWindow(ssn.getOutgoingWindowSize());
         if (link != null) {
@@ -586,7 +605,9 @@ public class TransportImpl extends EndpointImpl
                 session.incrementOutgoingBytes(-delta);
             }
 
-            getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            if (snd.getLocalState() != EndpointState.CLOSED) {
+                getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
+            }
         }
 
         if(wasDone && delivery.getLocalState() != null)
@@ -820,6 +841,9 @@ public class TransportImpl extends EndpointImpl
                         {
                             begin.setRemoteChannel(UnsignedShort.valueOf((short) transportSession.getRemoteChannel()));
                         }
+
+                        transportSession.updateIncomingWindow();
+
                         begin.setHandleMax(transportSession.getHandleMax());
                         begin.setIncomingWindow(transportSession.getIncomingWindowSize());
                         begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
@@ -1314,8 +1338,9 @@ public class TransportImpl extends EndpointImpl
             }
             _head_closed = true;
         }
-        if (_condition != null) {
+        if (_condition != null && !postedTransportError) {
             put(Event.Type.TRANSPORT_ERROR, this);
+            postedTransportError = true;
         }
         if (!postedTailClosed) {
             put(Event.Type.TRANSPORT_TAIL_CLOSED, this);
@@ -1438,14 +1463,17 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
+    @Override
     public void setIdleTimeout(int timeout) {
         _localIdleTimeout = timeout;
     }
 
+    @Override
     public int getIdleTimeout() {
         return _localIdleTimeout;
     }
 
+    @Override
     public int getRemoteIdleTimeout() {
         return _remoteIdleTimeout;
     }
@@ -1525,6 +1553,7 @@ public class TransportImpl extends EndpointImpl
         _outputProcessor.close_head();
     }
 
+    @Override
     public boolean isClosed() {
         int p = pending();
         int c = capacity();
@@ -1588,4 +1617,20 @@ public class TransportImpl extends EndpointImpl
 
     @Override
     void localClose() {}
+
+    public void setSelectable(Selectable selectable) {
+        _selectable = selectable;
+    }
+
+    public Selectable getSelectable() {
+        return _selectable;
+    }
+
+    public void setReactor(Reactor reactor) {
+        _reactor = reactor;
+    }
+
+    public Reactor getReactor() {
+        return _reactor;
+    }
 }

@@ -29,11 +29,14 @@ The proton APIs consist of the following classes:
                   data.
 
 """
+from __future__ import absolute_import
 
 from cproton import *
-from wrapper import Wrapper
+from .wrapper import Wrapper
+from . import _compat
 
 import weakref, socket, sys, threading
+
 try:
   import uuid
 
@@ -76,16 +79,16 @@ except ImportError:
   rand = random.Random()
   rand.seed((os.getpid(), time.time(), socket.gethostname()))
   def random_uuid():
-    bytes = [rand.randint(0, 255) for i in xrange(16)]
+    data = [rand.randint(0, 255) for i in xrange(16)]
 
     # From RFC4122, the version bits are set to 0100
-    bytes[6] &= 0x0F
-    bytes[6] |= 0x40
+    data[6] &= 0x0F
+    data[6] |= 0x40
 
     # From RFC4122, the top two bits of byte 8 get set to 01
-    bytes[8] &= 0x3F
-    bytes[8] |= 0x80
-    return "".join(map(chr, bytes))
+    data[8] &= 0x3F
+    data[8] |= 0x80
+    return "".join(map(chr, data))
 
   def uuid4():
     return uuid.UUID(bytes=random_uuid())
@@ -93,10 +96,22 @@ except ImportError:
   def generate_uuid():
     return uuid4()
 
+#
+# Hacks to provide Python2 <---> Python3 compatibility
+#
 try:
   bytes()
 except NameError:
   bytes = str
+try:
+  long()
+except NameError:
+  long = int
+try:
+  unicode()
+except NameError:
+  unicode = str
+
 
 VERSION_MAJOR = PN_VERSION_MAJOR
 VERSION_MINOR = PN_VERSION_MINOR
@@ -790,7 +805,7 @@ class Message(object):
     self.annotations = None
     self.properties = None
     self.body = body
-    for k,v in kwargs.iteritems():
+    for k,v in _compat.iteritems(kwargs):
       getattr(self, k)          # Raise exception if it's not a valid attribute.
       setattr(self, k, v)
 
@@ -935,7 +950,7 @@ The number of delivery attempts made for this message.
   def _get_id(self):
     return self._id.get_object()
   def _set_id(self, value):
-    if type(value) in (int, long):
+    if type(value) in _compat.INT_TYPES:
       value = ulong(value)
     self._id.rewind()
     self._id.put_object(value)
@@ -991,7 +1006,7 @@ The reply-to address for the message.
   def _get_correlation_id(self):
     return self._correlation_id.get_object()
   def _set_correlation_id(self, value):
-    if type(value) in (int, long):
+    if type(value) in _compat.INT_TYPES:
       value = ulong(value)
     self._correlation_id.rewind()
     self._correlation_id.put_object(value)
@@ -1091,7 +1106,7 @@ The group-id for any replies.
         return data
 
   def decode(self, data):
-    self._check(pn_message_decode(self._msg, data, len(data)))
+    self._check(pn_message_decode(self._msg, data))
     self._post_decode()
 
   def send(self, sender, tag=None):
@@ -1426,7 +1441,7 @@ class Data:
   def type_name(type): return Data.type_names[type]
 
   def __init__(self, capacity=16):
-    if type(capacity) in (int, long):
+    if type(capacity) in _compat.INT_TYPES:
       self._data = pn_data(capacity)
       self._free = True
     else:
@@ -1791,7 +1806,7 @@ class Data:
     @type s: string
     @param s: the symbol name
     """
-    self._check(pn_data_put_symbol(self._data, s))
+    self._check(pn_data_put_symbol(self._data, s.encode('ascii')))
 
   def get_list(self):
     """
@@ -1922,14 +1937,14 @@ class Data:
     If the current node is a signed int, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_int(self._data)
+    return int(pn_data_get_int(self._data))
 
   def get_char(self):
     """
     If the current node is a char, returns its value, returns 0
     otherwise.
     """
-    return char(unichr(pn_data_get_char(self._data)))
+    return char(_compat.unichar(pn_data_get_char(self._data)))
 
   def get_ulong(self):
     """
@@ -1943,7 +1958,7 @@ class Data:
     If the current node is an signed long, returns its value, returns
     0 otherwise.
     """
-    return pn_data_get_long(self._data)
+    return long(pn_data_get_long(self._data))
 
   def get_timestamp(self):
     """
@@ -2019,7 +2034,7 @@ class Data:
     If the current node is a symbol, returns its value, returns ""
     otherwise.
     """
-    return symbol(pn_data_get_symbol(self._data))
+    return symbol(pn_data_get_symbol(self._data).decode('ascii'))
 
   def copy(self, src):
     self._check(pn_data_copy(self._data, src._data))
@@ -2146,9 +2161,8 @@ class Data:
     unicode: put_string,
     bytes: put_binary,
     symbol: put_symbol,
-    int: put_long,
-    char: put_char,
     long: put_long,
+    char: put_char,
     ulong: put_ulong,
     timestamp: put_timestamp,
     float: put_double,
@@ -2156,6 +2170,11 @@ class Data:
     Described: put_py_described,
     Array: put_py_array
     }
+  # for python 3.x, long is merely an alias for int, but for python 2.x
+  # we need to add an explicit int since it is a different type
+  if int not in put_mappings:
+      put_mappings[int] = put_int
+
   get_mappings = {
     NULL: lambda s: None,
     BOOL: get_bool,
@@ -2228,7 +2247,7 @@ class Endpoint(object):
       assert False, "Subclass must override this!"
 
   def _get_handler(self):
-    import reactor
+    from . import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
       on_error = ractor.on_error
@@ -2238,7 +2257,7 @@ class Endpoint(object):
     return WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
   def _set_handler(self, handler):
-    import reactor
+    from . import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
       on_error = ractor.on_error
@@ -2319,21 +2338,34 @@ def millis2timeout(millis):
   return millis2secs(millis)
 
 def unicode2utf8(string):
+    """Some Proton APIs expect a null terminated string. Convert python text
+    types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
+    This method will throw if the string cannot be converted.
+    """
     if string is None:
         return None
-    if isinstance(string, unicode):
-        return string.encode('utf8')
-    elif isinstance(string, str):
-        return string
+    if _compat.IS_PY2:
+        if isinstance(string, unicode):
+            return string.encode('utf-8')
+        elif isinstance(string, str):
+            return string
     else:
-        raise TypeError("Unrecognized string type: %r" % string)
+        # decoding a string results in bytes
+        if isinstance(string, str):
+            string = string.encode('utf-8')
+            # fall through
+        if isinstance(string, bytes):
+            return string.decode('utf-8')
+    raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
 def utf82unicode(string):
+    """Covert C strings returned from proton-c into python unicode"""
     if string is None:
         return None
-    if isinstance(string, unicode):
+    if isinstance(string, _compat.TEXT_TYPES):
+        # already unicode
         return string
-    elif isinstance(string, str):
+    elif isinstance(string, _compat.BINARY_TYPES):
         return string.decode('utf8')
     else:
         raise TypeError("Unrecognized string type")
@@ -2538,6 +2570,14 @@ class Session(Wrapper, Endpoint):
     pn_session_set_incoming_capacity(self._impl, capacity)
 
   incoming_capacity = property(_get_incoming_capacity, _set_incoming_capacity)
+
+  def _get_outgoing_window(self):
+    return pn_session_get_outgoing_window(self._impl)
+
+  def _set_outgoing_window(self, window):
+    pn_session_set_outgoing_window(self._impl, window)
+
+  outgoing_window = property(_get_outgoing_window, _set_outgoing_window)
 
   @property
   def outgoing_bytes(self):
@@ -2866,11 +2906,14 @@ class Sender(Link):
   def offered(self, n):
     pn_link_offered(self._impl, n)
 
-  def stream(self, bytes):
+  def stream(self, data):
     """
-    Send specified bytes as part of the current delivery
+    Send specified data as part of the current delivery
+
+    @type data: binary
+    @param data: data to send
     """
-    return self._check(pn_link_send(self._impl, bytes))
+    return self._check(pn_link_send(self._impl, data))
 
   def send(self, obj, tag=None):
     """
@@ -2895,7 +2938,7 @@ class Sender(Link):
           yield str(count)
           count += 1
       self.tag_generator = simple_tags()
-    return self.tag_generator.next()
+    return next(self.tag_generator)
 
 class Receiver(Link):
   """
@@ -2907,12 +2950,12 @@ class Receiver(Link):
     pn_link_flow(self._impl, n)
 
   def recv(self, limit):
-    n, bytes = pn_link_recv(self._impl, limit)
+    n, binary = pn_link_recv(self._impl, limit)
     if n == PN_EOS:
       return None
     else:
       self._check(n)
-      return bytes
+      return binary
 
   def drain(self, n):
     pn_link_drain(self._impl, n)
@@ -3256,10 +3299,10 @@ A callback for trace logging. The callback is passed the transport and log messa
     else:
       return self._check(c)
 
-  def push(self, bytes):
-    n = self._check(pn_transport_push(self._impl, bytes))
-    if n != len(bytes):
-      raise OverflowError("unable to process all bytes")
+  def push(self, binary):
+    n = self._check(pn_transport_push(self._impl, binary))
+    if n != len(binary):
+      raise OverflowError("unable to process all bytes: %s, %s" % (n, len(binary)))
 
   def close_tail(self):
     self._check(pn_transport_close_tail(self._impl))
@@ -3799,7 +3842,7 @@ class _cadapter:
 
   def exception(self, exc, val, tb):
     if self.on_error is None:
-      raise exc, val, tb
+      _compat.raise_(exc, val, tb)
     else:
       self.on_error((exc, val, tb))
 
@@ -3820,7 +3863,7 @@ class WrappedHandler(Wrapper):
   def _on_error(self, info):
     on_error = getattr(self, "on_error", None)
     if on_error is None:
-      raise info[0], info[1], info[2]
+      _compat.raise_(info[0], info[1], info[2])
     else:
       on_error(info)
 
@@ -3902,7 +3945,7 @@ class Url(object):
       If specified, replaces corresponding part in url string.
     """
     if url:
-      self._url = pn_url_parse(str(url))
+      self._url = pn_url_parse(unicode2utf8(str(url)))
       if not self._url: raise ValueError("Invalid URL '%s'" % url)
     else:
       self._url = pn_url()

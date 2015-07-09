@@ -147,6 +147,7 @@ set(qpid-proton-core
   ${PN_PATH}/src/transport/transport.c
   ${PN_PATH}/src/message/message.c
   ${PN_PATH}/src/sasl/sasl.c
+  ${PN_PATH}/src/sasl/none_sasl.c
 
   ${PN_PATH}/src/messenger/messenger.c
   ${PN_PATH}/src/messenger/subscription.c

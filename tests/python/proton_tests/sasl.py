@@ -16,13 +16,14 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import absolute_import
 
-import sys, os, common
+import sys, os
+from . import common
 
 from proton import *
-from common import pump, Skipped
-
-from cproton import *
+from .common import pump, Skipped
+from proton._compat import str2bin
 
 def _sslCertpath(file):
     """ Return the full path to the certificate,keyfile, etc.
@@ -33,6 +34,7 @@ def _sslCertpath(file):
 def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', encrypted=False, authenticated=True):
   self.s1.allowed_mechs(mech)
   self.c1.open()
+  self.c2.open()
 
   pump(self.t1, self.t2, 1024)
 
@@ -47,11 +49,15 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
     assert self.s2.user == authUser
     assert self.s2.mech == mech.strip()
     assert self.s2.outcome == SASL.OK
+    assert self.c2.state & Endpoint.LOCAL_ACTIVE and self.c2.state & Endpoint.REMOTE_ACTIVE,\
+      "local_active=%s, remote_active=%s" % (self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
     # Client
     assert self.t1.user == clientUser
     assert self.s1.user == clientUser
     assert self.s1.mech == mech.strip()
     assert self.s1.outcome == SASL.OK
+    assert self.c1.state & Endpoint.LOCAL_ACTIVE and self.c1.state & Endpoint.REMOTE_ACTIVE,\
+      "local_active=%s, remote_active=%s" % (self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
   else:
     # Server
     assert self.t2.user == None
@@ -160,7 +166,7 @@ class SaslTest(Test):
     c1.open()
 
     # get all t1's output in one buffer then pass it all to t2
-    out1_sasl_and_amqp = ""
+    out1_sasl_and_amqp = str2bin("")
     t1_still_producing = True
     while t1_still_producing:
       out1 = self.t1.peek(1024)
@@ -210,17 +216,17 @@ class SaslTest(Test):
 
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("AMQP\x03\x01\x00\x00")
+    self.t1.push(str2bin("AMQP\x03\x01\x00\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("\x00\x00\x00")
+    self.t1.push(str2bin("\x00\x00\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
 
-    self.t1.push("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5")
+    self.t1.push(str2bin("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00")
+    self.t1.push(str2bin("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
     while out:
@@ -299,8 +305,11 @@ class CyrusSASLTest(Test):
     self.c1.password = 'password'
     self.c1.hostname = 'localhost'
 
+    self.c2 = Connection()
+
   def testMechANON(self):
     self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
     _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
 
   def testMechCRAMMD5(self):
@@ -308,6 +317,7 @@ class CyrusSASLTest(Test):
       raise Skipped('Extended SASL not supported')
 
     self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
     _testSaslMech(self, 'CRAM-MD5')
 
   def testMechDIGESTMD5(self):
@@ -315,6 +325,7 @@ class CyrusSASLTest(Test):
       raise Skipped('Extended SASL not supported')
 
     self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
     _testSaslMech(self, 'DIGEST-MD5')
 
 # SCRAM not supported before Cyrus SASL 2.1.26
@@ -325,6 +336,7 @@ class CyrusSASLTest(Test):
 #      raise Skipped('Extended SASL not supported')
 #
 #    self.t1.bind(self.c1)
+#    self.t2.bind(self.c2)
 #    _testSaslMech(self, 'SCRAM-SHA-1')
 
 def _sslConnection(domain, transport, connection):
@@ -346,6 +358,7 @@ class SSLSASLTest(Test):
     self.s2 = SASL(self.t2)
 
     self.c1 = Connection()
+    self.c2 = Connection()
 
   def testSSLPlainSimple(self):
     if "java" in sys.platform:
@@ -361,7 +374,7 @@ class SSLSASLTest(Test):
     self.c1.hostname = 'localhost'
 
     ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, encrypted=True)
 
@@ -379,7 +392,7 @@ class SSLSASLTest(Test):
     self.c1.hostname = 'localhost'
 
     ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, clientUser='usr@proton', encrypted=True, authenticated=False)
 
@@ -403,7 +416,7 @@ class SSLSASLTest(Test):
     self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
 
     ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, clientUser=None, authUser=extUser, encrypted=True)
 
@@ -423,6 +436,6 @@ class SSLSASLTest(Test):
     self.client_domain.set_peer_authentication(SSLDomain.VERIFY_PEER)
 
     ssl1 = _sslConnection(self.client_domain, self.t1, self.c1)
-    ssl2 = _sslConnection(self.server_domain, self.t2, Connection())
+    ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)

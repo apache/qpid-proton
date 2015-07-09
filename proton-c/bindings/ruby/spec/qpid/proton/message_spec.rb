@@ -143,7 +143,7 @@ module Qpid
       it "raises an error on a nil delivery count" do
         expect {
           @message.delivery_count = nil
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "raises an error on a negative delivery count" do
@@ -155,7 +155,7 @@ module Qpid
       it "raises an error on a non-numeric delivery count" do
         expect {
           @message.delivery_count = "farkle"
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "converts a floating point delivery count to its integer portion" do
@@ -272,7 +272,7 @@ module Qpid
       it "raises an error on a negative expiry time" do
         expect {
           @message.expires = (0-(rand(65535)))
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "can have a zero expiry time" do
@@ -295,7 +295,7 @@ module Qpid
       it "raises an error on a negative creation time" do
         expect {
           @message.creation_time = (0 - rand(65535))
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "can have a zero creation time" do

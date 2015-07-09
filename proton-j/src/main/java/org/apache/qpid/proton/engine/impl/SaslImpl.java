@@ -83,6 +83,7 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private Symbol _chosenMechanism;
 
     private Role _role;
+    private boolean _allowSkip = true;
 
     /**
      * @param maxFrameSize the size of the input and output buffers
@@ -479,13 +480,22 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     @Override
     public void allowSkip(boolean allowSkip)
     {
-        //TODO: implement
-        throw new ProtonUnsupportedOperationException();
+        _allowSkip = allowSkip;
     }
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
-        return new SaslTransportWrapper(input, output);
+        return new SaslSniffer(new SaslTransportWrapper(input, output),
+                               new PlainTransportWrapper(output, input)) {
+            protected boolean isDeterminationMade() {
+                if (_role == Role.SERVER && _allowSkip) {
+                    return super.isDeterminationMade();
+                } else {
+                    _selectedTransportWrapper = _wrapper1;
+                    return true;
+                }
+            }
+        };
     }
 
     @Override

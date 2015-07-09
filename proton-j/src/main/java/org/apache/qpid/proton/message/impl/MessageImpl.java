@@ -859,4 +859,24 @@ public class MessageImpl implements ProtonJMessage
         return MessageError.OK;
     }
 
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Message{");
+        if (_header != null) {
+            sb.append("header=");
+            sb.append(_header);
+        }
+        if (_properties != null) {
+            sb.append("properties=");
+            sb.append(_properties);
+        }
+        if (_body != null) {
+            sb.append("body=");
+            sb.append(_body);
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
 }

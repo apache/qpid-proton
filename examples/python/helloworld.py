@@ -18,6 +18,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -34,11 +35,11 @@ class HelloWorld(MessagingHandler):
         event.container.create_sender(conn, self.address)
 
     def on_sendable(self, event):
-        event.sender.send(Message(body=u"Hello World!"))
+        event.sender.send(Message(body="Hello World!"))
         event.sender.close()
 
     def on_message(self, event):
-        print event.message.body
+        print(event.message.body)
         event.connection.close()
 
 Container(HelloWorld("localhost:5672", "examples")).run()

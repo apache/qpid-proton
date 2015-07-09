@@ -18,7 +18,11 @@
 # under the License.
 #
 
-import Queue
+try:
+    import Queue
+except:
+    import queue as Queue
+
 import sqlite3
 import threading
 

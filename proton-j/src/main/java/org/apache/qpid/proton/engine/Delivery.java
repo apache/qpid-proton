@@ -28,7 +28,7 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
  * Whilst a message is logically a long-lived object, a delivery is short-lived - it
  * is only intended to be used by the application until it is settled and all its data has been read.
  */
-public interface Delivery
+public interface Delivery extends Extendable
 {
 
     public byte[] getTag();

@@ -69,11 +69,11 @@ module Qpid::Proton::Util
         registry_key = get_key(object.impl)
         unless attachment_method.nil?
           record = Cproton.__send__(attachment_method, object.impl)
-          rbkey = Cproton.pn_rbkey_new
-          Cproton.pn_rbkey_set_registry(rbkey, Cproton.pn_rb2void(Qpid::Proton::Util::Wrapper.registry))
-          Cproton.pn_rbkey_set_method(rbkey, "delete")
-          Cproton.pn_rbkey_set_key_value(rbkey, registry_key)
-          Cproton.pn_record_def(record, RBCTX, Cproton.pn_rbkey__class());
+          rbkey = Cproton.Pn_rbkey_new
+          Cproton.Pn_rbkey_set_registry(rbkey, Cproton.pn_rb2void(Qpid::Proton::Util::Wrapper.registry))
+          Cproton.Pn_rbkey_set_method(rbkey, "delete")
+          Cproton.Pn_rbkey_set_key_value(rbkey, registry_key)
+          Cproton.pn_record_def(record, RBCTX, Cproton.Pn_rbkey__class());
           Cproton.pn_record_set(record, RBCTX, rbkey)
         end
         Qpid::Proton::Util::Wrapper.registry[registry_key] = object
@@ -96,7 +96,7 @@ module Qpid::Proton::Util
           rbkey = Cproton.pni_void2rbkey(Cproton.pn_record_get(record, RBCTX))
           # if we don't have a key, then we don't have an object
           return nil if rbkey.nil?
-          registry_key = Cproton.pn_rbkey_get_key_value(rbkey)
+          registry_key = Cproton.Pn_rbkey_get_key_value(rbkey)
         else
           registry_key = get_key(impl)
         end

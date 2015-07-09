@@ -492,8 +492,10 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   add_test (NAME python-test
             COMMAND ${env_py}
-	             "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
-                    ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+            "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+            ${VALGRIND_ENV}
+            ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   else (NOT OLD_ADD_TEST_COMMAND)
   list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
@@ -517,11 +519,16 @@ if (BUILD_PYTHON)
          to_native_path ("${py_path}" py_path)
          to_native_path ("${py_pythonpath}" py_pythonpath)
          add_test (NAME python-tox-test
+		   WORKING_DIRECTORY ${py_src}
                    COMMAND ${env_py}
-		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../" ${VALGRIND_ENV}
-                   tox
-		   WORKING_DIRECTORY ${py_src})
-         set_tests_properties(python-tox-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
+                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                   ${VALGRIND_ENV}
+                   tox)
+         set_tests_properties(python-tox-test
+                              PROPERTIES
+                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
      else (TOX_CMD)
          message(STATUS "The tox tool is not available - skipping the python-tox-tests")
      endif (TOX_CMD)
@@ -530,7 +537,7 @@ if (BUILD_PYTHON)
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
-if (RUBY_EXE)
+if (RUBY_EXE AND BUILD_RUBY)
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
@@ -564,7 +571,7 @@ if (RUBY_EXE)
   endif (DEFAULT_RUBY_TESTING)
 else (RUBY_EXE)
   message (STATUS "Cannot find ruby, skipping ruby tests")
-endif (RUBY_EXE)
+endif()
 
 mark_as_advanced (RUBY_EXE RSPEC_EXE)
 

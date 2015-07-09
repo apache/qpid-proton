@@ -20,12 +20,16 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJSession;
 import org.apache.qpid.proton.engine.Session;
-import org.apache.qpid.proton.engine.Event;
 
 public class SessionImpl extends EndpointImpl implements ProtonJSession
 {
@@ -40,6 +44,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     private int _outgoingBytes = 0;
     private int _incomingDeliveries = 0;
     private int _outgoingDeliveries = 0;
+    private long _outgoingWindow = Integer.MAX_VALUE;
 
     private LinkNode<SessionImpl> _node;
 
@@ -52,6 +57,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         _connection.put(Event.Type.SESSION_INIT, this);
     }
 
+    @Override
     public SenderImpl sender(String name)
     {
         SenderImpl sender = _senders.get(name);
@@ -74,6 +80,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return sender;
     }
 
+    @Override
     public ReceiverImpl receiver(String name)
     {
         ReceiverImpl receiver = _receivers.get(name);
@@ -96,6 +103,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return receiver;
     }
 
+    @Override
     public Session next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote)
     {
         LinkNode.Query<SessionImpl> query = new EndpointImplQuery<SessionImpl>(local, remote);
@@ -111,6 +119,7 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
         return _connection;
     }
 
+    @Override
     public ConnectionImpl getConnection()
     {
         return getConnectionImpl();
@@ -261,5 +270,22 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     void localClose()
     {
         getConnectionImpl().put(Event.Type.SESSION_LOCAL_CLOSE, this);
+    }
+
+    @Override
+    public void setOutgoingWindow(long outgoingWindow) {
+        if(outgoingWindow < 0 || outgoingWindow > 0xFFFFFFFFL)
+        {
+            throw new IllegalArgumentException("Value '" + outgoingWindow + "' must be in the"
+                    + " range [0 - 2^32-1]");
+        }
+
+        _outgoingWindow = outgoingWindow;
+    }
+
+    @Override
+    public long getOutgoingWindow()
+    {
+        return _outgoingWindow;
     }
 }

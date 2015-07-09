@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -16,7 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import logging, os, Queue, socket, time, types
+import logging, os, socket, time, types
 from heapq import heappush, heappop, nsmallest
 from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
 from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
@@ -28,8 +29,14 @@ from proton import unicode2utf8, utf82unicode
 
 import traceback
 from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
-from wrapper import Wrapper, PYCTX
+from .wrapper import Wrapper, PYCTX
 from cproton import *
+from . import _compat
+
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 class Task(Wrapper):
 
@@ -45,6 +52,9 @@ class Task(Wrapper):
 
     def _init(self):
         pass
+
+    def cancel(self):
+        pn_task_cancel(self._impl)
 
 class Acceptor(Wrapper):
 
@@ -105,7 +115,7 @@ class Reactor(Wrapper):
         pn_reactor_yield(self._impl)
 
     def mark(self):
-        pn_reactor_mark(self._impl)
+        return pn_reactor_mark(self._impl)
 
     def _get_handler(self):
         return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)
@@ -139,7 +149,7 @@ class Reactor(Wrapper):
             for exc, value, tb in self.errors[:-1]:
                 traceback.print_exception(exc, value, tb)
             exc, value, tb = self.errors[-1]
-            raise exc, value, tb
+            _compat.raise_(exc, value, tb)
 
     def process(self):
         result = pn_reactor_process(self._impl)
@@ -211,7 +221,7 @@ class EventInjector(object):
         of the reactor to which this EventInjector was added.
         """
         self.queue.put(event)
-        os.write(self.pipe[1], "!")
+        os.write(self.pipe[1], _compat.str2bin("!"))
 
     def close(self):
         """
@@ -220,7 +230,7 @@ class EventInjector(object):
         then this will be removed from the set of interest.
         """
         self._closed = True
-        os.write(self.pipe[1], "!")
+        os.write(self.pipe[1], _compat.str2bin("!"))
 
     def fileno(self):
         return self.pipe[0]
@@ -489,7 +499,7 @@ class Connector(Handler):
     def _connect(self, connection):
         url = self.address.next()
         # IoHandler uses the hostname to determine where to try to connect to
-        connection.hostname = "%s:%i" % (url.host, url.port)
+        connection.hostname = "%s:%s" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
 
         if url.username:
@@ -566,10 +576,10 @@ class Urls(object):
 
     def next(self):
         try:
-            return self.i.next()
+            return next(self.i)
         except StopIteration:
             self.i = iter(self.values)
-            return self.i.next()
+            return next(self.i)
 
 class SSLConfig(object):
     def __init__(self):
@@ -670,7 +680,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, basestring):
+        if isinstance(context, _compat.STRING_TYPES):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -711,7 +721,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, basestring):
+        if isinstance(context, _compat.STRING_TYPES):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

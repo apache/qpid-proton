@@ -246,6 +246,7 @@ struct pn_session_t {
   pn_sequence_t outgoing_bytes;
   pn_sequence_t incoming_deliveries;
   pn_sequence_t outgoing_deliveries;
+  pn_sequence_t outgoing_window;
   pn_session_state_t state;
 };
 

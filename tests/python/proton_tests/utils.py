@@ -77,7 +77,7 @@ class SyncRequestResponseTest(Test):
 
     def test_request_response(self):
         def test(name, address="x"):
-            for i in xrange(5):
+            for i in range(5):
                 body="%s%s" % (name, i)
                 response = client.call(Message(address=address, body=body))
                 self.assertEquals(response.address, client.reply_to)

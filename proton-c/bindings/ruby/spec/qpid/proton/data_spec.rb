@@ -26,7 +26,7 @@ module Qpid
     describe "A data object" do
 
       before :each do
-        @data = Qpid::Proton::Data.new
+        @data = Qpid::Proton::Codec::Data.new
       end
 
       it "can be initialized" do
@@ -341,13 +341,13 @@ module Qpid
       it "raises an error on a null UUID" do
         expect {
           @data.uuid = nil
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "raises an error on a malformed UUID" do
         expect {
           @data.uuid = random_string(36)
-        }.to raise_error(ArgumentError)
+        }.to raise_error(::ArgumentError)
       end
 
       it "can set a UUID from an integer value" do
@@ -416,7 +416,7 @@ module Qpid
       it "can hold an array" do
         values = []
         (1..(rand(100) + 5)).each { values << rand(2**16) }
-        @data.put_array false, Qpid::Proton::INT
+        @data.put_array false, Qpid::Proton::Codec::INT
         @data.enter
         values.each { |value| @data.int = value }
         @data.exit
@@ -432,13 +432,13 @@ module Qpid
         values = []
         (1..(rand(100) + 5)).each { values << random_string(64) }
         descriptor = random_string(32)
-        @data.put_array true, Qpid::Proton::STRING
+        @data.put_array true, Qpid::Proton::Codec::STRING
         @data.enter
         @data.symbol = descriptor
         values.each { |value| @data.string = value }
         @data.exit
 
-        expect(@data.array).to match_array([values.size, true, Qpid::Proton::STRING])
+        expect(@data.array).to match_array([values.size, true, Qpid::Proton::Codec::STRING])
         @data.enter
         @data.next
         expect(@data.symbol).to eq(descriptor)

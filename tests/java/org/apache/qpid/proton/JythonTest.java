@@ -46,6 +46,7 @@ public class JythonTest
 
     /* System properties expected to be defined in test/pom.xml */
     private static final String PROTON_JYTHON_BINDING = "protonJythonBinding";
+    private static final String PROTON_JYTHON_SHIM = "protonJythonShim";
     private static final String PROTON_JYTHON_TEST_ROOT = "protonJythonTestRoot";
     private static final String PROTON_JYTHON_TEST_SCRIPT = "protonJythonTestScript";
     private static final String PROTON_JYTHON_TESTS_XML_OUTPUT_DIRECTORY = "protonJythonTestXmlOutputDirectory";
@@ -67,12 +68,14 @@ public class JythonTest
     {
         String testScript = getJythonTestScript();
         String binding = getJythonBinding();
+        String shim = getJythonShim();
         String testRoot = getJythonTestRoot();
         String xmlReportFile = getOptionalXmlReportFilename();
         String ignoreFile = getOptionalIgnoreFile();
 
         PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile, ignoreFile);
         interp.getSystemState().path.insert(0, new PyString(binding));
+        interp.getSystemState().path.insert(0, new PyString(shim));
         interp.getSystemState().path.insert(0, new PyString(testRoot));
 
         LOGGER.info("About to call Jython test script: '" + testScript
@@ -176,6 +179,17 @@ public class JythonTest
         if (!file.isDirectory())
         {
             throw new FileNotFoundException("Binding location '" + file + "' should be a directory.");
+        }
+        return file.getAbsolutePath();
+    }
+
+    private String getJythonShim() throws FileNotFoundException
+    {
+        String str = getNonNullSystemProperty(PROTON_JYTHON_SHIM, "System property '%s' must provide the location of the jythin shim");
+        File file = new File(str);
+        if (!file.isDirectory())
+        {
+            throw new FileNotFoundException("Shim location '" + file + "' should be a directory.");
         }
         return file.getAbsolutePath();
     }

@@ -1,0 +1,4 @@
+#!/bin/bash
+CLASS=$1
+shift
+mvn -q -e exec:java -Dexec.mainClass=org.apache.qpid.proton.example.reactor.${CLASS} -Dexec.args="$*"

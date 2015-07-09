@@ -90,7 +90,7 @@ module Qpid::Proton::Reactor
       elsif !options[:address].nil?
         connector.address = URLs.new([Qpid::Proton::URL.new(options[:address])])
       else
-        raise ArgumentError.new("either :url or :urls or :address required")
+        raise ::ArgumentError.new("either :url or :urls or :address required")
       end
 
       connector.heartbeat = options[:heartbeat] if !options[:heartbeat].nil?

@@ -70,6 +70,7 @@ class TransportSession
     {
         _transport = transport;
         _session = session;
+        _outgoingWindowSize = UnsignedInteger.valueOf(session.getOutgoingWindow());
     }
 
     void unbind()
@@ -175,31 +176,13 @@ class TransportSession
         return _incomingWindowSize;
     }
 
-    public void updateWindows()
+    void updateIncomingWindow()
     {
-        // incoming window
         int size = _transport.getMaxFrameSize();
         if (size <= 0) {
             _incomingWindowSize = UnsignedInteger.valueOf(2147483647); // biggest legal value
         } else {
             _incomingWindowSize = UnsignedInteger.valueOf((_session.getIncomingCapacity() - _session.getIncomingBytes())/size);
-        }
-
-        // outgoing window
-        int outgoingDeliveries = _session.getOutgoingDeliveries();
-        if (size <= 0) {
-            _outgoingWindowSize = UnsignedInteger.valueOf(outgoingDeliveries);
-        } else {
-            int outgoingBytes = _session.getOutgoingBytes();
-            int frames = outgoingBytes/size;
-            if (outgoingBytes % size > 0) {
-                frames++;
-            }
-            if (frames > outgoingDeliveries) {
-                _outgoingWindowSize = UnsignedInteger.valueOf(frames);
-            } else {
-                _outgoingWindowSize = UnsignedInteger.valueOf(outgoingDeliveries);
-            }
         }
     }
 

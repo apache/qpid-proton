@@ -42,10 +42,36 @@ module. Instead, you get the `cproton.py` that resides in the Java source tree
 under `proton-j/src/main/resources`.  This `cproton.py` and its dependent files
 serve as a shim that adapts between the Java API and the C API.
 
+
 ### Running tests
 
 To test Proton you should use the CMake build. By default this will invoke the
 maven tests as well, so the maven prerequisites will additionally be required.
+
+By default the unit tests are run using the system's default Python
+interpreter.  However, Proton's Python language bindings support both
+versions of the python language (Python 2.x and Python 3.x).  These
+bindings should be tested using both versions of the Python
+interpreter.  CMake makes this possible by automatically running the
+python unit tests under all versions of python installed on the
+system.
+
+Developers can ensure that Proton remains compatible with both
+versions of Python by installing the following prerequisites:
+
+_Note: currently CMake only supports multi-Python testing in **Linux**
+based environments.  Non-Linux developers may skip the following two
+steps._
+
+1. Installing both Python2.x and Python3.x and their associated
+development environments on your system.  Most modern Linux
+distributions support installing Python 2.x and Python 3.x in
+parallel.
+
+2. Install the **tox** Python testing tool, (e.g. for Fedora):
+
+   $ yum install python-tox
+
 
 To run the tests, cd into your build directory and use the following commands:
 

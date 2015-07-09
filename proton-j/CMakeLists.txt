@@ -20,7 +20,7 @@
 include(UseJava)
 include(ProtonUseJava)
 set(CMAKE_JAVA_TARGET_VERSION ${PN_VERSION})
-file(GLOB_RECURSE SOURCES_ABS "src/main/java/*.java")
+file(GLOB_RECURSE SOURCES_ABS "src/main/java/*.java" "../tests/*/ProtonJInterop.java")
 add_jar(proton-j ${SOURCES_ABS})
 rebuild_jar(proton-j proton-j-${PN_VERSION}.jar)
 set (JAVA_INSTALL_DIR ${SHARE_INSTALL_DIR}/java CACHE PATH "Installation directory for all JARs except those using JNI")

@@ -21,7 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
-import java.util.Iterator;
+
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -186,5 +186,6 @@ public interface Link extends Endpoint
     public boolean getDrain();
 
     public void detach();
+    public boolean detached();
 
 }

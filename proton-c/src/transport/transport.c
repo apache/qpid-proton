@@ -373,7 +373,7 @@ static void pn_transport_initialize(void *object)
   transport->scratch = pn_string(NULL);
   transport->args = pn_data(16);
   transport->output_args = pn_data(16);
-  transport->frame = pn_buffer(TRANSPORT_INITIAL_FRAME_SIZE);
+  transport->frame = pn_buffer(PN_TRANSPORT_INITIAL_FRAME_SIZE);
   transport->input_frames_ct = 0;
   transport->output_frames_ct = 0;
 
@@ -396,7 +396,7 @@ static void pn_transport_initialize(void *object)
   transport->remote_container = NULL;
   transport->remote_hostname = NULL;
   transport->local_max_frame = PN_DEFAULT_MAX_FRAME_SIZE;
-  transport->remote_max_frame = 0;
+  transport->remote_max_frame = (uint32_t) 0xffffffff;
 
   /*
    * We set the local limit on channels to 2^15, because 
@@ -414,7 +414,6 @@ static void pn_transport_initialize(void *object)
   transport->local_channel_max  = PN_IMPL_CHANNEL_MAX;
   transport->channel_max        = transport->local_channel_max;
 
-  transport->remote_channel_max = 0;
   transport->local_idle_timeout = 0;
   transport->dead_remote_deadline = 0;
   transport->last_bytes_input = 0;
@@ -653,11 +652,21 @@ int pn_transport_bind(pn_transport_t *transport, pn_connection_t *connection)
     pn_sasl(transport);
     pni_sasl_set_user_password(transport, pn_string_get(connection->auth_user), pn_string_get(connection->auth_password));
   }
-  if (transport->sasl) {
-    pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
-  }
-  if (transport->ssl) {
-    pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+
+  if (pn_string_size(connection->hostname)) {
+      if (transport->sasl) {
+          pni_sasl_set_remote_hostname(transport, pn_string_get(connection->hostname));
+      }
+
+      // be sure not to overwrite a hostname already set by the user via
+      // pn_ssl_set_peer_hostname() called before the bind
+      if (transport->ssl) {
+          size_t name_len = 0;
+          pn_ssl_get_peer_hostname((pn_ssl_t*) transport, NULL, &name_len);
+          if (name_len == 0) {
+              pn_ssl_set_peer_hostname((pn_ssl_t*) transport, pn_string_get(connection->hostname));
+          }
+      }
   }
 
   if (transport->open_rcvd) {
@@ -1102,20 +1111,37 @@ static char *pn_bytes_strdup(pn_bytes_t str)
 int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_connection_t *conn = transport->connection;
-  bool container_q, hostname_q;
+  bool container_q, hostname_q, remote_channel_max_q, remote_max_frame_q;
+  uint16_t remote_channel_max;
+  uint32_t remote_max_frame;
   pn_bytes_t remote_container, remote_hostname;
   pn_data_clear(transport->remote_offered_capabilities);
   pn_data_clear(transport->remote_desired_capabilities);
   pn_data_clear(transport->remote_properties);
-  int err = pn_data_scan(args, "D.[?S?SIHI..CCC]", &container_q,
-                         &remote_container, &hostname_q, &remote_hostname,
-                         &transport->remote_max_frame,
-                         &transport->remote_channel_max,
+  int err = pn_data_scan(args, "D.[?S?S?I?HI..CCC]",
+                         &container_q, &remote_container,
+                         &hostname_q, &remote_hostname,
+                         &remote_max_frame_q, &remote_max_frame,
+                         &remote_channel_max_q, &remote_channel_max,
                          &transport->remote_idle_timeout,
                          transport->remote_offered_capabilities,
                          transport->remote_desired_capabilities,
                          transport->remote_properties);
   if (err) return err;
+  /*
+   * The default value is already stored in the variable.
+   * But the scanner zeroes out values if it does not
+   * find them in the args, so don't give the variable
+   * directly to the scanner.
+   */
+  if (remote_channel_max_q) {
+    transport->remote_channel_max = remote_channel_max;
+  }
+
+  if (remote_max_frame_q) {
+    transport->remote_max_frame = remote_max_frame;
+  }
+
   if (transport->remote_max_frame > 0) {
     if (transport->remote_max_frame < AMQP_MIN_MAX_FRAME_SIZE) {
       pn_transport_logf(transport, "Peer advertised bad max-frame (%u), forcing to %u",
@@ -1279,7 +1305,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-      pn_do_error(transport, "amqp:connection:no-session", "attach without a session");
+      pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
       if (strheap) free(strheap);
       return PN_EOS;
   }
@@ -1395,12 +1421,18 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
                          &settled, &more, &has_type, &type, transport->disp_data);
   if (err) return err;
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
 
   if (!ssn->state.incoming_window) {
     return pn_do_error(transport, "amqp:session:window-violation", "incoming session window exceeded");
   }
 
   pn_link_t *link = pni_handle_state(ssn, handle);
+  if (!link) {
+    return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
+  }
   pn_delivery_t *delivery;
   if (link->unsettled_tail && !link->unsettled_tail->done) {
     delivery = link->unsettled_tail;
@@ -1465,6 +1497,9 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   if (err) return err;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
 
   if (inext_init) {
     ssn->state.remote_incoming_window = inext + iwin - ssn->state.outgoing_transfer_count;
@@ -1474,6 +1509,9 @@ int pn_do_flow(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 
   if (handle_init) {
     pn_link_t *link = pni_handle_state(ssn, handle);
+    if (!link) {
+      return pn_do_error(transport, "amqp:invalid-field", "no such handle: %u", handle);
+    }
     if (link->endpoint.type == SENDER) {
       pn_sequence_t receiver_count;
       if (dcount_init) {
@@ -1535,6 +1573,10 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   if (!last_init) last = first;
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
+
   pn_delivery_map_t *deliveries;
   if (role) {
     deliveries = &ssn->state.outgoing;
@@ -1608,7 +1650,7 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-    return pn_do_error(transport, "amqp:invalid-field", "no such channel: %u", channel);
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
   }
   pn_link_t *link = pni_handle_state(ssn, handle);
   if (!link) {
@@ -1633,6 +1675,9 @@ int pn_do_detach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 int pn_do_end(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pn_session_t *ssn = pni_channel_state(transport, channel);
+  if (!ssn) {
+    return pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+  }
   int err = pn_scan_error(args, &ssn->endpoint.remote_condition, SCAN_ERROR_DEFAULT);
   if (err) return err;
   PN_SET_REMOTE(ssn->endpoint.state, PN_REMOTE_CLOSED);
@@ -1864,16 +1909,7 @@ static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * val
 
 static size_t pni_session_outgoing_window(pn_session_t *ssn)
 {
-  uint32_t size = ssn->connection->transport->remote_max_frame;
-  if (!size) {
-    return ssn->outgoing_deliveries;
-  } else {
-    pn_sequence_t frames = ssn->outgoing_bytes/size;
-    if (ssn->outgoing_bytes % size) {
-      frames++;
-    }
-    return pn_max(frames, ssn->outgoing_deliveries);
-  }
+  return ssn->outgoing_window;
 }
 
 static size_t pni_session_incoming_window(pn_session_t *ssn)

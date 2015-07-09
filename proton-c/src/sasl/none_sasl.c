@@ -172,6 +172,26 @@ void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
 {
 }
 
+bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
+{
+  return false;
+}
+
+ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
+{
+  return 0;
+}
+
+ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+  return 0;
+}
+
+ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+  return 0;
+}
+
 bool pn_sasl_extended(void)
 {
   return false;

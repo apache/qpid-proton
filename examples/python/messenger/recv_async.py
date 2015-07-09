@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import print_function
 import sys, optparse
 from async import *
 
@@ -31,25 +32,25 @@ if not args:
 class App(CallbackAdapter):
 
     def on_start(self):
-        print "Started"
+        print("Started")
         for a in args:
-            print "Subscribing to:", a
+            print("Subscribing to:", a)
             self.messenger.subscribe(a)
         self.messenger.recv()
 
     def on_recv(self, msg):
-        print "Received:", msg
+        print("Received:", msg)
         if msg.body == "die":
             self.stop()
         if msg.reply_to:
             self.message.clear()
             self.message.address = msg.reply_to
             self.message.body = "Reply for: %s" % msg.body
-            print "Replied:", self.message
+            print("Replied:", self.message)
             self.send(self.message)
 
     def on_stop(self):
-        print "Stopped"
+        print("Stopped")
 
 a = App(Messenger())
 a.run()

@@ -17,8 +17,10 @@
 # under the License.
 #
 
-import os, common
+import os
+from . import common
 from proton import *
+from proton._compat import str2bin
 try:
   from uuid import uuid4
 except ImportError:
@@ -37,7 +39,7 @@ class AccessorsTest(Test):
 
   def _test(self, name, default, values):
     d = getattr(self.msg, name)
-    assert d == default, d
+    assert d == default, (d, default)
     for v in values:
       setattr(self.msg, name, v)
       gotten = getattr(self.msg, name)
@@ -71,7 +73,8 @@ class AccessorsTest(Test):
     self._test("delivery_count", 0, range(0, 1024))
 
   def testUserId(self):
-    self._test("user_id", "", ("asdf", "fdsa", "asd\x00fdsa", ""))
+    self._test("user_id", str2bin(""), (str2bin("asdf"), str2bin("fdsa"),
+                                      str2bin("asd\x00fdsa"), str2bin("")))
 
   def testAddress(self):
     self._test_str("address")

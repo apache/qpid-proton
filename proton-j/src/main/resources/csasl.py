@@ -18,7 +18,7 @@
 #
 from org.apache.qpid.proton.engine import Sasl
 
-from jarray import array, zeros
+from compat import array, zeros
 
 from cerror import *
 
@@ -60,7 +60,7 @@ SASL_OUTCOMES_J2P = {
 }
 
 def pn_transport_require_auth(transport, require):
-  transport.impl.sasl().allowSkip(not require)
+  raise Skipped('Not supported in Proton-J')
 
 # TODO: Placeholders
 def pn_transport_is_authenticated(transport):
