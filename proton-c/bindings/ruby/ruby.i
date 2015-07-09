@@ -28,8 +28,6 @@
 #include <proton/url.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>
-
-#include <uuid/uuid.h>
 %}
 
 %include <cstring.i>
