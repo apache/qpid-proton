@@ -42,6 +42,9 @@ import org.python.util.PythonInterpreter;
  */
 public class JythonTest
 {
+    public interface PathBuilder {
+        public PathBuilder append(String path);
+    }
     private static final Logger LOGGER = Logger.getLogger(JythonTest.class.getName());
 
     /* System properties expected to be defined in test/pom.xml */
@@ -67,16 +70,19 @@ public class JythonTest
     public void test() throws Exception
     {
         String testScript = getJythonTestScript();
-        String binding = getJythonBinding();
-        String shim = getJythonShim();
         String testRoot = getJythonTestRoot();
         String xmlReportFile = getOptionalXmlReportFilename();
         String ignoreFile = getOptionalIgnoreFile();
 
-        PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile, ignoreFile);
-        interp.getSystemState().path.insert(0, new PyString(binding));
-        interp.getSystemState().path.insert(0, new PyString(shim));
-        interp.getSystemState().path.insert(0, new PyString(testRoot));
+        final PythonInterpreter interp = createInterpreterWithArgs(xmlReportFile, ignoreFile);
+        PathBuilder pathBuilder = new PathBuilder() {
+            @Override
+            public PathBuilder append(String path) {
+                interp.getSystemState().path.insert(0, new PyString(path));
+                return this;
+            }
+        };
+        extendPath(pathBuilder);
 
         LOGGER.info("About to call Jython test script: '" + testScript
                 + "' with '" + testRoot + "' added to Jython path");
@@ -97,6 +103,14 @@ public class JythonTest
         {
             runTestOnce(testScript, interp, invocations);
         }
+    }
+
+    protected void extendPath(PathBuilder pathBuilder) throws Exception {
+        String binding = getJythonBinding();
+        String shim = getJythonShim();
+        String testRoot = getJythonTestRoot();
+        pathBuilder.append(binding).append(shim).append(testRoot);
+
     }
 
     private void runTestOnce(String testScript, PythonInterpreter interp, int invocationsSoFar)
@@ -174,7 +188,7 @@ public class JythonTest
 
     private String getJythonBinding() throws FileNotFoundException
     {
-        String str = getNonNullSystemProperty(PROTON_JYTHON_BINDING, "System property '%s' must provide the location of the python test root");
+        String str = getNonNullSystemProperty(PROTON_JYTHON_BINDING, "System property '%s' must provide the location of the proton python binding");
         File file = new File(str);
         if (!file.isDirectory())
         {
@@ -185,7 +199,7 @@ public class JythonTest
 
     private String getJythonShim() throws FileNotFoundException
     {
-        String str = getNonNullSystemProperty(PROTON_JYTHON_SHIM, "System property '%s' must provide the location of the jythin shim");
+        String str = getNonNullSystemProperty(PROTON_JYTHON_SHIM, "System property '%s' must provide the location of the proton jython shim");
         File file = new File(str);
         if (!file.isDirectory())
         {
@@ -256,7 +270,7 @@ public class JythonTest
         }
     }
 
-    private String getNonNullSystemProperty(String systemProperty, String messageWithStringFormatToken)
+    protected String getNonNullSystemProperty(String systemProperty, String messageWithStringFormatToken)
     {
         String testScriptString = System.getProperty(systemProperty);
         if (testScriptString == null)
