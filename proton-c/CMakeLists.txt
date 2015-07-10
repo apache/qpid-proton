@@ -512,7 +512,8 @@ if (BUILD_PYTHON)
   # platforms will be supported. Since `setup.py` will skip
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
-  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+  option(TOX_TEST "Enable muti-version python testing with TOX" ON)
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
      find_program(TOX_CMD "tox")
      if (TOX_CMD)
          list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
@@ -532,7 +533,7 @@ if (BUILD_PYTHON)
      else (TOX_CMD)
          message(STATUS "The tox tool is not available - skipping the python-tox-tests")
      endif (TOX_CMD)
-  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
 endif (BUILD_PYTHON)
 
