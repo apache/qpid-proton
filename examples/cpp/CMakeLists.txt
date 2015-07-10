@@ -28,6 +28,8 @@ foreach(example
     helloworld_direct
     simple_recv
     simple_send
+    direct_recv
+    direct_send
     encode_decode)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} qpid-proton-cpp)

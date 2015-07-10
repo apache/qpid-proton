@@ -21,16 +21,17 @@
 
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 
 class hello_world : public proton::messaging_handler {
   private:
-    std::string server;
+    proton::url server;
     std::string address;
   public:
 
-    hello_world(const std::string &s, const std::string &addr) : server(s), address(addr) {}
+    hello_world(const proton::url &url) : server(url), address(url.path()) {}
 
     void on_start(proton::event &e) {
         proton::connection conn = e.container().connect(server);
@@ -46,19 +47,16 @@ class hello_world : public proton::messaging_handler {
     }
 
     void on_message(proton::event &e) {
-        std::string s;
-        proton::value v(e.message().body());
-        std::cout << v.get<std::string>() << std::endl;
+        proton::value body(e.message().body());
+        std::cout << body << std::endl;
         e.connection().close();
     }
-
 };
 
 int main(int argc, char **argv) {
     try {
-        std::string server = argc > 1 ? argv[1] : ":5672";
-        std::string addr = argc > 2 ? argv[2] : "examples";
-        hello_world hw(server, addr);
+        std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
+        hello_world hw(url);
         proton::container(hw).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

@@ -28,28 +28,54 @@ import platform
 def exe_name(name):
     if platform.system() == "Windows":
         return name + ".exe"
-    return name
+    return "./" + name
 
-def execute(*args):
-    """Run executable and return its output"""
+def background(*args):
+    """Run executable in the backround, return the popen"""
     args = [exe_name(args[0])]+list(args[1:])
+    p = Popen(args, stdout=PIPE, stderr=STDOUT)
+    p.args = args               # Save arguments for debugging output
+    return p
+
+def verify(p):
+    """Wait for executable to exit and verify status."""
     try:
-        p = Popen(args, stdout=PIPE, stderr=STDOUT)
         out, err = p.communicate()
     except Exception as e:
-        raise Exception("Error running %s: %s", args, e)
+        raise Exception("Error running %s: %s", p.args, e)
     if p.returncode:
         raise Exception("""%s exit code %s
 vvvvvvvvvvvvvvvv
 %s
 ^^^^^^^^^^^^^^^^
-""" % (args[0], p.returncode, out))
+""" % (p.args, p.returncode, out))
     if platform.system() == "Windows":
         # Just \n please
         out = out.translate(None, '\r')
     return out
 
+def execute(*args):
+    return verify(background(*args))
+
 NULL = open(os.devnull, 'w')
+
+def wait_addr(addr, timeout=10):
+    """Wait up to timeout for something to listen on port"""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            c = socket.create_connection(addr.split(":"), deadline - time.time())
+            c.close()
+            return
+        except socket.error as e:
+            time.sleep(0.01)
+    raise Exception("Timed out waiting for %s", addr)
+
+def pick_addr():
+    """Pick a new host:port address."""
+    # FIXME aconway 2015-07-14: need a safer way to pick ports.
+    p =  randrange(10000, 20000)
+    return "127.0.0.1:%s" % p
 
 class Broker(object):
     """Run the test broker"""
@@ -62,31 +88,19 @@ class Broker(object):
 
     @classmethod
     def stop(cls):
-        if cls._broker and cls._broker.process:
+        if cls.get() and cls._broker.process:
             cls._broker.process.kill()
             cls._broker = None
 
     def __init__(self):
-        self.port = randrange(10000, 20000)
-        self.addr = ":%s" % self.port
+        self.addr = pick_addr()
         cmd = [exe_name("broker"), self.addr]
         try:
             self.process = Popen(cmd, stdout=NULL, stderr=NULL)
+            wait_addr(self.addr)
+            self.addr += "/examples"
         except Exception as e:
             raise Exception("Error running %s: %s", cmd, e)
-        # Wait 10 secs for broker to listen
-        deadline = time.time() + 10
-        c = None
-        while time.time() < deadline:
-            try:
-                c = socket.create_connection(("127.0.0.1", self.port), deadline - time.time())
-                break
-            except socket.error as e:
-                time.sleep(0.01)
-        if c is None:
-            raise Exception("Timed out waiting for broker")
-        c.close()
-
 
 class ExampleTest(unittest.TestCase):
     """Run the examples, verify they behave as expected."""
@@ -98,41 +112,54 @@ class ExampleTest(unittest.TestCase):
     def test_helloworld(self):
         b = Broker.get()
         hw = execute("helloworld", b.addr)
-        self.assertEqual("Hello World!\n", hw)
+        self.assertEqual('"Hello World!"\n', hw)
 
     def test_helloworld_blocking(self):
         b = Broker.get()
-        hw = execute("helloworld_blocking", b.addr)
-        self.assertEqual("Hello World!\n", hw)
+        hw = execute("helloworld_blocking", b.addr, b.addr)
+        self.assertEqual('"Hello World!"\n', hw)
 
     def test_helloworld_direct(self):
-        url = ":%s/examples" % randrange(10000, 20000)
-        hw = execute("helloworld_direct", url)
-        self.assertEqual("Hello World!\n", hw)
+        addr = pick_addr()
+        hw = execute("helloworld_direct", addr)
+        self.assertEqual('"Hello World!"\n', hw)
 
     def test_simple_send_recv(self):
         b = Broker.get()
-        n = 5
-        send = execute("simple_send", "-a", b.addr, "-m", str(n))
+        send = execute("simple_send", "-a", b.addr)
         self.assertEqual("all messages confirmed\n", send)
-        recv = execute("simple_recv", "-a", b.addr, "-m", str(n))
-        recv_expect = "simple_recv listening on %s\n" % (b.addr)
-        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(n)])
+        recv = execute("simple_recv", "-a", b.addr)
+        recv_expect = "simple_recv listening on amqp://%s\n" % (b.addr)
+        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
         self.assertEqual(recv_expect, recv)
 
-        # FIXME aconway 2015-06-16: bug when receiver is started before sender, messages
-        # are not delivered to receiver.
-    def FIXME_test_simple_recv_send(self):
+    def test_simple_send_direct_recv(self):
+        addr = pick_addr()
+        recv = background("direct_recv", "-a", addr)
+        wait_addr(addr)
+        self.assertEqual("all messages confirmed\n", execute("simple_send", "-a", addr))
+        recv_expect = "direct_recv listening on amqp://%s\n" % (addr)
+        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
+        self.assertEqual(recv_expect, verify(recv))
+
+    def test_simple_recv_direct_send(self):
+        addr = pick_addr()
+        send = background("direct_send", "-a", addr)
+        wait_addr(addr)
+        recv_expect = "simple_recv listening on amqp://%s\n" % (addr)
+        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
+        self.assertEqual(recv_expect, execute("simple_recv", "-a", addr))
+        send_expect = "direct_send listening on amqp://%s\nall messages confirmed\n" % (addr)
+        self.assertEqual(send_expect, verify(send))
+
+    def test_simple_recv_send(self):
         """Start receiver first, then run sender"""
         b = Broker.get()
-        n = 5
-        recv = Popen(["simple_recv", "-a", b.addr, "-m", str(n)], stdout=PIPE)
-        self.assertEqual("simple_recv listening on %s\n" % (b.addr), recv.stdout.readline())
-        send = execute("simple_send", "-a", b.addr, "-m", str(n))
-        self.assertEqual("all messages confirmed\n", send)
-        recv_expect = "".join(['[%d]: b"some arbitrary binary data"\n' % (i+1) for i in range(n)])
-        out, err = recv.communicate()
-        self.assertEqual(recv_expect, out)
+        recv = background("simple_recv", "-a", b.addr)
+        self.assertEqual("all messages confirmed\n", execute("simple_send", "-a", b.addr))
+        recv_expect = "simple_recv listening on amqp://%s\n" % (b.addr)
+        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
+        self.assertEqual(recv_expect, verify(recv))
 
     def test_encode_decode(self):
         expect="""

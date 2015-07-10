@@ -60,7 +60,7 @@ struct connection_closed : public wait_condition {
 }
 
 
-blocking_connection_impl::blocking_connection_impl(std::string &u, duration timeout0, ssl_domain *ssld, container *c)
+blocking_connection_impl::blocking_connection_impl(const url &u, duration timeout0, ssl_domain *ssld, container *c)
     : url_(u), timeout_(timeout0), refcount_(0)
 {
     if (c)

@@ -10,8 +10,8 @@
   -rw-rw-r--. 1 aconway aconway  2390 Jun 10 08:40 Connection.cpp
   -rw-rw-r--. 1 aconway aconway  4285 Jun 10 08:40 ConnectionImpl.cpp
   -rw-rw-r--. 1 aconway aconway  2531 Jun 10 08:40 ConnectionImpl.h
-  -rw-rw-r--. 1 aconway aconway  2131 Jun 10 08:40 Connector.cpp
-  -rw-rw-r--. 1 aconway aconway  1624 Jun 10 08:40 Connector.h
+  -rw-rw-r--. 1 aconway aconway  2131 Jun 10 08:40 connector.cpp
+  -rw-rw-r--. 1 aconway aconway  1624 Jun 10 08:40 connector.h
   -rw-rw-r--. 1 aconway aconway  3188 Jun 10 08:40 Container.cpp
   -rw-rw-r--. 1 aconway aconway 12183 Jun 10 08:40 ContainerImpl.cpp
   -rw-rw-r--. 1 aconway aconway  2689 Jun 10 08:40 ContainerImpl.h

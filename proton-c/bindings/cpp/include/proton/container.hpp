@@ -25,6 +25,7 @@
 #include "proton/handle.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/duration.hpp"
+#include "proton/url.hpp"
 #include <proton/reactor.h>
 #include <string>
 
@@ -32,7 +33,7 @@ namespace proton {
 
 class dispatch_helper;
 class connection;
-class Connector;
+class connector;
 class acceptor;
 class container_impl;
 class messaging_handler;
@@ -51,7 +52,7 @@ class container : public handle<container_impl>
 
     PN_CPP_EXTERN container();
     PN_CPP_EXTERN container(messaging_handler &mhandler);
-    PN_CPP_EXTERN connection connect(std::string &host, handler *h=0);
+    PN_CPP_EXTERN connection connect(const proton::url&, handler *h=0);
     PN_CPP_EXTERN void run();
     PN_CPP_EXTERN void start();
     PN_CPP_EXTERN bool process();
@@ -60,10 +61,10 @@ class container : public handle<container_impl>
     PN_CPP_EXTERN bool is_quiesced();
     PN_CPP_EXTERN pn_reactor_t *reactor();
     PN_CPP_EXTERN sender create_sender(connection &connection, std::string &addr, handler *h=0);
-    PN_CPP_EXTERN sender create_sender(std::string &url);
+    PN_CPP_EXTERN sender create_sender(const proton::url &);
     PN_CPP_EXTERN receiver create_receiver(connection &connection, std::string &addr);
-    PN_CPP_EXTERN receiver create_receiver(const std::string &url);
-    PN_CPP_EXTERN acceptor listen(const std::string &url);
+    PN_CPP_EXTERN receiver create_receiver(const url &);
+    PN_CPP_EXTERN acceptor listen(const proton::url &);
     PN_CPP_EXTERN std::string container_id();
     PN_CPP_EXTERN duration timeout();
     PN_CPP_EXTERN void timeout(duration timeout);

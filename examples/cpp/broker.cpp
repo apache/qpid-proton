@@ -21,6 +21,7 @@
 
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -84,13 +85,13 @@ class queue {
 class broker : public proton::messaging_handler {
   private:
     typedef std::map<std::string, queue *> queue_map;
-    std::string url;
+    proton::url url;
     queue_map queues;
     uint64_t queue_count;       // Use to generate unique queue IDs.
 
   public:
 
-    broker(const std::string &s) : url(s), queue_count(0) {}
+    broker(const proton::url &u) : url(u), queue_count(0) {}
 
     void on_start(proton::event &e) {
         e.container().listen(url);
@@ -125,12 +126,14 @@ class broker : public proton::messaging_handler {
                 queue *q = new queue(true);
                 queues[address] = q;
                 q->subscribe(sender);
+                std::cout << "broker dynamic outgoing link from " << address << std::endl;
             }
             else {
                 std::string address = remote_source.address();
                 if (!address.empty()) {
                     lnk.source().address(address);
                     get_queue(address).subscribe(sender);
+                    std::cout << "broker outgoing link from " << address << std::endl;
                 }
             }
         }
@@ -138,6 +141,7 @@ class broker : public proton::messaging_handler {
             std::string address = lnk.remote_target().address();
             if (!address.empty())
                 lnk.target().address(address);
+            std::cout << "broker incoming link to " << address << std::endl;
         }
     }
 
@@ -192,9 +196,9 @@ class broker : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
-    std::string url = argc > 1 ? argv[1] : ":5672";
-    broker broker(url);
     try {
+        std::string url(argc > 1 ? argv[1] : "0.0.0.0");
+        broker broker(url);
         proton::container(broker).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

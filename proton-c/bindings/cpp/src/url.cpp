@@ -20,57 +20,74 @@
  */
 
 #include "proton/error.hpp"
-#include "url.hpp"
-#include "proton_impl_ref.hpp"
-#include "msg.hpp"
+#include "proton/url.hpp"
+#include "proton/url.h"
 
 namespace proton {
 
-template class proton_handle<pn_url_t>;
-typedef proton_impl_ref<Url> PI;
+bad_url::bad_url(const std::string& s) throw() : error(s) {}
 
+namespace {
 
-Url::Url(const std::string &url) {
-    pn_url_t *up = pn_url_parse(url.c_str());
-    // refcount is 1, no need to incref
-    if (!up)
-        throw error(MSG("invalid URL: " << url));
-    impl_ = up;
+pn_url_t* parse_throw(const std::string& s) {
+    pn_url_t* u = pn_url_parse(s.c_str());
+    if (!u) throw bad_url("invalid URL: " + s);
+    return u;
 }
 
-Url::~Url() { PI::dtor(*this); }
-
-Url::Url(const Url& c) : proton_handle<pn_url_t>() {
-    PI::copy(*this, c);
+pn_url_t* parse_allow_empty(const std::string& s) {
+    return s.empty() ? pn_url() : parse_throw(s);
 }
 
-Url& Url::operator=(const Url& c) {
-    return PI::assign(*this, c);
+std::string char_str(const char* s) { return s ? std::string(s) : std::string(); }
+
+void replace(pn_url_t*& var, pn_url_t* val) {
+    if (var) pn_url_free(var);
+    var = val;
 }
 
-std::string Url::port() {
-    const char *p = pn_url_get_port(impl_);
-    if (!p)
-        return std::string("5672");
-    else
-        return std::string(p);
+} // namespace
+
+url::url() : url_(pn_url()) {}
+
+url::url(const std::string &s, bool d) : url_(parse_throw(s)) { if (d) defaults(); }
+
+url::url(const url& u) : url_(parse_allow_empty(u.str())) {}
+
+url::~url() { pn_url_free(url_); }
+
+url& url::operator=(const url& u) { replace(url_, parse_allow_empty(u.str())); return *this; }
+
+void url::parse(const std::string& s) { replace(url_, parse_throw(s)); }
+
+std::string url::str() const { return char_str(pn_url_str(url_)); }
+
+std::string url::scheme() const { return char_str(pn_url_get_scheme(url_)); }
+std::string url::username() const { return char_str(pn_url_get_username(url_)); }
+std::string url::password() const { return char_str(pn_url_get_password(url_)); }
+std::string url::host() const { return char_str(pn_url_get_host(url_)); }
+std::string url::port() const { return char_str(pn_url_get_port(url_)); }
+std::string url::path() const { return char_str(pn_url_get_path(url_)); }
+
+std::string url::host_port() const { return host() + ":" + port(); }
+
+bool url::empty() const { return str().empty(); }
+
+void url::scheme(const std::string& s) { pn_url_set_scheme(url_, s.c_str()); }
+void url::username(const std::string& s) { pn_url_set_username(url_, s.c_str()); }
+void url::password(const std::string& s) { pn_url_set_password(url_, s.c_str()); }
+void url::host(const std::string& s) { pn_url_set_host(url_, s.c_str()); }
+void url::port(const std::string& s) { pn_url_set_port(url_, s.c_str()); }
+void url::path(const std::string& s) { pn_url_set_path(url_, s.c_str()); }
+
+void url::defaults() {
+    if (scheme().empty()) scheme(AMQP);
+    if (port().empty()) port(scheme());
 }
 
-std::string Url::host() {
-    const char *p = pn_url_get_host(impl_);
-    if (!p)
-        return std::string("0.0.0.0");
-    else
-        return std::string(p);
-}
+const std::string url::AMQP("amqp");
+const std::string url::AMQPS("amqps");
 
-std::string Url::path() {
-    const char *p = pn_url_get_path(impl_);
-    if (!p)
-        return std::string("");
-    else
-        return std::string(p);
-}
+std::ostream& operator<<(std::ostream& o, const url& u) { return o << u.str(); }
 
-
-}
+} // namespace proton

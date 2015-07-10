@@ -21,53 +21,48 @@
 
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/connection.hpp"
+#include "proton/link.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 #include <map>
-#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 
-class simple_send : public proton::messaging_handler {
+class direct_recv : public proton::messaging_handler {
   private:
     proton::url url;
-    int sent;
-    int confirmed;
-    int total;
-  public:
+    int expected;
+    int received;
+    proton::acceptor acceptor;
 
-    simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
+  public:
+    direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_start(proton::event &e) {
-        e.container().create_sender(url);
+        acceptor = e.container().listen(url);
+        std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
-        while (sender.credit() && sent < total) {
-            proton::message msg;
-            msg.id(proton::value(sent + 1));
-            std::map<std::string, int> m;
-            m["sequence"] = sent+1;
-            msg.body(proton::as<proton::MAP>(m));
-            sender.send(msg);
-            sent++;
+    void on_message(proton::event &e) {
+        proton::message msg = e.message();
+        proton::value id = msg.id();
+        if (id.type() == proton::ULONG) {
+            if (id.get<int>() < received)
+                return; // ignore duplicate
         }
-    }
-
-    void on_accepted(proton::event &e) {
-        confirmed++;
-        if (confirmed == total) {
-            std::cout << "all messages confirmed" << std::endl;
+        if (expected == 0 || received < expected) {
+            std::cout << msg.body() << std::endl;
+            received++;
+        }
+        if (received == expected) {
+            e.receiver().close();
             e.connection().close();
+            if (acceptor) acceptor.close();
         }
-    }
-
-    void on_disconnected(proton::event &e) {
-        sent = confirmed;
     }
 };
 
@@ -78,8 +73,8 @@ int main(int argc, char **argv) {
         int message_count = 100;
         std::string address("127.0.0.1:5672/examples");
         parse_options(argc, argv, message_count, address);
-        simple_send send(address, message_count);
-        proton::container(send).run();
+        direct_recv recv(address, message_count);
+        proton::container(recv).run();
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
@@ -88,7 +83,7 @@ int main(int argc, char **argv) {
 
 
 static void usage() {
-    std::cout << "Usage: simple_send -m message_count -a address:" << std::endl;
+    std::cout << "Usage: direct_recv -m message_count -a address:" << std::endl;
     exit (1);
 }
 

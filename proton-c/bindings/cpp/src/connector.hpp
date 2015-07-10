@@ -25,6 +25,7 @@
 #include "proton/proton_handler.hpp"
 #include "proton/event.h"
 #include "proton/reactor.h"
+#include "proton/url.h"
 #include <string>
 
 
@@ -34,12 +35,12 @@ class event;
 class connection;
 class transport;
 
-class Connector : public proton_handler
+class connector : public proton_handler
 {
   public:
-    Connector(connection &c);
-    ~Connector();
-    void address(const std::string &host);
+    connector(connection &c);
+    ~connector();
+    void address(const url&);
     void connect();
     virtual void on_connection_local_open(event &e);
     virtual void on_connection_remote_open(event &e);
@@ -48,7 +49,7 @@ class Connector : public proton_handler
 
   private:
     connection connection_;
-    std::string address_;
+    url address_;
     transport *transport_;
 };
 

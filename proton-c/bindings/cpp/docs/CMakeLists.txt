@@ -29,3 +29,5 @@ if (DOXYGEN_FOUND)
            COMPONENT documentation
            ${OPTIONAL_ARG})
 endif (DOXYGEN_FOUND)
+
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES html)

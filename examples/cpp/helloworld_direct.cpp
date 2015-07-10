@@ -25,12 +25,9 @@
 //#include "proton/acceptor.hpp"
 #include <iostream>
 
-
-
-
 class hello_world_direct : public proton::messaging_handler {
   private:
-    std::string url_;
+    proton::url url_;
     proton::acceptor acceptor_;
   public:
 
@@ -49,8 +46,7 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_message(proton::event &e) {
-        proton::value v(e.message().body());
-        std::cout << v.get<std::string>() << std::endl;
+        std::cout << e.message().body() << std::endl;
     }
 
     void on_accepted(proton::event &e) {

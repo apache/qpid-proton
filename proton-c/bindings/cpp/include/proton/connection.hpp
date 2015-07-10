@@ -58,7 +58,7 @@ class connection : public endpoint, public handle<connection_impl>
     PN_CPP_EXTERN link link_head(endpoint::State mask);
   private:
    friend class private_impl_ref<connection>;
-   friend class Connector;
+   friend class connector;
    friend class connection_impl;
 };
 

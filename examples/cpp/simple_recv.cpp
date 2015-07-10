@@ -33,7 +33,7 @@
 
 class simple_recv : public proton::messaging_handler {
   private:
-    std::string url;
+    proton::url url;
     int expected;
     int received;
   public:
@@ -68,7 +68,7 @@ static void parse_options(int argc, char **argv, int &count, std::string &addr);
 int main(int argc, char **argv) {
     try {
         int message_count = 100;
-        std::string address("localhost:5672/examples");
+        std::string address("127.0.0.1:5672/examples");
         parse_options(argc, argv, message_count, address);
         simple_recv recv(address, message_count);
         proton::container(recv).run();

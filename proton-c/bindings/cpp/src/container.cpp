@@ -25,13 +25,12 @@
 #include "proton/messaging_adapter.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
+#include "proton/url.hpp"
+
 #include "container_impl.hpp"
 #include "private_impl_ref.hpp"
-
 #include "connector.hpp"
 #include "contexts.hpp"
-#include "url.hpp"
-
 #include "proton/connection.h"
 #include "proton/session.h"
 
@@ -55,7 +54,7 @@ container::container() {
     PI::ctor(*this, cimpl);
 }
 
-connection container::connect(std::string &host, handler *h) { return impl_->connect(host, h); }
+connection container::connect(const url &host, handler *h) { return impl_->connect(host, h); }
 
 pn_reactor_t *container::reactor() { return impl_->reactor(); }
 
@@ -69,20 +68,20 @@ sender container::create_sender(connection &connection, std::string &addr, handl
     return impl_->create_sender(connection, addr, h);
 }
 
-sender container::create_sender(std::string &url_string) {
-    return impl_->create_sender(url_string);
+sender container::create_sender(const proton::url &url) {
+    return impl_->create_sender(url);
 }
 
 receiver container::create_receiver(connection &connection, std::string &addr) {
     return impl_->create_receiver(connection, addr);
 }
 
-receiver container::create_receiver(const std::string &url) {
+receiver container::create_receiver(const proton::url &url) {
     return impl_->create_receiver(url);
 }
 
-acceptor container::listen(const std::string &url_string) {
-    return impl_->listen(url_string);
+acceptor container::listen(const proton::url &url) {
+    return impl_->listen(url);
 }
 
 

@@ -37,12 +37,14 @@ class simple_send : public proton::messaging_handler {
     int sent;
     int confirmed;
     int total;
+    proton::acceptor acceptor;
   public:
 
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_start(proton::event &e) {
-        e.container().create_sender(url);
+        acceptor = e.container().listen(url);
+        std::cout << "direct_send listening on " << url << std::endl;
     }
 
     void on_sendable(proton::event &e) {
@@ -63,6 +65,7 @@ class simple_send : public proton::messaging_handler {
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
             e.connection().close();
+            acceptor.close();
         }
     }
 

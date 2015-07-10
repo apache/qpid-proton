@@ -38,7 +38,7 @@ class ssl_domain;
  class blocking_connection_impl : public messaging_handler
 {
   public:
-    PN_CPP_EXTERN blocking_connection_impl(std::string &url, duration d, ssl_domain *ssld, container *c);
+    PN_CPP_EXTERN blocking_connection_impl(const url &url, duration d, ssl_domain *ssld, container *c);
     PN_CPP_EXTERN ~blocking_connection_impl();
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN void wait(wait_condition &condition);
@@ -51,7 +51,7 @@ class ssl_domain;
     friend class blocking_connection;
     container container_;
     connection connection_;
-    std::string url_;
+    url url_;
     duration timeout_;
     int refcount_;
 };

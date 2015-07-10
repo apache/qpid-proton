@@ -25,13 +25,13 @@
 #include "proton/messaging_adapter.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
+#include "proton/url.hpp"
 
 #include "msg.hpp"
 #include "container_impl.hpp"
 #include "connection_impl.hpp"
 #include "connector.hpp"
 #include "contexts.hpp"
-#include "url.hpp"
 #include "private_impl_ref.hpp"
 
 #include "proton/connection.h"
@@ -73,7 +73,7 @@ class CHandler : public handler
 };
 
 
-// Used to sniff for Connector events before the reactor's global handler sees them.
+// Used to sniff for connector events before the reactor's global handler sees them.
 class override_handler : public handler
 {
   public:
@@ -196,16 +196,16 @@ container_impl::~container_impl() {
     pn_reactor_free(reactor_);
 }
 
-connection container_impl::connect(std::string &host, handler *h) {
+connection container_impl::connect(const proton::url &url, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
-    container cntnr(this);
-    connection connection(cntnr, handler_);
-    Connector *connector = new Connector(connection);
-    // Connector self-deletes depending on reconnect logic
-    connector->address(host);  // TODO: url vector
-    connection.override(connector);
-    connection.open();
-    return connection;
+    container ctnr(this);
+    connection conn(ctnr, handler_);
+    connector *ctor = new connector(conn);
+    // connector self-deletes depending on reconnect logic
+    ctor->address(url);  // TODO: url vector
+    conn.override(ctor);
+    conn.open();
+    return conn;
 }
 
 pn_reactor_t *container_impl::reactor() { return reactor_; }
@@ -244,11 +244,11 @@ sender container_impl::create_sender(connection &connection, std::string &addr, 
     return snd;
 }
 
-sender container_impl::create_sender(std::string &url_string) {
+sender container_impl::create_sender(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
-    connection conn = connect(url_string, 0);
+    connection conn = connect(url, 0);
     session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
-    std::string path = Url(url_string).path();
+    std::string path = url.path();
     sender snd = session.create_sender(container_id_ + '-' + path);
     pn_terminus_set_address(pn_link_target(snd.pn_link()), path.c_str());
     snd.open();
@@ -265,31 +265,29 @@ receiver container_impl::create_receiver(connection &connection, std::string &ad
     return rcv;
 }
 
-receiver container_impl::create_receiver(const std::string &url_string) {
+receiver container_impl::create_receiver(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
     // TODO: const cleanup of API
-    connection conn = connect(const_cast<std::string &>(url_string), 0);
+    connection conn = connect(url, 0);
     session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
-    std::string path = Url(url_string).path();
+    std::string path = url.path();
     receiver rcv = session.create_receiver(container_id_ + '-' + path);
     pn_terminus_set_address(pn_link_source(rcv.pn_link()), path.c_str());
     rcv.open();
     return rcv;
 }
 
-class acceptor container_impl::acceptor(const std::string &host, const std::string &port) {
-    pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_, host.c_str(), port.c_str(), NULL);
+class acceptor container_impl::acceptor(const proton::url& url) {
+    pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_, url.host().c_str(), url.port().c_str(), NULL);
     if (acptr)
         return proton::acceptor(acptr);
     else
-        throw error(MSG("accept fail: " << pn_error_text(pn_io_error(pn_reactor_io(reactor_))) << "(" << host << ":" << port << ")"));
+        throw error(MSG("accept fail: " << pn_error_text(pn_io_error(pn_reactor_io(reactor_))) << "(" << url << ")"));
 }
 
-acceptor container_impl::listen(const std::string &url_string) {
+acceptor container_impl::listen(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
-    Url url(url_string);
-    // TODO: SSL
-    return acceptor(url.host(), url.port());
+    return acceptor(url);
 }
 
 

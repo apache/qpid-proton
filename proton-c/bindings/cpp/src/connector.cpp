@@ -24,42 +24,41 @@
 #include "proton/container.hpp"
 #include "proton/event.hpp"
 #include "proton/connection.h"
+#include "proton/url.hpp"
+
 #include "connector.hpp"
 #include "connection_impl.hpp"
-#include "url.hpp"
 
 namespace proton {
 
-Connector::Connector(connection &c) : connection_(c), transport_(0) {}
+connector::connector(connection &c) : connection_(c), transport_(0) {}
 
-Connector::~Connector() {}
+connector::~connector() {}
 
-void Connector::address(const std::string &a) {
+void connector::address(const url &a) {
     address_ = a;
 }
 
-void Connector::connect() {
+void connector::connect() {
     pn_connection_t *conn = connection_.pn_connection();
     pn_connection_set_container(conn, connection_.container().container_id().c_str());
-    Url url(address_);
-    std::string hostname = url.host() + ":" + url.port();
-    pn_connection_set_hostname(conn, hostname.c_str());
+    pn_connection_set_hostname(conn, address_.host_port().c_str());
     transport_ = new transport();
     transport_->bind(connection_);
     connection_.impl_->transport_ = transport_;
 }
 
 
-void Connector::on_connection_local_open(event &e) {
+void connector::on_connection_local_open(event &e) {
     connect();
 }
 
-void Connector::on_connection_remote_open(event &e) {}
+void connector::on_connection_remote_open(event &e) {}
 
-void Connector::on_connection_init(event &e) {
+void connector::on_connection_init(event &e) {
 }
 
-void Connector::on_transport_closed(event &e) {
+void connector::on_transport_closed(event &e) {
     // TODO: prepend with reconnect logic
     pn_connection_release(connection_.impl_->pn_connection_);
     // No more interaction, so drop our counted reference.

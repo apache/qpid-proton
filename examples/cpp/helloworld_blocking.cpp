@@ -39,8 +39,7 @@ class hello_world_blocking : public proton::messaging_handler {
     }
 
     void on_message(proton::event &e) {
-        proton::value v(e.message().body());
-        std::cout << v.get<std::string>() << std::endl;
+        std::cout << e.message().body() << std::endl;
         e.connection().close();
     }
 

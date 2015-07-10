@@ -57,7 +57,7 @@ class connection_impl : public endpoint
     static void incref(connection_impl *);
     static void decref(connection_impl *);
   private:
-    friend class Connector;
+    friend class connector;
     friend class container_impl;
     class container container_;
     int refcount_;
