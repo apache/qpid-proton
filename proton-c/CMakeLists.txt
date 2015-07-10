@@ -218,7 +218,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
     set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
 
-    execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion OUTPUT_VARIABLE GCC_VERSION
+    execute_process(COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1} ${CMAKE_C_COMPILER_ARG2} -dumpversion OUTPUT_VARIABLE GCC_VERSION
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     if (${GCC_VERSION} VERSION_LESS "4.3.0")
       # Only a concern if contibuting code back.
