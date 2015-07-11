@@ -25,6 +25,8 @@
 
 #if  defined(__cplusplus) && __cplusplus >= 201100
 #include <type_traits>
+#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 150030729
+#include <type_traits>
 #else
 /**
  * Workaround missing std:: classes on older C++ compilers.  NOTE: this is NOT a

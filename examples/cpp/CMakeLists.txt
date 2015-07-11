@@ -34,12 +34,15 @@ foreach(example
   set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 endforeach()
 
-set(TEST_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(env_py "${CMAKE_SOURCE_DIR}/proton-c/env.py")
+set(test_bin_dir "$<TARGET_FILE_DIR:broker>")
 if (WIN32)
-  set(TEST_DIR ${TEST_DIR}/${CMAKE_BUILD_TYPE})
+  set(test_path "${test_bin_dir}" "$<TARGET_FILE_DIR:qpid-proton>" "$<TARGET_FILE_DIR:qpid-proton-cpp>")
+else(WIN32)
+  set(test_path "${test_bin_dir}")
 endif(WIN32)
 
 add_test(
   NAME cpp_example_test
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
-  WORKING_DIRECTORY ${TEST_DIR})
+  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}"
+    ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)

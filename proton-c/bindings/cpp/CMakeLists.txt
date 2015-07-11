@@ -23,7 +23,7 @@ include(CheckCXXSourceCompiles)
 set(CMAKE_REQUIRED_FLAGS "${CXX_WARNING_FLAGS}")
 check_cxx_source_compiles("long long ll; int main(int, char**) { return 0; }" HAVE_LONG_LONG)
 if (HAVE_LONG_LONG)
-  add_definitions(-DHAVE_LONG_LONG=1)
+  add_definitions(-DPN_HAVE_LONG_LONG=1)
 endif()
 
 include_directories(
@@ -103,7 +103,7 @@ macro(add_cpp_test test)
     add_test (NAME cpp_${test}
       COMMAND ${env_py}
       "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      ${test}> ${ARGN})
+      $<TARGET_FILE:${test}> ${ARGN})
   else ()
     add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${test} ${ARGN})
   endif ()

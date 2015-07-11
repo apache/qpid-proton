@@ -25,14 +25,14 @@ from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 import platform
 
-def exe_path(name):
-    path = os.path.abspath(name)
-    if platform.system() == "Windows": path += ".exe"
-    return path
+def exe_name(name):
+    if platform.system() == "Windows":
+        return name + ".exe"
+    return name
 
 def execute(*args):
     """Run executable and return its output"""
-    args = [exe_path(args[0])]+list(args[1:])
+    args = [exe_name(args[0])]+list(args[1:])
     try:
         p = Popen(args, stdout=PIPE, stderr=STDOUT)
         out, err = p.communicate()
@@ -44,6 +44,9 @@ vvvvvvvvvvvvvvvv
 %s
 ^^^^^^^^^^^^^^^^
 """ % (args[0], p.returncode, out))
+    if platform.system() == "Windows":
+        # Just \n please
+        out = out.translate(None, '\r')
     return out
 
 NULL = open(os.devnull, 'w')
@@ -66,7 +69,7 @@ class Broker(object):
     def __init__(self):
         self.port = randrange(10000, 20000)
         self.addr = ":%s" % self.port
-        cmd = [exe_path("broker"), self.addr]
+        cmd = [exe_name("broker"), self.addr]
         try:
             self.process = Popen(cmd, stdout=NULL, stderr=NULL)
         except Exception as e:
