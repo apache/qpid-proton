@@ -29,7 +29,7 @@ import java.util.Iterator;
  *
  */
 
-public class BaseHandler implements Handler
+public class BaseHandler implements CoreHandler
 {
 
     public static Handler getHandler(Record r) {
@@ -109,4 +109,132 @@ public class BaseHandler implements Handler
         return children.iterator();
     }
 
+	@Override
+	public void handle(Event e) {
+        switch (e.getType()) {
+        case CONNECTION_INIT:
+            onConnectionInit(e);
+            break;
+        case CONNECTION_LOCAL_OPEN:
+            onConnectionLocalOpen(e);
+            break;
+        case CONNECTION_REMOTE_OPEN:
+            onConnectionRemoteOpen(e);
+            break;
+        case CONNECTION_LOCAL_CLOSE:
+            onConnectionLocalClose(e);
+            break;
+        case CONNECTION_REMOTE_CLOSE:
+            onConnectionRemoteClose(e);
+            break;
+        case CONNECTION_BOUND:
+            onConnectionBound(e);
+            break;
+        case CONNECTION_UNBOUND:
+            onConnectionUnbound(e);
+            break;
+        case CONNECTION_FINAL:
+            onConnectionFinal(e);
+            break;
+        case SESSION_INIT:
+            onSessionInit(e);
+            break;
+        case SESSION_LOCAL_OPEN:
+            onSessionLocalOpen(e);
+            break;
+        case SESSION_REMOTE_OPEN:
+            onSessionRemoteOpen(e);
+            break;
+        case SESSION_LOCAL_CLOSE:
+            onSessionLocalClose(e);
+            break;
+        case SESSION_REMOTE_CLOSE:
+            onSessionRemoteClose(e);
+            break;
+        case SESSION_FINAL:
+            onSessionFinal(e);
+            break;
+        case LINK_INIT:
+            onLinkInit(e);
+            break;
+        case LINK_LOCAL_OPEN:
+            onLinkLocalOpen(e);
+            break;
+        case LINK_REMOTE_OPEN:
+            onLinkRemoteOpen(e);
+            break;
+        case LINK_LOCAL_DETACH:
+            onLinkLocalDetach(e);
+            break;
+        case LINK_REMOTE_DETACH:
+            onLinkRemoteDetach(e);
+            break;
+        case LINK_LOCAL_CLOSE:
+            onLinkLocalClose(e);
+            break;
+        case LINK_REMOTE_CLOSE:
+            onLinkRemoteClose(e);
+            break;
+        case LINK_FLOW:
+            onLinkFlow(e);
+            break;
+        case LINK_FINAL:
+            onLinkFinal(e);
+            break;
+        case DELIVERY:
+            onDelivery(e);
+            break;
+        case TRANSPORT:
+            onTransport(e);
+            break;
+        case TRANSPORT_ERROR:
+            onTransportError(e);
+            break;
+        case TRANSPORT_HEAD_CLOSED:
+            onTransportHeadClosed(e);
+            break;
+        case TRANSPORT_TAIL_CLOSED:
+            onTransportTailClosed(e);
+            break;
+        case TRANSPORT_CLOSED:
+            onTransportClosed(e);
+            break;
+        case REACTOR_FINAL:
+            onReactorFinal(e);
+            break;
+        case REACTOR_QUIESCED:
+            onReactorQuiesced(e);
+            break;
+        case REACTOR_INIT:
+            onReactorInit(e);
+            break;
+        case SELECTABLE_ERROR:
+            onSelectableError(e);
+            break;
+        case SELECTABLE_EXPIRED:
+            onSelectableExpired(e);
+            break;
+        case SELECTABLE_FINAL:
+            onSelectableFinal(e);
+            break;
+        case SELECTABLE_INIT:
+            onSelectableInit(e);
+            break;
+        case SELECTABLE_READABLE:
+            onSelectableReadable(e);
+            break;
+        case SELECTABLE_UPDATED:
+            onSelectableWritable(e);
+            break;
+        case SELECTABLE_WRITABLE:
+            onSelectableWritable(e);
+            break;
+        case TIMER_TASK:
+            onTimerTask(e);
+            break;
+        case NON_CORE_EVENT:
+            onUnhandled(e);
+            break;
+        }
+	}
 }

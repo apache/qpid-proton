@@ -34,6 +34,7 @@ import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
+import org.apache.qpid.proton.engine.EventType;
 import org.apache.qpid.proton.engine.Extendable;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.HandlerException;
@@ -60,7 +61,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private int selectables;
     private boolean yield;
     private Selectable selectable;
-    private Type previous;
+    private EventType previous;
     private Timer timer;
     private final Pipe wakeup;
     private Selector selector;
@@ -251,13 +252,13 @@ public class ReactorImpl implements Reactor, Extendable {
         Event event = collector.peek();
         if (event == null) return true;
         if (collector.more()) return false;
-        return event.getType() == Type.REACTOR_QUIESCED;
+        return event.getEventType() == Type.REACTOR_QUIESCED;
     }
 
     @Override
     public boolean process() throws HandlerException {
         mark();
-        Type previous = null;
+        EventType previous = null;
         while (true) {
             Event event = collector.peek();
             if (event != null) {
@@ -269,10 +270,10 @@ public class ReactorImpl implements Reactor, Extendable {
                 event.dispatch(handler);
                 event.dispatch(global);
 
-                if (event.getType() == Type.CONNECTION_FINAL) {
+                if (event.getEventType() == Type.CONNECTION_FINAL) {
                     children.remove(event.getConnection());
                 }
-                this.previous = event.getType();
+                this.previous = event.getEventType();
                 previous = this.previous;
                 collector.pop();
 
