@@ -43,9 +43,6 @@ class endpoint
     };
     typedef int State;
 
-     PN_CPP_EXTERN virtual class connection &connection();
-     PN_CPP_EXTERN virtual class transport &transport();
-
     // TODO: condition, remote_condition, update_condition, get/handler
 protected:
     PN_CPP_EXTERN endpoint();

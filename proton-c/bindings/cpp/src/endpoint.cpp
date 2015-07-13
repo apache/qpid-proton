@@ -29,12 +29,4 @@ endpoint::endpoint() {}
 
 endpoint::~endpoint() {}
 
-class connection &endpoint::connection() {
-    return dynamic_cast<class connection&>(*this);
-}
-
-class transport &endpoint::transport() {
-    return connection().transport();
-}
-
 }
