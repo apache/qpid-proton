@@ -32,6 +32,7 @@ import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
 import org.apache.qpid.proton.amqp.transport.ConnectionError;
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
 import org.apache.qpid.proton.amqp.transport.Detach;
 import org.apache.qpid.proton.amqp.transport.Disposition;
 import org.apache.qpid.proton.amqp.transport.End;
@@ -640,15 +641,22 @@ public class TransportImpl extends EndpointImpl
 
         if (tpSession.isLocalChannelSet())
         {
+            boolean settled = delivery.isSettled();
+            DeliveryState localState = delivery.getLocalState();
+
             Disposition disposition = new Disposition();
             disposition.setFirst(tpDelivery.getDeliveryId());
             disposition.setLast(tpDelivery.getDeliveryId());
             disposition.setRole(Role.RECEIVER);
-            disposition.setSettled(delivery.isSettled());
+            disposition.setSettled(settled);
+            disposition.setState(localState);
 
-            disposition.setState(delivery.getLocalState());
+            if(localState == null && settled) {
+                disposition.setState(delivery.getDefaultDeliveryState());
+            }
+
             writeFrame(tpSession.getLocalChannel(), disposition, null, null);
-            if (delivery.isSettled())
+            if (settled)
             {
                 tpDelivery.settled();
             }

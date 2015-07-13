@@ -49,6 +49,7 @@ public class DeliveryImpl implements Delivery
     private boolean _settled;
     private boolean _remoteSettled;
     private DeliveryState _remoteDeliveryState;
+    private DeliveryState _defaultDeliveryState = null;
 
     private static final int DELIVERY_STATE_CHANGED = 1;
     private static final int ABLE_TO_SEND = 2;
@@ -420,6 +421,7 @@ public class DeliveryImpl implements Delivery
             .append(", _remoteSettled=").append(_remoteSettled)
             .append(", _remoteDeliveryState=").append(_remoteDeliveryState)
             .append(", _flags=").append(_flags)
+            .append(", _defaultDeliveryState=").append(_defaultDeliveryState)
             .append(", _transportDelivery=").append(_transportDelivery)
             .append(", _dataSize=").append(_dataSize)
             .append(", _complete=").append(_complete)
@@ -432,6 +434,18 @@ public class DeliveryImpl implements Delivery
     public int pending()
     {
         return _dataSize;
+    }
+
+    @Override
+    public void setDefaultDeliveryState(DeliveryState state)
+    {
+        _defaultDeliveryState = state;
+    }
+
+    @Override
+    public DeliveryState getDefaultDeliveryState()
+    {
+        return _defaultDeliveryState;
     }
 
 }

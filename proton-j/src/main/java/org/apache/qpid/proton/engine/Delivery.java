@@ -108,4 +108,14 @@ public interface Delivery extends Extendable
 
     public boolean isBuffered();
 
+    /**
+     * Configures a default DeliveryState to be used if a
+     * received delivery is settled/freed without any disposition
+     * state having been previously applied.
+     *
+     * @param state the default delivery state
+     */
+    public void setDefaultDeliveryState(DeliveryState state);
+
+    public DeliveryState getDefaultDeliveryState();
 }
