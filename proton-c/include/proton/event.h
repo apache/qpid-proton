@@ -350,8 +350,9 @@ PN_EXTERN void pn_collector_release(pn_collector_t *collector);
  * this happens, this operation will return a NULL pointer.
  *
  * @param[in] collector a collector object
- * @param[in] type the event type
+ * @param[in] clazz class of the context
  * @param[in] context the event context
+ * @param[in] type the event type
  *
  * @return a pointer to the newly created event or NULL if the event
  *         was elided

@@ -53,9 +53,7 @@ typedef pn_iterator_t pn_selectables_t;
  *
  * Every selectable is associated with exactly one file descriptor.
  * Selectables may be interested in three kinds of events, read
- * events, write events, and timer events. A selectable will express
- * its interest in these events through the ::pn_selectable_capacity(),
- * ::pn_selectable_pending(), and ::pn_selectable_deadline() calls.
+ * events, write events, and timer events. 
  *
  * When a read, write, or timer event occurs, the selectable must be
  * notified by calling ::pn_selectable_readable(),
@@ -237,6 +235,7 @@ PN_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
  * writable, and expired events into the supplied collector.
  *
  * @param[in] selectable a selectable objet
+ * @param[in] collector a collector object
  */
 PN_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
 

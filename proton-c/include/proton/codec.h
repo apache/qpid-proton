@@ -509,8 +509,7 @@ PN_EXTERN int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
  * @param bytes the buffer for encoded data
  * @param size the size of the buffer
  *
- * @param ssize_t returns the size of the encoded data on success or
- *                an error code on failure
+ * @return the size of the encoded data on success or an error code on failure
  */
 PN_EXTERN ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
 
@@ -519,7 +518,7 @@ PN_EXTERN ssize_t pn_data_encode(pn_data_t *data, char *bytes, size_t size);
  *
  * @param data the data object
  *
- * @param ssize_t returns the size of the encoded data or an error code if data is invalid.
+ * @return the size of the encoded data or an error code if data is invalid.
  */
 PN_EXTERN ssize_t pn_data_encoded_size(pn_data_t *data);
 
@@ -545,7 +544,7 @@ PN_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size
 /**
  * Puts an empty list value into a pn_data_t. Elements may be filled
  * by entering the list node using ::pn_data_enter() and using
- * ::pn_data_put_* to add the desired contents. Once done,
+ * pn_data_put_* to add the desired contents. Once done,
  * ::pn_data_exit() may be used to return to the current level in the
  * tree and put more values.
  *
@@ -915,7 +914,7 @@ PN_EXTERN size_t pn_data_get_map(pn_data_t *data);
  * If the current node is an array, return the number of elements in
  * the array, otherwise return 0. Array data can be accessed by
  * entering the array. If the array is described, the first child node
- * will be the descriptor, and the remaining @var count child nodes
+ * will be the descriptor, and the remaining count child nodes
  * will be the elements of the array.
  *
  * @code
@@ -1249,7 +1248,7 @@ PN_EXTERN pn_handle_t pn_data_point(pn_data_t *data);
  * otherwise it will return true.
  *
  * @param data a pn_data_t object
- * @param handle a handle referencing the saved navigational state
+ * @param point a handle referencing the saved navigational state
  * @return true iff the prior navigational state was restored
  */
 PN_EXTERN bool pn_data_restore(pn_data_t *data, pn_handle_t point);
