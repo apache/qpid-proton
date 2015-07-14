@@ -21,6 +21,9 @@
 
 package org.apache.qpid.proton.message;
 
+/**
+ * @deprecated This class will be removed in a future release.
+ */
 public class MessageFormatException extends RuntimeException
 {
     public MessageFormatException(String message, CharSequence value)
