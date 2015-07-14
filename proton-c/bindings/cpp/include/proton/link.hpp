@@ -32,6 +32,7 @@ struct pn_connection_t;
 
 namespace proton {
 
+/** Messages are transferred across a link. Base class for sender, receiver. */
 class link : public endpoint, public proton_handle<pn_link_t>
 {
   public:
@@ -40,19 +41,41 @@ class link : public endpoint, public proton_handle<pn_link_t>
     PN_CPP_EXTERN ~link();
     PN_CPP_EXTERN link(const link&);
     PN_CPP_EXTERN link& operator=(const link&);
+
+    /** Locally open the link, not complete till messaging_handler::on_link_opened or
+     * proton_handler::link_remote_open
+     */
     PN_CPP_EXTERN void open();
+
+    /** Locally close the link, not complete till messaging_handler::on_link_closeed or
+     * proton_handler::link_remote_close
+     */
     PN_CPP_EXTERN void close();
+
+    /** True if link is a sender */
     PN_CPP_EXTERN bool is_sender();
+    /** True if link is a receiver */
     PN_CPP_EXTERN bool is_receiver();
+    /** Credit available on the link */
     PN_CPP_EXTERN int credit();
+    /** Local source of the link */
     PN_CPP_EXTERN terminus source();
+    /** Local target of the link */
     PN_CPP_EXTERN terminus target();
+    /** Remote source of the link */
     PN_CPP_EXTERN terminus remote_source();
+    /** Remote source of the link */
     PN_CPP_EXTERN terminus remote_target();
+    /** Link name */
     PN_CPP_EXTERN std::string name();
-    PN_CPP_EXTERN pn_link_t *pn_link() const;
-    PN_CPP_EXTERN link next(endpoint::State mask);
+
+    /** Next link that matches state mask. @see endpoint::state */
+    PN_CPP_EXTERN link next(endpoint::state mask);
+
+    /** Connection of the link */
     PN_CPP_EXTERN class connection &connection();
+
+    PN_CPP_EXTERN pn_link_t *pn_link() const;
 
   protected:
     PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);

@@ -19,6 +19,8 @@
  *
  */
 
+#include "options.hpp"
+
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/link.hpp"
@@ -29,8 +31,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-
 
 class direct_recv : public proton::messaging_handler {
   private:
@@ -66,52 +66,23 @@ class direct_recv : public proton::messaging_handler {
     }
 };
 
-static void parse_options(int argc, char **argv, int &count, std::string &addr);
-
 int main(int argc, char **argv) {
+    // Command line options
+    std::string address("127.0.0.1:5672/examples");
+    int message_count = 100;
+    options opts(argc, argv);
+    opts.add_value(address, 'a', "address", "listen and receive on URL", "URL");
+    opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
     try {
-        int message_count = 100;
-        std::string address("127.0.0.1:5672/examples");
-        parse_options(argc, argv, message_count, address);
+        opts.parse();
         direct_recv recv(address, message_count);
         proton::container(recv).run();
+        return 0;
+    } catch (const bad_option& e) {
+        std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
-        return 1;
     }
+    return 1;
 }
 
-
-static void usage() {
-    std::cout << "Usage: direct_recv -m message_count -a address:" << std::endl;
-    exit (1);
-}
-
-
-static void parse_options(int argc, char **argv, int &count, std::string &addr) {
-    int c, i;
-    for (i = 1; i < argc; i++) {
-        if (strlen(argv[i]) == 2 && argv[i][0] == '-') {
-            c = argv[i][1];
-            const char *nextarg = i < argc ? argv[i+1] : NULL;
-
-            switch (c) {
-            case 'a':
-                if (!nextarg) usage();
-                addr = nextarg;
-                i++;
-                break;
-            case 'm':
-                if (!nextarg) usage();
-                unsigned newc;
-                if (sscanf( nextarg, "%d", &newc) != 1) usage();
-                count = newc;
-                i++;
-                break;
-            default:
-                usage();
-            }
-        }
-        else usage();
-    }
-}

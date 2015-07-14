@@ -44,12 +44,15 @@ message::message(const message& m) : proton_handle<pn_message_t>(), body_(0) {
     PI::copy(*this, m);
 }
 
-// FIXME aconway 2015-06-17: message should be a value type, needs to own pn_message_t
-// and do appropriate _copy and _free operations.
+// TODO aconway 2015-06-17: message should be a value not a handle
+// Needs to own pn_message_t and do appropriate _copy and _free operations.
+
 message& message::operator=(const message& m) {
     return PI::assign(*this, m);
 }
 message::~message() { PI::dtor(*this); }
+
+void message::clear() { pn_message_clear(impl_); }
 
 namespace {
 void confirm(pn_message_t * const&  p) {
@@ -189,12 +192,12 @@ std::string message::group_id() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::reply_togroup_id(const std::string &s) {
+void message::reply_to_group_id(const std::string &s) {
     confirm(impl_);
     check(pn_message_set_reply_to_group_id(impl_, s.c_str()));
 }
 
-std::string message::reply_togroup_id() const {
+std::string message::reply_to_group_id() const {
     confirm(impl_);
     const char* s = pn_message_get_reply_to_group_id(impl_);
     return s ? std::string(s) : std::string();

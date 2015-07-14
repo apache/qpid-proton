@@ -22,6 +22,7 @@
 #include "proton/blocking_connection.hpp"
 #include "proton/blocking_sender.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/url.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
 #include "blocking_connection_impl.hpp"
@@ -39,7 +40,7 @@ blocking_connection::blocking_connection(const blocking_connection& c) : handle<
 blocking_connection& blocking_connection::operator=(const blocking_connection& c) { return PI::assign(*this, c); }
 blocking_connection::~blocking_connection() { PI::dtor(*this); }
 
-blocking_connection::blocking_connection(std::string &url, duration d, ssl_domain *ssld, container *c) {
+blocking_connection::blocking_connection(const proton::url &url, duration d, ssl_domain *ssld, container *c) {
     blocking_connection_impl *cimpl = new blocking_connection_impl(url, d,ssld, c);
     PI::ctor(*this, cimpl);
 }
@@ -51,7 +52,7 @@ void blocking_connection::wait(wait_condition &cond, std::string &msg, duration 
     return impl_->wait(cond, msg, timeout);
 }
 
-blocking_sender blocking_connection::create_sender(std::string &address, handler *h) {
+blocking_sender blocking_connection::create_sender(const std::string &address, handler *h) {
     sender sender = impl_->container_.create_sender(impl_->connection_, address, h);
     return blocking_sender(*this, sender);
 }

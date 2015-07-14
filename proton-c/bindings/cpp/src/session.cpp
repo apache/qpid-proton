@@ -60,12 +60,12 @@ connection &session::connection() {
     return connection_impl::reactor_reference(c);
 }
 
-receiver session::create_receiver(std::string name) {
+receiver session::create_receiver(const std::string& name) {
     pn_link_t *link = pn_receiver(impl_, name.c_str());
     return receiver(link);
 }
 
-sender session::create_sender(std::string name) {
+sender session::create_sender(const std::string& name) {
     pn_link_t *link = pn_sender(impl_, name.c_str());
     return sender(link);
 }

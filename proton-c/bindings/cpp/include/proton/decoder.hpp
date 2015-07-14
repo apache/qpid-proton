@@ -29,13 +29,13 @@ namespace proton {
 
 class value;
 
-/** Raised by decoder operations on error. @ingroup cpp*/
+/** Raised by decoder operations on error.*/
 struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&) throw(); };
 
-/** Skips a value with `decoder >> skip()`. @ingroup cpp */
+/** Skips a value with `decoder >> skip()`. */
 struct skip{};
 
-/** Rewind the decoder with `decoder >> rewind()`. @ingroup cpp */
+/** Rewind the decoder with `decoder >> rewind()`. */
 struct rewind{};
 
 /**
@@ -64,7 +64,7 @@ struct rewind{};
  * extracting AMQP maps.
  *
  * You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
- * @ingroup cpp
+ *
 */
 class decoder : public virtual data {
   public:
@@ -126,7 +126,7 @@ class decoder : public virtual data {
     template <class T, type_id A> T get_as() { T value; *this >> as<A>(value); return value; }
 
     /** Call decoder::start() in constructor, decoder::finish in destructor().
-     * @ingroup cpp
+     *
      */
     struct scope : public start {
         decoder& decoder_;

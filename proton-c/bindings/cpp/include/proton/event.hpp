@@ -34,20 +34,32 @@ class handler;
 class container;
 class connection;
 
-class event
-{
+/** Context information about a proton event */ 
+class event {
   public:
-    virtual PN_CPP_EXTERN void dispatch(handler &h) = 0;
-    virtual PN_CPP_EXTERN class container &container();
-    virtual PN_CPP_EXTERN class connection &connection();
-    virtual PN_CPP_EXTERN class sender sender();
-    virtual PN_CPP_EXTERN class receiver receiver();
-    virtual PN_CPP_EXTERN class link link();
-    virtual PN_CPP_EXTERN class message message();
-    virtual PN_CPP_EXTERN void message(class message &);
     virtual PN_CPP_EXTERN ~event();
+
+    /// Dispatch this event to a handler.
+    virtual PN_CPP_EXTERN void dispatch(handler &h) = 0;
+
+    /// Get container.
+    virtual PN_CPP_EXTERN class container &container();
+    /// Get connection.
+    virtual PN_CPP_EXTERN class connection &connection();
+    /// Get sender @throws error if no sender.
+    virtual PN_CPP_EXTERN class sender sender();
+    /// Get receiver @throws error if no receiver.
+    virtual PN_CPP_EXTERN class receiver receiver();
+    /// Get link @throws error if no link.
+    virtual PN_CPP_EXTERN class link link();
+    /// Get message @throws error if no message.
+    virtual PN_CPP_EXTERN class message message();
+    /// Get message @throws error if no message.
+    virtual PN_CPP_EXTERN void message(class message&);
+
   protected:
     PN_CPP_EXTERN event();
+
   private:
     event(const event&);
     event& operator=(const event&);

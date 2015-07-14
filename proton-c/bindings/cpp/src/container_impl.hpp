@@ -46,9 +46,9 @@ class container_impl
     PN_CPP_EXTERN connection connect(const url&, handler *h);
     PN_CPP_EXTERN void run();
     PN_CPP_EXTERN pn_reactor_t *reactor();
-    PN_CPP_EXTERN sender create_sender(connection &connection, std::string &addr, handler *h);
+    PN_CPP_EXTERN sender create_sender(connection &connection, const std::string &addr, handler *h);
     PN_CPP_EXTERN sender create_sender(const url&);
-    PN_CPP_EXTERN receiver create_receiver(connection &connection, std::string &addr);
+    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, handler *h);
     PN_CPP_EXTERN receiver create_receiver(const url&);
     PN_CPP_EXTERN class acceptor listen(const url&);
     PN_CPP_EXTERN std::string container_id();

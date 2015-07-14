@@ -32,7 +32,7 @@ struct pn_data_t;
 
 namespace proton {
 
-// FIXME aconway 2015-06-17: documentation of properties.
+/// An AMQP message.
 class message : public proton_handle<pn_message_t>
 {
   public:
@@ -44,7 +44,15 @@ class message : public proton_handle<pn_message_t>
 
     PN_CPP_EXTERN pn_message_t *pn_message() const;
 
+    /** Clear the message content */
+    PN_CPP_EXTERN void clear();
+
+    ///@name Message properties
+    ///@{
+
+    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
     PN_CPP_EXTERN void id(const value& id);
+    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
     PN_CPP_EXTERN value id() const;
 
     PN_CPP_EXTERN void user(const std::string &user);
@@ -59,7 +67,9 @@ class message : public proton_handle<pn_message_t>
     PN_CPP_EXTERN void reply_to(const std::string &s);
     PN_CPP_EXTERN std::string reply_to() const;
 
+    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
     PN_CPP_EXTERN void correlation_id(const value&);
+    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
     PN_CPP_EXTERN value correlation_id() const;
 
     PN_CPP_EXTERN void content_type(const std::string &s);
@@ -77,29 +87,35 @@ class message : public proton_handle<pn_message_t>
     PN_CPP_EXTERN void group_id(const std::string &s);
     PN_CPP_EXTERN std::string group_id() const;
 
-    PN_CPP_EXTERN void reply_togroup_id(const std::string &s);
-    PN_CPP_EXTERN std::string reply_togroup_id() const;
+    PN_CPP_EXTERN void reply_to_group_id(const std::string &s);
+    PN_CPP_EXTERN std::string reply_to_group_id() const;
+    ///@}
 
-    /** Set the body to an AMQP value. */
+    /** Set the body to a proton::value. */
     PN_CPP_EXTERN void body(const value&);
 
-    /** Template to convert any type to a value and set as the body */
+    /** Set the body to any type T that can be converted to a proton::value */
     template <class T> void body(const T& v) { body(value(v)); }
 
-    /** Set the body to a sequence of sections containing AMQP values. */
+    /** Set the body to a sequence of values, each value is encoded as an AMQP section. */
     PN_CPP_EXTERN void body(const values&);
 
+    /** Get the body values, there may be more than one. */
     PN_CPP_EXTERN const values& body() const;
 
-    PN_CPP_EXTERN values& body(); ///< Allows in-place modification of body sections.
+    /** Get a reference to the body, can be modified in-place. */
+    PN_CPP_EXTERN values& body();
 
-    // FIXME aconway 2015-06-17: consistent and flexible treatment of buffers.
+    // TODO aconway 2015-06-17: consistent and flexible treatment of buffers.
     // Allow convenient std::string encoding/decoding (with re-use of existing
     // string capacity) but also need to allow encoding/decoding of non-string
     // buffers. Introduce a buffer type with begin/end pointers?
 
+    /** Encode the message into string data */
     PN_CPP_EXTERN void encode(std::string &data);
+    /** Retrun encoded message as a string */
     PN_CPP_EXTERN std::string encode();
+    /** Decode from string data into the message. */
     PN_CPP_EXTERN void decode(const std::string &data);
 
   private:

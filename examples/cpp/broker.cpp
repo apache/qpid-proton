@@ -19,6 +19,8 @@
  *
  */
 
+#include "options.hpp"
+
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"
@@ -196,12 +198,19 @@ class broker : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
+    // Command line options
+    proton::url url("0.0.0.0");
+    options opts(argc, argv);
+    opts.add_value(url, 'a', "address", "listen on URL", "URL");
     try {
-        std::string url(argc > 1 ? argv[1] : "0.0.0.0");
+        opts.parse();
         broker broker(url);
         proton::container(broker).run();
+        return 0;
+    } catch (const bad_option& e) {
+        std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
-        return 1;
     }
+    return 1;
 }

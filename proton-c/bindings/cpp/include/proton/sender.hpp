@@ -33,12 +33,14 @@ struct pn_connection_t;
 
 namespace proton {
 
-
+/// A sending link
 class sender : public link
 {
   public:
     PN_CPP_EXTERN sender(pn_link_t *lnk=0);
     PN_CPP_EXTERN sender(const link& c);
+
+    /// Send a message on the link.
     PN_CPP_EXTERN delivery send(message &m);
 
   protected:

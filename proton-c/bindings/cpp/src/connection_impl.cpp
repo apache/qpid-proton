@@ -129,7 +129,7 @@ connection &connection_impl::reactor_reference(pn_connection_t *conn) {
     return impl_->reactor_reference_;
 }
 
-link connection_impl::link_head(endpoint::State mask) {
+link connection_impl::link_head(endpoint::state mask) {
     return link(pn_link_head(pn_connection_, mask));
 }
 

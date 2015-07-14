@@ -25,6 +25,9 @@
 
 namespace proton {
 
+// TODO aconway 2015-07-15: c++11 should use std::function
+// c++03 could use a function template.
+
 // Interface class to indicates that an expected contion has been
 // achieved, i.e. for blocking_connection.wait()
 

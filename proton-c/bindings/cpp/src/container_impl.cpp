@@ -230,7 +230,7 @@ void container_impl::timeout(duration timeout) {
 }
 
 
-sender container_impl::create_sender(connection &connection, std::string &addr, handler *h) {
+sender container_impl::create_sender(connection &connection, const std::string &addr, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
     session session = default_session(connection.pn_connection(), &impl(connection)->default_session_);
     sender snd = session.create_sender(container_id_  + '-' + addr);
@@ -255,19 +255,23 @@ sender container_impl::create_sender(const proton::url &url) {
     return snd;
 }
 
-receiver container_impl::create_receiver(connection &connection, std::string &addr) {
+receiver container_impl::create_receiver(connection &connection, const std::string &addr, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
     connection_impl *conn_impl = impl(connection);
     session session = default_session(conn_impl->pn_connection_, &conn_impl->default_session_);
     receiver rcv = session.create_receiver(container_id_ + '-' + addr);
-    pn_terminus_set_address(pn_link_source(rcv.pn_link()), addr.c_str());
+    pn_link_t *lnk = rcv.pn_link();
+    pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
+    if (h) {
+        pn_record_t *record = pn_link_attachments(lnk);
+        pn_record_set_handler(record, wrap_handler(h));
+    }
     rcv.open();
     return rcv;
 }
 
 receiver container_impl::create_receiver(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
-    // TODO: const cleanup of API
     connection conn = connect(url, 0);
     session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
     std::string path = url.path();

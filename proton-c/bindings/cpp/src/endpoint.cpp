@@ -22,6 +22,7 @@
 #include "proton/endpoint.hpp"
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
+#include "proton/connection.h"
 
 namespace proton {
 
@@ -29,4 +30,13 @@ endpoint::endpoint() {}
 
 endpoint::~endpoint() {}
 
+const int endpoint::LOCAL_UNINIT = PN_LOCAL_UNINIT;
+const int endpoint::REMOTE_UNINIT = PN_REMOTE_UNINIT;
+const int endpoint::LOCAL_ACTIVE = PN_LOCAL_ACTIVE;
+const int endpoint::REMOTE_ACTIVE = PN_REMOTE_ACTIVE;
+const int endpoint::LOCAL_CLOSED = PN_LOCAL_CLOSED;
+const int endpoint::REMOTE_CLOSED = PN_REMOTE_CLOSED;
+const int endpoint::LOCAL_MASK = PN_LOCAL_MASK;
+const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
+ 
 }

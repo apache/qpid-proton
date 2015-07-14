@@ -33,13 +33,14 @@
 struct pn_connection_t;
 
 namespace proton {
-
+class url;
 class container;
 class blocking_connection_impl;
 class ssl_domain;
 class blocking_sender;
 class wait_condition;
 
+// TODO documentation
 class blocking_connection : public handle<blocking_connection_impl>
 {
   public:
@@ -48,11 +49,11 @@ class blocking_connection : public handle<blocking_connection_impl>
     PN_CPP_EXTERN blocking_connection& operator=(const blocking_connection& c);
     PN_CPP_EXTERN ~blocking_connection();
 
-    PN_CPP_EXTERN blocking_connection(std::string &url, duration = duration::FOREVER,
-                                         ssl_domain *ssld=0, container *c=0);
+    PN_CPP_EXTERN blocking_connection(const proton::url &url, duration = duration::FOREVER,
+                                      ssl_domain *ssld=0, container *c=0);
     PN_CPP_EXTERN void close();
 
-    PN_CPP_EXTERN blocking_sender create_sender(std::string &address, handler *h=0);
+    PN_CPP_EXTERN blocking_sender create_sender(const std::string &address, handler *h=0);
     PN_CPP_EXTERN void wait(wait_condition &condition);
     PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg, duration timeout=duration::FOREVER);
     PN_CPP_EXTERN duration timeout();

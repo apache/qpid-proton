@@ -31,11 +31,14 @@ namespace proton {
 
 class connection;
 
+/** Represents a connection transport */
 class transport
 {
   public:
     PN_CPP_EXTERN transport();
     PN_CPP_EXTERN ~transport();
+
+    /** Bind the transport to an AMQP connection */
     PN_CPP_EXTERN void bind(connection &c);
 
     class connection* connection() const { return connection_; }

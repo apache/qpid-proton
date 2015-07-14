@@ -107,8 +107,7 @@ void blocking_connection_impl::wait(wait_condition &condition, std::string &msg,
                 std::string txt = "connection timed out";
                 if (!msg.empty())
                     txt += ": " + msg;
-                // TODO: proper Timeout exception
-                throw error(MSG(txt));
+                throw timeout_error(txt);
             }
         }
     } catch (...) {

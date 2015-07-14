@@ -30,54 +30,59 @@ class handler;
 class container;
 class connection;
 
-typedef enum {
-    PN_MESSAGING_PROTON = 0,  // Wrapped pn_event_t
-    // Covenience events for C++ messaging_handlers
-    PN_MESSAGING_ABORT,
-    PN_MESSAGING_ACCEPTED,
-    PN_MESSAGING_COMMIT,
-    PN_MESSAGING_CONNECTION_CLOSED,
-    PN_MESSAGING_CONNECTION_CLOSING,
-    PN_MESSAGING_CONNECTION_ERROR,
-    PN_MESSAGING_CONNECTION_OPENED,
-    PN_MESSAGING_CONNECTION_OPENING,
-    PN_MESSAGING_DISCONNECTED,
-    PN_MESSAGING_FETCH,
-    PN_MESSAGING_Id_LOADED,
-    PN_MESSAGING_LINK_CLOSED,
-    PN_MESSAGING_LINK_CLOSING,
-    PN_MESSAGING_LINK_OPENED,
-    PN_MESSAGING_LINK_OPENING,
-    PN_MESSAGING_LINK_ERROR,
-    PN_MESSAGING_MESSAGE,
-    PN_MESSAGING_QUIT,
-    PN_MESSAGING_RECORD_INSERTED,
-    PN_MESSAGING_RECORDS_LOADED,
-    PN_MESSAGING_REJECTED,
-    PN_MESSAGING_RELEASED,
-    PN_MESSAGING_REQUEST,
-    PN_MESSAGING_RESPONSE,
-    PN_MESSAGING_SENDABLE,
-    PN_MESSAGING_SESSION_CLOSED,
-    PN_MESSAGING_SESSION_CLOSING,
-    PN_MESSAGING_SESSION_OPENED,
-    PN_MESSAGING_SESSION_OPENING,
-    PN_MESSAGING_SESSION_ERROR,
-    PN_MESSAGING_SETTLED,
-    PN_MESSAGING_START,
-    PN_MESSAGING_TIMER,
-    PN_MESSAGING_TRANSACTION_ABORTED,
-    PN_MESSAGING_TRANSACTION_COMMITTED,
-    PN_MESSAGING_TRANSACTION_DECLARED,
-    PN_MESSAGING_TRANSPORT_CLOSED
-} messaging_event_type_t;
-
+/** An event for the proton::messaging_handler */
 class messaging_event : public proton_event
 {
   public:
+
+    // TODO aconway 2015-07-16: document meaning of each event type.
+
+    /** Event types for a messaging_handler */
+    enum event_type {
+        PROTON = 0,  // Wrapped pn_event_t
+        ABORT,
+        ACCEPTED,
+        COMMIT,
+        CONNECTION_CLOSED,
+        CONNECTION_CLOSING,
+        CONNECTION_ERROR,
+        CONNECTION_OPENED,
+        CONNECTION_OPENING,
+        DISCONNECTED,
+        FETCH,
+        ID_LOADED,
+        LINK_CLOSED,
+        LINK_CLOSING,
+        LINK_OPENED,
+        LINK_OPENING,
+        LINK_ERROR,
+        MESSAGE,
+        QUIT,
+        RECORD_INSERTED,
+        RECORDS_LOADED,
+        REJECTED,
+        RELEASED,
+        REQUEST,
+        RESPONSE,
+        SENDABLE,
+        SESSION_CLOSED,
+        SESSION_CLOSING,
+        SESSION_OPENED,
+        SESSION_OPENING,
+        SESSION_ERROR,
+        SETTLED,
+        START,
+        TIMER,
+        TRANSACTION_ABORTED,
+        TRANSACTION_COMMITTED,
+        TRANSACTION_DECLARED,
+        TRANSPORT_CLOSED
+    };
+
     messaging_event(pn_event_t *ce, pn_event_type_t t, class container &c);
-    messaging_event(messaging_event_type_t t, proton_event &parent);
+    messaging_event(event_type t, proton_event &parent);
     ~messaging_event();
+
     virtual PN_CPP_EXTERN void dispatch(handler &h);
     virtual PN_CPP_EXTERN class connection &connection();
     virtual PN_CPP_EXTERN class sender sender();
@@ -85,8 +90,10 @@ class messaging_event : public proton_event
     virtual PN_CPP_EXTERN class link link();
     virtual PN_CPP_EXTERN class message message();
     virtual PN_CPP_EXTERN void message(class message &);
+    PN_CPP_EXTERN event_type type() const;
+
   private:
-    messaging_event_type_t messaging_type_;
+    event_type type_;
     proton_event *parent_event_;
     class message *message_;
     messaging_event operator=(const messaging_event&);

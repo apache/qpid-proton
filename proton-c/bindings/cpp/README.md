@@ -8,10 +8,8 @@ API documentation in doxygen format.
 # TO DO
 
 Doc & examples
-- Example set with tutorial documentation. Follow pyton examples + C++ encode/decode example.
-  - Consistent option parsing for examples, like other languages.
-  - Auto tests for all examples validating all statements & code in tutorial.
-- API documentation, fill out & organize for readable doxygen HTML.
+- Finish example set and tutorial documentation, following pyton examples.
+- Auto tests for all examples validating all statements & code in tutorial.
 - C++ section on website.
 
 Bugs
@@ -19,7 +17,7 @@ Bugs
   - Drop PIMPL pattern in API: pn_foo pointer is already hiding the impl.
   - Proper ownership of pn_objects created by user, e.g. Message. Let user choose pointer style?
 - Error handling, examples crash on error e.g. queue not found.
-- FIXME and TODO notes in code.
+- TODO notes in code.
 
 Tests
 - Interop/type testing for full AMQP type coverage.

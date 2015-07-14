@@ -22,6 +22,8 @@
 #include "proton/error.hpp"
 #include "proton/url.hpp"
 #include "proton/url.h"
+#include <ostream>
+#include <istream>
 
 namespace proton {
 
@@ -52,6 +54,8 @@ url::url() : url_(pn_url()) {}
 
 url::url(const std::string &s, bool d) : url_(parse_throw(s)) { if (d) defaults(); }
 
+url::url(const char *s, bool d) : url_(parse_throw(s)) { if (d) defaults(); }
+
 url::url(const url& u) : url_(parse_allow_empty(u.str())) {}
 
 url::~url() { pn_url_free(url_); }
@@ -59,6 +63,8 @@ url::~url() { pn_url_free(url_); }
 url& url::operator=(const url& u) { replace(url_, parse_allow_empty(u.str())); return *this; }
 
 void url::parse(const std::string& s) { replace(url_, parse_throw(s)); }
+
+void url::parse(const char *s) { replace(url_, parse_throw(s)); }
 
 std::string url::str() const { return char_str(pn_url_str(url_)); }
 
@@ -89,5 +95,20 @@ const std::string url::AMQP("amqp");
 const std::string url::AMQPS("amqps");
 
 std::ostream& operator<<(std::ostream& o, const url& u) { return o << u.str(); }
+
+std::istream& operator>>(std::istream& i, url& u) {
+    std::string s;
+    i >> s;
+    if (!i.fail() && !i.bad()) {
+        pn_url_t* p = pn_url_parse(s.c_str());
+        if (p) {
+            replace(u.url_, p);
+            u.defaults();
+        } else {
+            i.clear(std::ios::failbit);
+        }
+    }
+    return i;
+}
 
 } // namespace proton

@@ -25,8 +25,6 @@
 #include "proton/type_traits.hpp"
 #include <iosfwd>
 
-#include <iostream>             // FIXME aconway 2015-06-18:
-
 struct pn_data_t;
 
 namespace proton {
@@ -60,7 +58,6 @@ struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const s
  * You can also insert containers element-by-element, see operator<<(encoder&, const start&)
  *
  *@throw decoder::error if the curent value is not a container type.
- *@ingroup cpp
  */
 class encoder : public virtual data {
   public:
@@ -137,7 +134,7 @@ class encoder : public virtual data {
   template <class T> friend encoder& operator<<(encoder&, cref<T, ARRAY>);
   template <class T> friend encoder& operator<<(encoder&, cref<T, LIST>);
   template <class T> friend encoder& operator<<(encoder&, cref<T, MAP>);
-    // TODO aconway 2015-06-16: DESCRIBED.
+    // TODO aconway 2015-06-16: described values.
     ///@}
 
     /** Copy data from a raw pn_data_t */

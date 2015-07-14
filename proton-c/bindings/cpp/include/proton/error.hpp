@@ -27,10 +27,11 @@
 
 namespace proton {
 
-/** @ingroup cpp
- * Functions in the proton namespace throw a subclass of proton::error on error.
- */
+/** Functions in the proton namespace throw a subclass of proton::error on error. */
 struct error : public std::runtime_error { PN_CPP_EXTERN explicit error(const std::string&) throw(); };
+
+/** Raised if timeout expires */
+struct timeout_error : public error { PN_CPP_EXTERN explicit timeout_error(const std::string&) throw(); };
 
 /** Raised if a message is rejected */
 struct message_reject : public error { PN_CPP_EXTERN explicit message_reject(const std::string&) throw(); };

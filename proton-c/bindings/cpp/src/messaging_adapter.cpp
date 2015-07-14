@@ -43,7 +43,7 @@ messaging_adapter::~messaging_adapter(){}
 void messaging_adapter::on_reactor_init(event &e) {
     proton_event *pe = dynamic_cast<proton_event*>(&e);
     if (pe) {
-        messaging_event mevent(PN_MESSAGING_START, *pe);
+        messaging_event mevent(messaging_event::START, *pe);
         delegate_.on_start(mevent);
     }
 }
@@ -55,7 +55,7 @@ void messaging_adapter::on_link_flow(event &e) {
         pn_link_t *lnk = pn_event_link(pne);
         if (lnk && pn_link_is_sender(lnk) && pn_link_credit(lnk) > 0) {
             // create on_message extended event
-            messaging_event mevent(PN_MESSAGING_SENDABLE, *pe);
+            messaging_event mevent(messaging_event::SENDABLE, *pe);
             delegate_.on_sendable(mevent);;
         }
    }
@@ -86,7 +86,7 @@ void messaging_adapter::on_delivery(event &e) {
         if (pn_link_is_receiver(lnk)) {
             if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
                 // generate on_message
-                messaging_event mevent(PN_MESSAGING_MESSAGE, *pe);
+                messaging_event mevent(messaging_event::MESSAGE, *pe);
                 message m(receive_message(lnk, dlv));
                 mevent.message(m);
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
@@ -114,7 +114,7 @@ void messaging_adapter::on_delivery(event &e) {
                 }
             }
             else if (pn_delivery_updated(dlv) && pn_delivery_settled(dlv)) {
-                messaging_event mevent(PN_MESSAGING_SETTLED, *pe);
+                messaging_event mevent(messaging_event::SETTLED, *pe);
                 delegate_.on_settled(mevent);
             }
         } else {
@@ -122,20 +122,20 @@ void messaging_adapter::on_delivery(event &e) {
             if (pn_delivery_updated(dlv)) {
                 std::uint64_t rstate = pn_delivery_remote_state(dlv);
                 if (rstate == PN_ACCEPTED) {
-                    messaging_event mevent(PN_MESSAGING_ACCEPTED, *pe);
+                    messaging_event mevent(messaging_event::ACCEPTED, *pe);
                     delegate_.on_accepted(mevent);
                 }
                 else if (rstate == PN_REJECTED) {
-                    messaging_event mevent(PN_MESSAGING_REJECTED, *pe);
+                    messaging_event mevent(messaging_event::REJECTED, *pe);
                     delegate_.on_rejected(mevent);
                 }
                 else if (rstate == PN_RELEASED || rstate == PN_MODIFIED) {
-                    messaging_event mevent(PN_MESSAGING_RELEASED, *pe);
+                    messaging_event mevent(messaging_event::RELEASED, *pe);
                     delegate_.on_released(mevent);
                 }
 
                 if (pn_delivery_settled(dlv)) {
-                    messaging_event mevent(PN_MESSAGING_SETTLED, *pe);
+                    messaging_event mevent(messaging_event::SETTLED, *pe);
                     delegate_.on_settled(mevent);
                 }
                 if (auto_settle_)
@@ -172,15 +172,15 @@ void messaging_adapter::on_link_remote_close(event &e) {
         pn_link_t *lnk = pn_event_link(cevent);
         pn_state_t state = pn_link_state(lnk);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
-            messaging_event mevent(PN_MESSAGING_LINK_ERROR, *pe);
+            messaging_event mevent(messaging_event::LINK_ERROR, *pe);
             on_link_error(mevent);
         }
         else if (is_local_closed(state)) {
-            messaging_event mevent(PN_MESSAGING_LINK_CLOSED, *pe);
+            messaging_event mevent(messaging_event::LINK_CLOSED, *pe);
             on_link_closed(mevent);
         }
         else {
-            messaging_event mevent(PN_MESSAGING_LINK_CLOSING, *pe);
+            messaging_event mevent(messaging_event::LINK_CLOSING, *pe);
             on_link_closing(mevent);
         }
         pn_link_close(lnk);
@@ -194,15 +194,15 @@ void messaging_adapter::on_session_remote_close(event &e) {
         pn_session_t *session = pn_event_session(cevent);
         pn_state_t state = pn_session_state(session);
         if (pn_condition_is_set(pn_session_remote_condition(session))) {
-            messaging_event mevent(PN_MESSAGING_SESSION_ERROR, *pe);
+            messaging_event mevent(messaging_event::SESSION_ERROR, *pe);
             on_session_error(mevent);
         }
         else if (is_local_closed(state)) {
-            messaging_event mevent(PN_MESSAGING_SESSION_CLOSED, *pe);
+            messaging_event mevent(messaging_event::SESSION_CLOSED, *pe);
             on_session_closed(mevent);
         }
         else {
-            messaging_event mevent(PN_MESSAGING_SESSION_CLOSING, *pe);
+            messaging_event mevent(messaging_event::SESSION_CLOSING, *pe);
             on_session_closing(mevent);
         }
         pn_session_close(session);
@@ -216,15 +216,15 @@ void messaging_adapter::on_connection_remote_close(event &e) {
         pn_connection_t *connection = pn_event_connection(cevent);
         pn_state_t state = pn_connection_state(connection);
         if (pn_condition_is_set(pn_connection_remote_condition(connection))) {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_ERROR, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_ERROR, *pe);
             on_connection_error(mevent);
         }
         else if (is_local_closed(state)) {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_CLOSED, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_CLOSED, *pe);
             on_connection_closed(mevent);
         }
         else {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_CLOSING, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_CLOSING, *pe);
             on_connection_closing(mevent);
         }
         pn_connection_close(connection);
@@ -236,7 +236,7 @@ void messaging_adapter::on_connection_local_open(event &e) {
     if (pe) {
         pn_connection_t *connection = pn_event_connection(pe->pn_event());
         if (is_remote_open(pn_connection_state(connection))) {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_OPENED, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_OPENED, *pe);
             on_connection_opened(mevent);
         }
     }
@@ -247,11 +247,11 @@ void messaging_adapter::on_connection_remote_open(event &e) {
     if (pe) {
         pn_connection_t *connection = pn_event_connection(pe->pn_event());
         if (is_local_open(pn_connection_state(connection))) {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_OPENED, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_OPENED, *pe);
             on_connection_opened(mevent);
         }
         else if (is_local_unititialised(pn_connection_state(connection))) {
-            messaging_event mevent(PN_MESSAGING_CONNECTION_OPENING, *pe);
+            messaging_event mevent(messaging_event::CONNECTION_OPENING, *pe);
             on_connection_opening(mevent);
             pn_connection_open(connection);
         }
@@ -263,7 +263,7 @@ void messaging_adapter::on_session_local_open(event &e) {
     if (pe) {
         pn_session_t *session = pn_event_session(pe->pn_event());
         if (is_remote_open(pn_session_state(session))) {
-            messaging_event mevent(PN_MESSAGING_SESSION_OPENED, *pe);
+            messaging_event mevent(messaging_event::SESSION_OPENED, *pe);
             on_session_opened(mevent);
         }
     }
@@ -274,11 +274,11 @@ void messaging_adapter::on_session_remote_open(event &e) {
     if (pe) {
         pn_session_t *session = pn_event_session(pe->pn_event());
         if (is_local_open(pn_session_state(session))) {
-            messaging_event mevent(PN_MESSAGING_SESSION_OPENED, *pe);
+            messaging_event mevent(messaging_event::SESSION_OPENED, *pe);
             on_session_opened(mevent);
         }
         else if (is_local_unititialised(pn_session_state(session))) {
-            messaging_event mevent(PN_MESSAGING_SESSION_OPENING, *pe);
+            messaging_event mevent(messaging_event::SESSION_OPENING, *pe);
             on_session_opening(mevent);
             pn_session_open(session);
         }
@@ -290,7 +290,7 @@ void messaging_adapter::on_link_local_open(event &e) {
     if (pe) {
         pn_link_t *link = pn_event_link(pe->pn_event());
         if (is_remote_open(pn_link_state(link))) {
-            messaging_event mevent(PN_MESSAGING_LINK_OPENED, *pe);
+            messaging_event mevent(messaging_event::LINK_OPENED, *pe);
             on_link_opened(mevent);
         }
     }
@@ -301,11 +301,11 @@ void messaging_adapter::on_link_remote_open(event &e) {
     if (pe) {
         pn_link_t *link = pn_event_link(pe->pn_event());
         if (is_local_open(pn_link_state(link))) {
-            messaging_event mevent(PN_MESSAGING_LINK_OPENED, *pe);
+            messaging_event mevent(messaging_event::LINK_OPENED, *pe);
             on_link_opened(mevent);
         }
         else if (is_local_unititialised(pn_link_state(link))) {
-            messaging_event mevent(PN_MESSAGING_LINK_OPENING, *pe);
+            messaging_event mevent(messaging_event::LINK_OPENING, *pe);
             on_link_opening(mevent);
             pn_link_open(link);
         }
@@ -317,7 +317,7 @@ void messaging_adapter::on_transport_tail_closed(event &e) {
     if (pe) {
         pn_connection_t *conn = pn_event_connection(pe->pn_event());
         if (conn && is_local_open(pn_connection_state(conn))) {
-            messaging_event mevent(PN_MESSAGING_DISCONNECTED, *pe);
+            messaging_event mevent(messaging_event::DISCONNECTED, *pe);
             delegate_.on_disconnected(mevent);
         }
     }

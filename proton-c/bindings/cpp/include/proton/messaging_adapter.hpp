@@ -29,6 +29,8 @@
 #include "proton/event.h"
 #include "proton/reactor.h"
 
+///@cond INTERNAL
+
 namespace proton {
 
 // Combine's Python's: endpoint_state_handler, incoming_message_handler, outgoing_message_handler
@@ -72,5 +74,5 @@ class messaging_adapter : public messaging_handler
 };
 
 }
-
+///@endcond INTERNAL
 #endif  /*!PROTON_CPP_MESSAGING_ADAPTER_H*/

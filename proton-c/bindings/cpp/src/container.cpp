@@ -64,7 +64,7 @@ duration container::timeout() { return impl_->timeout(); }
 void container::timeout(duration timeout) { impl_->timeout(timeout); }
 
 
-sender container::create_sender(connection &connection, std::string &addr, handler *h) {
+sender container::create_sender(connection &connection, const std::string &addr, handler *h) {
     return impl_->create_sender(connection, addr, h);
 }
 
@@ -72,8 +72,8 @@ sender container::create_sender(const proton::url &url) {
     return impl_->create_sender(url);
 }
 
-receiver container::create_receiver(connection &connection, std::string &addr) {
-    return impl_->create_receiver(connection, addr);
+receiver container::create_receiver(connection &connection, const std::string &addr, handler *h) {
+    return impl_->create_receiver(connection, addr, h);
 }
 
 receiver container::create_receiver(const proton::url &url) {

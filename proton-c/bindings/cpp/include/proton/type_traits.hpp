@@ -19,23 +19,19 @@
  * under the License.
  */
 
-///@cond INTERNAL_DETAIL
+/**@file
+ * Internal: Type traits for mapping between AMQP and C++ types.
+ *
+ * Also provides workarounds for missing type_traits classes on older C++ compilers.
+ * @cond INTERNAL
+ */
 
 #include "proton/types.hpp"
 
-#if  defined(__cplusplus) && __cplusplus >= 201100
-#include <type_traits>
-#elif defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 150030729
+#ifdef USE_CPP11
 #include <type_traits>
 #else
-/**
- * Workaround missing std:: classes on older C++ compilers.  NOTE: this is NOT a
- * full implementation of the standard c++11 types, it is the bare minimum
- * needed by this library.
- */
 namespace std {
-
-
 template <bool, class T=void> struct enable_if;
 template <class T> struct enable_if<true, T> { typedef T type; };
 
@@ -123,7 +119,6 @@ template <class T> struct is_unknown_integer {
 };
 
 }
-
 ///@endcond
 
 #endif // TYPE_TRAITS_HPP

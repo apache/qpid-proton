@@ -30,21 +30,36 @@ class handler;
 class connection;
 class transport;
 
+/** endpoint is a base class for session, connection and link */
 class endpoint
 {
   public:
-    enum {
-        LOCAL_UNINIT = PN_LOCAL_UNINIT,
-        REMOTE_UNINIT = PN_REMOTE_UNINIT,
-        LOCAL_ACTIVE = PN_LOCAL_ACTIVE,
-        REMOTE_ACTIVE = PN_REMOTE_ACTIVE,
-        LOCAL_CLOSED = PN_LOCAL_CLOSED,
-        REMOTE_CLOSED  = PN_REMOTE_CLOSED
-    };
-    typedef int State;
+    /** state is a bit mask of state_bit values.
+     *
+     * A state mask is matched against an endpoint as follows: If the state mask
+     * contains both local and remote flags, then an exact match against those
+     * flags is performed. If state contains only local or only remote flags,
+     * then a match occurs if any of the local or remote flags are set
+     * respectively.
+     *
+     * @see connection::link_head, connection::session_head, link::next, session::next
+     */
+    typedef int state;
+
+    /// endpoint state bit values @{
+    static const int LOCAL_UNINIT;    ///< Local endpoint is un-initialized
+    static const int REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
+    static const int LOCAL_ACTIVE;    ///< Local endpoint is active
+    static const int REMOTE_ACTIVE;   ///< Remote endpoint is active
+    static const int LOCAL_CLOSED;    ///< Local endpoint has been closed
+    static const int REMOTE_CLOSED;   ///< Remote endpoint has been closed
+    static const int LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
+    static const int REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
+     ///@}
 
     // TODO: condition, remote_condition, update_condition, get/handler
-protected:
+
+  protected:
     PN_CPP_EXTERN endpoint();
     PN_CPP_EXTERN ~endpoint();
 };

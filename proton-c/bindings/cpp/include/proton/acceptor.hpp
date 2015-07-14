@@ -30,6 +30,7 @@ struct pn_connection_t;
 
 namespace proton {
 
+/** acceptor accepts connections. @see container::listen */
 class acceptor : public proton_handle<pn_acceptor_t>
 {
   public:
@@ -39,7 +40,9 @@ class acceptor : public proton_handle<pn_acceptor_t>
     PN_CPP_EXTERN acceptor& operator=(const acceptor&);
     PN_CPP_EXTERN ~acceptor();
 
+    /** close the acceptor */
     PN_CPP_EXTERN void close();
+
   private:
     friend class proton_impl_ref<acceptor>;
 };

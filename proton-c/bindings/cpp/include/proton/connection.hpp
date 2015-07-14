@@ -36,6 +36,7 @@ class handler;
 class transport;
 class connection_impl;
 
+/** connection is the local end of a connectoin to a remote AMQP peer. */
 class connection : public endpoint, public handle<connection_impl>
 {
   public:
@@ -47,15 +48,32 @@ class connection : public endpoint, public handle<connection_impl>
 
     PN_CPP_EXTERN connection& operator=(const connection& c);
 
+    ///@name getters @{
     PN_CPP_EXTERN class transport& transport();
     PN_CPP_EXTERN handler *override();
-    PN_CPP_EXTERN void override(handler *h);
-    PN_CPP_EXTERN void open();
-    PN_CPP_EXTERN void close();
     PN_CPP_EXTERN pn_connection_t *pn_connection();
     PN_CPP_EXTERN class container &container();
     PN_CPP_EXTERN std::string hostname();
-    PN_CPP_EXTERN link link_head(endpoint::State mask);
+    ///@}
+
+    /** override the handler for this connection */
+    PN_CPP_EXTERN void override(handler *h);
+
+    /** Initiate local open, not complete till messaging_handler::on_connection_opened()
+     * or proton_handler::on_connection_remote_open()
+     */
+    PN_CPP_EXTERN void open();
+
+    /** Initiate local close, not complete till messaging_handler::on_connection_closed()
+     * or proton_handler::on_connection_remote_close()
+     */
+    PN_CPP_EXTERN void close();
+
+    /** Get the first link on this connection matching the state mask.
+     * @see link::next, endpoint::state
+     */
+    PN_CPP_EXTERN link link_head(endpoint::state mask);
+
   private:
    friend class private_impl_ref<connection>;
    friend class connector;

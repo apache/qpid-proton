@@ -31,6 +31,7 @@ struct pn_connection_t;
 
 namespace proton {
 
+/// A receiving link
 class receiver : public link
 {
   public:

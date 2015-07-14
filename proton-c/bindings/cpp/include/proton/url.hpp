@@ -27,11 +27,15 @@ struct pn_url_t;
 
 namespace proton {
 
+/// Thrown if URL parsing fails.
 struct bad_url : public error { PN_CPP_EXTERN explicit bad_url(const std::string&) throw(); };
 
 
 /**
- * url is a proton URL of the form <scheme>://<username>:<password>@<host>:<port>/<path>.
+ * url is a proton URL of the form `<scheme>://<username>:<password>@<host>:<port>/<path>`.
+ * scheme can be `amqp` or `amqps`. host is a DNS name or IP address (v4 or v6)
+ * port can be a number or symbolic service name like `amqp`. path is normally used as
+ * a link source or target address, on a broker it typically it corresponds to a queue or topic name.
  */
 class url {
   public:
@@ -48,6 +52,13 @@ class url {
      */
     PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
 
+    /** Parse url_str as an AMQP URL. If defaults is true, fill in defaults for missing values
+     *  otherwise return an empty string for missing values.
+     *  Note: converts automatically from string.
+     *@throws bad_url if URL is invalid.
+     */
+    PN_CPP_EXTERN url(const char* url_str, bool defaults=true);
+
     PN_CPP_EXTERN url(const url&);
     PN_CPP_EXTERN ~url();
     PN_CPP_EXTERN url& operator=(const url&);
@@ -56,6 +67,11 @@ class url {
      *@throws bad_url if URL is invalid.
      */
     PN_CPP_EXTERN void parse(const std::string&);
+
+    /** Parse a string as a URL 
+     *@throws bad_url if URL is invalid.
+     */
+    PN_CPP_EXTERN void parse(const char*);
 
     PN_CPP_EXTERN bool empty() const;
 
@@ -92,11 +108,19 @@ class url {
     /** defaults fills in default values for missing parts of the URL */
     PN_CPP_EXTERN void defaults();
 
+  friend std::ostream& operator<<(std::ostream&, const url&);
+
+    /** parse url from istream, automatically fills in defaults for missing values.
+     *
+     * Note: an invalid url is indicated by setting std::stream::fail() NOT by throwing bad_url.
+     */
+  friend std::istream& operator>>(std::istream&, url&);
+
   private:
     pn_url_t* url_;
 };
 
-std::ostream& operator<<(std::ostream&, const url&);
+
 }
 
 #endif // URL_HPP

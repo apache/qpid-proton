@@ -21,7 +21,6 @@
 
 /**@file
  * Defines C++ types representing AMQP types.
- * @ingroup cpp
  */
 
 #include "proton/export.hpp"
@@ -35,9 +34,7 @@
 
 namespace proton {
 
-/** type_id identifies an AMQP type.
- *@ingroup cpp
- */
+/** type_id identifies an AMQP type. */
 enum type_id {
     NULl_=PN_NULL,              ///< The null type, contains no data.
     BOOL=PN_BOOL,               ///< Boolean true or false.
@@ -66,8 +63,9 @@ enum type_id {
     MAP=PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
 };
 
-///@internal
+/// Internal base class to provide comparison operators.
 template <class T> struct comparable {};
+///@cond INTERNAL
 template<class T> bool operator<(const comparable<T>& a, const comparable<T>& b) {
     return static_cast<const T&>(a) < static_cast<const T&>(b); // operator < provided by type T
 }
@@ -77,37 +75,38 @@ template<class T> bool operator>=(const comparable<T>& a, const comparable<T>& b
 template<class T> bool operator==(const comparable<T>& a, const comparable<T>& b) { return a <= b && b <= a; }
 template<class T> bool operator!=(const comparable<T>& a, const comparable<T>& b) { return !(a == b); }
 
-/// AMQP NULL type. @ingroup cpp
-struct amqp_null {};
-/// AMQP boolean type. @ingroup cpp
-typedef bool amqp_bool;
-/// AMQP unsigned 8-bit type. @ingroup cpp
-typedef std::uint8_t amqp_ubyte;
-/// AMQP signed 8-bit integer type. @ingroup cpp
-typedef std::int8_t amqp_byte;
-/// AMQP unsigned 16-bit integer type. @ingroup cpp
-typedef std::uint16_t amqp_ushort;
-/// AMQP signed 16-bit integer type. @ingroup cpp
-typedef std::int16_t amqp_short;
-/// AMQP unsigned 32-bit integer type. @ingroup cpp
-typedef std::uint32_t amqp_uint;
-/// AMQP signed 32-bit integer type. @ingroup cpp
-typedef std::int32_t amqp_int;
-/// AMQP 32-bit unicode character type. @ingroup cpp
-typedef wchar_t amqp_char;
-/// AMQP unsigned 64-bit integer type. @ingroup cpp
-typedef std::uint64_t amqp_ulong;
-/// AMQP signed 64-bit integer type. @ingroup cpp
-typedef std::int64_t amqp_long;
-/// AMQP 32-bit floating-point type. @ingroup cpp
-typedef float amqp_float;
-/// AMQP 64-bit floating-point type. @ingroup cpp
-typedef double amqp_double;
-
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
+///@endcond
 
-/// AMQP UTF-8 encoded string. @ingroup cpp
+/// AMQP NULL type.
+struct amqp_null {};
+/// AMQP boolean type.
+typedef bool amqp_bool;
+/// AMQP unsigned 8-bit type.
+typedef std::uint8_t amqp_ubyte;
+/// AMQP signed 8-bit integer type.
+typedef std::int8_t amqp_byte;
+/// AMQP unsigned 16-bit integer type.
+typedef std::uint16_t amqp_ushort;
+/// AMQP signed 16-bit integer type.
+typedef std::int16_t amqp_short;
+/// AMQP unsigned 32-bit integer type.
+typedef std::uint32_t amqp_uint;
+/// AMQP signed 32-bit integer type.
+typedef std::int32_t amqp_int;
+/// AMQP 32-bit unicode character type.
+typedef wchar_t amqp_char;
+/// AMQP unsigned 64-bit integer type.
+typedef std::uint64_t amqp_ulong;
+/// AMQP signed 64-bit integer type.
+typedef std::int64_t amqp_long;
+/// AMQP 32-bit floating-point type.
+typedef float amqp_float;
+/// AMQP 64-bit floating-point type.
+typedef double amqp_double;
+
+/// AMQP UTF-8 encoded string.
 struct amqp_string : public std::string {
     amqp_string(const std::string& s=std::string()) : std::string(s) {}
     amqp_string(const char* s) : std::string(s) {}
@@ -115,7 +114,7 @@ struct amqp_string : public std::string {
     operator pn_bytes_t() const { return pn_bytes(*this); }
 };
 
-/// AMQP ASCII encoded symbolic name. @ingroup cpp
+/// AMQP ASCII encoded symbolic name.
 struct amqp_symbol : public std::string {
     amqp_symbol(const std::string& s=std::string()) : std::string(s) {}
     amqp_symbol(const char* s) : std::string(s) {}
@@ -123,7 +122,7 @@ struct amqp_symbol : public std::string {
     operator pn_bytes_t() const { return pn_bytes(*this); }
 };
 
-/// AMQP variable-length binary data. @ingroup cpp
+/// AMQP variable-length binary data.
 struct amqp_binary : public std::string {
     amqp_binary(const std::string& s=std::string()) : std::string(s) {}
     amqp_binary(const char* s) : std::string(s) {}
@@ -134,7 +133,7 @@ struct amqp_binary : public std::string {
 // TODO aconway 2015-06-11: alternative representation of variable-length data
 // as pointer to existing buffer.
 
-// Wrapper for opaque proton types that can be treated as byte arrays.
+/// Template for opaque proton proton types that can be treated as byte arrays.
 template <class P> struct opaque: public comparable<opaque<P> > {
     P value;
     opaque(const P& p=P()) : value(p) {}
@@ -152,17 +151,17 @@ template <class P> struct opaque: public comparable<opaque<P> > {
     bool operator<(const opaque& x) const { return std::lexicographical_compare(begin(), end(), x.begin(), x.end()); }
 };
 
-/// AMQP 16-byte UUID. @ingroup cpp
+/// AMQP 16-byte UUID.
 typedef opaque<pn_uuid_t> amqp_uuid;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_uuid&);
-/// AMQP 32-bit decimal floating point (IEEE 854). @ingroup cpp
+/// AMQP 32-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal32_t> amqp_decimal32;
-/// AMQP 64-bit decimal floating point (IEEE 854). @ingroup cpp
+/// AMQP 64-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal64_t> amqp_decimal64;
-/// AMQP 128-bit decimal floating point (IEEE 854). @ingroup cpp
+/// AMQP 128-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal128_t> amqp_decimal128;
 
-/// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970. @ingroup cpp
+/// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
 struct amqp_timestamp : public comparable<amqp_timestamp> {
     pn_timestamp_t milliseconds;
     amqp_timestamp(std::int64_t ms=0) : milliseconds(ms) {}
@@ -171,6 +170,7 @@ struct amqp_timestamp : public comparable<amqp_timestamp> {
     bool operator<(const amqp_timestamp& x) { return milliseconds < x.milliseconds; }
 };
 
+///@cond INTERNAL
 template<class T, type_id A> struct type_pair {
     typedef T cpp_type;
     type_id type;
@@ -186,41 +186,45 @@ template<class T, type_id A> struct cref : public type_pair<T, A> {
     cref(const ref<T,A>& ref) : value(ref.value) {}
     const T& value;
 };
+///@endcond INTERNAL
 
 /** A holder for AMQP values. A holder is always encoded/decoded as its amqp_value, no need
  * for the as<TYPE>() helper functions.
  *
  * For example to encode an array of arrays using std::vector:
  *
- *     typedef Holder<std::vector<amqp_string>, ARRAY> Inner;
- *     typedef Holder<std::vector<Inner>, ARRAY> Outer;
+ *     typedef holder<std::vector<amqp_string>, ARRAY> Inner;
+ *     typedef holder<std::vector<Inner>, ARRAY> Outer;
  *     Outer o ...
  *     encoder << o;
- * @ingroup cpp
+ *
  */
-template<class T, type_id A> struct Holder : public type_pair<T, A> {
+template<class T, type_id A> struct holder : public type_pair<T, A> {
     T value;
 };
 
-/** Create a reference to value as AMQP type A for decoding. For example to decode an array of amqp_int:
+/** Create a reference to value as AMQP type A for decoding.
+ * For example to decode an array of amqp_int:
  *
  *     std::vector<amqp_int> v;
  *     decoder >> as<ARRAY>(v);
- * @ingroup cpp
  */
 template <type_id A, class T> ref<T, A> as(T& value) { return ref<T, A>(value); }
 
-/** Create a const reference to value as AMQP type A for encoding. */
+/** Create a const reference to value as AMQP type A for encoding.
+ * For example to encode an array of amqp_int:
+ *
+ *     std::vector<amqp_int> v;
+ *     encoder << as<ARRAY>(v);
+ */
 template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
-
-///@}
 
 // TODO aconway 2015-06-16: described types.
 
-/** Return the name of a type. @ingroup cpp */
+/** Return the name of a type. */
 PN_CPP_EXTERN std::string type_name(type_id);
 
-/** Print the name of a type. @ingroup cpp */
+/** Print the name of a type. */
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
 /** Information needed to start extracting or inserting a container type.

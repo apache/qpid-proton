@@ -26,7 +26,9 @@
 
 namespace proton {
 
+///@cond INTERNAL
 template <class> class proton_impl_ref;
+///@endcond INTERNAL
 
 /**
  * See handle.h.  Similar but for lightly wrapped Proton pn_object_t targets.

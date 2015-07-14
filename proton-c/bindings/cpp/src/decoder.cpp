@@ -293,7 +293,6 @@ decoder& operator>>(decoder& d, amqp_double& value) {
     return d;
 }
 
-// TODO aconway 2015-06-11: decimal conversions.
 decoder& operator>>(decoder& d, amqp_decimal32& value) {
     extract(d.data_, value, pn_data_get_decimal32);
     return d;

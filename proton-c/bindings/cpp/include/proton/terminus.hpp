@@ -31,22 +31,28 @@ namespace proton {
 
 class link;
 
+/** A terminus represents one end of a link.
+ * The source terminus is where originate, the target terminus is where they go.
+ */
 class terminus : public proton_handle<pn_terminus_t>
 {
   public:
+    /// Type of terminus
     enum type_t {
         TYPE_UNSPECIFIED = PN_UNSPECIFIED,
         SOURCE = PN_SOURCE,
         TARGET = PN_TARGET,
-        COORDINATOR = PN_COORDINATOR
+        COORDINATOR = PN_COORDINATOR ///< Transaction co-ordinator
     };
 
+    /// Expiry policy
     enum expiry_policy_t {
         NONDURABLE = PN_NONDURABLE,
         CONFIGURATION = PN_CONFIGURATION,
         DELIVERIES = PN_DELIVERIES
     };
 
+    /// Distribution mode
     enum distribution_mode_t {
         MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
         COPY = PN_DIST_MODE_COPY,

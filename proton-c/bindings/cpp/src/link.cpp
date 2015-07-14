@@ -105,7 +105,7 @@ class connection &link::connection() {
     return connection_impl::reactor_reference(c);
 }
 
-link link::next(endpoint::State mask) {
+link link::next(endpoint::state mask) {
 
     return link(pn_link_next(impl_, (pn_state_t) mask));
 }

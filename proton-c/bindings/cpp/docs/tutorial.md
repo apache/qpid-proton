@@ -5,23 +5,18 @@ This is a brief tutorial that will walk you through the fundamentals of building
 messaging applications in incremental steps. There are further examples, in
 addition the ones mentioned in the tutorial.
 
-Note on Brokers and URLs
-------------------------
+Some of the examples require an AMQP *broker* that can receive, store and send
+messages. \ref broker.cpp is a simple example broker which you can use. When run
+without arguments it listens on `0.0.0.0:5672`, the standard AMQP port on all
+network interfaces. To use a different port or network interface:
 
-Some of the examples require an AMQP *broker* that can receive, store and send messages.
-
-There is a very simple broker included as an example (\ref broker.cpp) which you can use.
-Run it like this:
-
-    broker [URL]
-
-The default URL is "0.0.0.0:5672" which listens on the standard AMQP port on all
-network interfaces.
+    broker -a <host>:<port>
 
 Instead of the example broker, you can use any AMQP 1.0 compliant broker. You
 must configure your broker to have a queue (or topic) named "examples".
 
-Most of the examples take an optional URL argument, the simplest form is:
+Most of the examples take an optional URL argument or `-a URL` option the
+URL looks like:
 
     HOST:PORT/ADDRESS
 
@@ -140,6 +135,11 @@ event loop exits, and the run() method will return.
 
 So now we have our example working without a broker involved!
 
+Note that for this example we paick an "unusual" port 8888 since we are talking
+to ourselves rather than a broker.
+
+\skipline url =
+
 Asynchronous Send and Receive
 -----------------------------
 
@@ -212,7 +212,7 @@ got to.
 
 \dontinclude simple_recv.cpp
 
-Now let's look at the corresponding receiver \ref simple_recv.cpp:
+Now let's look at the corresponding receiver \ref simple_recv.cpp
 
 This time we'll use an `expected` member variable for for the number of messages we expecct and
 a `received` variable to count how many we have received so far.send.
@@ -295,7 +295,7 @@ as a simple broker for testing purposes is an example of this).
 Request/Response
 ----------------
 
-\todo FIXME missing example in C++
+\todo TODO missing example in C++
 
 A common pattern is to send a request message and expect a response message in
 return. AMQP has special support for this pattern. Let's have a look at a simple
@@ -303,7 +303,7 @@ example. We'll start with \ref server.cpp, the program that will process the
 request and send the response. Note that we are still using a broker in this
 example.
 
-\todo FIXME insert server snips
+\todo TODO insert server snips
 
 Our server will provide a very simple service: it will respond with the
 body of the request converted to uppercase.
@@ -316,7 +316,7 @@ reply\_to.
 
 Now let's create a simple \ref client.cpp to test this service out.
 
-\todo FIXME insert client snips
+\todo TODO insert client snips
 
 As well as sending requests, we need to be able to get back the
 responses. We create a receiver for that (see line 14), but we don't
@@ -335,7 +335,7 @@ Again, we could avoid having any intermediary process here if we wished.
 The following code implementas a server to which the client above could
 connect directly without any need for a broker or similar.
 
-\todo FIXME missing server_direct.cpp
+\todo TODO missing server_direct.cpp
 
 Though this requires some more extensive changes than the simple sending
 and receiving examples, the essence of the program is still the same.
@@ -349,7 +349,7 @@ Many brokers offer the ability to consume messages based on a 'selector'
 that defines which messages are of interest based on particular values
 of the headers. The following example shows how that can be achieved:
 
-\todo FIXME selected_recv.cpp
+\todo TODO selected_recv.cpp
 
 When creating the receiver, we specify a Selector object as an option.
 The options argument can take a single object or a list. Another option
@@ -359,4 +359,4 @@ done in AMQP by specifying a distribution mode of 'copy' (instead of
 'move' which is the expected default for queues). An example of that is
 shown next:
 
-\todo FIXME queue_browser.cpp
+\todo TODO queue_browser.cpp

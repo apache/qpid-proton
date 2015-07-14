@@ -31,13 +31,27 @@ namespace proton {
 class event;
 class messaging_adapter;
 
+/** messaging_handler base class. Provides a simpler set of events than
+ * proton::proton_handler and automates some common tasks.  Subclass and
+ * over-ride event handling member functions.
+ * @see proton::messaging_event for meaning of events.
+ */
 class messaging_handler : public proton_handler , public acking
 {
   public:
+    /** Create a messaging_handler
+     *@param prefetch set flow control to automatically pre-fetch this many messages
+     *@param auto_accept automatically accept received messages after on_message()
+     *@param auto_settle automatically settle on receipt of delivery for sent messages.
+     *@param peer_close_is_error treat orderly remote connection close as error.
+     */
     PN_CPP_EXTERN messaging_handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
-                                       bool peer_close_is_error=false);
+                                    bool peer_close_is_error=false);
+
     PN_CPP_EXTERN virtual ~messaging_handler();
 
+    ///@name Over-ride these member functions to handle events
+    ///@{
     PN_CPP_EXTERN virtual void on_abort(event &e);
     PN_CPP_EXTERN virtual void on_accepted(event &e);
     PN_CPP_EXTERN virtual void on_commit(event &e);
@@ -75,8 +89,9 @@ class messaging_handler : public proton_handler , public acking
     PN_CPP_EXTERN virtual void on_transaction_committed(event &e);
     PN_CPP_EXTERN virtual void on_transaction_declared(event &e);
     PN_CPP_EXTERN virtual void on_transport_closed(event &e);
+    ///@}
 
- private:
+  private:
     int prefetch_;
     bool auto_accept_;
     bool auto_settle_;

@@ -26,10 +26,10 @@
 
 namespace proton {
 
+///@cond INTERNAL
 template <class> class private_impl_ref;
 template <class> class proton_impl_ref;
-
-// FIXME aconway 2015-06-09: don't need handle, get rid of it.
+///@endcond INTERNAL
 
 /**
  * A handle is like a pointer: refers to an underlying implementation object.

@@ -61,7 +61,7 @@ std::string connection::hostname() { return impl_->hostname(); }
 
 class container &connection::container() { return impl_->container(); }
 
-link connection::link_head(endpoint::State mask) {
+link connection::link_head(endpoint::state mask) {
     return impl_->link_head(mask);
 }
 

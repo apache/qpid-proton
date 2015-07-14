@@ -29,17 +29,19 @@
 
 namespace proton {
 
+/** delivery status of a message */
 class delivery : public proton_handle<pn_delivery_t>
 {
   public:
 
+    /** Delivery state of a message */
     enum state {
-        NONE = 0,
-        RECEIVED = PN_RECEIVED,
-        ACCEPTED = PN_ACCEPTED,
-        REJECTED = PN_REJECTED,
-        RELEASED = PN_RELEASED,
-        MODIFIED = PN_MODIFIED
+        NONE = 0, ///< Unknown state
+        RECEIVED = PN_RECEIVED, ///< Received but not yet settled
+        ACCEPTED = PN_ACCEPTED, ///< Settled as accepted
+        REJECTED = PN_REJECTED, ///< Settled as rejected
+        RELEASED = PN_RELEASED, ///< Settled as released
+        MODIFIED = PN_MODIFIED  ///< Settled as modified
     };  // AMQP spec 3.4 delivery State
 
     PN_CPP_EXTERN delivery(pn_delivery_t *d);
@@ -47,8 +49,15 @@ class delivery : public proton_handle<pn_delivery_t>
     PN_CPP_EXTERN ~delivery();
     PN_CPP_EXTERN delivery(const delivery&);
     PN_CPP_EXTERN delivery& operator=(const delivery&);
+
+    /** Return true if the delivery has been settled. */
     PN_CPP_EXTERN bool settled();
+
+    /** Settle the delivery, informs the remote end. */
     PN_CPP_EXTERN void settle();
+
+    // TODO aconway 2015-07-15: add update() here?
+
     PN_CPP_EXTERN pn_delivery_t *pn_delivery();
   private:
     friend class proton_impl_ref<delivery>;

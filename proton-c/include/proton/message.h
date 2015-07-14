@@ -389,7 +389,7 @@ PN_EXTERN const char *   pn_message_get_subject           (pn_message_t *msg);
 PN_EXTERN int            pn_message_set_subject           (pn_message_t *msg, const char *subject);
 
 /**
- * Get the reply_to for a message.
+o * Get the reply_to for a message.
  *
  * This operation will return NULL if no reply_to has been set or if
  * the reply_to has been set to NULL. The pointer returned by this

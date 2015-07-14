@@ -34,12 +34,13 @@
 namespace proton {
 
 messaging_event::messaging_event(pn_event_t *ce, pn_event_type_t t, class container &c) :
-    proton_event(ce, t, c), messaging_type_(PN_MESSAGING_PROTON), parent_event_(0), message_(0)
+    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0), message_(0)
 {}
 
-messaging_event::messaging_event(messaging_event_type_t t, proton_event &p) :
-    proton_event(NULL, PN_EVENT_NONE, p.container()), messaging_type_(t), parent_event_(&p), message_(0) {
-    if (messaging_type_ == PN_MESSAGING_PROTON)
+messaging_event::messaging_event(event_type t, proton_event &p) :
+    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p), message_(0)
+{
+    if (type_ == messaging_event::PROTON)
         throw error(MSG("invalid messaging event type"));
 }
 
@@ -47,8 +48,10 @@ messaging_event::~messaging_event() {
     delete message_;
 }
 
+messaging_event::event_type messaging_event::type() const { return type_; }
+
 connection &messaging_event::connection() {
-    if (messaging_type_ == PN_MESSAGING_PROTON)
+    if (type_ == messaging_event::PROTON)
         return proton_event::connection();
     if (parent_event_)
         return parent_event_->connection();
@@ -56,7 +59,7 @@ connection &messaging_event::connection() {
 }
 
 sender messaging_event::sender() {
-    if (messaging_type_ == PN_MESSAGING_PROTON)
+    if (type_ == messaging_event::PROTON)
         return proton_event::sender();
     if (parent_event_)
         return parent_event_->sender();
@@ -64,7 +67,7 @@ sender messaging_event::sender() {
 }
 
 receiver messaging_event::receiver() {
-    if (messaging_type_ == PN_MESSAGING_PROTON)
+    if (type_ == messaging_event::PROTON)
         return proton_event::receiver();
     if (parent_event_)
         return parent_event_->receiver();
@@ -72,7 +75,7 @@ receiver messaging_event::receiver() {
 }
 
 link messaging_event::link() {
-    if (messaging_type_ == PN_MESSAGING_PROTON)
+    if (type_ == messaging_event::PROTON)
         return proton_event::link();
     if (parent_event_)
         return parent_event_->link();
@@ -89,50 +92,50 @@ message messaging_event::message() {
 }
 
 void messaging_event::message(class message &m) {
-    if (messaging_type_ != PN_MESSAGING_MESSAGE || !parent_event_)
+    if (type_ != messaging_event::MESSAGE || !parent_event_)
         throw error(MSG("event type does not provide message"));
     event_context(parent_event_->pn_event(), m.pn_message());
 }
 
 void messaging_event::dispatch(handler &h) {
-    if (messaging_type_ == PN_MESSAGING_PROTON) {
+    if (type_ == messaging_event::PROTON) {
         proton_event::dispatch(h);
         return;
     }
 
     messaging_handler *handler = dynamic_cast<messaging_handler*>(&h);
     if (handler) {
-        switch(messaging_type_) {
+        switch(type_) {
 
-        case PN_MESSAGING_START:       handler->on_start(*this); break;
-        case PN_MESSAGING_SENDABLE:    handler->on_sendable(*this); break;
-        case PN_MESSAGING_MESSAGE:     handler->on_message(*this); break;
-        case PN_MESSAGING_ACCEPTED:    handler->on_accepted(*this); break;
-        case PN_MESSAGING_REJECTED:    handler->on_rejected(*this); break;
-        case PN_MESSAGING_RELEASED:    handler->on_released(*this); break;
-        case PN_MESSAGING_SETTLED:     handler->on_settled(*this); break;
+        case messaging_event::START:       handler->on_start(*this); break;
+        case messaging_event::SENDABLE:    handler->on_sendable(*this); break;
+        case messaging_event::MESSAGE:     handler->on_message(*this); break;
+        case messaging_event::ACCEPTED:    handler->on_accepted(*this); break;
+        case messaging_event::REJECTED:    handler->on_rejected(*this); break;
+        case messaging_event::RELEASED:    handler->on_released(*this); break;
+        case messaging_event::SETTLED:     handler->on_settled(*this); break;
 
-        case PN_MESSAGING_CONNECTION_CLOSING:     handler->on_connection_closing(*this); break;
-        case PN_MESSAGING_CONNECTION_CLOSED:      handler->on_connection_closed(*this); break;
-        case PN_MESSAGING_CONNECTION_ERROR:       handler->on_connection_error(*this); break;
-        case PN_MESSAGING_CONNECTION_OPENING:     handler->on_connection_opening(*this); break;
-        case PN_MESSAGING_CONNECTION_OPENED:      handler->on_connection_opened(*this); break;
+        case messaging_event::CONNECTION_CLOSING:     handler->on_connection_closing(*this); break;
+        case messaging_event::CONNECTION_CLOSED:      handler->on_connection_closed(*this); break;
+        case messaging_event::CONNECTION_ERROR:       handler->on_connection_error(*this); break;
+        case messaging_event::CONNECTION_OPENING:     handler->on_connection_opening(*this); break;
+        case messaging_event::CONNECTION_OPENED:      handler->on_connection_opened(*this); break;
 
-        case PN_MESSAGING_LINK_CLOSED:            handler->on_link_closed(*this); break;
-        case PN_MESSAGING_LINK_CLOSING:           handler->on_link_closing(*this); break;
-        case PN_MESSAGING_LINK_ERROR:             handler->on_link_error(*this); break;
-        case PN_MESSAGING_LINK_OPENING:           handler->on_link_opening(*this); break;
-        case PN_MESSAGING_LINK_OPENED:            handler->on_link_opened(*this); break;
+        case messaging_event::LINK_CLOSED:            handler->on_link_closed(*this); break;
+        case messaging_event::LINK_CLOSING:           handler->on_link_closing(*this); break;
+        case messaging_event::LINK_ERROR:             handler->on_link_error(*this); break;
+        case messaging_event::LINK_OPENING:           handler->on_link_opening(*this); break;
+        case messaging_event::LINK_OPENED:            handler->on_link_opened(*this); break;
 
-        case PN_MESSAGING_SESSION_CLOSED:         handler->on_session_closed(*this); break;
-        case PN_MESSAGING_SESSION_CLOSING:        handler->on_session_closing(*this); break;
-        case PN_MESSAGING_SESSION_ERROR:          handler->on_session_error(*this); break;
-        case PN_MESSAGING_SESSION_OPENING:        handler->on_session_opening(*this); break;
-        case PN_MESSAGING_SESSION_OPENED:         handler->on_session_opened(*this); break;
+        case messaging_event::SESSION_CLOSED:         handler->on_session_closed(*this); break;
+        case messaging_event::SESSION_CLOSING:        handler->on_session_closing(*this); break;
+        case messaging_event::SESSION_ERROR:          handler->on_session_error(*this); break;
+        case messaging_event::SESSION_OPENING:        handler->on_session_opening(*this); break;
+        case messaging_event::SESSION_OPENED:         handler->on_session_opened(*this); break;
 
-        case PN_MESSAGING_TRANSPORT_CLOSED:       handler->on_transport_closed(*this); break;
+        case messaging_event::TRANSPORT_CLOSED:       handler->on_transport_closed(*this); break;
         default:
-            throw error(MSG("Unkown messaging event type " << messaging_type_));
+            throw error(MSG("Unkown messaging event type " << type_));
             break;
         }
     } else {

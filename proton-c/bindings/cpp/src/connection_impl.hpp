@@ -49,7 +49,7 @@ class connection_impl : public endpoint
     PN_CPP_EXTERN pn_connection_t *pn_connection();
     PN_CPP_EXTERN class container &container();
     PN_CPP_EXTERN std::string hostname();
-    PN_CPP_EXTERN link link_head(endpoint::State mask);
+    PN_CPP_EXTERN link link_head(endpoint::state mask);
     virtual PN_CPP_EXTERN class connection &connection();
     static class connection &reactor_reference(pn_connection_t *);
     static connection_impl *impl(const class connection &c) { return c.impl_; }

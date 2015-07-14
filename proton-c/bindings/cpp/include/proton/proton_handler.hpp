@@ -28,10 +28,15 @@ namespace proton {
 class event;
 class proton_event;
 
+/// Handler base class, subclass and over-ride event handling member functions.
+/// @see proton::proton_event for meaning of events.
 class proton_handler : public handler
 {
   public:
     PN_CPP_EXTERN proton_handler();
+
+    ///@name Over-ride these member functions to handle events
+    ///@{
     PN_CPP_EXTERN virtual void on_reactor_init(event &e);
     PN_CPP_EXTERN virtual void on_reactor_quiesced(event &e);
     PN_CPP_EXTERN virtual void on_reactor_final(event &e);
@@ -72,8 +77,8 @@ class proton_handler : public handler
     PN_CPP_EXTERN virtual void on_selectable_expired(event &e);
     PN_CPP_EXTERN virtual void on_selectable_error(event &e);
     PN_CPP_EXTERN virtual void on_selectable_final(event &e);
-
     PN_CPP_EXTERN virtual void on_unhandled(event &e);
+    ///@}
 };
 
 }

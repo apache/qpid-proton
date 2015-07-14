@@ -27,16 +27,16 @@
 
 class hello_world : public proton::messaging_handler {
   private:
-    proton::url server;
-    std::string address;
+    proton::url url;
+
   public:
 
-    hello_world(const proton::url &url) : server(url), address(url.path()) {}
+    hello_world(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(server);
-        e.container().create_receiver(conn, address);
-        e.container().create_sender(conn, address);
+        proton::connection conn = e.container().connect(url);
+        e.container().create_receiver(conn, url.path());
+        e.container().create_sender(conn, url.path());
     }
 
     void on_sendable(proton::event &e) {
@@ -58,8 +58,9 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
         hello_world hw(url);
         proton::container(hw).run();
+        return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
-        return 1;
     }
+    return 1;
 }

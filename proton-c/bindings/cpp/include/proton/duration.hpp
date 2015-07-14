@@ -27,9 +27,7 @@
 
 namespace proton {
 
-/** @ingroup cpp
- * A duration is a time in milliseconds.
- */
+/** Duration in milliseconds. */
 class duration : public comparable<duration>
 {
   public:
@@ -39,10 +37,10 @@ class duration : public comparable<duration>
     bool operator<(duration d) { return milliseconds < d.milliseconds; }
     bool operator==(duration d) { return milliseconds == d.milliseconds; }
 
-    PN_CPP_EXTERN static const duration FOREVER;
-    PN_CPP_EXTERN static const duration IMMEDIATE;
-    PN_CPP_EXTERN static const duration SECOND;
-    PN_CPP_EXTERN static const duration MINUTE;
+    PN_CPP_EXTERN static const duration FOREVER; ///< Wait for ever
+    PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
+    PN_CPP_EXTERN static const duration SECOND; ///< One second
+    PN_CPP_EXTERN static const duration MINUTE; ///< One minute
 };
 
 inline duration operator*(duration d, std::uint64_t n) { return duration(d.milliseconds*n); }

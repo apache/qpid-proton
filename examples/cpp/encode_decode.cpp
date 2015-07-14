@@ -175,10 +175,11 @@ int main(int, char**) {
         insert_extract_containers();
         mixed_containers();
         insert_extract_stream_operators();
+        return 0;
     } catch (const exception& e) {
         cerr << endl << "error: " << e.what() << endl;
-        return 1;
     }
+    return 1;
 }
 
 // print_next prints the next value from values by recursively descending into complex values.

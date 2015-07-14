@@ -37,6 +37,7 @@ namespace proton {
 class blocking_connection;
 class blocking_link;
 
+// TODO documentation
 class blocking_sender : public blocking_link
 {
   public:
