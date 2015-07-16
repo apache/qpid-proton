@@ -57,6 +57,10 @@ find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
 find_package_handle_standard_args(CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 
+# Find saslpasswd2 executable to generate test config
+find_program(SASLPASSWD_EXE saslpasswd2 DOC "Program used to make SASL user db for testing")
+mark_as_advanced(SASLPASSWD_EXE)
+
 if(PN_WINAPI)
   set(ssl_impl schannel)
   set(ssl_providers "'none','schannel','openssl'")
@@ -488,26 +492,29 @@ if (BUILD_PYTHON)
   set (app_path $<TARGET_FILE_DIR:msgr-send> "${pn_test_root}/tools/apps/python")
   set (py_path ${py_bld} ${app_path} $ENV{PATH})
   set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
+  to_native_path ("${py_pythonpath}" py_pythonpath)
 
   if (NOT OLD_ADD_TEST_COMMAND)
-  to_native_path ("${py_path}" py_path)
-  to_native_path ("${py_pythonpath}" py_pythonpath)
-  add_test (NAME python-test
-            COMMAND ${env_py}
-	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
-            "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-            ${VALGRIND_ENV}
-            ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
-  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+    to_native_path ("${py_path}" py_path)
+    add_test (NAME python-test
+              COMMAND ${env_py}
+                "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+                "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                "SASLPASSWD=${SASLPASSWD_EXE}"
+                ${VALGRIND_ENV}
+                ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   else (NOT OLD_ADD_TEST_COMMAND)
-  list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
-  to_native_path ("${py_path}" py_path)
-  to_native_path ("${py_pythonpath}" py_pythonpath)
-  add_test (python-test
-            ${env_py}
-	    "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}" ${VALGRIND_ENV}
-            ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
-  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+    list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
+    to_native_path ("${py_path}" py_path)
+    add_test (python-test
+                ${env_py}
+                "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+                "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                "SASLPASSWD=${SASLPASSWD_EXE}"
+                ${VALGRIND_ENV}
+                ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
   endif (NOT OLD_ADD_TEST_COMMAND)
 
   # Eventually, we'll get rid of this check when other
@@ -515,25 +522,26 @@ if (BUILD_PYTHON)
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
   if (CMAKE_SYSTEM_NAME STREQUAL Linux)
-     find_program(TOX_CMD "tox")
-     if (TOX_CMD)
-         list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
-         to_native_path ("${py_path}" py_path)
-         to_native_path ("${py_pythonpath}" py_pythonpath)
-         add_test (NAME python-tox-test
-		   WORKING_DIRECTORY ${py_src}
-                   COMMAND ${env_py}
-		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
-                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-                   ${VALGRIND_ENV}
-                   tox)
-         set_tests_properties(python-tox-test
-                              PROPERTIES
-                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
-     else (TOX_CMD)
-         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
-     endif (TOX_CMD)
+   find_program(TOX_EXE "tox")
+   mark_as_advanced(TOX_EXE)
+   if (TOX_EXE)
+     to_native_path ("${py_path}" py_path)
+     add_test (NAME python-tox-test
+               WORKING_DIRECTORY ${py_src}
+               COMMAND ${env_py}
+                 "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
+                 "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                 "SASLPASSWD=${SASLPASSWD_EXE}"
+                 "SWIG=${SWIG_EXECUTABLE}"
+                 ${VALGRIND_ENV}
+                 ${TOX_EXE})
+     set_tests_properties(python-tox-test
+                          PROPERTIES
+                          PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                          FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+   else (TOX_EXE)
+     message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+   endif (TOX_EXE)
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
 
 endif (BUILD_PYTHON)
