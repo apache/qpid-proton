@@ -59,3 +59,8 @@ export PATH="$PATH:$PROTON_HOME/tests/python"
 if [[ -x "$(type -p valgrind)" ]] ; then
     export VALGRIND=$(type -p valgrind)
 fi
+
+# can the test harness use saslpasswd2?
+if [[ -x "$(type -p saslpasswd2)" ]] ; then
+    export SASLPASSWD=$(type -p saslpasswd2)
+fi

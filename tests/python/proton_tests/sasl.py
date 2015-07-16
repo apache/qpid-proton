@@ -313,16 +313,14 @@ class CyrusSASLTest(Test):
     _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
 
   def testMechCRAMMD5(self):
-    if not SASL.extended():
-      raise Skipped('Extended SASL not supported')
+    common.ensureCanTestExtendedSASL()
 
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
     _testSaslMech(self, 'CRAM-MD5')
 
   def testMechDIGESTMD5(self):
-    if not SASL.extended():
-      raise Skipped('Extended SASL not supported')
+    common.ensureCanTestExtendedSASL()
 
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
@@ -332,8 +330,7 @@ class CyrusSASLTest(Test):
 # so not universal and hance need a test for support
 # to keep it in tests.
 #  def testMechSCRAMSHA1(self):
-#    if not SASL.extended():
-#      raise Skipped('Extended SASL not supported')
+#    common.ensureCanTestExtendedSASL()
 #
 #    self.t1.bind(self.c1)
 #    self.t2.bind(self.c2)
@@ -365,6 +362,7 @@ class SSLSASLTest(Test):
       raise Skipped("Proton-J does not support SSL with SASL")
     if not SASL.extended():
       raise Skipped("Simple SASL server does not support PLAIN")
+    common.ensureCanTestExtendedSASL()
 
     clientUser = 'user@proton'
     mech = 'PLAIN'
@@ -383,6 +381,7 @@ class SSLSASLTest(Test):
       raise Skipped("Proton-J does not support SSL with SASL")
     if not SASL.extended():
       raise Skipped("Simple SASL server does not support PLAIN")
+    common.ensureCanTestExtendedSASL()
 
     clientUser = 'usr@proton'
     mech = 'PLAIN'
