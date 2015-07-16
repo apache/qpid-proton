@@ -20,15 +20,14 @@ cmake_minimum_required (VERSION 2.6)
 
 project (Proton C)
 
+# Enable C++ now for examples and bindings subdirectories, but make it optional.
+enable_language(CXX OPTIONAL)
+
 if (MSVC)
   # No C99 capability, use C++
   set(DEFAULT_BUILD_WITH_CXX ON)
 endif (MSVC)
 option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
-
-if (BUILD_WITH_CXX)
-  project (Proton C CXX)
-endif (BUILD_WITH_CXX)
 
 if (CMAKE_CONFIGURATION_TYPES)
   # There is no single "build type"...
@@ -141,6 +140,7 @@ if (BUILD_JAVA)
 endif()
 
 add_subdirectory(proton-c)
+add_subdirectory(examples)
 
 install (FILES LICENSE README.md TODO
          DESTINATION ${PROTON_SHARE})

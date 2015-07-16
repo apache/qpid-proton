@@ -213,6 +213,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
   set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  # C++ allow "%z" format specifier and variadic macros
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros" CACHE STRING "C++ warning flags")
   if (NOT BUILD_WITH_CXX)
     set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes")
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
@@ -227,8 +229,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
       set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
     endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
-    # allow "%z" format specifier and variadic macros
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
+    set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
   endif (NOT BUILD_WITH_CXX)
 
   if (ENABLE_UNDEFINED_ERROR)
@@ -258,10 +259,7 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
-if (SWIG_FOUND)
-  add_subdirectory(bindings)
-endif (SWIG_FOUND)
-
+add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
@@ -514,7 +512,8 @@ if (BUILD_PYTHON)
   # platforms will be supported. Since `setup.py` will skip
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
-  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+  option(TOX_TEST "Enable muti-version python testing with TOX" ON)
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
      find_program(TOX_CMD "tox")
      if (TOX_CMD)
          list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
@@ -534,7 +533,7 @@ if (BUILD_PYTHON)
      else (TOX_CMD)
          message(STATUS "The tox tool is not available - skipping the python-tox-tests")
      endif (TOX_CMD)
-  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
 endif (BUILD_PYTHON)
 
@@ -581,6 +580,3 @@ if (BUILD_JAVASCRIPT)
   add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
   add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
 endif (BUILD_JAVASCRIPT)
-
-# build examples to make sure they still work
-add_subdirectory(../examples ../examples)

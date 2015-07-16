@@ -34,3 +34,6 @@ proton-c/bindings/go/bin
 
 # Testresults from the jenkins build script
 testresults
+
+# KDE project files
+/*.kdev*
