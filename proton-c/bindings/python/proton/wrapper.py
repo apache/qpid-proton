@@ -55,8 +55,10 @@ class Wrapper(object):
         else:
             attrs = EMPTY_ATTRS
             init = False
+            record = None
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
+        self.__dict__["_record"] = record
         if init: self._init()
 
     def __getattr__(self, name):
@@ -64,7 +66,7 @@ class Wrapper(object):
         if name in attrs:
             return attrs[name]
         else:
-            raise AttributeError(name)
+            raise AttributeError(name + " not in _attrs")
 
     def __setattr__(self, name, value):
         if hasattr(self.__class__, name):
