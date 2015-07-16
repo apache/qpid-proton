@@ -1,4 +1,10 @@
-Tutorial {#tutorial}
+// -*-markdown-*-
+// NOTE: doxygen can include markdown pages directly but there seems to be a bug
+// that shows messed-up line numbers in \skip \until code extracts so this file
+// is markdown wrapped in a C++ comment - which works.
+
+/** \page tutorial Tutorial
+Tutorial 
 ========
 
 This is a brief tutorial that will walk you through the fundamentals of building
@@ -360,3 +366,4 @@ done in AMQP by specifying a distribution mode of 'copy' (instead of
 shown next:
 
 \todo TODO queue_browser.cpp
+*/
