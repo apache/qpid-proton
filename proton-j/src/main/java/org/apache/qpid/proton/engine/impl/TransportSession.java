@@ -42,7 +42,10 @@ class TransportSession
     private int _remoteChannel = -1;
     private boolean _openSent;
     private final UnsignedInteger _handleMax = UnsignedInteger.valueOf(HANDLE_MAX); //TODO: should this be configurable?
+    // This is used for the delivery-id actually stamped in each transfer frame of a given message delivery.
     private UnsignedInteger _outgoingDeliveryId = UnsignedInteger.ZERO;
+    // These are used for the session windows communicated via Begin/Flow frames
+    // and the conceptual transfer-id relating to updating them.
     private UnsignedInteger _incomingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _outgoingWindowSize = UnsignedInteger.ZERO;
     private UnsignedInteger _nextOutgoingId = UnsignedInteger.ONE;
