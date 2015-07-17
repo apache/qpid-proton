@@ -120,6 +120,9 @@ class Configure(build_ext):
     def prepare_swig_wrap(self):
         ext = self.distribution.ext_modules[-1]
 
+        if 'SWIG' in os.environ:
+            self.swig = os.environ['SWIG']
+
         try:
             # This will actually call swig to generate the files
             # and list the sources.
