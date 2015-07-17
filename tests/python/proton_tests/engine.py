@@ -267,8 +267,8 @@ class ConnectionTest(Test):
     # we have already sent the OPEN frame.
     try:
       self.c1.transport.channel_max = 666
+      assert False, "expected session exception"
     except:
-      # The java impl will throw an exception.
       pass
 
     assert self.c1.transport.channel_max == upper_limit

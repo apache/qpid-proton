@@ -31,6 +31,7 @@ extern "C" {
 
 typedef struct pn_error_t pn_error_t;
 
+#define PN_OK (0)
 #define PN_EOS (-1)
 #define PN_ERR (-2)
 #define PN_OVERFLOW (-3)

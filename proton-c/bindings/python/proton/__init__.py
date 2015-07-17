@@ -3352,7 +3352,8 @@ Sets the maximum size for received frames (in bytes).
     return pn_transport_get_channel_max(self._impl)
 
   def _set_channel_max(self, value):
-    pn_transport_set_channel_max(self._impl, value)
+    if pn_transport_set_channel_max(self._impl, value):
+      raise SessionException("Too late to change channel max.")
 
   channel_max = property(_get_channel_max, _set_channel_max,
                          doc="""

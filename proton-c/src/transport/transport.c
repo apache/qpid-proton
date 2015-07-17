@@ -2677,7 +2677,7 @@ uint16_t pn_transport_get_channel_max(pn_transport_t *transport)
   return transport->channel_max;
 }
 
-void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_channel_max)
+int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_channel_max)
 {
   /*
    * Once the OPEN frame has been sent, we have communicated our 
@@ -2691,13 +2691,15 @@ void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_
    */
   if(transport->open_sent) {
     pn_transport_logf(transport, "Cannot change local channel-max after OPEN frame sent.");
+    return PN_STATE_ERR;
   }
-  else {
-    transport->local_channel_max = (requested_channel_max < PN_IMPL_CHANNEL_MAX)
-                                   ? requested_channel_max
-                                   : PN_IMPL_CHANNEL_MAX;
-    pni_calculate_channel_max(transport);
-  }
+
+  transport->local_channel_max = (requested_channel_max < PN_IMPL_CHANNEL_MAX)
+                                 ? requested_channel_max
+                                 : PN_IMPL_CHANNEL_MAX;
+  pni_calculate_channel_max(transport);
+
+  return PN_OK;
 }
 
 uint16_t pn_transport_remote_channel_max(pn_transport_t *transport)

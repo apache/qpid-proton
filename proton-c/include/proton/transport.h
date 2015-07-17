@@ -345,8 +345,9 @@ PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
  *
  * @param[in] transport a transport object
  * @param[in] channel_max the maximum allowed channel
+ * @return PN_OK, or PN_STATE_ERR if it is too late to change channel_max
  */
-PN_EXTERN void pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
+PN_EXTERN int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
 
 /**
  * Get the maximum allowed channel of a transport's remote peer.
