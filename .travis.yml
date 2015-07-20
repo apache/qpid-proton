@@ -1,21 +1,35 @@
----
-language: python
-install:
-- sudo apt-get update -qq
-- sudo apt-get install -y -qq bash cmake libssl-dev maven ruby ruby-dev
-    python python-dev python3 python3-dev php5 openjdk-7-jdk swig uuid-dev
-    valgrind libsasl2-dev sasl2-bin
-- pip install tox
-- gem install rspec simplecov
-before_script:
-- export PATH=${HOME}/.local/bin:${PATH}
-- export PYTHON_PATHS=$(ls -d /opt/python/*)
-- echo PYTHON_PATHS=${PYTHON_PATHS}
-- for PYTHON_DIR in ${PYTHON_PATHS} ;
-    do export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:${PYTHON_DIR} ;
-  done
-- echo CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
-script:
-- bin/jenkins-proton-c-build.sh
 os:
 - linux
+sudo: false
+language:
+- python
+python:
+- 2.7
+addons:
+  apt:
+    packages:
+    - cmake
+    - libssl-dev
+    - libsasl2-dev
+    - sasl2-bin
+    - swig
+    - python-dev
+    - valgrind
+    - ruby
+    - ruby-dev
+    - python3-dev
+    - php5
+    - openjdk-7-jdk
+install:
+- pip install --upgrade pip
+- pip install tox
+- gem install rspec simplecov
+- gem install minitest --version 4.7.0
+before_script:
+- export PATH=${HOME}/.local/bin:${PATH}
+script:
+- mkdir Build
+- cd Build
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install
+- cmake --build . --target install
+- ctest -V
