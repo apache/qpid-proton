@@ -101,7 +101,7 @@ typedef struct pn_io_layer_t {
   ssize_t (*process_input)(struct pn_transport_t *transport, unsigned int layer, const char *, size_t);
   ssize_t (*process_output)(struct pn_transport_t *transport, unsigned int layer, char *, size_t);
   pn_timestamp_t (*process_tick)(struct pn_transport_t *transport, unsigned int layer, pn_timestamp_t);
-  size_t (*buffered_output)(struct pn_transport_t *);  // how much output is held
+  size_t (*buffered_output)(struct pn_transport_t * transport);  // how much output is held
 } pn_io_layer_t;
 
 extern const pn_io_layer_t pni_passthru_layer;

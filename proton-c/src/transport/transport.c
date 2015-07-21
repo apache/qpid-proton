@@ -1764,101 +1764,6 @@ static ssize_t transport_consume(pn_transport_t *transport)
   return consumed;
 }
 
-static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
-{
-  bool eos = pn_transport_capacity(transport)==PN_EOS;
-  pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
-  switch (protocol) {
-  case PNI_PROTOCOL_AMQP1:
-    if (transport->io_layers[layer] == &amqp_read_header_layer) {
-      transport->io_layers[layer] = &amqp_layer;
-    } else {
-      transport->io_layers[layer] = &amqp_write_header_layer;
-    }
-    if (transport->trace & PN_TRACE_FRM)
-      pn_transport_logf(transport, "  <- %s", "AMQP");
-    return 8;
-  case PNI_PROTOCOL_INSUFFICIENT:
-    if (!eos) return 0;
-    /* Fallthru */
-  default:
-    break;
-  }
-  char quoted[1024];
-  pn_quote_data(quoted, 1024, bytes, available);
-  pn_do_error(transport, "amqp:connection:framing-error",
-              "%s header mismatch: %s ['%s']%s", "AMQP", pni_protocol_name(protocol), quoted,
-              !eos ? "" : " (connection aborted)");
-  return PN_EOS;
-}
-
-static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
-{
-  if (transport->close_rcvd) {
-    if (available > 0) {
-      pn_do_error(transport, "amqp:connection:framing-error", "data after close");
-      return PN_EOS;
-    }
-  }
-
-  if (!transport->close_rcvd && !available) {
-    pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
-    return PN_EOS;
-  }
-
-
-  ssize_t n = pn_dispatcher_input(transport, bytes, available, true, &transport->halt);
-  if (n < 0) {
-    //return pn_error_set(transport->error, n, "dispatch error");
-    return PN_EOS;
-  } else if (transport->close_rcvd) {
-    return PN_EOS;
-  } else {
-    return n;
-  }
-}
-
-/* process AMQP related timer events */
-static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, pn_timestamp_t now)
-{
-  pn_timestamp_t timeout = 0;
-
-  if (transport->local_idle_timeout) {
-    if (transport->dead_remote_deadline == 0 ||
-        transport->last_bytes_input != transport->bytes_input) {
-      transport->dead_remote_deadline = now + transport->local_idle_timeout;
-      transport->last_bytes_input = transport->bytes_input;
-    } else if (transport->dead_remote_deadline <= now) {
-      transport->dead_remote_deadline = now + transport->local_idle_timeout;
-      if (!transport->posted_idle_timeout) {
-        transport->posted_idle_timeout = true;
-        // Note: AMQP-1.0 really should define a generic "timeout" error, but does not.
-        pn_do_error(transport, "amqp:resource-limit-exceeded", "local-idle-timeout expired");
-      }
-    }
-    timeout = transport->dead_remote_deadline;
-  }
-
-  // Prevent remote idle timeout as describe by AMQP 1.0:
-  if (transport->remote_idle_timeout && !transport->close_sent) {
-    if (transport->keepalive_deadline == 0 ||
-        transport->last_bytes_output != transport->bytes_output) {
-      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
-      transport->last_bytes_output = transport->bytes_output;
-    } else if (transport->keepalive_deadline <= now) {
-      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
-      if (transport->available == 0) {    // no outbound data pending
-        // so send empty frame (and account for it!)
-        pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "");
-        transport->last_bytes_output += transport->available;
-      }
-    }
-    timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
-  }
-
-  return timeout;
-}
-
 static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION)
@@ -2500,6 +2405,101 @@ static int pni_process(pn_transport_t *transport)
 }
 
 #define AMQP_HEADER ("AMQP\x00\x01\x00\x00")
+
+static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
+{
+  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
+  switch (protocol) {
+  case PNI_PROTOCOL_AMQP1:
+    if (transport->io_layers[layer] == &amqp_read_header_layer) {
+      transport->io_layers[layer] = &amqp_layer;
+    } else {
+      transport->io_layers[layer] = &amqp_write_header_layer;
+    }
+    if (transport->trace & PN_TRACE_FRM)
+      pn_transport_logf(transport, "  <- %s", "AMQP");
+    return 8;
+  case PNI_PROTOCOL_INSUFFICIENT:
+    if (!eos) return 0;
+    /* Fallthru */
+  default:
+    break;
+  }
+  char quoted[1024];
+  pn_quote_data(quoted, 1024, bytes, available);
+  pn_do_error(transport, "amqp:connection:framing-error",
+              "%s header mismatch: %s ['%s']%s", "AMQP", pni_protocol_name(protocol), quoted,
+              !eos ? "" : " (connection aborted)");
+  return PN_EOS;
+}
+
+static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
+{
+  if (transport->close_rcvd) {
+    if (available > 0) {
+      pn_do_error(transport, "amqp:connection:framing-error", "data after close");
+      return PN_EOS;
+    }
+  }
+
+  if (!transport->close_rcvd && !available) {
+    pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
+    return PN_EOS;
+  }
+
+
+  ssize_t n = pn_dispatcher_input(transport, bytes, available, true, &transport->halt);
+  if (n < 0) {
+    //return pn_error_set(transport->error, n, "dispatch error");
+    return PN_EOS;
+  } else if (transport->close_rcvd) {
+    return PN_EOS;
+  } else {
+    return n;
+  }
+}
+
+/* process AMQP related timer events */
+static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer, pn_timestamp_t now)
+{
+  pn_timestamp_t timeout = 0;
+
+  if (transport->local_idle_timeout) {
+    if (transport->dead_remote_deadline == 0 ||
+        transport->last_bytes_input != transport->bytes_input) {
+      transport->dead_remote_deadline = now + transport->local_idle_timeout;
+      transport->last_bytes_input = transport->bytes_input;
+    } else if (transport->dead_remote_deadline <= now) {
+      transport->dead_remote_deadline = now + transport->local_idle_timeout;
+      if (!transport->posted_idle_timeout) {
+        transport->posted_idle_timeout = true;
+        // Note: AMQP-1.0 really should define a generic "timeout" error, but does not.
+        pn_do_error(transport, "amqp:resource-limit-exceeded", "local-idle-timeout expired");
+      }
+    }
+    timeout = transport->dead_remote_deadline;
+  }
+
+  // Prevent remote idle timeout as describe by AMQP 1.0:
+  if (transport->remote_idle_timeout && !transport->close_sent) {
+    if (transport->keepalive_deadline == 0 ||
+        transport->last_bytes_output != transport->bytes_output) {
+      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
+      transport->last_bytes_output = transport->bytes_output;
+    } else if (transport->keepalive_deadline <= now) {
+      transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
+      if (transport->available == 0) {    // no outbound data pending
+        // so send empty frame (and account for it!)
+        pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "");
+        transport->last_bytes_output += transport->available;
+      }
+    }
+    timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
+  }
+
+  return timeout;
+}
 
 static ssize_t pn_output_write_amqp_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t available)
 {
