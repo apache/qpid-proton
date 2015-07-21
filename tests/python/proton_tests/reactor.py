@@ -45,11 +45,20 @@ class BarfOnTask:
         raise Barf()
 
 class BarfOnFinal:
+    init = False
+
+    def on_reactor_init(self, event):
+        self.init = True
 
     def on_reactor_final(self, event):
         raise Barf()
     
 class BarfOnFinalDerived(CHandshaker):
+    init = False
+    
+    def on_reactor_init(self, event):
+        self.init = True
+
     def on_reactor_final(self, event):
         raise Barf()
     
@@ -263,6 +272,11 @@ class HandlerDerivationTest(Test):
           raise SkipTest()
         self.reactor = Reactor()
 
+    def wrong_exception(self):
+        import sys
+        ex = sys.exc_info()
+        assert False, " Unexpected exception " + str(ex[1])
+    
     def test_reactor_final_derived(self):
         h = BarfOnFinalDerived()
         self.reactor.global_handler = h
@@ -271,6 +285,8 @@ class HandlerDerivationTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+        except:
+            self.wrong_exception()
 
     def test_reactor_final_py_child_py(self):
         class APoorExcuseForAHandler:
@@ -282,6 +298,8 @@ class HandlerDerivationTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+        except:
+            self.wrong_exception()
 
     def test_reactor_final_py_child_derived(self):
         class APoorExcuseForAHandler:
@@ -293,6 +311,8 @@ class HandlerDerivationTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+        except:
+            self.wrong_exception()
 
     def test_reactor_final_derived_child_derived(self):
         class APoorExcuseForAHandler(CHandshaker):
@@ -305,6 +325,8 @@ class HandlerDerivationTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+        except:
+            self.wrong_exception()
 
     def test_reactor_final_derived_child_py(self):
         class APoorExcuseForAHandler(CHandshaker):
@@ -317,4 +339,64 @@ class HandlerDerivationTest(Test):
             assert False, "expected to barf"
         except Barf:
             pass
+        except:
+            self.wrong_exception()
 
+    def test_reactor_init_derived(self):
+        h = BarfOnFinalDerived()
+        self.reactor.global_handler = h
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except:
+            assert h.init, "excpected the init"
+
+    def test_reactor_init_py_child_py(self):
+        h = BarfOnFinal()
+        class APoorExcuseForAHandler:
+            def __init__(self):
+                self.handlers = [h]
+        self.reactor.global_handler = APoorExcuseForAHandler()
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except:
+            assert h.init, "excpected the init"
+
+    def test_reactor_init_py_child_derived(self):
+        h = BarfOnFinalDerived()
+        class APoorExcuseForAHandler:
+            def __init__(self):
+                self.handlers = [h]
+        self.reactor.global_handler = APoorExcuseForAHandler()
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except:
+            assert h.init, "excpected the init"
+
+    def test_reactor_init_derived_child_derived(self):
+        h = BarfOnFinalDerived()
+        class APoorExcuseForAHandler(CHandshaker):
+            def __init__(self):
+                CHandshaker.__init__(self)
+                self.handlers = [h]
+        self.reactor.global_handler = APoorExcuseForAHandler()
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except:
+            assert h.init, "excpected the init"
+
+    def test_reactor_init_derived_child_py(self):
+        h = BarfOnFinal()
+        class APoorExcuseForAHandler(CHandshaker):
+            def __init__(self):
+                CHandshaker.__init__(self)
+                self.handlers = [h]
+        self.reactor.global_handler = APoorExcuseForAHandler()
+        try:
+            self.reactor.run()
+            assert False, "expected to barf"
+        except:
+            assert h.init, "excpected the init"

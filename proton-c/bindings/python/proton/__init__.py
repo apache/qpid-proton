@@ -3910,7 +3910,6 @@ class WrappedHandler(Wrapper):
       # instantiate the surrogate
       self.handlers.extend([])
 
-
   def _on_error(self, info):
     on_error = getattr(self, "on_error", None)
     if on_error is None:
