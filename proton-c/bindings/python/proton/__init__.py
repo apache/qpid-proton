@@ -3862,7 +3862,38 @@ class _cadapter:
     else:
       self.on_error((exc, val, tb))
 
+class WrappedHandlersChildSurrogate:
+    def __init__(self, delegate):
+        self.handlers = []
+        self.delegate = weakref.ref(delegate)
+
+    def on_unhandled(self, method, event):
+        delegate = self.delegate()
+        if delegate:
+            dispatch(delegate, method, event)
+    
+
+class WrappedHandlersProperty(object):
+    def __get__(self, obj, clazz):
+        if obj is None:
+            return None
+        return self.surrogate(obj).handlers
+    
+    def __set__(self, obj, value):
+        self.surrogate(obj).handlers = value
+        
+    def surrogate(self, obj):
+        key = "_surrogate"
+        objdict = obj.__dict__
+        surrogate = objdict.get(key, None)
+        if surrogate is None:
+            objdict[key] = surrogate = WrappedHandlersChildSurrogate(obj)
+            obj.add(surrogate)
+        return surrogate
+
 class WrappedHandler(Wrapper):
+    
+  handlers = WrappedHandlersProperty()
 
   @staticmethod
   def wrap(impl, on_error=None):
@@ -3872,9 +3903,13 @@ class WrappedHandler(Wrapper):
       handler = WrappedHandler(impl)
       handler.__dict__["on_error"] = on_error
       return handler
-
+  
   def __init__(self, impl_or_constructor):
     Wrapper.__init__(self, impl_or_constructor)
+    if list(self.__class__.__mro__).index(WrappedHandler) > 1:
+      # instantiate the surrogate
+      self.handlers.extend([])
+
 
   def _on_error(self, info):
     on_error = getattr(self, "on_error", None)

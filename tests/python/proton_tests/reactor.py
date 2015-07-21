@@ -18,7 +18,7 @@ from __future__ import absolute_import
 # under the License.
 #
 
-from .common import Test
+from .common import Test, SkipTest
 from proton.reactor import Reactor
 from proton.handlers import CHandshaker
 
@@ -257,6 +257,10 @@ class ExceptionTest(Test):
 
 class HandlerDerivationTest(Test):
     def setUp(self):
+        import platform
+        if platform.python_implementation() != "Jython":
+          # Exception propagation does not work currently for CPython
+          raise SkipTest()
         self.reactor = Reactor()
 
     def test_reactor_final_derived(self):
