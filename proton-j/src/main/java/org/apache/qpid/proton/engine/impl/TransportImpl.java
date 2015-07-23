@@ -1589,7 +1589,7 @@ public class TransportImpl extends EndpointImpl
 
     void log(String event, TransportFrame frame)
     {
-        if ((_levels & TRACE_FRM) != 0) {
+        if (isTraceFramesEnabled()) {
             StringBuilder msg = new StringBuilder();
             msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
@@ -1603,6 +1603,11 @@ public class TransportImpl extends EndpointImpl
             }
             System.out.println(msg.toString());
         }
+    }
+
+    boolean isTraceFramesEnabled()
+    {
+        return (_levels & TRACE_FRM) != 0;
     }
 
     @Override

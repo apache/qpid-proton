@@ -154,23 +154,28 @@ class FrameWriter
         }
         int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), capacity);
 
-        ByteBuffer originalPayload = null;
-        if( payload!=null )
+        ProtocolTracer tracer = _protocolTracer == null ? null : _protocolTracer.get();
+        if( tracer != null || _transport.isTraceFramesEnabled())
         {
-            originalPayload = payload.duplicate();
-            originalPayload.limit(payload.position() + payloadSize);
-        }
-
-        // XXX: this is a bit of a hack but it eliminates duplicate
-        // code, further refactor will fix this
-        if (_frameType == AMQP_FRAME_TYPE) {
-            TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload));
-            _transport.log(TransportImpl.OUTGOING, frame);
-
-            ProtocolTracer tracer = _protocolTracer.get();
-            if(tracer != null)
+            // XXX: this is a bit of a hack but it eliminates duplicate
+            // code, further refactor will fix this
+            if (_frameType == AMQP_FRAME_TYPE)
             {
-                tracer.sentFrame(frame);
+                ByteBuffer originalPayload = null;
+                if( payload!=null )
+                {
+                    originalPayload = payload.duplicate();
+                    originalPayload.limit(payload.position() + payloadSize);
+                }
+
+                Binary payloadBin = Binary.create(originalPayload);
+                TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, payloadBin);
+                _transport.log(TransportImpl.OUTGOING, frame);
+
+                if(tracer != null)
+                {
+                    tracer.sentFrame(frame);
+                }
             }
         }
 
