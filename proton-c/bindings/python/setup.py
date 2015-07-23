@@ -44,22 +44,13 @@ required ones, then the install process will continue normally.
 If the available versions are not good for the bindings or the library is
 missing, then the following will happen:
 
-The setup script will attempt to download qpid-proton's tar - see
-`setuputils.bundle.fetch_libqpid_proton` - and it'll build it and then install
-it. Note that if this is being executed outside a virtualenv, it'll install it
-on whatever `distutils.sysconfig.PREFIX` is available. Once qpid-proton has been
-built and installed, the extension build will proceed normally as if the library
-would have been found. The extension will use the recently built library.
+The setup script will attempt to download the C source for qpid-proton - see
+`setuputils.bundle.fetch_libqpid_proton` - and it will include the proton C
+code into the extension itself.
 
-While the above removes the need of *always* having qpid-proton installed, it does
-not solve the need of having `cmake` and `swig` installed to make this setup work.
-Eventually, future works should remove the need of `cmake` by collecting sources
-and letting `distutils` do the compilation.
-
-On a final note, it's important to say that in either case, the library paths will
-be added as `rpaths` to the `_cproton` shared library. Mainly because we need to
-make sure `libqpid-proton.so` will be found and loaded when it's not installed in
-the main system.
+While the above removes the need of *always* having qpid-proton installed, it
+does not solve the need of having `swig` and the libraries qpid-proton requires
+installed to make this setup work.
 
 From the Python side, this scripts overrides 1 command - build_ext - and it adds a
 new one. The later - Configure - is called from the former to setup/discover what's
@@ -118,6 +109,10 @@ class Configure(build_ext):
             return compiler.compiler_type
 
     def prepare_swig_wrap(self):
+        """Run swig against the sources.  This will cause swig to compile the
+        cproton.i file into a .c file called cproton_wrap.c, and create
+        cproton.py.
+        """
         ext = self.distribution.ext_modules[-1]
 
         if 'SWIG' in os.environ:
@@ -132,22 +127,21 @@ class Configure(build_ext):
                     os.path.exists('cproton.py')):
                 raise e
 
+        # now remove the cproton.i file from the source list so we don't run
+        # swig again.
         ext.sources = ext.sources[1:]
         ext.swig_opts = []
 
     def bundle_libqpid_proton_extension(self):
         """The proper version of libqpid-proton is not present on the system,
         so attempt to retrieve the proper libqpid-proton sources and
-        build/install them locally.
+        include them in the extension.
         """
         setup_path = os.path.dirname(os.path.realpath(__file__))
         base = self.get_finalized_command('build').build_base
         build_include = os.path.join(base, 'include')
-        install = self.get_finalized_command('install').install_base
-        install_lib = self.get_finalized_command('install').install_lib
-        ext_modules = self.distribution.ext_modules
 
-        log.info("Using bundled libqpid-proton")
+        log.info("Bundling qpid-proton into the extension")
 
         # QPID_PROTON_SRC - (optional) pathname to the Proton C sources.  Can
         # be used to override where this setup gets the Proton C sources from
@@ -176,6 +170,9 @@ class Configure(build_ext):
         proton_src = os.path.join(proton_base, 'src')
         proton_include = os.path.join(proton_base, 'include')
 
+        #
+        # Create any generated header files, and put them in build_include:
+        #
         if not os.path.exists(build_include):
             os.makedirs(build_include)
             os.mkdir(os.path.join(build_include, 'proton'))
@@ -206,21 +203,13 @@ class Configure(build_ext):
 """ % bundle.min_qpid_proton
             ver.write(version_text.encode('utf-8'))
 
-        # Collect all the C files that need to be built.
+        # Collect all the Proton C files that need to be built.
         # we could've used `glob(.., '*', '*.c')` but I preferred going
         # with an explicit list of subdirs that we can control and expand
         # depending on the version. Specifically, lets avoid adding things
         # we don't need.
-        sources = []
-        libraries = []
-        extra_compile_args = [
-            '-std=gnu99',
-            '-Dqpid_proton_EXPORTS',
-            '-DUSE_ATOLL',
-            '-DUSE_CLOCK_GETTIME',
-            '-DUSE_STRERROR_R',
-        ]
 
+        sources = []
         for subdir in ['object', 'framing', 'codec', 'dispatcher',
                        'engine', 'events', 'transport',
                        'message', 'reactor', 'messenger',
@@ -231,6 +220,10 @@ class Configure(build_ext):
         sources.extend(filter(lambda x: not x.endswith('dump.c'),
                        glob.iglob(os.path.join(proton_src, '*.c'))))
 
+        # Look for any optional libraries that proton needs, and adjust the
+        # source list as necessary.
+        libraries = []
+
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
         # return True and we'll use it. Otherwise, we'll use the stub.
@@ -240,6 +233,7 @@ class Configure(build_ext):
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
 
+        # create a temp compiler to check for optional compile-time features
         cc = new_compiler(compiler=self.compiler_type)
         cc.output_dir = self.build_temp
 
@@ -262,75 +256,44 @@ class Configure(build_ext):
 
         sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
 
-        # Create an extension for the bundled qpid-proton
-        # library and let distutils do the build step for us.
-        # This is not the `swig` library... What's going to be built by this
-        # `Extension` is qpid-proton itself. For the swig library, pls, see the
-        # dependencies in the `setup` function call and how it's extended further
-        # down this method.
-        libqpid_proton = Extension(
-            'libqpid-proton',
+        # compile all the proton sources.  We'll add the resulting list of
+        # objects to the _cproton extension as 'extra objects'.  We do this
+        # instead of just lumping all the sources into the extension to prevent
+        # any proton-specific compilation flags from affecting the compilation
+        # of the generated swig code
 
-            # List of `.c` files that will be compiled.
-            # `sources` is defined earlier on in this method and it's mostly
-            # filled dynamically except for a few cases where files are added
-            # depending on the presence of some libraries.
-            sources=sources,
+        cc = new_compiler(compiler=self.compiler_type)
+        ds_sys.customize_compiler(cc)
 
-            # Libraries that need to be linked to should
-            # be added to this list. `libraries` is defined earlier on
-            # in this same method and it's filled depending on some
-            # conditions. You'll find comments on each of those.
-            libraries=libraries,
+        objects = cc.compile(sources,
+                             # -D flags (None means no value, just define)
+                             macros=[('qpid_proton_EXPORTS', None),
+                                     ('USE_ATOLL', None),
+                                     ('USE_CLOCK_GETTIME', None),
+                                     ('USE_STRERROR_R', None)],
+                             include_dirs=[build_include,
+                                           proton_include,
+                                           proton_src],
+                             # compiler command line options:
+                             extra_postargs=['-std=gnu99'],
+                             output_dir=self.build_temp)
 
-            # Changes to this list should be rare.
-            # However, this is where new headers' dirs are added.
-            # This list translates to `-I....` flags.
-            include_dirs=[build_include, proton_src, proton_include],
-
-            # If you need to add a default flag, this is
-            # the place. All these compile arguments will be appended to
-            # the GCC command. This list of flags is not used during the
-            # linking phase.
-            extra_compile_args = extra_compile_args,
-
-            # If you need to add flags to the linking phase
-            # this is the right place to do it. Just like the compile flags,
-            # this is a list of flags that will be appended to the link
-            # command.
-            extra_link_args = []
-        )
-
-
-        # Extend the `swig` module `Extension` and add a few
-        # extra options. For instance, we'll add new library dirs where `swig`
-        # should look for headers and libraries. In addition to this, we'll
-        # also append a `runtime path` where the qpid-proton library for this
-        # swig extension should be looked up from whenever the proton bindings
-        # are imported. We need this because the library will live in the
-        # site-packages along with the proton bindings instead of being in the
-        # common places like `/usr/lib` or `/usr/local/lib`.
         #
-        # This is not the place where you'd add "default" flags. If you need to
-        # add flags like `-thread` please read the `setup` function call at the
-        # bottom of this file and see the examples there.
+        # Now update the _cproton extension instance to include the objects and
+        # libraries
+        #
         _cproton = self.distribution.ext_modules[-1]
-        _cproton.library_dirs.append(self.build_lib)
-        _cproton.include_dirs.append(proton_include)
+        _cproton.extra_objects = objects
         _cproton.include_dirs.append(build_include)
-        _cproton.include_dirs.append(os.path.join(proton_src, 'bindings', 'python'))
+        _cproton.include_dirs.append(proton_include)
 
+        # swig will need to access the proton headers:
         _cproton.swig_opts.append('-I%s' % build_include)
         _cproton.swig_opts.append('-I%s' % proton_include)
 
-        _cproton.runtime_library_dirs.extend([install_lib])
-
-        if sys.version_info[0] >= 3:
-            _cproton.libraries[0] = "qpid-proton%s" % ds_sys.get_config_var('EXT_SUFFIX')[:-3]
-
-        # Register this new extension and make
-        # sure it's built and installed *before* `_cproton`.
-        self.distribution.ext_modules.insert(0, libqpid_proton)
+        # lastly replace the libqpid-proton dependency with libraries required
+        # by the Proton objects:
+        _cproton.libraries=libraries
 
     def check_qpid_proton_version(self):
         """check the qpid_proton version"""
@@ -346,8 +309,8 @@ class Configure(build_ext):
             (not self.check_qpid_proton_version())
 
     def use_installed_proton(self):
-        """The Proton development headers and library are installed, tell swig
-        and the extension where to find them.
+        """The Proton development headers and library are installed, update the
+        _cproton extension to tell it where to find the library and headers.
         """
         _cproton = self.distribution.ext_modules[-1]
         incs = misc.pkg_config_get_var('includedir')
@@ -404,7 +367,6 @@ cmdclass = {'configure': Configure,
             'build_ext': CheckingBuildExt,
             'sdist': CheckSDist}
 
-
 setup(name='python-qpid-proton',
       version=bundle.bundled_version_str,
       description='An AMQP based messaging library.',
@@ -417,7 +379,10 @@ setup(name='python-qpid-proton',
       classifiers=["License :: OSI Approved :: Apache Software License",
                    "Intended Audience :: Developers",
                    "Programming Language :: Python"],
-      cmdclass = cmdclass,
+      cmdclass=cmdclass,
+      # Note well: the following extension instance is modified during the
+      # installation!  If you make changes below, you may need to update the
+      # Configure class above
       ext_modules=[Extension('_cproton',
                              sources=['cproton.i', 'cproton_wrap.c'],
                              swig_opts=['-threads'],
