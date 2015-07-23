@@ -190,9 +190,6 @@ public class TransportImpl extends EndpointImpl
         return _remoteMaxFrameSize;
     }
 
-    /**
-     * TODO propagate the new value to {@link #_outputProcessor} etc
-     */
     @Override
     public void setMaxFrameSize(int maxFrameSize)
     {
