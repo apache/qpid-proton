@@ -77,7 +77,7 @@ public class TransportImpl extends EndpointImpl
     }
 
     private static final boolean FRM_ENABLED = getBooleanEnv("PN_TRACE_FRM");
-    private static final int TRACE_FRAME_PAYLOAD_LENGTH = Integer.getInteger("proton.trace_frame_payload_length", 80);
+    private static final int TRACE_FRAME_PAYLOAD_LENGTH = Integer.getInteger("proton.trace_frame_payload_length", 1024);
 
     // trace levels
     private int _levels = (FRM_ENABLED ? TRACE_FRM : 0);
@@ -1594,12 +1594,11 @@ public class TransportImpl extends EndpointImpl
             msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
             msg.append(" ").append(event).append(" ").append(frame.getBody());
-            if (frame.getPayload() != null) {
-                String payload = frame.getPayload().toString();
-                if (payload.length() > TRACE_FRAME_PAYLOAD_LENGTH) {
-                    payload = payload.substring(0, TRACE_FRAME_PAYLOAD_LENGTH) + "(" + payload.length() + ")";
-                }
-                msg.append(" \"").append(payload).append("\"");
+
+            Binary bin = frame.getPayload();
+            if (bin != null) {
+                msg.append(" (").append(bin.getLength()).append(") ");
+                msg.append(StringUtils.toQuotedString(bin, TRACE_FRAME_PAYLOAD_LENGTH, true));
             }
             System.out.println(msg.toString());
         }
