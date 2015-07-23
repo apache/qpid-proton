@@ -80,7 +80,7 @@ public class TransportImpl extends EndpointImpl
     private static final int TRACE_FRAME_PAYLOAD_LENGTH = Integer.getInteger("proton.trace_frame_payload_length", 80);
 
     // trace levels
-    private int _levels = (FRM_ENABLED ? this.TRACE_FRM : 0);
+    private int _levels = (FRM_ENABLED ? TRACE_FRM : 0);
 
     private FrameParser _frameParser;
 
