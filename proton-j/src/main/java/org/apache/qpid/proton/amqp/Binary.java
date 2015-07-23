@@ -23,8 +23,6 @@ package org.apache.qpid.proton.amqp;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 
-import static java.lang.Math.min;
-
 public final class Binary
 {
 

@@ -28,13 +28,11 @@ import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.UnsignedShort;
-import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.List;
