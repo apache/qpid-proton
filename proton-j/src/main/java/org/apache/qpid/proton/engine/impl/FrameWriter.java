@@ -146,10 +146,19 @@ class FrameWriter
             writePerformative(frameBody);
         }
 
+        int capacity;
+        if (_maxFrameSize > 0) {
+            capacity = _maxFrameSize - _performativeSize;
+        } else {
+            capacity = Integer.MAX_VALUE;
+        }
+        int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), capacity);
+
         ByteBuffer originalPayload = null;
         if( payload!=null )
         {
             originalPayload = payload.duplicate();
+            originalPayload.limit(payload.position() + payloadSize);
         }
 
         // XXX: this is a bit of a hack but it eliminates duplicate
@@ -164,14 +173,6 @@ class FrameWriter
                 tracer.sentFrame(frame);
             }
         }
-
-        int capacity;
-        if (_maxFrameSize > 0) {
-            capacity = _maxFrameSize - _performativeSize;
-        } else {
-            capacity = Integer.MAX_VALUE;
-        }
-        int payloadSize = Math.min(payload == null ? 0 : payload.remaining(), capacity);
 
         if(payloadSize > 0)
         {
