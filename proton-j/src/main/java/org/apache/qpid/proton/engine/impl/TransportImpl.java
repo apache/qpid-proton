@@ -492,17 +492,6 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
-    private void dumpQueue(String msg)
-    {
-        System.out.print("  " + msg + "{");
-        DeliveryImpl dlv = _connectionEndpoint.getTransportWorkHead();
-        while (dlv != null) {
-            System.out.print(new Binary(dlv.getTag()) + ", ");
-            dlv = dlv.getTransportWorkNext();
-        }
-        System.out.println("}");
-    }
-
     private void processTransportWork()
     {
         if(_connectionEndpoint != null)
