@@ -125,9 +125,6 @@ class FrameWriter
         _buffer.put(_frameType);
         _buffer.putShort((short) channel);
         _buffer.position(limit);
-
-        int offset = _bbuf.arrayOffset() + _frameStart;
-        //System.out.println("RAW: \"" + new Binary(_bbuf.array(), offset, frameSize) + "\"");
     }
 
     void writeFrame(int channel, Object frameBody, ByteBuffer payload,
@@ -218,8 +215,6 @@ class FrameWriter
         src.limit(limit);
         _bbuf.rewind();
         _bbuf.put(src);
-
-        //System.out.println("RAW: \"" + new Binary(dst.array(), dst.arrayOffset(), dst.position()) + "\"");
 
         return size;
     }
