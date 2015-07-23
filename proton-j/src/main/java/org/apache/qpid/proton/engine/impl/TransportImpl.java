@@ -573,7 +573,6 @@ public class TransportImpl extends EndpointImpl
 
             transfer.setMessageFormat(UnsignedInteger.ZERO);
 
-            // TODO - large frames
             ByteBuffer payload = delivery.getData() ==  null ? null :
                 ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(),
                                 delivery.getDataLength());
