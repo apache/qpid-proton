@@ -579,12 +579,14 @@ const pn_io_layer_t ssl_layer = {
     process_input_ssl,
     process_output_ssl,
     NULL,
+    NULL,
     buffered_output
 };
 
 const pn_io_layer_t ssl_input_closed_layer = {
     process_input_done,
     process_output_ssl,
+    NULL,
     NULL,
     buffered_output
 };
@@ -593,12 +595,14 @@ const pn_io_layer_t ssl_output_closed_layer = {
     process_input_ssl,
     process_output_done,
     NULL,
+    NULL,
     buffered_output
 };
 
 const pn_io_layer_t ssl_closed_layer = {
     process_input_done,
     process_output_done,
+    NULL,
     NULL,
     buffered_output
 };

@@ -2529,9 +2529,10 @@ class IdleTimeoutEventTest(PeerTest):
 
   def half_pump(self):
     p = self.transport.pending()
-    self.transport.pop(p)
+    if p>0:
+      self.transport.pop(p)
 
-  def testTimeoutWithZombieServer(self):
+  def testTimeoutWithZombieServer(self, expectOpenCloseFrames=True):
     self.transport.idle_timeout = self.delay
     self.connection.open()
     self.half_pump()
@@ -2542,14 +2543,15 @@ class IdleTimeoutEventTest(PeerTest):
                 Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                 Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert self.transport.capacity() < 0
-    assert self.transport.pending() > 0
+    if expectOpenCloseFrames:
+      assert self.transport.pending() > 0
     self.half_pump()
     self.expect(Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
     assert self.transport.pending() < 0
 
   def testTimeoutWithZombieServerAndSASL(self):
     sasl = self.transport.sasl()
-    self.testTimeoutWithZombieServer()
+    self.testTimeoutWithZombieServer(expectOpenCloseFrames=False)
 
 class DeliverySegFaultTest(Test):
 

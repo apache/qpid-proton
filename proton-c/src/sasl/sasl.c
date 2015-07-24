@@ -49,10 +49,12 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t *transport, unsigned in
 static ssize_t pn_output_write_sasl_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t size);
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 static ssize_t pn_output_write_sasl_encrypt(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
+static void pn_error_sasl(pn_transport_t* transport);
 
 const pn_io_layer_t sasl_header_layer = {
     pn_input_read_sasl_header,
     pn_output_write_sasl_header,
+    pn_error_sasl,
     NULL,
     NULL
 };
@@ -60,6 +62,7 @@ const pn_io_layer_t sasl_header_layer = {
 const pn_io_layer_t sasl_write_header_layer = {
     pn_input_read_sasl,
     pn_output_write_sasl_header,
+    pn_error_sasl,
     NULL,
     NULL
 };
@@ -67,6 +70,7 @@ const pn_io_layer_t sasl_write_header_layer = {
 const pn_io_layer_t sasl_read_header_layer = {
     pn_input_read_sasl_header,
     pn_output_write_sasl,
+    pn_error_sasl,
     NULL,
     NULL
 };
@@ -74,6 +78,7 @@ const pn_io_layer_t sasl_read_header_layer = {
 const pn_io_layer_t sasl_layer = {
     pn_input_read_sasl,
     pn_output_write_sasl,
+    pn_error_sasl,
     NULL,
     NULL
 };
@@ -81,6 +86,7 @@ const pn_io_layer_t sasl_layer = {
 const pn_io_layer_t sasl_encrypt_layer = {
     pn_input_read_sasl_encrypt,
     pn_output_write_sasl_encrypt,
+    NULL,
     NULL,
     NULL
 };
@@ -110,6 +116,7 @@ static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
   enum pni_sasl_state last_state = sasl->last_state;
   enum pni_sasl_state desired_state = sasl->desired_state;
   return last_state==SASL_RECVED_OUTCOME
+      || last_state==SASL_ERROR
       || desired_state==SASL_POSTED_OUTCOME;
 }
 
@@ -118,6 +125,7 @@ static bool pni_sasl_is_final_output_state(pni_sasl_t *sasl)
   enum pni_sasl_state last_state = sasl->last_state;
   return last_state==SASL_PRETEND_OUTCOME
       || last_state==SASL_RECVED_OUTCOME
+      || last_state==SASL_ERROR
       || last_state==SASL_POSTED_OUTCOME;
 }
 
@@ -218,10 +226,21 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       }
       break;
     case SASL_NONE:
+    case SASL_ERROR:
       return;
     }
     sasl->last_state = desired_state;
     desired_state = sasl->desired_state;
+  }
+}
+
+static void pn_error_sasl(pn_transport_t* transport)
+{
+  transport->close_sent = true;
+  pni_sasl_t *sasl = transport->sasl;
+  if (!pni_sasl_is_final_input_state(sasl)) {
+    sasl->desired_state = SASL_ERROR;
+    sasl->last_state = SASL_ERROR;
   }
 }
 
@@ -246,7 +265,6 @@ static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int
   default:
     break;
   }
-  transport->close_sent = true;
   char quoted[1024];
   pn_quote_data(quoted, 1024, bytes, available);
   pn_do_error(transport, "amqp:connection:framing-error",
@@ -271,7 +289,6 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 {
   bool eos = pn_transport_capacity(transport)==PN_EOS;
   if (eos) {
-    transport->close_sent = true;
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
     pn_set_error_layer(transport);
     return PN_EOS;
@@ -343,18 +360,18 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
   pni_sasl_t *sasl = transport->sasl;
 
   // this accounts for when pn_do_error is invoked, e.g. by idle timeout
-  if (!transport->close_sent) {
-    pni_sasl_start_server_if_needed(transport);
+  if (transport->close_sent) return PN_EOS;
 
-    pni_post_sasl_frame(transport);
+  pni_sasl_start_server_if_needed(transport);
 
-    if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
-      return pn_dispatcher_output(transport, bytes, available);
-    } else {
-      if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
-        pn_transport_close_tail(transport);
-        return PN_EOS;
-      }
+  pni_post_sasl_frame(transport);
+
+  if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
+    return pn_dispatcher_output(transport, bytes, available);
+  } else {
+    if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
+      pn_transport_close_tail(transport);
+      return PN_EOS;
     }
   }
 
