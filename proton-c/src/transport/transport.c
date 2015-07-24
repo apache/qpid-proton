@@ -1009,14 +1009,15 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
   return framecount;
 }
 
-static int pni_post_close(pn_transport_t *transport, const char *condition, const char *description)
+static int pni_post_close(pn_transport_t *transport, pn_condition_t *cond)
 {
-  pn_condition_t *cond = NULL;
-  if (transport->connection) {
+  if (!cond && transport->connection) {
     cond = pn_connection_condition(transport->connection);
   }
+  const char *condition = NULL;
+  const char *description = NULL;
   pn_data_t *info = NULL;
-  if (!condition && pn_condition_is_set(cond)) {
+  if (pn_condition_is_set(cond)) {
     condition = pn_condition_get_name(cond);
     description = pn_condition_get_description(cond);
     info = pn_condition_info(cond);
@@ -1065,15 +1066,6 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
     buf[0] = '\0';
   }
   va_end(ap);
-  if (!transport->close_sent) {
-    if (!transport->open_sent) {
-      pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[S]", OPEN, "");
-    }
-
-    pni_post_close(transport, condition, buf);
-    transport->close_sent = true;
-  }
-  transport->halt = true;
   pn_condition_t *cond = &transport->condition;
   if (!pn_condition_is_set(cond)) {
     pn_condition_set_name(cond, condition);
@@ -1095,6 +1087,15 @@ int pn_do_error(pn_transport_t *transport, const char *condition, const char *fm
   if (transport->trace & PN_TRACE_DRV) {
     pn_transport_logf(transport, "ERROR %s %s", condition, buf);
   }
+  if (!transport->close_sent) {
+    if (!transport->open_sent) {
+      pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[S]", OPEN, "");
+    }
+
+    pni_post_close(transport, &transport->condition);
+    transport->close_sent = true;
+  }
+  transport->halt = true;
   transport->done_processing = true;
   pni_close_tail(transport);
   return PN_ERR;
@@ -2352,7 +2353,7 @@ static int pni_process_conn_teardown(pn_transport_t *transport, pn_endpoint_t *e
   {
     if (endpoint->state & PN_LOCAL_CLOSED && !transport->close_sent) {
       if (pni_pointful_buffering(transport, NULL)) return 0;
-      int err = pni_post_close(transport, NULL, NULL);
+      int err = pni_post_close(transport, NULL);
       if (err) return err;
       transport->close_sent = true;
     }
