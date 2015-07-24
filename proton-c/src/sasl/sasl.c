@@ -288,7 +288,6 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   pni_sasl_t *sasl = transport->sasl;
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
@@ -361,7 +360,6 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
-    pn_transport_logf(transport, "SASL max buffer: %d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else if (sasl->client) {
     return pni_passthru_layer.process_output(transport, layer, bytes, available );

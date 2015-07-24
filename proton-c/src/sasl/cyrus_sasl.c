@@ -390,7 +390,6 @@ bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
   }
   int ssf = *(int *) value;
   if (ssf > 0) {
-    pn_transport_logf(transport, "SASL Encryption enabled: ssf=%d", ssf);
     return true;
   }
   return false;
