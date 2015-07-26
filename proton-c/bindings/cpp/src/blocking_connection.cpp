@@ -21,9 +21,11 @@
 #include "proton/container.hpp"
 #include "proton/blocking_connection.hpp"
 #include "proton/blocking_sender.hpp"
+#include "proton/blocking_receiver.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"
 #include "proton/error.hpp"
+#include "fetcher.hpp"
 #include "msg.hpp"
 #include "blocking_connection_impl.hpp"
 #include "private_impl_ref.hpp"
@@ -55,6 +57,23 @@ void blocking_connection::wait(wait_condition &cond, std::string &msg, duration 
 blocking_sender blocking_connection::create_sender(const std::string &address, handler *h) {
     sender sender = impl_->container_.create_sender(impl_->connection_, address, h);
     return blocking_sender(*this, sender);
+}
+
+namespace {
+struct fetcher_guard{
+    fetcher_guard(fetcher &f) : fetcher_(f) { fetcher_.incref(); }
+    ~fetcher_guard() { fetcher_.decref(); }
+    fetcher& fetcher_;
+};
+}
+
+blocking_receiver blocking_connection::create_receiver(const std::string &address, int credit,
+                                                       bool dynamic, std::string name) {
+    fetcher *f = new fetcher(*this, credit);
+    fetcher_guard fg(*f);
+    receiver receiver = impl_->container_.create_receiver(impl_->connection_, address, dynamic, f);
+    blocking_receiver brcv(*this, receiver, *f, credit);
+    return brcv;
 }
 
 duration blocking_connection::timeout() { return impl_->timeout(); }

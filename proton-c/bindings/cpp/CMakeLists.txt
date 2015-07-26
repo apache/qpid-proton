@@ -64,10 +64,12 @@ set(qpid-proton-cpp-source
   src/value.cpp
   src/values.cpp
   src/proton_bits.cpp
+  src/fetcher.cpp
   src/blocking_connection.cpp
   src/blocking_connection_impl.cpp
   src/blocking_link.cpp
   src/blocking_sender.cpp
+  src/blocking_receiver.cpp
   src/contexts.cpp
   src/types.cpp
   )

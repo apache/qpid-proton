@@ -82,6 +82,14 @@ link messaging_event::link() {
     throw error(MSG("No link context for event"));
 }
 
+delivery messaging_event::delivery() {
+    if (type_ == messaging_event::PROTON)
+        return proton_event::delivery();
+    if (parent_event_)
+        return parent_event_->delivery();
+    throw error(MSG("No delivery context for event"));
+}
+
 message messaging_event::message() {
     if (parent_event_) {
         pn_message_t *m = event_context(parent_event_->pn_event());

@@ -48,7 +48,7 @@ class container_impl
     PN_CPP_EXTERN pn_reactor_t *reactor();
     PN_CPP_EXTERN sender create_sender(connection &connection, const std::string &addr, handler *h);
     PN_CPP_EXTERN sender create_sender(const url&);
-    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, handler *h);
+    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
     PN_CPP_EXTERN receiver create_receiver(const url&);
     PN_CPP_EXTERN class acceptor listen(const url&);
     PN_CPP_EXTERN std::string container_id();
@@ -59,6 +59,7 @@ class container_impl
     void stop();
     void wakeup();
     bool is_quiesced();
+    void yield();
     pn_handler_t *wrap_handler(handler *h);
     static void incref(container_impl *);
     static void decref(container_impl *);

@@ -55,6 +55,7 @@ blocking_link::blocking_link(blocking_connection *c, pn_link_t *pnl) : connectio
     std::string msg = "Opening link " + link_.name();
     link_opened link_opened(link_.pn_link());
     connection_.wait(link_opened, msg);
+    check_closed();
 }
 
 blocking_link::~blocking_link() {}
@@ -70,8 +71,7 @@ void blocking_link::check_closed() {
     pn_link_t * pn_link = link_.pn_link();
     if (pn_link_state(pn_link) & PN_REMOTE_CLOSED) {
         link_.close();
-        // TODO: link_detached exception
-        throw error(MSG("link detached"));
+        throw error(MSG("Link detached: " << link_.name()));
     }
 }
 

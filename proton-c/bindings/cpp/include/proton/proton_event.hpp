@@ -274,6 +274,7 @@ class proton_event : public event
     virtual PN_CPP_EXTERN class sender sender();
     virtual PN_CPP_EXTERN class receiver receiver();
     virtual PN_CPP_EXTERN class link link();
+    virtual PN_CPP_EXTERN class delivery delivery();
 
     /** Get type of event */
     PN_CPP_EXTERN event_type type();

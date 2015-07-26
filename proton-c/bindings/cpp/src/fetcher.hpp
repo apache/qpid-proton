@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_RECEIVER_H
-#define PROTON_CPP_RECEIVER_H
+#ifndef PROTON_CPP_FETCHER_H
+#define PROTON_CPP_FETCHER_H
 
 /*
  *
@@ -21,28 +21,38 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/link.hpp"
-#include "proton/types.h"
+#include "proton/container.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/blocking_connection.hpp"
+#include "proton/error.hpp"
+#include "msg.hpp"
 #include <string>
-
-struct pn_connection_t;
+#include <deque>
 
 namespace proton {
 
-/// A receiving link
-class receiver : public link
-{
+class fetcher : public messaging_handler {
+  private:
+    blocking_connection connection_;
+    std::deque<message> messages_;
+    std::deque<delivery> deliveries_;
+    std::deque<delivery> unsettled_;
+    int refcount_;
+    pn_link_t *pn_link_;
   public:
-    PN_CPP_EXTERN receiver(pn_link_t *lnk);
-    PN_CPP_EXTERN receiver();
-    PN_CPP_EXTERN receiver(const link& c);
-    PN_CPP_EXTERN void flow(int count);
-  protected:
-    PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);
+    fetcher(blocking_connection &c, int p);
+    void incref();
+    void decref();
+    void on_message(event &e);
+    void on_link_error(event &e);
+    void on_connection_error(event &e);
+    void on_link_init(event &e);
+    bool has_message();
+    message pop();
+    void settle(delivery::state state = delivery::NONE);
 };
+
 
 }
 
-#endif  /*!PROTON_CPP_RECEIVER_H*/
+#endif  /*!PROTON_CPP_FETCHER_H*/

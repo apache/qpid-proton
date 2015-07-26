@@ -81,9 +81,9 @@ class container : public handle<container_impl>
     PN_CPP_EXTERN sender create_sender(const proton::url &);
 
     /** Create a receiver on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, handler *h=0);
+    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, bool dynamic=false, handler *h=0);
 
-    /** Create a receiver on connection with source=addr and optional handler h */
+    /** Create a receiver on connection with source=url.path() */
     PN_CPP_EXTERN receiver create_receiver(const url &);
 
     /** Open a connection to url and create a receiver with source=url.path() */
@@ -103,6 +103,7 @@ class container : public handle<container_impl>
 
     PN_CPP_EXTERN void wakeup();
     PN_CPP_EXTERN bool is_quiesced();
+    PN_CPP_EXTERN void yield();
 private:
    friend class private_impl_ref<container>;
 };

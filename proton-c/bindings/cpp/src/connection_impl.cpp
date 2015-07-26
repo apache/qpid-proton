@@ -103,6 +103,10 @@ connection &connection_impl::connection() {
 
 container &connection_impl::container() { return (container_); }
 
+
+// TODO: Rework this.  Rename and document excellently for user handlers on connections.
+// Better: provide general solution for handlers that delete before the C reactor object
+// has finished sending events.
 void connection_impl::reactor_detach() {
     // "save" goes out of scope last, preventing possible recursive destructor
     // confusion with reactor_reference.

@@ -57,6 +57,10 @@ class link event::link() {
     throw error(MSG("No link context for event"));
 }
 
+class delivery event::delivery() {
+    throw error(MSG("No link context for event"));
+}
+
 class message event::message() {
     throw error(MSG("No message associated with event"));
 }

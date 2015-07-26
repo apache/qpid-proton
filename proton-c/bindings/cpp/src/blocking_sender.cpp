@@ -44,7 +44,7 @@ blocking_sender::blocking_sender(blocking_connection &c, sender &l) : blocking_l
         wait_for_closed();
         link_.close();
         std::string txt = "Failed to open sender " + link_.name() + ", target does not match";
-        throw error(MSG("container not started"));
+        throw error(MSG(txt));
     }
 }
 

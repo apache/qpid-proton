@@ -40,5 +40,8 @@ void receiver::verify_type(pn_link_t *lnk) {
         throw error(MSG("Creating receiver with sender context"));
 }
 
+void receiver::flow(int count) {
+    pn_link_flow(pn_link(), count);
+}
 
 }

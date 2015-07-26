@@ -22,43 +22,28 @@
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/blocking_sender.hpp"
+#include "proton/blocking_receiver.hpp"
+#include "proton/duration.hpp"
 
 #include <iostream>
-
-class hello_world_blocking : public proton::messaging_handler {
-  private:
-    proton::url url;
-
-  public:
-
-    hello_world_blocking(const proton::url& u) : url(u) {}
-
-    void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
-        e.container().create_receiver(conn, url.path());
-    }
-
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
-        e.connection().close();
-    }
-
-};
 
 int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
-
         proton::blocking_connection conn(url);
+        proton::blocking_receiver receiver = conn.create_receiver(url.path());
         proton::blocking_sender sender = conn.create_sender(url.path());
+
         proton::message m;
         m.body("Hello World!");
         sender.send(m);
-        conn.close();
 
-        // TODO Temporary hack until blocking receiver available
-        hello_world_blocking hw(url);
-        proton::container(hw).run();
+        proton::duration timeout(30000);
+        proton::message m2 = receiver.receive(timeout);
+        std::cout << m2.body() << std::endl;
+        receiver.accept();
+
+        conn.close();
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

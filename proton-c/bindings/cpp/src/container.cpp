@@ -72,8 +72,8 @@ sender container::create_sender(const proton::url &url) {
     return impl_->create_sender(url);
 }
 
-receiver container::create_receiver(connection &connection, const std::string &addr, handler *h) {
-    return impl_->create_receiver(connection, addr, h);
+receiver container::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
+    return impl_->create_receiver(connection, addr, dynamic, h);
 }
 
 receiver container::create_receiver(const proton::url &url) {
@@ -91,5 +91,6 @@ bool container::process() { return impl_->process(); }
 void container::stop() { impl_->stop(); }
 void container::wakeup() { impl_->wakeup(); }
 bool container::is_quiesced() { return impl_->is_quiesced(); }
+void container::yield() { impl_->yield(); }
 
 }

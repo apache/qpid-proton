@@ -52,6 +52,8 @@ class event {
     virtual PN_CPP_EXTERN class receiver receiver();
     /// Get link @throws error if no link.
     virtual PN_CPP_EXTERN class link link();
+    /// Get delivey @throws error if no delivery.
+    virtual PN_CPP_EXTERN class delivery delivery();
     /// Get message @throws error if no message.
     virtual PN_CPP_EXTERN class message message();
     /// Get message @throws error if no message.

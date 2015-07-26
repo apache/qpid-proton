@@ -78,6 +78,13 @@ link proton_event::link() {
     throw error(MSG("No link context for this event"));
 }
 
+delivery proton_event::delivery() {
+    pn_delivery_t *dlv = pn_event_delivery(pn_event());
+    if (dlv)
+        return proton::delivery(dlv);
+    throw error(MSG("No delivery context for this event"));
+}
+
 
 
 

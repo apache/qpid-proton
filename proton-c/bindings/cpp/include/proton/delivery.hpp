@@ -56,7 +56,8 @@ class delivery : public proton_handle<pn_delivery_t>
     /** Settle the delivery, informs the remote end. */
     PN_CPP_EXTERN void settle();
 
-    // TODO aconway 2015-07-15: add update() here?
+    /** Set the local state of the delivery. */
+    PN_CPP_EXTERN void update(delivery::state state);
 
     PN_CPP_EXTERN pn_delivery_t *pn_delivery();
   private:

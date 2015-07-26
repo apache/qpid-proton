@@ -148,6 +148,9 @@ void cpp_handler_dispatch(pn_handler_t *c_handler, pn_event_t *cevent, pn_event_
     container c(inbound_context::get(c_handler)->container_impl_);
     messaging_event mevent(cevent, type, c);
     mevent.dispatch(*inbound_context::get(c_handler)->cpp_handler_);
+    // Possible decref and deletion via a handler action on this event.
+    // return without further processing.
+    return;
 }
 
 void cpp_handler_cleanup(pn_handler_t *c_handler)
@@ -199,7 +202,7 @@ container_impl::~container_impl() {
 connection container_impl::connect(const proton::url &url, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
     container ctnr(this);
-    connection conn(ctnr, handler_);
+    connection conn(ctnr, h);
     connector *ctor = new connector(conn);
     // connector self-deletes depending on reconnect logic
     ctor->address(url);  // TODO: url vector
@@ -238,7 +241,9 @@ sender container_impl::create_sender(connection &connection, const std::string &
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     if (h) {
         pn_record_t *record = pn_link_attachments(lnk);
-        pn_record_set_handler(record, wrap_handler(h));
+        pn_handler_t *chandler = wrap_handler(h);
+        pn_record_set_handler(record, chandler);
+        pn_decref(chandler);
     }
     snd.open();
     return snd;
@@ -255,16 +260,21 @@ sender container_impl::create_sender(const proton::url &url) {
     return snd;
 }
 
-receiver container_impl::create_receiver(connection &connection, const std::string &addr, handler *h) {
+receiver container_impl::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
     connection_impl *conn_impl = impl(connection);
     session session = default_session(conn_impl->pn_connection_, &conn_impl->default_session_);
     receiver rcv = session.create_receiver(container_id_ + '-' + addr);
     pn_link_t *lnk = rcv.pn_link();
-    pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
+    pn_terminus_t *src = pn_link_source(lnk);
+    pn_terminus_set_address(src, addr.c_str());
+    if (dynamic)
+        pn_terminus_set_dynamic(src, true);
     if (h) {
         pn_record_t *record = pn_link_attachments(lnk);
-        pn_record_set_handler(record, wrap_handler(h));
+        pn_handler_t *chandler = wrap_handler(h);
+        pn_record_set_handler(record, chandler);
+        pn_decref(chandler);
     }
     rcv.open();
     return rcv;
@@ -358,6 +368,11 @@ void container_impl::wakeup() {
 bool container_impl::is_quiesced() {
     if (!reactor_) throw error(MSG("container not started"));
     return pn_reactor_quiesced(reactor_);
+}
+
+void container_impl::yield() {
+    if (!reactor_) throw error(MSG("container not started"));
+    pn_reactor_yield(reactor_);
 }
 
 }

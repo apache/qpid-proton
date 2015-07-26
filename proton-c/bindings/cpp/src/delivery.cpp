@@ -52,6 +52,10 @@ void delivery::settle() {
     pn_delivery_settle(impl_);
 }
 
+void delivery::update(delivery::state state) {
+    pn_delivery_update(impl_, state);
+}
+
 pn_delivery_t *delivery::pn_delivery() { return impl_; }
 
 }

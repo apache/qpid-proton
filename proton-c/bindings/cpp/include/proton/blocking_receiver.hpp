@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_BLOCKINGCONNECTIONIMPL_H
-#define PROTON_CPP_BLOCKINGCONNECTIONIMPL_H
+#ifndef PROTON_CPP_BLOCKING_RECEIVER_HPP
+#define PROTON_CPP_BLOCKING_RECEIVER_HPP
 
 /*
  *
@@ -22,41 +22,39 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/endpoint.hpp"
 #include "proton/container.hpp"
+#include "proton/blocking_link.hpp"
+#include "proton/duration.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/types.h"
+#include "proton/delivery.h"
 #include <string>
-
-struct pn_connection_t;
 
 namespace proton {
 
-class handler;
-class container;
-class ssl_domain;
+class blocking_connection;
+class blocking_link;
+class fetcher;
 
- class blocking_connection_impl : public messaging_handler
+class blocking_receiver : public blocking_link
 {
   public:
-    PN_CPP_EXTERN blocking_connection_impl(const url &url, duration d, ssl_domain *ssld, container *c);
-    PN_CPP_EXTERN ~blocking_connection_impl();
-    PN_CPP_EXTERN void close();
-    PN_CPP_EXTERN void wait(wait_condition &condition);
-    PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg, duration timeout);
-    PN_CPP_EXTERN pn_connection_t *pn_blocking_connection();
-    duration timeout() { return timeout_; }
-    static void incref(blocking_connection_impl *);
-    static void decref(blocking_connection_impl *);
+    PN_CPP_EXTERN blocking_receiver(const blocking_receiver&);
+    PN_CPP_EXTERN blocking_receiver& operator=(const blocking_receiver&);
+    PN_CPP_EXTERN ~blocking_receiver();
+    PN_CPP_EXTERN message receive();
+    PN_CPP_EXTERN message receive(duration timeout);
+    PN_CPP_EXTERN void accept();
+    PN_CPP_EXTERN void reject();
+    PN_CPP_EXTERN void release(bool delivered = true);
+    PN_CPP_EXTERN void settle();
+    PN_CPP_EXTERN void settle(delivery::state state);
   private:
+    blocking_receiver(blocking_connection &c, receiver &l, fetcher &f, int credit);
+    fetcher &fetcher_;
     friend class blocking_connection;
-    container container_;
-    connection connection_;
-    url url_;
-    duration timeout_;
-    int refcount_;
 };
-
 
 }
 
-#endif  /*!PROTON_CPP_BLOCKINGCONNECTIONIMPL_H*/
+#endif  /*!PROTON_CPP_BLOCKING_RECEIVER_HPP*/
