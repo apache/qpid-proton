@@ -51,12 +51,6 @@ public class DeliveryImpl implements Delivery
     private DeliveryState _remoteDeliveryState;
     private DeliveryState _defaultDeliveryState = null;
 
-    private static final int DELIVERY_STATE_CHANGED = 1;
-    private static final int ABLE_TO_SEND = 2;
-    private static final int IO_WORK = 4;
-    private static final int DELIVERY_SETTLED = 8;
-
-
     /**
      * A bit-mask representing the outstanding work on this delivery received from the transport layer
      * that has not yet been processed by the application.

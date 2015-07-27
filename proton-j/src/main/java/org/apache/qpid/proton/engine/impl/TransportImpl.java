@@ -77,10 +77,10 @@ public class TransportImpl extends EndpointImpl
     }
 
     private static final boolean FRM_ENABLED = getBooleanEnv("PN_TRACE_FRM");
-    private static final int TRACE_FRAME_PAYLOAD_LENGTH = Integer.getInteger("proton.trace_frame_payload_length", 80);
+    private static final int TRACE_FRAME_PAYLOAD_LENGTH = Integer.getInteger("proton.trace_frame_payload_length", 1024);
 
     // trace levels
-    private int _levels = (FRM_ENABLED ? this.TRACE_FRM : 0);
+    private int _levels = (FRM_ENABLED ? TRACE_FRM : 0);
 
     private FrameParser _frameParser;
 
@@ -190,9 +190,6 @@ public class TransportImpl extends EndpointImpl
         return _remoteMaxFrameSize;
     }
 
-    /**
-     * TODO propagate the new value to {@link #_outputProcessor} etc
-     */
     @Override
     public void setMaxFrameSize(int maxFrameSize)
     {
@@ -492,17 +489,6 @@ public class TransportImpl extends EndpointImpl
         }
     }
 
-    private void dumpQueue(String msg)
-    {
-        System.out.print("  " + msg + "{");
-        DeliveryImpl dlv = _connectionEndpoint.getTransportWorkHead();
-        while (dlv != null) {
-            System.out.print(new Binary(dlv.getTag()) + ", ");
-            dlv = dlv.getTransportWorkNext();
-        }
-        System.out.println("}");
-    }
-
     private void processTransportWork()
     {
         if(_connectionEndpoint != null)
@@ -573,7 +559,6 @@ public class TransportImpl extends EndpointImpl
 
             transfer.setMessageFormat(UnsignedInteger.ZERO);
 
-            // TODO - large frames
             ByteBuffer payload = delivery.getData() ==  null ? null :
                 ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(),
                                 delivery.getDataLength());
@@ -1604,20 +1589,24 @@ public class TransportImpl extends EndpointImpl
 
     void log(String event, TransportFrame frame)
     {
-        if ((_levels & TRACE_FRM) != 0) {
+        if (isTraceFramesEnabled()) {
             StringBuilder msg = new StringBuilder();
             msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
             msg.append(" ").append(event).append(" ").append(frame.getBody());
-            if (frame.getPayload() != null) {
-                String payload = frame.getPayload().toString();
-                if (payload.length() > TRACE_FRAME_PAYLOAD_LENGTH) {
-                    payload = payload.substring(0, TRACE_FRAME_PAYLOAD_LENGTH) + "(" + payload.length() + ")";
-                }
-                msg.append(" \"").append(payload).append("\"");
+
+            Binary bin = frame.getPayload();
+            if (bin != null) {
+                msg.append(" (").append(bin.getLength()).append(") ");
+                msg.append(StringUtils.toQuotedString(bin, TRACE_FRAME_PAYLOAD_LENGTH, true));
             }
             System.out.println(msg.toString());
         }
+    }
+
+    boolean isTraceFramesEnabled()
+    {
+        return (_levels & TRACE_FRM) != 0;
     }
 
     @Override
