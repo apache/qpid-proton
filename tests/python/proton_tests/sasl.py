@@ -459,6 +459,7 @@ class SASLEventTest(engine.CollectorTest):
     self.collector = Collector()
 
   def testNormalAuthenticationClient(self):
+    common.ensureCanTestExtendedSASL()
     self.c1.collect(self.collector)
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
@@ -468,6 +469,7 @@ class SASLEventTest(engine.CollectorTest):
                 Event.CONNECTION_REMOTE_OPEN)
 
   def testNormalAuthenticationServer(self):
+    common.ensureCanTestExtendedSASL()
     self.c2.collect(self.collector)
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
@@ -477,6 +479,7 @@ class SASLEventTest(engine.CollectorTest):
                 Event.CONNECTION_REMOTE_OPEN)
 
   def testFailedAuthenticationClient(self):
+    common.ensureCanTestExtendedSASL()
     clientUser = "usr@proton"
     self.c1.user = clientUser
     self.c1.collect(self.collector)
@@ -489,6 +492,7 @@ class SASLEventTest(engine.CollectorTest):
                 Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
   def testFailedAuthenticationServer(self):
+    common.ensureCanTestExtendedSASL()
     clientUser = "usr@proton"
     self.c1.user = clientUser
     self.c2.collect(self.collector)
@@ -501,6 +505,7 @@ class SASLEventTest(engine.CollectorTest):
                 Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
   def testNoMechClient(self):
+    common.ensureCanTestExtendedSASL()
     self.c1.collect(self.collector)
     self.s2.allowed_mechs('IMPOSSIBLE')
     self.t1.bind(self.c1)
@@ -512,6 +517,7 @@ class SASLEventTest(engine.CollectorTest):
                 Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
 
   def testNoMechServer(self):
+    common.ensureCanTestExtendedSASL()
     self.c2.collect(self.collector)
     self.s2.allowed_mechs('IMPOSSIBLE')
     self.t1.bind(self.c1)
@@ -537,6 +543,26 @@ class SASLEventTest(engine.CollectorTest):
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
     _testSaslMech(self, 'IMPOSSIBLE', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testDisallowedPlainClient(self):
+    self.c1.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'PLAIN', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testDisallowedPlainServer(self):
+    self.c2.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'PLAIN', authenticated=False)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
                 Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
                 Event.TRANSPORT_TAIL_CLOSED,
