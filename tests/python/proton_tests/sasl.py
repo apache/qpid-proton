@@ -20,6 +20,7 @@ from __future__ import absolute_import
 
 import sys, os
 from . import common
+from . import engine
 
 from proton import *
 from .common import pump, Skipped
@@ -38,9 +39,10 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
 
   pump(self.t1, self.t2, 1024)
 
-  if encrypted:
+  if encrypted is not None:
     assert self.t2.encrypted == encrypted
     assert self.t1.encrypted == encrypted
+
   assert self.t2.authenticated == authenticated
   assert self.t1.authenticated == authenticated
   if authenticated:
@@ -293,7 +295,7 @@ class SaslTest(Test):
     assert self.s1.outcome != SASL.OK
     assert self.s2.outcome != SASL.OK
 
-class CyrusSASLTest(Test):
+class SASLMechTest(Test):
   def setup(self):
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
@@ -307,19 +309,19 @@ class CyrusSASLTest(Test):
 
     self.c2 = Connection()
 
-  def testMechANON(self):
+  def testANON(self):
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
     _testSaslMech(self, 'ANONYMOUS', authUser='anonymous')
 
-  def testMechCRAMMD5(self):
+  def testCRAMMD5(self):
     common.ensureCanTestExtendedSASL()
 
     self.t1.bind(self.c1)
     self.t2.bind(self.c2)
     _testSaslMech(self, 'CRAM-MD5')
 
-  def testMechDIGESTMD5(self):
+  def testDIGESTMD5(self):
     common.ensureCanTestExtendedSASL()
 
     self.t1.bind(self.c1)
@@ -329,7 +331,7 @@ class CyrusSASLTest(Test):
 # SCRAM not supported before Cyrus SASL 2.1.26
 # so not universal and hance need a test for support
 # to keep it in tests.
-#  def testMechSCRAMSHA1(self):
+#  def testSCRAMSHA1(self):
 #    common.ensureCanTestExtendedSASL()
 #
 #    self.t1.bind(self.c1)
@@ -438,3 +440,104 @@ class SSLSASLTest(Test):
     ssl2 = _sslConnection(self.server_domain, self.t2, self.c2)
 
     _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)
+
+class SASLEventTest(engine.CollectorTest):
+  def setup(self):
+    engine.CollectorTest.setup(self)
+    self.t1 = Transport()
+    self.s1 = SASL(self.t1)
+    self.t2 = Transport(Transport.SERVER)
+    self.s2 = SASL(self.t2)
+
+    self.c1 = Connection()
+    self.c1.user = 'user@proton'
+    self.c1.password = 'password'
+    self.c1.hostname = 'localhost'
+
+    self.c2 = Connection()
+
+    self.collector = Collector()
+
+  def testNormalAuthenticationClient(self):
+    self.c1.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5')
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.CONNECTION_REMOTE_OPEN)
+
+  def testNormalAuthenticationServer(self):
+    self.c2.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5')
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.CONNECTION_REMOTE_OPEN)
+
+  def testFailedAuthenticationClient(self):
+    clientUser = "usr@proton"
+    self.c1.user = clientUser
+    self.c1.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5', clientUser=clientUser, authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testFailedAuthenticationServer(self):
+    clientUser = "usr@proton"
+    self.c1.user = clientUser
+    self.c2.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5', clientUser=clientUser, authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testNoMechClient(self):
+    self.c1.collect(self.collector)
+    self.s2.allowed_mechs('IMPOSSIBLE')
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testNoMechServer(self):
+    self.c2.collect(self.collector)
+    self.s2.allowed_mechs('IMPOSSIBLE')
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'DIGEST-MD5', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testDisallowedMechClient(self):
+    self.c1.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'IMPOSSIBLE', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
+
+  def testDisallowedMechServer(self):
+    self.c2.collect(self.collector)
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'IMPOSSIBLE', authenticated=False)
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND,
+                Event.CONNECTION_LOCAL_OPEN, Event.TRANSPORT,
+                Event.TRANSPORT_TAIL_CLOSED,
+                Event.TRANSPORT_ERROR, Event.TRANSPORT_HEAD_CLOSED, Event.TRANSPORT_CLOSED)
