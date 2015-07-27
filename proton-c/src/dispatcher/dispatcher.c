@@ -78,7 +78,7 @@ static int pni_dispatch_frame(pn_transport_t * transport, pn_data_t *args, pn_fr
 {
   if (frame.size == 0) { // ignore null frames
     if (transport->trace & PN_TRACE_FRM)
-      pn_transport_logf(transport, "%u <- (EMPTY FRAME)\n", frame.channel);
+      pn_transport_logf(transport, "%u <- (EMPTY FRAME)", frame.channel);
     return 0;
   }
 
