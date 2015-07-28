@@ -761,7 +761,7 @@ void pn_clear_modified(pn_connection_t *connection, pn_endpoint_t *endpoint)
     // the modified list (see pni_preserve_child() - the endpoint is considered
     // 'bound').  This increment/decrement will re-run the finalize in this
     // case.
-    if (endpoint != &connection->endpoint && endpoint->freed && !endpoint->referenced) {
+    if (endpoint != &connection->endpoint) {
         pn_incref(endpoint);
         pn_decref(endpoint);
     }
