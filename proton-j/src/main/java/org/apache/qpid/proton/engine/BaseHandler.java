@@ -20,8 +20,8 @@
  */
 package org.apache.qpid.proton.engine;
 
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 
 
 /**
@@ -48,7 +48,7 @@ public class BaseHandler implements CoreHandler
         ext.attachments().set(Handler.class, Handler.class, handler);
     }
 
-    private HashSet<Handler> children = new HashSet<Handler>();
+    private LinkedHashSet<Handler> children = new LinkedHashSet<Handler>();
 
     @Override public void onConnectionInit(Event e) { onUnhandled(e); }
     @Override public void onConnectionLocalOpen(Event e) { onUnhandled(e); }
