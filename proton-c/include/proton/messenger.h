@@ -132,6 +132,27 @@ extern "C" {
  * ::pn_messenger_recv() will do whatever they can without blocking,
  * and then return. You can then look at the number of incoming and
  * outgoing messages to see how much outstanding work still remains.
+ *
+ * Authentication Mechanims
+ * ========================
+ *
+ * The messenger API authenticates using some specific mechanisms. In prior versions
+ * of Proton the only authentication mechanism available was the PLAIN mechanism
+ * which transports the user's password over the network unencrypted. The Proton versions
+ * 0.10 and newer support other more secure mechanisms which avoid sending the users's
+ * password over the network unencrypted. For backwards compatibility the 0.10 version
+ * of the messenger API will also allow the use of the unencrypted PLAIN mechanism. From the
+ * 0.11 version and onwards you will need to set the flag PN_FLAGS_ALLOW_INSECURE_MECHS to
+ * carry on using the unencrypted PLAIN mechanism.
+ *
+ * The code for this looks like:
+ *
+ *   ...
+ *   pn_messenger_set_flags(messenger, PN_FLAGS_ALLOW_INSECURE_MECHS);
+ *   ...
+ *
+ * Note that the use of the PLAIN mechanism over an SSL connection is allowed as the
+ * password is not sent unencrypted.
  */
 typedef struct pn_messenger_t pn_messenger_t;
 
@@ -959,6 +980,11 @@ PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
   (0x1) /** Messenger flag to indicate that a call                             \
             to pn_messenger_start should check that                            \
             any defined routes are valid */
+
+#define PN_FLAGS_ALLOW_INSECURE_MECHS                                          \
+  (0x2) /** Messenger flag to indicate that the PLAIN                          \
+            mechanism is allowed on an unencrypted                             \
+            connection */
 
 /** Sets control flags to enable additional function for the Messenger.
  *

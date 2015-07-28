@@ -334,7 +334,10 @@ static void pni_listener_readable(pn_selectable_t *sel)
 
   pn_transport_t *t = pn_transport();
   pn_transport_set_server(t);
-
+  if (ctx->messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS) {
+      pn_sasl_t *s = pn_sasl(t);
+      pn_sasl_set_allow_insecure_mechs(s, true);
+  }
   pn_ssl_t *ssl = pn_ssl(t);
   pn_ssl_init(ssl, ctx->domain, NULL);
 
@@ -661,7 +664,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->rewritten = pn_string(NULL);
     m->domain = pn_string(NULL);
     m->connection_error = 0;
-    m->flags = 0;
+    m->flags = PN_FLAGS_ALLOW_INSECURE_MECHS; // TODO: Change this back to 0 for the Proton 0.11 release
     m->snd_settle_mode = PN_SND_SETTLED;
     m->rcv_settle_mode = PN_RCV_FIRST;
     m->tracer = NULL;
@@ -1140,6 +1143,11 @@ void pn_messenger_process_connection(pn_messenger_t *messenger, pn_event_t *even
       pn_transport_unbind(pn_connection_transport(conn));
       pn_connection_reset(conn);
       pn_transport_t *t = pn_transport();
+      if (messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS &&
+          messenger->address.user && messenger->address.pass) {
+        pn_sasl_t *s = pn_sasl(t);
+        pn_sasl_set_allow_insecure_mechs(s, true);
+      }
       pn_transport_bind(t, conn);
       pn_decref(t);
       pn_transport_config(messenger, conn);
@@ -1671,6 +1679,10 @@ pn_connection_t *pn_messenger_resolve(pn_messenger_t *messenger, const char *add
   pn_connection_t *connection =
     pn_messenger_connection(messenger, sock, scheme, user, pass, host, port, NULL);
   pn_transport_t *transport = pn_transport();
+  if (messenger->flags & PN_FLAGS_ALLOW_INSECURE_MECHS && user && pass) {
+      pn_sasl_t *s = pn_sasl(transport);
+      pn_sasl_set_allow_insecure_mechs(s, true);
+  }
   pn_transport_bind(transport, connection);
   pn_decref(transport);
   pn_connection_ctx_t *ctx = (pn_connection_ctx_t *) pn_connection_get_context(connection);
