@@ -143,11 +143,14 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
 {
   pni_sasl_t *sasl = transport->sasl;
   if (sasl->last_state > desired_state) {
-    pn_transport_logf(transport, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
+    if (transport->trace & PN_TRACE_DRV)
+      pn_transport_logf(transport, "Trying to send SASL frame (%d), but illegal: already in later state (%d)", desired_state, sasl->last_state);
   } else if (sasl->client && !pni_sasl_is_client_state(desired_state)) {
-    pn_transport_logf(transport, "Trying to send server SASL frame (%d) on a client", desired_state);
+    if (transport->trace & PN_TRACE_DRV)
+      pn_transport_logf(transport, "Trying to send server SASL frame (%d) on a client", desired_state);
   } else if (!sasl->client && !pni_sasl_is_server_state(desired_state)) {
-    pn_transport_logf(transport, "Trying to send client SASL frame (%d) on a server", desired_state);
+    if (transport->trace & PN_TRACE_DRV)
+      pn_transport_logf(transport, "Trying to send client SASL frame (%d) on a server", desired_state);
   } else {
     // If we need to repeat CHALLENGE or RESPONSE frames adjust current state to seem
     // like they haven't been sent yet
@@ -313,6 +316,8 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   pni_sasl_t *sasl = transport->sasl;
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
+    if (transport->trace & PN_TRACE_DRV)
+      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
@@ -384,6 +389,8 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
+    if (transport->trace & PN_TRACE_DRV)
+      pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
   } else if (sasl->client) {
     return pni_passthru_layer.process_output(transport, layer, bytes, available );

@@ -40,7 +40,8 @@ static const char *amqp_service = "amqp";
 static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logger)
 {
     if (r!=SASL_OK) {
-        pn_transport_logf(logger, "sasl error: %s", conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL));
+        if (logger->trace & PN_TRACE_DRV)
+          pn_transport_logf(logger, "sasl error: %s", conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL));
         return false;
     }
     return true;
@@ -319,7 +320,8 @@ static void pni_process_server_result(pn_transport_t *transport, int result)
             const void* value;
             sasl_getprop(cyrus_conn, SASL_USERNAME, &value);
             sasl->username = (const char*) value;
-            pn_transport_logf(transport, "Authenticated user: %s with mechanism %s", sasl->username, sasl->selected_mechanism);
+            if (transport->trace & PN_TRACE_DRV)
+              pn_transport_logf(transport, "Authenticated user: %s with mechanism %s", sasl->username, sasl->selected_mechanism);
             pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
         case SASL_CONTINUE:
@@ -427,7 +429,8 @@ ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
     *out = pn_bytes(outlen, output);
     return outlen;
   }
-  pn_transport_logf(transport, "SASL encode error: %s", sasl_errdetail(cyrus_conn));
+  if (transport->trace & PN_TRACE_DRV)
+    pn_transport_logf(transport, "SASL encode error: %s", sasl_errdetail(cyrus_conn));
   return PN_ERR;
 }
 
@@ -443,7 +446,8 @@ ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
     *out = pn_bytes(outlen, output);
     return outlen;
   }
-  pn_transport_logf(transport, "SASL decode error: %s", sasl_errdetail(cyrus_conn));
+  if (transport->trace & PN_TRACE_DRV)
+    pn_transport_logf(transport, "SASL decode error: %s", sasl_errdetail(cyrus_conn));
   return PN_ERR;
 }
 
