@@ -77,12 +77,13 @@ struct pni_sasl_t {
   char *external_auth;
   int external_ssf;
   size_t max_encrypt_size;
-  pn_sasl_outcome_t outcome;
   pn_buffer_t* decoded_buffer;
   pn_buffer_t* encoded_buffer;
   pn_bytes_t bytes_out;
+  pn_sasl_outcome_t outcome;
   enum pni_sasl_state desired_state;
   enum pni_sasl_state last_state;
+  bool allow_insecure_mechs;
   bool client;
 };
 

@@ -328,6 +328,33 @@ class SASLMechTest(Test):
     self.t2.bind(self.c2)
     _testSaslMech(self, 'DIGEST-MD5')
 
+  # PLAIN shouldn't work without encryption without special setting
+  def testPLAINfail(self):
+    common.ensureCanTestExtendedSASL()
+
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'PLAIN', authenticated=False)
+
+  # Client won't accept PLAIN even if offered by server without special setting
+  def testPLAINClientFail(self):
+    common.ensureCanTestExtendedSASL()
+
+    self.s2.allow_insecure_mechs = True
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'PLAIN', authenticated=False)
+
+  # PLAIN will only work if both ends are specially set up
+  def testPLAIN(self):
+    common.ensureCanTestExtendedSASL()
+
+    self.s1.allow_insecure_mechs = True
+    self.s2.allow_insecure_mechs = True
+    self.t1.bind(self.c1)
+    self.t2.bind(self.c2)
+    _testSaslMech(self, 'PLAIN')
+
 # SCRAM not supported before Cyrus SASL 2.1.26
 # so not universal and hance need a test for support
 # to keep it in tests.

@@ -125,7 +125,7 @@ bool pni_init_client(pn_transport_t* transport) {
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
-    SASL_SEC_NOPLAINTEXT |
+      ( sasl->allow_insecure_mechs ? 0 : SASL_SEC_NOPLAINTEXT ) |
       ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
     secprops.min_ssf = 0;
     secprops.max_ssf = 2048;
@@ -258,7 +258,7 @@ bool pni_init_server(pn_transport_t* transport)
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
-      SASL_SEC_NOPLAINTEXT |
+      ( sasl->allow_insecure_mechs ? 0 : SASL_SEC_NOPLAINTEXT ) |
       ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
     secprops.min_ssf = 0;
     secprops.max_ssf = 2048;

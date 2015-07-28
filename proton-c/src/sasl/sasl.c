@@ -497,6 +497,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->bytes_out.start = NULL;
     sasl->desired_state = SASL_NONE;
     sasl->last_state = SASL_NONE;
+    sasl->allow_insecure_mechs = false;
 
     transport->sasl = sasl;
   }
@@ -591,6 +592,18 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
       pn_transport_t *transport = get_transport_internal(sasl0);
       pni_sasl_force_anonymous(transport);
     }
+}
+
+void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl0, bool insecure)
+{
+    pni_sasl_t *sasl = get_sasl_internal(sasl0);
+    sasl->allow_insecure_mechs = insecure;
+}
+
+bool pn_sasl_get_allow_insecure_mechs(pn_sasl_t *sasl0)
+{
+    pni_sasl_t *sasl = get_sasl_internal(sasl0);
+    return sasl->allow_insecure_mechs;
 }
 
 void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)

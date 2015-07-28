@@ -73,10 +73,10 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
   // Look for "PLAIN" in mechs
   found = strstr(mechs, PLAIN);
   // Make sure that string is separated and terminated, allowed
-  // and we have a username and password and connection is encrypted
+  // and we have a username and password and connection is encrypted or we allow insecure
   if (found && (found==mechs || found[-1]==' ') && (found[5]==0 || found[5]==' ') &&
       pni_included_mech(transport->sasl->included_mechanisms, pn_bytes(5, found)) &&
-      transport->sasl->external_ssf > 0 &&
+      (transport->sasl->external_ssf > 0 || transport->sasl->allow_insecure_mechs) &&
       transport->sasl->username && transport->sasl->password) {
     transport->sasl->selected_mechanism = pn_strdup(PLAIN);
     size_t usize = strlen(transport->sasl->username);

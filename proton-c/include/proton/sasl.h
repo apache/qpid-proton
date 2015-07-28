@@ -133,6 +133,30 @@ PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
  */
 PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
 
+/** Boolean to allow use of clear text authentication mechanisms
+ *
+ * By default the SASL layer is configured not to allow mechanisms that disclose
+ * the clear text of the password over an unencrypted AMQP connection. This specifically
+ * will disallow the use of the PLAIN mechanism without using SSL encryption.
+ *
+ * This default is to avoid disclosing password information accidentally over an
+ * insecure network.
+ *
+ * If you actually wish to use a clear text password unencrypted then you can use this
+ * API to set allow_insecure_mechs to true.
+ *
+ * @param[in] sasl the SASL layer
+ * @param[in] insecure set this to true to allow unencrypted PLAIN authentication.
+ *
+ */
+PN_EXTERN void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl, bool insecure);
+
+/** Return the current value for allow_insecure_mechs
+ *
+ * @param[in] sasl the SASL layer
+ */
+PN_EXTERN bool pn_sasl_get_allow_insecure_mechs(pn_sasl_t *sasl);
+
 /**
  * Set the sasl configuration name
  *

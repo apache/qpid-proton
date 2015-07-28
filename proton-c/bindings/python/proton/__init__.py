@@ -3450,6 +3450,17 @@ class SASL(Wrapper):
   def allowed_mechs(self, mechs):
     pn_sasl_allowed_mechs(self._sasl, mechs)
 
+  def _get_allow_insecure_mechs(self):
+    return pn_sasl_get_allow_insecure_mechs(self._sasl)
+
+  def _set_allow_insecure_mechs(self, insecure):
+    pn_sasl_set_allow_insecure_mechs(self._sasl, insecure)
+
+  allow_insecure_mechs = property(_get_allow_insecure_mechs, _set_allow_insecure_mechs,
+                                  doc="""
+Allow unencrypted cleartext passwords (PLAIN mech)
+""")
+
   def done(self, outcome):
     pn_sasl_done(self._sasl, outcome)
 
