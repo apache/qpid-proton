@@ -70,6 +70,7 @@ set(qpid-proton-cpp-source
   src/blocking_link.cpp
   src/blocking_sender.cpp
   src/blocking_receiver.cpp
+  src/sync_request_response.cpp
   src/contexts.cpp
   src/types.cpp
   )

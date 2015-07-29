@@ -50,6 +50,9 @@ blocking_connection::blocking_connection(const proton::url &url, duration d, ssl
 void blocking_connection::close() { impl_->close(); }
 
 void blocking_connection::wait(wait_condition &cond) { return impl_->wait(cond); }
+void blocking_connection::wait(wait_condition &cond, std::string &msg) {
+    return impl_->wait(cond, msg);
+}
 void blocking_connection::wait(wait_condition &cond, std::string &msg, duration timeout) {
     return impl_->wait(cond, msg, timeout);
 }
@@ -61,18 +64,22 @@ blocking_sender blocking_connection::create_sender(const std::string &address, h
 
 namespace {
 struct fetcher_guard{
-    fetcher_guard(fetcher &f) : fetcher_(f) { fetcher_.incref(); }
-    ~fetcher_guard() { fetcher_.decref(); }
-    fetcher& fetcher_;
+    fetcher_guard(fetcher *f) : fetcher_(f) { if (fetcher_) fetcher_->incref(); }
+    ~fetcher_guard() { if (fetcher_) fetcher_->decref(); }
+    fetcher* fetcher_;
 };
 }
 
 blocking_receiver blocking_connection::create_receiver(const std::string &address, int credit,
-                                                       bool dynamic, std::string name) {
-    fetcher *f = new fetcher(*this, credit);
-    fetcher_guard fg(*f);
-    receiver receiver = impl_->container_.create_receiver(impl_->connection_, address, dynamic, f);
-    blocking_receiver brcv(*this, receiver, *f, credit);
+                                                       bool dynamic, handler *handler, std::string name) {
+    fetcher *f = NULL;
+    if (!handler) {
+        f = new fetcher(*this, credit);
+        handler = f;
+    }
+    fetcher_guard fg(f);
+    receiver receiver = impl_->container_.create_receiver(impl_->connection_, address, dynamic, handler);
+    blocking_receiver brcv(*this, receiver, f, credit);
     return brcv;
 }
 

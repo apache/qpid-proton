@@ -102,6 +102,31 @@ class Broker(object):
         except Exception as e:
             raise Exception("Error running %s: %s", cmd, e)
 
+class Server(object):
+    """Run the test server"""
+
+    @classmethod
+    def get(cls, addr):
+        if not hasattr(cls, "_server"):
+            cls._server = Server(addr)
+        return cls._server
+
+    @classmethod
+    def stop(cls):
+        if cls.get(None) and cls._server.process:
+            cls._server.process.kill()
+            cls._server = None
+
+    def __init__(self, addr):
+        self.addr = addr
+        cmd = [exe_name("server"), "-a", self.addr]
+        try:
+            self.process = Popen(cmd, stdout=NULL, stderr=NULL)
+            time.sleep(0.3)
+
+        except Exception as e:
+            raise Exception("Error running %s: %s", cmd, e)
+
 class ExampleTest(unittest.TestCase):
     """Run the examples, verify they behave as expected."""
 
@@ -160,6 +185,21 @@ class ExampleTest(unittest.TestCase):
         recv_expect = "simple_recv listening on amqp://%s\n" % (b.addr)
         recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
         self.assertEqual(recv_expect, verify(recv))
+
+    def test_sync_request_response(self):
+        """Start server first, then run sync_client"""
+        b = Broker.get()
+        s = Server.get(b.addr)
+        expect = """
+"Twas brillig, and the slithy toves" => "TWAS BRILLIG, AND THE SLITHY TOVES"
+"Did gire and gymble in the wabe." => "DID GIRE AND GYMBLE IN THE WABE."
+"All mimsy were the borogroves," => "ALL MIMSY WERE THE BOROGROVES,"
+"And the mome raths outgrabe." => "AND THE MOME RATHS OUTGRABE."
+"""
+        sc = "\n"
+        sc += execute("sync_client", "-a", b.addr)
+        self.assertEqual(expect, sc)
+        Server.stop()
 
     def test_encode_decode(self):
         expect="""

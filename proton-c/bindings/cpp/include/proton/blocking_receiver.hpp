@@ -49,9 +49,21 @@ class blocking_receiver : public blocking_link
     PN_CPP_EXTERN void release(bool delivered = true);
     PN_CPP_EXTERN void settle();
     PN_CPP_EXTERN void settle(delivery::state state);
+    PN_CPP_EXTERN void flow(int count);
+    /** Credit available on the receiver link */
+    PN_CPP_EXTERN int credit();
+    /** Local source of the receiver link */
+    PN_CPP_EXTERN terminus source();
+    /** Local target of the receiver link */
+    PN_CPP_EXTERN terminus target();
+    /** Remote source of the receiver link */
+    PN_CPP_EXTERN terminus remote_source();
+    /** Remote target of the receiver link */
+    PN_CPP_EXTERN terminus remote_target();
+
   private:
-    blocking_receiver(blocking_connection &c, receiver &l, fetcher &f, int credit);
-    fetcher &fetcher_;
+    blocking_receiver(blocking_connection &c, receiver &l, fetcher *f, int credit);
+    fetcher *fetcher_;
     friend class blocking_connection;
 };
 

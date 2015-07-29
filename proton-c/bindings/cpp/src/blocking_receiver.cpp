@@ -39,11 +39,11 @@ struct fetcher_has_message : public wait_condition {
 } // namespace
 
 
-blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetcher &f, int credit)
+blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetcher *f, int credit)
     : blocking_link(&c, l.pn_link()), fetcher_(f) {
     std::string sa = link_.source().address();
     std::string rsa = link_.remote_source().address();
-    if (sa.empty() || sa.compare(rsa) != 0) {
+    if (!sa.empty() && sa.compare(rsa) != 0) {
         wait_for_closed();
         link_.close();
         std::string txt = "Failed to open receiver " + link_.name() + ", source does not match";
@@ -51,30 +51,38 @@ blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetche
     }
     if (credit)
         pn_link_flow(link_.pn_link(), credit);
-    fetcher_.incref();
+    if (fetcher_)
+        fetcher_->incref();
 }
 
 blocking_receiver::blocking_receiver(const blocking_receiver& r) : blocking_link(r), fetcher_(r.fetcher_) {
-    fetcher_.incref();
+    if (fetcher_)
+        fetcher_->incref();
 }
 blocking_receiver& blocking_receiver::operator=(const blocking_receiver& r) {
     if (this == &r) return *this;
     fetcher_ = r.fetcher_;
-    fetcher_.incref();
+    if (fetcher_)
+        fetcher_->incref();
     return *this;
 }
-blocking_receiver::~blocking_receiver() { fetcher_.decref(); }
+blocking_receiver::~blocking_receiver() {
+    if (fetcher_)
+        fetcher_->decref();
+}
 
 
 
 message blocking_receiver::receive(duration timeout) {
+    if (!fetcher_)
+        throw error(MSG("Can't call receive on this receiver as a handler was provided"));
     receiver rcv = link_;
     if (!rcv.credit())
         rcv.flow(1);
     std::string txt = "Receiving on receiver " + link_.name();
-    fetcher_has_message cond(fetcher_);
+    fetcher_has_message cond(*fetcher_);
     connection_.wait(cond, txt, timeout);
-    return fetcher_.pop();
+    return fetcher_->pop();
 }
 
 message blocking_receiver::receive() {
@@ -98,7 +106,35 @@ void blocking_receiver::release(bool delivered) {
 }
 
 void blocking_receiver::settle(delivery::state state = delivery::NONE) {
-    fetcher_.settle(state);
+    if (!fetcher_)
+        throw error(MSG("Can't call accept/reject etc on this receiver as a handler was provided"));
+    fetcher_->settle(state);
 }
+
+void blocking_receiver::flow(int count) {
+    receiver rcv(link_);
+    rcv.flow(count);
+}
+
+int blocking_receiver::credit() {
+    return link_.credit();
+}
+
+terminus blocking_receiver::source() {
+    return link_.source();
+}
+
+terminus blocking_receiver::target() {
+    return link_.target();
+}
+
+terminus blocking_receiver::remote_source() {
+    return link_.remote_source();
+}
+
+terminus blocking_receiver::remote_target() {
+    return link_.remote_target();
+}
+
 
 } // namespace

@@ -30,6 +30,8 @@ foreach(example
     simple_send
     direct_recv
     direct_send
+    sync_client
+    server
     encode_decode)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} qpid-proton-cpp)

@@ -64,7 +64,7 @@ class link : public endpoint, public proton_handle<pn_link_t>
     PN_CPP_EXTERN terminus target();
     /** Remote source of the link */
     PN_CPP_EXTERN terminus remote_source();
-    /** Remote source of the link */
+    /** Remote target of the link */
     PN_CPP_EXTERN terminus remote_target();
     /** Link name */
     PN_CPP_EXTERN std::string name();

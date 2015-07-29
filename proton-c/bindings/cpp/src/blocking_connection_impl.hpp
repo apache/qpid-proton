@@ -42,6 +42,7 @@ class ssl_domain;
     PN_CPP_EXTERN ~blocking_connection_impl();
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN void wait(wait_condition &condition);
+    PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg);
     PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg, duration timeout);
     PN_CPP_EXTERN pn_connection_t *pn_blocking_connection();
     duration timeout() { return timeout_; }

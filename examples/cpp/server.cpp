@@ -23,60 +23,68 @@
 
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/link.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 #include <map>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <string>
 
-
-
-class simple_recv : public proton::messaging_handler {
+class server : public proton::messaging_handler {
   private:
+    typedef std::map<std::string, proton::sender> sender_map;
     proton::url url;
-    int expected;
-    int received;
+    proton::connection connection;
+    sender_map senders;
+
   public:
 
-    simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
+    server(const proton::url &u) : url(u) {}
 
     void on_start(proton::event &e) {
-        e.container().create_receiver(url);
-        std::cout << "simple_recv listening on " << url << std::endl;
+        connection = e.container().connect(url);
+        e.container().create_receiver(connection, url.path());
+        std::cout << "server listening on " << url << std::endl;
     }
 
+    std::string to_upper(const std::string &s) {
+        std::string uc(s);
+        size_t l = uc.size();
+        for (size_t i=0; i<l; i++) uc[i] = std::toupper(uc[i]);
+        return uc;
+    }
+
+    // TODO: on_connection_opened() and ANONYMOUS-RELAY
+
     void on_message(proton::event &e) {
+        proton::sender sender;
         proton::message msg = e.message();
-        proton::value id = msg.id();
-        if (id.type() == proton::ULONG) {
-            if (id.get<int>() < received)
-                return; // ignore duplicate
+        std::cout << "Received " << msg.body() << std::endl;
+        std::string sender_id = msg.reply_to();
+        sender_map::iterator it = senders.find(sender_id);
+        if (it == senders.end()) {
+            sender = e.container().create_sender(connection, sender_id);
+            senders[sender_id] = sender;
         }
-        if (expected == 0 || received < expected) {
-            std::cout << msg.body() << std::endl;
-            received++;
-            if (received == expected) {
-                e.receiver().close();
-                e.connection().close();
-            }
+        else {
+            sender = it->second;
         }
+        proton::message reply;
+        reply.body(to_upper(msg.body().get<std::string>()));
+        reply.correlation_id(msg.correlation_id());
+        reply.address(sender_id);
+        sender.send(reply);
     }
 };
 
 int main(int argc, char **argv) {
     // Command line options
-    std::string address("127.0.0.1:5672/examples");
-    int message_count = 100;
+    proton::url url("amqp://127.0.0.1:5672/examples");
     options opts(argc, argv);
-    opts.add_value(address, 'a', "address", "connect to and receive from URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
-
+    opts.add_value(url, 'a', "address", "listen on URL", "URL");
     try {
         opts.parse();
-        simple_recv recv(address, message_count);
-        proton::container(recv).run();
+        server server(url);
+        proton::container(server).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

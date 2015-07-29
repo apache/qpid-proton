@@ -125,7 +125,7 @@ class options {
             if (arg.compare(0, long_.size(), long_) == 0 && arg[long_.size()] == '=' ) {
                 set_value(long_, arg.substr(long_.size()+1));
                 return true;
-            } 
+            }
             return false;
         }
 
