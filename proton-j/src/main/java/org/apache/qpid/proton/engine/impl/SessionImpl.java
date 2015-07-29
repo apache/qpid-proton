@@ -197,8 +197,6 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
 
     void freeReceiver(ReceiverImpl receiver)
     {
-        _receivers.remove(receiver.getName());
-
         String name = receiver.getName();
         ReceiverImpl existing = _receivers.get(name);
         if (receiver.equals(existing))
