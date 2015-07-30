@@ -29,6 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.transport.EmptyFrame;
 import org.apache.qpid.proton.amqp.transport.FrameBody;
 import org.apache.qpid.proton.codec.ByteBufferDecoder;
 import org.apache.qpid.proton.codec.DecodeException;
@@ -370,13 +371,14 @@ class FrameParser implements TransportInput
                     {
                         _framesInput += 1;
 
+                        Binary payload = null;
+                        Object val = null;
+
                         if (frameBodySize > 0)
                         {
                             _decoder.setByteBuffer(in);
-                            Object val = _decoder.readObject();
+                            val = _decoder.readObject();
                             _decoder.setByteBuffer(null);
-
-                            Binary payload;
 
                             if(in.hasRemaining())
                             {
@@ -388,41 +390,38 @@ class FrameParser implements TransportInput
                             {
                                 payload = null;
                             }
+                        }
+                        else
+                        {
+                            val = new EmptyFrame();
+                        }
 
-                            if(val instanceof FrameBody)
+                        if(val instanceof FrameBody)
+                        {
+                            FrameBody frameBody = (FrameBody) val;
+                            if(TRACE_LOGGER.isLoggable(Level.FINE))
                             {
-                                FrameBody frameBody = (FrameBody) val;
-                                if(TRACE_LOGGER.isLoggable(Level.FINE))
-                                {
-                                    TRACE_LOGGER.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
-                                }
-                                TransportFrame frame = new TransportFrame(channel, frameBody, payload);
+                                TRACE_LOGGER.log(Level.FINE, "IN: CH["+channel+"] : " + frameBody + (payload == null ? "" : "[" + payload + "]"));
+                            }
+                            TransportFrame frame = new TransportFrame(channel, frameBody, payload);
 
-                                if(_frameHandler.isHandlingFrames())
-                                {
-                                    _tail_closed = _frameHandler.handleFrame(frame);
-                                }
-                                else
-                                {
-                                    transportAccepting = false;
-                                    _heldFrame = frame;
-                                }
-
+                            if(_frameHandler.isHandlingFrames())
+                            {
+                                _tail_closed = _frameHandler.handleFrame(frame);
                             }
                             else
                             {
-                                throw new TransportException("Frameparser encountered a "
-                                        + (val == null? "null" : val.getClass())
-                                        + " which is not a " + FrameBody.class);
+                                transportAccepting = false;
+                                _heldFrame = frame;
                             }
                         }
                         else
                         {
-                            if(TRACE_LOGGER.isLoggable(Level.FINEST))
-                            {
-                                TRACE_LOGGER.finest("Ignored empty frame");
-                            }
+                            throw new TransportException("Frameparser encountered a "
+                                    + (val == null? "null" : val.getClass())
+                                    + " which is not a " + FrameBody.class);
                         }
+
                         reset();
                         in = oldIn;
                         oldIn = null;

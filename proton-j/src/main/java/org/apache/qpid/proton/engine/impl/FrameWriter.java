@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.amqp.Binary;
+import org.apache.qpid.proton.amqp.transport.EmptyFrame;
 import org.apache.qpid.proton.amqp.transport.FrameBody;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.codec.WritableBuffer;
@@ -166,7 +167,18 @@ class FrameWriter
                 }
 
                 Binary payloadBin = Binary.create(originalPayload);
-                TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, payloadBin);
+                FrameBody body = null;
+                if (frameBody == null)
+                {
+                    body = new EmptyFrame();
+                }
+                else
+                {
+                    body = (FrameBody) frameBody;
+                }
+
+                TransportFrame frame = new TransportFrame(channel, body, payloadBin);
+
                 _transport.log(TransportImpl.OUTGOING, frame);
 
                 if(tracer != null)
