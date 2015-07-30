@@ -83,3 +83,11 @@
    fun:CRYPTO_malloc
 }
 
+{
+   Known memory leak in cyrus-sasl (fixed in 2.1.26)
+   Memcheck:Leak
+   fun:malloc
+   fun:*
+   fun:sasl_config_init
+   fun:sasl_server_init
+}
