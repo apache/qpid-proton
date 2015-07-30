@@ -987,7 +987,7 @@ static void pn_condition_report(const char *pfx, pn_condition_t *condition)
 int pni_pump_in(pn_messenger_t *messenger, const char *address, pn_link_t *receiver)
 {
   pn_delivery_t *d = pn_link_current(receiver);
-  if (!pn_delivery_readable(d) && !pn_delivery_partial(d)) {
+  if (!pn_delivery_readable(d) || pn_delivery_partial(d)) {
     return 0;
   }
 
