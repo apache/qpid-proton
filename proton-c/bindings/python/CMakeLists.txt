@@ -65,9 +65,9 @@ set (pysrc
 
 macro (py_compile directory files artifacts)
   foreach (src_file ${files})
-    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m py_compile ${src_file}
+    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}c')\"
                                   WORKING_DIRECTORY ${directory})")
-    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -m py_compile ${src_file}
+    install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} -O -c \"import py_compile; py_compile.compile('${src_file}', cfile='${src_file}o')\"
                                   WORKING_DIRECTORY ${directory})")
     list(APPEND ${artifacts} ${directory}/${src_file}
       ${directory}/${src_file}c
