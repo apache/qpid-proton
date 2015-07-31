@@ -15,6 +15,7 @@
 *.pyo
 target
 
+# MacOS File
 .DS_Store
 
 # Start of Eclipse IDE files
