@@ -185,13 +185,13 @@ class BlockingConnection(Handler):
     """
     A synchronous style connection wrapper.
     """
-    def __init__(self, url, timeout=None, container=None, ssl_domain=None):
+    def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None):
         self.timeout = timeout
         self.container = container or Container()
         self.container.timeout = self.timeout
         self.container.start()
         self.url = Url(url).defaults()
-        self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False)
+        self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False, heartbeat=heartbeat)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 
