@@ -179,41 +179,6 @@ public interface Message
      */
     int encode(byte[] data, int offset, int length);
 
-    /**
-     * Loads message body from the {@code data}.
-     *
-     * @deprecated This method will be removed in a future release.
-     * @see #setMessageFormat(MessageFormat)
-     */
-    void load(Object data);
-
-    /**
-     * Return the message body in a format determined by {@link #getMessageFormat()}.
-     *
-     * @deprecated This method will be removed in a future release.
-     */
-    Object save();
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    String toAMQPFormat(Object value);
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    Object parseAMQPFormat(String value);
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    void setMessageFormat(MessageFormat format);
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    MessageFormat getMessageFormat();
-
     void clear();
 
     MessageError getError();

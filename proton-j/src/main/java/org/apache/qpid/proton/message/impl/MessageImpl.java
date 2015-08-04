@@ -28,14 +28,11 @@ import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedByte;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
 import org.apache.qpid.proton.amqp.messaging.*;
-import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.codec.*;
 import org.apache.qpid.proton.message.*;
 
 public class MessageImpl implements ProtonJMessage
 {
-    private final AMQPMessageFormat _parser = new AMQPMessageFormat();
-
     private Header _header;
     private DeliveryAnnotations _deliveryAnnotations;
     private MessageAnnotations _messageAnnotations;
@@ -43,7 +40,6 @@ public class MessageImpl implements ProtonJMessage
     private ApplicationProperties _applicationProperties;
     private Section _body;
     private Footer _footer;
-    private MessageFormat _format = MessageFormat.DATA;
     
     private static class EncoderDecoderPair {
       DecoderImpl decoder = new DecoderImpl();
@@ -746,123 +742,6 @@ public class MessageImpl implements ProtonJMessage
         encoder.setByteBuffer((WritableBuffer)null);
 
         return length - buffer.remaining();
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public void load(Object data)
-    {
-        switch (_format)
-        {
-            case DATA:
-                Binary binData;
-                if(data instanceof byte[])
-                {
-                    binData = new Binary((byte[])data);
-                }
-                else if(data instanceof Binary)
-                {
-                    binData = (Binary) data;
-                }
-                else if(data instanceof String)
-                {
-                    final String strData = (String) data;
-                    byte[] bin = new byte[strData.length()];
-                    for(int i = 0; i < bin.length; i++)
-                    {
-                        bin[i] = (byte) strData.charAt(i);
-                    }
-                    binData = new Binary(bin);
-                }
-                else
-                {
-                    binData = null;
-                }
-                _body = new Data(binData);
-                break;
-            case TEXT:
-                _body = new AmqpValue(data == null ? "" : data.toString());
-                break;
-            default:
-                // AMQP
-                _body = new AmqpValue(parseAMQPFormat((String) data));
-        }
-
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public Object save()
-    {
-        switch (_format)
-        {
-            case DATA:
-                if(_body instanceof Data)
-                {
-                    return ((Data)_body).getValue().getArray();
-                }
-                else return null;
-            case AMQP:
-                if(_body instanceof AmqpValue)
-                {
-                    return toAMQPFormat(((AmqpValue) _body).getValue());
-                }
-                else
-                {
-                    return null;
-                }
-            case TEXT:
-                if(_body instanceof AmqpValue)
-                {
-                    final Object value = ((AmqpValue) _body).getValue();
-                    return value == null ? "" : value.toString();
-                }
-                return null;
-            default:
-                return null;
-        }
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public String toAMQPFormat(Object value)
-    {
-        return _parser.encode(value);
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public Object parseAMQPFormat(String value)
-    {
-
-        Object obj = _parser.format(value);
-        return obj;
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public void setMessageFormat(MessageFormat format)
-    {
-        _format = format;
-    }
-
-    /**
-     * @deprecated This method will be removed in a future release.
-     */
-    @Override
-    public MessageFormat getMessageFormat()
-    {
-        return _format;
     }
 
     @Override

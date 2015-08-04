@@ -19,7 +19,6 @@
 from org.apache.qpid.proton import Proton
 from org.apache.qpid.proton.amqp.messaging import AmqpValue, AmqpSequence, \
   Data as DataSection
-from org.apache.qpid.proton.message import MessageFormat
 
 from ccodec import *
 from cerror import *
@@ -238,40 +237,5 @@ def pn_message_encode(msg, size):
   except BufferOverflowException, e:
     return PN_OVERFLOW, None
 
-
-MESSAGE_FORMAT_J2P = {
-  MessageFormat.DATA: PN_DATA,
-  MessageFormat.TEXT: PN_TEXT,
-  MessageFormat.AMQP: PN_AMQP,
-  MessageFormat.JSON: PN_JSON
-}
-
-MESSAGE_FORMAT_P2J = {
-  PN_DATA: MessageFormat.DATA,
-  PN_TEXT: MessageFormat.TEXT,
-  PN_AMQP: MessageFormat.AMQP,
-  PN_JSON: MessageFormat.JSON
-}
-
-
-def pn_message_set_format(msg, format):
-  msg.impl.setMessageFormat(MESSAGE_FORMAT_P2J[format])
-  return 0
-
 def pn_message_clear(msg):
   msg.impl.clear()
-
-def pn_message_load(msg, data):
-  msg.impl.load(data)
-  return 0
-
-from array import array as array_type
-
-def pn_message_save(msg, size):
-  data = msg.impl.save()
-  if data is None:
-    return 0, ""
-  elif isinstance(data, array_type):
-    return 0, data.tostring()
-  else:
-    return 0, data
