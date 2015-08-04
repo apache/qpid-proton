@@ -387,6 +387,23 @@ class MessagingHandler(Handler, Acking):
         self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
         self.handlers.append(IncomingMessageHandler(auto_accept, self))
         self.handlers.append(OutgoingMessageHandler(auto_settle, self))
+        self.fatal_conditions = ["amqp:unauthorized-access"]
+
+    def on_transport_error(self, event):
+        """
+        Called when some error is encountered with the transport over
+        which the AMQP connection is to be established. This includes
+        authentication errors as well as socket errors.
+        """
+        if event.transport.condition:
+            if event.transport.condition.info:
+                logging.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
+            else:
+                logging.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description))
+            if event.transport.condition.name in self.fatal_conditions:
+                event.connection.close()
+        else:
+            logging.error("Unspecified transport error")
 
     def on_connection_error(self, event):
         """
