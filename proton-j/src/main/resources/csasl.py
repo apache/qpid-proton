@@ -81,6 +81,9 @@ def pn_connection_set_password(connection, password):
 def pn_sasl_allowed_mechs(sasl, mechs):
   sasl.setMechanisms(*mechs.split())
 
+def pn_sasl_set_allow_insecure_mechs(sasl, insecure):
+  raise Skipped('Not supported in Proton-J')
+
 def pn_sasl_done(sasl, outcome):
   sasl.done(SASL_OUTCOMES_P2J[outcome])
 

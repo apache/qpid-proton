@@ -495,6 +495,8 @@ class Connector(Handler):
         self.heartbeat = None
         self.reconnect = None
         self.ssl_domain = None
+        self.allow_insecure_mechs = True
+        self.allowed_mechs = None
 
     def _connect(self, connection):
         url = self.address.next()
@@ -507,6 +509,10 @@ class Connector(Handler):
         if url.password:
             connection.password = url.password
         transport = Transport()
+        sasl = transport.sasl()
+        sasl.allow_insecure_mechs = self.allow_insecure_mechs
+        if self.allowed_mechs:
+            sasl.allowed_mechs(self.allowed_mechs)
         transport.bind(connection)
         if self.heartbeat:
             transport.idle_timeout = self.heartbeat
@@ -612,6 +618,8 @@ class Container(Reactor):
             self.global_handler = GlobalOverrides(kwargs.get('global_handler', self.global_handler))
             self.trigger = None
             self.container_id = str(generate_uuid())
+            self.allow_insecure_mechs = True
+            self.allowed_mechs = None
             Wrapper.__setattr__(self, 'subclass', self.__class__)
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None):
@@ -623,6 +631,8 @@ class Container(Reactor):
         conn.container = self.container_id or str(generate_uuid())
 
         connector = Connector(conn)
+        connector.allow_insecure_mechs = self.allow_insecure_mechs
+        connector.allowed_mechs = self.allowed_mechs
         conn._overrides = connector
         if url: connector.address = Urls([url])
         elif urls: connector.address = Urls(urls)
