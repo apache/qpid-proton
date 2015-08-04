@@ -688,7 +688,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
   } else {
     sasl->outcome = PN_SASL_PERM;
-    pni_sasl_set_desired_state(transport, SASL_ERROR);
+    pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
   }
 
   pn_free(mechs);
