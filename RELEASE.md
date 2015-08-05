@@ -13,7 +13,7 @@
   - e.g "md5sum qpid-proton-${TAG}.tar.gz > qpid-proton-${TAG}.tar.gz.md5"
 7. Deploy the Java binaries to a staging repo:
   - Run: "tar -xzf qpid-proton-${TAG}.tar.gz"
-  - Run: "cd qpid-proton-${VERSION}.tar.gz"
+  - Run: "cd qpid-proton-${VERSION}"
   - Run: "mvn deploy -Papache-release -DskipTests=true"
 8. Close the staging repo:
   - Log in at https://repository.apache.org/index.html#stagingRepositories
