@@ -76,6 +76,6 @@ WORKDIR=$(mktemp -d)
     tar -c -z \
         --owner=root --group=root --numeric-owner \
         --mtime="${MTIME}" \
-        -f ${ARCHIVE} .
+        -f ${ARCHIVE} ${PREFIX}
     echo "${ARCHIVE}"
 )
