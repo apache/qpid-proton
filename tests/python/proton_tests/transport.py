@@ -18,6 +18,7 @@
 #
 
 import os
+import sys
 from . import common
 from proton import *
 from proton._compat import str2bin
@@ -88,6 +89,19 @@ class ClientTransportTest(Test):
     self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
+
+  def testHeaderBadDOFF1(self):
+    """Verify doff > size error"""
+    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x08\x00\x00\x00"))
+
+  def testHeaderBadDOFF2(self):
+    """Verify doff < 2 error"""
+    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x01\x00\x00\x00"))
+
+  def testHeaderBadSize(self):
+    """Verify size > max_frame_size error"""
+    self.transport.max_frame_size = 512
+    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x02\x01\x02\x00\x00\x00"))
 
   def testProtocolNotSupported(self):
     self.transport.push(str2bin("AMQP\x01\x01\x0a\x00"))

@@ -127,13 +127,16 @@ ssize_t pn_dispatcher_input(pn_transport_t *transport, const char *bytes, size_t
   while (available && !*halt) {
     pn_frame_t frame;
 
-    size_t n = pn_read_frame(&frame, bytes + read, available);
-    if (n) {
+    ssize_t n = pn_read_frame(&frame, bytes + read, available, transport->local_max_frame);
+    if (n > 0) {
       read += n;
       available -= n;
       transport->input_frames_ct += 1;
       int e = pni_dispatch_frame(transport, transport->args, frame);
       if (e) return e;
+    } else if (n < 0) {
+      pn_do_error(transport, "amqp:connection:framing-error", "malformed frame");
+      return n;
     } else {
       break;
     }

@@ -67,8 +67,8 @@ int dump(const char *file)
       }
 
       pn_frame_t frame;
-      size_t consumed = pn_read_frame(&frame, available.start, available.size);
-      if (consumed) {
+      ssize_t consumed = pn_read_frame(&frame, available.start, available.size, 0);
+      if (consumed > 0) {
         pn_data_clear(data);
         ssize_t dsize = pn_data_decode(data, frame.payload, frame.size);
         if (dsize < 0) {
@@ -81,6 +81,9 @@ int dump(const char *file)
           printf("\n");
         }
         pn_buffer_trim(buf, consumed, 0);
+      } else if (consumed < 0) {
+          fprintf(stderr, "Error decoding frame: invalid frame format\n");
+          return -1;
       } else {
         break;
       }

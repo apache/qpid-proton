@@ -64,25 +64,23 @@ static inline uint32_t pn_i_read32(const char *bytes)
 }
 
 
-size_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available)
+ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max)
 {
-  if (available >= AMQP_HEADER_SIZE) {
-    size_t size = pn_i_read32(&bytes[0]);
-    if (available >= size)
-    {
-      int doff = bytes[4]*4;
-      frame->size = size - doff;
-      frame->ex_size = doff - AMQP_HEADER_SIZE;
-      frame->type = bytes[5];
-      frame->channel = pn_i_read16(&bytes[6]);
+  if (available < AMQP_HEADER_SIZE) return 0;
+  uint32_t size = pn_i_read32(&bytes[0]);
+  if (max && size > max) return PN_ERR;
+  if (available < size) return 0;
+  unsigned int doff = 4 * (uint8_t)bytes[4];
+  if (doff < AMQP_HEADER_SIZE || doff > size) return PN_ERR;
 
-      frame->extended = bytes + AMQP_HEADER_SIZE;
-      frame->payload = bytes + doff;
-      return size;
-    }
-  }
+  frame->size = size - doff;
+  frame->ex_size = doff - AMQP_HEADER_SIZE;
+  frame->type = bytes[5];
+  frame->channel = pn_i_read16(&bytes[6]);
+  frame->extended = bytes + AMQP_HEADER_SIZE;
+  frame->payload = bytes + doff;
 
-  return 0;
+  return size;
 }
 
 size_t pn_write_frame(char *bytes, size_t available, pn_frame_t frame)
