@@ -700,7 +700,7 @@ class Container(Reactor):
             snd.source.address = source
         if target:
             snd.target.address = target
-        if handler:
+        if handler != None:
             snd.handler = handler
         if tags:
             snd.tag_generator = tags
@@ -743,7 +743,7 @@ class Container(Reactor):
             rcv.source.dynamic = True
         if target:
             rcv.target.address = target
-        if handler:
+        if handler != None:
             rcv.handler = handler
         _apply_link_options(options, rcv)
         rcv.open()
