@@ -65,7 +65,8 @@ class FrameParser implements TransportInput
 
     private final FrameHandler _frameHandler;
     private final ByteBufferDecoder _decoder;
-    private final int _maxFrameSize;
+    private final int _inputBufferSize;
+    private final int _localMaxFrameSize;
 
     private ByteBuffer _inputBuffer = null;
     private boolean _tail_closed = false;
@@ -88,12 +89,12 @@ class FrameParser implements TransportInput
      * We store the last result when processing input so that
      * we know not to process any more input if it was an error.
      */
-
-    FrameParser(FrameHandler frameHandler, ByteBufferDecoder decoder, int maxFrameSize)
+    FrameParser(FrameHandler frameHandler, ByteBufferDecoder decoder, int localMaxFrameSize)
     {
         _frameHandler = frameHandler;
         _decoder = decoder;
-        _maxFrameSize = maxFrameSize > 0 ? maxFrameSize : 4*1024;
+        _localMaxFrameSize = localMaxFrameSize;
+        _inputBufferSize = _localMaxFrameSize > 0 ? _localMaxFrameSize : 4*1024;
     }
 
     private void input(ByteBuffer in) throws TransportException
@@ -292,6 +293,14 @@ class FrameParser implements TransportInput
                         break;
                     }
 
+                    if (_localMaxFrameSize > 0 && size > _localMaxFrameSize)
+                    {
+                        frameParsingError = new TransportException("specified frame size %d greater than maximum valid frame size %d",
+                                                                   size, _localMaxFrameSize);
+                        state = State.ERROR;
+                        break;
+                    }
+
                     if(in.remaining() < size-4)
                     {
                         _frameBuffer = ByteBuffer.allocate(size-4);
@@ -480,7 +489,7 @@ class FrameParser implements TransportInput
             if (_inputBuffer != null) {
                 return _inputBuffer.remaining();
             } else {
-                return _maxFrameSize;
+                return _inputBufferSize;
             }
         }
     }
@@ -501,7 +510,7 @@ class FrameParser implements TransportInput
         }
 
         if (_inputBuffer == null) {
-            _inputBuffer = newWriteableBuffer(_maxFrameSize);
+            _inputBuffer = newWriteableBuffer(_inputBufferSize);
         }
 
         return _inputBuffer;
