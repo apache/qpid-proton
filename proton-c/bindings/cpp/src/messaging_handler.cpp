@@ -53,19 +53,15 @@ class Cflow_controller : public proton_handler
 
 
 messaging_handler::messaging_handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0)
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0), messaging_adapter_(0), flow_controller_(0)
 {
     create_helpers();
 }
 
-messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_accept0, bool auto_settle0,
-                                   bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0)
+messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0), messaging_adapter_(0), flow_controller_(0)
 {
-    if (raw_handler) {
-        flow_controller_ = 0;
-        messaging_adapter_ = 0;
-    } else {
+    if (!raw_handler) {
         create_helpers();
     }
 }
@@ -80,8 +76,8 @@ void messaging_handler::create_helpers() {
 }
 
 messaging_handler::~messaging_handler(){
-    delete flow_controller_;
-    delete messaging_adapter_;
+    if (flow_controller_) delete flow_controller_;
+    if (messaging_adapter_) delete messaging_adapter_;
 }
 
 void messaging_handler::on_abort(event &e) { on_unhandled(e); }

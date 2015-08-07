@@ -58,8 +58,8 @@ class blocking_connection : public handle<blocking_connection_impl>
     PN_CPP_EXTERN blocking_receiver create_receiver(const std::string &address, int credit = 0,
                                                     bool dynamic = false, handler *h=0, std::string name = std::string());
     PN_CPP_EXTERN void wait(wait_condition &condition);
-    PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg);
-    PN_CPP_EXTERN void wait(wait_condition &condition, std::string &msg, duration timeout);
+    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg);
+    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg, duration timeout);
     PN_CPP_EXTERN duration timeout();
   private:
     friend class private_impl_ref<blocking_connection>;

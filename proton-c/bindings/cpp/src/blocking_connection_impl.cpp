@@ -88,11 +88,11 @@ void blocking_connection_impl::wait(wait_condition &condition) {
     wait(condition, empty, timeout_);
 }
 
-void blocking_connection_impl::wait(wait_condition &condition, std::string &msg) {
+void blocking_connection_impl::wait(wait_condition &condition, const std::string &msg) {
     wait(condition, msg, timeout_);
 }
 
-void blocking_connection_impl::wait(wait_condition &condition, std::string &msg, duration wait_timeout) {
+void blocking_connection_impl::wait(wait_condition &condition, const std::string &msg, duration wait_timeout) {
     if (wait_timeout == duration::FOREVER) {
         while (!condition.achieved()) {
             container_.process();

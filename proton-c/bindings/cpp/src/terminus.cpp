@@ -86,7 +86,7 @@ std::string terminus::address() {
     return addr ? std::string(addr) : std::string();
 }
 
-void terminus::address(std::string &addr) {
+void terminus::address(const std::string &addr) {
     pn_terminus_set_address(impl_, addr.c_str());
 }
 
