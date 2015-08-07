@@ -32,6 +32,8 @@ struct pn_data_t;
 
 namespace proton {
 
+// TODO aconway 2015-08-07: make this a value-semantics class, hide pn_message_t.
+
 /// An AMQP message.
 class message : public proton_handle<pn_message_t>
 {

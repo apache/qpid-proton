@@ -35,7 +35,6 @@ template <class> class proton_impl_ref;
  */
 template <class T> class proton_handle {
   public:
-
     /**@return true if handle is valid,  i.e. not null. */
     bool is_valid() const { return impl_; }
 
@@ -50,8 +49,14 @@ template <class T> class proton_handle {
 
     void swap(proton_handle<T>& h) { T* t = h.impl_; h.impl_ = impl_; impl_ = t; }
 
+    bool operator==(const proton_handle<T>& x) { return x.impl_ == impl_; }
+    bool operator!=(const proton_handle<T>& x) { return x.impl_ != impl_; }
+
+    T* raw() { return impl_; }
+
   private:
     // Not implemented, subclasses must implement.
+    // FIXME aconway 2015-08-07: why?
     proton_handle(const proton_handle&);
     proton_handle& operator=(const proton_handle&);
 

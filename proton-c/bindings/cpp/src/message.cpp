@@ -73,9 +73,13 @@ void set_value(pn_data_t* d, const value& v) {
 }
 
 value get_value(pn_data_t* d) {
-    values values(d);
-    values.rewind();
-    return values.get<value>();
+    if (d) {
+        values vals(d);
+        vals.rewind();
+        if (vals.more())
+            return vals.get<value>();
+    }
+    return value();
 }
 } // namespace
 

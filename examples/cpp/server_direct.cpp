@@ -28,6 +28,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <sstream>
 
 class server : public proton::messaging_handler {
   private:
@@ -35,15 +36,15 @@ class server : public proton::messaging_handler {
     proton::url url;
     proton::connection connection;
     sender_map senders;
+    int address_counter;
 
   public:
 
-    server(const std::string &u) : url(u) {}
+    server(const std::string &u) : url(u), address_counter(0) {}
 
     void on_start(proton::event &e) {
-        connection = e.container().connect(url);
-        e.container().create_receiver(connection, url.path());
-        std::cout << "server connected to " << url << std::endl;
+        e.container().listen(url);
+        std::cout << "server listening on " << url << std::endl;
     }
 
     std::string to_upper(const std::string &s) {
@@ -53,16 +54,34 @@ class server : public proton::messaging_handler {
         return uc;
     }
 
+    std::string generate_address() {
+        std::ostringstream addr;
+        addr << "server" << address_counter++;
+        return addr.str();
+    }
+
+    void on_link_opening(proton::event& e) {
+        proton::link link = e.link();
+        if (link.is_sender() && link.remote_source() && link.remote_source().is_dynamic()) {
+            link.source().address(generate_address());
+            senders[link.source().address()] = link;
+        }
+    }
+
     void on_message(proton::event &e) {
         std::cout << "Received " << e.message().body() << std::endl;
         std::string reply_to = e.message().reply_to();
-        proton::message reply;
-        reply.address(reply_to);
-        reply.body(to_upper(e.message().body().get<std::string>()));
-        reply.correlation_id(e.message().correlation_id());
-        if (!senders[reply_to])
-            senders[reply_to] = e.container().create_sender(connection, reply_to);
-        senders[reply_to].send(reply);
+        sender_map::iterator it = senders.find(reply_to);
+        if (it == senders.end()) {
+            std::cout << "No link for reply_to: " << reply_to << std::endl;
+        } else {
+            proton::sender sender = it->second;
+            proton::message reply;
+            reply.address(reply_to);
+            reply.body(to_upper(e.message().body().get<std::string>()));
+            reply.correlation_id(e.message().correlation_id());
+            sender.send(reply);
+        }
     }
 };
 

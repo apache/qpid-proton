@@ -12,17 +12,17 @@ messaging applications in incremental steps. There are further examples, in
 addition the ones mentioned in the tutorial.
 
 Some of the examples require an AMQP *broker* that can receive, store and send
-messages. \ref broker.cpp is a simple example broker which you can use. When run
-without arguments it listens on `0.0.0.0:5672`, the standard AMQP port on all
-network interfaces. To use a different port or network interface:
+messages. \ref broker.cpp is a simple example broker. Run without arguments it
+listens on `0.0.0.0:5672`, the standard AMQP port on all network interfaces. To
+use a different port or network interface:
 
     broker -a <host>:<port>
 
 Instead of the example broker, you can use any AMQP 1.0 compliant broker. You
 must configure your broker to have a queue (or topic) named "examples".
 
-Most of the examples take an optional URL argument or `-a URL` option the
-URL looks like:
+The `helloworld` examples take an optional URL argument. The other examples take
+an option `-a URL`. A URL looks like:
 
     HOST:PORT/ADDRESS
 
@@ -41,10 +41,8 @@ receiving. In a realistic system the sender and receiver would normally be in
 different processes. The complete example is \ref helloworld.cpp
 
 We will include the following classes: `proton::container` runs an event loop
-which dispatches events to a `proton::messaging_handler`. This allows a
-*reactive* style of programming which is well suited to messaging
-applications. `proton::url` is a simple parser for the URL format described
-above.
+which dispatches events to a `proton::messaging_handler`. This allows a *reactive*
+style of programming which is well suited to messaging applications. `proton::url` is a simple parser for the URL format mentioned above.
 
 \skip   proton/container
 \until  proton/url
@@ -301,55 +299,117 @@ as a simple broker for testing purposes is an example of this).
 Request/Response
 ----------------
 
-\todo TODO missing example in C++
-
 A common pattern is to send a request message and expect a response message in
 return. AMQP has special support for this pattern. Let's have a look at a simple
 example. We'll start with \ref server.cpp, the program that will process the
 request and send the response. Note that we are still using a broker in this
 example.
 
-\todo TODO insert server snips
-
 Our server will provide a very simple service: it will respond with the
 body of the request converted to uppercase.
 
+\dontinclude server.cpp
+\skip class server
+\until };
+
 The code here is not too different from the simple receiver example.  When we
-receive a request however, we look at the proton::message::reply_to address on
-proton::message and create a sender for that over which to send the
-response. We'll cache the senders incase we get further requests with the same
-reply\_to.
+receive a request in `on_message` however, we look at the
+`proton::message::reply_to` address and create a sender with that address for
+the response. We'll cache the senders incase we get further requests with the
+same `reply_to`.
 
 Now let's create a simple \ref client.cpp to test this service out.
 
-\todo TODO insert client snips
+\dontinclude client.cpp
 
-As well as sending requests, we need to be able to get back the
-responses. We create a receiver for that (see line 14), but we don't
-specify an address, we set the dynamic option which tells the broker we
-are connected to to create a temporary address over which we can receive
-our responses.
+Our client takes a list of strings to send as requests
 
-We need to use the address allocated by the broker as the reply\_to
-address of our requests, so we can't send them until the broker has
-confirmed our receiving link has been set up (at which point we will
-have our allocated address). To do that, we add an `on_link_opened()`
-method to our handler class, and if the link associated with event is
-the receiver, we use that as the trigger to send our first request.
+\skipline client(
 
-Again, we could avoid having any intermediary process here if we wished.
-The following code implementas a server to which the client above could
-connect directly without any need for a broker or similar.
+Since we will be sending and receiving, we create a sender and a receiver in
+`on_start`.  Our receiver has a blank address and sets the `dynamic` flag to
+true, which means we expect the remote end (broker or server) to assign a unique
+address for us.
 
-\todo TODO missing server_direct.cpp
+\skip on_start
+\until }
 
-Though this requires some more extensive changes than the simple sending
-and receiving examples, the essence of the program is still the same.
-Here though, rather than the server establishing a link for the
-response, it relies on the link that the client established, since that
-now comes in directly to the server process.
+Now a function to send the next request from our list of requests. We set the
+reply_to address to be the dynamically assigned address of our receiver.
 
-### Miscellaneous
+\skip send_request
+\until }
+
+We need to use the address assigned by the broker as the `reply_to` address of
+our requests, so we can't send them until our receiver has been set up. To do
+that, we add an `on_link_opened()` method to our handler class, and if the link
+associated with event is the receiver, we use that as the trigger to send our
+first request.
+
+\skip on_link_opened
+\until }
+
+When we receive a reply, we send the next request.
+
+\skip on_message
+\until }
+\until }
+\until }
+
+Direct Request/Response
+-----------------------
+
+We can avoid the intermediary process by writing a server that accepts
+connections directly, \ref server_direct.cpp. It involves the following changes
+to our original server:
+
+\dontinclude server_direct.cpp
+
+First the server must generate a unique reply-to addreses for links from the
+client that request a dynamic address (previously this was done by the broker.)
+We use a simple counter.
+
+\skip generate_address
+\until }
+
+Next we need to handle incoming requests for links with dynamic addresses from
+the client.  We give the link a unique address and record it in our `senders`
+map.
+
+\skip on_link_opening
+\until }
+
+Note we are interested in *sender* links above because we are implementing the
+server. A *receiver* link created on the client corresponds to a *sender* link
+on the server.
+
+Finally when we receive a message we look up its `reply_to` in our senders map and send the reply.
+
+\skip on_message
+\until }
+\until }
+\until }
+
+Synchronous Request/Response
+----------------------------
+
+The event-driven style of programming is extremely powerful, especially for
+server or mixed client-server programs. However for simple client-only programs
+a synchronous or blocking style of programming is sometimes simpler.
+
+`proton::blocking_connection` allows a blocking style of programming,
+`proton::sync_request_response` automates the common case of synchronous
+request/response, send a request and block for the response.
+
+\ref sync_client.cpp is our request/response client in blocking style. Here's the key section
+
+\dontinclude sync_client.cpp
+\skip conn(
+\until }
+
+*/
+
+/* TODO selector and browser
 
 Many brokers offer the ability to consume messages based on a 'selector'
 that defines which messages are of interest based on particular values

@@ -28,7 +28,9 @@
 #include "proton/types.hpp"
 
 #include <iostream>
+#include <vector>
 #include <string>
+
 
 int main(int argc, char **argv) {
     // Command line options
@@ -38,20 +40,20 @@ int main(int argc, char **argv) {
     opts.add_value(url, 'a', "address", "connect to URL", "URL");
     opts.add_value(timeout, 't', "timeout", "give up after this TIMEOUT (milliseconds)", "TIMEOUT");
 
-    std::string requests[] = { "Twas brillig, and the slithy toves",
-                               "Did gire and gymble in the wabe.",
-                               "All mimsy were the borogroves,",
-                               "And the mome raths outgrabe." };
-    int requests_size=4;
+    std::vector<std::string> requests;
+    requests.push_back("Twas brillig, and the slithy toves");
+    requests.push_back("Did gire and gymble in the wabe.");
+    requests.push_back("All mimsy were the borogroves,");
+    requests.push_back("And the mome raths outgrabe.");
 
     try {
         opts.parse();
-        proton::duration d(timeout);
-        proton::blocking_connection conn(url, d);
+
+        proton::blocking_connection conn(url, proton::duration(timeout));
         proton::sync_request_response client(conn, url.path());
-        for (int i=0; i<requests_size; i++) {
+        for (std::vector<std::string>::const_iterator i=requests.begin(); i != requests.end(); i++) {
             proton::message request;
-            request.body(requests[i]);
+            request.body(*i);
             proton::message response = client.call(request);
             std::cout << request.body() << " => " << response.body() << std::endl;
         }

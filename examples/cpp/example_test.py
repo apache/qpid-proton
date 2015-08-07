@@ -102,31 +102,6 @@ class Broker(object):
         except Exception as e:
             raise Exception("Error running %s: %s", cmd, e)
 
-class Server(object):
-    """Run the test server"""
-
-    @classmethod
-    def get(cls, addr):
-        if not hasattr(cls, "_server"):
-            cls._server = Server(addr)
-        return cls._server
-
-    @classmethod
-    def stop(cls):
-        if cls.get(None) and cls._server.process:
-            cls._server.process.kill()
-            cls._server = None
-
-    def __init__(self, addr):
-        self.addr = addr
-        cmd = [exe_name("server"), "-a", self.addr]
-        try:
-            self.process = Popen(cmd, stdout=NULL, stderr=NULL)
-            time.sleep(0.3)
-
-        except Exception as e:
-            raise Exception("Error running %s: %s", cmd, e)
-
 class ExampleTest(unittest.TestCase):
     """Run the examples, verify they behave as expected."""
 
@@ -177,8 +152,13 @@ class ExampleTest(unittest.TestCase):
         send_expect = "direct_send listening on amqp://%s\nall messages confirmed\n" % (addr)
         self.assertEqual(send_expect, verify(send))
 
+    CLIENT_EXPECT=""""Twas brillig, and the slithy toves" => "TWAS BRILLIG, AND THE SLITHY TOVES"
+"Did gire and gymble in the wabe." => "DID GIRE AND GYMBLE IN THE WABE."
+"All mimsy were the borogroves," => "ALL MIMSY WERE THE BOROGROVES,"
+"And the mome raths outgrabe." => "AND THE MOME RATHS OUTGRABE."
+"""
     def test_simple_recv_send(self):
-        """Start receiver first, then run sender"""
+        # Start receiver first, then run sender"""
         b = Broker.get()
         recv = background("simple_recv", "-a", b.addr)
         self.assertEqual("all messages confirmed\n", execute("simple_send", "-a", b.addr))
@@ -186,20 +166,30 @@ class ExampleTest(unittest.TestCase):
         recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
         self.assertEqual(recv_expect, verify(recv))
 
-    def test_sync_request_response(self):
-        """Start server first, then run sync_client"""
+    def test_request_response(self):
         b = Broker.get()
-        s = Server.get(b.addr)
-        expect = """
-"Twas brillig, and the slithy toves" => "TWAS BRILLIG, AND THE SLITHY TOVES"
-"Did gire and gymble in the wabe." => "DID GIRE AND GYMBLE IN THE WABE."
-"All mimsy were the borogroves," => "ALL MIMSY WERE THE BOROGROVES,"
-"And the mome raths outgrabe." => "AND THE MOME RATHS OUTGRABE."
-"""
-        sc = "\n"
-        sc += execute("sync_client", "-a", b.addr)
-        self.assertEqual(expect, sc)
-        Server.stop()
+        server = background("server", "-a", b.addr)
+        try:
+            self.assertEqual(execute("client", "-a", b.addr), self.CLIENT_EXPECT)
+        finally:
+            server.kill()
+
+    def test_sync_request_response(self):
+        b = Broker.get()
+        server = background("server", "-a", b.addr)
+        try:
+            self.assertEqual(execute("sync_client", "-a", b.addr), self.CLIENT_EXPECT)
+        finally:
+            server.kill()
+
+    def test_request_response_direct(self):
+        addr = pick_addr()
+        server = background("server_direct", "-a", addr+"/examples")
+        wait_addr(addr)
+        try:
+            self.assertEqual(execute("client", "-a", addr+"/examples"), self.CLIENT_EXPECT)
+        finally:
+            server.kill()
 
     def test_encode_decode(self):
         expect="""
