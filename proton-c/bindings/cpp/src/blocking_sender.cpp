@@ -20,7 +20,6 @@
  */
 #include "proton/blocking_sender.hpp"
 #include "proton/blocking_connection.hpp"
-#include "proton/wait_condition.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
 
@@ -28,9 +27,9 @@
 namespace proton {
 
 namespace {
-struct delivery_settled : public wait_condition {
+struct delivery_settled {
     delivery_settled(pn_delivery_t *d) : pn_delivery(d) {}
-    bool achieved() { return pn_delivery_settled(pn_delivery); }
+    bool operator()() { return pn_delivery_settled(pn_delivery); }
     pn_delivery_t *pn_delivery;
 };
 

@@ -25,7 +25,6 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_sender.hpp"
-#include "proton/wait_condition.hpp"
 #include <string>
 #include <memory>
 

@@ -21,7 +21,6 @@
 #include "proton/blocking_link.hpp"
 #include "proton/blocking_connection.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/wait_condition.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
 
@@ -29,21 +28,21 @@
 namespace proton {
 
 namespace {
-struct link_opened : public wait_condition {
+struct link_opened {
     link_opened(pn_link_t *l) : pn_link(l) {}
-    bool achieved() { return !(pn_link_state(pn_link) & PN_REMOTE_UNINIT); }
+    bool operator()() { return !(pn_link_state(pn_link) & PN_REMOTE_UNINIT); }
     pn_link_t *pn_link;
 };
 
-struct link_closed : public wait_condition {
+struct link_closed {
     link_closed(pn_link_t *l) : pn_link(l) {}
-    bool achieved() { return (pn_link_state(pn_link) & PN_REMOTE_CLOSED); }
+    bool operator()() { return (pn_link_state(pn_link) & PN_REMOTE_CLOSED); }
     pn_link_t *pn_link;
 };
 
-struct link_not_open : public wait_condition {
+struct link_not_open {
     link_not_open(pn_link_t *l) : pn_link(l) {}
-    bool achieved() { return !(pn_link_state(pn_link) & PN_REMOTE_ACTIVE); }
+    bool operator()() { return !(pn_link_state(pn_link) & PN_REMOTE_ACTIVE); }
     pn_link_t *pn_link;
 };
 

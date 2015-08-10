@@ -39,7 +39,6 @@ class blocking_connection_impl;
 class ssl_domain;
 class blocking_sender;
 class blocking_receiver;
-class wait_condition;
 
 // TODO documentation
 class blocking_connection : public handle<blocking_connection_impl>
@@ -57,12 +56,36 @@ class blocking_connection : public handle<blocking_connection_impl>
     PN_CPP_EXTERN blocking_sender create_sender(const std::string &address, handler *h=0);
     PN_CPP_EXTERN blocking_receiver create_receiver(const std::string &address, int credit = 0,
                                                     bool dynamic = false, handler *h=0, std::string name = std::string());
-    PN_CPP_EXTERN void wait(wait_condition &condition);
-    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg);
-    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg, duration timeout);
+
+    /// Abstract condition class for wait.
+    struct condition {
+        virtual ~condition() {}
+        virtual bool operator()() = 0;
+    };
+
+    /** Wait till cond returns true. 
+     * C must be copyable and callable with no arguments and bool return value.
+     * Wait up to timeout if specified or blocking_connection::timeout() if not.
+     * @throws timeout_error with message msg if timeout is exceeded.
+     */
+    template <class C> void wait(C cond, const std::string &msg="", duration timeout=duration(-1)) {
+        condition_impl<C> c(cond);
+        wait(dynamic_cast<condition&>(c), msg, timeout);
+    }
+
     PN_CPP_EXTERN duration timeout();
   private:
-    friend class private_impl_ref<blocking_connection>;
+
+    PN_CPP_EXTERN void wait(condition &, const std::string &msg="", duration timeout=duration(-1));
+
+
+    template <class C> struct condition_impl : public condition {
+        C cond_;
+        condition_impl(C c) : cond_(c) {}
+        bool operator()() { return cond_(); }
+    };
+
+  friend class private_impl_ref<blocking_connection>;
 };
 
 }

@@ -20,7 +20,6 @@
  */
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_connection.hpp"
-#include "proton/wait_condition.hpp"
 #include "proton/error.hpp"
 #include "fetcher.hpp"
 #include "msg.hpp"
@@ -30,9 +29,9 @@ namespace proton {
 
 namespace {
 
-struct fetcher_has_message : public wait_condition {
+struct fetcher_has_message {
     fetcher_has_message(fetcher &f) : fetcher_(f) {}
-    bool achieved() { return fetcher_.has_message(); }
+    bool operator()() { return fetcher_.has_message(); }
     fetcher &fetcher_;
 };
 

@@ -24,6 +24,7 @@
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/container.hpp"
+#include "proton/blocking_connection.hpp"
 #include "proton/types.h"
 #include <string>
 
@@ -41,15 +42,20 @@ class ssl_domain;
     PN_CPP_EXTERN blocking_connection_impl(const url &url, duration d, ssl_domain *ssld, container *c);
     PN_CPP_EXTERN ~blocking_connection_impl();
     PN_CPP_EXTERN void close();
-    PN_CPP_EXTERN void wait(wait_condition &condition);
-    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg);
-    PN_CPP_EXTERN void wait(wait_condition &condition, const std::string &msg, duration timeout);
+    template <class C> void wait(C c, const std::string &msg="", duration timeout=duration(-1)) {
+        blocking_connection::condition_impl<C> cond(c);
+        wait(dynamic_cast<blocking_connection::condition&>(cond), msg, timeout);
+    }
+
     PN_CPP_EXTERN pn_connection_t *pn_blocking_connection();
     duration timeout() { return timeout_; }
     static void incref(blocking_connection_impl *);
     static void decref(blocking_connection_impl *);
   private:
     friend class blocking_connection;
+    PN_CPP_EXTERN void wait(blocking_connection::condition &, const std::string & ="",
+                            duration=duration(-1));
+
     container container_;
     connection connection_;
     url url_;

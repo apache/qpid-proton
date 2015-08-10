@@ -49,11 +49,7 @@ blocking_connection::blocking_connection(const proton::url &url, duration d, ssl
 
 void blocking_connection::close() { impl_->close(); }
 
-void blocking_connection::wait(wait_condition &cond) { return impl_->wait(cond); }
-void blocking_connection::wait(wait_condition &cond, const std::string &msg) {
-    return impl_->wait(cond, msg);
-}
-void blocking_connection::wait(wait_condition &cond, const std::string &msg, duration timeout) {
+void blocking_connection::wait(condition &cond, const std::string &msg, duration timeout) {
     return impl_->wait(cond, msg, timeout);
 }
 

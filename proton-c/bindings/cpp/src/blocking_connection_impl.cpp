@@ -22,7 +22,6 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/duration.hpp"
 #include "proton/error.hpp"
-#include "proton/wait_condition.hpp"
 #include "blocking_connection_impl.hpp"
 #include "msg.hpp"
 #include "contexts.hpp"
@@ -30,9 +29,6 @@
 #include "proton/connection.h"
 
 namespace proton {
-
-wait_condition::~wait_condition() {}
-
 
 void blocking_connection_impl::incref(blocking_connection_impl *impl_) {
     impl_->refcount_++;
@@ -45,15 +41,15 @@ void blocking_connection_impl::decref(blocking_connection_impl *impl_) {
 }
 
 namespace {
-struct connection_opening : public wait_condition {
+struct connection_opening {
     connection_opening(pn_connection_t *c) : pn_connection(c) {}
-    bool achieved() { return (pn_connection_state(pn_connection) & PN_REMOTE_UNINIT); }
+    bool operator()() { return (pn_connection_state(pn_connection) & PN_REMOTE_UNINIT); }
     pn_connection_t *pn_connection;
 };
 
-struct connection_closed : public wait_condition {
+struct connection_closed {
     connection_closed(pn_connection_t *c) : pn_connection(c) {}
-    bool achieved() { return !(pn_connection_state(pn_connection) & PN_REMOTE_ACTIVE); }
+    bool operator()() { return !(pn_connection_state(pn_connection) & PN_REMOTE_ACTIVE); }
     pn_connection_t *pn_connection;
 };
 
@@ -83,18 +79,10 @@ void blocking_connection_impl::close() {
     wait(cond);
 }
 
-void blocking_connection_impl::wait(wait_condition &condition) {
-    std::string empty;
-    wait(condition, empty, timeout_);
-}
-
-void blocking_connection_impl::wait(wait_condition &condition, const std::string &msg) {
-    wait(condition, msg, timeout_);
-}
-
-void blocking_connection_impl::wait(wait_condition &condition, const std::string &msg, duration wait_timeout) {
+void blocking_connection_impl::wait(blocking_connection::condition &condition, const std::string &msg, duration wait_timeout) {
+    if (wait_timeout == duration(-1)) wait_timeout = timeout_;
     if (wait_timeout == duration::FOREVER) {
-        while (!condition.achieved()) {
+        while (!condition()) {
             container_.process();
         }
     }
@@ -105,7 +93,7 @@ void blocking_connection_impl::wait(wait_condition &condition, const std::string
     try {
         pn_timestamp_t now = pn_reactor_mark(reactor);
         pn_timestamp_t deadline = now + wait_timeout.milliseconds;
-        while (!condition.achieved()) {
+        while (!condition()) {
             container_.process();
             if (deadline < pn_reactor_mark(reactor)) {
                 std::string txt = "connection timed out";

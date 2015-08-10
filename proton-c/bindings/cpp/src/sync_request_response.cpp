@@ -28,10 +28,9 @@ namespace proton {
 namespace {
 amqp_ulong global_correlation_id = 0;
 
-struct response_received : public wait_condition {
+struct response_received {
     response_received(std::auto_ptr<message>& m, amqp_ulong id) : message_(m), id_(id) {}
-    bool achieved() {
-        return message_.get() && message_->correlation_id() == id_; }
+    bool operator()() { return message_.get() && message_->correlation_id() == id_; }
     std::auto_ptr<message>& message_;
     value id_;
 };
