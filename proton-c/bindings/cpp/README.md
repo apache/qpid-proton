@@ -27,6 +27,8 @@ Tests
 Features
 - SASL/SSL support with interop tests.
 - Reconnection
+- Browsing
+- Selectors
 - Finish blocking API & examples.
 - Described types, full support and tests.
 - Durable subscriptions & demos (see python changes)

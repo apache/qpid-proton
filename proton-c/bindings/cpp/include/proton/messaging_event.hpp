@@ -88,15 +88,15 @@ class messaging_event : public proton_event
     virtual PN_CPP_EXTERN class sender sender();
     virtual PN_CPP_EXTERN class receiver receiver();
     virtual PN_CPP_EXTERN class link link();
-    virtual PN_CPP_EXTERN class message message();
+    virtual PN_CPP_EXTERN class message& message();
     virtual PN_CPP_EXTERN class delivery delivery();
-    virtual PN_CPP_EXTERN void message(class message &);
     PN_CPP_EXTERN event_type type() const;
 
   private:
+  friend class messaging_adapter;
     event_type type_;
     proton_event *parent_event_;
-    class message *message_;
+    class message message_;
     messaging_event operator=(const messaging_event&);
     messaging_event(const messaging_event&);
 };

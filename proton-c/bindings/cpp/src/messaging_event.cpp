@@ -34,19 +34,17 @@
 namespace proton {
 
 messaging_event::messaging_event(pn_event_t *ce, pn_event_type_t t, class container &c) :
-    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0), message_(0)
+    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0)
 {}
 
 messaging_event::messaging_event(event_type t, proton_event &p) :
-    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p), message_(0)
+    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p)
 {
     if (type_ == messaging_event::PROTON)
         throw error(MSG("invalid messaging event type"));
 }
 
-messaging_event::~messaging_event() {
-    delete message_;
-}
+messaging_event::~messaging_event() {}
 
 messaging_event::event_type messaging_event::type() const { return type_; }
 
@@ -90,19 +88,10 @@ delivery messaging_event::delivery() {
     throw error(MSG("No delivery context for event"));
 }
 
-message messaging_event::message() {
-    if (parent_event_) {
-        pn_message_t *m = event_context(parent_event_->pn_event());
-        if (m)
-            return proton::message(m);
-    }
-    throw error(MSG("No message context for event"));
-}
-
-void messaging_event::message(class message &m) {
+message &messaging_event::message() {
     if (type_ != messaging_event::MESSAGE || !parent_event_)
         throw error(MSG("event type does not provide message"));
-    event_context(parent_event_->pn_event(), m.pn_message());
+    return message_;
 }
 
 void messaging_event::dispatch(handler &h) {

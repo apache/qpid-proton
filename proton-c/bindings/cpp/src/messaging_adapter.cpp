@@ -61,21 +61,6 @@ void messaging_adapter::on_link_flow(event &e) {
    }
 }
 
-namespace {
-message receive_message(pn_link_t *lnk, pn_delivery_t *dlv) {
-    std::string buf;
-    size_t sz = pn_delivery_pending(dlv);
-    buf.resize(sz);
-    ssize_t n = pn_link_recv(lnk, (char *) buf.data(), sz);
-    if (n != (ssize_t) sz)
-        throw error(MSG("link read failure"));
-    message m;
-    m. decode(buf);
-    pn_link_advance(lnk);
-    return m;
-}
-} // namespace
-
 void messaging_adapter::on_delivery(event &e) {
     proton_event *pe = dynamic_cast<proton_event*>(&e);
     if (pe) {
@@ -87,8 +72,7 @@ void messaging_adapter::on_delivery(event &e) {
             if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
                 // generate on_message
                 messaging_event mevent(messaging_event::MESSAGE, *pe);
-                message m(receive_message(lnk, dlv));
-                mevent.message(m);
+                mevent.message_.decode(link(lnk), delivery(dlv));
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                     if (auto_accept_) {
                         pn_delivery_update(dlv, PN_RELEASED);

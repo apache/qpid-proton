@@ -22,29 +22,43 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/proton_handle.hpp"
 #include "proton/value.hpp"
 #include "proton/message.hpp"
 #include <string>
 
 struct pn_message_t;
-struct pn_data_t;
 
 namespace proton {
 
-// TODO aconway 2015-08-07: make this a value-semantics class, hide pn_message_t.
+class link;
+class delivery;
 
-/// An AMQP message.
-class message : public proton_handle<pn_message_t>
+/** An AMQP message.
+ *
+ * This class has value semantics: the copy constructor and assignment make a
+ * copy of the underlying message data. If you want to transfer the message data
+ * without a copy use the swap member function or std::swap.
+ */
+
+class message
 {
   public:
     PN_CPP_EXTERN message();
+    /** Takes ownership of the pn_message_t, calls pn_message_free on destruction. */
     PN_CPP_EXTERN message(pn_message_t *);
+    /// Makes a copy of the other message.
     PN_CPP_EXTERN message(const message&);
+    /// Makes a copy of the other message.
     PN_CPP_EXTERN message& operator=(const message&);
+
     PN_CPP_EXTERN ~message();
 
-    PN_CPP_EXTERN pn_message_t *pn_message() const;
+    PN_CPP_EXTERN void swap(message&);
+
+    /// Access the underlying pn_message_t, note it will be freed by ~message.
+    PN_CPP_EXTERN pn_message_t *pn_message();
+    /// Forget the underlying pn_message_t, the message is cleared. Caller must call pn_message_free.
+    PN_CPP_EXTERN pn_message_t *pn_message_forget();
 
     /** Clear the message content */
     PN_CPP_EXTERN void clear();
@@ -93,7 +107,7 @@ class message : public proton_handle<pn_message_t>
     PN_CPP_EXTERN std::string reply_to_group_id() const;
     ///@}
 
-    /** Set the body to a proton::value. */
+    /** Set the body to a proton::value, copies the value. */
     PN_CPP_EXTERN void body(const value&);
 
     /** Set the body to any type T that can be converted to a proton::value */
@@ -102,10 +116,14 @@ class message : public proton_handle<pn_message_t>
     /** Set the body to a sequence of values, each value is encoded as an AMQP section. */
     PN_CPP_EXTERN void body(const values&);
 
-    /** Get the body values, there may be more than one. */
+    /** Get the body values, there may be more than one.
+     * Note the reference will be invalidated by destroying the message or calling swap.
+     */
     PN_CPP_EXTERN const values& body() const;
 
-    /** Get a reference to the body, can be modified in-place. */
+    /** Get a reference to the body values, can be modified in-place.
+     * Note the reference will be invalidated by destroying the message or calling swap.
+     */
     PN_CPP_EXTERN values& body();
 
     // TODO aconway 2015-06-17: consistent and flexible treatment of buffers.
@@ -114,15 +132,18 @@ class message : public proton_handle<pn_message_t>
     // buffers. Introduce a buffer type with begin/end pointers?
 
     /** Encode the message into string data */
-    PN_CPP_EXTERN void encode(std::string &data);
+    PN_CPP_EXTERN void encode(std::string &data) const;
     /** Retrun encoded message as a string */
-    PN_CPP_EXTERN std::string encode();
+    PN_CPP_EXTERN std::string encode() const;
     /** Decode from string data into the message. */
     PN_CPP_EXTERN void decode(const std::string &data);
 
+    /// Decode the message from link corresponding to delivery.
+    PN_CPP_EXTERN void decode(proton::link link, proton::delivery);
+
   private:
+    pn_message_t *impl_;
     mutable values body_;
-  friend class proton_impl_ref<message>;
 };
 
 }

@@ -27,12 +27,12 @@ namespace proton {
 
 namespace {
 amqp_ulong global_correlation_id = 0;
-message null_message;
 
 struct response_received : public wait_condition {
-    response_received(message &m, amqp_ulong id) : message_(m), id_(id) {}
-    bool achieved() { return message_ && message_.correlation_id() == id_; }
-    message &message_;
+    response_received(std::auto_ptr<message>& m, amqp_ulong id) : message_(m), id_(id) {}
+    bool achieved() {
+        return message_.get() && message_->correlation_id() == id_; }
+    std::auto_ptr<message>& message_;
     value id_;
 };
 
@@ -41,14 +41,13 @@ struct response_received : public wait_condition {
 sync_request_response::sync_request_response(blocking_connection &conn, const std::string addr):
     connection_(conn), address_(addr),
     sender_(connection_.create_sender(addr)),
-    receiver_(connection_.create_receiver("", 1, true, this)), // credit=1, dynamic=true
-    response_(null_message)
+    receiver_(connection_.create_receiver("", 1/*credit*/, true/*dynamic*/, this))
 {
 }
 
 message sync_request_response::call(message &request) {
     if (address_.empty() && request.address().empty())
-        throw error(MSG("Request message has no address: " << request));
+        throw error(MSG("Request message has no address"));
     // TODO: thread safe increment.
     correlation_id_ = global_correlation_id++;
     request.correlation_id(value(correlation_id_));
@@ -57,8 +56,8 @@ message sync_request_response::call(message &request) {
     std::string txt("Waiting for response");
     response_received cond(response_, correlation_id_);
     connection_.wait(cond, txt);
-    message resp = response_;
-    response_ = null_message;
+    message resp = *response_;
+    response_.reset(0);
     receiver_.flow(1);
     return resp;
 }
@@ -68,7 +67,8 @@ std::string sync_request_response::reply_to() {
 }
 
 void sync_request_response::on_message(event &e) {
-    response_ = e.message();
+    response_.reset(new message);
+    response_->swap(e.message());
     // Wake up enclosing blocking_connection.wait() to handle the message
     e.container().yield();
 }

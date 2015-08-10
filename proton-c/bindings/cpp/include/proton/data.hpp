@@ -26,7 +26,7 @@ struct pn_data_t;
 
 namespace proton {
 
-/** Base for classes that hold AMQP data, not for direct use. @see value, encoder, decoder. */
+/** Base for classes that hold AMQP data, not for direct use. @see value, values, encoder, decoder. */
 class data {
   public:
     PN_CPP_EXTERN explicit data();

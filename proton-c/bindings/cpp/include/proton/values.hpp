@@ -34,7 +34,7 @@ class values : public encoder, public decoder {
     PN_CPP_EXTERN values();
     PN_CPP_EXTERN values(const values&);
 
-    /** Does not take ownership, just a view on the data */
+    /** Does not take ownership, just operates on the pn_data_t object. */
     PN_CPP_EXTERN values(pn_data_t*);
 
     PN_CPP_EXTERN ~values();

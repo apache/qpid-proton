@@ -27,7 +27,6 @@
 #include "proton/message.hpp"
 #include <vector>
 
-
 namespace proton {
 
 class handler;
@@ -54,10 +53,10 @@ class event {
     virtual PN_CPP_EXTERN class link link();
     /// Get delivey @throws error if no delivery.
     virtual PN_CPP_EXTERN class delivery delivery();
-    /// Get message @throws error if no message.
-    virtual PN_CPP_EXTERN class message message();
-    /// Get message @throws error if no message.
-    virtual PN_CPP_EXTERN void message(class message&);
+    /** Get message @throws error if no message.
+     * Refernece is valid only till end of event dispatch. Copy or swap the message to keep it.
+     */
+    virtual PN_CPP_EXTERN class message &message();
 
   protected:
     PN_CPP_EXTERN event();

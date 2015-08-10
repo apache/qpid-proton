@@ -61,14 +61,8 @@ class delivery event::delivery() {
     throw error(MSG("No link context for event"));
 }
 
-class message event::message() {
+class message &event::message() {
     throw error(MSG("No message associated with event"));
 }
-
-void event::message(class message &) {
-    throw error(MSG("Operation not supported for this type of event"));
-}
-
-
 
 }
