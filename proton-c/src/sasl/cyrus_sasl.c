@@ -234,7 +234,7 @@ void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
 
             // Failed somehow - equivalent to failing authentication
             sasl->outcome = PN_SASL_AUTH;
-            pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
+            pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
             break;
     }
 }

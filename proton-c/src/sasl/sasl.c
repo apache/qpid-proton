@@ -109,7 +109,8 @@ static bool pni_sasl_is_client_state(enum pni_sasl_state state)
       || state==SASL_POSTED_INIT
       || state==SASL_POSTED_RESPONSE
       || state==SASL_PRETEND_OUTCOME
-      || state==SASL_RECVED_OUTCOME
+      || state==SASL_RECVED_OUTCOME_SUCCEED
+      || state==SASL_RECVED_OUTCOME_FAIL
       || state==SASL_ERROR;
 }
 
@@ -117,16 +118,19 @@ static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
 {
   enum pni_sasl_state last_state = sasl->last_state;
   enum pni_sasl_state desired_state = sasl->desired_state;
-  return last_state==SASL_RECVED_OUTCOME
+  return last_state==SASL_RECVED_OUTCOME_SUCCEED
+      || last_state==SASL_RECVED_OUTCOME_FAIL
       || last_state==SASL_ERROR
-      || desired_state==SASL_POSTED_OUTCOME;
+      || desired_state==SASL_POSTED_OUTCOME
+      || ( desired_state==SASL_RECVED_OUTCOME_SUCCEED && last_state>=SASL_POSTED_INIT);
 }
 
 static bool pni_sasl_is_final_output_state(pni_sasl_t *sasl)
 {
   enum pni_sasl_state last_state = sasl->last_state;
   return last_state==SASL_PRETEND_OUTCOME
-      || last_state==SASL_RECVED_OUTCOME
+      || last_state==SASL_RECVED_OUTCOME_SUCCEED
+      || last_state==SASL_RECVED_OUTCOME_FAIL
       || last_state==SASL_ERROR
       || last_state==SASL_POSTED_OUTCOME;
 }
@@ -161,9 +165,9 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
       sasl->last_state = SASL_POSTED_MECHANISMS;
     }
     // If we already pretended to receive outcome and we actually received outcome
-    // we must set last_state here as we'vwe already stoped outputting from this layer
-    if (sasl->last_state==SASL_PRETEND_OUTCOME && desired_state==SASL_RECVED_OUTCOME ) {
-        sasl->last_state = SASL_RECVED_OUTCOME;
+    // we must set last_state here as we've already stoped outputting from this layer
+    if (sasl->last_state==SASL_PRETEND_OUTCOME && (desired_state==SASL_RECVED_OUTCOME_SUCCEED || desired_state==SASL_RECVED_OUTCOME_FAIL) ) {
+        sasl->last_state = desired_state;
     }
     sasl->desired_state = desired_state;
     // Don't emit transport event on error as there will be a TRANSPORT_ERROR event
@@ -229,15 +233,15 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_ERROR;
       }
       break;
-    case SASL_RECVED_OUTCOME:
-      if (sasl->last_state < SASL_POSTED_INIT && sasl->outcome==PN_SASL_OK) {
+    case SASL_RECVED_OUTCOME_SUCCEED:
+      if (sasl->last_state < SASL_POSTED_INIT) {
         desired_state = SASL_POSTED_INIT;
         continue;
       }
-      if (sasl->outcome!=PN_SASL_OK) {
-        pn_do_error(transport, "amqp:unauthorized-access", "Authentication failed [mech=%s]", transport->sasl->selected_mechanism);
-        desired_state = SASL_ERROR;
-      }
+      break;
+    case SASL_RECVED_OUTCOME_FAIL:
+      pn_do_error(transport, "amqp:unauthorized-access", "Authentication failed [mech=%s]", transport->sasl->selected_mechanism);
+      desired_state = SASL_ERROR;
       break;
     case SASL_ERROR:
       break;
@@ -298,6 +302,8 @@ static void pni_sasl_start_server_if_needed(pn_transport_t *transport)
 
 static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
+  pni_sasl_t *sasl = transport->sasl;
+
   bool eos = pn_transport_capacity(transport)==PN_EOS;
   if (eos) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
@@ -309,11 +315,14 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
 
-  if (n!=0 || !pni_sasl_is_final_input_state(transport->sasl)) {
+  if (!pni_sasl_is_final_input_state(sasl)) {
     return n;
   }
 
-  pni_sasl_t *sasl = transport->sasl;
+  if (!sasl->client && n!=0) {
+    return n;
+  }
+
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     if (transport->trace & PN_TRACE_DRV)
@@ -322,9 +331,10 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
   } else {
+    assert(n==0);
     return pni_passthru_layer.process_input(transport, layer, bytes, available );
   }
-  return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
+  return n+transport->io_layers[layer]->process_input(transport, layer, bytes+n, available-n);
 }
 
 static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
@@ -551,7 +561,7 @@ static void pni_sasl_force_anonymous(pn_transport_t *transport)
       pni_sasl_set_desired_state(transport, SASL_PRETEND_OUTCOME);
     } else {
       sasl->outcome = PN_SASL_PERM;
-      pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
+      pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
     }
   }
 }
@@ -688,7 +698,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
   } else {
     sasl->outcome = PN_SASL_PERM;
-    pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
+    pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
   }
 
   pn_free(mechs);
@@ -728,8 +738,9 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
 
   pni_sasl_t *sasl = transport->sasl;
   sasl->outcome = (pn_sasl_outcome_t) outcome;
-  transport->authenticated = sasl->outcome==PN_SASL_OK;
-  pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME);
+  bool authenticated = sasl->outcome==PN_SASL_OK;
+  transport->authenticated = authenticated;
+  pni_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_OUTCOME_SUCCEED : SASL_RECVED_OUTCOME_FAIL);
 
   return 0;
 }
