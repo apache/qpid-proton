@@ -671,24 +671,37 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 
   // This scanning relies on pn_data_scan leaving the pn_data_t cursors
   // where they are after finishing the scan
-  int err = pn_data_scan(args, "D.[@[");
-  if (err) return err;
-
   pn_string_t *mechs = pn_string("");
 
-  // Now keep checking for end of array and pull a symbol
-  while(pn_data_next(args)) {
-    pn_bytes_t s = pn_data_get_symbol(args);
-    if (pni_included_mech(transport->sasl->included_mechanisms, s)) {
-      pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
-    }
-  }
+  // Try array of symbols for mechanism list
+  bool array = false;
+  int err = pn_data_scan(args, "D.[?@[", &array);
+  if (err) return err;
 
-  if (pn_string_size(mechs)) {
-      pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
+  if (array) {
+    // Now keep checking for end of array and pull a symbol
+    while(pn_data_next(args)) {
+      pn_bytes_t s = pn_data_get_symbol(args);
+      if (pni_included_mech(transport->sasl->included_mechanisms, s)) {
+        pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
+      }
+    }
+
+    if (pn_string_size(mechs)) {
+        pn_string_buffer(mechs)[pn_string_size(mechs)-1] = 0;
+    }
+  } else {
+    // No array of symbols; try single symbol
+    pn_data_rewind(args);
+    pn_bytes_t symbol;
+    int err = pn_data_scan(args, "D.[s]", &symbol);
+    if (err) return err;
+
+    pn_string_setn(mechs, symbol.start, symbol.size);
   }
 
   if (pni_init_client(transport) &&
+      pn_string_size(mechs) &&
       pni_process_mechanisms(transport, pn_string_get(mechs))) {
     pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
   } else {
