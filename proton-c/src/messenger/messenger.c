@@ -42,7 +42,7 @@
 #include "transform.h"
 #include "subscription.h"
 #include "selectable.h"
-#include "../log_private.h"
+#include "log_private.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 
