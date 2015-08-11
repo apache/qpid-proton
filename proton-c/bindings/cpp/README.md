@@ -2,38 +2,36 @@
 
 This is a C++ binding for the proton API.
 
-There are [examples](../../../examples/cpp/README.md) and the header files have
-API documentation in doxygen format.
+The documentation includes a tutorial and API documentation.
+
+To generate the documentation go to your build directory, run `make docs-cpp`
+and open `proton-c/bindings/cpp/docs/html/index.html` in a browser.
 
 # TO DO
 
-Doc & examples
-- Finish example set and tutorial documentation, following pyton examples.
-- Auto tests for all examples validating all statements & code in tutorial.
-- C++ section on website.
-
-Bugs
-- Memory management
-  - Drop PIMPL pattern in API: pn_foo pointer is already hiding the impl.
-  - Proper ownership of pn_objects created by user, e.g. Message. Let user choose pointer style?
-- Error handling, examples crash on error e.g. queue not found.
-- TODO notes in code.
+Doc & website
+- Fill out API documentation
+- Update website with C++ docs.
 
 Tests
-- Interop/type testing for full AMQP type coverage.
+- Interop/type testing: proton/tests/interop, new interop suite
 - Unit testing for reasonable code coverage.
 - Valgrind for automated unit and example tests.
+- Test examples against AM-Q and qpidd.
+
+Bugs
+- Error handling: examples exit silently on broker exit/not running, core on no-such-queue.
+- TODO notes in code.
 
 Features
 - SASL/SSL support with interop tests.
 - Reconnection
 - Browsing
 - Selectors
-- Finish blocking API & examples.
-- Described types, full support and tests.
+- AMQP described types and arrays, full support and tests.
 - Durable subscriptions & demos (see python changes)
 
 # Nice to have
 
-- Helpers (or at least doc) for multi-threaded use (reactor/engine per connection)
+- Helpers (or at least doc) for multi-threaded use (container per connection)
 - Usable support for decimal types.
