@@ -30,8 +30,13 @@ Features
 - Selectors
 - AMQP described types and arrays, full support and tests.
 - Durable subscriptions & demos (see python changes)
+- Transactions
+- Heartbeats
+- Tasks
 
 # Nice to have
 
 - Helpers (or at least doc) for multi-threaded use (container per connection)
 - Usable support for decimal types.
+- Endpoint conditions
+- Selectables and 3rd party event loop support
