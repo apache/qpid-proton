@@ -40,35 +40,35 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
   pump(self.t1, self.t2, 1024)
 
   if encrypted is not None:
-    assert self.t2.encrypted == encrypted
-    assert self.t1.encrypted == encrypted
+    assert self.t2.encrypted == encrypted, encrypted
+    assert self.t1.encrypted == encrypted, encrypted
 
-  assert self.t2.authenticated == authenticated
-  assert self.t1.authenticated == authenticated
+  assert self.t2.authenticated == authenticated, authenticated
+  assert self.t1.authenticated == authenticated, authenticated
   if authenticated:
     # Server
     assert self.t2.user == authUser
     assert self.s2.user == authUser
     assert self.s2.mech == mech.strip()
-    assert self.s2.outcome == SASL.OK
+    assert self.s2.outcome == SASL.OK, self.s2.outcome
     assert self.c2.state & Endpoint.LOCAL_ACTIVE and self.c2.state & Endpoint.REMOTE_ACTIVE,\
       "local_active=%s, remote_active=%s" % (self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
     # Client
     assert self.t1.user == clientUser
     assert self.s1.user == clientUser
     assert self.s1.mech == mech.strip()
-    assert self.s1.outcome == SASL.OK
+    assert self.s1.outcome == SASL.OK, self.s1.outcome
     assert self.c1.state & Endpoint.LOCAL_ACTIVE and self.c1.state & Endpoint.REMOTE_ACTIVE,\
       "local_active=%s, remote_active=%s" % (self.c1.state & Endpoint.LOCAL_ACTIVE, self.c1.state & Endpoint.REMOTE_ACTIVE)
   else:
     # Server
     assert self.t2.user == None
     assert self.s2.user == None
-    assert self.s2.outcome != SASL.OK
+    assert self.s2.outcome != SASL.OK, self.s2.outcome
     # Client
     assert self.t1.user == clientUser
     assert self.s1.user == clientUser
-    assert self.s1.outcome != SASL.OK
+    assert self.s1.outcome != SASL.OK, self.s1.outcome
 
 class Test(common.Test):
   pass
