@@ -313,14 +313,8 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 
   pni_sasl_start_server_if_needed(transport);
 
-  ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
-
   if (!pni_sasl_is_final_input_state(sasl)) {
-    return n;
-  }
-
-  if (!sasl->client && n!=0) {
-    return n;
+    return pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
   }
 
   if (pni_sasl_impl_can_encrypt(transport)) {
@@ -331,10 +325,9 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   } else if (sasl->client) {
     transport->io_layers[layer] = &pni_passthru_layer;
   } else {
-    assert(n==0);
-    return pni_passthru_layer.process_input(transport, layer, bytes, available );
+    return pni_passthru_layer.process_input(transport, layer, bytes, available);
   }
-  return n+transport->io_layers[layer]->process_input(transport, layer, bytes+n, available-n);
+  return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
 }
 
 static ssize_t pn_input_read_sasl_encrypt(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
@@ -393,10 +386,12 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
     return pn_dispatcher_output(transport, bytes, available);
   }
 
+  // We only get here if there is nothing to output and we're a final output state
   if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
     return PN_EOS;
   }
 
+  // We know that auth succeeded or we're not in final input state
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     if (transport->trace & PN_TRACE_DRV)
