@@ -79,6 +79,7 @@ class SaslTest(Test):
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)
+    self.t2.max_frame_size = 65536
     self.s2 = SASL(self.t2)
 
   def pump(self):
@@ -150,12 +151,6 @@ class SaslTest(Test):
 
     self.s1.allowed_mechs('ANONYMOUS')
     self.s2.allowed_mechs('ANONYMOUS')
-
-    # send the server's OK to the client
-    # This is still needed for the Java impl
-    out2 = self.t2.peek(1024)
-    self.t2.pop(len(out2))
-    self.t1.push(out2)
 
     # do some work to generate AMQP data
     c1 = Connection()
