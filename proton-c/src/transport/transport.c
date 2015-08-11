@@ -31,7 +31,7 @@
 #include "platform.h"
 #include "platform_fmt.h"
 #include "config.h"
-#include "../log_private.h"
+#include "log_private.h"
 
 #include <stdlib.h>
 #include <string.h>
