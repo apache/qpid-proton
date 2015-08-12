@@ -25,6 +25,8 @@
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/error.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 
 #include "msg.hpp"
 #include "contexts.hpp"

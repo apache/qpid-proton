@@ -37,14 +37,11 @@ namespace proton {
 class sender : public link
 {
   public:
-    PN_CPP_EXTERN sender(pn_link_t *lnk=0);
-    PN_CPP_EXTERN sender(const link& c);
+    /// @throw proton::error if (link && !link.is_sender())
+    PN_CPP_EXTERN sender(link = link());
 
     /// Send a message on the link.
     PN_CPP_EXTERN delivery send(message &m);
-
-  protected:
-    PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);
 };
 
 

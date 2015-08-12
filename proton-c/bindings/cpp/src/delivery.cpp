@@ -21,41 +21,15 @@
 
 #include "proton/delivery.hpp"
 #include "proton/delivery.h"
-#include "proton_impl_ref.hpp"
 
 namespace proton {
 
-template class proton_handle<pn_delivery_t>;
-typedef proton_impl_ref<delivery> PI;
+delivery::delivery(pn_delivery_t *p) : wrapper<pn_delivery_t>(p) {}
 
-delivery::delivery(pn_delivery_t *p) {
-    PI::ctor(*this, p);
-}
-delivery::delivery() {
-    PI::ctor(*this, 0);
-}
-delivery::delivery(const delivery& c) : proton_handle<pn_delivery_t>() {
-    PI::copy(*this, c);
-}
-delivery& delivery::operator=(const delivery& c) {
-    return PI::assign(*this, c);
-}
-delivery::~delivery() {
-    PI::dtor(*this);
-}
+bool delivery::settled() { return pn_delivery_settled(get()); }
 
-bool delivery::settled() {
-    return pn_delivery_settled(impl_);
-}
+void delivery::settle() { pn_delivery_settle(get()); }
 
-void delivery::settle() {
-    pn_delivery_settle(impl_);
-}
-
-void delivery::update(delivery::state state) {
-    pn_delivery_update(impl_, state);
-}
-
-pn_delivery_t *delivery::pn_delivery() { return impl_; }
+void delivery::update(delivery::state state) { pn_delivery_update(get(), state); }
 
 }

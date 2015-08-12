@@ -23,6 +23,8 @@
 #include "proton/blocking_sender.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 #include "proton/url.hpp"
 #include "proton/error.hpp"
 #include "fetcher.hpp"

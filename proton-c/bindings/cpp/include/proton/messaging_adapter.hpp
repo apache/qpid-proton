@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/proton_handler.hpp"
+#include "proton/wrapper.hpp"
 #include "proton/messaging_handler.hpp"
 
 #include "proton/messaging_event.hpp"

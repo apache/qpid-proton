@@ -22,7 +22,7 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/proton_handle.hpp"
+#include "proton/wrapper.hpp"
 
 #include "proton/delivery.h"
 #include "proton/disposition.h"
@@ -30,7 +30,7 @@
 namespace proton {
 
 /** delivery status of a message */
-class delivery : public proton_handle<pn_delivery_t>
+class delivery : public wrapper<pn_delivery_t>
 {
   public:
 
@@ -44,11 +44,7 @@ class delivery : public proton_handle<pn_delivery_t>
         MODIFIED = PN_MODIFIED  ///< Settled as modified
     };  // AMQP spec 3.4 delivery State
 
-    PN_CPP_EXTERN delivery(pn_delivery_t *d);
-    PN_CPP_EXTERN delivery();
-    PN_CPP_EXTERN ~delivery();
-    PN_CPP_EXTERN delivery(const delivery&);
-    PN_CPP_EXTERN delivery& operator=(const delivery&);
+    PN_CPP_EXTERN delivery(pn_delivery_t * = 0);
 
     /** Return true if the delivery has been settled. */
     PN_CPP_EXTERN bool settled();
@@ -58,10 +54,6 @@ class delivery : public proton_handle<pn_delivery_t>
 
     /** Set the local state of the delivery. */
     PN_CPP_EXTERN void update(delivery::state state);
-
-    PN_CPP_EXTERN pn_delivery_t *pn_delivery();
-  private:
-    friend class proton_impl_ref<delivery>;
 };
 
 }

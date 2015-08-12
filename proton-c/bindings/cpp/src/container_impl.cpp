@@ -26,6 +26,8 @@
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
 #include "proton/url.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 
 #include "msg.hpp"
 #include "container_impl.hpp"
@@ -237,7 +239,7 @@ sender container_impl::create_sender(connection &connection, const std::string &
     if (!reactor_) throw error(MSG("container not started"));
     session session = default_session(connection.pn_connection(), &impl(connection)->default_session_);
     sender snd = session.create_sender(container_id_  + '-' + addr);
-    pn_link_t *lnk = snd.pn_link();
+    pn_link_t *lnk = snd.get();
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     if (h) {
         pn_record_t *record = pn_link_attachments(lnk);
@@ -255,7 +257,7 @@ sender container_impl::create_sender(const proton::url &url) {
     session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
     std::string path = url.path();
     sender snd = session.create_sender(container_id_ + '-' + path);
-    pn_terminus_set_address(pn_link_target(snd.pn_link()), path.c_str());
+    pn_terminus_set_address(pn_link_target(snd.get()), path.c_str());
     snd.open();
     return snd;
 }
@@ -265,7 +267,7 @@ receiver container_impl::create_receiver(connection &connection, const std::stri
     connection_impl *conn_impl = impl(connection);
     session session = default_session(conn_impl->pn_connection_, &conn_impl->default_session_);
     receiver rcv = session.create_receiver(container_id_ + '-' + addr);
-    pn_link_t *lnk = rcv.pn_link();
+    pn_link_t *lnk = rcv.get();
     pn_terminus_t *src = pn_link_source(lnk);
     pn_terminus_set_address(src, addr.c_str());
     if (dynamic)
@@ -286,7 +288,7 @@ receiver container_impl::create_receiver(const proton::url &url) {
     session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
     std::string path = url.path();
     receiver rcv = session.create_receiver(container_id_ + '-' + path);
-    pn_terminus_set_address(pn_link_source(rcv.pn_link()), path.c_str());
+    pn_terminus_set_address(pn_link_source(rcv.get()), path.c_str());
     rcv.open();
     return rcv;
 }

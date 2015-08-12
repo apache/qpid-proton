@@ -33,11 +33,11 @@ std::string error_str(int code);
 /** Print the error string from pn_error_t, or from code if pn_error_t has no error. */
 std::string error_str(pn_error_t*, int code=0);
 
-/** Wrapper for a proton object pointer. */
-struct pn_object { void* value; pn_object(void* o) : value(o) {} };
+/** Make a void* inspectable via operator <<. */
+struct inspectable { void* value; inspectable(void* o) : value(o) {} };
 
 /** Stream a proton object via pn_inspect. */
-std::ostream& operator<<(std::ostream& o, const pn_object& object);
+std::ostream& operator<<(std::ostream& o, const inspectable& object);
 
 
 

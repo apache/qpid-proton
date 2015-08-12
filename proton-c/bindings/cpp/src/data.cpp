@@ -62,6 +62,6 @@ void data::rewind() { ::pn_data_rewind(data_); }
 
 bool data::empty() const { return ::pn_data_size(data_) == 0; }
 
-std::ostream& operator<<(std::ostream& o, const data& d) { return o << pn_object(d.data_); }
+std::ostream& operator<<(std::ostream& o, const data& d) { return o << inspectable(d.data_); }
 
 }

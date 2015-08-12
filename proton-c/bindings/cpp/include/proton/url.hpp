@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include "proton/proton_handle.hpp"
+#include "proton/wrapper.hpp"
 #include "proton/error.hpp"
 #include <iosfwd>
 

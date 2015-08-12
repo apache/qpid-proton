@@ -24,11 +24,11 @@
 #include "proton/link.hpp"
 #include "proton/delivery.hpp"
 #include "proton/message.h"
-#include "proton/link.h"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 #include "proton/delivery.h"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "proton_impl_ref.hpp"
 
 #include <cstring>
 #include <assert.h>
@@ -50,10 +50,6 @@ message& message::operator=(const message& m) {
 }
 
 message::~message() { if (impl_) pn_message_free(impl_); }
-
-void message::swap(message& m) {
-    if (this != &m) std::swap(impl_, m.impl_);
-}
 
 void message::clear() { pn_message_clear(impl_); }
 
@@ -224,9 +220,9 @@ void message::decode(const std::string &s) {
     check(pn_message_decode(impl_, s.data(), s.size()));
 }
 
-pn_message_t *message::pn_message() { return impl_; }
+pn_message_t *message::get() { return impl_; }
 
-pn_message_t *message::pn_message_forget() {
+pn_message_t *message::release() {
     pn_message_t *result = impl_;
     impl_ = 0;
     return result;
@@ -234,12 +230,12 @@ pn_message_t *message::pn_message_forget() {
 
 void message::decode(proton::link link, proton::delivery delivery) {
     std::string buf;
-    buf.resize(pn_delivery_pending(delivery.pn_delivery()));
-    ssize_t n = pn_link_recv(link.pn_link(), (char *) buf.data(), buf.size());
+    buf.resize(pn_delivery_pending(delivery.get()));
+    ssize_t n = pn_link_recv(link.get(), (char *) buf.data(), buf.size());
     if (n != (ssize_t) buf.size()) throw error(MSG("link read failure"));
     clear();
     decode(buf);
-    pn_link_advance(link.pn_link());
+    pn_link_advance(link.get());
 }
 
 }

@@ -27,6 +27,8 @@
 #include "proton/proton_handler.hpp"
 #include "proton/error.hpp"
 #include "proton/container.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 
 #include "connection_impl.hpp"
 #include "msg.hpp"

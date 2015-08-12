@@ -21,35 +21,12 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
-#include "proton_impl_ref.hpp"
 #include "msg.hpp"
 
 namespace proton {
 
-template class proton_handle<pn_acceptor_t>;
-typedef proton_impl_ref<acceptor> PI;
+acceptor::acceptor(pn_acceptor_t *a) : wrapper<pn_acceptor_t>(a) {}
 
-acceptor::acceptor() {}
-
-acceptor::acceptor(pn_acceptor_t *a)
-{
-    PI::ctor(*this, a);
-}
-
-acceptor::~acceptor() { PI::dtor(*this); }
-
-
-acceptor::acceptor(const acceptor& a) : proton_handle<pn_acceptor_t>() {
-    PI::copy(*this, a);
-}
-
-acceptor& acceptor::operator=(const acceptor& a) {
-    return PI::assign(*this, a);
-}
-
-void acceptor::close() {
-    if (impl_)
-        pn_acceptor_close(impl_);
-}
+void acceptor::close() { pn_acceptor_close(get()); }
 
 }

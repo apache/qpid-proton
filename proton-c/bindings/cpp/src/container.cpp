@@ -26,6 +26,8 @@
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
 #include "proton/url.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 
 #include "container_impl.hpp"
 #include "private_impl_ref.hpp"

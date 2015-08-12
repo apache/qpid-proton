@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/link.hpp"
 
 #include "proton/link.h"
 #include <string>
@@ -34,7 +33,7 @@ class link;
 /** A terminus represents one end of a link.
  * The source terminus is where originate, the target terminus is where they go.
  */
-class terminus : public proton_handle<pn_terminus_t>
+class terminus : public wrapper<pn_terminus_t>
 {
   public:
     /// Type of terminus
@@ -59,12 +58,6 @@ class terminus : public proton_handle<pn_terminus_t>
         MOVE = PN_DIST_MODE_MOVE
     };
 
-
-    PN_CPP_EXTERN terminus();
-    PN_CPP_EXTERN ~terminus();
-    PN_CPP_EXTERN terminus(const terminus&);
-    PN_CPP_EXTERN terminus& operator=(const terminus&);
-    PN_CPP_EXTERN pn_terminus_t *pn_terminus();
     PN_CPP_EXTERN type_t type();
     PN_CPP_EXTERN void type(type_t);
     PN_CPP_EXTERN expiry_policy_t expiry_policy();
@@ -77,10 +70,9 @@ class terminus : public proton_handle<pn_terminus_t>
     PN_CPP_EXTERN void dynamic(bool);
 
   private:
-    link *link_;
-    PN_CPP_EXTERN terminus(pn_terminus_t *, link *);
+    pn_link_t* link_;
+    PN_CPP_EXTERN terminus(pn_terminus_t * = 0, pn_link_t * = 0);
   friend class link;
-  friend class proton_impl_ref<terminus>;
 };
 
 

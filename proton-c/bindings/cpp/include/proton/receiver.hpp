@@ -35,12 +35,11 @@ namespace proton {
 class receiver : public link
 {
   public:
-    PN_CPP_EXTERN receiver(pn_link_t *lnk);
-    PN_CPP_EXTERN receiver();
-    PN_CPP_EXTERN receiver(const link& c);
+    /// @throw proton::error if (link && !link.is_receiver())
+    PN_CPP_EXTERN receiver(link = link());
+
+    /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
-  protected:
-    PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);
 };
 
 }

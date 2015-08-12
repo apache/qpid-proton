@@ -280,15 +280,15 @@ PN_EXTERN void pn_link_detach(pn_link_t *link);
  */
 PN_EXTERN pn_terminus_t *pn_link_source(pn_link_t *link);
 
-/**
- * Access the locally defined target definition for a link.
- *
- * The pointer returned by this operation is valid until the link
- * object is freed.
- *
- * @param[in] link a link object
- * @return a pointer to a target terminus
- */
+    /**
+     * Access the locally defined target definition for a link.
+     *
+     * The pointer returned by this operation is valid until the link
+     * object is freed.
+     *
+     * @param[in] link a link object
+     * @return a pointer to a target terminus
+     */
 PN_EXTERN pn_terminus_t *pn_link_target(pn_link_t *link);
 
 /**

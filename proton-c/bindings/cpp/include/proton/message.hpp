@@ -35,9 +35,13 @@ class delivery;
 
 /** An AMQP message.
  *
- * This class has value semantics: the copy constructor and assignment make a
- * copy of the underlying message data. If you want to transfer the message data
- * without a copy use the swap member function or std::swap.
+ * NOTE: This class has value semantics, unlike other proton wrapper types.  The
+ * copy constructor and assignment make a copy of the underlying pn_message_t
+ * object.  You can get at the underlying pn_message_t* by calling get() or
+ * release(), or use std::swap to move the data from one proton::message to
+ * another without copying.
+ *
+ // FIXME aconway 2015-08-12: support move semantics assignment for C++11
  */
 
 class message
@@ -53,12 +57,11 @@ class message
 
     PN_CPP_EXTERN ~message();
 
-    PN_CPP_EXTERN void swap(message&);
-
     /// Access the underlying pn_message_t, note it will be freed by ~message.
-    PN_CPP_EXTERN pn_message_t *pn_message();
+    PN_CPP_EXTERN pn_message_t *get();
+
     /// Forget the underlying pn_message_t, the message is cleared. Caller must call pn_message_free.
-    PN_CPP_EXTERN pn_message_t *pn_message_forget();
+    PN_CPP_EXTERN pn_message_t *release();
 
     /** Clear the message content */
     PN_CPP_EXTERN void clear();

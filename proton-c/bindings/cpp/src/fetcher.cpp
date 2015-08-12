@@ -43,7 +43,7 @@ void fetcher::decref() {
 }
 
 void fetcher::on_link_init(event &e) {
-    pn_link_ = e.link().pn_link();
+    pn_link_ = e.link().get();
     pn_incref(pn_link_);
 }
 
@@ -56,7 +56,7 @@ void fetcher::on_message(event &e) {
 
 void fetcher::on_link_error(event &e) {
     link lnk = e.link();
-    if (pn_link_state(lnk.pn_link()) & PN_LOCAL_ACTIVE) {
+    if (pn_link_state(lnk.get()) & PN_LOCAL_ACTIVE) {
         lnk.close();
         throw error(MSG("Link detached: " << lnk.name()));
     }

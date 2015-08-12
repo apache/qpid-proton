@@ -41,7 +41,7 @@ void acking::release(delivery &d, bool delivered) {
 
 void acking::settle(delivery &d, delivery::state state) {
     if (state)
-        pn_delivery_update(d.pn_delivery(), state);
+        pn_delivery_update(d.get(), state);
     d.settle();
 }
 

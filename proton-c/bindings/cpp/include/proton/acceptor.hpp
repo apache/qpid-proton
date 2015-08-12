@@ -24,27 +24,20 @@
 
 #include "proton/reactor.h"
 #include "proton/export.hpp"
-#include "proton/proton_handle.hpp"
+#include "proton/wrapper.hpp"
 
 struct pn_connection_t;
 
 namespace proton {
 
 /** acceptor accepts connections. @see container::listen */
-class acceptor : public proton_handle<pn_acceptor_t>
+class acceptor : public wrapper<pn_acceptor_t>
 {
   public:
-    PN_CPP_EXTERN acceptor();
-    PN_CPP_EXTERN acceptor(pn_acceptor_t *);
-    PN_CPP_EXTERN acceptor(const acceptor&);
-    PN_CPP_EXTERN acceptor& operator=(const acceptor&);
-    PN_CPP_EXTERN ~acceptor();
+    PN_CPP_EXTERN acceptor(pn_acceptor_t * = 0);
 
     /** close the acceptor */
     PN_CPP_EXTERN void close();
-
-  private:
-    friend class proton_impl_ref<acceptor>;
 };
 
 }

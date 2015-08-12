@@ -20,6 +20,8 @@
  */
 #include "proton/blocking_sender.hpp"
 #include "proton/blocking_connection.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
 
@@ -36,7 +38,7 @@ struct delivery_settled {
 } // namespace
 
 
-blocking_sender::blocking_sender(blocking_connection &c, sender &l) : blocking_link(&c, l.pn_link()) {
+blocking_sender::blocking_sender(blocking_connection &c, sender l) : blocking_link(&c, l.get()) {
     std::string ta = link_.target().address();
     std::string rta = link_.remote_target().address();
     if (ta.empty() || ta.compare(rta) != 0) {
@@ -48,10 +50,10 @@ blocking_sender::blocking_sender(blocking_connection &c, sender &l) : blocking_l
 }
 
 delivery blocking_sender::send(message &msg, duration timeout) {
-    sender snd = link_;
+    sender snd(link_.get());
     delivery dlv = snd.send(msg);
     std::string txt = "Sending on sender " + link_.name();
-    delivery_settled cond(dlv.pn_delivery());
+    delivery_settled cond(dlv.get());
     connection_.wait(cond, txt, timeout);
     return dlv;
 }

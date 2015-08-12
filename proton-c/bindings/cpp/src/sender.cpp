@@ -36,31 +36,29 @@
 
 namespace proton {
 
+namespace {
 
-sender::sender(pn_link_t *lnk) : link(lnk) {}
-
-void sender::verify_type(pn_link_t *lnk) {
-    if (lnk && pn_link_is_receiver(lnk))
-        throw error(MSG("Creating sender with receiver context"));
+pn_link_t* verify(pn_link_t* l) {
+    if (l && !link(l).is_sender())
+        throw error(MSG("Creating sender from receiver link"));
+    return l;
 }
-
-sender::sender(const link& c) : link(c.pn_link()) {}
-
-
-namespace{
-// revisit if thread safety required
+// TODO: revisit if thread safety required
 std::uint64_t tag_counter = 0;
+
 }
+
+sender::sender(link lnk) : link(verify(lnk.get())) {}
 
 delivery sender::send(message &message) {
     char tag[8];
     void *ptr = &tag;
     std::uint64_t id = ++tag_counter;
     *((std::uint64_t *) ptr) = id;
-    pn_delivery_t *dlv = pn_delivery(pn_link(), pn_dtag(tag, 8));
+    pn_delivery_t *dlv = pn_delivery(get(), pn_dtag(tag, 8));
     std::string buf;
     message.encode(buf);
-    pn_link_t *link = pn_link();
+    pn_link_t *link = get();
     pn_link_send(link, buf.data(), buf.size());
     pn_link_advance(link);
     if (pn_link_snd_settle_mode(link) == PN_SND_SETTLED)

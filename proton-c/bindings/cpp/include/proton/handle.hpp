@@ -28,29 +28,17 @@ namespace proton {
 
 ///@cond INTERNAL
 template <class> class private_impl_ref;
-template <class> class proton_impl_ref;
 ///@endcond INTERNAL
 
 /**
  * A handle is like a pointer: refers to an underlying implementation object.
  * Copying the handle does not copy the object.
  *
- * Handles can be null,  like a 0 pointer. Use is_valid(), is_null() or the
- * conversion to bool to test for a null handle.
+ * A handle can be null, use `if (handle)` or `if (!handle)` to test for a null handle.
  */
 template <class T> class handle {
   public:
-
-    /**@return true if handle is valid,  i.e. not null. */
-    bool is_valid() const { return impl_; }
-
-    /**@return true if handle is null. It is an error to call any function on a null handle. */
-    bool is_null() const { return !impl_; }
-
-    /** Conversion to bool supports idiom if (handle) { handle->... } */
     operator bool() const { return impl_; }
-
-    /** Operator ! supports idiom if (!handle) { do_if_handle_is_null(); } */
     bool operator !() const { return !impl_; }
 
     /** Operator ==  equal if they point to same non-null object*/

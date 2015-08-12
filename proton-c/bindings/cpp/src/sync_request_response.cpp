@@ -67,7 +67,7 @@ std::string sync_request_response::reply_to() {
 
 void sync_request_response::on_message(event &e) {
     response_.reset(new message);
-    response_->swap(e.message());
+    std::swap(*response_, e.message());
     // Wake up enclosing blocking_connection.wait() to handle the message
     e.container().yield();
 }

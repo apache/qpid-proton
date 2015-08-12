@@ -52,7 +52,7 @@ struct link_not_open {
 
 blocking_link::blocking_link(blocking_connection *c, pn_link_t *pnl) : connection_(*c), link_(pnl) {
     std::string msg = "Opening link " + link_.name();
-    link_opened link_opened(link_.pn_link());
+    link_opened link_opened(link_.get());
     connection_.wait(link_opened, msg);
     check_closed();
 }
@@ -61,13 +61,13 @@ blocking_link::~blocking_link() {}
 
 void blocking_link::wait_for_closed(duration timeout) {
     std::string msg = "Closing link " + link_.name();
-    link_closed link_closed(link_.pn_link());
+    link_closed link_closed(link_.get());
     connection_.wait(link_closed, msg);
     check_closed();
 }
 
 void blocking_link::check_closed() {
-    pn_link_t * pn_link = link_.pn_link();
+    pn_link_t * pn_link = link_.get();
     if (pn_link_state(pn_link) & PN_REMOTE_CLOSED) {
         link_.close();
         throw error(MSG("Link detached: " << link_.name()));
@@ -77,7 +77,7 @@ void blocking_link::check_closed() {
 void blocking_link::close() {
     link_.close();
     std::string msg = "Closing link " + link_.name();
-    link_not_open link_not_open(link_.pn_link());
+    link_not_open link_not_open(link_.get());
     connection_.wait(link_not_open, msg);
 }
 

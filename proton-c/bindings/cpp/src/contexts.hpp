@@ -36,8 +36,8 @@ void session_context(pn_session_t *pn_session, session *session);
 session *session_context(pn_session_t *pn_session);
 
 class link;
-void link_context(pn_link_t *pn_link, link *link);
-link *link_context(pn_link_t *pn_link);
+void link_context(pn_link_t *get(), link *link);
+link *link_context(pn_link_t *get());
 
 class container_impl;
 void container_context(pn_reactor_t *pn_reactor, container_impl *container);

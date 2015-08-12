@@ -22,7 +22,7 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/proton_handle.hpp"
+#include "proton/wrapper.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/terminus.hpp"
 #include "proton/types.h"
@@ -33,14 +33,10 @@ struct pn_connection_t;
 namespace proton {
 
 /** Messages are transferred across a link. Base class for sender, receiver. */
-class link : public endpoint, public proton_handle<pn_link_t>
+class link : public endpoint, public wrapper<pn_link_t>
 {
   public:
-    PN_CPP_EXTERN link(pn_link_t *);
-    PN_CPP_EXTERN link();
-    PN_CPP_EXTERN ~link();
-    PN_CPP_EXTERN link(const link&);
-    PN_CPP_EXTERN link& operator=(const link&);
+    PN_CPP_EXTERN link(pn_link_t * = 0);
 
     /** Locally open the link, not complete till messaging_handler::on_link_opened or
      * proton_handler::link_remote_open
@@ -74,14 +70,6 @@ class link : public endpoint, public proton_handle<pn_link_t>
 
     /** Connection of the link */
     PN_CPP_EXTERN class connection &connection();
-
-    PN_CPP_EXTERN pn_link_t *pn_link() const;
-
-  protected:
-    PN_CPP_EXTERN virtual void verify_type(pn_link_t *l);
-  private:
-    friend class proton_impl_ref<link>;
-    bool sender_link;
 };
 
 }

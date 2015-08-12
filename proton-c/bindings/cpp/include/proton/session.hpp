@@ -38,14 +38,10 @@ class handler;
 class transport;
 
 /** A session is a collection of links */
-class session : public endpoint, public proton_handle<pn_session_t>
+class session : public endpoint, public wrapper<pn_session_t>
 {
   public:
-    PN_CPP_EXTERN session(pn_session_t *s);
-    PN_CPP_EXTERN session();
-    PN_CPP_EXTERN session(const session&);
-    PN_CPP_EXTERN ~session();
-    PN_CPP_EXTERN session& operator=(const session&);
+    PN_CPP_EXTERN session(pn_session_t * = 0);
 
     /** Initiate local open, not complete till messaging_handler::on_session_opened()
      * or proton_handler::on_session_remote_open()
@@ -63,11 +59,6 @@ class session : public endpoint, public proton_handle<pn_session_t>
     PN_CPP_EXTERN receiver create_receiver(const std::string& name);
     /// Create a sender link
     PN_CPP_EXTERN sender create_sender(const std::string& name);
-
-    PN_CPP_EXTERN pn_session_t *pn_session();
-
-  private:
-  friend class proton_impl_ref<session>;
 };
 
 }

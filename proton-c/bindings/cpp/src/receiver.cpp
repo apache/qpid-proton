@@ -29,19 +29,20 @@
 
 namespace proton {
 
+namespace {
 
-receiver::receiver(pn_link_t *lnk) : link(lnk) {}
-receiver::receiver() : link(0) {}
-
-receiver::receiver(const link& c) : link(c.pn_link()) {}
-
-void receiver::verify_type(pn_link_t *lnk) {
-    if (lnk && pn_link_is_sender(lnk))
-        throw error(MSG("Creating receiver with sender context"));
+pn_link_t* verify(pn_link_t* l) {
+    if (l && !link(l).is_receiver())
+        throw error(MSG("Creating receiver from sender link"));
+    return l;
 }
 
+}
+
+receiver::receiver(link lnk) : link(verify(lnk.get())) {}
+
 void receiver::flow(int count) {
-    pn_link_flow(pn_link(), count);
+    pn_link_flow(get(), count);
 }
 
 }
