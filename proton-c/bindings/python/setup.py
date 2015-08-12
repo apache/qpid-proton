@@ -371,7 +371,14 @@ setup(name='python-qpid-proton',
       license="Apache Software License",
       classifiers=["License :: OSI Approved :: Apache Software License",
                    "Intended Audience :: Developers",
-                   "Programming Language :: Python"],
+                   "Programming Language :: Python",
+                   "Programming Language :: Python :: 2"
+                   "Programming Language :: Python :: 2.6",
+                   "Programming Language :: Python :: 2.7",
+                   "Programming Language :: Python :: 3",
+                   "Programming Language :: Python :: 3.3",
+                   "Programming Language :: Python :: 3.4",
+                   "Programming Language :: Python :: 3.5"],
       cmdclass=cmdclass,
       # Note well: the following extension instance is modified during the
       # installation!  If you make changes below, you may need to update the
