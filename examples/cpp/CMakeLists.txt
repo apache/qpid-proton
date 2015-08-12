@@ -49,4 +49,4 @@ else(WIN32)
 endif(WIN32)
 
 add_test(cpp_example_test
-    ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+  ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)

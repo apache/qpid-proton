@@ -25,15 +25,20 @@ from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 import platform
 
-def exe_name(name):
+def cmdline(*args):
+    """Adjust executable name args[0] for windows and/or valgrind"""
+    args = list(args)
     if platform.system() == "Windows":
-        return name + ".exe"
-    return "./" + name
+        args[0] += ".exe"
+    else:
+        args[0] = "./" + args[0]
+    if "VALGRIND" in os.environ:
+        args = [os.environ["VALGRIND"], "-q"] + args
+    return args
 
 def background(*args):
     """Run executable in the backround, return the popen"""
-    args = [exe_name(args[0])]+list(args[1:])
-    p = Popen(args, stdout=PIPE, stderr=STDOUT)
+    p = Popen(cmdline(*args), stdout=PIPE, stderr=sys.stderr)
     p.args = args               # Save arguments for debugging output
     return p
 
@@ -94,9 +99,9 @@ class Broker(object):
 
     def __init__(self):
         self.addr = pick_addr()
-        cmd = [exe_name("broker"), "-a", self.addr]
+        cmd = cmdline("broker", "-a", self.addr)
         try:
-            self.process = Popen(cmd, stdout=NULL, stderr=NULL)
+            self.process = Popen(cmd, stdout=NULL, stderr=sys.stderr)
             wait_addr(self.addr)
             self.addr += "/examples"
         except Exception as e:

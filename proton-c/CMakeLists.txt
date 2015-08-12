@@ -442,20 +442,6 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
-# CTest
-
-find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
-option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-if (ENABLE_VALGRIND)
-  if (NOT VALGRIND_EXE)
-    message(STATUS "Can't locate the valgrind command; no run-time error detection")
-  else ()
-    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
-  endif ()
-endif (ENABLE_VALGRIND)
-
-mark_as_advanced (VALGRIND_EXE)
-
 # c tests:
 
 add_subdirectory(src/tests)

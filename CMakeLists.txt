@@ -139,6 +139,20 @@ if (BUILD_JAVA)
   add_subdirectory(proton-j)
 endif()
 
+# Check for valgrind here so tests under proton-c/ and examples/ can use it.
+find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
+option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
+if (ENABLE_VALGRIND)
+  if (NOT VALGRIND_EXE)
+    message(STATUS "Can't locate the valgrind command; no run-time error detection")
+  else ()
+    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
+  endif ()
+endif (ENABLE_VALGRIND)
+
+mark_as_advanced (VALGRIND_EXE)
+message("FIXME VG ${VALGRIND_ENV}")
+
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 
