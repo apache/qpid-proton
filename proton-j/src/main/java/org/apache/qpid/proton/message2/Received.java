@@ -84,9 +84,9 @@ public final class Received implements DeliveryState, Encodable
             {
 
             case 0:
-                received.setSectionOffset((long) l.get(1));
+                received.setSectionOffset((Long) l.get(1));
             case 1:
-                received.setSectionNumber((int) l.get(0));
+                received.setSectionNumber((Integer) l.get(0));
             }
             return received;
         }

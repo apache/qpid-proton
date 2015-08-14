@@ -30,11 +30,11 @@ import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 import org.apache.qpid.proton.codec2.Type;
 
-public final class SaslMechanisms implements Encodable
+public final class SaslMechanisms implements Encodable, SaslBody
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000040L;
+    public final static long CODE = 0x0000000000000040L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-mechanisms:list";
+    public final static String DESCRIPTOR = "amqp:sasl-mechanisms:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -59,7 +59,7 @@ public final class SaslMechanisms implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putArray(Type.SYMBOL);
         for (String mech : _saslServerMechanisms)
@@ -101,5 +101,17 @@ public final class SaslMechanisms implements Encodable
     {
         return "SaslMechanisms{" + "saslServerMechanisms="
                 + (_saslServerMechanisms == null ? null : Arrays.asList(_saslServerMechanisms)) + '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }

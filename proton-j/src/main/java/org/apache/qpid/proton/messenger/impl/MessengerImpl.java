@@ -461,7 +461,7 @@ public class MessengerImpl implements Messenger
         StoreEntry entry = _incomingStore.get( null );
         if (entry != null)
         {
-            Message message = Proton.message();
+            Message message = Proton.message2();
             message.decode( entry.getEncodedMsg(), 0, entry.getEncodedLength() );
 
             _incomingTracker = new TrackerImpl(TrackerImpl.Type.INCOMING,

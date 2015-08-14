@@ -146,7 +146,7 @@ class FrameWriter2
         _encoder.putShort((short) channel);
     }
 
-    void writeFrame(int channel, Performative frameBody, ByteBuffer payload, Runnable onPayloadTooLarge)
+    void writeFrame(int channel, Object frameBody, ByteBuffer payload, Runnable onPayloadTooLarge)
     {
         startFrame();
 
@@ -206,7 +206,7 @@ class FrameWriter2
         _framesOutput += 1;
     }
 
-    void writeFrame(Performative frameBody)
+    void writeFrame(Object frameBody)
     {
         writeFrame(0, frameBody, null, null);
     }

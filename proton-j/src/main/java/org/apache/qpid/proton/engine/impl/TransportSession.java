@@ -361,7 +361,7 @@ class TransportSession
         unsetRemoteChannel();
     }
 
-    private void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
+    void setRemoteIncomingWindow(UnsignedInteger incomingWindow)
     {
         _remoteIncomingWindow = incomingWindow;
     }
@@ -371,7 +371,7 @@ class TransportSession
         _remoteIncomingWindow = _remoteIncomingWindow.subtract(UnsignedInteger.ONE);
     }
 
-    private void setRemoteOutgoingWindow(UnsignedInteger outgoingWindow)
+    void setRemoteOutgoingWindow(UnsignedInteger outgoingWindow)
     {
         _remoteOutgoingWindow = outgoingWindow;
     }
@@ -402,12 +402,13 @@ class TransportSession
         }
     }
 
-    private void setRemoteNextOutgoingId(UnsignedInteger nextOutgoingId)
+    //Changing visibility temporarily to bridge the code
+    void setRemoteNextOutgoingId(UnsignedInteger nextOutgoingId)
     {
         _remoteNextOutgoingId = nextOutgoingId;
     }
 
-    private void setRemoteNextIncomingId(UnsignedInteger remoteNextIncomingId)
+    void setRemoteNextIncomingId(UnsignedInteger remoteNextIncomingId)
     {
         _remoteNextIncomingId = remoteNextIncomingId;
     }
@@ -507,5 +508,65 @@ class TransportSession
     public void sentBegin()
     {
         _beginSent = true;
+    }
+    
+    int getIncomingDeliveryId()
+    {
+        return _incomingDeliveryId == null ? -1 : _incomingDeliveryId.intValue();
+    }
+    
+    UnsignedInteger getIncomingDeliveryIdAsUnsignedInteger()
+    {
+        return _incomingDeliveryId;
+    }
+    
+    DeliveryImpl getUnsettledIncomingDeliveryById(UnsignedInteger id)
+    {
+        return _unsettledIncomingDeliveriesById.get(id);
+    }
+    
+    void putUnsettledIncomingDelivery(UnsignedInteger id, DeliveryImpl delivery)
+    {
+        _unsettledIncomingDeliveriesById.put(id, delivery);
+    }
+
+    void incrementUnsettledIncomingSize()
+    {
+        _unsettledIncomingSize++;
+    }
+
+    void setIncomingWindowSize(UnsignedInteger size)
+    {
+        _incomingWindowSize = size;
+    }
+    
+    void handleDisposition(org.apache.qpid.proton.transport2.Disposition disposition)
+    {
+        UnsignedInteger id = UnsignedInteger.valueOf(disposition.getFirst());
+        UnsignedInteger last = disposition.getLast() == -1 ? id : UnsignedInteger.valueOf(disposition.getLast());
+        final Map<UnsignedInteger, DeliveryImpl> unsettledDeliveries =
+                disposition.getRole() == org.apache.qpid.proton.transport2.Role.RECEIVER ? _unsettledOutgoingDeliveriesById
+                        : _unsettledIncomingDeliveriesById;
+
+        while(id.compareTo(last)<=0)
+        {
+            DeliveryImpl delivery = unsettledDeliveries.get(id);
+            if(delivery != null)
+            {
+                if(disposition.getState() != null)
+                {
+                    delivery.setRemoteDeliveryState(LegacyTypeHelper.convertToLegacyDeliveryState(disposition.getState()));
+                }
+                if(Boolean.TRUE.equals(disposition.getSettled()))
+                {
+                    delivery.setRemoteSettled(true);
+                    unsettledDeliveries.remove(id);
+                }
+                delivery.updateWork();
+
+                getSession().getConnection().put(Event.Type.DELIVERY, delivery);
+            }
+            id = id.add(UnsignedInteger.ONE);
+        }
     }
 }

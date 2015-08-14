@@ -125,11 +125,11 @@ public class DiscriptorRegistry
 
     public static void registerSaslTypes()
     {
-        registerType(SaslMechanisms.DESCRIPTOR_LONG, SaslMechanisms.DESCRIPTOR_STRING, SaslMechanisms.FACTORY);
-        registerType(SaslInit.DESCRIPTOR_LONG, SaslInit.DESCRIPTOR_STRING, SaslInit.FACTORY);
-        registerType(SaslChallenge.DESCRIPTOR_LONG, SaslChallenge.DESCRIPTOR_STRING, SaslChallenge.FACTORY);
-        registerType(SaslResponse.DESCRIPTOR_LONG, SaslResponse.DESCRIPTOR_STRING, SaslResponse.FACTORY);
-        registerType(SaslOutcome.DESCRIPTOR_LONG, SaslOutcome.DESCRIPTOR_STRING, SaslOutcome.FACTORY);
+        registerType(SaslMechanisms.CODE, SaslMechanisms.DESCRIPTOR, SaslMechanisms.FACTORY);
+        registerType(SaslInit.CODE, SaslInit.DESCRIPTOR, SaslInit.FACTORY);
+        registerType(SaslChallenge.CODE, SaslChallenge.DESCRIPTOR, SaslChallenge.FACTORY);
+        registerType(SaslResponse.CODE, SaslResponse.DESCRIPTOR, SaslResponse.FACTORY);
+        registerType(SaslOutcome.CODE, SaslOutcome.DESCRIPTOR, SaslOutcome.FACTORY);
     }
 
     public static DescribedTypeFactory lookup(Object code)

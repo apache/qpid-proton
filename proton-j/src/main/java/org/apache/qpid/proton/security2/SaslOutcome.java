@@ -28,11 +28,11 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class SaslOutcome implements Encodable
+public final class SaslOutcome implements Encodable, SaslBody
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000044L;
+    public final static long CODE = 0x0000000000000044L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-saslOutcome:list";
+    public final static String DESCRIPTOR = "amqp:sasl-saslOutcome:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -40,12 +40,12 @@ public final class SaslOutcome implements Encodable
 
     private byte[] _additionalData;
 
-    public SaslCode getCode()
+    public SaslCode getSaslCode()
     {
         return _code;
     }
 
-    public void setCode(SaslCode code)
+    public void setSaslCode(SaslCode code)
     {
         if (code == null)
         {
@@ -69,7 +69,7 @@ public final class SaslOutcome implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putUbyte(_code.getValue());
         if (_additionalData != null)
@@ -98,7 +98,7 @@ public final class SaslOutcome implements Encodable
                 case 0:
                     saslOutcome.setAdditionalData( (byte[]) l.get( 1 ) );
                 case 1:
-                    saslOutcome.setCode(SaslCode.valueOf((Byte)l.get(0)));
+                    saslOutcome.setSaslCode(SaslCode.valueOf((Byte)l.get(0)));
             }
 
 
@@ -113,5 +113,17 @@ public final class SaslOutcome implements Encodable
                "_code=" + _code +
                ", _additionalData=" + _additionalData +
                '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }

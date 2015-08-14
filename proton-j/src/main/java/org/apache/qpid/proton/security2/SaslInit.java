@@ -28,11 +28,11 @@ import org.apache.qpid.proton.codec2.DescribedTypeFactory;
 import org.apache.qpid.proton.codec2.Encodable;
 import org.apache.qpid.proton.codec2.Encoder;
 
-public final class SaslInit implements Encodable
+public final class SaslInit implements Encodable, SaslBody
 {
-    public final static long DESCRIPTOR_LONG = 0x0000000000000042L;
+    public final static long CODE = 0x0000000000000042L;
 
-    public final static String DESCRIPTOR_STRING = "amqp:sasl-challenge:list";
+    public final static String DESCRIPTOR = "amqp:sasl-challenge:list";
 
     public final static Factory FACTORY = new Factory();
 
@@ -81,7 +81,7 @@ public final class SaslInit implements Encodable
     public void encode(Encoder encoder)
     {
         encoder.putDescriptor();
-        encoder.putUlong(DESCRIPTOR_LONG);
+        encoder.putUlong(CODE);
         encoder.putList();
         encoder.putSymbol(_mechanism);
         encoder.putBinary(_initialResponse, 0, _initialResponse.length);
@@ -120,5 +120,17 @@ public final class SaslInit implements Encodable
                ", initialResponse=" + _initialResponse +
                ", hostname='" + _hostname + '\'' +
                '}';
+    }
+
+    @Override
+    public long getCode()
+    {
+        return CODE;
+    }
+
+    @Override
+    public String getDescriptor()
+    {
+        return DESCRIPTOR;
     }
 }
