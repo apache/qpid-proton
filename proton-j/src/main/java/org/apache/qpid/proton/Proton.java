@@ -29,8 +29,6 @@ import org.apache.qpid.proton.amqp.messaging.Header;
 import org.apache.qpid.proton.amqp.messaging.MessageAnnotations;
 import org.apache.qpid.proton.amqp.messaging.Properties;
 import org.apache.qpid.proton.amqp.messaging.Section;
-import org.apache.qpid.proton.codec.Codec;
-import org.apache.qpid.proton.codec.Data;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
@@ -39,20 +37,16 @@ import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.message2.ApplicationProperties;
-import org.apache.qpid.proton.message2.DeliveryAnnotations;
-import org.apache.qpid.proton.message2.Footer;
-import org.apache.qpid.proton.message2.Header;
-import org.apache.qpid.proton.message2.Message;
-import org.apache.qpid.proton.message2.MessageAnnotations;
-import org.apache.qpid.proton.message2.Properties;
-import org.apache.qpid.proton.message2.Section;
+import org.apache.qpid.proton.engine.impl.TransportImpl2;
+import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.reactor.Reactor;
 
 public final class Proton
 {
 
+    static boolean isNewCodec = Boolean.getBoolean("new-codec");
+    
     private Proton()
     {
     }
@@ -69,7 +63,14 @@ public final class Proton
 
     public static Transport transport()
     {
-        return Engine.transport();
+        if (isNewCodec)
+        {
+            return new TransportImpl2();
+        }
+        else
+        {
+            return Engine.transport();
+        }
     }
 
     public static SslDomain sslDomain()
@@ -87,14 +88,19 @@ public final class Proton
         return Message.Factory.create();
     }
 
+    public static org.apache.qpid.proton.message2.Message message2()
+    {
+        return org.apache.qpid.proton.message2.Message.Factory.create();
+    }
+    
     public static Message message(Header header,
                       DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
                       Properties properties, ApplicationProperties applicationProperties,
                       Section body, Footer footer)
     {
         return Message.Factory.create(header, deliveryAnnotations,
-                                      messageAnnotations, properties,
-                                      applicationProperties, body, footer);
+                messageAnnotations, properties,
+                applicationProperties, body, footer);        
     }
 
 

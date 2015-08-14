@@ -24,28 +24,10 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.qpid.proton.amqp.Binary;
-import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
-import org.apache.qpid.proton.amqp.UnsignedShort;
-import org.apache.qpid.proton.amqp.transport.DeliveryState;
-import org.apache.qpid.proton.amqp.transport.ErrorCondition;
-import org.apache.qpid.proton.transport2.Attach;
-import org.apache.qpid.proton.transport2.Begin;
-import org.apache.qpid.proton.transport2.Close;
-import org.apache.qpid.proton.transport2.ConnectionError;
-import org.apache.qpid.proton.transport2.Detach;
-import org.apache.qpid.proton.transport2.Disposition;
-import org.apache.qpid.proton.transport2.End;
-import org.apache.qpid.proton.transport2.Flow;
-import org.apache.qpid.proton.transport2.Open;
-import org.apache.qpid.proton.transport2.Performative;
-import org.apache.qpid.proton.transport2.Role;
-import org.apache.qpid.proton.transport2.Transfer;
 import org.apache.qpid.proton.codec2.ByteArrayDecoder;
 import org.apache.qpid.proton.codec2.ByteArrayEncoder;
 import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJTransport;
@@ -53,12 +35,27 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
+import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
-import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.framing.TransportFrame2;
+import org.apache.qpid.proton.transport2.Attach;
+import org.apache.qpid.proton.transport2.Begin;
+import org.apache.qpid.proton.transport2.Close;
+import org.apache.qpid.proton.transport2.ConnectionError;
+import org.apache.qpid.proton.transport2.Detach;
+import org.apache.qpid.proton.transport2.Disposition;
+import org.apache.qpid.proton.transport2.End;
+import org.apache.qpid.proton.transport2.ErrorCondition;
+import org.apache.qpid.proton.transport2.Flow;
+import org.apache.qpid.proton.transport2.Open;
+import org.apache.qpid.proton.transport2.Performative;
+import org.apache.qpid.proton.transport2.Role;
+import org.apache.qpid.proton.transport2.Transfer;
+//import org.apache.qpid.proton.amqp.Binary;
 
 public class TransportImpl2 extends EndpointImpl
     implements ProtonJTransport, FrameHandler2, TransportOutputWriter
@@ -79,7 +76,7 @@ public class TransportImpl2 extends EndpointImpl
     // trace levels
     private int _levels = (FRM_ENABLED ? this.TRACE_FRM : 0);
 
-    private FrameParser _frameParser;
+    private FrameParser2 _frameParser;
 
     private ConnectionImpl _connectionEndpoint;
 
@@ -158,7 +155,7 @@ public class TransportImpl2 extends EndpointImpl
         if(!_init)
         {
             _init = true;
-            _frameParser = new FrameParser(_frameHandler , _decoder, _maxFrameSize);
+            _frameParser = new FrameParser2(_frameHandler , _decoder, _maxFrameSize);
             _inputProcessor = _frameParser;
             _outputProcessor = new TransportOutputAdaptor(this, _maxFrameSize);
         }
@@ -213,9 +210,9 @@ public class TransportImpl2 extends EndpointImpl
     }
 
     @Override
-    public ErrorCondition getCondition()
+    public org.apache.qpid.proton.amqp.transport.ErrorCondition getCondition()
     {
-        return _condition;
+        return LegacyTypeHelper.convertToLegacyErrorCondition(_condition);
     }
 
     @Override
@@ -406,13 +403,11 @@ public class TransportImpl2 extends EndpointImpl
                         detach.setHandle(localHandle.intValue());
                         detach.setClosed(!link.detached());
 
-                        ErrorCondition localError = convertEndpointError(link);
+                        ErrorCondition localError = LegacyTypeHelper.convertFromLegacyErrorCondition(link.getCondition());
                         if( localError.getCondition() !=null )
                         {
                             detach.setError(localError);
                         }
-
-
                         writeFrame(transportSession.getLocalChannel(), detach, null, null);
                     }
 
@@ -477,7 +472,7 @@ public class TransportImpl2 extends EndpointImpl
         System.out.print("  " + msg + "{");
         DeliveryImpl dlv = _connectionEndpoint.getTransportWorkHead();
         while (dlv != null) {
-            System.out.print(new Binary(dlv.getTag()) + ", ");
+            System.out.print(new String(dlv.getTag()) + ", ");
             dlv = dlv.getTransportWorkNext();
         }
         System.out.println("}");
@@ -534,7 +529,7 @@ public class TransportImpl2 extends EndpointImpl
 
             if(delivery.getLocalState() != null)
             {
-                transfer.setState(delivery.getLocalState());
+                transfer.setState(LegacyTypeHelper.convertFromLegacyDeliveryState(delivery.getLocalState()));
             }
 
             if(delivery.isSettled())
@@ -601,7 +596,7 @@ public class TransportImpl2 extends EndpointImpl
             {
                 tpDelivery.settled();
             }
-            disposition.setState(delivery.getLocalState());
+            disposition.setState(LegacyTypeHelper.convertFromLegacyDeliveryState(delivery.getLocalState()));
 
             writeFrame(tpSession.getLocalChannel(), disposition, null,
                        null);
@@ -625,7 +620,7 @@ public class TransportImpl2 extends EndpointImpl
             disposition.setRole(Role.RECEIVER);
             disposition.setSettled(delivery.isSettled());
 
-            disposition.setState(delivery.getLocalState());
+            disposition.setState(LegacyTypeHelper.convertFromLegacyDeliveryState(delivery.getLocalState()));
             writeFrame(tpSession.getLocalChannel(), disposition, null, null);
             if (delivery.isSettled())
             {
@@ -720,22 +715,22 @@ public class TransportImpl2 extends EndpointImpl
 
                             if(link.getSenderSettleMode() != null)
                             {
-                                attach.setSndSettleMode(link.getSenderSettleMode());
+                                attach.setSndSettleMode(LegacyTypeHelper.convertFromLegacySenderSettleMode(link.getSenderSettleMode()));
                             }
 
                             if(link.getReceiverSettleMode() != null)
                             {
-                                attach.setRcvSettleMode(link.getReceiverSettleMode());
+                                attach.setRcvSettleMode(LegacyTypeHelper.convertFromLegacyReceiverSettleMode(link.getReceiverSettleMode()));
                             }
 
                             if(link.getSource() != null)
                             {
-                                attach.setSource(link.getSource());
+                                attach.setSource(LegacyTypeHelper.convertFromLegacySource(link.getSource()));
                             }
 
                             if(link.getTarget() != null)
                             {
-                                attach.setTarget(link.getTarget());
+                                attach.setTarget(LegacyTypeHelper.convertFromLegacyTarget(link.getTarget()));
                             }
 
                             attach.setRole(endpoint instanceof ReceiverImpl ? Role.RECEIVER : Role.SENDER);
@@ -775,9 +770,9 @@ public class TransportImpl2 extends EndpointImpl
                 String cid = _connectionEndpoint.getLocalContainerId();
                 open.setContainerId(cid == null ? "" : cid);
                 open.setHostname(_connectionEndpoint.getHostname());
-                open.setDesiredCapabilities(convertToStringArray(_connectionEndpoint.getDesiredCapabilities()));
-                open.setOfferedCapabilities(convertToStringArray(_connectionEndpoint.getOfferedCapabilities()));
-                open.setProperties(convertSymbolToStringKeyMap(_connectionEndpoint.getProperties()));
+                open.setDesiredCapabilities(LegacyTypeHelper.convertToStringArray(_connectionEndpoint.getDesiredCapabilities()));
+                open.setOfferedCapabilities(LegacyTypeHelper.convertToStringArray(_connectionEndpoint.getOfferedCapabilities()));
+                open.setProperties(LegacyTypeHelper.convertSymbolToStringKeyMap(_connectionEndpoint.getProperties()));
             } else {
                 open.setContainerId("");
             }
@@ -900,7 +895,7 @@ public class TransportImpl2 extends EndpointImpl
 
                         int channel = freeLocalChannel(transportSession);
                         End end = new End();
-                        ErrorCondition localError = convertEndpointError(endpoint);
+                        ErrorCondition localError = LegacyTypeHelper.convertFromLegacyErrorCondition(endpoint.getCondition());
                         if( localError.getCondition() !=null )
                         {
                             end.setError(localError);
@@ -959,7 +954,7 @@ public class TransportImpl2 extends EndpointImpl
                 if (_connectionEndpoint == null) {
                     localError = _condition;
                 } else {
-                    localError =  convertEndpointError(_connectionEndpoint);
+                    localError =  LegacyTypeHelper.convertFromLegacyErrorCondition(_connectionEndpoint.getCondition());
                 }
 
                 if(localError.getCondition() != null)
@@ -1002,7 +997,7 @@ public class TransportImpl2 extends EndpointImpl
     // handle incoming amqp data
 
 
-    public void handleOpen(Open open, Binary payload, Integer channel)
+    public void handleOpen(Open open, Integer channel)
     {
         setRemoteState(EndpointState.ACTIVE);
         if(_connectionEndpoint != null)
@@ -1032,7 +1027,7 @@ public class TransportImpl2 extends EndpointImpl
         }
     }
 
-    public void handleBegin(Begin begin, Binary payload, Integer channel)
+    public void handleBegin(Begin begin, Integer channel)
     {
         // TODO - check channel < max_channel
         TransportSession transportSession = _remoteSessions.get(channel);
@@ -1043,7 +1038,7 @@ public class TransportImpl2 extends EndpointImpl
         else
         {
             SessionImpl session;
-            if(begin.getRemoteChannel() == null)
+            if(begin.getRemoteChannel() == -1)
             {
                 session = _connectionEndpoint.session();
                 transportSession = getTransportState(session);
@@ -1051,7 +1046,7 @@ public class TransportImpl2 extends EndpointImpl
             else
             {
                 // TODO check null
-                transportSession = _localSessions.get(begin.getRemoteChannel().intValue());
+                transportSession = _localSessions.get(begin.getRemoteChannel());
                 if (transportSession == null) {
                     throw new NullPointerException("uncorrelated channel: " + begin.getRemoteChannel());
                 }
@@ -1060,7 +1055,7 @@ public class TransportImpl2 extends EndpointImpl
             }
             transportSession.setRemoteChannel(channel);
             session.setRemoteState(EndpointState.ACTIVE);
-            transportSession.setNextIncomingId(begin.getNextOutgoingId());
+            transportSession.setNextIncomingId(UnsignedInteger.valueOf(begin.getNextOutgoingId()));
             _remoteSessions.put(channel, transportSession);
 
             _connectionEndpoint.put(Event.Type.SESSION_REMOTE_OPEN, session);
@@ -1068,8 +1063,7 @@ public class TransportImpl2 extends EndpointImpl
 
     }
 
-    @Override
-    public void handleAttach(Attach attach, Binary payload, Integer channel)
+    public void handleAttach(Attach attach, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
@@ -1079,7 +1073,7 @@ public class TransportImpl2 extends EndpointImpl
         else
         {
             SessionImpl session = transportSession.getSession();
-            final UnsignedInteger handle = attach.getHandle();
+            final UnsignedInteger handle = UnsignedInteger.valueOf(attach.getHandle());
             if (handle.compareTo(transportSession.getHandleMax()) > 0) {
                 // The handle-max value is the highest handle value that can be used on the session. A peer MUST
                 // NOT attempt to attach a link using a handle value outside the range that its partner can handle.
@@ -1088,7 +1082,7 @@ public class TransportImpl2 extends EndpointImpl
                 ErrorCondition condition =
                         new ErrorCondition(ConnectionError.FRAMING_ERROR,
                                                             "handle-max exceeded");
-                _connectionEndpoint.setCondition(condition);
+                _connectionEndpoint.setCondition(LegacyTypeHelper.convertToLegacyErrorCondition(condition));
                 _connectionEndpoint.setLocalState(EndpointState.CLOSED);
                 if (!_isCloseSent) {
                     Close close = new Close();
@@ -1123,15 +1117,15 @@ public class TransportImpl2 extends EndpointImpl
                 }
                 if(attach.getRole() == Role.SENDER)
                 {
-                    transportLink.setDeliveryCount(attach.getInitialDeliveryCount());
+                    transportLink.setDeliveryCount(UnsignedInteger.valueOf(attach.getInitialDeliveryCount()));
                 }
 
                 link.setRemoteState(EndpointState.ACTIVE);
-                link.setRemoteSource(attach.getSource());
-                link.setRemoteTarget(attach.getTarget());
+                link.setRemoteSource(LegacyTypeHelper.convertToLegacySource(attach.getSource()));
+                link.setRemoteTarget(LegacyTypeHelper.convertToLegacyTarget(attach.getTarget()));
 
-                link.setRemoteReceiverSettleMode(attach.getRcvSettleMode());
-                link.setRemoteSenderSettleMode(attach.getSndSettleMode());
+                link.setRemoteReceiverSettleMode(org.apache.qpid.proton.amqp.transport.ReceiverSettleMode.valueOf(attach.getRcvSettleMode().name()));
+                link.setRemoteSenderSettleMode(org.apache.qpid.proton.amqp.transport.SenderSettleMode.valueOf(attach.getSndSettleMode().name()));
 
                 transportLink.setName(attach.getName());
                 transportLink.setRemoteHandle(handle);
@@ -1143,8 +1137,7 @@ public class TransportImpl2 extends EndpointImpl
         }
     }
 
-    @Override
-    public void handleFlow(Flow flow, Binary payload, Integer channel)
+    public void handleFlow(Flow flow, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
@@ -1153,19 +1146,104 @@ public class TransportImpl2 extends EndpointImpl
         }
         else
         {
-            transportSession.handleFlow(flow);
+            int inext = flow.getNextIncomingId();
+            int iwin = flow.getIncomingWindow();
+
+            if(inext != -1)
+            {
+                transportSession.setRemoteNextIncomingId(UnsignedInteger.valueOf(inext));
+                transportSession.setRemoteIncomingWindow(UnsignedInteger.valueOf(inext+iwin-transportSession.getNextOutgoingId().intValue()));
+            }
+            else
+            {
+                transportSession.setRemoteIncomingWindow(UnsignedInteger.valueOf(iwin));
+            }
+            transportSession.setRemoteNextOutgoingId(UnsignedInteger.valueOf(flow.getNextOutgoingId()));
+            transportSession.setRemoteOutgoingWindow(UnsignedInteger.valueOf(flow.getOutgoingWindow()));
+
+            if(flow.getHandle() != -1)
+            {
+                TransportLink transportLink = transportSession.getLinkFromRemoteHandle(UnsignedInteger.valueOf(flow.getHandle()));
+                transportLink.setRemoteLinkCredit(UnsignedInteger.valueOf(flow.getLinkCredit()));
+                transportLink.setRemoteDeliveryCount(UnsignedInteger.valueOf(flow.getDeliveryCount()));
+            }
         }
 
     }
 
-    @Override
-    public void handleTransfer(Transfer transfer, Binary payload, Integer channel)
+    public void handleTransfer(Transfer transfer, byte[] payload, int offset, int length, Integer channel)
     {
         // TODO - check channel < max_channel
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession != null)
         {
-            transportSession.handleTransfer(transfer, payload);
+            DeliveryImpl delivery;
+            transportSession.incrementNextIncomingId();
+            if(transfer.getDeliveryId() == transportSession.getIncomingDeliveryId())
+            {
+                TransportReceiver transportReceiver = (TransportReceiver) transportSession.getLinkFromRemoteHandle(UnsignedInteger.valueOf(transfer.getHandle()));
+                ReceiverImpl receiver = transportReceiver.getReceiver();
+                delivery = transportSession.getUnsettledIncomingDeliveryById(transportSession.getIncomingDeliveryIdAsUnsignedInteger());
+                delivery.getTransportDelivery().incrementSessionSize();
+            }
+            else
+            {
+                // TODO - check deliveryId has been incremented by one
+                int incomingDeliveryId = transfer.getDeliveryId();
+                // TODO - check link handle valid and a receiver
+                TransportReceiver transportReceiver = (TransportReceiver)transportSession.getLinkFromRemoteHandle(UnsignedInteger.valueOf(transfer.getHandle()));
+                ReceiverImpl receiver = transportReceiver.getReceiver();
+                delivery = receiver.delivery(transfer.getDeliveryTag(), 0, transfer.getDeliveryTag().length);
+                TransportDelivery transportDelivery = new TransportDelivery(UnsignedInteger.valueOf(incomingDeliveryId), delivery, transportReceiver);
+                delivery.setTransportDelivery(transportDelivery);
+                transportSession.putUnsettledIncomingDelivery(UnsignedInteger.valueOf(incomingDeliveryId), delivery);
+                transportSession.getSession().incrementIncomingDeliveries(1);
+            }
+            if( transfer.getState()!=null )
+            {
+                delivery.setRemoteDeliveryState(LegacyTypeHelper.convertToLegacyDeliveryState(transfer.getState()));
+            }
+            transportSession.incrementUnsettledIncomingSize();
+            // TODO - should this be a copy?
+            if(payload != null)
+            {
+                if(delivery.getDataLength() == 0)
+                {
+                    delivery.setData(payload);
+                    delivery.setDataLength(length);
+                    delivery.setDataOffset(offset);
+                }
+                else
+                {
+                    byte[] data = new byte[delivery.getDataLength() + length];
+                    System.arraycopy(delivery.getData(), delivery.getDataOffset(), data, 0, delivery.getDataLength());
+                    System.arraycopy(payload, offset, data, delivery.getDataLength(), length);
+                    delivery.setData(data);
+                    delivery.setDataOffset(0);
+                    delivery.setDataLength(data.length);
+                }
+                transportSession.getSession().incrementIncomingBytes(length);
+            }
+            delivery.updateWork();
+
+            if(!(transfer.getMore() || transfer.getAborted()))
+            {
+                delivery.setComplete();
+                delivery.getLink().getTransportLink().decrementLinkCredit();
+                delivery.getLink().getTransportLink().incrementDeliveryCount();
+            }
+            if(Boolean.TRUE == transfer.getSettled())
+            {
+                delivery.setRemoteSettled(true);
+            }
+
+            transportSession.setIncomingWindowSize(transportSession.getIncomingWindowSize().subtract(UnsignedInteger.ONE));
+
+            // this will cause a flow to happen
+            if (transportSession.getIncomingWindowSize().equals(UnsignedInteger.ZERO)) {
+                delivery.getLink().modified(false);
+            }
+            transportSession.getSession().getConnection().put(Event.Type.DELIVERY, delivery);            
         }
         else
         {
@@ -1173,8 +1251,7 @@ public class TransportImpl2 extends EndpointImpl
         }
     }
 
-    @Override
-    public void handleDisposition(Disposition disposition, Binary payload, Integer channel)
+    public void handleDisposition(Disposition disposition, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
@@ -1187,8 +1264,7 @@ public class TransportImpl2 extends EndpointImpl
         }
     }
 
-    @Override
-    public void handleDetach(Detach detach, Binary payload, Integer channel)
+    public void handleDetach(Detach detach, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
@@ -1197,7 +1273,7 @@ public class TransportImpl2 extends EndpointImpl
         }
         else
         {
-            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(detach.getHandle());
+            TransportLink<?> transportLink = transportSession.getLinkFromRemoteHandle(UnsignedInteger.valueOf(detach.getHandle()));
 
             if(transportLink != null)
             {
@@ -1213,7 +1289,7 @@ public class TransportImpl2 extends EndpointImpl
                 link.setRemoteState(EndpointState.CLOSED);
                 if(detach.getError() != null)
                 {
-                    link.getRemoteCondition().copyFrom(detach.getError());
+                    link.getRemoteCondition().copyFrom(LegacyTypeHelper.convertToLegacyErrorCondition(detach.getError()));
                 }
             }
             else
@@ -1223,8 +1299,7 @@ public class TransportImpl2 extends EndpointImpl
         }
     }
 
-    @Override
-    public void handleEnd(End end, Binary payload, Integer channel)
+    public void handleEnd(End end, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
         if(transportSession == null)
@@ -1241,15 +1316,14 @@ public class TransportImpl2 extends EndpointImpl
             ErrorCondition errorCondition = end.getError();
             if(errorCondition != null)
             {
-                session.getRemoteCondition().copyFrom(errorCondition);
+                session.getRemoteCondition().copyFrom(LegacyTypeHelper.convertToLegacyErrorCondition(errorCondition));
             }
 
             _connectionEndpoint.put(Event.Type.SESSION_REMOTE_CLOSE, session);
         }
     }
 
-    @Override
-    public void handleClose(Close close, Binary payload, Integer channel)
+    public void handleClose(Close close, Integer channel)
     {
         _closeReceived = true;
         _remoteIdleTimeout = 0;
@@ -1259,7 +1333,7 @@ public class TransportImpl2 extends EndpointImpl
             _connectionEndpoint.setRemoteState(EndpointState.CLOSED);
             if(close.getError() != null)
             {
-                _connectionEndpoint.getRemoteCondition().copyFrom(close.getError());
+                _connectionEndpoint.getRemoteCondition().copyFrom(LegacyTypeHelper.convertToLegacyErrorCondition(close.getError()));
             }
 
             _connectionEndpoint.put(Event.Type.CONNECTION_REMOTE_CLOSE, _connectionEndpoint);
@@ -1267,7 +1341,6 @@ public class TransportImpl2 extends EndpointImpl
 
     }
 
-    @Override
     public boolean handleFrame(TransportFrame2 frame)
     {
         if (!isHandlingFrames())
@@ -1277,13 +1350,52 @@ public class TransportImpl2 extends EndpointImpl
 
         log(INCOMING, frame);
 
-        ProtocolTracer tracer = _protocolTracer.get();
+        /*ProtocolTracer tracer = _protocolTracer.get();
         if( tracer != null )
         {
             tracer.receivedFrame(frame);
+        }*/
+       
+        // Quick hack to get it going.
+        Performative performative = frame.getPerformative();
+        int channel = frame.getChannel();
+        if (Transfer.CODE == performative.getCode())
+        {
+            this.handleTransfer((Transfer) performative, frame.getPayload(), 0, frame.getPayload().length, channel);
         }
-
-        frame.getBody().invoke(this,frame.getPayload(), frame.getChannel());
+        else if (Disposition.CODE == performative.getCode())
+        {
+            this.handleDisposition((Disposition) performative, channel);
+        }
+        else if (Flow.CODE == performative.getCode())
+        {
+            this.handleFlow((Flow) performative, channel);
+        }
+        else if (Open.CODE == performative.getCode())
+        {
+            this.handleOpen((Open) performative, channel);
+        }
+        else if (Begin.CODE == performative.getCode())
+        {
+            this.handleBegin((Begin) performative, channel);
+        }
+        else if (Attach.CODE == performative.getCode())
+        {
+            this.handleAttach((Attach) performative, channel);
+        }
+        else if (Close.CODE == performative.getCode())
+        {
+            this.handleClose((Close) performative, channel);
+        }
+        else if (End.CODE == performative.getCode())
+        {
+            this.handleEnd((End) performative, channel);
+        }
+        else
+        {
+            throw new IllegalArgumentException("Invalid code: " + performative.getCode());
+        }
+        
         return _closeReceived;
     }
 
@@ -1464,9 +1576,9 @@ public class TransportImpl2 extends EndpointImpl
                 if (_connectionEndpoint != null &&
                     _connectionEndpoint.getLocalState() != EndpointState.CLOSED) {
                     ErrorCondition condition =
-                            new ErrorCondition(Symbol.getSymbol("amqp:resource-limit-exceeded"),
+                            new ErrorCondition("amqp:resource-limit-exceeded",
                                                                 "local-idle-timeout expired");
-                    _connectionEndpoint.setCondition(condition);
+                    _connectionEndpoint.setCondition(LegacyTypeHelper.convertToLegacyErrorCondition(condition));
                     _connectionEndpoint.setLocalState(EndpointState.CLOSED);
 
                     if (!_isOpenSent) {
@@ -1506,7 +1618,6 @@ public class TransportImpl2 extends EndpointImpl
         return timeout;
     }
 
-    @Override
     public long getFramesOutput()
     {
         return _frameWriter.getFramesOutput();
@@ -1556,7 +1667,7 @@ public class TransportImpl2 extends EndpointImpl
      * Override the default frame handler. Must be called before the transport starts being used
      * (e.g. {@link #getInputBuffer()}, {@link #getOutputBuffer()}, {@link #ssl(SslDomain)} etc).
      */
-    public void setFrameHandler(FrameHandler frameHandler)
+    public void setFrameHandler(FrameHandler2 frameHandler)
     {
         _frameHandler = frameHandler;
     }
@@ -1564,13 +1675,13 @@ public class TransportImpl2 extends EndpointImpl
     static String INCOMING = "<-";
     static String OUTGOING = "->";
 
-    void log(String event, TransportFrame frame)
+    void log(String event, TransportFrame2 frame)
     {
         if ((_levels & TRACE_FRM) != 0) {
             StringBuilder msg = new StringBuilder();
             msg.append("[").append(System.identityHashCode(this)).append(":")
                 .append(frame.getChannel()).append("]");
-            msg.append(" ").append(event).append(" ").append(frame.getBody());
+            msg.append(" ").append(event).append(" ").append(frame.getPerformative());
             if (frame.getPayload() != null) {
                 String payload = frame.getPayload().toString();
                 if (payload.length() > TRACE_FRAME_PAYLOAD_LENGTH) {
@@ -1594,77 +1705,10 @@ public class TransportImpl2 extends EndpointImpl
         connection.setRemoteState(EndpointState.ACTIVE);
         connection.setRemoteHostname(open.getHostname());
         connection.setRemoteContainer(open.getContainerId());
-        connection.setRemoteDesiredCapabilities(convertToSymbolArray(open.getDesiredCapabilities()));
-        connection.setRemoteOfferedCapabilities(convertToSymbolArray(open.getOfferedCapabilities()));
-        connection.setRemoteProperties(convertStringToSymbolKeyMap(open.getProperties()));
+        connection.setRemoteDesiredCapabilities(LegacyTypeHelper.convertToSymbolArray(open.getDesiredCapabilities()));
+        connection.setRemoteOfferedCapabilities(LegacyTypeHelper.convertToSymbolArray(open.getOfferedCapabilities()));
+        connection.setRemoteProperties(LegacyTypeHelper.convertStringToSymbolKeyMap(open.getProperties()));
         connection.addConnectionOpenEvent();
     }
-    
-    private Map<String, Object> convertSymbolToStringKeyMap(Map<Symbol, Object> in)
-    {
-        if (in == null)
-        {
-            return null;
-        }
-        Map<String, Object> out = new HashMap<String, Object>(in.size());
-        for (Symbol sym : in.keySet())
-        {
-            out.put(sym.toString(), in.get(sym));
-        }
-        return out;
-    }
 
-    private Map<Symbol, Object> convertStringToSymbolKeyMap(Map<String, Object> in)
-    {
-        if (in == null)
-        {
-            return null;
-        }
-        Map<Symbol, Object> out = new HashMap<Symbol, Object>(in.size());
-        for (String str : in.keySet())
-        {
-            out.put(Symbol.valueOf(str), in.get(str));
-        }
-        return out;
-    }
-    
-    private Symbol[] convertToSymbolArray(String[] in)
-    {
-        if (in == null)
-        {
-            return null;
-        }
-        Symbol[] out = new Symbol[in.length];
-        for(int i=0; i < in.length; i++)
-        {
-            out[i] = Symbol.valueOf(in[i]);
-        }
-        return out;
-    }
-
-    private String[] convertToStringArray(Symbol[] in)
-    {
-        if (in == null)
-        {
-            return null;
-        }
-        String[] out = new String[in.length];
-        for(int i=0; i < in.length; i++)
-        {
-            out[i] = in[i].toString();
-        }
-        return out;
-    }
-    
-    private org.apache.qpid.proton.transport2.ErrorCondition convertEndpointError(Endpoint endpoint)
-    {
-        if (endpoint != null && endpoint.getCondition() != null)
-        {
-            return new org.apache.qpid.proton.transport2.ErrorCondition(endpoint.getCondition().getCondition().toString(), endpoint.getCondition().getDescription());
-        }
-        else
-        {
-            return null;
-        }
-    }
 }
