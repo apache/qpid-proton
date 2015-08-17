@@ -27,11 +27,7 @@
  * Not the full cstdint, just the type needed by proton.
  */
 
-#ifndef PN_HAS_CSTDINT
-#define PN_HAS_CSTDINT __cplusplus >= 201100
-#endif
-
-#if PN_HAS_CSTDINT
+#ifdef USE_CPP11
 #include <cstdint>
 #else
 #include <proton/type_compat.h>
