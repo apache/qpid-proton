@@ -1,8 +1,9 @@
 
-Warning: contains remarks about unreleased (but design-complete as far as the
+*Warning*: contains remarks about unreleased (but design-complete as far as the
 remarks are concerned) C++ and Go bindings.
 
-Proton memory mangement =======================
+Proton memory mangement
+=======================
 
 Proton is a collection of libraries in different programming langauges. Some of
 the libraries (e.g. C and Java) are written directly in those langauges. Some
@@ -39,7 +40,8 @@ programmer you know that function-scoped cleanup is all you really need, and
 allocates memory that is not tracked by Go, so proper cleanup is important (but
 you knew that.)
 
-Proton reference counting in C ------------------------------
+Proton reference counting in C
+------------------------------
 
 Internally, the proton C library uses reference counting, and you can
 *optionally* use it in your code. Reminder: if you just want to use proton to
