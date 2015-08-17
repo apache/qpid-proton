@@ -36,7 +36,9 @@ min_qpid_proton = (0, 10)
 min_qpid_proton_str = "%i.%i" % min_qpid_proton
 
 bundled_version = (0, 10, 0)
-bundled_version_str = "%i.%i.%i" % bundled_version
+bundled_version_str = ("%i.%i" % bundled_version[:-1]
+                       if bundled_version[-1] == 0 else
+                       "%i.%i.%i" % bundled_version)
 libqpid_proton = "qpid-proton-%s.tar.gz" % bundled_version_str
 libqpid_proton_url = ("http://www.apache.org/dist/qpid/proton/%s/%s" %
                       (bundled_version_str, libqpid_proton))
