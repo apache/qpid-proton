@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Event;
+import org.apache.qpid.proton.engine.EventType;
 
 
 /**
@@ -57,9 +58,15 @@ public class CollectorImpl implements Collector
         }
     }
 
-    public EventImpl put(Event.Type type, Object context)
+    public EventImpl put(EventType type, Object context)
     {
-        if (tail != null && tail.getType() == type &&
+        if (type == null) {
+            throw new IllegalArgumentException("Type cannot be null");
+        }
+        if (!type.isValid()) {
+            throw new IllegalArgumentException("Cannot put events of type " + type);
+        }
+        if (tail != null && tail.getEventType() == type &&
             tail.getContext() == context) {
             return null;
         }

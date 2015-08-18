@@ -20,36 +20,21 @@
  */
 package org.apache.qpid.proton.engine;
 
-import java.util.Iterator;
-
-
 /**
- * Handler
- *
+ * Entry point for external libraries to add event types. Event types should be
+ * <code>final static</code> fields. EventType instances are compared by
+ * reference.
+ * <p>
+ * Event types are best described by an <code>enum</code> that implements the
+ * {@link EventType} interface, see {@link Event.Type}.
+ * 
  */
+public interface EventType {
 
-public interface Handler
-{
     /**
-     * Handle the event in this instance. This is the second half of
-     * {@link Event#dispatch(Handler)}. The method must invoke a concrete onXxx
-     * method for the given event, or invoke it's {@link #onUnhandled(Event)}
-     * method if the {@link EventType} of the event is not recognized by the
-     * handler.
-     * <p>
-     * <b>Note:</b> The handler is not supposed to invoke the
-     * {@link #handle(Event)} method on it's {@link #children()}, that is the
-     * responsibility of the {@link Event#dispatch(Handler)}
-     *
-     * @see BaseHandler
-     * @param e
-     *            The event to handle
+     * @return false if this particular EventType instance does not represent a
+     *         real event type but a guard value, example: extra enum value for
+     *         switch statements, see {@link Event.Type#NON_CORE_EVENT}
      */
-    void handle(Event e);
-
-    void onUnhandled(Event e);
-
-    void add(Handler child);
-
-    Iterator<Handler> children();
+    public boolean isValid();
 }

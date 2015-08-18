@@ -1099,7 +1099,7 @@ def pn_event_context(event):
   return wrappers[pn_event_class(event)](event.impl.getContext())
 
 def pn_event_type(event):
-  return event.impl.getType()
+  return event.impl.getEventType()
 
 def pn_event_type_name(etype):
   return str(etype)
