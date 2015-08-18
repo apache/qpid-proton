@@ -57,14 +57,26 @@ int dump(const char *file)
       if (!available.size) break;
 
       if (!header) {
-        if (available.size >= 8) {
-          pn_buffer_trim(buf, 8, 0);
-          available = pn_buffer_bytes(buf);
-          header = true;
-        } else {
-          break;
+        header = true;
+        while (available.size >= 8) {
+          pn_bytes_t b = pn_buffer_bytes(buf);
+          if (b.start[0] == 'A' &&
+              b.start[1] == 'M' &&
+              b.start[2] == 'Q' &&
+              b.start[3] == 'P') {
+            fprintf(stdout, "AMQP Header: ");
+            pn_fprint_data(stdout, b.start, 8);
+            fprintf(stdout, "\n");
+
+            pn_buffer_trim(buf, 8, 0);
+            available = pn_buffer_bytes(buf);
+          } else {
+            break;
+          }
         }
       }
+      if (available.size < 8)
+        break;
 
       pn_frame_t frame;
       ssize_t consumed = pn_read_frame(&frame, available.start, available.size, 0);
