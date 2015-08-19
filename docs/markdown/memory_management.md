@@ -44,18 +44,19 @@ Proton reference counting in C
 ------------------------------
 
 Internally, the proton C library uses reference counting, and you can
-*optionally* use it in your code. Reminder: if you just want to use proton to
-send and receive AMQP messages *you do not need to know or care about reference
-counting*. The binding library takes care of it, or in C you can call
-`pn_X_free` yourself like a grown-up.
+*optionally* use it in your code. You should choose *either* reference counting
+*or* `pn_X_free` in your code, *not both*. It might work, but it is the sort of
+Bad Idea that might break your code in the future and will hurt your head in the
+present. `pn_X_free` is all you really need to write an AMQP application in C.
 
 However, proton is designed to be embedded and integrated. If you are
 integrating proton with a new programming language, or some other kind of
-framwork, reference counts may be useful. As a rule of thumb, if your target
-language has native reference counting and/or finalizers (aka destructors) then
-reference counts may help (e.g. python, ruby and C++). As a counter-example the
-Go langauge *is* garbage collected but does *not* have finalizers, and the Go
-binding does *not* use reference counts.
+framwork, reference counts may be useful. If your integration target has some
+form of automatic clean-up *and* some way for you to hook into it (finalizers,
+destructors or the like) then reference counts may help (e.g. python, ruby and
+C++). As a counter-example the Go langauge *is* garbage collected but does *not*
+have finalizers, and the Go binding does *not* use reference counts, it is
+written like a "normal" C application with `pn_X_free`.
 
 If you are mixing your own C code with code using a reference-counted proton
 binding (e.g. C++ or python) then you may need to at least be aware of reference
