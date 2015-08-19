@@ -504,14 +504,17 @@ class Connector(Handler):
         connection.hostname = "%s:%s" % (url.host, url.port)
         logging.info("connecting to %s..." % connection.hostname)
 
+        transport = Transport()
+        sasl = None
         if url.username:
             connection.user = url.username
+            sasl = transport.sasl()
+            sasl.allow_insecure_mechs = self.allow_insecure_mechs
         if url.password:
             connection.password = url.password
-        transport = Transport()
-        sasl = transport.sasl()
-        sasl.allow_insecure_mechs = self.allow_insecure_mechs
         if self.allowed_mechs:
+            if sasl == None:
+                sasl = transport.sasl()
             sasl.allowed_mechs(self.allowed_mechs)
         transport.bind(connection)
         if self.heartbeat:
