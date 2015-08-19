@@ -9,18 +9,16 @@ The best way to start is with the \ref tutorial "tutorial".
 An overview of the model
 ------------------------
 
-Messages are transferred between connected peers over 'links'. At the
-sending peer the link is called a sender. At the receiving peer it is
-called a receiver. Messages are sent by senders and received by
-receivers. Links may have named 'source' and 'target' addresses (for
-example to identify the queue from which message were to be received
-or to which they were to be sent).
+Messages are transferred between connected peers over 'links'. At the sending
+peer the link is called a sender. At the receiving peer it is called a
+receiver. Messages are sent by senders and received by receivers. Links may have
+named 'source' and 'target' addresses (see "sources and targets" below.)
 
 Links are established over sessions. Sessions are established over
-connections. Connections are (generally) established between two
-uniquely identified containers. Though a connection can have multiple
-sessions, often this is not needed. The container API allows you to
-ignore sessions unless you actually require them.
+connections. Connections are (generally) established between two uniquely
+identified containers. Though a connection can have multiple sessions, often
+this is not needed. The container API allows you to ignore sessions unless you
+actually require them.
 
 The sending of a message over a link is called a delivery. The message
 is the content sent, including all meta-data such as headers and
@@ -35,6 +33,34 @@ message.
 
 Three different delivery levels or 'guarantees' can be achieved: at-most-once,
 at-least-once or exactly-once. See below for details.
+
+### Sources and targets ###
+
+Every link has two addresses, *source* and *target*. The most common pattern for
+using these addresses is as follows:
+
+When a client creates a *receiver* link, it sets the *source* address. This
+means "I want to receive messages from this source." This is often referred to
+as "subscribing" to the source. When a client creates a *sender* link, it sets
+the *target* address. This means "I want to send to this target."
+
+In the case of a broker, the source or target usually refers to a queue or
+topic. In general they can refer to any AMQP-capable node.
+
+In the *request-response* pattern, a request message carries a *reply-to*
+address for the response message. This can be any AMQP address, but it is often
+useful to create a temporary address for just the response message.
+
+The most common approach is for the client to create a *receiver* for the
+response with the *dynamic* flag set. This asks the server to generate a unique
+*source* address automatically and discard it when the link closes. The client
+uses this "dynamic" source address as the reply-to when it sends the request,
+and the response is delivered to the client's dynamic receiver.
+
+In the case of a broker a dynamic address usually corresponds to a temporary
+queue but any AMQP request-response server can use this technique. The \ref
+server_direct.cpp example illustrates how to implement a queueless
+request-response server.
 
 Commonly used classes
 ---------------------

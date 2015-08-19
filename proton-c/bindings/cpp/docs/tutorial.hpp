@@ -365,7 +365,7 @@ to our original server:
 
 \dontinclude server_direct.cpp
 
-First the server must generate a unique reply-to addreses for links from the
+Our server must generate a unique reply-to addreses for links from the
 client that request a dynamic address (previously this was done by the broker.)
 We use a simple counter.
 
