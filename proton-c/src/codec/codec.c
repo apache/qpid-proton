@@ -417,10 +417,14 @@ void pn_data_clear(pn_data_t *data)
 
 static int pni_data_grow(pn_data_t *data)
 {
-  pni_nid_t new_capacity = 2 * (data->capacity ? data->capacity : 2);
-  pni_node_t *new_nodes = (pni_node_t *)realloc(data->nodes, new_capacity * sizeof(pni_node_t));
+  size_t capacity = data->capacity ? data->capacity : 2;
+  if (capacity >= PNI_NID_MAX) return PN_OUT_OF_MEMORY;
+  else if (capacity < PNI_NID_MAX/2) capacity *= 2;
+  else capacity = PNI_NID_MAX;
+
+  pni_node_t *new_nodes = (pni_node_t *)realloc(data->nodes, capacity * sizeof(pni_node_t));
   if (new_nodes == NULL) return PN_OUT_OF_MEMORY;
-  data->capacity = new_capacity;
+  data->capacity = capacity;
   data->nodes = new_nodes;
   return 0;
 }

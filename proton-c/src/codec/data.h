@@ -22,11 +22,13 @@
  *
  */
 
+#include <proton/codec.h>
 #include "buffer.h"
 #include "decoder.h"
 #include "encoder.h"
 
 typedef uint16_t pni_nid_t;
+#define PNI_NID_MAX ((pni_nid_t)-1)
 
 typedef struct {
   char *start;
