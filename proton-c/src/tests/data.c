@@ -41,6 +41,7 @@ static void test_grow(void)
     fprintf(stderr, "expected PN_OUT_OF_MEMORY, got  %s\n", pn_code(code));
   assert(code == PN_OUT_OF_MEMORY);
   assert(pn_data_size(data) == PNI_NID_MAX);
+  pn_data_free(data);
 }
 
 int main(int argc, char **argv) {
