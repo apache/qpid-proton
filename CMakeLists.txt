@@ -27,7 +27,7 @@ endif (MSVC)
 option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 
 if (BUILD_WITH_CXX)
-  project (Proton C CXX)
+  enable_language (CXX)
 endif (BUILD_WITH_CXX)
 
 if (CMAKE_CONFIGURATION_TYPES)
