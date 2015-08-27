@@ -158,7 +158,7 @@ public final class Source extends Terminus implements Encodable
                 Boolean dynamic = (Boolean) l.get(4);
                 source.setDynamic(dynamic == null ? false : dynamic);
             case 7:
-                source.setTimeout(l.get(3) == null ? 0 : (int) l.get(3));
+                source.setTimeout(l.get(3) == null ? 0 : (Integer) l.get(3));
             case 8:
                 source.setExpiryPolicy(l.get(2) == null ? TerminusExpiryPolicy.SESSION_END : TerminusExpiryPolicy
                         .getEnum((String) l.get(2)));
