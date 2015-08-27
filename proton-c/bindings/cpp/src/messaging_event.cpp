@@ -58,7 +58,7 @@ connection &messaging_event::connection() {
     throw error(MSG("No connection context for event"));
 }
 
-sender messaging_event::sender() {
+sender& messaging_event::sender() {
     if (type_ == messaging_event::PROTON)
         return proton_event::sender();
     if (parent_event_)
@@ -66,7 +66,7 @@ sender messaging_event::sender() {
     throw error(MSG("No sender context for event"));
 }
 
-receiver messaging_event::receiver() {
+receiver& messaging_event::receiver() {
     if (type_ == messaging_event::PROTON)
         return proton_event::receiver();
     if (parent_event_)
@@ -74,7 +74,7 @@ receiver messaging_event::receiver() {
     throw error(MSG("No receiver context for event"));
 }
 
-link messaging_event::link() {
+link& messaging_event::link() {
     if (type_ == messaging_event::PROTON)
         return proton_event::link();
     if (parent_event_)
@@ -82,7 +82,7 @@ link messaging_event::link() {
     throw error(MSG("No link context for event"));
 }
 
-delivery messaging_event::delivery() {
+delivery& messaging_event::delivery() {
     if (type_ == messaging_event::PROTON)
         return proton_event::delivery();
     if (parent_event_)

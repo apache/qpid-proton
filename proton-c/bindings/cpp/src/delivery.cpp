@@ -24,12 +24,15 @@
 
 namespace proton {
 
-delivery::delivery(pn_delivery_t *p) : wrapper<pn_delivery_t>(p) {}
+bool delivery::settled() { return pn_delivery_settled(pn_cast(this)); }
 
-bool delivery::settled() { return pn_delivery_settled(get()); }
+void delivery::settle() { pn_delivery_settle(pn_cast(this)); }
 
-void delivery::settle() { pn_delivery_settle(get()); }
+void delivery::update(delivery::state state) { pn_delivery_update(pn_cast(this), state); }
 
-void delivery::update(delivery::state state) { pn_delivery_update(get(), state); }
+void delivery::settle(delivery::state state) {
+    update(state);
+    settle();
+}
 
 }

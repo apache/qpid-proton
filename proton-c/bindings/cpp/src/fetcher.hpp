@@ -35,8 +35,8 @@ class fetcher : public messaging_handler {
   private:
     blocking_connection connection_;
     std::deque<message> messages_;
-    std::deque<delivery> deliveries_;
-    std::deque<delivery> unsettled_;
+    std::deque<counted_ptr<delivery> > deliveries_;
+    std::deque<counted_ptr<delivery> > unsettled_;
     int refcount_;
     pn_link_t *pn_link_;
   public:

@@ -24,6 +24,7 @@
 #include "proton/export.hpp"
 
 #include "proton/link.h"
+#include "proton/facade.hpp"
 #include <string>
 
 namespace proton {
@@ -33,7 +34,7 @@ class link;
 /** A terminus represents one end of a link.
  * The source terminus is where originate, the target terminus is where they go.
  */
-class terminus : public wrapper<pn_terminus_t>
+class terminus : public counted_facade<pn_terminus_t, terminus>
 {
   public:
     /// Type of terminus
@@ -68,11 +69,6 @@ class terminus : public wrapper<pn_terminus_t>
     PN_CPP_EXTERN void address(const std::string &);
     PN_CPP_EXTERN bool is_dynamic();
     PN_CPP_EXTERN void dynamic(bool);
-
-  private:
-    pn_link_t* link_;
-    PN_CPP_EXTERN terminus(pn_terminus_t * = 0, pn_link_t * = 0);
-  friend class link;
 };
 
 

@@ -26,10 +26,6 @@
 
 namespace proton {
 
-endpoint::endpoint() {}
-
-endpoint::~endpoint() {}
-
 const int endpoint::LOCAL_UNINIT = PN_LOCAL_UNINIT;
 const int endpoint::REMOTE_UNINIT = PN_REMOTE_UNINIT;
 const int endpoint::LOCAL_ACTIVE = PN_LOCAL_ACTIVE;

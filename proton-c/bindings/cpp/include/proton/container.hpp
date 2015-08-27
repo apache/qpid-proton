@@ -21,11 +21,12 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/handle.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/duration.hpp"
+#include "proton/export.hpp"
+#include "proton/facade.hpp"
 #include "proton/url.hpp"
+
 #include <proton/reactor.h>
 #include <string>
 
@@ -41,26 +42,20 @@ class sender;
 class receiver;
 class link;
 class handler;
+class container_impl;
 
-/** Top level container for connections and other objects, runs the event loop */ 
-class container : public handle<container_impl>
+/**
+ * Top level container for connections and other objects, runs the event loop.
+ */
+class container
 {
   public:
-    ///@name internal @internal @{
-    PN_CPP_EXTERN container(container_impl *);
-    PN_CPP_EXTERN container(const container& c);
-    PN_CPP_EXTERN container& operator=(const container& c);
-    PN_CPP_EXTERN ~container();
-    ///@}
-
-    /** Create a container */
     PN_CPP_EXTERN container();
-
-    /** Create a container and set the top-level messaging_handler */
-    PN_CPP_EXTERN container(messaging_handler &mhandler);
+    PN_CPP_EXTERN container(messaging_handler& mhandler);
+    PN_CPP_EXTERN ~container();
 
     /** Locally open a connection @see connection::open  */
-    PN_CPP_EXTERN connection connect(const proton::url&, handler *h=0);
+    PN_CPP_EXTERN connection& connect(const proton::url&, handler *h=0);
 
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
@@ -75,19 +70,19 @@ class container : public handle<container_impl>
     PN_CPP_EXTERN void stop();
 
     /** Create a sender on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN sender create_sender(connection &connection, const std::string &addr, handler *h=0);
+    PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h=0);
 
     /** Open a connection to url and create a sender with target=url.path() */
-    PN_CPP_EXTERN sender create_sender(const proton::url &);
+    PN_CPP_EXTERN sender& create_sender(const proton::url &);
 
     /** Create a receiver on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, bool dynamic=false, handler *h=0);
+    PN_CPP_EXTERN receiver& create_receiver(connection &connection, const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Create a receiver on connection with source=url.path() */
-    PN_CPP_EXTERN receiver create_receiver(const url &);
+    PN_CPP_EXTERN receiver& create_receiver(const url &);
 
     /** Open a connection to url and create a receiver with source=url.path() */
-    PN_CPP_EXTERN acceptor listen(const proton::url &);
+    PN_CPP_EXTERN acceptor& listen(const proton::url &);
 
     /// Identifier for the container
     PN_CPP_EXTERN std::string container_id();
@@ -104,8 +99,9 @@ class container : public handle<container_impl>
     PN_CPP_EXTERN void wakeup();
     PN_CPP_EXTERN bool is_quiesced();
     PN_CPP_EXTERN void yield();
-private:
-   friend class private_impl_ref<container>;
+
+  private:
+    PN_UNIQUE_OR_AUTO_PTR<container_impl> impl_;
 };
 
 }

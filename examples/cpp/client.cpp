@@ -33,8 +33,8 @@ class client : public proton::messaging_handler {
   private:
     proton::url url;
     std::vector<std::string> requests;
-    proton::sender sender;
-    proton::receiver receiver;
+    proton::counted_ptr<proton::sender> sender;
+    proton::counted_ptr<proton::receiver> receiver;
 
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
@@ -42,24 +42,24 @@ class client : public proton::messaging_handler {
     void on_start(proton::event &e) {
         sender = e.container().create_sender(url);
         // Create a receiver with a dynamically chosen unique address.
-        receiver = e.container().create_receiver(sender.connection(), "", true/*dynamic*/);
+        receiver = e.container().create_receiver(sender->connection(), "", true/*dynamic*/);
     }
 
     void send_request() {
-        proton::message req;
+        proton::message_value req;
         req.body(requests.front());
-        req.reply_to(receiver.remote_source().address());
-        sender.send(req);
+        req.reply_to(receiver->remote_source().address());
+        sender->send(req);
     }
 
     void on_link_opened(proton::event &e) {
-        if (e.link() == receiver) 
+        if (&e.link() == receiver.get()) 
             send_request();
     }
 
     void on_message(proton::event &e) {
         if (requests.empty()) return; // Spurious extra message!
-        proton::message response = e.message();
+        proton::message& response = e.message();
         std::cout << '"' << requests.front() << '"' << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
         if (!requests.empty()) {

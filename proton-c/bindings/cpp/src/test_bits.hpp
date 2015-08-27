@@ -1,5 +1,6 @@
+#ifndef TEST_BITS_HPP
+#define TEST_BITS_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,36 +17,32 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 
-#include "proton/messaging_handler.hpp"
-#include "proton/blocking_sender.hpp"
-#include "proton/blocking_receiver.hpp"
-#include "proton/duration.hpp"
-
+#include <stdexcept>
 #include <iostream>
+#include "msg.hpp"
 
-int main(int argc, char **argv) {
+namespace {
+
+struct fail : public std::logic_error { fail(const std::string& what) : logic_error(what) {} };
+#define FAIL(WHAT) throw fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
+#define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
+#define ASSERT_EQUAL(WANT, GOT) if ((WANT) != (GOT)) \
+        FAIL(#WANT << " !=  " << #GOT << ": " << WANT << " != " << GOT)
+
+int run_test(void (*testfn)(), const char* name) {
     try {
-        proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
-        proton::blocking_connection conn(url);
-        proton::blocking_receiver receiver = conn.create_receiver(url.path());
-        proton::blocking_sender sender = conn.create_sender(url.path());
-
-        proton::message_value m;
-        m->body("Hello World!");
-        sender.send(*m);
-
-        proton::duration timeout(30000);
-        proton::message_value m2 = receiver.receive(timeout);
-        std::cout << m2->body() << std::endl;
-        receiver.accept();
-
-        conn.close();
+        testfn();
         return 0;
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+    } catch(const fail& e) {
+        std::cout << "FAIL " << name << std::endl << e.what();
+    } catch(const std::exception& e) {
+        std::cout << "ERROR " << name << std::endl << e.what();
     }
     return 1;
 }
+
+#define RUN_TEST(TEST) run_test(TEST, #TEST)
+}
+#endif // TEST_BITS_HPP

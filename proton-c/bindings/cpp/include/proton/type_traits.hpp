@@ -26,9 +26,10 @@
  * @cond INTERNAL
  */
 
+#include "proton/config.hpp"
 #include "proton/types.hpp"
 
-#ifdef USE_CPP11
+#if PN_USE_CPP11
 #include <type_traits>
 #else
 namespace std {
@@ -75,7 +76,7 @@ namespace proton {
 
 // Metafunction returning exact AMQP type associated with a C++ type
 template <class T> struct type_id_of;
-template<> struct type_id_of<amqp_null> { static const type_id value=NULl_; };
+template<> struct type_id_of<amqp_null> { static const type_id value=NULL_; };
 template<> struct type_id_of<amqp_bool> { static const type_id value=BOOL; };
 template<> struct type_id_of<amqp_ubyte> { static const type_id value=UBYTE; };
 template<> struct type_id_of<amqp_byte> { static const type_id value=BYTE; };

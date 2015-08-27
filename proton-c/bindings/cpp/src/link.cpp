@@ -21,7 +21,6 @@
 #include "proton/link.hpp"
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
-#include "connection_impl.hpp"
 #include "msg.hpp"
 #include "contexts.hpp"
 
@@ -31,55 +30,49 @@
 
 namespace proton {
 
-link::link(pn_link_t* p) : wrapper<pn_link_t>(p) {}
-
 void link::open() {
-    pn_link_open(get());
+    pn_link_open(pn_cast(this));
 }
 
 void link::close() {
-    pn_link_close(get());
+    pn_link_close(pn_cast(this));
 }
 
-bool link::is_sender() {
-    return pn_link_is_sender(get());
+bool link::is_sender() { return pn_link_is_sender(pn_cast(this)); }
+bool link::is_receiver() { return pn_link_is_receiver(pn_cast(this)); }
+
+sender& link::sender() {
+    if (!is_sender()) throw error("link is not a sender");
+    return *reinterpret_cast<class sender*>(this);
 }
 
-bool link::is_receiver() { return !is_sender(); }
+receiver& link::receiver() {
+    if (!is_receiver()) throw error("link is not a receiver");
+    return *reinterpret_cast<class receiver*>(this);
+}
 
 int link::credit() {
-    return pn_link_credit(get());
+    return pn_link_credit(pn_cast(this));
 }
 
-terminus link::source() {
-    return terminus(pn_link_source(get()), get());
-}
+bool link::has_source() { return pn_link_source(pn_cast(this)); }
+bool link::has_target() { return pn_link_target(pn_cast(this)); }
+bool link::has_remote_source() { return pn_link_remote_source(pn_cast(this)); }
+bool link::has_remote_target() { return pn_link_remote_target(pn_cast(this)); }
 
-terminus link::target() {
-    return terminus(pn_link_target(get()), get());
-}
+terminus& link::source() { return *terminus::cast(pn_link_source(pn_cast(this))); }
+terminus& link::target() { return *terminus::cast(pn_link_target(pn_cast(this))); }
+terminus& link::remote_source() { return *terminus::cast(pn_link_remote_source(pn_cast(this))); }
+terminus& link::remote_target() { return *terminus::cast(pn_link_remote_target(pn_cast(this))); }
 
-terminus link::remote_source() {
-    return terminus(pn_link_remote_source(get()), get());
-}
-
-terminus link::remote_target() {
-    return terminus(pn_link_remote_target(get()), get());
-}
-
-std::string link::name() {
-    return std::string(pn_link_name(get()));
-}
+std::string link::name() { return std::string(pn_link_name(pn_cast(this)));}
 
 class connection &link::connection() {
-    pn_session_t *s = pn_link_session(get());
-    pn_connection_t *c = pn_session_connection(s);
-    return connection_impl::reactor_reference(c);
+    return *connection::cast(pn_session_connection(pn_link_session(pn_cast(this))));
 }
 
-link link::next(endpoint::state mask) {
-
-    return link(pn_link_next(get(), (pn_state_t) mask));
+link* link::next(endpoint::state mask) {
+    return link::cast(pn_link_next(pn_cast(this), (pn_state_t) mask));
 }
 
 }

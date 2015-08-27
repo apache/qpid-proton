@@ -48,9 +48,8 @@ class connector : public proton_handler
     virtual void on_transport_closed(event &e);
 
   private:
-    connection connection_;
+    counted_ptr<connection> connection_;
     url address_;
-    transport *transport_;
 };
 
 

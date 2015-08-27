@@ -34,14 +34,11 @@ struct pn_connection_t;
 namespace proton {
 
 /// A sending link
-class sender : public link
+class sender : public link, public ptr_convetible<sender>
 {
   public:
-    /// @throw proton::error if (link && !link.is_sender())
-    PN_CPP_EXTERN sender(link = link());
-
     /// Send a message on the link.
-    PN_CPP_EXTERN delivery send(message &m);
+    PN_CPP_EXTERN delivery& send(message &m);
 };
 
 

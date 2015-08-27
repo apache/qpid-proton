@@ -67,7 +67,7 @@ Commonly used classes
 
 A brief summary of some of the key classes follows.
 
-The `proton::container` class is a convenient entry point into the API, allowing
+The `proton::container` class is the main entry point into the API, allowing
 connections and links to be established. Applications are structured as one or
 more event handlers.
 

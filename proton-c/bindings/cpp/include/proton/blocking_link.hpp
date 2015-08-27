@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/handle.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/container.hpp"
 #include "proton/duration.hpp"

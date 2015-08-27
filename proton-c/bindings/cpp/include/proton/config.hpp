@@ -20,11 +20,32 @@
  */
 
 /**@file
- * @internal
+ *
+ * Configuration macros. If set before this file is included (e.g. via -D
+ * options to the compiler) they will not be altered, otherwise we will enable
+ * everything possible.
+ *
+ * The macros are:
+ * - PN_USE_CPP11 - assume a C++11 or greater compiler. Defaulted from compiler settings.
+ * - PN_USE_BOOST - include support for boost smart pointers, default 0.
  */
 
-#if (defined(__cplusplus) && __cplusplus >= 201100) || (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 150030729)
-#define USE_CPP11
+
+#ifndef PN_USE_CPP11
+#if ((defined(__cplusplus) && __cplusplus >= 201100) || (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 150030729))
+#define PN_USE_CPP11 1
+#else
+#define PN_USE_CPP11 0
 #endif
+#endif
+
+#if PN_USE_CPP11
+// Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
+#define PN_UNIQUE_OR_AUTO_PTR std::unique_ptr
+#else
+// Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
+#define PN_UNIQUE_OR_AUTO_PTR std::auto_ptr
+#endif
+
 
 #endif // CONFIG_HPP

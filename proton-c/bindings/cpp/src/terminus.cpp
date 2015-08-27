@@ -24,47 +24,45 @@
 
 namespace proton {
 
-terminus::terminus(pn_terminus_t *p, pn_link_t* l) : wrapper<pn_terminus_t>(p), link_(l) {}
-
 terminus::type_t terminus::type() {
-    return (type_t) pn_terminus_get_type(get());
+    return (type_t) pn_terminus_get_type(pn_cast(this));
 }
 
 void terminus::type(type_t type) {
-    pn_terminus_set_type(get(), (pn_terminus_type_t) type);
+    pn_terminus_set_type(pn_cast(this), (pn_terminus_type_t) type);
 }
 
 terminus::expiry_policy_t terminus::expiry_policy() {
-    return (expiry_policy_t) pn_terminus_get_type(get());
+    return (expiry_policy_t) pn_terminus_get_type(pn_cast(this));
 }
 
 void terminus::expiry_policy(expiry_policy_t policy) {
-    pn_terminus_set_expiry_policy(get(), (pn_expiry_policy_t) policy);
+    pn_terminus_set_expiry_policy(pn_cast(this), (pn_expiry_policy_t) policy);
 }
 
 terminus::distribution_mode_t terminus::distribution_mode() {
-    return (distribution_mode_t) pn_terminus_get_type(get());
+    return (distribution_mode_t) pn_terminus_get_type(pn_cast(this));
 }
 
 void terminus::distribution_mode(distribution_mode_t mode) {
-    pn_terminus_set_distribution_mode(get(), (pn_distribution_mode_t) mode);
+    pn_terminus_set_distribution_mode(pn_cast(this), (pn_distribution_mode_t) mode);
 }
 
 std::string terminus::address() {
-    const char *addr = pn_terminus_get_address(get());
+    const char *addr = pn_terminus_get_address(pn_cast(this));
     return addr ? std::string(addr) : std::string();
 }
 
 void terminus::address(const std::string &addr) {
-    pn_terminus_set_address(get(), addr.c_str());
+    pn_terminus_set_address(pn_cast(this), addr.c_str());
 }
 
 bool terminus::is_dynamic() {
-    return (type_t) pn_terminus_is_dynamic(get());
+    return (type_t) pn_terminus_is_dynamic(pn_cast(this));
 }
 
 void terminus::dynamic(bool d) {
-    pn_terminus_set_dynamic(get(), d);
+    pn_terminus_set_dynamic(pn_cast(this), d);
 }
 
 }

@@ -36,6 +36,7 @@
 class simple_recv : public proton::messaging_handler {
   private:
     proton::url url;
+    proton::counted_ptr<proton::receiver> receiver;
     int expected;
     int received;
   public:
@@ -43,13 +44,13 @@ class simple_recv : public proton::messaging_handler {
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_start(proton::event &e) {
-        e.container().create_receiver(url);
+        receiver = e.container().create_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
     void on_message(proton::event &e) {
-        proton::message msg = e.message();
-        proton::value id = msg.id();
+        proton::message& msg = e.message();
+        proton::data_value id = msg.id();
         if (id.type() == proton::ULONG) {
             if (id.get<int>() < received)
                 return; // ignore duplicate

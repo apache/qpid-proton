@@ -22,8 +22,8 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/value.hpp"
-#include "proton/message.hpp"
+#include "proton/data.hpp"
+#include "proton/facade.hpp"
 #include <string>
 
 struct pn_message_t;
@@ -33,35 +33,16 @@ namespace proton {
 class link;
 class delivery;
 
-/** An AMQP message.
- *
- * NOTE: This class has value semantics, unlike other proton wrapper types.  The
- * copy constructor and assignment make a copy of the underlying pn_message_t
- * object.  You can get at the underlying pn_message_t* by calling get() or
- * release(), or use std::swap to move the data from one proton::message to
- * another without copying.
- *
- // FIXME aconway 2015-08-12: support move semantics assignment for C++11
- */
+class message;
 
-class message
+/** An AMQP message. Not directly construct-able, use create() or value<message>.*/
+class message : public facade<pn_message_t, message>
 {
   public:
-    PN_CPP_EXTERN message();
-    /** Takes ownership of the pn_message_t, calls pn_message_free on destruction. */
-    PN_CPP_EXTERN message(pn_message_t *);
-    /// Makes a copy of the other message.
-    PN_CPP_EXTERN message(const message&);
-    /// Makes a copy of the other message.
-    PN_CPP_EXTERN message& operator=(const message&);
+    PN_CPP_EXTERN static PN_UNIQUE_OR_AUTO_PTR<message> create();
 
-    PN_CPP_EXTERN ~message();
-
-    /// Access the underlying pn_message_t, note it will be freed by ~message.
-    PN_CPP_EXTERN pn_message_t *get();
-
-    /// Forget the underlying pn_message_t, the message is cleared. Caller must call pn_message_free.
-    PN_CPP_EXTERN pn_message_t *release();
+    /// Copy data from m to this.
+    message& operator=(const message& m);
 
     /** Clear the message content */
     PN_CPP_EXTERN void clear();
@@ -70,9 +51,10 @@ class message
     ///@{
 
     /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
-    PN_CPP_EXTERN void id(const value& id);
+    PN_CPP_EXTERN void id(const data& id);
     /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
-    PN_CPP_EXTERN value id() const;
+    PN_CPP_EXTERN const data& id() const;
+    PN_CPP_EXTERN data& id();
 
     PN_CPP_EXTERN void user(const std::string &user);
     PN_CPP_EXTERN std::string user() const;
@@ -87,9 +69,10 @@ class message
     PN_CPP_EXTERN std::string reply_to() const;
 
     /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
-    PN_CPP_EXTERN void correlation_id(const value&);
+    PN_CPP_EXTERN void correlation_id(const data&);
     /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
-    PN_CPP_EXTERN value correlation_id() const;
+    PN_CPP_EXTERN const data& correlation_id() const;
+    PN_CPP_EXTERN data& correlation_id();
 
     PN_CPP_EXTERN void content_type(const std::string &s);
     PN_CPP_EXTERN std::string content_type() const;
@@ -110,24 +93,17 @@ class message
     PN_CPP_EXTERN std::string reply_to_group_id() const;
     ///@}
 
-    /** Set the body to a proton::value, copies the value. */
-    PN_CPP_EXTERN void body(const value&);
+    /** Set the body. If data has more than one value, each is encoded as an AMQP section. */
+    PN_CPP_EXTERN void body(const data&);
 
-    /** Set the body to any type T that can be converted to a proton::value */
-    template <class T> void body(const T& v) { body(value(v)); }
+    /** Set the body to any type T that can be converted to proton::data */
+    template <class T> void body(const T& v) { body().clear(); body().encoder() << v; }
 
-    /** Set the body to a sequence of values, each value is encoded as an AMQP section. */
-    PN_CPP_EXTERN void body(const values&);
+    /** Get the body values. */
+    PN_CPP_EXTERN const data& body() const;
 
-    /** Get the body values, there may be more than one.
-     * Note the reference will be invalidated by destroying the message or calling swap.
-     */
-    PN_CPP_EXTERN const values& body() const;
-
-    /** Get a reference to the body values, can be modified in-place.
-     * Note the reference will be invalidated by destroying the message or calling swap.
-     */
-    PN_CPP_EXTERN values& body();
+    /** Get a reference to the body data, can be modified in-place. */
+    PN_CPP_EXTERN data& body();
 
     // TODO aconway 2015-06-17: consistent and flexible treatment of buffers.
     // Allow convenient std::string encoding/decoding (with re-use of existing
@@ -142,13 +118,104 @@ class message
     PN_CPP_EXTERN void decode(const std::string &data);
 
     /// Decode the message from link corresponding to delivery.
-    PN_CPP_EXTERN void decode(proton::link link, proton::delivery);
+    PN_CPP_EXTERN void decode(proton::link&, proton::delivery&);
 
-  private:
-    pn_message_t *impl_;
-    mutable values body_;
+    void operator delete(void*);
 };
 
+
+/** A message with value semantics */
+class message_value {
+  public:
+    message_value() : message_(message::create()) {}
+    message_value(const message_value& x) : message_(message::create()) { *message_ = *x.message_; }
+    message_value(const message& x) : message_(message::create()) { *message_ = x; }
+    message_value& operator=(const message_value& x) { *message_ = *x.message_; return *this; }
+    message_value& operator=(const message& x) { *message_ = x; return *this; }
+
+    operator message&() { return *message_; }
+    operator const message&() const { return *message_; }
+
+    /** Clear the message content */
+    void clear() { message_->clear(); }
+
+    ///@name Message properties
+    ///@{
+
+    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    void id(const data& id) { message_->id(id); }
+    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    const data& id() const { return message_->id(); }
+    data& id() { return message_->id(); }
+
+    void user(const std::string &user) { message_->user(user); }
+    std::string user() const { return message_->user(); }
+
+    void address(const std::string &addr) { message_->address(addr); }
+    std::string address() const { return message_->address(); }
+
+    void subject(const std::string &s) { message_->subject(s); }
+    std::string subject() const { return message_->subject(); }
+
+    void reply_to(const std::string &s) { message_->reply_to(s); }
+    std::string reply_to() const { return message_->reply_to(); }
+
+    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    void correlation_id(const data& d) { message_->correlation_id(d); }
+    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    const data& correlation_id() const { return message_->correlation_id(); }
+    data& correlation_id() { return message_->correlation_id(); }
+
+    void content_type(const std::string &s) { message_->content_type(s); }
+    std::string content_type() const { return message_->content_type(); }
+
+    void content_encoding(const std::string &s) { message_->content_encoding(s); }
+    std::string content_encoding() const { return message_->content_encoding(); }
+
+    void expiry(amqp_timestamp t) { message_->expiry(t); }
+    amqp_timestamp expiry() const { return message_->expiry(); }
+
+    void creation_time(amqp_timestamp t) { message_->creation_time(t); }
+    amqp_timestamp creation_time() const { return message_->creation_time(); }
+
+    void group_id(const std::string &s) { message_->group_id(s); }
+    std::string group_id() const { return message_->group_id(); }
+
+    void reply_to_group_id(const std::string &s) { message_->reply_to_group_id(s); }
+    std::string reply_to_group_id() const { return message_->reply_to_group_id(); }
+    ///@}
+
+    /** Set the body. If data has more than one value, each is encoded as an AMQP section. */
+    void body(const data& d) { message_->body(d); }
+
+    /** Set the body to any type T that can be converted to proton::data */
+    template <class T> void body(const T& v) { message_->body(v); }
+
+    /** Get the body values. */
+    const data& body() const { return message_->body(); }
+
+    /** Get a reference to the body data, can be modified in-place. */
+    data& body() { return message_->body(); }
+
+    // TODO aconway 2015-06-17: consistent and flexible treatment of buffers.
+    // Allow convenient std::string encoding/decoding (with re-use of existing
+    // string capacity) but also need to allow encoding/decoding of non-string
+    // buffers. Introduce a buffer type with begin/end pointers?
+
+    /** Encode the message into string data */
+    void encode(std::string &data) const { message_->encode(data); }
+    /** Retrun encoded message as a string */
+    std::string encode() const { return message_->encode(); }
+    /** Decode from string data into the message. */
+    void decode(const std::string &data) { message_->decode(data); }
+
+    /// Decode the message from link corresponding to delivery.
+    void decode(proton::link& l, proton::delivery& d) { message_->decode(l, d); }
+
+  private:
+    PN_UNIQUE_OR_AUTO_PTR<message> message_;
+};
+    
 }
 
 #endif  /*!PROTON_CPP_MESSAGE_H*/

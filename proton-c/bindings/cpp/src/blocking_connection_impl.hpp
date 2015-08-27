@@ -57,7 +57,7 @@ class ssl_domain;
                             duration=duration(-1));
 
     container container_;
-    connection connection_;
+    counted_ptr<connection> connection_;
     url url_;
     duration timeout_;
     int refcount_;

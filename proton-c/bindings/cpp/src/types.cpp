@@ -45,7 +45,7 @@ std::ostream& operator<<(std::ostream& o, const amqp_uuid& u) {
 
 std::string type_name(type_id t) {
     switch (t) {
-      case NULl_: return "null";
+      case NULL_: return "null";
       case BOOL: return "bool";
       case UBYTE: return "ubyte";
       case BYTE: return "byte";
@@ -91,6 +91,6 @@ start::start(type_id t, type_id e, bool d, size_t s) : type(t), element(e), is_d
 start start::array(type_id element, bool described) { return start(ARRAY, element, described); }
 start start::list() { return start(LIST); }
 start start::map() { return start(MAP); }
-start start::described() { return start(DESCRIBED, NULl_, true); }
+start start::described() { return start(DESCRIBED, NULL_, true); }
 
 }

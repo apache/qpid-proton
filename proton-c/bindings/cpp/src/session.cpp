@@ -25,29 +25,23 @@
 #include "proton/session.h"
 #include "proton/session.hpp"
 #include "proton/connection.hpp"
-#include "connection_impl.hpp"
 
 namespace proton {
 
-session::session(pn_session_t *p) : wrapper<pn_session_t>(p) {}
-
 void session::open() {
-    pn_session_open(get());
+    pn_session_open(pn_cast(this));
 }
 
 connection &session::connection() {
-    pn_connection_t *c = pn_session_connection(get());
-    return connection_impl::reactor_reference(c);
+    return *proton::connection::cast(pn_session_connection(pn_cast(this)));
 }
 
-receiver session::create_receiver(const std::string& name) {
-    pn_link_t *link = pn_receiver(get(), name.c_str());
-    return receiver(link);
+receiver& session::create_receiver(const std::string& name) {
+    return *reinterpret_cast<receiver*>(pn_receiver(pn_cast(this), name.c_str()));
 }
 
-sender session::create_sender(const std::string& name) {
-    pn_link_t *link = pn_sender(get(), name.c_str());
-    return sender(link);
+sender& session::create_sender(const std::string& name) {
+    return *reinterpret_cast<sender*>(pn_sender(pn_cast(this), name.c_str()));
 }
 
 }

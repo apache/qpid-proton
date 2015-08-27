@@ -23,7 +23,6 @@
  */
 
 #include "proton/proton_handler.hpp"
-#include "proton/acking.hpp"
 #include "proton/event.h"
 
 namespace proton {
@@ -36,7 +35,7 @@ class messaging_adapter;
  * over-ride event handling member functions.
  * @see proton::messaging_event for meaning of events.
  */
-class messaging_handler : public proton_handler , public acking
+class messaging_handler : public proton_handler
 {
   public:
     /** Create a messaging_handler

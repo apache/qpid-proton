@@ -40,17 +40,16 @@ class acceptor;
 class container_impl
 {
   public:
-    PN_CPP_EXTERN container_impl(handler &h);
-    PN_CPP_EXTERN container_impl();
+    PN_CPP_EXTERN container_impl(container&, handler *);
     PN_CPP_EXTERN ~container_impl();
-    PN_CPP_EXTERN connection connect(const url&, handler *h);
+    PN_CPP_EXTERN connection& connect(const url&, handler *h);
     PN_CPP_EXTERN void run();
     PN_CPP_EXTERN pn_reactor_t *reactor();
-    PN_CPP_EXTERN sender create_sender(connection &connection, const std::string &addr, handler *h);
-    PN_CPP_EXTERN sender create_sender(const url&);
-    PN_CPP_EXTERN receiver create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
-    PN_CPP_EXTERN receiver create_receiver(const url&);
-    PN_CPP_EXTERN class acceptor listen(const url&);
+    PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h);
+    PN_CPP_EXTERN sender& create_sender(const url&);
+    PN_CPP_EXTERN receiver& create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
+    PN_CPP_EXTERN receiver& create_receiver(const url&);
+    PN_CPP_EXTERN class acceptor& listen(const url&);
     PN_CPP_EXTERN std::string container_id();
     PN_CPP_EXTERN duration timeout();
     PN_CPP_EXTERN void timeout(duration timeout);
@@ -63,10 +62,14 @@ class container_impl
     pn_handler_t *wrap_handler(handler *h);
     static void incref(container_impl *);
     static void decref(container_impl *);
+
+    container& container_;
+
   private:
     void dispatch(pn_event_t *event, pn_event_type_t type);
-    class acceptor acceptor(const url&);
+    class acceptor& acceptor(const url&);
     void initialize_reactor();
+
     pn_reactor_t *reactor_;
     handler *handler_;
     messaging_adapter *messaging_adapter_;

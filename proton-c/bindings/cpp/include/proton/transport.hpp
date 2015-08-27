@@ -21,32 +21,22 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/transport.h"
-#include <string>
 
-struct pn_connection_t;
+#include "proton/facade.hpp"
+
+#include "proton/export.hpp"
+
+struct pn_transport_t;
 
 namespace proton {
 
 class connection;
 
 /** Represents a connection transport */
-class transport
+class transport : public counted_facade<pn_transport_t, transport>
 {
   public:
-    PN_CPP_EXTERN transport();
-    PN_CPP_EXTERN ~transport();
-
-    /** Bind the transport to an AMQP connection */
-    PN_CPP_EXTERN void bind(connection &c);
-
-    class connection* connection() const { return connection_; }
-    pn_transport_t* pn_transport() const { return pn_transport_; }
-
-  private:
-    class connection *connection_;
-    pn_transport_t *pn_transport_;
+    class connection* connection();
 };
 
 

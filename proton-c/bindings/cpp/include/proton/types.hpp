@@ -25,7 +25,8 @@
 
 #include "proton/export.hpp"
 #include "proton/cstdint.hpp"
-#include <proton/codec.h>
+#include "proton/comparable.hpp"
+#include <proton/codec.h>       // TODO aconway 2015-08-25: exposes proton header.
 #include <algorithm>
 #include <bitset>
 #include <string>
@@ -36,7 +37,7 @@ namespace proton {
 
 /** type_id identifies an AMQP type. */
 enum type_id {
-    NULl_=PN_NULL,              ///< The null type, contains no data.
+    NULL_=PN_NULL,              ///< The null type, contains no data.
     BOOL=PN_BOOL,               ///< Boolean true or false.
     UBYTE=PN_UBYTE,             ///< Unsigned 8 bit integer.
     BYTE=PN_BYTE,               ///< Signed 8 bit integer.
@@ -62,18 +63,6 @@ enum type_id {
     LIST=PN_LIST,               ///< A sequence of values, may be of mixed types.
     MAP=PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
 };
-
-/// Internal base class to provide comparison operators.
-template <class T> struct comparable {};
-///@cond INTERNAL
-template<class T> bool operator<(const comparable<T>& a, const comparable<T>& b) {
-    return static_cast<const T&>(a) < static_cast<const T&>(b); // operator < provided by type T
-}
-template<class T> bool operator>(const comparable<T>& a, const comparable<T>& b) { return b < a; }
-template<class T> bool operator<=(const comparable<T>& a, const comparable<T>& b) { return !(a > b); }
-template<class T> bool operator>=(const comparable<T>& a, const comparable<T>& b) { return !(a < b); }
-template<class T> bool operator==(const comparable<T>& a, const comparable<T>& b) { return a <= b && b <= a; }
-template<class T> bool operator!=(const comparable<T>& a, const comparable<T>& b) { return !(a == b); }
 
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
@@ -233,7 +222,7 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
  * for examples of use.
  */
 struct start {
-    PN_CPP_EXTERN start(type_id type=NULl_, type_id element=NULl_, bool described=false, size_t size=0);
+    PN_CPP_EXTERN start(type_id type=NULL_, type_id element=NULL_, bool described=false, size_t size=0);
     type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
     type_id element;         ///< the element type for array only.
     bool is_described;       ///< true if first value is a descriptor.

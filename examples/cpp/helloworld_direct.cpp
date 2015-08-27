@@ -28,7 +28,7 @@
 class hello_world_direct : public proton::messaging_handler {
   private:
     proton::url url;
-    proton::acceptor acceptor;
+    proton::counted_ptr<proton::acceptor> acceptor;
   public:
 
     hello_world_direct(const proton::url& u) : url(u) {}
@@ -39,7 +39,7 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_sendable(proton::event &e) {
-        proton::message m;
+        proton::message_value m;
         m.body("Hello World!");
         e.sender().send(m);
         e.sender().close();
@@ -54,7 +54,7 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_connection_closed(proton::event &e) {
-        acceptor.close();
+        acceptor->close();
     }
 };
 

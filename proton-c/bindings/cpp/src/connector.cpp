@@ -27,11 +27,10 @@
 #include "proton/url.hpp"
 
 #include "connector.hpp"
-#include "connection_impl.hpp"
 
 namespace proton {
 
-connector::connector(connection &c) : connection_(c), transport_(0) {}
+connector::connector(connection &c) : connection_(c) {}
 
 connector::~connector() {}
 
@@ -40,14 +39,10 @@ void connector::address(const url &a) {
 }
 
 void connector::connect() {
-    pn_connection_t *conn = connection_.pn_connection();
-    pn_connection_set_container(conn, connection_.container().container_id().c_str());
+    pn_connection_t *conn = pn_cast(connection_.get());
+    pn_connection_set_container(conn, connection_->container().container_id().c_str());
     pn_connection_set_hostname(conn, address_.host_port().c_str());
-    transport_ = new transport();
-    transport_->bind(connection_);
-    connection_.impl_->transport_ = transport_;
 }
-
 
 void connector::on_connection_local_open(event &e) {
     connect();
@@ -60,10 +55,8 @@ void connector::on_connection_init(event &e) {
 
 void connector::on_transport_closed(event &e) {
     // TODO: prepend with reconnect logic
-    pn_connection_release(connection_.impl_->pn_connection_);
-    // No more interaction, so drop our counted reference.
-    connection_ = connection();
+    pn_connection_release(pn_cast(connection_.get()));
+    connection_.reset();
 }
-
 
 }

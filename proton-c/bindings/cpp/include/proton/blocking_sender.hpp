@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/handle.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/container.hpp"
 #include "proton/duration.hpp"
@@ -44,7 +43,7 @@ class blocking_sender : public blocking_link
     PN_CPP_EXTERN delivery send(message &msg);
     PN_CPP_EXTERN delivery send(message &msg, duration timeout);
   private:
-    PN_CPP_EXTERN blocking_sender(blocking_connection &c, sender l);
+    PN_CPP_EXTERN blocking_sender(blocking_connection &c, sender &l);
     friend class blocking_connection;
 };
 

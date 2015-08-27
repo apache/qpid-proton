@@ -21,23 +21,24 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/wrapper.hpp"
 #include "proton/endpoint.hpp"
+#include "proton/export.hpp"
+#include "proton/message.hpp"
 #include "proton/terminus.hpp"
 #include "proton/types.h"
-#include <string>
+#include "proton/facade.hpp"
 
-struct pn_connection_t;
+#include <string>
 
 namespace proton {
 
+class sender;
+class receiver;
+
 /** Messages are transferred across a link. Base class for sender, receiver. */
-class link : public endpoint, public wrapper<pn_link_t>
+class link : public counted_facade<pn_link_t, link>, public endpoint
 {
   public:
-    PN_CPP_EXTERN link(pn_link_t * = 0);
-
     /** Locally open the link, not complete till messaging_handler::on_link_opened or
      * proton_handler::link_remote_open
      */
@@ -52,23 +53,40 @@ class link : public endpoint, public wrapper<pn_link_t>
     PN_CPP_EXTERN bool is_sender();
     /** True if link is a receiver */
     PN_CPP_EXTERN bool is_receiver();
+    /** Return sender pointer. @throw if link is not a sender. */
+    PN_CPP_EXTERN class sender& sender();
+    /** Return receiver pointer. @throw if link is not a receiver. */
+    PN_CPP_EXTERN class receiver& receiver();
     /** Credit available on the link */
     PN_CPP_EXTERN int credit();
-    /** Local source of the link */
-    PN_CPP_EXTERN terminus source();
-    /** Local target of the link */
-    PN_CPP_EXTERN terminus target();
-    /** Remote source of the link */
-    PN_CPP_EXTERN terminus remote_source();
-    /** Remote target of the link */
-    PN_CPP_EXTERN terminus remote_target();
+
+    /** True if link has source */
+    PN_CPP_EXTERN bool has_source();
+    /** True if link has target */
+    PN_CPP_EXTERN bool has_target();
+    /** True if link has remote source */
+    PN_CPP_EXTERN bool has_remote_source();
+    /** True if link has remote target */
+    PN_CPP_EXTERN bool has_remote_target();
+
+    /** Local source of the link. @throw error if !has_source() */
+    PN_CPP_EXTERN terminus& source();
+    /** Local target of the link. @throw error if !has_target() */
+    PN_CPP_EXTERN terminus& target();
+    /** Remote source of the link. @throw error if !has_remote_source() */
+    PN_CPP_EXTERN terminus& remote_source();
+    /** Remote target of the link. @throw error if !has_remote_target() */
+    PN_CPP_EXTERN terminus& remote_target();
+
     /** Link name */
     PN_CPP_EXTERN std::string name();
 
-    /** Next link that matches state mask. @see endpoint::state */
-    PN_CPP_EXTERN link next(endpoint::state mask);
+    /** Next link that matches state mask. @see endpoint::state.
+     * @return 0 if none, do not delete returned pointer
+     */
+    PN_CPP_EXTERN link* next(endpoint::state mask);
 
-    /** Connection of the link */
+    /** Connection that owns this link */
     PN_CPP_EXTERN class connection &connection();
 };
 

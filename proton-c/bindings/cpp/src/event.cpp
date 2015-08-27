@@ -22,11 +22,12 @@
 #include "proton/reactor.h"
 #include "proton/event.h"
 
+#include "proton/delivery.hpp"
+#include "proton/error.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
-#include "proton/error.hpp"
-#include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/sender.hpp"
 
 #include "msg.hpp"
 #include "contexts.hpp"
@@ -38,28 +39,28 @@ event::event() {}
 event::~event() {}
 
 
-class container &event::container() {
+container &event::container() {
     // Subclasses to override as appropriate
     throw error(MSG("No container context for event"));
 }
 
-class connection &event::connection() {
+connection &event::connection() {
     throw error(MSG("No connection context for event"));
 }
 
-class sender event::sender() {
+sender& event::sender() {
     throw error(MSG("No sender context for event"));
 }
 
-class receiver event::receiver() {
+receiver& event::receiver() {
     throw error(MSG("No receiver context for event"));
 }
 
-class link event::link() {
+link& event::link() {
     throw error(MSG("No link context for event"));
 }
 
-class delivery event::delivery() {
+delivery& event::delivery() {
     throw error(MSG("No link context for event"));
 }
 

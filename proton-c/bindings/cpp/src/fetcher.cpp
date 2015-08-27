@@ -43,7 +43,7 @@ void fetcher::decref() {
 }
 
 void fetcher::on_link_init(event &e) {
-    pn_link_ = e.link().get();
+    pn_link_ = pn_cast(&e.link());
     pn_incref(pn_link_);
 }
 
@@ -55,8 +55,8 @@ void fetcher::on_message(event &e) {
 }
 
 void fetcher::on_link_error(event &e) {
-    link lnk = e.link();
-    if (pn_link_state(lnk.get()) & PN_LOCAL_ACTIVE) {
+    link& lnk = e.link();
+    if (pn_link_state(pn_cast(&lnk)) & PN_LOCAL_ACTIVE) {
         lnk.close();
         throw error(MSG("Link detached: " << lnk.name()));
     }
@@ -73,8 +73,8 @@ bool fetcher::has_message() {
 message fetcher::pop() {
     if (messages_.empty())
         throw error(MSG("blocking_receiver has no messages"));
-    delivery &dlv(deliveries_.front());
-    if (!dlv.settled())
+    counted_ptr<delivery> dlv(deliveries_.front());
+    if (!dlv->settled())
         unsettled_.push_back(dlv);
     message m = messages_.front();
     messages_.pop_front();
@@ -83,10 +83,10 @@ message fetcher::pop() {
 }
 
 void fetcher::settle(delivery::state state) {
-    delivery &dlv = unsettled_.front();
+    counted_ptr<delivery> dlv = unsettled_.front();
     if (state)
-        dlv.update(state);
-    dlv.settle();
+        dlv->update(state);
+    dlv->settle();
 }
 
 } // namespace

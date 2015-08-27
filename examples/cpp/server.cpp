@@ -31,9 +31,9 @@
 
 class server : public proton::messaging_handler {
   private:
-    typedef std::map<std::string, proton::sender> sender_map;
+    typedef std::map<std::string, proton::counted_ptr<proton::sender> > sender_map;
     proton::url url;
-    proton::connection connection;
+    proton::counted_ptr<proton::connection> connection;
     sender_map senders;
 
   public:
@@ -42,7 +42,7 @@ class server : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         connection = e.container().connect(url);
-        e.container().create_receiver(connection, url.path());
+        e.container().create_receiver(*connection, url.path());
         std::cout << "server connected to " << url << std::endl;
     }
 
@@ -56,13 +56,13 @@ class server : public proton::messaging_handler {
     void on_message(proton::event &e) {
         std::cout << "Received " << e.message().body() << std::endl;
         std::string reply_to = e.message().reply_to();
-        proton::message reply;
+        proton::message_value reply;
         reply.address(reply_to);
         reply.body(to_upper(e.message().body().get<std::string>()));
         reply.correlation_id(e.message().correlation_id());
         if (!senders[reply_to])
-            senders[reply_to] = e.container().create_sender(connection, reply_to);
-        senders[reply_to].send(reply);
+            senders[reply_to] = e.container().create_sender(*connection, reply_to);
+        senders[reply_to]->send(reply);
     }
 };
 

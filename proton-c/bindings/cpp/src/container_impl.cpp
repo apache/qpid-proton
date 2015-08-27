@@ -31,7 +31,6 @@
 
 #include "msg.hpp"
 #include "container_impl.hpp"
-#include "connection_impl.hpp"
 #include "connector.hpp"
 #include "contexts.hpp"
 #include "private_impl_ref.hpp"
@@ -41,15 +40,6 @@
 #include "proton/handlers.h"
 
 namespace proton {
-
-namespace {
-
-connection_impl *impl(const connection &c) {
-    return private_impl_ref<connection>::get(c);
-}
-
-} // namespace
-
 
 class CHandler : public handler
 {
@@ -99,42 +89,16 @@ class override_handler : public handler
         pn_event_t *cevent = pne->pn_event();
         pn_connection_t *conn = pn_event_connection(cevent);
         if (conn && type != PN_CONNECTION_INIT) {
-            // send to override handler first
-            connection_impl *connection = connection_context(conn);
-            if (connection) {
-                handler *override = connection->override();
-                if (override) {
-                    e.dispatch(*override);
-                }
-            }
+            handler *override = connection_context::get(conn).handler;
+            if (override) e.dispatch(*override);
         }
 
         pn_handler_dispatch(base_handler, cevent, (pn_event_type_t) type);
-
-        if (conn && type == PN_CONNECTION_FINAL) {
-            //  TODO:  this must be the last action of the last handler looking at
-            //  connection events. Better: generate a custom FINAL event (or task).  Or move to
-            //  separate event streams per connection as part of multi threading support.
-            connection_impl *cimpl = connection_context(conn);
-            if (cimpl)
-                cimpl->reactor_detach();
-            // TODO: remember all connections and do reactor_detach of zombie connections
-            // not yet pn_connection_release'd at PN_REACTOR_FINAL.
-        }
     }
 };
 
 
 namespace {
-
-// TODO: configurable policy.  session_per_connection for now.
-session default_session(pn_connection_t *conn, pn_session_t **ses) {
-    if (!*ses) {
-        *ses = pn_session(conn);
-        pn_session_open(*ses);
-    }
-    return session(*ses);
-}
 
 struct inbound_context {
     static inbound_context* get(pn_handler_t* h) {
@@ -146,12 +110,9 @@ struct inbound_context {
 
 void cpp_handler_dispatch(pn_handler_t *c_handler, pn_event_t *cevent, pn_event_type_t type)
 {
-    // Ref counted per event, but when is the last event if stop() never called?
-    container c(inbound_context::get(c_handler)->container_impl_);
+    container& c(inbound_context::get(c_handler)->container_impl_->container_);
     messaging_event mevent(cevent, type, c);
     mevent.dispatch(*inbound_context::get(c_handler)->cpp_handler_);
-    // Possible decref and deletion via a handler action on this event.
-    // return without further processing.
     return;
 }
 
@@ -182,14 +143,9 @@ void container_impl::decref(container_impl *impl_) {
         delete impl_;
 }
 
-container_impl::container_impl(handler &h) :
-    reactor_(0), handler_(&h), messaging_adapter_(0),
-    override_handler_(0), flow_controller_(0), container_id_(),
-    refcount_(0)
-{}
-
-container_impl::container_impl() :
-    reactor_(0), handler_(0), messaging_adapter_(0),
+container_impl::container_impl(container& c, handler *h) :
+    container_(c),
+    reactor_(0), handler_(h), messaging_adapter_(0),
     override_handler_(0), flow_controller_(0), container_id_(),
     refcount_(0)
 {}
@@ -201,16 +157,17 @@ container_impl::~container_impl() {
     pn_reactor_free(reactor_);
 }
 
-connection container_impl::connect(const proton::url &url, handler *h) {
+connection& container_impl::connect(const proton::url &url, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
-    container ctnr(this);
-    connection conn(ctnr, h);
-    connector *ctor = new connector(conn);
-    // connector self-deletes depending on reconnect logic
+
+    pn_handler_t *chandler = h ? wrap_handler(h) : 0;
+    connection* conn = connection::cast(pn_reactor_connection(reactor_, chandler));
+    if (chandler) pn_decref(chandler);
+    connector *ctor = new connector(*conn); // Will be deleted by connection_context
     ctor->address(url);  // TODO: url vector
-    conn.override(ctor);
-    conn.open();
-    return conn;
+    connection_context::get(pn_cast(conn)).handler = ctor;
+    conn->open();
+    return *conn;
 }
 
 pn_reactor_t *container_impl::reactor() { return reactor_; }
@@ -235,11 +192,10 @@ void container_impl::timeout(duration timeout) {
 }
 
 
-sender container_impl::create_sender(connection &connection, const std::string &addr, handler *h) {
+sender& container_impl::create_sender(connection &connection, const std::string &addr, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
-    session session = default_session(connection.pn_connection(), &impl(connection)->default_session_);
-    sender snd = session.create_sender(container_id_  + '-' + addr);
-    pn_link_t *lnk = snd.get();
+    sender& snd = connection.default_session().create_sender(container_id_  + '-' + addr);
+    pn_link_t *lnk = pn_cast(&snd);
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     if (h) {
         pn_record_t *record = pn_link_attachments(lnk);
@@ -251,23 +207,20 @@ sender container_impl::create_sender(connection &connection, const std::string &
     return snd;
 }
 
-sender container_impl::create_sender(const proton::url &url) {
+sender& container_impl::create_sender(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
-    connection conn = connect(url, 0);
-    session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
+    connection& conn = connect(url, 0);
     std::string path = url.path();
-    sender snd = session.create_sender(container_id_ + '-' + path);
-    pn_terminus_set_address(pn_link_target(snd.get()), path.c_str());
+    sender& snd = conn.default_session().create_sender(container_id_ + '-' + path);
+    pn_terminus_set_address(pn_link_target(pn_cast(&snd)), path.c_str());
     snd.open();
     return snd;
 }
 
-receiver container_impl::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
+receiver& container_impl::create_receiver(connection &conn, const std::string &addr, bool dynamic, handler *h) {
     if (!reactor_) throw error(MSG("container not started"));
-    connection_impl *conn_impl = impl(connection);
-    session session = default_session(conn_impl->pn_connection_, &conn_impl->default_session_);
-    receiver rcv = session.create_receiver(container_id_ + '-' + addr);
-    pn_link_t *lnk = rcv.get();
+    receiver& rcv = conn.default_session().create_receiver(container_id_ + '-' + addr);
+    pn_link_t *lnk = pn_cast(&rcv);
     pn_terminus_t *src = pn_link_source(lnk);
     pn_terminus_set_address(src, addr.c_str());
     if (dynamic)
@@ -282,26 +235,25 @@ receiver container_impl::create_receiver(connection &connection, const std::stri
     return rcv;
 }
 
-receiver container_impl::create_receiver(const proton::url &url) {
+receiver& container_impl::create_receiver(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
-    connection conn = connect(url, 0);
-    session session = default_session(conn.pn_connection(), &impl(conn)->default_session_);
+    connection& conn = connect(url, 0);
     std::string path = url.path();
-    receiver rcv = session.create_receiver(container_id_ + '-' + path);
-    pn_terminus_set_address(pn_link_source(rcv.get()), path.c_str());
+    receiver& rcv = conn.default_session().create_receiver(container_id_ + '-' + path);
+    pn_terminus_set_address(pn_link_source(pn_cast(&rcv)), path.c_str());
     rcv.open();
     return rcv;
 }
 
-class acceptor container_impl::acceptor(const proton::url& url) {
+acceptor& container_impl::acceptor(const proton::url& url) {
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_, url.host().c_str(), url.port().c_str(), NULL);
     if (acptr)
-        return proton::acceptor(acptr);
+        return *acceptor::cast(acptr);
     else
         throw error(MSG("accept fail: " << pn_error_text(pn_io_error(pn_reactor_io(reactor_))) << "(" << url << ")"));
 }
 
-acceptor container_impl::listen(const proton::url &url) {
+acceptor& container_impl::listen(const proton::url &url) {
     if (!reactor_) throw error(MSG("container not started"));
     return acceptor(url);
 }

@@ -22,20 +22,14 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/handle.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/container.hpp"
+#include "proton/facade.hpp"
 #include "proton/duration.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/types.h"
 #include <string>
 
 struct pn_connection_t;
 
 namespace proton {
 class url;
-class container;
-class blocking_connection_impl;
 class ssl_domain;
 class blocking_sender;
 class blocking_receiver;

@@ -22,7 +22,7 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/wrapper.hpp"
+#include "proton/facade.hpp"
 
 #include "proton/delivery.h"
 #include "proton/disposition.h"
@@ -30,9 +30,7 @@
 namespace proton {
 
 /** delivery status of a message */
-class delivery : public wrapper<pn_delivery_t>
-{
-  public:
+class delivery : public counted_facade<pn_delivery_t, delivery> {
 
     /** Delivery state of a message */
     enum state {
@@ -44,8 +42,6 @@ class delivery : public wrapper<pn_delivery_t>
         MODIFIED = PN_MODIFIED  ///< Settled as modified
     };  // AMQP spec 3.4 delivery State
 
-    PN_CPP_EXTERN delivery(pn_delivery_t * = 0);
-
     /** Return true if the delivery has been settled. */
     PN_CPP_EXTERN bool settled();
 
@@ -54,6 +50,21 @@ class delivery : public wrapper<pn_delivery_t>
 
     /** Set the local state of the delivery. */
     PN_CPP_EXTERN void update(delivery::state state);
+
+    /** update and settle a delivery with the given delivery::state */
+    PN_CPP_EXTERN void settle(delivery::state s);
+
+    /** settle with ACCEPTED state */
+    PN_CPP_EXTERN void accept() { settle(ACCEPTED); }
+
+    /** settle with REJECTED state */
+    PN_CPP_EXTERN void reject() { settle(REJECTED); }
+
+    /** settle with REJECTED state */
+    PN_CPP_EXTERN void release() { settle(RELEASED); }
+
+    /** settle with MODIFIED state */
+    PN_CPP_EXTERN void modifiy() { settle(MODIFIED); }
 };
 
 }

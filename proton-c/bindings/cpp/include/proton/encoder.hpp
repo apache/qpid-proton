@@ -19,18 +19,17 @@
  * under the License.
  */
 
-#include "proton/data.hpp"
 #include "proton/error.hpp"
 #include "proton/types.hpp"
 #include "proton/type_traits.hpp"
+#include "proton/facade.hpp"
 #include <iosfwd>
 
 struct pn_data_t;
 
 namespace proton {
 
-class value;
-class values;
+class data;
 
 /** Raised by encoder operations on error */
 struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&) throw(); };
@@ -59,11 +58,8 @@ struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const s
  *
  *@throw decoder::error if the curent value is not a container type.
  */
-class encoder : public virtual data {
+class encoder : public facade<pn_data_t, encoder> {
   public:
-    PN_CPP_EXTERN encoder();
-    PN_CPP_EXTERN ~encoder();
-
     /**
      * Encode the current values into buffer and update size to reflect the number of bytes encoded.
      *
@@ -82,6 +78,8 @@ class encoder : public virtual data {
 
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
+
+    PN_CPP_EXTERN class data& data();
 
     /** @name Insert simple types.
      *@{
@@ -107,8 +105,7 @@ class encoder : public virtual data {
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_string);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_symbol);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_binary);
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const value&);
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const values&);
+  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const class data&);
     ///@}
 
     /**
@@ -139,11 +136,6 @@ class encoder : public virtual data {
 
     /** Copy data from a raw pn_data_t */
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, pn_data_t*);
-
-  private:
-    PN_CPP_EXTERN encoder(pn_data_t* pd);
-
-  friend class value;
 };
 
 // Need to disambiguate char* conversion to bool and std::string as amqp_string.
@@ -185,11 +177,11 @@ template <class T> encoder& operator<<(encoder& e, cref<T, MAP> m){
     e << finish();
     return e;
 }
-//@internal Convert a ref to a cref.
+///@cond INTERNAL Convert a ref to a cref.
 template <class T, type_id A> encoder& operator<<(encoder& e, ref<T, A> ref) {
     return e << cref<T,A>(ref);
 }
-
+///@endcond
 
 }
 #endif // ENCODER_H

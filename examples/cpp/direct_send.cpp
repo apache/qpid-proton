@@ -39,7 +39,7 @@ class simple_send : public proton::messaging_handler {
     int sent;
     int confirmed;
     int total;
-    proton::acceptor acceptor;
+    proton::counted_ptr<proton::acceptor> acceptor;
   public:
 
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
@@ -50,10 +50,10 @@ class simple_send : public proton::messaging_handler {
     }
 
     void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
+        proton::sender& sender = e.sender();
         while (sender.credit() && sent < total) {
-            proton::message msg;
-            msg.id(proton::value(sent + 1));
+            proton::message_value msg;
+            msg.id(proton::data_value(sent + 1));
             std::map<std::string, int> m;
             m["sequence"] = sent+1;
             msg.body(proton::as<proton::MAP>(m));
@@ -67,7 +67,7 @@ class simple_send : public proton::messaging_handler {
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
             e.connection().close();
-            acceptor.close();
+            acceptor->close();
         }
     }
 

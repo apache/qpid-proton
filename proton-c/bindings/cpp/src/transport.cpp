@@ -20,19 +20,12 @@
  */
 #include "proton/transport.hpp"
 #include "proton/connection.hpp"
-
 #include "proton/transport.h"
 
 namespace proton {
 
-
-transport::transport() : connection_(0), pn_transport_(::pn_transport()) {}
-
-transport::~transport() { ::pn_decref(pn_transport_); }
-
-void transport::bind(class connection &c) {
-    connection_ = &c;
-    pn_transport_bind(pn_transport_, c.pn_connection());
+connection* transport::connection() {
+    return connection::cast(pn_transport_connection(pn_cast(this)));
 }
 
 }

@@ -21,23 +21,35 @@
  * under the License.
  *
  */
+
+#include "proton/facade.hpp"
+
 #include "proton/reactor.h"
 #include "proton/connection.h"
 #include "proton/message.h"
 
 namespace proton {
 
+class session;
+class handler;
+
+extern pn_class_t* CPP_CONTEXT;
+counted* get_context(pn_record_t*, pn_handle_t handle);
+void set_context(pn_record_t*, pn_handle_t, counted* value);
+
+struct connection_context : public counted {
+    static connection_context& get(pn_connection_t* c);
+
+    connection_context();
+    ~connection_context();
+
+    class handler* handler;
+    session* default_session;
+};
+
 class connection_impl;
 void connection_context(pn_connection_t *pn_connection, connection_impl *connection);
 connection_impl *connection_context(pn_connection_t *pn_connection);
-
-class session;
-void session_context(pn_session_t *pn_session, session *session);
-session *session_context(pn_session_t *pn_session);
-
-class link;
-void link_context(pn_link_t *get(), link *link);
-link *link_context(pn_link_t *get());
 
 class container_impl;
 void container_context(pn_reactor_t *pn_reactor, container_impl *container);

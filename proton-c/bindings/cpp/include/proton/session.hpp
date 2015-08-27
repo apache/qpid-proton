@@ -38,11 +38,9 @@ class handler;
 class transport;
 
 /** A session is a collection of links */
-class session : public endpoint, public wrapper<pn_session_t>
+class session : public counted_facade<pn_session_t, session>, public endpoint
 {
   public:
-    PN_CPP_EXTERN session(pn_session_t * = 0);
-
     /** Initiate local open, not complete till messaging_handler::on_session_opened()
      * or proton_handler::on_session_remote_open()
      */
@@ -54,11 +52,13 @@ class session : public endpoint, public wrapper<pn_session_t>
     PN_CPP_EXTERN void close();
 
     /// Get connection
-    PN_CPP_EXTERN virtual class connection &connection();
+    PN_CPP_EXTERN class connection &connection();
+
+    // FIXME aconway 2015-08-31: default generate unique name.
     /// Create a receiver link
-    PN_CPP_EXTERN receiver create_receiver(const std::string& name);
+    PN_CPP_EXTERN receiver& create_receiver(const std::string& name);
     /// Create a sender link
-    PN_CPP_EXTERN sender create_sender(const std::string& name);
+    PN_CPP_EXTERN sender& create_sender(const std::string& name);
 };
 
 }

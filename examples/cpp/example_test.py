@@ -78,7 +78,7 @@ def wait_addr(addr, timeout=10):
 
 def pick_addr():
     """Pick a new host:port address."""
-    # FIXME aconway 2015-07-14: need a safer way to pick ports.
+    # TODO aconway 2015-07-14: need a safer way to pick ports.
     p =  randrange(10000, 20000)
     return "127.0.0.1:%s" % p
 
@@ -119,10 +119,11 @@ class ExampleTest(unittest.TestCase):
         hw = execute("helloworld", b.addr)
         self.assertEqual('"Hello World!"\n', hw)
 
-    def test_helloworld_blocking(self):
-        b = Broker.get()
-        hw = execute("helloworld_blocking", b.addr, b.addr)
-        self.assertEqual('"Hello World!"\n', hw)
+        # FIXME aconway 2015-08-28: Restore blocking code and examples
+    # def test_helloworld_blocking(self):
+    #     b = Broker.get()
+    #     hw = execute("helloworld_blocking", b.addr, b.addr)
+    #     self.assertEqual('"Hello World!"\n', hw)
 
     def test_helloworld_direct(self):
         addr = pick_addr()
@@ -179,13 +180,14 @@ class ExampleTest(unittest.TestCase):
         finally:
             server.kill()
 
-    def test_sync_request_response(self):
-        b = Broker.get()
-        server = background("server", "-a", b.addr)
-        try:
-            self.assertEqual(execute("sync_client", "-a", b.addr), self.CLIENT_EXPECT)
-        finally:
-            server.kill()
+        # FIXME aconway 2015-08-28: Restore blocking code and examples
+    # def test_sync_request_response(self):
+    #     b = Broker.get()
+    #     server = background("server", "-a", b.addr)
+    #     try:
+    #         self.assertEqual(execute("sync_client", "-a", b.addr), self.CLIENT_EXPECT)
+    #     finally:
+    #         server.kill()
 
     def test_request_response_direct(self):
         addr = pick_addr()

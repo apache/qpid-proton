@@ -37,7 +37,7 @@ class direct_recv : public proton::messaging_handler {
     proton::url url;
     int expected;
     int received;
-    proton::acceptor acceptor;
+    proton::counted_ptr<proton::acceptor> acceptor;
 
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
@@ -48,8 +48,8 @@ class direct_recv : public proton::messaging_handler {
     }
 
     void on_message(proton::event &e) {
-        proton::message msg = e.message();
-        proton::value id = msg.id();
+        proton::message& msg = e.message();
+        proton::data_value id = msg.id();
         if (id.type() == proton::ULONG) {
             if (id.get<int>() < received)
                 return; // ignore duplicate
@@ -61,7 +61,7 @@ class direct_recv : public proton::messaging_handler {
         if (received == expected) {
             e.receiver().close();
             e.connection().close();
-            if (acceptor) acceptor.close();
+            if (acceptor) acceptor->close();
         }
     }
 };

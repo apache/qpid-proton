@@ -25,8 +25,6 @@
 
 namespace proton {
 
-acceptor::acceptor(pn_acceptor_t *a) : wrapper<pn_acceptor_t>(a) {}
-
-void acceptor::close() { pn_acceptor_close(get()); }
+void acceptor::close() { pn_acceptor_close(pn_cast(this)); }
 
 }

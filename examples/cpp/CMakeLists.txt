@@ -24,13 +24,13 @@ include_directories(
 foreach(example
     broker
     helloworld
-    helloworld_blocking
+    # helloworld_blocking
     helloworld_direct
     simple_recv
     simple_send
     direct_recv
     direct_send
-    sync_client
+    # sync_client
     client
     server
     server_direct

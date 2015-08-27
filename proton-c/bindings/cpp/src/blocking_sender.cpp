@@ -38,7 +38,7 @@ struct delivery_settled {
 } // namespace
 
 
-blocking_sender::blocking_sender(blocking_connection &c, sender l) : blocking_link(&c, l.get()) {
+blocking_sender::blocking_sender(blocking_connection &c, sender &l) : blocking_link(&c, pn_cast(l)) {
     std::string ta = link_.target().address();
     std::string rta = link_.remote_target().address();
     if (ta.empty() || ta.compare(rta) != 0) {
@@ -49,11 +49,11 @@ blocking_sender::blocking_sender(blocking_connection &c, sender l) : blocking_li
     }
 }
 
-delivery blocking_sender::send(message &msg, duration timeout) {
-    sender snd(link_.get());
-    delivery dlv = snd.send(msg);
+counted_ptr<delivery> blocking_sender::send(message &msg, duration timeout) {
+    sender snd(pn_cast(link_));
+    counted_ptr<delivery> dlv = snd.send(msg);
     std::string txt = "Sending on sender " + link_.name();
-    delivery_settled cond(dlv.get());
+    delivery_settled cond(pn_cast(dlv.get()));
     connection_.wait(cond, txt, timeout);
     return dlv;
 }

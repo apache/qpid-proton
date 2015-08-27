@@ -20,49 +20,61 @@
  */
 #include "proton/container.hpp"
 #include "proton/connection.hpp"
+#include "proton/transport.hpp"
 #include "proton/handler.hpp"
+#include "proton/session.hpp"
 #include "proton/error.hpp"
+
 #include "msg.hpp"
 #include "contexts.hpp"
-#include "connection_impl.hpp"
-#include "private_impl_ref.hpp"
+#include "container_impl.hpp"
 
 #include "proton/connection.h"
+#include "proton/session.h"
+#include "proton/transport.h"
+#include "proton/reactor.h"
+#include "proton/object.h"
 
 namespace proton {
 
-template class handle<connection_impl>;
-typedef private_impl_ref<connection> PI;
-
-connection::connection() {PI::ctor(*this, 0); }
-connection::connection(connection_impl* p) { PI::ctor(*this, p); }
-connection::connection(const connection& c) : handle<connection_impl>() { PI::copy(*this, c); }
-
-connection& connection::operator=(const connection& c) { return PI::assign(*this, c); }
-connection::~connection() { PI::dtor(*this); }
-
-connection::connection(class container &c, handler *h) {
-    connection_impl *cimpl = new connection_impl(c, h);
-    PI::ctor(*this, cimpl);
+namespace {
+struct override_holder : counted {
+    override_holder(class handler* h) : handler(h) {}
+    ~override_holder() { delete handler; }
+    class handler* handler;
+};
 }
 
-transport &connection::transport() { return impl_->transport(); }
+transport &connection::transport() {
+    return *transport::cast(pn_connection_transport(pn_cast(this)));
+}
 
-handler* connection::override() { return impl_->override(); }
-void connection::override(handler *h) { impl_->override(h); }
+void connection::open() { pn_connection_open(pn_cast(this)); }
 
-void connection::open() { impl_->open(); }
+void connection::close() { pn_connection_close(pn_cast(this)); }
 
-void connection::close() { impl_->close(); }
+std::string connection::hostname() {
+    return std::string(pn_connection_get_hostname(pn_cast(this)));
+}
 
-pn_connection_t *connection::pn_connection() { return impl_->pn_connection(); }
+container& connection::container() {
+    container_impl* impl = container_context(pn_object_reactor(pn_cast(this)));
+    return impl->container_;
+}
 
-std::string connection::hostname() { return impl_->hostname(); }
+link* connection::link_head(endpoint::state mask) {
+    return link::cast(pn_link_head(pn_cast(this), mask));
+}
 
-class container &connection::container() { return impl_->container(); }
+session& connection::create_session() { return *session::cast(pn_session(pn_cast(this))); }
 
-link connection::link_head(endpoint::state mask) {
-    return impl_->link_head(mask);
+session& connection::default_session() {
+    struct connection_context& ctx = connection_context::get(pn_cast(this));
+    if (!ctx.default_session) {
+        ctx.default_session = &create_session(); 
+        ctx.default_session->open();
+    }
+    return *ctx.default_session;
 }
 
 }

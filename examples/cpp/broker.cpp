@@ -35,8 +35,8 @@
 class queue {
   public:
     bool dynamic;
-    typedef std::deque<proton::message> message_queue;
-    typedef std::list<proton::sender> sender_list;
+    typedef std::deque<proton::message_value> message_queue;
+    typedef std::list<proton::counted_ptr<proton::sender> > sender_list;
     message_queue messages;
     sender_list consumers;
 
@@ -51,14 +51,13 @@ class queue {
         return (consumers.size() == 0 && (dynamic || messages.size() == 0));
     }
 
-    void publish(proton::message &m) {
+    void publish(const proton::message_value &m) {
         messages.push_back(m);
         dispatch(0);
     }
 
     void dispatch(proton::sender *s) {
-        while (deliver_to(s)) {
-        }
+        while (deliver_to(s)) {}
     }
 
     bool deliver_to(proton::sender *consumer) {
@@ -67,7 +66,8 @@ class queue {
         if (!count) return false;
         bool result = false;
         sender_list::iterator it = consumers.begin();
-        if (!consumer && count) consumer = &*it;
+        if (!consumer && count)
+            consumer = it->get();
 
         while (messages.size()) {
             if (consumer->credit()) {
@@ -118,10 +118,10 @@ class broker : public proton::messaging_handler {
     }
 
     void on_link_opening(proton::event &e) {
-        proton::link lnk = e.link();
+        proton::link& lnk = e.link();
         if (lnk.is_sender()) {
-            proton::sender sender(lnk);
-            proton::terminus remote_source(lnk.remote_source());
+            proton::sender &sender(lnk.sender());
+            proton::terminus &remote_source(lnk.remote_source());
             if (remote_source.is_dynamic()) {
                 std::string address = queue_name();
                 lnk.source().address(address);
@@ -157,10 +157,9 @@ class broker : public proton::messaging_handler {
     }
 
     void on_link_closing(proton::event &e) {
-        proton::link lnk = e.link();
+        proton::link &lnk = e.link();
         if (lnk.is_sender()) {
-            proton::sender s(lnk);
-            unsubscribe(s);
+            unsubscribe(lnk.sender());
         }
     }
 
@@ -173,26 +172,25 @@ class broker : public proton::messaging_handler {
     }
 
     void remove_stale_consumers(proton::connection &connection) {
-        proton::link l = connection.link_head(proton::endpoint::REMOTE_ACTIVE);
+        proton::link *l = connection.link_head(proton::endpoint::REMOTE_ACTIVE);
         while (l) {
-            if (l.is_sender()) {
-                proton::sender s(l);
-                unsubscribe(s);
+            if (l->is_sender()) {
+                unsubscribe(l->sender());
             }
-            l = l.next(proton::endpoint::REMOTE_ACTIVE);
+            l = l->next(proton::endpoint::REMOTE_ACTIVE);
         }
     }
 
     void on_sendable(proton::event &e) {
-        proton::link lnk = e.link();
-        proton::sender sender(lnk);
+        proton::link& lnk = e.link();
         std::string addr = lnk.source().address();
-        get_queue(addr).dispatch(&sender);
+        proton::sender &s(lnk.sender());
+        get_queue(addr).dispatch(&s);
     }
 
     void on_message(proton::event &e) {
         std::string addr = e.link().target().address();
-        proton::message msg = e.message();
+        proton::message_value msg = e.message();
         get_queue(addr).publish(msg);
     }
 };

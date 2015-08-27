@@ -3,9 +3,7 @@
 // that shows messed-up line numbers in \skip \until code extracts so this file
 // is markdown wrapped in a C++ comment - which works.
 
-/** \page tutorial Tutorial
-Tutorial 
-========
+/*! \page tutorial Tutorial
 
 This is a brief tutorial that will walk you through the fundamentals of building
 messaging applications in incremental steps. There are further examples, in
@@ -103,7 +101,7 @@ code at \ref helloworld_direct.cpp
 
 The first difference, is that rather than creating a receiver on the same
 connection as our sender, we listen for incoming connections by invoking the
-`proton::container::listen()` method on the container.
+`proton::container::Xblisten()` method on the container.
 
 \skip on_start
 \until }

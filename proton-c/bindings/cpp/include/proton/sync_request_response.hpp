@@ -26,7 +26,6 @@
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_sender.hpp"
 #include <string>
-#include <memory>
 
 struct pn_message_t;
 struct pn_data_t;
@@ -49,7 +48,7 @@ class sync_request_response : public messaging_handler
     std::string address_;
     blocking_sender sender_;
     blocking_receiver receiver_;
-    std::auto_ptr<message> response_;
+    PN_UNIQUE_OR_AUTO_PTR<message> response_;
     amqp_ulong correlation_id_;
 };
 

@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include "proton/wrapper.hpp"
+#include "proton/facade.hpp"
 #include "proton/error.hpp"
 #include <iosfwd>
 
@@ -48,14 +48,14 @@ class url {
     /** Parse url_str as an AMQP URL. If defaults is true, fill in defaults for missing values
      *  otherwise return an empty string for missing values.
      *  Note: converts automatically from string.
-     *@throws bad_url if URL is invalid.
+     *@throw bad_url if URL is invalid.
      */
     PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
 
     /** Parse url_str as an AMQP URL. If defaults is true, fill in defaults for missing values
      *  otherwise return an empty string for missing values.
      *  Note: converts automatically from string.
-     *@throws bad_url if URL is invalid.
+     *@throw bad_url if URL is invalid.
      */
     PN_CPP_EXTERN url(const char* url_str, bool defaults=true);
 
@@ -64,12 +64,12 @@ class url {
     PN_CPP_EXTERN url& operator=(const url&);
 
     /** Parse a string as a URL 
-     *@throws bad_url if URL is invalid.
+     *@throw bad_url if URL is invalid.
      */
     PN_CPP_EXTERN void parse(const std::string&);
 
     /** Parse a string as a URL 
-     *@throws bad_url if URL is invalid.
+     *@throw bad_url if URL is invalid.
      */
     PN_CPP_EXTERN void parse(const char*);
 

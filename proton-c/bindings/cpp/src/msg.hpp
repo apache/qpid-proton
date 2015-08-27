@@ -27,7 +27,7 @@
 
 namespace proton {
 
-/** A simple wrapper for std::ostringstream that allows
+/** A simple facade for std::ostringstream that allows
  * in place construction of a message and automatic conversion
  * to string.
  * E.g.

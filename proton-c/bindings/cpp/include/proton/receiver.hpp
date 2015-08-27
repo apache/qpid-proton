@@ -32,12 +32,9 @@ struct pn_connection_t;
 namespace proton {
 
 /// A receiving link
-class receiver : public link
+class receiver : public link, public ptr_convetible<receiver>
 {
   public:
-    /// @throw proton::error if (link && !link.is_receiver())
-    PN_CPP_EXTERN receiver(link = link());
-
     /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
 };

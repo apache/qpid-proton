@@ -72,7 +72,7 @@ void messaging_adapter::on_delivery(event &e) {
             if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
                 // generate on_message
                 messaging_event mevent(messaging_event::MESSAGE, *pe);
-                mevent.message_.decode(link(lnk), delivery(dlv));
+                mevent.message_.decode(*reinterpret_cast<link*>(lnk), *reinterpret_cast<delivery*>(dlv));
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                     if (auto_accept_) {
                         pn_delivery_update(dlv, PN_RELEASED);

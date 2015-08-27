@@ -19,15 +19,17 @@
  * under the License.
  */
 
-#include "proton/data.hpp"
 #include "proton/error.hpp"
 #include "proton/type_traits.hpp"
 #include "proton/types.hpp"
+#include "proton/facade.hpp"
 #include <iosfwd>
+
+struct pn_data_t;
 
 namespace proton {
 
-class value;
+class data;
 
 /** Raised by decoder operations on error.*/
 struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&) throw(); };
@@ -66,12 +68,8 @@ struct rewind{};
  * You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
  *
 */
-class decoder : public virtual data {
+class decoder : public facade<pn_data_t, decoder> {
   public:
-
-    PN_CPP_EXTERN decoder();
-    PN_CPP_EXTERN ~decoder();
-
     /** Copy AMQP data from a byte buffer into the decoder. */
     PN_CPP_EXTERN decoder(const char* buffer, size_t size);
 
@@ -91,6 +89,14 @@ class decoder : public virtual data {
      *@throw error if empty().
      */
     PN_CPP_EXTERN type_id type() const;
+
+    /** Rewind to the start of the data. */
+    PN_CPP_EXTERN void rewind();
+
+    /** Back up by one value */
+    PN_CPP_EXTERN void backup(); 
+
+    PN_CPP_EXTERN class data& data();
 
     /** @name Extract simple types
      * Overloads to extract simple types.
@@ -116,7 +122,7 @@ class decoder : public virtual data {
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_decimal128&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_uuid&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, std::string&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, value&);
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, class data&);
     ///@}
 
     /** Extract and return a value of type T. */
@@ -178,10 +184,8 @@ class decoder : public virtual data {
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, struct rewind);
 
   private:
-    template <class T> decoder& extract(T& value);
     PN_CPP_EXTERN void check_type(type_id);
 
-  friend class value;
   friend class encoder;
 };
 

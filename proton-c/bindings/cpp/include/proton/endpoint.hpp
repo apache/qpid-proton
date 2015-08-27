@@ -58,10 +58,6 @@ class endpoint
      ///@}
 
     // TODO: condition, remote_condition, update_condition, get/handler
-
-  protected:
-    PN_CPP_EXTERN endpoint();
-    PN_CPP_EXTERN ~endpoint();
 };
 
 

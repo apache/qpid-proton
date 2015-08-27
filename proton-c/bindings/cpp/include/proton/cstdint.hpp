@@ -19,7 +19,7 @@
  * under the License.
  */
 
-///@cond INTERNAL_DETAIL
+///@cond INTERNAL
 
 /**@file
  *
@@ -27,7 +27,7 @@
  * Not the full cstdint, just the type needed by proton.
  */
 
-#ifdef USE_CPP11
+#if PN_USE_CPP11
 #include <cstdint>
 #else
 #include <proton/type_compat.h>

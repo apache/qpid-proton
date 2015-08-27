@@ -26,6 +26,12 @@ if (HAVE_LONG_LONG)
   add_definitions(-DPN_HAVE_LONG_LONG=1)
 endif()
 
+# Check for boost
+find_path(BOOST_INCLUDE_DIR boost/shared_ptr.hpp PATH_SUFFIXES include)
+if (BOOST_INCLUDE_DIR)
+  set(CXX_BOOST_FLAGS "-DPN_USE_BOOST")
+endif()
+
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -33,12 +39,17 @@ include_directories(
 
 set(qpid-proton-cpp-source
   src/acceptor.cpp
-  src/acking.cpp
+  # FIXME aconway 2015-08-28: Restore blocking code and examples
+  # src/blocking_connection.cpp
+  # src/blocking_connection_impl.cpp
+  # src/blocking_link.cpp
+  # src/blocking_receiver.cpp
+  # src/blocking_sender.cpp
   src/connection.cpp
-  src/connection_impl.cpp
   src/connector.cpp
   src/container.cpp
   src/container_impl.cpp
+  src/contexts.cpp
   src/data.cpp
   src/decoder.cpp
   src/delivery.cpp
@@ -47,38 +58,34 @@ set(qpid-proton-cpp-source
   src/endpoint.cpp
   src/error.cpp
   src/event.cpp
+  # FIXME aconway 2015-08-28: Restore blocking code and examples
+  # src/fetcher.cpp
   src/handler.cpp
   src/link.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/messaging_event.cpp
   src/messaging_handler.cpp
+  src/proton_bits.cpp
   src/proton_event.cpp
   src/proton_handler.cpp
   src/receiver.cpp
   src/sender.cpp
   src/session.cpp
+  # FIXME aconway 2015-08-28: Restore blocking code and examples
+  # src/sync_request_response.cpp
   src/terminus.cpp
   src/transport.cpp
-  src/url.cpp
-  src/value.cpp
-  src/values.cpp
-  src/proton_bits.cpp
-  src/fetcher.cpp
-  src/blocking_connection.cpp
-  src/blocking_connection_impl.cpp
-  src/blocking_link.cpp
-  src/blocking_sender.cpp
-  src/blocking_receiver.cpp
-  src/sync_request_response.cpp
-  src/contexts.cpp
   src/types.cpp
+  src/url.cpp
+  src/facade.cpp
   )
+
 
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
+  COMPILE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_BOOST_FLAGS}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -113,6 +120,7 @@ macro(add_cpp_test test)
 endmacro(add_cpp_test)
 
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
+add_cpp_test(conversion_test ${CMAKE_SOURCE_DIR}/tests)
 
 ## Install
 

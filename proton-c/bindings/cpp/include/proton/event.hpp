@@ -46,16 +46,14 @@ class event {
     /// Get connection.
     virtual PN_CPP_EXTERN class connection &connection();
     /// Get sender @throws error if no sender.
-    virtual PN_CPP_EXTERN class sender sender();
+    virtual PN_CPP_EXTERN class sender& sender();
     /// Get receiver @throws error if no receiver.
-    virtual PN_CPP_EXTERN class receiver receiver();
+    virtual PN_CPP_EXTERN class receiver& receiver();
     /// Get link @throws error if no link.
-    virtual PN_CPP_EXTERN class link link();
+    virtual PN_CPP_EXTERN class link& link();
     /// Get delivey @throws error if no delivery.
-    virtual PN_CPP_EXTERN class delivery delivery();
-    /** Get message @throws error if no message.
-     * Refernece is valid only till end of event dispatch. Copy or swap the message to keep it.
-     */
+    virtual PN_CPP_EXTERN class delivery& delivery();
+    /** Get message @throws error if no message. */
     virtual PN_CPP_EXTERN class message &message();
 
   protected:

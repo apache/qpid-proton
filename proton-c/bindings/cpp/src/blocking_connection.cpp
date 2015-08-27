@@ -56,8 +56,8 @@ void blocking_connection::wait(condition &cond, const std::string &msg, duration
 }
 
 blocking_sender blocking_connection::create_sender(const std::string &address, handler *h) {
-    sender sender = impl_->container_.create_sender(impl_->connection_, address, h);
-    return blocking_sender(*this, sender);
+    counted_ptr<sender> snd = impl_->container_.create_sender(impl_->connection_, address, h);
+    return blocking_sender(*this, snd);
 }
 
 namespace {
@@ -76,8 +76,8 @@ blocking_receiver blocking_connection::create_receiver(const std::string &addres
         handler = f;
     }
     fetcher_guard fg(f);
-    receiver receiver = impl_->container_.create_receiver(impl_->connection_, address, dynamic, handler);
-    blocking_receiver brcv(*this, receiver, f, credit);
+    counted_ptr<receiver> rcv = impl_->container_.create_receiver(impl_->connection_, address, dynamic, handler);
+    blocking_receiver brcv(*this, rcv, f, credit);
     return brcv;
 }
 

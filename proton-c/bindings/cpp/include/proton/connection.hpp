@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/handle.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/container.hpp"
 #include "proton/types.h"
@@ -34,30 +33,16 @@ namespace proton {
 
 class handler;
 class transport;
-class connection_impl;
 
-/** connection is the local end of a connectoin to a remote AMQP peer. */
-class connection : public endpoint, public handle<connection_impl>
+/** connection to a remote AMQP peer. */
+class connection : public counted_facade<pn_connection_t, connection>, public endpoint
 {
   public:
-    PN_CPP_EXTERN connection();
-    PN_CPP_EXTERN connection(connection_impl *);
-    PN_CPP_EXTERN connection(const connection& c);
-    PN_CPP_EXTERN connection(class container &c, handler *h = 0);
-    PN_CPP_EXTERN ~connection();
-
-    PN_CPP_EXTERN connection& operator=(const connection& c);
-
     ///@name getters @{
     PN_CPP_EXTERN class transport& transport();
-    PN_CPP_EXTERN handler *override();
-    PN_CPP_EXTERN pn_connection_t *pn_connection();
-    PN_CPP_EXTERN class container &container();
+    PN_CPP_EXTERN class container& container();
     PN_CPP_EXTERN std::string hostname();
     ///@}
-
-    /** override the handler for this connection */
-    PN_CPP_EXTERN void override(handler *h);
 
     /** Initiate local open, not complete till messaging_handler::on_connection_opened()
      * or proton_handler::on_connection_remote_open()
@@ -69,15 +54,17 @@ class connection : public endpoint, public handle<connection_impl>
      */
     PN_CPP_EXTERN void close();
 
+    /** Create a new session */
+    PN_CPP_EXTERN class session& create_session();
+
+    /** Default session is created on first call and re-used for the lifeime of the connection */
+    PN_CPP_EXTERN class session& default_session();
+
     /** Get the first link on this connection matching the state mask.
+     * Return 0 if none. Don't delete returned pointer.
      * @see link::next, endpoint::state
      */
-    PN_CPP_EXTERN link link_head(endpoint::state mask);
-
-  private:
-   friend class private_impl_ref<connection>;
-   friend class connector;
-   friend class connection_impl;
+    PN_CPP_EXTERN link* link_head(endpoint::state mask);
 };
 
 }

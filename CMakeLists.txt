@@ -151,7 +151,6 @@ if (ENABLE_VALGRIND)
 endif (ENABLE_VALGRIND)
 
 mark_as_advanced (VALGRIND_EXE)
-message("FIXME VG ${VALGRIND_ENV}")
 
 add_subdirectory(proton-c)
 add_subdirectory(examples)

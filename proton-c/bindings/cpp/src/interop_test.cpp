@@ -19,9 +19,8 @@
 
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
-#include "proton/value.hpp"
-#include "msg.hpp"
-#include <stdexcept>
+#include "proton/data.hpp"
+#include "test_bits.hpp"
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -32,13 +31,6 @@ using namespace std;
 using namespace proton;
 
 std::string tests_dir;
-
-struct Fail : public logic_error { Fail(const string& what) : logic_error(what) {} };
-#define FAIL(WHAT) throw Fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
-#define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
-#define ASSERT_EQUAL(WANT, GOT) if ((WANT) != (GOT)) \
-        FAIL(#WANT << " !=  " << #GOT << ": " << WANT << " != " << GOT)
-
 
 string read(string filename) {
     filename = tests_dir+string("/interop/")+filename+string(".amqp");
@@ -57,13 +49,16 @@ template <class T> std::string str(const T& value) {
 
 // Test data ostream operator
 void test_data_ostream() {
-    decoder d(read("primitives"));
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(d));
+    data_value dv;
+    dv.decoder().decode(read("primitives"));
+    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dv));
 }
 
 // Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
 void test_decoder_primitves_exact() {
-    decoder d(read("primitives"));
+    data_value dv;
+    dv.decoder().decode(read("primitives"));
+    decoder& d(dv.decoder());
     ASSERT(d.more());
     try { get<std::int8_t>(d); FAIL("got bool as byte"); } catch(decode_error){}
     ASSERT_EQUAL(true, get<bool>(d));
@@ -87,46 +82,33 @@ void test_decoder_primitves_exact() {
 
 // Test inserting primitive sand encoding as AMQP.
 void test_encoder_primitives() {
-    encoder e;
+    data_value dv;
+    encoder& e = dv.encoder();
     e << true << false;
     e << std::uint8_t(42);
     e << std::uint16_t(42) << std::int16_t(-42);
     e << std::uint32_t(12345) << std::int32_t(-12345);
     e << std::uint64_t(12345) << std::int64_t(-12345);
     e << float(0.125) << double(0.125);
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(e));
+    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(e.data()));
     std::string data = e.encode();
     ASSERT_EQUAL(read("primitives"), data);
 }
 
 // Test type conversions.
 void test_value_conversions() {
-    value v;
+    data_value v;
     ASSERT_EQUAL(true, bool(v = true));
     ASSERT_EQUAL(2, int(v=amqp_byte(2)));
     ASSERT_EQUAL(3, long(v=amqp_byte(3)));
     ASSERT_EQUAL(3, long(v=amqp_byte(3)));
     ASSERT_EQUAL(1.0, double(v=amqp_float(1.0)));
     ASSERT_EQUAL(1.0, float(v=amqp_double(1.0)));
-    try { bool(v = amqp_byte(1)); FAIL("got byte as bool"); } catch (decode_error) {}
-    try { float(v = true); FAIL("got bool as float"); } catch (decode_error) {}
-}
-
-int run_test(void (*testfn)(), const char* name) {
-    try {
-        testfn();
-        return 0;
-    } catch(const Fail& e) {
-        cout << "FAIL " << name << endl << e.what();
-    } catch(const std::exception& e) {
-        cout << "ERROR " << name << endl << e.what();
-    }
-    return 1;
+    try { (void)bool(v = amqp_byte(1)); FAIL("got byte as bool"); } catch (decode_error) {}
+    try { (void)float(v = true); FAIL("got bool as float"); } catch (decode_error) {}
 }
 
 // TODO aconway 2015-06-11: interop test is not complete.
-
-#define RUN_TEST(T) run_test(&T, #T)
 
 int main(int argc, char** argv) {
     int failed = 0;

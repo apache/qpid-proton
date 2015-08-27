@@ -40,7 +40,7 @@ struct fetcher_has_message {
 
 
 blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetcher *f, int credit)
-    : blocking_link(&c, l.get()), fetcher_(f) {
+    : blocking_link(&c, &l), fetcher_(f) {
     std::string sa = link_.source().address();
     std::string rsa = link_.remote_source().address();
     if (!sa.empty() && sa.compare(rsa) != 0) {
@@ -50,7 +50,7 @@ blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetche
         throw error(MSG(txt));
     }
     if (credit)
-        pn_link_flow(link_.get(), credit);
+        pn_link_flow(pn_cast(link_), credit);
     if (fetcher_)
         fetcher_->incref();
 }
@@ -76,7 +76,7 @@ blocking_receiver::~blocking_receiver() {
 message blocking_receiver::receive(duration timeout) {
     if (!fetcher_)
         throw error(MSG("Can't call receive on this receiver as a handler was provided"));
-    receiver rcv(link_.get());
+    receiver rcv(pn_cast(link_));
     if (!rcv.credit())
         rcv.flow(1);
     std::string txt = "Receiving on receiver " + link_.name();
@@ -112,7 +112,7 @@ void blocking_receiver::settle(delivery::state state = delivery::NONE) {
 }
 
 void blocking_receiver::flow(int count) {
-    receiver rcv(link_.get());
+    receiver rcv(pn_cast(link_));
     rcv.flow(count);
 }
 

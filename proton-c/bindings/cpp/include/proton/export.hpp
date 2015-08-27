@@ -22,7 +22,8 @@
  *
  */
 
-/// Internal: import/export macros @cond INTERNAL
+/// @cond INTERNAL
+/// import/export macros 
 #if defined(WIN32) && !defined(PN_CPP_DECLARE_STATIC)
   //
   // Import and Export definitions for Windows:

@@ -34,20 +34,20 @@ class hello_world : public proton::messaging_handler {
     hello_world(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
+        proton::connection& conn = e.container().connect(url);
         e.container().create_receiver(conn, url.path());
         e.container().create_sender(conn, url.path());
     }
 
     void on_sendable(proton::event &e) {
-        proton::message m;
+        proton::message_value m;
         m.body("Hello World!");
         e.sender().send(m);
         e.sender().close();
     }
 
     void on_message(proton::event &e) {
-        proton::value body(e.message().body());
+        proton::data& body(e.message().body());
         std::cout << body << std::endl;
         e.connection().close();
     }

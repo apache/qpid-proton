@@ -28,8 +28,14 @@
 
 namespace proton {
 
-/// Base class for event handlers.
-/// Handlers form a tree, a handler is a vector of pointers to child handlers.
+/** Base class for event handlers.
+ *
+ * A handler can have child handlers which are called in order, after the parent handler.
+ *
+ * Note: Event handlers are not deleted by the proton library, they must not be
+ * deleted while they are still in use. You can allocate a handler with `new` and
+ * call `delete this` in the appropriate `on_*_closed` or `on_*_final` event if you wish.
+ */
 class handler : public std::vector<handler*> {
   public:
     PN_CPP_EXTERN handler();

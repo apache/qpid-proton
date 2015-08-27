@@ -29,20 +29,8 @@
 
 namespace proton {
 
-namespace {
-
-pn_link_t* verify(pn_link_t* l) {
-    if (l && !link(l).is_receiver())
-        throw error(MSG("Creating receiver from sender link"));
-    return l;
-}
-
-}
-
-receiver::receiver(link lnk) : link(verify(lnk.get())) {}
-
 void receiver::flow(int count) {
-    pn_link_flow(get(), count);
+    pn_link_flow(pn_cast(this), count);
 }
 
 }

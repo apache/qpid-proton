@@ -38,25 +38,16 @@
 
 namespace proton {
 
-template class handle<container_impl>;
-typedef private_impl_ref<container> PI;
+container::container() : impl_(new container_impl(*this, 0)) {}
 
-container::container(container_impl* p) { PI::ctor(*this, p); }
-container::container(const container& c) : handle<container_impl>() { PI::copy(*this, c); }
-container& container::operator=(const container& c) { return PI::assign(*this, c); }
-container::~container() { PI::dtor(*this); }
+container::container(messaging_handler &mhandler) :
+    impl_(new container_impl(*this, &mhandler)) {}
 
-container::container(messaging_handler &mhandler) {
-    container_impl *cimpl = new container_impl(mhandler);
-    PI::ctor(*this, cimpl);
+container::~container() {}
+
+connection& container::connect(const url &host, handler *h) {
+    return impl_->connect(host, h);
 }
-
-container::container() {
-    container_impl *cimpl = new container_impl();
-    PI::ctor(*this, cimpl);
-}
-
-connection container::connect(const url &host, handler *h) { return impl_->connect(host, h); }
 
 pn_reactor_t *container::reactor() { return impl_->reactor(); }
 
@@ -66,23 +57,23 @@ duration container::timeout() { return impl_->timeout(); }
 void container::timeout(duration timeout) { impl_->timeout(timeout); }
 
 
-sender container::create_sender(connection &connection, const std::string &addr, handler *h) {
+sender& container::create_sender(connection &connection, const std::string &addr, handler *h) {
     return impl_->create_sender(connection, addr, h);
 }
 
-sender container::create_sender(const proton::url &url) {
+sender& container::create_sender(const proton::url &url) {
     return impl_->create_sender(url);
 }
 
-receiver container::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
+receiver& container::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
     return impl_->create_receiver(connection, addr, dynamic, h);
 }
 
-receiver container::create_receiver(const proton::url &url) {
+receiver& container::create_receiver(const proton::url &url) {
     return impl_->create_receiver(url);
 }
 
-acceptor container::listen(const proton::url &url) {
+acceptor& container::listen(const proton::url &url) {
     return impl_->listen(url);
 }
 
