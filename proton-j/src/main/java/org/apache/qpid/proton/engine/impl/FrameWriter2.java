@@ -31,6 +31,7 @@ import org.apache.qpid.proton.codec2.ByteArrayEncoder;
 import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.Type;
 import org.apache.qpid.proton.framing.TransportFrame;
+import org.apache.qpid.proton.framing.TransportFrame2;
 import org.apache.qpid.proton.transport2.Performative;
 
 /**
@@ -169,17 +170,17 @@ class FrameWriter2
 
         // XXX: this is a bit of a hack but it eliminates duplicate
         // code, further refactor will fix this
-        /*if (_frameType == AMQP_FRAME_TYPE)
+        if (_frameType == AMQP_FRAME_TYPE)
         {
-            TransportFrame frame = new TransportFrame(channel, (FrameBody) frameBody, Binary.create(originalPayload));
+            TransportFrame2 frame = new TransportFrame2(channel, (Performative) frameBody, null);
             _transport.log(TransportImpl.OUTGOING, frame);
 
-            ProtocolTracer tracer = _protocolTracer.get();
+            /*ProtocolTracer tracer = _protocolTracer.get();
             if (tracer != null)
             {
                 tracer.sentFrame(frame);
-            }
-        }*/
+            }*/
+        }
 
         int capacity;
         if (_maxFrameSize > 0)

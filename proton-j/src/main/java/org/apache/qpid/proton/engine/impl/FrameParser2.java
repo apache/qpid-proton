@@ -433,6 +433,7 @@ class FrameParser2 implements TransportInput
                     }
                     catch (Exception ex)
                     {
+                        ex.printStackTrace();
                         state = State.ERROR;
                         frameParsingError = new TransportException(ex);
                     }

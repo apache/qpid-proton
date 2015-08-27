@@ -44,8 +44,7 @@ import org.apache.qpid.proton.reactor.Reactor;
 
 public final class Proton
 {
-
-    static boolean isNewCodec = Boolean.getBoolean("new-codec");
+    static boolean isNewCodec = true; // Boolean.getBoolean("new-codec");
     
     private Proton()
     {

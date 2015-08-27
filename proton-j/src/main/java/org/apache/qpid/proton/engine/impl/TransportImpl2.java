@@ -321,7 +321,7 @@ public class TransportImpl2 extends EndpointImpl
     @Override
     public Sasl sasl()
     {
-        if(_sasl == null)
+        /*if(_sasl == null)
         {
             if(_processingStarted)
             {
@@ -333,7 +333,7 @@ public class TransportImpl2 extends EndpointImpl
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
-        }
+        }*/
         return _sasl;
 
     }
@@ -422,15 +422,15 @@ public class TransportImpl2 extends EndpointImpl
     private void writeFlow(TransportSession ssn, TransportLink link)
     {
         Flow flow = new Flow();
-        flow.setNextIncomingId(ssn.getNextIncomingId().intValue());
-        flow.setNextOutgoingId(ssn.getNextOutgoingId().intValue());
+        flow.setNextIncomingId(ssn.getNextIncomingId() == null ? 0 : ssn.getNextIncomingId().intValue());
+        flow.setNextOutgoingId(ssn.getNextOutgoingId() == null ? 0 : ssn.getNextOutgoingId().intValue());
         ssn.updateWindows();
-        flow.setIncomingWindow(ssn.getIncomingWindowSize().intValue());
-        flow.setOutgoingWindow(ssn.getOutgoingWindowSize().intValue());
+        flow.setIncomingWindow(ssn.getIncomingWindowSize() == null ? 0 : ssn.getIncomingWindowSize().intValue());
+        flow.setOutgoingWindow(ssn.getOutgoingWindowSize() == null ? 0 : ssn.getOutgoingWindowSize().intValue());
         if (link != null) {
-            flow.setHandle(link.getLocalHandle().intValue());
-            flow.setDeliveryCount(link.getDeliveryCount().intValue());
-            flow.setLinkCredit(link.getLinkCredit().intValue());
+            flow.setHandle(link.getLocalHandle() == null ? 0 : link.getLocalHandle().intValue());
+            flow.setDeliveryCount(link.getDeliveryCount() == null ? 0 : link.getDeliveryCount().intValue());
+            flow.setLinkCredit(link.getLinkCredit() == null? 0 : link.getLinkCredit().intValue());
             flow.setDrain(link.getLink().getDrain());
         }
         writeFrame(ssn.getLocalChannel(), flow, null, null);
@@ -740,7 +740,7 @@ public class TransportImpl2 extends EndpointImpl
                                 attach.setInitialDeliveryCount(0);
                             }
 
-                            writeFrame(transportSession.getLocalChannel(), attach, null, null);
+                            //writeFrame(transportSession.getLocalChannel(), attach, null, null);
                             transportLink.sentAttach();
                         }
                     }

@@ -343,7 +343,7 @@ public class TransportImpl extends EndpointImpl
     @Override
     public Sasl sasl()
     {
-        if(_sasl == null)
+        /*if(_sasl == null)
         {
             if(_processingStarted)
             {
@@ -355,7 +355,7 @@ public class TransportImpl extends EndpointImpl
             TransportWrapper transportWrapper = _sasl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
-        }
+        }*/
         return _sasl;
 
     }

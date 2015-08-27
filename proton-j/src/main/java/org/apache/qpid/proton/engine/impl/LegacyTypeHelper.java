@@ -121,7 +121,7 @@ public class LegacyTypeHelper
     {
         if (error != null)
         {
-            return new ErrorCondition(error.getCondition().toString(), error.getDescription());
+            return new ErrorCondition(error.getCondition() == null ? null: error.getCondition().toString(), error.getDescription());
         }
         else
         {
@@ -247,11 +247,11 @@ public class LegacyTypeHelper
         s.setAddress(legacy.getAddress());
         s.setCapabilities(convertToStringArray(legacy.getCapabilities()));
         // s.setDefaultOutcome(legacy.getDefaultOutcome());
-        s.setDistributionMode(legacy.getDistributionMode().toString());
+        s.setDistributionMode(legacy.getDistributionMode() == null ? null : legacy.getDistributionMode().toString());
         s.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
         s.setDynamic(legacy.getDynamic());
         s.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
-        s.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().toString()));
+        s.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
         s.setFilter(legacy.getFilter());
         s.setOutcomes(convertToStringArray(legacy.getOutcomes()));
         s.setTimeout(legacy.getTimeout().intValue());
@@ -268,7 +268,7 @@ public class LegacyTypeHelper
         t.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
         t.setDynamic(legacy.getDynamic());
         t.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
-        t.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().toString()));
+        t.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
         t.setTimeout(legacy.getTimeout().intValue());
         return t;
     }
@@ -279,7 +279,7 @@ public class LegacyTypeHelper
         legacy.setAddress(s.getAddress());
         legacy.setCapabilities(convertToSymbolArray(s.getCapabilities()));
         // legacy.setDefaultOutcome(s.getDefaultOutcome());
-        legacy.setDistributionMode(Symbol.valueOf(s.getDistributionMode().toString()));
+        legacy.setDistributionMode(s.getDistributionMode() == null ? null : Symbol.valueOf(s.getDistributionMode().toString()));
         legacy.setDurable(org.apache.qpid.proton.amqp.messaging.TerminusDurability.get(UnsignedInteger.valueOf(s
                 .getDurable().getValue())));
         legacy.setDynamic(s.getDynamic());
