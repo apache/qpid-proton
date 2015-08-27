@@ -192,60 +192,67 @@ public final class Open implements Encodable, Performative
 
             Open open = new Open();
 
-            switch (10 - l.size())
+            try
             {
-            case 0:
-                open.setProperties((Map<String, Object>) l.get(9));
-            case 1:
-                Object val1 = l.get(8);
-                if (val1 == null || val1.getClass().isArray())
+                switch (10 - l.size())
                 {
-                    open.setDesiredCapabilities((String[]) val1);
+                case 0:
+                    open.setProperties((Map<String, Object>) l.get(9));
+                case 1:
+                    Object val1 = l.get(8);
+                    if (val1 == null || val1.getClass().isArray())
+                    {
+                        open.setDesiredCapabilities((String[]) val1);
+                    }
+                    else
+                    {
+                        open.setDesiredCapabilities((String) val1);
+                    }
+                case 2:
+                    Object val2 = l.get(7);
+                    if (val2 == null || val2.getClass().isArray())
+                    {
+                        open.setOfferedCapabilities((String[]) val2);
+                    }
+                    else
+                    {
+                        open.setOfferedCapabilities((String) val2);
+                    }
+                case 3:
+                    Object val3 = l.get(6);
+                    if (val3 == null || val3.getClass().isArray())
+                    {
+                        open.setIncomingLocales((String[]) val3);
+                    }
+                    else
+                    {
+                        open.setIncomingLocales((String) val3);
+                    }
+                case 4:
+                    Object val4 = l.get(5);
+                    if (val4 == null || val4.getClass().isArray())
+                    {
+                        open.setOutgoingLocales((String[]) val4);
+                    }
+                    else
+                    {
+                        open.setOutgoingLocales((String) val4);
+                    }
+                case 5:
+                    open.setIdleTimeOut(l.get(4) == null ? 0 : (long) l.get(4));
+                case 6:
+                    open.setChannelMax(l.get(3) == null ? 65535 : (short) l.get(3));
+                case 7:
+                    open.setMaxFrameSize(l.get(2) == null ? Integer.MAX_VALUE : (int) l.get(2));
+                case 8:
+                    open.setHostname((String) l.get(1));
+                case 9:
+                    open.setContainerId((String) l.get(0));
                 }
-                else
-                {
-                    open.setDesiredCapabilities((String) val1);
-                }
-            case 2:
-                Object val2 = l.get(7);
-                if (val2 == null || val2.getClass().isArray())
-                {
-                    open.setOfferedCapabilities((String[]) val2);
-                }
-                else
-                {
-                    open.setOfferedCapabilities((String) val2);
-                }
-            case 3:
-                Object val3 = l.get(6);
-                if (val3 == null || val3.getClass().isArray())
-                {
-                    open.setIncomingLocales((String[]) val3);
-                }
-                else
-                {
-                    open.setIncomingLocales((String) val3);
-                }
-            case 4:
-                Object val4 = l.get(5);
-                if (val4 == null || val4.getClass().isArray())
-                {
-                    open.setOutgoingLocales((String[]) val4);
-                }
-                else
-                {
-                    open.setOutgoingLocales((String) val4);
-                }
-            case 5:
-                open.setIdleTimeOut((Long) l.get(4));
-            case 6:
-                open.setChannelMax(l.get(3) == null ? 65535 : (Integer) l.get(3));
-            case 7:
-                open.setMaxFrameSize(l.get(2) == null ? Integer.MAX_VALUE : (Integer) l.get(2));
-            case 8:
-                open.setHostname((String) l.get(1));
-            case 9:
-                open.setContainerId((String) l.get(0));
+            }
+            catch (Exception e)
+            {
+                throw new DecodeException("Error decoding 'Open' performative", e);
             }
 
             return open;

@@ -250,7 +250,7 @@ public final class Attach implements Encodable, Performative
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
         CodecHelper.encodeMap(encoder, _properties);
-        encoder.end();
+        //encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
@@ -301,9 +301,9 @@ public final class Attach implements Encodable, Performative
                 attach.setSource((Source) l.get(5));
             case 9:
                 attach.setRcvSettleMode(l.get(4) == null ? ReceiverSettleMode.FIRST
-                        : ReceiverSettleMode.values()[(Integer) l.get(4)]);
+                        : ReceiverSettleMode.values()[(byte) l.get(4)]);
             case 10:
-                attach.setSndSettleMode(l.get(3) == null ? SenderSettleMode.MIXED : SenderSettleMode.values()[(Integer) l
+                attach.setSndSettleMode(l.get(3) == null ? SenderSettleMode.MIXED : SenderSettleMode.values()[(byte) l
                                                                                                               .get(3)]);
             case 11:
                 attach.setRole(Boolean.TRUE.equals(l.get(2)) ? Role.RECEIVER : Role.SENDER);

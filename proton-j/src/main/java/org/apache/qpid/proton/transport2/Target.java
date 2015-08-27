@@ -88,7 +88,7 @@ public final class Target extends Terminus implements Encodable
                 target.setExpiryPolicy(l.get(2) == null ? TerminusExpiryPolicy.SESSION_END : TerminusExpiryPolicy
                         .getEnum((String) l.get(2)));
             case 5:
-                target.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get((Byte) l.get(1)));
+                target.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get(((Integer)l.get(1)).byteValue()));
             case 6:
                 target.setAddress((String) l.get(0));
             }

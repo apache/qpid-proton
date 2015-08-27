@@ -33,7 +33,7 @@ import org.apache.qpid.proton.codec2.Encoder;
 
 public final class Begin implements Encodable, Performative
 {
-    public final static long CODE = 0x0000000000000012L;
+    public final static long CODE = 0x0000000000000011L;
 
     public final static String DESCRIPTOR = "amqp:begin:list";
 
@@ -188,13 +188,13 @@ public final class Begin implements Encodable, Performative
             case 3:
                 begin.setHandleMax(l.get(4) == null ? 0xffffffff : (Integer) l.get(4));
             case 4:
-                begin.setOutgoingWindow((Integer) l.get(3));
+                begin.setOutgoingWindow(l.get(3) == null ? 0 : (Integer) l.get(3));
             case 5:
-                begin.setIncomingWindow((Integer) l.get(2));
+                begin.setIncomingWindow(l.get(2) == null ? 0 : (Integer) l.get(2));
             case 6:
-                begin.setNextOutgoingId((Integer) l.get(1));
+                begin.setNextOutgoingId(l.get(1) == null ? 0 : (Integer) l.get(1));
             case 7:
-                begin.setRemoteChannel((Integer) l.get(0));
+                begin.setRemoteChannel(l.get(0) == null ? -1 : (Integer) l.get(0));
             }
 
             return begin;
