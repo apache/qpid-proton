@@ -152,7 +152,7 @@ install (DIRECTORY examples
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")
 mark_as_advanced (MAVEN_EXE)
 if (JAVA_FOUND AND MAVEN_EXE)
-  add_test (proton-java ${MAVEN_EXE} test --file ${Proton_SOURCE_DIR}/pom.xml)
+  add_test (proton-java ${MAVEN_EXE} clean test --file ${Proton_SOURCE_DIR}/pom.xml)
 else (JAVA_FOUND AND MAVEN_EXE)
   message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
 endif (JAVA_FOUND AND MAVEN_EXE)
