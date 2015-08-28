@@ -221,8 +221,13 @@ class Configure(build_ext):
                        glob.iglob(os.path.join(proton_src, '*.c'))))
 
         # Look for any optional libraries that proton needs, and adjust the
-        # source list as necessary.
+        # source list and compile flags as necessary.
         libraries = []
+
+        # -D flags (None means no value, just define)
+        macros=[('qpid_proton_EXPORTS', None),
+                ('USE_ATOLL', None),
+                ('USE_STRERROR_R', None)]
 
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
@@ -237,11 +242,14 @@ class Configure(build_ext):
         cc = new_compiler(compiler=self.compiler_type)
         cc.output_dir = self.build_temp
 
-        # Some systems need to link to
-        # `rt`. Check whether `clock_getttime` is around
-        # and if not, link on rt.
-        if not cc.has_function('clock_getttime'):
-            libraries.append('rt')
+        # Some systems need to link to `rt`. Check whether `clock_gettime` is
+        # around and if librt is needed
+        if cc.has_function('clock_gettime'):
+            macros.append(('USE_CLOCK_GETTIME', None))
+        else:
+            if cc.has_function('clock_gettime', libraries=['rt']):
+                libraries.append('rt')
+                macros.append(('USE_CLOCK_GETTIME', None))
 
         # 0.10 added an implementation for cyrus. Check
         # if it is available before adding the implementation to the sources
@@ -266,11 +274,7 @@ class Configure(build_ext):
         ds_sys.customize_compiler(cc)
 
         objects = cc.compile(sources,
-                             # -D flags (None means no value, just define)
-                             macros=[('qpid_proton_EXPORTS', None),
-                                     ('USE_ATOLL', None),
-                                     ('USE_CLOCK_GETTIME', None),
-                                     ('USE_STRERROR_R', None)],
+                             macros=macros,
                              include_dirs=[build_include,
                                            proton_include,
                                            proton_src],
