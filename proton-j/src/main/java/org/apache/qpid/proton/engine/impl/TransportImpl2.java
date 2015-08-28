@@ -740,7 +740,7 @@ public class TransportImpl2 extends EndpointImpl
                                 attach.setInitialDeliveryCount(0);
                             }
 
-                            //writeFrame(transportSession.getLocalChannel(), attach, null, null);
+                            writeFrame(transportSession.getLocalChannel(), attach, null, null);
                             transportLink.sentAttach();
                         }
                     }
@@ -1140,33 +1140,26 @@ public class TransportImpl2 extends EndpointImpl
     public void handleFlow(Flow flow, Integer channel)
     {
         TransportSession transportSession = _remoteSessions.get(channel);
+        org.apache.qpid.proton.amqp.transport.Flow f = new org.apache.qpid.proton.amqp.transport.Flow();
+        f.setAvailable(UnsignedInteger.valueOf(flow.getAvailable()));
+        f.setDeliveryCount(UnsignedInteger.valueOf(flow.getDeliveryCount()));
+        f.setDrain(f.getDrain());
+        f.setEcho(flow.getEcho());
+        f.setHandle(UnsignedInteger.valueOf(flow.getHandle()));
+        f.setIncomingWindow(UnsignedInteger.valueOf(flow.getIncomingWindow()));
+        f.setLinkCredit(UnsignedInteger.valueOf(flow.getLinkCredit()));
+        f.setNextIncomingId(UnsignedInteger.valueOf(flow.getNextIncomingId()));
+        f.setOutgoingWindow(UnsignedInteger.valueOf(flow.getNextOutgoingId()));
+        f.setOutgoingWindow(UnsignedInteger.valueOf(flow.getOutgoingWindow()));
+        f.setProperties(flow.getProperties());
+        
         if(transportSession == null)
         {
             // TODO - fail due to attach on non-begun session
         }
         else
         {
-            int inext = flow.getNextIncomingId();
-            int iwin = flow.getIncomingWindow();
-
-            if(inext != -1)
-            {
-                transportSession.setRemoteNextIncomingId(UnsignedInteger.valueOf(inext));
-                transportSession.setRemoteIncomingWindow(UnsignedInteger.valueOf(inext+iwin-transportSession.getNextOutgoingId().intValue()));
-            }
-            else
-            {
-                transportSession.setRemoteIncomingWindow(UnsignedInteger.valueOf(iwin));
-            }
-            transportSession.setRemoteNextOutgoingId(UnsignedInteger.valueOf(flow.getNextOutgoingId()));
-            transportSession.setRemoteOutgoingWindow(UnsignedInteger.valueOf(flow.getOutgoingWindow()));
-
-            if(flow.getHandle() != -1)
-            {
-                TransportLink transportLink = transportSession.getLinkFromRemoteHandle(UnsignedInteger.valueOf(flow.getHandle()));
-                transportLink.setRemoteLinkCredit(UnsignedInteger.valueOf(flow.getLinkCredit()));
-                transportLink.setRemoteDeliveryCount(UnsignedInteger.valueOf(flow.getDeliveryCount()));
-            }
+            transportSession.handleFlow(f);
         }
 
     }

@@ -209,7 +209,7 @@ public final class Flow implements Encodable, Performative
             case 2:
                 flow.setDrain(l.get(8) == null ? false : (Boolean) l.get(8));
             case 3:
-                flow.setAvailable((Integer) l.get(7));
+                flow.setAvailable(l.get(7) == null ? -1 : (Integer)l.get(7));
             case 4:
                 flow.setLinkCredit((Integer) l.get(6));
             case 5:
