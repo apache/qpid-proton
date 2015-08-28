@@ -20,6 +20,8 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -140,11 +142,11 @@ class FrameWriter2
     private void endFrame(int channel)
     {
         int frameSize = _position - _frameStart;
-        _encoder.setPosition(_frameStart);
-        _encoder.putInt(frameSize);
-        _encoder.putByte((byte) 2);
-        _encoder.putByte(_frameType);
-        _encoder.putShort((short) channel);
+        ByteBuffer buf = ByteBuffer.wrap(_buffer, _frameStart, 8);
+        buf.putInt(frameSize);
+        buf.put((byte)2);
+        buf.put(_frameType);
+        buf.putShort((short) channel);
     }
 
     void writeFrame(int channel, Object frameBody, ByteBuffer payload, Runnable onPayloadTooLarge)
@@ -205,6 +207,18 @@ class FrameWriter2
         }
         endFrame(channel);
         _framesOutput += 1;
+        try
+        {
+            FileOutputStream fout = new FileOutputStream("/home/rajith/data/" + ((Performative) frameBody).getClass().getSimpleName());
+            fout.write(_buffer, _read, _position);
+            fout.flush();
+            fout.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        
     }
 
     void writeFrame(Object frameBody)
