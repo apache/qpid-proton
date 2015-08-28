@@ -194,7 +194,7 @@ public final class Begin implements Encodable, Performative
             case 6:
                 begin.setNextOutgoingId(l.get(1) == null ? 0 : (Integer) l.get(1));
             case 7:
-                begin.setRemoteChannel(l.get(0) == null ? -1 : (Integer) l.get(0));
+                begin.setRemoteChannel(l.get(0) == null ? -1 : ((Short)l.get(0)).intValue());
             }
 
             return begin;

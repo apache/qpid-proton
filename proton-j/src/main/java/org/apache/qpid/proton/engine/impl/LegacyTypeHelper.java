@@ -242,65 +242,93 @@ public class LegacyTypeHelper
 
     public static Source convertFromLegacySource(org.apache.qpid.proton.amqp.transport.Source source)
     {
-        org.apache.qpid.proton.amqp.messaging.Source legacy = (org.apache.qpid.proton.amqp.messaging.Source) source;
-        Source s = new Source();
-        s.setAddress(legacy.getAddress());
-        s.setCapabilities(convertToStringArray(legacy.getCapabilities()));
-        // s.setDefaultOutcome(legacy.getDefaultOutcome());
-        s.setDistributionMode(legacy.getDistributionMode() == null ? null : legacy.getDistributionMode().toString());
-        s.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
-        s.setDynamic(legacy.getDynamic());
-        s.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
-        s.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
-        s.setFilter(legacy.getFilter());
-        s.setOutcomes(convertToStringArray(legacy.getOutcomes()));
-        s.setTimeout(legacy.getTimeout().intValue());
-        return s;
+        if (source == null)
+        {
+            return null;
+        }
+        else
+        {
+            org.apache.qpid.proton.amqp.messaging.Source legacy = (org.apache.qpid.proton.amqp.messaging.Source) source;
+            Source s = new Source();
+            s.setAddress(legacy.getAddress());
+            s.setCapabilities(convertToStringArray(legacy.getCapabilities()));
+            // s.setDefaultOutcome(legacy.getDefaultOutcome());
+            s.setDistributionMode(legacy.getDistributionMode() == null ? null : legacy.getDistributionMode().toString());
+            s.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
+            s.setDynamic(legacy.getDynamic());
+            s.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
+            s.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
+            s.setFilter(legacy.getFilter());
+            s.setOutcomes(convertToStringArray(legacy.getOutcomes()));
+            s.setTimeout(legacy.getTimeout().intValue());
+            return s;
+        }
     }
 
     public static Target convertFromLegacyTarget(org.apache.qpid.proton.amqp.transport.Target target)
     {
-        org.apache.qpid.proton.amqp.messaging.Target legacy = (org.apache.qpid.proton.amqp.messaging.Target) target;
-        Target t = new Target();
-        t.setAddress(legacy.getAddress());
-        t.setCapabilities(convertToStringArray(legacy.getCapabilities()));
-
-        t.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
-        t.setDynamic(legacy.getDynamic());
-        t.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
-        t.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
-        t.setTimeout(legacy.getTimeout().intValue());
-        return t;
+        if (target == null)
+        {
+            return null;
+        }
+        else
+        {
+            org.apache.qpid.proton.amqp.messaging.Target legacy = (org.apache.qpid.proton.amqp.messaging.Target) target;
+            Target t = new Target();
+            t.setAddress(legacy.getAddress());
+            t.setCapabilities(convertToStringArray(legacy.getCapabilities()));
+    
+            t.setDurable(TerminusDurability.get(legacy.getDurable().getValue().byteValue()));
+            t.setDynamic(legacy.getDynamic());
+            t.setDynamicNodeProperties(legacy.getDynamicNodeProperties());
+            t.setExpiryPolicy(TerminusExpiryPolicy.getEnum(legacy.getExpiryPolicy().getPolicy().toString()));
+            t.setTimeout(legacy.getTimeout().intValue());
+            return t;
+        }
     }
 
     public static org.apache.qpid.proton.amqp.transport.Source convertToLegacySource(Source s)
     {
-        org.apache.qpid.proton.amqp.messaging.Source legacy = new org.apache.qpid.proton.amqp.messaging.Source();
-        legacy.setAddress(s.getAddress());
-        legacy.setCapabilities(convertToSymbolArray(s.getCapabilities()));
-        // legacy.setDefaultOutcome(s.getDefaultOutcome());
-        legacy.setDistributionMode(s.getDistributionMode() == null ? null : Symbol.valueOf(s.getDistributionMode().toString()));
-        legacy.setDurable(org.apache.qpid.proton.amqp.messaging.TerminusDurability.get(UnsignedInteger.valueOf(s
-                .getDurable().getValue())));
-        legacy.setDynamic(s.getDynamic());
-        legacy.setDynamicNodeProperties(s.getDynamicNodeProperties());
-        legacy.setFilter(s.getFilter());
-        legacy.setOutcomes(convertToSymbolArray(s.getOutcomes()));
-        legacy.setTimeout(UnsignedInteger.valueOf(s.getTimeout()));
-        return legacy;
+        if (s == null)
+        {
+            return null;
+        }
+        else
+        {
+            org.apache.qpid.proton.amqp.messaging.Source legacy = new org.apache.qpid.proton.amqp.messaging.Source();
+            legacy.setAddress(s.getAddress());
+            legacy.setCapabilities(convertToSymbolArray(s.getCapabilities()));
+            // legacy.setDefaultOutcome(s.getDefaultOutcome());
+            legacy.setDistributionMode(s.getDistributionMode() == null ? null : Symbol.valueOf(s.getDistributionMode().toString()));
+            legacy.setDurable(org.apache.qpid.proton.amqp.messaging.TerminusDurability.get(UnsignedInteger.valueOf(s
+                    .getDurable().getValue())));
+            legacy.setDynamic(s.getDynamic());
+            legacy.setDynamicNodeProperties(s.getDynamicNodeProperties());
+            legacy.setFilter(s.getFilter());
+            legacy.setOutcomes(convertToSymbolArray(s.getOutcomes()));
+            legacy.setTimeout(UnsignedInteger.valueOf(s.getTimeout()));
+            return legacy;
+        }
     }
     
     public static org.apache.qpid.proton.amqp.transport.Target convertToLegacyTarget(Target target)
     {
-        org.apache.qpid.proton.amqp.messaging.Target legacy = new org.apache.qpid.proton.amqp.messaging.Target();
-        legacy.setAddress(target.getAddress());
-        legacy.setCapabilities(convertToSymbolArray(target.getCapabilities()));
-
-        legacy.setDurable(org.apache.qpid.proton.amqp.messaging.TerminusDurability.get(UnsignedInteger.valueOf((int)target.getDurable().getValue())));
-        legacy.setDynamic(target.getDynamic());
-        legacy.setDynamicNodeProperties(target.getDynamicNodeProperties());
-        legacy.setExpiryPolicy(org.apache.qpid.proton.amqp.messaging.TerminusExpiryPolicy.valueOf(target.getExpiryPolicy().toString()));
-        legacy.setTimeout(UnsignedInteger.valueOf(target.getTimeout()));
-        return legacy;
+        if (target == null)
+        {
+            return null;
+        }
+        else
+        {
+            org.apache.qpid.proton.amqp.messaging.Target legacy = new org.apache.qpid.proton.amqp.messaging.Target();
+            legacy.setAddress(target.getAddress());
+            legacy.setCapabilities(convertToSymbolArray(target.getCapabilities()));
+    
+            legacy.setDurable(org.apache.qpid.proton.amqp.messaging.TerminusDurability.get(UnsignedInteger.valueOf((int)target.getDurable().getValue())));
+            legacy.setDynamic(target.getDynamic());
+            legacy.setDynamicNodeProperties(target.getDynamicNodeProperties());
+            legacy.setExpiryPolicy(org.apache.qpid.proton.amqp.messaging.TerminusExpiryPolicy.valueOf(target.getExpiryPolicy().toString()));
+            legacy.setTimeout(UnsignedInteger.valueOf(target.getTimeout()));
+            return legacy;
+        }
     }
 }

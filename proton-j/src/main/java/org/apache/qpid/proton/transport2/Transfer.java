@@ -180,7 +180,14 @@ public final class Transfer implements Encodable, Performative
         encoder.putUint(_messageFormat);
         encoder.putBoolean(_settled);
         encoder.putBoolean(_more);
-        encoder.putUbyte(_rcvSettleMode.getValue());
+        if (_rcvSettleMode == null)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            encoder.putUbyte(_rcvSettleMode.getValue());
+        }
         if (_state == null)
         {
             encoder.putNull();
