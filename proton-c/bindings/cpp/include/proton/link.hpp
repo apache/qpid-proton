@@ -44,7 +44,7 @@ class link : public counted_facade<pn_link_t, link>, public endpoint
      */
     PN_CPP_EXTERN void open();
 
-    /** Locally close the link, not complete till messaging_handler::on_link_closeed or
+    /** Locally close the link, not complete till messaging_handler::on_link_closed or
      * proton_handler::link_remote_close
      */
     PN_CPP_EXTERN void close();
@@ -88,6 +88,9 @@ class link : public counted_facade<pn_link_t, link>, public endpoint
 
     /** Connection that owns this link */
     PN_CPP_EXTERN class connection &connection();
+
+    /** Set a custom handler for this link */
+    PN_CPP_EXTERN void handler(class handler&);
 };
 
 }

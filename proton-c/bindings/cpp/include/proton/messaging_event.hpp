@@ -80,7 +80,7 @@ class messaging_event : public proton_event
         TRANSPORT_CLOSED
     };
 
-    messaging_event(pn_event_t *ce, pn_event_type_t t, class container &c);
+    messaging_event(pn_event_t *ce, proton_event::event_type t, class container &c);
     messaging_event(event_type t, proton_event &parent);
     ~messaging_event();
 

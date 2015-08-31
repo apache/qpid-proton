@@ -23,11 +23,9 @@
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/connection.hpp"
+
 #include <iostream>
 #include <vector>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 
 class client : public proton::messaging_handler {
   private:

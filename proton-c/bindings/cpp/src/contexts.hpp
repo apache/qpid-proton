@@ -25,15 +25,14 @@
 #include "proton/facade.hpp"
 
 #include "proton/reactor.h"
-#include "proton/connection.h"
 #include "proton/message.h"
 
 namespace proton {
 
 class session;
 class handler;
+class container_impl;
 
-extern pn_class_t* CPP_CONTEXT;
 counted* get_context(pn_record_t*, pn_handle_t handle);
 void set_context(pn_record_t*, pn_handle_t, counted* value);
 
@@ -45,15 +44,12 @@ struct connection_context : public counted {
 
     class handler* handler;
     session* default_session;
+    class container_impl* container_impl;
 };
 
-class connection_impl;
-void connection_context(pn_connection_t *pn_connection, connection_impl *connection);
-connection_impl *connection_context(pn_connection_t *pn_connection);
-
-class container_impl;
-void container_context(pn_reactor_t *pn_reactor, container_impl *container);
-container_impl *container_context(pn_reactor_t *pn_reactor);
+class container;
+void container_context(pn_reactor_t *, container&);
+container& container_context(pn_reactor_t *);
 
 void event_context(pn_event_t *pn_event, pn_message_t *m);
 pn_message_t *event_context(pn_event_t *pn_event);

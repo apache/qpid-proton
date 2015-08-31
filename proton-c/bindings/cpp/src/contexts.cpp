@@ -36,8 +36,9 @@ namespace proton {
 namespace {
 
 // A proton class for counted c++ objects used as proton attachments
+extern pn_class_t* COUNTED_CONTEXT;
 #define CID_cpp_context CID_pn_void
-static const pn_class_t *cpp_context_reify(void *object) { return CPP_CONTEXT; }
+static const pn_class_t *cpp_context_reify(void *object) { return COUNTED_CONTEXT; }
 #define cpp_context_new NULL
 #define cpp_context_free NULL
 #define cpp_context_initialize NULL
@@ -50,14 +51,14 @@ int cpp_context_refcount(void* p) { return 1; }
 #define cpp_context_compare NULL
 #define cpp_context_inspect NULL
 
-pn_class_t CPP_CONTEXT_ = PN_METACLASS(cpp_context);
+pn_class_t COUNTED_CONTEXT_ = PN_METACLASS(cpp_context);
+pn_class_t *COUNTED_CONTEXT = &COUNTED_CONTEXT_;
 }
 
-pn_class_t *CPP_CONTEXT = &CPP_CONTEXT_;
 
 void set_context(pn_record_t* record, pn_handle_t handle, counted* value)
 {
-    pn_record_def(record, handle, CPP_CONTEXT);
+    pn_record_def(record, handle, COUNTED_CONTEXT);
     pn_record_set(record, handle, value);
 }
 
@@ -69,7 +70,7 @@ counted* get_context(pn_record_t* record, pn_handle_t handle) {
 
 PN_HANDLE(CONNECTION_CONTEXT)
 
-connection_context::connection_context() : handler(0), default_session(0) {}
+connection_context::connection_context() : handler(0), default_session(0), container_impl(0) {}
 connection_context::~connection_context() { delete handler; }
 
 struct connection_context& connection_context::get(pn_connection_t* c) {
@@ -84,16 +85,17 @@ struct connection_context& connection_context::get(pn_connection_t* c) {
 
 PN_HANDLE(CONTAINER_CONTEXT)
 
-void container_context(pn_reactor_t *pn_reactor, container_impl *container) {
-    pn_record_t *record = pn_reactor_attachments(pn_reactor);
+void container_context(pn_reactor_t *r, container& c) {
+    pn_record_t *record = pn_reactor_attachments(r);
     pn_record_def(record, CONTAINER_CONTEXT, PN_VOID);
-    pn_record_set(record, CONTAINER_CONTEXT, container);
+    pn_record_set(record, CONTAINER_CONTEXT, &c);
 }
-container_impl *container_context(pn_reactor_t *pn_reactor) {
+
+container &container_context(pn_reactor_t *pn_reactor) {
     pn_record_t *record = pn_reactor_attachments(pn_reactor);
-    container_impl *p = (container_impl *) pn_record_get(record, CONTAINER_CONTEXT);
-    if (!p) throw error(MSG("Reactor has no C++ container context"));
-    return p;
+    container *ctx = reinterpret_cast<container*>(pn_record_get(record, CONTAINER_CONTEXT));
+    if (!ctx) throw error(MSG("Reactor has no C++ container context"));
+    return *ctx;
 }
 
 PN_HANDLE(EVENT_CONTEXT)
@@ -103,11 +105,12 @@ void event_context(pn_event_t *pn_event, pn_message_t *m) {
     pn_record_def(record, EVENT_CONTEXT, PN_OBJECT); // refcount it for life of the event
     pn_record_set(record, EVENT_CONTEXT, m);
 }
+
 pn_message_t *event_context(pn_event_t *pn_event) {
     if (!pn_event) return NULL;
     pn_record_t *record = pn_event_attachments(pn_event);
-    pn_message_t *p = (pn_message_t *) pn_record_get(record, EVENT_CONTEXT);
-    return p;
+    pn_message_t *ctx = (pn_message_t *) pn_record_get(record, EVENT_CONTEXT);
+    return ctx;
 }
 
 

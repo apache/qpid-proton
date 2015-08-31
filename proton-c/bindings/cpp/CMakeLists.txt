@@ -69,6 +69,7 @@ set(qpid-proton-cpp-source
   src/proton_bits.cpp
   src/proton_event.cpp
   src/proton_handler.cpp
+  src/reactor.cpp
   src/receiver.cpp
   src/sender.cpp
   src/session.cpp

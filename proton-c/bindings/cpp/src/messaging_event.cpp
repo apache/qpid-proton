@@ -35,7 +35,7 @@
 
 namespace proton {
 
-messaging_event::messaging_event(pn_event_t *ce, pn_event_type_t t, class container &c) :
+messaging_event::messaging_event(pn_event_t *ce, proton_event::event_type t, class container &c) :
     proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0)
 {}
 

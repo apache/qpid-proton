@@ -37,14 +37,6 @@
 
 namespace proton {
 
-namespace {
-struct override_holder : counted {
-    override_holder(class handler* h) : handler(h) {}
-    ~override_holder() { delete handler; }
-    class handler* handler;
-};
-}
-
 transport &connection::transport() {
     return *transport::cast(pn_connection_transport(pn_cast(this)));
 }
@@ -58,8 +50,7 @@ std::string connection::hostname() {
 }
 
 container& connection::container() {
-    container_impl* impl = container_context(pn_object_reactor(pn_cast(this)));
-    return impl->container_;
+    return container_context(pn_object_reactor(pn_cast(this)));
 }
 
 link* connection::link_head(endpoint::state mask) {

@@ -21,6 +21,7 @@
 #include "proton/link.hpp"
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
+#include "container_impl.hpp"
 #include "msg.hpp"
 #include "contexts.hpp"
 
@@ -73,6 +74,13 @@ class connection &link::connection() {
 
 link* link::next(endpoint::state mask) {
     return link::cast(pn_link_next(pn_cast(this), (pn_state_t) mask));
+}
+
+void link::handler(class handler& h) {
+    pn_record_t *record = pn_link_attachments(pn_cast(this));
+    connection_context& cc(connection_context::get(pn_cast(&connection())));
+    counted_ptr<pn_handler_t> chandler = cc.container_impl->cpp_handler(&h);
+    pn_record_set_handler(record, chandler.get());
 }
 
 }

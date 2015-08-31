@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_CONTAINER_H
-#define PROTON_CPP_CONTAINER_H
-
+#ifndef REACTOR_HPP
+#define REACTOR_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,35 +17,26 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
+
+#include "proton/facade.hpp"
 #include "proton/duration.hpp"
-#include "proton/export.hpp"
-#include "proton/reactor.hpp"
-#include "proton/url.hpp"
+
+struct pn_reactor_t;
 
 namespace proton {
 
 class connection;
 class acceptor;
-class messaging_handler;
-class sender;
-class receiver;
-class link;
+class url;
 class handler;
-class container_impl;
 
-/**
- * Top level container for connections and other objects, runs the event loop.
- */
-class container
-{
-  public:
-    PN_CPP_EXTERN container();
-    PN_CPP_EXTERN container(messaging_handler& mhandler);
-    PN_CPP_EXTERN ~container();
+class reactor : public facade<pn_reactor_t, reactor> {
+ public:
+    /** Create a new reactor. */
+    PN_CPP_EXTERN static PN_UNIQUE_OR_AUTO_PTR<reactor> create();
 
-    /** Locally open a connection @see connection::open  */
+    /** Open a connection @see connection::open  */
     PN_CPP_EXTERN connection& connect(const proton::url&, handler *h=0);
 
     /** Open a connection to url and create a receiver with source=url.path() */
@@ -56,17 +45,14 @@ class container
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
 
-    /** Create a sender on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h=0);
+    /** Start the reactor, you must call process() to process events */
+    PN_CPP_EXTERN void start();
 
-    /** Open a connection to url and create a sender with target=url.path() */
-    PN_CPP_EXTERN sender& create_sender(const proton::url &);
+    /** Process events, return true if there are more events to process. */
+    PN_CPP_EXTERN bool process();
 
-    /** Create a receiver on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver& create_receiver(connection &connection, const std::string &addr, bool dynamic=false, handler *h=0);
-
-    /** Create a receiver on connection with source=url.path() */
-    PN_CPP_EXTERN receiver& create_receiver(const url &);
+    /** Stop the reactor, causes run() to return and process() to return false. */
+    PN_CPP_EXTERN void stop();
 
     /// Identifier for the container
     PN_CPP_EXTERN std::string container_id();
@@ -77,12 +63,12 @@ class container
     /// Set timeout, process() will return if there is no activity within the timeout.
     PN_CPP_EXTERN void timeout(duration timeout);
 
-    PN_CPP_EXTERN class reactor& reactor();
+    PN_CPP_EXTERN void wakeup();
+    PN_CPP_EXTERN bool quiesced();
+    PN_CPP_EXTERN void yield();
 
-  private:
-    PN_UNIQUE_OR_AUTO_PTR<container_impl> impl_;
+    void operator delete(void*);
 };
 
 }
-
-#endif  /*!PROTON_CPP_CONTAINER_H*/
+#endif // REACTOR_HPP

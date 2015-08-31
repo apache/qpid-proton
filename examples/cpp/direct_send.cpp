@@ -21,17 +21,13 @@
 
 #include "options.hpp"
 
+#include "proton/acceptor.hpp"
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/connection.hpp"
 
 #include <iostream>
 #include <map>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-
 
 class simple_send : public proton::messaging_handler {
   private:

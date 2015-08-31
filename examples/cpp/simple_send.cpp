@@ -27,11 +27,6 @@
 
 #include <iostream>
 #include <map>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-
 
 class simple_send : public proton::messaging_handler {
   private:

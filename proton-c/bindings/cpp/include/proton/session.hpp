@@ -54,7 +54,7 @@ class session : public counted_facade<pn_session_t, session>, public endpoint
     /// Get connection
     PN_CPP_EXTERN class connection &connection();
 
-    // FIXME aconway 2015-08-31: default generate unique name.
+    // TODO aconway 2015-08-31: default generate unique name. Container args?
     /// Create a receiver link
     PN_CPP_EXTERN receiver& create_receiver(const std::string& name);
     /// Create a sender link

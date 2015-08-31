@@ -36,9 +36,9 @@
 
 namespace proton {
 
-proton_event::proton_event(pn_event_t *ce, pn_event_type_t t, class container &c) :
+proton_event::proton_event(pn_event_t *ce, proton_event::event_type t, class container &c) :
     pn_event_(ce),
-    type_((int) t),
+    type_(t),
     container_(c)
 {}
 

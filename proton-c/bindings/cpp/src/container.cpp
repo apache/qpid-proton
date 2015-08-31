@@ -38,23 +38,24 @@
 
 namespace proton {
 
+//// Public container class.
+
 container::container() : impl_(new container_impl(*this, 0)) {}
 
-container::container(messaging_handler &mhandler) :
-    impl_(new container_impl(*this, &mhandler)) {}
+container::container(messaging_handler &mhandler) : impl_(new container_impl(*this, &mhandler)) {}
 
 container::~container() {}
 
-connection& container::connect(const url &host, handler *h) {
-    return impl_->connect(host, h);
-}
+connection& container::connect(const url &host, handler *h) { return impl_->connect(host, h); }
 
-pn_reactor_t *container::reactor() { return impl_->reactor(); }
+reactor &container::reactor() { return *impl_->reactor_; }
 
-std::string container::container_id() { return impl_->container_id(); }
+std::string container::container_id() { return impl_->container_id_; }
 
-duration container::timeout() { return impl_->timeout(); }
-void container::timeout(duration timeout) { impl_->timeout(timeout); }
+duration container::timeout() { return impl_->reactor_->timeout(); }
+void container::timeout(duration timeout) { impl_->reactor_->timeout(timeout); }
+
+void container::run() { impl_->reactor_->run(); }
 
 
 sender& container::create_sender(connection &connection, const std::string &addr, handler *h) {
@@ -77,13 +78,4 @@ acceptor& container::listen(const proton::url &url) {
     return impl_->listen(url);
 }
 
-
-void container::run() { impl_->run(); }
-void container::start() { impl_->start(); }
-bool container::process() { return impl_->process(); }
-void container::stop() { impl_->stop(); }
-void container::wakeup() { impl_->wakeup(); }
-bool container::is_quiesced() { return impl_->is_quiesced(); }
-void container::yield() { impl_->yield(); }
-
-}
+} // namespace proton

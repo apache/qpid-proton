@@ -24,6 +24,8 @@
 #include "proton/event.hpp"
 #include "proton/link.hpp"
 
+struct pn_event_t;
+
 namespace proton {
 
 class handler;
@@ -282,7 +284,7 @@ class proton_event : public event
     PN_CPP_EXTERN pn_event_t* pn_event();
 
   protected:
-    PN_CPP_EXTERN proton_event(pn_event_t *ce, pn_event_type_t t, class container &c);
+    PN_CPP_EXTERN proton_event(pn_event_t *ce, proton_event::event_type t, class container &c);
   private:
     pn_event_t *pn_event_;
     event_type type_;

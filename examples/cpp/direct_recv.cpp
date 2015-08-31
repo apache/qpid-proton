@@ -22,15 +22,13 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
+#include "proton/acceptor.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
 #include <map>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
 class direct_recv : public proton::messaging_handler {
   private:
