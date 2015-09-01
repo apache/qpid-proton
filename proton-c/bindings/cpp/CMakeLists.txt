@@ -29,7 +29,7 @@ endif()
 # Check for boost
 find_path(BOOST_INCLUDE_DIR boost/shared_ptr.hpp PATH_SUFFIXES include)
 if (BOOST_INCLUDE_DIR)
-  set(CXX_BOOST_FLAGS "-DPN_USE_BOOST")
+  set(CXX_BOOST_FLAGS "-DPN_USE_BOOST=1")
 endif()
 
 include_directories(

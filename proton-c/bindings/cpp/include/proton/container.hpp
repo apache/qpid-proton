@@ -80,7 +80,7 @@ class container
     PN_CPP_EXTERN class reactor& reactor();
 
   private:
-    PN_UNIQUE_OR_AUTO_PTR<container_impl> impl_;
+    PN_UNIQUE_PTR<container_impl> impl_;
 };
 
 }

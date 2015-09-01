@@ -34,7 +34,7 @@ struct pn_connection_t;
 namespace proton {
 
 /// A sending link
-class sender : public link, public ptr_convetible<sender>
+class sender : public link, public ptr_convertible<sender>
 {
   public:
     /// Send a message on the link.

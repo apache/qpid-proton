@@ -58,11 +58,11 @@ class container_impl
   private:
 
     container& container_;
-    PN_UNIQUE_OR_AUTO_PTR<reactor> reactor_;
+    PN_UNIQUE_PTR<reactor> reactor_;
     handler *handler_;
-    PN_UNIQUE_OR_AUTO_PTR<messaging_adapter> messaging_adapter_;
-    PN_UNIQUE_OR_AUTO_PTR<handler> override_handler_;
-    PN_UNIQUE_OR_AUTO_PTR<handler> flow_controller_;
+    PN_UNIQUE_PTR<messaging_adapter> messaging_adapter_;
+    PN_UNIQUE_PTR<handler> override_handler_;
+    PN_UNIQUE_PTR<handler> flow_controller_;
     std::string container_id_;
 
   friend class container;

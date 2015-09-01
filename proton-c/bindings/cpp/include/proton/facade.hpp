@@ -49,7 +49,7 @@
  * in an event handler function.) To keep a reference outside that scope, you
  * can assign it to a proton::counted_ptr, std::shared_ptr, boost::shared_ptr,
  * boost::intrusive_ptr or std::unique_ptr. You can also call
- * `proton::counted_facade::new_reference` to get a raw pointer which you must
+ * `proton::counted_facade::new_ptr` to get a raw pointer which you must
  * delete when you are done (e.g. using `std::auto_ptr`)
  */
 
@@ -58,13 +58,7 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/config.hpp"
-#include "proton/comparable.hpp"
-#include <memory>
-#if PN_USE_BOOST
-#include "boost/shared_ptr.hpp"
-#include "boost/intrusive_ptr.hpp"
-#endif
+#include "counted_ptr.hpp"
 
 namespace proton {
 
@@ -95,69 +89,13 @@ template <class P, class T> class facade {
 #endif
 };
 
-///@cond INTERNAL Cast from a C++ facade type to the corresponding proton C struct type.
-/// Allow casting away const, the underlying pn structs have not constness.
+/** Cast a facade type to the C struct type.
+ * Allow casting away const, the underlying pn structs have not constness.
+ */
 template <class T> typename T::pn_type* pn_cast(const T* p) {
     return reinterpret_cast<typename T::pn_type*>(const_cast<T*>(p));
 }
-///@endcond
 
-/**
- * Smart pointer for object derived from `proton::counted_facade`.
- *
- * You can use it in your own code if you or convert it to any of
- * std::shared_ptr, boost::shared_ptr, boost::intrusive_ptr or std::unique_ptr
- *
- * Note a std::unique_ptr only takes ownership of a a
- * *reference*, not the underlying struct itself.
-*/
-template <class T> class counted_ptr : public comparable<counted_ptr<T> > {
-  public:
-    typedef T element_type;
-
-    explicit counted_ptr(T *p = 0, bool add_ref = true) : ptr_(p) { if (p && add_ref) incref(ptr_); }
-
-    counted_ptr(const counted_ptr<T>& p) : ptr_(p.ptr_) { incref(ptr_); }
-
-    // TODO aconway 2015-08-20: C++11 move constructor
-
-    ~counted_ptr() { decref(ptr_); }
-
-    void swap(counted_ptr& x) { std::swap(ptr_, x.ptr_); }
-
-    counted_ptr<T>& operator=(const counted_ptr<T>& p) {
-        counted_ptr<T>(p.get()).swap(*this);
-        return *this;
-    }
-
-    void reset(T* p=0, bool add_ref = true) {
-        counted_ptr<T>(p, add_ref).swap(*this);
-    }
-
-    T* release() {
-        T* ret = ptr_;
-        ptr_ = 0;
-        return ret;
-    }
-
-    T* get() const { return ptr_; }
-    T* operator->() const { return ptr_; }
-    T& operator*() const { return *ptr_; }
-    operator bool() const { return ptr_; }
-    bool operator!() const { return !ptr_; }
-
-    template <class U> operator counted_ptr<U>() const { return counted_ptr<U>(get()); }
-    template <class U> bool operator==(const counted_ptr<U>& x) { return get() == x.get(); }
-    template <class U> bool operator<(const counted_ptr<U>& x) { return get() < x.get(); }
-
-  private:
-    T* ptr_;
-};
-
-#if PN_USE_BOOST
-template <class T> inline void intrusive_ptr_add_ref(const T* p) { incref(p); }
-template <class T> inline void intrusive_ptr_release(const T* p) { decref(p); }
-#endif
 
 ///@cond INTERNAL
 class pn_counted {};
@@ -166,28 +104,31 @@ void decref(const pn_counted*);
 ///@endcond
 
 /// Reference counted proton types are convertible to smart pointer types.
-template <class T> class ptr_convetible {
+template <class T> class ptr_convertible {
  public:
     operator counted_ptr<T>() { return counted_ptr<T>(static_cast<T*>(this)); }
     operator counted_ptr<const T>() const { return counted_ptr<const T>(static_cast<const T*>(this)); }
 #if PN_USE_CPP11
     // TODO aconway 2015-08-21: need weak pointer context for efficient shared_ptr
-    operator std::shared_ptr<T>() { return std::shared_ptr<T>(incref(this)); }
-    operator std::shared_ptr<const T>() const { return std::shared_ptr<const T>(incref(this)); }
-    operator std::unique_ptr<T>() { return std::unique_ptr<T>(incref(this)); }
-    operator std::unique_ptr<const T>() const { return std::unique_ptr<const T>(incref(this)); }
+    operator std::shared_ptr<T>() { return std::shared_ptr<T>(new_ptr()); }
+    operator std::shared_ptr<const T>() const { return std::shared_ptr<const T>(new_ptr()); }
+    operator std::unique_ptr<T>() { return std::unique_ptr<T>(new_ptr()); }
+    operator std::unique_ptr<const T>() const { return std::unique_ptr<const T>(new_ptr()); }
 #endif
 #if PN_USE_BOOST
     // TODO aconway 2015-08-21: need weak pointer context for efficient shared_ptr
-    operator boost::shared_ptr<T>() { return boost::shared_ptr<T>(incref(this)); }
-    operator boost::shared_ptr<const T>() const { return boost::shared_ptr<const T>(incref(this)); }
+    operator boost::shared_ptr<T>() { return boost::shared_ptr<T>(new_ptr()); }
+    operator boost::shared_ptr<const T>() const { return boost::shared_ptr<const T>(new_ptr()); }
     operator boost::intrusive_ptr<T>() { return boost::intrusive_ptr<T>(this); }
     operator boost::intrusive_ptr<const T>() const { return boost::intrusive_ptr<const T>(this); }
 #endif
 
-  private:
-    T* incref() { proton::incref(static_cast<T*>(this)); return static_cast<T*>(this); }
-    const T* incref() const { proton::incref(this); return static_cast<const T*>(this); }
+    /** Get a pointer to a new reference to the underlying object.
+     * You must delete the returned pointer to release the reference.
+     * It is safer to convert to one of the supported smart pointer types.
+     */
+    T* new_ptr() { proton::incref(static_cast<T*>(this)); return static_cast<T*>(this); }
+    const T* new_ptr() const { proton::incref(static_cast<T*>(this)); return static_cast<const T*>(this); }
 };
 
 /**
@@ -202,62 +143,17 @@ template <class T> class ptr_convetible {
  * Deleting a counted_facade subclass actually calls `pn_decref` to remove a reference.
  */
 template <class P, class T> class counted_facade :
-        public facade<P, T>, public pn_counted, public ptr_convetible<T>
+        public facade<P, T>, public pn_counted, public ptr_convertible<T>
 {
   public:
 
     /// Deleting a counted_facade actually calls `pn_decref` to remove a reference.
     void operator delete(void* p) { decref(reinterpret_cast<pn_counted*>(p)); }
 
-    operator counted_ptr<T>() { return counted_ptr<T>(static_cast<T*>(this)); }
-    operator counted_ptr<const T>() const { return counted_ptr<const T>(static_cast<const T*>(this)); }
-#if PN_USE_CPP11
-    // TODO aconway 2015-08-21: need weak pointer context for efficient shared_ptr
-    operator std::shared_ptr<T>() { return std::shared_ptr<T>(new_reference(this)); }
-    operator std::shared_ptr<const T>() const { return std::shared_ptr<const T>(new_reference(this)); }
-    operator std::unique_ptr<T>() { return std::unique_ptr<T>(new_reference(this)); }
-    operator std::unique_ptr<const T>() const { return std::unique_ptr<const T>(new_reference(this)); }
-#endif
-#if PN_USE_BOOST
-    // TODO aconway 2015-08-21: need weak pointer context for efficient shared_ptr
-    operator boost::shared_ptr<T>() { return boost::shared_ptr<T>(new_reference(this)); }
-    operator boost::shared_ptr<const T>() const { return boost::shared_ptr<const T>(new_reference(this)); }
-    operator boost::intrusive_ptr<T>() { return boost::intrusive_ptr<T>(this); }
-    operator boost::intrusive_ptr<const T>() const { return boost::intrusive_ptr<const T>(this); }
-#endif
-
-    /** Get a pointer to a new reference to the underlying object.
-     * You must delete the returned pointer to release the reference.
-     * It is safer to convert to one of the supported smart pointer types.
-     */
-    T* new_reference() { proton::incref(this); return static_cast<T*>(this); }
-    const T* new_reference() const { proton::incref(this); return static_cast<const T*>(this); }
-
   private:
     counted_facade(const counted_facade&);
     counted_facade& operator=(const counted_facade&);
 };
-
-///@cond INTERNAL
-///Base class for reference counted objects other than proton struct facade types.
-class counted {
-  protected:
-    counted();
-    virtual ~counted();
-
-  private:
-    counted(const counted&);
-    counted& operator=(const counted&);
-    int refcount_;
-
-    friend void incref(const counted* p);
-    friend void decref(const counted* p);
-  template <class T> friend class counted_ptr;
-};
-
-void incref(const counted* p);
-void decref(const counted* p);
-///@endcond
 
 }
 #endif  /*!PROTON_CPP_FACADE_H*/

@@ -41,10 +41,10 @@
 
 #if PN_USE_CPP11
 // Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
-#define PN_UNIQUE_OR_AUTO_PTR std::unique_ptr
+#define PN_UNIQUE_PTR std::unique_ptr
 #else
 // Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
-#define PN_UNIQUE_OR_AUTO_PTR std::auto_ptr
+#define PN_UNIQUE_PTR std::auto_ptr
 #endif
 
 

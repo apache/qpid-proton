@@ -34,7 +34,7 @@ bool data::empty() const { return ::pn_data_size(pn_cast(this)) == 0; }
 
 std::ostream& operator<<(std::ostream& o, const data& d) { return o << inspectable(pn_cast(&d)); }
 
-PN_UNIQUE_OR_AUTO_PTR<data> data::create() { return PN_UNIQUE_OR_AUTO_PTR<data>(cast(::pn_data(0))); }
+PN_UNIQUE_PTR<data> data::create() { return PN_UNIQUE_PTR<data>(cast(::pn_data(0))); }
 
 encoder& data::encoder() { return reinterpret_cast<class encoder&>(*this); }
 decoder& data::decoder() { return reinterpret_cast<class decoder&>(*this); }

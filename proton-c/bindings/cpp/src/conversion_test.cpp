@@ -31,13 +31,11 @@ using namespace proton;
 
 template <class connection_ptr, class session_ptr>
 void test_shared() {
-    connection_ptr conn(*connection::cast(pn_connection()));
+    connection_ptr conn(connection::cast(pn_connection()));
     session& s = conn->default_session();
     session_ptr p = s;
-    ASSERT(p.unique());
     session_ptr p2 = s;
-    ASSERT(!p.unique());                      // Should be in same family as s
-    conn.reset();                               // Make sure we still have session
+    conn.reset();               // Make sure we still have session
     p->create_sender("");
 }
 
@@ -64,18 +62,18 @@ void test_unique() {
 
 int main(int argc, char** argv) {
     int failed = 0;
-    failed += run_test(test_counted<counted_ptr<connection>,
+    failed += run_test(&test_counted<counted_ptr<connection>,
                        counted_ptr<session> >, "counted");
-#if PN_CPP11
-    failed += run_test(test_shared<std::shared_ptr<connection>,
+#if PN_USE_CPP11
+    failed += run_test(&test_shared<std::shared_ptr<connection>,
                        std::shared_ptr<session> >, "std::shared");
-    failed += run_test(test_unique<std::unique_ptr<connection>,
+    failed += run_test(&test_unique<std::unique_ptr<connection>,
                        std::unique_ptr<session> >, "std::unique");
 #endif
 #if PN_USE_BOOST
-    failed += run_test(test_shared<boost::shared_ptr<connection>,
+    failed += run_test(&test_shared<boost::shared_ptr<connection>,
                        boost::shared_ptr<session> >, "boost::shared");
-    failed += run_test(test_counted<boost::intrusive_ptr<connection>,
+    failed += run_test(&test_counted<boost::intrusive_ptr<connection>,
                        boost::intrusive_ptr<session> >, "boost::intrusive");
 #endif
     return failed;

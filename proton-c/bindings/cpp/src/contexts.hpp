@@ -22,8 +22,7 @@
  *
  */
 
-#include "proton/facade.hpp"
-
+#include "proton/counted.hpp"
 #include "proton/reactor.h"
 #include "proton/message.h"
 

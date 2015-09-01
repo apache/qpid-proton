@@ -22,7 +22,6 @@
 #include "contexts.hpp"
 #include "msg.hpp"
 
-#include "proton/facade.hpp"
 #include "proton/error.hpp"
 #include "proton/handler.hpp"
 

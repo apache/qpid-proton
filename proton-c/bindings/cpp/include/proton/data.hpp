@@ -37,7 +37,7 @@ class data;
  */
 class data : public facade<pn_data_t, data>, public comparable<data> {
   public:
-    PN_CPP_EXTERN static PN_UNIQUE_OR_AUTO_PTR<data> create();
+    PN_CPP_EXTERN static PN_UNIQUE_PTR<data> create();
 
     PN_CPP_EXTERN data& operator=(const data&);
     template<class T> data& operator=(const T &t) {
@@ -121,7 +121,7 @@ class data_value : public comparable<data_value> {
       return o << *dv.data_;
   }
   private:
-    PN_UNIQUE_OR_AUTO_PTR<data> data_;
+    PN_UNIQUE_PTR<data> data_;
 };
 
 

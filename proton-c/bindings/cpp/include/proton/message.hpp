@@ -39,7 +39,7 @@ class message;
 class message : public facade<pn_message_t, message>
 {
   public:
-    PN_CPP_EXTERN static PN_UNIQUE_OR_AUTO_PTR<message> create();
+    PN_CPP_EXTERN static PN_UNIQUE_PTR<message> create();
 
     /// Copy data from m to this.
     message& operator=(const message& m);
@@ -213,7 +213,7 @@ class message_value {
     void decode(proton::link& l, proton::delivery& d) { message_->decode(l, d); }
 
   private:
-    PN_UNIQUE_OR_AUTO_PTR<message> message_;
+    PN_UNIQUE_PTR<message> message_;
 };
     
 }

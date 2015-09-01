@@ -45,18 +45,6 @@ void decref(const pn_counted* p) {
     if (p) pn_decref(const_cast<pn_counted*>(p));
 }
 
-counted::counted() : refcount_(0) {}
-counted::~counted() {}
-
-// FIX ME aconway 2015-08-27: atomic operations.
-
-void incref(const counted* p) {
-    if (p) const_cast<counted*>(p)->refcount_ += 1;
-}
-void decref(const counted* p) {
-    if (p && --const_cast<counted*>(p)->refcount_ == 0) delete p;
-}
-
 #if PN_USE_CPP11
 // Make sure facade types are empty.
 #define CHECK_EMPTY(T) static_assert(std::is_empty<T>::value,  "facade " #T " not empty")

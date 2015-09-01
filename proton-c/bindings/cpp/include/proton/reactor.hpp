@@ -34,7 +34,7 @@ class handler;
 class reactor : public facade<pn_reactor_t, reactor> {
  public:
     /** Create a new reactor. */
-    PN_CPP_EXTERN static PN_UNIQUE_OR_AUTO_PTR<reactor> create();
+    PN_CPP_EXTERN static PN_UNIQUE_PTR<reactor> create();
 
     /** Open a connection @see connection::open  */
     PN_CPP_EXTERN connection& connect(const proton::url&, handler *h=0);

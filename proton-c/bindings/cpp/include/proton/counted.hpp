@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_RECEIVER_H
-#define PROTON_CPP_RECEIVER_H
-
+#ifndef COUNTED_HPP
+#define COUNTED_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,26 +17,29 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/link.hpp"
-#include "proton/types.h"
-#include <string>
-
-struct pn_connection_t;
 
 namespace proton {
 
-/// A receiving link
-class receiver : public link, public ptr_convertible<receiver>
-{
-  public:
-    /// Add credit to the link
-    PN_CPP_EXTERN void flow(int count);
+/// Base class for reference counted objects other than proton struct facade types.
+class counted {
+  protected:
+    counted() : refcount_(0) {}
+    virtual ~counted() {}
+
+  private:
+    counted(const counted&);
+    counted& operator=(const counted&);
+    int refcount_;
+
+    friend void incref(const counted* p);
+    friend void decref(const counted* p);
+  template <class T> friend class counted_ptr;
 };
 
-}
+// TODO aconway 2015-08-27: atomic operations.
+inline void incref(const counted* p) { if (p) const_cast<counted*>(p)->refcount_ += 1; }
+inline void decref(const counted* p) { if (p && --const_cast<counted*>(p)->refcount_ == 0) delete p; }
 
-#endif  /*!PROTON_CPP_RECEIVER_H*/
+}
+#endif // COUNTED_HPP
