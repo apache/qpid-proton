@@ -30,7 +30,6 @@
 #include "proton/receiver.hpp"
 
 #include "container_impl.hpp"
-#include "private_impl_ref.hpp"
 #include "connector.hpp"
 #include "contexts.hpp"
 #include "proton/connection.h"
@@ -40,9 +39,11 @@ namespace proton {
 
 //// Public container class.
 
-container::container() : impl_(new container_impl(*this, 0)) {}
+container::container(const std::string& id) :
+    impl_(new container_impl(*this, 0, id)) {}
 
-container::container(messaging_handler &mhandler) : impl_(new container_impl(*this, &mhandler)) {}
+container::container(messaging_handler &mhandler, const std::string& id) :
+    impl_(new container_impl(*this, &mhandler, id)) {}
 
 container::~container() {}
 
@@ -58,16 +59,8 @@ void container::timeout(duration timeout) { impl_->reactor_->timeout(timeout); }
 void container::run() { impl_->reactor_->run(); }
 
 
-sender& container::create_sender(connection &connection, const std::string &addr, handler *h) {
-    return impl_->create_sender(connection, addr, h);
-}
-
 sender& container::create_sender(const proton::url &url) {
     return impl_->create_sender(url);
-}
-
-receiver& container::create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h) {
-    return impl_->create_receiver(connection, addr, dynamic, h);
 }
 
 receiver& container::create_receiver(const proton::url &url) {
@@ -77,5 +70,8 @@ receiver& container::create_receiver(const proton::url &url) {
 acceptor& container::listen(const proton::url &url) {
     return impl_->listen(url);
 }
+
+void container::link_prefix(const std::string& s) { impl_->prefix_ = s; }
+std::string  container::link_prefix() { return impl_->prefix_; }
 
 } // namespace proton

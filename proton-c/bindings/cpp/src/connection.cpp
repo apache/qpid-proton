@@ -68,4 +68,13 @@ session& connection::default_session() {
     return *ctx.default_session;
 }
 
+sender& connection::create_sender(const std::string &addr, handler *h) {
+    return default_session().create_sender(addr, h);
+}
+
+receiver& connection::create_receiver(const std::string &addr, bool dynamic, handler *h)
+{
+    return default_session().create_receiver(addr, dynamic, h);
+}
+
 }

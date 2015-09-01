@@ -23,6 +23,7 @@
 
 #include "test_bits.hpp"
 #include "proton/connection.hpp"
+#include "proton/connection.hpp"
 #include "proton/session.hpp"
 #include "proton/session.hpp"
 
@@ -31,12 +32,11 @@ using namespace proton;
 
 template <class connection_ptr, class session_ptr>
 void test_shared() {
+
     connection_ptr conn(connection::cast(pn_connection()));
     session& s = conn->default_session();
     session_ptr p = s;
     session_ptr p2 = s;
-    conn.reset();               // Make sure we still have session
-    p->create_sender("");
 }
 
 template <class connection_ptr, class session_ptr>
@@ -45,8 +45,6 @@ void test_counted() {
     session& s = conn->default_session();
     session_ptr p = s;
     session_ptr p2 = s;
-    conn.reset();                               // Make sure we still have session
-    p->create_sender("");
 }
 
 template <class connection_ptr, class session_ptr>
@@ -55,8 +53,6 @@ void test_unique() {
     session& s = conn->default_session();
     session_ptr p(s);
     session_ptr p2(s);
-    conn.reset();                               // Make sure we still have session
-    p->create_sender("");
 }
 
 

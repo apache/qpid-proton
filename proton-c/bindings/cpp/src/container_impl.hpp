@@ -42,7 +42,7 @@ class container;
 class container_impl
 {
   public:
-    PN_CPP_EXTERN container_impl(container&, handler *);
+    PN_CPP_EXTERN container_impl(container&, handler *, const std::string& id);
     PN_CPP_EXTERN ~container_impl();
     PN_CPP_EXTERN connection& connect(const url&, handler *h);
     PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h);
@@ -55,6 +55,8 @@ class container_impl
 
     counted_ptr<pn_handler_t> cpp_handler(handler *h);
 
+    std::string next_link_name();
+
   private:
 
     container& container_;
@@ -64,6 +66,8 @@ class container_impl
     PN_UNIQUE_PTR<handler> override_handler_;
     PN_UNIQUE_PTR<handler> flow_controller_;
     std::string container_id_;
+    uint64_t link_id_;
+    std::string prefix_;
 
   friend class container;
 };

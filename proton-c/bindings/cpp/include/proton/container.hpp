@@ -26,6 +26,8 @@
 #include "proton/reactor.hpp"
 #include "proton/url.hpp"
 
+#include <string>
+
 namespace proton {
 
 class connection;
@@ -43,8 +45,12 @@ class container_impl;
 class container
 {
   public:
-    PN_CPP_EXTERN container();
-    PN_CPP_EXTERN container(messaging_handler& mhandler);
+    /// Container ID should be unique within your system. By default a random ID is generated.
+    PN_CPP_EXTERN container(const std::string& id=std::string());
+
+    /// Container ID should be unique within your system. By default a random ID is generated.
+    PN_CPP_EXTERN container(messaging_handler& mhandler, const std::string& id=std::string());
+
     PN_CPP_EXTERN ~container();
 
     /** Locally open a connection @see connection::open  */
@@ -56,14 +62,8 @@ class container
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
 
-    /** Create a sender on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h=0);
-
     /** Open a connection to url and create a sender with target=url.path() */
     PN_CPP_EXTERN sender& create_sender(const proton::url &);
-
-    /** Create a receiver on connection with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver& create_receiver(connection &connection, const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Create a receiver on connection with source=url.path() */
     PN_CPP_EXTERN receiver& create_receiver(const url &);
@@ -78,6 +78,12 @@ class container
     PN_CPP_EXTERN void timeout(duration timeout);
 
     PN_CPP_EXTERN class reactor& reactor();
+
+    /// Set the prefix to be used when generating link names. @see proton::session
+    PN_CPP_EXTERN void link_prefix(const std::string&);
+
+    /// Get the prefix to be used when generating link names. @see proton::session
+    PN_CPP_EXTERN std::string link_prefix();
 
   private:
     PN_UNIQUE_PTR<container_impl> impl_;

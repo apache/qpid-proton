@@ -30,7 +30,6 @@
 #include "fetcher.hpp"
 #include "msg.hpp"
 #include "blocking_connection_impl.hpp"
-#include "private_impl_ref.hpp"
 
 namespace proton {
 

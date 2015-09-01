@@ -79,6 +79,7 @@ set(qpid-proton-cpp-source
   src/transport.cpp
   src/types.cpp
   src/url.cpp
+  src/uuid.cpp
   src/facade.cpp
   )
 

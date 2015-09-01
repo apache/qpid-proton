@@ -19,12 +19,13 @@
  *
  */
 #include "proton/session.hpp"
-#include "contexts.hpp"
-
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/session.hpp"
 #include "proton/connection.hpp"
+
+#include "contexts.hpp"
+#include "container_impl.hpp"
 
 namespace proton {
 
@@ -36,12 +37,42 @@ connection &session::connection() {
     return *proton::connection::cast(pn_session_connection(pn_cast(this)));
 }
 
-receiver& session::create_receiver(const std::string& name) {
-    return *reinterpret_cast<receiver*>(pn_receiver(pn_cast(this), name.c_str()));
+namespace {
+std::string set_name(const std::string& name, session* s) {
+    if (name.empty()) 
+        return connection_context::get(
+            pn_cast(&s->connection())).container_impl->next_link_name();
+    return name;
+}
 }
 
-sender& session::create_sender(const std::string& name) {
-    return *reinterpret_cast<sender*>(pn_sender(pn_cast(this), name.c_str()));
+receiver& session::create_receiver_link(const std::string& name) {
+    return *reinterpret_cast<receiver*>(
+        pn_receiver(pn_cast(this), set_name(name, this).c_str()));
 }
+
+sender& session::create_sender_link(const std::string& name) {
+    return *reinterpret_cast<sender*>(
+        pn_sender(pn_cast(this), set_name(name, this).c_str()));
+}
+
+sender& session::create_sender(const std::string &addr, handler *h) {
+    sender& snd = create_sender_link();
+    snd.target().address(addr);
+    if (h) snd.handler(*h);
+    snd.open();
+    return snd;
+}
+
+receiver& session::create_receiver(const std::string &addr, bool dynamic, handler *h)
+{
+    receiver& rcv = create_receiver_link();
+    rcv.source().address(addr);
+    if (dynamic) rcv.source().dynamic(true);
+    if (h) rcv.handler(*h);
+    rcv.open();
+    return rcv;
+}
+
 
 }

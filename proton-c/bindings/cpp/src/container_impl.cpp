@@ -34,7 +34,7 @@
 #include "container_impl.hpp"
 #include "connector.hpp"
 #include "contexts.hpp"
-#include "private_impl_ref.hpp"
+#include "uuid.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
@@ -103,9 +103,11 @@ counted_ptr<pn_handler_t> container_impl::cpp_handler(handler *h)
     return handler;
 }
 
-container_impl::container_impl(container& c, handler *h) :
-    container_(c), reactor_(reactor::create()), handler_(h)
+container_impl::container_impl(container& c, handler *h, const std::string& id) :
+    container_(c), reactor_(reactor::create()), handler_(h), container_id_(id),
+    link_id_(0)
 {
+    if (container_id_.empty()) container_id_ = uuid().str();
     container_context(pn_cast(reactor_.get()), container_);
 
     // Set our own global handler that "subclasses" the existing one
@@ -140,14 +142,6 @@ connection& container_impl::connect(const proton::url &url, handler *h) {
     return *conn;
 }
 
-sender& container_impl::create_sender(connection &connection, const std::string &addr, handler *h) {
-    sender& snd = connection.default_session().create_sender(container_id_  + '-' + addr);
-    snd.target().address(addr);
-    if (h) snd.handler(*h);
-    snd.open();
-    return snd;
-}
-
 sender& container_impl::create_sender(const proton::url &url) {
     connection& conn = connect(url, 0);
     std::string path = url.path();
@@ -155,16 +149,6 @@ sender& container_impl::create_sender(const proton::url &url) {
     snd.target().address(path);
     snd.open();
     return snd;
-}
-
-receiver& container_impl::create_receiver(connection &conn, const std::string &addr, bool dynamic, handler *h)
-{
-    receiver& rcv = conn.default_session().create_receiver(container_id_ + '-' + addr);
-    rcv.source().address(addr);
-    if (dynamic) rcv.source().dynamic(true);
-    if (h) rcv.handler(*h);
-    rcv.open();
-    return rcv;
 }
 
 receiver& container_impl::create_receiver(const proton::url &url) {
@@ -185,6 +169,13 @@ acceptor& container_impl::listen(const proton::url& url) {
         throw error(MSG("accept fail: " <<
                         pn_error_text(pn_io_error(pn_reactor_io(pn_cast(reactor_.get()))))
                         << "(" << url << ")"));
+}
+
+std::string container_impl::next_link_name() {
+    std::ostringstream s;
+    // TODO aconway 2015-09-01: atomic operation
+    s << prefix_ << std::hex << ++link_id_;
+    return s.str();
 }
 
 }

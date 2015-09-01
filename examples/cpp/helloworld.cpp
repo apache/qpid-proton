@@ -35,8 +35,8 @@ class hello_world : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         proton::connection& conn = e.container().connect(url);
-        e.container().create_receiver(conn, url.path());
-        e.container().create_sender(conn, url.path());
+        conn.create_receiver(url.path());
+        conn.create_sender(url.path());
     }
 
     void on_sendable(proton::event &e) {
