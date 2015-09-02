@@ -24,7 +24,10 @@
 
 #include "proton/counted.hpp"
 #include "proton/reactor.h"
-#include "proton/message.h"
+#include "proton/memory.hpp"
+#include "proton/session.hpp"
+
+#include <proton/message.h>
 
 namespace proton {
 
@@ -41,8 +44,8 @@ struct connection_context : public counted {
     connection_context();
     ~connection_context();
 
-    class handler* handler;
-    session* default_session;
+    PN_UNIQUE_PTR<class handler> handler;
+    session* default_session;   // Owned by connection
     class container_impl* container_impl;
 };
 

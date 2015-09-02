@@ -82,7 +82,7 @@ class override_handler : public handler
         pn_event_t *cevent = pne->pn_event();
         pn_connection_t *conn = pn_event_connection(cevent);
         if (conn && type != PN_CONNECTION_INIT) {
-            handler *override = connection_context::get(conn).handler;
+            handler *override = connection_context::get(conn).handler.get();
             if (override) e.dispatch(*override);
         }
         pn_handler_dispatch(base_handler.get(), cevent, (pn_event_type_t) type);
@@ -131,15 +131,15 @@ container_impl::~container_impl() {}
 
 connection& container_impl::connect(const proton::url &url, handler *h) {
     counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
-    connection* conn =
-        connection::cast(pn_reactor_connection(pn_cast(reactor_.get()), chandler.get()));
-    connector *ctor = new connector(*conn); // Will be deleted by connection_context
+    connection& conn(           // Reactor owns the reference.
+        *connection::cast(pn_reactor_connection(pn_cast(reactor_.get()), chandler.get())));
+    PN_UNIQUE_PTR<connector> ctor(new connector(conn));
     ctor->address(url);  // TODO: url vector
-    connection_context& cc(connection_context::get(pn_cast(conn)));
+    connection_context& cc(connection_context::get(pn_cast(&conn)));
     cc.container_impl = this;
-    cc.handler = ctor;
-    conn->open();
-    return *conn;
+    cc.handler.reset(ctor.release());
+    conn.open();
+    return conn;
 }
 
 sender& container_impl::create_sender(const proton::url &url) {

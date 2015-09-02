@@ -62,7 +62,7 @@ session& connection::create_session() { return *session::cast(pn_session(pn_cast
 session& connection::default_session() {
     struct connection_context& ctx = connection_context::get(pn_cast(this));
     if (!ctx.default_session) {
-        ctx.default_session = &create_session(); 
+        ctx.default_session = &create_session();
         ctx.default_session->open();
     }
     return *ctx.default_session;

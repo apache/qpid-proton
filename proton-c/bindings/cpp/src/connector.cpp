@@ -30,7 +30,7 @@
 
 namespace proton {
 
-connector::connector(connection &c) : connection_(c) {}
+connector::connector(connection &c) : connection_(&c) {}
 
 connector::~connector() {}
 
@@ -39,7 +39,7 @@ void connector::address(const url &a) {
 }
 
 void connector::connect() {
-    pn_connection_t *conn = pn_cast(connection_.get());
+    pn_connection_t *conn = pn_cast(connection_);
     pn_connection_set_container(conn, connection_->container().container_id().c_str());
     pn_connection_set_hostname(conn, address_.host_port().c_str());
 }
@@ -55,8 +55,8 @@ void connector::on_connection_init(event &e) {
 
 void connector::on_transport_closed(event &e) {
     // TODO: prepend with reconnect logic
-    pn_connection_release(pn_cast(connection_.get()));
-    connection_.reset();
+    pn_connection_release(pn_cast(connection_));
+    connection_  = 0;
 }
 
 }

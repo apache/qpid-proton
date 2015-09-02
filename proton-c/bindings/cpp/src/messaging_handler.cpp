@@ -55,13 +55,15 @@ class c_flow_controller : public proton_handler
 
 
 messaging_handler::messaging_handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0), messaging_adapter_(0), flow_controller_(0)
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0),
+    peer_close_iserror_(peer_close_is_error0)
 {
     create_helpers();
 }
 
 messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0), peer_close_iserror_(peer_close_is_error0), messaging_adapter_(0), flow_controller_(0)
+    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0),
+    peer_close_iserror_(peer_close_is_error0)
 {
     if (!raw_handler) {
         create_helpers();

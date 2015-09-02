@@ -69,8 +69,8 @@ counted* get_context(pn_record_t* record, pn_handle_t handle) {
 
 PN_HANDLE(CONNECTION_CONTEXT)
 
-connection_context::connection_context() : handler(0), default_session(0), container_impl(0) {}
-connection_context::~connection_context() { delete handler; }
+connection_context::connection_context() : default_session(), container_impl() {}
+connection_context::~connection_context() {}
 
 struct connection_context& connection_context::get(pn_connection_t* c) {
     connection_context* ctx = reinterpret_cast<connection_context*>(

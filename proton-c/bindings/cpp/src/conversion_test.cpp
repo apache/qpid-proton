@@ -23,8 +23,6 @@
 
 #include "test_bits.hpp"
 #include "proton/connection.hpp"
-#include "proton/connection.hpp"
-#include "proton/session.hpp"
 #include "proton/session.hpp"
 
 using namespace std;

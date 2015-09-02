@@ -33,7 +33,7 @@ uuid::uuid() {
         seeded = true;
     }
     int r = std::rand();
-    for (int i = 0; i < sizeof(bytes); ++i ) {
+    for (size_t i = 0; i < sizeof(bytes); ++i ) {
         bytes[i] = r & 0xFF;
         r >>= 8;
         if (!r) r = std::rand();

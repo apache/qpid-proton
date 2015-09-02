@@ -28,6 +28,8 @@ blocking_connection::blocking_connection(const proton::url &url, duration timeou
     impl_(new blocking_connection_impl(url, timeout))
 {}
 
+blocking_connection::~blocking_connection() {}
+
 void blocking_connection::close() { impl_->close(); }
 
 duration blocking_connection::timeout() { return impl_->container_->reactor().timeout(); }
