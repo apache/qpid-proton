@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_BLOCKINGCONNECTIONIMPL_H
-#define PROTON_CPP_BLOCKINGCONNECTIONIMPL_H
+#ifndef PROTON_CPP_BLOCKING_CONNECTION_IMPL_H
+#define PROTON_CPP_BLOCKING_CONNECTION_IMPL_H
 
 /*
  *
@@ -22,9 +22,9 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/endpoint.hpp"
 #include "proton/container.hpp"
-#include "proton/blocking_connection.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/connection.hpp"
 #include "proton/types.h"
 #include <string>
 
@@ -34,36 +34,27 @@ namespace proton {
 
 class handler;
 class container;
-class ssl_domain;
 
- class blocking_connection_impl : public messaging_handler
+class blocking_connection_impl : public messaging_handler
 {
   public:
-    PN_CPP_EXTERN blocking_connection_impl(const url &url, duration d, ssl_domain *ssld, container *c);
-    PN_CPP_EXTERN ~blocking_connection_impl();
-    PN_CPP_EXTERN void close();
-    template <class C> void wait(C c, const std::string &msg="", duration timeout=duration(-1)) {
-        blocking_connection::condition_impl<C> cond(c);
-        wait(dynamic_cast<blocking_connection::condition&>(cond), msg, timeout);
-    }
+    blocking_connection_impl(const url &url, duration d);
+    ~blocking_connection_impl();
 
-    PN_CPP_EXTERN pn_connection_t *pn_blocking_connection();
-    duration timeout() { return timeout_; }
-    static void incref(blocking_connection_impl *);
-    static void decref(blocking_connection_impl *);
-  private:
-    friend class blocking_connection;
-    PN_CPP_EXTERN void wait(blocking_connection::condition &, const std::string & ="",
-                            duration=duration(-1));
+    void close();
 
-    container container_;
+    struct condition {
+        virtual ~condition() {}
+        virtual bool operator()() const = 0;
+    };
+
+    void wait(const condition&, const std::string & ="", duration=duration(-1));
+
+    PN_UNIQUE_PTR<container> container_;
     counted_ptr<connection> connection_;
-    url url_;
-    duration timeout_;
-    int refcount_;
 };
 
 
 }
 
-#endif  /*!PROTON_CPP_BLOCKINGCONNECTIONIMPL_H*/
+#endif  /*!PROTON_CPP_BLOCKING_CONNECTION_IMPL_H*/

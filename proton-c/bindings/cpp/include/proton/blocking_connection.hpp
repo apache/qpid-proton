@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_BLOCKINGCONNECTION_H
-#define PROTON_CPP_BLOCKINGCONNECTION_H
+#ifndef PROTON_CPP_BLOCKING_CONNECTION_H
+#define PROTON_CPP_BLOCKING_CONNECTION_H
 
 /*
  *
@@ -21,67 +21,41 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/facade.hpp"
-#include "proton/duration.hpp"
-#include <string>
 
-struct pn_connection_t;
+#include "proton/memory.hpp"
+#include "proton/export.hpp"
+#include "proton/duration.hpp"
+#include "proton/memory.hpp"
+
+#include <string>
 
 namespace proton {
 class url;
-class ssl_domain;
-class blocking_sender;
-class blocking_receiver;
+class connection;
+class blocking_connection_impl;
 
 // TODO documentation
-class blocking_connection : public handle<blocking_connection_impl>
+// Note: must not be deleted while there are proton::blocking_link instances that depend on it.
+class blocking_connection
 {
   public:
-    PN_CPP_EXTERN blocking_connection();
-    PN_CPP_EXTERN blocking_connection(const blocking_connection& c);
-    PN_CPP_EXTERN blocking_connection& operator=(const blocking_connection& c);
-    PN_CPP_EXTERN ~blocking_connection();
-
-    PN_CPP_EXTERN blocking_connection(const proton::url &url, duration = duration::FOREVER,
-                                      ssl_domain *ssld=0, container *c=0);
+    PN_CPP_EXTERN blocking_connection(const proton::url &url, duration timeout = duration::FOREVER);
     PN_CPP_EXTERN void close();
-
-    PN_CPP_EXTERN blocking_sender create_sender(const std::string &address, handler *h=0);
-    PN_CPP_EXTERN blocking_receiver create_receiver(const std::string &address, int credit = 0,
-                                                    bool dynamic = false, handler *h=0, std::string name = std::string());
-
-    /// Abstract condition class for wait.
-    struct condition {
-        virtual ~condition() {}
-        virtual bool operator()() = 0;
-    };
-
-    /** Wait till cond returns true. 
-     * C must be copyable and callable with no arguments and bool return value.
-     * Wait up to timeout if specified or blocking_connection::timeout() if not.
-     * @throws timeout_error with message msg if timeout is exceeded.
-     */
-    template <class C> void wait(C cond, const std::string &msg="", duration timeout=duration(-1)) {
-        condition_impl<C> c(cond);
-        wait(dynamic_cast<condition&>(c), msg, timeout);
-    }
-
     PN_CPP_EXTERN duration timeout();
+    class connection& connection();
+
   private:
+    blocking_connection(const blocking_connection&);
+    blocking_connection& operator=(const blocking_connection&);
 
-    PN_CPP_EXTERN void wait(condition &, const std::string &msg="", duration timeout=duration(-1));
+    PN_UNIQUE_PTR<blocking_connection_impl> impl_;
 
-
-    template <class C> struct condition_impl : public condition {
-        C cond_;
-        condition_impl(C c) : cond_(c) {}
-        bool operator()() { return cond_(); }
-    };
-
-  friend class private_impl_ref<blocking_connection>;
+  friend class blocking_link;
+  friend class blocking_sender;
+  friend class blocking_receiver;
+  friend class sync_request_response;
 };
 
 }
 
-#endif  /*!PROTON_CPP_BLOCKINGCONNECTION_H*/
+#endif  /*!PROTON_CPP_BLOCKING_CONNECTION_H*/

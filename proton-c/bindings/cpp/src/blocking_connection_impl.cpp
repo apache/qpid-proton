@@ -21,92 +21,81 @@
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/duration.hpp"
+#include "proton/connection.h"
 #include "proton/error.hpp"
+
 #include "blocking_connection_impl.hpp"
 #include "msg.hpp"
 #include "contexts.hpp"
 
-#include "proton/connection.h"
 
 namespace proton {
 
-void blocking_connection_impl::incref(blocking_connection_impl *impl_) {
-    impl_->refcount_++;
+namespace {
+struct connection_opening : public blocking_connection_impl::condition {
+    connection_opening(pn_connection_t *c) : pn_connection(c) {}
+    bool operator()() const { return (pn_connection_state(pn_connection) & PN_REMOTE_UNINIT); }
+    pn_connection_t *pn_connection;
+};
+
+struct connection_closed : public blocking_connection_impl::condition {
+    connection_closed(pn_connection_t *c) : pn_connection(c) {}
+    bool operator()() const { return !(pn_connection_state(pn_connection) & PN_REMOTE_ACTIVE); }
+    pn_connection_t *pn_connection;
+};
 }
 
-void blocking_connection_impl::decref(blocking_connection_impl *impl_) {
-    impl_->refcount_--;
-    if (impl_->refcount_ == 0)
-        delete impl_;
+blocking_connection_impl::blocking_connection_impl(const url& url, duration timeout) :
+    container_(new container())
+{
+    container_->reactor().start();
+    container_->reactor().timeout(timeout);
+    connection_ = container_->connect(url, this); // Set this as handler.
+    wait(connection_opening(pn_cast(connection_.get())));
+}
+
+blocking_connection_impl::~blocking_connection_impl() {}
+
+void blocking_connection_impl::close() {
+    connection_->close();
+    wait(connection_closed(pn_cast(connection_.get())));
 }
 
 namespace {
-struct connection_opening {
-    connection_opening(pn_connection_t *c) : pn_connection(c) {}
-    bool operator()() { return (pn_connection_state(pn_connection) & PN_REMOTE_UNINIT); }
-    pn_connection_t *pn_connection;
+struct save_timeout {
+    reactor& reactor_;
+    duration timeout_;
+    save_timeout(reactor& r) : reactor_(r), timeout_(r.timeout()) {}
+    ~save_timeout() { reactor_.timeout(timeout_); }
 };
-
-struct connection_closed {
-    connection_closed(pn_connection_t *c) : pn_connection(c) {}
-    bool operator()() { return !(pn_connection_state(pn_connection) & PN_REMOTE_ACTIVE); }
-    pn_connection_t *pn_connection;
-};
-
 }
 
-
-blocking_connection_impl::blocking_connection_impl(const url &u, duration timeout0, ssl_domain *ssld, container *c)
-    : url_(u), timeout_(timeout0), refcount_(0)
+void blocking_connection_impl::wait(const condition &condition, const std::string &msg, duration wait_timeout)
 {
-    if (c)
-        container_ = *c;
-    container_.start();
-    container_.timeout(timeout_);
-    // Create connection and send the connection events here
-    connection_ = container_.connect(url_, static_cast<handler *>(this));
-    connection_opening cond(connection_.pn_connection());
-    wait(cond);
-}
+    reactor& reactor = container_->reactor();
 
-blocking_connection_impl::~blocking_connection_impl() {
-    container_ = container();
-}
+    if (wait_timeout == duration(-1))
+        wait_timeout = container_->reactor().timeout();
 
-void blocking_connection_impl::close() {
-    connection_.close();
-    connection_closed cond(connection_.pn_connection());
-    wait(cond);
-}
-
-void blocking_connection_impl::wait(blocking_connection::condition &condition, const std::string &msg, duration wait_timeout) {
-    if (wait_timeout == duration(-1)) wait_timeout = timeout_;
     if (wait_timeout == duration::FOREVER) {
         while (!condition()) {
-            container_.process();
+            reactor.process();
         }
-    }
-
-    pn_reactor_t *reactor = container_.reactor();
-    pn_millis_t orig_timeout = pn_reactor_get_timeout(reactor);
-    pn_reactor_set_timeout(reactor, wait_timeout.milliseconds);
-    try {
-        pn_timestamp_t now = pn_reactor_mark(reactor);
-        pn_timestamp_t deadline = now + wait_timeout.milliseconds;
+    } else {
+        save_timeout st(reactor);
+        reactor.timeout(wait_timeout);
+        pn_timestamp_t deadline = pn_reactor_mark(pn_cast(&reactor)) + wait_timeout.milliseconds;
         while (!condition()) {
-            container_.process();
-            if (deadline < pn_reactor_mark(reactor)) {
-                std::string txt = "connection timed out";
-                if (!msg.empty())
-                    txt += ": " + msg;
-                throw timeout_error(txt);
+            reactor.process();
+            if (!condition()) {
+                pn_timestamp_t now = pn_reactor_mark(pn_cast(&reactor));
+                if (now < deadline)
+                    reactor.timeout(duration(deadline - now));
+                else
+                    throw timeout_error("connection timed out " + msg);
             }
         }
-    } catch (...) {
-        pn_reactor_set_timeout(reactor, orig_timeout);
-        throw;
     }
-    pn_reactor_set_timeout(reactor, orig_timeout);
 }
 
 

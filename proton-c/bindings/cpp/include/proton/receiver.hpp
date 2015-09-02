@@ -37,6 +37,8 @@ class receiver : public link, public ptr_convertible<receiver>
   public:
     /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
+
+    PN_CPP_EXTERN receiver* cast(pn_type*);
 };
 
 }

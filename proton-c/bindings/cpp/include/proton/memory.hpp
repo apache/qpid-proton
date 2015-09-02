@@ -1,8 +1,6 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
+#ifndef UNIQUE_PTR_HPP
+#define UNIQUE_PTR_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,31 +17,17 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/export.hpp"
-#include "proton/delivery.hpp"
-#include "proton/link.hpp"
-#include "proton/message.hpp"
 
-#include "proton/types.h"
-#include <string>
+#include "proton/config.hpp"
+#include <memory>
 
-struct pn_connection_t;
+#if PN_USE_CPP11
+// Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
+#define PN_UNIQUE_PTR std::unique_ptr
+#else
+// Simple ownership pointer, use std::unique_ptr in C++11 std::auto_ptr otherwise.
+#define PN_UNIQUE_PTR std::auto_ptr
+#endif
 
-namespace proton {
-
-/// A sending link
-class sender : public link, public ptr_convertible<sender>
-{
-  public:
-    /// Send a message on the link.
-    PN_CPP_EXTERN delivery& send(const message &m);
-
-    PN_CPP_EXTERN sender* cast(pn_type*);
-};
-
-
-}
-
-#endif  /*!PROTON_CPP_SENDER_H*/
+#endif // UNIQUE_PTR_HPP

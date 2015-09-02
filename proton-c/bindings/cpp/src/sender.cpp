@@ -41,7 +41,7 @@ namespace {
 std::uint64_t tag_counter = 0;
 }
 
-delivery& sender::send(message &message) {
+delivery& sender::send(const message &message) {
     std::uint64_t id = ++tag_counter;
     pn_delivery_t *dlv =
         pn_delivery(pn_cast(this), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
@@ -53,5 +53,7 @@ delivery& sender::send(message &message) {
         pn_delivery_settle(dlv);
     return *delivery::cast(dlv);
 }
+
+sender* sender::cast(pn_type* p) { return &link::cast(p)->sender(); }
 
 }

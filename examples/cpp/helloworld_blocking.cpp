@@ -20,6 +20,7 @@
  */
 
 #include "proton/messaging_handler.hpp"
+#include "proton/blocking_connection.hpp"
 #include "proton/blocking_sender.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/duration.hpp"
@@ -30,16 +31,16 @@ int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
         proton::blocking_connection conn(url);
-        proton::blocking_receiver receiver = conn.create_receiver(url.path());
-        proton::blocking_sender sender = conn.create_sender(url.path());
+        proton::blocking_receiver receiver(conn, url.path());
+        proton::blocking_sender sender(conn, url.path());
 
         proton::message_value m;
-        m->body("Hello World!");
-        sender.send(*m);
+        m.body("Hello World!");
+        sender.send(m);
 
         proton::duration timeout(30000);
         proton::message_value m2 = receiver.receive(timeout);
-        std::cout << m2->body() << std::endl;
+        std::cout << m2.body() << std::endl;
         receiver.accept();
 
         conn.close();

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SYNCREQUESTRESPONSE_H
-#define PROTON_CPP_SYNCREQUESTRESPONSE_H
+#ifndef PROTON_CPP_SYNC_REQUEST_RESPONSE_H
+#define PROTON_CPP_SYNC_REQUEST_RESPONSE_H
 
 /*
  *
@@ -25,6 +25,8 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_sender.hpp"
+#include "proton/memory.hpp"
+
 #include <string>
 
 struct pn_message_t;
@@ -32,26 +34,30 @@ struct pn_data_t;
 
 namespace proton {
 
-/// An implementation of the synchronous request-response pattern (aka RPC).
-class sync_request_response : public messaging_handler
+/**
+ * An implementation of the synchronous request-response pattern (aka RPC).
+ */
+class sync_request_response
 {
   public:
-    PN_CPP_EXTERN sync_request_response(blocking_connection &, const std::string address=std::string());
-    /** Send a request message, wait for and return the response message. */
-    PN_CPP_EXTERN message call(message &);
+    PN_CPP_EXTERN sync_request_response(
+        blocking_connection &, const std::string address=std::string());
+    /**
+     * Send a request message, wait for and return the response message.
+     * Modifies the message to set `address` (if not already set), `reply_to` and `correlation_id`.
+     */
+    PN_CPP_EXTERN message_value call(message &);
     /** Return the dynamic address of our receiver. */
     PN_CPP_EXTERN std::string reply_to();
-    /** Called when we receive a message for our receiver. */
-    void on_message(event &e);
+
   private:
-    blocking_connection connection_;
+    blocking_connection &connection_;
     std::string address_;
-    blocking_sender sender_;
-    blocking_receiver receiver_;
-    PN_UNIQUE_OR_AUTO_PTR<message> response_;
+    PN_UNIQUE_PTR<blocking_sender> sender_;
+    PN_UNIQUE_PTR<blocking_receiver> receiver_;
     amqp_ulong correlation_id_;
 };
 
 }
 
-#endif  /*!PROTON_CPP_SYNCREQUESTRESPONSE_H*/
+#endif  /*!PROTON_CPP_SYNC_REQUEST_RESPONSE_H*/

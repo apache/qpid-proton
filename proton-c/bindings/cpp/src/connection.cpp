@@ -77,4 +77,6 @@ receiver& connection::create_receiver(const std::string &addr, bool dynamic, han
     return default_session().create_receiver(addr, dynamic, h);
 }
 
+endpoint::state connection::state() { return pn_connection_state(pn_cast(this)); }
+
 }

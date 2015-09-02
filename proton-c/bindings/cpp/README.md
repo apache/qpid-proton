@@ -15,13 +15,14 @@ Doc & website
 
 Tests
 - Interop/type testing: proton/tests/interop, new interop suite
-- Unit testing for reasonable code coverage.
-- Valgrind for automated unit and example tests.
+- More unit testing, measured code coverage.
 - Test examples against AM-Q and qpidd.
 
 Bugs
-- Error handling: examples exit silently on broker exit/not running, core on no-such-queue.
-- TODO notes in code.
+- Error handling:
+  - examples exit silently on broker exit/not running, core on no-such-queue (e.g. with qpidd)
+  - TODO/FIXME notes in code.
+- const correctness: consistent use of const where semantically appropriate in C++ APIs.
 
 Features
 - SASL/SSL support with interop tests.
@@ -32,11 +33,12 @@ Features
 - Durable subscriptions & demos (see python changes)
 - Transactions
 - Heartbeats
-- Tasks
 
 # Nice to have
 
+- C++11 lambda version of handlers.
 - Helpers (or at least doc) for multi-threaded use (container per connection)
 - Usable support for decimal types.
-- Endpoint conditions
+- Expose endpoint conditions as C++ proton::condition error class.
 - Selectables and 3rd party event loop support
+- More efficient shared_ptr (single family per proton object.)

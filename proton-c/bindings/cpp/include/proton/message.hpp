@@ -24,6 +24,8 @@
 #include "proton/export.hpp"
 #include "proton/data.hpp"
 #include "proton/facade.hpp"
+#include "proton/memory.hpp"
+
 #include <string>
 
 struct pn_message_t;
@@ -33,9 +35,7 @@ namespace proton {
 class link;
 class delivery;
 
-class message;
-
-/** An AMQP message. Not directly construct-able, use create() or value<message>.*/
+/** An AMQP message. Not directly construct-able, use create() or message_value.*/
 class message : public facade<pn_message_t, message>
 {
   public:
@@ -44,7 +44,7 @@ class message : public facade<pn_message_t, message>
     /// Copy data from m to this.
     message& operator=(const message& m);
 
-    /** Clear the message content */
+    /** Clear the message content and properties. */
     PN_CPP_EXTERN void clear();
 
     ///@name Message properties
@@ -133,6 +133,8 @@ class message_value {
     message_value& operator=(const message_value& x) { *message_ = *x.message_; return *this; }
     message_value& operator=(const message& x) { *message_ = x; return *this; }
 
+    // TODO aconway 2015-09-02: C++11 move semantics.
+
     operator message&() { return *message_; }
     operator const message&() const { return *message_; }
 
@@ -212,10 +214,12 @@ class message_value {
     /// Decode the message from link corresponding to delivery.
     void decode(proton::link& l, proton::delivery& d) { message_->decode(l, d); }
 
+    void swap(message_value& x);
+
   private:
-    PN_UNIQUE_PTR<message> message_;
+    PN_UNIQUE_PTR<class message> message_;
 };
-    
+
 }
 
 #endif  /*!PROTON_CPP_MESSAGE_H*/

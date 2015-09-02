@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_BLOCKINGSENDER_H
-#define PROTON_CPP_BLOCKINGSENDER_H
+#ifndef PROTON_CPP_BLOCKING_SENDER_H
+#define PROTON_CPP_BLOCKING_SENDER_H
 
 /*
  *
@@ -22,31 +22,29 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/container.hpp"
-#include "proton/duration.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/delivery.hpp"
+#include "proton/message.hpp"
 #include "proton/blocking_link.hpp"
-#include "proton/types.h"
-#include "proton/delivery.h"
+
 #include <string>
 
 namespace proton {
-
+class sender;
 class blocking_connection;
-class blocking_link;
 
 // TODO documentation
 class blocking_sender : public blocking_link
 {
   public:
-    PN_CPP_EXTERN delivery send(message &msg);
-    PN_CPP_EXTERN delivery send(message &msg, duration timeout);
-  private:
-    PN_CPP_EXTERN blocking_sender(blocking_connection &c, sender &l);
-    friend class blocking_connection;
+    PN_CPP_EXTERN blocking_sender(class blocking_connection &c, const std::string &address);
+    PN_CPP_EXTERN ~blocking_sender();
+
+    PN_CPP_EXTERN delivery& send(const message_value &msg);
+    PN_CPP_EXTERN delivery& send(const message_value &msg, duration timeout);
+
+    PN_CPP_EXTERN class sender& sender();
 };
 
 }
 
-#endif  /*!PROTON_CPP_BLOCKINGSENDER_H*/
+#endif  /*!PROTON_CPP_BLOCKING_SENDER_H*/

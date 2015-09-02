@@ -96,6 +96,13 @@ template <class T> typename T::pn_type* pn_cast(const T* p) {
     return reinterpret_cast<typename T::pn_type*>(const_cast<T*>(p));
 }
 
+/** Cast a counted pointer to a facade type to the C struct type.
+ * Allow casting away const, the underlying pn structs have not constness.
+ */
+template <class T> typename T::pn_type* pn_cast(const counted_ptr<T>& p) {
+    return reinterpret_cast<typename T::pn_type*>(const_cast<T*>(p.get()));
+}
+
 
 ///@cond INTERNAL
 class pn_counted {};

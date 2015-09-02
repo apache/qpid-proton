@@ -204,5 +204,12 @@ void message::decode(proton::link &link, proton::delivery &delivery) {
     pn_link_advance(pn_cast(&link));
 }
 
+void message_value::swap(message_value& x) {
+    // This works with unique_ptr and auto_ptr (which has no swap)
+    message* a = message_.release();
+    message* b = x.message_.release();
+    message_.reset(b);
+    x.message_.reset(a);
+}
 }
 

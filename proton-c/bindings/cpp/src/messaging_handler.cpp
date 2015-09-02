@@ -22,17 +22,19 @@
 #include "proton/proton_event.hpp"
 #include "proton/messaging_adapter.hpp"
 #include "proton/handlers.h"
+#include <algorithm>
 
 namespace proton {
 
 namespace {
-class Cflow_controller : public proton_handler
+class c_flow_controller : public proton_handler
 {
   public:
     pn_handler_t *flowcontroller;
 
-    Cflow_controller(int window) : flowcontroller(pn_flowcontroller(window)) {}
-    ~Cflow_controller() {
+    // TODO: pn_flowcontroller requires a window > 1. 
+    c_flow_controller(int window) : flowcontroller(pn_flowcontroller(std::max(window, 2))) {}
+    ~c_flow_controller() {
         pn_decref(flowcontroller);
     }
 
@@ -68,17 +70,14 @@ messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_
 
 void messaging_handler::create_helpers() {
     if (prefetch_ > 0) {
-        flow_controller_ = new Cflow_controller(prefetch_);
+        flow_controller_.reset(new c_flow_controller(prefetch_));
         add_child_handler(*flow_controller_);
     }
-    messaging_adapter_ = new messaging_adapter(*this);
+    messaging_adapter_.reset(new messaging_adapter(*this));
     add_child_handler(*messaging_adapter_);
 }
 
-messaging_handler::~messaging_handler(){
-    if (flow_controller_) delete flow_controller_;
-    if (messaging_adapter_) delete messaging_adapter_;
-}
+messaging_handler::~messaging_handler(){}
 
 void messaging_handler::on_abort(event &e) { on_unhandled(e); }
 void messaging_handler::on_accepted(event &e) { on_unhandled(e); }

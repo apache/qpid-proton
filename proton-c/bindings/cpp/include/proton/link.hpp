@@ -89,8 +89,14 @@ class link : public counted_facade<pn_link_t, link>, public endpoint
     /** Connection that owns this link */
     PN_CPP_EXTERN class connection &connection();
 
-    /** Set a custom handler for this link */
-    PN_CPP_EXTERN void handler(class handler&);
+    /** Set a custom handler for this link. */
+    PN_CPP_EXTERN void handler(class handler &);
+
+    /** Unset any custom handler */
+    PN_CPP_EXTERN void detach_handler();
+
+    /** Get the endpoint state */
+    PN_CPP_EXTERN endpoint::state state();
 };
 
 }

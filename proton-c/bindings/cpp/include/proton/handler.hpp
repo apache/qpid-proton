@@ -32,9 +32,15 @@ namespace proton {
  *
  * A handler can have child handlers which are called in order, after the parent handler.
  *
- * Note: Event handlers are not deleted by the proton library, and they must not be
- * deleted while they are still in use. You can allocate a handler with `new` and
- * call `delete this` in the appropriate `on_*_closed` or `on_*_final` event if you wish.
+ * Note: handlers are not deleted automatically. They must not be deleted while
+ * they are still in use.
+ *
+ * There are two simple strategies you can use:
+ *
+ * 1. Destroy handlers only after the container that uses them is closed.
+ *
+ * 2. Allocate handlers with `new` and call `delete this` in the appropriate
+ * `on_*_closed` or `on_*_final` event that indicates the handler is no longer needed.
  *
  */
 class handler : public std::vector<handler*> {

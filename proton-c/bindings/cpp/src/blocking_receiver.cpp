@@ -18,11 +18,15 @@
  * under the License.
  *
  */
-#include "proton/blocking_receiver.hpp"
 #include "proton/blocking_connection.hpp"
+#include "proton/blocking_receiver.hpp"
+#include "proton/receiver.hpp"
+#include "proton/connection.hpp"
 #include "proton/receiver.hpp"
 #include "proton/error.hpp"
-#include "fetcher.hpp"
+
+#include "blocking_connection_impl.hpp"
+#include "blocking_fetcher.hpp"
 #include "msg.hpp"
 
 
@@ -30,62 +34,42 @@ namespace proton {
 
 namespace {
 
-struct fetcher_has_message {
-    fetcher_has_message(fetcher &f) : fetcher_(f) {}
-    bool operator()() { return fetcher_.has_message(); }
-    fetcher &fetcher_;
+struct fetcher_has_message : public blocking_connection_impl::condition {
+    fetcher_has_message(blocking_fetcher &f) : fetcher_(f) {}
+    bool operator()() const { return fetcher_.has_message(); }
+    blocking_fetcher &fetcher_;
 };
 
 } // namespace
 
-
-blocking_receiver::blocking_receiver(blocking_connection &c, receiver &l, fetcher *f, int credit)
-    : blocking_link(&c, &l), fetcher_(f) {
-    std::string sa = link_.source().address();
-    std::string rsa = link_.remote_source().address();
+blocking_receiver::blocking_receiver(
+    class blocking_connection &c, const std::string& addr, int credit, bool dynamic) :
+    blocking_link(c), fetcher_(new blocking_fetcher(credit))
+{
+    open(c.impl_->connection_->create_receiver(addr, dynamic, fetcher_.get()));
+    std::string sa = link_->source().address();
+    std::string rsa = link_->remote_source().address();
     if (!sa.empty() && sa.compare(rsa) != 0) {
         wait_for_closed();
-        link_.close();
-        std::string txt = "Failed to open receiver " + link_.name() + ", source does not match";
+        link_->close();
+        std::string txt = "Failed to open receiver " + link_->name() + ", source does not match";
         throw error(MSG(txt));
     }
     if (credit)
         pn_link_flow(pn_cast(link_), credit);
-    if (fetcher_)
-        fetcher_->incref();
 }
 
-blocking_receiver::blocking_receiver(const blocking_receiver& r) : blocking_link(r), fetcher_(r.fetcher_) {
-    if (fetcher_)
-        fetcher_->incref();
-}
-blocking_receiver& blocking_receiver::operator=(const blocking_receiver& r) {
-    if (this == &r) return *this;
-    fetcher_ = r.fetcher_;
-    if (fetcher_)
-        fetcher_->incref();
-    return *this;
-}
-blocking_receiver::~blocking_receiver() {
-    if (fetcher_)
-        fetcher_->decref();
-}
+blocking_receiver::~blocking_receiver() { link_->detach_handler(); }
 
-
-
-message blocking_receiver::receive(duration timeout) {
-    if (!fetcher_)
-        throw error(MSG("Can't call receive on this receiver as a handler was provided"));
-    receiver rcv(pn_cast(link_));
-    if (!rcv.credit())
-        rcv.flow(1);
-    std::string txt = "Receiving on receiver " + link_.name();
+message_value blocking_receiver::receive(duration timeout) {
+    if (!receiver().credit())
+        receiver().flow(1);
     fetcher_has_message cond(*fetcher_);
-    connection_.wait(cond, txt, timeout);
+    connection_.impl_->wait(cond, "receiving on receiver " + link_->name(), timeout);
     return fetcher_->pop();
 }
 
-message blocking_receiver::receive() {
+message_value blocking_receiver::receive() {
     // Use default timeout
     return receive(connection_.timeout());
 }
@@ -106,35 +90,13 @@ void blocking_receiver::release(bool delivered) {
 }
 
 void blocking_receiver::settle(delivery::state state = delivery::NONE) {
-    if (!fetcher_)
-        throw error(MSG("Can't call accept/reject etc on this receiver as a handler was provided"));
     fetcher_->settle(state);
 }
 
 void blocking_receiver::flow(int count) {
-    receiver rcv(pn_cast(link_));
-    rcv.flow(count);
+    receiver().flow(count);
 }
 
-int blocking_receiver::credit() {
-    return link_.credit();
+receiver& blocking_receiver::receiver() { return link_->receiver(); }
+
 }
-
-terminus blocking_receiver::source() {
-    return link_.source();
-}
-
-terminus blocking_receiver::target() {
-    return link_.target();
-}
-
-terminus blocking_receiver::remote_source() {
-    return link_.remote_source();
-}
-
-terminus blocking_receiver::remote_target() {
-    return link_.remote_target();
-}
-
-
-} // namespace

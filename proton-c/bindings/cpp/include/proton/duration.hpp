@@ -32,7 +32,7 @@ class duration : public comparable<duration>
 {
   public:
     std::uint64_t milliseconds;
-    explicit duration(std::uint64_t ms) : milliseconds(ms) {}
+    explicit duration(std::uint64_t ms = 0) : milliseconds(ms) {}
 
     bool operator<(duration d) { return milliseconds < d.milliseconds; }
     bool operator==(duration d) { return milliseconds == d.milliseconds; }

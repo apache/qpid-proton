@@ -32,7 +32,7 @@ def cmdline(*args):
         args[0] += ".exe"
     else:
         args[0] = "./" + args[0]
-    if "VALGRIND" in os.environ:
+    if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
         args = [os.environ["VALGRIND"], "-q"] + args
     return args
 
@@ -119,11 +119,10 @@ class ExampleTest(unittest.TestCase):
         hw = execute("helloworld", b.addr)
         self.assertEqual('"Hello World!"\n', hw)
 
-        # FIXME aconway 2015-08-28: Restore blocking code and examples
-    # def test_helloworld_blocking(self):
-    #     b = Broker.get()
-    #     hw = execute("helloworld_blocking", b.addr, b.addr)
-    #     self.assertEqual('"Hello World!"\n', hw)
+    def test_helloworld_blocking(self):
+        b = Broker.get()
+        hw = execute("helloworld_blocking", b.addr, b.addr)
+        self.assertEqual('"Hello World!"\n', hw)
 
     def test_helloworld_direct(self):
         addr = pick_addr()
@@ -180,14 +179,13 @@ class ExampleTest(unittest.TestCase):
         finally:
             server.kill()
 
-        # FIXME aconway 2015-08-28: Restore blocking code and examples
-    # def test_sync_request_response(self):
-    #     b = Broker.get()
-    #     server = background("server", "-a", b.addr)
-    #     try:
-    #         self.assertEqual(execute("sync_client", "-a", b.addr), self.CLIENT_EXPECT)
-    #     finally:
-    #         server.kill()
+    def test_sync_request_response(self):
+        b = Broker.get()
+        server = background("server", "-a", b.addr)
+        try:
+            self.assertEqual(execute("sync_client", "-a", b.addr), self.CLIENT_EXPECT)
+        finally:
+            server.kill()
 
     def test_request_response_direct(self):
         addr = pick_addr()

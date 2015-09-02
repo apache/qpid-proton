@@ -71,6 +71,9 @@ class connection : public counted_facade<pn_connection_t, connection>, public en
      * @see link::next, endpoint::state
      */
     PN_CPP_EXTERN link* link_head(endpoint::state mask);
+
+    /** Get the endpoint state */
+    PN_CPP_EXTERN endpoint::state state();
 };
 
 }

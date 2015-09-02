@@ -76,11 +76,17 @@ link* link::next(endpoint::state mask) {
     return link::cast(pn_link_next(pn_cast(this), (pn_state_t) mask));
 }
 
-void link::handler(class handler& h) {
+void link::handler(class handler &h) {
     pn_record_t *record = pn_link_attachments(pn_cast(this));
     connection_context& cc(connection_context::get(pn_cast(&connection())));
     counted_ptr<pn_handler_t> chandler = cc.container_impl->cpp_handler(&h);
     pn_record_set_handler(record, chandler.get());
 }
 
+void link::detach_handler() {
+    pn_record_t *record = pn_link_attachments(pn_cast(this));
+    pn_record_set_handler(record, 0);
+}
+
+endpoint::state link::state() { return pn_link_state(pn_cast(this)); }
 }

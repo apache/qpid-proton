@@ -74,5 +74,5 @@ receiver& session::create_receiver(const std::string &addr, bool dynamic, handle
     return rcv;
 }
 
-
+endpoint::state session::state() { return pn_session_state(pn_cast(this)); }
 }

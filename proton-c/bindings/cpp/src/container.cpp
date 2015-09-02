@@ -53,11 +53,7 @@ reactor &container::reactor() { return *impl_->reactor_; }
 
 std::string container::container_id() { return impl_->container_id_; }
 
-duration container::timeout() { return impl_->reactor_->timeout(); }
-void container::timeout(duration timeout) { impl_->reactor_->timeout(timeout); }
-
 void container::run() { impl_->reactor_->run(); }
-
 
 sender& container::create_sender(const proton::url &url) {
     return impl_->create_sender(url);

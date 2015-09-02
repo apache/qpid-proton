@@ -23,6 +23,7 @@
 #include "proton/facade.hpp"
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
+#include "proton/memory.hpp"
 #include <iosfwd>
 
 struct pn_data_t;
@@ -75,7 +76,7 @@ class data : public facade<pn_data_t, data>, public comparable<data> {
 };
 
 /** data with normal value semantics: copy, assign etc. */
-class data_value : public comparable<data_value> {
+class data_value {
   public:
     data_value() : data_(data::create()) {}
     data_value(const data_value& x) : data_(data::create()) { *data_ = *x.data_; }

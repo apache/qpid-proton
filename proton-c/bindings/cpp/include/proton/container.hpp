@@ -25,6 +25,7 @@
 #include "proton/export.hpp"
 #include "proton/reactor.hpp"
 #include "proton/url.hpp"
+#include "proton/memory.hpp"
 
 #include <string>
 
@@ -71,19 +72,14 @@ class container
     /// Identifier for the container
     PN_CPP_EXTERN std::string container_id();
 
-    /// Get timeout, process() will return if there is no activity within the timeout.
-    PN_CPP_EXTERN duration timeout();
-
-    /// Set timeout, process() will return if there is no activity within the timeout.
-    PN_CPP_EXTERN void timeout(duration timeout);
-
-    PN_CPP_EXTERN class reactor& reactor();
-
     /// Set the prefix to be used when generating link names. @see proton::session
     PN_CPP_EXTERN void link_prefix(const std::string&);
 
     /// Get the prefix to be used when generating link names. @see proton::session
     PN_CPP_EXTERN std::string link_prefix();
+
+    /// The reactor associated with this container.
+    PN_CPP_EXTERN class reactor& reactor();
 
   private:
     PN_UNIQUE_PTR<container_impl> impl_;

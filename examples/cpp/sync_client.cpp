@@ -22,9 +22,9 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
+#include "proton/blocking_connection.hpp"
 #include "proton/sync_request_response.hpp"
 #include "proton/url.hpp"
-#include "proton/value.hpp"
 #include "proton/types.hpp"
 
 #include <iostream>
@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
         proton::sync_request_response client(conn, url.path());
         for (std::vector<std::string>::const_iterator i=requests.begin(); i != requests.end(); i++) {
             proton::message_value request;
-            request->body(*i);
-            proton::message_value response(client.call(*request));
+            request.body(*i);
+            proton::message_value response(client.call(request));
             std::cout << request.body() << " => " << response.body() << std::endl;
         }
         return 0;

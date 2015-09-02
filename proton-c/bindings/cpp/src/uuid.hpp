@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <proton/types.hpp>
+
 #include <string>
 
 namespace proton {

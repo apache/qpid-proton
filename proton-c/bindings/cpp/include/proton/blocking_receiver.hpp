@@ -21,50 +21,40 @@
  * under the License.
  *
  */
+#include "proton/memory.hpp"
 #include "proton/export.hpp"
-#include "proton/container.hpp"
+#include "proton/delivery.hpp"
+#include "proton/message.hpp"
 #include "proton/blocking_link.hpp"
-#include "proton/duration.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/types.h"
-#include "proton/delivery.h"
+
 #include <string>
 
 namespace proton {
-
+class receiver;
 class blocking_connection;
-class blocking_link;
-class fetcher;
+class blocking_fetcher;
 
+// TODO documentation
 class blocking_receiver : public blocking_link
 {
   public:
-    PN_CPP_EXTERN blocking_receiver(const blocking_receiver&);
-    PN_CPP_EXTERN blocking_receiver& operator=(const blocking_receiver&);
+    PN_CPP_EXTERN blocking_receiver(
+        blocking_connection&, const std::string &address, int credit = 0, bool dynamic = false);
     PN_CPP_EXTERN ~blocking_receiver();
-    PN_CPP_EXTERN message receive();
-    PN_CPP_EXTERN message receive(duration timeout);
+
+    PN_CPP_EXTERN message_value receive();
+    PN_CPP_EXTERN message_value receive(duration timeout);
+
     PN_CPP_EXTERN void accept();
     PN_CPP_EXTERN void reject();
     PN_CPP_EXTERN void release(bool delivered = true);
     PN_CPP_EXTERN void settle();
     PN_CPP_EXTERN void settle(delivery::state state);
     PN_CPP_EXTERN void flow(int count);
-    /** Credit available on the receiver link */
-    PN_CPP_EXTERN int credit();
-    /** Local source of the receiver link */
-    PN_CPP_EXTERN terminus source();
-    /** Local target of the receiver link */
-    PN_CPP_EXTERN terminus target();
-    /** Remote source of the receiver link */
-    PN_CPP_EXTERN terminus remote_source();
-    /** Remote target of the receiver link */
-    PN_CPP_EXTERN terminus remote_target();
 
+    PN_CPP_EXTERN class receiver& receiver();
   private:
-    blocking_receiver(blocking_connection &c, receiver &l, fetcher *f, int credit);
-    fetcher *fetcher_;
-    friend class blocking_connection;
+    PN_UNIQUE_PTR<blocking_fetcher> fetcher_;
 };
 
 }

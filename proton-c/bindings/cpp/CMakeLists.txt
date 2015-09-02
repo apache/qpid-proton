@@ -39,12 +39,12 @@ include_directories(
 
 set(qpid-proton-cpp-source
   src/acceptor.cpp
-  # FIXME aconway 2015-08-28: Restore blocking code and examples
-  # src/blocking_connection.cpp
-  # src/blocking_connection_impl.cpp
-  # src/blocking_link.cpp
-  # src/blocking_receiver.cpp
-  # src/blocking_sender.cpp
+  src/blocking_connection.cpp
+  src/blocking_connection_impl.cpp
+  src/blocking_fetcher.cpp
+  src/blocking_link.cpp
+  src/blocking_receiver.cpp
+  src/blocking_sender.cpp
   src/connection.cpp
   src/connector.cpp
   src/container.cpp
@@ -58,8 +58,7 @@ set(qpid-proton-cpp-source
   src/endpoint.cpp
   src/error.cpp
   src/event.cpp
-  # FIXME aconway 2015-08-28: Restore blocking code and examples
-  # src/fetcher.cpp
+  src/facade.cpp
   src/handler.cpp
   src/link.cpp
   src/message.cpp
@@ -73,14 +72,12 @@ set(qpid-proton-cpp-source
   src/receiver.cpp
   src/sender.cpp
   src/session.cpp
-  # FIXME aconway 2015-08-28: Restore blocking code and examples
-  # src/sync_request_response.cpp
+  src/sync_request_response.cpp
   src/terminus.cpp
   src/transport.cpp
   src/types.cpp
   src/url.cpp
   src/uuid.cpp
-  src/facade.cpp
   )
 
 

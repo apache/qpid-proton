@@ -23,44 +23,46 @@
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 #include "proton/error.hpp"
+#include "blocking_connection_impl.hpp"
 #include "msg.hpp"
-
 
 namespace proton {
 
 namespace {
-struct delivery_settled {
+struct delivery_settled : public blocking_connection_impl::condition {
     delivery_settled(pn_delivery_t *d) : pn_delivery(d) {}
-    bool operator()() { return pn_delivery_settled(pn_delivery); }
+    bool operator()() const { return pn_delivery_settled(pn_delivery); }
     pn_delivery_t *pn_delivery;
 };
-
 } // namespace
 
-
-blocking_sender::blocking_sender(blocking_connection &c, sender &l) : blocking_link(&c, pn_cast(l)) {
-    std::string ta = link_.target().address();
-    std::string rta = link_.remote_target().address();
-    if (ta.empty() || ta.compare(rta) != 0) {
+blocking_sender::blocking_sender(blocking_connection &c, const std::string &address) :
+    blocking_link(c)
+{
+    open(c.impl_->connection_->create_sender(address));
+    std::string ta = link_->target().address();
+    std::string rta = link_->remote_target().address();
+    if (ta.empty() || ta.compare(rta) != 0) { 
         wait_for_closed();
-        link_.close();
-        std::string txt = "Failed to open sender " + link_.name() + ", target does not match";
+        link_->close();
+        std::string txt = "Failed to open sender " + link_->name() + ", target does not match";
         throw error(MSG(txt));
     }
 }
 
-counted_ptr<delivery> blocking_sender::send(message &msg, duration timeout) {
-    sender snd(pn_cast(link_));
-    counted_ptr<delivery> dlv = snd.send(msg);
-    std::string txt = "Sending on sender " + link_.name();
-    delivery_settled cond(pn_cast(dlv.get()));
-    connection_.wait(cond, txt, timeout);
+blocking_sender::~blocking_sender() {}
+
+delivery& blocking_sender::send(const message_value &msg, duration timeout) {
+    delivery& dlv = sender().send(msg);
+    connection_.impl_->wait(delivery_settled(pn_cast(&dlv)), "sending on sender " + link_->name(), timeout);
     return dlv;
 }
 
-delivery blocking_sender::send(message &msg) {
+delivery& blocking_sender::send(const message_value &msg) {
     // Use default timeout
     return send(msg, connection_.timeout());
 }
+
+sender& blocking_sender::sender() { return link_->sender(); }
 
 }

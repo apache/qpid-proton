@@ -21,6 +21,7 @@
 
 #include "proton/facade.hpp"
 #include "proton/duration.hpp"
+#include "proton/memory.hpp"
 
 struct pn_reactor_t;
 

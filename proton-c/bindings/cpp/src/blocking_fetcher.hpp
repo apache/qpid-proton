@@ -21,37 +21,27 @@
  * under the License.
  *
  */
-#include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/blocking_connection.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
+#include "proton/message.hpp"
 #include <string>
 #include <deque>
 
 namespace proton {
 
-class fetcher : public messaging_handler {
-  private:
-    blocking_connection connection_;
-    std::deque<message> messages_;
-    std::deque<counted_ptr<delivery> > deliveries_;
-    std::deque<counted_ptr<delivery> > unsettled_;
-    int refcount_;
-    pn_link_t *pn_link_;
+class blocking_fetcher : public messaging_handler {
   public:
-    fetcher(blocking_connection &c, int p);
-    void incref();
-    void decref();
+    blocking_fetcher(int prefetch);
     void on_message(event &e);
     void on_link_error(event &e);
-    void on_connection_error(event &e);
-    void on_link_init(event &e);
     bool has_message();
-    message pop();
+    message_value pop();
     void settle(delivery::state state = delivery::NONE);
-};
 
+  private:
+    std::deque<message_value> messages_;
+    std::deque<counted_ptr<delivery> > deliveries_;
+    std::deque<counted_ptr<delivery> > unsettled_;
+};
 
 }
 

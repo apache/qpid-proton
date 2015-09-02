@@ -23,19 +23,13 @@ namespace proton {
 
 ///@cond INTERNAL
 
-/// Internal base class to provide comparison operators.
+/// Internal base class to provide comparison operators. T must provide < and ==.
 template <class T> struct comparable {
+  friend bool operator>(const T &a, const T &b) { return b < a; }
+  friend bool operator<=(const T &a, const T &b) { return !(a > b); }
+  friend bool operator>=(const T &a, const T &b) { return !(a < b); }
+  friend bool operator!=(const T &a, const T &b) { return !(a == b); }
 };
-
-template<class T> bool operator<(const comparable<T>& a, const comparable<T>& b) {
-    return static_cast<const T&>(a) < static_cast<const T&>(b); // operator < provided by type T
-}
-
-template<class T> bool operator>(const comparable<T>& a, const comparable<T>& b) { return b < a; }
-template<class T> bool operator<=(const comparable<T>& a, const comparable<T>& b) { return !(a > b); }
-template<class T> bool operator>=(const comparable<T>& a, const comparable<T>& b) { return !(a < b); }
-template<class T> bool operator==(const comparable<T>& a, const comparable<T>& b) { return a <= b && b <= a; }
-template<class T> bool operator!=(const comparable<T>& a, const comparable<T>& b) { return !(a == b); }
 
 ///@endcond
 

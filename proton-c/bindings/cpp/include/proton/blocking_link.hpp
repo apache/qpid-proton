@@ -22,16 +22,13 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/container.hpp"
+#include "proton/counted_ptr.hpp"
 #include "proton/duration.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/blocking_connection.hpp"
-#include "proton/types.h"
+
 #include <string>
 
 namespace proton {
-
+class link;
 class blocking_connection;
 
 // TODO documentation
@@ -40,16 +37,19 @@ class blocking_link
   public:
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN ~blocking_link();
+
   protected:
-    PN_CPP_EXTERN blocking_link(blocking_connection *c, pn_link_t *l);
-    PN_CPP_EXTERN void wait_for_closed(duration timeout=duration::SECOND);
+    blocking_link(blocking_connection&);
+    void open(link&);
+    void check_closed();
+    void wait_for_closed();
+
+    blocking_connection& connection_;
+    counted_ptr<link> link_;
+
   private:
-    blocking_connection connection_;
-    link link_;
-    PN_CPP_EXTERN void check_closed();
-    friend class blocking_connection;
-    friend class blocking_sender;
-    friend class blocking_receiver;
+    blocking_link(const blocking_link&);
+    blocking_link& operator=(const blocking_link&);
 };
 
 }

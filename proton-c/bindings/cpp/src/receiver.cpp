@@ -33,4 +33,6 @@ void receiver::flow(int count) {
     pn_link_flow(pn_cast(this), count);
 }
 
+receiver* receiver::cast(pn_type* p) { return &link::cast(p)->receiver(); }
+
 }

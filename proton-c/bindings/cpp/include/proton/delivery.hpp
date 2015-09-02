@@ -31,7 +31,7 @@ namespace proton {
 
 /** delivery status of a message */
 class delivery : public counted_facade<pn_delivery_t, delivery> {
-
+  public:
     /** Delivery state of a message */
     enum state {
         NONE = 0, ///< Unknown state
