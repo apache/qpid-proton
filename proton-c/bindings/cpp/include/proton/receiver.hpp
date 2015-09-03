@@ -32,7 +32,7 @@ struct pn_connection_t;
 namespace proton {
 
 /// A receiving link
-class receiver : public link, public ptr_convertible<receiver>
+class receiver : public counted_facade<pn_link_t, receiver, link>
 {
   public:
     /// Add credit to the link

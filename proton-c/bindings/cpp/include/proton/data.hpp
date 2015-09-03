@@ -36,7 +36,7 @@ class data;
  * Holds a sequence of AMQP values, allows inserting and extracting via encoder() and decoder().
  * Cannot be directly instantiated, use `data_value`
  */
-class data : public facade<pn_data_t, data>, public comparable<data> {
+class data : public facade<pn_data_t, data, comparable<data> > {
   public:
     PN_CPP_EXTERN static PN_UNIQUE_PTR<data> create();
 

@@ -38,7 +38,7 @@ class handler;
 class transport;
 
 /** A session is a collection of links */
-class session : public counted_facade<pn_session_t, session>, public endpoint
+class session : public counted_facade<pn_session_t, session, endpoint>
 {
   public:
     /** Initiate local open, not complete till messaging_handler::on_session_opened()

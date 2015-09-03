@@ -62,12 +62,16 @@
 
 namespace proton {
 
+///@cond INTERNAL
+struct empty_base {};
+///@endcond
+
 /**
  * Base class for C++ facades of proton C struct types.
  *
  * @see \ref c-and-cpp
  */
-template <class P, class T> class facade {
+template <class P, class T, class Base=empty_base> class facade : public Base {
   public:
     /// The underlying C struct type.
     typedef P pn_type;
@@ -103,16 +107,25 @@ template <class T> typename T::pn_type* pn_cast(const counted_ptr<T>& p) {
     return reinterpret_cast<typename T::pn_type*>(const_cast<T*>(p.get()));
 }
 
+/**
+ * Some proton C structs are reference counted. The C++ facade for such structs can be
+ * converted to any of the following smart pointers: std::shared_ptr, std::unique_ptr,
+ * boost::shared_ptr, boost::intrusive_ptr.
+ *
+ * unique_ptr takes ownership of a single *reference* not the underlying struct,
+ * so it is safe to have multiple unique_ptr to the same facade object or to mix
+ * unique_ptr with shared_ptr etc.
+ *
+ * Deleting a counted_facade subclass actually calls `pn_decref` to remove a reference.
+ */
+template <class P, class T, class Base=empty_base>
+class counted_facade : public facade<P, T, Base>
+{
+  public:
 
-///@cond INTERNAL
-class pn_counted {};
-void incref(const pn_counted*);
-void decref(const pn_counted*);
-///@endcond
+    /// Deleting a counted_facade actually calls `pn_decref` to remove a reference.
+    void operator delete(void* p) { decref(p); }
 
-/// Reference counted proton types are convertible to smart pointer types.
-template <class T> class ptr_convertible {
- public:
     operator counted_ptr<T>() { return counted_ptr<T>(static_cast<T*>(this)); }
     operator counted_ptr<const T>() const { return counted_ptr<const T>(static_cast<const T*>(this)); }
 #if PN_USE_CPP11
@@ -134,32 +147,14 @@ template <class T> class ptr_convertible {
      * You must delete the returned pointer to release the reference.
      * It is safer to convert to one of the supported smart pointer types.
      */
-    T* new_ptr() { proton::incref(static_cast<T*>(this)); return static_cast<T*>(this); }
-    const T* new_ptr() const { proton::incref(static_cast<T*>(this)); return static_cast<const T*>(this); }
-};
-
-/**
- * Some proton C structs are reference counted. The C++ facade for such structs can be
- * converted to any of the following smart pointers: std::shared_ptr, std::unique_ptr,
- * boost::shared_ptr, boost::intrusive_ptr.
- *
- * unique_ptr takes ownership of a single *reference* not the underlying struct,
- * so it is safe to have multiple unique_ptr to the same facade object or to mix
- * unique_ptr with shared_ptr etc.
- *
- * Deleting a counted_facade subclass actually calls `pn_decref` to remove a reference.
- */
-template <class P, class T> class counted_facade :
-        public facade<P, T>, public pn_counted, public ptr_convertible<T>
-{
-  public:
-
-    /// Deleting a counted_facade actually calls `pn_decref` to remove a reference.
-    void operator delete(void* p) { decref(reinterpret_cast<pn_counted*>(p)); }
+    T* new_ptr() { incref(this); return static_cast<T*>(this); }
+    const T* new_ptr() const { incref(this); return static_cast<const T*>(this); }
 
   private:
     counted_facade(const counted_facade&);
     counted_facade& operator=(const counted_facade&);
+
+  template <class U> friend class counted_ptr;
 };
 
 }

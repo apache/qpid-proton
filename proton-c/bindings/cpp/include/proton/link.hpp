@@ -36,7 +36,7 @@ class sender;
 class receiver;
 
 /** Messages are transferred across a link. Base class for sender, receiver. */
-class link : public counted_facade<pn_link_t, link>, public endpoint
+class link : public counted_facade<pn_link_t, link, endpoint>
 {
   public:
     /** Locally open the link, not complete till messaging_handler::on_link_opened or

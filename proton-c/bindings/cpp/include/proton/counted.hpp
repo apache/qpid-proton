@@ -30,16 +30,19 @@ class counted {
   private:
     counted(const counted&);
     counted& operator=(const counted&);
-    int refcount_;
+    mutable int refcount_;
 
-    friend void incref(const counted* p);
-    friend void decref(const counted* p);
+    // TODO aconway 2015-08-27: atomic operations.
+    void incref() const { ++refcount_; }
+    void decref() const { if (--refcount_ == 0) delete this; }
+
+  friend void incref(const counted*);
+  friend void decref(const counted*);
   template <class T> friend class counted_ptr;
 };
 
-// TODO aconway 2015-08-27: atomic operations.
-inline void incref(const counted* p) { if (p) const_cast<counted*>(p)->refcount_ += 1; }
-inline void decref(const counted* p) { if (p && --const_cast<counted*>(p)->refcount_ == 0) delete p; }
+inline void incref(const counted* p) { if (p) p->incref(); }
+inline void decref(const counted* p) { if (p) p->decref(); }
 
 }
 #endif // COUNTED_HPP

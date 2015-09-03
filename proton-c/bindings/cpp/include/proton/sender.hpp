@@ -34,7 +34,7 @@ struct pn_connection_t;
 namespace proton {
 
 /// A sending link
-class sender : public link, public ptr_convertible<sender>
+class sender : public counted_facade<pn_link_t, sender, link>
 {
   public:
     /// Send a message on the link.

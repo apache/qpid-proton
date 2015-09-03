@@ -74,9 +74,4 @@ class container_impl
 
 }
 
-// Allow counted_ptr to a pn_handler_t
-inline void incref(const pn_handler_t* h) { pn_incref(const_cast<pn_handler_t*>(h)); }
-inline void decref(const pn_handler_t* h) { pn_decref(const_cast<pn_handler_t*>(h)); }
-
-
 #endif  /*!PROTON_CPP_CONTAINERIMPL_H*/

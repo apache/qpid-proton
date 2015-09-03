@@ -37,12 +37,12 @@
 
 namespace proton {
 
-void incref(const pn_counted* p) {
-    if (p) pn_incref(const_cast<pn_counted*>(p)); 
+void incref(const void* p) {
+    if (p) ::pn_incref(const_cast<void*>(p)); 
 }
 
-void decref(const pn_counted* p) {
-    if (p) pn_decref(const_cast<pn_counted*>(p));
+void decref(const void* p) {
+    if (p) ::pn_decref(const_cast<void*>(p));
 }
 
 #if PN_USE_CPP11

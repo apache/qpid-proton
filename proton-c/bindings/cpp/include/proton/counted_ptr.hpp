@@ -31,6 +31,15 @@
 
 namespace proton {
 
+///@cond INTERNAL
+
+// Default refcounting uses pn_incref, pn_decref. Other types must define
+// their own incref/decref overloads.
+void incref(const void*);
+void decref(const void*);
+
+///@endcond
+
 /**
  * Smart pointer for reference counted objects derived from `proton::counted`
  * or `proton::pn_counted`
@@ -39,7 +48,9 @@ template <class T> class counted_ptr : public proton::comparable<counted_ptr<T> 
   public:
     typedef T element_type;
 
-    explicit counted_ptr(T *p = 0, bool add_ref = true) : ptr_(p) { if (p && add_ref) incref(ptr_); }
+    explicit counted_ptr(T *p = 0, bool add_ref = true) : ptr_(p) {
+        if (add_ref) incref(ptr_);
+    }
 
     counted_ptr(const counted_ptr<T>& p) : ptr_(p.ptr_) { incref(ptr_); }
 
@@ -79,8 +90,8 @@ template <class T> class counted_ptr : public proton::comparable<counted_ptr<T> 
 };
 
 #if PN_USE_BOOST
-template <class T> inline void intrusive_ptr_add_ref(const T* p) { incref(p); }
-template <class T> inline void intrusive_ptr_release(const T* p) { decref(p); }
+template <class T> inline void intrusive_ptr_add_ref(const T* p) { if (p) p->incref(); }
+template <class T> inline void intrusive_ptr_release(const T* p) { if (p) p->decref(); }
 #endif
 
 }

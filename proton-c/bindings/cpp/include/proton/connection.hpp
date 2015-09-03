@@ -35,7 +35,7 @@ class handler;
 class transport;
 
 /** connection to a remote AMQP peer. */
-class connection : public counted_facade<pn_connection_t, connection>, public endpoint
+class connection : public counted_facade<pn_connection_t, connection, endpoint>
 {
   public:
     ///@name getters @{
