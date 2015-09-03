@@ -35,8 +35,8 @@ namespace proton {
 
 // Default refcounting uses pn_incref, pn_decref. Other types must define
 // their own incref/decref overloads.
-void incref(const void*);
-void decref(const void*);
+PN_CPP_EXTERN void incref(const void*);
+PN_CPP_EXTERN void decref(const void*);
 
 ///@endcond
 

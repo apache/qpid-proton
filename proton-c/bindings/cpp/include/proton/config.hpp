@@ -32,7 +32,7 @@
 
 
 #ifndef PN_USE_CPP11
-#if ((defined(__cplusplus) && __cplusplus >= 201100) || (defined(_MSC_FULL_VER) && _MSC_FULL_VER >= 150030729))
+#if ((defined(__cplusplus) && __cplusplus >= 201100))
 #define PN_USE_CPP11 1
 #else
 #define PN_USE_CPP11 0

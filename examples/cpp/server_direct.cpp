@@ -21,6 +21,7 @@
 
 #include "options.hpp"
 
+#include "proton/acceptor.hpp"
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"
@@ -29,6 +30,7 @@
 #include <map>
 #include <string>
 #include <sstream>
+#include <cctype>
 
 class server : public proton::messaging_handler {
   private:

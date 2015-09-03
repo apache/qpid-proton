@@ -66,10 +66,10 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     /** Get the current value */
     template<class T> T get() { T t; get(t); return t; }
 
-    bool operator==(const data& x) const;
-    bool operator<(const data& x) const;
+    PN_CPP_EXTERN bool operator==(const data& x) const;
+    PN_CPP_EXTERN bool operator<(const data& x) const;
 
-    void operator delete(void *);
+    PN_CPP_EXTERN void operator delete(void *);
 
     /** Human readable representation of data. */
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);

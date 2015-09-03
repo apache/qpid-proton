@@ -28,6 +28,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <cctype>
 
 class server : public proton::messaging_handler {
   private:

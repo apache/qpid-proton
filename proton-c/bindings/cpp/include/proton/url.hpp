@@ -28,7 +28,9 @@ struct pn_url_t;
 namespace proton {
 
 /// Thrown if URL parsing fails.
-struct bad_url : public error { PN_CPP_EXTERN explicit bad_url(const std::string&) throw(); };
+struct bad_url : public error {
+    PN_CPP_EXTERN explicit bad_url(const std::string&) throw();
+};
 
 
 /**
@@ -108,13 +110,13 @@ class url {
     /** defaults fills in default values for missing parts of the URL */
     PN_CPP_EXTERN void defaults();
 
-  friend std::ostream& operator<<(std::ostream&, const url&);
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
 
     /** parse url from istream, automatically fills in defaults for missing values.
      *
      * Note: an invalid url is indicated by setting std::stream::fail() NOT by throwing bad_url.
      */
-  friend std::istream& operator>>(std::istream&, url&);
+  friend PN_CPP_EXTERN std::istream& operator>>(std::istream&, url&);
 
   private:
     pn_url_t* url_;

@@ -47,14 +47,14 @@ class endpoint
     typedef int state;
 
     /// endpoint state bit values @{
-    static const int LOCAL_UNINIT;    ///< Local endpoint is un-initialized
-    static const int REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
-    static const int LOCAL_ACTIVE;    ///< Local endpoint is active
-    static const int REMOTE_ACTIVE;   ///< Remote endpoint is active
-    static const int LOCAL_CLOSED;    ///< Local endpoint has been closed
-    static const int REMOTE_CLOSED;   ///< Remote endpoint has been closed
-    static const int LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
-    static const int REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
+    PN_CPP_EXTERN static const int LOCAL_UNINIT;    ///< Local endpoint is un-initialized
+    PN_CPP_EXTERN static const int REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
+    PN_CPP_EXTERN static const int LOCAL_ACTIVE;    ///< Local endpoint is active
+    PN_CPP_EXTERN static const int REMOTE_ACTIVE;   ///< Remote endpoint is active
+    PN_CPP_EXTERN static const int LOCAL_CLOSED;    ///< Local endpoint has been closed
+    PN_CPP_EXTERN static const int REMOTE_CLOSED;   ///< Remote endpoint has been closed
+    PN_CPP_EXTERN static const int LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
+    PN_CPP_EXTERN static const int REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
      ///@}
 
     // TODO: condition, remote_condition, update_condition, get/handler

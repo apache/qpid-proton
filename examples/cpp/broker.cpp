@@ -21,6 +21,7 @@
 
 #include "options.hpp"
 
+#include "proton/acceptor.hpp"
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"

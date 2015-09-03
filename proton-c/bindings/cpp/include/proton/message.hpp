@@ -42,7 +42,7 @@ class message : public facade<pn_message_t, message>
     PN_CPP_EXTERN static PN_UNIQUE_PTR<message> create();
 
     /// Copy data from m to this.
-    message& operator=(const message& m);
+    PN_CPP_EXTERN message& operator=(const message& m);
 
     /** Clear the message content and properties. */
     PN_CPP_EXTERN void clear();
@@ -120,7 +120,7 @@ class message : public facade<pn_message_t, message>
     /// Decode the message from link corresponding to delivery.
     PN_CPP_EXTERN void decode(proton::link&, proton::delivery&);
 
-    void operator delete(void*);
+    PN_CPP_EXTERN void operator delete(void*);
 };
 
 
