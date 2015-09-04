@@ -41,12 +41,15 @@ foreach(example
 endforeach()
 
 set(env_py "${CMAKE_SOURCE_DIR}/proton-c/env.py")
+set(test_bin_dir "$<TARGET_FILE_DIR:broker>")
 if (WIN32)
-  set(test_bin_dir "$<TARGET_FILE_DIR:broker>")
+  # Ignore existing path (usualy containting spaces, escape chars).
+  # Choose just enough path for Windows, ';' separated.
   set(test_path "${test_bin_dir}" "$<TARGET_FILE_DIR:qpid-proton>" "$<TARGET_FILE_DIR:qpid-proton-cpp>")
 else(WIN32)
-  set(test_path "${CMAKE_CURRENT_BINARY_DIR}")
+  # ':' separated path with test_bin_dir first.
+  set(test_path "${test_bin_dir}:$ENV{PATH}")
 endif(WIN32)
 
-add_test(cpp_example_test
-  ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+add_test(NAME cpp_example_test
+  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
