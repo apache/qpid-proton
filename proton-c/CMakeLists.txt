@@ -217,6 +217,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (WERROR "-Werror")
   endif (ENABLE_WARNING_ERROR)
   set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  # C++ allow "%z" format specifier and variadic macros
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros" CACHE STRING "C++ warning flags")
   if (NOT BUILD_WITH_CXX)
     set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes")
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
@@ -231,8 +233,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
       set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
     endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
-    # allow "%z" format specifier and variadic macros
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
+    set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
   endif (NOT BUILD_WITH_CXX)
 
   if (ENABLE_UNDEFINED_ERROR)
@@ -262,10 +263,7 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
-if (SWIG_FOUND)
-  add_subdirectory(bindings)
-endif (SWIG_FOUND)
-
+add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
@@ -448,20 +446,6 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/Proton)
 
-# CTest
-
-find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
-option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-if (ENABLE_VALGRIND)
-  if (NOT VALGRIND_EXE)
-    message(STATUS "Can't locate the valgrind command; no run-time error detection")
-  else ()
-    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
-  endif ()
-endif (ENABLE_VALGRIND)
-
-mark_as_advanced (VALGRIND_EXE)
-
 # c tests:
 
 add_subdirectory(src/tests)
@@ -521,28 +505,28 @@ if (BUILD_PYTHON)
   # platforms will be supported. Since `setup.py` will skip
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
-  if (CMAKE_SYSTEM_NAME STREQUAL Linux)
-   find_program(TOX_EXE "tox")
-   mark_as_advanced(TOX_EXE)
-   if (TOX_EXE)
-     to_native_path ("${py_path}" py_path)
-     add_test (NAME python-tox-test
-               WORKING_DIRECTORY ${py_src}
-               COMMAND ${env_py}
-                 "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
-                 "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-                 "SASLPASSWD=${SASLPASSWD_EXE}"
-                 "SWIG=${SWIG_EXECUTABLE}"
-                 ${VALGRIND_ENV}
-                 ${TOX_EXE})
-     set_tests_properties(python-tox-test
-                          PROPERTIES
-                          PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-                          FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
-   else (TOX_EXE)
-     message(STATUS "The tox tool is not available - skipping the python-tox-tests")
-   endif (TOX_EXE)
-  endif (CMAKE_SYSTEM_NAME STREQUAL Linux)
+  option(TOX_TEST "Enable muti-version python testing with TOX" ON)
+  if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
+     find_program(TOX_EXE "tox")
+     if (TOX_EXE)
+         to_native_path ("${py_path}" py_path)
+         add_test (NAME python-tox-test
+		   WORKING_DIRECTORY ${py_src}
+                   COMMAND ${env_py}
+		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
+                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                   "SASLPASSWD=${SASLPASSWD_EXE}"
+                   "SWIG=${SWIG_EXECUTABLE}"
+                   ${VALGRIND_ENV}
+                   ${TOX_EXE})
+         set_tests_properties(python-tox-test
+                              PROPERTIES
+                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+     else (TOX_EXE)
+         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+     endif (TOX_EXE)
+  endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
 endif (BUILD_PYTHON)
 
@@ -589,6 +573,3 @@ if (BUILD_JAVASCRIPT)
   add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
   add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
 endif (BUILD_JAVASCRIPT)
-
-# build examples to make sure they still work
-add_subdirectory(../examples ../examples)

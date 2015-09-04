@@ -237,6 +237,7 @@ PN_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
  * writable, and expired events into the supplied collector.
  *
  * @param[in] selectable a selectable objet
+ * @param[in] collector a collector object
  */
 PN_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
 

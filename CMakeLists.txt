@@ -20,15 +20,14 @@ cmake_minimum_required (VERSION 2.6)
 
 project (Proton C)
 
+# Enable C++ now for examples and bindings subdirectories, but make it optional.
+enable_language(CXX OPTIONAL)
+
 if (MSVC)
   # No C99 capability, use C++
   set(DEFAULT_BUILD_WITH_CXX ON)
 endif (MSVC)
 option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
-
-if (BUILD_WITH_CXX)
-  enable_language (CXX)
-endif (BUILD_WITH_CXX)
 
 if (CMAKE_CONFIGURATION_TYPES)
   # There is no single "build type"...
@@ -140,7 +139,21 @@ if (BUILD_JAVA)
   add_subdirectory(proton-j)
 endif()
 
+# Check for valgrind here so tests under proton-c/ and examples/ can use it.
+find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
+option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
+if (ENABLE_VALGRIND)
+  if (NOT VALGRIND_EXE)
+    message(STATUS "Can't locate the valgrind command; no run-time error detection")
+  else ()
+    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
+  endif ()
+endif (ENABLE_VALGRIND)
+
+mark_as_advanced (VALGRIND_EXE)
+
 add_subdirectory(proton-c)
+add_subdirectory(examples)
 
 install (FILES LICENSE README.md TODO
          DESTINATION ${PROTON_SHARE})

@@ -171,10 +171,19 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
 
 static inline pn_socket_t pni_create_socket(int domain);
 
+static const char *amqp_service(const char *port) {
+  // Help older Windows to know about amqp[s] ports
+  if (port) {
+    if (!strcmp("amqp", port)) return "5672";
+    if (!strcmp("amqps", port)) return "5671";
+  }
+  return port;
+}
+
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
   struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
+  int code = getaddrinfo(host, amqp_service(port), NULL, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
     return INVALID_SOCKET;
@@ -228,7 +237,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
   const char *host = strcmp("0.0.0.0", hostarg) ? hostarg : "127.0.0.1";
 
   struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
+  int code = getaddrinfo(host, amqp_service(port), NULL, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
     return INVALID_SOCKET;

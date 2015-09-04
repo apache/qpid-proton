@@ -1,7 +1,3 @@
-
-*Warning*: contains remarks about unreleased (but design-complete as far as the
-remarks are concerned) C++ and Go bindings.
-
 Proton memory mangement
 =======================
 
@@ -69,9 +65,9 @@ The proton C API has standard reference counting rules (but see [1] below)
 
 - A pointer *returned* by a `pn_` function is either *borrowed* by the caller,
   or the caller *owns* a reference (the API doc says which.)
-- The owner of a reference must call `pn_object_decref()` exactly once to
+- The owner of a reference must call `pn_decref()` exactly once to
   release it.
-- To keep a borrowed pointer, call `pn_object_incref()`. This adds a new
+- To keep a borrowed pointer, call `pn_incref()`. This adds a new
   reference, which you now own.
 - A pointer *passed* to a `pn_` function has no change of ownership. If you
   owned a reference you still do, if you didn't you still don't.
@@ -80,7 +76,7 @@ The proton C API has standard reference counting rules (but see [1] below)
 
 A *borrowed* pointer is valid within some scope (typically the scope of an event
 handling function) but beyond that scope you cannot assume it is valid unless
-you make a new reference with `pn_object_incref`. The API documentation for the
+you make a new reference with `pn_incref`. The API documentation for the
 function that returned the pointer should tell you what the scope is.
 
 There are "container" relationships in proton: e.g. a connection contains
@@ -96,11 +92,11 @@ container are released [1]. This is useful for bindings to langauges with
 objects in memory for as long as any binding object needs them.
 
 For example: if you call `pn_message()` then you *own* a reference to the
-newly-created `pn_message_t` and you must call `pn_object_decref` when you are
+newly-created `pn_message_t` and you must call `pn_decref` when you are
 done [2]. If you call `pn_event_link()` in an event handler then you get a
 *borrowed* reference to the link. You can use it in the scope of the event
-handler, but if you want to save it for later you must call `pn_object_incref`
-to add a reference and of course call `pn_object_decref` when you are done with
+handler, but if you want to save it for later you must call `pn_incref`
+to add a reference and of course call `pn_decref` when you are done with
 that reference.
 
 [1] *Internally* the proton library plays tricks with reference counts to
@@ -111,7 +107,7 @@ implementation of the proton C library itself you may need to learn more, ask on
 proton@qpid.apache.org.
 
 [2] Actually if you call `pn_message()` then you must *either* call
-`pn_object_decref()` *or* `pn_message_free()`, definitely not both. It is
+`pn_decref()` *or* `pn_message_free()`, definitely not both. It is
 possible to mix reference couting and 'free' style memory management in the same
 codebase (`free` is sort-of an alias for `decref`) but it is probably not a good
 idea.
