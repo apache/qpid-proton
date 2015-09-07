@@ -88,21 +88,38 @@ class EventImpl implements Event
         return context;
     }
 
-    @Override
-    public void dispatch(Handler handler)
-    {
-        try {
-            handler.handle(this);
-        } catch(RuntimeException runtimeException) {
-            throw new HandlerException(handler, runtimeException);
-        }
+    private Handler delegated = null;
 
-        Iterator<Handler> children = handler.children();
+    @Override
+    public void dispatch(Handler handler) throws HandlerException
+    {
+        Handler old_delegated = delegated;
+        try {
+            delegated = handler;
+            try {
+                handler.handle(this);
+            } catch(RuntimeException runtimeException) {
+                throw new HandlerException(handler, runtimeException);
+            }
+            delegate();
+        } finally {
+            delegated = old_delegated;
+        }
+    }
+
+    @Override
+    public void delegate() throws HandlerException
+    {
+        if (delegated == null) {
+            return; // short circuit
+        }
+        Iterator<Handler> children = delegated.children();
+        delegated = null;
         while(children.hasNext()) {
             dispatch(children.next());
         }
     }
-    
+
     @Override
     public void redispatch(EventType as_type, Handler handler) throws HandlerException 
     {

@@ -129,6 +129,17 @@ public interface Event extends Extendable
      */
     void redispatch(EventType as_type, Handler handler) throws HandlerException;
 
+    /**
+     * dispatch the event to all children of the handler. A handler can call
+     * this method explicitly to be able to do more processing after all child
+     * handlers have already processed the event. If handler does not invoke
+     * this method it is invoked implicitly by {@link #dispatch(Handler)}
+     * 
+     * @param handler
+     * @throws HandlerException
+     */
+    void delegate() throws HandlerException;
+
     Connection getConnection();
 
     Session getSession();
