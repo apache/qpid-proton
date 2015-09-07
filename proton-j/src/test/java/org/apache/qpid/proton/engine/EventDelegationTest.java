@@ -25,6 +25,19 @@ public class EventDelegationTest {
         }
     }
 
+    class DelegatingFlowTracer extends ExecutionFlowTracer {
+        public DelegatingFlowTracer(String name) {
+            super(name);
+        }
+
+        @Override
+        public void onReactorInit(Event e) {
+            trace.add("(" + name);
+            e.delegate();
+            trace.add(name + ")");
+        }
+    }
+
     Handler assemble(Handler outer, Handler...inner) {
         for(Handler h : inner) {
             outer.add(h);
@@ -50,6 +63,26 @@ public class EventDelegationTest {
         r.getHandler().add(h);
         r.run();
         assertArrayEquals(new String[]{"A", "A.A", "A.A.A", "A.A.B", "A.B"}, trace.toArray());
+    }
+
+    @Test
+    public void testExplicitDelegate() throws IOException {
+        Handler h = 
+                assemble(
+                        new ExecutionFlowTracer("A"),
+                        assemble(
+                                new DelegatingFlowTracer("A.A"),
+                                new ExecutionFlowTracer("A.A.A"),
+                                new ExecutionFlowTracer("A.A.B")
+                                ),
+                        assemble(
+                                new ExecutionFlowTracer("A.B")
+                                )
+                );
+        Reactor r = Reactor.Factory.create();
+        r.getHandler().add(h);
+        r.run();
+        assertArrayEquals(new String[]{"A", "(A.A", "A.A.A", "A.A.B", "A.A)", "A.B"}, trace.toArray());
     }
 
 }

@@ -248,6 +248,11 @@ public class EventExtensibilityTest extends TestCase {
         public Event copy() {
             return new ExtraEventImpl(impl.copy());
         }
+
+        @Override
+        public void delegate() throws HandlerException {
+            impl.delegate();
+        }
     }
 
     public class ExtendedTestEventGenerator extends BaseHandler {
