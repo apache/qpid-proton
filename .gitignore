@@ -36,3 +36,7 @@ proton-c/bindings/go/bin
 
 # Testresults from the jenkins build script
 testresults
+
+# Go binding build output
+/proton-c/bindings/go/pkg
+/proton-c/bindings/go/bin

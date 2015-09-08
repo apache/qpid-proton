@@ -17,13 +17,21 @@
 # under the License.
 #
 
-# FIXME aconway 2015-05-20:
-# - use proton build for Go includes & libs.
-# - pre-build go libraries? Respect user GOPATH?
-
 if(BUILD_GO)
+  set(examples receive send broker)
+
+  foreach(example ${examples})
+    add_custom_target(go-example-${example} ALL
+      COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${CMAKE_CURRENT_BINARY_DIR}/${example} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
+      DEPENDS go-packages qpid-proton)
+  endforeach()
+  add_custom_target(go-example-test ALL
+      COMMAND ${GO_TEST} -c ${GO_EXAMPLE_FLAGS} -o ${CMAKE_CURRENT_BINARY_DIR}/example_test ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
+      DEPENDS go-packages qpid-proton)
+
   add_test(
     NAME go_example_test
-    COMMAND ${GO_TEST} example_test.go -rpath ${CMAKE_BINARY_DIR}/proton-c
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker broker)
+
+  list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()

@@ -20,12 +20,14 @@ under the License.
 package main
 
 import (
+	"./util"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
-	"qpid.apache.org/proton/go/amqp"
-	"qpid.apache.org/proton/go/messaging"
+	"qpid.apache.org/proton/amqp"
+	"qpid.apache.org/proton/concurrent"
 	"sync"
 )
 
@@ -37,9 +39,7 @@ Receive messages from all the listed URLs concurrently and print them.
 	flag.PrintDefaults()
 }
 
-var debug = flag.Bool("debug", false, "Print detailed debug output")
 var count = flag.Uint64("count", 1, "Stop after receiving this many messages.")
-var full = flag.Bool("full", false, "Print full message not just body.")
 
 func main() {
 	flag.Usage = usage
@@ -47,7 +47,7 @@ func main() {
 
 	urls := flag.Args() // Non-flag arguments are URLs to receive from
 	if len(urls) == 0 {
-		fmt.Fprintln(os.Stderr, "No URL provided")
+		log.Println("No URL provided")
 		usage()
 		os.Exit(1)
 	}
@@ -57,39 +57,46 @@ func main() {
 	var wait sync.WaitGroup             // Used by main() to wait for all goroutines to end.
 	wait.Add(len(urls))                 // Wait for one goroutine per URL.
 
-	connections := make([]*messaging.Connection, len(urls)) // Store connctions to close on exit
+	container := concurrent.NewContainer("")
+	connections := make(chan concurrent.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
 	// main() receives and prints them.
-	for i, urlStr := range urls {
-		debugf("debug: Connecting to %s\n", urlStr)
+	for _, urlStr := range urls {
+		util.Debugf("Connecting to %s\n", urlStr)
 		go func(urlStr string) { // Start the goroutine
 
 			defer wait.Done()                 // Notify main() when this goroutine is done.
 			url, err := amqp.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
-			exitIf(err)
+			util.ExitIf(err)
 
-			// Open a standard Go net.Conn and and AMQP connection using it.
+			// Open a new connection
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
-			exitIf(err)
-			pc, err := messaging.Connect(conn) // This is our AMQP connection.
-			exitIf(err)
-			connections[i] = pc // Save connection so it will be closed when main() ends
+			util.ExitIf(err)
+			c, err := container.NewConnection(conn)
+			util.ExitIf(err)
+			util.ExitIf(c.Open())
+			connections <- c // Save connection so we can Close() when main() ends
 
-			// Create a receiver using the path of the URL as the AMQP address
-			r, err := pc.Receiver(url.Path)
-			exitIf(err)
+			// Create and open a session
+			ss, err := c.NewSession()
+			util.ExitIf(err)
+			err = ss.Open()
+			util.ExitIf(err)
 
-			// Loop receiving messages
+			// Create a Receiver using the path of the URL as the source address
+			r, err := ss.Receiver(url.Path)
+			util.ExitIf(err)
+
+			// Loop receiving messages and sending them to the main() goroutine
 			for {
-				var m amqp.Message
-				select { // Receive a message or stop.
-				case m = <-r.Receive:
-				case <-stop: // The program is stopping.
+				rm, err := r.Receive()
+				if err == concurrent.Closed {
 					return
 				}
+				util.ExitIf(err)
 				select { // Send m to main() or stop
-				case messages <- m: // Send m to main()
+				case messages <- rm.Message: // Send to main()
 				case <-stop: // The program is stopping.
 					return
 				}
@@ -102,37 +109,17 @@ func main() {
 
 	// print each message until the count is exceeded.
 	for i := uint64(0); i < *count; i++ {
-		debugf("%s\n", formatMessage(<-messages))
+		m := <-messages
+		util.Debugf("%s\n", util.FormatMessage(m))
 	}
 	fmt.Printf("Received %d messages\n", *count)
+
+	// Close all connections, this will interrupt goroutines blocked in Receiver.Receive()
+	for i := 0; i < len(urls); i++ {
+		c := <-connections
+		c.Disconnect(nil) // FIXME aconway 2015-09-25: Close
+	}
 	close(stop) // Signal all goroutines to stop.
 	wait.Wait() // Wait for all goroutines to finish.
 	close(messages)
-	for _, c := range connections { // Close all connections
-		if c != nil {
-			c.Close()
-		}
-	}
-}
-
-// Simple debug logging
-func debugf(format string, data ...interface{}) {
-	if *debug {
-		fmt.Fprintf(os.Stderr, format, data...)
-	}
-}
-
-// Simple error handling for demo.
-func exitIf(err error) {
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-	}
-}
-
-func formatMessage(m amqp.Message) string {
-	if *full {
-		return fmt.Sprintf("%#v", m)
-	} else {
-		return fmt.Sprintf("%#v", m.Body())
-	}
 }

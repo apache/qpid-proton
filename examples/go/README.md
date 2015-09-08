@@ -2,18 +2,17 @@
 
 There are 3 go packages for proton:
 
-- qpid.apache.org/proton/go/amqp: converts AMQP messages and data types to and from Go data types.
-- qpid.apache.org/proton/go/messaging: easy-to-use, concurrent API for messaging clients and servers.
-- qpid.apache.org/proton/go/event: full low-level access to the proton engine.
+- qpid.apache.org/proton/amqp: converts AMQP messages and data types to and from Go data types.
+- qpid.apache.org/proton/concurrent: easy-to-use, concurrent API for concurrent clients and servers.
+- qpid.apache.org/proton: Low-level access to the proton engine.
 
-Most applications should use the `messaging` package. The `event` package is for
+Most applications should use the `proton/concurrent` package. The `proton` package is for
 applications that need low-level access to the proton engine.
 
 ## Example programs
 
-- [receive.go](receive.go) receive from many connections concurrently using messaging package.
-- [send.go](send.go) send to many connections concurrently using messaging package.
-- [event_broker.go](event_broker.go) simple mini-broker using event package.
+- [receive.go](receive.go) receive from many connections concurrently.
+- [send.go](send.go) send to many connections concurrently.
 
 ## Using the Go packages
 
@@ -54,7 +53,7 @@ the example source have more details.
 
 First start the broker:
 
-    go run event_broker.go
+    go run reactor_broker.go
 
 Send messages concurrently to queues "foo" and "bar", 10 messages to each queue:
 

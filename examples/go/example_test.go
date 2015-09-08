@@ -28,21 +28,20 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
 
-func panicIf(err error) {
+func fatalIf(t *testing.T, err error) {
 	if err != nil {
-		panic(err)
+		t.Fatalf("%s", err)
 	}
 }
 
@@ -77,16 +76,18 @@ func (b *broker) check() error {
 }
 
 // Start the demo broker, wait till it is listening on *addr. No-op if already started.
-func (b *broker) start() error {
+func (b *broker) start(t *testing.T) error {
 	if b.cmd == nil { // Not already started
-		// FIXME aconway 2015-04-30: better way to pick/configure a broker port.
 		b.addr = fmt.Sprintf("127.0.0.1:%d", rand.Intn(10000)+10000)
-		b.cmd = exampleCommand("event_broker", "-addr", b.addr)
+		b.cmd = exampleCommand(t, *brokerName, "-addr", b.addr)
 		b.runerr = make(chan error)
 		b.cmd.Stderr, b.cmd.Stdout = os.Stderr, os.Stdout
-		go func() {
-			b.runerr <- b.cmd.Run()
-		}()
+		b.err = b.cmd.Start()
+		if b.err == nil {
+			go func() { b.runerr <- b.cmd.Wait() }()
+		} else {
+			b.runerr <- b.err
+		}
 		b.err = b.check()
 	}
 	return b.err
@@ -95,7 +96,7 @@ func (b *broker) start() error {
 func (b *broker) stop() {
 	if b != nil && b.cmd != nil {
 		b.cmd.Process.Kill()
-		b.cmd.Wait()
+		<-b.runerr
 	}
 }
 
@@ -106,22 +107,49 @@ func checkEqual(want interface{}, got interface{}) error {
 	return fmt.Errorf("%#v != %#v", want, got)
 }
 
-// runCommand returns an exec.Cmd to run an example.
-func exampleCommand(prog string, arg ...string) *exec.Cmd {
-	build(prog + ".go")
+// 'go build' uses the installed copy of the proton Go libraries, which may be out of date.
+func checkStaleLibs(t *testing.T) {
+	var stale []string
+	pp := "qpid.apache.org/proton"
+	for _, p := range []string{pp, pp + "/amqp", pp + "/concurrent"} {
+		out, err := exec.Command("go", "list", "-f", "{{.Stale}}", p).CombinedOutput()
+		if err != nil {
+			t.Fatalf("failed to execute 'go list': %v\n%v", err, string(out))
+		}
+		if string(out) != "false\n" {
+			stale = append(stale, pp)
+		}
+	}
+	if len(stale) > 0 {
+		t.Fatalf("Stale libraries, run 'go install %s'", strings.Trim(fmt.Sprint(stale), "[]"))
+	}
+}
+
+// exampleCommand returns an exec.Cmd to run an example.
+func exampleCommand(t *testing.T, prog string, arg ...string) (cmd *exec.Cmd) {
+	checkStaleLibs(t)
 	args := []string{}
 	if *debug {
 		args = append(args, "-debug=true")
 	}
 	args = append(args, arg...)
-	cmd := exec.Command(exepath(prog), args...)
+	prog, err := filepath.Abs(prog)
+	fatalIf(t, err)
+	if _, err := os.Stat(prog); err == nil {
+		cmd = exec.Command(prog, args...)
+	} else if _, err := os.Stat(prog + ".go"); err == nil {
+		args = append([]string{"run", prog + ".go"}, args...)
+		cmd = exec.Command("go", args...)
+	} else {
+		t.Fatalf("Cannot find binary or source for %s", prog)
+	}
 	cmd.Stderr = os.Stderr
 	return cmd
 }
 
 // Run an example Go program, return the combined output as a string.
-func runExample(prog string, arg ...string) (string, error) {
-	cmd := exampleCommand(prog, arg...)
+func runExample(t *testing.T, prog string, arg ...string) (string, error) {
+	cmd := exampleCommand(t, prog, arg...)
 	out, err := cmd.Output()
 	return string(out), err
 }
@@ -133,8 +161,8 @@ func prefix(prefix string, err error) error {
 	return nil
 }
 
-func runExampleWant(want string, prog string, args ...string) error {
-	out, err := runExample(prog, args...)
+func runExampleWant(t *testing.T, want string, prog string, args ...string) error {
+	out, err := runExample(t, prog, args...)
 	if err != nil {
 		return fmt.Errorf("%s failed: %s: %s", prog, err, out)
 	}
@@ -142,7 +170,10 @@ func runExampleWant(want string, prog string, args ...string) error {
 }
 
 func exampleArgs(args ...string) []string {
-	return append(args, testBroker.addr+"/foo", testBroker.addr+"/bar", testBroker.addr+"/baz")
+	for i := 0; i < *connections; i++ {
+		args = append(args, fmt.Sprintf("%s/%s%d", testBroker.addr, "q", i))
+	}
+	return args
 }
 
 // Send then receive
@@ -150,18 +181,18 @@ func TestExampleSendReceive(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skip demo tests in short mode")
 	}
-	testBroker.start()
-	err := runExampleWant(
-		"Received all 15 acknowledgements\n",
+	testBroker.start(t)
+	err := runExampleWant(t,
+		fmt.Sprintf("Received all %d acknowledgements\n", expected),
 		"send",
-		exampleArgs("-count", "5")...)
+		exampleArgs("-count", fmt.Sprintf("%d", *count))...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = runExampleWant(
-		"Listening on 3 connections\nReceived 15 messages\n",
+	err = runExampleWant(t,
+		fmt.Sprintf("Listening on %v connections\nReceived %v messages\n", *connections, *count**connections),
 		"receive",
-		exampleArgs("-count", "15")...)
+		exampleArgs("-count", fmt.Sprintf("%d", *count**connections))...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,8 +206,8 @@ func init() { ready = fmt.Errorf("Ready") }
 // Send ready on errchan when it is listening.
 // Send final error when it is done.
 // Returns the Cmd, caller must Wait()
-func goReceiveWant(errchan chan<- error, want string, arg ...string) *exec.Cmd {
-	cmd := exampleCommand("receive", arg...)
+func goReceiveWant(t *testing.T, errchan chan<- error, want string, arg ...string) *exec.Cmd {
+	cmd := exampleCommand(t, "receive", arg...)
 	go func() {
 		pipe, err := cmd.StdoutPipe()
 		if err != nil {
@@ -209,11 +240,12 @@ func TestExampleReceiveSend(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skip demo tests in short mode")
 	}
-	testBroker.start()
+	testBroker.start(t)
 	recvErr := make(chan error)
-	recvCmd := goReceiveWant(recvErr,
-		"Received 15 messages\n",
-		exampleArgs("-count", "15")...)
+	recvCmd := goReceiveWant(
+		t, recvErr,
+		fmt.Sprintf("Received %d messages\n", expected),
+		exampleArgs(fmt.Sprintf("-count=%d", expected))...)
 	defer func() {
 		recvCmd.Process.Kill()
 		recvCmd.Wait()
@@ -221,10 +253,10 @@ func TestExampleReceiveSend(t *testing.T) {
 	if err := <-recvErr; err != ready { // Wait for receiver ready
 		t.Fatal(err)
 	}
-	err := runExampleWant(
-		"Received all 15 acknowledgements\n",
+	err := runExampleWant(t,
+		fmt.Sprintf("Received all %d acknowledgements\n", expected),
 		"send",
-		exampleArgs("-count", "5")...)
+		exampleArgs("-count", fmt.Sprintf("%d", *count))...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,51 +265,18 @@ func TestExampleReceiveSend(t *testing.T) {
 	}
 }
 
-func exepath(relative string) string {
-	if binDir == "" {
-		panic("bindir not set, cannot run example binaries")
-	}
-	return path.Join(binDir, relative)
-}
-
 var testBroker *broker
-var binDir, exampleDir string
-var built map[string]bool
 
-func init() {
-	built = make(map[string]bool)
-}
-
-func build(prog string) {
-	if !built[prog] {
-		args := []string{"build"}
-		if *rpath != "" {
-			args = append(args, "-ldflags", "-r "+*rpath)
-		}
-		args = append(args, path.Join(exampleDir, prog))
-		build := exec.Command("go", args...)
-		build.Dir = binDir
-		out, err := build.CombinedOutput()
-		if err != nil {
-			panic(fmt.Errorf("%v: %s", err, out))
-		}
-		built[prog] = true
-	}
-}
-
-var rpath = flag.String("rpath", "", "Runtime path for test executables")
 var debug = flag.Bool("debug", false, "Debugging output from examples")
+var brokerName = flag.String("broker", "broker", "Name of broker executable to run")
+var count = flag.Int("count", 3, "Count of messages to send in tests")
+var connections = flag.Int("connections", 3, "Number of connections to make in tests")
+var expected int
 
 func TestMain(m *testing.M) {
+	expected = (*count) * (*connections)
 	rand.Seed(time.Now().UTC().UnixNano())
-	var err error
-	exampleDir, err = filepath.Abs(".")
-	panicIf(err)
-	binDir, err = ioutil.TempDir("", "example_test.go")
-	panicIf(err)
-	defer os.Remove(binDir) // Clean up binaries
-	testBroker = &broker{}  // Broker is started on-demand by tests.
-	testBroker.stop()
+	testBroker = &broker{} // Broker is started on-demand by tests.
 	status := m.Run()
 	testBroker.stop()
 	os.Exit(status)

@@ -17,32 +17,49 @@
 # under the License.
 #
 
-# FIXME aconway 2015-05-20: install targets for go source.
-
 set(GO_BUILD_FLAGS "" CACHE STRING "Flags for 'go build'")
-set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
+set(GO_TEST_FLAGS "-v -race" CACHE STRING "Flags for 'go test'")
 
 separate_arguments(GO_BUILD_FLAGS)
 separate_arguments(GO_TEST_FLAGS)
-list(APPEND GO_BUILD_FLAGS "-ldflags=-r ${CMAKE_BINARY_DIR}/proton-c")
 
 if (BUILD_GO)
-  # Build in the source tree, go tools aren't friendly otherwise.
-  # All build output goes in git-ignored pkg or bin subdirectories.
-  set(qgo "qpid.apache.org/proton/go")
-  set(packages ${qgo}/amqp ${qgo}/event ${qgo}/messaging)
-
   # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
   set(GO_ENV ${env_py} --
     "GOPATH=${CMAKE_CURRENT_SOURCE_DIR}"
     "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include"
     "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
-    ${GO_EXE} CACHE INTERNAL "Run go with environment set"
-    )
-  set(GO_BUILD ${GO_ENV} build ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go build")
-  set(GO_TEST ${GO_ENV} test ${GO_BUILD_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
+    ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 
-  add_test(NAME go_package_test COMMAND ${GO_TEST} ${packages})
+  # Set rpath so test and example executables will use the proton library from this build.
+  execute_process(COMMAND ${GO_EXE} version OUTPUT_VARIABLE go_out)
+  if (go_out MATCHES "gccgo")
+    set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}/proton-c")
+  else()
+    set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}/proton-c")
+  endif()
+
+  set(GO_BUILD ${GO_ENV} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
+  set(GO_INSTALL ${GO_ENV} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install")
+  set(GO_TEST ${GO_ENV} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
+
+  # Install packages in the source tree, go tools aren't friendly otherwise.
+  # All build output goes in git-ignored pkg or bin subdirectories.
+  set(qgo "qpid.apache.org/proton")
+  set(packages ${qgo} ${qgo}/amqp ${qgo}/concurrent ${qgo}/internal)
+  add_custom_target(go-packages ALL
+    COMMAND ${GO_INSTALL} ${packages}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    DEPENDS qpid-proton)
+
+  add_test(
+    NAME go_test_packages
+    COMMAND ${GO_TEST} ${packages}
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+  list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/pkg
+    ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
   set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/src CACHE PATH "Installation directory for Go code")
   mark_as_advanced (GO_INSTALL_DIR)

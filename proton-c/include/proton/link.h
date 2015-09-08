@@ -216,7 +216,7 @@ PN_EXTERN pn_session_t *pn_link_session(pn_link_t *link);
  * both local and remote flags, then an exact match against those
  * flags is performed. If state contains only local or only remote
  * flags, then a match occurs if any of the local or remote flags are
- * set respectively.
+ * set respectively. state==0 matches all links.
  *
  * @param[in] connection to be searched for matching Links
  * @param[in] state mask to match

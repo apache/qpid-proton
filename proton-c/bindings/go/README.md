@@ -8,7 +8,7 @@ Feedback is strongly encouraged:
 - Email <proton@qpid.apache.org>
 - Create issues <https://issues.apache.org/jira/browse/PROTON>, attach patches to an issue.
 
-The package documentation is available at: <http://godoc.org/qpid.apache.org/proton/go>
+The package documentation is available at: <http://godoc.org/qpid.apache.org/proton>
 
 See the [examples](../../../examples/go/README.md) for working examples and
 practical instructions on how to get started.
@@ -38,40 +38,32 @@ There are two types of developer we want to support
 
 There are 3 go packages for proton:
 
-- qpid.apache.org/proton/go/amqp: converts AMQP messages and data types to and from Go data types.
-- qpid.apache.org/proton/go/messaging: easy-to-use, concurrent API for messaging clients and servers.
-- qpid.apache.org/proton/go/event: full low-level access to the proton engine.
+- qpid.apache.org/proton/amqp: converts AMQP messages and data types to and from Go data types.
+- qpid.apache.org/proton/concurrent: easy-to-use, concurrent API for clients and servers.
+- qpid.apache.org/proton: full low-level access to the proton engine.
 
-Most applications should use the `messaging` package. The `event` package is for
-applications that need low-level access to the proton engine.
+The `amqp` package provides conversions between AMQP and Go data types that are
+used by the other two packages.
 
-The `event` package is fairly complete, with the exception of the proton
-reactor. It's unclear if the reactor is important for go.
+The `concurrent` package provides a simple procedural API that can be used with
+goroutines to construct concurrent AMQP clients and servers.
 
-The `messaging` package can run the examples but probably not much else. There
-is work to do on error handling and the API may change.
+The `proton` package is a concurrency-unsafe, event-driven API. It is a very
+thin wrapper providing almost direct access to the underlying proton C API.
 
-There are working [examples](../../../examples/go/README.md) of a broker using `event` and
-a sender and receiver using `messaging`.
+The `concurrent` package will probably be more familiar and convenient to Go
+programmers for most use cases. The `proton` package may be more familiar if
+you have used proton in other languages.
 
-## The event driven API
+Note the `concurrent` package itself is implemented in terms of the `proton`
+package. It takes care of running concurrency-unsafe `proton` code in dedicated
+goroutines and setting up channels to move data between user and proton
+goroutines safely. It hides all this complexity behind a simple procedural
+interface rather than presenting an event-driven interface.
 
-See the package documentation for details.
+See the [examples](../../../examples/go/README.md) for a better illustration of the APIs.
 
-## The Go API
-
-The goal: A procedural API that allows any user goroutine to send and receive
-AMQP messages and other information (acknowledgments, flow control instructions
-etc.) using channels. There will be no user-visible locks and no need to run
-user code in special goroutines, e.g. as handlers in a proton event loop.
-
-See the package documentation for emerging details.
-
-Currently using a channel to receive messages, a function to send them (channels
-internally) and a channel as a "future" for acknowledgements to senders. This
-may change.
-
-## Why a separate API for Go?
+### Why two APIs?
 
 Go is a concurrent language and encourages applications to be divided into
 concurrent *goroutines*. It provides traditional locking but it encourages the
@@ -80,8 +72,7 @@ use *channels* to communicate between goroutines without explicit locks:
   "Share memory by communicating, don't communicate by sharing memory"
 
 The idea is that a given value is only operated on by one goroutine at a time,
-but values can easily be passed from one goroutine to another. This removes much
-of the need for locking.
+but values can easily be passed from one goroutine to another.
 
 Go literature distinguishes between:
 
@@ -97,8 +88,8 @@ respect to events like file descriptors being readable/writable, channels having
 data, timers firing etc. Go automatically takes care of switching out goroutines
 that block or sleep so it is normal to write code in terms of blocking calls.
 
-Event-driven API (like poll, epoll, select or the proton event API) also
-channel unpredictably ordered events to actions in one or a small pool of
+Event-driven programming (such as poll, epoll, select or the `proton` package)
+also channels unpredictably ordered events to actions in one or a small pool of
 execution threads. However this requires a different style of programming:
 "event-driven" or "reactive" programming. Go developers call it "inside-out"
 programming. In an event-driven architecture blocking is a big problem as it
@@ -121,15 +112,39 @@ preserved across blocking calls. There's no need to store details in context
 objects that you have to look up when handling a later event to figure out how
 to continue where you left off.
 
-So a Go-like proton API does not force the users code to run in an event-loop
-goroutine. Instead user goroutines communicate with the event loop(s) via
-channels.  There's no need to funnel connections into one event loop, in fact it
-makes no sense.  Connections can be processed concurrently so they should be
-processed in separate goroutines and left to Go to schedule. User goroutines can
-have simple loops that block channels till messages are available, the user can
-start as many or as few such goroutines as they wish to implement concurrency as
-simple or as complex as they wish. For example blocking request-response
-vs. asynchronous flows of messages and acknowledgments.
+The `proton` API is important because it is close to the original proton-C
+reactive API and gives you direct access to the underlying library. However it
+is un-Go-like in it's event-driven nature, and it requires care as methods on
+values associated with the same underlying proton engine are not
+concurrent-safe.
+
+The `concurrent` API hides the event-driven details behind a simple blocking API
+that can be safely called from arbitrary goroutines. Under the covers data is
+passed through channels to dedicated goroutines running separate `proton` event
+loops for each connection.
+
+### Design of the concurrent API
+
+The details are still being worked out (see the code) but some basic principles have been
+established.
+
+Code from the `proton` package runs _only_ in a dedicated goroutine (per
+connection). This makes it safe to use proton C data structures associated with
+that connection.
+
+Code in the `concurrent` package can run in any goroutine, and holds `proton`
+package values with proton object pointers.  To use those values, it "injects" a
+function into the proton goroutine via a special channel. Injected functions
+can use temporary channels to allow the calling code to wait for results. Such
+waiting is only for the local event-loop, not across network calls.
+
+The API exposes blocking calls returning normal error values, no exposed
+channels or callbacks. The user can write simple blocking code or start their
+own goroutine loops and channels as appropriate. Details of our internal channel
+use and error handling are hidden, which simplifies the API and gives us more
+implementation flexibility.
+
+TODO: lifecycle rules for proton objects.
 
 ## New to Go?
 
