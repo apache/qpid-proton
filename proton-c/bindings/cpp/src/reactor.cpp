@@ -23,8 +23,8 @@
 
 namespace proton {
 
-PN_UNIQUE_PTR<reactor> reactor::create() {
-    return PN_UNIQUE_PTR<reactor>(reactor::cast(pn_reactor()));
+pn_unique_ptr<reactor> reactor::create() {
+    return pn_unique_ptr<reactor>(reactor::cast(pn_reactor()));
 }
 
 void reactor::run() { pn_reactor_run(pn_cast(this)); }

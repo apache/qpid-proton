@@ -17,24 +17,7 @@
 # under the License.
 #
 
-include(CheckCXXSourceCompiles)
-
-# Check compiler capabilities.
-set(CMAKE_REQUIRED_FLAGS "${CXX_WARNING_FLAGS}")
-check_cxx_source_compiles("long long ll; int main(int, char**) { return 0; }" HAS_LONG_LONG)
-if (HAS_LONG_LONG)
-  add_definitions(-DPN_HAS_LONG_LONG=1)
-endif()
-check_cxx_source_compiles("#include <memory>\nstd::shared_ptr<int> i; std::unique_ptr<int> u; int main(int, char**) { return 0; }" HAS_STD_PTR)
-if (HAS_STD_PTR)
-  add_definitions(-DPN_HAS_STD_PTR=1)
-endif()
-
-# Check for boost
-find_path(BOOST_INCLUDE_DIR boost/shared_ptr.hpp PATH_SUFFIXES include)
-if (BOOST_INCLUDE_DIR)
-  add_definitions(-DPN_HAS_BOOST=1)
-endif()
+include(${CMAKE_SOURCE_DIR}/cpp.cmake) # Compiler checks
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"

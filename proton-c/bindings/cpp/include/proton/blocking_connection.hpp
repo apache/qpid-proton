@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/memory.hpp"
+#include "proton/pn_unique_ptr.hpp"
 #include "proton/export.hpp"
 #include "proton/duration.hpp"
-#include "proton/memory.hpp"
+#include "proton/pn_unique_ptr.hpp"
 
 #include <string>
 
@@ -49,7 +49,7 @@ class blocking_connection
     blocking_connection(const blocking_connection&);
     blocking_connection& operator=(const blocking_connection&);
 
-    PN_UNIQUE_PTR<blocking_connection_impl> impl_;
+    pn_unique_ptr<blocking_connection_impl> impl_;
 
   friend class blocking_link;
   friend class blocking_sender;

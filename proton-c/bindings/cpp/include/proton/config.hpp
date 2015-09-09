@@ -21,11 +21,10 @@
 
 /**@file
  *
- * Configuration macros, can be set via -D compiler options or in code. 
+ * Configuration macros, can be set via -D compiler options or in code.
  *
- * - PN_HAS_BOOST - include support for boost::shared_ptr and boost::intrusive_ptr
- * - PN_HAS_STD_PTR - include support for c++11 std::shared_ptr and std::unique_ptr
- * - PN_HAS_LONG_LONG - include support for the 'long long' type.
+ * On a C++11 compliant compiler, all C++11 features are enabled by default.
+ * Otherwise they can be enabled or disabled separately with -D on the compile line.
  */
 
 #if ((defined(__cplusplus) && __cplusplus >= 201100))
@@ -44,7 +43,17 @@
 #define PN_HAS_STATIC_ASSERT 1
 #endif
 
+#ifndef PN_NOEXCEPT
+#define PN_NOEXCEPT noexcept
 #endif
+
+#else  // C++11
+
+#ifndef PN_NOEXCEPT
+#define PN_NOEXCEPT
+#endif
+
+#endif // C++11
 
 #if defined(BOOST_VERSION)
 

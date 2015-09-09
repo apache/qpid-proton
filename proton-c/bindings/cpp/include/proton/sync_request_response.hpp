@@ -21,11 +21,11 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
-#include "proton/messaging_handler.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_sender.hpp"
-#include "proton/memory.hpp"
+#include "proton/export.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/pn_unique_ptr.hpp"
 
 #include <string>
 
@@ -53,8 +53,8 @@ class sync_request_response
   private:
     blocking_connection &connection_;
     std::string address_;
-    PN_UNIQUE_PTR<blocking_sender> sender_;
-    PN_UNIQUE_PTR<blocking_receiver> receiver_;
+    pn_unique_ptr<blocking_sender> sender_;
+    pn_unique_ptr<blocking_receiver> receiver_;
     amqp_ulong correlation_id_;
 };
 

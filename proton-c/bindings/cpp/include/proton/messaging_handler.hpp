@@ -95,8 +95,8 @@ class messaging_handler : public proton_handler
     bool auto_accept_;
     bool auto_settle_;
     bool peer_close_iserror_;
-    PN_UNIQUE_PTR<messaging_adapter> messaging_adapter_;
-    PN_UNIQUE_PTR<handler> flow_controller_;
+    pn_unique_ptr<messaging_adapter> messaging_adapter_;
+    pn_unique_ptr<handler> flow_controller_;
     PN_CPP_EXTERN messaging_handler(
         bool raw_handler, int prefetch=10, bool auto_accept=true,
         bool auto_settle=true, bool peer_close_is_error=false);

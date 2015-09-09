@@ -21,10 +21,10 @@
  * under the License.
  *
  */
-#include "proton/export.hpp"
 #include "proton/data.hpp"
+#include "proton/export.hpp"
 #include "proton/facade.hpp"
-#include "proton/memory.hpp"
+#include "proton/pn_unique_ptr.hpp"
 
 #include <string>
 
@@ -39,7 +39,7 @@ class delivery;
 class message : public facade<pn_message_t, message>
 {
   public:
-    PN_CPP_EXTERN static PN_UNIQUE_PTR<message> create();
+    PN_CPP_EXTERN static pn_unique_ptr<message> create();
 
     /// Copy data from m to this.
     PN_CPP_EXTERN message& operator=(const message& m);
@@ -217,7 +217,7 @@ class message_value {
     void swap(message_value& x);
 
   private:
-    PN_UNIQUE_PTR<class message> message_;
+    pn_unique_ptr<class message> message_;
 };
 
 }

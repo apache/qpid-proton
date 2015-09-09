@@ -17,6 +17,8 @@
 # under the License.
 #
 
+include(${CMAKE_SOURCE_DIR}/cpp.cmake) # Compiler checks
+
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
   "${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")

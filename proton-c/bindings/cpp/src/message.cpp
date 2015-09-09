@@ -37,7 +37,7 @@ namespace proton {
 
 void message::operator delete(void *p) { ::pn_message_free(reinterpret_cast<pn_message_t*>(p)); }
 
-PN_UNIQUE_PTR<message> message::create() { return PN_UNIQUE_PTR<message>(cast(::pn_message())); }
+pn_unique_ptr<message> message::create() { return pn_unique_ptr<message>(cast(::pn_message())); }
 
 message& message::operator=(const message& m) {
     // TODO aconway 2015-08-10: need more efficient pn_message_copy function

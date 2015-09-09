@@ -133,7 +133,7 @@ connection& container_impl::connect(const proton::url &url, handler *h) {
     counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
     connection& conn(           // Reactor owns the reference.
         *connection::cast(pn_reactor_connection(pn_cast(reactor_.get()), chandler.get())));
-    PN_UNIQUE_PTR<connector> ctor(new connector(conn));
+    pn_unique_ptr<connector> ctor(new connector(conn));
     ctor->address(url);  // TODO: url vector
     connection_context& cc(connection_context::get(pn_cast(&conn)));
     cc.container_impl = this;

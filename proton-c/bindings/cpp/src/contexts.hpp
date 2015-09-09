@@ -23,8 +23,8 @@
  */
 
 #include "proton/counted.hpp"
+#include "proton/pn_unique_ptr.hpp"
 #include "proton/reactor.h"
-#include "proton/memory.hpp"
 #include "proton/session.hpp"
 
 #include <proton/message.h>
@@ -44,7 +44,7 @@ struct connection_context : public counted {
     connection_context();
     ~connection_context();
 
-    PN_UNIQUE_PTR<class handler> handler;
+    pn_unique_ptr<class handler> handler;
     session* default_session;   // Owned by connection
     class container_impl* container_impl;
 };

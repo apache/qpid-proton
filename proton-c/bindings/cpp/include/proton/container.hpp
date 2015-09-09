@@ -23,9 +23,9 @@
  */
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
+#include "proton/pn_unique_ptr.hpp"
 #include "proton/reactor.hpp"
 #include "proton/url.hpp"
-#include "proton/memory.hpp"
 
 #include <string>
 
@@ -82,7 +82,7 @@ class container
     PN_CPP_EXTERN class reactor& reactor();
 
   private:
-    PN_UNIQUE_PTR<container_impl> impl_;
+    pn_unique_ptr<container_impl> impl_;
 };
 
 }

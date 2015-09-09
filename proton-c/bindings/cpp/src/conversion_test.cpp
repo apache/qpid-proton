@@ -51,24 +51,40 @@ void test_auto() {
     std::auto_ptr<session> p(s.ptr().release());
 }
 
+void test_pn_unique() {
+    std::auto_ptr<message> a(message::create().release());
+    a->clear();
+#if PN_HAS_STD_PTR
+    std::unique_ptr<message> u = message::create();
+    u->clear();
+#endif
+}
+
 int main(int argc, char** argv) {
     int failed = 0;
     failed += run_test(&test_counted<counted_ptr<connection>,
                        counted_ptr<session> >, "counted");
 
-    
-
 #if PN_HAS_STD_PTR
-    failed += run_test(&test_owning<std::shared_ptr<connection>,
-                       std::shared_ptr<session> >, "std::shared");
-    failed += run_test(&test_owning<std::unique_ptr<connection>,
-                       std::unique_ptr<session> >, "std::unique");
+    failed += run_test(&test_owning<
+                       std::shared_ptr<connection>,
+                       std::shared_ptr<session> >,
+                       "std::shared");
+    failed += run_test(&test_owning<
+                       std::unique_ptr<connection>,
+                       std::unique_ptr<session> >,
+                       "std::unique");
 #endif
 #if PN_HAS_BOOST
-    failed += run_test(&test_owning<boost::shared_ptr<connection>,
-                       boost::shared_ptr<session> >, "boost::shared");
-    failed += run_test(&test_counted<boost::intrusive_ptr<connection>,
-                       boost::intrusive_ptr<session> >, "boost::intrusive");
+    failed += run_test(&test_owning<
+                       boost::shared_ptr<connection>,
+                       boost::shared_ptr<session> >,
+                       "boost::shared");
+    failed += run_test(&test_counted<
+                       boost::intrusive_ptr<connection>,
+                       boost::intrusive_ptr<session> >,
+                       "boost::intrusive");
 #endif
+    failed += run_test(&test_pn_unique, "pn_unique_ptr");
     return failed;
 }

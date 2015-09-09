@@ -21,11 +21,11 @@
  * under the License.
  *
  */
-#include "proton/memory.hpp"
-#include "proton/export.hpp"
-#include "proton/delivery.hpp"
-#include "proton/message.hpp"
 #include "proton/blocking_link.hpp"
+#include "proton/delivery.hpp"
+#include "proton/export.hpp"
+#include "proton/message.hpp"
+#include "proton/pn_unique_ptr.hpp"
 
 #include <string>
 
@@ -54,7 +54,7 @@ class blocking_receiver : public blocking_link
 
     PN_CPP_EXTERN class receiver& receiver();
   private:
-    PN_UNIQUE_PTR<blocking_fetcher> fetcher_;
+    pn_unique_ptr<blocking_fetcher> fetcher_;
 };
 
 }

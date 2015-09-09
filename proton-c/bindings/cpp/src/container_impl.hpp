@@ -60,11 +60,11 @@ class container_impl
   private:
 
     container& container_;
-    PN_UNIQUE_PTR<reactor> reactor_;
+    pn_unique_ptr<reactor> reactor_;
     handler *handler_;
-    PN_UNIQUE_PTR<messaging_adapter> messaging_adapter_;
-    PN_UNIQUE_PTR<handler> override_handler_;
-    PN_UNIQUE_PTR<handler> flow_controller_;
+    pn_unique_ptr<messaging_adapter> messaging_adapter_;
+    pn_unique_ptr<handler> override_handler_;
+    pn_unique_ptr<handler> flow_controller_;
     std::string container_id_;
     uint64_t link_id_;
     std::string prefix_;
