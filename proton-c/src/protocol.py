@@ -26,11 +26,15 @@ sdoc = mllib.xml_parse(os.path.join(os.path.dirname(__file__), "security.xml"))
 def eq(attr, value):
   return lambda nd: nd[attr] == value
 
-TYPES = doc.query["amqp/section/type", eq("@class", "composite")] + \
+TYPEStmp = doc.query["amqp/section/type", eq("@class", "composite")] + \
     mdoc.query["amqp/section/type", eq("@class", "composite")] + \
     tdoc.query["amqp/section/type", eq("@class", "composite")] + \
     sdoc.query["amqp/section/type", eq("@class", "composite")] + \
     mdoc.query["amqp/section/type", eq("@provides", "section")]
+TYPES = []
+for ty in TYPEStmp:
+  if not ty in TYPES:
+    TYPES.append(ty)
 RESTRICTIONS = {}
 COMPOSITES = {}
 
