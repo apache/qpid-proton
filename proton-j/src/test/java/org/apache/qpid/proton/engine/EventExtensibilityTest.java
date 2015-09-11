@@ -225,6 +225,16 @@ public class EventExtensibilityTest extends TestCase {
             return impl.getLink();
         }
 
+        @Override
+        public Sender getSender() {
+            return impl.getSender();
+        }
+
+        @Override
+        public Receiver getReceiver() {
+            return impl.getReceiver();
+        }
+
         public Delivery getDelivery() {
             return impl.getDelivery();
         }

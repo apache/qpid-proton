@@ -29,7 +29,9 @@ import org.apache.qpid.proton.engine.EventType;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.HandlerException;
 import org.apache.qpid.proton.engine.Link;
+import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Record;
+import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.reactor.Reactor;
@@ -181,6 +183,34 @@ class EventImpl implements Event
                 return null;
             }
             return dlv.getLink();
+        }
+    }
+
+    @Override
+    public Sender getSender()
+    {
+        if (context instanceof Sender) {
+            return (Sender) context;
+        } else {
+            Link link = getLink();
+            if (link instanceof Sender) {
+                return (Sender) link;
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public Receiver getReceiver()
+    {
+        if (context instanceof Receiver) {
+            return (Receiver) context;
+        } else {
+            Link link = getLink();
+            if (link instanceof Receiver) {
+                return (Receiver) link;
+            }
+            return null;
         }
     }
 

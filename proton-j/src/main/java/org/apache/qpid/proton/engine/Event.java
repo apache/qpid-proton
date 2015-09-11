@@ -146,6 +146,10 @@ public interface Event extends Extendable
 
     Link getLink();
 
+    Sender getSender();
+
+    Receiver getReceiver();
+
     Delivery getDelivery();
 
     Transport getTransport();
