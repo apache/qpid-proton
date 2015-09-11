@@ -71,11 +71,13 @@ public interface Reactor {
     Record attachments();
 
     /**
-     * @param timeout a timeout value, to associate with this instance of
+     * ??PURPOSE??
+     * 
+     * @param timeout a timeout value ??UNITS??, to associate with this instance of
      *        the reactor.  This can be retrieved using the
-     *        {@link #getTimeout()} method.
+     *        {@link #getTimeout()} method
      */
-    void setTimeout(long timeout);
+    void setTimeout(long timeout); 
 
     /**
      * @return the value previously set using {@link #setTimeout(long)} or
