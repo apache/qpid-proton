@@ -97,7 +97,7 @@ class SendHandler:
 
 class ReactorInteropTest(Test):
 
-  def setup(self):
+  def setUp(self):
     classpath = ""
     if ('CLASSPATH' in os.environ):
       classpath = os.environ['CLASSPATH']

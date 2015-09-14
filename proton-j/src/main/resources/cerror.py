@@ -45,5 +45,4 @@ def pn_error_code(err):
 def pn_error_text(err):
   return err.text
 
-class Skipped(Exception):
-  skipped = True
+from unittest import SkipTest as Skipped

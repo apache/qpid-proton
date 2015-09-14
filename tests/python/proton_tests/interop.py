@@ -36,11 +36,11 @@ test_interop_dir=find_test_interop_dir()
 
 class InteropTest(common.Test):
 
-    def setup(self):
+    def setUp(self):
         self.data = Data()
         self.message = Message()
 
-    def teardown(self):
+    def tearDown(self):
         self.data = None
 
     def get_data(self, name):

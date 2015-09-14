@@ -28,10 +28,10 @@ except ImportError:
 
 class Test(common.Test):
 
-  def setup(self):
+  def setUp(self):
     self.data = Data()
 
-  def teardown(self):
+  def tearDown(self):
     self.data = None
 
 class DataTest(Test):

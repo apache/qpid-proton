@@ -28,10 +28,10 @@ except ImportError:
 
 class Test(common.Test):
 
-  def setup(self):
+  def setUp(self):
     self.msg = Message()
 
-  def teardown(self):
+  def tearDown(self):
     self.msg = None
 
 

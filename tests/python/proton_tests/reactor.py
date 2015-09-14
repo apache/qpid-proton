@@ -50,7 +50,7 @@ class BarfOnFinal:
 
 class ExceptionTest(Test):
 
-    def setup(self):
+    def setUp(self):
         self.reactor = Reactor()
 
     def test_reactor_final(self):

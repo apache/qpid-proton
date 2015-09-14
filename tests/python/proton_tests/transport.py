@@ -29,13 +29,13 @@ class Test(common.Test):
 
 class ClientTransportTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.transport = Transport()
     self.peer = Transport()
     self.conn = Connection()
     self.peer.bind(self.conn)
 
-  def teardown(self):
+  def tearDown(self):
     self.transport = None
     self.peer = None
     self.conn = None
@@ -193,13 +193,13 @@ class ClientTransportTest(Test):
 
 class ServerTransportTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.transport = Transport(Transport.SERVER)
     self.peer = Transport()
     self.conn = Connection()
     self.peer.bind(self.conn)
 
-  def teardown(self):
+  def tearDOwn(self):
     self.transport = None
     self.peer = None
     self.conn = None

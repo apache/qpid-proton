@@ -25,6 +25,11 @@ from fnmatch import fnmatchcase as match
 from getopt import GetoptError
 from logging import getLogger, StreamHandler, Formatter, Filter, \
     WARN, DEBUG, ERROR
+import unittest
+try:
+  from unittest import SkipTest
+except:
+  from unittest2 import SkipTest
 
 if sys.version_info[0] == 3:
     CLASS_TYPES = (type,)
@@ -347,7 +352,7 @@ class Runner:
     return self.exception or self.skip
 
   def run(self, phase_name, phase):
-    """invokes a test-phase method (which can be the test method itself or a setup/teardown
+    """invokes a test-phase method (which can be the test method itself or a setUp/tearDown
        method).  If the method raises an exception the exception is examined to see if the
        exception should be classified as a 'skipped' test"""
     # we don't try to catch exceptions for jython because currently a
@@ -364,7 +369,7 @@ class Runner:
         self.exception_phase_name = phase_name
         self.exception = sys.exc_info()
         exception_type = self.exception[0]
-        self.skip = getattr(exception_type, "skipped", False)
+        self.skip = getattr(exception_type, "skipped", False) or issubclass(exception_type, SkipTest)
 
   def status(self):
     if self.passed():
@@ -517,14 +522,9 @@ class MethodTest:
     if hasattr(inst, "setUp"):
       runner.run("setup", inst.setUp)
       if runner.halt(): return runner
-    if hasattr(inst, "setup"):
-      runner.run("setup", inst.setup)
-      if runner.halt(): return runner
 
     runner.run("test", test)
 
-    if hasattr(inst, "teardown"):
-      runner.run("teardown", inst.teardown)
     if hasattr(inst, "tearDown"):
       runner.run("teardown", inst.tearDown)
 

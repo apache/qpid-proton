@@ -76,11 +76,11 @@ class AppTests(Test):
     def valgrind_test(self):
         self.is_valgrind = True
 
-    def setup(self):
+    def setUp(self):
         self.senders = []
         self.receivers = []
 
-    def teardown(self):
+    def tearDown(self):
         pass
 
     def _do_test(self, iterations=1):

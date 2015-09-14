@@ -75,7 +75,7 @@ class Test(common.Test):
 
 class SaslTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)
@@ -291,7 +291,7 @@ class SaslTest(Test):
     assert self.s2.outcome != SASL.OK
 
 class SASLMechTest(Test):
-  def setup(self):
+  def setUp(self):
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)
@@ -366,7 +366,7 @@ def _sslConnection(domain, transport, connection):
   return connection
 
 class SSLSASLTest(Test):
-  def setup(self):
+  def setUp(self):
     if not common.isSSLPresent():
       raise Skipped("No SSL libraries found.")
 
@@ -464,8 +464,8 @@ class SSLSASLTest(Test):
     _testSaslMech(self, mech, clientUser=None, authUser=None, encrypted=None, authenticated=False)
 
 class SASLEventTest(engine.CollectorTest):
-  def setup(self):
-    engine.CollectorTest.setup(self)
+  def setUp(self):
+    engine.CollectorTest.setUp(self)
     self.t1 = Transport()
     self.s1 = SASL(self.t1)
     self.t2 = Transport(Transport.SERVER)

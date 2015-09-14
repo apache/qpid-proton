@@ -27,14 +27,14 @@ from .common import Skipped
 
 class Test(common.Test):
 
-  def setup(self):
+  def setUp(self):
     self.server_credit = 10
     self.server_received = 0
     self.server_finite_credit = False
     self.server = Messenger("server")
     self.server.timeout = self.timeout
     self.server.start()
-    self.server.subscribe("amqp://~0.0.0.0:12345")
+    self.server.subscribe("amqp://~127.0.0.1:12345")
     self.server_thread = Thread(name="server-thread", target=self.run_server)
     self.server_thread.daemon = True
     self.server_is_running_event = Event()
@@ -55,7 +55,7 @@ class Test(common.Test):
     self.client.stop()
     self.client = None
 
-  def teardown(self):
+  def tearDown(self):
     try:
       if self.running:
         if not self.server_thread_started: self.start()
@@ -446,7 +446,7 @@ class MessengerTest(Test):
     except Timeout:
       assert False, "Timeout waiting for client stop()"
 
-    # need to restart client, as teardown() uses it to stop server
+    # need to restart client, as tearDown() uses it to stop server
     self.client.start()
 
   def testRoute(self):
@@ -696,7 +696,7 @@ class MessengerTest(Test):
 
 class NBMessengerTest(common.Test):
 
-  def setup(self):
+  def setUp(self):
     self.client = Messenger("client")
     self.client2 = Messenger("client2")
     self.server = Messenger("server")
@@ -721,7 +721,7 @@ class NBMessengerTest(common.Test):
     self._pump(timeout, False)
     while self._pump(0, True): pass
 
-  def teardown(self):
+  def tearDown(self):
     self.server.stop()
     self.client.stop()
     self.client2.stop()

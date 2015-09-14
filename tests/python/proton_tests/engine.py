@@ -113,7 +113,7 @@ class Test(common.Test):
 
 class ConnectionTest(Test):
 
-  def setup(self):
+  def setUp(self):
     gc.enable()
     self.c1, self.c2 = self.connection()
 
@@ -123,7 +123,7 @@ class ConnectionTest(Test):
     self.c1 = None
     self.c2 = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
     gc.collect()
     assert not gc.garbage
@@ -328,7 +328,7 @@ class ConnectionTest(Test):
 
 class SessionTest(Test):
 
-  def setup(self):
+  def setUp(self):
     gc.enable()
     self.c1, self.c2 = self.connection()
     self.ssn = self.c1.session()
@@ -342,7 +342,7 @@ class SessionTest(Test):
     self.c2 = None
     self.ssn = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
     gc.collect()
     assert not gc.garbage
@@ -515,7 +515,7 @@ class SessionTest(Test):
 
 class LinkTest(Test):
 
-  def setup(self):
+  def setUp(self):
     gc.enable()
     self.snd, self.rcv = self.link("test-link")
 
@@ -525,7 +525,7 @@ class LinkTest(Test):
     self.snd = None
     self.rcv = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
     gc.collect()
     assert not gc.garbage, gc.garbage
@@ -799,7 +799,7 @@ class TerminusConfig:
 
 class TransferTest(Test):
 
-  def setup(self):
+  def setUp(self):
     gc.enable()
     self.snd, self.rcv = self.link("test-link")
     self.c1 = self.snd.session.connection
@@ -816,7 +816,7 @@ class TransferTest(Test):
     self.snd = None
     self.rcv = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
     gc.collect()
     assert not gc.garbage
@@ -1005,7 +1005,7 @@ class TransferTest(Test):
 
 class MaxFrameTransferTest(Test):
 
-  def setup(self):
+  def setUp(self):
     pass
 
   def cleanup(self):
@@ -1016,7 +1016,7 @@ class MaxFrameTransferTest(Test):
     self.snd = None
     self.rcv = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def message(self, size):
@@ -1130,7 +1130,7 @@ class MaxFrameTransferTest(Test):
 
 class IdleTimeoutTest(Test):
 
-  def setup(self):
+  def setUp(self):
     pass
 
   def cleanup(self):
@@ -1141,7 +1141,7 @@ class IdleTimeoutTest(Test):
     self.c1 = None
     self.c2 = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def message(self, size):
@@ -1232,7 +1232,7 @@ class IdleTimeoutTest(Test):
 
 class CreditTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.snd, self.rcv = self.link("test-link", max_frame=(16*1024, 16*1024))
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
@@ -1249,7 +1249,7 @@ class CreditTest(Test):
     self.rcv2 = None
     self.snd2 = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def testCreditSender(self, count=1024):
@@ -1642,7 +1642,7 @@ class CreditTest(Test):
 
 class SessionCreditTest(Test):
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def testBuffering(self, count=32, size=1024, capacity=16*1024, max_frame=1024):
@@ -1756,7 +1756,7 @@ class SessionCreditTest(Test):
 
 class SettlementTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.snd, self.rcv = self.link("test-link")
     self.c1 = self.snd.session.connection
     self.c2 = self.rcv.session.connection
@@ -1773,7 +1773,7 @@ class SettlementTest(Test):
     self.rcv2 = None
     self.snd2 = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def testSettleCurrent(self):
@@ -1881,7 +1881,7 @@ class SettlementTest(Test):
 
 class PipelineTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.c1, self.c2 = self.connection()
 
   def cleanup(self):
@@ -1890,7 +1890,7 @@ class PipelineTest(Test):
     self.c1 = None
     self.c2 = None
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def test(self):
@@ -2116,7 +2116,7 @@ class CustomValue:
 
 class DeliveryTest(Test):
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def testDisposition(self, count=1, tag="tag%i", type=Delivery.ACCEPTED, value=NoValue()):
@@ -2188,7 +2188,7 @@ class DeliveryTest(Test):
 
 class CollectorTest(Test):
 
-  def setup(self):
+  def setUp(self):
     self.collector = Collector()
 
   def drain(self):
@@ -2227,7 +2227,7 @@ class CollectorTest(Test):
 
 class EventTest(CollectorTest):
 
-  def teardown(self):
+  def tearDown(self):
     self.cleanup()
 
   def testEndpointEvents(self):
@@ -2441,8 +2441,8 @@ class EventTest(CollectorTest):
 
 class PeerTest(CollectorTest):
 
-  def setup(self):
-    CollectorTest.setup(self)
+  def setUp(self):
+    CollectorTest.setUp(self)
     self.connection = Connection()
     self.connection.collect(self.collector)
     self.transport = Transport()

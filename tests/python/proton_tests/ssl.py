@@ -40,13 +40,13 @@ class SslTest(common.Test):
         common.Test.__init__(self, *args)
         self._testpath = _testpath
 
-    def setup(self):
+    def setUp(self):
         if not common.isSSLPresent():
             raise Skipped("No SSL libraries found.")
         self.server_domain = SSLDomain(SSLDomain.MODE_SERVER)
         self.client_domain = SSLDomain(SSLDomain.MODE_CLIENT)
 
-    def teardown(self):
+    def tearDown(self):
         self.server_domain = None
         self.client_domain = None
 
@@ -560,10 +560,10 @@ class SslTest(common.Test):
         self._do_handshake( client, server )
         del server
         del client
-        self.teardown()
+        self.tearDown()
 
         # Should fail on CN name mismatch:
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
@@ -581,7 +581,7 @@ class SslTest(common.Test):
         assert server.connection.state & Endpoint.REMOTE_UNINIT
         del server
         del client
-        self.teardown()
+        self.tearDown()
 
         # Wildcarded Certificate
         # Assumes:
@@ -591,7 +591,7 @@ class SslTest(common.Test):
         #
 
         # Pass: match an alternate
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                            self._testpath("server-wc-private-key.pem"),
                                            "server-password")
@@ -605,10 +605,10 @@ class SslTest(common.Test):
         self._do_handshake( client, server )
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
         # Pass: match an alternate
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -622,10 +622,10 @@ class SslTest(common.Test):
         self._do_handshake(client, server)
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
         # Pass: match the pattern
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -639,10 +639,10 @@ class SslTest(common.Test):
         self._do_handshake( client, server )
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
         # Pass: match the pattern
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -656,10 +656,10 @@ class SslTest(common.Test):
         self._do_handshake( client, server )
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
         # Fail: must match prefix on wildcard
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -677,10 +677,10 @@ class SslTest(common.Test):
         assert server.connection.state & Endpoint.REMOTE_UNINIT
         del server
         del client
-        self.teardown()
+        self.tearDown()
 
         # Fail: leading wildcards are not optional
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -696,11 +696,11 @@ class SslTest(common.Test):
         assert server.transport.closed
         assert client.connection.state & Endpoint.REMOTE_UNINIT
         assert server.connection.state & Endpoint.REMOTE_UNINIT
-        self.teardown()
+        self.tearDown()
 
         # Pass: ensure that the user can give an alternate name that overrides
         # the connection's configured hostname
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-wc-certificate.pem"),
                                     self._testpath("server-wc-private-key.pem"),
                                     "server-password")
@@ -714,11 +714,11 @@ class SslTest(common.Test):
         self._do_handshake(client, server)
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
         # Pass: ensure that the hostname supplied by the connection is used if
         # none has been specified for the SSL instanace
-        self.setup()
+        self.setUp()
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                     self._testpath("server-private-key.pem"),
                                     "server-password")
@@ -731,7 +731,7 @@ class SslTest(common.Test):
         self._do_handshake(client, server)
         del client
         del server
-        self.teardown()
+        self.tearDown()
 
     def test_defaults_messenger_app(self):
         """ Test an SSL connection using the Messenger apps (no certificates)
@@ -839,7 +839,7 @@ class SslTest(common.Test):
 
 class MessengerSSLTests(common.Test):
 
-    def setup(self):
+    def setUp(self):
         if not common.isSSLPresent():
             raise Skipped("No SSL libraries found.")
         self.server = Messenger()
@@ -847,7 +847,7 @@ class MessengerSSLTests(common.Test):
         self.server.blocking = False
         self.client.blocking = False
 
-    def teardown(self):
+    def tearDown(self):
         self.server.stop()
         self.client.stop()
         self.pump()
