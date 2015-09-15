@@ -47,6 +47,7 @@ typedef struct {
     //Addresses_t subscriptions;
     //Addresses_t reply_tos;
     int   get_replies;
+    int   unique_message;  // 1 -> create and free a pn_message_t for each send/recv
     int   timeout;      // in seconds
     int   incoming_window;
     int   recv_count;
@@ -84,6 +85,7 @@ typedef struct {
   pn_url_t *send_url;
   pn_string_t *hostname;
   pn_string_t *container_id;
+  pn_string_t *reply_to;
 } sender_context_t;
 
 void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *stats)
@@ -93,7 +95,6 @@ void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *st
   sc->sent = 0;
   sc->received = 0;
   sc->id.type = PN_ULONG;
-  sc->reply_message = 0;
   // 4096 extra bytes should easily cover the message metadata
   sc->encoded_data_size = sc->opts->msg_size + 4096;
   sc->encoded_data = (char *)calloc(1, sc->encoded_data_size);
@@ -103,10 +104,9 @@ void sender_context_init(sender_context_t *sc, Options_t *opts, Statistics_t *st
   sc->reply_message = (sc->opts->get_replies) ? pn_message() : 0;
   sc->message = pn_message();
   check(sc->message, "failed to allocate a message");
-  pn_string_t *rpto = pn_string("amqp://");
-  pn_string_addf(rpto, "%s", pn_string_get(sc->container_id));
-  pn_message_set_reply_to(sc->message, pn_string_get(rpto));
-  pn_free(rpto);
+  sc->reply_to = pn_string("amqp://");
+  pn_string_addf(sc->reply_to, "%s", pn_string_get(sc->container_id));
+  pn_message_set_reply_to(sc->message, pn_string_get(sc->reply_to));
   pn_data_t *body = pn_message_body(sc->message);
   // borrow the encoding buffer this one time
   char *data = sc->encoded_data;
@@ -134,10 +134,33 @@ void sender_cleanup(pn_handler_t *h)
   pn_url_free(sc->send_url);
   pn_free(sc->hostname);
   pn_free(sc->container_id);
+  pn_free(sc->reply_to);
   free(sc->encoded_data);
 }
 
 pn_handler_t *replyto_handler(sender_context_t *sc);
+
+pn_message_t* get_message(sender_context_t *sc, bool sending) {
+  if (sc->opts->unique_message) {
+    pn_message_t *m = pn_message();
+    check(m, "failed to allocate a message");
+    if (sending) {
+      pn_message_set_reply_to(m, pn_string_get(sc->reply_to));
+      // copy the data
+      pn_data_t *body = pn_message_body(m);
+      pn_data_t *template_body = pn_message_body(sc->message);
+      pn_data_put_binary(body, pn_data_get_binary(template_body));
+    }
+    return m;
+  }
+  else
+    return sending ? sc->message : sc->reply_message;  // our simplified "message pool"
+}
+
+void return_message(sender_context_t *sc, pn_message_t *m) {
+  if (sc->opts->unique_message)
+    pn_message_free(m);
+}
 
 void sender_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
 {
@@ -174,7 +197,7 @@ void sender_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
         pn_delivery_t *dlv = pn_delivery(snd, pn_dtag(tag, 8));
 
         // setup the message to send
-        pn_message_t *msg = sc->message;
+        pn_message_t *msg = get_message(sc, true);;
         pn_message_set_address(msg, sc->opts->targets.addresses[0]);
         sc->id.u.as_ulong = sc->sent;
         pn_message_set_correlation_id(msg, sc->id);
@@ -186,6 +209,7 @@ void sender_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
         pn_link_send(snd, sc->encoded_data, size);
         pn_delivery_settle(dlv);
         sc->sent++;
+        return_message(sc, msg);
       }
       if (sc->sent == sc->opts->msg_count && !sc->opts->get_replies) {
         pn_link_close(snd);
@@ -254,12 +278,13 @@ void replyto_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type) 
         check(encoded_size <= sc->encoded_data_size, "decoding buffer too small");
         ssize_t n = pn_link_recv(recv_link, sc->encoded_data, encoded_size);
         check(n == (ssize_t)encoded_size, "read fail on reply link");
-        pn_message_t *msg = sc->reply_message;
+        pn_message_t *msg = get_message(sc, false);
         int err = pn_message_decode(msg, sc->encoded_data, n);
         check(err == 0, "message decode error");
         statistics_msg_received(sc->stats, msg);
         sc->received++;
         pn_delivery_settle(dlv);
+        return_message(sc, msg);
       }
       if (sc->received == sc->opts->msg_count) {
         pn_link_close(recv_link);
@@ -291,10 +316,11 @@ static void parse_options( int argc, char **argv, Options_t *opts )
     opts->send_batch = 1024;
     opts->timeout = -1;
     opts->recv_count = -1;
+    opts->unique_message = 0;
     addresses_init(&opts->targets);
 
     while ((c = getopt(argc, argv,
-                       "a:c:b:p:w:e:l:Rt:W:B:VN:T:C:K:P:")) != -1) {
+                       "ua:c:b:p:w:e:l:Rt:W:B:VN:T:C:K:P:")) != -1) {
         switch(c) {
         case 'a':
           {
@@ -334,6 +360,7 @@ static void parse_options( int argc, char **argv, Options_t *opts )
             }
             break;
         case 'R': opts->get_replies = 1; break;
+        case 'u': opts->unique_message = 1; break;
         case 't':
             if (sscanf( optarg, "%d", &opts->timeout ) != 1) {
                 fprintf(stderr, "Option -%c requires an integer argument.\n", optopt);

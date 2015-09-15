@@ -30,8 +30,6 @@ def cmdline(*args):
     args = list(args)
     if platform.system() == "Windows":
         args[0] += ".exe"
-    else:
-        args[0] = "./" + args[0]
     if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
         args = [os.environ["VALGRIND"], "-q"] + args
     return args
@@ -56,7 +54,8 @@ vvvvvvvvvvvvvvvv
 """ % (p.args, p.returncode, out))
     if platform.system() == "Windows":
         # Just \n please
-        out = out.translate(None, '\r')
+        if out:
+            out = out.translate(None, '\r')
     return out
 
 def execute(*args):

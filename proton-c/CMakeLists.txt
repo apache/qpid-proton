@@ -528,6 +528,12 @@ if (BUILD_PYTHON)
      endif (TOX_EXE)
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
+  set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
+  to_native_path ("${perf_pythonpath}" perf_pythonpath)
+  add_custom_target(quick_perf_c ${env_py} -- "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
+                           ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "C")
+  add_dependencies(quick_perf_c reactor-send reactor-recv)
+
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")

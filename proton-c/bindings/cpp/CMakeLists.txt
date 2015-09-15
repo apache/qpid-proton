@@ -132,3 +132,4 @@ file(GLOB headers "include/proton/cpp/*.h")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton/cpp)
 
 add_subdirectory(docs)
+add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)
