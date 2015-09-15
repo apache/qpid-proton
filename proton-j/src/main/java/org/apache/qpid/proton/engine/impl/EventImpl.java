@@ -100,6 +100,8 @@ class EventImpl implements Event
             delegated = handler;
             try {
                 handler.handle(this);
+            } catch(HandlerException handlerException) {
+                throw handlerException;
             } catch(RuntimeException runtimeException) {
                 throw new HandlerException(handler, runtimeException);
             }
