@@ -534,6 +534,12 @@ if (BUILD_PYTHON)
                            ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "C")
   add_dependencies(quick_perf_c reactor-send reactor-recv)
 
+  add_custom_target(quick_perf_py COMMAND ${env_py} --
+                    "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
+                    ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "PYTHON"
+                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/tools/apps/python")
+  add_dependencies(quick_perf_py reactor-recv _cproton)
+
 endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
