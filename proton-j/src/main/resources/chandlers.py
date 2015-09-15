@@ -43,5 +43,13 @@ class pn_pyhandler(BaseHandler):
         ev = pn_event(event)
         try:
             self.pyobj.dispatch(ev, pn_event_type(ev))
+        except HandlerException:
+            ex = sys.exc_info();
+            cause = ex[1].cause
+            if hasattr(cause, "value"):
+                cause = cause.value
+            t = type(cause)
+            self.pyobj.exception(t, cause, ex[2])
         except:
-            self.pyobj.exception(*sys.exc_info())
+            ex = sys.exc_info()
+            self.pyobj.exception(*ex)
