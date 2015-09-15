@@ -328,6 +328,42 @@ set (qpid-proton-core
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
 
+set (qpid-proton-include
+  include/proton/cid.h
+  include/proton/codec.h
+  include/proton/condition.h
+  include/proton/connection.h
+  include/proton/container.h
+  include/proton/delivery.h
+  include/proton/disposition.h
+  include/proton/engine.h
+  include/proton/error.h
+  include/proton/event.h
+  include/proton/handlers.h
+  include/proton/import_export.h
+  include/proton/io.h
+  include/proton/link.h
+  include/proton/log.h
+  include/proton/message.h
+  include/proton/messenger.h
+  include/proton/object.h
+  include/proton/parser.h
+  include/proton/reactor.h
+  include/proton/sasl.h
+  include/proton/scanner.h
+  include/proton/selectable.h
+  include/proton/selector.h
+  include/proton/session.h
+  include/proton/ssl.h
+  include/proton/terminus.h
+  include/proton/transport.h
+  include/proton/type_compat.h
+  include/proton/types.h
+  include/proton/url.h
+)
+
+source_group("API Header Files" FILES ${qpid-proton-include})
+
 set_source_files_properties (
   ${qpid-proton-core}
   PROPERTIES
@@ -346,6 +382,7 @@ add_library (
 
   ${qpid-proton-core}
   ${qpid-proton-platform}
+  ${qpid-proton-include}
   )
 
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
