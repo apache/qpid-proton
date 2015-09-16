@@ -71,9 +71,11 @@ public interface Reactor {
     Record attachments();
 
     /**
-     * @param timeout a timeout value, to associate with this instance of
+     * The value the reactor will use for {@link Selector#select(long)} that is called as part of {@link #process()}.
+     *
+     * @param timeout a timeout value in milliseconds, to associate with this instance of
      *        the reactor.  This can be retrieved using the
-     *        {@link #getTimeout()} method.
+     *        {@link #getTimeout()} method
      */
     void setTimeout(long timeout);
 

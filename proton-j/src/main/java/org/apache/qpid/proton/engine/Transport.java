@@ -224,8 +224,20 @@ public interface Transport extends Endpoint
 
     ErrorCondition getCondition();
 
+    /**
+     *
+     * @param local idle timeout in milliseconds
+     */
     void setIdleTimeout(int timeout);
+    /**
+     *
+     * @return local idle timeout in milliseconds
+     */
     int getIdleTimeout();
+    /**
+     *
+     * @return remote idle timeout in milliseconds
+     */
     int getRemoteIdleTimeout();
 
     long tick(long now);
