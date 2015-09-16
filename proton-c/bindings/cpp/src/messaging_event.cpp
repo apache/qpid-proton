@@ -33,14 +33,19 @@
 #include "msg.hpp"
 #include "contexts.hpp"
 
+/*
+ * Performance note:
+ * See comments for handler_context::dispatch() in container_impl.cpp.
+ */
+
 namespace proton {
 
 messaging_event::messaging_event(pn_event_t *ce, proton_event::event_type t, class container &c) :
-    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0)
+    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0), message_(0)
 {}
 
 messaging_event::messaging_event(event_type t, proton_event &p) :
-    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p)
+    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p), message_(0)
 {
     if (type_ == messaging_event::PROTON)
         throw error(MSG("invalid messaging event type"));
@@ -93,7 +98,7 @@ delivery& messaging_event::delivery() {
 message &messaging_event::message() {
     if (type_ != messaging_event::MESSAGE || !parent_event_)
         throw error(MSG("event type does not provide message"));
-    return message_;
+    return *message_;
 }
 
 void messaging_event::dispatch(handler &h) {

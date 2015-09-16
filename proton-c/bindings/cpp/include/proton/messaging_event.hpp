@@ -23,6 +23,7 @@
  */
 #include "proton/proton_event.hpp"
 #include "proton/link.hpp"
+#include "proton/message.hpp"
 
 namespace proton {
 
@@ -98,7 +99,7 @@ class messaging_event : public proton_event
   friend class messaging_adapter;
     event_type type_;
     proton_event *parent_event_;
-    message_value message_;
+    class message *message_;
     messaging_event operator=(const messaging_event&);
     messaging_event(const messaging_event&);
 };

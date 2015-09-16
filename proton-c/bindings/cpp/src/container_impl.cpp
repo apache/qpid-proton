@@ -51,6 +51,14 @@ struct handler_context {
     }
     static void cleanup(pn_handler_t*) {}
 
+    /*
+     * NOTE: this call, at the transition from C to C++ is possibly
+     * the biggest performance bottleneck.  "Average" clients ignore
+     * 90% of these events.  Current strategy is to create the
+     * messaging_event on the stack.  For success, the messaging_event
+     * should be small and free of indirect malloc/free/new/delete.
+     */
+
     static void dispatch(pn_handler_t *c_handler, pn_event_t *c_event, pn_event_type_t type)
     {
         handler_context& hc(handler_context::get(c_handler));

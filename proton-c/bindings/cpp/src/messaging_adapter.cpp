@@ -23,12 +23,14 @@
 #include "proton/sender.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
+#include "contexts.hpp"
 
 #include "proton/link.h"
 #include "proton/handlers.h"
 #include "proton/delivery.h"
 #include "proton/connection.h"
 #include "proton/session.h"
+#include "proton/message.h"
 
 namespace proton {
 messaging_adapter::messaging_adapter(messaging_handler &delegate_) :
@@ -72,7 +74,14 @@ void messaging_adapter::on_delivery(event &e) {
             if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
                 // generate on_message
                 messaging_event mevent(messaging_event::MESSAGE, *pe);
-                mevent.message_.decode(*reinterpret_cast<link*>(lnk), *reinterpret_cast<delivery*>(dlv));
+                pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
+                struct connection_context& ctx = connection_context::get(pnc);
+                // Reusable per-connection message.  Avoid expensive heap malloc/free overhead.
+                // See PROTON-998
+                class message &msg(ctx.event_message);
+                mevent.message_ = &msg;
+
+                mevent.message_->decode(*reinterpret_cast<link*>(lnk), *reinterpret_cast<delivery*>(dlv));
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                     if (auto_accept_) {
                         pn_delivery_update(dlv, PN_RELEASED);
