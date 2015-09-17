@@ -155,19 +155,8 @@ public class EventExtensibilityTest extends TestCase {
         /**
          * making this accessor public allows for easy binding to the scripting language
          */
-        public static final RecordAccessor<ExtraInfo> extraInfoAccessor = new RecordAccessor<ExtraInfo>() {
+        public static final ExtendableAccessor<Event, ExtraInfo> extraInfoAccessor = new ExtendableAccessor<>(ExtraInfo.class);
 
-            @Override
-            public ExtraInfo get(Record r) {
-                return r.get(this, ExtraInfo.class);
-            }
-
-            @Override
-            public void set(Record r, ExtraInfo value) {
-                r.set(this, ExtraInfo.class, value);
-            }
-
-        };
         private Event impl;
 
         public ExtraEventImpl(Event impl) {
@@ -185,7 +174,7 @@ public class EventExtensibilityTest extends TestCase {
 
         @Override
         public ExtraInfo getExtraInfo() {
-            return extraInfoAccessor.get(impl.attachments());
+            return extraInfoAccessor.get(impl);
         }
 
         // ---- delegate methods for the Event
@@ -270,7 +259,7 @@ public class EventExtensibilityTest extends TestCase {
         public void onReactorInit(Event e) {
             ExtraInfo extra = new ExtraInfo();
             extra.foo = 1234;
-            ExtraEventImpl.extraInfoAccessor.set(e.attachments(), extra);
+            ExtraEventImpl.extraInfoAccessor.set(e, extra);
             e.redispatch(ExtraEvent.ExtraTypes.FOO, this);
         }
     }
