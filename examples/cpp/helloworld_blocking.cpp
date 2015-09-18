@@ -34,12 +34,12 @@ int main(int argc, char **argv) {
         proton::blocking_receiver receiver(conn, url.path());
         proton::blocking_sender sender(conn, url.path());
 
-        proton::message_value m;
+        proton::message m;
         m.body("Hello World!");
         sender.send(m);
 
         proton::duration timeout(30000);
-        proton::message_value m2 = receiver.receive(timeout);
+        proton::message m2 = receiver.receive(timeout);
         std::cout << m2.body() << std::endl;
         receiver.accept();
 

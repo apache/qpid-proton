@@ -39,8 +39,8 @@ class blocking_sender : public blocking_link
     PN_CPP_EXTERN blocking_sender(class blocking_connection &c, const std::string &address);
     PN_CPP_EXTERN ~blocking_sender();
 
-    PN_CPP_EXTERN delivery& send(const message_value &msg);
-    PN_CPP_EXTERN delivery& send(const message_value &msg, duration timeout);
+    PN_CPP_EXTERN delivery& send(const message &msg);
+    PN_CPP_EXTERN delivery& send(const message &msg, duration timeout);
 
     PN_CPP_EXTERN class sender& sender();
 };

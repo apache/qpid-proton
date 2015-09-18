@@ -44,7 +44,7 @@ class client : public proton::messaging_handler {
     }
 
     void send_request() {
-        proton::message_value req;
+        proton::message req;
         req.body(requests.front());
         req.reply_to(receiver->remote_source().address());
         sender->send(req);

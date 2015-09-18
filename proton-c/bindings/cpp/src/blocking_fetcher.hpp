@@ -34,11 +34,11 @@ class blocking_fetcher : public messaging_handler {
     void on_message(event &e);
     void on_link_error(event &e);
     bool has_message();
-    message_value pop();
+    message pop();
     void settle(delivery::state state = delivery::NONE);
 
   private:
-    std::deque<message_value> messages_;
+    std::deque<message> messages_;
     std::deque<counted_ptr<delivery> > deliveries_;
     std::deque<counted_ptr<delivery> > unsettled_;
 };

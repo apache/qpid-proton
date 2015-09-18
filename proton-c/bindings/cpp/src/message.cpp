@@ -35,136 +35,143 @@
 
 namespace proton {
 
-void message::operator delete(void *p) { ::pn_message_free(reinterpret_cast<pn_message_t*>(p)); }
+message::message() : message_(::pn_message()) {}
 
-pn_unique_ptr<message> message::create() { return pn_unique_ptr<message>(cast(::pn_message())); }
+message::message(const message &m) : message_(::pn_message()) { *this = m; }
+
+#if PN_HAS_CPP11
+message::message(message &&m) : message_(::pn_message()) { swap(m); }
+#endif
+
+message::~message() { ::pn_message_free(message_); }
+
+void message::swap(message& m) { std::swap(message_, m.message_); }
 
 message& message::operator=(const message& m) {
-    // TODO aconway 2015-08-10: need more efficient pn_message_copy function
+    // TODO aconway 2015-08-10: more efficient pn_message_copy function
     std::string data;
     m.encode(data);
     decode(data);
     return *this;
 }
 
-void message::clear() { pn_message_clear(pn_cast(this)); }
+void message::clear() { pn_message_clear(message_); }
 
 namespace {
 void check(int err) {
     if (err) throw error(error_str(err));
 }
-
 } // namespace
 
-void message::id(const data& id) { *data::cast(pn_message_id(pn_cast(this))) = id; }
-const data& message::id() const { return *data::cast(pn_message_id(pn_cast(this))); }
-data& message::id() { return *data::cast(pn_message_id(pn_cast(this))); }
+void message::id(const data& id) { *data::cast(pn_message_id(message_)) = id; }
+const data& message::id() const { return *data::cast(pn_message_id(message_)); }
+data& message::id() { return *data::cast(pn_message_id(message_)); }
 
 void message::user(const std::string &id) {
-    check(pn_message_set_user_id(pn_cast(this), pn_bytes(id)));
+    check(pn_message_set_user_id(message_, pn_bytes(id)));
 }
 
 std::string message::user() const {
-    return str(pn_message_get_user_id(pn_cast(this)));
+    return str(pn_message_get_user_id(message_));
 }
 
 void message::address(const std::string &addr) {
-    check(pn_message_set_address(pn_cast(this), addr.c_str()));
+    check(pn_message_set_address(message_, addr.c_str()));
 }
 
 std::string message::address() const {
-    const char* addr = pn_message_get_address(pn_cast(this));
+    const char* addr = pn_message_get_address(message_);
     return addr ? std::string(addr) : std::string();
 }
 
 void message::subject(const std::string &s) {
-    check(pn_message_set_subject(pn_cast(this), s.c_str()));
+    check(pn_message_set_subject(message_, s.c_str()));
 }
 
 std::string message::subject() const {
-    const char* s = pn_message_get_subject(pn_cast(this));
+    const char* s = pn_message_get_subject(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::reply_to(const std::string &s) {
-    check(pn_message_set_reply_to(pn_cast(this), s.c_str()));
+    check(pn_message_set_reply_to(message_, s.c_str()));
 }
 
 std::string message::reply_to() const {
-    const char* s = pn_message_get_reply_to(pn_cast(this));
+    const char* s = pn_message_get_reply_to(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::correlation_id(const data& id) {
-    *data::cast(pn_message_correlation_id(pn_cast(this))) = id;
+    *data::cast(pn_message_correlation_id(message_)) = id;
 }
 
 const data& message::correlation_id() const {
-    return *data::cast(pn_message_correlation_id(pn_cast(this)));
+    return *data::cast(pn_message_correlation_id(message_));
 }
 
 data& message::correlation_id() {
-    return *data::cast(pn_message_correlation_id(pn_cast(this)));
+    return *data::cast(pn_message_correlation_id(message_));
 }
 
 void message::content_type(const std::string &s) {
-    check(pn_message_set_content_type(pn_cast(this), s.c_str()));
+    check(pn_message_set_content_type(message_, s.c_str()));
 }
 
 std::string message::content_type() const {
-    const char* s = pn_message_get_content_type(pn_cast(this));
+    const char* s = pn_message_get_content_type(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::content_encoding(const std::string &s) {
-    check(pn_message_set_content_encoding(pn_cast(this), s.c_str()));
+    check(pn_message_set_content_encoding(message_, s.c_str()));
 }
 
 std::string message::content_encoding() const {
-    const char* s = pn_message_get_content_encoding(pn_cast(this));
+    const char* s = pn_message_get_content_encoding(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::expiry(amqp_timestamp t) {
-    pn_message_set_expiry_time(pn_cast(this), t.milliseconds);
+    pn_message_set_expiry_time(message_, t.milliseconds);
 }
 amqp_timestamp message::expiry() const {
-    return amqp_timestamp(pn_message_get_expiry_time(pn_cast(this)));
+    return amqp_timestamp(pn_message_get_expiry_time(message_));
 }
 
 void message::creation_time(amqp_timestamp t) {
-    pn_message_set_creation_time(pn_cast(this), t);
+    pn_message_set_creation_time(message_, t);
 }
 amqp_timestamp message::creation_time() const {
-    return pn_message_get_creation_time(pn_cast(this));
+    return pn_message_get_creation_time(message_);
 }
 
 void message::group_id(const std::string &s) {
-    check(pn_message_set_group_id(pn_cast(this), s.c_str()));
+    check(pn_message_set_group_id(message_, s.c_str()));
 }
 
 std::string message::group_id() const {
-    const char* s = pn_message_get_group_id(pn_cast(this));
+    const char* s = pn_message_get_group_id(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::reply_to_group_id(const std::string &s) {
-    check(pn_message_set_reply_to_group_id(pn_cast(this), s.c_str()));
+    check(pn_message_set_reply_to_group_id(message_, s.c_str()));
 }
 
 std::string message::reply_to_group_id() const {
-    const char* s = pn_message_get_reply_to_group_id(pn_cast(this));
+    const char* s = pn_message_get_reply_to_group_id(message_);
     return s ? std::string(s) : std::string();
 }
 
 void message::body(const data& v) { body() = v; }
 
 const data& message::body() const {
-    return *data::cast(pn_message_body(pn_cast(this)));
+    return *data::cast(pn_message_body(message_));
 }
 
 data& message::body() {
-    return *data::cast(pn_message_body(pn_cast(this)));
+    return *data::cast(pn_message_body(message_));
 }
 
 void message::encode(std::string &s) const {
@@ -172,7 +179,7 @@ void message::encode(std::string &s) const {
     if (sz < 512) sz = 512;
     while (true) {
         s.resize(sz);
-        int err = pn_message_encode(pn_cast(this), (char *) s.data(), &sz);
+        int err = pn_message_encode(message_, (char *) s.data(), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
                 check(err);
@@ -191,7 +198,7 @@ std::string message::encode() const {
 }
 
 void message::decode(const std::string &s) {
-    check(pn_message_decode(pn_cast(this), s.data(), s.size()));
+    check(pn_message_decode(message_, s.data(), s.size()));
 }
 
 void message::decode(proton::link &link, proton::delivery &delivery) {
@@ -204,12 +211,7 @@ void message::decode(proton::link &link, proton::delivery &delivery) {
     pn_link_advance(pn_cast(&link));
 }
 
-void message_value::swap(message_value& x) {
-    // This works with unique_ptr and auto_ptr (which has no swap)
-    message* a = message_.release();
-    message* b = x.message_.release();
-    message_.reset(b);
-    x.message_.reset(a);
 }
-}
+
+
 

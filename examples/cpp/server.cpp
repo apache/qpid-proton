@@ -57,7 +57,7 @@ class server : public proton::messaging_handler {
     void on_message(proton::event &e) {
         std::cout << "Received " << e.message().body() << std::endl;
         std::string reply_to = e.message().reply_to();
-        proton::message_value reply;
+        proton::message reply;
         reply.address(reply_to);
         reply.body(to_upper(e.message().body().get<std::string>()));
         reply.correlation_id(e.message().correlation_id());

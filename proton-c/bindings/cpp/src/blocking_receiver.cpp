@@ -61,7 +61,7 @@ blocking_receiver::blocking_receiver(
 
 blocking_receiver::~blocking_receiver() { link_->detach_handler(); }
 
-message_value blocking_receiver::receive(duration timeout) {
+message blocking_receiver::receive(duration timeout) {
     if (!receiver().credit())
         receiver().flow(1);
     fetcher_has_message cond(*fetcher_);
@@ -69,7 +69,7 @@ message_value blocking_receiver::receive(duration timeout) {
     return fetcher_->pop();
 }
 
-message_value blocking_receiver::receive() {
+message blocking_receiver::receive() {
     // Use default timeout
     return receive(connection_.timeout());
 }

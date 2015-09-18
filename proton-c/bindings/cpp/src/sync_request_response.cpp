@@ -35,7 +35,7 @@ sync_request_response::sync_request_response(blocking_connection &conn, const st
     correlation_id_(0)
 {}
 
-message_value sync_request_response::call(message &request) {
+message sync_request_response::call(message &request) {
     if (address_.empty() && request.address().empty())
         throw error(MSG("Request message has no address"));
     // TODO: atomic increment.
@@ -43,7 +43,7 @@ message_value sync_request_response::call(message &request) {
     request.correlation_id(cid);
     request.reply_to(this->reply_to());
     sender_->send(request);
-    message_value response;
+    message response;
     while (response.correlation_id() != cid) {
         response = receiver_->receive();
     }

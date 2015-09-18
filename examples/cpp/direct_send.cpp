@@ -48,7 +48,7 @@ class simple_send : public proton::messaging_handler {
     void on_sendable(proton::event &e) {
         proton::sender& sender = e.sender();
         while (sender.credit() && sent < total) {
-            proton::message_value msg;
+            proton::message msg;
             msg.id(proton::data_value(sent + 1));
             std::map<std::string, int> m;
             m["sequence"] = sent+1;

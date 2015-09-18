@@ -52,13 +52,13 @@ blocking_sender::blocking_sender(blocking_connection &c, const std::string &addr
 
 blocking_sender::~blocking_sender() {}
 
-delivery& blocking_sender::send(const message_value &msg, duration timeout) {
+delivery& blocking_sender::send(const message &msg, duration timeout) {
     delivery& dlv = sender().send(msg);
     connection_.impl_->wait(delivery_settled(pn_cast(&dlv)), "sending on sender " + link_->name(), timeout);
     return dlv;
 }
 
-delivery& blocking_sender::send(const message_value &msg) {
+delivery& blocking_sender::send(const message &msg) {
     // Use default timeout
     return send(msg, connection_.timeout());
 }

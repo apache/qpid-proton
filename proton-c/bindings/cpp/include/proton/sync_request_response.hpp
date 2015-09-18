@@ -46,7 +46,7 @@ class sync_request_response
      * Send a request message, wait for and return the response message.
      * Modifies the message to set `address` (if not already set), `reply_to` and `correlation_id`.
      */
-    PN_CPP_EXTERN message_value call(message &);
+    PN_CPP_EXTERN message call(message &request);
     /** Return the dynamic address of our receiver. */
     PN_CPP_EXTERN std::string reply_to();
 

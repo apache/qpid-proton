@@ -42,8 +42,8 @@ class blocking_receiver : public blocking_link
         blocking_connection&, const std::string &address, int credit = 0, bool dynamic = false);
     PN_CPP_EXTERN ~blocking_receiver();
 
-    PN_CPP_EXTERN message_value receive();
-    PN_CPP_EXTERN message_value receive(duration timeout);
+    PN_CPP_EXTERN message receive();
+    PN_CPP_EXTERN message receive(duration timeout);
 
     PN_CPP_EXTERN void accept();
     PN_CPP_EXTERN void reject();

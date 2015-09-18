@@ -46,8 +46,8 @@ struct connection_context : public counted {
 
     pn_unique_ptr<class handler> handler;
     session* default_session;   // Owned by connection
-    class container_impl* container_impl;
-    class message_value event_message;  // re-used by messaging_adapter for performance
+    container_impl* container_impl;
+    message event_message;  // re-used by messaging_adapter for performance
 };
 
 class container;

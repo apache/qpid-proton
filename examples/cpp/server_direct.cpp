@@ -77,7 +77,7 @@ class server : public proton::messaging_handler {
             std::cout << "No link for reply_to: " << reply_to << std::endl;
         } else {
             proton::counted_ptr<proton::sender> sender = it->second;
-            proton::message_value reply;
+            proton::message reply;
             reply.address(reply_to);
             reply.body(to_upper(e.message().body().get<std::string>()));
             reply.correlation_id(e.message().correlation_id());

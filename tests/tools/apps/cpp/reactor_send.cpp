@@ -38,7 +38,7 @@
 class reactor_send : public proton::messaging_handler {
   private:
     proton::url url_;
-    proton::message_value message_;
+    proton::message message_;
     std::string reply_to_;
     int sent_;
     int confirmed_;

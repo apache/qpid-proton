@@ -51,15 +51,6 @@ void test_auto() {
     std::auto_ptr<session> p(s.ptr().release());
 }
 
-void test_pn_unique() {
-    std::auto_ptr<message> a(message::create().release());
-    a->clear();
-#if PN_HAS_STD_PTR
-    std::unique_ptr<message> u = message::create();
-    u->clear();
-#endif
-}
-
 int main(int argc, char** argv) {
     int failed = 0;
     failed += run_test(&test_counted<counted_ptr<connection>,
@@ -85,6 +76,5 @@ int main(int argc, char** argv) {
                        boost::intrusive_ptr<session> >,
                        "boost::intrusive");
 #endif
-    failed += run_test(&test_pn_unique, "pn_unique_ptr");
     return failed;
 }

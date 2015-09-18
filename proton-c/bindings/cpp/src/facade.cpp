@@ -64,7 +64,6 @@ CHECK_EMPTY(decoder);
 CHECK_EMPTY(delivery);
 CHECK_EMPTY(encoder);
 CHECK_EMPTY(link);
-CHECK_EMPTY(message);
 CHECK_EMPTY(session);
 CHECK_EMPTY(terminus);
 CHECK_EMPTY(transport);

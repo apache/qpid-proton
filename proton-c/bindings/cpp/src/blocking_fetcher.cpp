@@ -44,13 +44,13 @@ void blocking_fetcher::on_link_error(event &e) {
 
 bool blocking_fetcher::has_message() { return !messages_.empty(); }
 
-message_value blocking_fetcher::pop() {
+message blocking_fetcher::pop() {
     if (messages_.empty())
         throw error(MSG("receiver has no messages"));
     counted_ptr<delivery> dlv(deliveries_.front());
     if (!dlv->settled())
         unsettled_.push_back(dlv);
-    message_value m = messages_.front();
+    message m = messages_.front();
     messages_.pop_front();
     deliveries_.pop_front();
     return m;

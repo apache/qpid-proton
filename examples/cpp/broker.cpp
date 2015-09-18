@@ -36,7 +36,7 @@
 class queue {
   public:
     bool dynamic;
-    typedef std::deque<proton::message_value> message_queue;
+    typedef std::deque<proton::message> message_queue;
     typedef std::list<proton::counted_ptr<proton::sender> > sender_list;
     message_queue messages;
     sender_list consumers;
@@ -52,7 +52,7 @@ class queue {
         return (consumers.size() == 0 && (dynamic || messages.size() == 0));
     }
 
-    void publish(const proton::message_value &m) {
+    void publish(const proton::message &m) {
         messages.push_back(m);
         dispatch(0);
     }
@@ -191,8 +191,7 @@ class broker : public proton::messaging_handler {
 
     void on_message(proton::event &e) {
         std::string addr = e.link().target().address();
-        proton::message_value msg = e.message();
-        get_queue(addr).publish(msg);
+        get_queue(addr).publish(e.message());
     }
 };
 

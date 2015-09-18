@@ -52,9 +52,9 @@ int main(int argc, char **argv) {
         proton::blocking_connection conn(url, proton::duration(timeout));
         proton::sync_request_response client(conn, url.path());
         for (std::vector<std::string>::const_iterator i=requests.begin(); i != requests.end(); i++) {
-            proton::message_value request;
+            proton::message request;
             request.body(*i);
-            proton::message_value response(client.call(request));
+            proton::message response(client.call(request));
             std::cout << request.body() << " => " << response.body() << std::endl;
         }
         return 0;
