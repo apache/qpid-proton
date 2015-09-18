@@ -26,6 +26,7 @@
 #include "proton/connection.hpp"
 #include "proton/decoder.hpp"
 #include "proton/reactor.h"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
@@ -47,7 +48,7 @@ class reactor_send : public proton::messaging_handler {
     size_t received_bytes_;
     proton::amqp_binary received_content_;
     bool replying_;
-    proton::data_value id_value_;
+    proton::value id_value_;
     pn_reactor_t *reactor_;
   public:
 

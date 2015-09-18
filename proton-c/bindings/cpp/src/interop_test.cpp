@@ -19,7 +19,7 @@
 
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
-#include "proton/data.hpp"
+#include "proton/value.hpp"
 #include "test_bits.hpp"
 #include <string>
 #include <sstream>
@@ -49,14 +49,14 @@ template <class T> std::string str(const T& value) {
 
 // Test data ostream operator
 void test_data_ostream() {
-    data_value dv;
+    value dv;
     dv.decoder().decode(read("primitives"));
     ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dv));
 }
 
 // Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
 void test_decoder_primitves_exact() {
-    data_value dv;
+    value dv;
     dv.decoder().decode(read("primitives"));
     decoder& d(dv.decoder());
     ASSERT(d.more());
@@ -82,7 +82,7 @@ void test_decoder_primitves_exact() {
 
 // Test inserting primitive sand encoding as AMQP.
 void test_encoder_primitives() {
-    data_value dv;
+    value dv;
     encoder& e = dv.encoder();
     e << true << false;
     e << ::uint8_t(42);
@@ -97,7 +97,7 @@ void test_encoder_primitives() {
 
 // Test type conversions.
 void test_value_conversions() {
-    data_value v;
+    value v;
     ASSERT_EQUAL(true, bool(v = true));
     ASSERT_EQUAL(2, int(v=amqp_byte(2)));
     ASSERT_EQUAL(3, long(v=amqp_byte(3)));

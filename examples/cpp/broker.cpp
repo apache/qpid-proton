@@ -25,6 +25,7 @@
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <sstream>

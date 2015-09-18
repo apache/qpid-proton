@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <proton/data.hpp>
+#include <proton/value.hpp>
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -37,7 +37,7 @@ void print(proton::data&);
 // Inserting and extracting simple C++ values.
 void simple_insert_extract() {
     cout << endl << "== Simple values: int, string, bool" << endl;
-    proton::data_value dv;
+    proton::value dv;
     dv.encoder() << 42 << "foo" << true;
     print(dv);
     int i;
@@ -49,7 +49,7 @@ void simple_insert_extract() {
     // Encode and decode as AMQP
     string amqp_data = dv.encoder().encode();
     cout << "Encoded as AMQP in " << amqp_data.size() << " bytes" << endl;
-    proton::data_value  dt2;
+    proton::value  dt2;
     dt2.decoder().decode(amqp_data);
     dt2.decoder() >> i >> s >> b;
     cout << "Decoded: " << i << ", " << s << ", " << b << endl;
@@ -57,7 +57,7 @@ void simple_insert_extract() {
 
 // Inserting values as a specific AMQP type
 void simple_insert_extract_exact_type() {
-    proton::data_value dv;
+    proton::value dv;
     cout << endl << "== Specific AMQP types: byte, long, symbol" << endl;
     dv.encoder() << proton::amqp_byte('x') << proton::amqp_long(123456789123456789) << proton::amqp_symbol("bar");
     print(dv);
@@ -118,7 +118,7 @@ void insert_extract_containers() {
     m["one"] = 1;
     m["two"] = 2;
 
-    proton::data_value dv;
+    proton::value dv;
     dv.encoder() << proton::as<proton::ARRAY>(a) << proton::as<proton::LIST>(l) << proton::as<proton::MAP>(m);
     print(dv);
 
@@ -132,18 +132,18 @@ void insert_extract_containers() {
 // Containers with mixed types, use value to represent arbitrary AMQP types.
 void mixed_containers() {
     cout << endl << "== List and map of mixed type values." << endl;
-    vector<proton::data_value> l;
-    l.push_back(proton::data_value(42));
-    l.push_back(proton::data_value(proton::amqp_string("foo")));
-    map<proton::data_value, proton::data_value> m;
-    m[proton::data_value("five")] = proton::data_value(5);
-    m[proton::data_value(4)] = proton::data_value("four");
-    proton::data_value dv;
+    vector<proton::value> l;
+    l.push_back(proton::value(42));
+    l.push_back(proton::value(proton::amqp_string("foo")));
+    map<proton::value, proton::value> m;
+    m[proton::value("five")] = proton::value(5);
+    m[proton::value(4)] = proton::value("four");
+    proton::value dv;
     dv.encoder() << proton::as<proton::LIST>(l) << proton::as<proton::MAP>(m);
     print(dv);
 
-    vector<proton::data_value> l1;
-    map<proton::data_value, proton::data_value> m1;
+    vector<proton::value> l1;
+    map<proton::value, proton::value> m1;
     dv.decoder().rewind();
     dv.decoder() >> proton::as<proton::LIST>(l1) >> proton::as<proton::MAP>(m1);
     cout << "Extracted: " << l1 << ", " << m1 << endl;
@@ -152,7 +152,7 @@ void mixed_containers() {
 // Insert using stream operators (see print_next for example of extracting with stream ops.)
 void insert_extract_stream_operators() {
     cout << endl << "== Insert with stream operators." << endl;
-    proton::data_value dv;
+    proton::value dv;
     // Note: array elements must be encoded with the exact type, they are not
     // automaticlly converted. Mismatched types for array elements will not
     // be detected until dv.encode() is called.
@@ -243,7 +243,7 @@ void print_next(proton::data& dv) {
         // A simple type. We could continue the switch for all AMQP types but
         // instead we us the `value` type which can hold and print any AMQP
         // value.
-        proton::data_value v;
+        proton::value v;
         dv.decoder() >> v;
         cout << type << "(" << v << ")";
     }

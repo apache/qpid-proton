@@ -18,7 +18,7 @@
  */
 
 #include "proton_bits.hpp"
-#include "proton/data.hpp"
+#include "proton/value.hpp"
 
 #include <proton/codec.h>
 

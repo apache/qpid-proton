@@ -35,7 +35,7 @@ class data;
 
 /**
  * Holds a sequence of AMQP values, allows inserting and extracting via encoder() and decoder().
- * Cannot be directly instantiated, use `data_value`
+ * Cannot be directly instantiated, use `value`
  */
 class data : public facade<pn_data_t, data, comparable<data> > {
   public:
@@ -76,56 +76,6 @@ class data : public facade<pn_data_t, data, comparable<data> > {
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
 };
 
-/** data with normal value semantics: copy, assign etc. */
-class data_value {
-  public:
-    data_value() : data_(data::create()) {}
-    data_value(const data_value& x) : data_(data::create()) { *data_ = *x.data_; }
-    data_value(const data& x) : data_(data::create()) { *data_ = x; }
-    template <class T> data_value(const T& x) : data_(data::create()) { *data_ = x; }
-
-    operator data&() { return *data_; }
-    operator const data&() const { return *data_; }
-
-    data_value& operator=(const data_value& x) { *data_ = *x.data_; return *this; }
-    data_value& operator=(const data& x) { *data_ = x; return *this; }
-    template <class T> data_value& operator=(const T& x) { *data_ = x; return *this; }
-
-    void clear() { data_->clear(); }
-    bool empty() const { return data_->empty(); }
-
-    /** Encoder to encode into this value */
-    class encoder& encoder() { return data_->encoder(); }
-
-    /** Decoder to decode from this value */
-    class decoder& decoder() { return data_->decoder(); }
-
-    /** Type of the current value*/
-    type_id type() { return decoder().type(); }
-
-    /** Get the current value, don't move the decoder pointer. */
-    template<class T> void get(T &t) { decoder() >> t; decoder().backup(); }
-
-    /** Get the current value */
-    template<class T> T get() { T t; get(t); return t; }
-    template<class T> operator T() { return get<T>(); }
-
-    bool operator==(const data_value& x) const { return *data_ == *x.data_; }
-    bool operator<(const data_value& x) const { return *data_ < *x.data_; }
-
-  friend inline class encoder& operator<<(class encoder& e, const data_value& dv) {
-      return e << *dv.data_;
-  }
-  friend inline class decoder& operator>>(class decoder& d, data_value& dv) {
-      return d >> *dv.data_;
-  }
-  friend inline std::ostream& operator<<(std::ostream& o, const data_value& dv) {
-      return o << *dv.data_;
-  }
-  private:
-    pn_unique_ptr<data> data_;
-};
-
-
 }
 #endif // DATA_H
+

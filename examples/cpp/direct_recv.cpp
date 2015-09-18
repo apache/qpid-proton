@@ -26,6 +26,7 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
@@ -47,7 +48,7 @@ class direct_recv : public proton::messaging_handler {
 
     void on_message(proton::event &e) {
         proton::message& msg = e.message();
-        proton::data_value id = msg.id();
+        proton::value id = msg.id();
         if (id.type() == proton::ULONG) {
             if (id.get<int>() < received)
                 return; // ignore duplicate

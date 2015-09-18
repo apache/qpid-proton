@@ -25,6 +25,7 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
@@ -49,7 +50,7 @@ class simple_send : public proton::messaging_handler {
         proton::sender& sender = e.sender();
         while (sender.credit() && sent < total) {
             proton::message msg;
-            msg.id(proton::data_value(sent + 1));
+            msg.id(proton::value(sent + 1));
             std::map<std::string, int> m;
             m["sequence"] = sent+1;
             msg.body(proton::as<proton::MAP>(m));
