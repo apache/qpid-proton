@@ -28,8 +28,8 @@ struct pn_url_t;
 namespace proton {
 
 /// Thrown if URL parsing fails.
-struct bad_url : public error {
-    PN_CPP_EXTERN explicit bad_url(const std::string&) throw();
+struct url_error : public error {
+    PN_CPP_EXTERN explicit url_error(const std::string&) throw();
 };
 
 
@@ -50,14 +50,14 @@ class url {
     /** Parse url_str as an AMQP URL. If defaults is true, fill in defaults for missing values
      *  otherwise return an empty string for missing values.
      *  Note: converts automatically from string.
-     *@throw bad_url if URL is invalid.
+     *@throw url_error if URL is invalid.
      */
     PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
 
     /** Parse url_str as an AMQP URL. If defaults is true, fill in defaults for missing values
      *  otherwise return an empty string for missing values.
      *  Note: converts automatically from string.
-     *@throw bad_url if URL is invalid.
+     *@throw url_error if URL is invalid.
      */
     PN_CPP_EXTERN url(const char* url_str, bool defaults=true);
 
@@ -66,12 +66,12 @@ class url {
     PN_CPP_EXTERN url& operator=(const url&);
 
     /** Parse a string as a URL
-     *@throws bad_url if URL is invalid.
+     *@throws url_error if URL is invalid.
      */
     PN_CPP_EXTERN void parse(const std::string&);
 
     /** Parse a string as a URL
-     *@throws bad_url if URL is invalid.
+     *@throws url_error if URL is invalid.
      */
     PN_CPP_EXTERN void parse(const char*);
 
@@ -114,7 +114,7 @@ class url {
 
     /** parse url from istream, automatically fills in defaults for missing values.
      *
-     * Note: an invalid url is indicated by setting std::stream::fail() NOT by throwing bad_url.
+     * Note: an invalid url is indicated by setting std::stream::fail() NOT by throwing url_error.
      */
   friend PN_CPP_EXTERN std::istream& operator>>(std::istream&, url&);
 

@@ -27,8 +27,4 @@ error::error(const std::string& msg) throw() : std::runtime_error(prefix+msg) {}
 
 timeout_error::timeout_error(const std::string& msg) throw() : error(msg) {}
 
-message_reject::message_reject(const std::string& msg) throw() : error(msg) {}
-
-message_release::message_release(const std::string& msg) throw() : error(msg) {}
-
 }

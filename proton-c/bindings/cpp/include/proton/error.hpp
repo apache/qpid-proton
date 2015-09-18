@@ -33,13 +33,6 @@ struct error : public std::runtime_error { PN_CPP_EXTERN explicit error(const st
 /** Raised if timeout expires */
 struct timeout_error : public error { PN_CPP_EXTERN explicit timeout_error(const std::string&) throw(); };
 
-/** Raised if a message is rejected */
-struct message_reject : public error { PN_CPP_EXTERN explicit message_reject(const std::string&) throw(); };
-
-/** Raised if a message is released */
-struct message_release : public error { PN_CPP_EXTERN explicit message_release(const std::string&) throw(); };
-
-
 }
 
 #endif  /*!PROTON_CPP_EXCEPTIONS_H*/

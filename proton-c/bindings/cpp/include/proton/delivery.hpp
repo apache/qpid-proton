@@ -65,6 +65,49 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
 
     /** settle with MODIFIED state */
     PN_CPP_EXTERN void modifiy() { settle(MODIFIED); }
+
+    /**
+     * Check if a delivery is readable.
+     *
+     * A delivery is considered readable if it is the current delivery on
+     * an incoming link.
+     */
+    PN_CPP_EXTERN bool partial();
+
+    /**
+     * Check if a delivery is writable.
+     *
+     * A delivery is considered writable if it is the current delivery on
+     * an outgoing link, and the link has positive credit.
+     */
+    PN_CPP_EXTERN bool writable();
+
+    /**
+     * Check if a delivery is readable.
+     *
+     * A delivery is considered readable if it is the current delivery on
+     * an incoming link.
+     */
+    PN_CPP_EXTERN bool readable();
+
+    /**
+     * Check if a delivery is updated.
+     *
+     * A delivery is considered updated whenever the peer communicates a
+     * new disposition for the delivery. Once a delivery becomes updated,
+     * it will remain so until clear() is called.
+     */
+    PN_CPP_EXTERN bool updated();
+
+    /**
+     * Clear the updated flag for a delivery.
+     */
+    PN_CPP_EXTERN void clear();
+
+    /**
+     * Get the remote disposition state for a delivery.
+     */
+    PN_CPP_EXTERN state remote_state();
 };
 
 }

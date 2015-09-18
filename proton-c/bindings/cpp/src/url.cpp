@@ -27,13 +27,13 @@
 
 namespace proton {
 
-bad_url::bad_url(const std::string& s) throw() : error(s) {}
+url_error::url_error(const std::string& s) throw() : error(s) {}
 
 namespace {
 
 pn_url_t* parse_throw(const std::string& s) {
     pn_url_t* u = pn_url_parse(s.c_str());
-    if (!u) throw bad_url("invalid URL: " + s);
+    if (!u) throw url_error("invalid URL: " + s);
     return u;
 }
 

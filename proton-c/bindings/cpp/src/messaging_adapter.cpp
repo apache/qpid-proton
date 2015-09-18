@@ -68,10 +68,10 @@ void messaging_adapter::on_delivery(event &e) {
     if (pe) {
         pn_event_t *cevent = pe->pn_event();
         pn_link_t *lnk = pn_event_link(cevent);
-        pn_delivery_t *dlv = pn_event_delivery(cevent);
+        delivery &dlv = pe->delivery();
 
         if (pn_link_is_receiver(lnk)) {
-            if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
+            if (!dlv.partial() && dlv.readable()) {
                 // generate on_message
                 messaging_event mevent(messaging_event::MESSAGE, *pe);
                 pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
@@ -80,40 +80,24 @@ void messaging_adapter::on_delivery(event &e) {
                 // See PROTON-998
                 class message &msg(ctx.event_message);
                 mevent.message_ = &msg;
-
-                mevent.message_->decode(*reinterpret_cast<link*>(lnk), *reinterpret_cast<delivery*>(dlv));
+                mevent.message_->decode(*link::cast(lnk), dlv);
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
-                    if (auto_accept_) {
-                        pn_delivery_update(dlv, PN_RELEASED);
-                        pn_delivery_settle(dlv);
-                    }
-                }
-                else {
-                    try {
-                        delegate_.on_message(mevent);
-                        if (auto_accept_) {
-                            pn_delivery_update(dlv, PN_ACCEPTED);
-                            pn_delivery_settle(dlv);
-                        }
-                    }
-                    catch (message_reject &) {
-                        pn_delivery_update(dlv, PN_REJECTED);
-                        pn_delivery_settle(dlv);
-                    }
-                    catch (message_release &) {
-                        pn_delivery_update(dlv, PN_REJECTED);
-                        pn_delivery_settle(dlv);
-                    }
+                    if (auto_accept_)
+                        dlv.release();
+                } else {
+                    delegate_.on_message(mevent);
+                    if (auto_accept_ && !dlv.settled())
+                        dlv.accept();
                 }
             }
-            else if (pn_delivery_updated(dlv) && pn_delivery_settled(dlv)) {
+            else if (dlv.updated() && dlv.settled()) {
                 messaging_event mevent(messaging_event::SETTLED, *pe);
                 delegate_.on_settled(mevent);
             }
         } else {
             // sender
-            if (pn_delivery_updated(dlv)) {
-                amqp_ulong rstate = pn_delivery_remote_state(dlv);
+            if (dlv.updated()) {
+                amqp_ulong rstate = dlv.remote_state();
                 if (rstate == PN_ACCEPTED) {
                     messaging_event mevent(messaging_event::ACCEPTED, *pe);
                     delegate_.on_accepted(mevent);
@@ -127,12 +111,12 @@ void messaging_adapter::on_delivery(event &e) {
                     delegate_.on_released(mevent);
                 }
 
-                if (pn_delivery_settled(dlv)) {
+                if (dlv.settled()) {
                     messaging_event mevent(messaging_event::SETTLED, *pe);
                     delegate_.on_settled(mevent);
                 }
                 if (auto_settle_)
-                    pn_delivery_settle(dlv);
+                    dlv.settle();
             }
         }
     }

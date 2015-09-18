@@ -35,4 +35,10 @@ void delivery::settle(delivery::state state) {
     settle();
 }
 
+bool delivery::partial()  { return pn_delivery_partial(pn_cast(this)); }
+bool delivery::readable() { return pn_delivery_readable(pn_cast(this)); }
+bool delivery::writable() { return pn_delivery_writable(pn_cast(this)); }
+bool delivery::updated()  { return pn_delivery_updated(pn_cast(this)); }
+void delivery::clear()  { pn_delivery_clear(pn_cast(this)); }
+delivery::state delivery::remote_state() { return state(pn_delivery_remote_state(pn_cast(this))); }
 }

@@ -47,8 +47,7 @@ class hello_world : public proton::messaging_handler {
     }
 
     void on_message(proton::event &e) {
-        proton::data& body(e.message().body());
-        std::cout << body << std::endl;
+        std::cout << e.message().body() << std::endl;
         e.connection().close();
     }
 };
