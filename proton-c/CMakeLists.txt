@@ -242,6 +242,12 @@ if (CMAKE_COMPILER_IS_GNUCC)
   endif (ENABLE_UNDEFINED_ERROR)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  if (ENABLE_WARNING_ERROR)
+    set (WERROR "-Werror")
+  endif (ENABLE_WARNING_ERROR)
+endif()
+
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
     add_definitions(

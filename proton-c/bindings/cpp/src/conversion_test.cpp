@@ -45,12 +45,6 @@ void test_counted() {
     session_ptr p2 = s.ptr();
 }
 
-void test_auto() {
-    std::auto_ptr<connection> conn(connection::cast(pn_connection()));
-    session& s = conn->default_session();
-    std::auto_ptr<session> p(s.ptr().release());
-}
-
 int main(int argc, char** argv) {
     int failed = 0;
     failed += run_test(&test_counted<counted_ptr<connection>,

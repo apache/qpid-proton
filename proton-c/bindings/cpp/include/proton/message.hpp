@@ -129,8 +129,6 @@ class message
     /// Decode the message from link corresponding to delivery.
     PN_CPP_EXTERN void decode(proton::link&, proton::delivery&);
 
-    PN_CPP_EXTERN void operator delete(void*);
-
   private:
     pn_message_t *message_;
 };
