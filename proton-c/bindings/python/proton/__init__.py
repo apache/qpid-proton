@@ -1134,13 +1134,13 @@ The group-id for any replies.
     if link.is_sender: return None
     dlv = link.current
     if not dlv or dlv.partial: return None
-    encoded = link.recv(dlv.pending)
+    dlv.encoded = link.recv(dlv.pending)
     link.advance()
     # the sender has already forgotten about the delivery, so we might
     # as well too
     if link.remote_snd_settle_mode == Link.SND_SETTLED:
       dlv.settle()
-    self.decode(encoded)
+    self.decode(dlv.encoded)
     return dlv
 
   def __repr2__(self):
