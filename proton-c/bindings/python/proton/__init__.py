@@ -3895,12 +3895,12 @@ class WrappedHandler(Wrapper):
     
   handlers = WrappedHandlersProperty()
 
-  @staticmethod
-  def wrap(impl, on_error=None):
+  @classmethod
+  def wrap(cls, impl, on_error=None):
     if impl is None:
       return None
     else:
-      handler = WrappedHandler(impl)
+      handler = cls(impl)
       handler.__dict__["on_error"] = on_error
       return handler
   
