@@ -26,10 +26,7 @@ from getopt import GetoptError
 from logging import getLogger, StreamHandler, Formatter, Filter, \
     WARN, DEBUG, ERROR
 import unittest
-try:
-  from unittest import SkipTest
-except:
-  from unittest2 import SkipTest
+from proton_tests.common import SkipTest
 
 if sys.version_info[0] == 3:
     CLASS_TYPES = (type,)

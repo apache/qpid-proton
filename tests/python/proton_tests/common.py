@@ -21,7 +21,12 @@ from unittest import TestCase
 try:
   from unittest import SkipTest
 except:
-  from unittest2 import SkipTest
+  try:
+    from unittest2 import SkipTest
+  except:
+    class SkipTest(Exception):
+      pass
+
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
