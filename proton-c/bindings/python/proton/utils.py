@@ -186,6 +186,7 @@ class BlockingConnection(Handler):
     A synchronous style connection wrapper.
     """
     def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None):
+        self.disconnected = False
         self.timeout = timeout
         self.container = container or Container()
         self.container.timeout = self.timeout
@@ -223,14 +224,14 @@ class BlockingConnection(Handler):
         if timeout is False:
             timeout = self.timeout
         if timeout is None:
-            while not condition():
+            while not condition() and not self.disconnected:
                 self.container.process()
         else:
             container_timeout = self.container.timeout
             self.container.timeout = timeout
             try:
                 deadline = time.time() + timeout
-                while not condition():
+                while not condition() and not self.disconnected:
                     self.container.process()
                     if deadline < time.time():
                         txt = "Connection %s timed out" % self.url
@@ -238,6 +239,9 @@ class BlockingConnection(Handler):
                         raise Timeout(txt)
             finally:
                 self.container.timeout = container_timeout
+        if self.disconnected:
+            self.container.stop();
+            raise ConnectionException("Connection %s disconnected" % self.url);
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
@@ -254,7 +258,7 @@ class BlockingConnection(Handler):
 
     def on_transport_closed(self, event):
         if event.connection.state & Endpoint.LOCAL_ACTIVE:
-            raise ConnectionException("Connection %s disconnected" % self.url);
+            self.disconnected = True
 
 class AtomicCount(object):
     def __init__(self, start=0, step=1):
