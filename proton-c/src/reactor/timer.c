@@ -115,6 +115,7 @@ pn_task_t *pn_timer_schedule(pn_timer_t *timer,  pn_timestamp_t deadline) {
   task->pool = timer->pool;
   pn_incref(task->pool);
   task->deadline = deadline;
+  task->cancelled = false;
   pn_list_minpush(timer->tasks, task);
   pn_decref(task);
   return task;
