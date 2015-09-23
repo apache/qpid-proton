@@ -24,6 +24,7 @@
 #include "proton/export.hpp"
 #include "proton/event.hpp"
 #include "proton/event.h"
+#include "proton/reactor.h"
 #include <vector>
 
 namespace proton {
@@ -54,6 +55,10 @@ class handler : public std::vector<handler*> {
     /// Add a child handler, equivalent to this->push_back(&h)
     /// h must not be deleted before this handler.
     PN_CPP_EXTERN virtual void add_child_handler(handler &h);
+
+  private:
+    counted_ptr<pn_handler_t> pn_handler_;
+    friend class container_impl;
 };
 
 }

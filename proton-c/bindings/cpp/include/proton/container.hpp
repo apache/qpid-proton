@@ -38,6 +38,7 @@ class sender;
 class receiver;
 class link;
 class handler;
+class task;
 class container_impl;
 
 /**
@@ -80,6 +81,9 @@ class container
 
     /// The reactor associated with this container.
     PN_CPP_EXTERN class reactor& reactor();
+
+    // Schedule a timer task event in delay milliseconds.
+    PN_CPP_EXTERN task& schedule(int delay, handler *h = 0);
 
   private:
     pn_unique_ptr<container_impl> impl_;

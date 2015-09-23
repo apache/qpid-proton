@@ -53,6 +53,7 @@ class container_impl
     PN_CPP_EXTERN duration timeout();
     PN_CPP_EXTERN void timeout(duration timeout);
 
+    task& schedule(int delay, handler *h);
     counted_ptr<pn_handler_t> cpp_handler(handler *h);
 
     std::string next_link_name();

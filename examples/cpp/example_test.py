@@ -223,5 +223,16 @@ Values: map{string("k1"):int(42), symbol(:"k2"):bool(false)}
 """
         self.maxDiff = None
         self.assertEqual(expect, execute("encode_decode"))
+
+    def test_recurring_timer(self):
+        expect="""Tick...
+Tick...
+Tock...
+Tick...
+Tock...
+"""
+        self.maxDiff = None
+        self.assertEqual(expect, execute("recurring_timer", "-t", "3"))
+
 if __name__ == "__main__":
     unittest.main()

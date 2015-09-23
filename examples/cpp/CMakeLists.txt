@@ -36,6 +36,7 @@ foreach(example
     client
     server
     server_direct
+    recurring_timer
     encode_decode)
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} qpid-proton-cpp)

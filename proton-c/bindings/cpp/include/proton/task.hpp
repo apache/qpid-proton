@@ -1,3 +1,6 @@
+#ifndef PROTON_CPP_TASK_H
+#define PROTON_CPP_TASK_H
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,20 +21,20 @@
  * under the License.
  *
  */
-#include "proton/handler.hpp"
-#include "proton/event.hpp"
+#include "proton/export.hpp"
+#include "proton/facade.hpp"
+
+#include "proton/reactor.h"
 
 namespace proton {
 
-// container_impl.cpp sets pn_handler_ as needed.
-
-handler::handler() {}
-handler::~handler() {}
-
-void handler::on_unhandled(event &e) {}
-
-void handler::add_child_handler(handler &e) {
-    push_back(&e);
-}
+/** A task for timer events */
+class task : public counted_facade<pn_task_t, task> {
+  public:
+    /** Cancel the scheduled task. */
+    PN_CPP_EXTERN void cancel();
+};
 
 }
+
+#endif  /*!PROTON_CPP_TASK_H*/

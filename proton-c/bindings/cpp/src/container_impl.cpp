@@ -29,6 +29,7 @@
 #include "proton/url.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/task.hpp"
 
 #include "msg.hpp"
 #include "container_impl.hpp"
@@ -101,6 +102,8 @@ class override_handler : public handler
 
 counted_ptr<pn_handler_t> container_impl::cpp_handler(handler *h)
 {
+    if (h->pn_handler_)
+        return h->pn_handler_;
     counted_ptr<pn_handler_t> handler(
         pn_handler_new(&handler_context::dispatch, sizeof(struct handler_context),
                        &handler_context::cleanup),
@@ -108,6 +111,7 @@ counted_ptr<pn_handler_t> container_impl::cpp_handler(handler *h)
     handler_context &hc = handler_context::get(handler.get());
     hc.container_ = &container_;
     hc.handler_ = h;
+    h->pn_handler_ = handler;
     return handler;
 }
 
@@ -184,6 +188,14 @@ std::string container_impl::next_link_name() {
     // TODO aconway 2015-09-01: atomic operation
     s << prefix_ << std::hex << ++link_id_;
     return s.str();
+}
+
+task& container_impl::schedule(int delay, handler *h) {
+    counted_ptr<pn_handler_t> task_handler;
+    if (h)
+        task_handler = cpp_handler(h);
+    task *t = task::cast(pn_reactor_schedule(pn_cast(reactor_.get()), delay, task_handler.get()));
+    return *t;
 }
 
 }

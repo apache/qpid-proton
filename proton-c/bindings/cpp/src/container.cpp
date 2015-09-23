@@ -70,4 +70,6 @@ acceptor& container::listen(const proton::url &url) {
 void container::link_prefix(const std::string& s) { impl_->prefix_ = s; }
 std::string  container::link_prefix() { return impl_->prefix_; }
 
+task& container::schedule(int delay, handler *h) { return impl_->schedule(delay, h); }
+
 } // namespace proton

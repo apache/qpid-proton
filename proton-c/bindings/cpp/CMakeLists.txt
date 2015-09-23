@@ -60,6 +60,7 @@ set(qpid-proton-cpp-source
   src/sender.cpp
   src/session.cpp
   src/sync_request_response.cpp
+  src/task.cpp
   src/terminus.cpp
   src/transport.cpp
   src/types.cpp

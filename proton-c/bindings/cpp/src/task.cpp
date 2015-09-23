@@ -18,20 +18,12 @@
  * under the License.
  *
  */
-#include "proton/handler.hpp"
-#include "proton/event.hpp"
+
+#include "proton/task.hpp"
+#include "proton/reactor.h"
 
 namespace proton {
 
-// container_impl.cpp sets pn_handler_ as needed.
-
-handler::handler() {}
-handler::~handler() {}
-
-void handler::on_unhandled(event &e) {}
-
-void handler::add_child_handler(handler &e) {
-    push_back(&e);
-}
+void task::cancel() { pn_task_cancel(pn_cast(this)); }
 
 }
