@@ -240,8 +240,8 @@ class BlockingConnection(Handler):
             finally:
                 self.container.timeout = container_timeout
         if self.disconnected:
-            self.container.stop();
-            raise ConnectionException("Connection %s disconnected" % self.url);
+            self.container.stop()
+            raise ConnectionException("Connection %s disconnected" % self.url)
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
