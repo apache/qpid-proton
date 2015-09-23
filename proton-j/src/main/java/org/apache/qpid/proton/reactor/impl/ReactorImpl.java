@@ -36,6 +36,7 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Event.Type;
 import org.apache.qpid.proton.engine.EventType;
 import org.apache.qpid.proton.engine.Extendable;
+import org.apache.qpid.proton.engine.ExtendableAccessor;
 import org.apache.qpid.proton.engine.Handler;
 import org.apache.qpid.proton.engine.HandlerException;
 import org.apache.qpid.proton.engine.Record;
@@ -51,6 +52,7 @@ import org.apache.qpid.proton.reactor.Selector;
 import org.apache.qpid.proton.reactor.Task;
 
 public class ReactorImpl implements Reactor, Extendable {
+    public static final ExtendableAccessor<Event, Handler> ROOT = new ExtendableAccessor<>(Handler.class);
 
     private CollectorImpl collector;
     private long now;
@@ -267,8 +269,8 @@ public class ReactorImpl implements Reactor, Extendable {
                     return true;
                 }
                 Handler handler = eventHandler(event);
-                event.dispatch(handler);
-                event.dispatch(global);
+                dispatch(event, handler);
+                dispatch(event, global);
 
                 if (event.getEventType() == Type.CONNECTION_FINAL) {
                     children.remove(event.getConnection());
@@ -295,6 +297,11 @@ public class ReactorImpl implements Reactor, Extendable {
                 }
             }
         }
+    }
+
+    private void dispatch(Event event, Handler handler) {
+        ROOT.set(event, handler);
+        event.dispatch(handler);
     }
 
     @Override

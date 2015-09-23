@@ -116,15 +116,26 @@ public interface Event extends Extendable
 
     Object getContext();
 
+    /**
+     * The {@link Handler} at the root of the handler tree.
+     * <p>
+     * Set by the {@link Reactor} before dispatching the event.
+     * <p>
+     * @see #redispatch(EventType, Handler)
+     * @return The root handler
+     */
+    Handler getRootHandler();
+
     void dispatch(Handler handler) throws HandlerException;
 
     /**
      * Synchronously redispatch the current event as a new {@link EventType} on the provided handler and it's children.
      * <p>
-     * Note: the redispatch will happen before children of the current handler have had the current event dispatched.
+     * Note: the <code>redispatch()</code> will complete before children of the current handler have had the current event dispatched, see {@link #delegate()}.
+     *
      *
      * @param as_type Type of event to dispatch
-     * @param handler The handler where to start the dispatch
+     * @param handler The handler where to start the dispatch. Use {@link #getRootHandler()} to redispatch the new event to all handlers in the tree.
      * @throws HandlerException A wrapper exception of any unhandled exception thrown by <code>handler</code>
      */
     void redispatch(EventType as_type, Handler handler) throws HandlerException;

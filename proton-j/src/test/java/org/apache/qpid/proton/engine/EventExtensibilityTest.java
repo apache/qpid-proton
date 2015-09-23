@@ -195,6 +195,10 @@ public class EventExtensibilityTest extends TestCase {
             return impl.getContext();
         }
 
+        public Handler getRootHandler() {
+            return impl.getRootHandler();
+        }
+
         public void dispatch(Handler handler) throws HandlerException {
             impl.dispatch(handler);
         }

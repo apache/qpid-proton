@@ -37,6 +37,7 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Task;
+import org.apache.qpid.proton.reactor.impl.ReactorImpl;
 
 /**
  * EventImpl
@@ -88,6 +89,11 @@ class EventImpl implements Event
     public Object getContext()
     {
         return context;
+    }
+
+    @Override
+    public Handler getRootHandler() {
+        return ReactorImpl.ROOT.get(this);
     }
 
     private Handler delegated = null;
