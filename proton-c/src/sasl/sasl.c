@@ -49,7 +49,7 @@ static ssize_t pn_input_read_sasl_encrypt(pn_transport_t *transport, unsigned in
 static ssize_t pn_output_write_sasl_header(pn_transport_t* transport, unsigned int layer, char* bytes, size_t size);
 static ssize_t pn_output_write_sasl(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
 static ssize_t pn_output_write_sasl_encrypt(pn_transport_t *transport, unsigned int layer, char *bytes, size_t available);
-static void pn_error_sasl(pn_transport_t* transport);
+static void pn_error_sasl(pn_transport_t* transport, unsigned int layer);
 
 const pn_io_layer_t sasl_header_layer = {
     pn_input_read_sasl_header,
@@ -253,7 +253,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   }
 }
 
-static void pn_error_sasl(pn_transport_t* transport)
+static void pn_error_sasl(pn_transport_t* transport, unsigned int layer)
 {
   transport->close_sent = true;
   pni_sasl_set_desired_state(transport, SASL_ERROR);

@@ -142,6 +142,7 @@ struct pn_ssl_session_t {
 
 /* */
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata);
+static void handle_error_ssl( pn_transport_t *transport, unsigned int layer);
 static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len);
@@ -682,7 +683,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 const pn_io_layer_t ssl_layer = {
     process_input_ssl,
     process_output_ssl,
-    NULL,
+    handle_error_ssl,
     NULL,
     buffered_output
 };
@@ -690,7 +691,7 @@ const pn_io_layer_t ssl_layer = {
 const pn_io_layer_t ssl_input_closed_layer = {
     process_input_done,
     process_output_ssl,
-    NULL,
+    handle_error_ssl,
     NULL,
     buffered_output
 };
@@ -698,7 +699,7 @@ const pn_io_layer_t ssl_input_closed_layer = {
 const pn_io_layer_t ssl_output_closed_layer = {
     process_input_ssl,
     process_output_done,
-    NULL,
+    handle_error_ssl,
     NULL,
     buffered_output
 };
@@ -706,7 +707,7 @@ const pn_io_layer_t ssl_output_closed_layer = {
 const pn_io_layer_t ssl_closed_layer = {
     process_input_done,
     process_output_done,
-    NULL,
+    handle_error_ssl,
     NULL,
     buffered_output
 };
@@ -1020,6 +1021,11 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
   }
   ssl_log(transport, "process_input_ssl() returning %d", (int) consumed);
   return consumed;
+}
+
+static void handle_error_ssl(pn_transport_t *transport, unsigned int layer)
+{
+  transport->io_layers[layer] = &ssl_closed_layer;
 }
 
 static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer, char *buffer, size_t max_len)
