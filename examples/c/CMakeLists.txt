@@ -17,9 +17,5 @@
 # under the License.
 #
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_subdirectory(c)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
-endif()
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_subdirectory(messenger)
