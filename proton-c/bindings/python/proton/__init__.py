@@ -3629,10 +3629,20 @@ class Collector:
     pn_collector_free(self._impl)
     del self._impl
 
+if "TypeExtender" not in globals():
+  class TypeExtender:
+    def __init__(self, number):
+      self.number = number
+    def next(self):
+      try:
+        return self.number
+      finally:
+        self.number += 1
+
 class EventType(object):
 
   _lock = threading.Lock()
-  _extended = 10000
+  _extended = TypeExtender(10000)
   TYPES = {}
 
   def __init__(self, name=None, number=None, method=None):
@@ -3644,8 +3654,7 @@ class EventType(object):
         name = pn_event_type_name(number)
 
       if number is None:
-        number = EventType._extended
-        EventType._extended += 1
+        number = self._extended.next()
 
       if method is None:
         method = "on_%s" % name

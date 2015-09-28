@@ -25,7 +25,7 @@ from org.apache.qpid.proton.amqp.transaction import Coordinator
 from org.apache.qpid.proton.amqp.transport import ErrorCondition, \
   SenderSettleMode, ReceiverSettleMode
 from org.apache.qpid.proton.engine import EndpointState, Sender, \
-  Receiver, Transport as _Transport, TransportException
+  Receiver, Transport as _Transport, TransportException, EventType
 
 from java.util import EnumSet
 from compat import array, zeros
@@ -1125,3 +1125,12 @@ def pn_event_attachments(event):
 
 def pn_event_copy(event):
   return event.copy()
+
+class TypeExtender:
+  def __init__(self, number):
+    pass
+  def next(self):
+    class CustomEvent(EventType):
+      def isValid(self):
+        return True
+    return CustomEvent()

@@ -77,7 +77,10 @@ def peel_handler_exception(meth):
 def pn_handler_add(h, c):
     h.add(c)
 def pn_handler_dispatch(h, ev, et):
-    ev.impl.dispatch(h)
+    if et != None and et != ev.impl.type:
+      ev.impl.redispatch(et, h)
+    else:
+      ev.impl.dispatch(h)
 def pn_record_set_handler(r, h):
     BaseHandler.setHandler(r, h)
 def pn_record_get_handler(r):
