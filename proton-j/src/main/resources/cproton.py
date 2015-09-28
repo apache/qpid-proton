@@ -40,17 +40,3 @@ from cmessage import *
 from curl import *
 from creactor import *
 from chandlers import *
-
-# XXX: this is for compatibility, apparently the version of jython we
-# use doesn't have next, we should remove this when we upgrade
-
-_DEF = object()
-
-def next(iter, default=_DEF):
-    try:
-        return iter.next()
-    except StopIteration:
-        if default is _DEF:
-            raise
-        else:
-            return default
