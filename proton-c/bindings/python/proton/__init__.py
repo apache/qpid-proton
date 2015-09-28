@@ -3779,6 +3779,10 @@ class Event(Wrapper, EventBase):
       return None
 
   @property
+  def root(self):
+    return WrappedHandler.wrap(pn_event_root(self._impl))
+
+  @property
   def context(self):
     """Returns the context object associated with the event. The type of this depend on the type of event."""
     return wrappers[self.clazz](pn_event_context(self._impl))

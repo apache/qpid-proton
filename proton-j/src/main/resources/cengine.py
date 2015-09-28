@@ -1114,6 +1114,9 @@ def pn_event_context(event):
 def pn_event_type(event):
   return event.impl.getEventType()
 
+def pn_event_root(event):
+  return event.impl.getRootHandler()
+
 def pn_event_type_name(etype):
   return str(etype)
 
