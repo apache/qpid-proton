@@ -41,7 +41,6 @@ extern "C" {
  * @{
  */
 
-typedef struct pn_handler_t pn_handler_t;
 typedef struct pn_reactor_t pn_reactor_t;
 typedef struct pn_acceptor_t pn_acceptor_t;
 typedef struct pn_timer_t pn_timer_t;

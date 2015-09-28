@@ -18,9 +18,10 @@
  * under the License.
  *
  */
-
+#include <stdio.h>
 #include <proton/object.h>
 #include <proton/event.h>
+#include <proton/reactor.h>
 #include <assert.h>
 
 struct pn_collector_t {
@@ -283,7 +284,16 @@ pn_record_t *pn_event_attachments(pn_event_t *event)
   return event->attachments;
 }
 
+pn_handler_t *pn_event_root(pn_event_t *event)
+{
+  assert(event);
+  pn_handler_t *h = pn_record_get_handler(event->attachments);
+  return h;
+}
 
+void pni_event_set_root(pn_event_t *event, pn_handler_t *handler) {
+  pn_record_set_handler(event->attachments, handler);
+}
 
 const char *pn_event_type_name(pn_event_type_t type)
 {

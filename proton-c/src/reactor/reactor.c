@@ -398,7 +398,9 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
       pn_incref(event);
       pn_handler_t *handler = pn_event_handler(event, reactor->handler);
       pn_event_type_t type = pn_event_type(event);
+      pni_event_set_root(event, handler);
       pn_handler_dispatch(handler, event, type);
+      pni_event_set_root(event, reactor->global);
       pn_handler_dispatch(reactor->global, event, type);
       pni_reactor_dispatch_post(reactor, event);
       previous = reactor->previous = type;

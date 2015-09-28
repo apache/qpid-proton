@@ -25,6 +25,6 @@
 #include <proton/reactor.h>
 
 void pni_record_init_reactor(pn_record_t *record, pn_reactor_t *reactor);
-
+void pni_event_set_root(pn_event_t *event, pn_handler_t *handler);
 
 #endif /* src/reactor.h */

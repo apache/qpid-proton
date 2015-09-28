@@ -82,6 +82,21 @@ pn_handler_t *test_handler(pn_reactor_t *reactor, pn_list_t *events) {
   return handler;
 }
 
+
+void root_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t type) {
+  pni_test_handler_t *th = thmem(handler);
+  pn_reactor_t *reactor = pn_event_reactor(event);
+  assert(reactor == th->reactor);
+  pn_list_add(th->events, pn_event_root(event));
+}
+
+pn_handler_t *test_root(pn_reactor_t *reactor, pn_list_t *events) {
+  pn_handler_t *handler = pn_handler_new(root_dispatch, sizeof(pni_test_handler_t), NULL);
+  thmem(handler)->reactor = reactor;
+  thmem(handler)->events = events;
+  return handler;
+}
+
 #define END PN_EVENT_NONE
 
 void expect(pn_list_t *events, ...) {
@@ -154,6 +169,21 @@ static void test_reactor_handler_run_free(void) {
   expect(events, PN_REACTOR_INIT, PN_SELECTABLE_INIT, PN_SELECTABLE_UPDATED, PN_SELECTABLE_FINAL, PN_REACTOR_FINAL, END);
   pn_reactor_free(reactor);
   pn_free(events);
+}
+
+static void test_reactor_event_root(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  assert(reactor);
+  pn_handler_t *handler = pn_reactor_get_handler(reactor);
+  assert(handler);
+  pn_list_t *roots = pn_list(PN_VOID, 0);
+  pn_handler_t *th = test_root(reactor, roots);
+  pn_handler_add(handler, th);
+  pn_reactor_run(reactor);
+  expect(roots, handler, handler, handler, handler, handler, END);
+  pn_free(reactor);
+  pn_free(th);
+  pn_free(roots);
 }
 
 static void test_reactor_connection(void) {
@@ -456,6 +486,7 @@ static void test_reactor_schedule_cancel(void) {
 
 int main(int argc, char **argv)
 {
+  test_reactor_event_root();
   test_reactor();
   test_reactor_free();
   test_reactor_run();

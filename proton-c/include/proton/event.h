@@ -415,6 +415,11 @@ PN_EXTERN const pn_class_t *pn_event_class(pn_event_t *event);
 PN_EXTERN void *pn_event_context(pn_event_t *event);
 
 /**
+ * Get the root handler the current event was dispatched to.
+ */
+PN_EXTERN pn_handler_t *pn_event_root(pn_event_t *event);
+
+/**
  * Get the connection associated with an event.
  *
  * @param[in] event an event object
