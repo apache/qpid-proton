@@ -98,6 +98,9 @@ class HandlerTest(common.Test):
   def append_root(self, reactor, root):
     reactor.handler.handlers.append(root)
     
+  def event_root(self, event):
+    return event.root
+  
   def event_reactor_handler(self, event):
     return event.reactor.handler
 
@@ -110,3 +113,11 @@ class HandlerTest(common.Test):
   def test_append_handler(self):
     self.do_customEvent(self.append_root, self.event_reactor_handler)
 
+  def test_set_root(self):
+    self.do_customEvent(self.set_root, self.event_root)
+
+  def test_add_root(self):
+    self.do_customEvent(self.add_root, self.event_root)
+
+  def test_append_root(self):
+    self.do_customEvent(self.append_root, self.event_root)
