@@ -3850,7 +3850,16 @@ class Event(Wrapper, EventBase):
   def __repr__(self):
     return "%s(%s)" % (self.type, self.context)
 
+class LazyHandlers(object):
+  def __get__(self, obj, clazz):
+    if obj is None:
+      return self
+    ret = []
+    obj.__dict__['handlers'] = ret
+    return ret
+
 class Handler(object):
+  handlers = LazyHandlers()
 
   def on_unhandled(self, method, *args):
     pass
