@@ -1,13 +1,13 @@
 # Go examples for proton
 
-There are 3 go packages for proton:
+There are 3 Go packages for proton:
 
-- qpid.apache.org/proton/amqp: converts AMQP messages and data types to and from Go data types.
-- qpid.apache.org/proton/concurrent: easy-to-use, concurrent API for concurrent clients and servers.
-- qpid.apache.org/proton: Low-level access to the proton engine.
+- qpid.apache.org/proton/concurrent: Easy-to-use, concurrent API for concurrent clients and servers.
+- qpid.apache.org/proton/amqp: Convert AMQP messages and data to and from Go data types.
+- qpid.apache.org/proton: Direct access to the event-driven, concurrent-unsafe proton library.
 
-Most applications should use the `proton/concurrent` package. The `proton` package is for
-applications that need low-level access to the proton engine.
+Most applications should use the `concurrent` package. The `proton` package is
+for applications that need low-level access to the proton library.
 
 ## Example programs
 
@@ -16,10 +16,13 @@ applications that need low-level access to the proton engine.
 
 ## Using the Go packages
 
-Set your GOPATH environment variable to include `/<path-to-proton>/proton-c/bindings/go`
+Use `go get qpid.apache.org/proton/concurrent` or check out the proton
+repository and set your GOPATH environment variable to include
+`/<path-to-proton>/proton-c/bindings/go`
 
 The proton Go packages include C code so the cgo compiler needs to be able to
-find the proton library and include files.  There are a couple of ways to do this:
+find the proton library and include files.  There are a couple of ways to do
+this:
 
 1. Build proton in directory `$BUILD`. Source the script `$BUILD/config.sh` to set your environment.
 
@@ -51,9 +54,10 @@ You can compile the program first and then run the executable to avoid the delay
 All the examples take a `-h` flag to show usage information, and the comments in
 the example source have more details.
 
-First start the broker:
+First start the broker (the optional `-debug` flag will print extra information about
+what the broker is doing)
 
-    go run reactor_broker.go
+    go run broker.go -debug
 
 Send messages concurrently to queues "foo" and "bar", 10 messages to each queue:
 
@@ -63,14 +67,15 @@ Receive messages concurrently from "foo" and "bar". Note -count 20 for 10 messag
 
     go run receive.go -count 20 localhost:/foo localhost:/bar
 
-The broker and clients use the amqp port on the local host by default, to use a
-different address use the `-addr host:port` flag.
+The broker and clients use the standard AMQP port (5672) on the local host by
+default, to use a different address use the `-addr host:port` flag.
 
-You can mix it up by running the Go clients with the python broker:
+If you have the full proton repository checked out you can try try using the
+python broker with Go clients:
 
     python ../python/broker.py
 
 Or use the Go broker and the python clients:
 
     python ../python/simple_send.py
-    python ../python/simple_recv.py`.
+    python ../python/simple_recv.py

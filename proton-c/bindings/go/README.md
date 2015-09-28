@@ -1,7 +1,7 @@
-# *EXPERIMENTAL* Go binding for proton
+# Go binding for proton
 
-This is an *experimental* [Go](http://golang.org) binding for proton.
-The API is subject to change but there is enough to get a good idea of where it is headed.
+This is a a [Go](http://golang.org) binding for proton.
+The API is subject to change but is stabilizing.
 
 Feedback is strongly encouraged:
 
@@ -10,8 +10,8 @@ Feedback is strongly encouraged:
 
 The package documentation is available at: <http://godoc.org/qpid.apache.org/proton>
 
-See the [examples](../../../examples/go/README.md) for working examples and
-practical instructions on how to get started.
+See the [examples](https://github.com/apache/qpid-proton/blob/master/examples/cpp/README.mdw)
+for working examples and practical instructions on how to get started.
 
 The rest of this page discusses the high-level goals and design issues.
 
@@ -125,9 +125,6 @@ loops for each connection.
 
 ### Design of the concurrent API
 
-The details are still being worked out (see the code) but some basic principles have been
-established.
-
 Code from the `proton` package runs _only_ in a dedicated goroutine (per
 connection). This makes it safe to use proton C data structures associated with
 that connection.
@@ -138,13 +135,10 @@ function into the proton goroutine via a special channel. Injected functions
 can use temporary channels to allow the calling code to wait for results. Such
 waiting is only for the local event-loop, not across network calls.
 
-The API exposes blocking calls returning normal error values, no exposed
-channels or callbacks. The user can write simple blocking code or start their
-own goroutine loops and channels as appropriate. Details of our internal channel
-use and error handling are hidden, which simplifies the API and gives us more
-implementation flexibility.
-
-TODO: lifecycle rules for proton objects.
+The API exposes blocking calls returning normal error values. The user can write
+simple blocking code or start their own goroutine loops and channels as
+appropriate. Details of our internal channel use and error handling are hidden,
+which simplifies the API and gives us more implementation flexibility.
 
 ## New to Go?
 
