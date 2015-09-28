@@ -4089,6 +4089,7 @@ __all__ = [
            "Described",
            "Endpoint",
            "Event",
+           "EventType",
            "Handler",
            "Link",
            "Message",
