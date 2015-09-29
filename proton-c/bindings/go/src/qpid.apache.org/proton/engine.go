@@ -76,10 +76,9 @@ func (b *bufferChan) buffer() []byte {
 // functions (such as sending messages) are encoded and written to the
 // net.Conn. Create a engine with NewEngine()
 //
-// The proton protocol engine is single threaded (per connection). The Engine runs
-// proton in the goroutine that calls Engine.Run() and creates goroutines to feed
-// data to/from a net.Conn. You can create multiple Engines to handle multiple
-// connections concurrently.
+// The Engine runs a proton event loop in the goroutine that calls Engine.Run()
+// and creates goroutines to feed data to/from a net.Conn. You can create
+// multiple Engines to handle multiple connections concurrently.
 //
 // Methods on proton values defined in this package (Sessions, Links etc.) can
 // only be called in the goroutine that executes the corresponding

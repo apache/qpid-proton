@@ -81,7 +81,7 @@ func (b *broker) listen(addr string) (err error) {
 		if err != nil {
 			return err
 		}
-		c, err := b.container.NewConnection(conn)
+		c, err := b.container.Connection(conn)
 		if err != nil {
 			return err
 		}

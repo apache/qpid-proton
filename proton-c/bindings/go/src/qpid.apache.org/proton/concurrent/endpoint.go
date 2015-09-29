@@ -37,7 +37,8 @@ var Closed = io.EOF
 // Link, Sender and Receiver for details.
 //
 type Endpoint interface {
-	// Open the endpoint.
+	// Open the local end of a remotely-initiated endpoint. You must Open()
+	// endpoints returned by Connection.Accept() before using them.
 	Open() error
 
 	// Close an endpoint and signal an error to the remote end if error != nil.

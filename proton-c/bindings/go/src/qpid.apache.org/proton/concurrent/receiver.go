@@ -190,7 +190,6 @@ func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, er
 
 // Called in proton goroutine
 func (r *receiver) handleDelivery(delivery proton.Delivery) {
-	// FIXME aconway 2015-09-24: how can this happen if we are remote closed?
 	if r.eLink.State().RemoteClosed() {
 		localClose(r.eLink, r.eLink.RemoteCondition().Error())
 		return

@@ -33,6 +33,19 @@ import (
 type Connection interface {
 	Endpoint
 
+	// Sender opens a new sender on the DefaultSession.
+	//
+	// v can be a string, which is used as the Target address, or a SenderSettings
+	// struct containing more details settings.
+	Sender(v interface{}) (Sender, error)
+
+	// Receiver opens a new Receiver on the DefaultSession().
+	//
+	// v can be a string, which is used as the
+	// Source address, or a ReceiverSettings struct containing more details
+	// settings.
+	Receiver(v interface{}) (Receiver, error)
+
 	// Server puts the connection in server mode, must be called before Open().
 	//
 	// A server connection will do protocol negotiation to accept a incoming AMQP
@@ -45,9 +58,12 @@ type Connection interface {
 	// Must be called before Open().
 	Listen()
 
-	// NewSession creates a new local session, you must call Session.Open()
-	// to open it with the remote peer.
-	NewSession() (s Session, err error)
+	// DefaultSession() returns a default session for the connection. It is opened
+	// on the first call to DefaultSession and returned on subsequent calls.
+	DefaultSession() (Session, error)
+
+	// Session opens a new session.
+	Session() (Session, error)
 
 	// Accept returns the next Endpoint (Session, Sender or Receiver) opened by
 	// the remote peer. It returns (nil, error) if the connection closes.
@@ -70,13 +86,13 @@ type Connection interface {
 	// Container for the connection.
 	Container() Container
 
-	// Disconnect the connection abrubtly.
+	// Disconnect the connection abruptly with an error.
 	Disconnect(error)
 }
 
 type connection struct {
 	endpoint
-	listenOnce sync.Once
+	listenOnce, defaultSessionOnce sync.Once
 
 	// Set before Open()
 	container *container
@@ -88,6 +104,8 @@ type connection struct {
 	engine      *proton.Engine
 	err         internal.FirstError
 	eConnection proton.Connection
+
+	defaultSession Session
 }
 
 func newConnection(conn net.Conn, cont *container) (*connection, error) {
@@ -129,18 +147,20 @@ func (c *connection) Disconnect(err error) {
 	}
 }
 
-// FIXME aconway 2015-09-24: needed?
 func (c *connection) closed(err error) {
 	// Call from another goroutine to initiate close without deadlock.
 	go c.Close(err)
 }
 
-func (c *connection) NewSession() (Session, error) {
+func (c *connection) Session() (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
 		eSession, err := c.engine.Connection().Session()
 		if err == nil {
-			s = newSession(c, eSession)
+			eSession.Open()
+			if err == nil {
+				s = newSession(c, eSession)
+			}
 		}
 		return err
 	})
@@ -165,3 +185,29 @@ func (c *connection) Accept() (Endpoint, error) {
 }
 
 func (c *connection) Container() Container { return c.container }
+
+func (c *connection) DefaultSession() (s Session, err error) {
+	c.defaultSessionOnce.Do(func() {
+		c.defaultSession, err = c.Session()
+	})
+	if err == nil {
+		err = c.Error()
+	}
+	return c.defaultSession, err
+}
+
+func (c *connection) Sender(v interface{}) (Sender, error) {
+	if s, err := c.DefaultSession(); err == nil {
+		return s.Sender(v)
+	} else {
+		return nil, err
+	}
+}
+
+func (c *connection) Receiver(v interface{}) (Receiver, error) {
+	if s, err := c.DefaultSession(); err == nil {
+		return s.Receiver(v)
+	} else {
+		return nil, err
+	}
+}

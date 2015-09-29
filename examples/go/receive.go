@@ -73,19 +73,13 @@ func main() {
 			// Open a new connection
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
 			util.ExitIf(err)
-			c, err := container.NewConnection(conn)
+			c, err := container.Connection(conn)
 			util.ExitIf(err)
 			util.ExitIf(c.Open())
 			connections <- c // Save connection so we can Close() when main() ends
 
-			// Create and open a session
-			ss, err := c.NewSession()
-			util.ExitIf(err)
-			err = ss.Open()
-			util.ExitIf(err)
-
 			// Create a Receiver using the path of the URL as the source address
-			r, err := ss.Receiver(url.Path)
+			r, err := c.Receiver(url.Path)
 			util.ExitIf(err)
 
 			// Loop receiving messages and sending them to the main() goroutine

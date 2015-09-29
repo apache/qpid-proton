@@ -76,20 +76,14 @@ func main() {
 			// Open a new connection
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
 			util.ExitIf(err)
-			c, err := container.NewConnection(conn)
+			c, err := container.Connection(conn)
 			util.ExitIf(err)
 			err = c.Open()
 			util.ExitIf(err)
 			connections = append(connections, c) // Save connection so it will be closed when main() ends
 
-			// Create and open a session
-			ss, err := c.NewSession()
-			util.ExitIf(err)
-			err = ss.Open()
-			util.ExitIf(err)
-
 			// Create a Sender using the path of the URL as the AMQP address
-			s, err := ss.Sender(url.Path)
+			s, err := c.Sender(url.Path)
 			util.ExitIf(err)
 
 			// Loop sending messages.

@@ -41,7 +41,7 @@ func newServer(cont Container) (net.Addr, <-chan Connection) {
 	ch := make(chan Connection)
 	go func() {
 		conn, err := listener.Accept()
-		c, err := cont.NewConnection(conn)
+		c, err := cont.Connection(conn)
 		panicIf(err)
 		c.Server()
 		c.Listen()
@@ -55,10 +55,10 @@ func newServer(cont Container) (net.Addr, <-chan Connection) {
 func newClient(cont Container, addr net.Addr) Session {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	panicIf(err)
-	c, err := cont.NewConnection(conn)
+	c, err := cont.Connection(conn)
 	panicIf(err)
 	c.Open()
-	sn, err := c.NewSession()
+	sn, err := c.Session()
 	panicIf(err)
 	panicIf(sn.Open())
 	return sn

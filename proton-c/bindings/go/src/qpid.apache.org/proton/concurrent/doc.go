@@ -20,15 +20,23 @@ under the License.
 /*
 
 Package concurrent provides a procedural, concurrent Go API for exchanging AMQP
-messages.
+messages. You can write clients or servers using this API.
 
-AMPQ defines a credit-based scheme for flow control of messages over a
-link. Credit is the number of messages the receiver is willing to accept.  The
-receiver gives credit to the sender. The sender can send messages without
-waiting for a response from the receiver until it runs out of credit, at which
-point it must wait for more credit to send more messages.
+Start by creating a Container with NewContainer. A Container represents a client
+or server application that can contain incoming or outgoing connections.
 
-See the documentation of Sender and Receiver for details of how this API uses credit.
+You can create connections with the standard Go 'net' package using net.Dial or
+net.Listen. Create an AMQP connection over a net.Conn with
+Container.Connection() and open it with Connection.Open().
+
+AMQP sends messages over "links", each link has a Sender and Receiver
+end. Connection.Sender() and Connection.Receiver() allow you to create links to
+send and receive messages.
+
+You can also create an AMQP server connection by calling Connection.Listen()
+before calling Open() on the connection. You can then call Connection.Accept()
+after calling Connection.Open() to accept incoming sessions and links.
+
 */
 package concurrent
 

@@ -28,6 +28,8 @@ import (
 //
 type Session interface {
 	Endpoint
+
+	// Connection owning this session.
 	Connection() Connection
 
 	// Sender opens a new sender. v can be a string, which is used as the Target
@@ -63,8 +65,6 @@ func (s *session) Close(err error) {
 	s.engine().Inject(func() { localClose(s.eSession, err) })
 }
 
-// NewSender create a link sending to target.
-// You must call snd.Open() before calling snd.Send().
 func (s *session) Sender(v interface{}) (snd Sender, err error) {
 	var settings LinkSettings
 	switch v := v.(type) {
@@ -86,7 +86,6 @@ func (s *session) Sender(v interface{}) (snd Sender, err error) {
 	return
 }
 
-// Receiver opens a receiving link.
 func (s *session) Receiver(v interface{}) (rcv Receiver, err error) {
 	var settings ReceiverSettings
 	switch v := v.(type) {

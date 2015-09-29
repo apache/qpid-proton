@@ -39,7 +39,7 @@ type Container interface {
 	// setting any Connection properties you need to set. Note the net.Conn
 	// can be an outgoing connection (e.g. made with net.Dial) or an incoming
 	// connection (e.g. made with net.Listener.Accept())
-	NewConnection(conn net.Conn) (Connection, error)
+	Connection(conn net.Conn) (Connection, error)
 }
 
 type container struct {
@@ -66,6 +66,6 @@ func (cont *container) nextLinkName() string {
 	return cont.id + "@" + cont.linkNames.Next()
 }
 
-func (cont *container) NewConnection(conn net.Conn) (Connection, error) {
+func (cont *container) Connection(conn net.Conn) (Connection, error) {
 	return newConnection(conn, cont)
 }

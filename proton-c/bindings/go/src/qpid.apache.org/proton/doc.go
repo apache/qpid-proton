@@ -18,24 +18,46 @@ under the License.
 */
 
 /*
-Package proton provides a Go binding for the Qpid proton AMQP library.
-AMQP is an open standard for inter-operable message exchange, see <http://www.amqp.org/>
 
-Proton is an event-driven, concurrent-unsafe AMQP protocol library that allows
-you to send and receive messages using the standard AMQP concurrent protocol.
+Package proton is a Go binding for the Qpid Proton AMQP messaging toolkit (see
+http://qpid.apache.org/proton) It is a concurrent-unsafe, event-driven API that
+closely follows the Proton C API.
 
-For most tasks, consider using package `qpid.apache.org/proton/concurrent`.  It
-provides a concurrent-safe API that is easier and more natural to use in Go.
+Package qpid.apache.org/proton/concurrent provides an alternative,
+concurrent-safe, procedural API. Most applications will find the concurrent API
+easier to use.
 
-The raw proton API is event-driven and not concurrent-safe. You implement a
-MessagingHandler event handler to react to AMQP protocol events. You must ensure
-that all events are handled in a single goroutine or that you serialize all all
-uses of the proton objects associated with a single connection using a lock.
-You can use channels to communicate between application goroutines and the
-event-handling goroutine, see type Event fro more detail.
+If you need direct access to the underlying proton library for some reason, this
+package provides it. The types in this package are simple wrappers for C
+pointers. They provide access to C functions as Go methods and do some trivial
+conversions, for example between Go string and C null-terminated char* strings.
 
-Package `qpid.apache.org/proton/concurrent` does all this for you and presents
-a simple concurrent-safe interface.
+Consult the C API documentation at http://qpid.apache.org/proton for more
+information about the types here. There is a 1-1 correspondence between C type
+pn_foo_t and Go type proton.Foo, and between C function
+
+    pn_foo_do_something(pn_foo_t*, ...)
+
+and Go method
+
+    func (proton.Foo) DoSomething(...)
+
+The proton.Engine type pumps data between a Go net.Conn connection and a
+proton.Connection goroutine that feeds events to a proton.MessagingHandler. See
+the proton.Engine documentation for more detail.
+
+EventHandler and MessagingHandler define an event handling interfaces that you
+can implement to react to protocol events. MessagingHandler provides a somewhat
+simpler set of events and automates some common tasks for you.
+
+You must ensure that all events are handled in a single goroutine or that you
+serialize all all uses of the proton objects associated with a single connection
+using a lock.  You can use channels to communicate between application
+goroutines and the event-handling goroutine, see Engine documentation for more details.
+
+Package qpid.apache.org/proton/concurrent does all this for you and presents a
+simple concurrent-safe interface, for most applications you should use that
+instead.
 
 */
 package proton
