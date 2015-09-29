@@ -215,6 +215,9 @@ class BlockingConnection(Handler):
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
                   msg="Closing connection")
 
+    def _is_closed(self):
+        return self.conn.state & (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED)
+
     def run(self):
         """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
         while self.container.process(): pass
@@ -239,8 +242,9 @@ class BlockingConnection(Handler):
                         raise Timeout(txt)
             finally:
                 self.container.timeout = container_timeout
-        if self.disconnected:
+        if self.disconnected or self._is_closed():
             self.container.stop()
+        if self.disconnected:
             raise ConnectionException("Connection %s disconnected" % self.url)
 
     def on_link_remote_close(self, event):
