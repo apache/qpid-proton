@@ -36,35 +36,44 @@ programmer you know that function-scoped cleanup is all you really need, and
 allocates memory that is not tracked by Go, so proper cleanup is important (but
 you knew that.)
 
-Proton reference counting in C
-------------------------------
+The role of reference counts
+----------------------------
 
 Internally, the proton C library uses reference counting, and you can
 *optionally* use it in your code. You should choose *either* reference counting
 *or* `pn_X_free` in your code, *not both*. It might work, but it is the sort of
 Bad Idea that might break your code in the future and will hurt your head in the
-present. `pn_X_free` is all you really need to write an AMQP application in C.
+present. `pn_X_free` is all you really need to write an AMQP application in
+straight C.
 
 However, proton is designed to be embedded and integrated. If you are
 integrating proton with a new programming language, or some other kind of
-framwork, reference counts may be useful. If your integration target has some
-form of automatic clean-up *and* some way for you to hook into it (finalizers,
-destructors or the like) then reference counts may help (e.g. python, ruby and
-C++). As a counter-example the Go langauge *is* garbage collected but does *not*
-have finalizers, and the Go binding does *not* use reference counts, it is
-written like a "normal" C application with `pn_X_free`.
+framework, reference counts may be useful. If your integration target has some
+form of automatic clean-up that you can hook into (reference-counted pointers,
+finalizers, destructors or the like) then reference counts may help
+(e.g. python, ruby and C++ bindings all use them).
+
+As a counter-example the Go language is garbage collected, and has finalizers,
+but does not use reference counts. Go garbage collection is scheduled around
+memory use, so the timing may not be suitable for other resources. The Go
+binding does not use proton reference counts, it simply calls `pn_X_free` as
+part of resource cleanup (e.g. during Connection.Close()) or via finalizers as a
+fail-safe if resources are not cleaned up properly by the application.
 
 If you are mixing your own C code with code using a reference-counted proton
 binding (e.g. C++ or python) then you may need to at least be aware of reference
 counting.
 
-You can even use reference counts in plain C code if you find that helpful (I
-don't see how it would be but you never know.)
+You can even use reference counts in plain C code if you find that helpful. I
+don't see how it would be but you never know.
+
+The reference counting rules
+----------------------------
 
 The proton C API has standard reference counting rules (but see [1] below)
 
 - A pointer *returned* by a `pn_` function is either *borrowed* by the caller,
-  or the caller *owns* a reference (the API doc says which.)
+  or the caller *owns* a reference (the API doc should say which)
 - The owner of a reference must call `pn_decref()` exactly once to
   release it.
 - To keep a borrowed pointer, call `pn_incref()`. This adds a new
@@ -98,6 +107,19 @@ done [2]. If you call `pn_event_link()` in an event handler then you get a
 handler, but if you want to save it for later you must call `pn_incref`
 to add a reference and of course call `pn_decref` when you are done with
 that reference.
+
+You should treat `pn_decref` *exactly* like freeing the object: the pointer is
+dead to you, you must never even look at it again. *Never* write code that
+assumes that "something else" still has a reference after you have released your
+own. *Never* write code that checks the value of the reference count (except for
+debugging purposes.) If you own a reference you can use the pointer. Once you
+release your reference, the pointer is dead to you. That's the whole story.
+
+The point of reference counts is to break ownership dependencies between
+different parts of the code so that everything will Just Work provided each part
+of the code independently obeys the simple rules. If your code makes assumptions
+about distant refcounts or "peeks" to vary its behavior based on what others are
+doing, you defeat the purpose of reference counting [1].
 
 [1] *Internally* the proton library plays tricks with reference counts to
 implement 'weak' pointers and manage circular containment relationships. You do
