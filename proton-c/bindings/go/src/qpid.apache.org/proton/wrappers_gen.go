@@ -25,7 +25,7 @@ under the License.
 package proton
 
 import (
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"time"
 	"unsafe"
 )

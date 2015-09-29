@@ -45,8 +45,8 @@ if (BUILD_GO)
 
   # Install packages in the source tree, go tools aren't friendly otherwise.
   # All build output goes in git-ignored pkg or bin subdirectories.
-  set(qgo "qpid.apache.org/proton")
-  set(packages ${qgo} ${qgo}/amqp ${qgo}/concurrent ${qgo}/internal)
+  set(q "qpid.apache.org")
+  set(packages ${q}/amqp ${q}/internal ${q}/proton ${q}/electron)
   add_custom_target(go-packages ALL
     COMMAND ${GO_INSTALL} ${packages}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}

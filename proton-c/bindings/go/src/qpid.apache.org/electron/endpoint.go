@@ -17,12 +17,12 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+package electron
 
 import (
 	"io"
+	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/internal"
 )
 
 // Closed is an alias for io.EOF. It is returned as an error when an endpoint
@@ -37,10 +37,6 @@ var Closed = io.EOF
 // Link, Sender and Receiver for details.
 //
 type Endpoint interface {
-	// Open the local end of a remotely-initiated endpoint. You must Open()
-	// endpoints returned by Connection.Accept() before using them.
-	Open() error
-
 	// Close an endpoint and signal an error to the remote end if error != nil.
 	Close(error)
 
@@ -50,38 +46,23 @@ type Endpoint interface {
 	// Error returns nil if the endpoint is open, otherwise returns an error.
 	// Error() == Closed means the endpoint was closed without error.
 	Error() error
+
+	// Connection containing the endpoint
+	Connection() Connection
 }
 
-// Implements setError() and Error() from Endpoint values that hold an error.
-type errorHolder struct {
-	err internal.FirstError
-}
-
-func (e *errorHolder) setError(err error) error { return e.err.Set(err) }
-func (e *errorHolder) Error() error             { return e.err.Get() }
-
-// Implements Error() and String() from Endpoint
 type endpoint struct {
-	errorHolder
+	err internal.ErrorHolder
 	str string // Must be set by the value that embeds endpoint.
 }
 
 func (e *endpoint) String() string { return e.str }
+func (e *endpoint) Error() error   { return e.err.Get() }
 
 // Call in proton goroutine to close an endpoint locally
 // handler will complete the close when remote end closes.
 func localClose(ep proton.Endpoint, err error) {
 	if ep.State().LocalActive() {
-		if err != nil {
-			ep.Condition().SetError(err)
-		}
-		ep.Close()
+		proton.CloseError(ep, err)
 	}
-}
-
-func (e *endpoint) closeError(err error) {
-	if err == nil {
-		err = Closed
-	}
-	e.err.Set(err)
 }

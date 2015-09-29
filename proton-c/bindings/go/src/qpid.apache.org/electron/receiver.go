@@ -17,21 +17,30 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+package electron
 
 import (
+	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/amqp"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/amqp"
+	"sync"
 	"time"
 )
 
-type ReceiverSettings struct {
-	LinkSettings
+// Receiver is a Link that receives messages.
+//
+type Receiver interface {
+	Link
 
-	// Capacity is the number of messages that the receiver can buffer locally.
-	// If unset (zero) it will be set to 1.
-	Capacity int
+	// Receive blocks until a message is available or until the Receiver is closed
+	// and has no more buffered messages.
+	Receive() (ReceivedMessage, error)
+
+	// ReceiveTimeout is like Receive but gives up after timeout, see Timeout.
+	//
+	// Note that that if Prefetch is false, after a Timeout the credit issued by
+	// Receive remains on the link. It will be used by the next call to Receive.
+	ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error)
 
 	// Prefetch==true means the Receiver will automatically issue credit to the
 	// remote sender to keep its buffer as full as possible, i.e. it will
@@ -49,25 +58,15 @@ type ReceiverSettings struct {
 	// calls to Receive with pre-fetch disabled, you can improve performance by
 	// setting the capacity close to the expected number of concurrent calls.
 	//
-	Prefetch bool
-}
+	Prefetch() bool
 
-// Receiver is a Link that receives messages.
-//
-type Receiver interface {
-	Link
+	// Capacity is the size (number of messages) of the local message buffer
+	// These are messages received but not yet returned to the application by a call to Receive()
+	Capacity() int
 
-	// SetCapacity sets the Capacity and Prefetch (see ReceiverSettings) It may
-	// may called before Open() on an accepted receiver, it cannot be changed once
-	// the receiver is Open().
+	// SetCapacity sets Capacity and Prefetch of an accepted Receiver.
+	// May only be called in an accept() function, see Connection.Listen()
 	SetCapacity(capacity int, prefetch bool)
-
-	// Receive blocks until a message is available or until the Receiver is closed
-	// and has no more buffered messages.
-	Receive() (ReceivedMessage, error)
-
-	// ReceiveTimeout is like Receive but gives up after timeout, see Timeout.
-	ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error)
 }
 
 // Flow control policy for a receiver.
@@ -121,59 +120,43 @@ func (p noPrefetchPolicy) Post(r *receiver, err error) {
 // Receiver implementation
 type receiver struct {
 	link
-	// Set in Setup()
-	capacity int
-	prefetch bool
-
-	// Set in Open()
-	buffer chan ReceivedMessage
-	policy policy
+	buffer    chan ReceivedMessage
+	policy    policy
+	setupOnce sync.Once
 }
 
-func newReceiver(l link) Receiver { return &receiver{link: l} }
-
 func (r *receiver) SetCapacity(capacity int, prefetch bool) {
-	r.setPanicIfOpen()
-	if capacity < 1 {
-		capacity = 1
-	}
+	internal.Assert(r.inAccept, "Receiver.SetCapacity called outside of accept function")
 	r.capacity = capacity
 	r.prefetch = prefetch
 }
 
-// Accept and open an incoming receiver.
-func (r *receiver) Open() error {
-	if r.capacity == 0 {
-		r.SetCapacity(1, false)
+func (r *receiver) setup() {
+	if r.capacity < 1 {
+		r.capacity = 1
 	}
 	if r.prefetch {
 		r.policy = &prefetchPolicy{}
 	} else {
 		r.policy = &noPrefetchPolicy{}
 	}
-	err := r.engine().InjectWait(func() error {
-		err := r.open()
-		if err == nil {
-			r.buffer = make(chan ReceivedMessage, r.capacity)
-			r.handler().addLink(r.eLink, r)
-		}
-		return err
-	})
-	return r.setError(err)
+	r.buffer = make(chan ReceivedMessage, r.capacity)
 }
 
-// call in proton goroutine
-func (r *receiver) credit() (buffered, credit, capacity int) {
-	return len(r.buffer), r.eLink.Credit(), cap(r.buffer)
+// call in proton goroutine.
+func (r *receiver) credit() (buffered, credit, max int) {
+	return len(r.buffer), r.eLink.Credit(), cap(r.buffer) - len(r.buffer)
 }
 
-func (r *receiver) Capacity() int { return cap(r.buffer) }
+func (r *receiver) Capacity() int  { return cap(r.buffer) }
+func (r *receiver) Prefetch() bool { return r.prefetch }
 
 func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 	return r.ReceiveTimeout(Forever)
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
+	r.setupOnce.Do(r.setup)
 	internal.Assert(r.buffer != nil, "Receiver is not open: %s", r)
 	r.policy.Pre(r)
 	defer func() { r.policy.Post(r, err) }()
@@ -188,8 +171,8 @@ func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, er
 	}
 }
 
-// Called in proton goroutine
-func (r *receiver) handleDelivery(delivery proton.Delivery) {
+// Called in proton goroutine on MMessage event.
+func (r *receiver) message(delivery proton.Delivery) {
 	if r.eLink.State().RemoteClosed() {
 		localClose(r.eLink, r.eLink.RemoteCondition().Error())
 		return
@@ -211,9 +194,17 @@ func (r *receiver) handleDelivery(delivery proton.Delivery) {
 	}
 }
 
+func (r *receiver) open() {
+	r.setupOnce.Do(r.setup)
+	r.link.open()
+	r.handler().addLink(r.eLink, r)
+}
+
 func (r *receiver) closed(err error) {
-	r.closeError(err)
-	close(r.buffer)
+	r.link.closed(err)
+	if r.buffer != nil {
+		close(r.buffer)
+	}
 }
 
 // ReceivedMessage contains an amqp.Message and allows the message to be acknowledged.

@@ -17,10 +17,10 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+package electron
 
 import (
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"reflect"
 	"time"
 )
@@ -56,7 +56,7 @@ func timedReceive(channel interface{}, timeout time.Duration) (value interface{}
 	switch {
 	case timeout == 0: // Non-blocking receive
 		cases = append(cases, reflect.SelectCase{Dir: reflect.SelectDefault})
-	case timeout < 0: // Block forever, nothing to add
+	case timeout == Forever: // Block forever, nothing to add
 	default: // Block up to timeout
 		cases = append(cases,
 			reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(time.After(timeout))})
@@ -67,5 +67,15 @@ func timedReceive(channel interface{}, timeout time.Duration) (value interface{}
 		return recv.Interface(), recvOk, false
 	default:
 		return nil, false, true
+	}
+}
+
+// After is like time.After but returns a nil channel if timeout == Forever
+// since selecting on a nil channel will never return.
+func After(timeout time.Duration) <-chan time.Time {
+	if timeout == Forever {
+		return nil
+	} else {
+		return time.After(timeout)
 	}
 }

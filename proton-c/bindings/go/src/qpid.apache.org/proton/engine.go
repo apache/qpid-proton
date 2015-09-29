@@ -34,7 +34,7 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"sync"
 	"unsafe"
 )
@@ -107,7 +107,7 @@ func (b *bufferChan) buffer() []byte {
 //
 type Engine struct {
 	// Error is set on exit from Run() if there was an error.
-	err    internal.FirstError
+	err    internal.ErrorHolder
 	inject chan func()
 
 	conn       net.Conn
@@ -127,14 +127,14 @@ const bufferSize = 4096
 var engines = internal.MakeSafeMap()
 
 // NewEngine initializes a engine with a connection and handlers. To start it running:
-//    p := NewEngine(...)
-//    go run p.Run()
+//    eng := NewEngine(...)
+//    go run eng.Run()
 // The goroutine will exit when the engine is closed or disconnected.
 // You can check for errors on Engine.Error.
 //
 func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	// Save the connection ID for Connection.String()
-	p := &Engine{
+	eng := &Engine{
 		inject:     make(chan func()),
 		conn:       conn,
 		transport:  Transport{C.pn_transport()},
@@ -145,7 +145,7 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 		write:      newBufferChan(bufferSize),
 		running:    make(chan struct{}),
 	}
-	if p.transport.IsNil() || p.connection.IsNil() || p.collector == nil {
+	if eng.transport.IsNil() || eng.connection.IsNil() || eng.collector == nil {
 		return nil, internal.Errorf("failed to allocate engine")
 	}
 
@@ -154,27 +154,27 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	// to run connection.
 
 	// Unique container-id by default.
-	p.connection.SetContainer(internal.UUID4().String())
-	pnErr := p.transport.Bind(p.connection)
+	eng.connection.SetContainer(internal.UUID4().String())
+	pnErr := eng.transport.Bind(eng.connection)
 	if pnErr != 0 {
 		return nil, internal.Errorf("cannot setup engine: %s", internal.PnErrorCode(pnErr))
 	}
-	C.pn_connection_collect(p.connection.pn, p.collector)
-	p.connection.Open()
-	connectionContexts.Put(p.connection, connectionContext{p, p.String()})
-	return p, nil
+	C.pn_connection_collect(eng.connection.pn, eng.collector)
+	eng.connection.Open()
+	connectionContexts.Put(eng.connection, connectionContext{eng, eng.String()})
+	return eng, nil
 }
 
-func (p *Engine) String() string {
-	return fmt.Sprintf("%s-%s", p.conn.LocalAddr(), p.conn.RemoteAddr())
+func (eng *Engine) String() string {
+	return fmt.Sprintf("%s-%s", eng.conn.LocalAddr(), eng.conn.RemoteAddr())
 }
 
-func (p *Engine) Id() string {
-	return fmt.Sprintf("%p", &p)
+func (eng *Engine) Id() string {
+	return fmt.Sprintf("%eng", &eng)
 }
 
-func (p *Engine) Error() error {
-	return p.err.Get()
+func (eng *Engine) Error() error {
+	return eng.err.Get()
 }
 
 // Inject a function into the Engine's event loop.
@@ -189,27 +189,27 @@ func (p *Engine) Error() error {
 //
 // Returns a non-nil error if the engine is closed before the function could be
 // injected.
-func (p *Engine) Inject(f func()) error {
+func (eng *Engine) Inject(f func()) error {
 	select {
-	case p.inject <- f:
+	case eng.inject <- f:
 		return nil
-	case <-p.running:
-		return p.Error()
+	case <-eng.running:
+		return eng.Error()
 	}
 }
 
 // InjectWait is like Inject but does not return till f() has completed or the
 // engine is closed, and returns an error value from f()
-func (p *Engine) InjectWait(f func() error) error {
+func (eng *Engine) InjectWait(f func() error) error {
 	done := make(chan error)
 	defer close(done)
-	err := p.Inject(func() { done <- f() })
+	err := eng.Inject(func() { done <- f() })
 	if err != nil {
 		return err
 	}
 	select {
-	case <-p.running:
-		return p.Error()
+	case <-eng.running:
+		return eng.Error()
 	case err := <-done:
 		return err
 	}
@@ -219,119 +219,131 @@ func (p *Engine) InjectWait(f func() error) error {
 // the incoming connnection such as use of SASL and SSL.
 // Must be called before Run()
 //
-func (p *Engine) Server() { p.transport.SetServer() }
+func (eng *Engine) Server() { eng.transport.SetServer() }
 
 // Close the engine's connection, returns when the engine has exited.
-func (p *Engine) Close(err error) {
-	p.Inject(func() {
-		if err != nil {
-			p.connection.Condition().SetError(err)
-		}
-		p.connection.Close()
+func (eng *Engine) Close(err error) {
+	eng.Inject(func() {
+		CloseError(eng.connection, err)
 	})
-	<-p.running
+	<-eng.running
 }
 
 // Disconnect the engine's connection without and AMQP close, returns when the engine has exited.
-func (p *Engine) Disconnect(err error) {
+func (eng *Engine) Disconnect(err error) {
 	if err != nil {
-		p.err.Set(err)
+		eng.err.Set(err)
 	}
-	p.conn.Close()
-	<-p.running
+	eng.conn.Close()
+	<-eng.running
 }
 
-// Run the engine. Normally called in a goroutine as: go engine.Run()
-// Engine.Run() will exit when the engine is closed or disconnected.
-// You can check for errors after exit with Engine.Error().
+// Run the engine. Engine.Run() will exit when the engine is closed or
+// disconnected.  You can check for errors after exit with Engine.Error().
 //
-func (p *Engine) Run() {
-	// Signal errors from the read/write goroutines. Don't block if we don't
-	// read all the errors, we only care about the first.
-	error := make(chan error, 2)
+func (eng *Engine) Run() error {
 	wait := sync.WaitGroup{}
-	wait.Add(2)
+	wait.Add(2) // Read and write goroutines
 
-	go func() { // Read goroutine
+	readErr := make(chan error, 1) // Don't block
+	go func() {                    // Read goroutine
 		defer wait.Done()
 		for {
-			rbuf := p.read.buffer()
-			n, err := p.conn.Read(rbuf)
+			rbuf := eng.read.buffer()
+			n, err := eng.conn.Read(rbuf)
 			if n > 0 {
-				p.read.buffers <- rbuf[:n]
-			} else if err != nil {
-				close(p.read.buffers)
-				error <- err
+				eng.read.buffers <- rbuf[:n]
+			}
+			if err != nil {
+				readErr <- err
+				close(readErr)
+				close(eng.read.buffers)
 				return
 			}
 		}
 	}()
 
-	go func() { // Write goroutine
+	writeErr := make(chan error, 1) // Don't block
+	go func() {                     // Write goroutine
 		defer wait.Done()
 		for {
-			wbuf, ok := <-p.write.buffers
+			wbuf, ok := <-eng.write.buffers
 			if !ok {
 				return
 			}
-			_, err := p.conn.Write(wbuf)
+			_, err := eng.conn.Write(wbuf)
 			if err != nil {
-				error <- err
+				writeErr <- err
+				close(writeErr)
 				return
 			}
 		}
 	}()
 
-	wbuf := p.write.buffer()[:0]
+	wbuf := eng.write.buffer()[:0]
 loop:
 	for {
 		if len(wbuf) == 0 {
-			p.pop(&wbuf)
+			eng.pop(&wbuf)
 		}
 		// Don't set wchan unless there is something to write.
 		var wchan chan []byte
 		if len(wbuf) > 0 {
-			wchan = p.write.buffers
+			wchan = eng.write.buffers
 		}
 
 		select {
-		case buf := <-p.read.buffers: // Read a buffer
-			p.push(buf)
+		case buf, ok := <-eng.read.buffers: // Read a buffer
+			if ok {
+				eng.push(buf)
+			}
 		case wchan <- wbuf: // Write a buffer
-			wbuf = p.write.buffer()[:0]
-		case f := <-p.inject: // Function injected from another goroutine
-			f()
-		case err := <-error: // Network read or write error
-			p.conn.Close() // Make sure both sides are closed
-			p.err.Set(err)
-			p.transport.CloseHead()
-			p.transport.CloseTail()
+			wbuf = eng.write.buffer()[:0]
+		case f, ok := <-eng.inject: // Function injected from another goroutine
+			if ok {
+				f()
+			}
+		case err := <-readErr:
+			eng.netError(err)
+		case err := <-writeErr:
+			eng.netError(err)
 		}
-		p.process()
-		if p.err.Get() != nil {
+		eng.process()
+		if eng.err.Get() != nil {
 			break loop
 		}
 	}
-	close(p.write.buffers)
-	p.conn.Close()
+	close(eng.write.buffers)
+	eng.conn.Close() // Make sure connection is closed
 	wait.Wait()
-	connectionContexts.Delete(p.connection)
-	if !p.connection.IsNil() {
-		p.connection.Free()
+	connectionContexts.Delete(eng.connection)
+	if !eng.connection.IsNil() {
+		eng.connection.Free()
 	}
-	if !p.transport.IsNil() {
-		p.transport.Free()
+	if !eng.transport.IsNil() {
+		eng.transport.Free()
 	}
-	if p.collector != nil {
-		C.pn_collector_free(p.collector)
+	if eng.collector != nil {
+		C.pn_collector_free(eng.collector)
 	}
-	for _, h := range p.handlers {
+	for _, h := range eng.handlers {
 		switch h := h.(type) {
 		case cHandler:
 			C.pn_handler_free(h.pn)
 		}
 	}
-	close(p.running) // Signal goroutines have exited and Error is set.
+	close(eng.running) // Signal goroutines have exited and Error is set.
+	return eng.err.Get()
+}
+
+func (eng *Engine) netError(err error) {
+	if err == nil {
+		err = internal.Errorf("unknown network error")
+	}
+	eng.conn.Close() // Make sure both sides are closed
+	eng.err.Set(err)
+	eng.transport.CloseHead()
+	eng.transport.CloseTail()
 }
 
 func minInt(a, b int) int {
@@ -342,8 +354,8 @@ func minInt(a, b int) int {
 	}
 }
 
-func (p *Engine) pop(buf *[]byte) {
-	pending := int(p.transport.Pending())
+func (eng *Engine) pop(buf *[]byte) {
+	pending := int(eng.transport.Pending())
 	switch {
 	case pending == int(C.PN_EOS):
 		*buf = (*buf)[:]
@@ -356,15 +368,15 @@ func (p *Engine) pop(buf *[]byte) {
 	if size == 0 {
 		return
 	}
-	C.memcpy(unsafe.Pointer(&(*buf)[0]), p.transport.Head(), C.size_t(size))
+	C.memcpy(unsafe.Pointer(&(*buf)[0]), eng.transport.Head(), C.size_t(size))
 	internal.Assert(size > 0)
-	p.transport.Pop(uint(size))
+	eng.transport.Pop(uint(size))
 }
 
-func (p *Engine) push(buf []byte) {
+func (eng *Engine) push(buf []byte) {
 	buf2 := buf
 	for len(buf2) > 0 {
-		n := p.transport.Push(buf2)
+		n := eng.transport.Push(buf2)
 		if n <= 0 {
 			panic(internal.Errorf("error in transport: %s", internal.PnErrorCode(n)))
 		}
@@ -372,30 +384,24 @@ func (p *Engine) push(buf []byte) {
 	}
 }
 
-func (p *Engine) handle(e Event) (more bool) {
-	for _, h := range p.handlers {
+func (eng *Engine) handle(e Event) {
+	for _, h := range eng.handlers {
 		h.HandleEvent(e)
 	}
 	if e.Type() == ETransportClosed {
-		p.err.Set(e.Connection().RemoteCondition().Error())
-		p.err.Set(e.Connection().Transport().Condition().Error())
-		if p.err.Get() == nil {
-			p.err.Set(io.EOF)
+		eng.err.Set(e.Connection().RemoteCondition().Error())
+		eng.err.Set(e.Connection().Transport().Condition().Error())
+		if eng.err.Get() == nil {
+			eng.err.Set(io.EOF)
 		}
-		return false
 	}
-	return true
 }
 
-func (p *Engine) process() (more bool) {
-	for ce := C.pn_collector_peek(p.collector); ce != nil; ce = C.pn_collector_peek(p.collector) {
-		e := makeEvent(ce)
-		if !p.handle(e) {
-			return false
-		}
-		C.pn_collector_pop(p.collector)
+func (eng *Engine) process() {
+	for ce := C.pn_collector_peek(eng.collector); ce != nil; ce = C.pn_collector_peek(eng.collector) {
+		eng.handle(makeEvent(ce))
+		C.pn_collector_pop(eng.collector)
 	}
-	return true
 }
 
-func (p *Engine) Connection() Connection { return p.connection }
+func (eng *Engine) Connection() Connection { return eng.connection }

@@ -20,14 +20,15 @@ under the License.
 package main
 
 import (
-	"./util"
+	"../util"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"qpid.apache.org/proton/amqp"
-	"qpid.apache.org/proton/concurrent"
+	"path"
+	"qpid.apache.org/amqp"
+	"qpid.apache.org/electron"
 	"sync"
 )
 
@@ -43,7 +44,7 @@ var count = flag.Int64("count", 1, "Send this may messages per address.")
 
 type sent struct {
 	name        string
-	sentMessage concurrent.SentMessage
+	sentMessage electron.SentMessage
 }
 
 func main() {
@@ -61,8 +62,9 @@ func main() {
 	var wait sync.WaitGroup     // Used by main() to wait for all goroutines to end.
 	wait.Add(len(urls))         // Wait for one goroutine per URL.
 
-	container := concurrent.NewContainer("")
-	var connections []concurrent.Connection // Store connctions to close on exit
+	_, prog := path.Split(os.Args[0])
+	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
+	var connections []electron.Connection // Store connctions to close on exit
 
 	// Start a goroutine for each URL to send messages.
 	for _, urlStr := range urls {
@@ -83,7 +85,7 @@ func main() {
 			connections = append(connections, c) // Save connection so it will be closed when main() ends
 
 			// Create a Sender using the path of the URL as the AMQP address
-			s, err := c.Sender(url.Path)
+			s, err := c.Sender(electron.Target(url.Path))
 			util.ExitIf(err)
 
 			// Loop sending messages.

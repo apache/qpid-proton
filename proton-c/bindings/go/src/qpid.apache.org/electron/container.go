@@ -17,11 +17,11 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+package electron
 
 import (
 	"net"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 )
 
 // Container is an AMQP container, it represents a single AMQP "application".It

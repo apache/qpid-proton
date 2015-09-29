@@ -27,7 +27,7 @@ import (
 	"log"
 	"os"
 	"path"
-	"qpid.apache.org/proton/amqp"
+	"qpid.apache.org/amqp"
 )
 
 // Debug flag "-debug" enables debug output with Debugf

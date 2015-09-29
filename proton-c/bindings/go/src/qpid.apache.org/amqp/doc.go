@@ -18,7 +18,7 @@ under the License.
 */
 
 /*
-Package amqp encodes and decodes AMQP messages and data as Go types.
+Package amqp encodes and decodes AMQP messages and data types as Go types.
 
 It follows the standard 'encoding' libraries pattern. The mapping between AMQP
 and Go types is described in the documentation of the Marshal and Unmarshal

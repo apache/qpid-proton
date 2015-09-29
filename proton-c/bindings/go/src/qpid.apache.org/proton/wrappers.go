@@ -36,8 +36,8 @@ import "C"
 
 import (
 	"fmt"
-	"qpid.apache.org/proton/amqp"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
+	"qpid.apache.org/amqp"
 	"reflect"
 	"time"
 	"unsafe"
@@ -134,8 +134,20 @@ type Endpoint interface {
 
 // CloseError sets an error condition on an endpoint and closes the endpoint.
 func CloseError(e Endpoint, err error) {
-	e.Condition().SetError(err)
+	if err != nil {
+		e.Condition().SetError(err)
+	}
 	e.Close()
+}
+
+// EndpointError returns the remote error if there is one, the local error if not
+// nil if there is no error.
+func EndpointError(e Endpoint) error {
+	err := e.RemoteCondition().Error()
+	if err == nil {
+		err = e.Condition().Error()
+	}
+	return err
 }
 
 const (
@@ -271,9 +283,12 @@ func (l Link) Connection() Connection { return l.Session().Connection() }
 
 // Human-readable link description including name, source, target and direction.
 func (l Link) String() string {
-	if l.IsSender() {
+	switch {
+	case l.IsNil():
+		return fmt.Sprintf("<nil-link>")
+	case l.IsSender():
 		return fmt.Sprintf("%s(%s->%s)", l.Name(), l.Source().Address(), l.Target().Address())
-	} else {
+	default:
 		return fmt.Sprintf("%s(%s<-%s)", l.Name(), l.Target().Address(), l.Source().Address())
 	}
 }

@@ -26,7 +26,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"reflect"
 	"unsafe"
 )

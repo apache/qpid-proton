@@ -17,11 +17,10 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+package electron
 
 import (
 	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/internal"
 )
 
 // Session is an AMQP session, it contains Senders and Receivers.
@@ -29,23 +28,25 @@ import (
 type Session interface {
 	Endpoint
 
-	// Connection owning this session.
-	Connection() Connection
-
 	// Sender opens a new sender. v can be a string, which is used as the Target
 	// address, or a SenderSettings struct containing more details settings.
-	Sender(v interface{}) (Sender, error)
+	Sender(...LinkSetting) (Sender, error)
 
 	// Receiver opens a new Receiver. v can be a string, which is used as the
 	// Source address, or a ReceiverSettings struct containing more details
 	// settings.
-	Receiver(v interface{}) (Receiver, error)
+	Receiver(...LinkSetting) (Receiver, error)
+
+	// SetCapacity sets the session buffer capacity in bytes.
+	// Only has effect if called in an accept() function, see Connection.Listen()
+	SetCapacity(bytes uint)
 }
 
 type session struct {
 	endpoint
 	eSession   proton.Session
 	connection *connection
+	capacity   uint
 }
 
 // in proton goroutine
@@ -60,55 +61,38 @@ func newSession(c *connection, es proton.Session) *session {
 func (s *session) Connection() Connection     { return s.connection }
 func (s *session) eEndpoint() proton.Endpoint { return s.eSession }
 func (s *session) engine() *proton.Engine     { return s.connection.engine }
-func (s *session) Open() error                { s.engine().Inject(s.eSession.Open); return nil }
 func (s *session) Close(err error) {
 	s.engine().Inject(func() { localClose(s.eSession, err) })
 }
 
-func (s *session) Sender(v interface{}) (snd Sender, err error) {
-	var settings LinkSettings
-	switch v := v.(type) {
-	case string:
-		settings.Target = v
-	case SenderSettings:
-		settings = v.LinkSettings
-	default:
-		internal.Assert(false, "NewSender() want string or SenderSettings, got %T", v)
-	}
+func (s *session) SetCapacity(bytes uint) { s.capacity = bytes }
+
+func (s *session) Sender(setting ...LinkSetting) (snd Sender, err error) {
 	err = s.engine().InjectWait(func() error {
-		l, err := makeLocalLink(s, true, settings)
-		snd = newSender(l)
+		l, err := localLink(s, true, setting...)
+		if err == nil {
+			snd = &sender{link: *l}
+			snd.(*sender).open()
+		}
 		return err
 	})
-	if err == nil {
-		err = snd.Open()
-	}
 	return
 }
 
-func (s *session) Receiver(v interface{}) (rcv Receiver, err error) {
-	var settings ReceiverSettings
-	switch v := v.(type) {
-	case string:
-		settings.Source = v
-	case ReceiverSettings:
-		settings = v
-	default:
-		internal.Assert(false, "NewReceiver() want string or ReceiverSettings, got %T", v)
-	}
+func (s *session) Receiver(setting ...LinkSetting) (rcv Receiver, err error) {
 	err = s.engine().InjectWait(func() error {
-		l, err := makeLocalLink(s, false, settings.LinkSettings)
-		rcv = newReceiver(l)
+		l, err := localLink(s, false, setting...)
+		if err == nil {
+			rcv = &receiver{link: *l}
+			rcv.(*receiver).open()
+		}
 		return err
 	})
-	rcv.SetCapacity(settings.Capacity, settings.Prefetch)
-	if err == nil {
-		err = rcv.Open()
-	}
 	return
 }
 
 // Called from handler on closed.
 func (s *session) closed(err error) {
-	s.closeError(err)
+	s.err.Set(err)
+	s.err.Set(Closed)
 }

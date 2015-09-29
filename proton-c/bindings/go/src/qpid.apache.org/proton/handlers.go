@@ -23,7 +23,7 @@ package proton
 import "C"
 
 import (
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 )
 
 // EventHandler handles core proton events.
@@ -166,7 +166,7 @@ func (t MessagingEvent) String() string {
 	case MLinkClosed:
 		return "LinkClosed"
 	case MDisconnected:
-		return "MDisconnected"
+		return "Disconnected"
 	case MSendable:
 		return "Sendable"
 	case MAccepted:
@@ -355,20 +355,12 @@ func (d *MessagingDelegator) HandleEvent(e Event) {
 func (d *MessagingDelegator) incoming(e Event) (err error) {
 	delivery := e.Delivery()
 	if delivery.HasMessage() {
-		if e.Link().State().LocalClosed() {
+		d.mhandler.HandleMessagingEvent(MMessage, e)
+		if d.AutoAccept && !delivery.Settled() {
+			delivery.Accept()
+		}
+		if delivery.Current() {
 			e.Link().Advance()
-			if d.AutoAccept {
-				delivery.Release(false)
-			}
-		} else {
-			d.mhandler.HandleMessagingEvent(MMessage, e)
-			if d.AutoAccept && !delivery.Settled() {
-				if err == nil {
-					delivery.Accept()
-				} else {
-					delivery.Reject()
-				}
-			}
 		}
 	} else if delivery.Updated() && delivery.Settled() {
 		d.mhandler.HandleMessagingEvent(MSettled, e)

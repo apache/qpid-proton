@@ -20,14 +20,15 @@ under the License.
 package main
 
 import (
-	"./util"
+	"../util"
 	"flag"
 	"fmt"
 	"log"
 	"net"
 	"os"
-	"qpid.apache.org/proton/amqp"
-	"qpid.apache.org/proton/concurrent"
+	"path"
+	"qpid.apache.org/amqp"
+	"qpid.apache.org/electron"
 	"sync"
 )
 
@@ -57,8 +58,9 @@ func main() {
 	var wait sync.WaitGroup             // Used by main() to wait for all goroutines to end.
 	wait.Add(len(urls))                 // Wait for one goroutine per URL.
 
-	container := concurrent.NewContainer("")
-	connections := make(chan concurrent.Connection, len(urls)) // Connections to close on exit
+	_, prog := path.Split(os.Args[0])
+	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
+	connections := make(chan electron.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
 	// main() receives and prints them.
@@ -79,13 +81,13 @@ func main() {
 			connections <- c // Save connection so we can Close() when main() ends
 
 			// Create a Receiver using the path of the URL as the source address
-			r, err := c.Receiver(url.Path)
+			r, err := c.Receiver(electron.Source(url.Path))
 			util.ExitIf(err)
 
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
 				rm, err := r.Receive()
-				if err == concurrent.Closed {
+				if err == electron.Closed {
 					return
 				}
 				util.ExitIf(err)
@@ -111,7 +113,8 @@ func main() {
 	// Close all connections, this will interrupt goroutines blocked in Receiver.Receive()
 	for i := 0; i < len(urls); i++ {
 		c := <-connections
-		c.Disconnect(nil) // FIXME aconway 2015-09-25: Close
+		util.Debugf("close %s", c)
+		c.Close(nil)
 	}
 	close(stop) // Signal all goroutines to stop.
 	wait.Wait() // Wait for all goroutines to finish.

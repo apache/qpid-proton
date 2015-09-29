@@ -35,7 +35,7 @@ import "C"
 import (
 	"net"
 	"net/url"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"unsafe"
 )
 

@@ -17,11 +17,15 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package concurrent
+// FIXME aconway 2015-10-07: move to amqp or split into sub packages?
+// proton.core
+// proton.msg
+
+package electron
 
 import (
 	"qpid.apache.org/proton"
-	"qpid.apache.org/proton/amqp"
+	"qpid.apache.org/amqp"
 )
 
 // NOTE: methods in this file are called only in the proton goroutine unless otherwise indicated.
@@ -55,10 +59,11 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 
 	case proton.MMessage:
 		if r, ok := h.links[e.Link()].(*receiver); ok {
-			r.handleDelivery(e.Delivery())
+			r.message(e.Delivery())
 		} else {
-			h.connection.closed(
-				amqp.Errorf(amqp.InternalError, "cannot find receiver for link %s", e.Link()))
+			proton.CloseError(
+				h.connection.eConnection,
+				amqp.Errorf(amqp.InternalError, "no receiver for link %s", e.Link()))
 		}
 
 	case proton.MSettled:
@@ -66,22 +71,25 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 			sm.settled(nil)
 		}
 
+	case proton.MSendable:
+		h.trySend(e.Link())
+
 	case proton.MSessionOpening:
 		if e.Session().State().LocalUninit() { // Remotely opened
 			s := newSession(h.connection, e.Session())
-			h.sessions[e.Session()] = s
-			if h.connection.incoming != nil {
-				h.connection.incoming.In <- s
+			if err := h.connection.accept(s); err != nil {
+				proton.CloseError(e.Session(), (err))
 			} else {
-				proton.CloseError(e.Session(), amqp.Errorf(amqp.NotAllowed, "remote sessions not allowed"))
+				h.sessions[e.Session()] = s
+				if s.capacity > 0 {
+					e.Session().SetIncomingCapacity(s.capacity)
+				}
+				e.Session().Open()
 			}
 		}
 
-	case proton.MSessionClosing:
-		e.Session().Close()
-
 	case proton.MSessionClosed:
-		err := e.Session().RemoteCondition().Error()
+		err := proton.EndpointError(e.Session())
 		for l, _ := range h.links {
 			if l.Session() == e.Session() {
 				h.linkClosed(l, err)
@@ -92,24 +100,39 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 	case proton.MLinkOpening:
 		l := e.Link()
 		if l.State().LocalUninit() { // Remotely opened
-			if h.connection.incoming == nil {
-				proton.CloseError(l, amqp.Errorf(amqp.NotAllowed, ("no remote links")))
-				break
-			}
-			s := h.sessions[l.Session()]
-			if s == nil {
+			ss := h.sessions[l.Session()]
+			if ss == nil {
 				proton.CloseError(
-					l, amqp.Errorf(amqp.InternalError, ("cannot find session for link")))
+					l, amqp.Errorf(amqp.InternalError, ("no session for link")))
 				break
 			}
-			h.connection.handleIncoming(s, l)
+			var link Link
+			if l.IsReceiver() {
+				r := &receiver{link: incomingLink(ss, l)}
+				link = r
+				r.inAccept = true
+				defer func() { r.inAccept = false }()
+			} else {
+				link = &sender{link: incomingLink(ss, l)}
+			}
+			if err := h.connection.accept(link); err != nil {
+				proton.CloseError(l, err)
+				break
+			}
+			link.open()
+		}
+
+	case proton.MLinkOpened:
+		l := e.Link()
+		if l.IsSender() {
+			h.trySend(l)
 		}
 
 	case proton.MLinkClosing:
 		e.Link().Close()
 
 	case proton.MLinkClosed:
-		h.linkClosed(e.Link(), e.Link().RemoteCondition().Error())
+		h.linkClosed(e.Link(), proton.EndpointError(e.Link()))
 
 	case proton.MDisconnected:
 		err := h.connection.Error()
@@ -134,4 +157,20 @@ func (h *handler) linkClosed(l proton.Link, err error) {
 
 func (h *handler) addLink(rl proton.Link, ll Link) {
 	h.links[rl] = ll
+}
+
+func (h *handler) trySend(l proton.Link) {
+	if l.Credit() <= 0 {
+		return
+	}
+	if s, ok := h.links[l].(*sender); ok {
+		for ch := s.popBlocked(); l.Credit() > 0 && ch != nil; ch = s.popBlocked() {
+			if snd, ok := <-ch; ok {
+				s.doSend(snd)
+			}
+		}
+	} else {
+		h.connection.closed(
+			amqp.Errorf(amqp.InternalError, "cannot find sender for link %s", l))
+	}
 }

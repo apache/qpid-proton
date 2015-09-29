@@ -2,22 +2,30 @@
 
 There are 3 Go packages for proton:
 
-- qpid.apache.org/proton/concurrent: Easy-to-use, concurrent API for concurrent clients and servers.
-- qpid.apache.org/proton/amqp: Convert AMQP messages and data to and from Go data types.
+- qpid.apache.org/electron: Concurrent, procedural API for messaging clients and servers.
 - qpid.apache.org/proton: Direct access to the event-driven, concurrent-unsafe proton library.
+- qpid.apache.org/amqp: Convert AMQP messages and data to and from Go data types.
 
-Most applications should use the `concurrent` package. The `proton` package is
-for applications that need low-level access to the proton library.
+`proton` and `electron` are alternative APIs for sending messages. `proton` is a
+direct wrapping of the concurrent-unsafe, event-driven C proton API. `electron`
+is a procedural, concurrent-safe interface that may be more convenient and
+familiar for Go programmers. The examples `proton/broker.go` and
+`electron/broker.go` give an illustration of how the APIs differ.
 
 ## Example programs
 
-- [receive.go](receive.go) receive from many connections concurrently.
-- [send.go](send.go) send to many connections concurrently.
+electron
+- [receive.go](electron/receive.go) receive from many connections concurrently.
+- [send.go](electron/send.go) send to many connections concurrently.
+- [broker.go](electron/broker.go) a simple broker using the electron API
+
+proton
+- [broker.go](proton/broker.go) a simple broker using the proton API
 
 ## Using the Go packages
 
-Use `go get qpid.apache.org/proton/concurrent` or check out the proton
-repository and set your GOPATH environment variable to include
+Use `go get qpid.apache.org/electron` or check out the proton repository and set
+your GOPATH environment variable to include
 `/<path-to-proton>/proton-c/bindings/go`
 
 The proton Go packages include C code so the cgo compiler needs to be able to

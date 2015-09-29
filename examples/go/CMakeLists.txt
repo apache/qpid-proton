@@ -18,10 +18,11 @@
 #
 
 if(BUILD_GO)
-  set(examples receive send broker)
+  set(examples electron/receive electron/send electron/broker proton/broker)
 
   foreach(example ${examples})
-    add_custom_target(go-example-${example} ALL
+    string(REPLACE / - target ${example})
+    add_custom_target(go-example-${target} ALL
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${CMAKE_CURRENT_BINARY_DIR}/${example} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
       DEPENDS go-packages qpid-proton)
   endforeach()
@@ -30,8 +31,14 @@ if(BUILD_GO)
       DEPENDS go-packages qpid-proton)
 
   add_test(
-    NAME go_example_test
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker broker)
+    NAME go_example_electron_test
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker broker
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/electron)
+
+  add_test(
+    NAME go_example_proton_test
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker ../proton/broker
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/electron)
 
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()

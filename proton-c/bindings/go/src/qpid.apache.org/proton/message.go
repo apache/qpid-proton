@@ -25,8 +25,8 @@ package proton
 import "C"
 
 import (
-	"qpid.apache.org/proton/amqp"
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
+	"qpid.apache.org/amqp"
 )
 
 // HasMessage is true if all message data is available.
@@ -34,10 +34,17 @@ import (
 func (d Delivery) HasMessage() bool { return !d.IsNil() && d.Readable() && !d.Partial() }
 
 // Message decodes the message containined in a delivery.
-// Will return an error if delivery.HasMessage() is false.
+//
+// Must be called in the correct link context with this delivery as the current message,
+// handling an MMessage event is always a safe context to call this function.
+//
+// Will return an error if message is incomplete or not current.
 func (delivery Delivery) Message() (m amqp.Message, err error) {
-	if !delivery.Readable() || delivery.Partial() {
-		return nil, internal.Errorf("attempting to get incomplete message")
+	if !delivery.Readable() {
+		return nil, internal.Errorf("delivery is not readable")
+	}
+	if delivery.Partial() {
+		return nil, internal.Errorf("delivery has partial message")
 	}
 	data := make([]byte, delivery.Pending())
 	result := delivery.Link().Recv(data)

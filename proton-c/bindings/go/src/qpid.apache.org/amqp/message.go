@@ -35,7 +35,7 @@ package amqp
 import "C"
 
 import (
-	"qpid.apache.org/proton/internal"
+	"qpid.apache.org/internal"
 	"runtime"
 	"time"
 	"unsafe"

@@ -110,14 +110,14 @@ func checkEqual(want interface{}, got interface{}) error {
 // 'go build' uses the installed copy of the proton Go libraries, which may be out of date.
 func checkStaleLibs(t *testing.T) {
 	var stale []string
-	pp := "qpid.apache.org/proton"
-	for _, p := range []string{pp, pp + "/amqp", pp + "/concurrent"} {
+	pp := "qpid.apache.org"
+	for _, p := range []string{pp + "/proton", pp + "/amqp", pp + "/electron"} {
 		out, err := exec.Command("go", "list", "-f", "{{.Stale}}", p).CombinedOutput()
 		if err != nil {
 			t.Fatalf("failed to execute 'go list': %v\n%v", err, string(out))
 		}
 		if string(out) != "false\n" {
-			stale = append(stale, pp)
+			stale = append(stale, p)
 		}
 	}
 	if len(stale) > 0 {
