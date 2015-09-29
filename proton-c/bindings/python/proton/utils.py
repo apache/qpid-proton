@@ -18,7 +18,7 @@
 #
 import collections, socket, time, threading
 
-from proton import ConnectionException, Delivery, Endpoint, Handler, LinkException, Message
+from proton import ConnectionException, Delivery, Endpoint, Handler, Link, LinkException, Message
 from proton import ProtonException, Timeout, Url
 from proton.reactor import Container
 from proton.handlers import MessagingHandler, IncomingMessageHandler
@@ -58,6 +58,9 @@ class SendException(ProtonException):
     def __init__(self, state):
         self.state = state
 
+def _is_settled(delivery):
+    return delivery.settled or delivery.link.snd_settle_mode == Link.SND_SETTLED
+
 class BlockingSender(BlockingLink):
     def __init__(self, connection, sender):
         super(BlockingSender, self).__init__(connection, sender)
@@ -70,7 +73,7 @@ class BlockingSender(BlockingLink):
 
     def send(self, msg, timeout=False, error_states=None):
         delivery = self.link.send(msg)
-        self.connection.wait(lambda: delivery.settled, msg="Sending on sender %s" % self.link.name, timeout=timeout)
+        self.connection.wait(lambda: _is_settled(delivery), msg="Sending on sender %s" % self.link.name, timeout=timeout)
         bad = error_states
         if bad is None:
             bad = [Delivery.REJECTED, Delivery.RELEASED]
