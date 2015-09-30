@@ -17,11 +17,9 @@
 # under the License.
 #
 
-include(${CMAKE_SOURCE_DIR}/cpp.cmake) # Compiler checks
+find_package(ProtonCpp REQUIRED)
 
-include_directories(
-  "${CMAKE_SOURCE_DIR}/proton-c/include"
-  "${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include")
+include_directories(${ProtonCpp_INCLUDE_DIRS})
 
 foreach(example
     broker
@@ -39,7 +37,7 @@ foreach(example
     recurring_timer
     encode_decode)
   add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} qpid-proton-cpp)
+  target_link_libraries(${example} ${ProtonCpp_LIBRARIES})
   set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 endforeach()
 

@@ -88,27 +88,6 @@ set_target_properties (
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 
-## Test
-if (ENABLE_VALGRIND AND VALGRIND_EXE)
-  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet --leak-check=full --trace-children=yes)
-endif ()
-
-macro(add_cpp_test test)
-  add_executable (${test} src/${test}.cpp)
-  target_link_libraries (${test} qpid-proton qpid-proton-cpp)
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME cpp_${test}
-      COMMAND ${env_py}
-      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      $<TARGET_FILE:${test}> ${ARGN})
-  else ()
-    add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
-  endif ()
-endmacro(add_cpp_test)
-
-add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
-add_cpp_test(conversion_test ${CMAKE_SOURCE_DIR}/tests)
-
 ## Install
 
 install(TARGETS qpid-proton-cpp
@@ -129,8 +108,56 @@ if (MSVC)
 endif (MSVC)
 
 # Install header files
-file(GLOB headers "include/proton/cpp/*.h")
-install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton/cpp)
+file(GLOB headers "include/proton/*.hpp")
+install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
 add_subdirectory(docs)
 add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)
+
+# Pkg config file
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/libqpid-proton-cpp.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc @ONLY)
+install (FILES 
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
+  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+
+if (DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
+set(PROTONCPPLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_IMPORT_LIBRARY_SUFFIX})
+set(PROTONCPPLIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+else ()
+set(PROTONCPPLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(PROTONCPPLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
+endif ()
+
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfigVersion.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake @ONLY)
+install (FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
+  DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
+
+## Test
+if (ENABLE_VALGRIND AND VALGRIND_EXE)
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet --leak-check=full --trace-children=yes)
+endif ()
+
+macro(add_cpp_test test)
+  add_executable (${test} src/${test}.cpp)
+  target_link_libraries (${test} qpid-proton qpid-proton-cpp)
+  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+    add_test (NAME cpp_${test}
+      COMMAND ${env_py}
+      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
+      $<TARGET_FILE:${test}> ${ARGN})
+  else ()
+    add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
+  endif ()
+endmacro(add_cpp_test)
+
+add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
+add_cpp_test(conversion_test ${CMAKE_SOURCE_DIR}/tests)

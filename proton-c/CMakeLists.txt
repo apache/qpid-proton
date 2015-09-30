@@ -269,6 +269,11 @@ macro (pn_absolute_install_dir NAME VALUE PREFIX)
   get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
 endmacro()
 
+pn_absolute_install_dir(PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+
 add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(docs/man)
@@ -456,11 +461,6 @@ file(GLOB headers "include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
          DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
-
-pn_absolute_install_dir(PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
 
 # Pkg config file
 configure_file(

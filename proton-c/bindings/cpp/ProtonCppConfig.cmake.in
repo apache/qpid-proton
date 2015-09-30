@@ -17,11 +17,14 @@
 # under the License.
 #
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+# Name: Proton
+# Description: Qpid Proton C library
+# Version: @PN_VERSION@
+# URL: http://qpid.apache.org/proton/
 
-add_subdirectory(c)
-add_subdirectory(go)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
-endif()
+set (ProtonCpp_VERSION       @PN_VERSION@)
+
+set (ProtonCpp_INCLUDE_DIRS  @INCLUDEDIR@)
+set (ProtonCpp_LIBRARIES     optimized @LIBDIR@/@PROTONCPPLIB@ debug @LIBDIR@/@PROTONCPPLIBDEBUG@)
+
+set (ProtonCpp_FOUND True)

@@ -17,11 +17,7 @@
 # under the License.
 #
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_subdirectory(c)
-add_subdirectory(go)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
-endif()
+set (ProtonCpp_VERSION       ${PN_VERSION})
+set (ProtonCpp_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include ${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include)
+set (ProtonCpp_LIBRARIES     qpid-proton-cpp)
+set (ProtonCpp_FOUND True)
