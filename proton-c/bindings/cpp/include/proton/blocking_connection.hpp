@@ -54,7 +54,7 @@ class blocking_connection
   friend class blocking_link;
   friend class blocking_sender;
   friend class blocking_receiver;
-  friend class sync_request_response;
+  friend class request_response;
 };
 
 }

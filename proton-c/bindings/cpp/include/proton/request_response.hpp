@@ -37,10 +37,10 @@ namespace proton {
 /**
  * An implementation of the synchronous request-response pattern (aka RPC).
  */
-class sync_request_response
+class request_response
 {
   public:
-    PN_CPP_EXTERN sync_request_response(
+    PN_CPP_EXTERN request_response(
         blocking_connection &, const std::string address=std::string());
     /**
      * Send a request message, wait for and return the response message.

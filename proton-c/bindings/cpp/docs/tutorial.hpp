@@ -396,7 +396,7 @@ server or mixed client-server programs. However for simple client-only programs
 a synchronous or blocking style of programming is sometimes simpler.
 
 `proton::blocking_connection` allows a blocking style of programming,
-`proton::sync_request_response` automates the common case of synchronous
+`proton::request_response` automates the common case of synchronous
 request/response, send a request and block for the response.
 
 \ref sync_client.cpp is our request/response client in blocking style. Here's the key section

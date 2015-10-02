@@ -23,7 +23,7 @@
 
 #include "proton/container.hpp"
 #include "proton/blocking_connection.hpp"
-#include "proton/sync_request_response.hpp"
+#include "proton/request_response.hpp"
 #include "proton/url.hpp"
 #include "proton/types.hpp"
 
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         proton::blocking_connection conn(url, proton::duration(timeout));
-        proton::sync_request_response client(conn, url.path());
+        proton::request_response client(conn, url.path());
         for (std::vector<std::string>::const_iterator i=requests.begin(); i != requests.end(); i++) {
             proton::message request;
             request.body(*i);

@@ -59,7 +59,7 @@ set(qpid-proton-cpp-source
   src/receiver.cpp
   src/sender.cpp
   src/session.cpp
-  src/sync_request_response.cpp
+  src/request_response.cpp
   src/task.cpp
   src/terminus.cpp
   src/transport.cpp

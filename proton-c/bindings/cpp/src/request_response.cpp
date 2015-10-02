@@ -19,7 +19,7 @@
  *
  */
 #include "proton/blocking_connection.hpp"
-#include "proton/sync_request_response.hpp"
+#include "proton/request_response.hpp"
 #include "proton/event.hpp"
 #include "proton/error.hpp"
 #include "proton/value.hpp"
@@ -28,14 +28,14 @@
 
 namespace proton {
 
-sync_request_response::sync_request_response(blocking_connection &conn, const std::string addr):
+request_response::request_response(blocking_connection &conn, const std::string addr):
     connection_(conn), address_(addr),
     sender_(new blocking_sender(connection_, addr)),
     receiver_(new blocking_receiver(connection_, "", 1/*credit*/, true/*dynamic*/)),
     correlation_id_(0)
 {}
 
-message sync_request_response::call(message &request) {
+message request_response::call(message &request) {
     if (address_.empty() && request.address().empty())
         throw error(MSG("Request message has no address"));
     // TODO: atomic increment.
@@ -50,7 +50,7 @@ message sync_request_response::call(message &request) {
     return response;
 }
 
-std::string sync_request_response::reply_to() {
+std::string request_response::reply_to() {
     return receiver_->receiver().remote_source().address();
 }
 
