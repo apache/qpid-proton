@@ -1354,7 +1354,7 @@ public class TransportImpl2 extends EndpointImpl
         int channel = frame.getChannel();
         if (Transfer.CODE == performative.getCode())
         {
-            this.handleTransfer((Transfer) performative, frame.getPayload(), 0, frame.getPayload().length, channel);
+            this.handleTransfer((Transfer) performative, frame.getPayload(), 0, frame.getPayload() == null ? 0 : frame.getPayload().length, channel);
         }
         else if (Disposition.CODE == performative.getCode())
         {
@@ -1498,7 +1498,15 @@ public class TransportImpl2 extends EndpointImpl
         try {
             init();
             int beforePosition = _inputProcessor.position();
-            _inputProcessor.process();
+            try
+            {
+                _inputProcessor.process();
+            }
+            catch (Exception e)
+            {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
             _bytesInput += beforePosition - _inputProcessor.position();
         } catch (TransportException e) {
             _head_closed = true;

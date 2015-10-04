@@ -96,10 +96,9 @@ class FrameWriter2
     {
         byte[] old = _buffer;
         _buffer = new byte[_buffer.length * 2];
-        int pos = _position;
-        System.arraycopy(old, 0, _buffer, 0, pos);
+        System.arraycopy(old, 0, _buffer, 0, _position);
 
-        _encoder.init(_buffer, pos, _buffer.length * 2);
+        _encoder.init(_buffer, _position, _buffer.length * 2);
     }
 
     void writeHeader(byte[] header)
@@ -203,7 +202,7 @@ class FrameWriter2
             }
 
             payload.get(_buffer, _position, payloadSize);
-            _position = _position + payloadSize + 1;
+            _position = _position + payloadSize;
         }
         endFrame(channel);
         _framesOutput += 1;
@@ -237,17 +236,13 @@ class FrameWriter2
         int size = Math.min(_position - _read, dst.remaining());
 
         dst.put(_buffer, _read, size);
-        _read = _position - (_read + size);
+        _read = _read + size;
 
-        // If we have have copied everything we can go back to the beginning
-        // size > 0 ensures we go reset the buffer if we don't endup reading at
-        // all.
-        if (_read == 0 && size > 0)
+        if (_read == _position)
         {
             _position = 0;
+            _read = 0;
         }
-        // System.out.println("RAW: \"" + new Binary(dst.array(),
-        // dst.arrayOffset(), dst.position()) + "\"");
 
         return size;
     }

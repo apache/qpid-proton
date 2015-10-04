@@ -379,16 +379,19 @@ class FrameParser2 implements TransportInput
                             // temp workaround
                             byte[] body = new byte[in.remaining()];
                             in.get(body);
-                            _decoder.init(body, 0, body.length);
+                            
+                            int payloadStart = payloadStart(body); 
+                            
+                            _decoder.init(body, 0, payloadStart);
                             POJOBuilder pb = new POJOBuilder();
                             _decoder.decode(pb);
                             List l = (List) pb.build();
                             Object obj = l.get(0);
                             byte[] payloadBytes = null;
-                            if(in.hasRemaining())
+                            if(payloadStart < body.length)
                             {                          
-                                payloadBytes = new byte[in.remaining()];
-                                in.get(payloadBytes);
+                                payloadBytes = new byte[body.length - payloadStart];
+                                System.arraycopy(body, payloadStart, payloadBytes, 0, payloadBytes.length);
                             }
 
                             if(obj instanceof Performative)
@@ -475,6 +478,23 @@ class FrameParser2 implements TransportInput
         }
     }
 
+    int payloadStart(byte[] body)
+    {      
+        if (body.length > 15 && body[9] == 0x14)
+        {
+            int a = 0xFF & body[11];
+            int b = 0xFF & body[12];
+            int c = 0xFF & body[13];
+            int d = 0xFF & body[14];
+            int value = a << 24 | b << 16 | c << 8 | d;
+            return value + 11;
+        }
+        else
+        {
+            return body.length;
+        }
+    }
+    
     @Override
     public int capacity()
     {
