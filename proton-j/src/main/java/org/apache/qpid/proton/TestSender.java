@@ -7,7 +7,7 @@ import org.apache.qpid.proton.messenger.Messenger;
 
 public class TestSender
 {
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args) throws IOException, InterruptedException
     {
         Messenger messenger = Proton.messenger();
         messenger.start();
