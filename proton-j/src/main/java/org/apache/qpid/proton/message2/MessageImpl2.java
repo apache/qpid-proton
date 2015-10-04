@@ -720,6 +720,20 @@ public class MessageImpl2 implements Message
         {
             _footer.encode(encoder);
         }
+        
+        byte[] temp = new byte[encoder.getPosition()];
+        System.arraycopy(data, offset, temp, 0, encoder.getPosition());
+        
+        try
+        {
+            decode(temp, 0, encoder.getPosition());
+        }
+        catch (Exception e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        
         return encoder.getPosition();
     }
 
