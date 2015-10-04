@@ -27,7 +27,7 @@ import java.nio.charset.StandardCharsets;
  *
  */
 
-public abstract class AbstractEncoder implements Encoder
+public abstract class AbstractEncoder2 implements Encoder
 {
 
     abstract void skip(int width);
@@ -43,24 +43,22 @@ public abstract class AbstractEncoder implements Encoder
     abstract int getPosition();
     abstract void setPosition(int i);
 
-    private int count;
-
     private class Frame {
-        Frame next;
+        Frame prev;
         int start;
         int count;
-        boolean written;
         Coder coder;
         Incrementor incrementor;
         String desc;
+        String format = "[desc=%s, start=%s, count=%s]";
         
         public String toString()
         {
-            return "desc=" + desc + ", start=" + start;
+            return String.format(format, desc, start, count);
         }
     }
 
-    private Frame free = null;
+    /*private Frame free = null;
 
     private Frame allocate() {
         if (free == null) {
@@ -75,32 +73,27 @@ public abstract class AbstractEncoder implements Encoder
     private void free(Frame frame) {
         frame.next = free;
         free = frame;
-    }
+    }*/
 
     private Frame current = null;
 
-    private void push(String desc) {
-        Frame frame = allocate();
-        frame.next = current;
+    private void newFrame(String desc) {
+        Frame frame = new Frame();
+        frame.prev = current;
         frame.start = getPosition();
-        frame.count = count;
+        frame.count = 0;
         frame.coder = coder;
         frame.incrementor = incrementor;
         frame.desc = desc;
-        count = 0;
         incrementor = NOOP;
         coder = DEFAULT;
         current = frame;
     }
 
-    private void pop() {
-        count = current.count;
-        coder = current.coder;
-        incrementor = current.incrementor;
-        current = current.next;
-        if (current != null) {
-            free(current);
-        }
+    private void endFrame() {
+        coder = current.prev == null? DEFAULT : current.prev.coder;
+        incrementor = current.prev == null? NOOP : current.prev.incrementor;
+        current = current.prev;      
     }
 
     private abstract class Coder {
@@ -143,8 +136,8 @@ public abstract class AbstractEncoder implements Encoder
 
     private class DescriptorIncrementor extends Incrementor {
         void go() {
-            if (count == 2) {
-                pop();
+            if (current.count == 2) {
+                endFrame();
                 increment();
                 incrementor = NOOP;
             }
@@ -153,8 +146,8 @@ public abstract class AbstractEncoder implements Encoder
 
     private class DescriptorArrayIncrementor extends Incrementor {
         void go() {
-            if (count == 1) {
-                pop();
+            if (current.count == 1) {
+                endFrame();
                 incrementor = NOOP;
             }
         }
@@ -167,8 +160,11 @@ public abstract class AbstractEncoder implements Encoder
     private Incrementor incrementor = NOOP;
 
     private void increment() {
-        count++;
-        incrementor.go();
+        if (current != null)
+        {
+            current.count++;
+            current.incrementor.go();
+        }
     }
 
     @Override
@@ -329,7 +325,7 @@ public abstract class AbstractEncoder implements Encoder
     }
 
     private void start(int width, String desc) {
-        push(desc);
+        newFrame(desc);
         skip(width);
     }
 
@@ -356,8 +352,8 @@ public abstract class AbstractEncoder implements Encoder
     public void putDescriptor() {
         writeF8(0x0);
         Incrementor inc = coder == ARRAY ? DESC_ARRAY : DESC;
-        push("Descriptor");
         incrementor = inc;
+        newFrame("Descriptor");
     }
 
     @Override
@@ -365,25 +361,13 @@ public abstract class AbstractEncoder implements Encoder
         if (current == null) {
             throw new IllegalStateException("mismatched call to end()");
         }
+        System.out.println("Ending frame : " + current);
         int pos = getPosition();
         setPosition(current.start);
         writeF32(pos - current.start);
-        writeF32(count);
+        writeF32(current.count);
         setPosition(pos);
-        pop();
-        increment();
-    }
-
-    public void endInCurrentFrame() {
-        int pos = getPosition();
-        setPosition(current.start);
-        writeF32(pos - current.start);
-        writeF32(count);
-        setPosition(pos);
-        count = current.count;
-        coder = current.coder;
-        incrementor = current.incrementor;
-        current = current.next;
+        endFrame();
         increment();
     }
 

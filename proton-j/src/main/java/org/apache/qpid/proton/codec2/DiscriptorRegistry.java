@@ -157,4 +157,9 @@ public class DiscriptorRegistry
     {
         return _typeRegByDescriptor.get(code);
     }
+    
+    static void dump()
+    {
+        System.out.println(_typeRegByCode);
+    }
 }

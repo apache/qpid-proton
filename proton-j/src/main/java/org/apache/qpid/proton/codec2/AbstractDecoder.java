@@ -519,4 +519,10 @@ public abstract class AbstractDecoder implements Decoder
         // TODO Auto-generated method stub
         return 0;
     }
+    
+    @Override
+    public byte[] getBytes(int size)
+    {
+        return readBytes(offset, size);
+    }
 }

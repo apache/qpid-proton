@@ -26,7 +26,7 @@ package org.apache.qpid.proton.codec2;
  *
  */
 
-public class ByteArrayEncoder extends AbstractEncoder
+public class ByteArrayEncoder extends AbstractEncoder2
 {
 
     private byte[] bytes;

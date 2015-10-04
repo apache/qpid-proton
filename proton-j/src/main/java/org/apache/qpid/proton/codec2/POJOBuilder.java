@@ -73,6 +73,7 @@ public class POJOBuilder implements DataHandler
                 }
                 else
                 {
+                    DiscriptorRegistry.dump();
                     described = new Described(descriptor, o);
                 }
                 end();
@@ -404,6 +405,6 @@ public class POJOBuilder implements DataHandler
     @Override
     public void onBinary(Decoder decoder)
     {
-        //builder.add(decoder.get);
+        builder.add(decoder.getBytes(decoder.getSize()));
     }
 }

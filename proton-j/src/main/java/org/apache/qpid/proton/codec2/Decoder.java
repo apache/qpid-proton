@@ -58,5 +58,7 @@ public interface Decoder
 
     char getChar();
 
+    byte[] getBytes(int size);
+    
     void decode(DataHandler handler);
 }
