@@ -173,7 +173,7 @@ public final class Open implements Encodable, Performative
         encoder.putString(_containerId);
         encoder.putString(_hostname);
         encoder.putUint(_maxFrameSize);
-        encoder.putUshort(_channelMax);
+        encoder.putInt(_channelMax);
         encoder.putLong(_idleTimeOut);
         CodecHelper.encodeSymbolArray(encoder, _outgoingLocales);
         CodecHelper.encodeSymbolArray(encoder, _incomingLocales);
@@ -241,7 +241,7 @@ public final class Open implements Encodable, Performative
                 case 5:
                     open.setIdleTimeOut(l.get(4) == null ? 0 : (Long) l.get(4));
                 case 6:
-                    open.setChannelMax(l.get(3) == null ? 65535 : (Short)l.get(3));
+                    open.setChannelMax(l.get(3) == null ? 65535 : ((Number)l.get(3)).intValue());
                 case 7:
                     open.setMaxFrameSize(l.get(2) == null ? Integer.MAX_VALUE : (Integer) l.get(2));
                 case 8:

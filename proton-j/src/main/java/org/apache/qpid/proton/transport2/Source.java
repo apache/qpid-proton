@@ -24,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.qpid.proton.codec2.AbstractEncoder;
 import org.apache.qpid.proton.codec2.CodecHelper;
 import org.apache.qpid.proton.codec2.DecodeException;
 import org.apache.qpid.proton.codec2.DescribedTypeFactory;
@@ -158,12 +159,12 @@ public final class Source extends Terminus implements Encodable
                 Boolean dynamic = (Boolean) l.get(4);
                 source.setDynamic(dynamic == null ? false : dynamic);
             case 7:
-                source.setTimeout(l.get(3) == null ? 0 : (Integer) l.get(3));
+                source.setTimeout(l.get(3) == null ? 0 : ((Number)l.get(3)).intValue());
             case 8:
                 source.setExpiryPolicy(l.get(2) == null ? TerminusExpiryPolicy.SESSION_END : TerminusExpiryPolicy
                         .getEnum((String) l.get(2)));
             case 9:
-                source.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get(((Integer)l.get(1)).byteValue()));
+                source.setDurable(l.get(1) == null ? TerminusDurability.NONE : TerminusDurability.get(((Number)l.get(1)).byteValue()));
             case 10:
                 source.setAddress((String) l.get(0));
             }

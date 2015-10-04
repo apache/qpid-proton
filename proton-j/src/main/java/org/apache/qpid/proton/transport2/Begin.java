@@ -141,7 +141,14 @@ public final class Begin implements Encodable, Performative
         encoder.putDescriptor();
         encoder.putUlong(CODE);
         encoder.putList();
-        encoder.putUshort(_remoteChannel);
+        if (_remoteChannel == -1)
+        {
+            encoder.putNull();
+        }
+        else
+        {
+            encoder.putInt(_remoteChannel);
+        }
         encoder.putUint(_nextOutgoingId);
         encoder.putUint(_incomingWindow);
         encoder.putUint(_outgoingWindow);
@@ -194,7 +201,7 @@ public final class Begin implements Encodable, Performative
             case 6:
                 begin.setNextOutgoingId(l.get(1) == null ? 0 : (Integer) l.get(1));
             case 7:
-                begin.setRemoteChannel(l.get(0) == null ? -1 : ((Short)l.get(0)).intValue());
+                begin.setRemoteChannel(l.get(0) == null ? -1 : ((Number)l.get(0)).intValue());
             }
 
             return begin;

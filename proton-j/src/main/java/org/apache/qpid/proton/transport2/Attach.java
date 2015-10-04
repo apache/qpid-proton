@@ -74,10 +74,10 @@ public final class Attach implements Encodable, Performative
 
     public void setName(String name)
     {
-        if (name == null)
+        /*if (name == null)
         {
             throw new NullPointerException("the name field is mandatory");
-        }
+        }*/
 
         _name = name;
     }
@@ -218,7 +218,7 @@ public final class Attach implements Encodable, Performative
 
     @Override
     public void encode(Encoder encoder)
-    {
+    {   
         encoder.putDescriptor();
         encoder.putUlong(CODE);
         encoder.putList();
@@ -250,7 +250,7 @@ public final class Attach implements Encodable, Performative
         CodecHelper.encodeSymbolArray(encoder, _offeredCapabilities);
         CodecHelper.encodeSymbolArray(encoder, _desiredCapabilities);
         CodecHelper.encodeMap(encoder, _properties);
-        //encoder.end();
+        encoder.end();
     }
 
     public static final class Factory implements DescribedTypeFactory
