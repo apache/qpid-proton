@@ -58,7 +58,7 @@ public class POJOBuilder implements DataHandler
             else
             {
                 DescribedTypeFactory factory = DiscriptorRegistry.lookup(descriptor);
-                System.out.println(String.format("Described Builder: {descriptor=%s, factory=%s}", descriptor, factory));
+                //System.out.println(String.format("Described Builder: {descriptor=%s, factory=%s}", descriptor, factory));
                 if (factory != null)
                 {
                     try

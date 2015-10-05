@@ -374,19 +374,6 @@ public abstract class AbstractEncoder implements Encoder
         increment();
     }
 
-    public void endInCurrentFrame() {
-        int pos = getPosition();
-        setPosition(current.start);
-        writeF32(pos - current.start);
-        writeF32(count);
-        setPosition(pos);
-        count = current.count;
-        coder = current.coder;
-        incrementor = current.incrementor;
-        current = current.next;
-        increment();
-    }
-
     @Override
     public void putUshort(int i)
     {

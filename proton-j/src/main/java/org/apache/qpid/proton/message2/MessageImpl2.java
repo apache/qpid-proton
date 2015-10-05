@@ -721,7 +721,7 @@ public class MessageImpl2 implements Message
             _footer.encode(encoder);
         }
         
-        byte[] temp = new byte[encoder.getPosition()];
+        /*byte[] temp = new byte[encoder.getPosition()];
         System.arraycopy(data, offset, temp, 0, encoder.getPosition());
         
         try
@@ -732,7 +732,7 @@ public class MessageImpl2 implements Message
         {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        }
+        }*/
         
         return encoder.getPosition();
     }

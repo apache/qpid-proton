@@ -361,7 +361,6 @@ public abstract class AbstractEncoder2 implements Encoder
         if (current == null) {
             throw new IllegalStateException("mismatched call to end()");
         }
-        System.out.println("Ending frame : " + current);
         int pos = getPosition();
         setPosition(current.start);
         writeF32(pos - current.start);

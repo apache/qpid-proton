@@ -94,7 +94,7 @@ public class TransportImpl2 extends EndpointImpl
     private ByteArrayEncoder _encoder = new ByteArrayEncoder();
 
     private int _maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
-    private int _remoteMaxFrameSize = 512;
+    private int _remoteMaxFrameSize = 2048;
     private int _channelMax = 65535;
     private int _remoteChannelMax = 65535;
 

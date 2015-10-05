@@ -50,7 +50,7 @@ class FrameWriter2
 
     static final byte SASL_FRAME_TYPE = (byte) 1;
 
-    static final int DEFUALT_BUFFER_SIZE = Integer.getInteger("proton.encoder.buffer_size", 1024);
+    static final int DEFUALT_BUFFER_SIZE = Integer.getInteger("proton.encoder.buffer_size", 2048);
 
     private ByteArrayEncoder _encoder;
 
@@ -206,7 +206,7 @@ class FrameWriter2
         }
         endFrame(channel);
         _framesOutput += 1;
-        try
+        /*try
         {
             FileOutputStream fout = new FileOutputStream("/home/rajith/data/" + ((Performative) frameBody).getClass().getSimpleName());
             fout.write(_buffer, _read, _position);
@@ -216,7 +216,7 @@ class FrameWriter2
         catch (Exception e)
         {
             e.printStackTrace();
-        }
+        }*/
         
     }
 

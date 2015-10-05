@@ -209,7 +209,6 @@ public final class Transfer implements Encodable, Performative
         {
             List<Object> l = (List<Object>) in;
             Transfer transfer = new Transfer();
-            System.out.println(l);
             switch (11 - l.size())
             {
             case 0:
