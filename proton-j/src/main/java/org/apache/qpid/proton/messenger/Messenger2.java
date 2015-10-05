@@ -23,9 +23,8 @@ package org.apache.qpid.proton.messenger;
 import java.io.IOException;
 
 import org.apache.qpid.proton.TimeoutException;
-import org.apache.qpid.proton.message.Message;
-
-import org.apache.qpid.proton.messenger.impl.MessengerImpl;
+import org.apache.qpid.proton.message2.Message;
+import org.apache.qpid.proton.messenger.impl.MessengerImpl2;
 
 /**
  *
@@ -69,17 +68,17 @@ import org.apache.qpid.proton.messenger.impl.MessengerImpl;
  *  Similarly, the get method will decode the content in the incoming
  *  message queue into the supplied Message object.
 */
-public interface Messenger
+public interface Messenger2
 {
 
     public static final class Factory
     {
-        public static Messenger create() {
-            return new MessengerImpl();
+        public static Messenger2 create() {
+            return new MessengerImpl2();
         }
 
-        public static Messenger create(String name) {
-            return new MessengerImpl(name);
+        public static Messenger2 create(String name) {
+            return new MessengerImpl2(name);
         }
     }
 

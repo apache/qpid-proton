@@ -45,8 +45,8 @@ import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.Ssl;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.message.Message;
-import org.apache.qpid.proton.messenger.Messenger;
+import org.apache.qpid.proton.message2.Message;
+import org.apache.qpid.proton.messenger.Messenger2;
 import org.apache.qpid.proton.messenger.MessengerException;
 import org.apache.qpid.proton.messenger.Status;
 import org.apache.qpid.proton.messenger.Tracker;
@@ -55,9 +55,7 @@ import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 
-import org.apache.qpid.proton.amqp.Binary;
-
-public class MessengerImpl implements Messenger
+public class MessengerImpl2 implements Messenger2
 {
     private enum LinkCreditMode
     {
@@ -106,7 +104,7 @@ public class MessengerImpl implements Messenger
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link MessengerFactory} instead
      */
-    @Deprecated public MessengerImpl()
+    @Deprecated public MessengerImpl2()
     {
         this(java.util.UUID.randomUUID().toString());
     }
@@ -115,7 +113,7 @@ public class MessengerImpl implements Messenger
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use a {@link MessengerFactory} instead
      */
-    @Deprecated public MessengerImpl(String name)
+    @Deprecated public MessengerImpl2(String name)
     {
         _name = name;
     }
@@ -461,7 +459,7 @@ public class MessengerImpl implements Messenger
         StoreEntry entry = _incomingStore.get( null );
         if (entry != null)
         {
-            Message message = Proton.message();
+            Message message = Proton.message2();
             message.decode( entry.getEncodedMsg(), 0, entry.getEncodedLength() );
 
             _incomingTracker = new TrackerImpl(TrackerImpl.Type.INCOMING,
