@@ -5,6 +5,10 @@ anonymous connections and accepts links to and from a node named
 provided against which the examples can also be run (transactions are
 not yet supported in this script).
 
+Note: For builds that include SASL support via the cyrus sasl library,
+those examples that accept incoming connections may require some SASL
+configuration which is described below.
+
 ------------------------------------------------------------------
 
 helloworld.py
@@ -171,3 +175,13 @@ A variant of the above that uses the tornado eventloop instead.
 
 -------------------------------------------------------------------
 
+SASL configuration
+
+If your build includes extra SASL support (provided via the cyrus SASL
+library), you may need to provide some configuration to enable
+examples that accept incoming connections (i.e. those with 'direct' in
+the name). This is done by supplying a config file name
+proton-server.conf. The directory in which it is in can be specified
+via the PN_SASL_CONFIG_PATH environment variable. A simple example
+config file is included along with these examples, enabling only the
+EXTERNAL and ANONYMOUS mechanisms by default.
