@@ -68,9 +68,7 @@ def peel_handler_exception(meth):
         return meth()
     except HandlerException, he:
         cause = he.cause
-        if hasattr(cause, "value"):
-            cause = cause.value
-        t = type(cause)
+        t = getattr(cause, "type", cause.__class__)
         info = sys.exc_info()
         _compat.raise_(t, cause, info[2]) 
 
