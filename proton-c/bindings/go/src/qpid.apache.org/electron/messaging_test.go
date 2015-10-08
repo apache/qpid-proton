@@ -117,8 +117,11 @@ func TestClientSendServerReceive(t *testing.T) {
 	for i := 0; i < nLinks; i++ {
 		for j := 0; j < nMessages; j++ {
 			var sm SentMessage
+
 			// Client send
+			sendDone := make(chan struct{})
 			go func() {
+				defer close(sendDone)
 				m := amqp.NewMessageWith(fmt.Sprintf("foobar%v-%v", i, j))
 				var err error
 				sm, err = s[i].Send(m)
@@ -137,6 +140,7 @@ func TestClientSendServerReceive(t *testing.T) {
 			}
 
 			// Should not be acknowledged on client yet
+			<-sendDone
 			if d, err := sm.DispositionTimeout(0); err != Timeout || NoDisposition != d {
 				t.Errorf("want [no-disposition/timeout] got [%v/%v]", d, err)
 			}

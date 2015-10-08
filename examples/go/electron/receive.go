@@ -20,7 +20,7 @@ under the License.
 package main
 
 import (
-	"../util"
+	"./util"
 	"flag"
 	"fmt"
 	"log"
@@ -54,9 +54,10 @@ func main() {
 	}
 
 	messages := make(chan amqp.Message) // Channel for messages from goroutines to main()
-	stop := make(chan struct{})         // Closing this channel means the program is stopping.
-	var wait sync.WaitGroup             // Used by main() to wait for all goroutines to end.
-	wait.Add(len(urls))                 // Wait for one goroutine per URL.
+	defer close(messages)
+
+	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
+	wait.Add(len(urls))     // Wait for one goroutine per URL.
 
 	_, prog := path.Split(os.Args[0])
 	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
@@ -87,14 +88,14 @@ func main() {
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
 				rm, err := r.Receive()
-				if err == electron.Closed {
+				switch err {
+				case electron.Closed:
+					util.Debugf("closed %s", urlStr)
 					return
-				}
-				util.ExitIf(err)
-				select { // Send m to main() or stop
-				case messages <- rm.Message: // Send to main()
-				case <-stop: // The program is stopping.
-					return
+				case nil:
+					messages <- rm.Message
+				default:
+					log.Fatal(err)
 				}
 			}
 		}(urlStr)
@@ -105,8 +106,9 @@ func main() {
 
 	// print each message until the count is exceeded.
 	for i := uint64(0); i < *count; i++ {
+		util.Debugf("pre (%d/%d)\n", i, *count)
 		m := <-messages
-		util.Debugf("%s\n", util.FormatMessage(m))
+		util.Debugf("%s (%d/%d)\n", util.FormatMessage(m), i, *count)
 	}
 	fmt.Printf("Received %d messages\n", *count)
 
@@ -116,7 +118,5 @@ func main() {
 		util.Debugf("close %s", c)
 		c.Close(nil)
 	}
-	close(stop) // Signal all goroutines to stop.
 	wait.Wait() // Wait for all goroutines to finish.
-	close(messages)
 }

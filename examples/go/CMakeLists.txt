@@ -32,13 +32,12 @@ if(BUILD_GO)
 
   add_test(
     NAME go_example_electron_test
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker broker
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/electron)
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker broker)
+
 
   add_test(
     NAME go_example_proton_test
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -broker ../proton/broker
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/electron)
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/example_test -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
 
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()

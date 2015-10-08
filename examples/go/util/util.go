@@ -46,8 +46,7 @@ func Debugf(format string, data ...interface{}) {
 // Simple error handling for demo.
 func ExitIf(err error) {
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 

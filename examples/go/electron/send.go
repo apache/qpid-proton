@@ -20,7 +20,7 @@ under the License.
 package main
 
 import (
-	"../util"
+	"./util"
 	"flag"
 	"fmt"
 	"log"
@@ -64,7 +64,7 @@ func main() {
 
 	_, prog := path.Split(os.Args[0])
 	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
-	var connections []electron.Connection // Store connctions to close on exit
+	connections := make(chan electron.Connection, len(urls)) // Connctions to close on exit
 
 	// Start a goroutine for each URL to send messages.
 	for _, urlStr := range urls {
@@ -82,7 +82,7 @@ func main() {
 			util.ExitIf(err)
 			err = c.Open()
 			util.ExitIf(err)
-			connections = append(connections, c) // Save connection so it will be closed when main() ends
+			connections <- c // Save connection so we can Close() when main() ends
 
 			// Create a Sender using the path of the URL as the AMQP address
 			s, err := c.Sender(electron.Target(url.Path))
@@ -114,8 +114,9 @@ func main() {
 	}
 	fmt.Printf("Received all %v acknowledgements\n", expect)
 
-	wait.Wait()                     // Wait for all goroutines to finish.
-	for _, c := range connections { // Close all connections
+	wait.Wait() // Wait for all goroutines to finish.
+	close(connections)
+	for c := range connections { // Close all connections
 		if c != nil {
 			c.Close(nil)
 		}

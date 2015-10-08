@@ -84,9 +84,10 @@ func (t Type) String() string {
 		return "list"
 	case C.PN_MAP:
 		return "map"
-	case C.PN_INVALID:
-		return "no-data"
 	default:
+		if uint32(t) == uint32(C.PN_INVALID) {
+			return "no-data"
+		}
 		return fmt.Sprintf("unknown-type(%d)", t)
 	}
 }

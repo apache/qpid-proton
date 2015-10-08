@@ -446,7 +446,8 @@ func rewindUnmarshal(v interface{}, data *C.pn_data_t) {
 func getInterface(data *C.pn_data_t, v *interface{}) {
 	pnType := C.pn_data_type(data)
 	switch pnType {
-	case C.PN_NULL, C.PN_INVALID: // No data.
+	// Note PN_INVALID is defined outside the enum, older Go versions don't consider it a C.pn_type_t
+	case C.PN_NULL, C.pn_type_t(C.PN_INVALID): // No data.
 		*v = nil
 	case C.PN_BOOL:
 		*v = bool(C.pn_data_get_bool(data))
@@ -512,7 +513,8 @@ func getMap(data *C.pn_data_t, v interface{}) {
 				}
 			}
 		}
-	case C.PN_INVALID: // Leave the map empty
+		// Note PN_INVALID is defined outside the enum, older Go versions don't consider it a C.pn_type_t
+	case C.pn_type_t(C.PN_INVALID): // Leave the map empty
 	default:
 		panic(newUnmarshalError(pnType, v))
 	}

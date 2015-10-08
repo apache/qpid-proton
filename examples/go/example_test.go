@@ -32,6 +32,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -133,7 +134,7 @@ func exampleCommand(t *testing.T, prog string, arg ...string) (cmd *exec.Cmd) {
 		args = append(args, "-debug=true")
 	}
 	args = append(args, arg...)
-	prog, err := filepath.Abs(prog)
+	prog, err := filepath.Abs(path.Join(*dir, prog))
 	fatalIf(t, err)
 	if _, err := os.Stat(prog); err == nil {
 		cmd = exec.Command(prog, args...)
@@ -271,6 +272,7 @@ var debug = flag.Bool("debug", false, "Debugging output from examples")
 var brokerName = flag.String("broker", "broker", "Name of broker executable to run")
 var count = flag.Int("count", 3, "Count of messages to send in tests")
 var connections = flag.Int("connections", 3, "Number of connections to make in tests")
+var dir = flag.String("dir", "", "Directory containing example sources or binaries")
 var expected int
 
 func TestMain(m *testing.M) {
