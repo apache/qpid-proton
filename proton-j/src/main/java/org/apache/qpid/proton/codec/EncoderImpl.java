@@ -59,6 +59,7 @@ public final class EncoderImpl implements ByteBufferEncoder
     private final UnsignedIntegerType   _unsignedIntegerType;
     private final LongType              _longType;
     private final UnsignedLongType      _unsignedLongType;
+    private final BigIntegerType        _bigIntegerType;
 
     private final CharacterType         _characterType;
     private final FloatType             _floatType;
@@ -98,6 +99,7 @@ public final class EncoderImpl implements ByteBufferEncoder
         _unsignedIntegerType    = new UnsignedIntegerType(this, decoder);
         _longType               = new LongType(this, decoder);
         _unsignedLongType       = new UnsignedLongType(this, decoder);
+        _bigIntegerType         = new BigIntegerType(this, decoder);
 
         _characterType          = new CharacterType(this, decoder);
         _floatType              = new FloatType(this, decoder);
