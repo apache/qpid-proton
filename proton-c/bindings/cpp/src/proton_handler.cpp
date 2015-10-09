@@ -19,7 +19,7 @@
  *
  */
 #include "proton/proton_handler.hpp"
-#include "proton/proton_event.hpp"
+#include "proton_event.hpp"
 
 namespace proton {
 

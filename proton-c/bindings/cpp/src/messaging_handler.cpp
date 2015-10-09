@@ -19,7 +19,7 @@
  *
  */
 #include "proton/messaging_handler.hpp"
-#include "proton/proton_event.hpp"
+#include "proton_event.hpp"
 #include "proton/messaging_adapter.hpp"
 #include "proton/handlers.h"
 #include <algorithm>

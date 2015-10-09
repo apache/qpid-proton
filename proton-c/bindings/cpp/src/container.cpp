@@ -19,7 +19,7 @@
  *
  */
 #include "proton/container.hpp"
-#include "proton/messaging_event.hpp"
+#include "messaging_event.hpp"
 #include "proton/connection.hpp"
 #include "proton/session.hpp"
 #include "proton/messaging_adapter.hpp"

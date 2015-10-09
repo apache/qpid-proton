@@ -19,7 +19,7 @@
  *
  */
 #include "proton/messaging_adapter.hpp"
-#include "proton/messaging_event.hpp"
+#include "messaging_event.hpp"
 #include "proton/sender.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"

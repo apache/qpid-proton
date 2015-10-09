@@ -23,7 +23,7 @@
 #include "proton/event.h"
 #include "proton/link.h"
 
-#include "proton/messaging_event.hpp"
+#include "messaging_event.hpp"
 #include "proton/message.hpp"
 #include "proton/proton_handler.hpp"
 #include "proton/messaging_handler.hpp"
