@@ -51,16 +51,13 @@ class messaging_handler : public proton_handler
 
     ///@name Over-ride these member functions to handle events
     ///@{
-    PN_CPP_EXTERN virtual void on_abort(event &e);
     PN_CPP_EXTERN virtual void on_accepted(event &e);
-    PN_CPP_EXTERN virtual void on_commit(event &e);
     PN_CPP_EXTERN virtual void on_connection_closed(event &e);
     PN_CPP_EXTERN virtual void on_connection_closing(event &e);
     PN_CPP_EXTERN virtual void on_connection_error(event &e);
     PN_CPP_EXTERN virtual void on_connection_opening(event &e);
     PN_CPP_EXTERN virtual void on_connection_opened(event &e);
     PN_CPP_EXTERN virtual void on_disconnected(event &e);
-    PN_CPP_EXTERN virtual void on_fetch(event &e);
     PN_CPP_EXTERN virtual void on_id_loaded(event &e);
     PN_CPP_EXTERN virtual void on_link_closed(event &e);
     PN_CPP_EXTERN virtual void on_link_closing(event &e);
@@ -68,7 +65,6 @@ class messaging_handler : public proton_handler
     PN_CPP_EXTERN virtual void on_link_opened(event &e);
     PN_CPP_EXTERN virtual void on_link_opening(event &e);
     PN_CPP_EXTERN virtual void on_message(event &e);
-    PN_CPP_EXTERN virtual void on_quit(event &e);
     PN_CPP_EXTERN virtual void on_record_inserted(event &e);
     PN_CPP_EXTERN virtual void on_records_loaded(event &e);
     PN_CPP_EXTERN virtual void on_rejected(event &e);

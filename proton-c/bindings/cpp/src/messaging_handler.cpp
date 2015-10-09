@@ -81,16 +81,13 @@ void messaging_handler::create_helpers() {
 
 messaging_handler::~messaging_handler(){}
 
-void messaging_handler::on_abort(event &e) { on_unhandled(e); }
 void messaging_handler::on_accepted(event &e) { on_unhandled(e); }
-void messaging_handler::on_commit(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_closed(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_closing(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_error(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_opened(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_opening(event &e) { on_unhandled(e); }
 void messaging_handler::on_disconnected(event &e) { on_unhandled(e); }
-void messaging_handler::on_fetch(event &e) { on_unhandled(e); }
 void messaging_handler::on_id_loaded(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_closed(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_closing(event &e) { on_unhandled(e); }
@@ -98,7 +95,6 @@ void messaging_handler::on_link_error(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_opened(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_opening(event &e) { on_unhandled(e); }
 void messaging_handler::on_message(event &e) { on_unhandled(e); }
-void messaging_handler::on_quit(event &e) { on_unhandled(e); }
 void messaging_handler::on_record_inserted(event &e) { on_unhandled(e); }
 void messaging_handler::on_records_loaded(event &e) { on_unhandled(e); }
 void messaging_handler::on_rejected(event &e) { on_unhandled(e); }
