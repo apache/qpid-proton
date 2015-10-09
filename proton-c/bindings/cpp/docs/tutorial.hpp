@@ -93,7 +93,7 @@ Hello World, Direct!
 \dontinclude helloworld_direct.cpp
 
 Though often used in conjunction with a broker, AMQP does not *require* this. It
-also allows senders and receivers can communicate directly if desired.
+also allows senders and receivers to communicate directly if desired.
 
 We will modify our example to send a message directly to itself. This is a bit
 contrived but illustrates both sides of the direct send/receive scenario. Full
@@ -101,7 +101,7 @@ code at \ref helloworld_direct.cpp
 
 The first difference, is that rather than creating a receiver on the same
 connection as our sender, we listen for incoming connections by invoking the
-`proton::container::Xblisten()` method on the container.
+`proton::container::listen()` method on the container.
 
 \skip on_start
 \until }
@@ -137,7 +137,7 @@ event loop exits, and the run() method will return.
 
 So now we have our example working without a broker involved!
 
-Note that for this example we paick an "unusual" port 8888 since we are talking
+Note that for this example we pick an "unusual" port 8888 since we are talking
 to ourselves rather than a broker.
 
 \skipline url =
@@ -216,8 +216,8 @@ got to.
 
 Now let's look at the corresponding receiver \ref simple_recv.cpp
 
-This time we'll use an `expected` member variable for for the number of messages we expecct and
-a `received` variable to count how many we have received so far.send.
+This time we'll use an `expected` member variable for for the number of messages we expect and
+a `received` variable to count how many we have received so far.
 
 \skip class simple_recv
 \until received
@@ -363,7 +363,7 @@ to our original server:
 
 \dontinclude server_direct.cpp
 
-Our server must generate a unique reply-to addreses for links from the
+Our server must generate a unique reply-to addresses for links from the
 client that request a dynamic address (previously this was done by the broker.)
 We use a simple counter.
 
@@ -418,7 +418,7 @@ of the headers. The following example shows how that can be achieved:
 When creating the receiver, we specify a Selector object as an option.
 The options argument can take a single object or a list. Another option
 that is sometimes of interest when using a broker is the ability to
-'browse' the messages on a queue, rather than consumig them. This is
+'browse' the messages on a queue, rather than consuming them. This is
 done in AMQP by specifying a distribution mode of 'copy' (instead of
 'move' which is the expected default for queues). An example of that is
 shown next:
