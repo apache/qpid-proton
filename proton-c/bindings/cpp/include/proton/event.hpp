@@ -26,6 +26,7 @@
 #include "proton/connection.hpp"
 #include "proton/message.hpp"
 #include <vector>
+#include <string>
 
 namespace proton {
 
@@ -40,6 +41,9 @@ class event {
 
     /// Dispatch this event to a handler.
     virtual PN_CPP_EXTERN void dispatch(handler &h) = 0;
+
+    /// Return the name of the event type
+    virtual PN_CPP_EXTERN std::string name() const = 0;
 
     /// Get container.
     virtual PN_CPP_EXTERN class container &container();
@@ -63,6 +67,7 @@ class event {
     event(const event&);
     event& operator=(const event&);
 };
+
 
 }
 

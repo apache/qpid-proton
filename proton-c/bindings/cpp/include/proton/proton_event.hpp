@@ -38,6 +38,8 @@ class proton_event : public event
 {
   public:
 
+    std::string name() const;
+
     ///@name Event types
     ///@{
 
@@ -279,7 +281,7 @@ class proton_event : public event
     virtual PN_CPP_EXTERN class delivery& delivery();
 
     /** Get type of event */
-    PN_CPP_EXTERN event_type type();
+    PN_CPP_EXTERN event_type type() const;
 
     PN_CPP_EXTERN pn_event_t* pn_event();
 

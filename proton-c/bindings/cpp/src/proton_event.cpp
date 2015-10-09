@@ -42,7 +42,9 @@ proton_event::proton_event(pn_event_t *ce, proton_event::event_type t, class con
     container_(c)
 {}
 
-int proton_event::type() { return type_; }
+int proton_event::type() const { return type_; }
+
+std::string proton_event::name() const { return pn_event_type_name(pn_event_type_t(type_)); }
 
 pn_event_t *proton_event::pn_event() { return pn_event_; }
 
@@ -181,3 +183,5 @@ const proton_event::event_type proton_event::SELECTABLE_ERROR=PN_SELECTABLE_ERRO
 const proton_event::event_type proton_event::SELECTABLE_EXPIRED=PN_SELECTABLE_EXPIRED;
 const proton_event::event_type proton_event::SELECTABLE_FINAL=PN_SELECTABLE_FINAL;
 }
+
+

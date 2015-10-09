@@ -37,6 +37,8 @@ class messaging_event : public proton_event
 {
   public:
 
+    std::string name() const;
+
     // TODO aconway 2015-07-16: document meaning of each event type.
 
     /** Event types for a messaging_handler */

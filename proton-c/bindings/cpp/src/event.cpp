@@ -38,7 +38,6 @@ event::event() {}
 
 event::~event() {}
 
-
 container &event::container() {
     // Subclasses to override as appropriate
     throw error(MSG("No container context for event"));
