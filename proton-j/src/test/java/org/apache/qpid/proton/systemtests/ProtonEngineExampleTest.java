@@ -43,6 +43,7 @@ import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.message.Message;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -302,6 +303,80 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         LOGGER.fine(bold("======== Done!"));
     }
+
+    @Ignore("This test does not have a fix yet")
+    @Test
+    public void testPROTON_1017() throws Exception
+    {
+        LOGGER.fine(bold("======== About to create transports"));
+
+        getClient().transport = Proton.transport();
+        ProtocolTracerEnabler.setProtocolTracer(getClient().transport, TestLoggingHelper.CLIENT_PREFIX);
+
+        getServer().transport = Proton.transport();
+        ProtocolTracerEnabler.setProtocolTracer(getServer().transport, "            " + TestLoggingHelper.SERVER_PREFIX);
+
+        doOutputInputCycle();
+
+        getClient().connection = Proton.connection();
+        getClient().transport.bind(getClient().connection);
+
+        getServer().connection = Proton.connection();
+        getServer().transport.bind(getServer().connection);
+
+
+
+        LOGGER.fine(bold("======== About to open connections"));
+        getClient().connection.open();
+        getServer().connection.open();
+
+        doOutputInputCycle();
+
+
+
+        LOGGER.fine(bold("======== About to open and close client session"));
+        getClient().session = getClient().connection.session();
+        getClient().session.open();
+        getClient().session.close();
+        pumpClientToServer();
+
+        getServer().session = getServer().connection.sessionHead(of(UNINITIALIZED), of(CLOSED));
+        assertEndpointState(getServer().session, UNINITIALIZED, CLOSED);
+
+        getServer().session.open();
+        assertEndpointState(getServer().session, ACTIVE, CLOSED);
+
+        getServer().session.close();
+        assertEndpointState(getServer().session, CLOSED, CLOSED);
+
+        pumpServerToClient();
+        assertEndpointState(getClient().session, CLOSED, CLOSED);
+
+
+        LOGGER.fine(bold("======== About to close client's connection"));
+
+        getClient().connection.close();
+
+        pumpClientToServer();
+
+
+        LOGGER.fine(bold("======== Server about to process client's connection closure"));
+
+        assertEquals(CLOSED, getServer().connection.getRemoteState());
+        getServer().connection.close();
+
+        pumpServerToClient();
+
+
+        LOGGER.fine(bold("======== Checking client has nothing more to pump"));
+
+
+        assertClientHasNothingToOutput();
+
+        LOGGER.fine(bold("======== Done!"));
+    }
+
+
 
     /**
      * Simulates creating a local terminus using the properties supplied by the remote link endpoint.
