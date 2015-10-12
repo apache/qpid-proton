@@ -27,9 +27,8 @@ install:
 - gem install minitest --version 4.7.0
 before_script:
 - export PATH=${HOME}/.local/bin:${PATH}
-script:
 - mkdir Build
 - cd Build
 - cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install
-- cmake --build . --target install
-- ctest -V
+script:
+- cmake --build . --target install && ctest -V
