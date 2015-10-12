@@ -41,11 +41,13 @@ set(GO_ENV ${env_py} --
   "GOPATH=${CMAKE_CURRENT_SOURCE_DIR}"
   "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
-  ${GO_EXE} CACHE INTERNAL "Run go with environment set")
+  CACHE INTERNAL "Run a command with Go environment variables")
 
-set(GO_BUILD ${GO_ENV} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
-set(GO_INSTALL ${GO_ENV} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install")
-set(GO_TEST ${GO_ENV} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
+set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
+
+set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
+set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install")
+set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
 
 # Install packages in the source tree, go tools aren't friendly otherwise.
 # All build output goes in git-ignored pkg or bin subdirectories.
