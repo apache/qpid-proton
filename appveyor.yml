@@ -2,6 +2,7 @@ version: 0.10-SNAPSHOT-{branch}.{build}
 configuration: RelWithDebInfo
 install:
 - cinst -y swig
+- cinst -y mingw
 before_build:
 - mkdir BLD
 - cd BLD

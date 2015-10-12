@@ -30,6 +30,7 @@ import (
 	"./util"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"qpid.apache.org/electron"
@@ -51,14 +52,27 @@ var qsize = flag.Int("qsize", 1000, "Max queue size")
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+	if err := newBroker().run(); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	b := newBroker()
+type broker struct {
+	queues    util.Queues
+	container electron.Container
+}
+
+func newBroker() *broker {
+	return &broker{util.MakeQueues(*qsize), electron.NewContainer("")}
+}
+
+func (b *broker) run() (err error) {
 	listener, err := net.Listen("tcp", *addr)
-	util.ExitIf(err)
+	if err != nil {
+		return err
+	}
 	defer listener.Close()
 	fmt.Printf("Listening on %s\n", listener.Addr())
-
-	// Loop accepting new connections.
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -72,15 +86,6 @@ func main() {
 			}
 		}
 	}
-}
-
-type broker struct {
-	queues    util.Queues
-	container electron.Container
-}
-
-func newBroker() *broker {
-	return &broker{util.MakeQueues(*qsize), electron.NewContainer("")}
 }
 
 // connection creates a new AMQP connection for a net.Conn.
