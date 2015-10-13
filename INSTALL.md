@@ -19,6 +19,9 @@ package for that language:
     # dependencies needed for ssl support
     $ yum install openssl-devel
 
+    # dependencies needed for Cyrus SASL support
+    $ yum install cyrus-sasl-devel
+
     # dependencies needed for bindings
     $ yum install swig python-devel ruby-devel php-devel perl-devel
 
