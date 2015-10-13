@@ -75,14 +75,17 @@ foreach (pkg amqp proton electron)
   set(sources "${GoFiles}${CgoFiles}")
 
   # Build the package library
-  add_custom_command(OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package} DEPENDS ${sources} ${cdepends})
+  add_custom_command(
+    OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package} DEPENDS ${sources} ${cdepends}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
   set(target go-package-${pkg})
   add_custom_target(${target} ALL DEPENDS ${lib})
 
   # Package test
   go_sources(TestGoFiles)
   set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/${pkg}.test)
-  add_custom_command(OUTPUT ${test_exe} COMMAND ${GO_TEST} -c -o ${test_exe} ${package}
+  add_custom_command(
+    OUTPUT ${test_exe} COMMAND ${GO_TEST} -c -o ${test_exe} ${package}
     DEPENDS ${target} qpid-proton)
   add_custom_target(go-package-test-${pkg} ALL DEPENDS ${test_exe})
   add_test(NAME go_test_${pkg} COMMAND ${test_exe} WORKING_DIRECTORY ${dir})

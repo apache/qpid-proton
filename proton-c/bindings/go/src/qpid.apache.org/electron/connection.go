@@ -28,131 +28,114 @@ import (
 	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"sync"
+	"time"
 )
 
 // Connection is an AMQP connection, created by a Container.
 type Connection interface {
 	Endpoint
 
-	// Server puts the connection in server mode, must be called before Open().
-	//
-	// A server connection will do protocol negotiation to accept a incoming AMQP
-	// connection. Normally you would call this for a connection created by
-	// net.Listener.Accept()
-	//
-	Server()
-
-	// Listen arranges for endpoints opened by the remote peer to be passed to accept().
-	// Listen() must be called before Connection.Open().
-	//
-	// accept() is passed a Session, Sender or Receiver.  It can examine endpoint
-	// properties and set some properties (e.g. Receiver.SetCapacity()) Returning nil
-	// will accept the endpoint, returning an error will reject it.
-	//
-	// accept() must not block or use the endpoint other than to examine or set
-	// properties.  It can start a goroutine to process the Endpoint, or pass the
-	// Endpoint to another goroutine via a channel, and that goroutine can use
-	// the endpoint as normal.
-	//
-	// The default Listen function is RejectEndpoint which rejects all endpoints.
-	// You can call Listen(AcceptEndpoint) to accept all endpoints
-	Listen(accept func(Endpoint) error)
-
-	// Open the connection, ready for use.
-	Open() error
-
 	// Sender opens a new sender on the DefaultSession.
 	//
 	// v can be a string, which is used as the Target address, or a SenderSettings
 	// struct containing more details settings.
-	Sender(setting ...LinkSetting) (Sender, error)
+	Sender(...LinkSetting) (Sender, error)
 
 	// Receiver opens a new Receiver on the DefaultSession().
 	//
 	// v can be a string, which is used as the
 	// Source address, or a ReceiverSettings struct containing more details
 	// settings.
-	Receiver(setting ...LinkSetting) (Receiver, error)
+	Receiver(...LinkSetting) (Receiver, error)
 
 	// DefaultSession() returns a default session for the connection. It is opened
 	// on the first call to DefaultSession and returned on subsequent calls.
 	DefaultSession() (Session, error)
 
 	// Session opens a new session.
-	Session() (Session, error)
+	Session(...SessionSetting) (Session, error)
 
 	// Container for the connection.
 	Container() Container
 
 	// Disconnect the connection abruptly with an error.
 	Disconnect(error)
+
+	// Wait waits for the connection to be disconnected.
+	Wait() error
+
+	// WaitTimeout is like Wait but returns Timeout if the timeout expires.
+	WaitTimeout(time.Duration) error
 }
 
-// AcceptEndpoint pass to Connection.Listen to accept all endpoints
-func AcceptEndpoint(Endpoint) error { return nil }
+// ConnectionSetting can be passed when creating a connection.
+// See functions that return ConnectionSetting for details
+type ConnectionSetting func(*connection)
 
-// RejectEndpoint pass to Connection.Listen to reject all endpoints
-func RejectEndpoint(Endpoint) error {
-	return amqp.Errorf(amqp.NotAllowed, "remote open rejected")
+// Server setting puts the connection in server mode.
+//
+// A server connection will do protocol negotiation to accept a incoming AMQP
+// connection. Normally you would call this for a connection created by
+// net.Listener.Accept()
+//
+func Server() ConnectionSetting { return func(c *connection) { c.engine.Server() } }
+
+// Accepter provides a function to be called when a connection receives an incoming
+// request to open an endpoint, one of IncomingSession, IncomingSender or IncomingReceiver.
+//
+// The accept() function must not block or use the accepted endpoint.
+// It can pass the endpoint to another goroutine for processing.
+//
+// By default all incoming endpoints are rejected.
+func Accepter(accept func(Incoming)) ConnectionSetting {
+	return func(c *connection) { c.accept = accept }
 }
 
 type connection struct {
 	endpoint
 	listenOnce, defaultSessionOnce, closeOnce sync.Once
 
-	// Set before Open()
-	container *container
-	conn      net.Conn
-	accept    func(Endpoint) error
-
-	// Set by Open()
+	container   *container
+	conn        net.Conn
+	accept      func(Incoming)
 	handler     *handler
 	engine      *proton.Engine
 	err         internal.ErrorHolder
 	eConnection proton.Connection
 
 	defaultSession Session
+	done           chan struct{}
 }
 
-func newConnection(conn net.Conn, cont *container) (*connection, error) {
-	c := &connection{container: cont, conn: conn, accept: RejectEndpoint}
+func newConnection(conn net.Conn, cont *container, setting ...ConnectionSetting) (*connection, error) {
+	c := &connection{container: cont, conn: conn, accept: func(Incoming) {}, done: make(chan struct{})}
 	c.handler = newHandler(c)
 	var err error
 	c.engine, err = proton.NewEngine(c.conn, c.handler.delegator)
 	if err != nil {
 		return nil, err
 	}
+	for _, set := range setting {
+		set(c)
+	}
 	c.str = c.engine.String()
 	c.eConnection = c.engine.Connection()
+	go func() { c.engine.Run(); close(c.done) }()
 	return c, nil
 }
 
-func (c *connection) Server() { c.engine.Server() }
+func (c *connection) Close(err error) { c.err.Set(err); c.engine.Close(err) }
 
-func (c *connection) Listen(accept func(Endpoint) error) { c.accept = accept }
+func (c *connection) Disconnect(err error) { c.err.Set(err); c.engine.Disconnect(err) }
 
-func (c *connection) Open() error {
-	go c.engine.Run()
-	return nil
-}
-
-func (c *connection) Close(err error) { c.engine.Close(err) }
-
-func (c *connection) Disconnect(err error) { c.engine.Disconnect(err) }
-
-func (c *connection) closed(err error) {
-	// Call from another goroutine to initiate close without deadlock.
-	go c.Close(err)
-}
-
-func (c *connection) Session() (Session, error) {
+func (c *connection) Session(setting ...SessionSetting) (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
 		eSession, err := c.engine.Connection().Session()
 		if err == nil {
 			eSession.Open()
 			if err == nil {
-				s = newSession(c, eSession)
+				s = newSession(c, eSession, setting...)
 			}
 		}
 		return err
@@ -189,3 +172,47 @@ func (c *connection) Receiver(setting ...LinkSetting) (Receiver, error) {
 }
 
 func (c *connection) Connection() Connection { return c }
+
+func (c *connection) Wait() error { return c.WaitTimeout(Forever) }
+func (c *connection) WaitTimeout(timeout time.Duration) error {
+	_, err := timedReceive(c.done, timeout)
+	if err == Timeout {
+		return Timeout
+	}
+	return c.Error()
+}
+
+// Incoming is the interface for incoming requests to open an endpoint.
+// Implementing types are IncomingSession, IncomingSender and IncomingReceiver.
+type Incoming interface {
+	// Accept the endpoint with default settings.
+	//
+	// You must not use the returned endpoint in the accept() function that
+	// receives the Incoming value, but you can pass it to other goroutines.
+	//
+	// Implementing types provide type-specific Accept functions that take additional settings.
+	Accept() Endpoint
+
+	// Reject the endpoint with an error
+	Reject(error)
+
+	error() error
+}
+
+type incoming struct {
+	err      error
+	accepted bool
+}
+
+func (i *incoming) Reject(err error) { i.err = err }
+
+func (i *incoming) error() error {
+	switch {
+	case i.err != nil:
+		return i.err
+	case !i.accepted:
+		return amqp.Errorf(amqp.NotAllowed, "remote open rejected")
+	default:
+		return nil
+	}
+}

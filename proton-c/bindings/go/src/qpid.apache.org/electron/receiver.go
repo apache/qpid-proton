@@ -20,10 +20,9 @@ under the License.
 package electron
 
 import (
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
-	"qpid.apache.org/amqp"
-	"sync"
 	"time"
 )
 
@@ -63,10 +62,6 @@ type Receiver interface {
 	// Capacity is the size (number of messages) of the local message buffer
 	// These are messages received but not yet returned to the application by a call to Receive()
 	Capacity() int
-
-	// SetCapacity sets Capacity and Prefetch of an accepted Receiver.
-	// May only be called in an accept() function, see Connection.Listen()
-	SetCapacity(capacity int, prefetch bool)
 }
 
 // Flow control policy for a receiver.
@@ -120,18 +115,12 @@ func (p noPrefetchPolicy) Post(r *receiver, err error) {
 // Receiver implementation
 type receiver struct {
 	link
-	buffer    chan ReceivedMessage
-	policy    policy
-	setupOnce sync.Once
+	buffer chan ReceivedMessage
+	policy policy
 }
 
-func (r *receiver) SetCapacity(capacity int, prefetch bool) {
-	internal.Assert(r.inAccept, "Receiver.SetCapacity called outside of accept function")
-	r.capacity = capacity
-	r.prefetch = prefetch
-}
-
-func (r *receiver) setup() {
+func newReceiver(l link) *receiver {
+	r := &receiver{link: l}
 	if r.capacity < 1 {
 		r.capacity = 1
 	}
@@ -141,6 +130,9 @@ func (r *receiver) setup() {
 		r.policy = &noPrefetchPolicy{}
 	}
 	r.buffer = make(chan ReceivedMessage, r.capacity)
+	r.handler().addLink(r.eLink, r)
+	r.link.open()
+	return r
 }
 
 // call in proton goroutine.
@@ -156,15 +148,14 @@ func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
-	r.setupOnce.Do(r.setup)
 	internal.Assert(r.buffer != nil, "Receiver is not open: %s", r)
 	r.policy.Pre(r)
 	defer func() { r.policy.Post(r, err) }()
-	rmi, ok, timedout := timedReceive(r.buffer, timeout)
-	switch {
-	case timedout:
+	rmi, err := timedReceive(r.buffer, timeout)
+	switch err {
+	case Timeout:
 		return ReceivedMessage{}, Timeout
-	case !ok:
+	case Closed:
 		return ReceivedMessage{}, r.Error()
 	default:
 		return rmi.(ReceivedMessage), nil
@@ -192,12 +183,6 @@ func (r *receiver) message(delivery proton.Delivery) {
 			r.buffer <- ReceivedMessage{m, delivery, r}
 		}
 	}
-}
-
-func (r *receiver) open() {
-	r.setupOnce.Do(r.setup)
-	r.link.open()
-	r.handler().addLink(r.eLink, r)
 }
 
 func (r *receiver) closed(err error) {
@@ -230,3 +215,24 @@ func (rm *ReceivedMessage) Accept() error { return rm.Acknowledge(Accepted) }
 
 // Reject is short for Acknowledge(Rejected)
 func (rm *ReceivedMessage) Reject() error { return rm.Acknowledge(Rejected) }
+
+// IncomingReceiver is passed to the accept() function given to Connection.Listen()
+// when there is an incoming request for a receiver link.
+type IncomingReceiver struct {
+	incomingLink
+}
+
+// Link provides information about the incoming link.
+func (i *IncomingReceiver) Link() Link { return i }
+
+// AcceptReceiver sets Capacity and Prefetch of the accepted Receiver.
+func (i *IncomingReceiver) AcceptReceiver(capacity int, prefetch bool) Receiver {
+	i.capacity = capacity
+	i.prefetch = prefetch
+	return i.Accept().(Receiver)
+}
+
+func (i *IncomingReceiver) Accept() Endpoint {
+	i.accepted = true
+	return newReceiver(i.link)
+}

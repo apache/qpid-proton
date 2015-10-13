@@ -191,7 +191,7 @@ type endpointDelegator struct {
 	remoteOpen, remoteClose, localOpen, localClose EventType
 	opening, opened, closing, closed, error        MessagingEvent
 	endpoint                                       func(Event) Endpoint
-	delegator                                      *MessagingDelegator
+	delegator                                      *MessagingAdapter
 }
 
 // HandleEvent handles an open/close event for an endpoint in a generic way.
@@ -240,10 +240,10 @@ func (d endpointDelegator) HandleEvent(e Event) {
 	}
 }
 
-// MessagingDelegator implments a EventHandler and delegates to a MessagingHandler.
-// You can modify the exported fields before you pass the MessagingDelegator to
+// MessagingAdapter implments a EventHandler and delegates to a MessagingHandler.
+// You can modify the exported fields before you pass the MessagingAdapter to
 // a Engine.
-type MessagingDelegator struct {
+type MessagingAdapter struct {
 	mhandler                  MessagingHandler
 	connection, session, link endpointDelegator
 	flowcontroller            EventHandler
@@ -261,8 +261,8 @@ type MessagingDelegator struct {
 	PeerCloseError bool
 }
 
-func NewMessagingDelegator(h MessagingHandler) *MessagingDelegator {
-	return &MessagingDelegator{
+func NewMessagingAdapter(h MessagingHandler) *MessagingAdapter {
+	return &MessagingAdapter{
 		mhandler:       h,
 		flowcontroller: nil,
 		AutoSettle:     true,
@@ -281,7 +281,7 @@ func handleIf(h EventHandler, e Event) {
 
 // Handle a proton event by passing the corresponding MessagingEvent(s) to
 // the MessagingHandler.
-func (d *MessagingDelegator) HandleEvent(e Event) {
+func (d *MessagingAdapter) HandleEvent(e Event) {
 	handleIf(d.flowcontroller, e)
 
 	switch e.Type() {
@@ -352,7 +352,7 @@ func (d *MessagingDelegator) HandleEvent(e Event) {
 	}
 }
 
-func (d *MessagingDelegator) incoming(e Event) (err error) {
+func (d *MessagingAdapter) incoming(e Event) (err error) {
 	delivery := e.Delivery()
 	if delivery.HasMessage() {
 		d.mhandler.HandleMessagingEvent(MMessage, e)
@@ -368,7 +368,7 @@ func (d *MessagingDelegator) incoming(e Event) (err error) {
 	return
 }
 
-func (d *MessagingDelegator) outgoing(e Event) (err error) {
+func (d *MessagingAdapter) outgoing(e Event) (err error) {
 	delivery := e.Delivery()
 	if delivery.Updated() {
 		switch delivery.Remote().Type() {

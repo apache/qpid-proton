@@ -77,8 +77,6 @@ func main() {
 			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
 			util.ExitIf(err)
 			c, err := container.Connection(conn)
-			util.ExitIf(err)
-			util.ExitIf(c.Open())
 			connections <- c // Save connection so we can Close() when main() ends
 
 			// Create a Receiver using the path of the URL as the source address
@@ -106,9 +104,8 @@ func main() {
 
 	// print each message until the count is exceeded.
 	for i := uint64(0); i < *count; i++ {
-		util.Debugf("pre (%d/%d)\n", i, *count)
 		m := <-messages
-		util.Debugf("%s (%d/%d)\n", util.FormatMessage(m), i, *count)
+		util.Debugf("%s\n", util.FormatMessage(m))
 	}
 	fmt.Printf("Received %d messages\n", *count)
 

@@ -23,10 +23,9 @@ package electron
 import "C"
 
 import (
-	"container/list"
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
-	"qpid.apache.org/amqp"
 	"reflect"
 	"time"
 )
@@ -69,7 +68,7 @@ type sendMessage struct {
 
 type sender struct {
 	link
-	blocked list.List // Channel of sendMessage for blocked senders.
+	credit chan struct{} // Signal available credit.
 }
 
 // Disposition indicates the outcome of a settled message delivery.
@@ -102,31 +101,6 @@ func (d Disposition) String() string {
 	}
 }
 
-// Send a message, assumes there is credit
-func (s *sender) doSend(snd sendMessage) {
-	delivery, err := s.eLink.Send(snd.m)
-	switch sm := snd.sm.(type) {
-	case nil:
-		delivery.Settle()
-	case *sentMessage:
-		sm.delivery = delivery
-		if err != nil {
-			sm.settled(err)
-		} else {
-			s.handler().sentMessages[delivery] = sm
-		}
-	default:
-		internal.Assert(false, "bad SentMessage type %T", snd.sm)
-	}
-}
-
-func (s *sender) popBlocked() chan sendMessage {
-	if s.blocked.Len() > 0 {
-		return s.blocked.Remove(s.blocked.Front()).(chan sendMessage)
-	}
-	return nil
-}
-
 func (s *sender) Send(m amqp.Message) (SentMessage, error) {
 	return s.SendTimeout(m, Forever)
 }
@@ -152,52 +126,58 @@ func (s *sender) SendForgetTimeout(m amqp.Message, timeout time.Duration) error 
 }
 
 func (s *sender) sendInternal(snd sendMessage, timeout time.Duration) (SentMessage, error) {
-	if s.Error() != nil {
-		return nil, s.Error()
-	}
-	var err error
-	if timeout == 0 {
-		err = s.engine().InjectWait(func() error {
-			if s.eLink.Credit() > 0 {
-				s.doSend(snd)
-				return nil
-			}
-			return Timeout
-		})
-	} else {
-		buf := make(chan sendMessage)
-		done := make(chan struct{})
-		defer close(buf)
-		s.engine().Inject(func() { // Runs concurrently
-			if s.eLink.Credit() > 0 {
-				s.doSend(snd)
-				close(done) // Signal already sent
-			} else {
-				s.blocked.PushBack(buf)
-			}
-		})
-		select {
-		case <-done: // Sent without blocking
-		case buf <- snd: // Sent via blocking channel
-		case <-s.done:
+	if _, err := timedReceive(s.credit, timeout); err != nil { // Wait for credit
+		if err == Closed {
 			err = s.Error()
-		case <-After(timeout):
-			err = Timeout
+			internal.Assert(err != nil)
 		}
+		return nil, err
 	}
-	if err != nil {
+	if err := s.engine().Inject(func() { s.doSend(snd) }); err != nil {
 		return nil, err
 	}
 	return snd.sm, nil
 }
 
-func (s *sender) closed(err error) {
-	s.link.closed(err)
+// Send a message. Handler goroutine
+func (s *sender) doSend(snd sendMessage) {
+	delivery, err := s.eLink.Send(snd.m)
+	switch sm := snd.sm.(type) {
+	case nil:
+		delivery.Settle()
+	case *sentMessage:
+		sm.delivery = delivery
+		if err != nil {
+			sm.settled(err)
+		} else {
+			s.handler().sentMessages[delivery] = sm
+		}
+	default:
+		internal.Assert(false, "bad SentMessage type %T", snd.sm)
+	}
+	if s.eLink.Credit() > 0 {
+		s.sendable() // Signal credit.
+	}
 }
 
-func (s *sender) open() {
-	s.link.open()
+// Signal the sender has credit. Any goroutine.
+func (s *sender) sendable() {
+	select { // Non-blocking
+	case s.credit <- struct{}{}: // Set the flag if not already set.
+	default:
+	}
+}
+
+func (s *sender) closed(err error) {
+	s.link.closed(err)
+	close(s.credit)
+}
+
+func newSender(l link) *sender {
+	s := &sender{link: l, credit: make(chan struct{}, 1)}
 	s.handler().addLink(s.eLink, s)
+	s.link.open()
+	return s
 }
 
 // SentMessage represents a previously sent message. It allows you to wait for acknowledgement.
@@ -285,7 +265,7 @@ func (sm *sentMessage) Disposition() (Disposition, error) {
 }
 
 func (sm *sentMessage) DispositionTimeout(timeout time.Duration) (Disposition, error) {
-	if _, _, timedout := timedReceive(sm.done, timeout); timedout {
+	if _, err := timedReceive(sm.done, timeout); err == Timeout {
 		return sm.disposition, Timeout
 	} else {
 		return sm.disposition, sm.err
@@ -317,3 +297,19 @@ func (sm *sentMessage) finish() {
 }
 
 func (sm *sentMessage) Error() error { return sm.err }
+
+// IncomingSender is passed to the accept() function given to Connection.Listen()
+// when there is an incoming request for a sender link.
+type IncomingSender struct {
+	incomingLink
+}
+
+// Link provides information about the incoming link.
+func (i *IncomingSender) Link() Link { return i }
+
+func (i *IncomingSender) AcceptSender() Sender { return i.Accept().(Sender) }
+
+func (i *IncomingSender) Accept() Endpoint {
+	i.accepted = true
+	return newSender(i.link)
+}

@@ -39,15 +39,26 @@ import (
 	"unsafe"
 )
 
-// Injecter allows functions to be "injected" into an event-processing loop.
+// Injecter allows functions to be "injected" into the event-processing loop, to
+// be called in the same goroutine as event handlers.
 type Injecter interface {
-	// Inject a function into an event-loop concurrency context.
+	// Inject a function into the engine goroutine.
 	//
-	// f() will be called in the same concurrency context as event handers, so it
-	// can safely use values that can used be used in that context. If f blocks it
-	// will block the event loop so be careful calling blocking functions in f.
+	// f() will be called in the same goroutine as event handlers, so it can safely
+	// use values belonging to event handlers without synchronization. f() should
+	// not block, no further events or injected functions can be processed until
+	// f() returns.
 	//
-	// Returns a non-nil error if the function could not be injected.
+	// Returns a non-nil error if the function could not be injected and will
+	// never be called. Otherwise the function will eventually be called.
+	//
+	// Note that proton values (Link, Session, Connection etc.) that existed when
+	// Inject(f) was called may have become invalid by the time f() is executed.
+	// Handlers should handle keep track of Closed events to ensure proton values
+	// are not used after they become invalid. One technique is to have map from
+	// proton values to application values. Check that the map has the correct
+	// proton/application value pair at the start of the injected function and
+	// delete the value from the map when handling a Closed event.
 	Inject(f func()) error
 
 	// InjectWait is like Inject but does not return till f() has completed.
@@ -72,19 +83,14 @@ func (b *bufferChan) buffer() []byte {
 }
 
 // Engine reads from a net.Conn, decodes AMQP events and calls the appropriate
-// Handler functions in a single event-loop goroutine. Actions taken by Handler
-// functions (such as sending messages) are encoded and written to the
-// net.Conn. Create a engine with NewEngine()
+// Handler functions sequentially in a single goroutine. Actions taken by
+// Handler functions (such as sending messages) are encoded and written to the
+// net.Conn. You can create multiple Engines to handle multiple connections
+// concurrently.
 //
-// The Engine runs a proton event loop in the goroutine that calls Engine.Run()
-// and creates goroutines to feed data to/from a net.Conn. You can create
-// multiple Engines to handle multiple connections concurrently.
-//
-// Methods on proton values defined in this package (Sessions, Links etc.) can
-// only be called in the goroutine that executes the corresponding
-// Engine.Run(). You implement the EventHandler or MessagingHandler interfaces
-// and provide those values to NewEngine(). Their HandleEvent method will be
-// called in the Engine goroutine, in typical event-driven style.
+// You implement the EventHandler and/or MessagingHandler interfaces and provide
+// those values to NewEngine(). Their HandleEvent method will be called in the
+// event-handling goroutine.
 //
 // Handlers can pass values from an event (Connections, Links, Deliveries etc.) to
 // other goroutines, store them, or use them as map indexes. Effectively they are
@@ -161,7 +167,7 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	}
 	C.pn_connection_collect(eng.connection.pn, eng.collector)
 	eng.connection.Open()
-	connectionContexts.Put(eng.connection, connectionContext{eng, eng.String()})
+	connectionContexts.Put(eng.connection, connectionContext{eng.String()})
 	return eng, nil
 }
 
@@ -223,6 +229,7 @@ func (eng *Engine) Server() { eng.transport.SetServer() }
 
 // Close the engine's connection, returns when the engine has exited.
 func (eng *Engine) Close(err error) {
+	eng.err.Set(err)
 	eng.Inject(func() {
 		CloseError(eng.connection, err)
 	})
@@ -231,9 +238,7 @@ func (eng *Engine) Close(err error) {
 
 // Disconnect the engine's connection without and AMQP close, returns when the engine has exited.
 func (eng *Engine) Disconnect(err error) {
-	if err != nil {
-		eng.err.Set(err)
-	}
+	eng.err.Set(err)
 	eng.conn.Close()
 	<-eng.running
 }
@@ -281,8 +286,8 @@ func (eng *Engine) Run() error {
 	}()
 
 	wbuf := eng.write.buffer()[:0]
-loop:
-	for {
+
+	for eng.err.Get() == nil {
 		if len(wbuf) == 0 {
 			eng.pop(&wbuf)
 		}
@@ -309,13 +314,12 @@ loop:
 			eng.netError(err)
 		}
 		eng.process()
-		if eng.err.Get() != nil {
-			break loop
-		}
 	}
 	close(eng.write.buffers)
 	eng.conn.Close() // Make sure connection is closed
 	wait.Wait()
+	close(eng.running) // Signal goroutines have exited and Error is set.
+
 	connectionContexts.Delete(eng.connection)
 	if !eng.connection.IsNil() {
 		eng.connection.Free()
@@ -332,15 +336,10 @@ loop:
 			C.pn_handler_free(h.pn)
 		}
 	}
-	close(eng.running) // Signal goroutines have exited and Error is set.
 	return eng.err.Get()
 }
 
 func (eng *Engine) netError(err error) {
-	if err == nil {
-		err = internal.Errorf("unknown network error")
-	}
-	eng.conn.Close() // Make sure both sides are closed
 	eng.err.Set(err)
 	eng.transport.CloseHead()
 	eng.transport.CloseTail()
@@ -389,17 +388,13 @@ func (eng *Engine) handle(e Event) {
 		h.HandleEvent(e)
 	}
 	if e.Type() == ETransportClosed {
-		eng.err.Set(e.Connection().RemoteCondition().Error())
-		eng.err.Set(e.Connection().Transport().Condition().Error())
-		if eng.err.Get() == nil {
-			eng.err.Set(io.EOF)
-		}
+		eng.err.Set(io.EOF)
 	}
 }
 
 func (eng *Engine) process() {
 	for ce := C.pn_collector_peek(eng.collector); ce != nil; ce = C.pn_collector_peek(eng.collector) {
-		eng.handle(makeEvent(ce))
+		eng.handle(makeEvent(ce, eng))
 		C.pn_collector_pop(eng.collector)
 	}
 }

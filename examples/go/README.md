@@ -87,3 +87,34 @@ Or use the Go broker and the python clients:
 
     python ../python/simple_send.py
     python ../python/simple_recv.py
+
+
+## A tale of two brokers.
+
+The `proton` and `electron` packages provide two alternate APIs for AMQP applications.
+See [the proton Go README](https://github.com/apache/qpid-proton/blob/master/proton-c/bindings/go/src/qpid.apache.org/README.md) for a discussion
+of why there are two APIs.
+
+The examples `proton/broker.go` and `electron/broker.go` both implement the same
+simple broker-like functionality using each of the two APIs. They both handle
+multiple connections concurrently and store messages on bounded queues
+implemented by Go channels.
+
+However the `electron/broker` is less than half as long as the `proton/broker`
+illustrating why it is better suited for most Go applications.
+
+`proton/broker` must explicitly handle proton events, which are processed in a
+single goroutine per connection since proton is not concurrent safe. Each
+connection uses channels to exchange messages between the event-handling
+goroutine and the shared queues that are accessible to all connections. Sending
+messages is particularly tricky since we must monitor the queue for available
+messages and the sending link for available credit in order to send messages.
+
+
+`electron/broker` takes advantage of the `electron` package, which hides all the
+event handling and passing of messages between goroutines beind behind
+straightforward interfaces for sending and receiving messages. The electron
+broker can implement links as simple goroutines that loop popping messages from
+a queue and sending them or receiving messages and pushing them to a queue.
+
+

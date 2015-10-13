@@ -60,39 +60,39 @@ type Link interface {
 	open()
 }
 
-// LinkSetting is a function that sets a link property. Passed when creating
-// a Sender or Receiver, do not use at any other time.
-type LinkSetting func(Link)
+// LinkSetting can be passed when creating a sender or receiver.
+// See functions that return LinkSetting for details
+type LinkSetting func(*link)
 
 // Source sets address that messages are coming from.
-func Source(s string) LinkSetting { return func(l Link) { l.(*link).source = s } }
+func Source(s string) LinkSetting { return func(l *link) { l.source = s } }
 
 // Target sets address that messages are going to.
-func Target(s string) LinkSetting { return func(l Link) { l.(*link).target = s } }
+func Target(s string) LinkSetting { return func(l *link) { l.target = s } }
 
 // LinkName sets the link name.
-func LinkName(s string) LinkSetting { return func(l Link) { l.(*link).target = s } }
+func LinkName(s string) LinkSetting { return func(l *link) { l.target = s } }
 
 // SndSettle sets the send settle mode
-func SndSettle(m SndSettleMode) LinkSetting { return func(l Link) { l.(*link).sndSettle = m } }
+func SndSettle(m SndSettleMode) LinkSetting { return func(l *link) { l.sndSettle = m } }
 
 // RcvSettle sets the send settle mode
-func RcvSettle(m RcvSettleMode) LinkSetting { return func(l Link) { l.(*link).rcvSettle = m } }
+func RcvSettle(m RcvSettleMode) LinkSetting { return func(l *link) { l.rcvSettle = m } }
 
 // SndSettleMode defines when the sending end of the link settles message delivery.
 type SndSettleMode proton.SndSettleMode
 
 // Capacity sets the link capacity
-func Capacity(n int) LinkSetting { return func(l Link) { l.(*link).capacity = n } }
+func Capacity(n int) LinkSetting { return func(l *link) { l.capacity = n } }
 
 // Prefetch sets a receivers pre-fetch flag. Not relevant for a sender.
-func Prefetch(p bool) LinkSetting { return func(l Link) { l.(*link).prefetch = p } }
+func Prefetch(p bool) LinkSetting { return func(l *link) { l.prefetch = p } }
 
 // AtMostOnce sets "fire and forget" mode, messages are sent but no
 // acknowledgment is received, messages can be lost if there is a network
 // failure. Sets SndSettleMode=SendSettled and RcvSettleMode=RcvFirst
 func AtMostOnce() LinkSetting {
-	return func(l Link) {
+	return func(l *link) {
 		SndSettle(SndSettled)(l)
 		RcvSettle(RcvFirst)(l)
 	}
@@ -104,7 +104,7 @@ func AtMostOnce() LinkSetting {
 // that the message will be received twice in this case.
 // Sets SndSettleMode=SndUnsettled and RcvSettleMode=RcvFirst
 func AtLeastOnce() LinkSetting {
-	return func(l Link) {
+	return func(l *link) {
 		SndSettle(SndUnsettled)(l)
 		RcvSettle(RcvFirst)(l)
 	}
@@ -145,8 +145,6 @@ type link struct {
 	session *session
 	eLink   proton.Link
 	done    chan struct{} // Closed when link is closed
-
-	inAccept bool
 }
 
 func (l *link) Source() string           { return l.source }
@@ -163,8 +161,8 @@ func (l *link) engine() *proton.Engine { return l.session.connection.engine }
 func (l *link) handler() *handler      { return l.session.connection.handler }
 
 // Set up link fields and open the proton.Link
-func localLink(sn *session, isSender bool, setting ...LinkSetting) (*link, error) {
-	l := &link{
+func localLink(sn *session, isSender bool, setting ...LinkSetting) (link, error) {
+	l := link{
 		session:  sn,
 		isSender: isSender,
 		capacity: 1,
@@ -172,7 +170,7 @@ func localLink(sn *session, isSender bool, setting ...LinkSetting) (*link, error
 		done:     make(chan struct{}),
 	}
 	for _, set := range setting {
-		set(l)
+		set(&l)
 	}
 	if l.linkName == "" {
 		l.linkName = l.session.connection.container.nextLinkName()
@@ -184,7 +182,7 @@ func localLink(sn *session, isSender bool, setting ...LinkSetting) (*link, error
 	}
 	if l.eLink.IsNil() {
 		l.err.Set(internal.Errorf("cannot create link %s", l))
-		return nil, l.err.Get()
+		return l, l.err.Get()
 	}
 	l.eLink.Source().SetAddress(l.source)
 	l.eLink.Target().SetAddress(l.target)
@@ -195,20 +193,27 @@ func localLink(sn *session, isSender bool, setting ...LinkSetting) (*link, error
 	return l, nil
 }
 
+type incomingLink struct {
+	incoming
+	link
+}
+
 // Set up a link from an incoming proton.Link.
-func incomingLink(sn *session, eLink proton.Link) link {
-	l := link{
-		session:   sn,
-		isSender:  eLink.IsSender(),
-		eLink:     eLink,
-		source:    eLink.RemoteSource().Address(),
-		target:    eLink.RemoteTarget().Address(),
-		linkName:  eLink.Name(),
-		sndSettle: SndSettleMode(eLink.RemoteSndSettleMode()),
-		rcvSettle: RcvSettleMode(eLink.RemoteRcvSettleMode()),
-		capacity:  1,
-		prefetch:  false,
-		done:      make(chan struct{}),
+func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
+	l := incomingLink{
+		link: link{
+			session:   sn,
+			isSender:  eLink.IsSender(),
+			eLink:     eLink,
+			source:    eLink.RemoteSource().Address(),
+			target:    eLink.RemoteTarget().Address(),
+			linkName:  eLink.Name(),
+			sndSettle: SndSettleMode(eLink.RemoteSndSettleMode()),
+			rcvSettle: RcvSettleMode(eLink.RemoteRcvSettleMode()),
+			capacity:  1,
+			prefetch:  false,
+			done:      make(chan struct{}),
+		},
 	}
 	l.str = eLink.String()
 	return l

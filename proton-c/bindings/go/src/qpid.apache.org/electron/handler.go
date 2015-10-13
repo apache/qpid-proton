@@ -27,7 +27,7 @@ import (
 // NOTE: methods in this file are called only in the proton goroutine unless otherwise indicated.
 
 type handler struct {
-	delegator    *proton.MessagingDelegator
+	delegator    *proton.MessagingAdapter
 	connection   *connection
 	links        map[proton.Link]Link
 	sentMessages map[proton.Delivery]*sentMessage
@@ -41,13 +41,17 @@ func newHandler(c *connection) *handler {
 		sentMessages: make(map[proton.Delivery]*sentMessage),
 		sessions:     make(map[proton.Session]*session),
 	}
-	h.delegator = proton.NewMessagingDelegator(h)
-	// Disable auto features of MessagingDelegator, we do these ourselves.
+	h.delegator = proton.NewMessagingAdapter(h)
+	// Disable auto features of MessagingAdapter, we do these ourselves.
 	h.delegator.Prefetch = 0
 	h.delegator.AutoAccept = false
 	h.delegator.AutoSettle = false
 	h.delegator.AutoOpen = false
 	return h
+}
+
+func (h *handler) internalError(fmt string, arg ...interface{}) {
+	proton.CloseError(h.connection.eConnection, amqp.Errorf(amqp.InternalError, fmt, arg...))
 }
 
 func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) {
@@ -57,9 +61,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		if r, ok := h.links[e.Link()].(*receiver); ok {
 			r.message(e.Delivery())
 		} else {
-			proton.CloseError(
-				h.connection.eConnection,
-				amqp.Errorf(amqp.InternalError, "no receiver for link %s", e.Link()))
+			h.internalError("no receiver for link %s", e.Link())
 		}
 
 	case proton.MSettled:
@@ -68,19 +70,18 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 
 	case proton.MSendable:
-		h.trySend(e.Link())
+		if s, ok := h.links[e.Link()].(*sender); ok {
+			s.sendable()
+		} else {
+			h.internalError("no receiver for link %s", e.Link())
+		}
 
 	case proton.MSessionOpening:
 		if e.Session().State().LocalUninit() { // Remotely opened
-			s := newSession(h.connection, e.Session())
-			if err := h.connection.accept(s); err != nil {
-				proton.CloseError(e.Session(), (err))
-			} else {
-				h.sessions[e.Session()] = s
-				if s.capacity > 0 {
-					e.Session().SetIncomingCapacity(s.capacity)
-				}
-				e.Session().Open()
+			incoming := &IncomingSession{h: h, pSession: e.Session()}
+			h.connection.accept(incoming)
+			if err := incoming.error(); err != nil {
+				proton.CloseError(e.Session(), err)
 			}
 		}
 
@@ -95,33 +96,24 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 
 	case proton.MLinkOpening:
 		l := e.Link()
-		if l.State().LocalUninit() { // Remotely opened
-			ss := h.sessions[l.Session()]
-			if ss == nil {
-				proton.CloseError(
-					l, amqp.Errorf(amqp.InternalError, ("no session for link")))
-				break
-			}
-			var link Link
-			if l.IsReceiver() {
-				r := &receiver{link: incomingLink(ss, l)}
-				link = r
-				r.inAccept = true
-				defer func() { r.inAccept = false }()
-			} else {
-				link = &sender{link: incomingLink(ss, l)}
-			}
-			if err := h.connection.accept(link); err != nil {
-				proton.CloseError(l, err)
-				break
-			}
-			link.open()
+		if l.State().LocalActive() { // Already opened locally.
+			break
 		}
-
-	case proton.MLinkOpened:
-		l := e.Link()
-		if l.IsSender() {
-			h.trySend(l)
+		ss := h.sessions[l.Session()]
+		if ss == nil {
+			h.internalError("no session for link %s", e.Link())
+			break
+		}
+		var incoming Incoming
+		if l.IsReceiver() {
+			incoming = &IncomingReceiver{makeIncomingLink(ss, l)}
+		} else {
+			incoming = &IncomingSender{makeIncomingLink(ss, l)}
+		}
+		h.connection.accept(incoming)
+		if err := incoming.error(); err != nil {
+			proton.CloseError(l, err)
+			break
 		}
 
 	case proton.MLinkClosing:
@@ -130,7 +122,17 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 	case proton.MLinkClosed:
 		h.linkClosed(e.Link(), proton.EndpointError(e.Link()))
 
+	case proton.MConnectionClosing:
+		h.connection.err.Set(e.Connection().RemoteCondition().Error())
+
+	case proton.MConnectionClosed:
+		h.connection.err.Set(Closed) // If no error already set, this is an orderly close.
+
 	case proton.MDisconnected:
+		h.connection.err.Set(e.Transport().Condition().Error())
+		// If err not set at this point (e.g. to Closed) then this is unexpected.
+		h.connection.err.Set(amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection))
+
 		err := h.connection.Error()
 		for l, _ := range h.links {
 			h.linkClosed(l, err)
@@ -153,20 +155,4 @@ func (h *handler) linkClosed(l proton.Link, err error) {
 
 func (h *handler) addLink(rl proton.Link, ll Link) {
 	h.links[rl] = ll
-}
-
-func (h *handler) trySend(l proton.Link) {
-	if l.Credit() <= 0 {
-		return
-	}
-	if s, ok := h.links[l].(*sender); ok {
-		for ch := s.popBlocked(); l.Credit() > 0 && ch != nil; ch = s.popBlocked() {
-			if snd, ok := <-ch; ok {
-				s.doSend(snd)
-			}
-		}
-	} else {
-		h.connection.closed(
-			amqp.Errorf(amqp.InternalError, "cannot find sender for link %s", l))
-	}
 }

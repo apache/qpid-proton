@@ -64,5 +64,5 @@ func FormatMessage(m amqp.Message) string {
 func init() {
 	log.SetFlags(0)
 	_, prog := path.Split(os.Args[0])
-	log.SetPrefix(prog + ": ")
+	log.SetPrefix(fmt.Sprintf("%s(%d): ", prog, os.Getpid()))
 }

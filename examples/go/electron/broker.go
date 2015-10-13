@@ -52,21 +52,20 @@ var qsize = flag.Int("qsize", 1000, "Max queue size")
 func main() {
 	flag.Usage = usage
 	flag.Parse()
-	if err := newBroker().run(); err != nil {
+	b := &broker{util.MakeQueues(*qsize), electron.NewContainer("")}
+	if err := b.run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
+// State for the broker
 type broker struct {
 	queues    util.Queues
 	container electron.Container
 }
 
-func newBroker() *broker {
-	return &broker{util.MakeQueues(*qsize), electron.NewContainer("")}
-}
-
-func (b *broker) run() (err error) {
+// Listens for connections and starts an electron.Connection for each one.
+func (b *broker) run() error {
 	listener, err := net.Listen("tcp", *addr)
 	if err != nil {
 		return err
@@ -76,46 +75,29 @@ func (b *broker) run() (err error) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			util.Debugf("Accept error: %s", err)
+			util.Debugf("Accept error: %v", err)
 			continue
 		}
-		if err := b.connection(conn); err != nil {
-			if err != nil {
-				util.Debugf("Connection error: %s", err)
-				continue
-			}
+		c, err := b.container.Connection(conn, electron.Server(), electron.Accepter(b.accept))
+		if err != nil {
+			util.Debugf("Connection error: %v", err)
+			continue
 		}
+		util.Debugf("Accepted %v", c)
 	}
-}
-
-// connection creates a new AMQP connection for a net.Conn.
-func (b *broker) connection(conn net.Conn) error {
-	c, err := b.container.Connection(conn)
-	if err != nil {
-		return err
-	}
-	c.Server()         // Enable server-side protocol negotiation.
-	c.Listen(b.accept) // Call accept() for remotely-opened endpoints.
-	if err := c.Open(); err != nil {
-		return err
-	}
-	util.Debugf("Accepted %s", c)
-	return nil
 }
 
 // accept remotely-opened endpoints (Session, Sender and Receiver)
 // and start goroutines to service them.
-func (b *broker) accept(ep electron.Endpoint) error {
-	switch ep := ep.(type) {
-	case electron.Sender:
-		util.Debugf("%s opened", ep)
-		go b.sender(ep)
-	case electron.Receiver:
-		util.Debugf("%s opened", ep)
-		ep.SetCapacity(100, true) // Pre-fetch 100 messages
-		go b.receiver(ep)
+func (b *broker) accept(i electron.Incoming) {
+	switch i := i.(type) {
+	case *electron.IncomingSender:
+		go b.sender(i.AcceptSender())
+	case *electron.IncomingReceiver:
+		go b.receiver(i.AcceptReceiver(100, true)) // Pre-fetch 100 messages
+	default:
+		i.Accept()
 	}
-	return nil
 }
 
 // sender pops messages from a queue and sends them.
@@ -127,17 +109,16 @@ func (b *broker) sender(sender electron.Sender) {
 			return
 		}
 		if err := sender.SendForget(m); err == nil {
-			util.Debugf("send %s: %s", sender, util.FormatMessage(m))
+			util.Debugf("%s send: %s", sender, util.FormatMessage(m))
 		} else {
-			util.Debugf("send error %s: %s", sender, err)
+			util.Debugf("%s error: %s", sender, err)
 			q <- m // Put it back on the queue.
-			break
+			return
 		}
 	}
 }
 
-// receiver receives messages and pushes to the queue named by the receivers's
-// Target address
+// receiver receives messages and pushes to a queue.
 func (b *broker) receiver(receiver electron.Receiver) {
 	q := b.queues.Get(receiver.Target())
 	for {
@@ -146,7 +127,7 @@ func (b *broker) receiver(receiver electron.Receiver) {
 			q <- rm.Message
 			rm.Accept()
 		} else {
-			util.Debugf("%s: error %s", receiver, err)
+			util.Debugf("%s error: %s", receiver, err)
 			break
 		}
 	}

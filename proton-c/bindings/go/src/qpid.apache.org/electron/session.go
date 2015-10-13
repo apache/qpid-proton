@@ -24,7 +24,6 @@ import (
 )
 
 // Session is an AMQP session, it contains Senders and Receivers.
-//
 type Session interface {
 	Endpoint
 
@@ -36,10 +35,6 @@ type Session interface {
 	// Source address, or a ReceiverSettings struct containing more details
 	// settings.
 	Receiver(...LinkSetting) (Receiver, error)
-
-	// SetCapacity sets the session buffer capacity in bytes.
-	// Only has effect if called in an accept() function, see Connection.Listen()
-	SetCapacity(bytes uint)
 }
 
 type session struct {
@@ -49,13 +44,27 @@ type session struct {
 	capacity   uint
 }
 
+// SessionSetting can be passed when creating a sender or receiver.
+// See functions that return SessionSetting for details
+type SessionSetting func(*session)
+
+// IncomingCapacity sets the size (in bytes) of the sessions incoming data buffer..
+func IncomingCapacity(cap uint) SessionSetting { return func(s *session) { s.capacity = cap } }
+
 // in proton goroutine
-func newSession(c *connection, es proton.Session) *session {
-	return &session{
+func newSession(c *connection, es proton.Session, setting ...SessionSetting) *session {
+	s := &session{
 		connection: c,
 		eSession:   es,
 		endpoint:   endpoint{str: es.String()},
 	}
+	for _, set := range setting {
+		set(s)
+	}
+	c.handler.sessions[s.eSession] = s
+	s.eSession.SetIncomingCapacity(s.capacity)
+	s.eSession.Open()
+	return s
 }
 
 func (s *session) Connection() Connection     { return s.connection }
@@ -71,8 +80,7 @@ func (s *session) Sender(setting ...LinkSetting) (snd Sender, err error) {
 	err = s.engine().InjectWait(func() error {
 		l, err := localLink(s, true, setting...)
 		if err == nil {
-			snd = &sender{link: *l}
-			snd.(*sender).open()
+			snd = newSender(l)
 		}
 		return err
 	})
@@ -83,8 +91,7 @@ func (s *session) Receiver(setting ...LinkSetting) (rcv Receiver, err error) {
 	err = s.engine().InjectWait(func() error {
 		l, err := localLink(s, false, setting...)
 		if err == nil {
-			rcv = &receiver{link: *l}
-			rcv.(*receiver).open()
+			rcv = newReceiver(l)
 		}
 		return err
 	})
@@ -95,4 +102,24 @@ func (s *session) Receiver(setting ...LinkSetting) (rcv Receiver, err error) {
 func (s *session) closed(err error) {
 	s.err.Set(err)
 	s.err.Set(Closed)
+}
+
+// IncomingSession is passed to the accept() function given to Connection.Listen()
+// when there is an incoming session request.
+type IncomingSession struct {
+	incoming
+	h        *handler
+	pSession proton.Session
+	capacity uint
+}
+
+// AcceptCapacity sets the session buffer capacity of an incoming session in bytes.
+func (i *IncomingSession) AcceptSession(bytes uint) Session {
+	i.capacity = bytes
+	return i.Accept().(Session)
+}
+
+func (i *IncomingSession) Accept() Endpoint {
+	i.accepted = true
+	return newSession(i.h.connection, i.pSession, IncomingCapacity(i.capacity))
 }

@@ -28,6 +28,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -35,7 +36,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 )
@@ -108,27 +108,8 @@ func checkEqual(want interface{}, got interface{}) error {
 	return fmt.Errorf("%#v != %#v", want, got)
 }
 
-// 'go build' uses the installed copy of the proton Go libraries, which may be out of date.
-func checkStaleLibs(t *testing.T) {
-	var stale []string
-	pp := "qpid.apache.org"
-	for _, p := range []string{pp + "/proton", pp + "/amqp", pp + "/electron"} {
-		out, err := exec.Command("go", "list", "-f", "{{.Stale}}", p).CombinedOutput()
-		if err != nil {
-			t.Fatalf("failed to execute 'go list': %v\n%v", err, string(out))
-		}
-		if string(out) != "false\n" {
-			stale = append(stale, p)
-		}
-	}
-	if len(stale) > 0 {
-		t.Fatalf("Stale libraries, run 'go install %s'", strings.Trim(fmt.Sprint(stale), "[]"))
-	}
-}
-
 // exampleCommand returns an exec.Cmd to run an example.
 func exampleCommand(t *testing.T, prog string, arg ...string) (cmd *exec.Cmd) {
-	checkStaleLibs(t)
 	args := []string{}
 	if *debug {
 		args = append(args, "-debug=true")
@@ -230,6 +211,7 @@ func goReceiveWant(t *testing.T, errchan chan<- error, want string, arg ...strin
 		errchan <- ready
 		buf := bytes.Buffer{}
 		io.Copy(&buf, out) // Collect the rest of the output
+		cmd.Wait()
 		errchan <- checkEqual(want, buf.String())
 		close(errchan)
 	}()
@@ -242,26 +224,30 @@ func TestExampleReceiveSend(t *testing.T) {
 		t.Skip("Skip demo tests in short mode")
 	}
 	testBroker.start(t)
-	recvErr := make(chan error)
-	recvCmd := goReceiveWant(
-		t, recvErr,
-		fmt.Sprintf("Received %d messages\n", expected),
-		exampleArgs(fmt.Sprintf("-count=%d", expected))...)
-	defer func() {
-		recvCmd.Process.Kill()
-		recvCmd.Wait()
-	}()
-	if err := <-recvErr; err != ready { // Wait for receiver ready
-		t.Fatal(err)
-	}
-	err := runExampleWant(t,
-		fmt.Sprintf("Received all %d acknowledgements\n", expected),
-		"send",
-		exampleArgs("-count", fmt.Sprintf("%d", *count))...)
+
+	// Start receiver, wait for "listening" message on stdout
+	recvCmd := exampleCommand(t, "receive", exampleArgs(fmt.Sprintf("-count=%d", expected))...)
+	pipe, err := recvCmd.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := <-recvErr; err != nil {
+	recvCmd.Start()
+	out := bufio.NewReader(pipe)
+	line, err := out.ReadString('\n')
+	if err := checkEqual("Listening on 3 connections\n", line); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runExampleWant(t,
+		fmt.Sprintf("Received all %d acknowledgements\n", expected),
+		"send",
+		exampleArgs("-count", fmt.Sprintf("%d", *count))...); err != nil {
+		t.Fatal(err)
+	}
+
+	buf := bytes.Buffer{}
+	io.Copy(&buf, out)
+	if err := checkEqual(fmt.Sprintf("Received %d messages\n", expected), buf.String()); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -276,6 +262,9 @@ var dir = flag.String("dir", "", "Directory containing example sources or binari
 var expected int
 
 func TestMain(m *testing.M) {
+	if out, err := exec.Command("go", "install", "qpid.apache.org/...").CombinedOutput(); err != nil {
+		log.Fatalf("go install failed: %s\n%s", err, out)
+	}
 	expected = (*count) * (*connections)
 	rand.Seed(time.Now().UTC().UnixNano())
 	testBroker = &broker{} // Broker is started on-demand by tests.

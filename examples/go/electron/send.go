@@ -80,8 +80,6 @@ func main() {
 			util.ExitIf(err)
 			c, err := container.Connection(conn)
 			util.ExitIf(err)
-			err = c.Open()
-			util.ExitIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
 
 			// Create a Sender using the path of the URL as the AMQP address

@@ -20,6 +20,7 @@
 if(BUILD_GO)
 
   set(examples electron/broker electron/receive electron/send proton/broker)
+  file(GLOB_RECURSE example_source ${CMAKE_CURRENT_SOURCE_DIR}/*.go)
 
   # Build example exes
   foreach(example ${examples})
@@ -28,7 +29,8 @@ if(BUILD_GO)
     add_custom_command(
       OUTPUT ${target}
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${target} ${source}
-      DEPENDS  ${source} ${GO_TARGETS})
+      DEPENDS  ${example_source} ${GO_TARGETS}
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
     list(APPEND example_exes ${target})
   endforeach()
 
@@ -36,8 +38,9 @@ if(BUILD_GO)
   set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/example_test)
   add_custom_command(
     OUTPUT ${test_exe}
-    DEPENDS ${example_exes}
-    COMMAND ${GO_TEST} -c -o ${test_exe} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go)
+    DEPENDS ${example_exes} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
+    COMMAND ${GO_TEST} -c -o ${test_exe} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
   add_custom_target(go-test-exe ALL DEPENDS ${test_exe})
 

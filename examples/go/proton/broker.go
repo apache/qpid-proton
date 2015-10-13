@@ -30,7 +30,7 @@ import (
 	"./util"
 	"flag"
 	"fmt"
-	"io"
+	"log"
 	"net"
 	"os"
 	"qpid.apache.org/amqp"
@@ -53,247 +53,276 @@ var qsize = flag.Int("qsize", 1000, "Max queue size")
 func main() {
 	flag.Usage = usage
 	flag.Parse()
-
-	b := newBroker()
-	listener, err := net.Listen("tcp", *addr)
-	util.ExitIf(err)
-	defer listener.Close()
-	fmt.Printf("Listening on %s\n", listener.Addr())
-
-	// Loop accepting new connections.
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			util.Debugf("Accept error: %s", err)
-			continue
-		}
-		if err := b.connection(conn); err != nil {
-			if err != nil {
-				util.Debugf("Connection error: %s", err)
-				continue
-			}
-		}
+	b := &broker{util.MakeQueues(*qsize)}
+	if err := b.run(); err != nil {
+		log.Fatal(err)
 	}
 }
 
+// State for the broker
 type broker struct {
 	queues util.Queues
 }
 
-func newBroker() *broker {
-	return &broker{util.MakeQueues(*qsize)}
-}
-
-// connection creates a new AMQP connection for a net.Conn.
-func (b *broker) connection(conn net.Conn) error {
-	delegator := proton.NewMessagingDelegator(newHandler(&b.queues, *credit))
-	// We want to accept messages when they are enqueued, not just when they
-	// are received, so we turn off auto-accept and prefetch by the handler.
-	delegator.Prefetch = 0
-	delegator.AutoAccept = false
-	engine, err := proton.NewEngine(conn, delegator)
+// Listens for connections and starts a proton.Engine for each one.
+func (b *broker) run() error {
+	listener, err := net.Listen("tcp", *addr)
 	if err != nil {
 		return err
 	}
-	engine.Server() // Enable server-side protocol negotiation.
-	go func() {     // Start goroutine to run the engine event loop
-		engine.Run()
-		util.Debugf("Closed %s", engine)
-	}()
-	util.Debugf("Accepted %s", engine)
-	return nil
+	defer listener.Close()
+	fmt.Printf("Listening on %s\n", listener.Addr())
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			util.Debugf("Accept error: %v", err)
+			continue
+		}
+		adapter := proton.NewMessagingAdapter(newHandler(&b.queues))
+		// We want to accept messages when they are enqueued, not just when they
+		// are received, so we turn off auto-accept and prefetch by the adapter.
+		adapter.Prefetch = 0
+		adapter.AutoAccept = false
+		engine, err := proton.NewEngine(conn, adapter)
+		if err != nil {
+			util.Debugf("Connection error: %v", err)
+			continue
+		}
+		engine.Server() // Enable server-side protocol negotiation.
+		util.Debugf("Accepted connection %s", engine)
+		go func() { // Start goroutine to run the engine event loop
+			engine.Run()
+			util.Debugf("Closed %s", engine)
+		}()
+	}
 }
 
-// receiver is a channel to buffer messages waiting to go on the queue.
-type receiver chan receivedMessage
+// handler handles AMQP events. There is one handler per connection.  The
+// handler does not need to be concurrent-safe as proton.Engine will serialize
+// all calls to the handler. We use channels to communicate between the handler
+// goroutine and other goroutines sending and receiving messages.
+type handler struct {
+	queues    *util.Queues
+	receivers map[proton.Link]*receiver
+	senders   map[proton.Link]*sender
+	injecter  proton.Injecter
+}
 
-// receivedMessage is a message and the corresponding delivery for acknowledgement.
+func newHandler(queues *util.Queues) *handler {
+	return &handler{
+		queues:    queues,
+		receivers: make(map[proton.Link]*receiver),
+		senders:   make(map[proton.Link]*sender),
+	}
+}
+
+// HandleMessagingEvent handles an event, called in the handler goroutine.
+func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) {
+	switch t {
+
+	case proton.MStart:
+		h.injecter = e.Injecter()
+
+	case proton.MLinkOpening:
+		if e.Link().IsReceiver() {
+			h.startReceiver(e)
+		} else {
+			h.startSender(e)
+		}
+
+	case proton.MLinkClosed:
+		h.linkClosed(e.Link(), e.Link().RemoteCondition().Error())
+
+	case proton.MSendable:
+		if s, ok := h.senders[e.Link()]; ok {
+			s.sendable() // Signal the send goroutine that we have credit.
+		} else {
+			proton.CloseError(e.Link(), amqp.Errorf(amqp.NotFound, "link %s sender not found", e.Link()))
+		}
+
+	case proton.MMessage:
+		m, err := e.Delivery().Message() // Message() must be called while handling the MMessage event.
+		if err != nil {
+			proton.CloseError(e.Link(), err)
+			break
+		}
+		r, ok := h.receivers[e.Link()]
+		if !ok {
+			proton.CloseError(e.Link(), amqp.Errorf(amqp.NotFound, "link %s receiver not found", e.Link()))
+			break
+		}
+		// This will not block as AMQP credit is set to the buffer capacity.
+		r.buffer <- receivedMessage{e.Delivery(), m}
+		util.Debugf("link %s received %s", e.Link(), util.FormatMessage(m))
+
+	case proton.MConnectionClosed, proton.MDisconnected:
+		for l, _ := range h.receivers {
+			h.linkClosed(l, nil)
+		}
+		for l, _ := range h.senders {
+			h.linkClosed(l, nil)
+		}
+	}
+}
+
+// linkClosed is called when a link has been closed by both ends.
+// It removes the link from the handlers maps and stops its goroutine.
+func (h *handler) linkClosed(l proton.Link, err error) {
+	if s, ok := h.senders[l]; ok {
+		s.stop()
+		delete(h.senders, l)
+	} else if r, ok := h.receivers[l]; ok {
+		r.stop()
+		delete(h.receivers, l)
+	}
+}
+
+// link has some common data and methods that are used by the sender and receiver types.
+//
+// An active link is represented by a sender or receiver value and a goroutine
+// running its run() method. The run() method communicates with the handler via
+// channels.
+type link struct {
+	l proton.Link
+	q util.Queue
+	h *handler
+}
+
+func makeLink(l proton.Link, q util.Queue, h *handler) link {
+	lnk := link{l: l, q: q, h: h}
+	return lnk
+}
+
+// receiver has a channel to buffer messages that have been received by the
+// handler and are waiting to go on the queue. AMQP credit ensures that the
+// handler does not overflow the buffer and block.
+type receiver struct {
+	link
+	buffer chan receivedMessage
+}
+
+// receivedMessage holds a message and a Delivery so that the message can be
+// acknowledged when it is put on the queue.
 type receivedMessage struct {
 	delivery proton.Delivery
 	message  amqp.Message
 }
 
-// sender is a signal channel, closed when we are done sending.
-type sender chan struct{}
-
-// handler handles AMQP events. There is one handler per connection.  The
-// handler does not need to be concurrent-safe as proton will serialize all
-// calls to a handler. We will use channels to communicate from the handler
-// to goroutines sending and receiving messages.
-type handler struct {
-	queues    *util.Queues
-	credit    int // Credit window for receiver flow control.
-	receivers map[proton.Link]receiver
-	senders   map[proton.Link]sender
-}
-
-func newHandler(queues *util.Queues, credit int) *handler {
-	return &handler{
-		queues,
-		credit,
-		make(map[proton.Link]receiver),
-		make(map[proton.Link]sender),
+// startReceiver creates a receiver and a goroutine for its run() method.
+func (h *handler) startReceiver(e proton.Event) {
+	q := h.queues.Get(e.Link().RemoteTarget().Address())
+	r := &receiver{
+		link:   makeLink(e.Link(), q, h),
+		buffer: make(chan receivedMessage, *credit),
 	}
+	h.receivers[r.l] = r
+	r.l.Flow(cap(r.buffer)) // Give credit to fill the buffer to capacity.
+	go r.run()
 }
 
-// Handle an AMQP event.
-func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) {
-	switch t {
-
-	case proton.MLinkOpening:
-		l := e.Link()
-		var err error
-		if l.IsReceiver() {
-			err = h.receiver(l)
-		} else { // IsSender()
-			err = h.sender(l)
-		}
-		if err == nil {
-			util.Debugf("%s opened", l)
-		} else {
-			util.Debugf("%s open error: %s", l, err)
-			proton.CloseError(l, err)
-		}
-
-	case proton.MLinkClosing:
-		l := e.Link()
-		if r, ok := h.receivers[l]; ok {
-			close(r)
-			delete(h.receivers, l)
-		} else if s, ok := h.senders[l]; ok {
-			close(s)
-			delete(h.senders, l)
-		}
-		util.Debugf("%s closed", l)
-
-	case proton.MSendable:
-		l := e.Link()
-		q := h.queues.Get(l.RemoteSource().Address())
-		if n, err := h.sendAll(e.Link(), q); err == nil && n > 0 {
-			// Still have credit, start a watcher.
-			go h.sendWatch(e.Link(), q)
-		}
-
-	case proton.MMessage:
-		l := e.Link()
-		d := e.Delivery()
-		m, err := d.Message() // Must decode message immediately before link state changes.
-		if err != nil {
-			util.Debugf("%s error decoding message: %s", e.Link(), err)
-			proton.CloseError(l, err)
-		} else {
-			// This will not block, AMQP credit prevents us from overflowing the buffer.
-			h.receivers[l] <- receivedMessage{d, m}
-			util.Debugf("%s received %s", l, util.FormatMessage(m))
-		}
-
-	case proton.MConnectionClosing, proton.MDisconnected:
-		for l, r := range h.receivers {
-			close(r)
-			delete(h.receivers, l)
-		}
-		for l, s := range h.senders {
-			close(s)
-			delete(h.senders, l)
-		}
-	}
-}
-
-// receiver is called by the handler when a receiver link opens.
-//
-// It sets up data structures in the handler and then starts a goroutine
-// to receive messages and put them on a queue.
-func (h *handler) receiver(l proton.Link) error {
-	q := h.queues.Get(l.RemoteTarget().Address())
-	buffer := make(receiver, h.credit)
-	h.receivers[l] = buffer
-	l.Flow(cap(buffer)) // credit==cap(buffer) so we won't overflow the buffer.
-	go h.runReceive(l, buffer, q)
-	return nil
-}
-
-// runReceive moves messages from buffer to queue
-func (h *handler) runReceive(l proton.Link, buffer receiver, q util.Queue) {
-	for rm := range buffer {
-		q <- rm.message
-		rm2 := rm // Save in temp var for injected closure
-		err := l.Connection().Injecter().Inject(func() {
-			rm2.delivery.Accept()
-			l.Flow(1)
+// run runs in a separate goroutine. It moves messages from the buffer to the
+// queue for a receiver link, and injects a handler function to acknowledge the
+// message and send a credit.
+func (r *receiver) run() {
+	for rm := range r.buffer {
+		r.q <- rm.message
+		d := rm.delivery
+		// We are not in the handler goroutine so we Inject the accept function as a closure.
+		r.h.injecter.Inject(func() {
+			// Check that the receiver is still open, it may have been closed by the remote end.
+			if r == r.h.receivers[r.l] {
+				d.Accept()  // Accept the delivery
+				r.l.Flow(1) // Add one credit
+			}
 		})
-		if err != nil {
-			util.Debugf("%s receive error: %s", l, err)
-			proton.CloseError(l, err)
-		}
 	}
 }
 
-// sender is called by the handler when a sender link opens.
-// It sets up a sender structures in the handler.
-func (h *handler) sender(l proton.Link) error {
-	h.senders[l] = make(sender)
-	return nil
+// stop closes the buffer channel and waits for the run() goroutine to stop.
+func (r *receiver) stop() {
+	close(r.buffer)
 }
 
-// send one message in handler context, assumes we have credit.
-func (h *handler) send(l proton.Link, m amqp.Message, q util.Queue) error {
-	delivery, err := l.Send(m)
-	if err != nil {
-		h.closeSender(l, err)
-		return err
+// sender has a channel that is used to signal when there is credit to send messages.
+type sender struct {
+	link
+	credit chan struct{} // Channel to signal availability of credit.
+}
+
+// startSender creates a sender and starts a goroutine for sender.run()
+func (h *handler) startSender(e proton.Event) {
+	q := h.queues.Get(e.Link().RemoteSource().Address())
+	s := &sender{
+		link:   makeLink(e.Link(), q, h),
+		credit: make(chan struct{}, 1), // Capacity of 1 for signalling.
 	}
-	delivery.Settle() // Pre-settled, unreliable.
-	util.Debugf("%s sent %s", l, util.FormatMessage(m))
-	return nil
+	h.senders[e.Link()] = s
+	go s.run()
 }
 
-// sendAll sends as many messages as possible without blocking, call in handler context.
-// Returns the number of credits left, >0 means we ran out of messages.
-func (h *handler) sendAll(l proton.Link, q util.Queue) (int, error) {
-	for l.Credit() > 0 {
+// stop closes the credit channel and waits for the run() goroutine to stop.
+func (s *sender) stop() {
+	close(s.credit)
+}
+
+// sendable signals that the sender has credit, it does not block.
+// sender.credit has capacity 1, if it is already full we carry on.
+func (s *sender) sendable() {
+	select { // Non-blocking
+	case s.credit <- struct{}{}:
+	default:
+	}
+}
+
+// run runs in a separate goroutine. It monitors the queue for messages and injects
+// a function to send them when there is credit
+func (s *sender) run() {
+	var q chan amqp.Message // q is nil initially as we have no credit.
+	for {
 		select {
-		case m, ok := <-q:
-			if ok { // Got a message
-				if err := h.send(l, m, q); err != nil {
-					return 0, err
-				}
-			} else { // Queue is closed
-				l.Close()
-				return 0, io.EOF
+		case _, ok := <-s.credit:
+			if !ok { // sender closed
+				return
 			}
-		default: // Queue empty
-			return l.Credit(), nil
+			q = s.q // We have credit, enable selecting on the queue.
+
+		case m, ok := <-q: // q is only enabled when we have credit.
+			if !ok { // queue closed
+				return
+			}
+			q = nil                      // Assume all credit will be used used, will be signaled otherwise.
+			s.h.injecter.Inject(func() { // Inject handler function to actually send
+				if s.h.senders[s.l] != s { // The sender has been closed by the remote end.
+					go func() { q <- m }() // Put the message back on the queue but don't block
+					return
+				}
+				if s.sendOne(m) != nil {
+					return
+				}
+				// Send as many more messages as we can without blocking
+				for s.l.Credit() > 0 {
+					select { // Non blocking receive from q
+					case m, ok := <-s.q:
+						if ok {
+							s.sendOne(m)
+						}
+					default: // Queue is empty but we have credit, signal the run() goroutine.
+						s.sendable()
+					}
+				}
+			})
 		}
 	}
-	return l.Credit(), nil
 }
 
-// sendWatch watches the queue for more messages and re-runs sendAll.
-// Run in a separate goroutine, so must inject handler functions.
-func (h *handler) sendWatch(l proton.Link, q util.Queue) {
-	select {
-	case m, ok := <-q:
-		l.Connection().Injecter().Inject(func() {
-			if ok {
-				if h.send(l, m, q) != nil {
-					return
-				}
-				if n, err := h.sendAll(l, q); err != nil {
-					return
-				} else if n > 0 {
-					go h.sendWatch(l, q) // Start a new watcher.
-				}
-			}
-		})
-	case <-h.senders[l]: // Closed
-		return
+// sendOne runs in the handler goroutine. It sends a single message.
+func (s *sender) sendOne(m amqp.Message) error {
+	delivery, err := s.l.Send(m)
+	if err == nil {
+		delivery.Settle() // Pre-settled, unreliable.
+		util.Debugf("link %s sent %s", s.l, util.FormatMessage(m))
+	} else {
+		go func() { s.q <- m }() // Put the message back on the queue but don't block
 	}
-}
-
-// closeSender closes a sender link and signals goroutines processing that sender.
-func (h *handler) closeSender(l proton.Link, err error) {
-	util.Debugf("%s sender closed: %s", l, err)
-	proton.CloseError(l, err)
-	close(h.senders[l])
-	delete(h.senders, l)
+	return err
 }
