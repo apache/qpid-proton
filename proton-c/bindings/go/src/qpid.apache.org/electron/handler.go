@@ -17,15 +17,11 @@ specific language governing permissions and limitations
 under the License.
 */
 
-// FIXME aconway 2015-10-07: move to amqp or split into sub packages?
-// proton.core
-// proton.msg
-
 package electron
 
 import (
-	"qpid.apache.org/proton"
 	"qpid.apache.org/amqp"
+	"qpid.apache.org/proton"
 )
 
 // NOTE: methods in this file are called only in the proton goroutine unless otherwise indicated.

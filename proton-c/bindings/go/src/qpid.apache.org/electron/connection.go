@@ -24,9 +24,9 @@ import "C"
 
 import (
 	"net"
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
-	"qpid.apache.org/amqp"
 	"sync"
 )
 
@@ -140,7 +140,6 @@ func (c *connection) Close(err error) { c.engine.Close(err) }
 
 func (c *connection) Disconnect(err error) { c.engine.Disconnect(err) }
 
-// FIXME aconway 2015-10-07:
 func (c *connection) closed(err error) {
 	// Call from another goroutine to initiate close without deadlock.
 	go c.Close(err)

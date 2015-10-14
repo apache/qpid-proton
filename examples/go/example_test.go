@@ -113,7 +113,6 @@ func checkStaleLibs(t *testing.T) {
 	var stale []string
 	pp := "qpid.apache.org"
 	for _, p := range []string{pp + "/proton", pp + "/amqp", pp + "/electron"} {
-		t.Log("FIXME", os.Getenv("GOPATH"))
 		out, err := exec.Command("go", "list", "-f", "{{.Stale}}", p).CombinedOutput()
 		if err != nil {
 			t.Fatalf("failed to execute 'go list': %v\n%v", err, string(out))

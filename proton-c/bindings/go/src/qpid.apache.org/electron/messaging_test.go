@@ -30,7 +30,7 @@ import (
 )
 
 func fatalIf(t *testing.T, err error) {
-	if err != nil { // FIXME aconway 2015-10-07:
+	if err != nil {
 		_, file, line, ok := runtime.Caller(1) // annotate with location of caller.
 		if ok {
 			_, file = path.Split(file)
