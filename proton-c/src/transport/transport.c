@@ -612,7 +612,6 @@ static void pn_transport_finalize(void *object)
   // we may have posted events, so stay alive until they are processed
   if (pn_refcount(transport) > 0) return;
 
-  pn_free(transport->context);
   pn_ssl_free(transport);
   pn_sasl_free(transport);
   free(transport->remote_container);
@@ -632,6 +631,7 @@ static void pn_transport_finalize(void *object)
   pn_data_free(transport->args);
   pn_data_free(transport->output_args);
   pn_buffer_free(transport->frame);
+  pn_free(transport->context);
   free(transport->output);
 }
 
