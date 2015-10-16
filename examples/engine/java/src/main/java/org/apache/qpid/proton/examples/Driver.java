@@ -38,6 +38,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.UUID;
 
 
 /**
@@ -111,6 +112,8 @@ public class Driver extends BaseHandler
     public void onConnectionLocalOpen(Event evt) {
         Connection conn = evt.getConnection();
         if (conn.getRemoteState() == EndpointState.UNINITIALIZED) {
+            // Give the connection a [random] container-id
+            conn.setContainer(UUID.randomUUID().toString());
             try {
                 new Connector(conn);
             } catch (IOException e) {
