@@ -25,6 +25,7 @@ if(BUILD_GO)
   foreach(example ${examples})
     set(source ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go)
     set(target ${CMAKE_CURRENT_BINARY_DIR}/${example})
+    message("FIXME ${source} ${GO_TARGETS}")
     add_custom_command(
       OUTPUT ${target}
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${target} ${source}

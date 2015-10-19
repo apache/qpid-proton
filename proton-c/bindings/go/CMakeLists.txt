@@ -49,7 +49,8 @@ set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install")
 set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
 
 # Go build depends on the C headers
-file(GLOB headers ${CMAKE_SOURCE_DIR}/proton_c/include/proton/*.h)
+file(GLOB cheaders ${CMAKE_SOURCE_DIR}/proton_c/include/proton/*.h)
+set(cdepends ${headers} qpid-proton)
 
 # Go tools insist on standard Go layout which puts compiled code in the source tree :(
 # Build output is all under git-ignored pkg or bin subdirectories, they are removed by make clean.
@@ -74,7 +75,7 @@ foreach (pkg amqp proton electron)
   set(sources "${GoFiles}${CgoFiles}")
 
   # Build the package library
-  add_custom_command(OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package} DEPENDS ${sources} ${headers})
+  add_custom_command(OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package} DEPENDS ${sources} ${cdepends})
   set(target go-package-${pkg})
   add_custom_target(${target} ALL DEPENDS ${lib})
 
@@ -86,9 +87,11 @@ foreach (pkg amqp proton electron)
   add_custom_target(go-package-test-${pkg} ALL DEPENDS ${test_exe})
   add_test(NAME go_test_${pkg} COMMAND ${test_exe} WORKING_DIRECTORY ${dir})
 
-  list(APPEND GO_TARGETS ${target})
-
+  list(APPEND targets ${target})
 endforeach()
+
+# Make available to examples/go/CMakeLists
+set(GO_TARGETS ${targets} CACHE INTERNAL "Go package library targets")
 
 # Clean up go output directories.
 list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
