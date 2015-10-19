@@ -46,27 +46,27 @@ std::string set_name(const std::string& name, session* s) {
 }
 }
 
-receiver& session::create_receiver_link(const std::string& name) {
+receiver& session::create_receiver(const std::string& name) {
     return *reinterpret_cast<receiver*>(
         pn_receiver(pn_cast(this), set_name(name, this).c_str()));
 }
 
-sender& session::create_sender_link(const std::string& name) {
+sender& session::create_sender(const std::string& name) {
     return *reinterpret_cast<sender*>(
         pn_sender(pn_cast(this), set_name(name, this).c_str()));
 }
 
-sender& session::create_sender(const std::string &addr, handler *h) {
-    sender& snd = create_sender_link();
+sender& session::open_sender(const std::string &addr, handler *h) {
+    sender& snd = create_sender();
     snd.target().address(addr);
     if (h) snd.handler(*h);
     snd.open();
     return snd;
 }
 
-receiver& session::create_receiver(const std::string &addr, bool dynamic, handler *h)
+receiver& session::open_receiver(const std::string &addr, bool dynamic, handler *h)
 {
-    receiver& rcv = create_receiver_link();
+    receiver& rcv = create_receiver();
     rcv.source().address(addr);
     if (dynamic) rcv.source().dynamic(true);
     if (h) rcv.handler(*h);

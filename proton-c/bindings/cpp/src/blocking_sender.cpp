@@ -39,7 +39,7 @@ struct delivery_settled : public blocking_connection_impl::condition {
 blocking_sender::blocking_sender(blocking_connection &c, const std::string &address) :
     blocking_link(c)
 {
-    open(c.impl_->connection_->create_sender(address));
+    open(c.impl_->connection_->open_sender(address));
     std::string ta = link_->target().address();
     std::string rta = link_->remote_target().address();
     if (ta.empty() || ta.compare(rta) != 0) {
@@ -63,6 +63,6 @@ delivery& blocking_sender::send(const message &msg) {
     return send(msg, connection_.timeout());
 }
 
-sender& blocking_sender::sender() { return link_->sender(); }
+sender& blocking_sender::sender() { return *link_->sender(); }
 
 }

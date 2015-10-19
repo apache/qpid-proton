@@ -46,7 +46,7 @@ blocking_receiver::blocking_receiver(
     class blocking_connection &c, const std::string& addr, int credit, bool dynamic) :
     blocking_link(c), fetcher_(new blocking_fetcher(credit))
 {
-    open(c.impl_->connection_->create_receiver(addr, dynamic, fetcher_.get()));
+    open(c.impl_->connection_->open_receiver(addr, dynamic, fetcher_.get()));
     std::string sa = link_->source().address();
     std::string rsa = link_->remote_source().address();
     if (!sa.empty() && sa.compare(rsa) != 0) {
@@ -97,6 +97,6 @@ void blocking_receiver::flow(int count) {
     receiver().flow(count);
 }
 
-receiver& blocking_receiver::receiver() { return link_->receiver(); }
+receiver& blocking_receiver::receiver() { return *link_->receiver(); }
 
 }

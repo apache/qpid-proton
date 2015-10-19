@@ -54,6 +54,6 @@ delivery& sender::send(const message &message) {
     return *delivery::cast(dlv);
 }
 
-sender* sender::cast(pn_type* p) { return &link::cast(p)->sender(); }
+sender* sender::cast(pn_type* p) { return link::cast(p)->sender(); }
 
 }

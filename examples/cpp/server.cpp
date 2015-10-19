@@ -43,7 +43,7 @@ class server : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         connection = e.container().connect(url).ptr();
-        connection->create_receiver(url.path());
+        connection->open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
     }
 
@@ -62,7 +62,7 @@ class server : public proton::messaging_handler {
         reply.body(to_upper(e.message().body().get<std::string>()));
         reply.correlation_id(e.message().correlation_id());
         if (!senders[reply_to])
-            senders[reply_to] = connection->create_sender(reply_to).ptr();
+            senders[reply_to] = connection->open_sender(reply_to).ptr();
         senders[reply_to]->send(reply);
     }
 };

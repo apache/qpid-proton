@@ -36,7 +36,7 @@ class hello_world_direct : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         acceptor = e.container().listen(url).ptr();
-        e.container().create_sender(url);
+        e.container().open_sender(url);
     }
 
     void on_sendable(proton::event &e) {

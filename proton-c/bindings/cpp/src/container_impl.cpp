@@ -116,10 +116,10 @@ counted_ptr<pn_handler_t> container_impl::cpp_handler(handler *h)
 }
 
 container_impl::container_impl(container& c, handler *h, const std::string& id) :
-    container_(c), reactor_(reactor::create()), handler_(h), container_id_(id),
+    container_(c), reactor_(reactor::create()), handler_(h), id_(id),
     link_id_(0)
 {
-    if (container_id_.empty()) container_id_ = uuid().str();
+    if (id_.empty()) id_ = uuid().str();
     container_context(pn_cast(reactor_.get()), container_);
 
     // Set our own global handler that "subclasses" the existing one
@@ -154,19 +154,19 @@ connection& container_impl::connect(const proton::url &url, handler *h) {
     return conn;
 }
 
-sender& container_impl::create_sender(const proton::url &url) {
+sender& container_impl::open_sender(const proton::url &url) {
     connection& conn = connect(url, 0);
     std::string path = url.path();
-    sender& snd = conn.default_session().create_sender(container_id_ + '-' + path);
+    sender& snd = conn.default_session().open_sender(id_ + '-' + path);
     snd.target().address(path);
     snd.open();
     return snd;
 }
 
-receiver& container_impl::create_receiver(const proton::url &url) {
+receiver& container_impl::open_receiver(const proton::url &url) {
     connection& conn = connect(url, 0);
     std::string path = url.path();
-    receiver& rcv = conn.default_session().create_receiver(container_id_ + '-' + path);
+    receiver& rcv = conn.default_session().open_receiver(id_ + '-' + path);
     pn_terminus_set_address(pn_link_source(pn_cast(&rcv)), path.c_str());
     rcv.open();
     return rcv;

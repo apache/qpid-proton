@@ -57,7 +57,7 @@ void terminus::address(const std::string &addr) {
     pn_terminus_set_address(pn_cast(this), addr.c_str());
 }
 
-bool terminus::is_dynamic() {
+bool terminus::dynamic() {
     return (type_t) pn_terminus_is_dynamic(pn_cast(this));
 }
 

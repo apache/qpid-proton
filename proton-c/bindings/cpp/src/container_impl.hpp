@@ -45,10 +45,10 @@ class container_impl
     PN_CPP_EXTERN container_impl(container&, handler *, const std::string& id);
     PN_CPP_EXTERN ~container_impl();
     PN_CPP_EXTERN connection& connect(const url&, handler *h);
-    PN_CPP_EXTERN sender& create_sender(connection &connection, const std::string &addr, handler *h);
-    PN_CPP_EXTERN sender& create_sender(const url&);
-    PN_CPP_EXTERN receiver& create_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
-    PN_CPP_EXTERN receiver& create_receiver(const url&);
+    PN_CPP_EXTERN sender& open_sender(connection &connection, const std::string &addr, handler *h);
+    PN_CPP_EXTERN sender& open_sender(const url&);
+    PN_CPP_EXTERN receiver& open_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
+    PN_CPP_EXTERN receiver& open_receiver(const url&);
     PN_CPP_EXTERN class acceptor& listen(const url&);
     PN_CPP_EXTERN duration timeout();
     PN_CPP_EXTERN void timeout(duration timeout);
@@ -66,7 +66,7 @@ class container_impl
     pn_unique_ptr<messaging_adapter> messaging_adapter_;
     pn_unique_ptr<handler> override_handler_;
     pn_unique_ptr<handler> flow_controller_;
-    std::string container_id_;
+    std::string id_;
     uint64_t link_id_;
     std::string prefix_;
 

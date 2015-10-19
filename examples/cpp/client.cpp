@@ -38,9 +38,9 @@ class client : public proton::messaging_handler {
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
     void on_start(proton::event &e) {
-        sender = e.container().create_sender(url).ptr();
+        sender = e.container().open_sender(url).ptr();
         // Create a receiver with a dynamically chosen unique address.
-        receiver = sender->connection().create_receiver("", true/*dynamic*/).ptr();
+        receiver = sender->connection().open_receiver("", true/*dynamic*/).ptr();
     }
 
     void send_request() {

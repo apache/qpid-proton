@@ -55,16 +55,16 @@ class connection : public counted_facade<pn_connection_t, connection, endpoint>
     PN_CPP_EXTERN void close();
 
     /** Create a new session */
-    PN_CPP_EXTERN class session& create_session();
+    PN_CPP_EXTERN class session& open_session();
 
     /** Default session is created on first call and re-used for the lifeime of the connection */
     PN_CPP_EXTERN class session& default_session();
 
     /** Create a sender on default_session() with target=addr and optional handler h */
-    PN_CPP_EXTERN sender& create_sender(const std::string &addr, handler *h=0);
+    PN_CPP_EXTERN sender& open_sender(const std::string &addr, handler *h=0);
 
     /** Create a receiver on default_session() with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver& create_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
+    PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Get the first link on this connection matching the state mask.
      * Return 0 if none. Don't delete returned pointer.

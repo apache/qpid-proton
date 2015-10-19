@@ -49,14 +49,10 @@ class link : public counted_facade<pn_link_t, link, endpoint>
      */
     PN_CPP_EXTERN void close();
 
-    /** True if link is a sender */
-    PN_CPP_EXTERN bool is_sender();
-    /** True if link is a receiver */
-    PN_CPP_EXTERN bool is_receiver();
-    /** Return sender pointer. @throw if link is not a sender. */
-    PN_CPP_EXTERN class sender& sender();
-    /** Return receiver pointer. @throw if link is not a receiver. */
-    PN_CPP_EXTERN class receiver& receiver();
+    /** Return sender if this link is a sender, 0 if not. */
+    PN_CPP_EXTERN class sender* sender();
+    /** Return receiver if this link is a receiver, 0 if not. */
+    PN_CPP_EXTERN class receiver* receiver();
     /** Credit available on the link */
     PN_CPP_EXTERN int credit();
 

@@ -65,13 +65,13 @@ class container
     PN_CPP_EXTERN void run();
 
     /** Open a connection to url and create a sender with target=url.path() */
-    PN_CPP_EXTERN sender& create_sender(const proton::url &);
+    PN_CPP_EXTERN sender& open_sender(const proton::url &);
 
     /** Create a receiver on connection with source=url.path() */
-    PN_CPP_EXTERN receiver& create_receiver(const url &);
+    PN_CPP_EXTERN receiver& open_receiver(const url &);
 
     /// Identifier for the container
-    PN_CPP_EXTERN std::string container_id();
+    PN_CPP_EXTERN std::string id();
 
     /// Set the prefix to be used when generating link names. @see proton::session
     PN_CPP_EXTERN void link_prefix(const std::string&);

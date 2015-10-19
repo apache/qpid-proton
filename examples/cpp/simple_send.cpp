@@ -41,7 +41,7 @@ class simple_send : public proton::messaging_handler {
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_start(proton::event &e) {
-        sender = e.container().create_sender(url).ptr();
+        sender = e.container().open_sender(url).ptr();
     }
 
     void on_sendable(proton::event &e) {

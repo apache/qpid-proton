@@ -121,22 +121,21 @@ class broker : public proton::messaging_handler {
 
     void on_link_opening(proton::event &e) {
         proton::link& lnk = e.link();
-        if (lnk.is_sender()) {
-            proton::sender &sender(lnk.sender());
+        if (lnk.sender()) {
             proton::terminus &remote_source(lnk.remote_source());
-            if (remote_source.is_dynamic()) {
+            if (remote_source.dynamic()) {
                 std::string address = queue_name();
                 lnk.source().address(address);
                 queue *q = new queue(true);
                 queues[address] = q;
-                q->subscribe(sender);
+                q->subscribe(*lnk.sender());
                 std::cout << "broker dynamic outgoing link from " << address << std::endl;
             }
             else {
                 std::string address = remote_source.address();
                 if (!address.empty()) {
                     lnk.source().address(address);
-                    get_queue(address).subscribe(sender);
+                    get_queue(address).subscribe(*lnk.sender());
                     std::cout << "broker outgoing link from " << address << std::endl;
                 }
             }
@@ -160,8 +159,8 @@ class broker : public proton::messaging_handler {
 
     void on_link_closing(proton::event &e) {
         proton::link &lnk = e.link();
-        if (lnk.is_sender()) {
-            unsubscribe(lnk.sender());
+        if (lnk.sender()) {
+            unsubscribe(*lnk.sender());
         }
     }
 
@@ -176,8 +175,8 @@ class broker : public proton::messaging_handler {
     void remove_stale_consumers(proton::connection &connection) {
         proton::link *l = connection.link_head(proton::endpoint::REMOTE_ACTIVE);
         while (l) {
-            if (l->is_sender()) {
-                unsubscribe(l->sender());
+            if (l->sender()) {
+                unsubscribe(*l->sender());
             }
             l = l->next(proton::endpoint::REMOTE_ACTIVE);
         }
@@ -186,8 +185,7 @@ class broker : public proton::messaging_handler {
     void on_sendable(proton::event &e) {
         proton::link& lnk = e.link();
         std::string addr = lnk.source().address();
-        proton::sender &s(lnk.sender());
-        get_queue(addr).dispatch(&s);
+        get_queue(addr).dispatch(lnk.sender());
     }
 
     void on_message(proton::event &e) {

@@ -63,9 +63,9 @@ class server : public proton::messaging_handler {
 
     void on_link_opening(proton::event& e) {
         proton::link& link = e.link();
-        if (link.is_sender() && link.has_remote_source() && link.remote_source().is_dynamic()) {
+        if (link.sender() && link.has_remote_source() && link.remote_source().dynamic()) {
             link.source().address(generate_address());
-            senders[link.source().address()] = link.sender().ptr();
+            senders[link.source().address()] = link.sender()->ptr();
         }
     }
 

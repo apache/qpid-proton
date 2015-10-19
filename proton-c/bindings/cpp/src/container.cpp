@@ -51,16 +51,16 @@ connection& container::connect(const url &host, handler *h) { return impl_->conn
 
 reactor &container::reactor() { return *impl_->reactor_; }
 
-std::string container::container_id() { return impl_->container_id_; }
+std::string container::id() { return impl_->id_; }
 
 void container::run() { impl_->reactor_->run(); }
 
-sender& container::create_sender(const proton::url &url) {
-    return impl_->create_sender(url);
+sender& container::open_sender(const proton::url &url) {
+    return impl_->open_sender(url);
 }
 
-receiver& container::create_receiver(const proton::url &url) {
-    return impl_->create_receiver(url);
+receiver& container::open_receiver(const proton::url &url) {
+    return impl_->open_receiver(url);
 }
 
 acceptor& container::listen(const proton::url &url) {

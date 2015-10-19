@@ -228,7 +228,7 @@ struct start {
     type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
     type_id element;         ///< the element type for array only.
     bool is_described;       ///< true if first value is a descriptor.
-    size_t size;            ///< the element count excluding the descriptor (if any)
+    size_t size;             ///< the element count excluding the descriptor (if any)
 
     /** Return a start for an array */
     PN_CPP_EXTERN static start array(type_id element, bool described=false);

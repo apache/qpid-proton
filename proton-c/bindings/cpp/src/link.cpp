@@ -39,17 +39,12 @@ void link::close() {
     pn_link_close(pn_cast(this));
 }
 
-bool link::is_sender() { return pn_link_is_sender(pn_cast(this)); }
-bool link::is_receiver() { return pn_link_is_receiver(pn_cast(this)); }
-
-sender& link::sender() {
-    if (!is_sender()) throw error("link is not a sender");
-    return *reinterpret_cast<class sender*>(this);
+sender* link::sender() {
+    return pn_link_is_sender(pn_cast(this)) ? reinterpret_cast<class sender*>(this) : 0;
 }
 
-receiver& link::receiver() {
-    if (!is_receiver()) throw error("link is not a receiver");
-    return *reinterpret_cast<class receiver*>(this);
+receiver* link::receiver() {
+    return pn_link_is_receiver(pn_cast(this)) ? reinterpret_cast<class receiver*>(this) : 0;
 }
 
 int link::credit() {

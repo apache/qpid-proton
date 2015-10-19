@@ -57,24 +57,24 @@ link* connection::link_head(endpoint::state mask) {
     return link::cast(pn_link_head(pn_cast(this), mask));
 }
 
-session& connection::create_session() { return *session::cast(pn_session(pn_cast(this))); }
+session& connection::open_session() { return *session::cast(pn_session(pn_cast(this))); }
 
 session& connection::default_session() {
     struct connection_context& ctx = connection_context::get(pn_cast(this));
     if (!ctx.default_session) {
-        ctx.default_session = &create_session();
+        ctx.default_session = &open_session();
         ctx.default_session->open();
     }
     return *ctx.default_session;
 }
 
-sender& connection::create_sender(const std::string &addr, handler *h) {
-    return default_session().create_sender(addr, h);
+sender& connection::open_sender(const std::string &addr, handler *h) {
+    return default_session().open_sender(addr, h);
 }
 
-receiver& connection::create_receiver(const std::string &addr, bool dynamic, handler *h)
+receiver& connection::open_receiver(const std::string &addr, bool dynamic, handler *h)
 {
-    return default_session().create_receiver(addr, dynamic, h);
+    return default_session().open_receiver(addr, dynamic, h);
 }
 
 endpoint::state connection::state() { return pn_connection_state(pn_cast(this)); }

@@ -63,9 +63,15 @@ link& proton_event::link() {
     return *lnk;
 }
 
-sender& proton_event::sender() { return link().sender(); }
+sender& proton_event::sender() {
+    if (!link().sender()) throw error(MSG("No sender context for this event"));
+    return *link().sender();
+}
 
-receiver& proton_event::receiver() { return link().receiver(); }
+receiver& proton_event::receiver() {
+    if (!link().receiver()) throw error(MSG("No receiver context for this event"));
+    return *link().receiver();
+}
 
 delivery& proton_event::delivery() {
     class delivery *dlv = delivery::cast(pn_event_delivery(pn_event()));

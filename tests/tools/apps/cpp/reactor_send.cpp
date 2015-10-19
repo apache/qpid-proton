@@ -64,7 +64,7 @@ class reactor_send : public proton::messaging_handler {
     }
 
     void on_start(proton::event &e) {
-        e.container().create_sender(url_);
+        e.container().open_sender(url_);
         reactor_ = pn_cast(&e.container().reactor());
     }
 

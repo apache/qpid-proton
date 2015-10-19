@@ -56,7 +56,7 @@ class reactor : public facade<pn_reactor_t, reactor> {
     PN_CPP_EXTERN void stop();
 
     /// Identifier for the container
-    PN_CPP_EXTERN std::string container_id();
+    PN_CPP_EXTERN std::string id();
 
     /// Get timeout, process() will return if there is no activity within the timeout.
     PN_CPP_EXTERN duration timeout();

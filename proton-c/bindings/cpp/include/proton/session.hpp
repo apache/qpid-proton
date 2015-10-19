@@ -59,20 +59,20 @@ class session : public counted_facade<pn_session_t, session, endpoint>
      *@param name must be unique within a container, if empty a unique name is
      * generated beginning with connection().container().link_prefix()
      */
-    PN_CPP_EXTERN receiver& create_receiver_link(const std::string& name=std::string());
+    PN_CPP_EXTERN receiver& create_receiver(const std::string& name=std::string());
 
     /** An un-opened sender link, you can set link properties before calling open().
      *
      *@param name must be unique within a container, if empty a unique name is
      * generated beginning with connection().container().link_prefix()
      */
-    PN_CPP_EXTERN sender& create_sender_link(const std::string& name=std::string());
+    PN_CPP_EXTERN sender& create_sender(const std::string& name=std::string());
 
     /** Create and open a sender with target=addr and optional handler h */
-    PN_CPP_EXTERN sender& create_sender(const std::string &addr, handler *h=0);
+    PN_CPP_EXTERN sender& open_sender(const std::string &addr, handler *h=0);
 
     /** Create and open a receiver with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver& create_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
+    PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state();

@@ -67,7 +67,7 @@ class terminus : public counted_facade<pn_terminus_t, terminus>
     PN_CPP_EXTERN void distribution_mode(distribution_mode_t);
     PN_CPP_EXTERN std::string address();
     PN_CPP_EXTERN void address(const std::string &);
-    PN_CPP_EXTERN bool is_dynamic();
+    PN_CPP_EXTERN bool dynamic();
     PN_CPP_EXTERN void dynamic(bool);
 };
 
