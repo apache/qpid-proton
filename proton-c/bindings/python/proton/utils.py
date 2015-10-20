@@ -249,7 +249,7 @@ class BlockingConnection(Handler):
                 self.container.timeout = container_timeout
         if self.disconnected or self._is_closed():
             self.container.stop()
-        if self.disconnected:
+        if self.disconnected and not self._is_closed():
             raise ConnectionException("Connection %s disconnected" % self.url)
 
     def on_link_remote_close(self, event):
@@ -265,9 +265,11 @@ class BlockingConnection(Handler):
     def on_transport_tail_closed(self, event):
         self.on_transport_closed(event)
 
+    def on_transport_head_closed(self, event):
+        self.on_transport_closed(event)
+
     def on_transport_closed(self, event):
-        if event.connection.state & Endpoint.LOCAL_ACTIVE:
-            self.disconnected = True
+        self.disconnected = True
 
 class AtomicCount(object):
     def __init__(self, start=0, step=1):
