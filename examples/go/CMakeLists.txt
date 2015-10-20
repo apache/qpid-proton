@@ -25,7 +25,6 @@ if(BUILD_GO)
   foreach(example ${examples})
     set(source ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go)
     set(target ${CMAKE_CURRENT_BINARY_DIR}/${example})
-    message("FIXME ${source} ${GO_TARGETS}")
     add_custom_command(
       OUTPUT ${target}
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${target} ${source}
@@ -46,10 +45,9 @@ if(BUILD_GO)
     NAME go_example_electron_test
     COMMAND ${GO_ENV} ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker broker)
 
-  # FIXME aconway 2015-10-14: proton broker is buggy, enable when fixed.
-  # add_test(
-  #   NAME go_example_proton_test
-  #   COMMAND ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
+  add_test(
+    NAME go_example_proton_test
+    COMMAND ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
 
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()
