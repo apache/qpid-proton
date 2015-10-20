@@ -47,27 +47,30 @@ receiver* link::receiver() {
     return pn_link_is_receiver(pn_cast(this)) ? reinterpret_cast<class receiver*>(this) : 0;
 }
 
-int link::credit() {
+const sender* link::sender() const {
+    return pn_link_is_sender(pn_cast(this)) ? reinterpret_cast<const class sender*>(this) : 0;
+}
+
+const receiver* link::receiver() const {
+    return pn_link_is_receiver(pn_cast(this)) ? reinterpret_cast<const class receiver*>(this) : 0;
+}
+
+int link::credit() const {
     return pn_link_credit(pn_cast(this));
 }
 
-bool link::has_source() { return pn_link_source(pn_cast(this)); }
-bool link::has_target() { return pn_link_target(pn_cast(this)); }
-bool link::has_remote_source() { return pn_link_remote_source(pn_cast(this)); }
-bool link::has_remote_target() { return pn_link_remote_target(pn_cast(this)); }
+terminus& link::source() const { return *terminus::cast(pn_link_source(pn_cast(this))); }
+terminus& link::target() const { return *terminus::cast(pn_link_target(pn_cast(this))); }
+terminus& link::remote_source() const { return *terminus::cast(pn_link_remote_source(pn_cast(this))); }
+terminus& link::remote_target() const { return *terminus::cast(pn_link_remote_target(pn_cast(this))); }
 
-terminus& link::source() { return *terminus::cast(pn_link_source(pn_cast(this))); }
-terminus& link::target() { return *terminus::cast(pn_link_target(pn_cast(this))); }
-terminus& link::remote_source() { return *terminus::cast(pn_link_remote_source(pn_cast(this))); }
-terminus& link::remote_target() { return *terminus::cast(pn_link_remote_target(pn_cast(this))); }
+std::string link::name() const { return std::string(pn_link_name(pn_cast(this)));}
 
-std::string link::name() { return std::string(pn_link_name(pn_cast(this)));}
-
-class connection &link::connection() {
+class connection &link::connection() const {
     return *connection::cast(pn_session_connection(pn_link_session(pn_cast(this))));
 }
 
-class session &link::session() {
+class session &link::session() const {
     return *session::cast(pn_link_session(pn_cast(this)));
 }
 
@@ -83,5 +86,5 @@ void link::detach_handler() {
     pn_record_set_handler(record, 0);
 }
 
-endpoint::state link::state() { return pn_link_state(pn_cast(this)); }
+endpoint::state link::state() const { return pn_link_state(pn_cast(this)); }
 }

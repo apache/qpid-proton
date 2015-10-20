@@ -36,7 +36,7 @@ class connection;
 class transport : public counted_facade<pn_transport_t, transport>
 {
   public:
-    class connection* connection();
+    class connection* connection() const;
 };
 
 

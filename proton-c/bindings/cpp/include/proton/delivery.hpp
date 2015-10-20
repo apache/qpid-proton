@@ -43,7 +43,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
     };  // AMQP spec 3.4 delivery State
 
     /** Return true if the delivery has been settled. */
-    PN_CPP_EXTERN bool settled();
+    PN_CPP_EXTERN bool settled() const;
 
     /** Settle the delivery, informs the remote end. */
     PN_CPP_EXTERN void settle();
@@ -72,7 +72,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
      * A delivery is considered readable if it is the current delivery on
      * an incoming link.
      */
-    PN_CPP_EXTERN bool partial();
+    PN_CPP_EXTERN bool partial() const;
 
     /**
      * Check if a delivery is writable.
@@ -80,7 +80,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
      * A delivery is considered writable if it is the current delivery on
      * an outgoing link, and the link has positive credit.
      */
-    PN_CPP_EXTERN bool writable();
+    PN_CPP_EXTERN bool writable() const;
 
     /**
      * Check if a delivery is readable.
@@ -88,7 +88,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
      * A delivery is considered readable if it is the current delivery on
      * an incoming link.
      */
-    PN_CPP_EXTERN bool readable();
+    PN_CPP_EXTERN bool readable() const;
 
     /**
      * Check if a delivery is updated.
@@ -97,7 +97,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
      * new disposition for the delivery. Once a delivery becomes updated,
      * it will remain so until clear() is called.
      */
-    PN_CPP_EXTERN bool updated();
+    PN_CPP_EXTERN bool updated() const;
 
     /**
      * Clear the updated flag for a delivery.
@@ -107,7 +107,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
     /**
      * Get the remote disposition state for a delivery.
      */
-    PN_CPP_EXTERN state remote_state();
+    PN_CPP_EXTERN state remote_state() const;
 };
 
 }

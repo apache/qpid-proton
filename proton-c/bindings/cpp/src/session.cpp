@@ -33,7 +33,7 @@ void session::open() {
     pn_session_open(pn_cast(this));
 }
 
-connection &session::connection() {
+connection &session::connection() const {
     return *proton::connection::cast(pn_session_connection(pn_cast(this)));
 }
 
@@ -74,9 +74,9 @@ receiver& session::open_receiver(const std::string &addr, bool dynamic, handler 
     return rcv;
 }
 
-endpoint::state session::state() { return pn_session_state(pn_cast(this)); }
+endpoint::state session::state() const { return pn_session_state(pn_cast(this)); }
 
-link_range session::find_links(endpoint::state mask)  {
+link_range session::find_links(endpoint::state mask)  const {
     link_range r(connection().find_links(mask));
     link_iterator i(r.begin(), this);
     if (i && this != &i->session())

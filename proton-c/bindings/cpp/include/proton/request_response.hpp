@@ -48,7 +48,7 @@ class request_response
      */
     PN_CPP_EXTERN message call(message &request);
     /** Return the dynamic address of our receiver. */
-    PN_CPP_EXTERN std::string reply_to();
+    PN_CPP_EXTERN std::string reply_to() const;
 
   private:
     blocking_connection &connection_;

@@ -186,7 +186,7 @@ acceptor& container_impl::listen(const proton::url& url) {
 std::string container_impl::next_link_name() {
     std::ostringstream s;
     // TODO aconway 2015-09-01: atomic operation
-    s << prefix_ << std::hex << ++link_id_;
+    s << std::hex << ++link_id_ << "@" << id_;
     return s.str();
 }
 

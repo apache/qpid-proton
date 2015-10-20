@@ -59,7 +59,7 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     PN_CPP_EXTERN class decoder& decoder();
 
     /** Type of the current value*/
-    PN_CPP_EXTERN type_id type() { return decoder().type(); }
+    PN_CPP_EXTERN type_id type() const;
 
     /** Get the current value, don't move the decoder pointer. */
     template<class T> void get(T &t) { decoder() >> t; decoder().backup(); }

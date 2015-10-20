@@ -39,9 +39,9 @@ class connection : public counted_facade<pn_connection_t, connection, endpoint>
 {
   public:
     ///@name getters @{
-    PN_CPP_EXTERN class transport& transport();
-    PN_CPP_EXTERN class container& container();
-    PN_CPP_EXTERN std::string hostname();
+    PN_CPP_EXTERN class transport& transport() const;
+    PN_CPP_EXTERN class container& container() const;
+    PN_CPP_EXTERN std::string host() const;
     ///@}
 
     /** Initiate local open, not complete till messaging_handler::on_connection_opened()
@@ -67,13 +67,13 @@ class connection : public counted_facade<pn_connection_t, connection, endpoint>
     PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Return links on this connection matching the state mask. */
-    PN_CPP_EXTERN link_range find_links(endpoint::state mask);
+    PN_CPP_EXTERN link_range find_links(endpoint::state mask) const;
 
     /** Return sessions on this connection matching the state mask. */
-    PN_CPP_EXTERN session_range find_sessions(endpoint::state mask);
+    PN_CPP_EXTERN session_range find_sessions(endpoint::state mask) const;
 
     /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state();
+    PN_CPP_EXTERN endpoint::state state() const;
 };
 
 }

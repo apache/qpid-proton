@@ -55,7 +55,7 @@ messaging_event::~messaging_event() {}
 
 messaging_event::event_type messaging_event::type() const { return type_; }
 
-connection &messaging_event::connection() {
+connection &messaging_event::connection() const {
     if (type_ == messaging_event::PROTON)
         return proton_event::connection();
     if (parent_event_)
@@ -63,7 +63,7 @@ connection &messaging_event::connection() {
     throw error(MSG("No connection context for event"));
 }
 
-sender& messaging_event::sender() {
+sender& messaging_event::sender() const {
     if (type_ == messaging_event::PROTON)
         return proton_event::sender();
     if (parent_event_)
@@ -71,7 +71,7 @@ sender& messaging_event::sender() {
     throw error(MSG("No sender context for event"));
 }
 
-receiver& messaging_event::receiver() {
+receiver& messaging_event::receiver() const {
     if (type_ == messaging_event::PROTON)
         return proton_event::receiver();
     if (parent_event_)
@@ -79,7 +79,7 @@ receiver& messaging_event::receiver() {
     throw error(MSG("No receiver context for event"));
 }
 
-link& messaging_event::link() {
+link& messaging_event::link() const {
     if (type_ == messaging_event::PROTON)
         return proton_event::link();
     if (parent_event_)
@@ -87,7 +87,7 @@ link& messaging_event::link() {
     throw error(MSG("No link context for event"));
 }
 
-delivery& messaging_event::delivery() {
+delivery& messaging_event::delivery() const {
     if (type_ == messaging_event::PROTON)
         return proton_event::delivery();
     if (parent_event_)
@@ -95,7 +95,7 @@ delivery& messaging_event::delivery() {
     throw error(MSG("No delivery context for event"));
 }
 
-message &messaging_event::message() {
+message &messaging_event::message() const {
     if (type_ != messaging_event::MESSAGE || !parent_event_)
         throw error(MSG("event type does not provide message"));
     return *message_;

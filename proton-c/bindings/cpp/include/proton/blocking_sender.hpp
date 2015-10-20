@@ -42,7 +42,7 @@ class blocking_sender : public blocking_link
     PN_CPP_EXTERN delivery& send(const message &msg);
     PN_CPP_EXTERN delivery& send(const message &msg, duration timeout);
 
-    PN_CPP_EXTERN class sender& sender();
+    PN_CPP_EXTERN class sender& sender() const;
 };
 
 }

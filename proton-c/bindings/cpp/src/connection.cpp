@@ -37,7 +37,7 @@
 
 namespace proton {
 
-transport &connection::transport() {
+transport &connection::transport() const {
     return *transport::cast(pn_connection_transport(pn_cast(this)));
 }
 
@@ -45,19 +45,19 @@ void connection::open() { pn_connection_open(pn_cast(this)); }
 
 void connection::close() { pn_connection_close(pn_cast(this)); }
 
-std::string connection::hostname() {
+std::string connection::host() const {
     return std::string(pn_connection_get_hostname(pn_cast(this)));
 }
 
-container& connection::container() {
+container& connection::container() const {
     return container_context(pn_object_reactor(pn_cast(this)));
 }
 
-link_range connection::find_links(endpoint::state mask)  {
+link_range connection::find_links(endpoint::state mask) const {
     return link_range(link_iterator(link::cast(pn_link_head(pn_cast(this), mask))));
 }
 
-session_range connection::find_sessions(endpoint::state mask) {
+session_range connection::find_sessions(endpoint::state mask) const {
     return session_range(
         session_iterator(session::cast(pn_session_head(pn_cast(this), mask))));
 }
@@ -82,6 +82,6 @@ receiver& connection::open_receiver(const std::string &addr, bool dynamic, handl
     return default_session().open_receiver(addr, dynamic, h);
 }
 
-endpoint::state connection::state() { return pn_connection_state(pn_cast(this)); }
+endpoint::state connection::state() const { return pn_connection_state(pn_cast(this)); }
 
 }

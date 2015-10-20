@@ -52,19 +52,19 @@ class session : public counted_facade<pn_session_t, session, endpoint>
     PN_CPP_EXTERN void close();
 
     /// Get connection
-    PN_CPP_EXTERN class connection &connection();
+    PN_CPP_EXTERN class connection &connection() const;
 
     /** An un-opened receiver link, you can set link properties before calling open().
      *
-     *@param name must be unique within a container, if empty a unique name is
-     * generated beginning with connection().container().link_prefix()
+     *@param name if specified must be unique, by default the container generates a name
+     * of the form: <hex-digits> + "@" + container.id()
      */
     PN_CPP_EXTERN receiver& create_receiver(const std::string& name=std::string());
 
     /** An un-opened sender link, you can set link properties before calling open().
      *
-     *@param name must be unique within a container, if empty a unique name is
-     * generated beginning with connection().container().link_prefix()
+     *@param name if specified must be unique, by default the container generates a name
+     * of the form: <hex-digits> + "@" + container.id()
      */
     PN_CPP_EXTERN sender& create_sender(const std::string& name=std::string());
 
@@ -75,10 +75,10 @@ class session : public counted_facade<pn_session_t, session, endpoint>
     PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state();
+    PN_CPP_EXTERN endpoint::state state() const;
 
     /** Return the links on this session matching the state mask. */
-    PN_CPP_EXTERN link_range find_links(endpoint::state mask);
+    PN_CPP_EXTERN link_range find_links(endpoint::state mask) const;
 };
 
 }

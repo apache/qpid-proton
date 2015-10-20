@@ -49,14 +49,14 @@ class endpoint
     typedef int state;
 
     /// endpoint state bit values @{
-    PN_CPP_EXTERN static const int LOCAL_UNINIT;    ///< Local endpoint is un-initialized
-    PN_CPP_EXTERN static const int REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
-    PN_CPP_EXTERN static const int LOCAL_ACTIVE;    ///< Local endpoint is active
-    PN_CPP_EXTERN static const int REMOTE_ACTIVE;   ///< Remote endpoint is active
-    PN_CPP_EXTERN static const int LOCAL_CLOSED;    ///< Local endpoint has been closed
-    PN_CPP_EXTERN static const int REMOTE_CLOSED;   ///< Remote endpoint has been closed
-    PN_CPP_EXTERN static const int LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
-    PN_CPP_EXTERN static const int REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
+    PN_CPP_EXTERN static const state LOCAL_UNINIT;    ///< Local endpoint is un-initialized
+    PN_CPP_EXTERN static const state REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
+    PN_CPP_EXTERN static const state LOCAL_ACTIVE;    ///< Local endpoint is active
+    PN_CPP_EXTERN static const state REMOTE_ACTIVE;   ///< Remote endpoint is active
+    PN_CPP_EXTERN static const state LOCAL_CLOSED;    ///< Local endpoint has been closed
+    PN_CPP_EXTERN static const state REMOTE_CLOSED;   ///< Remote endpoint has been closed
+    PN_CPP_EXTERN static const state LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
+    PN_CPP_EXTERN static const state REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
     ///@}
 
     // TODO: condition, remote_condition, update_condition, get/handler
@@ -112,11 +112,11 @@ class link_iterator : public iter_base<link, link_iterator> {
   public:
     explicit link_iterator(link* p = 0, endpoint::state s = 0) :
         iter_base(p, s), session_(0) {}
-    explicit link_iterator(const link_iterator& i, session *ssn) :
+    explicit link_iterator(const link_iterator& i, const session *ssn) :
         iter_base(i.ptr_, i.state_), session_(ssn) {}
   private:
     PN_CPP_EXTERN void advance();
-    session* session_;
+    const session* session_;
   friend class iter_base<link, link_iterator>;
 };
 

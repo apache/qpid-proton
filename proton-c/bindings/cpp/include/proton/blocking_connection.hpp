@@ -42,8 +42,8 @@ class blocking_connection
     PN_CPP_EXTERN blocking_connection(const proton::url &url, duration timeout = duration::FOREVER);
     PN_CPP_EXTERN ~blocking_connection();
     PN_CPP_EXTERN void close();
-    PN_CPP_EXTERN duration timeout();
-    PN_CPP_EXTERN class connection& connection();
+    PN_CPP_EXTERN duration timeout() const;
+    PN_CPP_EXTERN class connection& connection() const;
 
   private:
     blocking_connection(const blocking_connection&);

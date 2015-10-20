@@ -59,15 +59,15 @@ class terminus : public counted_facade<pn_terminus_t, terminus>
         MOVE = PN_DIST_MODE_MOVE
     };
 
-    PN_CPP_EXTERN type_t type();
+    PN_CPP_EXTERN type_t type() const;
     PN_CPP_EXTERN void type(type_t);
-    PN_CPP_EXTERN expiry_policy_t expiry_policy();
+    PN_CPP_EXTERN expiry_policy_t expiry_policy() const;
     PN_CPP_EXTERN void expiry_policy(expiry_policy_t);
-    PN_CPP_EXTERN distribution_mode_t distribution_mode();
+    PN_CPP_EXTERN distribution_mode_t distribution_mode() const;
     PN_CPP_EXTERN void distribution_mode(distribution_mode_t);
-    PN_CPP_EXTERN std::string address();
+    PN_CPP_EXTERN std::string address() const;
     PN_CPP_EXTERN void address(const std::string &);
-    PN_CPP_EXTERN bool dynamic();
+    PN_CPP_EXTERN bool dynamic() const;
     PN_CPP_EXTERN void dynamic(bool);
 };
 

@@ -50,7 +50,7 @@ message request_response::call(message &request) {
     return response;
 }
 
-std::string request_response::reply_to() {
+std::string request_response::reply_to() const {
     return receiver_->receiver().remote_source().address();
 }
 

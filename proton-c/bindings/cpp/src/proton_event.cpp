@@ -46,34 +46,34 @@ int proton_event::type() const { return type_; }
 
 std::string proton_event::name() const { return pn_event_type_name(pn_event_type_t(type_)); }
 
-pn_event_t *proton_event::pn_event() { return pn_event_; }
+pn_event_t *proton_event::pn_event() const { return pn_event_; }
 
-container &proton_event::container() { return container_; }
+container &proton_event::container() const { return container_; }
 
-connection &proton_event::connection() {
+connection &proton_event::connection() const {
     pn_connection_t *conn = pn_event_connection(pn_event());
     if (!conn)
         throw error(MSG("No connection context for this event"));
     return *connection::cast(conn);
 }
 
-link& proton_event::link() {
+link& proton_event::link() const {
     class link *lnk = link::cast(pn_event_link(pn_event()));
     if (!lnk) throw error(MSG("No link context for this event"));
     return *lnk;
 }
 
-sender& proton_event::sender() {
+sender& proton_event::sender() const {
     if (!link().sender()) throw error(MSG("No sender context for this event"));
     return *link().sender();
 }
 
-receiver& proton_event::receiver() {
+receiver& proton_event::receiver() const {
     if (!link().receiver()) throw error(MSG("No receiver context for this event"));
     return *link().receiver();
 }
 
-delivery& proton_event::delivery() {
+delivery& proton_event::delivery() const {
     class delivery *dlv = delivery::cast(pn_event_delivery(pn_event()));
     if (!dlv) throw error(MSG("No delivery context for this event"));
     return *dlv;

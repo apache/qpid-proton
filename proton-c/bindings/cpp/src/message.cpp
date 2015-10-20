@@ -132,10 +132,10 @@ std::string message::content_encoding() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::expiry(amqp_timestamp t) {
+void message::expiry_time(amqp_timestamp t) {
     pn_message_set_expiry_time(message_, t.milliseconds);
 }
-amqp_timestamp message::expiry() const {
+amqp_timestamp message::expiry_time() const {
     return amqp_timestamp(pn_message_get_expiry_time(message_));
 }
 

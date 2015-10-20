@@ -68,7 +68,6 @@ class container_impl
     pn_unique_ptr<handler> flow_controller_;
     std::string id_;
     uint64_t link_id_;
-    std::string prefix_;
 
   friend class container;
 };

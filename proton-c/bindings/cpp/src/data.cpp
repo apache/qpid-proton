@@ -39,6 +39,8 @@ pn_unique_ptr<data> data::create() { return pn_unique_ptr<data>(cast(::pn_data(0
 encoder& data::encoder() { return reinterpret_cast<class encoder&>(*this); }
 decoder& data::decoder() { return reinterpret_cast<class decoder&>(*this); }
 
+type_id data::type() const { return reinterpret_cast<const class decoder&>(*this).type(); }
+
 namespace {
 
 // Compare nodes, return -1 if a<b, 0 if a==b, +1 if a>b

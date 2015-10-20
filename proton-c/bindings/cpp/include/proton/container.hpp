@@ -43,6 +43,9 @@ class container_impl;
 
 /**
  * Top level container for connections and other objects, runs the event loop.
+ *
+ * Note that by default, links belonging to the container have generated link-names
+ * of the form
  */
 class container
 {
@@ -71,16 +74,10 @@ class container
     PN_CPP_EXTERN receiver& open_receiver(const url &);
 
     /// Identifier for the container
-    PN_CPP_EXTERN std::string id();
-
-    /// Set the prefix to be used when generating link names. @see proton::session
-    PN_CPP_EXTERN void link_prefix(const std::string&);
-
-    /// Get the prefix to be used when generating link names. @see proton::session
-    PN_CPP_EXTERN std::string link_prefix();
+    PN_CPP_EXTERN std::string id() const;
 
     /// The reactor associated with this container.
-    PN_CPP_EXTERN class reactor& reactor();
+    PN_CPP_EXTERN class reactor& reactor() const;
 
     // Schedule a timer task event in delay milliseconds.
     PN_CPP_EXTERN task& schedule(int delay, handler *h = 0);

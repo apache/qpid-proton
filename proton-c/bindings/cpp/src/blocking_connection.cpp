@@ -32,8 +32,8 @@ blocking_connection::~blocking_connection() {}
 
 void blocking_connection::close() { impl_->close(); }
 
-duration blocking_connection::timeout() { return impl_->container_->reactor().timeout(); }
+duration blocking_connection::timeout() const { return impl_->container_->reactor().timeout(); }
 
-connection& blocking_connection::connection() { return *impl_->connection_; }
+connection& blocking_connection::connection() const { return *impl_->connection_; }
 
 }

@@ -38,32 +38,32 @@ event::event() {}
 
 event::~event() {}
 
-container &event::container() {
+container &event::container() const {
     // Subclasses to override as appropriate
     throw error(MSG("No container context for event"));
 }
 
-connection &event::connection() {
+connection &event::connection() const {
     throw error(MSG("No connection context for event"));
 }
 
-sender& event::sender() {
+sender& event::sender() const {
     throw error(MSG("No sender context for event"));
 }
 
-receiver& event::receiver() {
+receiver& event::receiver() const {
     throw error(MSG("No receiver context for event"));
 }
 
-link& event::link() {
+link& event::link() const {
     throw error(MSG("No link context for event"));
 }
 
-delivery& event::delivery() {
+delivery& event::delivery() const {
     throw error(MSG("No link context for event"));
 }
 
-class message &event::message() {
+class message &event::message() const {
     throw error(MSG("No message associated with event"));
 }
 

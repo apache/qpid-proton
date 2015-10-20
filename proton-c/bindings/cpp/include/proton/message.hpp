@@ -56,11 +56,12 @@ class message
     ///@name Message properties
     ///@{
 
-    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    ///@ Set message identifier, can be a string, unsigned long, uuid or binary.
     PN_CPP_EXTERN void id(const data& id);
-    /// Globally unique identifier, can be an a string, an unsigned long, a uuid or a binary value.
-    PN_CPP_EXTERN const data& id() const;
+    ///@ Get message identifier
     PN_CPP_EXTERN data& id();
+    ///@ Get message identifier reference, allows modification in-place.
+    PN_CPP_EXTERN const data& id() const;
 
     PN_CPP_EXTERN void user(const std::string &user);
     PN_CPP_EXTERN std::string user() const;
@@ -74,10 +75,11 @@ class message
     PN_CPP_EXTERN void reply_to(const std::string &s);
     PN_CPP_EXTERN std::string reply_to() const;
 
-    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    /// Get correlation identifier, can be a string, unsigned long, uuid or binary.
     PN_CPP_EXTERN void correlation_id(const data&);
-    /// Correlation identifier, can be an a string, an unsigned long, a uuid or a binary value.
+    /// Get correlation identifier.
     PN_CPP_EXTERN const data& correlation_id() const;
+    /// Get correlation identifier reference, allows modification in-place.
     PN_CPP_EXTERN data& correlation_id();
 
     PN_CPP_EXTERN void content_type(const std::string &s);
@@ -86,8 +88,8 @@ class message
     PN_CPP_EXTERN void content_encoding(const std::string &s);
     PN_CPP_EXTERN std::string content_encoding() const;
 
-    PN_CPP_EXTERN void expiry(amqp_timestamp t);
-    PN_CPP_EXTERN amqp_timestamp expiry() const;
+    PN_CPP_EXTERN void expiry_time(amqp_timestamp t);
+    PN_CPP_EXTERN amqp_timestamp expiry_time() const;
 
     PN_CPP_EXTERN void creation_time(amqp_timestamp t);
     PN_CPP_EXTERN amqp_timestamp creation_time() const;

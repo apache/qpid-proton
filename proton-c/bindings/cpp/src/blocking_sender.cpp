@@ -63,6 +63,6 @@ delivery& blocking_sender::send(const message &msg) {
     return send(msg, connection_.timeout());
 }
 
-sender& blocking_sender::sender() { return *link_->sender(); }
+sender& blocking_sender::sender() const { return *link_->sender(); }
 
 }

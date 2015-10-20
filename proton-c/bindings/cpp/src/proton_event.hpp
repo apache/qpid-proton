@@ -273,22 +273,22 @@ class proton_event : public event
     ///@}
 
     virtual PN_CPP_EXTERN void dispatch(handler &h);
-    virtual PN_CPP_EXTERN class container &container();
-    virtual PN_CPP_EXTERN class connection &connection();
-    virtual PN_CPP_EXTERN class sender& sender();
-    virtual PN_CPP_EXTERN class receiver& receiver();
-    virtual PN_CPP_EXTERN class link& link();
-    virtual PN_CPP_EXTERN class delivery& delivery();
+    virtual PN_CPP_EXTERN class container &container() const;
+    virtual PN_CPP_EXTERN class connection &connection() const;
+    virtual PN_CPP_EXTERN class sender& sender() const;
+    virtual PN_CPP_EXTERN class receiver& receiver() const;
+    virtual PN_CPP_EXTERN class link& link() const;
+    virtual PN_CPP_EXTERN class delivery& delivery() const;
 
     /** Get type of event */
     PN_CPP_EXTERN event_type type() const;
 
-    PN_CPP_EXTERN pn_event_t* pn_event();
+    PN_CPP_EXTERN pn_event_t* pn_event() const;
 
   protected:
     PN_CPP_EXTERN proton_event(pn_event_t *ce, proton_event::event_type t, class container &c);
   private:
-    pn_event_t *pn_event_;
+    mutable pn_event_t *pn_event_;
     event_type type_;
     class container &container_;
 };

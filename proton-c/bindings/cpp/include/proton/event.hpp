@@ -46,19 +46,19 @@ class event {
     virtual PN_CPP_EXTERN std::string name() const = 0;
 
     /// Get container.
-    virtual PN_CPP_EXTERN class container &container();
+    virtual PN_CPP_EXTERN class container &container() const;
     /// Get connection.
-    virtual PN_CPP_EXTERN class connection &connection();
+    virtual PN_CPP_EXTERN class connection &connection() const;
     /// Get sender @throws error if no sender.
-    virtual PN_CPP_EXTERN class sender& sender();
+    virtual PN_CPP_EXTERN class sender& sender() const;
     /// Get receiver @throws error if no receiver.
-    virtual PN_CPP_EXTERN class receiver& receiver();
+    virtual PN_CPP_EXTERN class receiver& receiver() const;
     /// Get link @throws error if no link.
-    virtual PN_CPP_EXTERN class link& link();
+    virtual PN_CPP_EXTERN class link& link() const;
     /// Get delivey @throws error if no delivery.
-    virtual PN_CPP_EXTERN class delivery& delivery();
+    virtual PN_CPP_EXTERN class delivery& delivery() const;
     /** Get message @throws error if no message. */
-    virtual PN_CPP_EXTERN class message &message();
+    virtual PN_CPP_EXTERN class message &message() const;
 
   protected:
     PN_CPP_EXTERN event();

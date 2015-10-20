@@ -51,37 +51,32 @@ class link : public counted_facade<pn_link_t, link, endpoint>
 
     /** Return sender if this link is a sender, 0 if not. */
     PN_CPP_EXTERN class sender* sender();
+    PN_CPP_EXTERN const class sender* sender() const;
+
     /** Return receiver if this link is a receiver, 0 if not. */
     PN_CPP_EXTERN class receiver* receiver();
+    PN_CPP_EXTERN const class receiver* receiver() const;
+
     /** Credit available on the link */
-    PN_CPP_EXTERN int credit();
+    PN_CPP_EXTERN int credit() const;
 
-    /** True if link has source */
-    PN_CPP_EXTERN bool has_source();
-    /** True if link has target */
-    PN_CPP_EXTERN bool has_target();
-    /** True if link has remote source */
-    PN_CPP_EXTERN bool has_remote_source();
-    /** True if link has remote target */
-    PN_CPP_EXTERN bool has_remote_target();
-
-    /** Local source of the link. @throw error if !has_source() */
-    PN_CPP_EXTERN terminus& source();
-    /** Local target of the link. @throw error if !has_target() */
-    PN_CPP_EXTERN terminus& target();
-    /** Remote source of the link. @throw error if !has_remote_source() */
-    PN_CPP_EXTERN terminus& remote_source();
-    /** Remote target of the link. @throw error if !has_remote_target() */
-    PN_CPP_EXTERN terminus& remote_target();
+    /** Local source of the link. */
+    PN_CPP_EXTERN terminus& source() const;
+    /** Local target of the link. */
+    PN_CPP_EXTERN terminus& target() const;
+    /** Remote source of the link. */
+    PN_CPP_EXTERN terminus& remote_source() const;
+    /** Remote target of the link. */
+    PN_CPP_EXTERN terminus& remote_target() const;
 
     /** Link name */
-    PN_CPP_EXTERN std::string name();
+    PN_CPP_EXTERN std::string name() const;
 
     /** Connection that owns this link */
-    PN_CPP_EXTERN class connection &connection();
+    PN_CPP_EXTERN class connection &connection() const;
 
     /** Session that owns this link */
-    PN_CPP_EXTERN class session &session();
+    PN_CPP_EXTERN class session &session() const;
 
     /** Set a custom handler for this link. */
     PN_CPP_EXTERN void handler(class handler &);
@@ -90,7 +85,7 @@ class link : public counted_facade<pn_link_t, link, endpoint>
     PN_CPP_EXTERN void detach_handler();
 
     /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state();
+    PN_CPP_EXTERN endpoint::state state() const;
 };
 
 }
