@@ -75,4 +75,14 @@ receiver& session::open_receiver(const std::string &addr, bool dynamic, handler 
 }
 
 endpoint::state session::state() { return pn_session_state(pn_cast(this)); }
+
+link_range session::find_links(endpoint::state mask)  {
+    link_range r(connection().find_links(mask));
+    link_iterator i(r.begin(), this);
+    if (i && this != &i->session())
+        ++i;
+    return link_range(i);
 }
+
+} // namespace proton
+

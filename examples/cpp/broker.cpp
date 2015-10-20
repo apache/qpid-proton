@@ -173,12 +173,11 @@ class broker : public proton::messaging_handler {
     }
 
     void remove_stale_consumers(proton::connection &connection) {
-        proton::link *l = connection.link_head(proton::endpoint::REMOTE_ACTIVE);
-        while (l) {
+        proton::link_range r = connection.find_links(proton::endpoint::REMOTE_ACTIVE);
+        for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
             if (l->sender()) {
                 unsubscribe(*l->sender());
             }
-            l = l->next(proton::endpoint::REMOTE_ACTIVE);
         }
     }
 

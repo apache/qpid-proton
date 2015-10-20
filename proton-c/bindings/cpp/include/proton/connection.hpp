@@ -66,11 +66,11 @@ class connection : public counted_facade<pn_connection_t, connection, endpoint>
     /** Create a receiver on default_session() with target=addr and optional handler h */
     PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
-    /** Get the first link on this connection matching the state mask.
-     * Return 0 if none. Don't delete returned pointer.
-     * @see link::next, endpoint::state
-     */
-    PN_CPP_EXTERN link* link_head(endpoint::state mask);
+    /** Return links on this connection matching the state mask. */
+    PN_CPP_EXTERN link_range find_links(endpoint::state mask);
+
+    /** Return sessions on this connection matching the state mask. */
+    PN_CPP_EXTERN session_range find_sessions(endpoint::state mask);
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state();

@@ -76,6 +76,9 @@ class session : public counted_facade<pn_session_t, session, endpoint>
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state();
+
+    /** Return the links on this session matching the state mask. */
+    PN_CPP_EXTERN link_range find_links(endpoint::state mask);
 };
 
 }

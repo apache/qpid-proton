@@ -77,13 +77,11 @@ class link : public counted_facade<pn_link_t, link, endpoint>
     /** Link name */
     PN_CPP_EXTERN std::string name();
 
-    /** Next link that matches state mask. @see endpoint::state.
-     * @return 0 if none, do not delete returned pointer
-     */
-    PN_CPP_EXTERN link* next(endpoint::state mask);
-
     /** Connection that owns this link */
     PN_CPP_EXTERN class connection &connection();
+
+    /** Session that owns this link */
+    PN_CPP_EXTERN class session &session();
 
     /** Set a custom handler for this link. */
     PN_CPP_EXTERN void handler(class handler &);

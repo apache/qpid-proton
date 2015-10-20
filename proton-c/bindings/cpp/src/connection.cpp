@@ -53,8 +53,13 @@ container& connection::container() {
     return container_context(pn_object_reactor(pn_cast(this)));
 }
 
-link* connection::link_head(endpoint::state mask) {
-    return link::cast(pn_link_head(pn_cast(this), mask));
+link_range connection::find_links(endpoint::state mask)  {
+    return link_range(link_iterator(link::cast(pn_link_head(pn_cast(this), mask))));
+}
+
+session_range connection::find_sessions(endpoint::state mask) {
+    return session_range(
+        session_iterator(session::cast(pn_session_head(pn_cast(this), mask))));
 }
 
 session& connection::open_session() { return *session::cast(pn_session(pn_cast(this))); }

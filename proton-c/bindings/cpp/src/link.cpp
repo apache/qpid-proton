@@ -67,8 +67,8 @@ class connection &link::connection() {
     return *connection::cast(pn_session_connection(pn_link_session(pn_cast(this))));
 }
 
-link* link::next(endpoint::state mask) {
-    return link::cast(pn_link_next(pn_cast(this), (pn_state_t) mask));
+class session &link::session() {
+    return *session::cast(pn_link_session(pn_cast(this)));
 }
 
 void link::handler(class handler &h) {

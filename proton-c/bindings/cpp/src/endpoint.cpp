@@ -19,10 +19,15 @@
  *
  */
 
-#include "proton/endpoint.hpp"
 #include "proton/connection.hpp"
+#include "proton/endpoint.hpp"
+#include "proton/session.hpp"
+#include "proton/link.hpp"
 #include "proton/transport.hpp"
+
 #include "proton/connection.h"
+#include "proton/session.h"
+#include "proton/link.h"
 
 namespace proton {
 
@@ -34,5 +39,15 @@ const int endpoint::LOCAL_CLOSED = PN_LOCAL_CLOSED;
 const int endpoint::REMOTE_CLOSED = PN_REMOTE_CLOSED;
 const int endpoint::LOCAL_MASK = PN_LOCAL_MASK;
 const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
+
+void session_iterator::advance() {
+    ptr_ = session::cast(pn_session_next(pn_cast(ptr_), (pn_state_t) state_));
+}
+
+void link_iterator::advance() {
+    do {
+        ptr_ = link::cast(pn_link_next(pn_cast(ptr_), (pn_state_t) state_));
+    } while (session_ && &ptr_->session() != session_);
+}
 
 }
