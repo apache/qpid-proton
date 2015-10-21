@@ -40,14 +40,16 @@ const int endpoint::REMOTE_CLOSED = PN_REMOTE_CLOSED;
 const int endpoint::LOCAL_MASK = PN_LOCAL_MASK;
 const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
 
-void session_iterator::advance() {
+session_iterator session_iterator::operator++() {
     ptr_ = session::cast(pn_session_next(pn_cast(ptr_), (pn_state_t) state_));
+    return *this;
 }
 
-void link_iterator::advance() {
+link_iterator link_iterator::operator++() {
     do {
         ptr_ = link::cast(pn_link_next(pn_cast(ptr_), (pn_state_t) state_));
-    } while (session_ && &ptr_->session() != session_);
+    } while (ptr_ && session_ && &ptr_->session() != session_);
+    return *this;
 }
 
 }
