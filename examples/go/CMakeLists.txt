@@ -47,7 +47,7 @@ if(BUILD_GO)
 
   add_test(
     NAME go_example_proton_test
-    COMMAND ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
+    COMMAND ${GO_ENV} ${test_exe} -dir ${CMAKE_CURRENT_BINARY_DIR}/electron -broker ../proton/broker)
 
   list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${examples})
 endif()
