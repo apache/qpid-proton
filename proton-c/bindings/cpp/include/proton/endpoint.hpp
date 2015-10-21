@@ -98,7 +98,8 @@ template<class I> class range {
 ///@ An iterator for a range of sessions.
 class session_iterator : public iter_base<session, session_iterator> {
  public:
-    explicit session_iterator(session* p = 0, endpoint::state s = 0) : iter_base(p, s) {}
+    explicit session_iterator(session* p = 0, endpoint::state s = 0) :
+        iter_base<session, session_iterator>(p, s) {}
   private:
     PN_CPP_EXTERN void advance();
   friend class iter_base<session, session_iterator>;
