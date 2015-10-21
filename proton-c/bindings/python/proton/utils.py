@@ -249,6 +249,7 @@ class BlockingConnection(Handler):
                 self.container.timeout = container_timeout
         if self.disconnected or self._is_closed():
             self.container.stop()
+            self.conn.handler = None # break cyclical reference
         if self.disconnected and not self._is_closed():
             raise ConnectionException("Connection %s disconnected" % self.url)
 
