@@ -32,6 +32,26 @@
 }
 
 {
+   SSL does a number of uninitialized accesses (FreeBSD version)
+   Memcheck:Value8
+   fun:BN_num_bits_word
+   fun:BN_num_bits
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*libcrypto.so*
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL does a number of uninitialized accesses (FreeBSD version)
+   Memcheck:Value8
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*libcrypto.so*
+   fun:ssl3_ctx_ctrl
+}
+
+{
    SSL does a number of uninitialized accesses (expected) 5
    Memcheck:Value4
    fun:BN_mod_exp_mont_consttime
