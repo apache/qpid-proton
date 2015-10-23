@@ -62,10 +62,10 @@ func timedReceive(channel interface{}, timeout time.Duration) (interface{}, erro
 	}
 	chosen, value, ok := reflect.Select(cases)
 	switch {
-	case !ok:
-		return nil, Closed
-	case chosen == 0:
+	case chosen == 0 && ok:
 		return value.Interface(), nil
+	case chosen == 0 && !ok:
+		return nil, Closed
 	default:
 		return nil, Timeout
 	}

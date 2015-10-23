@@ -50,8 +50,8 @@ func newHandler(c *connection) *handler {
 	return h
 }
 
-func (h *handler) internalError(fmt string, arg ...interface{}) {
-	proton.CloseError(h.connection.eConnection, amqp.Errorf(amqp.InternalError, fmt, arg...))
+func (h *handler) internalError(ep proton.Endpoint, msg string) {
+	proton.CloseError(ep, amqp.Errorf(amqp.InternalError, "%s %s", msg, ep))
 }
 
 func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) {
@@ -61,7 +61,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		if r, ok := h.links[e.Link()].(*receiver); ok {
 			r.message(e.Delivery())
 		} else {
-			h.internalError("no receiver for link %s", e.Link())
+			h.internalError(e.Link(), "no receiver for link")
 		}
 
 	case proton.MSettled:
@@ -73,14 +73,14 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		if s, ok := h.links[e.Link()].(*sender); ok {
 			s.sendable()
 		} else {
-			h.internalError("no receiver for link %s", e.Link())
+			h.internalError(e.Link(), "no sender for link")
 		}
 
 	case proton.MSessionOpening:
 		if e.Session().State().LocalUninit() { // Remotely opened
 			incoming := &IncomingSession{h: h, pSession: e.Session()}
 			h.connection.accept(incoming)
-			if err := incoming.error(); err != nil {
+			if err := incoming.error("rejected session %s", e.Session()); err != nil {
 				proton.CloseError(e.Session(), err)
 			}
 		}
@@ -101,7 +101,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 		ss := h.sessions[l.Session()]
 		if ss == nil {
-			h.internalError("no session for link %s", e.Link())
+			h.internalError(e.Link(), "no session for link")
 			break
 		}
 		var incoming Incoming
@@ -111,7 +111,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 			incoming = &IncomingSender{makeIncomingLink(ss, l)}
 		}
 		h.connection.accept(incoming)
-		if err := incoming.error(); err != nil {
+		if err := incoming.error("rejected link %s", e.Link()); err != nil {
 			proton.CloseError(l, err)
 			break
 		}

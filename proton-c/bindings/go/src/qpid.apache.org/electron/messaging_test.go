@@ -40,18 +40,15 @@ func fatalIf(t *testing.T, err error) {
 }
 
 // Start a server, return listening addr and channel for incoming Connection.
-func newServer(t *testing.T, cont Container, accept func(Endpoint) error) (net.Addr, <-chan Connection) {
+func newServer(t *testing.T, cont Container, accept func(Incoming)) (net.Addr, <-chan Connection) {
 	listener, err := net.Listen("tcp", "")
 	fatalIf(t, err)
 	addr := listener.Addr()
 	ch := make(chan Connection)
 	go func() {
 		conn, err := listener.Accept()
-		c, err := cont.Connection(conn)
+		c, err := cont.Connection(conn, Server(), Accepter(accept))
 		fatalIf(t, err)
-		c.Server()
-		c.Listen(accept)
-		fatalIf(t, c.Open())
 		ch <- c
 	}()
 	return addr, ch
@@ -63,16 +60,15 @@ func newClient(t *testing.T, cont Container, addr net.Addr) Session {
 	fatalIf(t, err)
 	c, err := cont.Connection(conn)
 	fatalIf(t, err)
-	c.Open()
 	sn, err := c.Session()
 	fatalIf(t, err)
 	return sn
 }
 
 // Return client and server ends of the same connection.
-func newClientServer(t *testing.T, accept func(Endpoint) error) (client Session, server Connection) {
-	addr, ch := newServer(t, NewContainer(""), accept)
-	client = newClient(t, NewContainer(""), addr)
+func newClientServer(t *testing.T, accept func(Incoming)) (client Session, server Connection) {
+	addr, ch := newServer(t, NewContainer("test-server"), accept)
+	client = newClient(t, NewContainer("test-client"), addr)
 	return client, <-ch
 }
 
@@ -89,12 +85,13 @@ func TestClientSendServerReceive(t *testing.T) {
 	nMessages := 3
 
 	rchan := make(chan Receiver, nLinks)
-	client, server := newClientServer(t, func(ep Endpoint) error {
-		if r, ok := ep.(Receiver); ok {
-			r.SetCapacity(1, false)
-			rchan <- r
+	client, server := newClientServer(t, func(i Incoming) {
+		switch i := i.(type) {
+		case *IncomingReceiver:
+			rchan <- i.AcceptReceiver(1, false)
+		default:
+			i.Accept()
 		}
-		return nil
 	})
 
 	defer func() {
@@ -158,8 +155,10 @@ func TestClientSendServerReceive(t *testing.T) {
 
 func TestClientReceiver(t *testing.T) {
 	nMessages := 3
-	client, server := newClientServer(t, func(ep Endpoint) error {
-		if s, ok := ep.(Sender); ok {
+	client, server := newClientServer(t, func(i Incoming) {
+		switch i := i.(type) {
+		case *IncomingSender:
+			s := i.AcceptSender()
 			go func() {
 				for i := int32(0); i < int32(nMessages); i++ {
 					sm, err := s.Send(amqp.NewMessageWith(i))
@@ -172,8 +171,9 @@ func TestClientReceiver(t *testing.T) {
 				}
 				s.Close(nil)
 			}()
+		default:
+			i.Accept()
 		}
-		return nil
 	})
 
 	r, err := client.Receiver(Source("foo"))
@@ -203,12 +203,13 @@ func TestClientReceiver(t *testing.T) {
 func TestTimeouts(t *testing.T) {
 	var err error
 	rchan := make(chan Receiver, 1)
-	client, server := newClientServer(t, func(ep Endpoint) error {
-		if r, ok := ep.(Receiver); ok {
-			r.SetCapacity(1, false) // Issue credit only on receive
-			rchan <- r
+	client, server := newClientServer(t, func(i Incoming) {
+		switch i := i.(type) {
+		case *IncomingReceiver:
+			rchan <- i.AcceptReceiver(1, false) // Issue credit only on receive
+		default:
+			i.Accept()
 		}
-		return nil
 	})
 	defer func() { closeClientServer(client, server) }()
 
@@ -273,15 +274,15 @@ type pairs struct {
 
 func newPairs(t *testing.T) *pairs {
 	p := &pairs{t: t, rchan: make(chan Receiver, 1), schan: make(chan Sender, 1)}
-	p.client, p.server = newClientServer(t, func(ep Endpoint) error {
-		switch ep := ep.(type) {
-		case Receiver:
-			ep.SetCapacity(1, false)
-			p.rchan <- ep
-		case Sender:
-			p.schan <- ep
+	p.client, p.server = newClientServer(t, func(i Incoming) {
+		switch i := i.(type) {
+		case *IncomingReceiver:
+			p.rchan <- i.AcceptReceiver(1, false)
+		case *IncomingSender:
+			p.schan <- i.AcceptSender()
+		default:
+			i.Accept()
 		}
-		return nil
 	})
 	return p
 }

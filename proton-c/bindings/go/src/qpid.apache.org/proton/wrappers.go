@@ -173,14 +173,13 @@ type Endpoint interface {
 	String() string
 }
 
-// CloseError sets an error condition on an endpoint and closes the endpoint (if not already closed)
+// CloseError sets an error condition on an endpoint and closes the endpoint
+// if not already closed
 func CloseError(e Endpoint, err error) {
 	if err != nil {
 		e.Condition().SetError(err)
 	}
-	if e.State().RemoteActive() {
-		e.Close()
-	}
+	e.Close()
 }
 
 // EndpointError returns the remote error if there is one, the local error if not

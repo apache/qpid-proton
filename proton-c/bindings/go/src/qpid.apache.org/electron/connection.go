@@ -196,9 +196,10 @@ type Incoming interface {
 	// Reject the endpoint with an error
 	Reject(error)
 
-	error() error
+	error(string, ...interface{}) error
 }
 
+// Common state for incoming endpoints, record accept or reject error.
 type incoming struct {
 	err      error
 	accepted bool
@@ -206,12 +207,12 @@ type incoming struct {
 
 func (i *incoming) Reject(err error) { i.err = err }
 
-func (i *incoming) error() error {
+func (i *incoming) error(fmt string, arg ...interface{}) error {
 	switch {
 	case i.err != nil:
 		return i.err
 	case !i.accepted:
-		return amqp.Errorf(amqp.NotAllowed, "remote open rejected")
+		return amqp.Errorf(amqp.NotAllowed, fmt, arg...)
 	default:
 		return nil
 	}
