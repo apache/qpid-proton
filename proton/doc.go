@@ -18,16 +18,53 @@ under the License.
 */
 
 /*
-Package proton is a Go binding for the proton AMQP protocol engine.
+Package proton is an event-driven, concurrent-unsafe Go library for AMQP messaging.
+You can write clients and servers using this library.
 
-It alows you to construct and parse AMQP messages, and to implement AMQP
-clients, servers and intermediaries that can exchange messages with any
-AMQP 1.0 compliant endpoint.
+This package is a port of the Proton C API into Go (see
+http://qpid.apache.org/proton) Go programmers may find the 'electron' package
+more convenient. qpid.apache.org/electron provides a concurrent-safe API that
+allows you to run procedural loops in arbitrary goroutines rather than
+implementing event handlers that must run in a single goroutine.
 
-Encoding and decoding AMQP data follows the pattern of the standard
-encoding/json and encoding/xml packages.The mapping between AMQP and Go types is
-described in the documentation of the Marshal and Unmarshal functions.
+Consult the C API documentation at http://qpid.apache.org/proton for more
+information about the types here. There is a 1-1 correspondence between C type
+pn_foo_t and Go type proton.Foo, and between C function
+
+    pn_foo_do_something(pn_foo_t*, ...)
+
+and Go method
+
+    func (proton.Foo) DoSomething(...)
+
+The proton.Engine type pumps data between a Go net.Conn and a proton event loop
+goroutine that feeds events to a proton.MessagingHandler, which you must implement.
+See the Engine documentation for more.
+
+MessagingHandler defines an event handling interface that you can implement to
+react to AMQP protocol events. There is also a lower-level EventHandler, but
+MessagingHandler provides a simpler set of events and automates common tasks for you,
+for most applications it will be more convenient.
+
+NOTE: Methods on most types defined in this package (Sessions, Links etc.)  can
+*only* be called in the event handler goroutine of the relevant
+Connection/Engine, either by the HandleEvent method of a handler type or in a
+function injected into the goroutine via Inject() or InjectWait() Handlers and
+injected functions can set up channels to communicate with other goroutines.
+Note the Injecter associated with a handler available as part of the Event value
+passed to HandleEvent.
+
+Separate Engine instances are independent, and can run concurrently.
+
+The 'electron' package is built on the proton package but instead offers a
+concurrent-safe API that can use simple procedural loops rather than event
+handlers to express application logic. It is easier to use for most
+applications.
+
 */
 package proton
+
+// #cgo LDFLAGS: -lqpid-proton
+import "C"
 
 // This file is just for the package comment.
