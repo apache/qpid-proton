@@ -65,25 +65,20 @@ pn_timestamp_t pn_i_now(void)
 }
 #endif
 
+#include <string.h>
+#include <stdio.h>
+static void pn_i_strerror(int errnum, char *buf, size_t buflen)
+{
+  // PROTON-1029 provide a simple default in case strerror fails
+  snprintf(buf, buflen, "errno: %d", errnum);
 #ifdef USE_STRERROR_R
-#include <string.h>
-static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
-  if (strerror_r(errnum, buf, buflen) != 0) pni_fatal("strerror_r() failed\n");
-}
+  strerror_r(errnum, buf, buflen);
 #elif USE_STRERROR_S
-#include <string.h>
-static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
-  if (strerror_s(buf, buflen, errnum) != 0) pni_fatal("strerror_s() failed\n");
-}
+  strerror_s(buf, buflen, errnum);
 #elif USE_OLD_STRERROR
-// This is thread safe on some platforms, and the only option on others
-#include <string.h>
-static void pn_i_strerror(int errnum, char *buf, size_t buflen) {
   strncpy(buf, strerror(errnum), buflen);
-}
-#else
-#error "Don't know a safe strerror equivalent for this platform"
 #endif
+}
 
 int pn_i_error_from_errno(pn_error_t *error, const char *msg)
 {
