@@ -35,7 +35,7 @@ package amqp
 import "C"
 
 import (
-	"qpid.apache.org/internal"
+	"fmt"
 	"runtime"
 	"time"
 	"unsafe"
@@ -313,11 +313,10 @@ func (m *message) Body() (v interface{})   { m.Unmarshal(&v); return }
 func (m *message) Decode(data []byte) error {
 	m.Clear()
 	if len(data) == 0 {
-		return internal.Errorf("empty buffer for decode")
+		return fmt.Errorf("empty buffer for decode")
 	}
 	if C.pn_message_decode(m.pn, cPtr(data), cLen(data)) < 0 {
-		return internal.Errorf("decoding message: %s",
-			internal.PnError(unsafe.Pointer(C.pn_message_error(m.pn))))
+		return fmt.Errorf("decoding message: %s", PnError(C.pn_message_error(m.pn)))
 	}
 	return nil
 }
@@ -336,7 +335,7 @@ func (m *message) Encode(buffer []byte) ([]byte, error) {
 		case result == C.PN_OVERFLOW:
 			return buf, overflow
 		case result < 0:
-			return buf, internal.Errorf("cannot encode message: %s", internal.PnErrorCode(result))
+			return buf, fmt.Errorf("cannot encode message: %s", PnErrorCode(result))
 		default:
 			return buf[:len], nil
 		}

@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"qpid.apache.org/internal"
 	"reflect"
 	"unsafe"
 )
@@ -47,9 +46,9 @@ func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
 
 func (e UnmarshalError) Error() string {
 	if e.GoType.Kind() != reflect.Ptr {
-		return fmt.Sprintf("proton: cannot unmarshal to type %s, not a pointer", e.GoType)
+		return fmt.Sprintf("cannot unmarshal to type %s, not a pointer", e.GoType)
 	} else {
-		return fmt.Sprintf("proton: cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
+		return fmt.Sprintf("cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
 	}
 }
 
@@ -57,8 +56,8 @@ func doRecover(err *error) {
 	r := recover()
 	switch r := r.(type) {
 	case nil:
-	case *UnmarshalError, internal.Error:
-		*err = r.(error)
+	case *UnmarshalError:
+		*err = r
 	default:
 		panic(r)
 	}
@@ -104,8 +103,11 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	var n int
-	for n == 0 && err == nil {
-		n = decode(data, d.buffer.Bytes())
+	for n == 0 {
+		n, err = decode(data, d.buffer.Bytes())
+		if err != nil {
+			return err
+		}
 		if n == 0 { // n == 0 means not enough data, read more
 			err = d.more()
 		} else {
@@ -183,13 +185,16 @@ func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
-	n = decode(data, bytes)
+	n, err = decode(data, bytes)
+	if err != nil {
+		return 0, err
+	}
 	if n == 0 {
-		err = internal.Errorf("not enough data")
+		return 0, fmt.Errorf("not enough data")
 	} else {
 		unmarshal(v, data)
 	}
-	return
+	return n, nil
 }
 
 // more reads more data when we can't parse a complete AMQP type
@@ -543,16 +548,16 @@ func getList(data *C.pn_data_t, v interface{}) {
 // decode from bytes.
 // Return bytes decoded or 0 if we could not decode a complete object.
 //
-func decode(data *C.pn_data_t, bytes []byte) int {
+func decode(data *C.pn_data_t, bytes []byte) (int, error) {
 	if len(bytes) == 0 {
-		return 0
+		return 0, nil
 	}
 	n := int(C.pn_data_decode(data, cPtr(bytes), cLen(bytes)))
 	if n == int(C.PN_UNDERFLOW) {
 		C.pn_error_clear(C.pn_data_error(data))
-		return 0
+		return 0, nil
 	} else if n <= 0 {
-		panic(internal.Errorf("unmarshal %s", internal.PnErrorCode(n)))
+		return 0, fmt.Errorf("unmarshal %s", PnErrorCode(n))
 	}
-	return n
+	return n, nil
 }

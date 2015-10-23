@@ -34,7 +34,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"qpid.apache.org/internal"
 	"sync"
 	"unsafe"
 )
@@ -113,7 +112,7 @@ func (b *bufferChan) buffer() []byte {
 //
 type Engine struct {
 	// Error is set on exit from Run() if there was an error.
-	err    internal.ErrorHolder
+	err    ErrorHolder
 	inject chan func()
 
 	conn       net.Conn
@@ -128,9 +127,6 @@ type Engine struct {
 }
 
 const bufferSize = 4096
-
-// Map of Connection to *Engine
-var engines = internal.MakeSafeMap()
 
 // NewEngine initializes a engine with a connection and handlers. To start it running:
 //    eng := NewEngine(...)
@@ -152,7 +148,7 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 		running:    make(chan struct{}),
 	}
 	if eng.transport.IsNil() || eng.connection.IsNil() || eng.collector == nil {
-		return nil, internal.Errorf("failed to allocate engine")
+		return nil, fmt.Errorf("failed to allocate engine")
 	}
 
 	// TODO aconway 2015-06-25: connection settings for user, password, container etc.
@@ -160,14 +156,13 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	// to run connection.
 
 	// Unique container-id by default.
-	eng.connection.SetContainer(internal.UUID4().String())
+	eng.connection.SetContainer(UUID4().String())
 	pnErr := eng.transport.Bind(eng.connection)
 	if pnErr != 0 {
-		return nil, internal.Errorf("cannot setup engine: %s", internal.PnErrorCode(pnErr))
+		return nil, fmt.Errorf("cannot setup engine: %s", PnErrorCode(pnErr))
 	}
 	C.pn_connection_collect(eng.connection.pn, eng.collector)
 	eng.connection.Open()
-	connectionContexts.Put(eng.connection, connectionContext{eng.String()})
 	return eng, nil
 }
 
@@ -320,7 +315,6 @@ func (eng *Engine) Run() error {
 	wait.Wait()
 	close(eng.running) // Signal goroutines have exited and Error is set.
 
-	connectionContexts.Delete(eng.connection)
 	if !eng.connection.IsNil() {
 		eng.connection.Free()
 	}
@@ -360,7 +354,7 @@ func (eng *Engine) pop(buf *[]byte) {
 		*buf = (*buf)[:]
 		return
 	case pending < 0:
-		panic(internal.Errorf("%s", internal.PnErrorCode(pending)))
+		panic(fmt.Errorf("%s", PnErrorCode(pending)))
 	}
 	size := minInt(pending, cap(*buf))
 	*buf = (*buf)[:size]
@@ -368,7 +362,7 @@ func (eng *Engine) pop(buf *[]byte) {
 		return
 	}
 	C.memcpy(unsafe.Pointer(&(*buf)[0]), eng.transport.Head(), C.size_t(size))
-	internal.Assert(size > 0)
+	assert(size > 0)
 	eng.transport.Pop(uint(size))
 }
 
@@ -377,7 +371,7 @@ func (eng *Engine) push(buf []byte) {
 	for len(buf2) > 0 {
 		n := eng.transport.Push(buf2)
 		if n <= 0 {
-			panic(internal.Errorf("error in transport: %s", internal.PnErrorCode(n)))
+			panic(fmt.Errorf("error in transport: %s", PnErrorCode(n)))
 		}
 		buf2 = buf2[n:]
 	}

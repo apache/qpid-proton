@@ -24,7 +24,6 @@ import "C"
 
 import (
 	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"reflect"
 	"time"
@@ -129,7 +128,7 @@ func (s *sender) sendInternal(snd sendMessage, timeout time.Duration) (SentMessa
 	if _, err := timedReceive(s.credit, timeout); err != nil { // Wait for credit
 		if err == Closed {
 			err = s.Error()
-			internal.Assert(err != nil)
+			assert(err != nil)
 		}
 		return nil, err
 	}
@@ -153,7 +152,7 @@ func (s *sender) doSend(snd sendMessage) {
 			s.handler().sentMessages[delivery] = sm
 		}
 	default:
-		internal.Assert(false, "bad SentMessage type %T", snd.sm)
+		assert(false, "bad SentMessage type %T", snd.sm)
 	}
 	if s.eLink.Credit() > 0 {
 		s.sendable() // Signal credit.

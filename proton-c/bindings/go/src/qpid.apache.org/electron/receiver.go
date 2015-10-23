@@ -20,8 +20,8 @@ under the License.
 package electron
 
 import (
+	"fmt"
 	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"time"
 )
@@ -148,7 +148,7 @@ func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
-	internal.Assert(r.buffer != nil, "Receiver is not open: %s", r)
+	assert(r.buffer != nil, "Receiver is not open: %s", r)
 	r.policy.Pre(r)
 	defer func() { r.policy.Post(r, err) }()
 	rmi, err := timedReceive(r.buffer, timeout)
@@ -174,10 +174,10 @@ func (r *receiver) message(delivery proton.Delivery) {
 			localClose(r.eLink, err)
 			return
 		}
-		internal.Assert(m != nil)
+		assert(m != nil)
 		r.eLink.Advance()
 		if r.eLink.Credit() < 0 {
-			localClose(r.eLink, internal.Errorf("received message in excess of credit limit"))
+			localClose(r.eLink, fmt.Errorf("received message in excess of credit limit"))
 		} else {
 			// We never issue more credit than cap(buffer) so this will not block.
 			r.buffer <- ReceivedMessage{m, delivery, r}

@@ -21,7 +21,6 @@ package electron
 
 import (
 	"io"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 )
 
@@ -52,7 +51,7 @@ type Endpoint interface {
 }
 
 type endpoint struct {
-	err internal.ErrorHolder
+	err proton.ErrorHolder
 	str string // Must be set by the value that embeds endpoint.
 }
 

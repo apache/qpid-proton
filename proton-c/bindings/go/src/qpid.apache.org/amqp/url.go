@@ -33,9 +33,9 @@ inline void	set(pn_url_t *url, setter_fn s, const char* value) {
 import "C"
 
 import (
+	"fmt"
 	"net"
 	"net/url"
-	"qpid.apache.org/internal"
 	"unsafe"
 )
 
@@ -54,7 +54,7 @@ func ParseURL(s string) (u *url.URL, err error) {
 	defer C.free(unsafe.Pointer(cstr))
 	pnUrl := C.pn_url_parse(cstr)
 	if pnUrl == nil {
-		return nil, internal.Errorf("bad URL %#v", s)
+		return nil, fmt.Errorf("bad URL %#v", s)
 	}
 	defer C.pn_url_free(pnUrl)
 
@@ -66,7 +66,7 @@ func ParseURL(s string) (u *url.URL, err error) {
 	path := C.GoString(C.pn_url_get_path(pnUrl))
 
 	if err != nil {
-		return nil, internal.Errorf("bad URL %#v: %s", s, err)
+		return nil, fmt.Errorf("bad URL %#v: %s", s, err)
 	}
 	if scheme == "" {
 		scheme = amqp

@@ -27,14 +27,11 @@ import (
 type Session interface {
 	Endpoint
 
-	// Sender opens a new sender. v can be a string, which is used as the Target
-	// address, or a SenderSettings struct containing more details settings.
-	Sender(...LinkSetting) (Sender, error)
+	// Sender opens a new sender.
+	Sender(...LinkOption) (Sender, error)
 
-	// Receiver opens a new Receiver. v can be a string, which is used as the
-	// Source address, or a ReceiverSettings struct containing more details
-	// settings.
-	Receiver(...LinkSetting) (Receiver, error)
+	// Receiver opens a new Receiver.
+	Receiver(...LinkOption) (Receiver, error)
 }
 
 type session struct {
@@ -44,15 +41,14 @@ type session struct {
 	capacity   uint
 }
 
-// SessionSetting can be passed when creating a sender or receiver.
-// See functions that return SessionSetting for details
-type SessionSetting func(*session)
+// SessionOption can be passed when creating a Session
+type SessionOption func(*session)
 
 // IncomingCapacity sets the size (in bytes) of the sessions incoming data buffer..
-func IncomingCapacity(cap uint) SessionSetting { return func(s *session) { s.capacity = cap } }
+func IncomingCapacity(cap uint) SessionOption { return func(s *session) { s.capacity = cap } }
 
 // in proton goroutine
-func newSession(c *connection, es proton.Session, setting ...SessionSetting) *session {
+func newSession(c *connection, es proton.Session, setting ...SessionOption) *session {
 	s := &session{
 		connection: c,
 		eSession:   es,
@@ -76,7 +72,7 @@ func (s *session) Close(err error) {
 
 func (s *session) SetCapacity(bytes uint) { s.capacity = bytes }
 
-func (s *session) Sender(setting ...LinkSetting) (snd Sender, err error) {
+func (s *session) Sender(setting ...LinkOption) (snd Sender, err error) {
 	err = s.engine().InjectWait(func() error {
 		l, err := localLink(s, true, setting...)
 		if err == nil {
@@ -87,7 +83,7 @@ func (s *session) Sender(setting ...LinkSetting) (snd Sender, err error) {
 	return
 }
 
-func (s *session) Receiver(setting ...LinkSetting) (rcv Receiver, err error) {
+func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 	err = s.engine().InjectWait(func() error {
 		l, err := localLink(s, false, setting...)
 		if err == nil {

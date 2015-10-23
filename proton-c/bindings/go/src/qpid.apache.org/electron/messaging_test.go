@@ -386,7 +386,7 @@ func TestConnectionCloseInterrupt1(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
 			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil and EOF.
-			t.Logf("want %v got %v", want, r)
+			t.Logf("want %v got %v", want, r.err)
 		}
 	}
 }
@@ -411,7 +411,7 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
 			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil.
-			t.Logf("want %v got %v", want, r)
+			t.Logf("want %v got %v", want, r.err)
 		}
 	}
 }

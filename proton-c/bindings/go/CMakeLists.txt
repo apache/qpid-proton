@@ -45,7 +45,7 @@ set(GO_ENV ${env_py} --
 set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 
 set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
-set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install")
+set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
 set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
 
 # Go build depends on the C headers
@@ -76,7 +76,8 @@ foreach (pkg amqp proton electron)
 
   # Build the package library
   add_custom_command(
-    OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package} DEPENDS ${sources} ${cdepends}
+    OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package}
+    DEPENDS ${sources} ${cdepends}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
   set(target go-package-${pkg})
   add_custom_target(${target} ALL DEPENDS ${lib})
@@ -86,7 +87,8 @@ foreach (pkg amqp proton electron)
   set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/${pkg}.test)
   add_custom_command(
     OUTPUT ${test_exe} COMMAND ${GO_TEST} -c -o ${test_exe} ${package}
-    DEPENDS ${target} qpid-proton)
+    DEPENDS ${sources} ${cdepends} qpid-proton
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
   add_custom_target(go-package-test-${pkg} ALL DEPENDS ${test_exe})
   add_test(NAME go_test_${pkg} COMMAND ${test_exe} WORKING_DIRECTORY ${dir})
 

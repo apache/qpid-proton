@@ -25,8 +25,10 @@ package proton
 import "C"
 
 import (
-	"qpid.apache.org/internal"
+	"fmt"
 	"qpid.apache.org/amqp"
+	"strconv"
+	"sync/atomic"
 )
 
 // HasMessage is true if all message data is available.
@@ -41,42 +43,47 @@ func (d Delivery) HasMessage() bool { return !d.IsNil() && d.Readable() && !d.Pa
 // Will return an error if message is incomplete or not current.
 func (delivery Delivery) Message() (m amqp.Message, err error) {
 	if !delivery.Readable() {
-		return nil, internal.Errorf("delivery is not readable")
+		return nil, fmt.Errorf("delivery is not readable")
 	}
 	if delivery.Partial() {
-		return nil, internal.Errorf("delivery has partial message")
+		return nil, fmt.Errorf("delivery has partial message")
 	}
 	data := make([]byte, delivery.Pending())
 	result := delivery.Link().Recv(data)
 	if result != len(data) {
-		return nil, internal.Errorf("cannot receive message: %s", internal.PnErrorCode(result))
+		return nil, fmt.Errorf("cannot receive message: %s", PnErrorCode(result))
 	}
 	m = amqp.NewMessage()
 	err = m.Decode(data)
 	return
 }
 
-// TODO aconway 2015-04-08: proper handling of delivery tags. Tag counter per link.
-var tags internal.IdCounter
+// Process-wide atomic counter for generating tag names
+var tagCounter uint64
+
+func nextTag() string {
+	return strconv.FormatUint(atomic.AddUint64(&tagCounter, 1), 32)
+}
 
 // Send sends a amqp.Message over a Link.
 // Returns a Delivery that can be use to determine the outcome of the message.
 func (link Link) Send(m amqp.Message) (Delivery, error) {
 	if !link.IsSender() {
-		return Delivery{}, internal.Errorf("attempt to send message on receiving link")
+		return Delivery{}, fmt.Errorf("attempt to send message on receiving link")
 	}
-	delivery := link.Delivery(tags.Next())
+
+	delivery := link.Delivery(nextTag())
 	bytes, err := m.Encode(nil)
 	if err != nil {
-		return Delivery{}, internal.Errorf("cannot send mesage %s", err)
+		return Delivery{}, fmt.Errorf("cannot send mesage %s", err)
 	}
 	result := link.SendBytes(bytes)
 	link.Advance()
 	if result != len(bytes) {
 		if result < 0 {
-			return delivery, internal.Errorf("send failed %v", internal.PnErrorCode(result))
+			return delivery, fmt.Errorf("send failed %v", PnErrorCode(result))
 		} else {
-			return delivery, internal.Errorf("send incomplete %v of %v", result, len(bytes))
+			return delivery, fmt.Errorf("send incomplete %v of %v", result, len(bytes))
 		}
 	}
 	if link.RemoteSndSettleMode() == SndSettled {

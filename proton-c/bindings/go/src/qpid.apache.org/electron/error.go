@@ -17,41 +17,19 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package internal
+package electron
 
 import (
-	"sync"
+	"fmt"
 )
 
-// SafeMap is a goroutine-safe map of interface{} to interface{}.
-type SafeMap struct {
-	m    map[interface{}]interface{}
-	lock sync.Mutex
-}
-
-func MakeSafeMap() SafeMap { return SafeMap{m: make(map[interface{}]interface{})} }
-
-func (m *SafeMap) Get(key interface{}) interface{} {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	return m.m[key]
-}
-
-func (m *SafeMap) GetOk(key interface{}) (interface{}, bool) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	v, ok := m.m[key]
-	return v, ok
-}
-
-func (m *SafeMap) Put(key, value interface{}) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.m[key] = value
-}
-
-func (m *SafeMap) Delete(key interface{}) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	delete(m.m, key)
+// assert panics if condition is false with optional formatted message
+func assert(condition bool, format ...interface{}) {
+	if !condition {
+		if len(format) > 0 {
+			panic(fmt.Errorf(format[0].(string), format[1:]...))
+		} else {
+			panic(fmt.Errorf("assertion failed"))
+		}
+	}
 }

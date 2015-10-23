@@ -52,7 +52,6 @@ package proton
 import (
 	"time"
   "unsafe"
-  "qpid.apache.org/proton/internal"
 )
 
 // #include <proton/types.h>
@@ -322,7 +321,7 @@ func mapType(ctype string) (g genType) {
 		g.ToGo = func(v string) string { return fmt.Sprintf("goTime(%s)", v) }
 	case "C.pn_error_t *":
 		g.Gotype = "error"
-		g.ToGo = func(v string) string { return fmt.Sprintf("internal.PnError(unsafe.Pointer(%s))", v) }
+		g.ToGo = func(v string) string { return fmt.Sprintf("PnError(%s)", v) }
 	default:
 		pnId := regexp.MustCompile(" *pn_([a-z_]+)_t *\\*? *")
 		match := pnId.FindStringSubmatch(g.Ctype)

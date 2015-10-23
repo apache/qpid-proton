@@ -18,7 +18,7 @@ under the License.
 */
 
 // Internal implementation details - ignore.
-package internal
+package proton
 
 // #cgo LDFLAGS: -lqpid-proton
 // #include <proton/error.h>
@@ -29,21 +29,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"unsafe"
 )
-
-// Error type for proton runtime errors returned as error values.
-type Error string
-
-// Error prefixes error message with proton:
-func (e Error) Error() string {
-	return "proton: " + string(e)
-}
-
-// Errorf creates an Error with a formatted message
-func Errorf(format string, a ...interface{}) Error {
-	return Error(fmt.Sprintf(format, a...))
-}
 
 type PnErrorCode int
 
@@ -72,19 +58,11 @@ func (e PnErrorCode) String() string {
 	}
 }
 
-func PnError(p unsafe.Pointer) error {
-	e := (*C.pn_error_t)(p)
+func PnError(e *C.pn_error_t) error {
 	if e == nil || C.pn_error_code(e) == 0 {
 		return nil
 	}
-	return Errorf("%s: %s", PnErrorCode(C.pn_error_code(e)), C.GoString(C.pn_error_text(e)))
-}
-
-// panicIf panics if condition is true, the panic value is Errorf(fmt, args...)
-func panicIf(condition bool, fmt string, args ...interface{}) {
-	if condition {
-		panic(Errorf(fmt, args...))
-	}
+	return fmt.Errorf("%s: %s", PnErrorCode(C.pn_error_code(e)), C.GoString(C.pn_error_text(e)))
 }
 
 // ErrorHolder is a goroutine-safe error holder that keeps the first error that is set.
@@ -106,13 +84,13 @@ func (e *ErrorHolder) Get() (err error) {
 	return
 }
 
-// Assert panics if condition is false with optional formatted message
-func Assert(condition bool, format ...interface{}) {
+// assert panics if condition is false with optional formatted message
+func assert(condition bool, format ...interface{}) {
 	if !condition {
 		if len(format) > 0 {
-			panic(Errorf(format[0].(string), format[1:]...))
+			panic(fmt.Errorf(format[0].(string), format[1:]...))
 		} else {
-			panic(Errorf("assertion failed"))
+			panic(fmt.Errorf("assertion failed"))
 		}
 	}
 }

@@ -20,7 +20,7 @@ under the License.
 package electron
 
 import (
-	"qpid.apache.org/internal"
+	"fmt"
 	"qpid.apache.org/proton"
 )
 
@@ -60,38 +60,37 @@ type Link interface {
 	open()
 }
 
-// LinkSetting can be passed when creating a sender or receiver.
-// See functions that return LinkSetting for details
-type LinkSetting func(*link)
+// LinkOption can be passed when creating a sender or receiver link.
+type LinkOption func(*link)
 
 // Source sets address that messages are coming from.
-func Source(s string) LinkSetting { return func(l *link) { l.source = s } }
+func Source(s string) LinkOption { return func(l *link) { l.source = s } }
 
 // Target sets address that messages are going to.
-func Target(s string) LinkSetting { return func(l *link) { l.target = s } }
+func Target(s string) LinkOption { return func(l *link) { l.target = s } }
 
 // LinkName sets the link name.
-func LinkName(s string) LinkSetting { return func(l *link) { l.target = s } }
+func LinkName(s string) LinkOption { return func(l *link) { l.target = s } }
 
 // SndSettle sets the send settle mode
-func SndSettle(m SndSettleMode) LinkSetting { return func(l *link) { l.sndSettle = m } }
+func SndSettle(m SndSettleMode) LinkOption { return func(l *link) { l.sndSettle = m } }
 
 // RcvSettle sets the send settle mode
-func RcvSettle(m RcvSettleMode) LinkSetting { return func(l *link) { l.rcvSettle = m } }
+func RcvSettle(m RcvSettleMode) LinkOption { return func(l *link) { l.rcvSettle = m } }
 
 // SndSettleMode defines when the sending end of the link settles message delivery.
 type SndSettleMode proton.SndSettleMode
 
 // Capacity sets the link capacity
-func Capacity(n int) LinkSetting { return func(l *link) { l.capacity = n } }
+func Capacity(n int) LinkOption { return func(l *link) { l.capacity = n } }
 
 // Prefetch sets a receivers pre-fetch flag. Not relevant for a sender.
-func Prefetch(p bool) LinkSetting { return func(l *link) { l.prefetch = p } }
+func Prefetch(p bool) LinkOption { return func(l *link) { l.prefetch = p } }
 
 // AtMostOnce sets "fire and forget" mode, messages are sent but no
 // acknowledgment is received, messages can be lost if there is a network
 // failure. Sets SndSettleMode=SendSettled and RcvSettleMode=RcvFirst
-func AtMostOnce() LinkSetting {
+func AtMostOnce() LinkOption {
 	return func(l *link) {
 		SndSettle(SndSettled)(l)
 		RcvSettle(RcvFirst)(l)
@@ -103,7 +102,7 @@ func AtMostOnce() LinkSetting {
 // failure, unacknowledged messages can be re-sent but there is a chance
 // that the message will be received twice in this case.
 // Sets SndSettleMode=SndUnsettled and RcvSettleMode=RcvFirst
-func AtLeastOnce() LinkSetting {
+func AtLeastOnce() LinkOption {
 	return func(l *link) {
 		SndSettle(SndUnsettled)(l)
 		RcvSettle(RcvFirst)(l)
@@ -161,7 +160,7 @@ func (l *link) engine() *proton.Engine { return l.session.connection.engine }
 func (l *link) handler() *handler      { return l.session.connection.handler }
 
 // Set up link fields and open the proton.Link
-func localLink(sn *session, isSender bool, setting ...LinkSetting) (link, error) {
+func localLink(sn *session, isSender bool, setting ...LinkOption) (link, error) {
 	l := link{
 		session:  sn,
 		isSender: isSender,
@@ -181,7 +180,7 @@ func localLink(sn *session, isSender bool, setting ...LinkSetting) (link, error)
 		l.eLink = l.session.eSession.Receiver(l.linkName)
 	}
 	if l.eLink.IsNil() {
-		l.err.Set(internal.Errorf("cannot create link %s", l))
+		l.err.Set(fmt.Errorf("cannot create link %s", l))
 		return l, l.err.Get()
 	}
 	l.eLink.Source().SetAddress(l.source)

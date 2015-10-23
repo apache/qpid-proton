@@ -37,7 +37,6 @@ import "C"
 import (
 	"fmt"
 	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"reflect"
 	"time"
 	"unsafe"
@@ -125,9 +124,7 @@ func (d Data) Free()                   { C.pn_data_free(d.pn) }
 func (d Data) Pointer() unsafe.Pointer { return unsafe.Pointer(d.pn) }
 func (d Data) Clear()                  { C.pn_data_clear(d.pn) }
 func (d Data) Rewind()                 { C.pn_data_rewind(d.pn) }
-func (d Data) Error() error {
-	return internal.PnError(unsafe.Pointer(C.pn_data_error(d.pn)))
-}
+func (d Data) Error() error            { return PnError(C.pn_data_error(d.pn)) }
 
 // State holds the state flags for an AMQP endpoint.
 type State byte
@@ -283,18 +280,8 @@ func (s Session) Receiver(name string) Link {
 	return Link{C.pn_receiver(s.pn, cname)}
 }
 
-// Context information per connection.
-type connectionContext struct {
-	str string
-}
-
-var connectionContexts = internal.MakeSafeMap()
-
 // Unique (per process) string identifier for a connection, useful for debugging.
 func (c Connection) String() string {
-	if cc, ok := connectionContexts.Get(c).(connectionContext); ok {
-		return cc.str
-	}
 	return fmt.Sprintf("%x", c.pn)
 }
 

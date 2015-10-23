@@ -25,7 +25,6 @@ under the License.
 package proton
 
 import (
-	"qpid.apache.org/internal"
 	"time"
 	"unsafe"
 )
@@ -158,7 +157,7 @@ func (s Session) State() State {
 	return State(C.pn_session_state(s.pn))
 }
 func (s Session) Error() error {
-	return internal.PnError(unsafe.Pointer(C.pn_session_error(s.pn)))
+	return PnError(C.pn_session_error(s.pn))
 }
 func (s Session) Condition() Condition {
 	return Condition{C.pn_session_condition(s.pn)}
@@ -258,7 +257,7 @@ func (l Link) State() State {
 	return State(C.pn_link_state(l.pn))
 }
 func (l Link) Error() error {
-	return internal.PnError(unsafe.Pointer(C.pn_link_error(l.pn)))
+	return PnError(C.pn_link_error(l.pn))
 }
 func (l Link) Condition() Condition {
 	return Condition{C.pn_link_condition(l.pn)}
@@ -668,7 +667,7 @@ func (c Connection) Release() {
 	C.pn_connection_release(c.pn)
 }
 func (c Connection) Error() error {
-	return internal.PnError(unsafe.Pointer(C.pn_connection_error(c.pn)))
+	return PnError(C.pn_connection_error(c.pn))
 }
 func (c Connection) State() State {
 	return State(C.pn_connection_state(c.pn))
@@ -780,7 +779,7 @@ func (t Transport) Condition() Condition {
 	return Condition{C.pn_transport_condition(t.pn)}
 }
 func (t Transport) Error() error {
-	return internal.PnError(unsafe.Pointer(C.pn_transport_error(t.pn)))
+	return PnError(C.pn_transport_error(t.pn))
 }
 func (t Transport) Bind(connection Connection) int {
 	return int(C.pn_transport_bind(t.pn, connection.pn))

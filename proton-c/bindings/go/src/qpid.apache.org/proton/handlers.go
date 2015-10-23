@@ -21,10 +21,7 @@ package proton
 
 // #include <proton/handlers.h>
 import "C"
-
-import (
-	"qpid.apache.org/internal"
-)
+import "fmt"
 
 // EventHandler handles core proton events.
 type EventHandler interface {
@@ -236,7 +233,7 @@ func (d endpointDelegator) HandleEvent(e Event) {
 
 	default:
 		// We shouldn't be called with any other event type.
-		panic(internal.Errorf("internal error, not an open/close event: %s", e))
+		panic(fmt.Errorf("internal error, not an open/close event: %s", e))
 	}
 }
 

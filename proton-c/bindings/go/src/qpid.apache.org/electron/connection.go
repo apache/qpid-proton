@@ -25,7 +25,6 @@ import "C"
 import (
 	"net"
 	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"sync"
 	"time"
@@ -36,24 +35,17 @@ type Connection interface {
 	Endpoint
 
 	// Sender opens a new sender on the DefaultSession.
-	//
-	// v can be a string, which is used as the Target address, or a SenderSettings
-	// struct containing more details settings.
-	Sender(...LinkSetting) (Sender, error)
+	Sender(...LinkOption) (Sender, error)
 
 	// Receiver opens a new Receiver on the DefaultSession().
-	//
-	// v can be a string, which is used as the
-	// Source address, or a ReceiverSettings struct containing more details
-	// settings.
-	Receiver(...LinkSetting) (Receiver, error)
+	Receiver(...LinkOption) (Receiver, error)
 
 	// DefaultSession() returns a default session for the connection. It is opened
 	// on the first call to DefaultSession and returned on subsequent calls.
 	DefaultSession() (Session, error)
 
 	// Session opens a new session.
-	Session(...SessionSetting) (Session, error)
+	Session(...SessionOption) (Session, error)
 
 	// Container for the connection.
 	Container() Container
@@ -68,9 +60,8 @@ type Connection interface {
 	WaitTimeout(time.Duration) error
 }
 
-// ConnectionSetting can be passed when creating a connection.
-// See functions that return ConnectionSetting for details
-type ConnectionSetting func(*connection)
+// ConnectionOption can be passed when creating a connection.
+type ConnectionOption func(*connection)
 
 // Server setting puts the connection in server mode.
 //
@@ -78,7 +69,7 @@ type ConnectionSetting func(*connection)
 // connection. Normally you would call this for a connection created by
 // net.Listener.Accept()
 //
-func Server() ConnectionSetting { return func(c *connection) { c.engine.Server() } }
+func Server() ConnectionOption { return func(c *connection) { c.engine.Server() } }
 
 // Accepter provides a function to be called when a connection receives an incoming
 // request to open an endpoint, one of IncomingSession, IncomingSender or IncomingReceiver.
@@ -87,7 +78,7 @@ func Server() ConnectionSetting { return func(c *connection) { c.engine.Server()
 // It can pass the endpoint to another goroutine for processing.
 //
 // By default all incoming endpoints are rejected.
-func Accepter(accept func(Incoming)) ConnectionSetting {
+func Accepter(accept func(Incoming)) ConnectionOption {
 	return func(c *connection) { c.accept = accept }
 }
 
@@ -100,14 +91,14 @@ type connection struct {
 	accept      func(Incoming)
 	handler     *handler
 	engine      *proton.Engine
-	err         internal.ErrorHolder
+	err         proton.ErrorHolder
 	eConnection proton.Connection
 
 	defaultSession Session
 	done           chan struct{}
 }
 
-func newConnection(conn net.Conn, cont *container, setting ...ConnectionSetting) (*connection, error) {
+func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
 	c := &connection{container: cont, conn: conn, accept: func(Incoming) {}, done: make(chan struct{})}
 	c.handler = newHandler(c)
 	var err error
@@ -128,7 +119,7 @@ func (c *connection) Close(err error) { c.err.Set(err); c.engine.Close(err) }
 
 func (c *connection) Disconnect(err error) { c.err.Set(err); c.engine.Disconnect(err) }
 
-func (c *connection) Session(setting ...SessionSetting) (Session, error) {
+func (c *connection) Session(setting ...SessionOption) (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
 		eSession, err := c.engine.Connection().Session()
@@ -155,7 +146,7 @@ func (c *connection) DefaultSession() (s Session, err error) {
 	return c.defaultSession, err
 }
 
-func (c *connection) Sender(setting ...LinkSetting) (Sender, error) {
+func (c *connection) Sender(setting ...LinkOption) (Sender, error) {
 	if s, err := c.DefaultSession(); err == nil {
 		return s.Sender(setting...)
 	} else {
@@ -163,7 +154,7 @@ func (c *connection) Sender(setting ...LinkSetting) (Sender, error) {
 	}
 }
 
-func (c *connection) Receiver(setting ...LinkSetting) (Receiver, error) {
+func (c *connection) Receiver(setting ...LinkOption) (Receiver, error) {
 	if s, err := c.DefaultSession(); err == nil {
 		return s.Receiver(setting...)
 	} else {

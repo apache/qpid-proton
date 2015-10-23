@@ -20,7 +20,7 @@ under the License.
 package electron
 
 import (
-	"qpid.apache.org/internal"
+	"fmt"
 	"reflect"
 	"time"
 )
@@ -38,7 +38,7 @@ import (
 // If timeout == Forever the function will return only when there is a result or
 // some non-timeout error occurs.
 //
-var Timeout = internal.Errorf("timeout")
+var Timeout = fmt.Errorf("timeout")
 
 // Forever can be used as a timeout parameter to indicate wait forever.
 const Forever time.Duration = -1
