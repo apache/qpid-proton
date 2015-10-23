@@ -64,7 +64,7 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
     PN_CPP_EXTERN void release() { settle(RELEASED); }
 
     /** settle with MODIFIED state */
-    PN_CPP_EXTERN void modifiy() { settle(MODIFIED); }
+    PN_CPP_EXTERN void modify() { settle(MODIFIED); }
 
     /**
      * Check if a delivery is readable.

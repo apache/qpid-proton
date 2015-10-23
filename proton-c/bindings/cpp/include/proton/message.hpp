@@ -63,8 +63,8 @@ class message
     ///@ Get message identifier reference, allows modification in-place.
     PN_CPP_EXTERN const data& id() const;
 
-    PN_CPP_EXTERN void user(const std::string &user);
-    PN_CPP_EXTERN std::string user() const;
+    PN_CPP_EXTERN void user_id(const std::string &user);
+    PN_CPP_EXTERN std::string user_id() const;
 
     PN_CPP_EXTERN void address(const std::string &addr);
     PN_CPP_EXTERN std::string address() const;

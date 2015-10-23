@@ -67,11 +67,11 @@ void message::id(const data& id) { *data::cast(pn_message_id(message_)) = id; }
 const data& message::id() const { return *data::cast(pn_message_id(message_)); }
 data& message::id() { return *data::cast(pn_message_id(message_)); }
 
-void message::user(const std::string &id) {
+void message::user_id(const std::string &id) {
     check(pn_message_set_user_id(message_, pn_bytes(id)));
 }
 
-std::string message::user() const {
+std::string message::user_id() const {
     return str(pn_message_get_user_id(message_));
 }
 
