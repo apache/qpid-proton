@@ -1,4 +1,4 @@
-# Qpid Go Libraries for AMQP
+# Qpid Go packages for AMQP
 
 These packages provide [Go](http://golang.org) support for sending and receiving
 AMQP messages in client or server applications. Reference documentation is
@@ -15,8 +15,8 @@ simple, concurrent-safe API for sending and receiving messages. It can be used
 with goroutines and channels to build concurrent AMQP clients and servers.
 
 [qpid.apache.org/proton](http://godoc.org/qpid.apache.org/proton) is an
-event-driven, concurrent-unsafe library that closely follows the proton C
-API. Most Go programmers will find the electron library easier to use.
+event-driven, concurrent-unsafe package that closely follows the proton C
+API. Most Go programmers will find the electron package easier to use.
 
 There are [examples](https://github.com/apache/qpid-proton/blob/master/examples/go/README.md)
 to help you get started.
@@ -93,4 +93,4 @@ If you are new to Go then these are a good place to start:
 - [A Tour of Go](http://tour.golang.org)
 - [Effective Go](http://golang.org/doc/effective_go.html)
 
-Then look at the tools and library docs at <http://golang.org> as you need them.
+Then look at the tools and docs at <http://golang.org> as you need them.
