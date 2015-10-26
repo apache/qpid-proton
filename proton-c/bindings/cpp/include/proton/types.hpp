@@ -240,7 +240,7 @@ struct start {
     PN_CPP_EXTERN static start described();
 };
 
-/** Finish insterting or extracting a container value. */
+/** Finish inserting or extracting a container value. */
 struct finish {};
 
 }

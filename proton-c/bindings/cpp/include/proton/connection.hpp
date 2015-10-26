@@ -57,7 +57,7 @@ class connection : public counted_facade<pn_connection_t, connection, endpoint>
     /** Create a new session */
     PN_CPP_EXTERN class session& open_session();
 
-    /** Default session is created on first call and re-used for the lifeime of the connection */
+    /** Default session is created on first call and re-used for the lifetime of the connection */
     PN_CPP_EXTERN class session& default_session();
 
     /** Create a sender on default_session() with target=addr and optional handler h */

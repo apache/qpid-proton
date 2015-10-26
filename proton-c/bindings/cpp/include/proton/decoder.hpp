@@ -62,7 +62,7 @@ struct rewind{};
  *
  * AMQP maps can be inserted/extracted to any container with pair<X,Y> as
  * value_type, which includes std::map and std::unordered_map but also for
- * example std::vector<std::pair<X,Y> >. This allows you to perserve order when
+ * example std::vector<std::pair<X,Y> >. This allows you to preserve order when
  * extracting AMQP maps.
  *
  * You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
@@ -157,7 +157,7 @@ class decoder : public facade<pn_data_t, decoder> {
      *     decoder >> finish();
      *
      * The first value of an ARRAY is a descriptor if start::descriptor is true,
-     * followed by start.size elemets of type start::element.
+     * followed by start.size elements of type start::element.
      *
      * A LIST has start.size elements which may be of mixed type.
      *
@@ -170,7 +170,7 @@ class decoder : public facade<pn_data_t, decoder> {
      * You must always end a complex type by extracting to an instance of `finish`,
      * the decoder::scope automates this.
      *
-     *@throw decoder::error if the curent value is not a container type.
+     *@throw decoder::error if the current value is not a container type.
      */
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, start&);
 

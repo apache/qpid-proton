@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     int message_count = 100;
     options opts(argc, argv);
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
-    opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
+    opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
     try {
         opts.parse();
         simple_send send(address, message_count);

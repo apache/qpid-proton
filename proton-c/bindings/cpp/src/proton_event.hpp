@@ -131,7 +131,7 @@ class proton_event : public event
 
     /**
      * The local session endpoint has been opened. Events of this type
-     * point ot the relevant session.
+     * point to the relevant session.
      */
     PN_CPP_EXTERN static const event_type SESSION_LOCAL_OPEN;
 

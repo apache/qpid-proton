@@ -113,7 +113,7 @@ class encoder : public facade<pn_data_t, encoder> {
      *
      * Use one of the static functions start::array(), start::list(),
      * start::map() or start::described() to create an appropriate start value
-     * and inser it into the encoder, followed by the contained elements.  For
+     * and insert it into the encoder, followed by the contained elements.  For
      * example:
      *
      *      encoder << start::list() << amqp_int(1) << amqp_symbol("two") << 3.0 << finish();
