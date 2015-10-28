@@ -191,7 +191,7 @@ class Configure(build_ext):
                               env={'PYTHONPATH': proton_base}, stdout=header)
 
         # Create a custom, temporary, version.h file mapping the
-        # major and minor versions from the downloaded tarbal. This version should
+        # major and minor versions from the downloaded tarball. This version should
         # match the ones in the bundle module
         with open(os.path.join(build_include, 'proton', 'version.h'), "wb") as ver:
             version_text = """
@@ -199,8 +199,9 @@ class Configure(build_ext):
 #define _PROTON_VERSION_H 1
 #define PN_VERSION_MAJOR %i
 #define PN_VERSION_MINOR %i
+#define PN_VERSION_POINT %i
 #endif /* version.h */
-""" % bundle.min_qpid_proton
+""" % bundle.bundled_version
             ver.write(version_text.encode('utf-8'))
 
         # Collect all the Proton C files that need to be built.
