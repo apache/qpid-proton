@@ -169,7 +169,7 @@ class LinkDetached(LinkException):
         else:
             txt += " by peer"
             self.condition = None
-        super(LinkDetached, self).__init__(txt)
+        LinkException.__init__(self, txt)
 
 
 class ConnectionClosed(ConnectionException):
@@ -182,7 +182,7 @@ class ConnectionClosed(ConnectionException):
         else:
             txt += " by peer"
             self.condition = None
-        super(ConnectionClosed, self).__init__(txt)
+        ConnectionException.__init__(self, txt)
 
 
 class BlockingConnection(Handler):
