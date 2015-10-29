@@ -26,6 +26,7 @@ against both the C and Java protocol implementations.
 # @todo(kgiusti) dynamically set these via filters in the pom.xml file
 PN_VERSION_MAJOR = 0
 PN_VERSION_MINOR = 0
+PN_VERSION_POINT = 0
 
 from ctypes import *
 from cobject import *
