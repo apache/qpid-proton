@@ -30,6 +30,7 @@ struct pn_data_t;
 namespace proton {
 
 class data;
+class message_id;
 
 /** Raised by encoder operations on error */
 struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&) throw(); };
@@ -85,7 +86,7 @@ class encoder : public facade<pn_data_t, encoder> {
      *@{
      */
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_null);
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_bool);
+  friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_boolean);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_ubyte);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_byte);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_ushort);
@@ -105,6 +106,7 @@ class encoder : public facade<pn_data_t, encoder> {
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_string);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_symbol);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_binary);
+  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const message_id&);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, const class data&);
     ///@}
 

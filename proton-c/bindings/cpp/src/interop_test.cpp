@@ -98,14 +98,14 @@ void test_encoder_primitives() {
 // Test type conversions.
 void test_value_conversions() {
     value v;
-    ASSERT_EQUAL(true, bool(v = true));
-    ASSERT_EQUAL(2, int(v=amqp_byte(2)));
-    ASSERT_EQUAL(3, long(v=amqp_byte(3)));
-    ASSERT_EQUAL(3, long(v=amqp_byte(3)));
-    ASSERT_EQUAL(1.0, double(v=amqp_float(1.0)));
-    ASSERT_EQUAL(1.0, float(v=amqp_double(1.0)));
-    try { (void)bool(v = amqp_byte(1)); FAIL("got byte as bool"); } catch (decode_error) {}
-    try { (void)float(v = true); FAIL("got bool as float"); } catch (decode_error) {}
+    ASSERT_EQUAL(true, (v=true).get<bool>());
+    ASSERT_EQUAL(2, (v=amqp_byte(2)).get<int>());
+    ASSERT_EQUAL(3, (v=amqp_byte(3)).get<long>());
+    ASSERT_EQUAL(3, (v=amqp_byte(3)).get<long>());
+    ASSERT_EQUAL(1.0, (v=amqp_float(1.0)).get<double>());
+    ASSERT_EQUAL(1.0, (v=amqp_double(1.0)).get<float>());
+    try { (void)(v = amqp_byte(1)).get<bool>(); FAIL("got byte as bool"); } catch (decode_error) {}
+    try { (void)(v = true).get<float>(); FAIL("got bool as float"); } catch (decode_error) {}
 }
 
 // TODO aconway 2015-06-11: interop test is not complete.

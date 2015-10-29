@@ -69,7 +69,7 @@ class server : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     // Command line options
-    std::string address("amqp://127.0.0.1:5672/examples");
+    std::string address("amqp://0.0.0.0:5672/examples");
     options opts(argc, argv);
     opts.add_value(address, 'a', "address", "listen on URL", "URL");
     try {

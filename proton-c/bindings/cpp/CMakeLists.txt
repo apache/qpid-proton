@@ -57,15 +57,16 @@ set(qpid-proton-cpp-source
   src/proton_handler.cpp
   src/reactor.cpp
   src/receiver.cpp
+  src/request_response.cpp
   src/sender.cpp
   src/session.cpp
-  src/request_response.cpp
   src/task.cpp
   src/terminus.cpp
   src/transport.cpp
   src/types.cpp
   src/url.cpp
   src/uuid.cpp
+  src/value.cpp
   )
 
 
@@ -160,4 +161,5 @@ macro(add_cpp_test test)
 endmacro(add_cpp_test)
 
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
-add_cpp_test(conversion_test ${CMAKE_SOURCE_DIR}/tests)
+add_cpp_test(conversion_test)
+add_cpp_test(encode_decode_test)

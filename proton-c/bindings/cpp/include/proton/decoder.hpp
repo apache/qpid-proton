@@ -30,6 +30,7 @@ struct pn_data_t;
 namespace proton {
 
 class data;
+class message_id;
 
 /** Raised by decoder operations on error.*/
 struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&) throw(); };
@@ -104,7 +105,7 @@ class decoder : public facade<pn_data_t, decoder> {
      * @{
      */
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_null);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_bool&);
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_boolean&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_ubyte&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_byte&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_ushort&);
@@ -122,6 +123,7 @@ class decoder : public facade<pn_data_t, decoder> {
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_decimal128&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_uuid&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, std::string&);
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, message_id&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, class data&);
     ///@}
 

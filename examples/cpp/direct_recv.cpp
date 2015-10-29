@@ -34,8 +34,8 @@
 class direct_recv : public proton::messaging_handler {
   private:
     proton::url url;
-    int expected;
-    int received;
+    uint64_t expected;
+    uint64_t received;
     proton::counted_ptr<proton::acceptor> acceptor;
 
   public:
@@ -48,11 +48,8 @@ class direct_recv : public proton::messaging_handler {
 
     void on_message(proton::event &e) {
         proton::message& msg = e.message();
-        proton::value id = msg.id();
-        if (id.type() == proton::ULONG) {
-            if (id.get<int>() < received)
-                return; // ignore duplicate
-        }
+        if (msg.id().get<uint64_t>() < received)
+            return; // ignore duplicate
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;

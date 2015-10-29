@@ -17,11 +17,14 @@
  * under the License.
  */
 
+#include "proton/data.hpp"
 #include "proton/decoder.hpp"
 #include "proton/value.hpp"
-#include <proton/codec.h>
+#include "proton/message_id.hpp"
 #include "proton_bits.hpp"
 #include "msg.hpp"
+
+#include <proton/codec.h>
 
 namespace proton {
 
@@ -157,6 +160,17 @@ decoder& operator>>(decoder& d, data& v) {
     return d;
 }
 
+decoder& operator>>(decoder& d, message_id& id) {
+    switch (d.type()) {
+      case ULONG:
+      case UUID:
+      case BINARY:
+      case STRING:
+        return d >> id.value_;
+      default:
+        throw decode_error("expected one of ulong, uuid, binary or string but found "+d.type());
+    };
+}
 
 decoder& operator>>(decoder& d, amqp_null) {
     save_state ss(pn_cast(&d));
@@ -164,7 +178,7 @@ decoder& operator>>(decoder& d, amqp_null) {
     return d;
 }
 
-decoder& operator>>(decoder& d, amqp_bool& value) {
+decoder& operator>>(decoder& d, amqp_boolean& value) {
     extract(pn_cast(&d), value, pn_data_get_bool);
     return d;
 }

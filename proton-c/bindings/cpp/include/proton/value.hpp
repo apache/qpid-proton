@@ -20,57 +20,60 @@
  */
 
 #include "proton/data.hpp"
+#include "proton/decoder.hpp"
+#include "proton/pn_unique_ptr.hpp"
+#include "proton/types.hpp"
 
 namespace proton {
 
+class data;
+class encoder;
+class decoder;
+
 /** AMQP data  with normal value semantics: copy, assign etc. */
-class value {
+class value : public comparable<value> {
   public:
-    value() : data_(data::create()) {}
-    value(const value& x) : data_(data::create()) { *data_ = *x.data_; }
-    value(const data& x) : data_(data::create()) { *data_ = x; }
+    PN_CPP_EXTERN value();
+    PN_CPP_EXTERN value(const value& x);
     template <class T> value(const T& x) : data_(data::create()) { *data_ = x; }
 
-    operator data&() { return *data_; }
-    operator const data&() const { return *data_; }
-
-    value& operator=(const value& x) { *data_ = *x.data_; return *this; }
-    value& operator=(const data& x) { *data_ = x; return *this; }
+    PN_CPP_EXTERN value& operator=(const value& x);
+    PN_CPP_EXTERN value& operator=(const data& x);
     template <class T> value& operator=(const T& x) { *data_ = x; return *this; }
 
-    void clear() { data_->clear(); }
-    bool empty() const { return data_->empty(); }
+    PN_CPP_EXTERN void clear();
+    PN_CPP_EXTERN bool empty() const;
 
-    /** Encoder to encode into this value */
-    class encoder& encoder() { return data_->encoder(); }
+    /** Encoder to encode complex data into this value.
+     * Note if you enocde more than one value, all but the first will be ignored.
+     */
+    PN_CPP_EXTERN class encoder& encoder();
 
-    /** Decoder to decode from this value */
-    class decoder& decoder() { return data_->decoder(); }
+    /** Decoder to decode complex data from this value */
+    PN_CPP_EXTERN class decoder& decoder();
 
     /** Type of the current value*/
-    type_id type() { return decoder().type(); }
+    PN_CPP_EXTERN type_id type() const;
 
-    /** Get the current value, don't move the decoder pointer. */
-    template<class T> void get(T &t) { decoder() >> t; decoder().backup(); }
+    /** Get the value. */
+    template<class T> void get(T &t) const { rewind() >> t; }
 
-    /** Get the current value */
-    template<class T> T get() { T t; get(t); return t; }
-    template<class T> operator T() { return get<T>(); }
+    /** Get the value. */
+    template<class T> T get() const { T t; get(t); return t; }
 
-    bool operator==(const value& x) const { return *data_ == *x.data_; }
-    bool operator<(const value& x) const { return *data_ < *x.data_; }
+    PN_CPP_EXTERN bool operator==(const value& x) const;
+    PN_CPP_EXTERN bool operator<(const value& x) const;
 
-  friend inline class encoder& operator<<(class encoder& e, const value& dv) {
-      return e << *dv.data_;
-  }
-  friend inline class decoder& operator>>(class decoder& d, value& dv) {
-      return d >> *dv.data_;
-  }
-  friend inline std::ostream& operator<<(std::ostream& o, const value& dv) {
-      return o << *dv.data_;
-  }
+  friend PN_CPP_EXTERN class encoder& operator<<(class encoder& e, const value& dv);
+  friend PN_CPP_EXTERN class decoder& operator>>(class decoder& d, value& dv);
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
+
   private:
+    value(const data&);
+    class decoder& rewind() const { data_->decoder().rewind(); return data_->decoder(); }
+
     pn_unique_ptr<data> data_;
+  friend class message;
 };
 
 

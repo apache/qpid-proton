@@ -21,9 +21,10 @@
  * under the License.
  *
  */
-#include "proton/data.hpp"
 #include "proton/export.hpp"
 #include "proton/facade.hpp"
+#include "proton/message_id.hpp"
+#include "proton/data.hpp"
 #include "proton/pn_unique_ptr.hpp"
 
 #include <string>
@@ -35,6 +36,7 @@ namespace proton {
 
 class link;
 class delivery;
+class message_id;
 
 /** An AMQP message. Value semantics, can be copied or assigned to make a new message. */
 class message
@@ -56,12 +58,8 @@ class message
     ///@name Message properties
     ///@{
 
-    ///@ Set message identifier, can be a string, unsigned long, uuid or binary.
-    PN_CPP_EXTERN void id(const data& id);
-    ///@ Get message identifier
-    PN_CPP_EXTERN data& id();
-    ///@ Get message identifier reference, allows modification in-place.
-    PN_CPP_EXTERN const data& id() const;
+    PN_CPP_EXTERN void id(const message_id& id);
+    PN_CPP_EXTERN message_id id() const;
 
     PN_CPP_EXTERN void user_id(const std::string &user);
     PN_CPP_EXTERN std::string user_id() const;
@@ -75,12 +73,8 @@ class message
     PN_CPP_EXTERN void reply_to(const std::string &s);
     PN_CPP_EXTERN std::string reply_to() const;
 
-    /// Get correlation identifier, can be a string, unsigned long, uuid or binary.
-    PN_CPP_EXTERN void correlation_id(const data&);
-    /// Get correlation identifier.
-    PN_CPP_EXTERN const data& correlation_id() const;
-    /// Get correlation identifier reference, allows modification in-place.
-    PN_CPP_EXTERN data& correlation_id();
+    PN_CPP_EXTERN void correlation_id(const message_id&);
+    PN_CPP_EXTERN message_id correlation_id() const;
 
     PN_CPP_EXTERN void content_type(const std::string &s);
     PN_CPP_EXTERN std::string content_type() const;

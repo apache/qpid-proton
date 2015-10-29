@@ -22,7 +22,7 @@
 #include "proton/request_response.hpp"
 #include "proton/event.hpp"
 #include "proton/error.hpp"
-#include "proton/value.hpp"
+#include "proton/message_id.hpp"
 #include "blocking_connection_impl.hpp"
 #include "msg.hpp"
 
@@ -39,7 +39,7 @@ message request_response::call(message &request) {
     if (address_.empty() && request.address().empty())
         throw error(MSG("Request message has no address"));
     // TODO: atomic increment.
-    value cid(++correlation_id_);
+    message_id cid(++correlation_id_);
     request.correlation_id(cid);
     request.reply_to(this->reply_to());
     sender_->send(request);

@@ -46,7 +46,7 @@ std::ostream& operator<<(std::ostream& o, const amqp_uuid& u) {
 std::string type_name(type_id t) {
     switch (t) {
       case NULL_: return "null";
-      case BOOL: return "bool";
+      case BOOLEAN: return "boolean";
       case UBYTE: return "ubyte";
       case BYTE: return "byte";
       case USHORT: return "ushort";

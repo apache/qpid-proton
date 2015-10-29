@@ -70,7 +70,7 @@ template <> struct is_signed<signed long long> : public true_type {};
 // Metafunction returning exact AMQP type associated with a C++ type
 template <class T> struct type_id_of;
 template<> struct type_id_of<amqp_null> { static const type_id value=NULL_; };
-template<> struct type_id_of<amqp_bool> { static const type_id value=BOOL; };
+template<> struct type_id_of<amqp_boolean> { static const type_id value=BOOLEAN; };
 template<> struct type_id_of<amqp_ubyte> { static const type_id value=UBYTE; };
 template<> struct type_id_of<amqp_byte> { static const type_id value=BYTE; };
 template<> struct type_id_of<amqp_ushort> { static const type_id value=USHORT; };

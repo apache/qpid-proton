@@ -61,11 +61,11 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     /** Type of the current value*/
     PN_CPP_EXTERN type_id type() const;
 
-    /** Get the current value, don't move the decoder pointer. */
-    template<class T> void get(T &t) { decoder() >> t; decoder().backup(); }
+    /** Get the first value, don't move the decoder pointer. */
+    template<class T> void get(T &t) const { decoder() >> t; decoder().backup(); }
 
-    /** Get the current value */
-    template<class T> T get() { T t; get(t); return t; }
+    /** Get the first value, don't move the decoder pointer. */
+    template<class T> T get() const { T t; get(t); return t; }
 
     PN_CPP_EXTERN bool operator==(const data& x) const;
     PN_CPP_EXTERN bool operator<(const data& x) const;
@@ -74,6 +74,9 @@ class data : public facade<pn_data_t, data, comparable<data> > {
 
     /** Human readable representation of data. */
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
+
+  private:
+    class decoder& decoder() const { return const_cast<data*>(this)->decoder(); }
 };
 
 }

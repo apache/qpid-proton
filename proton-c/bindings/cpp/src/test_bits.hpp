@@ -28,7 +28,7 @@ namespace {
 struct fail : public std::logic_error { fail(const std::string& what) : logic_error(what) {} };
 #define FAIL(WHAT) throw fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
 #define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
-#define ASSERT_EQUAL(WANT, GOT) if ((WANT) != (GOT)) \
+#define ASSERT_EQUAL(WANT, GOT) if (!((WANT) == (GOT))) \
         FAIL(#WANT << " !=  " << #GOT << ": " << WANT << " != " << GOT)
 
 int run_test(void (*testfn)(), const char* name) {

@@ -18,9 +18,11 @@
  */
 
 #include "proton_bits.hpp"
-#include "proton/value.hpp"
+#include "proton/data.hpp"
 
 #include <proton/codec.h>
+
+#include <ostream>
 
 namespace proton {
 
@@ -32,7 +34,20 @@ void data::clear() { ::pn_data_clear(pn_cast(this)); }
 
 bool data::empty() const { return ::pn_data_size(pn_cast(this)) == 0; }
 
-std::ostream& operator<<(std::ostream& o, const data& d) { return o << inspectable(pn_cast(&d)); }
+namespace {
+struct save_state {
+    pn_data_t* data;
+    pn_handle_t handle;
+    save_state(pn_data_t* d) : data(d), handle(pn_data_point(d)) {}
+    ~save_state() { if (data) pn_data_restore(data, handle); }
+};
+}
+
+std::ostream& operator<<(std::ostream& o, const data& d) {
+    save_state(pn_cast(&d));
+    d.decoder().rewind();
+    return o << inspectable(pn_cast(&d));
+}
 
 pn_unique_ptr<data> data::create() { return pn_unique_ptr<data>(cast(::pn_data(0))); }
 
@@ -88,7 +103,7 @@ int compare_next(data& a, data& b) {
       case MAP:
       case DESCRIBED:
         return compare_container(a, b);
-      case BOOL: return compare_simple<amqp_bool>(a, b);
+      case BOOLEAN: return compare_simple<amqp_boolean>(a, b);
       case UBYTE: return compare_simple<amqp_ubyte>(a, b);
       case BYTE: return compare_simple<amqp_byte>(a, b);
       case USHORT: return compare_simple<amqp_ushort>(a, b);
@@ -114,6 +129,8 @@ int compare_next(data& a, data& b) {
 }
 
 int compare(data& a, data& b) {
+    save_state(pn_cast(&a));
+    save_state(pn_cast(&b));
     a.decoder().rewind();
     b.decoder().rewind();
     while (a.decoder().more() && b.decoder().more()) {

@@ -197,29 +197,18 @@ class ExampleTest(unittest.TestCase):
 
     def test_encode_decode(self):
         expect="""
-== Simple values: int, string, bool
-Values: int(42), string("foo"), bool(true)
-Extracted: 42, foo, 1
-Encoded as AMQP in 8 bytes
-Decoded: 42, foo, 1
-
-== Specific AMQP types: byte, long, symbol
-Values: byte(120), long(123456789123456789), symbol(:bar)
-Extracted (with conversion) 120, 123456789123456789, bar
-Extracted (exact) x, 123456789123456789, bar
-
 == Array, list and map.
-Values: array<int>[int(1), int(2), int(3)], list[int(4), int(5)], map{string("one"):int(1), string("two"):int(2)}
+Values: array<int>[int(1), int(2), int(3)], list[int(4), int(5)], map{string(one):int(1), string(two):int(2)}
 Extracted: [ 1 2 3 ], [ 4 5 ], { one:1 two:2 }
 
 == List and map of mixed type values.
-Values: list[int(42), string("foo")], map{int(4):string("four"), string("five"):int(5)}
-Extracted: [ 42 "foo" ], { 4:"four" "five":5 }
+Values: list[int(42), string(foo)], map{int(4):string(four), string(five):int(5)}
+Extracted: [ 42 foo ], { 4:four five:5 }
 
 == Insert with stream operators.
 Values: array<int>[int(1), int(2), int(3)]
-Values: list[int(42), bool(false), symbol(:x)]
-Values: map{string("k1"):int(42), symbol(:"k2"):bool(false)}
+Values: list[int(42), boolean(false), symbol(x)]
+Values: map{string(k1):int(42), symbol(k2):boolean(false)}
 """
         self.maxDiff = None
         self.assertEqual(expect, execute("encode_decode"))

@@ -40,7 +40,7 @@ namespace proton {
 /** type_id identifies an AMQP type. */
 enum type_id {
     NULL_=PN_NULL,              ///< The null type, contains no data.
-    BOOL=PN_BOOL,               ///< Boolean true or false.
+    BOOLEAN=PN_BOOL,            ///< Boolean true or false.
     UBYTE=PN_UBYTE,             ///< Unsigned 8 bit integer.
     BYTE=PN_BYTE,               ///< Signed 8 bit integer.
     USHORT=PN_USHORT,           ///< Unsigned 16 bit integer.
@@ -73,7 +73,7 @@ PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
 /// AMQP NULL type.
 struct amqp_null {};
 /// AMQP boolean type.
-typedef bool amqp_bool;
+typedef bool amqp_boolean;
 /// AMQP unsigned 8-bit type.
 typedef ::uint8_t amqp_ubyte;
 /// AMQP signed 8-bit integer type.

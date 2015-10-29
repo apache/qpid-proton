@@ -17,11 +17,15 @@
  * under the License.
  */
 
+#include "proton/data.hpp"
 #include "proton/encoder.hpp"
+#include "proton/message_id.hpp"
 #include "proton/value.hpp"
-#include <proton/codec.h>
+
 #include "proton_bits.hpp"
 #include "msg.hpp"
+
+#include <proton/codec.h>
 
 namespace proton {
 
@@ -105,7 +109,7 @@ encoder& insert(encoder& e, pn_data_t* data, T& value, int (*put)(pn_data_t*, U)
 }
 
 encoder& operator<<(encoder& e, amqp_null) { pn_data_put_null(pn_cast(&e)); return e; }
-encoder& operator<<(encoder& e, amqp_bool value) { return insert(e, pn_cast(&e), value, pn_data_put_bool); }
+encoder& operator<<(encoder& e, amqp_boolean value) { return insert(e, pn_cast(&e), value, pn_data_put_bool); }
 encoder& operator<<(encoder& e, amqp_ubyte value) { return insert(e, pn_cast(&e), value, pn_data_put_ubyte); }
 encoder& operator<<(encoder& e, amqp_byte value) { return insert(e, pn_cast(&e), value, pn_data_put_byte); }
 encoder& operator<<(encoder& e, amqp_ushort value) { return insert(e, pn_cast(&e), value, pn_data_put_ushort); }
@@ -131,5 +135,7 @@ encoder& operator<<(encoder& e, const data& v) {
     check(pn_data_append(pn_cast(&e), pn_cast(&v)), pn_cast(&e));
     return e;
 }
+
+encoder& operator<<(encoder& e, const message_id& v) { return e << v.value_; }
 
 }

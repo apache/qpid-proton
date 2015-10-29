@@ -26,6 +26,7 @@
 #include "proton/message.h"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/message_id.hpp"
 #include "proton/delivery.h"
 #include "msg.hpp"
 #include "proton_bits.hpp"
@@ -63,9 +64,9 @@ void check(int err) {
 }
 } // namespace
 
-void message::id(const data& id) { *data::cast(pn_message_id(message_)) = id; }
-const data& message::id() const { return *data::cast(pn_message_id(message_)); }
-data& message::id() { return *data::cast(pn_message_id(message_)); }
+void message::id(const message_id& id) { *data::cast(pn_message_id(message_)) = id.value_; }
+
+message_id message::id() const { return message_id(*data::cast(pn_message_id(message_))); }
 
 void message::user_id(const std::string &id) {
     check(pn_message_set_user_id(message_, pn_bytes(id)));
@@ -102,16 +103,12 @@ std::string message::reply_to() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::correlation_id(const data& id) {
-    *data::cast(pn_message_correlation_id(message_)) = id;
+void message::correlation_id(const message_id& id) {
+    *data::cast(pn_message_correlation_id(message_)) = id.value_;
 }
 
-const data& message::correlation_id() const {
-    return *data::cast(pn_message_correlation_id(message_));
-}
-
-data& message::correlation_id() {
-    return *data::cast(pn_message_correlation_id(message_));
+message_id message::correlation_id() const {
+    return message_id(*data::cast(pn_message_correlation_id(message_)));
 }
 
 void message::content_type(const std::string &s) {
