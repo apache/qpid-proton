@@ -92,7 +92,7 @@ template<> struct type_id_of<amqp_string> { static const type_id value=STRING; }
 template<> struct type_id_of<amqp_symbol> { static const type_id value=SYMBOL; };
 
 template <class T, class Enable=void> struct has_type_id { static const bool value = false; };
-template <class T> struct has_type_id<T, typename enable_if<type_id_of<T>::value>::type>  {
+template <class T> struct has_type_id<T, typename enable_if<!!type_id_of<T>::value>::type>  {
     static const bool value = true;
 };
 
@@ -109,7 +109,7 @@ template<> struct integer_type<8, false> { typedef amqp_ulong type; };
 
 // True if T is an integer type that does not have a type_id mapping.
 template <class T> struct is_unknown_integer {
-    static const bool value = bool((!has_type_id<T>::value) && is_integral<T>::value);
+    static const bool value = !has_type_id<T>::value && is_integral<T>::value;
 };
 
 }
