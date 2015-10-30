@@ -1,0 +1,5 @@
+REVIEWBOARD_URL = "https://reviews.apache.org"
+REPOSITORY = 'qpid-proton-git'
+
+
+
