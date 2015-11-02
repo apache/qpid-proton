@@ -176,9 +176,9 @@ class LinkDetached(LinkException):
 class ConnectionClosed(ConnectionException):
     def __init__(self, connection):
         self.connection = connection
-        txt = "Connection %s closed" % self.url
-        if event.connection.remote_condition:
-            txt += " due to: %s" % event.connection.remote_condition
+        txt = "Connection %s closed" % connection.hostname
+        if connection.remote_condition:
+            txt += " due to: %s" % connection.remote_condition
             self.condition = connection.remote_condition.name
         else:
             txt += " by peer"
