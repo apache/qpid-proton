@@ -20,6 +20,7 @@
  */
 
 #include "proton/facade.hpp"
+#include "proton/types.hpp"
 #include "proton/error.hpp"
 #include <iosfwd>
 
@@ -89,6 +90,9 @@ class url {
     PN_CPP_EXTERN std::string host() const;
     /** port is a string, it can be a number or a symbolic name like "amqp" */
     PN_CPP_EXTERN std::string port() const;
+    /** port_int is the numeric value of the port. */
+    PN_CPP_EXTERN uint16_t port_int() const;
+    /** path is everything after the final "/" */
     PN_CPP_EXTERN std::string path() const;
     //@}
 

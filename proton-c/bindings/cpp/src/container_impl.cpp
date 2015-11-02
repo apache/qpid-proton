@@ -63,7 +63,7 @@ struct handler_context {
     static void dispatch(pn_handler_t *c_handler, pn_event_t *c_event, pn_event_type_t type)
     {
         handler_context& hc(handler_context::get(c_handler));
-        messaging_event mevent(c_event, type, *hc.container_);
+        messaging_event mevent(c_event, type, hc.container_);
         mevent.dispatch(*hc.handler_);
         return;
     }

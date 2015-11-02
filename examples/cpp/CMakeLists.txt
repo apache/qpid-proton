@@ -32,6 +32,7 @@ foreach(example
     direct_send
     sync_client
     client
+    select_broker
     server
     server_direct
     recurring_timer
@@ -54,3 +55,8 @@ endif(WIN32)
 
 add_test(NAME cpp_example_test
   COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} -m unittest -v example_test)
+
+set(broker_tests example_test.ExampleTest.test_request_response example_test.ExampleTest.test_simple_send_recv)
+
+add_test(NAME cpp_example_select_test
+  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}" "TEST_BROKER=select_broker" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} -m unittest -v ${broker_tests})

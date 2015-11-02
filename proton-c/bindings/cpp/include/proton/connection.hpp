@@ -32,17 +32,28 @@ struct pn_connection_t;
 namespace proton {
 
 class handler;
-class transport;
+class engine;
 
 /** connection to a remote AMQP peer. */
 class connection : public counted_facade<pn_connection_t, connection, endpoint>
 {
   public:
-    ///@name getters @{
-    PN_CPP_EXTERN class transport& transport() const;
-    PN_CPP_EXTERN class container& container() const;
+
+    /// Get the event_loop, can be a container or an engine.
+    PN_CPP_EXTERN class event_loop &event_loop() const;
+
+    /// Get the container, throw an exception if event_loop is not a container.
+    PN_CPP_EXTERN class container &container() const;
+
+    /// Get the engine, , throw an exception if event_loop is not an engine.
+    PN_CPP_EXTERN class engine &engine() const;
+
+    /// Return the AMQP host name for the connection.
     PN_CPP_EXTERN std::string host() const;
-    ///@}
+
+    /// Return the container-ID for the connection. All connections have a container_id,
+    /// even if they don't have a container event_loop.
+    PN_CPP_EXTERN std::string container_id() const;
 
     /** Initiate local open, not complete till messaging_handler::on_connection_opened()
      * or proton_handler::on_connection_remote_open()

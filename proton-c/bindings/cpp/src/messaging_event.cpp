@@ -40,12 +40,12 @@
 
 namespace proton {
 
-messaging_event::messaging_event(pn_event_t *ce, proton_event::event_type t, class container &c) :
-    proton_event(ce, t, c), type_(messaging_event::PROTON), parent_event_(0), message_(0)
+messaging_event::messaging_event(pn_event_t *ce, proton_event::event_type t, class event_loop *el) :
+    proton_event(ce, t, el), type_(messaging_event::PROTON), parent_event_(0), message_(0)
 {}
 
 messaging_event::messaging_event(event_type t, proton_event &p) :
-    proton_event(NULL, PN_EVENT_NONE, p.container()), type_(t), parent_event_(&p), message_(0)
+    proton_event(NULL, PN_EVENT_NONE, &p.event_loop()), type_(t), parent_event_(&p), message_(0)
 {
     if (type_ == messaging_event::PROTON)
         throw error(MSG("invalid messaging event type"));

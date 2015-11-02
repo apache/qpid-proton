@@ -23,6 +23,7 @@
  */
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
+#include "proton/event_loop.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/reactor.hpp"
 #include "proton/url.hpp"
@@ -47,8 +48,7 @@ class container_impl;
  * Note that by default, links belonging to the container have generated link-names
  * of the form
  */
-class container
-{
+class container : public event_loop {
   public:
     /// Container ID should be unique within your system. By default a random ID is generated.
     PN_CPP_EXTERN container(const std::string& id=std::string());

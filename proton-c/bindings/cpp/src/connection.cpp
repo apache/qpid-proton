@@ -37,16 +37,17 @@
 
 namespace proton {
 
-transport &connection::transport() const {
-    return *transport::cast(pn_connection_transport(pn_cast(this)));
-}
-
 void connection::open() { pn_connection_open(pn_cast(this)); }
 
 void connection::close() { pn_connection_close(pn_cast(this)); }
 
 std::string connection::host() const {
     return std::string(pn_connection_get_hostname(pn_cast(this)));
+}
+
+std::string connection::container_id() const {
+    const char* id = pn_connection_get_container(pn_cast(this));
+    return id ? std::string(id) : std::string();
 }
 
 container& connection::container() const {

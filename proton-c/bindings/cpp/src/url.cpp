@@ -22,8 +22,7 @@
 #include "proton/error.hpp"
 #include "proton/url.hpp"
 #include "proton/url.h"
-#include <ostream>
-#include <istream>
+#include <sstream>
 
 namespace proton {
 
@@ -93,6 +92,18 @@ void url::defaults() {
 
 const std::string url::AMQP("amqp");
 const std::string url::AMQPS("amqps");
+
+uint16_t url::port_int() const {
+    // TODO aconway 2015-10-27: full service name lookup
+    if (port() == AMQP) return 5672;
+    if (port() == AMQPS) return 5671;
+    std::istringstream is(port());
+    uint16_t result;
+    is >> result;
+    if (is.fail())
+        throw url_error("invalid port '" + port() + "'");
+    return result;
+}
 
 std::ostream& operator<<(std::ostream& o, const url& u) { return o << u.str(); }
 

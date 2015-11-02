@@ -17,8 +17,6 @@ Tests
 Bugs
 - Error handling:
   - examples exit silently on broker exit/not running, core on no-such-queue (e.g. with qpidd)
-  - TODO/FIXME notes in code.
-- const correctness: consistent use of const where semantically appropriate in C++ APIs.
 
 Features
 - SASL/SSL support with interop tests.

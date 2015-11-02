@@ -97,8 +97,9 @@ class Broker(object):
             cls._broker = None
 
     def __init__(self):
+        broker_exe = os.environ.get("TEST_BROKER") or "broker"
         self.addr = pick_addr()
-        cmd = cmdline("broker", "-a", self.addr)
+        cmd = cmdline(broker_exe, "-a", self.addr)
         try:
             self.process = Popen(cmd, stdout=NULL, stderr=sys.stderr)
             wait_addr(self.addr)

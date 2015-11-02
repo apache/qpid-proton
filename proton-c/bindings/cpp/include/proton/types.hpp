@@ -121,9 +121,6 @@ struct amqp_binary : public std::string {
     operator pn_bytes_t() const { return pn_bytes(*this); }
 };
 
-// TODO aconway 2015-06-11: alternative representation of variable-length data
-// as pointer to existing buffer.
-
 /// Template for opaque proton proton types that can be treated as byte arrays.
 template <class P> struct opaque: public comparable<opaque<P> > {
     P value;

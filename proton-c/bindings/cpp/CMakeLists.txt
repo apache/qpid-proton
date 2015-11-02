@@ -43,6 +43,7 @@ set(qpid-proton-cpp-source
   src/duration.cpp
   src/encoder.cpp
   src/endpoint.cpp
+  src/engine.cpp
   src/error.cpp
   src/event.cpp
   src/facade.cpp
