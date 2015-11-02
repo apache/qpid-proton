@@ -10,9 +10,9 @@ messaging applications in incremental steps. There are further examples, in
 addition the ones mentioned in the tutorial.
 
 Some of the examples require an AMQP *broker* that can receive, store and send
-messages. \ref broker.cpp is a simple example broker. Run without arguments it
-listens on `0.0.0.0:5672`, the standard AMQP port on all network interfaces. To
-use a different port or network interface:
+messages. \ref broker.hpp and \ref broker.cpp define a simple example
+broker. Run without arguments it listens on `0.0.0.0:5672`, the standard AMQP
+port on all network interfaces. To use a different port or network interface:
 
     broker -a <host>:<port>
 
@@ -291,8 +291,8 @@ To try this modified sender, run the original \ref simple_recv.cpp against it.
 
 The symmetry in the underlying AMQP that enables this is quite unique and
 elegant, and in reflecting this the proton API provides a flexible toolkit for
-implementing all sorts of interesting intermediaries (\ref broker.cpp provided
-as a simple broker for testing purposes is an example of this).
+implementing all sorts of interesting intermediaries (\ref broker.hpp and \ref
+broker.cpp provide a simple broker for testing purposes is an example of this).
 
 Request/Response
 ----------------

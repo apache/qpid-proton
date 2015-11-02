@@ -9,14 +9,6 @@
 // DEVELOPER NOTE: if you are adding or modifying examples you should keep this
 // file and ../proton-c/bindings/cpp/docs/tutorial.hpp up to date.
 
-/** \example broker.cpp
-
-A very simple "mini broker". You can use this to run other examples that reqiure
-an intermediary, or you can use any AMQP 1.0 broker. This broker creates queues
-automatically when a client tries to send or subscribe.
-
-*/
-
 /** \example helloworld.cpp
 
 Basic example that connects to an intermediary on 127.0.0.1:5672,
@@ -116,5 +108,35 @@ alternatives.
 
 A variant of the client part, that uses a blocking/synchronous style
 instead of the reactive/asynchronous style.
+
+*/
+
+/** \example broker.hpp
+
+Common logic for a simple "mini broker" that creates creates queues
+automatically when a client tries to send or subscribe. This file contains
+the `queue` class that queues messages and the `broker_handler` class
+that manages queues and links and transfers messages to/from clients.
+
+There are several broker programs all using the same logic but illustrating
+different ways to run a server application.
+
+*/
+
+/** \example broker.cpp
+
+A simple, single-threaded broker using the `proton::container`. You can use this
+to run other examples that reqiure an intermediary, or you can use any AMQP 1.0
+broker. This broker creates queues automatically when a client tries to send or
+subscribe.
+
+*/
+
+/** \example select_broker.cpp
+
+A simple, single-threaded, select-based broker using the `proton::engine`. This
+broker implementation uses the standard `select` call as an illustration of
+how to integrate proton with an external IO "framework", instead of letting
+the `proton::container` manage IO.
 
 */
