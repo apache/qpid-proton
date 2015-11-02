@@ -40,7 +40,12 @@ endif (CMAKE_CXX_COMPILER)
 find_program(GO_EXE go)
 mark_as_advanced(GO_EXE)
 if (GO_EXE)
-  set (DEFAULT_GO ON)
+  if(WIN32)
+    # Go on windows requires gcc tool chain
+    set (DEFAULT_GO OFF)
+  else()
+    set (DEFAULT_GO ON)
+  endif()
 endif (GO_EXE)
 
 if(SWIG_FOUND)
