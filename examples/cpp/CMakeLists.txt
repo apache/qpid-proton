@@ -21,22 +21,28 @@ find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 
-foreach(example
-    broker
-    helloworld
-    helloworld_blocking
-    helloworld_direct
-    simple_recv
-    simple_send
-    direct_recv
-    direct_send
-    sync_client
-    client
-    select_broker
-    server
-    server_direct
-    recurring_timer
-    encode_decode)
+set(examples
+  broker
+  helloworld
+  helloworld_blocking
+  helloworld_direct
+  simple_recv
+  simple_send
+  direct_recv
+  direct_send
+  sync_client
+  client
+  server
+  server_direct
+  recurring_timer
+  encode_decode)
+
+if (NOT WIN32)
+  list(APPEND examples
+    select_broker)
+endif()
+
+foreach(example ${examples})
   add_executable(${example} ${example}.cpp)
   target_link_libraries(${example} ${ProtonCpp_LIBRARIES})
   set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
@@ -58,5 +64,7 @@ add_test(NAME cpp_example_test
 
 set(broker_tests example_test.ExampleTest.test_request_response example_test.ExampleTest.test_simple_send_recv)
 
-add_test(NAME cpp_example_select_test
-  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}" "TEST_BROKER=select_broker" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} -m unittest -v ${broker_tests})
+if (NOT WIN32)
+  add_test(NAME cpp_example_select_test
+    COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}" "TEST_BROKER=select_broker" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} -m unittest -v ${broker_tests})
+endif()
