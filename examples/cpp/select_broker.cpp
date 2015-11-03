@@ -136,7 +136,7 @@ class broker {
         FD_SET(fd, &reading_);
         FD_SET(fd, &writing_);
         std::cout << "accept " << ::inet_ntoa(client_addr.sin_addr)
-                  << ":" << ::ntohs(client_addr.sin_port)
+                  << ":" << ntohs(client_addr.sin_port)
                   << " fd=" << fd << std::endl;
     }
 
