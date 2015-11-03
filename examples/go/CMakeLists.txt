@@ -20,7 +20,7 @@
 if(BUILD_GO)
 
   set(examples electron/broker electron/receive electron/send proton/broker)
-  file(GLOB_RECURSE example_source ${CMAKE_CURRENT_SOURCE_DIR}/*.go)
+  file(GLOB_RECURSE example_source FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/*.go)
 
   # Build example exes
   foreach(example ${examples})
