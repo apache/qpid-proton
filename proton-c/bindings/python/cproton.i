@@ -25,11 +25,22 @@
 #include <proton/engine.h>
 #include <proton/url.h>
 #include <proton/message.h>
+#include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/messenger.h>
 #include <proton/ssl.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>
+
+/*
+NOTE: According to ccache-swig man page: "Known problems are using
+preprocessor directives within %inline blocks and the use of ’#pragma SWIG’."
+This includes using macros in an %inline section.
+
+Do any preprocessor work or macro expansions here before we get into the %inline sections.
+*/
+PN_HANDLE(PNI_PYTRACER);
+
 %}
 
 %include <cstring.i>
@@ -353,8 +364,6 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
     SWIG_PYTHON_THREAD_END_BLOCK;
     return chandler;
   }
-
-  PN_HANDLE(PNI_PYTRACER);
 
   void pn_pytracer(pn_transport_t *transport, const char *message) {
     PyObject *pytracer = (PyObject *) pn_record_get(pn_transport_attachments(transport), PNI_PYTRACER);

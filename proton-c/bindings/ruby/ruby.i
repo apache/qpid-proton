@@ -28,6 +28,47 @@
 #include <proton/url.h>
 #include <proton/reactor.h>
 #include <proton/handlers.h>
+
+
+/*
+NOTE: According to ccache-swig man page: "Known problems are using
+preprocessor directives within %inline blocks and the use of ’#pragma SWIG’."
+This includes using any macros in an %inline section.
+
+Do any preprocessor work or macro expansions here before we get into the %inline sections.
+*/
+
+#define CID_Pn_rbkey CID_pn_void
+
+typedef struct {
+  void *registry;
+  char *method;
+  char *key_value;
+} Pn_rbkey_t;
+
+void Pn_rbkey_initialize(Pn_rbkey_t *rbkey) {
+  assert(rbkey);
+  rbkey->registry = NULL;
+  rbkey->method = NULL;
+  rbkey->key_value = NULL;
+}
+
+void Pn_rbkey_finalize(Pn_rbkey_t *rbkey) {
+  if(rbkey && rbkey->registry && rbkey->method && rbkey->key_value) {
+    rb_funcall((VALUE )rbkey->registry, rb_intern(rbkey->method), 1, rb_str_new2(rbkey->key_value));
+  }
+  if(rbkey->key_value) {
+    free(rbkey->key_value);
+    rbkey->key_value = NULL;
+  }
+}
+
+#define Pn_rbkey_inspect NULL
+#define Pn_rbkey_compare NULL
+#define Pn_rbkey_hashcode NULL
+
+PN_CLASSDEF(Pn_rbkey)
+
 %}
 
 %include <cstring.i>
@@ -465,37 +506,6 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
 
 %inline %{
 
-#define CID_Pn_rbkey CID_pn_void
-
-typedef struct {
-  void *registry;
-  char *method;
-  char *key_value;
-} Pn_rbkey_t;
-
-void Pn_rbkey_initialize(Pn_rbkey_t *rbkey) {
-  assert(rbkey);
-  rbkey->registry = NULL;
-  rbkey->method = NULL;
-  rbkey->key_value = NULL;
-}
-
-void Pn_rbkey_finalize(Pn_rbkey_t *rbkey) {
-  if(rbkey && rbkey->registry && rbkey->method && rbkey->key_value) {
-    rb_funcall((VALUE )rbkey->registry, rb_intern(rbkey->method), 1, rb_str_new2(rbkey->key_value));
-  }
-  if(rbkey->key_value) {
-    free(rbkey->key_value);
-    rbkey->key_value = NULL;
-  }
-}
-
-#define Pn_rbkey_inspect NULL
-#define Pn_rbkey_compare NULL
-#define Pn_rbkey_hashcode NULL
-
-PN_CLASSDEF(Pn_rbkey)
-
 void Pn_rbkey_set_registry(Pn_rbkey_t *rbkey, void *registry) {
   assert(rbkey);
   rbkey->registry = registry;
@@ -569,7 +579,8 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
   }
 
   VALUE pni_ruby_get_from_registry(VALUE key) {
-    rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
+
+      return rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
   }
 
   void pni_ruby_delete_from_registry(VALUE stored_key) {
