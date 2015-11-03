@@ -27,6 +27,7 @@ import org.apache.qpid.proton.amqp.transport.Flow;
 class TransportSender extends TransportLink<SenderImpl>
 {
     private boolean _drain;
+    private DeliveryImpl _inProgressDelivery;
     private static final UnsignedInteger ORIGINAL_DELIVERY_COUNT = UnsignedInteger.ZERO;
 
     TransportSender(SenderImpl link)
@@ -57,4 +58,13 @@ class TransportSender extends TransportLink<SenderImpl>
         setLinkCredit(linkCredit);
     }
 
+    public void setInProgressDelivery(DeliveryImpl inProgressDelivery)
+    {
+        _inProgressDelivery = inProgressDelivery;
+    }
+
+    public DeliveryImpl getInProgressDelivery()
+    {
+        return _inProgressDelivery;
+    }
 }

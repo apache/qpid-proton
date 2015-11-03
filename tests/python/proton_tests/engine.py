@@ -1100,7 +1100,74 @@ class MaxFrameTransferTest(Test):
 
     binary = self.rcv.recv(1024)
     assert binary == None
-    
+
+  def testSendQueuedMultiFrameMessages(self, sendSingleFrameMsg = False):
+    """
+    Test that multiple queued messages on the same link
+    with multi-frame content are sent correctly. Use an
+    odd max frame size, send enough data to use many.
+    """
+    self.snd, self.rcv = self.link("test-link", max_frame=[0,517])
+    self.c1 = self.snd.session.connection
+    self.c2 = self.rcv.session.connection
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.session.connection.transport.max_frame_size == 517
+    assert self.snd.session.connection.transport.remote_max_frame_size == 517
+
+    self.rcv.flow(5)
+
+    self.pump()
+
+    # Send a delivery with 5 frames, all bytes as X1234
+    self.snd.delivery("tag")
+    msg = ("X1234" * 425).encode('utf-8')
+    assert 2125 == len(msg)
+    n = self.snd.send(msg)
+    assert n == len(msg)
+    assert self.snd.advance()
+
+    # Send a delivery with 5 frames, all bytes as Y5678
+    self.snd.delivery("tag2")
+    msg2 = ("Y5678" * 425).encode('utf-8')
+    assert 2125 == len(msg2)
+    n = self.snd.send(msg2)
+    assert n == len(msg2)
+    assert self.snd.advance()
+
+    self.pump()
+
+    if sendSingleFrameMsg:
+        # Send a delivery with 1 frame
+        self.snd.delivery("tag3")
+        msg3 = ("Z").encode('utf-8')
+        assert 1 == len(msg3)
+        n = self.snd.send(msg3)
+        assert n == len(msg3)
+        assert self.snd.advance()
+        self.pump()
+
+    binary = self.rcv.recv(5000)
+    self.assertEqual(binary, msg)
+
+    self.rcv.advance()
+
+    binary2 = self.rcv.recv(5000)
+    self.assertEqual(binary2, msg2)
+
+    self.rcv.advance()
+
+    if sendSingleFrameMsg:
+        binary3 = self.rcv.recv(5000)
+        self.assertEqual(binary3, msg3)
+        self.rcv.advance()
+
+    self.pump()
+
+  def testSendQueuedMultiFrameMessagesThenSingleFrameMessage(self):
+    self.testSendQueuedMultiFrameMessages(sendSingleFrameMsg = True)
+
   def testBigMessage(self):
     """
     Test transfering a big message.

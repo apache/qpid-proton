@@ -517,7 +517,7 @@ public class TransportImpl extends EndpointImpl
     private boolean processTransportWorkSender(DeliveryImpl delivery,
                                                SenderImpl snd)
     {
-        TransportLink<SenderImpl> tpLink = snd.getTransportLink();
+        TransportSender tpLink = snd.getTransportLink();
         SessionImpl session = snd.getSession();
         TransportSession tpSession = session.getTransportSession();
 
@@ -529,6 +529,16 @@ public class TransportImpl extends EndpointImpl
            tpSession.isLocalChannelSet() &&
            tpLink.getLocalHandle() != null && !_frameWriter.isFull())
         {
+            DeliveryImpl inProgress = tpLink.getInProgressDelivery();
+            if(inProgress != null){
+                // There is an existing Delivery awaiting completion. Check it
+                // is the same Delivery object given and return if not, as we
+                // can't interleave Transfer frames for deliveries on a link.
+                if(inProgress != delivery) {
+                    return false;
+                }
+            }
+
             UnsignedInteger deliveryId = tpSession.getOutgoingDeliveryId();
             TransportDelivery tpDelivery = new TransportDelivery(deliveryId, delivery, tpLink);
             delivery.setTransportDelivery(tpDelivery);
@@ -575,6 +585,9 @@ public class TransportImpl extends EndpointImpl
                 delivery.setDataLength(0);
 
                 if (!transfer.getMore()) {
+                    // Clear the in-progress delivery marker
+                    tpLink.setInProgressDelivery(null);
+
                     delivery.setDone();
                     tpLink.setDeliveryCount(tpLink.getDeliveryCount().add(UnsignedInteger.ONE));
                     tpLink.setLinkCredit(tpLink.getLinkCredit().subtract(UnsignedInteger.ONE));
@@ -589,6 +602,10 @@ public class TransportImpl extends EndpointImpl
                 delivery.setDataOffset(delivery.getDataOffset() + delta);
                 delivery.setDataLength(payload.remaining());
                 session.incrementOutgoingBytes(-delta);
+
+                // Remember the delivery we are still processing
+                // the body transfer frames for
+                tpLink.setInProgressDelivery(delivery);
             }
 
             if (snd.getLocalState() != EndpointState.CLOSED) {
