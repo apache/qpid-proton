@@ -168,7 +168,8 @@ decoder& operator>>(decoder& d, message_id& id) {
       case STRING:
         return d >> id.value_;
       default:
-        throw decode_error("expected one of ulong, uuid, binary or string but found "+d.type());
+        throw decode_error("expected one of ulong, uuid, binary or string but found " +
+                           type_name(d.type()));
     };
 }
 
