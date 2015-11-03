@@ -1,2 +1,2 @@
-set (PN_LIB_SOMAJOR 3)
+set (PN_LIB_SOMAJOR 5)
 set (PN_LIB_SOMINOR "0.0")
