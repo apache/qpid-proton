@@ -61,9 +61,9 @@ struct pn_class_t {
   int (*inspect)(void *, pn_string_t *);
 };
 
-PN_EXTERN extern const pn_class_t *PN_OBJECT;
-PN_EXTERN extern const pn_class_t *PN_VOID;
-PN_EXTERN extern const pn_class_t *PN_WEAKREF;
+PN_EXTERN extern const pn_class_t * const PN_OBJECT;
+PN_EXTERN extern const pn_class_t * const PN_VOID;
+PN_EXTERN extern const pn_class_t * const PN_WEAKREF;
 
 #define PN_CLASSDEF(PREFIX)                                               \
 static void PREFIX ## _initialize_cast(void *object) {                    \
@@ -265,8 +265,8 @@ PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
 #define PN_LEGCTX ((pn_handle_t) 0)
 
 #define PN_HANDLE(name) \
-  static char *_PN_HANDLE_ ## name = 0; \
-  static pn_handle_t name = ((pn_handle_t) &_PN_HANDLE_ ## name);
+  static const char _PN_HANDLE_ ## name = 0; \
+  static const pn_handle_t name = ((pn_handle_t) &_PN_HANDLE_ ## name);
 
 PN_EXTERN pn_record_t *pn_record(void);
 PN_EXTERN void pn_record_def(pn_record_t *record, pn_handle_t key, const pn_class_t *clazz);

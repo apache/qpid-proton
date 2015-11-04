@@ -24,7 +24,7 @@
 #include <proton/transport.h>
 #include <assert.h>
 
-static void *pni_selector_handle = NULL;
+static const char pni_selector_handle = 0;
 
 #define PN_SELECTOR ((pn_handle_t) &pni_selector_handle)
 
