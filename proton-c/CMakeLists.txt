@@ -344,7 +344,6 @@ set (qpid-proton-include
   include/proton/codec.h
   include/proton/condition.h
   include/proton/connection.h
-  include/proton/container.h
   include/proton/delivery.h
   include/proton/disposition.h
   include/proton/engine.h
