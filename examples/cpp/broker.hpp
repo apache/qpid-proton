@@ -36,14 +36,6 @@
 #include <list>
 #include <sstream>
 
-bool debug_enabled() {
-    const char *s = ::getenv("BROKER_DEBUG");
-    return s && *s;             // Set to non-empty string
-}
-
-/// Debug log messages to stderr.
-#define LOG_DEBUG(MSG) do { if (debug_enabled()) { std::cerr << MSG << std::endl; } } while(0)
-
 /** A simple implementation of a queue. */
 class queue {
   public:
@@ -52,19 +44,16 @@ class queue {
     std::string name() const { return name_; }
 
     void subscribe(proton::sender &s) {
-        LOG_DEBUG("queue " << name_ << ": subscribe " << s.name());
         consumers_.push_back(s.ptr());
     }
 
     // Return true if queue can be deleted.
     bool unsubscribe(proton::sender &s) {
-        LOG_DEBUG("queue " << name_ << ": unsubscribe " << s.name());
         consumers_.remove(s.ptr());
         return (consumers_.size() == 0 && (dynamic_ || messages_.size() == 0));
     }
 
     void publish(const proton::message &m, proton::receiver *r) {
-        LOG_DEBUG("queue " << name_ << ": receive from " << r->name() << " : " << m.body());
         messages_.push_back(m);
         dispatch(0);
     }
@@ -85,7 +74,6 @@ class queue {
         while (messages_.size()) {
             if (s->credit()) {
                 const proton::message& m = messages_.front();
-                LOG_DEBUG("queue " << name_ << ": send to " << s->name() << " : " << m.body());
                 s->send(m);
                 messages_.pop_front();
                 result = true;
