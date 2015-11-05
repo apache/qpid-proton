@@ -43,53 +43,52 @@ class tocker : public proton::messaging_handler {
 
 class recurring : public proton::messaging_handler {
   private:
-    int remaining_secs;
+    int remaining_msecs, tick_ms;
     ticker tick_handler;
     tocker tock_handler;
     proton::task *cancel_task;
   public:
 
-    recurring(int secs) : remaining_secs(secs), cancel_task(0) {}
+    recurring(int msecs, int tickms) : remaining_msecs(msecs), tick_ms(tickms), cancel_task(0) {}
 
     proton::task& ticktock(proton::event &e) {
         // Show timer events in separate handlers.
-        e.container().schedule(250, &tick_handler);
-        return e.container().schedule(750, &tock_handler);
+        e.container().schedule(tick_ms, &tick_handler);
+        return e.container().schedule(tick_ms * 3, &tock_handler);
     }
 
     void on_start(proton::event &e) {
-        if (remaining_secs <= 0)
+        if (remaining_msecs <= 0)
             return;
         proton::task& first_tock = ticktock(e);
-        e.container().schedule(1000);
-        remaining_secs--;
         // Show a cancel operation.
         cancel_task = &first_tock;
-        e.container().schedule(500);
+        e.container().schedule(tick_ms);
     }
 
     void on_timer_task(proton::event &e) {
         if (cancel_task) {
             cancel_task->cancel();
             cancel_task = 0;
-            return;
         }
-        if (remaining_secs) {
+        remaining_msecs -= tick_ms * 2;
+        if (remaining_msecs > 0) {
             ticktock(e);
-            e.container().schedule(1000);
-            remaining_secs--;
+            e.container().schedule(tick_ms * 4);
         }
     }
 };
 
 int main(int argc, char **argv) {
     // Command line options
-    int running_time_in_secs = 5;
+    double running_time = 5;
+    double tick = 0.25;
     options opts(argc, argv);
-    opts.add_value(running_time_in_secs, 't', "running time", "running time in seconds", "RUNTIME");
+    opts.add_value(running_time, 't', "running time", "running time in seconds", "RUNTIME");
+    opts.add_value(tick, 'k', "tick time", "tick time as fraction of second", "TICK");
     try {
         opts.parse();
-        recurring recurring_handler(running_time_in_secs);
+        recurring recurring_handler(running_time * 1000, tick * 1000);
         proton::container(recurring_handler).run();
         return 0;
     } catch (const bad_option& e) {

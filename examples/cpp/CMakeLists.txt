@@ -60,7 +60,7 @@ else(WIN32)
 endif(WIN32)
 
 add_test(NAME cpp_example_test
-  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" "PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} -m unittest -v example_test)
+  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
 
 set(broker_tests example_test.ExampleTest.test_request_response example_test.ExampleTest.test_simple_send_recv)
 

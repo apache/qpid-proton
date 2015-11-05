@@ -23,6 +23,7 @@ import unittest
 import os, sys, socket, time
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
+from copy import copy
 import platform
 
 def cmdline(*args):
@@ -215,14 +216,24 @@ Values: map{string(k1):int(42), symbol(k2):boolean(false)}
         self.assertEqual(expect, execute("encode_decode"))
 
     def test_recurring_timer(self):
-        expect="""Tick...
+        # Disable valgrind, this test is time-sensitive.
+        env = {k: v for k,v in os.environ.iteritems() if k != "VALGRIND"}
+        env, os.environ = os.environ, env
+        try:
+            expect="""Tick...
+Tick...
+Tock...
+Tick...
+Tock...
 Tick...
 Tock...
 Tick...
 Tock...
 """
-        self.maxDiff = None
-        self.assertEqual(expect, execute("recurring_timer", "-t", "3"))
+            self.maxDiff = None
+            self.assertEqual(expect, execute("recurring_timer", "-t", ".01", "-k", ".001"))
+        finally:
+            os.environ = env    # Restore environment
 
 if __name__ == "__main__":
     unittest.main()
