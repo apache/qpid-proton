@@ -30,7 +30,9 @@
 #include "proton/types.hpp"
 
 namespace proton {
-template <bool, class T=void> struct enable_if;
+class value;
+
+template <bool, class T=void> struct enable_if {};
 template <class T> struct enable_if<true, T> { typedef T type; };
 
 struct true_type { static const bool value = true; };
@@ -67,8 +69,15 @@ template <> struct is_signed<unsigned long long> : public false_type {};
 template <> struct is_signed<signed long long> : public true_type {};
 #endif
 
-// Metafunction returning exact AMQP type associated with a C++ type
-template <class T> struct type_id_of;
+template <class T, class U> struct is_same { static const bool value=false; };
+template <class T> struct is_same<T,T> { static const bool value=true; };
+
+
+template< class T > struct remove_const          { typedef T type; };
+template< class T > struct remove_const<const T> { typedef T type; };
+
+// Metafunction returning AMQP type for basic C++ types
+template <class T, class Enable=void> struct type_id_of;
 template<> struct type_id_of<amqp_null> { static const type_id value=NULL_; };
 template<> struct type_id_of<amqp_boolean> { static const type_id value=BOOLEAN; };
 template<> struct type_id_of<amqp_ubyte> { static const type_id value=UBYTE; };
@@ -91,12 +100,12 @@ template<> struct type_id_of<amqp_binary> { static const type_id value=BINARY; }
 template<> struct type_id_of<amqp_string> { static const type_id value=STRING; };
 template<> struct type_id_of<amqp_symbol> { static const type_id value=SYMBOL; };
 
-template <class T, class Enable=void> struct has_type_id { static const bool value = false; };
+template <class T, class Enable=void> struct has_type_id : public false_type {};
 template <class T> struct has_type_id<T, typename enable_if<!!type_id_of<T>::value>::type>  {
     static const bool value = true;
 };
 
-// amqp_map to known integer types by sizeof and signedness.
+// Map arbitrary integral types to know AMQP integral types.
 template<size_t N, bool S> struct integer_type;
 template<> struct integer_type<1, true> { typedef amqp_byte type; };
 template<> struct integer_type<2, true> { typedef amqp_short type; };

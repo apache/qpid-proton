@@ -130,9 +130,11 @@ encoder& operator<<(encoder& e, amqp_string value) { return insert(e, pn_cast(&e
 encoder& operator<<(encoder& e, amqp_symbol value) { return insert(e, pn_cast(&e), value, pn_data_put_symbol); }
 encoder& operator<<(encoder& e, amqp_binary value) { return insert(e, pn_cast(&e), value, pn_data_put_binary); }
 
-encoder& operator<<(encoder& e, const data& v) {
-    if (pn_cast(&e) == pn_cast(&v)) throw encode_error("cannot insert into self");
-    check(pn_data_append(pn_cast(&e), pn_cast(&v)), pn_cast(&e));
+encoder& operator<<(encoder& e, const value& v) {
+    pn_data_t *edata = pn_cast(&e);
+    pn_data_t *vdata = pn_cast(&v.decoder());
+    if (edata == vdata) throw encode_error("cannot insert into self");
+    check(pn_data_append(edata, vdata), edata);
     return e;
 }
 

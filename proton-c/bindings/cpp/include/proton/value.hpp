@@ -30,11 +30,23 @@ class data;
 class encoder;
 class decoder;
 
-/** AMQP data  with normal value semantics: copy, assign etc. */
+/**
+ * Holder for an AMQP value.
+ *
+ * proton::value can hold any AMQP data value, simple or compound.  It has
+ * assignment and conversion operators to convert its contents easily to and
+ * from native C++ types.
+ *
+ * See proton::encoder and proton::decoder for details of the conversion rules.
+ * Assigning to a proton::value follows the encoder rules, converting from a
+ * proton::value (or calling proton::value::get) follows the decoder rules.
+ */
 class value : public comparable<value> {
   public:
     PN_CPP_EXTERN value();
     PN_CPP_EXTERN value(const value& x);
+    PN_CPP_EXTERN value(const data&);
+
     template <class T> value(const T& x) : data_(data::create()) { *data_ = x; }
 
     PN_CPP_EXTERN value& operator=(const value& x);
@@ -44,22 +56,25 @@ class value : public comparable<value> {
     PN_CPP_EXTERN void clear();
     PN_CPP_EXTERN bool empty() const;
 
-    /** Encoder to encode complex data into this value.
-     * Note if you enocde more than one value, all but the first will be ignored.
-     */
+    // FIXME aconway 2015-11-06: rename encode/decode
+
+    /** Encoder to encode complex data into this value. Note this clears the value. */
     PN_CPP_EXTERN class encoder& encoder();
 
-    /** Decoder to decode complex data from this value */
-    PN_CPP_EXTERN class decoder& decoder();
+    /** Decoder to decode complex data from this value. Note this rewinds the decoder. */
+    PN_CPP_EXTERN class decoder& decoder() const;
 
     /** Type of the current value*/
     PN_CPP_EXTERN type_id type() const;
 
     /** Get the value. */
-    template<class T> void get(T &t) const { rewind() >> t; }
+    template<class T> void get(T &t) const { decoder() >> t; }
 
     /** Get the value. */
     template<class T> T get() const { T t; get(t); return t; }
+
+    /** Automatic conversion */
+    template<class T> operator T() const { return get<T>(); }
 
     PN_CPP_EXTERN bool operator==(const value& x) const;
     PN_CPP_EXTERN bool operator<(const value& x) const;
@@ -69,9 +84,6 @@ class value : public comparable<value> {
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
 
   private:
-    value(const data&);
-    class decoder& rewind() const { data_->decoder().rewind(); return data_->decoder(); }
-
     pn_unique_ptr<data> data_;
   friend class message;
 };

@@ -51,7 +51,7 @@ class simple_send : public proton::messaging_handler {
             msg.id(sent + 1);
             std::map<std::string, int> m;
             m["sequence"] = sent+1;
-            msg.body(proton::as<proton::MAP>(m));
+            msg.body(m);
             sender.send(msg);
             sent++;
         }

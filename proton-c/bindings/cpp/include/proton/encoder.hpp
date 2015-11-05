@@ -25,39 +25,68 @@
 #include "proton/facade.hpp"
 #include <iosfwd>
 
+#ifndef PN_NO_CONTAINER_CONVERT
+
+#include <vector>
+#include <deque>
+#include <list>
+#include <map>
+
+#if PN_HAS_CPP11
+#include <array>
+#include <forward_list>
+#include <unordered_map>
+#endif // PN_HAS_CPP11
+
+#endif // PN_NO_CONTAINER_CONVERT
+
 struct pn_data_t;
 
 namespace proton {
 
-class data;
 class message_id;
 
 /** Raised by encoder operations on error */
 struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&) throw(); };
 
 /**
- * Stream C++ data values into an AMQP encoder using operator<<.
+ * Stream-like encoder from C++ values to AMQP values.
  *
- * types.h defines C++ typedefs and types for AMQP each type. These types insert
- * as the corresponding AMQP type. Conversion rules apply to other types:
+ * types.hpp defines a C++ type for each AMQP type. For simple types they are
+ * just typedefs for corresponding native C++ types. These types encode as the
+ * corresponding AMQP type.
  *
- * - Integer types insert as the AMQP integer of matching size and signedness.
- * - std::string or char* insert as AMQP strings.
+ * There are some special case conversions:
  *
- * C++ containers can be inserted as AMQP containers with the as() helper
- * functions. For example:
+ * - Integer types other than those mentioned in types.hpp encode as the AMQP
+ *   integer type of matching size and signedness.
+ * - std::string or char* insert as AMQP STRING.
  *
- *     std::vector<amqp_symbol> v;
- *     encoder << as<amqp_list>(v);
+ * For example to encode an AMQP INT, BOOLEAN and STRING these are equivalent:
  *
- * AMQP maps can be inserted from any container with std::pair<X,Y> as the
- * value_type. That includes std::map and std::unordered_map but also for
- * example std::vector<std::pair<X,Y> >. This allows you to control the order
- * of elements when inserting AMQP maps.
+ *     enc << proton::amqp_int(1) << proton::amqp_boolean(true) << proton::amqp_string("foo");
+ *     enc << int32_t(1) << true << "foo";
+ *
+ * You can force the encoding using the `proton::as` template function, for example:
+ *
+ *     uint64_t i = 100;
+ *     enc << as<proton::SHORT>(i);
+ *
+ * C++ standard containers can be inserted. By default:
+ *
+ * - std::map and std::unordered_map encode as AMQP MAP
+ * - std::vector, std::deque, std::list, std::array or std::forward_list encode as an AMQP ARRAY.
+ * - std::vector<proton::value> etc. encode as AMQP LIST
+ *
+ * Again you can force the encoding using proton::as<LIST>() or proton::as<ARRAY>()
+ *
+ * Note that you can encode a sequence of pairs as a map, which allows you to control the
+ * encoded order if that is important:
+ *
+ *     std::vector<std::pair<T1, T2> > v;
+ *     enc << proton::as<MAP>(v);
  *
  * You can also insert containers element-by-element, see operator<<(encoder&, const start&)
- *
- *@throw decoder::error if the curent value is not a container type.
  */
 class encoder : public facade<pn_data_t, encoder> {
   public:
@@ -107,7 +136,7 @@ class encoder : public facade<pn_data_t, encoder> {
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_symbol);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, amqp_binary);
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, const message_id&);
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const class data&);
+  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const value&);
     ///@}
 
     /**
@@ -118,7 +147,7 @@ class encoder : public facade<pn_data_t, encoder> {
      * and insert it into the encoder, followed by the contained elements.  For
      * example:
      *
-     *      encoder << start::list() << amqp_int(1) << amqp_symbol("two") << 3.0 << finish();
+     *      enc << start::list() << amqp_int(1) << amqp_symbol("two") << 3.0 << finish();
      */
   friend PN_CPP_EXTERN encoder& operator<<(encoder&, const start&);
 
@@ -135,9 +164,6 @@ class encoder : public facade<pn_data_t, encoder> {
   template <class T> friend encoder& operator<<(encoder&, cref<T, MAP>);
     // TODO aconway 2015-06-16: described values.
     ///@}
-
-    /** Copy data from a raw pn_data_t */
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, pn_data_t*);
 };
 
 // Need to disambiguate char* conversion to bool and std::string as amqp_string.
@@ -179,11 +205,36 @@ template <class T> encoder& operator<<(encoder& e, cref<T, MAP> m){
     e << finish();
     return e;
 }
-///@cond INTERNAL Convert a ref to a cref.
-template <class T, type_id A> encoder& operator<<(encoder& e, ref<T, A> ref) {
-    return e << cref<T,A>(ref);
-}
-///@endcond
 
+#ifndef PN_NO_CONTAINER_CONVERT
+// Encode as ARRAY
+template <class T, class A> encoder& operator<<(encoder &e, const std::vector<T, A>& v) { return e << as<ARRAY>(v); }
+template <class T, class A> encoder& operator<<(encoder &e, const std::deque<T, A>& v) { return e << as<ARRAY>(v); }
+template <class T, class A> encoder& operator<<(encoder &e, const std::list<T, A>& v) { return e << as<ARRAY>(v); }
+
+// Encode as LIST
+template <class A> encoder& operator<<(encoder &e, const std::vector<value, A>& v) { return e << as<LIST>(v); }
+template <class A> encoder& operator<<(encoder &e, const std::deque<value, A>& v) { return e << as<LIST>(v); }
+template <class A> encoder& operator<<(encoder &e, const std::list<value, A>& v) { return e << as<LIST>(v); }
+
+// Encode as MAP
+template <class K, class T, class C, class A> encoder& operator<<(encoder &e, const std::map<K, T, C, A>& v) { return e << as<MAP>(v); }
+
+#if PN_HAS_CPP11
+
+// Encode as ARRAY.
+template <class T, class A> encoder& operator<<(encoder &e, const std::forward_list<T, A>& v) { return e << as<ARRAY>(v); }
+template <class T, std::size_t N> encoder& operator<<(encoder &e, const std::array<T, N>& v) { return e << as<ARRAY>(v); }n
+
+// Encode as LIST.
+template <class value, class A> encoder& operator<<(encoder &e, const std::forward_list<value, A>& v) { return e << as<LIST>(v); }
+template <class value, std::size_t N> encoder& operator<<(encoder &e, const std::array<value, N>& v) { return e << as<LIST>(v); }
+
+// Encode as map.
+template <class K, class T, class C, class A> encoder& operator<<(encoder &e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
+
+#endif // PN_HAS_CPP11
+
+#endif // PN_NO_CONTAINER_CONVERT
 }
 #endif // ENCODER_H

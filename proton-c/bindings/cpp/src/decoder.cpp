@@ -147,16 +147,19 @@ decoder& operator>>(decoder& d, finish) { pn_data_exit(pn_cast(&d)); return d; }
 
 decoder& operator>>(decoder& d, skip) { pn_data_next(pn_cast(&d)); return d; }
 
+decoder& operator>>(decoder& d, assert_type a) { bad_type(a.type, d.type()); return d; }
+
 decoder& operator>>(decoder& d, rewind) { d.rewind(); return d; }
 
-decoder& operator>>(decoder& d, data& v) {
-    if (pn_cast(&d) == pn_cast(&v)) throw decode_error("extract into self");
-    v.clear();
+decoder& operator>>(decoder& d, value& v) {
+    pn_data_t *ddata = pn_cast(&d);
+    pn_data_t *vdata = pn_cast(&v.encoder());
+    if (ddata == vdata) throw decode_error("extract into self");
     {
-        narrow n(pn_cast(&d));
-        check(pn_data_appendn(pn_cast(&v), pn_cast(&d), 1));
+        narrow n(ddata);
+        check(pn_data_appendn(vdata, ddata, 1));
     }
-    if (!pn_data_next(pn_cast(&d))) throw decode_error("no more data");
+    if (!pn_data_next(ddata)) throw decode_error("no more data");
     return d;
 }
 
@@ -339,5 +342,13 @@ decoder& operator>>(decoder& d, std::string& value) {
     ss.cancel();
     return d;
 }
+
+void assert_map_scope(const decoder::scope& s) {
+    if (s.type != MAP)
+        throw decode_error("cannot decode "+type_name(s.type)+" as map");
+    if (s.size % 2 != 0)
+        throw decode_error("odd number of elements in map");
+}
+
 
 }

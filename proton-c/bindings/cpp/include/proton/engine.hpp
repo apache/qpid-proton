@@ -31,7 +31,7 @@ namespace proton {
 class handler;
 class connection;
 
-/// Pointers to a data buffer.
+/// Pointers to a byte range to use as a buffer.
 template <class T> class buffer {
   public:
     explicit buffer(T* begin__=0, T* end__=0) : begin_(begin__), end_(end__) {}

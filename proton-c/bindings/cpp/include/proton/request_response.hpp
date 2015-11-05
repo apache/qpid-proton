@@ -29,9 +29,6 @@
 
 #include <string>
 
-struct pn_message_t;
-struct pn_data_t;
-
 namespace proton {
 
 /**

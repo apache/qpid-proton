@@ -26,6 +26,7 @@
 #include "proton/message_id.hpp"
 #include "proton/data.hpp"
 #include "proton/pn_unique_ptr.hpp"
+#include "proton/value.hpp"
 
 #include <string>
 #include <utility>
@@ -95,32 +96,31 @@ class message
     PN_CPP_EXTERN std::string reply_to_group_id() const;
     ///@}
 
-    /** Set the body. If data has more than one value, each is encoded as an AMQP section. */
-    PN_CPP_EXTERN void body(const data&);
+    /** Set the body. */
+    PN_CPP_EXTERN void body(const value&);
 
-    /** Set the body to any type T that can be converted to proton::data */
-    template <class T> void body(const T& v) { body().clear(); body().encoder() << v; }
-
-    /** Get the body values. */
+    /** Get the body. Note data can be copied to a proton::value */
     PN_CPP_EXTERN const data& body() const;
 
     /** Get a reference to the body data, can be modified in-place. */
     PN_CPP_EXTERN data& body();
 
-    /** Encode into memory starting at buffer.first and ending before buffer.second */
+    // FIXME aconway 2015-11-10: use buffer
+    /** Encode message into memory starting at buffer.first and ending before buffer.second */
     PN_CPP_EXTERN void encode(std::pair<char*, char*> buffer);
 
     /** Encode into a string, growing the string if necessary. */
-    PN_CPP_EXTERN void encode(std::string &data) const;
+    PN_CPP_EXTERN void encode(std::string &bytes) const;
 
     /** Return encoded message as a string */
     PN_CPP_EXTERN std::string encode() const;
 
+    // FIXME aconway 2015-11-10: use buffer
     /** Decode from memory starting at buffer.first and ending before buffer.second */
     PN_CPP_EXTERN void decode(std::pair<const char*, const char*> buffer);
 
     /** Decode from string data into the message. */
-    PN_CPP_EXTERN void decode(const std::string &data);
+    PN_CPP_EXTERN void decode(const std::string &bytes);
 
     /// Decode the message from link corresponding to delivery.
     PN_CPP_EXTERN void decode(proton::link&, proton::delivery&);

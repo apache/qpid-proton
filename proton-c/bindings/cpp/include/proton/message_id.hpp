@@ -29,6 +29,8 @@ namespace proton {
 class message_id : public comparable<message_id> {
   public:
     message_id() {}
+    message_id(const value& x) : value_(x) {}
+    message_id(const data& x) : value_(x) {}
     message_id(const uint64_t& x) : value_(x) {}
     message_id(const amqp_uuid& x) : value_(x) {}
     message_id(const amqp_binary& x) : value_(x) {}
@@ -71,7 +73,6 @@ class message_id : public comparable<message_id> {
   friend PN_CPP_EXTERN decoder& operator>>(decoder&, message_id&);
 
   private:
-    message_id(const value& v) : value_(v) {}
     value value_;
   friend class message;
 };

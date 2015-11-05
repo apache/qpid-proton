@@ -159,51 +159,22 @@ struct amqp_timestamp : public comparable<amqp_timestamp> {
 };
 
 ///@cond INTERNAL
-template<class T, type_id A> struct type_pair {
+template<class T, type_id A> struct cref {
     typedef T cpp_type;
-    type_id type;
-};
+    static const type_id type;
 
-template<class T, type_id A> struct ref : public type_pair<T, A> {
-    ref(T& v) : value(v) {}
-    T& value;
-};
-
-template<class T, type_id A> struct cref : public type_pair<T, A> {
     cref(const T& v) : value(v) {}
-    cref(const ref<T,A>& ref) : value(ref.value) {}
     const T& value;
 };
+template <class T, type_id A> const type_id cref<T, A>::type = A;
 ///@endcond INTERNAL
 
-/** A holder for AMQP values. A holder is always encoded/decoded as its amqp_value, no need
- * for the as<TYPE>() helper functions.
- *
- * For example to encode an array of arrays using std::vector:
- *
- *     typedef holder<std::vector<amqp_string>, ARRAY> Inner;
- *     typedef holder<std::vector<Inner>, ARRAY> Outer;
- *     Outer o ...
- *     encoder << o;
- *
- */
-template<class T, type_id A> struct holder : public type_pair<T, A> {
-    T value;
-};
-
-/** Create a reference to value as AMQP type A for decoding.
- * For example to decode an array of amqp_int:
+/**
+ * Indicate the desired AMQP type to use when encoding T.
+ * For example to encode a vector as a list:
  *
  *     std::vector<amqp_int> v;
- *     decoder >> as<ARRAY>(v);
- */
-template <type_id A, class T> ref<T, A> as(T& value) { return ref<T, A>(value); }
-
-/** Create a const reference to value as AMQP type A for encoding.
- * For example to encode an array of amqp_int:
- *
- *     std::vector<amqp_int> v;
- *     encoder << as<ARRAY>(v);
+ *     encoder << as<LIST>(v);
  */
 template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
 

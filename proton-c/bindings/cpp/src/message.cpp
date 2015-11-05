@@ -161,7 +161,7 @@ std::string message::reply_to_group_id() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::body(const data& v) { body() = v; }
+void message::body(const value& v) { body() = v; }
 
 const data& message::body() const {
     return *data::cast(pn_message_body(message_));

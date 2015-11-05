@@ -199,18 +199,26 @@ class ExampleTest(unittest.TestCase):
 
     def test_encode_decode(self):
         expect="""
-== Array, list and map.
-Values: array<int>[int(1), int(2), int(3)], list[int(4), int(5)], map{string(one):int(1), string(two):int(2)}
-Extracted: [ 1 2 3 ], [ 4 5 ], { one:1 two:2 }
+== Array, list and map of uniform type.
+array<int>[int(1), int(2), int(3)]
+[ 1 2 3 ]
+list[int(1), int(2), int(3)]
+[ 1 2 3 ]
+map{string(one):int(1), string(two):int(2)}
+{ one:1 two:2 }
+map{string(z):int(3), string(a):int(4)}
+[ z:3 a:4 ]
 
 == List and map of mixed type values.
-Values: list[int(42), string(foo)], map{int(4):string(four), string(five):int(5)}
-Extracted: [ 42 foo ], { 4:four five:5 }
+list[int(42), string(foo)]
+[ 42 foo ]
+map{int(4):string(four), string(five):int(5)}
+{ 4:four five:5 }
 
 == Insert with stream operators.
-Values: array<int>[int(1), int(2), int(3)]
-Values: list[int(42), boolean(false), symbol(x)]
-Values: map{string(k1):int(42), symbol(k2):boolean(false)}
+array<int>[int(1), int(2), int(3)]
+list[int(42), boolean(false), symbol(x)]
+map{string(k1):int(42), symbol(k2):boolean(false)}
 """
         self.maxDiff = None
         self.assertEqual(expect, execute("encode_decode"))

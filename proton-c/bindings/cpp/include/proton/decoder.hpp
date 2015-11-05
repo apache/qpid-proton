@@ -23,51 +23,130 @@
 #include "proton/type_traits.hpp"
 #include "proton/types.hpp"
 #include "proton/facade.hpp"
+
 #include <iosfwd>
+
+#ifndef PN_NO_CONTAINER_CONVERT
+
+#include <vector>
+#include <deque>
+#include <list>
+#include <map>
+
+#if PN_HAS_CPP11
+#include <array>
+#include <forward_list>
+#include <unordered_map>
+#endif // PN_HAS_CPP11
+
+#endif // PN_NO_CONTAINER_CONVERT
 
 struct pn_data_t;
 
 namespace proton {
 
-class data;
 class message_id;
 
 /** Raised by decoder operations on error.*/
 struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&) throw(); };
 
-/** Skips a value with `decoder >> skip()`. */
+/** Skips a value with `dec >> skip()`. */
 struct skip{};
 
-/** Rewind the decoder with `decoder >> rewind()`. */
+/** Assert the next type of value in the decoder: `dec >> assert_type(t)`
+ *  throws if decoder.type() != t
+ */
+struct assert_type {
+    type_id type;
+    assert_type(type_id t) : type(t) {}
+};
+
+/** Rewind the decoder with `dec >> rewind()`. */
 struct rewind{};
 
 /**
- * Stream-like decoder from AMQP bytes to a stream of C++ values.
- *
- * types.h defines C++ types corresponding to AMQP types.
- *
- * decoder operator>> will extract AMQP types into corresponding C++ types, and
- * do simple conversions, e.g. from AMQP integer types to corresponding or
- * larger C++ integer types.
- *
- * You can require an exact AMQP type using the `as<type>(value)` helper. E.g.
- *
- *     amqp_int i;
- *     decoder >> as<INT>(i):       // Will throw if decoder does not contain an INT
- *
- * You can also use the `as` helper to extract an AMQP list, array or map into C++ containers.
- *
- *
- *     std::vector<amqp_int> v;
- *     decoder >> as<LIST>(v);     // Extract a list of INT.
- *
- * AMQP maps can be inserted/extracted to any container with pair<X,Y> as
- * value_type, which includes std::map and std::unordered_map but also for
- * example std::vector<std::pair<X,Y> >. This allows you to preserve order when
- * extracting AMQP maps.
- *
- * You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
- *
+Stream-like decoder from AMQP bytes to C++ values.
+
+@see types.hpp defines C++ types corresponding to AMQP types.
+
+The decoder operator>> will extract AMQP types into any compatible C++
+type or throw an exception if the types are not compatible.
+
++-------------------------+-------------------------------+
+|AMQP type                |Compatible C++ types           |
++=========================+===============================+
+|BOOLEAN                  |amqp_boolean, bool             |
++-------------------------+-------------------------------+
+|signed integer type I    |C++ signed integer type T where|
+|                         |sizeof(T) >= sizeof(I)         |
++-------------------------+-------------------------------+
+|unsigned integer type U  |C++ unsigned integer type T    |
+|                         |where sizeof(T) >= sizeof(U)   |
++-------------------------+-------------------------------+
+|CHAR                     |amqp_char, wchar_t             |
++-------------------------+-------------------------------+
+|FLOAT                    |amqp_float, float              |
++-------------------------+-------------------------------+
+|DOUBLE                   |amqp_double, double            |
++-------------------------+-------------------------------+
+|STRING                   |amqp_string, std::string       |
++-------------------------+-------------------------------+
+|SYMBOL                   |amqp_symbol, std::string       |
++-------------------------+-------------------------------+
+|BINARY                   |amqp_binary, std::string       |
++-------------------------+-------------------------------+
+|DECIMAL<n>               |amqp_decimal<n>                |
++-------------------------+-------------------------------+
+|TIMESTAMP                |amqp_timestamp                 |
++-------------------------+-------------------------------+
+|UUID                     |amqp_uuid                      |
++-------------------------+-------------------------------+
+
+The special proton::value type can hold any AMQP type, simple or compound.
+
+By default operator >> will do any conversion that does not lose data. For example
+any AMQP signed integer type can be extracted as follows:
+
+    int64_t i;
+    dec >> i;
+
+You can assert the exact AMQP type with proton::assert_type, for example
+the following will throw if the AMQP type is not an AMQP INT (32 bits)
+
+    amqp_int i;
+    dec >> assert_type(INT) >> i;       // Will throw if decoder does not contain an INT
+
+You can extract AMQP ARRAY, LIST or MAP into standard C++ containers of compatible types, for example:
+
+    std::vector<int32_t> v;
+    dec >> v;
+
+This will work if the decoder contains an AMQP ARRAY or LIST of SHORT or INT values. It won't work
+for LONG or other types. It will also work for a MAP with keys and values that are SHORT OR INT,
+the map will be "flattened" into a sequence [ key1, value1, key2, value2 ] This will work with
+std::dequeue, std::array, std::list or std::forward_list.
+
+You can extract a MAP into a std::map or std::unordered_map
+
+    std::map<std::string, std::string> v;
+    dec >> v;
+
+This will work for any AMQP map with keys and values that are STRING, SYMBOL or BINARY.
+
+If you have non-standard container types that meet the most basic requirements for
+the container or associative-container concepts, you can use them via helper functions:
+
+    my_sequence_type<int64_t> s;
+    dec >> proton::to_sequence(s); // Decode sequence of integers
+    my_map_type<amqp_string, bool> s;
+    dec >> proton::to_map(s); // Decode map of string: bool.
+
+Finally you can extract an AMQP LIST with mixed type elements into a container of proton::value, e.g.
+
+    std::vector<proton::value> v;
+    dec >> v;
+
+You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
 */
 class decoder : public facade<pn_data_t, decoder> {
   public:
@@ -124,14 +203,11 @@ class decoder : public facade<pn_data_t, decoder> {
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_uuid&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, std::string&);
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, message_id&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, class data&);
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, value&);
     ///@}
 
     /** Extract and return a value of type T. */
-    template <class T> T get() { T value; *this >> value; return value; }
-
-    /** Extract and return a value of type T, as AMQP type. */
-    template <class T, type_id A> T get_as() { T value; *this >> as<A>(value); return value; }
+    template <class T> T extract() { T value; *this >> value; return value; }
 
     /** Call decoder::start() in constructor, decoder::finish in destructor().
      *
@@ -142,21 +218,15 @@ class decoder : public facade<pn_data_t, decoder> {
         ~scope() { decoder_ >> finish(); }
     };
 
-    template <type_id A, class T> friend decoder& operator>>(decoder& d, ref<T, A> ref) {
-        d.check_type(A);
-        d >> ref.value;
-        return d;
-    }
-
     /** start extracting a container value, one of array, list, map, described.
      * The basic pattern is:
      *
      *     start s;
-     *     decoder >> s;
+     *     dec >> s;
      *     // check s.type() to see if this is an ARRAY, LIST, MAP or DESCRIBED type.
      *     if (s.described) extract the descriptor...
      *     for (size_t i = 0; i < s.size(); ++i) Extract each element...
-     *     decoder >> finish();
+     *     dec >> finish();
      *
      * The first value of an ARRAY is a descriptor if start::descriptor is true,
      * followed by start.size elements of type start::element.
@@ -182,6 +252,9 @@ class decoder : public facade<pn_data_t, decoder> {
     /** Skip a value */
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, skip);
 
+    /** Throw an exception if decoder.type() != assert_type.type */
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, assert_type);
+
     /** Rewind to the beginning */
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, struct rewind);
 
@@ -191,46 +264,138 @@ class decoder : public facade<pn_data_t, decoder> {
   friend class encoder;
 };
 
+
 // operator >> for integer types that are not covered by the standard overrides.
 template <class T>
-typename enable_if<is_unknown_integer<T>::value, decoder&>::type operator>>(decoder& d, T& i)  {
+typename enable_if<is_unknown_integer<T>::value, decoder&>::type
+operator>>(decoder& d, T& i)  {
     typename integer_type<sizeof(T), is_signed<T>::value>::type v;
     d >> v;                     // Extract as a known integer type
     i = v;
     return d;
 }
 
-template <class T> decoder& operator>>(decoder& d, ref<T, ARRAY> ref)  {
+///@cond INTERNAL
+template <class T> struct sequence_ref {
+    sequence_ref(T& v) : value(v) {}
+    T& value;
+};
+
+template <class T> struct map_ref {
+    map_ref(T& v) : value(v) {}
+    T& value;
+};
+
+template <class T> struct pairs_ref {
+    pairs_ref(T& v) : value(v) {}
+    T& value;
+};
+///@endcond
+
+/**
+ * Return a wrapper for a C++ container to be decoded as a sequence. The AMQP
+ * ARRAY, LIST, and MAP types can all be decoded as a sequence, a map will be
+ * decoded as alternating key and value (provided they can both be converted to
+ * the container's value_type)
+ *
+ * The following expressions must be valid for T t;
+ *     T::iterator
+ *     t.clear()
+ *     t.resize()
+ *     t.begin()
+ *     t.end()
+ */
+template <class T> sequence_ref<T> to_sequence(T& v) { return sequence_ref<T>(v); }
+
+/** Return a wrapper for a C++ map container to be decoded from an AMQP MAP.
+ * The following expressions must be valid for T t;
+ *     T::key_type
+ *     T::mapped_type
+ *     t.clear()
+ *     T::key_type k; T::mapped_type v; t[k] = v;
+ */
+template <class T> map_ref<T> to_map(T& v) { return map_ref<T>(v); }
+
+/** Return a wrapper for a C++ container of std::pair that can be decoded from AMQP maps,
+ * preserving the encoded map order.
+ *
+ * The following expressions must be valid for T t;
+ *     T::iterator
+ *     t.clear()
+ *     t.resize()
+ *     t.begin()
+ *     t.end()
+ *     T::iterator i; i->first; i->second
+ */
+template <class T> pairs_ref<T> to_pairs(T& v) { return pairs_ref<T>(v); }
+
+/** Extract any AMQP sequence (ARRAY, LIST or MAP) to a C++ container of T if
+ * the elements types are convertible to T. A MAP is extracted as [key1, value1,
+ * key2, value2...]
+ */
+template <class T> decoder& operator>>(decoder& d, sequence_ref<T> ref)  {
     decoder::scope s(d);
     if (s.is_described) d >> skip();
-    ref.value.clear();
-    ref.value.resize(s.size);
-    for (typename T::iterator i = ref.value.begin(); i != ref.value.end(); ++i) {
+    T& v = ref.value;
+    v.clear();
+    v.resize(s.size);
+    for (typename T::iterator i = v.begin(); i != v.end(); ++i)
         d >> *i;
-    }
     return d;
 }
 
-template <class T> decoder& operator>>(decoder& d, ref<T, LIST> ref)  {
+void assert_map_scope(const decoder::scope& s);
+
+/** Extract an AMQP MAP to a C++ map */
+template <class T> decoder& operator>>(decoder& d, map_ref<T> ref)  {
     decoder::scope s(d);
-    ref.value.clear();
-    ref.value.resize(s.size);
-    for (typename T::iterator i = ref.value.begin(); i != ref.value.end(); ++i)
-        d >> *i;
-    return d;
-}
-
-template <class T> decoder& operator>>(decoder& d, ref<T, MAP> ref)  {
-    decoder::scope m(d);
-    ref.value.clear();
-    for (size_t i = 0; i < m.size/2; ++i) {
-        typename T::key_type k;
-        typename T::mapped_type v;
+    assert_map_scope(s);
+    T& m = ref.value;
+    m.clear();
+    for (size_t i = 0; i < s.size/2; ++i) {
+        typename remove_const<typename T::key_type>::type k;
+        typename remove_const<typename T::mapped_type>::type v;
         d >> k >> v;
-        ref.value[k] = v;
+        m[k] = v;
     }
     return d;
 }
 
+/** Extract an AMQP MAP to a C++ container of std::pair, preserving order. */
+template <class T> decoder& operator>>(decoder& d, pairs_ref<T> ref)  {
+    decoder::scope s(d);
+    assert_map_scope(s);
+    T& m = ref.value;
+    m.clear();
+    m.resize(s.size/2);
+    for (typename T::iterator i = m.begin(); i != m.end(); ++i) {
+        d >> i->first >> i->second;
+    }
+    return d;
 }
+
+#ifndef PN_NO_CONTAINER_CONVERT
+
+// Decode to sequence.
+template <class T, class A> decoder& operator>>(decoder &d, std::vector<T, A>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder& operator>>(decoder &d, std::deque<T, A>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder& operator>>(decoder &d, std::list<T, A>& v) { return d >> to_sequence(v); }
+
+// Decode to map.
+template <class K, class T, class C, class A> decoder& operator>>(decoder &d, std::map<K, T, C, A>& v) { return d >> to_map(v); }
+
+#if PN_HAS_CPP11
+
+// Decode to sequence.
+template <class T, class A> decoder& operator>>(decoder &d, std::forward_list<T, A>& v) { return d >> to_sequence(v); }
+template <class T, std::size_t N> decoder& operator>>(decoder &d, std::array<T, N>& v) { return d >> to_sequence(v); }
+
+// Decode to map.
+template <class K, class T, class C, class A> decoder& operator>>(decoder &d, std::unordered_map<K, T, C, A>& v) { return d >> to_map(v); }
+
+#endif // PN_HAS_CPP11
+#endif // PN_NO_CONTAINER_CONVERT
+
+}
+
 #endif // DECODER_H
