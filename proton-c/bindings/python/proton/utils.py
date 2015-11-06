@@ -131,6 +131,10 @@ class BlockingReceiver(BlockingLink):
         if credit: receiver.flow(credit)
         self.fetcher = fetcher
 
+    def __del__(self):
+        self.fetcher = None
+        self.link.handler = None
+
     def receive(self, timeout=False):
         if not self.fetcher:
             raise Exception("Can't call receive on this receiver as a handler was provided")
@@ -217,8 +221,12 @@ class BlockingConnection(Handler):
 
     def close(self):
         self.conn.close()
-        self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
-                  msg="Closing connection")
+        try:
+            self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
+                      msg="Closing connection")
+        finally:
+            self.conn = None
+            self.container = None
 
     def _is_closed(self):
         return self.conn.state & (Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED)
