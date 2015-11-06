@@ -28,15 +28,10 @@ class Server(MessagingHandler):
         self.container = Container(self)
         self.conn = self.container.connect(host)
         self.receiver = self.container.create_receiver(self.conn, address)
-        self.senders = {}
-        self.relay = None
+        self.sender = self.container.create_sender(self.conn, None)
 
     def on_message(self, event):
         self.on_request(event.message.body, event.message.reply_to)
-
-    def on_connection_open(self, event):
-        if event.connection.remote_offered_capabilities and "ANONYMOUS-RELAY" in event.connection.remote_offered_capabilities:
-            self.relay = self.container.create_sender(self.conn, None)
 
     def on_connection_close(self, endpoint, error):
         if error: print("Closed due to %s" % error)
@@ -46,16 +41,10 @@ class Server(MessagingHandler):
         self.container.run()
 
     def send(self, response, reply_to):
-        sender = self.relay
-        if not sender:
-            sender = self.senders.get(reply_to)
-        if not sender:
-            sender = self.container.create_sender(self.conn, reply_to)
-            self.senders[reply_to] = sender
         msg = Message(body=response)
-        if self.relay:
+        if self.sender:
             msg.address = reply_to
-        sender.send_msg(msg)
+        self.sender.send(msg)
 
     def on_request(self, request, reply_to):
         pass

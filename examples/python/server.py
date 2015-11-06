@@ -28,26 +28,17 @@ class Server(MessagingHandler):
         super(Server, self).__init__()
         self.url = url
         self.address = address
-        self.senders = {}
 
     def on_start(self, event):
         print("Listening on", self.url)
         self.container = event.container
         self.conn = event.container.connect(self.url)
         self.receiver = event.container.create_receiver(self.conn, self.address)
-        self.relay = None
-
-    def on_connection_opened(self, event):
-        if event.connection.remote_offered_capabilities and 'ANONYMOUS-RELAY' in event.connection.remote_offered_capabilities:
-            self.relay = self.container.create_sender(self.conn, None)
+        self.server = self.container.create_sender(self.conn, None)
 
     def on_message(self, event):
         print("Received", event.message)
-        sender = self.relay or self.senders.get(event.message.reply_to)
-        if not sender:
-            sender = self.container.create_sender(self.conn, event.message.reply_to)
-            self.senders[event.message.reply_to] = sender
-        sender.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
+        self.server.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
                             correlation_id=event.message.correlation_id))
 
 try:
