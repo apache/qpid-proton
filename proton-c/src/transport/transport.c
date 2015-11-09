@@ -1356,6 +1356,8 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     if (err) return err;
     if (code == COORDINATOR) {
       pn_terminus_set_type(rtgt, PN_COORDINATOR);
+    } else if (code == TARGET) {
+      pn_terminus_set_type(rtgt, PN_TARGET);
     } else {
       pn_terminus_set_type(rtgt, PN_UNSPECIFIED);
     }
