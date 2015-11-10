@@ -56,8 +56,6 @@ class value : public comparable<value> {
     PN_CPP_EXTERN void clear();
     PN_CPP_EXTERN bool empty() const;
 
-    // FIXME aconway 2015-11-06: rename encode/decode
-
     /** Encoder to encode complex data into this value. Note this clears the value. */
     PN_CPP_EXTERN class encoder& encoder();
 
