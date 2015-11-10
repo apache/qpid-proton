@@ -21,10 +21,11 @@
  * under the License.
  *
  */
+
+#include "proton/data.hpp"
 #include "proton/export.hpp"
 #include "proton/facade.hpp"
 #include "proton/message_id.hpp"
-#include "proton/data.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/value.hpp"
 
@@ -105,19 +106,11 @@ class message
     /** Get a reference to the body data, can be modified in-place. */
     PN_CPP_EXTERN data& body();
 
-    // FIXME aconway 2015-11-10: use buffer
-    /** Encode message into memory starting at buffer.first and ending before buffer.second */
-    PN_CPP_EXTERN void encode(std::pair<char*, char*> buffer);
-
     /** Encode into a string, growing the string if necessary. */
     PN_CPP_EXTERN void encode(std::string &bytes) const;
 
     /** Return encoded message as a string */
     PN_CPP_EXTERN std::string encode() const;
-
-    // FIXME aconway 2015-11-10: use buffer
-    /** Decode from memory starting at buffer.first and ending before buffer.second */
-    PN_CPP_EXTERN void decode(std::pair<const char*, const char*> buffer);
 
     /** Decode from string data into the message. */
     PN_CPP_EXTERN void decode(const std::string &bytes);
