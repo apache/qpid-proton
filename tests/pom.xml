@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.qpid</groupId>
     <artifactId>proton-project</artifactId>
-    <version>0.11.0-rc</version>
+    <version>0.11.0</version>
   </parent>
 
   <description>The Proton system tests execute against either the Java or the C implementations,
