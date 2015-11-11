@@ -344,7 +344,7 @@ template <class T> decoder& operator>>(decoder& d, sequence_ref<T> ref)  {
     return d;
 }
 
-void assert_map_scope(const decoder::scope& s);
+PN_CPP_EXTERN void assert_map_scope(const decoder::scope& s);
 
 /** Extract an AMQP MAP to a C++ map */
 template <class T> decoder& operator>>(decoder& d, map_ref<T> ref)  {
