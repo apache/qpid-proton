@@ -78,26 +78,43 @@ func (b *broker) run() error {
 			util.Debugf("Accept error: %v", err)
 			continue
 		}
-		c, err := b.container.Connection(conn, electron.Server(), electron.Accepter(b.accept))
+		c, err := b.container.Connection(conn, electron.Server(), electron.AllowIncoming())
 		if err != nil {
 			util.Debugf("Connection error: %v", err)
 			continue
 		}
+		go b.accept(c) // Goroutine to accept incoming sessions and links.
 		util.Debugf("Accepted %v", c)
 	}
 }
 
 // accept remotely-opened endpoints (Session, Sender and Receiver)
 // and start goroutines to service them.
-func (b *broker) accept(i electron.Incoming) {
-	switch i := i.(type) {
-	case *electron.IncomingSender:
-		go b.sender(i.AcceptSender())
-	case *electron.IncomingReceiver:
-		go b.receiver(i.AcceptReceiver(100, true)) // Pre-fetch 100 messages
-	default:
-		i.Accept()
+func (b *broker) accept(c electron.Connection) {
+	for in := range c.Incoming() {
+		switch in := in.(type) {
+
+		case *electron.IncomingSender:
+			if in.Source() == "" {
+				util.Debugf("sender has no source: %s", in)
+				break
+			}
+			go b.sender(in.Accept().(electron.Sender))
+
+		case *electron.IncomingReceiver:
+			if in.Target() == "" {
+				util.Debugf("receiver has no target: %s", in)
+				break
+			}
+			in.SetPrefetch(true)
+			in.SetCapacity(*credit) // Pre-fetch up to credit window.
+			go b.receiver(in.Accept().(electron.Receiver))
+
+		default:
+			in.Accept() // Accept sessions unconditionally
+		}
 	}
+	util.Debugf("incoming closed: %s", c)
 }
 
 // sender pops messages from a queue and sends them.

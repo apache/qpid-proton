@@ -168,6 +168,8 @@ type Endpoint interface {
 	RemoteCondition() Condition
 	// Human readable name
 	String() string
+	// Human readable endpoint type "link", "session" etc.
+	Type() string
 }
 
 // CloseError sets an error condition on an endpoint and closes the endpoint
@@ -257,6 +259,15 @@ func (l Link) String() string {
 	}
 }
 
+func (l Link) Type() string {
+	if l.IsSender() {
+		return "sender-link"
+	} else {
+		return "receiver-link"
+	}
+
+}
+
 func cPtr(b []byte) *C.char {
 	if len(b) == 0 {
 		return nil
@@ -283,6 +294,10 @@ func (s Session) Receiver(name string) Link {
 // Unique (per process) string identifier for a connection, useful for debugging.
 func (c Connection) String() string {
 	return fmt.Sprintf("%x", c.pn)
+}
+
+func (c Connection) Type() string {
+	return "connection"
 }
 
 // Head functions don't follow the normal naming conventions so missed by the generator.
@@ -312,6 +327,8 @@ func (c Connection) Sessions(state State) (sessions []Session) {
 func (s Session) String() string {
 	return fmt.Sprintf("%s/%p", s.Connection(), s.pn)
 }
+
+func (s Session) Type() string { return "session" }
 
 // Error returns an instance of amqp.Error or nil.
 func (c Condition) Error() error {

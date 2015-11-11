@@ -49,9 +49,8 @@ func newHandler(c *connection) *handler {
 	h.delegator.AutoOpen = false
 	return h
 }
-
-func (h *handler) internalError(ep proton.Endpoint, msg string) {
-	proton.CloseError(ep, amqp.Errorf(amqp.InternalError, "%s %s", msg, ep))
+func (h *handler) linkError(l proton.Link, msg string) {
+	proton.CloseError(l, amqp.Errorf(amqp.InternalError, "%s for %s %s", msg, l.Type(), l))
 }
 
 func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) {
@@ -61,7 +60,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		if r, ok := h.links[e.Link()].(*receiver); ok {
 			r.message(e.Delivery())
 		} else {
-			h.internalError(e.Link(), "no receiver for link")
+			h.linkError(e.Link(), "no receiver")
 		}
 
 	case proton.MSettled:
@@ -73,16 +72,12 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		if s, ok := h.links[e.Link()].(*sender); ok {
 			s.sendable()
 		} else {
-			h.internalError(e.Link(), "no sender for link")
+			h.linkError(e.Link(), "no sender")
 		}
 
 	case proton.MSessionOpening:
 		if e.Session().State().LocalUninit() { // Remotely opened
-			incoming := &IncomingSession{h: h, pSession: e.Session()}
-			h.connection.accept(incoming)
-			if err := incoming.error("rejected session %s", e.Session()); err != nil {
-				proton.CloseError(e.Session(), err)
-			}
+			h.incoming(newIncomingSession(h, e.Session()))
 		}
 
 	case proton.MSessionClosed:
@@ -101,19 +96,13 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 		ss := h.sessions[l.Session()]
 		if ss == nil {
-			h.internalError(e.Link(), "no session for link")
+			h.linkError(e.Link(), "no session")
 			break
 		}
-		var incoming Incoming
 		if l.IsReceiver() {
-			incoming = &IncomingReceiver{makeIncomingLink(ss, l)}
+			h.incoming(&IncomingReceiver{makeIncomingLink(ss, l)})
 		} else {
-			incoming = &IncomingSender{makeIncomingLink(ss, l)}
-		}
-		h.connection.accept(incoming)
-		if err := incoming.error("rejected link %s", e.Link()); err != nil {
-			proton.CloseError(l, err)
-			break
+			h.incoming(&IncomingSender{makeIncomingLink(ss, l)})
 		}
 
 	case proton.MLinkClosing:
@@ -143,6 +132,22 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		for _, sm := range h.sentMessages {
 			sm.settled(err)
 		}
+	}
+}
+
+func (h *handler) incoming(in Incoming) {
+	var err error
+	if h.connection.incoming != nil {
+		h.connection.incoming <- in
+		err = in.wait()
+	} else {
+		err = amqp.Errorf(amqp.NotAllowed, "rejected incoming %s %s",
+			in.pEndpoint().Type(), in.pEndpoint().String())
+	}
+	if err == nil {
+		in.pEndpoint().Open()
+	} else {
+		proton.CloseError(in.pEndpoint(), err)
 	}
 }
 

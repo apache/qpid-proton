@@ -297,18 +297,13 @@ func (sm *sentMessage) finish() {
 
 func (sm *sentMessage) Error() error { return sm.err }
 
-// IncomingSender is passed to the accept() function given to Connection.Listen()
-// when there is an incoming request for a sender link.
+// IncomingSender is sent on the Connection.Incoming() channel when there is
+// an incoming request to open a sender link.
 type IncomingSender struct {
 	incomingLink
 }
 
-// Link provides information about the incoming link.
-func (i *IncomingSender) Link() Link { return i }
-
-func (i *IncomingSender) AcceptSender() Sender { return i.Accept().(Sender) }
-
-func (i *IncomingSender) Accept() Endpoint {
-	i.accepted = true
-	return newSender(i.link)
+// Accept accepts an incoming sender endpoint
+func (in *IncomingSender) Accept() Endpoint {
+	return in.accept(func() Endpoint { return newSender(in.link) })
 }

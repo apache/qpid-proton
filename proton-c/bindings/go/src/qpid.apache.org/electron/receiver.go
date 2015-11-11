@@ -119,6 +119,7 @@ type receiver struct {
 	policy policy
 }
 
+// Call in proton goroutine
 func newReceiver(l link) *receiver {
 	r := &receiver{link: l}
 	if r.capacity < 1 {
@@ -216,23 +217,19 @@ func (rm *ReceivedMessage) Accept() error { return rm.Acknowledge(Accepted) }
 // Reject is short for Acknowledge(Rejected)
 func (rm *ReceivedMessage) Reject() error { return rm.Acknowledge(Rejected) }
 
-// IncomingReceiver is passed to the accept() function given to Connection.Listen()
-// when there is an incoming request for a receiver link.
+// IncomingReceiver is sent on the Connection.Incoming() channel when there is
+// an incoming request to open a receiver link.
 type IncomingReceiver struct {
 	incomingLink
 }
 
-// Link provides information about the incoming link.
-func (i *IncomingReceiver) Link() Link { return i }
+// SetCapacity sets the capacity of the incoming receiver, call before Accept()
+func (in *IncomingReceiver) SetCapacity(capacity int) { in.capacity = capacity }
 
-// AcceptReceiver sets Capacity and Prefetch of the accepted Receiver.
-func (i *IncomingReceiver) AcceptReceiver(capacity int, prefetch bool) Receiver {
-	i.capacity = capacity
-	i.prefetch = prefetch
-	return i.Accept().(Receiver)
-}
+// SetPrefetch sets the pre-fetch mode of the incoming receiver, call before Accept()
+func (in *IncomingReceiver) SetPrefetch(prefetch bool) { in.prefetch = prefetch }
 
-func (i *IncomingReceiver) Accept() Endpoint {
-	i.accepted = true
-	return newReceiver(i.link)
+// Accept accepts an incoming receiver endpoint
+func (in *IncomingReceiver) Accept() Endpoint {
+	return in.accept(func() Endpoint { return newReceiver(in.link) })
 }

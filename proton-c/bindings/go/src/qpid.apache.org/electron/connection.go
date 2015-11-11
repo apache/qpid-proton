@@ -24,7 +24,6 @@ import "C"
 
 import (
 	"net"
-	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
 	"sync"
 	"time"
@@ -58,12 +57,30 @@ type Connection interface {
 
 	// WaitTimeout is like Wait but returns Timeout if the timeout expires.
 	WaitTimeout(time.Duration) error
+
+	// Incoming returns a channel for incoming endpoints opened by the remote end.
+	//
+	// To enable, pass AllowIncoming() when creating the Connection. Otherwise all
+	// incoming endpoint requests are automatically rejected and Incoming()
+	// returns nil.
+	//
+	// An Incoming value can be an *IncomingSession, *IncomingSender or
+	// *IncomingReceiver.  You must call Accept() to open the endpoint or Reject()
+	// to close it with an error. The specific Incoming types have additional
+	// methods to configure the endpoint.
+	//
+	// Delay in receiving from Incoming() or calling Accept/Reject will block
+	// proton. Normally you should have a dedicated goroutine receive from this
+	// channel and start a new goroutine to serve each endpoint accepted.  The
+	// channel is closed when the Connection closes.
+	//
+	Incoming() <-chan Incoming
 }
 
-// ConnectionOption can be passed when creating a connection.
+// ConnectionOption can be passed when creating a connection to configure various options
 type ConnectionOption func(*connection)
 
-// Server setting puts the connection in server mode.
+// Server returns a ConnectionOption to put the connection in server mode.
 //
 // A server connection will do protocol negotiation to accept a incoming AMQP
 // connection. Normally you would call this for a connection created by
@@ -71,24 +88,19 @@ type ConnectionOption func(*connection)
 //
 func Server() ConnectionOption { return func(c *connection) { c.engine.Server() } }
 
-// Accepter provides a function to be called when a connection receives an incoming
-// request to open an endpoint, one of IncomingSession, IncomingSender or IncomingReceiver.
-//
-// The accept() function must not block or use the accepted endpoint.
-// It can pass the endpoint to another goroutine for processing.
-//
-// By default all incoming endpoints are rejected.
-func Accepter(accept func(Incoming)) ConnectionOption {
-	return func(c *connection) { c.accept = accept }
+// AllowIncoming returns a ConnectionOption to enable incoming endpoint open requests.
+// See Connection.Incoming()
+func AllowIncoming() ConnectionOption {
+	return func(c *connection) { c.incoming = make(chan Incoming) }
 }
 
 type connection struct {
 	endpoint
-	listenOnce, defaultSessionOnce, closeOnce sync.Once
+	defaultSessionOnce, closeOnce sync.Once
 
 	container   *container
 	conn        net.Conn
-	accept      func(Incoming)
+	incoming    chan Incoming
 	handler     *handler
 	engine      *proton.Engine
 	err         proton.ErrorHolder
@@ -99,7 +111,7 @@ type connection struct {
 }
 
 func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
-	c := &connection{container: cont, conn: conn, accept: func(Incoming) {}, done: make(chan struct{})}
+	c := &connection{container: cont, conn: conn, done: make(chan struct{})}
 	c.handler = newHandler(c)
 	var err error
 	c.engine, err = proton.NewEngine(c.conn, c.handler.delegator)
@@ -173,38 +185,45 @@ func (c *connection) WaitTimeout(timeout time.Duration) error {
 	return c.Error()
 }
 
+func (c *connection) Incoming() <-chan Incoming { return c.incoming }
+
 // Incoming is the interface for incoming requests to open an endpoint.
 // Implementing types are IncomingSession, IncomingSender and IncomingReceiver.
 type Incoming interface {
-	// Accept the endpoint with default settings.
-	//
-	// You must not use the returned endpoint in the accept() function that
-	// receives the Incoming value, but you can pass it to other goroutines.
-	//
-	// Implementing types provide type-specific Accept functions that take additional settings.
+	// Accept and open the endpoint.
 	Accept() Endpoint
 
 	// Reject the endpoint with an error
 	Reject(error)
 
-	error(string, ...interface{}) error
+	// wait for and call the accept function, call in proton goroutine.
+	wait() error
+	pEndpoint() proton.Endpoint
 }
 
-// Common state for incoming endpoints, record accept or reject error.
 type incoming struct {
-	err      error
-	accepted bool
+	endpoint proton.Endpoint
+	acceptCh chan func() error
 }
 
-func (i *incoming) Reject(err error) { i.err = err }
+func makeIncoming(e proton.Endpoint) incoming {
+	return incoming{endpoint: e, acceptCh: make(chan func() error)}
+}
 
-func (i *incoming) error(fmt string, arg ...interface{}) error {
-	switch {
-	case i.err != nil:
-		return i.err
-	case !i.accepted:
-		return amqp.Errorf(amqp.NotAllowed, fmt, arg...)
-	default:
+func (in *incoming) Reject(err error) { in.acceptCh <- func() error { return err } }
+
+// Call in proton goroutine, wait for and call the accept function fr
+func (in *incoming) wait() error { return (<-in.acceptCh)() }
+
+func (in *incoming) pEndpoint() proton.Endpoint { return in.endpoint }
+
+// Called in app goroutine to send an accept function to proton and return the resulting endpoint.
+func (in *incoming) accept(f func() Endpoint) Endpoint {
+	done := make(chan Endpoint)
+	in.acceptCh <- func() error {
+		ep := f()
+		done <- ep
 		return nil
 	}
+	return <-done
 }

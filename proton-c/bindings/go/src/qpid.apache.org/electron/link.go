@@ -60,36 +60,37 @@ type Link interface {
 	open()
 }
 
-// LinkOption can be passed when creating a sender or receiver link.
+// LinkOption can be passed when creating a sender or receiver link to set optional configuration.
 type LinkOption func(*link)
 
-// Source sets address that messages are coming from.
+// Source returns a LinkOption that sets address that messages are coming from.
 func Source(s string) LinkOption { return func(l *link) { l.source = s } }
 
-// Target sets address that messages are going to.
+// Target returns a LinkOption that sets address that messages are going to.
 func Target(s string) LinkOption { return func(l *link) { l.target = s } }
 
-// LinkName sets the link name.
+// LinkName returns a LinkOption that sets the link name.
 func LinkName(s string) LinkOption { return func(l *link) { l.target = s } }
 
-// SndSettle sets the send settle mode
+// SndSettle returns a LinkOption that sets the send settle mode
 func SndSettle(m SndSettleMode) LinkOption { return func(l *link) { l.sndSettle = m } }
 
-// RcvSettle sets the send settle mode
+// RcvSettle returns a LinkOption that sets the send settle mode
 func RcvSettle(m RcvSettleMode) LinkOption { return func(l *link) { l.rcvSettle = m } }
 
-// SndSettleMode defines when the sending end of the link settles message delivery.
+// SndSettleMode returns a LinkOption that defines when the sending end of the
+// link settles message delivery.
 type SndSettleMode proton.SndSettleMode
 
-// Capacity sets the link capacity
+// Capacity returns a LinkOption that sets the link capacity
 func Capacity(n int) LinkOption { return func(l *link) { l.capacity = n } }
 
-// Prefetch sets a receivers pre-fetch flag. Not relevant for a sender.
+// Prefetch returns a LinkOption that sets a receivers pre-fetch flag. Not relevant for a sender.
 func Prefetch(p bool) LinkOption { return func(l *link) { l.prefetch = p } }
 
-// AtMostOnce sets "fire and forget" mode, messages are sent but no
-// acknowledgment is received, messages can be lost if there is a network
-// failure. Sets SndSettleMode=SendSettled and RcvSettleMode=RcvFirst
+// AtMostOnce returns a LinkOption that sets "fire and forget" mode, messages
+// are sent but no acknowledgment is received, messages can be lost if there is
+// a network failure. Sets SndSettleMode=SendSettled and RcvSettleMode=RcvFirst
 func AtMostOnce() LinkOption {
 	return func(l *link) {
 		SndSettle(SndSettled)(l)
@@ -97,11 +98,11 @@ func AtMostOnce() LinkOption {
 	}
 }
 
-// AtLeastOnce requests acknowledgment for every message, acknowledgment
-// indicates the message was definitely received. In the event of a
-// failure, unacknowledged messages can be re-sent but there is a chance
-// that the message will be received twice in this case.
-// Sets SndSettleMode=SndUnsettled and RcvSettleMode=RcvFirst
+// AtLeastOnce returns a LinkOption that requests acknowledgment for every
+// message, acknowledgment indicates the message was definitely received. In the
+// event of a failure, unacknowledged messages can be re-sent but there is a
+// chance that the message will be received twice in this case.  Sets
+// SndSettleMode=SndUnsettled and RcvSettleMode=RcvFirst
 func AtLeastOnce() LinkOption {
 	return func(l *link) {
 		SndSettle(SndUnsettled)(l)
@@ -200,6 +201,7 @@ type incomingLink struct {
 // Set up a link from an incoming proton.Link.
 func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
 	l := incomingLink{
+		incoming: makeIncoming(eLink),
 		link: link{
 			session:   sn,
 			isSender:  eLink.IsSender(),
