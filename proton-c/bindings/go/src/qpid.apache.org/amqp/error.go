@@ -39,7 +39,7 @@ import (
 type Error struct{ Name, Description string }
 
 // Error implements the Go error interface for AMQP error errors.
-func (c Error) Error() string { return fmt.Sprintf("proton %s: %s", c.Name, c.Description) }
+func (c Error) Error() string { return fmt.Sprintf("%s: %s", c.Name, c.Description) }
 
 // Errorf makes a Error with name and formatted description as per fmt.Sprintf
 func Errorf(name, format string, arg ...interface{}) Error {

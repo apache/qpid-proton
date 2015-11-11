@@ -25,148 +25,219 @@ import "C"
 import (
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
-	"reflect"
 	"time"
 )
 
 // Sender is a Link that sends messages.
+//
+// The result of sending a message is provided by an Outcome value.
+//
+// A sender can buffer messages up to the credit limit provided by the remote receiver.
+// Send* methods will block if the buffer is full until there is space.
+// Send*Timeout methods will give up after the timeout and set Timeout as Outcome.Error.
+//
 type Sender interface {
 	Link
 
-	// Send a message without waiting for acknowledgement. Returns a SentMessage.
-	// use SentMessage.Disposition() to wait for acknowledgement and get the
-	// disposition code.
+	// SendSync sends a message and blocks until the message is acknowledged by the remote receiver.
+	// Returns an Outcome, which may contain an error if the message could not be sent.
+	SendSync(m amqp.Message) Outcome
+
+	// SendWaitable puts a message in the send buffer and returns a channel that
+	// you can use to wait for the Outcome of just that message. The channel is
+	// buffered so you can receive from it whenever you want without blocking anything.
+	SendWaitable(m amqp.Message) <-chan Outcome
+
+	// SendForget buffers a message for sending and returns, with no notification of the outcome.
+	SendForget(m amqp.Message)
+
+	// SendAsync puts a message in the send buffer and returns immediately.  An
+	// Outcome with Value = value will be sent to the ack channel when the remote
+	// receiver has acknowledged the message or if there is an error.
 	//
-	// If the send buffer is full, send blocks until there is space in the buffer.
-	Send(m amqp.Message) (sm SentMessage, err error)
-
-	// SendTimeout is like send but only waits up to timeout for buffer space.
+	// You can use the same ack channel for many calls to SendAsync(), possibly on
+	// many Senders. The channel will receive the outcomes in the order they
+	// become available. The channel should be buffered and/or served by dedicated
+	// goroutines to avoid blocking the connection.
 	//
-	// Returns Timeout error if the timeout expires and the message has not been sent.
-	SendTimeout(m amqp.Message, timeout time.Duration) (sm SentMessage, err error)
+	// If ack == nil no Outcome is sent.
+	SendAsync(m amqp.Message, ack chan<- Outcome, value interface{})
 
-	// Send a message and forget it, there will be no acknowledgement.
-	// If the send buffer is full, send blocks until there is space in the buffer.
-	SendForget(m amqp.Message) error
+	SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, value interface{}, timeout time.Duration)
 
-	// SendForgetTimeout is like send but only waits up to timeout for buffer space.
-	// Returns Timeout error if the timeout expires and the message has not been sent.
-	SendForgetTimeout(m amqp.Message, timeout time.Duration) error
+	SendWaitableTimeout(m amqp.Message, timeout time.Duration) <-chan Outcome
 
-	// Credit indicates how many messages the receiving end of the link can accept.
-	//
-	// On a Sender credit can be negative, meaning that messages in excess of the
-	// receiver's credit limit have been buffered locally till credit is available.
-	Credit() (int, error)
+	SendForgetTimeout(m amqp.Message, timeout time.Duration)
+
+	SendSyncTimeout(m amqp.Message, timeout time.Duration) Outcome
 }
 
-type sendMessage struct {
-	m  amqp.Message
-	sm SentMessage
+// Outcome provides information about the outcome of sending a message.
+type Outcome struct {
+	// Status of the message: was it sent, how was it acknowledged.
+	Status SentStatus
+	// Error is a local error if Status is Unsent or Unacknowledged, a remote error otherwise.
+	Error error
+	// Value provided by the application in SendAsync()
+	Value interface{}
 }
 
-type sender struct {
-	link
-	credit chan struct{} // Signal available credit.
-}
-
-// Disposition indicates the outcome of a settled message delivery.
-type Disposition uint64
+// SentStatus indicates the status of a sent message.
+type SentStatus int
 
 const (
-	// No disposition available: pre-settled, not yet acknowledged or an error occurred
-	NoDisposition Disposition = 0
+	// Message was never sent
+	Unsent SentStatus = iota
+	// Message was sent but never acknowledged. It may or may not have been received.
+	Unacknowledged
+	// Message was sent pre-settled, no remote outcome is available.
+	Presettled
 	// Message was accepted by the receiver
-	Accepted = proton.Accepted
+	Accepted
 	// Message was rejected as invalid by the receiver
-	Rejected = proton.Rejected
-	// Message was not processed by the receiver but may be processed by some other receiver.
-	Released = proton.Released
+	Rejected
+	// Message was not processed by the receiver but may be valid for a different receiver
+	Released
+	// Receiver responded with an unrecognized status.
+	Unknown
 )
 
-// String human readable name for a Disposition.
-func (d Disposition) String() string {
-	switch d {
-	case NoDisposition:
-		return "no-disposition"
+// String human readable name for SentStatus.
+func (s SentStatus) String() string {
+	switch s {
+	case Unsent:
+		return "unsent"
+	case Unacknowledged:
+		return "unacknowledged"
 	case Accepted:
 		return "accepted"
 	case Rejected:
 		return "rejected"
 	case Released:
 		return "released"
-	default:
+	case Unknown:
 		return "unknown"
-	}
-}
-
-func (s *sender) Send(m amqp.Message) (SentMessage, error) {
-	return s.SendTimeout(m, Forever)
-}
-
-func (s *sender) SendTimeout(m amqp.Message, timeout time.Duration) (SentMessage, error) {
-	var sm SentMessage
-	if s.sndSettle == SndSettled {
-		sm = nil
-	} else {
-		sm = newSentMessage(s.session.connection)
-	}
-	return s.sendInternal(sendMessage{m, sm}, timeout)
-}
-
-func (s *sender) SendForget(m amqp.Message) error {
-	return s.SendForgetTimeout(m, Forever)
-}
-
-func (s *sender) SendForgetTimeout(m amqp.Message, timeout time.Duration) error {
-	snd := sendMessage{m, nil}
-	_, err := s.sendInternal(snd, timeout)
-	return err
-}
-
-func (s *sender) sendInternal(snd sendMessage, timeout time.Duration) (SentMessage, error) {
-	if _, err := timedReceive(s.credit, timeout); err != nil { // Wait for credit
-		if err == Closed {
-			err = s.Error()
-			assert(err != nil)
-		}
-		return nil, err
-	}
-	if err := s.engine().Inject(func() { s.doSend(snd) }); err != nil {
-		return nil, err
-	}
-	return snd.sm, nil
-}
-
-// Send a message. Handler goroutine
-func (s *sender) doSend(snd sendMessage) {
-	delivery, err := s.eLink.Send(snd.m)
-	switch sm := snd.sm.(type) {
-	case nil:
-		delivery.Settle()
-	case *sentMessage:
-		sm.delivery = delivery
-		if err != nil {
-			sm.settled(err)
-		} else {
-			s.handler().sentMessages[delivery] = sm
-		}
 	default:
-		assert(false, "bad SentMessage type %T", snd.sm)
-	}
-	if s.eLink.Credit() > 0 {
-		s.sendable() // Signal credit.
+		return "invalid"
 	}
 }
 
-// Signal the sender has credit. Any goroutine.
+// Convert proton delivery state code to SentStatus value
+func sentStatus(d uint64) SentStatus {
+	switch d {
+	case proton.Accepted:
+		return Accepted
+	case proton.Rejected:
+		return Rejected
+	case proton.Released, proton.Modified:
+		return Released
+	default:
+		return Unknown
+	}
+}
+
+// Sender implementation, held by handler.
+type sender struct {
+	link
+	credit chan struct{} // Signal available credit.
+}
+
+func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interface{}, t time.Duration) {
+	// wait for credit
+	if _, err := timedReceive(s.credit, t); err != nil {
+		if err == Closed && s.Error != nil {
+			err = s.Error()
+		}
+		ack <- Outcome{Unsent, err, v}
+		return
+	}
+	// Send a message in handler goroutine
+	err := s.engine().Inject(func() {
+		if s.Error() != nil {
+			if ack != nil {
+				ack <- Outcome{Unsent, s.Error(), v}
+			}
+			return
+		}
+		if delivery, err := s.eLink.Send(m); err == nil {
+			if ack != nil { // We must report an outcome
+				if s.SndSettle() == SndSettled {
+					delivery.Settle() // Pre-settle if required
+					ack <- Outcome{Presettled, nil, v}
+				} else {
+					s.handler().sentMessages[delivery] = sentMessage{ack, v}
+				}
+			} else { // ack == nil, can't report outcome
+				if s.SndSettle() != SndUnsettled { // Pre-settle unless we are forced not to.
+					delivery.Settle()
+				}
+			}
+		} else { // err != nil
+			if ack != nil {
+				ack <- Outcome{Unsent, err, v}
+			}
+		}
+		if s.eLink.Credit() > 0 { // Signal there is still credit
+			s.sendable()
+		}
+	})
+	if err != nil && ack != nil {
+		ack <- Outcome{Unsent, err, v}
+	}
+}
+
+// Set credit flag if not already set. Non-blocking, any goroutine
 func (s *sender) sendable() {
 	select { // Non-blocking
-	case s.credit <- struct{}{}: // Set the flag if not already set.
+	case s.credit <- struct{}{}:
 	default:
 	}
 }
 
+func (s *sender) SendWaitableTimeout(m amqp.Message, t time.Duration) <-chan Outcome {
+	out := make(chan Outcome, 1)
+	s.SendAsyncTimeout(m, out, nil, t)
+	return out
+}
+
+func (s *sender) SendForgetTimeout(m amqp.Message, t time.Duration) {
+	s.SendAsyncTimeout(m, nil, nil, t)
+}
+
+func (s *sender) SendSyncTimeout(m amqp.Message, t time.Duration) Outcome {
+	deadline := time.Now().Add(t)
+	ack := s.SendWaitableTimeout(m, t)
+	t = deadline.Sub(time.Now()) // Adjust for time already spent.
+	if t < 0 {
+		t = 0
+	}
+	if out, err := timedReceive(ack, t); err == nil {
+		return out.(Outcome)
+	} else {
+		if err == Closed && s.Error() != nil {
+			err = s.Error()
+		}
+		return Outcome{Unacknowledged, err, nil}
+	}
+}
+
+func (s *sender) SendAsync(m amqp.Message, ack chan<- Outcome, v interface{}) {
+	s.SendAsyncTimeout(m, ack, v, Forever)
+}
+
+func (s *sender) SendWaitable(m amqp.Message) <-chan Outcome {
+	return s.SendWaitableTimeout(m, Forever)
+}
+
+func (s *sender) SendForget(m amqp.Message) {
+	s.SendForgetTimeout(m, Forever)
+}
+
+func (s *sender) SendSync(m amqp.Message) Outcome {
+	return <-s.SendWaitable(m)
+}
+
+// handler goroutine
 func (s *sender) closed(err error) {
 	s.link.closed(err)
 	close(s.credit)
@@ -179,123 +250,11 @@ func newSender(l link) *sender {
 	return s
 }
 
-// SentMessage represents a previously sent message. It allows you to wait for acknowledgement.
-type SentMessage interface {
-
-	// Disposition blocks till the message is acknowledged and returns the
-	// disposition state.
-	//
-	// NoDisposition with Error() != nil means the Connection was closed before
-	// the message was acknowledged.
-	//
-	// NoDisposition with Error() == nil means the message was pre-settled or
-	// Forget() was called.
-	Disposition() (Disposition, error)
-
-	// DispositionTimeout is like Disposition but gives up after timeout, see Timeout.
-	DispositionTimeout(time.Duration) (Disposition, error)
-
-	// Forget interrupts any call to Disposition on this SentMessage and tells the
-	// peer we are no longer interested in the disposition of this message.
-	Forget()
-
-	// Error returns the error that closed the disposition, or nil if there was no error.
-	// If the disposition closed because the connection closed, it will return Closed.
-	Error() error
-
-	// Value is an optional value you wish to associate with the SentMessage. It
-	// can be the message itself or some form of identifier.
-	Value() interface{}
-	SetValue(interface{})
-}
-
-// SentMessageSet is a concurrent-safe set of sent messages that can be checked
-// to get the next completed sent message
-type SentMessageSet struct {
-	cases []reflect.SelectCase
-	sm    []SentMessage
-	done  chan SentMessage
-}
-
-func (s *SentMessageSet) Add(sm SentMessage) {
-	s.sm = append(s.sm, sm)
-	s.cases = append(s.cases, reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(sm.(*sentMessage).done)})
-}
-
-// Wait waits up to timeout and returns the next SentMessage that has a valid dispositionb
-// or an error.
-func (s *SentMessageSet) Wait(sm SentMessage, timeout time.Duration) (SentMessage, error) {
-	s.cases = s.cases[:len(s.sm)] // Remove previous timeout cases
-	if timeout == 0 {             // Non-blocking
-		s.cases = append(s.cases, reflect.SelectCase{Dir: reflect.SelectDefault})
-	} else {
-		s.cases = append(s.cases,
-			reflect.SelectCase{Dir: reflect.SelectRecv, Chan: reflect.ValueOf(After(timeout))})
-	}
-	chosen, _, _ := reflect.Select(s.cases)
-	if chosen > len(s.sm) {
-		return nil, Timeout
-	} else {
-		sm := s.sm[chosen]
-		s.sm = append(s.sm[:chosen], s.sm[chosen+1:]...)
-		return sm, nil
-	}
-}
-
-// SentMessage implementation
+// sentMessage records a sent message on the handler.
 type sentMessage struct {
-	connection  *connection
-	done        chan struct{}
-	delivery    proton.Delivery
-	disposition Disposition
-	err         error
-	value       interface{}
+	ack   chan<- Outcome
+	value interface{}
 }
-
-func newSentMessage(c *connection) *sentMessage {
-	return &sentMessage{connection: c, done: make(chan struct{})}
-}
-
-func (sm *sentMessage) SetValue(v interface{}) { sm.value = v }
-func (sm *sentMessage) Value() interface{}     { return sm.value }
-func (sm *sentMessage) Disposition() (Disposition, error) {
-	<-sm.done
-	return sm.disposition, sm.err
-}
-
-func (sm *sentMessage) DispositionTimeout(timeout time.Duration) (Disposition, error) {
-	if _, err := timedReceive(sm.done, timeout); err == Timeout {
-		return sm.disposition, Timeout
-	} else {
-		return sm.disposition, sm.err
-	}
-}
-
-func (sm *sentMessage) Forget() {
-	sm.connection.engine.Inject(func() {
-		sm.delivery.Settle()
-		delete(sm.connection.handler.sentMessages, sm.delivery)
-	})
-	sm.finish()
-}
-
-func (sm *sentMessage) settled(err error) {
-	if sm.delivery.Settled() {
-		sm.disposition = Disposition(sm.delivery.Remote().Type())
-	}
-	sm.err = err
-	sm.finish()
-}
-
-func (sm *sentMessage) finish() {
-	select {
-	case <-sm.done: // No-op if already closed
-	default:
-		close(sm.done)
-	}
-}
-
-func (sm *sentMessage) Error() error { return sm.err }
 
 // IncomingSender is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a sender link.
@@ -306,4 +265,10 @@ type IncomingSender struct {
 // Accept accepts an incoming sender endpoint
 func (in *IncomingSender) Accept() Endpoint {
 	return in.accept(func() Endpoint { return newSender(in.link) })
+}
+
+// Call in injected functions to check if the sender is valid.
+func (s *sender) valid() bool {
+	s2, ok := s.handler().links[s.eLink].(*sender)
+	return ok && s2 == s
 }

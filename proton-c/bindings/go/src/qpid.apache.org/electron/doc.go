@@ -35,7 +35,8 @@ Send() and Receive() messages.
 You can create an AMQP server connection by calling Connection.Server() and
 Connection.Listen() before calling Connection.Open(). A server connection can
 negotiate protocol security details and can accept incoming links opened from
-the remote end of the connection
+the remote end of the connection.
+
 */
 package electron
 

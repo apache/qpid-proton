@@ -69,10 +69,10 @@ type Connection interface {
 	// to close it with an error. The specific Incoming types have additional
 	// methods to configure the endpoint.
 	//
-	// Delay in receiving from Incoming() or calling Accept/Reject will block
-	// proton. Normally you should have a dedicated goroutine receive from this
-	// channel and start a new goroutine to serve each endpoint accepted.  The
-	// channel is closed when the Connection closes.
+	// Not receiving from Incoming() or not calling Accept/Reject will block the
+	// electron event loop. Normally you would have a dedicated goroutine receive
+	// from Incoming() and start new goroutines to serve each incoming endpoint.
+	// The channel is closed when the Connection closes.
 	//
 	Incoming() <-chan Incoming
 }
@@ -103,15 +103,13 @@ type connection struct {
 	incoming    chan Incoming
 	handler     *handler
 	engine      *proton.Engine
-	err         proton.ErrorHolder
 	eConnection proton.Connection
 
 	defaultSession Session
-	done           chan struct{}
 }
 
 func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
-	c := &connection{container: cont, conn: conn, done: make(chan struct{})}
+	c := &connection{container: cont, conn: conn}
 	c.handler = newHandler(c)
 	var err error
 	c.engine, err = proton.NewEngine(c.conn, c.handler.delegator)
@@ -121,10 +119,18 @@ func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) 
 	for _, set := range setting {
 		set(c)
 	}
-	c.str = c.engine.String()
+	c.endpoint = makeEndpoint(c.engine.String())
 	c.eConnection = c.engine.Connection()
-	go func() { c.engine.Run(); close(c.done) }()
+	go c.run()
 	return c, nil
+}
+
+func (c *connection) run() {
+	c.engine.Run()
+	if c.incoming != nil {
+		close(c.incoming)
+	}
+	c.closed(Closed)
 }
 
 func (c *connection) Close(err error) { c.err.Set(err); c.engine.Close(err) }
@@ -134,6 +140,9 @@ func (c *connection) Disconnect(err error) { c.err.Set(err); c.engine.Disconnect
 func (c *connection) Session(setting ...SessionOption) (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
+		if c.Error() != nil {
+			return c.Error()
+		}
 		eSession, err := c.engine.Connection().Session()
 		if err == nil {
 			eSession.Open()

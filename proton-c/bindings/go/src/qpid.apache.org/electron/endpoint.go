@@ -48,20 +48,45 @@ type Endpoint interface {
 
 	// Connection containing the endpoint
 	Connection() Connection
+
+	// Done returns a channel that will close when the endpoint closes.
+	// Error() will contain the reason.
+	Done() <-chan struct{}
 }
 
 type endpoint struct {
-	err proton.ErrorHolder
-	str string // Must be set by the value that embeds endpoint.
+	err  proton.ErrorHolder
+	str  string // Must be set by the value that embeds endpoint.
+	done chan struct{}
+}
+
+func makeEndpoint(s string) endpoint { return endpoint{str: s, done: make(chan struct{})} }
+
+func (e *endpoint) closed(err error) {
+	e.err.Set(err)
+	e.err.Set(Closed)
+	close(e.done)
 }
 
 func (e *endpoint) String() string { return e.str }
-func (e *endpoint) Error() error   { return e.err.Get() }
+
+func (e *endpoint) Error() error { return e.err.Get() }
+
+func (e *endpoint) Done() <-chan struct{} { return e.done }
 
 // Call in proton goroutine to close an endpoint locally
 // handler will complete the close when remote end closes.
 func localClose(ep proton.Endpoint, err error) {
 	if ep.State().LocalActive() {
 		proton.CloseError(ep, err)
+	}
+}
+
+// Used to indicate that a channel has closed which normally is because the endpoint is closed.
+func errorOrClosed(e Endpoint) error {
+	if e.Error() != nil {
+		return e.Error()
+	} else {
+		return Closed
 	}
 }

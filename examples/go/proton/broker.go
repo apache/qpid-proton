@@ -24,6 +24,9 @@ under the License.
 // messages to queues or subscribe to receive messages from them.
 //
 
+// TODO: show how to handle acknowledgedments from receivers and put rejected or
+// un-acknowledged messages back on their queues.
+
 package main
 
 import (
@@ -277,7 +280,7 @@ func (s *sender) sendable() {
 // run runs in a separate goroutine. It monitors the queue for messages and injects
 // a function to send them when there is credit
 func (s *sender) run() {
-	var q chan amqp.Message // q is nil initially as we have no credit.
+	var q util.Queue // q is nil initially as we have no credit.
 	for {
 		select {
 		case _, ok := <-s.credit:
@@ -293,7 +296,7 @@ func (s *sender) run() {
 			q = nil                      // Assume all credit will be used used, will be signaled otherwise.
 			s.h.injecter.Inject(func() { // Inject handler function to actually send
 				if s.h.senders[s.l] != s { // The sender has been closed by the remote end.
-					go func() { q <- m }() // Put the message back on the queue but don't block
+					q.PutBack(m) // Put the message back on the queue but don't block
 					return
 				}
 				if s.sendOne(m) != nil {
@@ -322,7 +325,7 @@ func (s *sender) sendOne(m amqp.Message) error {
 		delivery.Settle() // Pre-settled, unreliable.
 		util.Debugf("link %s sent %s", s.l, util.FormatMessage(m))
 	} else {
-		go func() { s.q <- m }() // Put the message back on the queue but don't block
+		s.q.PutBack(m) // Put the message back on the queue, don't block
 	}
 	return err
 }

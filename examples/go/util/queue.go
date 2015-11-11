@@ -27,6 +27,16 @@ import (
 // Use a buffered channel as a very simple queue.
 type Queue chan amqp.Message
 
+// Put a message back on the queue, does not block.
+func (q Queue) PutBack(m amqp.Message) {
+	select {
+	case q <- m:
+	default:
+		// Not an efficient implementation but ensures we don't block the caller.
+		go func() { q <- m }()
+	}
+}
+
 // Concurrent-safe map of queues.
 type Queues struct {
 	queueSize int

@@ -30,7 +30,7 @@ type handler struct {
 	delegator    *proton.MessagingAdapter
 	connection   *connection
 	links        map[proton.Link]Link
-	sentMessages map[proton.Delivery]*sentMessage
+	sentMessages map[proton.Delivery]sentMessage
 	sessions     map[proton.Session]*session
 }
 
@@ -38,7 +38,7 @@ func newHandler(c *connection) *handler {
 	h := &handler{
 		connection:   c,
 		links:        make(map[proton.Link]Link),
-		sentMessages: make(map[proton.Delivery]*sentMessage),
+		sentMessages: make(map[proton.Delivery]sentMessage),
 		sessions:     make(map[proton.Session]*session),
 	}
 	h.delegator = proton.NewMessagingAdapter(h)
@@ -64,8 +64,10 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 
 	case proton.MSettled:
-		if sm := h.sentMessages[e.Delivery()]; sm != nil {
-			sm.settled(nil)
+		if sm, ok := h.sentMessages[e.Delivery()]; ok {
+			d := e.Delivery().Remote()
+			sm.ack <- Outcome{sentStatus(d.Type()), d.Condition().Error(), sm.value}
+			delete(h.sentMessages, e.Delivery())
 		}
 
 	case proton.MSendable:
@@ -123,15 +125,19 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		h.connection.err.Set(amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection))
 
 		err := h.connection.Error()
+
 		for l, _ := range h.links {
 			h.linkClosed(l, err)
 		}
+		h.links = nil
 		for _, s := range h.sessions {
 			s.closed(err)
 		}
+		h.sessions = nil
 		for _, sm := range h.sentMessages {
-			sm.settled(err)
+			sm.ack <- Outcome{Unacknowledged, err, sm.value}
 		}
+		h.sentMessages = nil
 	}
 }
 

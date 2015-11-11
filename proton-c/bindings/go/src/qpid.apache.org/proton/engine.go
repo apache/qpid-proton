@@ -315,6 +315,13 @@ func (eng *Engine) Run() error {
 	wait.Wait()
 	close(eng.running) // Signal goroutines have exited and Error is set.
 
+	// Execute any injected functions for side effects on application data structures.
+	inject := eng.inject
+	eng.inject = nil // Further calls to Inject() will return an error.
+	for f := range inject {
+		f()
+	}
+
 	if !eng.connection.IsNil() {
 		eng.connection.Free()
 	}

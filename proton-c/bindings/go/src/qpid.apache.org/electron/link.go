@@ -144,7 +144,6 @@ type link struct {
 
 	session *session
 	eLink   proton.Link
-	done    chan struct{} // Closed when link is closed
 }
 
 func (l *link) Source() string           { return l.source }
@@ -167,7 +166,6 @@ func localLink(sn *session, isSender bool, setting ...LinkOption) (link, error) 
 		isSender: isSender,
 		capacity: 1,
 		prefetch: false,
-		done:     make(chan struct{}),
 	}
 	for _, set := range setting {
 		set(&l)
@@ -188,8 +186,8 @@ func localLink(sn *session, isSender bool, setting ...LinkOption) (link, error) 
 	l.eLink.Target().SetAddress(l.target)
 	l.eLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
 	l.eLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))
-	l.str = l.eLink.String()
 	l.eLink.Open()
+	l.endpoint = makeEndpoint(l.eLink.String())
 	return l, nil
 }
 
@@ -213,23 +211,18 @@ func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
 			rcvSettle: RcvSettleMode(eLink.RemoteRcvSettleMode()),
 			capacity:  1,
 			prefetch:  false,
-			done:      make(chan struct{}),
+			endpoint:  makeEndpoint(eLink.String()),
 		},
 	}
-	l.str = eLink.String()
 	return l
-}
-
-// Called in proton goroutine on closed or disconnected
-func (l *link) closed(err error) {
-	l.err.Set(err)
-	l.err.Set(Closed) // If no error set, mark as closed.
-	close(l.done)
 }
 
 // Not part of Link interface but use by Sender and Receiver.
 func (l *link) Credit() (credit int, err error) {
 	err = l.engine().InjectWait(func() error {
+		if l.Error() != nil {
+			return l.Error()
+		}
 		credit = l.eLink.Credit()
 		return nil
 	})
@@ -240,7 +233,11 @@ func (l *link) Credit() (credit int, err error) {
 func (l *link) Capacity() int { return l.capacity }
 
 func (l *link) Close(err error) {
-	l.engine().Inject(func() { localClose(l.eLink, err) })
+	l.engine().Inject(func() {
+		if l.Error() == nil {
+			localClose(l.eLink, err)
+		}
+	})
 }
 
 func (l *link) open() {

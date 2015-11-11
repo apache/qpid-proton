@@ -77,6 +77,9 @@ type prefetchPolicy struct{}
 
 func (p prefetchPolicy) Flow(r *receiver) {
 	r.engine().Inject(func() {
+		if r.Error() != nil {
+			return
+		}
 		_, _, max := r.credit()
 		if max > 0 {
 			r.eLink.Flow(max)
@@ -94,6 +97,9 @@ type noPrefetchPolicy struct{ waiting int }
 
 func (p noPrefetchPolicy) Flow(r *receiver) { // Not called in proton goroutine
 	r.engine().Inject(func() {
+		if r.Error() != nil {
+			return
+		}
 		len, credit, max := r.credit()
 		add := p.waiting - (len + credit)
 		if add > max {
@@ -202,20 +208,23 @@ type ReceivedMessage struct {
 	receiver  Receiver
 }
 
-// Acknowledge a ReceivedMessage with the given disposition code.
-func (rm *ReceivedMessage) Acknowledge(disposition Disposition) error {
-	return rm.receiver.(*receiver).engine().InjectWait(func() error {
-		// Settle doesn't return an error but if the receiver is broken the settlement won't happen.
-		rm.eDelivery.SettleAs(uint64(disposition))
-		return rm.receiver.Error()
+// Acknowledge a ReceivedMessage with the given delivery status.
+func (rm *ReceivedMessage) acknowledge(status uint64) error {
+	return rm.receiver.(*receiver).engine().Inject(func() {
+		// Deliveries are valid as long as the connection is, unless settled.
+		rm.eDelivery.SettleAs(uint64(status))
 	})
 }
 
-// Accept is short for Acknowledge(Accpeted)
-func (rm *ReceivedMessage) Accept() error { return rm.Acknowledge(Accepted) }
+// Accept tells the sender that we take responsibility for processing the message.
+func (rm *ReceivedMessage) Accept() error { return rm.acknowledge(proton.Accepted) }
 
-// Reject is short for Acknowledge(Rejected)
-func (rm *ReceivedMessage) Reject() error { return rm.Acknowledge(Rejected) }
+// Reject tells the sender we consider the message invalid and unusable.
+func (rm *ReceivedMessage) Reject() error { return rm.acknowledge(proton.Rejected) }
+
+// Release tells the sender we will not process the message but some other
+// receiver might.
+func (rm *ReceivedMessage) Release() error { return rm.acknowledge(proton.Released) }
 
 // IncomingReceiver is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a receiver link.

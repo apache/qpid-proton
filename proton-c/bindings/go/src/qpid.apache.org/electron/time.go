@@ -21,6 +21,7 @@ package electron
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"time"
 )
@@ -41,7 +42,7 @@ import (
 var Timeout = fmt.Errorf("timeout")
 
 // Forever can be used as a timeout parameter to indicate wait forever.
-const Forever time.Duration = -1
+const Forever time.Duration = math.MaxInt64
 
 // timedReceive receives on channel (which can be a chan of any type), waiting
 // up to timeout.

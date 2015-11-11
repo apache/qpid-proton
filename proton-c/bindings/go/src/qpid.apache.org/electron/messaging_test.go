@@ -80,7 +80,6 @@ func closeClientServer(client Session, server Connection) {
 
 // Send a message one way with a client sender and server receiver, verify ack.
 func TestClientSendServerReceive(t *testing.T) {
-	timeout := time.Second * 2
 	nLinks := 3
 	nMessages := 3
 
@@ -116,15 +115,14 @@ func TestClientSendServerReceive(t *testing.T) {
 
 	for i := 0; i < nLinks; i++ {
 		for j := 0; j < nMessages; j++ {
-			var sm SentMessage
-
 			// Client send
+			ack := make(chan Outcome, 1)
 			sendDone := make(chan struct{})
 			go func() {
 				defer close(sendDone)
 				m := amqp.NewMessageWith(fmt.Sprintf("foobar%v-%v", i, j))
 				var err error
-				sm, err = s[i].Send(m)
+				s[i].SendAsync(m, ack, "testing")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -141,16 +139,19 @@ func TestClientSendServerReceive(t *testing.T) {
 
 			// Should not be acknowledged on client yet
 			<-sendDone
-			if d, err := sm.DispositionTimeout(0); err != Timeout || NoDisposition != d {
-				t.Errorf("want [no-disposition/timeout] got [%v/%v]", d, err)
+			select {
+			case <-ack:
+				t.Errorf("unexpected ack")
+			default:
 			}
-			// Server ack
-			if err := rm.Acknowledge(Rejected); err != nil {
+
+			// Server send ack
+			if err := rm.Reject(); err != nil {
 				t.Error(err)
 			}
 			// Client get ack.
-			if d, err := sm.DispositionTimeout(timeout); err != nil || Rejected != d {
-				t.Errorf("want [rejected/nil] got [%v/%v]", d, err)
+			if a := <-ack; a.Value != "testing" || a.Error != nil || a.Status != Rejected {
+				t.Error("unexpected ack: ", a.Status, a.Error, a.Value)
 			}
 		}
 	}
@@ -166,12 +167,10 @@ func TestClientReceiver(t *testing.T) {
 				s := in.Accept().(Sender)
 				go func() {
 					for i := int32(0); i < int32(nMessages); i++ {
-						sm, err := s.Send(amqp.NewMessageWith(i))
-						if err != nil {
-							t.Error(err)
+						out := s.SendSync(amqp.NewMessageWith(i))
+						if out.Error != nil {
+							t.Error(out.Error)
 							return
-						} else {
-							sm.Disposition() // Sync send.
 						}
 					}
 					s.Close(nil)
@@ -235,10 +234,10 @@ func TestTimeouts(t *testing.T) {
 	short := time.Millisecond
 	long := time.Second
 	m := amqp.NewMessage()
-	if _, err = snd.SendTimeout(m, 0); err != Timeout { // No credit, expect timeout.
+	if err := snd.SendSyncTimeout(m, 0).Error; err != Timeout { // No credit, expect timeout.
 		t.Error("want Timeout got", err)
 	}
-	if _, err = snd.SendTimeout(m, short); err != Timeout { // No credit, expect timeout.
+	if err := snd.SendSyncTimeout(m, short).Error; err != Timeout { // No credit, expect timeout.
 		t.Error("want Timeout got", err)
 	}
 	// Test receive with timeout
@@ -250,17 +249,15 @@ func TestTimeouts(t *testing.T) {
 		t.Error("want Timeout got", err)
 	}
 	// There is now a credit on the link due to receive
-	sm, err := snd.SendTimeout(m, long)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ack := make(chan Outcome)
+	snd.SendAsyncTimeout(m, ack, nil, short)
 	// Disposition should timeout
-	if _, err = sm.DispositionTimeout(long); err != Timeout {
-		t.Error("want Timeout got", err)
+	select {
+	case <-ack:
+		t.Errorf("want Timeout got %#v", ack)
+	case <-time.After(short):
 	}
-	if _, err = sm.DispositionTimeout(short); err != Timeout {
-		t.Error("want Timeout got", err)
-	}
+
 	// Receive and accept
 	rm, err := rcv.ReceiveTimeout(long)
 	if err != nil {
@@ -268,9 +265,8 @@ func TestTimeouts(t *testing.T) {
 	}
 	rm.Accept()
 	// Sender get ack
-	d, err := sm.DispositionTimeout(long)
-	if err != nil || d != Accepted {
-		t.Errorf("want (rejected, nil) got (%v, %v)", d, err)
+	if a := <-ack; a.Status != Accepted || a.Error != nil {
+		t.Errorf("want (accepted, nil) got %#v", a)
 	}
 }
 
@@ -329,7 +325,7 @@ type result struct {
 func (r result) String() string { return fmt.Sprintf("%s(%s)", r.err, r.label) }
 
 func doSend(snd Sender, results chan result) {
-	_, err := snd.Send(amqp.NewMessage())
+	err := snd.SendSync(amqp.NewMessage()).Error
 	results <- result{"send", err}
 }
 
@@ -338,9 +334,8 @@ func doReceive(rcv Receiver, results chan result) {
 	results <- result{"receive", err}
 }
 
-func doDisposition(sm SentMessage, results chan result) {
-	_, err := sm.Disposition()
-	results <- result{"disposition", err}
+func doDisposition(ack <-chan Outcome, results chan result) {
+	results <- result{"disposition", (<-ack).Error}
 }
 
 // Test that closing Links interrupts blocked link functions.
@@ -391,9 +386,8 @@ func TestConnectionCloseInterrupt1(t *testing.T) {
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
 	go doReceive(rcv, results)
-	sm, err := snd.Send(amqp.NewMessage())
-	fatalIf(t, err)
-	go doDisposition(sm, results)
+	ack := snd.SendWaitable(amqp.NewMessage())
+	go doDisposition(ack, results)
 	snd, rcv = pairs.senderReceiver()
 	go doSend(snd, results)
 	rcv, snd = pairs.receiverSender()
@@ -416,9 +410,8 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
 	go doReceive(rcv, results)
-	sm, err := snd.Send(amqp.NewMessage())
-	fatalIf(t, err)
-	go doDisposition(sm, results)
+	ack := snd.SendWaitable(amqp.NewMessage())
+	go doDisposition(ack, results)
 	snd, rcv = pairs.senderReceiver()
 	go doSend(snd, results)
 	rcv, snd = pairs.receiverSender()

@@ -53,7 +53,7 @@ func newSession(c *connection, es proton.Session, setting ...SessionOption) *ses
 	s := &session{
 		connection: c,
 		eSession:   es,
-		endpoint:   endpoint{str: es.String()},
+		endpoint:   makeEndpoint(es.String()),
 	}
 	for _, set := range setting {
 		set(s)
@@ -67,12 +67,20 @@ func newSession(c *connection, es proton.Session, setting ...SessionOption) *ses
 func (s *session) Connection() Connection     { return s.connection }
 func (s *session) eEndpoint() proton.Endpoint { return s.eSession }
 func (s *session) engine() *proton.Engine     { return s.connection.engine }
+
 func (s *session) Close(err error) {
-	s.engine().Inject(func() { localClose(s.eSession, err) })
+	s.engine().Inject(func() {
+		if s.Error() == nil {
+			localClose(s.eSession, err)
+		}
+	})
 }
 
 func (s *session) Sender(setting ...LinkOption) (snd Sender, err error) {
 	err = s.engine().InjectWait(func() error {
+		if s.Error() != nil {
+			return s.Error()
+		}
 		l, err := localLink(s, true, setting...)
 		if err == nil {
 			snd = newSender(l)
@@ -84,6 +92,9 @@ func (s *session) Sender(setting ...LinkOption) (snd Sender, err error) {
 
 func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 	err = s.engine().InjectWait(func() error {
+		if s.Error() != nil {
+			return s.Error()
+		}
 		l, err := localLink(s, false, setting...)
 		if err == nil {
 			rcv = newReceiver(l)
@@ -91,12 +102,6 @@ func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 		return err
 	})
 	return
-}
-
-// Called from handler on closed.
-func (s *session) closed(err error) {
-	s.err.Set(err)
-	s.err.Set(Closed)
 }
 
 // IncomingSender is sent on the Connection.Incoming() channel when there is an

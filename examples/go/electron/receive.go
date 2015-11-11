@@ -85,15 +85,12 @@ func main() {
 
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
-				rm, err := r.Receive()
-				switch err {
-				case electron.Closed:
-					util.Debugf("closed %s", urlStr)
+				if rm, err := r.Receive(); err != nil {
+					util.Debugf("closed %v: %v", urlStr, err)
 					return
-				case nil:
+				} else {
+					rm.Accept()
 					messages <- rm.Message
-				default:
-					log.Fatal(err)
 				}
 			}
 		}(urlStr)

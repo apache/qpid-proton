@@ -42,11 +42,6 @@ Send messages to each URL concurrently with body "<url-path>-<n>" where n is the
 
 var count = flag.Int64("count", 1, "Send this may messages per address.")
 
-type sent struct {
-	name        string
-	sentMessage electron.SentMessage
-}
-
 func main() {
 	flag.Usage = usage
 	flag.Parse()
@@ -58,9 +53,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	sentChan := make(chan sent) // Channel to receive all the delivery receipts.
-	var wait sync.WaitGroup     // Used by main() to wait for all goroutines to end.
-	wait.Add(len(urls))         // Wait for one goroutine per URL.
+	sentChan := make(chan electron.Outcome) // Channel to receive acknowledgements.
+
+	var wait sync.WaitGroup
+	wait.Add(len(urls)) // Wait for one goroutine per URL.
 
 	_, prog := path.Split(os.Args[0])
 	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
@@ -91,9 +87,7 @@ func main() {
 				m := amqp.NewMessage()
 				body := fmt.Sprintf("%v-%v", url.Path, i)
 				m.Marshal(body)
-				sentMessage, err := s.Send(m)
-				util.ExitIf(err)
-				sentChan <- sent{body, sentMessage}
+				s.SendAsync(m, sentChan, body) // Outcome will be sent to sentChan
 			}
 		}(urlStr)
 	}
@@ -102,12 +96,11 @@ func main() {
 	expect := int(*count) * len(urls)
 	util.Debugf("Started senders, expect %v acknowledgements\n", expect)
 	for i := 0; i < expect; i++ {
-		d := <-sentChan
-		disposition, err := d.sentMessage.Disposition()
-		if err != nil {
-			util.Debugf("acknowledgement[%v] %v error: %v\n", i, d.name, err)
+		out := <-sentChan // Outcome of async sends.
+		if out.Error != nil {
+			util.Debugf("acknowledgement[%v] %v error: %v\n", i, out.Value, out.Error)
 		} else {
-			util.Debugf("acknowledgement[%v]  %v (%v)\n", i, d.name, disposition)
+			util.Debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
 		}
 	}
 	fmt.Printf("Received all %v acknowledgements\n", expect)
