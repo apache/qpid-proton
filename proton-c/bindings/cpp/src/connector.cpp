@@ -40,7 +40,7 @@ void connector::address(const url &a) {
 
 void connector::connect() {
     pn_connection_t *conn = pn_cast(connection_);
-    pn_connection_set_container(conn, connection_->container_id().c_str());
+    pn_connection_set_container(conn, connection_->container().id().c_str());
     pn_connection_set_hostname(conn, address_.host_port().c_str());
 }
 
