@@ -58,23 +58,22 @@ class recurring : public proton::messaging_handler {
     }
 
     void on_start(proton::event &e) {
-        if (remaining_msecs <= 0)
-            return;
-        proton::task& first_tock = ticktock(e);
-        // Show a cancel operation.
-        cancel_task = &first_tock;
-        e.container().schedule(tick_ms);
+        // Demonstrate cancel(), we will cancel the first tock on the first recurring::on_timer_task
+        cancel_task = &ticktock(e);
+        e.container().schedule(0);
     }
 
     void on_timer_task(proton::event &e) {
         if (cancel_task) {
             cancel_task->cancel();
             cancel_task = 0;
-        }
-        remaining_msecs -= tick_ms * 2;
-        if (remaining_msecs > 0) {
-            ticktock(e);
             e.container().schedule(tick_ms * 4);
+        } else {
+            remaining_msecs -= tick_ms * 4;
+            if (remaining_msecs > 0) {
+                ticktock(e);
+                e.container().schedule(tick_ms * 4);
+            }
         }
     }
 };
@@ -88,7 +87,7 @@ int main(int argc, char **argv) {
     opts.add_value(tick, 'k', "tick time", "tick time as fraction of second", "TICK");
     try {
         opts.parse();
-        recurring recurring_handler(running_time * 1000, tick * 1000);
+        recurring recurring_handler(int(running_time * 1000), int(tick * 1000));
         proton::container(recurring_handler).run();
         return 0;
     } catch (const bad_option& e) {
