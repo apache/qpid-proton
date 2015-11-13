@@ -224,11 +224,11 @@ template <class K, class T, class C, class A> encoder& operator<<(encoder &e, co
 
 // Encode as ARRAY.
 template <class T, class A> encoder& operator<<(encoder &e, const std::forward_list<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, std::size_t N> encoder& operator<<(encoder &e, const std::array<T, N>& v) { return e << as<ARRAY>(v); }n
+template <class T, std::size_t N> encoder& operator<<(encoder &e, const std::array<T, N>& v) { return e << as<ARRAY>(v); }
 
 // Encode as LIST.
-template <class value, class A> encoder& operator<<(encoder &e, const std::forward_list<value, A>& v) { return e << as<LIST>(v); }
-template <class value, std::size_t N> encoder& operator<<(encoder &e, const std::array<value, N>& v) { return e << as<LIST>(v); }
+template <class A> encoder& operator<<(encoder &e, const std::forward_list<value, A>& v) { return e << as<LIST>(v); }
+template <std::size_t N> encoder& operator<<(encoder &e, const std::array<value, N>& v) { return e << as<LIST>(v); }
 
 // Encode as map.
 template <class K, class T, class C, class A> encoder& operator<<(encoder &e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
