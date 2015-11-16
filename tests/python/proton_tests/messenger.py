@@ -450,7 +450,8 @@ class MessengerTest(Test):
     self.client.start()
 
   def testRoute(self):
-    if not common.isSSLPresent():
+    # anonymous cipher not supported on Windows
+    if os.name == "nt" or not common.isSSLPresent():
         domain = "amqp"
     else:
         domain = "amqps"

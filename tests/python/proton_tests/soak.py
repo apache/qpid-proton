@@ -124,6 +124,8 @@ class MessengerTests(AppTests):
     def _ssl_check(self):
         if not isSSLPresent():
             raise Skipped("No SSL libraries found.")
+        if os.name=="nt":
+            raise Skipped("Windows SChannel lacks anonymous cipher support.")
 
     def __init__(self, *args):
         AppTests.__init__(self, *args)

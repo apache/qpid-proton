@@ -59,4 +59,14 @@ keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs
 keytool -ext san=dns:alternate.name.one.com,dns:another.name.com  -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
 
-
+# Create pkcs12 versions of the above certificates (for Windows SChannel)
+# The CA certificate store/DB is created without public keys.
+# Give the "p12" files the same base name so the tests can just change the extension to switch between platforms.
+# These certificates might work for OpenSSL <-> SChannel interop tests, but note that the DH cypher suite
+# overlap is poor between platforms especially for older Windows versions.  RSA certificates are better for
+# interop (or PFS-friendly certificates on newer platforms).
+openssl pkcs12 -export -out ca-certificate.p12 -in ca-certificate.pem -name ca-certificate -nokeys -passout pass:
+openssl pkcs12 -export -out server-certificate.p12 -passin pass:server-password -passout pass:server-password -inkey server-private-key.pem -in server-certificate.pem -name server-certificate
+openssl pkcs12 -export -out client-certificate.p12 -passin pass:client-password -passout pass:client-password -inkey client-private-key.pem -in client-certificate.pem -name client-certificate
+openssl pkcs12 -export -out bad-server-certificate.p12 -passin pass:server-password -passout pass:server-password -inkey bad-server-private-key.pem -in bad-server-certificate.pem -name bad-server
+openssl pkcs12 -export -out server-wc-certificate.p12 -passin pass:server-password -passout pass:server-password -inkey server-wc-private-key.pem -in server-wc-certificate.pem -name server-wc-certificate

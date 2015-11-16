@@ -29,6 +29,13 @@ from proton._compat import str2bin
 def _sslCertpath(file):
     """ Return the full path to the certificate,keyfile, etc.
     """
+    if os.name=="nt":
+        if file.find("private-key")!=-1:
+            # The private key is not in a separate store
+            return None
+        # Substitute pkcs#12 equivalent for the CA/key store
+        if file.endswith(".pem"):
+            file = file[:-4] + ".p12"
     return os.path.join(os.path.dirname(__file__),
                         "ssl_db/%s" % file)
 
@@ -423,7 +430,10 @@ class SSLSASLTest(Test):
     if "java" in sys.platform:
       raise Skipped("Proton-J does not support SSL with SASL")
 
-    extUser = 'O=Client,CN=127.0.0.1'
+    if os.name=="nt":
+      extUser = 'O=Client, CN=127.0.0.1'
+    else:
+      extUser = 'O=Client,CN=127.0.0.1'
     mech = 'EXTERNAL'
 
     self.server_domain.set_credentials(_sslCertpath("server-certificate.pem"),

@@ -410,11 +410,9 @@ static void ssl_session_free( pn_ssl_session_t *ssn)
 
 /** Public API - visible to application code */
 
-// TODO: This should really return true as SSL is fully implemented,
-// but the tests currently fail because the fixed certificates aren't usable on windows
 bool pn_ssl_present(void)
 {
-  return false;
+  return true;
 }
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )

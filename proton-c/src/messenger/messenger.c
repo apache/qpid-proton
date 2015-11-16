@@ -931,7 +931,7 @@ static int pn_transport_config(pn_messenger_t *messenger,
     pn_transport_set_tracer(transport, messenger->tracer);
   if (ctx->scheme && !strcmp(ctx->scheme, "amqps")) {
     pn_ssl_domain_t *d = pn_ssl_domain(PN_SSL_MODE_CLIENT);
-    if (messenger->certificate && messenger->private_key) {
+    if (messenger->certificate) {
       int err = pn_ssl_domain_set_credentials( d, messenger->certificate,
                                                messenger->private_key,
                                                messenger->password);

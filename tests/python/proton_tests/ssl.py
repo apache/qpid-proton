@@ -31,6 +31,13 @@ from .common import Skipped, pump
 def _testpath(file):
     """ Set the full path to the certificate,keyfile, etc. for the test.
     """
+    if os.name=="nt":
+        if file.find("private-key")!=-1:
+            # The private key is not in a separate store
+            return None
+        # Substitute pkcs#12 equivalent for the CA/key store
+        if file.endswith(".pem"):
+            file = file[:-4] + ".p12"
     return os.path.join(os.path.dirname(__file__),
                         "ssl_db/%s" % file)
 
@@ -90,6 +97,8 @@ class SslTest(common.Test):
         self._pump(client, server)
 
     def test_defaults(self):
+        if os.name=="nt":
+            raise Skipped("Windows SChannel lacks anonymous cipher support.")
         """ By default, both the server and the client support anonymous
         ciphers - they should connect without need for a certificate.
         """
@@ -429,6 +438,9 @@ class SslTest(common.Test):
     def test_session_resume(self):
         """ Test resume of client session.
         """
+        if os.name=="nt":
+            raise Skipped("Windows SChannel session resume not yet implemented.")
+
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
@@ -736,6 +748,8 @@ class SslTest(common.Test):
     def test_defaults_messenger_app(self):
         """ Test an SSL connection using the Messenger apps (no certificates)
         """
+        if os.name=="nt":
+            raise Skipped("Windows SChannel lacks anonymous cipher support.")
         port = common.free_tcp_ports()[0]
 
         receiver = common.MessengerReceiverC()
