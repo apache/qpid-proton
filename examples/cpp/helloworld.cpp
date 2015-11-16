@@ -40,8 +40,7 @@ class hello_world : public proton::messaging_handler {
     }
 
     void on_sendable(proton::event &e) {
-        proton::message m;
-        m.body("Hello World!");
+        proton::message m("Hello World!");
         e.sender().send(m);
         e.sender().close();
     }

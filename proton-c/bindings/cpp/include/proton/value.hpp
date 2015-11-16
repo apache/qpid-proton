@@ -71,9 +71,6 @@ class value : public comparable<value> {
     /** Get the value. */
     template<class T> T get() const { T t; get(t); return t; }
 
-    /** Automatic conversion */
-    template<class T> operator T() const { return get<T>(); }
-
     PN_CPP_EXTERN bool operator==(const value& x) const;
     PN_CPP_EXTERN bool operator<(const value& x) const;
 
@@ -83,7 +80,6 @@ class value : public comparable<value> {
 
   private:
     pn_unique_ptr<data> data_;
-  friend class message;
 };
 
 

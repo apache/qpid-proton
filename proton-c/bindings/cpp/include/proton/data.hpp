@@ -42,6 +42,7 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     PN_CPP_EXTERN static pn_unique_ptr<data> create();
 
     PN_CPP_EXTERN data& operator=(const data&);
+
     template<class T> data& operator=(const T &t) {
         clear(); encoder() << t; decoder().rewind(); return *this;
     }
@@ -58,13 +59,12 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     /** Decoder to decode from this value */
     PN_CPP_EXTERN class decoder& decoder();
 
-    /** Type of the current value*/
+    /** Rewind and return the type of the first value*/
     PN_CPP_EXTERN type_id type() const;
 
-    /** Get the first value, don't move the decoder pointer. */
-    template<class T> void get(T &t) const { decoder() >> t; decoder().backup(); }
+    /** Rewind and decode the first value */
+    template<class T> void get(T &t) const { decoder().rewind(); decoder() >> t; }
 
-    /** Get the first value, don't move the decoder pointer. */
     template<class T> T get() const { T t; get(t); return t; }
 
     PN_CPP_EXTERN bool operator==(const data& x) const;

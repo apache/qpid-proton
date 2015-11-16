@@ -29,14 +29,13 @@ namespace proton {
 class message_id : public comparable<message_id> {
   public:
     message_id() {}
-    message_id(const value& x) : value_(x) {}
-    message_id(const data& x) : value_(x) {}
     message_id(const uint64_t& x) : value_(x) {}
     message_id(const amqp_uuid& x) : value_(x) {}
     message_id(const amqp_binary& x) : value_(x) {}
     message_id(const amqp_string& x) : value_(x) {}
     /// string is encoded as amqp_string
     message_id(const std::string& x) : value_(x) {}
+    message_id(const char *x) : value_(x) {}
 
     message_id& operator=(const message_id& x) { value_ = x.value_; return *this; }
     message_id& operator=(const uint64_t& x) { value_ = x; return *this; }
@@ -45,6 +44,7 @@ class message_id : public comparable<message_id> {
     message_id& operator=(const amqp_string& x) { value_ = x; return *this; }
     /// string is encoded as amqp_string
     message_id& operator=(const std::string& x) { value_ = x; return *this; }
+    message_id& operator=(const char *x) { value_ = x; return *this; }
 
     void clear() { value_.clear(); }
     bool empty() const { return value_.empty(); }
@@ -58,7 +58,6 @@ class message_id : public comparable<message_id> {
     void get(std::string& x) const { value_.get(x); }
 
     template<class T> T get() const { T x; get(x); return x; }
-    template<class T> operator T() const { return get<T>(); }
 
     // String representation: decimal representation of uint64_t, standard text
     // representation of UUID, amqp_string or amqp_binary are returned without
@@ -73,6 +72,7 @@ class message_id : public comparable<message_id> {
   friend PN_CPP_EXTERN decoder& operator>>(decoder&, message_id&);
 
   private:
+    message_id(const data& d) : value_(d) {}
     value value_;
   friend class message;
 };

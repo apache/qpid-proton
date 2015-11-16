@@ -77,9 +77,11 @@ bool decoder::more() const {
     return pn_data_next(pn_cast(this));
 }
 
-void decoder::rewind() { ::pn_data_rewind(pn_cast(this)); }
+void decoder::rewind() { pn_data_rewind(pn_cast(this)); }
 
-void decoder::backup() { ::pn_data_prev(pn_cast(this)); }
+void decoder::backup() { pn_data_prev(pn_cast(this)); }
+
+void decoder::skip() { pn_data_next(pn_cast(this)); }
 
 data& decoder::data() { return *data::cast(pn_cast(this)); }
 

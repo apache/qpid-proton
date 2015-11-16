@@ -44,6 +44,8 @@ message::message(const message &m) : message_(::pn_message()) { *this = m; }
 message::message(message &&m) : message_(::pn_message()) { swap(m); }
 #endif
 
+message::message(const value& v) : message_(::pn_message()) { body(v); }
+
 message::~message() { ::pn_message_free(message_); }
 
 void message::swap(message& m) { std::swap(message_, m.message_); }
@@ -161,6 +163,10 @@ std::string message::reply_to_group_id() const {
     return s ? std::string(s) : std::string();
 }
 
+bool message::inferred() const { return pn_message_is_inferred(message_); }
+
+void message::inferred(bool b) { pn_message_set_inferred(message_, b); }
+
 void message::body(const value& v) { body() = v; }
 
 const data& message::body() const {
@@ -169,6 +175,58 @@ const data& message::body() const {
 
 data& message::body() {
     return *data::cast(pn_message_body(message_));
+}
+
+void message::properties(const value& v) {
+    properties() = v;
+}
+
+const data& message::properties() const {
+    return *data::cast(pn_message_properties(message_));
+}
+
+data& message::properties() {
+    return *data::cast(pn_message_properties(message_));
+}
+
+namespace {
+typedef std::map<std::string, value> props_map;
+}
+
+void message::property(const std::string& name, const value &v) {
+    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
+    // Could avoid full encode/decode with linear scan of names. Need
+    // better codec suport for in-place modification of data.
+    props_map m;
+    if (!properties().empty())
+        properties().get(m);
+    m[name] = v;
+    properties(m);
+}
+
+value message::property(const std::string& name) const {
+    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
+    if (!properties().empty()) {
+        props_map m;
+        properties().get(m);
+        props_map::const_iterator i = m.find(name);
+        if (i != m.end())
+            return i->second;
+    }
+    return value();
+}
+
+bool message::erase_property(const std::string& name) {
+    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
+    if (!properties().empty()) {
+        props_map m;
+        properties().get(m);
+        if (m.erase(name)) {
+            properties(m);
+            return true;
+        }
+    }
+    return false;
 }
 
 void message::encode(std::string &s) const {

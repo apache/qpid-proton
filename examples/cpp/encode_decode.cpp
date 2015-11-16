@@ -71,7 +71,8 @@ void uniform_containers() {
     // By default a C++ container is encoded as an AMQP array.
     v = a;
     print(v);
-    std::list<int> a1 = v;          // Decode as a C++ std::list instead
+    std::list<int> a1;
+    v.get(a1);                  // Decode as a C++ std::list instead
     std::cout << a1 << std::endl;
 
     // You can specify that a container should be encoded as an AMQP list instead.
@@ -111,7 +112,8 @@ void mixed_containers() {
     // By default, a sequence of proton::value is treated as an AMQP list.
     v = l;
     print(v);
-    std::vector<proton::value> l2 = v;
+    std::vector<proton::value> l2;
+    v.get(l2);
     std::cout << l2 << std::endl;
 
     std::map<proton::value, proton::value> m;
@@ -119,7 +121,8 @@ void mixed_containers() {
     m[proton::value(4)] = proton::value("four");
     v = m;
     print(v);
-    std::map<proton::value, proton::value> m2 = v;
+    std::map<proton::value, proton::value> m2;
+    v.get(m2);
     std::cout << m2 << std::endl;
 }
 

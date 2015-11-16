@@ -173,6 +173,9 @@ class decoder : public facade<pn_data_t, decoder> {
     /** Rewind to the start of the data. */
     PN_CPP_EXTERN void rewind();
 
+    /** Skip one value */
+    PN_CPP_EXTERN void skip();
+
     /** Back up by one value */
     PN_CPP_EXTERN void backup();
 
@@ -250,7 +253,7 @@ class decoder : public facade<pn_data_t, decoder> {
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, finish);
 
     /** Skip a value */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, skip);
+    PN_CPP_EXTERN friend decoder& operator>>(decoder&, struct skip);
 
     /** Throw an exception if decoder.type() != assert_type.type */
     PN_CPP_EXTERN friend decoder& operator>>(decoder&, assert_type);

@@ -162,5 +162,6 @@ macro(add_cpp_test test)
 endmacro(add_cpp_test)
 
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
+add_cpp_test(message_test)
 add_cpp_test(conversion_test)
 add_cpp_test(encode_decode_test)

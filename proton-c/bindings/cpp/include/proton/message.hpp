@@ -46,6 +46,8 @@ class message
   public:
     PN_CPP_EXTERN message();
     PN_CPP_EXTERN message(const message&);
+    PN_CPP_EXTERN message(const value&);
+
 #if PN_HAS_CPP11
     PN_CPP_EXTERN message(message&&);
 #endif
@@ -57,7 +59,7 @@ class message
     /** Clear the message content and properties. */
     PN_CPP_EXTERN void clear();
 
-    ///@name Message properties
+    ///@name Standard AMQP properties
     ///@{
 
     PN_CPP_EXTERN void id(const message_id& id);
@@ -95,6 +97,7 @@ class message
 
     PN_CPP_EXTERN void reply_to_group_id(const std::string &s);
     PN_CPP_EXTERN std::string reply_to_group_id() const;
+
     ///@}
 
     /** Set the body. */
@@ -105,6 +108,30 @@ class message
 
     /** Get a reference to the body data, can be modified in-place. */
     PN_CPP_EXTERN data& body();
+
+    /** Set the application properties. Must be a map with string keys or an
+     * empty value. You can assign to a proton::value from a standard C++ map
+     * of std::string to proton::value.
+     */
+    PN_CPP_EXTERN void properties(const value&);
+
+    /** Get the application properties, which will be a map with string keys or
+     * an empty value. You can assign proton::value containing a map to a
+     * standard C++ map of std::string to proton::value.
+     */
+    PN_CPP_EXTERN const data& properties() const;
+
+    /** Get a reference to the application properties, can be modified in-place.*/
+    PN_CPP_EXTERN data& properties();
+
+    /** Set an individual application property. */
+    PN_CPP_EXTERN void property(const std::string &name, const value &);
+
+    /** Get an individual application property. Returns an empty value if not found. */
+    PN_CPP_EXTERN value property(const std::string &name) const;
+
+    /** Erase an application property. Returns false if there was no such property. */
+    PN_CPP_EXTERN bool erase_property(const std::string &name);
 
     /** Encode into a string, growing the string if necessary. */
     PN_CPP_EXTERN void encode(std::string &bytes) const;
@@ -117,6 +144,23 @@ class message
 
     /// Decode the message from link corresponding to delivery.
     PN_CPP_EXTERN void decode(proton::link&, proton::delivery&);
+
+    /**
+     * Get the inferred flag for a message.
+     *
+     * The inferred flag for a message indicates how the message content
+     * is encoded into AMQP sections. If inferred is true then binary and
+     * list values in the body of the message will be encoded as AMQP DATA
+     * and AMQP SEQUENCE sections, respectively. If inferred is false,
+     * then all values in the body of the message will be encoded as AMQP
+     * VALUE sections regardless of their type. Use
+     * ::pn_message_set_inferred to set the value.
+     *
+     * @param[in] msg a message object
+     * @return the value of the inferred flag for the message
+     */
+    PN_CPP_EXTERN bool inferred() const;
+    PN_CPP_EXTERN void inferred(bool);
 
   private:
     pn_message_t *message_;
