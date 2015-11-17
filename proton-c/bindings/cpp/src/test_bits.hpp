@@ -21,6 +21,7 @@
 
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 #include "msg.hpp"
 
 namespace {
@@ -44,5 +45,8 @@ int run_test(void (*testfn)(), const char* name) {
 }
 
 #define RUN_TEST(TEST) run_test(TEST, #TEST)
+
+template<class T> std::string str(const T& x) { std::ostringstream s; s << x; return s.str(); }
+
 }
 #endif // TEST_BITS_HPP

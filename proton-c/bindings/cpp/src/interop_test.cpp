@@ -45,12 +45,6 @@ template <class T> T get(decoder& d) {
     return v;
 }
 
-template <class T> std::string str(const T& value) {
-    ostringstream oss;
-    oss << value;
-    return oss.str();
-}
-
 // Test data ostream operator
 void test_data_ostream() {
     value dv;
