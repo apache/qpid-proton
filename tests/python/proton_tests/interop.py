@@ -25,7 +25,7 @@ from proton._compat import str2bin
 
 def find_test_interop_dir():
     """Walk up the directory tree to find the tests directory."""
-    f = os.path.dirname(__file__)
+    f = os.path.dirname(os.path.abspath(__file__))
     while f and os.path.basename(f) != "tests": f = os.path.dirname(f)
     f = os.path.join(f, "interop")
     if not os.path.isdir(f):

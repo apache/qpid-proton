@@ -40,6 +40,18 @@ typedef struct pn_url_t pn_url_t;
 PN_EXTERN pn_url_t *pn_url(void);
 
 /** Parse a string URL as a pn_url_t.
+ *
+ * URL syntax:
+ * [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
+ *
+ * <scheme>, <user>, <password>, <port> cannot contain any of '@', ':', '/'
+ *
+ * If the first character of <host> is '[' then it can contain any character up
+ * to ']' (this is to allow IPv6 literal syntax). Otherwise it also cannot
+ * contain '@', ':', '/'
+ *
+ * <path> can contain any character
+ *
  *@param[in] url A URL string.
  *@return The parsed pn_url_t or NULL if url is not a valid URL string.
  */

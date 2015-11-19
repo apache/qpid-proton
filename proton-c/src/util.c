@@ -135,13 +135,6 @@ void pni_urldecode(const char *src, char *dst)
   *out = '\0';
 }
 
-// Parse URL syntax:
-// [ <scheme> :// ] [ <user> [ : <password> ] @ ] <host> [ : <port> ] [ / <path> ]
-// <scheme>, <user>, <password>, <port> cannot contain any of '@', ':', '/'
-// If the first character of <host> is '[' then it can contain any character up to ']' (this is to allow IPv6
-// literal syntax). Otherwise it also cannot contain '@', ':', '/'
-// <host> is not optional but it can be null! If it is not present an empty string will be returned
-// <path> can contain any character
 void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
 {
   if (!url) return;

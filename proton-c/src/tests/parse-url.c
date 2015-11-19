@@ -24,84 +24,100 @@
 #include <stdlib.h>
 #include <string.h>
 
-// No point in running this code if assert doesn't work!
-#undef NDEBUG
-#include <assert.h>
-
 #include "proton/type_compat.h"
 #include "proton/error.h"
-#include "util.h"
+#include "proton/url.h"
 
-static inline bool equalStrP(const char* s1, const char* s2)
-{
-  return (s1==s2) || (s1 && s2 && strcmp(s1,s2)==0);
+static bool verify(const char* what, const char* want, const char* got) {
+  bool eq = (want == got || (want && got && strcmp(want, got) == 0));
+  if (!eq) printf("  %s: '%s' != '%s'\n", what, want, got);
+  return eq;
 }
 
-static bool test_url_parse(const char* url0, const char* scheme0, const char* user0, const char* pass0, const char* host0, const char* port0, const char*path0)
+static bool test(const char* url, const char* scheme, const char* user, const char* pass, const char* host, const char* port, const char*path)
 {
-  char* url = (char*)malloc(strlen(url0)+1);
-  char* scheme = 0;
-  char* user = 0;
-  char* pass = 0;
-  char* host = 0;
-  char* port = 0;
-  char* path = 0;
-
-  strcpy(url, url0);
-
-  pni_parse_url(url, &scheme, &user, &pass, &host, &port, &path);
-  bool r =  equalStrP(scheme,scheme0) &&
-            equalStrP(user, user0) &&
-            equalStrP(pass, pass0) &&
-            equalStrP(host, host0) &&
-            equalStrP(port, port0) &&
-            equalStrP(path, path0);
-
-  free(url);
-
-  return r;
+  pn_url_t *purl = pn_url_parse(url);
+  bool ok =
+    verify("scheme", scheme, pn_url_get_scheme(purl)) &&
+    verify("user", user, pn_url_get_username(purl)) &&
+    verify("pass", pass, pn_url_get_password(purl)) &&
+    verify("host", host, pn_url_get_host(purl)) &&
+    verify("port", port, pn_url_get_port(purl)) &&
+    verify("path", path, pn_url_get_path(purl));
+  pn_url_free(purl);
+  return ok;
 }
+
+// Run test and additionally verify the round trip of parse and stringify
+// matches original string.
+static bool testrt(const char* url, const char* scheme, const char* user, const char* pass, const char* host, const char* port, const char*path)
+{
+  bool ok = test(url, scheme, user, pass, host, port, path);
+  pn_url_t *purl = pn_url_parse(url);
+  ok = ok && verify("url", url, pn_url_str(purl));
+  pn_url_free(purl);
+  return ok;
+}
+
+#define TEST(EXPR) \
+  do { if (!(EXPR)) { printf("%s:%d: %s\n\n", __FILE__, __LINE__, #EXPR); failed++; } } while(0)
 
 int main(int argc, char **argv)
 {
-  assert(test_url_parse("", 0, 0, 0, "", 0, 0));
-  assert(test_url_parse("/Foo.bar:90087@somewhere", 0, 0, 0, "", 0, "Foo.bar:90087@somewhere"));
-  assert(test_url_parse("host", 0, 0, 0, "host", 0, 0));
-  assert(test_url_parse("host:423", 0, 0, 0, "host", "423", 0));
-  assert(test_url_parse("user@host", 0, "user", 0, "host", 0, 0));
-  assert(test_url_parse("user:1243^&^:pw@host:423", 0, "user", "1243^&^:pw", "host", "423", 0));
-  assert(test_url_parse("user:1243^&^:pw@host:423/Foo.bar:90087", 0, "user", "1243^&^:pw", "host", "423", "Foo.bar:90087"));
-  assert(test_url_parse("user:1243^&^:pw@host:423/Foo.bar:90087@somewhere", 0, "user", "1243^&^:pw", "host", "423", "Foo.bar:90087@somewhere"));
-  assert(test_url_parse("[::1]", 0, 0, 0, "::1", 0, 0));
-  assert(test_url_parse("[::1]:amqp", 0, 0, 0, "::1", "amqp", 0));
-  assert(test_url_parse("user@[::1]", 0, "user", 0, "::1", 0, 0));
-  assert(test_url_parse("user@[::1]:amqp", 0, "user", 0, "::1", "amqp", 0));
-  assert(test_url_parse("user:1243^&^:pw@[::1]:amqp", 0, "user", "1243^&^:pw", "::1", "amqp", 0));
-  assert(test_url_parse("user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087"));
-  assert(test_url_parse("user:1243^&^:pw@[::1:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "[", ":1:amqp", "Foo.bar:90087"));
-  assert(test_url_parse("user:1243^&^:pw@::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "", ":1]:amqp", "Foo.bar:90087"));
-  assert(test_url_parse("amqp://user@[::1]", "amqp", "user", 0, "::1", 0, 0));
-  assert(test_url_parse("amqp://user@[::1]:amqp", "amqp", "user", 0, "::1", "amqp", 0));
-  assert(test_url_parse("amqp://user@[1234:52:0:1260:f2de:f1ff:fe59:8f87]:amqp", "amqp", "user", 0, "1234:52:0:1260:f2de:f1ff:fe59:8f87", "amqp", 0));
-  assert(test_url_parse("amqp://user:1243^&^:pw@[::1]:amqp", "amqp", "user", "1243^&^:pw", "::1", "amqp", 0));
-  assert(test_url_parse("amqp://user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", "amqp", "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087"));
-  assert(test_url_parse("amqp://host", "amqp", 0, 0, "host", 0, 0));
-  assert(test_url_parse("amqp://user@host", "amqp", "user", 0, "host", 0, 0));
-  assert(test_url_parse("amqp://user@host/path:%", "amqp", "user", 0, "host", 0, "path:%"));
-  assert(test_url_parse("amqp://user@host:5674/path:%", "amqp", "user", 0, "host", "5674", "path:%"));
-  assert(test_url_parse("amqp://user@host/path:%", "amqp", "user", 0, "host", 0, "path:%"));
-  assert(test_url_parse("amqp://bigbird@host/queue@host", "amqp", "bigbird", 0, "host", 0, "queue@host"));
-  assert(test_url_parse("amqp://host/queue@host", "amqp", 0, 0, "host", 0, "queue@host"));
-  assert(test_url_parse("amqp://host:9765/queue@host", "amqp", 0, 0, "host", "9765", "queue@host"));
-  assert(test_url_parse("user:pass%2fword@host", 0, "user", "pass/word", "host", 0, 0));
-  assert(test_url_parse("user:pass%2Fword@host", 0, "user", "pass/word", "host", 0, 0));
-  assert(test_url_parse("us%2fer:password@host", 0, "us/er", "password", "host", 0, 0));
-  assert(test_url_parse("us%2Fer:password@host", 0, "us/er", "password", "host", 0, 0));
-  assert(test_url_parse("user:pass%2fword%@host", 0, "user", "pass/word%", "host", 0, 0));
-  assert(test_url_parse("localhost/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", 0, 0, 0, "localhost", 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
-  assert(test_url_parse("/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", 0, 0, 0, "", 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
-  assert(test_url_parse("amqp://localhost/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", "amqp", 0, 0, "localhost", 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
+  int failed = 0;
+  TEST(testrt("/Foo.bar:90087@somewhere", 0, 0, 0, 0, 0, "Foo.bar:90087@somewhere"));
+  TEST(testrt("host", 0, 0, 0, "host", 0, 0));
+  TEST(testrt("host:423", 0, 0, 0, "host", "423", 0));
+  TEST(testrt("user@host", 0, "user", 0, "host", 0, 0));
+
+  // Can't round-trip passwords with ':', not strictly legal but the parser allows it.
+  TEST(test("user:1243^&^:pw@host:423", 0, "user", "1243^&^:pw", "host", "423", 0));
+  TEST(test("user:1243^&^:pw@host:423/Foo.bar:90087", 0, "user", "1243^&^:pw", "host", "423", "Foo.bar:90087"));
+  TEST(test("user:1243^&^:pw@host:423/Foo.bar:90087@somewhere", 0, "user", "1243^&^:pw", "host", "423", "Foo.bar:90087@somewhere"));
+
+  TEST(testrt("[::1]", 0, 0, 0, "::1", 0, 0));
+  TEST(testrt("[::1]:amqp", 0, 0, 0, "::1", "amqp", 0));
+  TEST(testrt("user@[::1]", 0, "user", 0, "::1", 0, 0));
+  TEST(testrt("user@[::1]:amqp", 0, "user", 0, "::1", "amqp", 0));
+
+  // Can't round-trip passwords with ':', not strictly legal but the parser allows it.
+  TEST(test("user:1243^&^:pw@[::1]:amqp", 0, "user", "1243^&^:pw", "::1", "amqp", 0));
+  TEST(test("user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087"));
+  TEST(test("user:1243^&^:pw@[::1:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "[", ":1:amqp", "Foo.bar:90087"));
+  TEST(test("user:1243^&^:pw@::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", 0, ":1]:amqp", "Foo.bar:90087"));
+
+  TEST(testrt("amqp://user@[::1]", "amqp", "user", 0, "::1", 0, 0));
+  TEST(testrt("amqp://user@[::1]:amqp", "amqp", "user", 0, "::1", "amqp", 0));
+  TEST(testrt("amqp://user@[1234:52:0:1260:f2de:f1ff:fe59:8f87]:amqp", "amqp", "user", 0, "1234:52:0:1260:f2de:f1ff:fe59:8f87", "amqp", 0));
+
+  // Can't round-trip passwords with ':', not strictly legal but the parser allows it.
+  TEST(test("amqp://user:1243^&^:pw@[::1]:amqp", "amqp", "user", "1243^&^:pw", "::1", "amqp", 0));
+  TEST(test("amqp://user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", "amqp", "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087"));
+
+  TEST(testrt("amqp://host", "amqp", 0, 0, "host", 0, 0));
+  TEST(testrt("amqp://user@host", "amqp", "user", 0, "host", 0, 0));
+  TEST(testrt("amqp://user@host/path:%", "amqp", "user", 0, "host", 0, "path:%"));
+  TEST(testrt("amqp://user@host:5674/path:%", "amqp", "user", 0, "host", "5674", "path:%"));
+  TEST(testrt("amqp://user@host/path:%", "amqp", "user", 0, "host", 0, "path:%"));
+  TEST(testrt("amqp://bigbird@host/queue@host", "amqp", "bigbird", 0, "host", 0, "queue@host"));
+  TEST(testrt("amqp://host/queue@host", "amqp", 0, 0, "host", 0, "queue@host"));
+  TEST(testrt("amqp://host:9765/queue@host", "amqp", 0, 0, "host", "9765", "queue@host"));
+  TEST(test("user:pass%2fword@host", 0, "user", "pass/word", "host", 0, 0));
+  TEST(testrt("user:pass%2Fword@host", 0, "user", "pass/word", "host", 0, 0));
+  // Can't round-trip passwords with lowercase hex encoding
+  TEST(test("us%2fer:password@host", 0, "us/er", "password", "host", 0, 0));
+  TEST(testrt("us%2Fer:password@host", 0, "us/er", "password", "host", 0, 0));
+  // Can't round-trip passwords with lowercase hex encoding
+  TEST(test("user:pass%2fword%@host", 0, "user", "pass/word%", "host", 0, 0));
+  TEST(testrt("localhost/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", 0, 0, 0, "localhost", 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
+  TEST(testrt("/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", 0, 0, 0, 0, 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
+  TEST(testrt("amqp://localhost/temp-queue://ID:ganymede-36663-1408448359876-2:123:0", "amqp", 0, 0, "localhost", 0, "temp-queue://ID:ganymede-36663-1408448359876-2:123:0"));
+  // PROTON-995
+  TEST(testrt("amqps://%40user%2F%3A:%40pass%2F%3A@example.net/some_topic",
+              "amqps", "@user/:", "@pass/:", "example.net", 0, "some_topic"));
+  TEST(testrt("amqps://user%2F%3A=:pass%2F%3A=@example.net/some_topic",
+              "amqps", "user/:=", "pass/:=", "example.net", 0, "some_topic"));
   // Really perverse url
-  assert(test_url_parse("://:@://:", "", "", "", "", "", "/:"));
-  return 0;
+  TEST(testrt("://:@://:", "", "", "", 0, "", "/:"));
+  return failed;
 }

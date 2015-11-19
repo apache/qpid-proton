@@ -130,13 +130,33 @@ PN_EXTERN void pn_url_clear(pn_url_t *url) {
     pn_string_clear(url->str);
 }
 
+/** URL-encode src and append to dst. */
+static void pni_urlencode(pn_string_t *dst, const char* src) {
+    static const char *bad = "@:/";
+
+    if (!src) return;
+    const char *i = src;
+    const char *j = strpbrk(i, bad);
+    while (j) {
+        pn_string_addf(dst, "%.*s", (int)(j-i), i);
+        pn_string_addf(dst, "%%%02X", (int)*j);
+        i = j + 1;
+        j = strpbrk(i, bad);
+    }
+    pn_string_addf(dst, "%s", i);
+}
+
+
 /** Return the string form of a URL. */
 PN_EXTERN const char *pn_url_str(pn_url_t *url) {
     if (pn_string_get(url->str) == NULL) {
         pn_string_set(url->str, "");
         if (url->scheme) pn_string_addf(url->str, "%s://", url->scheme);
-        if (url->username) pn_string_addf(url->str, "%s", url->username);
-        if (url->password) pn_string_addf(url->str, ":%s", url->password);
+        if (url->username) pni_urlencode(url->str, url->username);
+        if (url->password) {
+            pn_string_addf(url->str, ":");
+            pni_urlencode(url->str, url->password);
+        }
         if (url->username || url->password) pn_string_addf(url->str, "@");
         if (url->host) {
             if (strchr(url->host, ':')) pn_string_addf(url->str, "[%s]", url->host);
