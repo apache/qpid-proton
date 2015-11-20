@@ -555,6 +555,8 @@ class SslTest(common.Test):
         """ Test authentication of the names held in the server's certificate
         against various configured hostnames.
         """
+        if os.name=="nt":
+            raise Skipped("PROTON-1057: disable temporarily on Windows.")
 
         # Check the CommonName matches (case insensitive).
         # Assumes certificate contains "CN=A1.Good.Server.domain.com"
