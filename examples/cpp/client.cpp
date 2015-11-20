@@ -31,27 +31,27 @@ class client : public proton::messaging_handler {
   private:
     proton::url url;
     std::vector<std::string> requests;
-    proton::counted_ptr<proton::sender> sender;
-    proton::counted_ptr<proton::receiver> receiver;
+    proton::sender sender;
+    proton::receiver receiver;
 
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
     void on_start(proton::event &e) {
-        sender = e.container().open_sender(url).ptr();
+        sender = e.container().open_sender(url);
         // Create a receiver with a dynamically chosen unique address.
-        receiver = sender->connection().open_receiver("", true/*dynamic*/).ptr();
+        receiver = sender.connection().open_receiver("", true/*dynamic*/);
     }
 
     void send_request() {
         proton::message req;
         req.body(requests.front());
-        req.reply_to(receiver->remote_source().address());
-        sender->send(req);
+        req.reply_to(receiver.remote_source().address());
+        sender.send(req);
     }
 
     void on_link_opened(proton::event &e) {
-        if (&e.link() == receiver.get())
+        if (e.link() == receiver)
             send_request();
     }
 

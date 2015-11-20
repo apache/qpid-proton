@@ -32,9 +32,9 @@
 
 class server : public proton::messaging_handler {
   private:
-    typedef std::map<std::string, proton::counted_ptr<proton::sender> > sender_map;
+    typedef std::map<std::string, proton::sender> sender_map;
     proton::url url;
-    proton::counted_ptr<proton::connection> connection;
+    proton::connection connection;
     sender_map senders;
 
   public:
@@ -42,8 +42,8 @@ class server : public proton::messaging_handler {
     server(const std::string &u) : url(u) {}
 
     void on_start(proton::event &e) {
-        connection = e.container().connect(url).ptr();
-        connection->open_receiver(url.path());
+        connection = e.container().connect(url);
+        connection.open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
     }
 
@@ -62,8 +62,8 @@ class server : public proton::messaging_handler {
         reply.body(to_upper(e.message().body().get<std::string>()));
         reply.correlation_id(e.message().correlation_id());
         if (!senders[reply_to])
-            senders[reply_to] = connection->open_sender(reply_to).ptr();
-        senders[reply_to]->send(reply);
+            senders[reply_to] = connection.open_sender(reply_to);
+        senders[reply_to].send(reply);
     }
 };
 

@@ -22,6 +22,7 @@
  *
  */
 #include "proton/export.hpp"
+#include "proton/counted_ptr.hpp"
 #include "proton/event.hpp"
 #include "proton/event.h"
 #include "proton/reactor.h"

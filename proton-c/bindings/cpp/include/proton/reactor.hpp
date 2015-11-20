@@ -19,29 +19,30 @@
  * under the License.
  */
 
-#include "proton/facade.hpp"
+#include "proton/object.hpp"
 #include "proton/duration.hpp"
-#include "proton/pn_unique_ptr.hpp"
 
 struct pn_reactor_t;
+struct pn_io_t;
 
 namespace proton {
 
 class connection;
+class container;
 class acceptor;
 class url;
 class handler;
+class task;
 
-class reactor : public facade<pn_reactor_t, reactor> {
- public:
+class reactor : public object<pn_reactor_t> {
+  public:
+    reactor(pn_reactor_t* r = 0) : object(r) {}
+
     /** Create a new reactor. */
-    PN_CPP_EXTERN static pn_unique_ptr<reactor> create();
-
-    /** Open a connection @see connection::open  */
-    PN_CPP_EXTERN connection& connect(const proton::url&, handler *h=0);
+    PN_CPP_EXTERN static reactor create();
 
     /** Open a connection to url and create a receiver with source=url.path() */
-    PN_CPP_EXTERN acceptor& listen(const proton::url &);
+    PN_CPP_EXTERN acceptor listen(const proton::url &);
 
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
@@ -64,9 +65,28 @@ class reactor : public facade<pn_reactor_t, reactor> {
     /// Set timeout, process() will return if there is no activity within the timeout.
     PN_CPP_EXTERN void timeout(duration timeout);
 
+    PN_CPP_EXTERN amqp_timestamp mark();
+    PN_CPP_EXTERN amqp_timestamp now();
+    
+    PN_CPP_EXTERN task schedule(int, pn_handler_t*);
+
+    class connection connection(pn_handler_t*) const;
+
+    pn_handler_t* pn_handler() const;
+
+    void pn_handler(pn_handler_t* );
+
+    pn_handler_t* pn_global_handler() const;
+
+    void pn_global_handler(pn_handler_t* );
+
+    pn_io_t* pn_io() const;
+
     PN_CPP_EXTERN void wakeup();
     PN_CPP_EXTERN bool quiesced();
     PN_CPP_EXTERN void yield();
+
+    void container_context(container&);
 
     void operator delete(void*);
 };

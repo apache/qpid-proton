@@ -120,16 +120,16 @@ container_impl::container_impl(container& c, handler *h, const std::string& id) 
     link_id_(0)
 {
     if (id_.empty()) id_ = uuid().str();
-    container_context(pn_cast(reactor_.get()), container_);
+    reactor_.container_context(container_);
 
     // Set our own global handler that "subclasses" the existing one
-    pn_handler_t *global_handler = pn_reactor_get_global_handler(pn_cast(reactor_.get()));
+    pn_handler_t *global_handler = reactor_.pn_global_handler();
     override_handler_.reset(new override_handler(global_handler));
     counted_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
-    pn_reactor_set_global_handler(pn_cast(reactor_.get()), cpp_global_handler.get());
+    reactor_.pn_global_handler(cpp_global_handler.get());
     if (handler_) {
         counted_ptr<pn_handler_t> pn_handler(cpp_handler(handler_));
-        pn_reactor_set_handler(pn_cast(reactor_.get()), pn_handler.get());
+        reactor_.pn_handler(pn_handler.get());
     }
 
 
@@ -141,46 +141,44 @@ container_impl::container_impl(container& c, handler *h, const std::string& id) 
 
 container_impl::~container_impl() {}
 
-connection& container_impl::connect(const proton::url &url, handler *h) {
+connection container_impl::connect(const proton::url &url, handler *h) {
     counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
-    connection& conn(           // Reactor owns the reference.
-        *connection::cast(pn_reactor_connection(pn_cast(reactor_.get()), chandler.get())));
+    connection conn(reactor_.connection(chandler.get()));
     pn_unique_ptr<connector> ctor(new connector(conn));
     ctor->address(url);  // TODO: url vector
-    connection_context& cc(connection_context::get(pn_cast(&conn)));
+    connection_context& cc(conn.context());
     cc.container_impl = this;
     cc.handler.reset(ctor.release());
     conn.open();
     return conn;
 }
 
-sender& container_impl::open_sender(const proton::url &url) {
-    connection& conn = connect(url, 0);
+sender container_impl::open_sender(const proton::url &url) {
+    connection conn = connect(url, 0);
     std::string path = url.path();
-    sender& snd = conn.default_session().open_sender(id_ + '-' + path);
+    sender snd = conn.default_session().open_sender(id_ + '-' + path);
     snd.target().address(path);
     snd.open();
     return snd;
 }
 
-receiver& container_impl::open_receiver(const proton::url &url) {
-    connection& conn = connect(url, 0);
+receiver container_impl::open_receiver(const proton::url &url) {
+    connection conn = connect(url, 0);
     std::string path = url.path();
-    receiver& rcv = conn.default_session().open_receiver(id_ + '-' + path);
-    pn_terminus_set_address(pn_link_source(pn_cast(&rcv)), path.c_str());
+    receiver rcv = conn.default_session().open_receiver(id_ + '-' + path);
+    rcv.source().address(path);
     rcv.open();
     return rcv;
 }
 
-acceptor& container_impl::listen(const proton::url& url) {
-    pn_acceptor_t *acptr = pn_reactor_acceptor(
-        pn_cast(reactor_.get()), url.host().c_str(), url.port().c_str(), NULL);
-    if (acptr)
-        return *acceptor::cast(acptr);
+acceptor container_impl::listen(const proton::url& url) {
+    acceptor acptr = reactor_.listen(url);
+    if (!!acptr)
+        return acptr;
     else
         throw error(MSG("accept fail: " <<
-                        pn_error_text(pn_io_error(pn_reactor_io(pn_cast(reactor_.get()))))
-                        << "(" << url << ")"));
+                        pn_error_text(pn_io_error(reactor_.pn_io())))
+                        << "(" << url << ")");
 }
 
 std::string container_impl::next_link_name() {
@@ -190,12 +188,11 @@ std::string container_impl::next_link_name() {
     return s.str();
 }
 
-task& container_impl::schedule(int delay, handler *h) {
+task container_impl::schedule(int delay, handler *h) {
     counted_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = cpp_handler(h);
-    task *t = task::cast(pn_reactor_schedule(pn_cast(reactor_.get()), delay, task_handler.get()));
-    return *t;
+    return reactor_.schedule(delay, task_handler.get());
 }
 
 }

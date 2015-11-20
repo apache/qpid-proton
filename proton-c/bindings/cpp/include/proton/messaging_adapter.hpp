@@ -22,7 +22,6 @@
  *
  */
 
-#include "proton/facade.hpp"
 #include "proton/messaging_handler.hpp"
 
 #include "proton/event.h"

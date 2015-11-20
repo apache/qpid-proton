@@ -33,15 +33,15 @@ namespace proton {
 
 namespace {
 struct connection_opening : public blocking_connection_impl::condition {
-    connection_opening(pn_connection_t *c) : pn_connection(c) {}
-    bool operator()() const { return (pn_connection_state(pn_connection) & PN_REMOTE_UNINIT); }
-    pn_connection_t *pn_connection;
+    connection_opening(const connection& c) : connection_(c) {}
+    bool operator()() const { return (connection_.state()) & PN_REMOTE_UNINIT; }
+    const connection& connection_;
 };
 
 struct connection_closed : public blocking_connection_impl::condition {
-    connection_closed(pn_connection_t *c) : pn_connection(c) {}
-    bool operator()() const { return !(pn_connection_state(pn_connection) & PN_REMOTE_ACTIVE); }
-    pn_connection_t *pn_connection;
+    connection_closed(const connection& c) : connection_(c) {}
+    bool operator()() const { return !(connection_.state() & PN_REMOTE_ACTIVE); }
+    const connection& connection_;
 };
 }
 
@@ -50,15 +50,15 @@ blocking_connection_impl::blocking_connection_impl(const url& url, duration time
 {
     container_->reactor().start();
     container_->reactor().timeout(timeout);
-    connection_ = container_->connect(url, this).ptr(); // Set this as handler.
-    wait(connection_opening(pn_cast(connection_.get())));
+    connection_ = container_->connect(url, this); // Set this as handler.
+    wait(connection_opening(connection_));
 }
 
 blocking_connection_impl::~blocking_connection_impl() {}
 
 void blocking_connection_impl::close() {
-    connection_->close();
-    wait(connection_closed(pn_cast(connection_.get())));
+    connection_.close();
+    wait(connection_closed(connection_));
 }
 
 namespace {
@@ -72,10 +72,10 @@ struct save_timeout {
 
 void blocking_connection_impl::wait(const condition &condition, const std::string &msg, duration wait_timeout)
 {
-    reactor& reactor = container_->reactor();
+    reactor reactor = container_->reactor();
 
     if (wait_timeout == duration(-1))
-        wait_timeout = container_->reactor().timeout();
+        wait_timeout = reactor.timeout();
 
     if (wait_timeout == duration::FOREVER) {
         while (!condition()) {
@@ -84,11 +84,11 @@ void blocking_connection_impl::wait(const condition &condition, const std::strin
     } else {
         save_timeout st(reactor);
         reactor.timeout(wait_timeout);
-        pn_timestamp_t deadline = pn_reactor_mark(pn_cast(&reactor)) + wait_timeout.milliseconds;
+        pn_timestamp_t deadline = reactor.mark() + wait_timeout.milliseconds;
         while (!condition()) {
             reactor.process();
             if (!condition()) {
-                pn_timestamp_t now = pn_reactor_mark(pn_cast(&reactor));
+                pn_timestamp_t now = reactor.mark();
                 if (now < deadline)
                     reactor.timeout(duration(deadline - now));
                 else

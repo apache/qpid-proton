@@ -34,13 +34,13 @@ struct pn_connection_t;
 namespace proton {
 
 /// A sending link
-class sender : public counted_facade<pn_link_t, sender, link>
+class sender : public link
 {
   public:
-    /// Send a message on the link.
-    PN_CPP_EXTERN delivery& send(const message &m);
+    sender(pn_link_t* s=0) : link(s) {}
 
-    PN_CPP_EXTERN sender* cast(pn_type*);
+    /// Send a message on the link.
+    PN_CPP_EXTERN delivery send(const message &m);
 };
 
 

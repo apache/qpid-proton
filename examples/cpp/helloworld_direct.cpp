@@ -23,19 +23,18 @@
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
 
-//#include "proton/acceptor.hpp"
 #include <iostream>
 
 class hello_world_direct : public proton::messaging_handler {
   private:
     proton::url url;
-    proton::counted_ptr<proton::acceptor> acceptor;
+    proton::acceptor acceptor;
   public:
 
     hello_world_direct(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
-        acceptor = e.container().listen(url).ptr();
+        acceptor = e.container().listen(url);
         e.container().open_sender(url);
     }
 
@@ -54,7 +53,7 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_connection_closed(proton::event &e) {
-        acceptor->close();
+        acceptor.close();
     }
 };
 

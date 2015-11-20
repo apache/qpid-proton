@@ -273,14 +273,14 @@ class proton_event : public event
     ///@}
 
     virtual void dispatch(handler &h);
-    virtual class event_loop &event_loop() const;
-    virtual class container &container() const;
-    virtual class engine &engine() const;
-    virtual class connection &connection() const;
-    virtual class sender& sender() const;
-    virtual class receiver& receiver() const;
-    virtual class link& link() const;
-    virtual class delivery& delivery() const;
+    virtual class event_loop& event_loop() const;
+    virtual class container& container() const;
+    virtual class engine& engine() const;
+    virtual class connection connection() const;
+    virtual class sender sender() const;
+    virtual class receiver receiver() const;
+    virtual class link link() const;
+    virtual class delivery delivery() const;
 
     /** Get type of event */
     event_type type() const;

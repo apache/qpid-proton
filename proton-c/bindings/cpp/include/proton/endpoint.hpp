@@ -69,15 +69,15 @@ template <class T> class iter_base {
     typedef T value_type;
 
     T& operator*() const { return *ptr_; }
-    T* operator->() const { return ptr_; }
-    operator bool() const { return ptr_; }
+    const T* operator->() const { return &ptr_; }
+    operator bool() const { return !!ptr_; }
     bool operator !() const { return !ptr_; }
     bool operator==(const iter_base<T>& x) const { return ptr_ == x.ptr_; }
     bool operator!=(const iter_base<T>& x) const { return ptr_ != x.ptr_; }
 
   protected:
-    explicit iter_base(T* p = 0, endpoint::state s = 0) : ptr_(p), state_(s) {}
-    T* ptr_;
+    explicit iter_base(T p = 0, endpoint::state s = 0) : ptr_(p), state_(s) {}
+    T ptr_;
     endpoint::state state_;
 };
 ///@endcond INTERNAL
@@ -93,35 +93,6 @@ template<class I> class range {
   private:
     I begin_, end_;
 };
-
-/// An iterator for sessions.
-class session_iterator : public iter_base<session> {
- public:
-    explicit session_iterator(session* p = 0, endpoint::state s = 0) :
-        iter_base<session>(p, s) {}
-    PN_CPP_EXTERN session_iterator operator++();
-    session_iterator operator++(int) { session_iterator x(*this); ++(*this); return x; }
-};
-
-/// A range of sessions.
-typedef range<session_iterator> session_range;
-
-/// An iterator for links.
-class link_iterator : public iter_base<link> {
-  public:
-    explicit link_iterator(link* p = 0, endpoint::state s = 0) :
-        iter_base<link>(p, s), session_(0) {}
-    explicit link_iterator(const link_iterator& i, const session *ssn) :
-        iter_base<link>(i.ptr_, i.state_), session_(ssn) {}
-    PN_CPP_EXTERN link_iterator operator++();
-    link_iterator operator++(int) { link_iterator x(*this); ++(*this); return x; }
-
-  private:
-    const session* session_;
-};
-
-/// A range of links.
-typedef range<link_iterator> link_range;
 
 }
 

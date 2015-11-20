@@ -36,13 +36,13 @@ class direct_recv : public proton::messaging_handler {
     proton::url url;
     uint64_t expected;
     uint64_t received;
-    proton::counted_ptr<proton::acceptor> acceptor;
+    proton::acceptor acceptor;
 
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_start(proton::event &e) {
-        acceptor = e.container().listen(url).ptr();
+        acceptor = e.container().listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
@@ -57,7 +57,7 @@ class direct_recv : public proton::messaging_handler {
         if (received == expected) {
             e.receiver().close();
             e.connection().close();
-            if (acceptor) acceptor->close();
+            if (!!acceptor) acceptor.close();
         }
     }
 };

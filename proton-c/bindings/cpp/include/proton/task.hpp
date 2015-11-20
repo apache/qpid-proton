@@ -22,15 +22,17 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/facade.hpp"
+#include "proton/object.hpp"
 
 #include "proton/reactor.h"
 
 namespace proton {
 
 /** A task for timer events */
-class task : public counted_facade<pn_task_t, task> {
+class task : public object<pn_task_t> {
   public:
+    task(pn_task_t* t) : object(t) {}
+
     /** Cancel the scheduled task. */
     PN_CPP_EXTERN void cancel();
 };

@@ -46,12 +46,12 @@ class recurring : public proton::messaging_handler {
     int remaining_msecs, tick_ms;
     ticker tick_handler;
     tocker tock_handler;
-    proton::task *cancel_task;
+    proton::task cancel_task;
   public:
 
     recurring(int msecs, int tickms) : remaining_msecs(msecs), tick_ms(tickms), cancel_task(0) {}
 
-    proton::task& ticktock(proton::event &e) {
+    proton::task ticktock(proton::event &e) {
         // Show timer events in separate handlers.
         e.container().schedule(tick_ms, &tick_handler);
         return e.container().schedule(tick_ms * 3, &tock_handler);
@@ -59,13 +59,13 @@ class recurring : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         // Demonstrate cancel(), we will cancel the first tock on the first recurring::on_timer_task
-        cancel_task = &ticktock(e);
+        cancel_task = ticktock(e);
         e.container().schedule(0);
     }
 
     void on_timer_task(proton::event &e) {
-        if (cancel_task) {
-            cancel_task->cancel();
+        if (!!cancel_task) {
+            cancel_task.cancel();
             cancel_task = 0;
             e.container().schedule(tick_ms * 4);
         } else {

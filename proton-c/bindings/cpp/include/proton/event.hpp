@@ -46,24 +46,24 @@ class event {
     virtual PN_CPP_EXTERN std::string name() const = 0;
 
     /// Get the event_loop object, can be a container or an engine.
-    virtual PN_CPP_EXTERN class event_loop &event_loop() const;
+    virtual PN_CPP_EXTERN class event_loop& event_loop() const;
 
     /// Get the container, throw an exception if event_loop is not a container.
-    virtual PN_CPP_EXTERN class container &container() const;
+    virtual PN_CPP_EXTERN class container& container() const;
 
     /// Get the engine, , throw an exception if event_loop is not an engine.
-    virtual PN_CPP_EXTERN class engine &engine() const;
+    virtual PN_CPP_EXTERN class engine& engine() const;
 
     /// Get connection.
-    virtual PN_CPP_EXTERN class connection &connection() const;
+    virtual PN_CPP_EXTERN class connection connection() const;
     /// Get sender @throws error if no sender.
-    virtual PN_CPP_EXTERN class sender& sender() const;
+    virtual PN_CPP_EXTERN class sender sender() const;
     /// Get receiver @throws error if no receiver.
-    virtual PN_CPP_EXTERN class receiver& receiver() const;
+    virtual PN_CPP_EXTERN class receiver receiver() const;
     /// Get link @throws error if no link.
-    virtual PN_CPP_EXTERN class link& link() const;
+    virtual PN_CPP_EXTERN class link link() const;
     /// Get delivery @throws error if no delivery.
-    virtual PN_CPP_EXTERN class delivery& delivery() const;
+    virtual PN_CPP_EXTERN class delivery delivery() const;
     /** Get message @throws error if no message. */
     virtual PN_CPP_EXTERN class message &message() const;
 

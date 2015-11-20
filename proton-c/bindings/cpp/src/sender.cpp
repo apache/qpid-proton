@@ -41,19 +41,17 @@ namespace {
 amqp_ulong tag_counter = 0;
 }
 
-delivery& sender::send(const message &message) {
+delivery sender::send(const message &message) {
     amqp_ulong id = ++tag_counter;
     pn_delivery_t *dlv =
-        pn_delivery(pn_cast(this), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
+        pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
     std::string buf;
     message.encode(buf);
-    pn_link_send(pn_cast(this), buf.data(), buf.size());
-    pn_link_advance(pn_cast(this));
-    if (pn_link_snd_settle_mode(pn_cast(this)) == PN_SND_SETTLED)
+    pn_link_send(pn_object(), buf.data(), buf.size());
+    pn_link_advance(pn_object());
+    if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
-    return *delivery::cast(dlv);
+    return dlv;
 }
-
-sender* sender::cast(pn_type* p) { return link::cast(p)->sender(); }
 
 }

@@ -22,7 +22,7 @@
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
 #include "proton/export.hpp"
-#include "proton/facade.hpp"
+#include "proton/object.hpp"
 #include "proton/pn_unique_ptr.hpp"
 
 #include <iosfwd>
@@ -37,14 +37,17 @@ class data;
  * Holds a sequence of AMQP values, allows inserting and extracting via encoder() and decoder().
  * Cannot be directly instantiated, use `value`
  */
-class data : public facade<pn_data_t, data, comparable<data> > {
+class data : public object<pn_data_t> {
   public:
-    PN_CPP_EXTERN static pn_unique_ptr<data> create();
+    data(pn_data_t* d) : object(d) {}
+    data(owned_object<pn_data_t> d) : object(d) {}
+
+    PN_CPP_EXTERN static owned_object<pn_data_t> create();
 
     PN_CPP_EXTERN data& operator=(const data&);
 
     template<class T> data& operator=(const T &t) {
-        clear(); encoder() << t; decoder().rewind(); return *this;
+        clear(); encoder() << t; return *this;
     }
 
     /** Clear the data. */
@@ -54,10 +57,26 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     PN_CPP_EXTERN bool empty() const;
 
     /** Encoder to encode into this value */
-    PN_CPP_EXTERN class encoder& encoder();
+    PN_CPP_EXTERN class encoder encoder();
 
     /** Decoder to decode from this value */
-    PN_CPP_EXTERN class decoder& decoder();
+    PN_CPP_EXTERN class decoder decoder();
+
+    /** Return the data cursor position */
+    PN_CPP_EXTERN uintptr_t point() const;
+
+    /** Restore the cursor position to a previously saved position */
+    PN_CPP_EXTERN void restore(uintptr_t h);
+
+    PN_CPP_EXTERN void narrow();
+
+    PN_CPP_EXTERN void widen();
+
+    PN_CPP_EXTERN int append(data src);
+
+    PN_CPP_EXTERN int appendn(data src, int limit);
+
+    PN_CPP_EXTERN bool next() const;
 
     /** Rewind and return the type of the first value*/
     PN_CPP_EXTERN type_id type() const;
@@ -70,13 +89,11 @@ class data : public facade<pn_data_t, data, comparable<data> > {
     PN_CPP_EXTERN bool operator==(const data& x) const;
     PN_CPP_EXTERN bool operator<(const data& x) const;
 
-    PN_CPP_EXTERN void operator delete(void *);
-
     /** Human readable representation of data. */
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
-
+  friend class value;
   private:
-    class decoder& decoder() const { return const_cast<data*>(this)->decoder(); }
+    class decoder decoder() const { return const_cast<data*>(this)->decoder(); }
 };
 
 }

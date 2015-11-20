@@ -231,7 +231,7 @@ void print_next(proton::decoder& d) {
 
 // Print a value, for example purposes. Normal code can use operator<<
 void print(proton::value& v) {
-    proton::decoder& d = v.decoder();
+    proton::decoder d = v.decoder();
     d.rewind();
     while (d.more()) {
         print_next(d);

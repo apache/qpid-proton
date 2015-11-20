@@ -122,7 +122,7 @@ class ExampleTest(unittest.TestCase):
 
     def test_helloworld_blocking(self):
         b = Broker.get()
-        hw = execute("helloworld_blocking", b.addr, b.addr)
+        hw = execute("helloworld_blocking", b.addr)
         self.assertEqual('"Hello World!"\n', hw)
 
     def test_helloworld_direct(self):
@@ -180,7 +180,7 @@ class ExampleTest(unittest.TestCase):
         finally:
             server.kill()
 
-    def test_request_response(self):
+    def test_request_response_sync(self):
         b = Broker.get()
         server = background("server", "-a", b.addr)
         try:

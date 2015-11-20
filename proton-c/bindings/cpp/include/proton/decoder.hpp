@@ -22,8 +22,7 @@
 #include "proton/error.hpp"
 #include "proton/type_traits.hpp"
 #include "proton/types.hpp"
-#include "proton/facade.hpp"
-
+#include "proton/object.hpp"
 #include <iosfwd>
 
 #ifndef PN_NO_CONTAINER_CONVERT
@@ -45,6 +44,7 @@ struct pn_data_t;
 
 namespace proton {
 
+class data;
 class message_id;
 
 /** Raised by decoder operations on error.*/
@@ -148,8 +148,10 @@ Finally you can extract an AMQP LIST with mixed type elements into a container o
 
 You can also extract container values element-by-element, see decoder::operator>>(decoder&, start&)
 */
-class decoder : public facade<pn_data_t, decoder> {
+class decoder : public object<pn_data_t> {
   public:
+    decoder(pn_data_t* d) : object(d) {}
+
     /** Copy AMQP data from a byte buffer into the decoder. */
     PN_CPP_EXTERN decoder(const char* buffer, size_t size);
 
@@ -179,47 +181,38 @@ class decoder : public facade<pn_data_t, decoder> {
     /** Back up by one value */
     PN_CPP_EXTERN void backup();
 
-    PN_CPP_EXTERN class data& data();
+    PN_CPP_EXTERN class data data();
 
     /** @name Extract simple types
      * Overloads to extract simple types.
      * @throw error if the decoder is empty or the current value has an incompatible type.
      * @{
      */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_null);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_boolean&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_ubyte&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_byte&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_ushort&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_short&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_uint&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_int&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_char&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_ulong&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_long&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_timestamp&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_float&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_double&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_decimal32&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_decimal64&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_decimal128&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, amqp_uuid&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, std::string&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, message_id&);
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, value&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_null);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_boolean&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_ubyte&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_byte&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_ushort&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_short&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_uint&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_int&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_char&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_ulong&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_long&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_timestamp&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_float&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_double&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal32&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal64&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal128&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_uuid&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, std::string&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, message_id&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, value&);
     ///@}
 
     /** Extract and return a value of type T. */
     template <class T> T extract() { T value; *this >> value; return value; }
-
-    /** Call decoder::start() in constructor, decoder::finish in destructor().
-     *
-     */
-    struct scope : public start {
-        decoder& decoder_;
-        scope(decoder& d) : decoder_(d) { d >> *this; }
-        ~scope() { decoder_ >> finish(); }
-    };
 
     /** start extracting a container value, one of array, list, map, described.
      * The basic pattern is:
@@ -247,19 +240,19 @@ class decoder : public facade<pn_data_t, decoder> {
      *
      *@throw decoder::error if the current value is not a container type.
      */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, start&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, start&);
 
     /** Finish extracting a container value. */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, finish);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, finish);
 
     /** Skip a value */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, struct skip);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, struct skip);
 
     /** Throw an exception if decoder.type() != assert_type.type */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, assert_type);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, assert_type);
 
     /** Rewind to the beginning */
-    PN_CPP_EXTERN friend decoder& operator>>(decoder&, struct rewind);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, struct rewind);
 
   private:
     PN_CPP_EXTERN void check_type(type_id);
@@ -267,11 +260,19 @@ class decoder : public facade<pn_data_t, decoder> {
   friend class encoder;
 };
 
+/** Call decoder::start() in constructor, decoder::finish in destructor().
+ *
+ */
+struct scope : public start {
+    decoder decoder_;
+    scope(decoder d) : decoder_(d) { decoder_ >> *this; }
+    ~scope() { decoder_ >> finish(); }
+};
 
 // operator >> for integer types that are not covered by the standard overrides.
 template <class T>
-typename enable_if<is_unknown_integer<T>::value, decoder&>::type
-operator>>(decoder& d, T& i)  {
+typename enable_if<is_unknown_integer<T>::value, decoder>::type
+operator>>(decoder d, T& i)  {
     typename integer_type<sizeof(T), is_signed<T>::value>::type v;
     d >> v;                     // Extract as a known integer type
     i = v;
@@ -336,8 +337,8 @@ template <class T> pairs_ref<T> to_pairs(T& v) { return pairs_ref<T>(v); }
  * the elements types are convertible to T. A MAP is extracted as [key1, value1,
  * key2, value2...]
  */
-template <class T> decoder& operator>>(decoder& d, sequence_ref<T> ref)  {
-    decoder::scope s(d);
+template <class T> decoder operator>>(decoder d, sequence_ref<T> ref)  {
+    scope s(d);
     if (s.is_described) d >> skip();
     T& v = ref.value;
     v.clear();
@@ -347,11 +348,11 @@ template <class T> decoder& operator>>(decoder& d, sequence_ref<T> ref)  {
     return d;
 }
 
-PN_CPP_EXTERN void assert_map_scope(const decoder::scope& s);
+PN_CPP_EXTERN void assert_map_scope(const scope& s);
 
 /** Extract an AMQP MAP to a C++ map */
-template <class T> decoder& operator>>(decoder& d, map_ref<T> ref)  {
-    decoder::scope s(d);
+template <class T> decoder operator>>(decoder d, map_ref<T> ref)  {
+    scope s(d);
     assert_map_scope(s);
     T& m = ref.value;
     m.clear();
@@ -365,8 +366,8 @@ template <class T> decoder& operator>>(decoder& d, map_ref<T> ref)  {
 }
 
 /** Extract an AMQP MAP to a C++ container of std::pair, preserving order. */
-template <class T> decoder& operator>>(decoder& d, pairs_ref<T> ref)  {
-    decoder::scope s(d);
+template <class T> decoder operator>>(decoder d, pairs_ref<T> ref)  {
+    scope s(d);
     assert_map_scope(s);
     T& m = ref.value;
     m.clear();
@@ -380,25 +381,24 @@ template <class T> decoder& operator>>(decoder& d, pairs_ref<T> ref)  {
 #ifndef PN_NO_CONTAINER_CONVERT
 
 // Decode to sequence.
-template <class T, class A> decoder& operator>>(decoder &d, std::vector<T, A>& v) { return d >> to_sequence(v); }
-template <class T, class A> decoder& operator>>(decoder &d, std::deque<T, A>& v) { return d >> to_sequence(v); }
-template <class T, class A> decoder& operator>>(decoder &d, std::list<T, A>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder operator>>(decoder d, std::vector<T, A>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder operator>>(decoder d, std::deque<T, A>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder operator>>(decoder d, std::list<T, A>& v) { return d >> to_sequence(v); }
 
 // Decode to map.
-template <class K, class T, class C, class A> decoder& operator>>(decoder &d, std::map<K, T, C, A>& v) { return d >> to_map(v); }
+template <class K, class T, class C, class A> decoder operator>>(decoder d, std::map<K, T, C, A>& v) { return d >> to_map(v); }
 
 #if PN_HAS_CPP11
 
 // Decode to sequence.
-template <class T, class A> decoder& operator>>(decoder &d, std::forward_list<T, A>& v) { return d >> to_sequence(v); }
-template <class T, std::size_t N> decoder& operator>>(decoder &d, std::array<T, N>& v) { return d >> to_sequence(v); }
+template <class T, class A> decoder operator>>(decoder d, std::forward_list<T, A>& v) { return d >> to_sequence(v); }
+template <class T, std::size_t N> decoder operator>>(decoder d, std::array<T, N>& v) { return d >> to_sequence(v); }
 
 // Decode to map.
-template <class K, class T, class C, class A> decoder& operator>>(decoder &d, std::unordered_map<K, T, C, A>& v) { return d >> to_map(v); }
+template <class K, class T, class C, class A> decoder operator>>(decoder d, std::unordered_map<K, T, C, A>& v) { return d >> to_map(v); }
 
 #endif // PN_HAS_CPP11
 #endif // PN_NO_CONTAINER_CONVERT
 
 }
-
 #endif // DECODER_H

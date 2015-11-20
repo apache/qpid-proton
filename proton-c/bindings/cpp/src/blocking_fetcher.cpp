@@ -19,6 +19,7 @@
  *
  */
 #include "blocking_fetcher.hpp"
+#include "proton/container.hpp"
 #include "msg.hpp"
 
 #include "proton/event.hpp"
@@ -29,14 +30,14 @@ blocking_fetcher::blocking_fetcher(int prefetch) : messaging_handler(prefetch, f
 
 void blocking_fetcher::on_message(event &e) {
     messages_.push_back(e.message());
-    deliveries_.push_back(e.delivery().ptr());
+    deliveries_.push_back(e.delivery());
     // Wake up enclosing connection.wait()
     e.container().reactor().yield();
 }
 
 void blocking_fetcher::on_link_error(event &e) {
-    link& lnk = e.link();
-    if (pn_link_state(pn_cast(&lnk)) & PN_LOCAL_ACTIVE) {
+    link lnk = e.link();
+    if (lnk.state() & PN_LOCAL_ACTIVE) {
         lnk.close();
         throw error(MSG("Link detached: " << lnk.name()));
     }
@@ -47,8 +48,8 @@ bool blocking_fetcher::has_message() { return !messages_.empty(); }
 message blocking_fetcher::pop() {
     if (messages_.empty())
         throw error(MSG("receiver has no messages"));
-    counted_ptr<delivery> dlv(deliveries_.front());
-    if (!dlv->settled())
+    delivery dlv(deliveries_.front());
+    if (!dlv.settled())
         unsettled_.push_back(dlv);
     message m = messages_.front();
     messages_.pop_front();
@@ -57,10 +58,10 @@ message blocking_fetcher::pop() {
 }
 
 void blocking_fetcher::settle(delivery::state state) {
-    counted_ptr<delivery> dlv = unsettled_.front();
+    delivery dlv = unsettled_.front();
     if (state)
-        dlv->update(state);
-    dlv->settle();
+        dlv.update(state);
+    dlv.settle();
 }
 
 }

@@ -34,7 +34,7 @@
 
 class server : public proton::messaging_handler {
   private:
-    typedef std::map<std::string, proton::counted_ptr<proton::sender> > sender_map;
+    typedef std::map<std::string, proton::sender> sender_map;
     proton::url url;
     sender_map senders;
     int address_counter;
@@ -62,10 +62,10 @@ class server : public proton::messaging_handler {
     }
 
     void on_link_opening(proton::event& e) {
-        proton::link& link = e.link();
-        if (link.sender() && link.remote_source().dynamic()) {
+        proton::link link = e.link();
+        if (!!link.sender() && link.remote_source().dynamic()) {
             link.source().address(generate_address());
-            senders[link.source().address()] = link.sender()->ptr();
+            senders[link.source().address()] = link.sender();
         }
     }
 
@@ -76,12 +76,12 @@ class server : public proton::messaging_handler {
         if (it == senders.end()) {
             std::cout << "No link for reply_to: " << reply_to << std::endl;
         } else {
-            proton::counted_ptr<proton::sender> sender = it->second;
+            proton::sender sender = it->second;
             proton::message reply;
             reply.address(reply_to);
             reply.body(to_upper(e.message().body().get<std::string>()));
             reply.correlation_id(e.message().correlation_id());
-            sender->send(reply);
+            sender.send(reply);
         }
     }
 };

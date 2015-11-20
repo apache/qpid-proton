@@ -88,11 +88,11 @@ class messaging_event : public proton_event
     ~messaging_event();
 
     virtual PN_CPP_EXTERN void dispatch(handler &h);
-    virtual PN_CPP_EXTERN class connection &connection() const;
-    virtual PN_CPP_EXTERN class sender& sender() const;
-    virtual PN_CPP_EXTERN class receiver& receiver() const;
-    virtual PN_CPP_EXTERN class link& link() const;
-    virtual PN_CPP_EXTERN class delivery& delivery() const;
+    virtual PN_CPP_EXTERN class connection connection() const;
+    virtual PN_CPP_EXTERN class sender sender() const;
+    virtual PN_CPP_EXTERN class receiver receiver() const;
+    virtual PN_CPP_EXTERN class link link() const;
+    virtual PN_CPP_EXTERN class delivery delivery() const;
     virtual PN_CPP_EXTERN class message& message() const;
 
     PN_CPP_EXTERN event_type type() const;

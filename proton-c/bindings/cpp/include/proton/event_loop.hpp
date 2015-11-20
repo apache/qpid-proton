@@ -23,10 +23,12 @@
 
 #include <string>
 
+namespace proton {
+
 /**
  * An event_loop dispatches events to event handlers.  event_loop is an abstract
  * class, concrete subclasses are proton::container and prton::engine.
-*/
+ */
 class event_loop {
   public:
     PN_CPP_EXTERN virtual ~event_loop() {}
@@ -38,4 +40,5 @@ class event_loop {
     // TODO aconway 2015-11-02: injecting application events.
 };
 
+}
 #endif // EVENT_LOOP_HPP

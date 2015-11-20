@@ -68,7 +68,7 @@ void messaging_adapter::on_delivery(event &e) {
     if (pe) {
         pn_event_t *cevent = pe->pn_event();
         pn_link_t *lnk = pn_event_link(cevent);
-        delivery &dlv = pe->delivery();
+        delivery dlv = pe->delivery();
 
         if (pn_link_is_receiver(lnk)) {
             if (!dlv.partial() && dlv.readable()) {
@@ -81,7 +81,7 @@ void messaging_adapter::on_delivery(event &e) {
                 // See PROTON-998
                 class message &msg(ctx.event_message);
                 mevent.message_ = &msg;
-                mevent.message_->decode(*link::cast(lnk), dlv);
+                mevent.message_->decode(lnk, dlv);
                 if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                     if (auto_accept_)
                         dlv.release();

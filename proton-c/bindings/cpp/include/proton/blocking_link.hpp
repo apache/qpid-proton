@@ -24,6 +24,7 @@
 #include "proton/export.hpp"
 #include "proton/counted_ptr.hpp"
 #include "proton/duration.hpp"
+#include "proton/link.hpp"
 
 #include <string>
 
@@ -40,12 +41,12 @@ class blocking_link
 
   protected:
     blocking_link(blocking_connection&);
-    void open(link&);
+    void open(link);
     void check_closed();
     void wait_for_closed();
 
     blocking_connection& connection_;
-    counted_ptr<link> link_;
+    link link_;
 
   private:
     blocking_link(const blocking_link&);

@@ -24,6 +24,7 @@
 #include "proton/blocking_sender.hpp"
 #include "proton/blocking_receiver.hpp"
 #include "proton/duration.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 

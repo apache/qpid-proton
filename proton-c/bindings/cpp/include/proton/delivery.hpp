@@ -1,3 +1,4 @@
+
 #ifndef PROTON_CPP_DELIVERY_H
 #define PROTON_CPP_DELIVERY_H
 
@@ -22,7 +23,7 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/facade.hpp"
+#include "proton/object.hpp"
 
 #include "proton/delivery.h"
 #include "proton/disposition.h"
@@ -30,8 +31,10 @@
 namespace proton {
 
 /** delivery status of a message */
-class delivery : public counted_facade<pn_delivery_t, delivery> {
+class delivery : public object<pn_delivery_t> {
   public:
+    delivery(pn_delivery_t* d=0) : object(d) {}
+
     /** Delivery state of a message */
     enum state {
         NONE = 0, ///< Unknown state
@@ -108,6 +111,11 @@ class delivery : public counted_facade<pn_delivery_t, delivery> {
      * Get the remote disposition state for a delivery.
      */
     PN_CPP_EXTERN state remote_state() const;
+
+    /**
+     * Get the size of the current delivery
+     */
+    PN_CPP_EXTERN size_t pending() const;
 };
 
 }

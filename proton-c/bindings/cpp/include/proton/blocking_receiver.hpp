@@ -52,7 +52,7 @@ class blocking_receiver : public blocking_link
     PN_CPP_EXTERN void settle(delivery::state state);
     PN_CPP_EXTERN void flow(int count);
 
-    PN_CPP_EXTERN class receiver& receiver();
+    PN_CPP_EXTERN class receiver receiver();
   private:
     pn_unique_ptr<blocking_fetcher> fetcher_;
 };

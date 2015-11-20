@@ -36,6 +36,7 @@ set(qpid-proton-cpp-source
   src/connector.cpp
   src/container.cpp
   src/container_impl.cpp
+  src/counted_ptr.cpp
   src/contexts.cpp
   src/data.cpp
   src/decoder.cpp
@@ -46,13 +47,13 @@ set(qpid-proton-cpp-source
   src/engine.cpp
   src/error.cpp
   src/event.cpp
-  src/facade.cpp
   src/handler.cpp
   src/link.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/messaging_event.cpp
   src/messaging_handler.cpp
+  src/object.cpp
   src/proton_bits.cpp
   src/proton_event.cpp
   src/proton_handler.cpp
@@ -163,5 +164,4 @@ endmacro(add_cpp_test)
 
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
-add_cpp_test(conversion_test)
 add_cpp_test(encode_decode_test)

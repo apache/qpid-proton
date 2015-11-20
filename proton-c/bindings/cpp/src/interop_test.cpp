@@ -56,7 +56,7 @@ void test_data_ostream() {
 void test_decoder_primitves_exact() {
     value dv;
     dv.decoder().decode(read("primitives"));
-    decoder& d(dv.decoder());
+    decoder d(dv.decoder());
     ASSERT(d.more());
     try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(decode_error){}
     ASSERT_EQUAL(true, get<bool>(d));
@@ -81,7 +81,7 @@ void test_decoder_primitves_exact() {
 // Test inserting primitive sand encoding as AMQP.
 void test_encoder_primitives() {
     value dv;
-    encoder& e = dv.encoder();
+    encoder e = dv.encoder();
     e << true << false;
     e << ::uint8_t(42);
     e << ::uint16_t(42) << ::int16_t(-42);

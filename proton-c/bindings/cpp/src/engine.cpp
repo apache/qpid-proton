@@ -123,8 +123,8 @@ bool engine::closed() const {
     return pn_transport_closed(impl_->transport);
 }
 
-class connection& engine::connection() const {
-    return *connection::cast(impl_->connection);
+class connection engine::connection() const {
+    return impl_->connection;
 }
 
 std::string engine::id() const { return connection().container_id(); }

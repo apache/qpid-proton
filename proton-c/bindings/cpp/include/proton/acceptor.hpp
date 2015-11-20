@@ -24,16 +24,18 @@
 
 #include "proton/reactor.h"
 #include "proton/export.hpp"
-#include "proton/facade.hpp"
+#include "proton/object.hpp"
 
 struct pn_connection_t;
 
 namespace proton {
 
 /** acceptor accepts connections. @see container::listen */
-class acceptor : public counted_facade<pn_acceptor_t, acceptor>
+class acceptor : public object<pn_acceptor_t>
 {
   public:
+    acceptor(pn_acceptor_t* a=0) : object(a) {}
+
     /** close the acceptor */
     PN_CPP_EXTERN void close();
 };

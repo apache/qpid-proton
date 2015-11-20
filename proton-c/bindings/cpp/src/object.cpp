@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_TRANSPORT_H
-#define PROTON_CPP_TRANSPORT_H
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,29 +15,19 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 
 #include "proton/object.hpp"
-
-#include "proton/export.hpp"
-
-struct pn_transport_t;
+#include <proton/object.h>
 
 namespace proton {
 
-class connection;
-
-/** Represents a connection transport */
-class transport : public object<pn_transport_t>
-{
-  public:
-    transport(pn_transport_t* t) : object(t) {}
-
-    class connection connection() const;
-};
-
-
+void object_base::incref() const {
+    if (object_) ::pn_incref(const_cast<void*>(object_));
 }
 
-#endif  /*!PROTON_CPP_TRANSPORT_H*/
+void object_base::decref() const {
+    if (object_) ::pn_decref(const_cast<void*>(object_));
+}
+
+}

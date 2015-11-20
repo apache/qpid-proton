@@ -28,27 +28,23 @@ namespace proton {
 
 value::value() : data_(data::create()) {}
 
-value::value(const value& x) : data_(data::create()) { *data_ = *x.data_; }
+value::value(const value& x) : data_(data::create()) { data_ = x.data_; }
 
-value::value(const data& x) : data_(data::create()) { *data_ = x; }
+value& value::operator=(const value& x) { data_ = x.data_; return *this; }
 
-value& value::operator=(const value& x) { *data_ = *x.data_; return *this; }
+void value::clear() { data_.clear(); }
 
-value& value::operator=(const data& x) { *data_ = x; return *this; }
+bool value::empty() const { return data_.empty(); }
 
-void value::clear() { data_->clear(); }
+class encoder value::encoder() { clear(); return data_.encoder(); }
 
-bool value::empty() const { return data_->empty(); }
-
-class encoder& value::encoder() { clear(); return data_->encoder(); }
-
-class decoder& value::decoder() const { data_->decoder().rewind(); return data_->decoder(); }
+class decoder value::decoder() const { data_.decoder().rewind(); return data_.decoder(); }
 
 type_id value::type() const { return decoder().type(); }
 
-bool value::operator==(const value& x) const { return *data_ == *x.data_; }
+bool value::operator==(const value& x) const { return data_ == x.data_; }
 
-bool value::operator<(const value& x) const { return *data_ < *x.data_; }
+bool value::operator<(const value& x) const { return data_ < x.data_; }
 
 std::ostream& operator<<(std::ostream& o, const value& v) {
     // pn_inspect prints strings with quotes which is not normal in C++.
@@ -57,7 +53,7 @@ std::ostream& operator<<(std::ostream& o, const value& v) {
       case SYMBOL:
         return o << v.get<std::string>();
       default:
-        return o << *v.data_;
+        return o << v.data_;
     }
 }
 

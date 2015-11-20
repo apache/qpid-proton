@@ -32,13 +32,13 @@ struct pn_connection_t;
 namespace proton {
 
 /// A receiving link
-class receiver : public counted_facade<pn_link_t, receiver, link>
+class receiver : public link
 {
   public:
+    receiver(pn_link_t* r=0) : link(r) {}
+
     /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
-
-    PN_CPP_EXTERN receiver* cast(pn_type*);
 };
 
 }

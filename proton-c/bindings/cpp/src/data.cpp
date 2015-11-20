@@ -26,35 +26,48 @@
 
 namespace proton {
 
-void data::operator delete(void *p) { ::pn_data_free(reinterpret_cast<pn_data_t*>(p)); }
+data& data::operator=(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); return *this; }
 
-data& data::operator=(const data& x) { ::pn_data_copy(pn_cast(this), pn_cast(&x)); return *this; }
+void data::clear() { ::pn_data_clear(pn_object()); }
 
-void data::clear() { ::pn_data_clear(pn_cast(this)); }
+bool data::empty() const { return ::pn_data_size(pn_object()) == 0; }
 
-bool data::empty() const { return ::pn_data_size(pn_cast(this)) == 0; }
+uintptr_t data::point() const { return pn_data_point(pn_object()); }
+
+void data::restore(uintptr_t h) { pn_data_restore(pn_object(), h); }
+
+void data::narrow() { pn_data_narrow(pn_object()); }
+
+void data::widen() { pn_data_widen(pn_object()); }
+
+int data::append(data src) { return pn_data_append(pn_object(), src.pn_object());}
+
+int data::appendn(data src, int limit) { return pn_data_appendn(pn_object(), src.pn_object(), limit);}
+
+bool data::next() const { return pn_data_next(pn_object()); }
+
 
 namespace {
 struct save_state {
-    pn_data_t* data;
-    pn_handle_t handle;
-    save_state(pn_data_t* d) : data(d), handle(pn_data_point(d)) {}
-    ~save_state() { if (data) pn_data_restore(data, handle); }
+    data data_;
+    uintptr_t handle;
+    save_state(data d) : data_(d), handle(data_.point()) {}
+    ~save_state() { if (!!data_) data_.restore(handle); }
 };
 }
 
 std::ostream& operator<<(std::ostream& o, const data& d) {
-    save_state(pn_cast(&d));
+    save_state s(d.pn_object());
     d.decoder().rewind();
-    return o << inspectable(pn_cast(&d));
+    return o << inspectable(d.pn_object());
 }
 
-pn_unique_ptr<data> data::create() { return pn_unique_ptr<data>(cast(::pn_data(0))); }
+owned_object<pn_data_t> data::create() { return pn_data(0); }
 
-encoder& data::encoder() { return reinterpret_cast<class encoder&>(*this); }
-decoder& data::decoder() { return reinterpret_cast<class decoder&>(*this); }
+encoder data::encoder() { return proton::encoder(pn_object()); }
+decoder data::decoder() { return proton::decoder(pn_object()); }
 
-type_id data::type() const { return reinterpret_cast<const class decoder&>(*this).type(); }
+type_id data::type() const { return decoder().type(); }
 
 namespace {
 
@@ -69,7 +82,7 @@ template <class T> int compare(const T& a, const T& b) {
 }
 
 int compare_container(data& a, data& b) {
-    decoder::scope sa(a.decoder()), sb(b.decoder());
+    scope sa(a.decoder()), sb(b.decoder());
     // Compare described vs. not-described.
     int cmp = compare(sa.is_described, sb.is_described);
     if (cmp) return cmp;
@@ -129,8 +142,8 @@ int compare_next(data& a, data& b) {
 }
 
 int compare(data& a, data& b) {
-    save_state(pn_cast(&a));
-    save_state(pn_cast(&b));
+    save_state s1(a);
+    save_state s2(b);
     a.decoder().rewind();
     b.decoder().rewind();
     while (a.decoder().more() && b.decoder().more()) {

@@ -22,7 +22,6 @@
  *
  */
 
-#include "proton/pn_unique_ptr.hpp"
 #include "proton/export.hpp"
 #include "proton/duration.hpp"
 #include "proton/pn_unique_ptr.hpp"
@@ -43,7 +42,7 @@ class blocking_connection
     PN_CPP_EXTERN ~blocking_connection();
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN duration timeout() const;
-    PN_CPP_EXTERN class connection& connection() const;
+    PN_CPP_EXTERN class connection connection() const;
 
   private:
     blocking_connection(const blocking_connection&);

@@ -49,53 +49,53 @@ std::string proton_event::name() const { return pn_event_type_name(pn_event_type
 
 pn_event_t *proton_event::pn_event() const { return pn_event_; }
 
-event_loop &proton_event::event_loop() const {
+event_loop& proton_event::event_loop() const {
     if (!event_loop_)
         throw error(MSG("No event_loop context for this event"));
     return *event_loop_;
 }
 
-container &proton_event::container() const {
+container& proton_event::container() const {
     class container *c = dynamic_cast<class container*>(event_loop_);
     if (!c)
         throw error(MSG("No container context for this event"));
     return *c;
 }
 
-engine &proton_event::engine() const {
+engine& proton_event::engine() const {
     class engine *e = dynamic_cast<class engine*>(event_loop_);
     if (!e)
         throw error(MSG("No engine context for this event"));
     return *e;
 }
 
-connection &proton_event::connection() const {
+connection proton_event::connection() const {
     pn_connection_t *conn = pn_event_connection(pn_event());
     if (!conn)
         throw error(MSG("No connection context for this event"));
-    return *connection::cast(conn);
+    return conn;
 }
 
-link& proton_event::link() const {
-    class link *lnk = link::cast(pn_event_link(pn_event()));
+link proton_event::link() const {
+    class link lnk = pn_event_link(pn_event());
     if (!lnk) throw error(MSG("No link context for this event"));
-    return *lnk;
+    return lnk;
 }
 
-sender& proton_event::sender() const {
+sender proton_event::sender() const {
     if (!link().sender()) throw error(MSG("No sender context for this event"));
-    return *link().sender();
+    return link().sender();
 }
 
-receiver& proton_event::receiver() const {
+receiver proton_event::receiver() const {
     if (!link().receiver()) throw error(MSG("No receiver context for this event"));
-    return *link().receiver();
+    return link().receiver();
 }
 
-delivery& proton_event::delivery() const {
-    class delivery *dlv = delivery::cast(pn_event_delivery(pn_event()));
+delivery proton_event::delivery() const {
+    pn_delivery_t* dlv = pn_event_delivery(pn_event());
     if (!dlv) throw error(MSG("No delivery context for this event"));
-    return *dlv;
+    return dlv;
 }
 
 void proton_event::dispatch(handler &h) {

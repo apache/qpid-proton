@@ -59,28 +59,28 @@ class container : public event_loop {
     PN_CPP_EXTERN ~container();
 
     /** Locally open a connection @see connection::open  */
-    PN_CPP_EXTERN connection& connect(const proton::url&, handler *h=0);
+    PN_CPP_EXTERN connection connect(const proton::url&, handler *h=0);
 
     /** Open a connection to url and create a receiver with source=url.path() */
-    PN_CPP_EXTERN acceptor& listen(const proton::url &);
+    PN_CPP_EXTERN acceptor listen(const proton::url &);
 
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
 
     /** Open a connection to url and create a sender with target=url.path() */
-    PN_CPP_EXTERN sender& open_sender(const proton::url &);
+    PN_CPP_EXTERN sender open_sender(const proton::url &);
 
     /** Create a receiver on connection with source=url.path() */
-    PN_CPP_EXTERN receiver& open_receiver(const url &);
+    PN_CPP_EXTERN receiver open_receiver(const url &);
 
     /// Identifier for the container
     PN_CPP_EXTERN std::string id() const;
 
     /// The reactor associated with this container.
-    PN_CPP_EXTERN class reactor& reactor() const;
+    PN_CPP_EXTERN class reactor reactor() const;
 
     // Schedule a timer task event in delay milliseconds.
-    PN_CPP_EXTERN task& schedule(int delay, handler *h = 0);
+    PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
 
   private:
     pn_unique_ptr<container_impl> impl_;

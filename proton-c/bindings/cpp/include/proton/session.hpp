@@ -30,6 +30,7 @@
 #include <string>
 
 struct pn_connection_t;
+struct pn_session_t;
 
 namespace proton {
 
@@ -38,9 +39,11 @@ class handler;
 class transport;
 
 /** A session is a collection of links */
-class session : public counted_facade<pn_session_t, session, endpoint>
+class session : public object<pn_session_t>, public endpoint
 {
   public:
+    session(pn_session_t* s=0) : object(s) {}
+
     /** Initiate local open, not complete till messaging_handler::on_session_opened()
      * or proton_handler::on_session_remote_open()
      */
@@ -52,34 +55,49 @@ class session : public counted_facade<pn_session_t, session, endpoint>
     PN_CPP_EXTERN void close();
 
     /// Get connection
-    PN_CPP_EXTERN class connection &connection() const;
+    PN_CPP_EXTERN class connection connection() const;
 
     /** An un-opened receiver link, you can set link properties before calling open().
      *
      *@param name if specified must be unique, by default the container generates a name
      * of the form: <hex-digits> + "@" + container.id()
      */
-    PN_CPP_EXTERN receiver& create_receiver(const std::string& name=std::string());
+    PN_CPP_EXTERN receiver create_receiver(const std::string& name=std::string());
 
     /** An un-opened sender link, you can set link properties before calling open().
      *
      *@param name if specified must be unique, by default the container generates a name
      * of the form: <hex-digits> + "@" + container.id()
      */
-    PN_CPP_EXTERN sender& create_sender(const std::string& name=std::string());
+    PN_CPP_EXTERN sender create_sender(const std::string& name=std::string());
 
     /** Create and open a sender with target=addr and optional handler h */
-    PN_CPP_EXTERN sender& open_sender(const std::string &addr, handler *h=0);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, handler *h=0);
 
     /** Create and open a receiver with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver& open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state() const;
 
+    /** Navigate the sessions in a connection - get next session with endpoint state*/
+    PN_CPP_EXTERN session next(endpoint::state) const;
+
     /** Return the links on this session matching the state mask. */
     PN_CPP_EXTERN link_range find_links(endpoint::state mask) const;
 };
+
+/// An iterator for sessions.
+class session_iterator : public iter_base<session> {
+ public:
+    explicit session_iterator(session p = session(), endpoint::state s = 0) :
+        iter_base<session>(p, s) {}
+    PN_CPP_EXTERN session_iterator operator++();
+    session_iterator operator++(int) { session_iterator x(*this); ++(*this); return x; }
+};
+
+/// A range of sessions.
+typedef range<session_iterator> session_range;
 
 }
 

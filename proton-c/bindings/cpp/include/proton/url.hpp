@@ -19,7 +19,6 @@
  * under the License.
  */
 
-#include "proton/facade.hpp"
 #include "proton/types.hpp"
 #include "proton/error.hpp"
 #include <iosfwd>

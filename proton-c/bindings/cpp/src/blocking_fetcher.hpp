@@ -39,8 +39,8 @@ class blocking_fetcher : public messaging_handler {
 
   private:
     std::deque<message> messages_;
-    std::deque<counted_ptr<delivery> > deliveries_;
-    std::deque<counted_ptr<delivery> > unsettled_;
+    std::deque<delivery> deliveries_;
+    std::deque<delivery> unsettled_;
 };
 
 }

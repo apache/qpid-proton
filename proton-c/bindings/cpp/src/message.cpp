@@ -66,9 +66,28 @@ void check(int err) {
 }
 } // namespace
 
-void message::id(const message_id& id) { *data::cast(pn_message_id(message_)) = id.value_; }
+void message::id(const message_id& id) { data(pn_message_id(message_)) = id.value_; }
 
-message_id message::id() const { return message_id(*data::cast(pn_message_id(message_))); }
+namespace {
+inline message_id from_pn_atom(const pn_atom_t& v) {
+  switch (v.type) {
+    case PN_ULONG:
+      return message_id(amqp_ulong(v.u.as_ulong));
+    case PN_UUID:
+      return message_id(amqp_uuid(v.u.as_uuid));
+    case PN_BINARY:
+      return message_id(amqp_binary(v.u.as_bytes));
+    case PN_STRING:
+      return message_id(amqp_string(v.u.as_bytes));
+    default:
+      return message_id();
+  }
+}
+}
+
+message_id message::id() const {
+    return from_pn_atom(pn_message_get_id(message_));
+}
 
 void message::user_id(const std::string &id) {
     check(pn_message_set_user_id(message_, pn_bytes(id)));
@@ -106,11 +125,11 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    *data::cast(pn_message_correlation_id(message_)) = id.value_;
+    data(pn_message_correlation_id(message_)) = id.value_;
 }
 
 message_id message::correlation_id() const {
-    return message_id(*data::cast(pn_message_correlation_id(message_)));
+    return from_pn_atom(pn_message_get_correlation_id(message_));
 }
 
 void message::content_type(const std::string &s) {
@@ -169,24 +188,24 @@ void message::inferred(bool b) { pn_message_set_inferred(message_, b); }
 
 void message::body(const value& v) { body() = v; }
 
-const data& message::body() const {
-    return *data::cast(pn_message_body(message_));
+const data message::body() const {
+    return pn_message_body(message_);
 }
 
-data& message::body() {
-    return *data::cast(pn_message_body(message_));
+data message::body() {
+    return pn_message_body(message_);
 }
 
 void message::properties(const value& v) {
     properties() = v;
 }
 
-const data& message::properties() const {
-    return *data::cast(pn_message_properties(message_));
+const data message::properties() const {
+    return pn_message_properties(message_);
 }
 
-data& message::properties() {
-    return *data::cast(pn_message_properties(message_));
+data message::properties() {
+    return pn_message_properties(message_);
 }
 
 namespace {
@@ -256,14 +275,14 @@ void message::decode(const std::string &s) {
     check(pn_message_decode(message_, s.data(), s.size()));
 }
 
-void message::decode(proton::link &link, proton::delivery &delivery) {
+void message::decode(proton::link link, proton::delivery delivery) {
     std::string buf;
-    buf.resize(pn_delivery_pending(pn_cast(&delivery)));
-    ssize_t n = pn_link_recv(pn_cast(&link), (char *) buf.data(), buf.size());
+    buf.resize(delivery.pending());
+    ssize_t n = link.recv((char *) buf.data(), buf.size());
     if (n != (ssize_t) buf.size()) throw error(MSG("link read failure"));
     clear();
     decode(buf);
-    pn_link_advance(pn_cast(&link));
+    link.advance();
 }
 
 }

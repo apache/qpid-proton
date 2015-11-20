@@ -46,26 +46,26 @@ blocking_receiver::blocking_receiver(
     class blocking_connection &c, const std::string& addr, int credit, bool dynamic) :
     blocking_link(c), fetcher_(new blocking_fetcher(credit))
 {
-    open(c.impl_->connection_->open_receiver(addr, dynamic, fetcher_.get()));
-    std::string sa = link_->source().address();
-    std::string rsa = link_->remote_source().address();
+    open(c.impl_->connection_.open_receiver(addr, dynamic, fetcher_.get()));
+    std::string sa = link_.source().address();
+    std::string rsa = link_.remote_source().address();
     if (!sa.empty() && sa.compare(rsa) != 0) {
         wait_for_closed();
-        link_->close();
-        std::string txt = "Failed to open receiver " + link_->name() + ", source does not match";
+        link_.close();
+        std::string txt = "Failed to open receiver " + link_.name() + ", source does not match";
         throw error(MSG(txt));
     }
     if (credit)
-        pn_link_flow(pn_cast(link_), credit);
+        link_.flow(credit);
 }
 
-blocking_receiver::~blocking_receiver() { link_->detach_handler(); }
+blocking_receiver::~blocking_receiver() { link_.detach_handler(); }
 
 message blocking_receiver::receive(duration timeout) {
     if (!receiver().credit())
         receiver().flow(1);
     fetcher_has_message cond(*fetcher_);
-    connection_.impl_->wait(cond, "receiving on receiver " + link_->name(), timeout);
+    connection_.impl_->wait(cond, "receiving on receiver " + link_.name(), timeout);
     return fetcher_->pop();
 }
 
@@ -97,6 +97,6 @@ void blocking_receiver::flow(int count) {
     receiver().flow(count);
 }
 
-receiver& blocking_receiver::receiver() { return *link_->receiver(); }
+receiver blocking_receiver::receiver() { return link_.receiver(); }
 
 }

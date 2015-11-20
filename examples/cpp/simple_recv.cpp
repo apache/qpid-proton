@@ -35,7 +35,7 @@
 class simple_recv : public proton::messaging_handler {
   private:
     proton::url url;
-    proton::counted_ptr<proton::receiver> receiver;
+    proton::receiver receiver;
     uint64_t expected;
     uint64_t received;
   public:
@@ -43,7 +43,7 @@ class simple_recv : public proton::messaging_handler {
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_start(proton::event &e) {
-        receiver = e.container().open_receiver(url).ptr();
+        receiver = e.container().open_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 

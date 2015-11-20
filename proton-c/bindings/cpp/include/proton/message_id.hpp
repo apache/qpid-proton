@@ -68,13 +68,14 @@ class message_id : public comparable<message_id> {
     bool operator<(const message_id& x) const { return value_ < x.value_; }
 
   friend std::ostream& operator<<(std::ostream&, const message_id&);
-  friend PN_CPP_EXTERN encoder& operator<<(encoder&, const message_id&);
-  friend PN_CPP_EXTERN decoder& operator>>(decoder&, message_id&);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
+  friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
 
   private:
-    message_id(const data& d) : value_(d) {}
+    //message_id(const data d) : value_(d) {}
     value value_;
   friend class message;
+  friend class data;
 };
 
 }

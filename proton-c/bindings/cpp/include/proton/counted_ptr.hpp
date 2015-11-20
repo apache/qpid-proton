@@ -78,7 +78,7 @@ template <class T> class counted_ptr : public proton::comparable<counted_ptr<T> 
     T* get() const { return ptr_; }
     T* operator->() const { return ptr_; }
     T& operator*() const { return *ptr_; }
-    operator bool() const { return ptr_; }
+    operator bool() const { return !!ptr_; }
     bool operator!() const { return !ptr_; }
 
     template <class U> operator counted_ptr<U>() const { return counted_ptr<U>(get()); }

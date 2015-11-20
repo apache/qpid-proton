@@ -139,7 +139,7 @@ class engine : public event_loop {
     PN_CPP_EXTERN bool closed() const;
 
     /** The AMQP connection associated with this engine. */
-    PN_CPP_EXTERN class connection&  connection() const;
+    PN_CPP_EXTERN class connection  connection() const;
 
     /** The AMQP container-id associated with this engine. */
     PN_CPP_EXTERN  std::string id() const;

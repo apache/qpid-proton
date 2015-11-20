@@ -24,8 +24,8 @@
 
 namespace proton {
 
-connection* transport::connection() const {
-    return connection::cast(pn_transport_connection(pn_cast(this)));
+connection transport::connection() const {
+    return pn_transport_connection(pn_object());
 }
 
 }

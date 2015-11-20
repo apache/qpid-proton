@@ -51,7 +51,7 @@ class blocking_connection_impl : public messaging_handler
     void wait(const condition&, const std::string & ="", duration=duration(-1));
 
     pn_unique_ptr<container> container_;
-    counted_ptr<connection> connection_;
+    connection connection_;
 };
 
 
