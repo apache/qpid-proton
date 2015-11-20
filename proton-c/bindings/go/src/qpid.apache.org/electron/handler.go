@@ -49,6 +49,7 @@ func newHandler(c *connection) *handler {
 	h.delegator.AutoOpen = false
 	return h
 }
+
 func (h *handler) linkError(l proton.Link, msg string) {
 	proton.CloseError(l, amqp.Errorf(amqp.InternalError, "%s for %s %s", msg, l.Type(), l))
 }
@@ -83,13 +84,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 
 	case proton.MSessionClosed:
-		err := proton.EndpointError(e.Session())
-		for l, _ := range h.links {
-			if l.Session() == e.Session() {
-				h.linkClosed(l, err)
-			}
-		}
-		delete(h.sessions, e.Session())
+		h.sessionClosed(e.Session(), proton.EndpointError(e.Session()))
 
 	case proton.MLinkOpening:
 		l := e.Link()
@@ -117,7 +112,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		h.connection.err.Set(e.Connection().RemoteCondition().Error())
 
 	case proton.MConnectionClosed:
-		h.connection.err.Set(Closed) // If no error already set, this is an orderly close.
+		h.connectionClosed(proton.EndpointError(e.Connection()))
 
 	case proton.MDisconnected:
 		h.connection.err.Set(e.Transport().Condition().Error())
@@ -157,13 +152,36 @@ func (h *handler) incoming(in Incoming) {
 	}
 }
 
+func (h *handler) addLink(pl proton.Link, el Link) {
+	h.links[pl] = el
+}
+
 func (h *handler) linkClosed(l proton.Link, err error) {
-	if link := h.links[l]; link != nil {
+	if link, ok := h.links[l]; ok {
 		link.closed(err)
 		delete(h.links, l)
 	}
 }
 
-func (h *handler) addLink(rl proton.Link, ll Link) {
-	h.links[rl] = ll
+func (h *handler) sessionClosed(ps proton.Session, err error) {
+	if s, ok := h.sessions[ps]; ok {
+		delete(h.sessions, ps)
+		err = s.closed(err)
+		for l, _ := range h.links {
+			if l.Session() == ps {
+				h.linkClosed(l, err)
+			}
+		}
+	}
+}
+
+func (h *handler) connectionClosed(err error) {
+	err = h.connection.closed(err)
+	// Close links first to avoid repeated scans of the link list by sessions.
+	for l, _ := range h.links {
+		h.linkClosed(l, err)
+	}
+	for s, _ := range h.sessions {
+		h.sessionClosed(s, err)
+	}
 }

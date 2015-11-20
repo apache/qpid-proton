@@ -54,6 +54,10 @@ type Endpoint interface {
 	Done() <-chan struct{}
 }
 
+// DEVELOPER NOTES
+//
+// An electron.Endpoint corresponds to a proton.Endpoint, which can be invalidated
+//
 type endpoint struct {
 	err  proton.ErrorHolder
 	str  string // Must be set by the value that embeds endpoint.
@@ -62,10 +66,17 @@ type endpoint struct {
 
 func makeEndpoint(s string) endpoint { return endpoint{str: s, done: make(chan struct{})} }
 
-func (e *endpoint) closed(err error) {
+// Called in handler on a Closed event. Marks the endpoint as closed and the corresponding
+// proton.Endpoint pointer as invalid. Injected functions should check Error() to ensure
+// the pointer has not been invalidated.
+//
+// Returns the error stored on the endpoint, which may not be different to err if there was
+// already a n error
+func (e *endpoint) closed(err error) error {
 	e.err.Set(err)
 	e.err.Set(Closed)
 	close(e.done)
+	return e.err.Get()
 }
 
 func (e *endpoint) String() string { return e.str }
@@ -74,19 +85,10 @@ func (e *endpoint) Error() error { return e.err.Get() }
 
 func (e *endpoint) Done() <-chan struct{} { return e.done }
 
-// Call in proton goroutine to close an endpoint locally
+// Call in proton goroutine to initiate closing an endpoint locally
 // handler will complete the close when remote end closes.
 func localClose(ep proton.Endpoint, err error) {
 	if ep.State().LocalActive() {
 		proton.CloseError(ep, err)
-	}
-}
-
-// Used to indicate that a channel has closed which normally is because the endpoint is closed.
-func errorOrClosed(e Endpoint) error {
-	if e.Error() != nil {
-		return e.Error()
-	} else {
-		return Closed
 	}
 }

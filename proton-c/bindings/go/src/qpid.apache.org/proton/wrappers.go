@@ -172,8 +172,8 @@ type Endpoint interface {
 	Type() string
 }
 
-// CloseError sets an error condition on an endpoint and closes the endpoint
-// if not already closed
+// CloseError sets an error condition (if err != nil) on an endpoint and closes
+// the endpoint if not already closed
 func CloseError(e Endpoint, err error) {
 	if err != nil {
 		e.Condition().SetError(err)
