@@ -91,7 +91,7 @@ struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const s
  */
 class encoder : public object<pn_data_t> {
   public:
-    encoder(pn_data_t* e) : object(e) {}
+    encoder(pn_data_t* e) : object<pn_data_t>(e) {}
 
     /**
      * Encode the current values into buffer and update size to reflect the number of bytes encoded.

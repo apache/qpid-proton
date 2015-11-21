@@ -41,7 +41,7 @@ class engine;
 class connection : public object<pn_connection_t>, endpoint
 {
   public:
-    connection(pn_connection_t* c=0) : object(c) {}
+    connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
 
     /// Get the connection context object from the connection
     PN_CPP_EXTERN connection_context& context() const;

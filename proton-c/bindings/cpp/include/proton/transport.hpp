@@ -36,7 +36,7 @@ class connection;
 class transport : public object<pn_transport_t>
 {
   public:
-    transport(pn_transport_t* t) : object(t) {}
+    transport(pn_transport_t* t) : object<pn_transport_t>(t) {}
 
     class connection connection() const;
 };

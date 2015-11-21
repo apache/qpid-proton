@@ -34,7 +34,7 @@ namespace proton {
 class acceptor : public object<pn_acceptor_t>
 {
   public:
-    acceptor(pn_acceptor_t* a=0) : object(a) {}
+    acceptor(pn_acceptor_t* a=0) : object<pn_acceptor_t>(a) {}
 
     /** close the acceptor */
     PN_CPP_EXTERN void close();

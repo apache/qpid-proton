@@ -39,8 +39,8 @@ class data;
  */
 class data : public object<pn_data_t> {
   public:
-    data(pn_data_t* d) : object(d) {}
-    data(owned_object<pn_data_t> d) : object(d) {}
+    data(pn_data_t* d) : object<pn_data_t>(d) {}
+    data(owned_object<pn_data_t> d) : object<pn_data_t>(d) {}
 
     PN_CPP_EXTERN static owned_object<pn_data_t> create();
 

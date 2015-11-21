@@ -33,7 +33,7 @@ namespace proton {
 /** delivery status of a message */
 class delivery : public object<pn_delivery_t> {
   public:
-    delivery(pn_delivery_t* d=0) : object(d) {}
+    delivery(pn_delivery_t* d=0) : object<pn_delivery_t>(d) {}
 
     /** Delivery state of a message */
     enum state {

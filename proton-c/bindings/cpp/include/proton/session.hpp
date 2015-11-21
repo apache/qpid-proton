@@ -42,7 +42,7 @@ class transport;
 class session : public object<pn_session_t>, public endpoint
 {
   public:
-    session(pn_session_t* s=0) : object(s) {}
+    session(pn_session_t* s=0) : object<pn_session_t>(s) {}
 
     /** Initiate local open, not complete till messaging_handler::on_session_opened()
      * or proton_handler::on_session_remote_open()

@@ -150,7 +150,7 @@ You can also extract container values element-by-element, see decoder::operator>
 */
 class decoder : public object<pn_data_t> {
   public:
-    decoder(pn_data_t* d) : object(d) {}
+    decoder(pn_data_t* d) : object<pn_data_t>(d) {}
 
     /** Copy AMQP data from a byte buffer into the decoder. */
     PN_CPP_EXTERN decoder(const char* buffer, size_t size);

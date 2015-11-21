@@ -31,7 +31,7 @@ namespace proton {
 /** A task for timer events */
 class task : public object<pn_task_t> {
   public:
-    task(pn_task_t* t) : object(t) {}
+    task(pn_task_t* t) : object<pn_task_t>(t) {}
 
     /** Cancel the scheduled task. */
     PN_CPP_EXTERN void cancel();
