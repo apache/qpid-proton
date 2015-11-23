@@ -45,6 +45,10 @@ class HelloWorld < Qpid::Proton::Handler::MessagingHandler
     puts event.message.body
     event.connection.close
   end
+
+  def on_transport_error(event)
+    raise "Connection error: #{event.transport.condition}"
+  end
 end
 
 options = {

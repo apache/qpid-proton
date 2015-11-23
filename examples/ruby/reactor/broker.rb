@@ -117,7 +117,7 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     debug("link is#{event.link.sender? ? '' : ' not'} a sender") if $options[:debug]
     if event.link.sender?
       if event.link.remote_source.dynamic?
-        address = generate_uuid
+        address = SecureRandom.uuid
         event.link.source.address = address
         q = Exchange.new(true)
         @queues[address] = q

@@ -18,6 +18,7 @@
 #++
 
 require 'qpid_proton'
+require 'optparse'
 
 class Client < Qpid::Proton::Handler::MessagingHandler
 
@@ -58,6 +59,10 @@ class Client < Qpid::Proton::Handler::MessagingHandler
     end
   end
 
+  def on_transport_error(event)
+    raise "Connection error: #{event.transport.condition}"
+  end
+
 end
 
 REQUESTS = ["Twas brillig, and the slithy toves",
@@ -65,4 +70,13 @@ REQUESTS = ["Twas brillig, and the slithy toves",
             "All mimsy were the borogroves,",
             "And the mome raths outgrabe."]
 
-Qpid::Proton::Reactor::Container.new(Client.new("0.0.0.0:5672/examples", REQUESTS)).run
+options = {
+  :address => "localhost:5672/examples",
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: client.rb [options]"
+  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") { |address| options[:address] = address }
+end.parse!
+
+Qpid::Proton::Reactor::Container.new(Client.new(options[:address], REQUESTS)).run
