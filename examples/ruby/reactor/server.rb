@@ -18,20 +18,20 @@
 #++
 
 require 'qpid_proton'
+require 'optparse'
 
 class Server < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, address)
+  def initialize(url)
     super()
-    @url = url
-    @address = address
+    @url = Qpid::Proton::URL.new url
+    @address = @url.path
     @senders = {}
   end
 
   def on_start(event)
-    puts "Listening on #{@url}"
     @container = event.container
-    @conn = @container.connect(:address => @url)
+    @conn = @container.connect(:url => @url)
     @receiver = @container.create_receiver(@conn, :source => @address)
     @relay = nil
   end
@@ -59,6 +59,18 @@ class Server < Qpid::Proton::Handler::MessagingHandler
     sender.send(reply)
   end
 
+  def on_transport_error(event)
+    raise "Connection error: #{event.transport.condition}"
+  end
 end
 
-Qpid::Proton::Reactor::Container.new(Server.new("0.0.0.0:5672", "examples")).run()
+options = {
+  :address => "localhost:5672/examples",
+}
+
+OptionParser.new do |opts|
+  opts.banner = "Usage: server.rb [options]"
+  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") { |address| options[:address] = address }
+end.parse!
+
+Qpid::Proton::Reactor::Container.new(Server.new(options[:address])).run()

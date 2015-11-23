@@ -37,10 +37,10 @@ NOTE: According to ccache-swig man page: "Known problems are using
 preprocessor directives within %inline blocks and the use of ’#pragma SWIG’."
 This includes using macros in an %inline section.
 
-Do any preprocessor work or macro expansions here before we get into the %inline sections.
+Keep preprocessor directives and macro expansions in the normal header section.
 */
-PN_HANDLE(PNI_PYTRACER);
 
+PN_HANDLE(PNI_PYTRACER);
 %}
 
 %include <cstring.i>

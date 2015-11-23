@@ -586,19 +586,25 @@ endif (BUILD_PYTHON)
 
 find_program(RUBY_EXE "ruby")
 if (RUBY_EXE AND BUILD_RUBY)
+  set (rb_root "${pn_test_root}/ruby")
+  set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
+  set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
+  set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
+  set (rb_bld "$<TARGET_FILE_DIR:qpid-proton>")
+  set (rb_path $ENV{PATH} ${rb_bin} ${rb_bld})
+  set (rb_rubylib ${rb_root} ${rb_src} ${rb_bin} ${rb_bld} ${rb_lib})
+  to_native_path("${rb_path}" rb_path)
+  to_native_path("${rb_rubylib}" rb_rubylib)
+
+  # ruby example tests have no dependencies other than standard ruby.
+  add_test(NAME ruby-example-test
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby
+    COMMAND ${env_py} -- "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+    ${RUBY_EXE} example_test.rb -v)
+
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
-    set (rb_root "${pn_test_root}/ruby")
-    set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
-    set (rb_lib "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby/lib")
-    set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
-    set (rb_bld "$<TARGET_FILE_DIR:qpid-proton>")
-    set (rb_path $ENV{PATH} ${rb_bin} ${rb_bld})
-    set (rb_rubylib ${rb_root} ${rb_src} ${rb_bin} ${rb_bld} ${rb_lib})
-    to_native_path("${rb_path}" rb_path)
-    to_native_path("${rb_rubylib}" rb_rubylib)
-
     add_test (NAME ruby-unit-test
               COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
                       "${rb_root}/proton-test")
