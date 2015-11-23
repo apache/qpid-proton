@@ -23,16 +23,16 @@ package amqp
 import "C"
 
 import (
+	"fmt"
 	"io"
-	"qpid.apache.org/internal"
 	"reflect"
 	"unsafe"
 )
 
 func dataError(prefix string, data *C.pn_data_t) error {
-	err := internal.PnError(unsafe.Pointer(C.pn_data_error(data)))
+	err := PnError(C.pn_data_error(data))
 	if err != nil {
-		err = internal.Errorf("%s: %s", prefix, err.(internal.Error))
+		err = fmt.Errorf("%s: %s", prefix, err.Error())
 	}
 	return err
 }
@@ -108,7 +108,7 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 const minEncode = 256
 
 // overflow is returned when an encoding function can't fit data in the buffer.
-var overflow = internal.Errorf("buffer too small")
+var overflow = fmt.Errorf("buffer too small")
 
 // encodeFn encodes into buffer[0:len(buffer)].
 // Returns buffer with length adjusted for data encoded.
@@ -189,7 +189,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		case reflect.Slice:
 			putList(data, v)
 		default:
-			panic(internal.Errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
+			panic(fmt.Errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
 		}
 	}
 	err := dataError("marshal", data)

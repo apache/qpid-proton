@@ -17,80 +17,80 @@ specific language governing permissions and limitations
 under the License.
 */
 
+// Internal implementation details - ignore.
 package proton
 
+// #cgo LDFLAGS: -lqpid-proton
 // #include <proton/error.h>
 // #include <proton/codec.h>
 import "C"
 
 import (
 	"fmt"
-	"reflect"
-	"runtime"
+	"sync"
+	"sync/atomic"
 )
 
-var pnErrorNames = map[int]string{
-	C.PN_EOS:        "end of data",
-	C.PN_ERR:        "error",
-	C.PN_OVERFLOW:   "overflow",
-	C.PN_UNDERFLOW:  "underflow",
-	C.PN_STATE_ERR:  "bad state",
-	C.PN_ARG_ERR:    "invalid argument",
-	C.PN_TIMEOUT:    "timeout",
-	C.PN_INTR:       "interrupted",
-	C.PN_INPROGRESS: "in progress",
-}
+type PnErrorCode int
 
-func pnErrorName(code int) string {
-	name := pnErrorNames[code]
-	if name != "" {
-		return name
-	} else {
-		return "unknown error code"
-	}
-}
-
-type BadUnmarshal struct {
-	AMQPType C.pn_type_t
-	GoType   reflect.Type
-}
-
-func newBadUnmarshal(pnType C.pn_type_t, v interface{}) *BadUnmarshal {
-	return &BadUnmarshal{pnType, reflect.TypeOf(v)}
-}
-
-func (e BadUnmarshal) Error() string {
-	if e.GoType.Kind() != reflect.Ptr {
-		return fmt.Sprintf("proton: cannot unmarshal to type %s, not a pointer", e.GoType)
-	} else {
-		return fmt.Sprintf("proton: cannot unmarshal AMQP %s to %s", getPnType(e.AMQPType), e.GoType)
-	}
-}
-
-// errorf creates an error with a formatted message
-func errorf(format string, a ...interface{}) error {
-	return fmt.Errorf("proton: %s", fmt.Sprintf(format, a...))
-}
-
-func pnDataError(data *C.pn_data_t) string {
-	err := C.pn_data_error(data)
-	if err != nil && int(C.pn_error_code(err)) != 0 {
-		return C.GoString(C.pn_error_text(err))
-	}
-	return ""
-}
-
-// doRecover is called to recover from internal panics
-func doRecover(err *error) {
-	r := recover()
-	switch r := r.(type) {
-	case nil:
-		return
-	case runtime.Error:
-		panic(r)
-	case error:
-		*err = r
+func (e PnErrorCode) String() string {
+	switch e {
+	case C.PN_EOS:
+		return "end-of-data"
+	case C.PN_ERR:
+		return "error"
+	case C.PN_OVERFLOW:
+		return "overflow"
+	case C.PN_UNDERFLOW:
+		return "underflow"
+	case C.PN_STATE_ERR:
+		return "bad-state"
+	case C.PN_ARG_ERR:
+		return "invalid-argument"
+	case C.PN_TIMEOUT:
+		return "timeout"
+	case C.PN_INTR:
+		return "interrupted"
+	case C.PN_INPROGRESS:
+		return "in-progress"
 	default:
-		panic(r)
+		return fmt.Sprintf("unknown-error(%d)", e)
+	}
+}
+
+func PnError(e *C.pn_error_t) error {
+	if e == nil || C.pn_error_code(e) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%s: %s", PnErrorCode(C.pn_error_code(e)), C.GoString(C.pn_error_text(e)))
+}
+
+// ErrorHolder is a goroutine-safe error holder that keeps the first error that is set.
+type ErrorHolder struct {
+	once  sync.Once
+	value atomic.Value
+}
+
+// Set the error if not already set, return the error in the Holder.
+func (e *ErrorHolder) Set(err error) {
+	if err != nil {
+		e.once.Do(func() { e.value.Store(err) })
+	}
+}
+
+// Get the error.
+func (e *ErrorHolder) Get() (err error) {
+	err, _ = e.value.Load().(error)
+	return
+}
+
+// assert panics if condition is false with optional formatted message
+func assert(condition bool, format ...interface{}) {
+	if !condition {
+		if len(format) > 0 {
+			panic(fmt.Errorf(format[0].(string), format[1:]...))
+		} else {
+			panic(fmt.Errorf("assertion failed"))
+		}
 	}
 }

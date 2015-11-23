@@ -47,5 +47,5 @@ func ExampleParseURL() {
 	// amqp://:1234
 	// amqp://host:amqp/path
 	// amqps://host:amqps
-	// proton: bad URL ""
+	// bad URL ""
 }

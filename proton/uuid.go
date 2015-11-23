@@ -17,19 +17,19 @@ specific language governing permissions and limitations
 under the License.
 */
 
-package internal
+package proton
 
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
+// UUID is a 16-byte Universally Unique Identifier
 type UUID [16]byte
 
+// String gives a UUID in standard string format.
 func (u UUID) String() string {
 	return fmt.Sprintf("%X-%X-%X-%X-%X", u[0:4], u[4:6], u[6:8], u[8:10], u[10:])
 }
@@ -44,6 +44,7 @@ func random() byte {
 	return byte(randomSource.Int63())
 }
 
+// UUID4 returns a randomly-generated (version 4) UUID, as per RFC4122
 func UUID4() UUID {
 	var u UUID
 	for i := 0; i < len(u); i++ {
@@ -53,18 +54,4 @@ func UUID4() UUID {
 	u[6] = (u[6] & 0x0F) | 0x40 // Version bits to 4
 	u[8] = (u[8] & 0x3F) | 0x80 // Reserved bits (top two) set to 01
 	return u
-}
-
-// A simple atomic counter to generate unique 64 bit IDs.
-type IdCounter struct{ count uint64 }
-
-// NextInt gets the next uint64 value from the atomic counter.
-func (uc *IdCounter) NextInt() uint64 {
-	return atomic.AddUint64(&uc.count, 1)
-}
-
-// Next gets the next integer value encoded as a base32 string, safe for NUL
-// terminated C strings.
-func (uc *IdCounter) Next() string {
-	return strconv.FormatUint(uc.NextInt(), 32)
 }

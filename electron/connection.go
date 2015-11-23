@@ -24,8 +24,6 @@ import "C"
 
 import (
 	"net"
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"sync"
 	"time"
@@ -36,24 +34,17 @@ type Connection interface {
 	Endpoint
 
 	// Sender opens a new sender on the DefaultSession.
-	//
-	// v can be a string, which is used as the Target address, or a SenderSettings
-	// struct containing more details settings.
-	Sender(...LinkSetting) (Sender, error)
+	Sender(...LinkOption) (Sender, error)
 
 	// Receiver opens a new Receiver on the DefaultSession().
-	//
-	// v can be a string, which is used as the
-	// Source address, or a ReceiverSettings struct containing more details
-	// settings.
-	Receiver(...LinkSetting) (Receiver, error)
+	Receiver(...LinkOption) (Receiver, error)
 
 	// DefaultSession() returns a default session for the connection. It is opened
 	// on the first call to DefaultSession and returned on subsequent calls.
 	DefaultSession() (Session, error)
 
 	// Session opens a new session.
-	Session(...SessionSetting) (Session, error)
+	Session(...SessionOption) (Session, error)
 
 	// Container for the connection.
 	Container() Container
@@ -66,49 +57,59 @@ type Connection interface {
 
 	// WaitTimeout is like Wait but returns Timeout if the timeout expires.
 	WaitTimeout(time.Duration) error
+
+	// Incoming returns a channel for incoming endpoints opened by the remote end.
+	//
+	// To enable, pass AllowIncoming() when creating the Connection. Otherwise all
+	// incoming endpoint requests are automatically rejected and Incoming()
+	// returns nil.
+	//
+	// An Incoming value can be an *IncomingSession, *IncomingSender or
+	// *IncomingReceiver.  You must call Accept() to open the endpoint or Reject()
+	// to close it with an error. The specific Incoming types have additional
+	// methods to configure the endpoint.
+	//
+	// Not receiving from Incoming() or not calling Accept/Reject will block the
+	// electron event loop. Normally you would have a dedicated goroutine receive
+	// from Incoming() and start new goroutines to serve each incoming endpoint.
+	// The channel is closed when the Connection closes.
+	//
+	Incoming() <-chan Incoming
 }
 
-// ConnectionSetting can be passed when creating a connection.
-// See functions that return ConnectionSetting for details
-type ConnectionSetting func(*connection)
+// ConnectionOption can be passed when creating a connection to configure various options
+type ConnectionOption func(*connection)
 
-// Server setting puts the connection in server mode.
+// Server returns a ConnectionOption to put the connection in server mode.
 //
 // A server connection will do protocol negotiation to accept a incoming AMQP
 // connection. Normally you would call this for a connection created by
 // net.Listener.Accept()
 //
-func Server() ConnectionSetting { return func(c *connection) { c.engine.Server() } }
+func Server() ConnectionOption { return func(c *connection) { c.engine.Server() } }
 
-// Accepter provides a function to be called when a connection receives an incoming
-// request to open an endpoint, one of IncomingSession, IncomingSender or IncomingReceiver.
-//
-// The accept() function must not block or use the accepted endpoint.
-// It can pass the endpoint to another goroutine for processing.
-//
-// By default all incoming endpoints are rejected.
-func Accepter(accept func(Incoming)) ConnectionSetting {
-	return func(c *connection) { c.accept = accept }
+// AllowIncoming returns a ConnectionOption to enable incoming endpoint open requests.
+// See Connection.Incoming()
+func AllowIncoming() ConnectionOption {
+	return func(c *connection) { c.incoming = make(chan Incoming) }
 }
 
 type connection struct {
 	endpoint
-	listenOnce, defaultSessionOnce, closeOnce sync.Once
+	defaultSessionOnce, closeOnce sync.Once
 
 	container   *container
 	conn        net.Conn
-	accept      func(Incoming)
+	incoming    chan Incoming
 	handler     *handler
 	engine      *proton.Engine
-	err         internal.ErrorHolder
 	eConnection proton.Connection
 
 	defaultSession Session
-	done           chan struct{}
 }
 
-func newConnection(conn net.Conn, cont *container, setting ...ConnectionSetting) (*connection, error) {
-	c := &connection{container: cont, conn: conn, accept: func(Incoming) {}, done: make(chan struct{})}
+func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
+	c := &connection{container: cont, conn: conn}
 	c.handler = newHandler(c)
 	var err error
 	c.engine, err = proton.NewEngine(c.conn, c.handler.delegator)
@@ -118,19 +119,30 @@ func newConnection(conn net.Conn, cont *container, setting ...ConnectionSetting)
 	for _, set := range setting {
 		set(c)
 	}
-	c.str = c.engine.String()
+	c.endpoint = makeEndpoint(c.engine.String())
 	c.eConnection = c.engine.Connection()
-	go func() { c.engine.Run(); close(c.done) }()
+	go c.run()
 	return c, nil
+}
+
+func (c *connection) run() {
+	c.engine.Run()
+	if c.incoming != nil {
+		close(c.incoming)
+	}
+	c.closed(Closed)
 }
 
 func (c *connection) Close(err error) { c.err.Set(err); c.engine.Close(err) }
 
 func (c *connection) Disconnect(err error) { c.err.Set(err); c.engine.Disconnect(err) }
 
-func (c *connection) Session(setting ...SessionSetting) (Session, error) {
+func (c *connection) Session(setting ...SessionOption) (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
+		if c.Error() != nil {
+			return c.Error()
+		}
 		eSession, err := c.engine.Connection().Session()
 		if err == nil {
 			eSession.Open()
@@ -155,7 +167,7 @@ func (c *connection) DefaultSession() (s Session, err error) {
 	return c.defaultSession, err
 }
 
-func (c *connection) Sender(setting ...LinkSetting) (Sender, error) {
+func (c *connection) Sender(setting ...LinkOption) (Sender, error) {
 	if s, err := c.DefaultSession(); err == nil {
 		return s.Sender(setting...)
 	} else {
@@ -163,7 +175,7 @@ func (c *connection) Sender(setting ...LinkSetting) (Sender, error) {
 	}
 }
 
-func (c *connection) Receiver(setting ...LinkSetting) (Receiver, error) {
+func (c *connection) Receiver(setting ...LinkOption) (Receiver, error) {
 	if s, err := c.DefaultSession(); err == nil {
 		return s.Receiver(setting...)
 	} else {
@@ -182,37 +194,45 @@ func (c *connection) WaitTimeout(timeout time.Duration) error {
 	return c.Error()
 }
 
+func (c *connection) Incoming() <-chan Incoming { return c.incoming }
+
 // Incoming is the interface for incoming requests to open an endpoint.
 // Implementing types are IncomingSession, IncomingSender and IncomingReceiver.
 type Incoming interface {
-	// Accept the endpoint with default settings.
-	//
-	// You must not use the returned endpoint in the accept() function that
-	// receives the Incoming value, but you can pass it to other goroutines.
-	//
-	// Implementing types provide type-specific Accept functions that take additional settings.
+	// Accept and open the endpoint.
 	Accept() Endpoint
 
 	// Reject the endpoint with an error
 	Reject(error)
 
-	error() error
+	// wait for and call the accept function, call in proton goroutine.
+	wait() error
+	pEndpoint() proton.Endpoint
 }
 
 type incoming struct {
-	err      error
-	accepted bool
+	endpoint proton.Endpoint
+	acceptCh chan func() error
 }
 
-func (i *incoming) Reject(err error) { i.err = err }
+func makeIncoming(e proton.Endpoint) incoming {
+	return incoming{endpoint: e, acceptCh: make(chan func() error)}
+}
 
-func (i *incoming) error() error {
-	switch {
-	case i.err != nil:
-		return i.err
-	case !i.accepted:
-		return amqp.Errorf(amqp.NotAllowed, "remote open rejected")
-	default:
+func (in *incoming) Reject(err error) { in.acceptCh <- func() error { return err } }
+
+// Call in proton goroutine, wait for and call the accept function fr
+func (in *incoming) wait() error { return (<-in.acceptCh)() }
+
+func (in *incoming) pEndpoint() proton.Endpoint { return in.endpoint }
+
+// Called in app goroutine to send an accept function to proton and return the resulting endpoint.
+func (in *incoming) accept(f func() Endpoint) Endpoint {
+	done := make(chan Endpoint)
+	in.acceptCh <- func() error {
+		ep := f()
+		done <- ep
 		return nil
 	}
+	return <-done
 }

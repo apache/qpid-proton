@@ -32,6 +32,10 @@ import (
 
 type Type C.pn_type_t
 
+// Older proton versions don't define C.PN_INVALID, so define it here.
+// In C it is pn_type_t(-1), in Go use the bitwise NOT operator to get the same value.
+const pnInvalid = ^C.pn_type_t(0)
+
 func (t Type) String() string {
 	switch C.pn_type_t(t) {
 	case C.PN_NULL:
@@ -85,7 +89,7 @@ func (t Type) String() string {
 	case C.PN_MAP:
 		return "map"
 	default:
-		if uint32(t) == uint32(C.PN_INVALID) {
+		if uint32(t) == uint32(pnInvalid) {
 			return "no-data"
 		}
 		return fmt.Sprintf("unknown-type(%d)", t)

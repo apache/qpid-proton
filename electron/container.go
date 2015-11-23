@@ -21,7 +21,9 @@ package electron
 
 import (
 	"net"
-	"qpid.apache.org/internal"
+	"qpid.apache.org/proton"
+	"strconv"
+	"sync/atomic"
 )
 
 // Container is an AMQP container, it represents a single AMQP "application".It
@@ -39,12 +41,16 @@ type Container interface {
 	// setting any Connection properties you need to set. Note the net.Conn
 	// can be an outgoing connection (e.g. made with net.Dial) or an incoming
 	// connection (e.g. made with net.Listener.Accept())
-	Connection(net.Conn, ...ConnectionSetting) (Connection, error)
+	Connection(net.Conn, ...ConnectionOption) (Connection, error)
 }
 
 type container struct {
-	id        string
-	linkNames internal.IdCounter
+	id         string
+	tagCounter uint64
+}
+
+func (cont *container) nextTag() string {
+	return strconv.FormatUint(atomic.AddUint64(&cont.tagCounter, 1), 32)
 }
 
 // NewContainer creates a new container. The id must be unique in your
@@ -54,7 +60,7 @@ type container struct {
 // If id == "" a random UUID will be generated for the id.
 func NewContainer(id string) Container {
 	if id == "" {
-		id = internal.UUID4().String()
+		id = proton.UUID4().String()
 	}
 	cont := &container{id: id}
 	return cont
@@ -63,9 +69,9 @@ func NewContainer(id string) Container {
 func (cont *container) Id() string { return cont.id }
 
 func (cont *container) nextLinkName() string {
-	return cont.id + "@" + cont.linkNames.Next()
+	return cont.id + "@" + cont.nextTag()
 }
 
-func (cont *container) Connection(conn net.Conn, setting ...ConnectionSetting) (Connection, error) {
+func (cont *container) Connection(conn net.Conn, setting ...ConnectionOption) (Connection, error) {
 	return newConnection(conn, cont, setting...)
 }

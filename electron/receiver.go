@@ -20,8 +20,8 @@ under the License.
 package electron
 
 import (
+	"fmt"
 	"qpid.apache.org/amqp"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 	"time"
 )
@@ -77,6 +77,9 @@ type prefetchPolicy struct{}
 
 func (p prefetchPolicy) Flow(r *receiver) {
 	r.engine().Inject(func() {
+		if r.Error() != nil {
+			return
+		}
 		_, _, max := r.credit()
 		if max > 0 {
 			r.eLink.Flow(max)
@@ -94,6 +97,9 @@ type noPrefetchPolicy struct{ waiting int }
 
 func (p noPrefetchPolicy) Flow(r *receiver) { // Not called in proton goroutine
 	r.engine().Inject(func() {
+		if r.Error() != nil {
+			return
+		}
 		len, credit, max := r.credit()
 		add := p.waiting - (len + credit)
 		if add > max {
@@ -119,6 +125,7 @@ type receiver struct {
 	policy policy
 }
 
+// Call in proton goroutine
 func newReceiver(l link) *receiver {
 	r := &receiver{link: l}
 	if r.capacity < 1 {
@@ -148,7 +155,7 @@ func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
-	internal.Assert(r.buffer != nil, "Receiver is not open: %s", r)
+	assert(r.buffer != nil, "Receiver is not open: %s", r)
 	r.policy.Pre(r)
 	defer func() { r.policy.Post(r, err) }()
 	rmi, err := timedReceive(r.buffer, timeout)
@@ -174,10 +181,10 @@ func (r *receiver) message(delivery proton.Delivery) {
 			localClose(r.eLink, err)
 			return
 		}
-		internal.Assert(m != nil)
+		assert(m != nil)
 		r.eLink.Advance()
 		if r.eLink.Credit() < 0 {
-			localClose(r.eLink, internal.Errorf("received message in excess of credit limit"))
+			localClose(r.eLink, fmt.Errorf("received message in excess of credit limit"))
 		} else {
 			// We never issue more credit than cap(buffer) so this will not block.
 			r.buffer <- ReceivedMessage{m, delivery, r}
@@ -201,38 +208,37 @@ type ReceivedMessage struct {
 	receiver  Receiver
 }
 
-// Acknowledge a ReceivedMessage with the given disposition code.
-func (rm *ReceivedMessage) Acknowledge(disposition Disposition) error {
-	return rm.receiver.(*receiver).engine().InjectWait(func() error {
-		// Settle doesn't return an error but if the receiver is broken the settlement won't happen.
-		rm.eDelivery.SettleAs(uint64(disposition))
-		return rm.receiver.Error()
+// Acknowledge a ReceivedMessage with the given delivery status.
+func (rm *ReceivedMessage) acknowledge(status uint64) error {
+	return rm.receiver.(*receiver).engine().Inject(func() {
+		// Deliveries are valid as long as the connection is, unless settled.
+		rm.eDelivery.SettleAs(uint64(status))
 	})
 }
 
-// Accept is short for Acknowledge(Accpeted)
-func (rm *ReceivedMessage) Accept() error { return rm.Acknowledge(Accepted) }
+// Accept tells the sender that we take responsibility for processing the message.
+func (rm *ReceivedMessage) Accept() error { return rm.acknowledge(proton.Accepted) }
 
-// Reject is short for Acknowledge(Rejected)
-func (rm *ReceivedMessage) Reject() error { return rm.Acknowledge(Rejected) }
+// Reject tells the sender we consider the message invalid and unusable.
+func (rm *ReceivedMessage) Reject() error { return rm.acknowledge(proton.Rejected) }
 
-// IncomingReceiver is passed to the accept() function given to Connection.Listen()
-// when there is an incoming request for a receiver link.
+// Release tells the sender we will not process the message but some other
+// receiver might.
+func (rm *ReceivedMessage) Release() error { return rm.acknowledge(proton.Released) }
+
+// IncomingReceiver is sent on the Connection.Incoming() channel when there is
+// an incoming request to open a receiver link.
 type IncomingReceiver struct {
 	incomingLink
 }
 
-// Link provides information about the incoming link.
-func (i *IncomingReceiver) Link() Link { return i }
+// SetCapacity sets the capacity of the incoming receiver, call before Accept()
+func (in *IncomingReceiver) SetCapacity(capacity int) { in.capacity = capacity }
 
-// AcceptReceiver sets Capacity and Prefetch of the accepted Receiver.
-func (i *IncomingReceiver) AcceptReceiver(capacity int, prefetch bool) Receiver {
-	i.capacity = capacity
-	i.prefetch = prefetch
-	return i.Accept().(Receiver)
-}
+// SetPrefetch sets the pre-fetch mode of the incoming receiver, call before Accept()
+func (in *IncomingReceiver) SetPrefetch(prefetch bool) { in.prefetch = prefetch }
 
-func (i *IncomingReceiver) Accept() Endpoint {
-	i.accepted = true
-	return newReceiver(i.link)
+// Accept accepts an incoming receiver endpoint
+func (in *IncomingReceiver) Accept() Endpoint {
+	return in.accept(func() Endpoint { return newReceiver(in.link) })
 }

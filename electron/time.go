@@ -20,7 +20,8 @@ under the License.
 package electron
 
 import (
-	"qpid.apache.org/internal"
+	"fmt"
+	"math"
 	"reflect"
 	"time"
 )
@@ -38,10 +39,10 @@ import (
 // If timeout == Forever the function will return only when there is a result or
 // some non-timeout error occurs.
 //
-var Timeout = internal.Errorf("timeout")
+var Timeout = fmt.Errorf("timeout")
 
 // Forever can be used as a timeout parameter to indicate wait forever.
-const Forever time.Duration = -1
+const Forever time.Duration = math.MaxInt64
 
 // timedReceive receives on channel (which can be a chan of any type), waiting
 // up to timeout.
@@ -62,10 +63,10 @@ func timedReceive(channel interface{}, timeout time.Duration) (interface{}, erro
 	}
 	chosen, value, ok := reflect.Select(cases)
 	switch {
-	case !ok:
-		return nil, Closed
-	case chosen == 0:
+	case chosen == 0 && ok:
 		return value.Interface(), nil
+	case chosen == 0 && !ok:
+		return nil, Closed
 	default:
 		return nil, Timeout
 	}

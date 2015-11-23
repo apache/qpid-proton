@@ -21,7 +21,6 @@ package electron
 
 import (
 	"io"
-	"qpid.apache.org/internal"
 	"qpid.apache.org/proton"
 )
 
@@ -49,17 +48,44 @@ type Endpoint interface {
 
 	// Connection containing the endpoint
 	Connection() Connection
+
+	// Done returns a channel that will close when the endpoint closes.
+	// Error() will contain the reason.
+	Done() <-chan struct{}
 }
 
+// DEVELOPER NOTES
+//
+// An electron.Endpoint corresponds to a proton.Endpoint, which can be invalidated
+//
 type endpoint struct {
-	err internal.ErrorHolder
-	str string // Must be set by the value that embeds endpoint.
+	err  proton.ErrorHolder
+	str  string // Must be set by the value that embeds endpoint.
+	done chan struct{}
+}
+
+func makeEndpoint(s string) endpoint { return endpoint{str: s, done: make(chan struct{})} }
+
+// Called in handler on a Closed event. Marks the endpoint as closed and the corresponding
+// proton.Endpoint pointer as invalid. Injected functions should check Error() to ensure
+// the pointer has not been invalidated.
+//
+// Returns the error stored on the endpoint, which may not be different to err if there was
+// already a n error
+func (e *endpoint) closed(err error) error {
+	e.err.Set(err)
+	e.err.Set(Closed)
+	close(e.done)
+	return e.err.Get()
 }
 
 func (e *endpoint) String() string { return e.str }
-func (e *endpoint) Error() error   { return e.err.Get() }
 
-// Call in proton goroutine to close an endpoint locally
+func (e *endpoint) Error() error { return e.err.Get() }
+
+func (e *endpoint) Done() <-chan struct{} { return e.done }
+
+// Call in proton goroutine to initiate closing an endpoint locally
 // handler will complete the close when remote end closes.
 func localClose(ep proton.Endpoint, err error) {
 	if ep.State().LocalActive() {

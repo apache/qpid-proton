@@ -35,7 +35,8 @@ Send() and Receive() messages.
 You can create an AMQP server connection by calling Connection.Server() and
 Connection.Listen() before calling Connection.Open(). A server connection can
 negotiate protocol security details and can accept incoming links opened from
-the remote end of the connection
+the remote end of the connection.
+
 */
 package electron
 
@@ -48,10 +49,15 @@ import "C"
 
 There is a single proton.Engine per connection, each driving it's own event-loop goroutine,
 and each with a 'handler'. Most state for a connection is maintained on the handler, and
-only accessed in the event-loop goroutine, so no locks are required.
+only accessed in the event-loop goroutine, so no locks are required there.
 
 The handler sets up channels as needed to get or send data from user goroutines
-using electron types like Sender or Receiver. We also use Engine.Inject to inject
-actions into the event loop from user goroutines.
+using electron types like Sender or Receiver.
+
+We also use Engine.Inject to inject actions into the event loop from user
+goroutines. It is important to check at the start of an injected function that
+required objects are still valid, for example a link may be remotely closed
+between the time a Sender function calls Inject and the time the injected
+function is execute by the handler goroutine. See comments in endpoint.go for more.
 
 */

@@ -19,6 +19,9 @@ under the License.
 
 package amqp
 
+// #include <proton/error.h>
+import "C"
+
 import (
 	"fmt"
 	"reflect"
@@ -36,7 +39,7 @@ import (
 type Error struct{ Name, Description string }
 
 // Error implements the Go error interface for AMQP error errors.
-func (c Error) Error() string { return fmt.Sprintf("proton %s: %s", c.Name, c.Description) }
+func (c Error) Error() string { return fmt.Sprintf("%s: %s", c.Name, c.Description) }
 
 // Errorf makes a Error with name and formatted description as per fmt.Sprintf
 func Errorf(name, format string, arg ...interface{}) Error {
@@ -64,3 +67,37 @@ var (
 	IllegalState       = "amqp:illegal-state"
 	FrameSizeTooSmall  = "amqp:frame-size-too-small"
 )
+
+type PnErrorCode int
+
+func (e PnErrorCode) String() string {
+	switch e {
+	case C.PN_EOS:
+		return "end-of-data"
+	case C.PN_ERR:
+		return "error"
+	case C.PN_OVERFLOW:
+		return "overflow"
+	case C.PN_UNDERFLOW:
+		return "underflow"
+	case C.PN_STATE_ERR:
+		return "bad-state"
+	case C.PN_ARG_ERR:
+		return "invalid-argument"
+	case C.PN_TIMEOUT:
+		return "timeout"
+	case C.PN_INTR:
+		return "interrupted"
+	case C.PN_INPROGRESS:
+		return "in-progress"
+	default:
+		return fmt.Sprintf("unknown-error(%d)", e)
+	}
+}
+
+func PnError(e *C.pn_error_t) error {
+	if e == nil || C.pn_error_code(e) == 0 {
+		return nil
+	}
+	return fmt.Errorf("%s: %s", PnErrorCode(C.pn_error_code(e)), C.GoString(C.pn_error_text(e)))
+}
