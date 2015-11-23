@@ -29,8 +29,7 @@
 uintptr_t pn_object_hashcode(void *object) { return (uintptr_t) object; }
 intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
 
-static const pn_class_t PNI_OBJECT = PN_CLASS(pn_object);
-const pn_class_t * const PN_OBJECT = &PNI_OBJECT;
+const pn_class_t PN_OBJECT[] = {PN_CLASS(pn_object)};
 
 #define pn_void_initialize NULL
 static void *pn_void_new(const pn_class_t *clazz, size_t size) { return malloc(size); }
@@ -44,8 +43,7 @@ uintptr_t pn_void_hashcode(void *object) { return (uintptr_t) object; }
 intptr_t pn_void_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) b; }
 int pn_void_inspect(void *object, pn_string_t *dst) { return pn_string_addf(dst, "%p", object); }
 
-static const pn_class_t PNI_VOID = PN_METACLASS(pn_void);
-const pn_class_t * const PN_VOID = &PNI_VOID;
+const pn_class_t PN_VOID[] = {PN_METACLASS(pn_void)};
 
 const char *pn_class_name(const pn_class_t *clazz)
 {
@@ -311,5 +309,4 @@ static int pn_weakref_inspect(void *object, pn_string_t *dst) {
   return pn_inspect(object, dst);
 }
 
-static const pn_class_t PNI_WEAKREF = PN_METACLASS(pn_weakref);
-const pn_class_t * const PN_WEAKREF = &PNI_WEAKREF;
+const pn_class_t PN_WEAKREF[] = {PN_METACLASS(pn_weakref)};

@@ -392,10 +392,8 @@ static bool pni_identity_equals(void *a, void *b)
   return a == b;
 }
 
-extern const pn_class_t * const PN_UINTPTR;
-
 #define CID_pni_uintptr CID_pn_void
-static const pn_class_t *pni_uintptr_reify(void *object) { return PN_UINTPTR; }
+static const pn_class_t *pni_uintptr_reify(void *object);
 #define pni_uintptr_new NULL
 #define pni_uintptr_free NULL
 #define pni_uintptr_initialize NULL
@@ -407,8 +405,12 @@ static int pni_uintptr_refcount(void *object) { return -1; }
 #define pni_uintptr_compare NULL
 #define pni_uintptr_inspect NULL
 
-static const pn_class_t PNI_UINTPTR = PN_METACLASS(pni_uintptr);
-const pn_class_t * const PN_UINTPTR = &PNI_UINTPTR;
+static const pn_class_t PN_UINTPTR[] = {PN_METACLASS(pni_uintptr)};
+
+static const pn_class_t *pni_uintptr_reify(void *object)
+{
+  return PN_UINTPTR;
+}
 
 pn_hash_t *pn_hash(const pn_class_t *clazz, size_t capacity, float load_factor)
 {

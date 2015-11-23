@@ -61,9 +61,11 @@ struct pn_class_t {
   int (*inspect)(void *, pn_string_t *);
 };
 
-PN_EXTERN extern const pn_class_t * const PN_OBJECT;
-PN_EXTERN extern const pn_class_t * const PN_VOID;
-PN_EXTERN extern const pn_class_t * const PN_WEAKREF;
+// Hack alert: Declare these as arrays so we can treat the name
+// of the single object as the address
+PN_EXTERN extern const pn_class_t PN_OBJECT[];
+PN_EXTERN extern const pn_class_t PN_VOID[];
+PN_EXTERN extern const pn_class_t PN_WEAKREF[];
 
 #define PN_CLASSDEF(PREFIX)                                               \
 static void PREFIX ## _initialize_cast(void *object) {                    \

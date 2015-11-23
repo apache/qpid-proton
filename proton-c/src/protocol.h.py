@@ -57,17 +57,12 @@ typedef struct {
 } pn_fields_t;
 
 extern const pn_fields_t FIELDS[];
-extern const char * const FIELD_STRINGPOOL;
 extern const uint16_t FIELD_NAME[];
 extern const uint16_t FIELD_FIELDS[];
-extern const unsigned char FIELD_MIN;
-extern const unsigned char FIELD_MAX;
 """)
 
-print("#ifdef DEFINE_FIELDS")
-
 print('struct FIELD_STRINGS {')
-print('  const char FIELD_STRINGS_NULL[sizeof("")];')
+print('  const char STRING0[sizeof("")];')
 strings = set()
 for name, fnames in fields.values():
     strings.add(name)
@@ -77,16 +72,20 @@ for str in strings:
     print('  const char FIELD_STRINGS_%s[sizeof("%s")];' % (istr, str))
 print("};")
 print()
-print('const struct FIELD_STRINGS FIELD_STRINGS = {')
+
+print("extern const struct FIELD_STRINGS FIELD_STRINGPOOL;")
+print("#ifdef DEFINE_FIELDS")
+print()
+
+print('const struct FIELD_STRINGS FIELD_STRINGPOOL = {')
 print('  "",')
 for str in strings:
     print('  "%s",'% str)
 print("};")
-print('const char * const FIELD_STRINGPOOL = (const char * const) &FIELD_STRINGS;')
 print()
 print("/* This is an array of offsets into FIELD_STRINGPOOL */")
 print("const uint16_t FIELD_NAME[] = {")
-print("  offsetof(struct FIELD_STRINGS, FIELD_STRINGS_NULL),")
+print("  offsetof(struct FIELD_STRINGS, STRING0),")
 index = 1
 for i in range(256):
   if i in fields:
@@ -98,7 +97,7 @@ print("};")
 
 print("/* This is an array of offsets into FIELD_STRINGPOOL */")
 print("const uint16_t FIELD_FIELDS[] = {")
-print("  offsetof(struct FIELD_STRINGS, FIELD_STRINGS_NULL),")
+print("  offsetof(struct FIELD_STRINGS, STRING0),")
 index = 1
 for i in range(256):
   if i in fields:
@@ -137,9 +136,11 @@ for i in range(field_min, field_max+1):
 
 print("};")
 print()
-print('const unsigned char FIELD_MIN = %d;' % field_min)
-print('const unsigned char FIELD_MAX = %d;' % field_max)
-print()
 print("#endif")
+print()
+print('enum {')
+print('  FIELD_MIN = %d,' % field_min)
+print('  FIELD_MAX = %d' % field_max)
+print('};')
 print()
 print("#endif /* protocol.h */")
