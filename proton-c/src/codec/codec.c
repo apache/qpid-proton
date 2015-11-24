@@ -74,8 +74,6 @@ const char *pn_type_name(pn_type_t type)
   return "<UNKNOWN>";
 }
 
-const pn_type_t PN_INVALID = (pn_type_t) -1;
-
 static inline void pni_atom_init(pn_atom_t *atom, pn_type_t type)
 {
   memset(atom, 0, sizeof(pn_atom_t));

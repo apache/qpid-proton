@@ -174,11 +174,14 @@ typedef enum {
    * An AMQP map. A polymorphic container of other AMQP values formed
    * into key/value pairs.
    */
-  PN_MAP = 25
-} pn_type_t;
+  PN_MAP = 25,
 
-/** A special invalid type value that is returned when no valid type is available. */
-PN_EXTERN extern const pn_type_t PN_INVALID;
+  /**
+   * A special invalid type value that is returned when no valid type
+   * is available.
+   */
+  PN_INVALID = -1
+} pn_type_t;
 
 /**
  * Return a string name for an AMQP type.
