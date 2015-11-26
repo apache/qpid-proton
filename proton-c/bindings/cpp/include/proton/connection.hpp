@@ -26,6 +26,7 @@
 #include "proton/link.hpp"
 #include "proton/object.hpp"
 #include "proton/session.hpp"
+#include "proton/connection_options.hpp"
 #include "proton/types.h"
 #include <string>
 
@@ -52,8 +53,11 @@ class connection : public object<pn_connection_t>, endpoint
     /// Get the container, throw an exception if event_loop is not a container.
     PN_CPP_EXTERN class container &container() const;
 
-    /// Get the engine, , throw an exception if event_loop is not an engine.
+    /// Get the engine, throw an exception if event_loop is not an engine.
     PN_CPP_EXTERN class engine &engine() const;
+
+    /// Get the transport for the connection.
+    PN_CPP_EXTERN class transport transport() const;
 
     /// Return the AMQP host name for the connection.
     PN_CPP_EXTERN std::string host() const;
@@ -102,6 +106,10 @@ class connection : public object<pn_connection_t>, endpoint
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state() const;
+
+    friend class connection_options;
+    friend class connector;
+    friend class transport;
 };
 
 }

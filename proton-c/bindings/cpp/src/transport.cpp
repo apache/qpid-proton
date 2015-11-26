@@ -20,12 +20,48 @@
  */
 #include "proton/transport.hpp"
 #include "proton/connection.hpp"
+#include "msg.hpp"
 #include "proton/transport.h"
 
 namespace proton {
 
 connection transport::connection() const {
     return pn_transport_connection(pn_object());
+}
+
+void transport::unbind() {
+    if (pn_transport_unbind(pn_object()))
+        throw error(MSG("transport::unbind failed " << pn_error_text(pn_transport_error(pn_object()))));
+}
+
+void transport::bind(class connection &conn) {
+//    pn_connection_t *c = static_cast<pn_connection_t*>(conn.object_);
+    if (pn_transport_bind(pn_object(), conn.pn_object()))
+        throw error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
+}
+
+uint32_t transport::max_frame_size() const {
+    return pn_transport_get_max_frame(pn_object());
+}
+
+uint32_t transport::remote_max_frame_size() const {
+    return pn_transport_get_remote_max_frame(pn_object());
+}
+
+uint16_t transport::max_channels() const {
+    return pn_transport_get_channel_max(pn_object());
+}
+
+uint16_t transport::remote_max_channels() const {
+    return pn_transport_remote_channel_max(pn_object());
+}
+
+uint32_t transport::idle_timeout() const {
+    return pn_transport_get_idle_timeout(pn_object());
+}
+
+uint32_t transport::remote_idle_timeout() const {
+    return pn_transport_get_remote_idle_timeout(pn_object());
 }
 
 }

@@ -33,6 +33,7 @@ set(qpid-proton-cpp-source
   src/blocking_receiver.cpp
   src/blocking_sender.cpp
   src/connection.cpp
+  src/connection_options.cpp
   src/connector.cpp
   src/container.cpp
   src/container_impl.cpp
@@ -59,6 +60,7 @@ set(qpid-proton-cpp-source
   src/proton_handler.cpp
   src/reactor.cpp
   src/receiver.cpp
+  src/reconnect_timer.cpp
   src/request_response.cpp
   src/sender.cpp
   src/session.cpp

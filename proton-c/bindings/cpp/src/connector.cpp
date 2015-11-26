@@ -19,43 +19,98 @@
  *
  */
 
+#include "connector.hpp"
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
 #include "proton/container.hpp"
 #include "proton/event.hpp"
-#include "proton/connection.h"
 #include "proton/url.hpp"
+#include "proton/reconnect_timer.hpp"
+#include "proton/task.hpp"
+#include "container_impl.hpp"
 
-#include "connector.hpp"
+#include "proton/connection.h"
+#include "proton/transport.h"
 
 namespace proton {
 
-connector::connector(connection &c) : connection_(c) {}
+connector::connector(connection&c, const connection_options &opts) :
+    connection_(c), options_(opts), reconnect_timer_(0), transport_configured_(false)
+{}
 
-connector::~connector() {}
+connector::~connector() { delete reconnect_timer_; }
 
 void connector::address(const url &a) {
     address_ = a;
 }
 
+void connector::apply_options() {
+    if (!connection_) return;
+    options_.apply(connection_);
+}
+
+bool connector::transport_configured() { return transport_configured_; }
+
+void connector::reconnect_timer(const class reconnect_timer &rt) {
+    delete reconnect_timer_;
+    reconnect_timer_ = new class reconnect_timer(rt);
+    reconnect_timer_->reactor_ = connection_.container().reactor();
+}
+
 void connector::connect() {
     connection_.container_id(connection_.container().id());
     connection_.host(address_.host_port());
+    transport t(pn_transport());
+    t.bind(connection_);
+    // Apply options to the new transport.
+    options_.apply(connection_);
+    transport_configured_ = true;
 }
 
 void connector::on_connection_local_open(event &e) {
     connect();
 }
 
-void connector::on_connection_remote_open(event &e) {}
+void connector::on_connection_remote_open(event &e) {
+    if (reconnect_timer_) {
+        reconnect_timer_->reset();
+    }
+}
 
 void connector::on_connection_init(event &e) {
 }
 
+void connector::on_transport_tail_closed(event &e) {
+    on_transport_closed(e);
+}
+
 void connector::on_transport_closed(event &e) {
-    // TODO: prepend with reconnect logic
+    if (!connection_) return;
+    if (connection_.state() & endpoint::LOCAL_ACTIVE) {
+        if (reconnect_timer_) {
+            e.connection().transport().unbind();
+            transport_configured_ = false;
+            int delay = reconnect_timer_->next_delay();
+            if (delay >= 0) {
+                if (delay == 0) {
+                    // log "Disconnected, reconnecting..."
+                    connect();
+                    return;
+                }
+                else {
+                    // log "Disconnected, reconnecting in " <<  delay << " milliseconds"
+                    connection_.container().schedule(delay, this);
+                    return;
+                }
+            }
+        }
+    }
     connection_.release();
     connection_  = 0;
+}
+
+void connector::on_timer_task(event &e) {
+    connect();
 }
 
 }

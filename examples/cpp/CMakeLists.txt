@@ -35,6 +35,7 @@ set(examples
   server
   server_direct
   recurring_timer
+  connection_options
   encode_decode)
 
 if (NOT WIN32)

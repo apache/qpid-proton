@@ -24,6 +24,7 @@
 #include "proton/handler.hpp"
 #include "proton/session.hpp"
 #include "proton/error.hpp"
+#include "connector.hpp"
 
 #include "msg.hpp"
 #include "contexts.hpp"
@@ -39,7 +40,17 @@ namespace proton {
 
 connection_context& connection::context() const { return connection_context::get(pn_object()); }
 
-void connection::open() { pn_connection_open(pn_object()); }
+transport connection::transport() const {
+    return pn_connection_transport(pn_object());
+}
+
+void connection::open() {
+    connector *connector = dynamic_cast<class connector*>(context().handler.get());
+    if (connector)
+        connector->apply_options();
+    // Inbound connections should already be configured.
+    pn_connection_open(pn_object());
+}
 
 void connection::close() { pn_connection_close(pn_object()); }
 
