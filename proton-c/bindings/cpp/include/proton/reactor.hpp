@@ -87,8 +87,6 @@ class reactor : public object<pn_reactor_t> {
     PN_CPP_EXTERN void yield();
 
     void container_context(container&);
-
-    void operator delete(void*);
 };
 
 }

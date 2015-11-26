@@ -30,7 +30,10 @@
 namespace proton {
 
 reactor reactor::create() {
-    return reactor(pn_reactor());
+    pn_reactor_t *p = pn_reactor();
+    reactor r(p);
+    pn_decref(p);               // FIXME aconway 2015-11-26: take ownership
+    return r;
 }
 
 void reactor::run() { pn_reactor_run(pn_object()); }
@@ -91,10 +94,6 @@ void reactor::timeout(duration timeout) {
 
 void reactor::container_context(container& c) {
     proton::container_context(pn_object(), c);
-}
-
-void reactor::operator delete(void* p) {
-    pn_reactor_free(reinterpret_cast<pn_reactor_t*>(p));
 }
 
 }

@@ -34,7 +34,7 @@ struct pn_connection_t;
 
 namespace proton {
 
-class connection_context;
+struct connection_context;
 class handler;
 class engine;
 

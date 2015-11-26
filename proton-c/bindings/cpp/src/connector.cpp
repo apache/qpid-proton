@@ -60,8 +60,10 @@ void connector::reconnect_timer(const class reconnect_timer &rt) {
 void connector::connect() {
     connection_.container_id(connection_.container().id());
     connection_.host(address_.host_port());
-    transport t(pn_transport());
+    pn_transport_t *pnt = pn_transport();
+    transport t(pnt);
     t.bind(connection_);
+    pn_decref((void *)pnt);
     // Apply options to the new transport.
     options_.apply(connection_);
     transport_configured_ = true;

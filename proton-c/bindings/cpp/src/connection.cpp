@@ -90,8 +90,11 @@ session connection::open_session() { return pn_session(pn_object()); }
 session connection::default_session() {
     struct connection_context& ctx = connection_context::get(pn_object());
     if (!ctx.default_session) {
-        ctx.default_session = open_session();
-        ctx.default_session.open();
+        // Note we can't use a proton::session here because we don't want to own
+        // a session reference. The connection owns the session, owning it here as well
+        // would create a circular ownership.
+        ctx.default_session = pn_session(pn_object());
+        pn_session_open(ctx.default_session);
     }
     return ctx.default_session;
 }

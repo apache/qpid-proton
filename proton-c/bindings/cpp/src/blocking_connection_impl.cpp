@@ -55,7 +55,9 @@ blocking_connection_impl::blocking_connection_impl(const url& url, duration time
     wait(connection_opening(connection_));
 }
 
-blocking_connection_impl::~blocking_connection_impl() {}
+blocking_connection_impl::~blocking_connection_impl() {
+    container_->reactor().stop();
+}
 
 void blocking_connection_impl::close() {
     connection_.close();
