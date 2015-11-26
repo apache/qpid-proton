@@ -41,7 +41,7 @@ type UnmarshalError struct {
 }
 
 func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
-	return &UnmarshalError{Type(pnType).String(), reflect.TypeOf(v)}
+	return &UnmarshalError{C.pn_type_t(pnType).String(), reflect.TypeOf(v)}
 }
 
 func (e UnmarshalError) Error() string {
@@ -451,7 +451,7 @@ func rewindUnmarshal(v interface{}, data *C.pn_data_t) {
 func getInterface(data *C.pn_data_t, v *interface{}) {
 	pnType := C.pn_data_type(data)
 	switch pnType {
-	case C.PN_NULL, C.pn_type_t(pnInvalid): // No data.
+	case C.PN_NULL, pnInvalid: // No data.
 		*v = nil
 	case C.PN_BOOL:
 		*v = bool(C.pn_data_get_bool(data))
@@ -517,7 +517,7 @@ func getMap(data *C.pn_data_t, v interface{}) {
 				}
 			}
 		}
-	case C.pn_type_t(pnInvalid): // Leave the map empty
+	case pnInvalid: // Leave the map empty
 	default:
 		panic(newUnmarshalError(pnType, v))
 	}
