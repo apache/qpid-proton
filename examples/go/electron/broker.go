@@ -139,6 +139,7 @@ func (c *connection) run() {
 		default:
 			in.Accept() // Accept sessions unconditionally
 		}
+		util.Debugf("incoming: %v", in)
 	}
 	util.Debugf("incoming closed: %v", c.connection)
 }

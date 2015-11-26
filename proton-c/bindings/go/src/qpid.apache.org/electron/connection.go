@@ -23,6 +23,7 @@ package electron
 import "C"
 
 import (
+	"fmt"
 	"net"
 	"qpid.apache.org/proton"
 	"sync"
@@ -219,6 +220,7 @@ func makeIncoming(e proton.Endpoint) incoming {
 	return incoming{endpoint: e, acceptCh: make(chan func() error)}
 }
 
+func (in *incoming) String() string   { return fmt.Sprintf("%s: %s", in.endpoint.Type(), in.endpoint) }
 func (in *incoming) Reject(err error) { in.acceptCh <- func() error { return err } }
 
 // Call in proton goroutine, wait for and call the accept function fr
