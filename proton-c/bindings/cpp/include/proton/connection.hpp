@@ -34,7 +34,6 @@ struct pn_connection_t;
 
 namespace proton {
 
-struct connection_context;
 class handler;
 class engine;
 
@@ -43,9 +42,6 @@ class connection : public object<pn_connection_t>, endpoint
 {
   public:
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
-
-    /// Get the connection context object from the connection
-    PN_CPP_EXTERN connection_context& context() const;
 
     /// Get the event_loop, can be a container or an engine.
     PN_CPP_EXTERN class event_loop &event_loop() const;
@@ -111,10 +107,10 @@ class connection : public object<pn_connection_t>, endpoint
     PN_CPP_EXTERN void user(const std::string &);
     PN_CPP_EXTERN void password(const std::string &);
 
-    
-    friend class connection_options;
-    friend class connector;
-    friend class transport;
+  friend class connection_context;
+  friend class connection_options;
+  friend class connector;
+  friend class transport;
 };
 
 }

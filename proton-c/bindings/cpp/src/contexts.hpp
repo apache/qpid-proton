@@ -22,27 +22,45 @@
  *
  */
 
-#include "proton/counted.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/reactor.h"
-#include "proton/session.hpp"
+#include "proton/message.hpp"
+#include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/handler.hpp"
 
-#include <proton/message.h>
+struct pn_session_t;
+struct pn_event_t;
+struct pn_record_t;
 
 namespace proton {
 
-class session;
 class handler;
 class container_impl;
 
-counted* get_context(pn_record_t*, pn_handle_t handle);
-void set_context(pn_record_t*, pn_handle_t, counted* value);
+// Base class for C++ classes that are used as proton contexts.
+// contexts are pn_objects managed by pn reference counts.
+class context {
+  public:
+    // Allocate a default-constructed T as a proton object. T must be a subclass of context.
+    template <class T> static T *create() { return new(alloc(sizeof(T))) T(); }
 
-struct connection_context : public counted {
-    static connection_context& get(pn_connection_t* c);
+    // Allocate a copy-constructed T as a proton object. T must be a subclass of context.
+    template <class T> static T *create(const T& x) { return new(alloc(sizeof(T))) T(x); }
 
-    connection_context();
-    ~connection_context();
+    virtual ~context();
+
+    static pn_class_t* pn_class();
+
+  private:
+    static void *alloc(size_t n);
+};
+
+class connection_context : public context {
+  public:
+    static connection_context& get(pn_connection_t*);
+    static connection_context& get(const connection&);
+
+    connection_context() : default_session(0), container_impl(0) {}
 
     pn_unique_ptr<class handler> handler;
     pn_session_t *default_session;   // Owned by connection
@@ -50,12 +68,13 @@ struct connection_context : public counted {
     message event_message;  // re-used by messaging_adapter for performance
 };
 
-class container;
-void container_context(pn_reactor_t *, container&);
-container& container_context(pn_reactor_t *);
+void container_context(const reactor&, container&);
 
-void event_context(pn_event_t *pn_event, pn_message_t *m);
-pn_message_t *event_context(pn_event_t *pn_event);
+class container_context {
+  public:
+    static void set(const reactor& r, container& c);
+    static container& get(pn_reactor_t*);
+};
 
 }
 

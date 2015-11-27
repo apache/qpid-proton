@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/counted_ptr.hpp"
 #include "proton/duration.hpp"
 #include "proton/link.hpp"
 

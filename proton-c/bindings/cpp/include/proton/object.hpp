@@ -21,93 +21,64 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
+#include "proton/comparable.hpp"
 
 #include <memory>
 
 namespace proton {
 
-/**
- * Base class for proton object types
- *
- * Automatically perform memory management for pn_object based types.
- *
- * Note that for the memory management to work correctly no class
- * inheriting from this should define any data members of its own.
- * 
- * This is ok because the entire purpose of this class is to provide
- * and manage the underlying pointer to the proton-c object.
- * 
- * So any class using this one needs to be merely a thin wrapping of
- * the proton-c object with no data members of it's own. Anything that internally
- * needs extra data members and a proton-c object must use an inheritor of
- * object<> as a data member - it must not inherit and add data members.
- * 
- */
-class object_base {
+///@cond INTERNAL
+class pn_ptr_base {
+  protected:
+    static void incref(void* p);
+    static void decref(void* p);
+};
+
+template <class T> class pn_ptr : public comparable<pn_ptr<T> >, private pn_ptr_base {
   public:
-    object_base() : object_(0) {}
-    object_base(void* o) : object_(o) {}
-    object_base(const object_base& o) : object_(o.object_) { incref(); }
+    pn_ptr() : ptr_(0) {}
+    pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
+    pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
 
-    #ifdef PN_HAS_CPP11
-    object_base(object_base&& o) : object_base() { *this = o; }
-    #endif
+#ifdef PN_HAS_CPP11
+    pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
+#endif
 
-    ~object_base() { decref(); };
+    ~pn_ptr() { decref(ptr_); };
 
-    object_base& operator=(object_base o)
-    { std::swap(object_, o.object_); return *this; }
+    static pn_ptr<T> take(T* p) { return pn_ptr<T>(p, true); }
 
-    bool operator!() const { return !object_; }
+    pn_ptr& operator=(pn_ptr o) { std::swap(ptr_, o.ptr_); return *this; }
+
+    T* get() const { return ptr_; }
+    bool operator!() const { return !ptr_; }
+
+  friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }
+  friend bool operator<(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ < b.ptr_; }
 
   private:
-    PN_CPP_EXTERN void incref() const;
-    PN_CPP_EXTERN void decref() const;
-
-    void* object_;
-
-  template <class T>
-  friend class object;
-  template <class T>
-  friend class owned_object;
-  friend bool operator==(const object_base&, const object_base&);
+    pn_ptr(T* p, bool) : ptr_(p) {}
+    T *ptr_;
 };
+///@endcond INTERNAL
 
-template <class T>
-class owned_object : public object_base {
+/**
+ * Base class for proton object types
+ */
+template <class T> class object : public comparable<object<T> > {
   public:
-    owned_object(T* o) : object_base(o) {};
+    bool operator!() const { return !object_; }
+
+  friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
+  friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 
   protected:
-    T* pn_object() const { return static_cast<T*>(object_); }
+    object(pn_ptr<T> o) : object_(o) {}
+    T* pn_object() const { return object_.get(); }
 
-  template <class U>
-  friend class object;
+  private:
+    pn_ptr<T> object_;
 };
-
-template <class T>
-class object : public object_base {
-  public:
-    object(T* o, bool take_own=false) : object_base(o) { if (!take_own) incref(); };
-    object(owned_object<T> o) : object_base(o.object_) { o.object_=0; };
-
-    object& operator=(owned_object<T> o)
-    { object_ = o.object_; o = 0; return *this; }
-
-  protected:
-    static const bool take_ownership = true;
-    T* pn_object() const { return static_cast<T*>(object_); }
-};
-
-inline
-bool operator==(const object_base& o1, const object_base& o2) {
-    return o1.object_==o2.object_;
-}
-
-inline
-bool operator!=(const object_base& o1, const object_base& o2) {
-    return !(o1==o2);
-}
 
 }
 #endif // OBJECT_HPP

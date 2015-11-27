@@ -40,7 +40,7 @@ connection session::connection() const {
 namespace {
 std::string set_name(const std::string& name, session* s) {
     if (name.empty())
-        return s->connection().context().container_impl->next_link_name();
+        return connection_context::get(s->connection()).container_impl->next_link_name();
     return name;
 }
 }

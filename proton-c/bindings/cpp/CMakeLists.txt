@@ -37,7 +37,6 @@ set(qpid-proton-cpp-source
   src/connector.cpp
   src/container.cpp
   src/container_impl.cpp
-  src/counted_ptr.cpp
   src/contexts.cpp
   src/data.cpp
   src/decoder.cpp

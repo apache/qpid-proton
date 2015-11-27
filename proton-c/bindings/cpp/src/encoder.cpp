@@ -132,7 +132,7 @@ encoder operator<<(encoder e, amqp_binary value) { return insert(e, e.pn_object(
 
 encoder operator<<(encoder e, const value& v) {
     data edata = e.data();
-    if (object_base(edata) == v.data_) throw encode_error("cannot insert into self");
+    if (edata == v.data_) throw encode_error("cannot insert into self");
     data vdata = v.decoder().data();
     check(edata.append(vdata), e.pn_object());
     return e;

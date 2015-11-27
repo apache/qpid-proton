@@ -28,9 +28,9 @@ namespace proton {
 
 value::value() : data_(data::create()) {}
 
-value::value(const value& x) : data_(data::create()) { data_ = x.data_; }
+value::value(const value& x) : data_(data::create()) { data_.copy(x.data_); }
 
-value& value::operator=(const value& x) { data_ = x.data_; return *this; }
+value& value::operator=(const value& x) { data_.copy(x.data_); return *this; }
 
 void value::clear() { data_.clear(); }
 
@@ -42,9 +42,9 @@ class decoder value::decoder() const { data_.decoder().rewind(); return data_.de
 
 type_id value::type() const { return decoder().type(); }
 
-bool value::operator==(const value& x) const { return data_ == x.data_; }
+bool value::operator==(const value& x) const { return data_.equal(x.data_); }
 
-bool value::operator<(const value& x) const { return data_ < x.data_; }
+bool value::operator<(const value& x) const { return data_.less(x.data_); }
 
 std::ostream& operator<<(std::ostream& o, const value& v) {
     // pn_inspect prints strings with quotes which is not normal in C++.

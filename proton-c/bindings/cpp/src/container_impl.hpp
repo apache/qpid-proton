@@ -62,7 +62,7 @@ class container_impl
 
     void configure_server_connection(connection &c);
     task schedule(int delay, handler *h);
-    counted_ptr<pn_handler_t> cpp_handler(handler *h);
+    pn_ptr<pn_handler_t> cpp_handler(handler *h);
 
     std::string next_link_name();
 

@@ -75,7 +75,7 @@ void messaging_adapter::on_delivery(event &e) {
                 // generate on_message
                 messaging_event mevent(messaging_event::MESSAGE, *pe);
                 pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
-                struct connection_context& ctx = connection_context::get(pnc);
+                connection_context& ctx = connection_context::get(pnc);
                 // Reusable per-connection message.
                 // Avoid expensive heap malloc/free overhead.
                 // See PROTON-998

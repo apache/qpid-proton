@@ -66,7 +66,7 @@ void check(int err) {
 }
 } // namespace
 
-void message::id(const message_id& id) { data(pn_message_id(message_)) = id.value_; }
+void message::id(const message_id& id) { data(pn_message_id(message_)).copy(id.value_); }
 
 namespace {
 inline message_id from_pn_atom(const pn_atom_t& v) {
@@ -125,7 +125,7 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    data(pn_message_correlation_id(message_)) = id.value_;
+    data(pn_message_correlation_id(message_)).copy(id.value_);
 }
 
 message_id message::correlation_id() const {
@@ -186,7 +186,7 @@ bool message::inferred() const { return pn_message_is_inferred(message_); }
 
 void message::inferred(bool b) { pn_message_set_inferred(message_, b); }
 
-void message::body(const value& v) { body() = v; }
+void message::body(const value& v) { body().copy(v); }
 
 const data message::body() const {
     return pn_message_body(message_);
@@ -197,7 +197,7 @@ data message::body() {
 }
 
 void message::properties(const value& v) {
-    properties() = v;
+    properties().copy(v);
 }
 
 const data message::properties() const {

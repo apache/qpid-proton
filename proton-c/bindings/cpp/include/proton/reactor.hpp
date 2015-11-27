@@ -67,7 +67,7 @@ class reactor : public object<pn_reactor_t> {
 
     PN_CPP_EXTERN amqp_timestamp mark();
     PN_CPP_EXTERN amqp_timestamp now();
-    
+
     PN_CPP_EXTERN task schedule(int, pn_handler_t*);
 
     class connection connection(pn_handler_t*) const;
@@ -86,9 +86,8 @@ class reactor : public object<pn_reactor_t> {
     PN_CPP_EXTERN bool quiesced();
     PN_CPP_EXTERN void yield();
 
-    void container_context(container&);
-
-    friend class container_impl;
+  friend class container_impl;
+  friend class container_context;
 };
 
 }

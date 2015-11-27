@@ -80,8 +80,8 @@ class session link::session() const {
 
 void link::handler(class handler &h) {
     pn_record_t *record = pn_link_attachments(pn_object());
-    connection_context& cc(connection().context());
-    counted_ptr<pn_handler_t> chandler = cc.container_impl->cpp_handler(&h);
+    connection_context& cc(connection_context::get(connection()));
+    pn_ptr<pn_handler_t> chandler = cc.container_impl->cpp_handler(&h);
     pn_record_set_handler(record, chandler.get());
 }
 

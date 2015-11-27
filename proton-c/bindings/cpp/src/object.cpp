@@ -22,12 +22,12 @@
 
 namespace proton {
 
-void object_base::incref() const {
-    if (object_) ::pn_incref(const_cast<void*>(object_));
+void pn_ptr_base::incref(void *p) {
+    if (p) ::pn_incref(const_cast<void*>(p));
 }
 
-void object_base::decref() const {
-    if (object_) ::pn_decref(const_cast<void*>(object_));
+void pn_ptr_base::decref(void *p) {
+    if (p) ::pn_decref(const_cast<void*>(p));
 }
 
 }

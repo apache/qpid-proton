@@ -38,14 +38,13 @@
 
 namespace proton {
 
-connection_context& connection::context() const { return connection_context::get(pn_object()); }
-
 transport connection::transport() const {
     return pn_connection_transport(pn_object());
 }
 
 void connection::open() {
-    connector *connector = dynamic_cast<class connector*>(context().handler.get());
+    connector *connector = dynamic_cast<class connector*>(
+        connection_context::get(pn_object()).handler.get());
     if (connector)
         connector->apply_options();
     // Inbound connections should already be configured.
@@ -74,7 +73,7 @@ void connection::container_id(const std::string& id) {
 }
 
 container& connection::container() const {
-    return container_context(pn_object_reactor(pn_object()));
+    return container_context::get(pn_object_reactor(pn_object()));
 }
 
 link_range connection::find_links(endpoint::state mask) const {
@@ -88,7 +87,7 @@ session_range connection::find_sessions(endpoint::state mask) const {
 session connection::open_session() { return pn_session(pn_object()); }
 
 session connection::default_session() {
-    struct connection_context& ctx = connection_context::get(pn_object());
+    connection_context& ctx = connection_context::get(pn_object());
     if (!ctx.default_session) {
         // Note we can't use a proton::session here because we don't want to own
         // a session reference. The connection owns the session, owning it here as well

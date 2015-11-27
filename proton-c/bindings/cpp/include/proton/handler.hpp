@@ -22,7 +22,6 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/counted_ptr.hpp"
 #include "proton/event.hpp"
 #include "proton/event.h"
 #include "proton/reactor.h"
@@ -58,7 +57,7 @@ class handler : public std::vector<handler*> {
     PN_CPP_EXTERN virtual void add_child_handler(handler &h);
 
   private:
-    counted_ptr<pn_handler_t> pn_handler_;
+    pn_ptr<pn_handler_t> pn_handler_;
     friend class container_impl;
 };
 

@@ -81,7 +81,7 @@ struct handler_context {
 class override_handler : public handler
 {
   public:
-    counted_ptr<pn_handler_t> base_handler;
+    pn_ptr<pn_handler_t> base_handler;
     container_impl &container_impl_;
 
     override_handler(pn_handler_t *h, container_impl &c) : base_handler(h), container_impl_(c) {}
@@ -113,19 +113,17 @@ class override_handler : public handler
 
 } // namespace
 
-counted_ptr<pn_handler_t> container_impl::cpp_handler(handler *h)
-{
-    if (h->pn_handler_)
-        return h->pn_handler_;
-    counted_ptr<pn_handler_t> handler(
-        pn_handler_new(&handler_context::dispatch, sizeof(struct handler_context),
-                       &handler_context::cleanup),
-        false);
-    handler_context &hc = handler_context::get(handler.get());
-    hc.container_ = &container_;
-    hc.handler_ = h;
-    h->pn_handler_ = handler;
-    return handler;
+pn_ptr<pn_handler_t> container_impl::cpp_handler(handler *h) {
+    if (!h->pn_handler_) {
+        h->pn_handler_ = pn_ptr<pn_handler_t>::take(
+            pn_handler_new(&handler_context::dispatch,
+                           sizeof(struct handler_context),
+                           &handler_context::cleanup));
+        handler_context &hc = handler_context::get(h->pn_handler_.get());
+        hc.container_ = &container_;
+        hc.handler_ = h;
+    }
+    return h->pn_handler_;
 }
 
 container_impl::container_impl(container& c, handler *h, const std::string& id) :
@@ -133,16 +131,15 @@ container_impl::container_impl(container& c, handler *h, const std::string& id) 
     link_id_(0)
 {
     if (id_.empty()) id_ = uuid().str();
-    reactor_.container_context(container_);
+    container_context::set(reactor_, container_);
 
     // Set our own global handler that "subclasses" the existing one
     pn_handler_t *global_handler = reactor_.pn_global_handler();
     override_handler_.reset(new override_handler(global_handler, *this));
-    counted_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
+    pn_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
     reactor_.pn_global_handler(cpp_global_handler.get());
     if (handler_) {
-        counted_ptr<pn_handler_t> pn_handler(cpp_handler(handler_));
-        reactor_.pn_handler(pn_handler.get());
+        reactor_.pn_handler(cpp_handler(handler_).get());
     }
 
 
@@ -159,11 +156,11 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     opts.override(user_opts);
     handler *h = opts.handler();
 
-    counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
+    pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection(chandler.get()));
     pn_unique_ptr<connector> ctor(new connector(conn, opts));
     ctor->address(url);  // TODO: url vector
-    connection_context& cc(conn.context());
+    connection_context& cc(connection_context::get(conn));
     cc.container_impl = this;
     cc.handler.reset(ctor.release());
     conn.open();
@@ -194,7 +191,7 @@ acceptor container_impl::listen(const proton::url& url) {
     opts.override(user_opts);
 #endif
     handler *h = opts.handler();
-    counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
+    pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());
     if (!acptr)
         throw error(MSG("accept fail: " <<
@@ -221,7 +218,7 @@ std::string container_impl::next_link_name() {
 }
 
 task container_impl::schedule(int delay, handler *h) {
-    counted_ptr<pn_handler_t> task_handler;
+    pn_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = cpp_handler(h);
     return reactor_.schedule(delay, task_handler.get());

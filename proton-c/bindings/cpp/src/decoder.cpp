@@ -156,7 +156,7 @@ decoder operator>>(decoder d, rewind) { d.rewind(); return d; }
 
 decoder operator>>(decoder d, value& v) {
     data ddata = d.data();
-    if (object_base(ddata) == v.data_) throw decode_error("extract into self");
+    if (ddata == v.data_) throw decode_error("extract into self");
     data vdata = v.encoder().data();
     {
         narrow n(ddata);

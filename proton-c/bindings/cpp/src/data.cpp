@@ -26,7 +26,7 @@
 
 namespace proton {
 
-data& data::operator=(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); return *this; }
+data& data::copy(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); return *this; }
 
 void data::clear() { ::pn_data_clear(pn_object()); }
 
@@ -62,7 +62,7 @@ std::ostream& operator<<(std::ostream& o, const data& d) {
     return o << inspectable(d.pn_object());
 }
 
-owned_object<pn_data_t> data::create() { return pn_data(0); }
+data data::create() { return pn_ptr<pn_data_t>::take(pn_data(0)); }
 
 encoder data::encoder() { return proton::encoder(pn_object()); }
 decoder data::decoder() { return proton::decoder(pn_object()); }
@@ -156,10 +156,10 @@ int compare(data& a, data& b) {
 }
 } // namespace
 
-bool data::operator==(const data& x) const {
+bool data::equal(const data& x) const {
     return compare(const_cast<data&>(*this), const_cast<data&>(x)) == 0;
 }
-bool data::operator<(const data& x) const {
+bool data::less(const data& x) const {
     return compare(const_cast<data&>(*this), const_cast<data&>(x)) < 0;
 }
 

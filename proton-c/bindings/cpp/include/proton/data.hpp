@@ -40,15 +40,15 @@ class data;
 class data : public object<pn_data_t> {
   public:
     data(pn_data_t* d) : object<pn_data_t>(d) {}
-    data(owned_object<pn_data_t> d) : object<pn_data_t>(d) {}
 
-    PN_CPP_EXTERN static owned_object<pn_data_t> create();
+    data& operator=(const data&);      // FIXME aconway 2015-12-01:
 
-    PN_CPP_EXTERN data& operator=(const data&);
+    PN_CPP_EXTERN static data create();
 
-    template<class T> data& operator=(const T &t) {
-        clear(); encoder() << t; return *this;
-    }
+    // Copy the contents of another data object t this one.
+    PN_CPP_EXTERN data& copy(const data&);
+
+    template<class T> data& copy(T &t) { clear(); encoder() << t; return *this; }
 
     /** Clear the data. */
     PN_CPP_EXTERN void clear();
@@ -86,13 +86,14 @@ class data : public object<pn_data_t> {
 
     template<class T> T get() const { T t; get(t); return t; }
 
-    PN_CPP_EXTERN bool operator==(const data& x) const;
-    PN_CPP_EXTERN bool operator<(const data& x) const;
+    PN_CPP_EXTERN bool equal(const data& x) const;
+    PN_CPP_EXTERN bool less(const data& x) const;
 
     /** Human readable representation of data. */
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
   friend class value;
   private:
+    data(pn_ptr<pn_data_t> d) : object<pn_data_t>(d) {}
     class decoder decoder() const { return const_cast<data*>(this)->decoder(); }
 };
 
