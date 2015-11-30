@@ -1523,9 +1523,9 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
 
   do {
     if (ssl->sc_input_shutdown) {
-      // TLS protocol shutdown detected on input
+      // TLS protocol shutdown detected on input, so we are done.
       read_closed(transport, layer, 0);
-      return consumed;
+      return PN_EOS;
     }
 
     // sc_inbuf should be ready for new or additional network encrypted bytes.
@@ -1596,7 +1596,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
         start_ssl_shutdown(transport);
       }
     } else if (ssl->state == SSL_CLOSED) {
-      return consumed ? consumed : -1;
+      return PN_EOS;
     }
 
     // Consume or discard the decrypted bytes
@@ -1632,12 +1632,16 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
     }
   } while (available || (ssl->sc_in_count && !ssl->sc_in_incomplete));
 
-  if (ssl->app_input_closed && ssl->state >= SHUTTING_DOWN) {
-    consumed = ssl->app_input_closed;
-    if (transport->io_layers[layer]==&ssl_output_closed_layer) {
-      transport->io_layers[layer] = &ssl_closed_layer;
-    } else {
-      transport->io_layers[layer] = &ssl_input_closed_layer;
+  if (ssl->state >= SHUTTING_DOWN) {
+    if (ssl->app_input_closed || ssl->sc_input_shutdown) {
+      // Next layer doesn't want more bytes, or it can't process without more data than it has seen so far
+      // but the ssl stream has ended
+      consumed = ssl->app_input_closed ? ssl->app_input_closed : PN_EOS;
+      if (transport->io_layers[layer]==&ssl_output_closed_layer) {
+        transport->io_layers[layer] = &ssl_closed_layer;
+      } else {
+        transport->io_layers[layer] = &ssl_input_closed_layer;
+      }
     }
   }
   ssl_log(transport, "process_input_ssl() returning %d, forwarded %d\n", (int) consumed, (int) forwarded);
