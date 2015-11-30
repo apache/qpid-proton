@@ -20,13 +20,14 @@
 #include "proton/types.hpp"
 #include <proton/codec.h>
 #include <ostream>
+#include <iomanip>
 #include <algorithm>
 
 namespace proton {
 
 namespace {
 inline std::ostream& print_segment(std::ostream& o, const amqp_uuid& u, size_t begin, size_t end, const char* sep="") {
-    for (const char* p = &u[begin]; p < &u[end]; ++p) o << *p;
+    for (const char* p = &u[begin]; p < &u[end]; ++p) o << std::setw(2) << std::setfill('0') << ((int)*p & 0xff);
     return o << sep;
 }
 }
