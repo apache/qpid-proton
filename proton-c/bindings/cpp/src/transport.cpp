@@ -20,6 +20,7 @@
  */
 #include "proton/transport.hpp"
 #include "proton/connection.hpp"
+#include "proton/ssl.hpp"
 #include "msg.hpp"
 #include "proton/transport.h"
 
@@ -27,6 +28,10 @@ namespace proton {
 
 connection transport::connection() const {
     return pn_transport_connection(pn_object());
+}
+
+class ssl transport::ssl() const {
+    return proton::ssl(pn_ssl(pn_object()));
 }
 
 void transport::unbind() {

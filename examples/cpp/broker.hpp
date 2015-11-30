@@ -162,7 +162,7 @@ class broker_handler : public proton::messaging_handler {
 
     void on_link_closing(proton::event &e) {
         proton::link lnk = e.link();
-        if (!!lnk.sender()) 
+        if (!!lnk.sender())
             unsubscribe(lnk.sender());
     }
 

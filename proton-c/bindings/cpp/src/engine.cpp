@@ -57,7 +57,7 @@ struct engine::impl {
 };
 
 engine::engine(handler &h, const std::string& id_) : impl_(new impl(h, pn_transport())) {
-    if (!impl_->transport || !impl_->connection || !impl_->collector) 
+    if (!impl_->transport || !impl_->connection || !impl_->collector)
         throw error("engine setup failed");
     std::string id = id_.empty() ? uuid().str() : id_;
     pn_connection_set_container(impl_->connection, id.c_str());

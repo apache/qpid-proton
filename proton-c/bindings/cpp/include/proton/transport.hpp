@@ -47,6 +47,7 @@ class transport : public object<pn_transport_t>
     PN_CPP_EXTERN uint16_t remote_max_channels() const;
     PN_CPP_EXTERN uint32_t idle_timeout() const;
     PN_CPP_EXTERN uint32_t remote_idle_timeout() const;
+    PN_CPP_EXTERN class ssl ssl() const;
     friend class connection_options;
 };
 

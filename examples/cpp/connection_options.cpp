@@ -47,7 +47,7 @@ class main_handler : public proton::messaging_handler {
 
     void on_start(proton::event &e) {
         // Connection options for this connection.  Merged with and overriding the container's
-        // client_connection_options() settings. 
+        // client_connection_options() settings.
         e.container().connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
     }
 

@@ -63,7 +63,7 @@ class connection_options {
     PN_CPP_EXTERN void override(const connection_options& other);
 
     // TODO: Document options
-    
+
     PN_CPP_EXTERN connection_options& handler(class handler *);
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
     PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
@@ -71,11 +71,11 @@ class connection_options {
     PN_CPP_EXTERN connection_options& heartbeat(uint32_t t);
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
-#ifdef PN_CPP_SOON
     PN_CPP_EXTERN connection_options& client_domain(const class client_domain &);
     PN_CPP_EXTERN connection_options& server_domain(const class server_domain &);
     PN_CPP_EXTERN connection_options& peer_hostname(const std::string &name);
     PN_CPP_EXTERN connection_options& resume_id(const std::string &id);
+#ifdef PN_CPP_SOON
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
     PN_CPP_EXTERN connection_options& allow_insecure_mechs(bool);
     PN_CPP_EXTERN connection_options& allowed_mechs(const std::string &);
@@ -88,9 +88,9 @@ class connection_options {
     bool sasl_enabled() const;
     bool allow_insecure_mechs() const;
     std::string *allowed_mechs() const;
+#endif
     class client_domain &client_domain();
     class server_domain &server_domain();
-#endif
 
     class impl;
     pn_unique_ptr<impl> impl_;

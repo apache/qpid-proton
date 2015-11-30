@@ -21,6 +21,7 @@
 #include "proton/connection_options.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
+#include "proton/ssl.hpp"
 #include "contexts.hpp"
 #include "connector.hpp"
 #include "msg.hpp"
@@ -47,11 +48,11 @@ class connection_options::impl {
     option<uint32_t> heartbeat;
     option<std::string> container_id;
     option<reconnect_timer> reconnect;
-#ifdef PN_CCP_SOON
     option<class client_domain> client_domain;
     option<class server_domain> server_domain;
     option<std::string> peer_hostname;
     option<std::string> resume_id;
+#ifdef PN_CCP_SOON
     option<bool> sasl_enabled;
     option<std::string> allowed_mechs;
     option<bool> allow_insecure_mechs;
@@ -68,6 +69,26 @@ class connection_options::impl {
         // transport not yet configured.
         if (pnt && (uninit || (outbound && !outbound->transport_configured())))
         {
+            if (outbound && outbound->address().scheme() == url::AMQPS) {
+                // Configure outbound ssl options. pni_acceptor_readable handles the inbound case.
+                const char* id = resume_id.value.empty() ? NULL : resume_id.value.c_str();
+                pn_ssl_t *ssl = pn_ssl(pnt);
+                if (pn_ssl_init(ssl, client_domain.value.pn_domain(), id))
+                    throw error(MSG("client SSL/TLS initialization error"));
+                if (peer_hostname.set && !peer_hostname.value.empty())
+                    if (pn_ssl_set_peer_hostname(ssl, peer_hostname.value.c_str()))
+                        throw error(MSG("error in SSL/TLS peer hostname \"") << peer_hostname.value << '"');
+#ifdef PROTON_1054_FIXED
+            } else if (!outbound) {
+                pn_acceptor_t *pnp = pn_connection_acceptor(pn_cast(&c));
+                listener_context &lc(listener_context::get(pnp));
+                if (lc.ssl) {
+                    pn_ssl_t *ssl = pn_ssl(pnt);
+                    if (pn_ssl_init(ssl, server_domain.value.pn_domain(), NULL))
+                        throw error(MSG("server SSL/TLS initialization error"));
+                }
+#endif
+            }
             if (max_frame_size.set)
                 pn_transport_set_max_frame(pnt, max_frame_size.value);
             if (max_channels.set)
@@ -92,6 +113,10 @@ class connection_options::impl {
         heartbeat.override(x.heartbeat);
         container_id.override(x.container_id);
         reconnect.override(x.reconnect);
+        client_domain.override(x.client_domain);
+        server_domain.override(x.server_domain);
+        resume_id.override(x.resume_id);
+        peer_hostname.override(x.peer_hostname);
     }
 
 };
@@ -116,8 +141,14 @@ connection_options& connection_options::idle_timeout(uint32_t t) { impl_->idle_t
 connection_options& connection_options::heartbeat(uint32_t t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
+connection_options& connection_options::client_domain(const class client_domain &c) { impl_->client_domain = c; return *this; }
+connection_options& connection_options::server_domain(const class server_domain &c) { impl_->server_domain = c; return *this; }
+connection_options& connection_options::resume_id(const std::string &id) { impl_->resume_id = id; return *this; }
+connection_options& connection_options::peer_hostname(const std::string &name) { impl_->peer_hostname = name; return *this; }
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
+class client_domain &connection_options::client_domain() { return impl_->client_domain.value; }
+class server_domain &connection_options::server_domain() { return impl_->server_domain.value; }
 handler* connection_options::handler() const { return impl_->handler.value; }
 
 pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }

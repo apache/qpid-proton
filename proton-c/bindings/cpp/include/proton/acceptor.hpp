@@ -38,6 +38,9 @@ class acceptor : public object<pn_acceptor_t>
 
     /** close the acceptor */
     PN_CPP_EXTERN void close();
+#ifndef PROTON_1057_FIXED
+    friend class container_impl;
+#endif
 };
 
 }

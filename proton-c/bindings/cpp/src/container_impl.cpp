@@ -31,6 +31,7 @@
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 #include "proton/task.hpp"
+#include "proton/ssl.hpp"
 
 #include "msg.hpp"
 #include "container_impl.hpp"
@@ -186,28 +187,28 @@ receiver container_impl::open_receiver(const proton::url &url) {
 }
 
 acceptor container_impl::listen(const proton::url& url) {
-#ifdef PN_COMING_SOON
     connection_options opts = server_connection_options(); // Defaults
+#ifdef PN_COMING_SOON
     opts.override(user_opts);
+#endif
     handler *h = opts.handler();
     counted_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : counted_ptr<pn_handler_t>();
-    pn_acceptor_t *acptr = pn_reactor_acceptor(
-        pn_cast(reactor_.get()), url.host().c_str(), url.port().c_str(), chandler.get());
-#else
-    acceptor acptr = reactor_.listen(url);
-#endif
+    pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());
     if (!acptr)
         throw error(MSG("accept fail: " <<
                         pn_error_text(pn_io_error(reactor_.pn_io())))
                         << "(" << url << ")");
-#ifdef PN_COMING_SOON
+#ifdef PROTON_1054_FIXED
     // Do not use pn_acceptor_set_ssl_domain().  Manage the incoming connections ourselves for
     // more flexibility (i.e. ability to change the server cert for a long running listener).
     listener_context& lc(listener_context::get(acptr));
     lc.connection_options = opts;
     lc.ssl = url.scheme() == url::AMQPS;
+#else
+    if (url.scheme() == url::AMQPS)
+        pn_acceptor_set_ssl_domain(acptr, server_connection_options_.server_domain().pn_domain());
 #endif
-    return acptr;
+    return acceptor(acptr);
 }
 
 std::string container_impl::next_link_name() {
