@@ -275,7 +275,7 @@ class ApplicationEvent(EventBase):
 
     def __repr__(self):
         objects = [self.connection, self.session, self.link, self.delivery, self.subject]
-        return "%s(%s)" % (typename, ", ".join([str(o) for o in objects if o is not None]))
+        return "%s(%s)" % (self.type, ", ".join([str(o) for o in objects if o is not None]))
 
 class Transaction(object):
     """
