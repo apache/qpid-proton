@@ -155,7 +155,6 @@ void messaging_event::dispatch(handler &h) {
 std::string messaging_event::name() const {
     switch (type()) {
       case PROTON: return pn_event_type_name(pn_event_type_t(proton_event::type()));
-      case ABORT: return "ABORT";
       case ACCEPTED: return "ACCEPTED";
       case COMMIT: return "COMMIT";
       case CONNECTION_CLOSED: return "CONNECTION_CLOSED";
@@ -164,8 +163,6 @@ std::string messaging_event::name() const {
       case CONNECTION_OPENED: return "CONNECTION_OPENED";
       case CONNECTION_OPENING: return "CONNECTION_OPENING";
       case DISCONNECTED: return "DISCONNECTED";
-      case FETCH: return "FETCH";
-      case ID_LOADED: return "ID_LOADED";
       case LINK_CLOSED: return "LINK_CLOSED";
       case LINK_CLOSING: return "LINK_CLOSING";
       case LINK_OPENED: return "LINK_OPENED";
@@ -173,12 +170,8 @@ std::string messaging_event::name() const {
       case LINK_ERROR: return "LINK_ERROR";
       case MESSAGE: return "MESSAGE";
       case QUIT: return "QUIT";
-      case RECORD_INSERTED: return "RECORD_INSERTED";
-      case RECORDS_LOADED: return "RECORDS_LOADED";
       case REJECTED: return "REJECTED";
       case RELEASED: return "RELEASED";
-      case REQUEST: return "REQUEST";
-      case RESPONSE: return "RESPONSE";
       case SENDABLE: return "SENDABLE";
       case SESSION_CLOSED: return "SESSION_CLOSED";
       case SESSION_CLOSING: return "SESSION_CLOSING";

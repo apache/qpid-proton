@@ -44,7 +44,6 @@ class messaging_event : public proton_event
     /** Event types for a messaging_handler */
     enum event_type {
         PROTON = 0,  // Wrapped pn_event_t
-        ABORT,
         ACCEPTED,
         COMMIT,
         CONNECTION_CLOSED,
@@ -53,8 +52,6 @@ class messaging_event : public proton_event
         CONNECTION_OPENED,
         CONNECTION_OPENING,
         DISCONNECTED,
-        FETCH,
-        ID_LOADED,
         LINK_CLOSED,
         LINK_CLOSING,
         LINK_OPENED,
@@ -62,12 +59,8 @@ class messaging_event : public proton_event
         LINK_ERROR,
         MESSAGE,
         QUIT,
-        RECORD_INSERTED,
-        RECORDS_LOADED,
         REJECTED,
         RELEASED,
-        REQUEST,
-        RESPONSE,
         SENDABLE,
         SESSION_CLOSED,
         SESSION_CLOSING,
