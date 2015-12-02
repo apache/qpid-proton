@@ -22,6 +22,7 @@
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
 #include "contexts.hpp"
 #include "connector.hpp"
 #include "msg.hpp"
@@ -52,11 +53,11 @@ class connection_options::impl {
     option<class server_domain> server_domain;
     option<std::string> peer_hostname;
     option<std::string> resume_id;
-#ifdef PN_CCP_SOON
     option<bool> sasl_enabled;
     option<std::string> allowed_mechs;
     option<bool> allow_insecure_mechs;
-#endif
+    option<std::string> sasl_config_name;
+    option<std::string> sasl_config_path;
 
     void apply(connection& c) {
         pn_connection_t *pnc = connection_options::pn_connection(c);
@@ -69,6 +70,7 @@ class connection_options::impl {
         // transport not yet configured.
         if (pnt && (uninit || (outbound && !outbound->transport_configured())))
         {
+            // SSL
             if (outbound && outbound->address().scheme() == url::AMQPS) {
                 // Configure outbound ssl options. pni_acceptor_readable handles the inbound case.
                 const char* id = resume_id.value.empty() ? NULL : resume_id.value.c_str();
@@ -89,6 +91,22 @@ class connection_options::impl {
                 }
 #endif
             }
+
+            // SASL
+            transport t = c.transport();
+            if (!sasl_enabled.set || sasl_enabled.value) {
+                if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
+                    t.sasl();          // Force a sasl instance.  Lazily create one otherwise.
+                if (allow_insecure_mechs.set)
+                    t.sasl().allow_insecure_mechs(allow_insecure_mechs.value);
+                if (allowed_mechs.set)
+                    t.sasl().allowed_mechs(allowed_mechs.value);
+                if (sasl_config_name.set)
+                    t.sasl().config_name(sasl_config_name.value);
+                if (sasl_config_path.set)
+                    t.sasl().config_path(sasl_config_path.value);
+            }
+
             if (max_frame_size.set)
                 pn_transport_set_max_frame(pnt, max_frame_size.value);
             if (max_channels.set)
@@ -117,6 +135,11 @@ class connection_options::impl {
         server_domain.override(x.server_domain);
         resume_id.override(x.resume_id);
         peer_hostname.override(x.peer_hostname);
+        sasl_enabled.override(x.sasl_enabled);
+        allow_insecure_mechs.override(x.allow_insecure_mechs);
+        allowed_mechs.override(x.allowed_mechs);
+        sasl_config_name.override(x.sasl_config_name);
+        sasl_config_path.override(x.sasl_config_path);
     }
 
 };
@@ -145,11 +168,15 @@ connection_options& connection_options::client_domain(const class client_domain 
 connection_options& connection_options::server_domain(const class server_domain &c) { impl_->server_domain = c; return *this; }
 connection_options& connection_options::resume_id(const std::string &id) { impl_->resume_id = id; return *this; }
 connection_options& connection_options::peer_hostname(const std::string &name) { impl_->peer_hostname = name; return *this; }
+connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
+connection_options& connection_options::allow_insecure_mechs(bool b) { impl_->allow_insecure_mechs = b; return *this; }
+connection_options& connection_options::allowed_mechs(const std::string &s) { impl_->allowed_mechs = s; return *this; }
+connection_options& connection_options::sasl_config_name(const std::string &n) { impl_->sasl_config_name = n; return *this; }
+connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
 class client_domain &connection_options::client_domain() { return impl_->client_domain.value; }
 class server_domain &connection_options::server_domain() { return impl_->server_domain.value; }
 handler* connection_options::handler() const { return impl_->handler.value; }
-
 pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }
 } // namespace proton

@@ -32,6 +32,8 @@
 #include "proton/receiver.hpp"
 #include "proton/task.hpp"
 #include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
+#include "proton/transport.hpp"
 
 #include "msg.hpp"
 #include "container_impl.hpp"
@@ -234,21 +236,15 @@ void container_impl::server_connection_options(const connection_options &opts) {
 }
 
 void container_impl::configure_server_connection(connection &c) {
-#ifdef PN_COMING_SOON
+#ifdef PN_1054_FIXED
     pn_acceptor_t *pnp = pn_connection_acceptor(pn_cast(&c));
     listener_context &lc(listener_context::get(pnp));
     class connection_options &opts(lc.connection_options);
-    if (opts.sasl_enabled()) {
-        sasl &s(c.transport().sasl());
-        s.allow_insecure_mechs(opts.allow_insecure_mechs());
-        if (opts.allowed_mechs())
-            s.allowed_mechs(*opts.allowed_mechs());
-    }
-    opts.apply(c);
 #else
     // Can't distinguish between multiple listeners yet.  See PROTON-1054
-    server_connection_options_.apply(c);
+    class connection_options &opts(server_connection_options_);
 #endif
+    opts.apply(c);
 }
 
 }

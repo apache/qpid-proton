@@ -25,6 +25,7 @@
 #include "proton/connection_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
 
 #include <iostream>
 
@@ -32,6 +33,7 @@ using proton::connection_options;
 using proton::client_domain;
 using proton::server_domain;
 using proton::ssl_certificate;
+using proton::sasl;
 
 // Helper functions defined below.
 bool using_OpenSSL();
@@ -41,12 +43,19 @@ std::string cert_directory;
 
 
 struct server_handler : public proton::messaging_handler {
-    proton::acceptor acceptor;
+    proton::acceptor inbound_listener;
 
     void on_connection_opened(proton::event &e) {
-        std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
+        std::cout << "Inbound server connection connected via SSL.  Protocol: " << 
             e.connection().transport().ssl().protocol() << std::endl;
-        acceptor.close();
+        if (e.connection().transport().sasl().outcome() == sasl::OK)
+            std::cout << "Inbound client certificate subject is " << 
+                e.connection().transport().ssl().remote_subject() << std::endl;
+        else {
+            std::cout << "Inbound client authentication failed" <<std::endl;
+            e.connection().close();
+        }
+	inbound_listener.close();
     }
 
     void on_message(proton::event &e) {
@@ -66,24 +75,30 @@ class hello_world_direct : public proton::messaging_handler {
     void on_start(proton::event &e) {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
-        server_domain sdomain(server_cert);
+	std::string client_CA = platform_CA("tclient");
+        // Specify an SSL domain with CA's for client certificate verification.
+        server_domain sdomain(server_cert, client_CA);
         connection_options server_opts;
         server_opts.server_domain(sdomain).handler(&s_handler);
+	server_opts.allowed_mechs("EXTERNAL");
         e.container().server_connection_options(server_opts);
 
-        // Configure client with a Certificate Authority database populated with the server's self signed certificate.
+        // Configure client.
+	ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
+	std::string server_CA = platform_CA("tserver");
+	client_domain cdomain(client_cert, server_CA);
         connection_options client_opts;
-        client_opts.client_domain(platform_CA("tserver"));
-        // Validate the server certificate against the known name in the certificate.
+        client_opts.client_domain(cdomain).allowed_mechs("EXTERNAL");
+        // Validate the server certificate against this name:
         client_opts.peer_hostname("test_server");
         e.container().client_connection_options(client_opts);
 
-        s_handler.acceptor = e.container().listen(url);
+        s_handler.inbound_listener = e.container().listen(url);
         e.container().open_sender(url);
     }
 
     void on_connection_opened(proton::event &e) {
-        std::cout << "Outgoing client connection connected via SSL.  Server certificate has subject " <<
+        std::cout << "Outgoing client connection connected via SSL.  Server certificate has subject " << 
             e.connection().transport().ssl().remote_subject() << std::endl;
     }
 
@@ -95,7 +110,7 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_accepted(proton::event &e) {
-        // All done.
+	// All done.
         e.connection().close();
     }
 };
@@ -103,16 +118,16 @@ class hello_world_direct : public proton::messaging_handler {
 int main(int argc, char **argv) {
     try {
         // Pick an "unusual" port since we are going to be talking to ourselves, not a broker.
-        // Note the use of "amqps" as the URL scheme to denote a TLS/SSL connection.
+	// Note the use of "amqps" as the URL scheme to denote a TLS/SSL connection.
         std::string url = argc > 1 ? argv[1] : "amqps://127.0.0.1:8888/examples";
-        // Location of certificates and private key information:
-        if (argc > 2) {
-            cert_directory = argv[2];
-            size_t sz = cert_directory.size();
-            if (sz && cert_directory[sz -1] != '/')
-                cert_directory.append("/");
-        }
-        else cert_directory = "ssl_certs/";
+	// Location of certificates and private key information:
+	if (argc > 2) {
+	    cert_directory = argv[2];
+	    size_t sz = cert_directory.size();
+	    if (sz && cert_directory[sz -1] != '/')
+		cert_directory.append("/");
+	}
+	else cert_directory = "ssl_certs/";
 
         hello_world_direct hwd(url);
         proton::container(hwd).run();
@@ -124,7 +139,7 @@ int main(int argc, char **argv) {
 }
 
 
-bool using_OpenSSL() {
+bool using_OpenSSL() { 
     // Current defaults.
 #if defined(WIN32)
     return false;
@@ -135,27 +150,27 @@ bool using_OpenSSL() {
 
 ssl_certificate platform_certificate(const std::string &base_name, const std::string &passwd) {
     if (using_OpenSSL()) {
-        // The first argument will be the name of the file containing the public certificate, the
-        // second argument will be the name of the file containing the private key.
-        return ssl_certificate(cert_directory + base_name + "-certificate.pem",
-                               cert_directory + base_name + "-private-key.pem", passwd);
+	// The first argument will be the name of the file containing the public certificate, the
+	// second argument will be the name of the file containing the private key.
+	return ssl_certificate(cert_directory + base_name + "-certificate.pem",
+			       cert_directory + base_name + "-private-key.pem", passwd);
     }
     else {
-        // Windows SChannel
-        // The first argument will be the database or store that contains one or more complete certificates
-        // (public and private data).  The second will be an optional name of the certificate in the store
-        // (not used in this example with one certificate per store).
-        return ssl_certificate(cert_directory + base_name + "-full.p12", "", passwd);
+	// Windows SChannel
+	// The first argument will be the database or store that contains one or more complete certificates
+	// (public and private data).  The second will be an optional name of the certificate in the store
+	// (not used in this example with one certificate per store).
+	return ssl_certificate(cert_directory + base_name + "-full.p12", "", passwd);
     }
 }
 
 std::string platform_CA(const std::string &base_name) {
     if (using_OpenSSL()) {
-        // In this simple example with self-signed certificates, the peer's certificate is the CA database.
-        return cert_directory + base_name + "-certificate.pem";
+	// In this simple example with self-signed certificates, the peer's certificate is the CA database.
+	return cert_directory + base_name + "-certificate.pem";
     }
     else {
-        // Windows SChannel.  Use a pkcs#12 file with just the peer's public certificate information.
-        return cert_directory + base_name + "-certificate.p12";
+	// Windows SChannel.  Use a pkcs#12 file with just the peer's public certificate information.
+	return cert_directory + base_name + "-certificate.p12";
     }
 }

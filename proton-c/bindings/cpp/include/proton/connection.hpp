@@ -107,6 +107,11 @@ class connection : public object<pn_connection_t>, endpoint
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state() const;
 
+  private:
+    PN_CPP_EXTERN void user(const std::string &);
+    PN_CPP_EXTERN void password(const std::string &);
+
+    
     friend class connection_options;
     friend class connector;
     friend class transport;

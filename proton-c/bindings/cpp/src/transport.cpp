@@ -21,6 +21,7 @@
 #include "proton/transport.hpp"
 #include "proton/connection.hpp"
 #include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
 #include "msg.hpp"
 #include "proton/transport.h"
 
@@ -34,13 +35,16 @@ class ssl transport::ssl() const {
     return proton::ssl(pn_ssl(pn_object()));
 }
 
+class sasl transport::sasl() const {
+    return proton::sasl(pn_sasl(pn_object()));
+}
+
 void transport::unbind() {
     if (pn_transport_unbind(pn_object()))
         throw error(MSG("transport::unbind failed " << pn_error_text(pn_transport_error(pn_object()))));
 }
 
 void transport::bind(class connection &conn) {
-//    pn_connection_t *c = static_cast<pn_connection_t*>(conn.object_);
     if (pn_transport_bind(pn_object(), conn.pn_object()))
         throw error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
 }

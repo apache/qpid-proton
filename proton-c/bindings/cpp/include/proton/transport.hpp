@@ -31,6 +31,7 @@ struct pn_transport_t;
 namespace proton {
 
 class connection;
+class sasl;
 
 /** Represents a connection transport */
 class transport : public object<pn_transport_t>
@@ -39,6 +40,8 @@ class transport : public object<pn_transport_t>
     transport(pn_transport_t* t) : object<pn_transport_t>(t) {}
 
     PN_CPP_EXTERN class connection connection() const;
+    PN_CPP_EXTERN class ssl ssl() const;
+    PN_CPP_EXTERN class sasl sasl() const;
     PN_CPP_EXTERN void unbind();
     PN_CPP_EXTERN void bind(class connection &);
     PN_CPP_EXTERN uint32_t max_frame_size() const;
@@ -47,7 +50,6 @@ class transport : public object<pn_transport_t>
     PN_CPP_EXTERN uint16_t remote_max_channels() const;
     PN_CPP_EXTERN uint32_t idle_timeout() const;
     PN_CPP_EXTERN uint32_t remote_idle_timeout() const;
-    PN_CPP_EXTERN class ssl ssl() const;
     friend class connection_options;
 };
 

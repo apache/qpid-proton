@@ -62,6 +62,7 @@ set(qpid-proton-cpp-source
   src/receiver.cpp
   src/reconnect_timer.cpp
   src/request_response.cpp
+  src/sasl.cpp
   src/sender.cpp
   src/session.cpp
   src/ssl.cpp

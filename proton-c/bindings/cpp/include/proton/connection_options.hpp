@@ -75,20 +75,16 @@ class connection_options {
     PN_CPP_EXTERN connection_options& server_domain(const class server_domain &);
     PN_CPP_EXTERN connection_options& peer_hostname(const std::string &name);
     PN_CPP_EXTERN connection_options& resume_id(const std::string &id);
-#ifdef PN_CPP_SOON
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
     PN_CPP_EXTERN connection_options& allow_insecure_mechs(bool);
     PN_CPP_EXTERN connection_options& allowed_mechs(const std::string &);
-#endif
+    PN_CPP_EXTERN connection_options& sasl_config_name(const std::string &);
+    PN_CPP_EXTERN connection_options& sasl_config_path(const std::string &);
+
   private:
     void apply(connection&) const;
     class handler* handler() const;
     static pn_connection_t *pn_connection(connection &);
-#ifdef PN_CPP_SOON
-    bool sasl_enabled() const;
-    bool allow_insecure_mechs() const;
-    std::string *allowed_mechs() const;
-#endif
     class client_domain &client_domain();
     class server_domain &server_domain();
 

@@ -27,6 +27,7 @@
 #include "proton/url.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/task.hpp"
+#include "proton/sasl.hpp"
 #include "container_impl.hpp"
 
 #include "proton/connection.h"
@@ -62,6 +63,10 @@ void connector::connect() {
     connection_.host(address_.host_port());
     pn_transport_t *pnt = pn_transport();
     transport t(pnt);
+    if (!address_.username().empty())
+        connection_.user(address_.username());
+    if (!address_.password().empty())
+        connection_.password(address_.password());
     t.bind(connection_);
     pn_decref((void *)pnt);
     // Apply options to the new transport.

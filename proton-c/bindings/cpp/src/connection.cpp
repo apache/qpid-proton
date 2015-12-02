@@ -110,4 +110,8 @@ receiver connection::open_receiver(const std::string &addr, bool dynamic, handle
 
 endpoint::state connection::state() const { return pn_connection_state(pn_object()); }
 
+void connection::user(const std::string &name) { pn_connection_set_user(pn_object(), name.c_str()); }
+
+void connection::password(const std::string &pass) { pn_connection_set_password(pn_object(), pass.c_str()); }
+
 }
