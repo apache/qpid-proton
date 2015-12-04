@@ -26,7 +26,6 @@
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/types.hpp"
-//#include "proton/ssl.hpp"
 
 #include <vector>
 #include <string>

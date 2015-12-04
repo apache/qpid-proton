@@ -26,14 +26,22 @@
 
 namespace proton {
 
-ssl_domain::ssl_domain(bool server_type) {
+ssl_domain::ssl_domain() : impl_(0) {}
+
+// Create on demand
+pn_ssl_domain_t *ssl_domain::init(bool server_type) {
+    if (impl_) return impl_;
     impl_ = pn_ssl_domain(server_type ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
     if (!impl_) throw error(MSG("SSL/TLS unavailable"));
+    return impl_;
 }
 
-ssl_domain::~ssl_domain() { pn_ssl_domain_free(impl_); }
+pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_; }
+
+ssl_domain::~ssl_domain() { if (impl_) pn_ssl_domain_free(impl_); }
 
 namespace {
+
 void set_cred(pn_ssl_domain_t *dom, const std::string &main, const std::string &extra, const std::string &pass, bool pwset) {
     const char *cred2 = extra.empty() ? NULL : extra.c_str();
     const char *pw = pwset ? pass.c_str() : NULL;
@@ -43,15 +51,17 @@ void set_cred(pn_ssl_domain_t *dom, const std::string &main, const std::string &
 }
 }
 
-server_domain::server_domain(ssl_certificate &cert) :
-    ssl_domain_(new ssl_domain(true)) {
-    set_cred(ssl_domain_->impl_, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
+server_domain::server_domain(ssl_certificate &cert) {
+    set_cred(init(true), cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
 }
 
-server_domain::server_domain(ssl_certificate &cert, const std::string &trust_db, const std::string &advertise_db,
-                             ssl::verify_mode_t mode) :
-    ssl_domain_(new ssl_domain(true)) {
-    pn_ssl_domain_t *dom = ssl_domain_->impl_;
+server_domain::server_domain(
+    ssl_certificate &cert,
+    const std::string &trust_db,
+    const std::string &advertise_db,
+    ssl::verify_mode_t mode)
+{
+    pn_ssl_domain_t* dom = init(true);
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     if (pn_ssl_domain_set_trusted_ca_db(dom, trust_db.c_str()))
         throw error(MSG("SSL trust store initialization failure for " << trust_db));
@@ -60,16 +70,7 @@ server_domain::server_domain(ssl_certificate &cert, const std::string &trust_db,
         throw error(MSG("SSL server configuration failure requiring client certificates using " << db));
 }
 
-// Keep default constructor low overhead for default use in connection_options.
-server_domain::server_domain() : ssl_domain_(0) {}
-
-pn_ssl_domain_t* server_domain::pn_domain() {
-    if (!ssl_domain_) {
-        // Lazily create anonymous domain context (no cert).  Could make it a singleton, but rare use?
-        ssl_domain_.reset(new ssl_domain(true));
-    }
-    return ssl_domain_->impl_;
-}
+server_domain::server_domain() {}
 
 namespace {
 void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify_mode_t mode) {
@@ -80,34 +81,22 @@ void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify
 }
 }
 
-client_domain::client_domain(const std::string &trust_db, ssl::verify_mode_t mode) :
-    ssl_domain_(new ssl_domain(false)) {
-    client_setup(ssl_domain_->impl_, trust_db, mode);
+client_domain::client_domain(const std::string &trust_db, ssl::verify_mode_t mode) {
+    client_setup(init(false), trust_db, mode);
 }
 
-client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, ssl::verify_mode_t mode) :
-    ssl_domain_(new ssl_domain(false)) {
-    pn_ssl_domain_t *dom = ssl_domain_->impl_;
+client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, ssl::verify_mode_t mode) {
+    pn_ssl_domain_t *dom = init(false);
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     client_setup(dom, trust_db, mode);
 }
 
-client_domain::client_domain() : ssl_domain_(0) {}
-
-pn_ssl_domain_t* client_domain::pn_domain() {
-    if (!ssl_domain_) {
-        // Lazily create anonymous domain context (no CA).  Could make it a singleton, but rare use?
-        ssl_domain_.reset(new ssl_domain(false));
-    }
-    return ssl_domain_->impl_;
-}
-
+client_domain::client_domain() {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra, const std::string &pw)
     : certdb_main_(main), certdb_extra_(extra), passwd_(pw), pw_set_(true) {}
-
 
 } // namespace

@@ -23,9 +23,6 @@
  */
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/counted.hpp"
-#include "proton/counted_ptr.hpp"
-
 #include "proton/ssl.h"
 
 #include <string>
@@ -75,17 +72,25 @@ class ssl_certificate {
     friend class server_domain;
 };
 
-class ssl_domain : public counted {
-    ssl_domain(bool server_type);
+// Base class for SSL configuration
+class ssl_domain {
+  public:
     ~ssl_domain();
+
+  protected:
+    ssl_domain();
+    pn_ssl_domain_t *init(bool is_server);
+    pn_ssl_domain_t *pn_domain();
+
   private:
     pn_ssl_domain_t *impl_;
-    friend class client_domain;
-    friend class server_domain;
+
+  friend class connection_options;
+  friend class container_impl;
 };
 
 /** SSL/TLS configuration for inbound connections created from a listener */
-class server_domain {
+class server_domain : public ssl_domain {
   public:
     /** A server domain based on the supplied X509 certificate specifier. */
     PN_CPP_EXTERN server_domain(ssl_certificate &cert);
@@ -95,28 +100,19 @@ class server_domain {
                                 ssl::verify_mode_t mode = ssl::VERIFY_PEER);
     /** A server domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN server_domain();
-  private:
-    pn_ssl_domain_t *pn_domain();
-    counted_ptr<ssl_domain> ssl_domain_;
-    server_domain(ssl_domain *);
-    friend class connection_options;
-    friend class container_impl;
 };
 
 
 /** SSL/TLS configuration for outgoing connections created */
-class client_domain {
+class client_domain : public ssl_domain {
   public:
     PN_CPP_EXTERN client_domain(const std::string &trust_db, ssl::verify_mode_t = ssl::VERIFY_PEER_NAME);
     PN_CPP_EXTERN client_domain(ssl_certificate&, const std::string &trust_db, ssl::verify_mode_t = ssl::VERIFY_PEER_NAME);
     /** A client domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN client_domain();
+
   private:
-    pn_ssl_domain_t *pn_domain();
-    counted_ptr<ssl_domain> ssl_domain_;
-    client_domain(ssl_domain *);
-    friend class connection_options;
-    friend class container_impl;
+    client_domain(ssl_domain);
 };
 
 
