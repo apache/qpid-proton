@@ -30,8 +30,8 @@ namespace proton {
 ///@cond INTERNAL
 class pn_ptr_base {
   protected:
-    static void incref(void* p);
-    static void decref(void* p);
+    PN_CPP_EXTERN static void incref(void* p);
+    PN_CPP_EXTERN static void decref(void* p);
 };
 
 template <class T> class pn_ptr : public comparable<pn_ptr<T> >, private pn_ptr_base {
