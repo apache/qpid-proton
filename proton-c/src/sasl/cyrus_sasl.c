@@ -53,8 +53,8 @@ static void pni_cyrus_interact(pni_sasl_t *sasl, sasl_interact_t *interact)
   for (sasl_interact_t *i = interact; i->id!=SASL_CB_LIST_END; i++) {
     switch (i->id) {
     case SASL_CB_USER:
-      i->result = sasl->username;
-      i->len = strlen(sasl->username);
+      i->result = 0;
+      i->len = 0;
       break;
     case SASL_CB_AUTHNAME:
       i->result = sasl->username;
