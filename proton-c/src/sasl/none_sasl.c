@@ -81,17 +81,16 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
     transport->sasl->selected_mechanism = pn_strdup(PLAIN);
     size_t usize = strlen(transport->sasl->username);
     size_t psize = strlen(transport->sasl->password);
-    size_t size = 2*usize + psize + 2;
+    size_t size = usize + psize + 2;
     char *iresp = (char *) malloc(size);
     if (!iresp) return false;
 
     transport->sasl->impl_context = iresp;
 
-    memmove(iresp, transport->sasl->username, usize);
-    iresp[usize] = 0;
-    memmove(iresp + usize + 1, transport->sasl->username, usize);
-    iresp[2*usize + 1] = 0;
-    memmove(iresp + 2*usize + 2, transport->sasl->password, psize);
+    iresp[0] = 0;
+    memmove(&iresp[1], transport->sasl->username, usize);
+    iresp[usize + 1] = 0;
+    memmove(&iresp[usize + 2], transport->sasl->password, psize);
     transport->sasl->bytes_out.start = iresp;
     transport->sasl->bytes_out.size =  size;
 
