@@ -428,6 +428,9 @@ class ApplicationEventTest(Test):
         if not hasattr(os, 'pipe'):
           # KAG: seems like Jython doesn't have an os.pipe() method
           raise SkipTest()
+        if os.name=="nt":
+          # Correct implementation on Windows is complicated
+          raise SkipTest("PROTON-1071")
         self.server = ApplicationEventTest.MyTestServer()
         self.server.reactor.handler.add(ApplicationEventTest.MyHandler(self))
         self.event_injector = EventInjector()
