@@ -86,6 +86,7 @@ PN_EXTERN pn_task_t *pn_reactor_schedule(pn_reactor_t *reactor, int delay, pn_ha
 
 PN_EXTERN void pn_acceptor_set_ssl_domain(pn_acceptor_t *acceptor, pn_ssl_domain_t *domain);
 PN_EXTERN void pn_acceptor_close(pn_acceptor_t *acceptor);
+PN_EXTERN pn_acceptor_t *pn_connection_acceptor(pn_connection_t *connection);
 
 PN_EXTERN pn_timer_t *pn_timer(pn_collector_t *collector);
 PN_EXTERN pn_timestamp_t pn_timer_deadline(pn_timer_t *timer);

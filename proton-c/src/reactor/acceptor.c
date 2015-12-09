@@ -23,6 +23,7 @@
 #include <proton/sasl.h>
 #include <proton/selector.h>
 #include <proton/transport.h>
+#include <proton/connection.h>
 #include "reactor.h"
 #include "selectable.h"
 
@@ -30,6 +31,7 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
 
 PN_HANDLE(PNI_ACCEPTOR_HANDLER)
 PN_HANDLE(PNI_ACCEPTOR_SSL_DOMAIN)
+PN_HANDLE(PNI_ACCEPTOR_CONNECTION)
 
 void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
@@ -49,6 +51,10 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_transport_bind(trans, conn);
   pn_decref(trans);
   pn_reactor_selectable_transport(reactor, sock, trans);
+  record = pn_connection_attachments(conn);
+  pn_record_def(record, PNI_ACCEPTOR_CONNECTION, PN_OBJECT);
+  pn_record_set(record, PNI_ACCEPTOR_CONNECTION, sel);
+
 }
 
 void pni_acceptor_finalize(pn_selectable_t *sel) {
@@ -94,4 +100,10 @@ void pn_acceptor_set_ssl_domain(pn_acceptor_t *acceptor, pn_ssl_domain_t *domain
   pn_record_t *record = pn_selectable_attachments(sel);
   pn_record_def(record, PNI_ACCEPTOR_SSL_DOMAIN, PN_VOID);
   pn_record_set(record, PNI_ACCEPTOR_SSL_DOMAIN, domain);
+}
+
+pn_acceptor_t *pn_connection_acceptor(pn_connection_t *conn) {
+  // Return the acceptor that created the connection or NULL if an outbound connection
+  pn_record_t *record = pn_connection_attachments(conn);
+  return (pn_acceptor_t *) pn_record_get(record, PNI_ACCEPTOR_CONNECTION);
 }
