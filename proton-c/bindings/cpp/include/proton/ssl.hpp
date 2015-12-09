@@ -75,7 +75,7 @@ class ssl_certificate {
 // Base class for SSL configuration
 class ssl_domain {
   public:
-    ~ssl_domain();
+    PN_CPP_EXTERN ~ssl_domain();
 
   protected:
     ssl_domain();
