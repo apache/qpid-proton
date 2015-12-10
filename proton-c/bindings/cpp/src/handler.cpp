@@ -31,7 +31,7 @@ handler::~handler() {}
 void handler::on_unhandled(event &e) {}
 
 void handler::add_child_handler(handler &e) {
-    push_back(&e);
+    children_.push_back(&e);
 }
 
 }

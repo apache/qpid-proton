@@ -147,7 +147,7 @@ void messaging_event::dispatch(handler &h) {
     }
 
     // recurse through children
-    for (handler::iterator child = h.begin(); child != h.end(); ++child) {
+    for (handler::iterator child = h.children_.begin(); child != h.children_.end(); ++child) {
         dispatch(**child);
     }
 }

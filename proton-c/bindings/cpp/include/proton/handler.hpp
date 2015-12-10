@@ -44,7 +44,7 @@ namespace proton {
  * `on_*_closed` or `on_*_final` event that indicates the handler is no longer needed.
  *
  */
-class handler : public std::vector<handler*> {
+class handler {
   public:
     PN_CPP_EXTERN handler();
     PN_CPP_EXTERN virtual ~handler();
@@ -56,6 +56,9 @@ class handler : public std::vector<handler*> {
     /// h must not be deleted before this handler.
     PN_CPP_EXTERN virtual void add_child_handler(handler &h);
 
+  public:
+    std::vector<handler*> children_;
+    typedef std::vector<handler*>::iterator iterator;
   private:
     pn_ptr<pn_handler_t> pn_handler_;
     friend class container_impl;
