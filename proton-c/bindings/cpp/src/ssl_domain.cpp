@@ -71,6 +71,7 @@ server_domain::server_domain(
 }
 
 server_domain::server_domain() {}
+server_domain::~server_domain() {}
 
 namespace {
 void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify_mode_t mode) {
@@ -92,6 +93,7 @@ client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db,
 }
 
 client_domain::client_domain() {}
+client_domain::~client_domain() {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}

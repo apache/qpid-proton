@@ -74,7 +74,7 @@ class ssl_certificate {
 // Base class for SSL configuration
 class ssl_domain {
   public:
-    PN_CPP_EXTERN ~ssl_domain();
+    ~ssl_domain();
 
   protected:
     ssl_domain();
@@ -83,13 +83,10 @@ class ssl_domain {
 
   private:
     pn_ssl_domain_t *impl_;
-
-  friend class connection_options;
-  friend class container_impl;
 };
 
 /** SSL/TLS configuration for inbound connections created from a listener */
-class server_domain : public ssl_domain {
+class server_domain : private ssl_domain {
   public:
     /** A server domain based on the supplied X509 certificate specifier. */
     PN_CPP_EXTERN server_domain(ssl_certificate &cert);
@@ -99,19 +96,30 @@ class server_domain : public ssl_domain {
                                 ssl::verify_mode_t mode = ssl::VERIFY_PEER);
     /** A server domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN server_domain();
+
+    PN_CPP_EXTERN ~server_domain();
+
+  private:
+    // Bring pn_domain into scope and allow container_impl to use it
+    using ssl_domain::pn_domain;
+    friend class container_impl;
 };
 
 
 /** SSL/TLS configuration for outgoing connections created */
-class client_domain : public ssl_domain {
+class client_domain : private ssl_domain {
   public:
     PN_CPP_EXTERN client_domain(const std::string &trust_db, ssl::verify_mode_t = ssl::VERIFY_PEER_NAME);
     PN_CPP_EXTERN client_domain(ssl_certificate&, const std::string &trust_db, ssl::verify_mode_t = ssl::VERIFY_PEER_NAME);
     /** A client domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN client_domain();
 
+    PN_CPP_EXTERN ~client_domain();
+
   private:
-    client_domain(ssl_domain);
+    // Bring pn_domain into scope and allow connection_options to use it
+    using ssl_domain::pn_domain;
+    friend class connection_options;
 };
 
 
