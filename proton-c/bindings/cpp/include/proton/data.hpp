@@ -23,7 +23,6 @@
 #include "proton/encoder.hpp"
 #include "proton/export.hpp"
 #include "proton/object.hpp"
-#include "proton/pn_unique_ptr.hpp"
 
 #include <iosfwd>
 
