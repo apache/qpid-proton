@@ -115,7 +115,7 @@ class override_handler : public handler
 
 pn_ptr<pn_handler_t> container_impl::cpp_handler(handler *h) {
     if (!h->pn_handler_) {
-        h->pn_handler_ = pn_ptr<pn_handler_t>::take(
+        h->pn_handler_ = take_ownership(
             pn_handler_new(&handler_context::dispatch,
                            sizeof(struct handler_context),
                            &handler_context::cleanup));

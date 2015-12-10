@@ -30,7 +30,7 @@
 namespace proton {
 
 reactor reactor::create() {
-    return pn_ptr<pn_reactor_t>::take(pn_reactor()).get();
+    return take_ownership(pn_reactor()).get();
 }
 
 void reactor::run() { pn_reactor_run(pn_object()); }
