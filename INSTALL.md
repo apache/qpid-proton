@@ -9,8 +9,8 @@ the Java portions of the code.
 CMake (Linux)
 -------------
 
-The following prerequisites are required to do a full build. If you do
-not wish to build a given language binding you can omit the devel
+The following prerequisites are required to do a full build on RPM based systems (RHEL, Fedora etc.).
+If you do not wish to build a given language binding you can omit the devel
 package for that language:
 
     # required dependencies
@@ -26,11 +26,34 @@ package for that language:
     $ yum install swig python-devel ruby-devel php-devel perl-devel
 
     # dependencies needed for java (note that any non-ancient jvm will
-    # work, 1.8.0 is just what is current for fedora 20)
+    # work, 1.8.0 is just what is current for fedora 23)
     $ yum install java-1.8.0-openjdk-devel
 
     # dependencies needed for python docs
     $ yum install epydoc
+
+The following prerequisites are required to do a full build on Debian based systems (Ubuntu). 
+If you do not wish to build a given language binding you can omit the dev
+package for that language:
+
+    # Required dependencies 
+    $ apt-get install gcc cmake cmake-curses-gui uuid-dev
+
+    # dependencies needed for ssl support
+    $ apt-get install libssl-dev
+
+    # dependencies needed for Cyrus SASL support
+    $ apt-get install libsasl2-2 libsasl2-dev
+
+    # dependencies needed for bindings
+    $ apt-get install swig python-dev ruby-dev libperl-dev
+
+    # dependencies needed for java (note that any non-ancient jvm will
+    # work, 1.8.0 is just what is current for ubuntu 14)
+    $ apt-get install openjdk-8-jdk
+
+    # dependencies needed for python docs
+    $ apt-get install python-epydoc
 
 From the directory where you found this README file:
 
