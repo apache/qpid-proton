@@ -38,7 +38,8 @@ import (
 // Send*Timeout methods will give up after the timeout and set Timeout as Outcome.Error.
 //
 type Sender interface {
-	Link
+	Endpoint
+	LinkSettings
 
 	// SendSync sends a message and blocks until the message is acknowledged by the remote receiver.
 	// Returns an Outcome, which may contain an error if the message could not be sent.
@@ -81,6 +82,12 @@ type Outcome struct {
 	Error error
 	// Value provided by the application in SendAsync()
 	Value interface{}
+}
+
+func (o Outcome) send(ack chan<- Outcome) {
+	if ack != nil {
+		ack <- o
+	}
 }
 
 // SentStatus indicates the status of a sent message.
@@ -144,44 +151,37 @@ type sender struct {
 func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interface{}, t time.Duration) {
 	// wait for credit
 	if _, err := timedReceive(s.credit, t); err != nil {
-		if err == Closed && s.Error != nil {
+		if err == Closed && s.Error() != nil {
 			err = s.Error()
 		}
-		ack <- Outcome{Unsent, err, v}
+		Outcome{Unsent, err, v}.send(ack)
 		return
 	}
 	// Send a message in handler goroutine
 	err := s.engine().Inject(func() {
 		if s.Error() != nil {
-			if ack != nil {
-				ack <- Outcome{Unsent, s.Error(), v}
-			}
+			Outcome{Unsent, s.Error(), v}.send(ack)
 			return
 		}
-		if delivery, err := s.eLink.Send(m); err == nil {
-			if ack != nil { // We must report an outcome
-				if s.SndSettle() == SndSettled {
-					delivery.Settle() // Pre-settle if required
-					ack <- Outcome{Accepted, nil, v}
-				} else {
-					s.handler().sentMessages[delivery] = sentMessage{ack, v}
-				}
-			} else { // ack == nil, can't report outcome
-				if s.SndSettle() != SndUnsettled { // Pre-settle unless we are forced not to.
-					delivery.Settle()
-				}
+
+		delivery, err2 := s.eLink.Send(m)
+		switch {
+		case err2 != nil:
+			Outcome{Unsent, err2, v}.send(ack)
+		case ack == nil || s.SndSettle() == SndSettled: // Pre-settled
+			if s.SndSettle() != SndUnsettled { // Not forced to send unsettled by link policy
+				delivery.Settle()
 			}
-		} else { // err != nil
-			if ack != nil {
-				ack <- Outcome{Unsent, err, v}
-			}
+			Outcome{Accepted, nil, v}.send(ack) // Assume accepted
+		default:
+			s.handler().sentMessages[delivery] = sentMessage{ack, v} // Register with handler
 		}
 		if s.eLink.Credit() > 0 { // Signal there is still credit
 			s.sendable()
 		}
 	})
-	if err != nil && ack != nil {
-		ack <- Outcome{Unsent, err, v}
+	if err != nil {
+		Outcome{Unsent, err, v}.send(ack)
 	}
 }
 
@@ -237,15 +237,16 @@ func (s *sender) SendSync(m amqp.Message) Outcome {
 }
 
 // handler goroutine
-func (s *sender) closed(err error) {
-	s.link.closed(err)
+func (s *sender) closed(err error) error {
 	close(s.credit)
+	return s.link.closed(err)
 }
 
-func newSender(l link) *sender {
-	s := &sender{link: l, credit: make(chan struct{}, 1)}
+func newSender(ls linkSettings) *sender {
+	s := &sender{link: link{linkSettings: ls}, credit: make(chan struct{}, 1)}
+	s.endpoint.init(s.link.eLink.String())
 	s.handler().addLink(s.eLink, s)
-	s.link.open()
+	s.link.eLink.Open()
 	return s
 }
 
@@ -263,7 +264,7 @@ type IncomingSender struct {
 
 // Accept accepts an incoming sender endpoint
 func (in *IncomingSender) Accept() Endpoint {
-	return in.accept(func() Endpoint { return newSender(in.link) })
+	return in.accept(func() Endpoint { return newSender(in.linkSettings) })
 }
 
 // Call in injected functions to check if the sender is valid.

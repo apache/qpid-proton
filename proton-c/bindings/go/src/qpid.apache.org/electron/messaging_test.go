@@ -270,24 +270,26 @@ func TestTimeouts(t *testing.T) {
 	}
 }
 
-// clientServer that returns sender/receiver pairs at opposite ends of link.
+// A server that returns the opposite end of each client link via channels.
 type pairs struct {
-	t      *testing.T
-	client Session
-	server Connection
-	rchan  chan Receiver
-	schan  chan Sender
+	t        *testing.T
+	client   Session
+	server   Connection
+	rchan    chan Receiver
+	schan    chan Sender
+	capacity int
+	prefetch bool
 }
 
-func newPairs(t *testing.T) *pairs {
+func newPairs(t *testing.T, capacity int, prefetch bool) *pairs {
 	p := &pairs{t: t, rchan: make(chan Receiver, 1), schan: make(chan Sender, 1)}
 	p.client, p.server = newClientServer(t)
 	go func() {
 		for i := range p.server.Incoming() {
 			switch i := i.(type) {
 			case *IncomingReceiver:
-				i.SetCapacity(1)
-				i.SetPrefetch(false)
+				i.SetCapacity(capacity)
+				i.SetPrefetch(prefetch)
 				p.rchan <- i.Accept().(Receiver)
 			case *IncomingSender:
 				p.schan <- i.Accept().(Sender)
@@ -303,6 +305,7 @@ func (p *pairs) close() {
 	closeClientServer(p.client, p.server)
 }
 
+// Return a client sender and server receiver
 func (p *pairs) senderReceiver() (Sender, Receiver) {
 	snd, err := p.client.Sender()
 	fatalIf(p.t, err)
@@ -310,6 +313,7 @@ func (p *pairs) senderReceiver() (Sender, Receiver) {
 	return snd, rcv
 }
 
+// Return a client receiver and server sender
 func (p *pairs) receiverSender() (Receiver, Sender) {
 	rcv, err := p.client.Receiver()
 	fatalIf(p.t, err)
@@ -322,7 +326,7 @@ type result struct {
 	err   error
 }
 
-func (r result) String() string { return fmt.Sprintf("%s(%s)", r.err, r.label) }
+func (r result) String() string { return fmt.Sprintf("%v(%v)", r.err, r.label) }
 
 func doSend(snd Sender, results chan result) {
 	err := snd.SendSync(amqp.NewMessage()).Error
@@ -338,30 +342,48 @@ func doDisposition(ack <-chan Outcome, results chan result) {
 	results <- result{"disposition", (<-ack).Error}
 }
 
+// Senders get credit immediately if receivers have prefetch set
+func TestSendReceivePrefetch(t *testing.T) {
+	pairs := newPairs(t, 1, true)
+	s, r := pairs.senderReceiver()
+	s.SendAsyncTimeout(amqp.NewMessage(), nil, nil, time.Second) // Should not block for credit.
+	if _, err := r.Receive(); err != nil {
+		t.Error(err)
+	}
+}
+
+// Senders do not get credit till Receive() if receivers don't have prefetch
+func TestSendReceiveNoPrefetch(t *testing.T) {
+	pairs := newPairs(t, 1, false)
+	s, r := pairs.senderReceiver()
+	done := make(chan struct{}, 1)
+	go func() {
+		s.SendAsyncTimeout(amqp.NewMessage(), nil, nil, time.Second) // Should block for credit.
+		close(done)
+	}()
+	select {
+	case <-done:
+		t.Errorf("send should be blocked on credit")
+	default:
+		if _, err := r.Receive(); err != nil {
+			t.Error(err)
+		} else {
+			<-done
+		} // Should be unblocked now
+	}
+}
+
 // Test that closing Links interrupts blocked link functions.
 func TestLinkCloseInterrupt(t *testing.T) {
-	want := amqp.Errorf("x", "all bad")
-	pairs := newPairs(t)
+	want := amqp.Error{Name: "x", Description: "all bad"}
+	pairs := newPairs(t, 1, false)
 	results := make(chan result) // Collect expected errors
 
-	// Sender.Close() interrupts Send()
-	snd, rcv := pairs.senderReceiver()
-	go doSend(snd, results)
-	snd.Close(want)
-	if r := <-results; want != r.err {
-		t.Errorf("want %#v got %#v", want, r)
-	}
-
-	// Remote Receiver.Close() interrupts Send()
-	snd, rcv = pairs.senderReceiver()
-	go doSend(snd, results)
-	rcv.Close(want)
-	if r := <-results; want != r.err {
-		t.Errorf("want %#v got %#v", want, r)
-	}
+	// Note closing the link does not interrupt Send() calls, the AMQP spec says
+	// that deliveries can be settled after the link is closed.
 
 	// Receiver.Close() interrupts Receive()
-	snd, rcv = pairs.senderReceiver()
+	snd, rcv := pairs.senderReceiver()
 	go doReceive(rcv, results)
 	rcv.Close(want)
 	if r := <-results; want != r.err {
@@ -379,44 +401,50 @@ func TestLinkCloseInterrupt(t *testing.T) {
 
 // Test closing the server end of a connection.
 func TestConnectionCloseInterrupt1(t *testing.T) {
-	want := amqp.Errorf("x", "bad")
-	pairs := newPairs(t)
+	want := amqp.Error{Name: "x", Description: "bad"}
+	pairs := newPairs(t, 1, true)
 	results := make(chan result) // Collect expected errors
 
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
-	go doReceive(rcv, results)
-	ack := snd.SendWaitable(amqp.NewMessage())
-	go doDisposition(ack, results)
-	snd, rcv = pairs.senderReceiver()
 	go doSend(snd, results)
+
+	rcv.Receive()
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)
+
+	snd, rcv = pairs.senderReceiver()
+	ack := snd.SendWaitable(amqp.NewMessage())
+	rcv.Receive()
+	go doDisposition(ack, results)
+
 	pairs.server.Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
-			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil and EOF.
-			t.Logf("want %v got %v", want, r.err)
+			t.Logf("want %v got %v", want, r)
 		}
 	}
 }
 
 // Test closing the client end of the connection.
 func TestConnectionCloseInterrupt2(t *testing.T) {
-	want := amqp.Errorf("x", "bad")
-	pairs := newPairs(t)
+	want := amqp.Error{Name: "x", Description: "bad"}
+	pairs := newPairs(t, 1, true)
 	results := make(chan result) // Collect expected errors
 
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
-	go doReceive(rcv, results)
-	ack := snd.SendWaitable(amqp.NewMessage())
-	go doDisposition(ack, results)
-	snd, rcv = pairs.senderReceiver()
 	go doSend(snd, results)
+	rcv.Receive()
+
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)
-	pairs.client.Close(want)
+
+	snd, rcv = pairs.senderReceiver()
+	ack := snd.SendWaitable(amqp.NewMessage())
+	go doDisposition(ack, results)
+
+	pairs.client.Connection().Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
 			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil.

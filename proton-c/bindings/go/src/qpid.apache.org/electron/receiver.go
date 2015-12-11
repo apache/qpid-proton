@@ -29,7 +29,8 @@ import (
 // Receiver is a Link that receives messages.
 //
 type Receiver interface {
-	Link
+	Endpoint
+	LinkSettings
 
 	// Receive blocks until a message is available or until the Receiver is closed
 	// and has no more buffered messages.
@@ -64,108 +65,88 @@ type Receiver interface {
 	Capacity() int
 }
 
-// Flow control policy for a receiver.
-type policy interface {
-	// Called at the start of Receive() to adjust credit before fetching a message.
-	Pre(*receiver)
-	// Called after Receive() has received a message from Buffer() before it returns.
-	// Non-nil error means no message was received because of an error.
-	Post(*receiver, error)
-}
-
-type prefetchPolicy struct{}
-
-func (p prefetchPolicy) Flow(r *receiver) {
-	r.engine().Inject(func() {
-		if r.Error() != nil {
-			return
-		}
-		_, _, max := r.credit()
-		if max > 0 {
-			r.eLink.Flow(max)
-		}
-	})
-}
-func (p prefetchPolicy) Pre(r *receiver) { p.Flow(r) }
-func (p prefetchPolicy) Post(r *receiver, err error) {
-	if err == nil {
-		p.Flow(r)
-	}
-}
-
-type noPrefetchPolicy struct{ waiting int }
-
-func (p noPrefetchPolicy) Flow(r *receiver) { // Not called in proton goroutine
-	r.engine().Inject(func() {
-		if r.Error() != nil {
-			return
-		}
-		len, credit, max := r.credit()
-		add := p.waiting - (len + credit)
-		if add > max {
-			add = max // Don't overflow
-		}
-		if add > 0 {
-			r.eLink.Flow(add)
-		}
-	})
-}
-func (p noPrefetchPolicy) Pre(r *receiver) { p.waiting++; p.Flow(r) }
-func (p noPrefetchPolicy) Post(r *receiver, err error) {
-	p.waiting--
-	if err == nil {
-		p.Flow(r)
-	}
-}
-
 // Receiver implementation
 type receiver struct {
 	link
-	buffer chan ReceivedMessage
-	policy policy
-}
-
-// Call in proton goroutine
-func newReceiver(l link) *receiver {
-	r := &receiver{link: l}
-	if r.capacity < 1 {
-		r.capacity = 1
-	}
-	if r.prefetch {
-		r.policy = &prefetchPolicy{}
-	} else {
-		r.policy = &noPrefetchPolicy{}
-	}
-	r.buffer = make(chan ReceivedMessage, r.capacity)
-	r.handler().addLink(r.eLink, r)
-	r.link.open()
-	return r
-}
-
-// call in proton goroutine.
-func (r *receiver) credit() (buffered, credit, max int) {
-	return len(r.buffer), r.eLink.Credit(), cap(r.buffer) - len(r.buffer)
+	buffer  chan ReceivedMessage
+	callers int
 }
 
 func (r *receiver) Capacity() int  { return cap(r.buffer) }
 func (r *receiver) Prefetch() bool { return r.prefetch }
 
+// Call in proton goroutine
+func newReceiver(ls linkSettings) *receiver {
+	r := &receiver{link: link{linkSettings: ls}}
+	r.endpoint.init(r.link.eLink.String())
+	if r.capacity < 1 {
+		r.capacity = 1
+	}
+	r.buffer = make(chan ReceivedMessage, r.capacity)
+	r.handler().addLink(r.eLink, r)
+	r.link.eLink.Open()
+	if r.prefetch {
+		r.flow(r.maxFlow())
+	}
+	return r
+}
+
+// Call in proton gorotine. Max additional credit we can request.
+func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.eLink.Credit() }
+
+func (r *receiver) flow(credit int) {
+	if credit > 0 {
+		r.eLink.Flow(credit)
+	}
+}
+
+// Inject flow check per-caller call when prefetch is off.
+// Called with inc=1 at start of call, inc = -1 at end
+func (r *receiver) caller(inc int) {
+	r.engine().Inject(func() {
+		r.callers += inc
+		need := r.callers - (len(r.buffer) + r.eLink.Credit())
+		max := r.maxFlow()
+		if need > max {
+			need = max
+		}
+		r.flow(need)
+	})
+}
+
+// Inject flow top-up if prefetch is enabled
+func (r *receiver) flowTopUp() {
+	if r.prefetch {
+		r.engine().Inject(func() { r.flow(r.maxFlow()) })
+	}
+}
+
+// Not claled
 func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 	return r.ReceiveTimeout(Forever)
 }
 
-func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
+func (r *receiver) ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error) {
 	assert(r.buffer != nil, "Receiver is not open: %s", r)
-	r.policy.Pre(r)
-	defer func() { r.policy.Post(r, err) }()
+	select { // Check for immediate availability
+	case rm := <-r.buffer:
+		r.flowTopUp()
+		return rm, nil
+	default:
+	}
+	if !r.prefetch { // Per-caller flow control
+		r.caller(+1)
+		defer r.caller(-1)
+	}
 	rmi, err := timedReceive(r.buffer, timeout)
 	switch err {
-	case Timeout:
-		return ReceivedMessage{}, Timeout
+	case nil:
+		r.flowTopUp()
+		return rmi.(ReceivedMessage), err
 	case Closed:
 		return ReceivedMessage{}, r.Error()
 	default:
-		return rmi.(ReceivedMessage), nil
+		return ReceivedMessage{}, err
 	}
 }
 
@@ -192,11 +173,11 @@ func (r *receiver) message(delivery proton.Delivery) {
 	}
 }
 
-func (r *receiver) closed(err error) {
-	r.link.closed(err)
+func (r *receiver) closed(err error) error {
 	if r.buffer != nil {
 		close(r.buffer)
 	}
+	return r.link.closed(err)
 }
 
 // ReceivedMessage contains an amqp.Message and allows the message to be acknowledged.
@@ -240,5 +221,5 @@ func (in *IncomingReceiver) SetPrefetch(prefetch bool) { in.prefetch = prefetch 
 
 // Accept accepts an incoming receiver endpoint
 func (in *IncomingReceiver) Accept() Endpoint {
-	return in.accept(func() Endpoint { return newReceiver(in.link) })
+	return in.accept(func() Endpoint { return newReceiver(in.linkSettings) })
 }

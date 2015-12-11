@@ -24,11 +24,8 @@ import (
 	"qpid.apache.org/proton"
 )
 
-// Link is the common interface for AMQP links. Sender and Receiver provide
-// more methods for the sending or receiving end of a link respectively.
-type Link interface {
-	Endpoint
-
+// Settings associated with a link
+type LinkSettings interface {
 	// Source address that messages are coming from.
 	Source() string
 
@@ -53,46 +50,41 @@ type Link interface {
 
 	// Session containing the Link
 	Session() Session
-
-	// Called in event loop on closed event.
-	closed(err error)
-	// Called to open a link (local or accepted incoming link)
-	open()
 }
 
 // LinkOption can be passed when creating a sender or receiver link to set optional configuration.
-type LinkOption func(*link)
+type LinkOption func(*linkSettings)
 
 // Source returns a LinkOption that sets address that messages are coming from.
-func Source(s string) LinkOption { return func(l *link) { l.source = s } }
+func Source(s string) LinkOption { return func(l *linkSettings) { l.source = s } }
 
 // Target returns a LinkOption that sets address that messages are going to.
-func Target(s string) LinkOption { return func(l *link) { l.target = s } }
+func Target(s string) LinkOption { return func(l *linkSettings) { l.target = s } }
 
 // LinkName returns a LinkOption that sets the link name.
-func LinkName(s string) LinkOption { return func(l *link) { l.target = s } }
+func LinkName(s string) LinkOption { return func(l *linkSettings) { l.target = s } }
 
 // SndSettle returns a LinkOption that sets the send settle mode
-func SndSettle(m SndSettleMode) LinkOption { return func(l *link) { l.sndSettle = m } }
+func SndSettle(m SndSettleMode) LinkOption { return func(l *linkSettings) { l.sndSettle = m } }
 
 // RcvSettle returns a LinkOption that sets the send settle mode
-func RcvSettle(m RcvSettleMode) LinkOption { return func(l *link) { l.rcvSettle = m } }
+func RcvSettle(m RcvSettleMode) LinkOption { return func(l *linkSettings) { l.rcvSettle = m } }
 
 // SndSettleMode returns a LinkOption that defines when the sending end of the
 // link settles message delivery.
 type SndSettleMode proton.SndSettleMode
 
 // Capacity returns a LinkOption that sets the link capacity
-func Capacity(n int) LinkOption { return func(l *link) { l.capacity = n } }
+func Capacity(n int) LinkOption { return func(l *linkSettings) { l.capacity = n } }
 
 // Prefetch returns a LinkOption that sets a receivers pre-fetch flag. Not relevant for a sender.
-func Prefetch(p bool) LinkOption { return func(l *link) { l.prefetch = p } }
+func Prefetch(p bool) LinkOption { return func(l *linkSettings) { l.prefetch = p } }
 
 // AtMostOnce returns a LinkOption that sets "fire and forget" mode, messages
 // are sent but no acknowledgment is received, messages can be lost if there is
 // a network failure. Sets SndSettleMode=SendSettled and RcvSettleMode=RcvFirst
 func AtMostOnce() LinkOption {
-	return func(l *link) {
+	return func(l *linkSettings) {
 		SndSettle(SndSettled)(l)
 		RcvSettle(RcvFirst)(l)
 	}
@@ -104,7 +96,7 @@ func AtMostOnce() LinkOption {
 // chance that the message will be received twice in this case.  Sets
 // SndSettleMode=SndUnsettled and RcvSettleMode=RcvFirst
 func AtLeastOnce() LinkOption {
-	return func(l *link) {
+	return func(l *linkSettings) {
 		SndSettle(SndUnsettled)(l)
 		RcvSettle(RcvFirst)(l)
 	}
@@ -129,10 +121,7 @@ const (
 	RcvSecond = RcvSettleMode(proton.RcvSecond)
 )
 
-type link struct {
-	endpoint
-
-	// Link settings.
+type linkSettings struct {
 	source    string
 	target    string
 	linkName  string
@@ -141,31 +130,35 @@ type link struct {
 	rcvSettle RcvSettleMode
 	capacity  int
 	prefetch  bool
-
-	session *session
-	eLink   proton.Link
+	session   *session
+	eLink     proton.Link
 }
 
-func (l *link) Source() string           { return l.source }
-func (l *link) Target() string           { return l.target }
-func (l *link) LinkName() string         { return l.linkName }
-func (l *link) IsSender() bool           { return l.isSender }
-func (l *link) IsReceiver() bool         { return !l.isSender }
-func (l *link) SndSettle() SndSettleMode { return l.sndSettle }
-func (l *link) RcvSettle() RcvSettleMode { return l.rcvSettle }
-func (l *link) Session() Session         { return l.session }
-func (l *link) Connection() Connection   { return l.session.Connection() }
+type link struct {
+	endpoint
+	linkSettings
+}
 
+func (l *linkSettings) Source() string           { return l.source }
+func (l *linkSettings) Target() string           { return l.target }
+func (l *linkSettings) LinkName() string         { return l.linkName }
+func (l *linkSettings) IsSender() bool           { return l.isSender }
+func (l *linkSettings) IsReceiver() bool         { return !l.isSender }
+func (l *linkSettings) SndSettle() SndSettleMode { return l.sndSettle }
+func (l *linkSettings) RcvSettle() RcvSettleMode { return l.rcvSettle }
+
+func (l *link) Session() Session       { return l.session }
+func (l *link) Connection() Connection { return l.session.Connection() }
 func (l *link) engine() *proton.Engine { return l.session.connection.engine }
 func (l *link) handler() *handler      { return l.session.connection.handler }
 
-// Set up link fields and open the proton.Link
-func localLink(sn *session, isSender bool, setting ...LinkOption) (link, error) {
-	l := link{
-		session:  sn,
+// Open a link and return the linkSettings.
+func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSettings, error) {
+	l := linkSettings{
 		isSender: isSender,
 		capacity: 1,
 		prefetch: false,
+		session:  sn,
 	}
 	for _, set := range setting {
 		set(&l)
@@ -179,31 +172,29 @@ func localLink(sn *session, isSender bool, setting ...LinkOption) (link, error) 
 		l.eLink = l.session.eSession.Receiver(l.linkName)
 	}
 	if l.eLink.IsNil() {
-		l.err.Set(fmt.Errorf("cannot create link %s", l))
-		return l, l.err.Get()
+		return l, fmt.Errorf("cannot create link %s", l.eLink)
 	}
 	l.eLink.Source().SetAddress(l.source)
 	l.eLink.Target().SetAddress(l.target)
 	l.eLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
 	l.eLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))
 	l.eLink.Open()
-	l.endpoint = makeEndpoint(l.eLink.String())
 	return l, nil
 }
 
 type incomingLink struct {
 	incoming
-	link
+	linkSettings
+	eLink proton.Link
+	sn    *session
 }
 
 // Set up a link from an incoming proton.Link.
 func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
 	l := incomingLink{
 		incoming: makeIncoming(eLink),
-		link: link{
-			session:   sn,
+		linkSettings: linkSettings{
 			isSender:  eLink.IsSender(),
-			eLink:     eLink,
 			source:    eLink.RemoteSource().Address(),
 			target:    eLink.RemoteTarget().Address(),
 			linkName:  eLink.Name(),
@@ -211,7 +202,8 @@ func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
 			rcvSettle: RcvSettleMode(eLink.RemoteRcvSettleMode()),
 			capacity:  1,
 			prefetch:  false,
-			endpoint:  makeEndpoint(eLink.String()),
+			eLink:     eLink,
+			session:   sn,
 		},
 	}
 	return l
@@ -238,8 +230,4 @@ func (l *link) Close(err error) {
 			localClose(l.eLink, err)
 		}
 	})
-}
-
-func (l *link) open() {
-	l.eLink.Open()
 }
