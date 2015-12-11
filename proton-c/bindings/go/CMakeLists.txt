@@ -22,13 +22,14 @@ execute_process(COMMAND ${GO_EXE} version OUTPUT_VARIABLE go_ver OUTPUT_STRIP_TR
 message(STATUS "Found Go: ${GO_EXE} (${go_ver})")
 
 set(GO_BUILD_FLAGS "" CACHE STRING "Flags for 'go build'")
-set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
-if (go_out MATCHES "gccgo")
+if (go_ver MATCHES "gccgo")
   # TODO aconway 2015-10-08: import cycles with -race under gccgo, investigate.
+  set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}/proton-c")
 else()
+  set(GO_TEST_FLAGS "-v -race" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}/proton-c")
 endif()
 
@@ -48,52 +49,19 @@ set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run
 set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
 set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
 
-# Go build depends on the C headers
-file(GLOB cheaders ${CMAKE_SOURCE_DIR}/proton_c/include/proton/*.h)
-set(cdepends ${headers} qpid-proton)
-
 # Go tools insist on standard Go layout which puts compiled code in the source tree :(
 # Build output is all under git-ignored pkg or bin subdirectories, they are removed by make clean.
-foreach (pkg amqp proton electron)
 
-  set(package "qpid.apache.org/${pkg}")
+# The go build tools handle dependency checks and incremental builds better than
+# CMake so just run them every time, they do nothing if nothing needs to be
+# done.
+add_custom_target(go-build ALL
+  COMMAND ${GO_INSTALL} qpid.apache.org/...
+  WORKING_DIRECTORY $ENV{PWD})  # get error filenames relative to the directory you ran 'make' in
 
-  # Get the target library location
-  macro(go_list var template)
-    execute_process(COMMAND ${GO} list -f "${template}" ${package}
-      OUTPUT_VARIABLE ${var} OUTPUT_STRIP_TRAILING_WHITESPACE)
-  endmacro()
-  go_list(lib  "{{.Target}}")
-
-  # Get package sources
-  go_list(dir "{{.Dir}}")
-  macro(go_sources field)
-    go_list(${field} "{{range .${field}}}${dir}/{{.}};{{end}}")
-  endmacro()
-  go_sources(GoFiles)
-  go_sources(CgoFiles)
-  set(sources "${GoFiles}${CgoFiles}")
-
-  # Build the package library
-  add_custom_command(
-    OUTPUT ${lib} COMMAND ${GO_INSTALL} ${package}
-    DEPENDS ${sources} ${cdepends}
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-  set(target go-package-${pkg})
-  add_custom_target(${target} ALL DEPENDS ${lib})
-
-  # Package test
-  go_sources(TestGoFiles)
-  set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/${pkg}.test)
-  add_custom_command(
-    OUTPUT ${test_exe} COMMAND ${GO_TEST} -c -o ${test_exe} ${package}
-    DEPENDS ${sources} ${cdepends} qpid-proton
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-  add_custom_target(go-package-test-${pkg} ALL DEPENDS ${test_exe})
-  add_test(NAME go_test_${pkg} COMMAND ${test_exe} WORKING_DIRECTORY ${dir})
-
-  list(APPEND targets ${target})
-endforeach()
+add_test(
+  NAME go-test COMMAND ${GO_TEST} qpid.apache.org/...
+  WORKING_DIRECTORY $ENV{PWD})
 
 # Make available to examples/go/CMakeLists
 set(GO_TARGETS ${targets} CACHE INTERNAL "Go package library targets")
