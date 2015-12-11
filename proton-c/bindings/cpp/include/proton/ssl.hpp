@@ -71,18 +71,22 @@ class ssl_certificate {
     friend class server_domain;
 };
 
+
+class ssl_domain_impl;
+
 // Base class for SSL configuration
 class ssl_domain {
   public:
+    PN_CPP_EXTERN ssl_domain(const ssl_domain&);
+    PN_CPP_EXTERN ssl_domain& operator=(const ssl_domain&);
     ~ssl_domain();
 
   protected:
-    ssl_domain();
-    pn_ssl_domain_t *init(bool is_server);
+    ssl_domain(bool is_server);
     pn_ssl_domain_t *pn_domain();
 
   private:
-    pn_ssl_domain_t *impl_;
+    ssl_domain_impl *impl_;
 };
 
 /** SSL/TLS configuration for inbound connections created from a listener */
@@ -121,9 +125,6 @@ class client_domain : private ssl_domain {
     using ssl_domain::pn_domain;
     friend class connection_options;
 };
-
-
-
 
 }
 

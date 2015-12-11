@@ -38,6 +38,7 @@ bool using_OpenSSL();
 std::string platform_CA(const std::string &base_name);
 ssl_certificate platform_certificate(const std::string &base_name, const std::string &passwd);
 std::string cert_directory;
+std::string find_CN(const std::string &);
 
 
 struct server_handler : public proton::messaging_handler {
@@ -83,8 +84,9 @@ class hello_world_direct : public proton::messaging_handler {
     }
 
     void on_connection_opened(proton::event &e) {
-        std::cout << "Outgoing client connection connected via SSL.  Server certificate has subject " <<
-            e.connection().transport().ssl().remote_subject() << std::endl;
+        std::string subject = e.connection().transport().ssl().remote_subject();
+        std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
+            find_CN(subject) << std::endl;
     }
 
     void on_sendable(proton::event &e) {
@@ -158,4 +160,15 @@ std::string platform_CA(const std::string &base_name) {
         // Windows SChannel.  Use a pkcs#12 file with just the peer's public certificate information.
         return cert_directory + base_name + "-certificate.p12";
     }
+}
+
+std::string find_CN(const std::string &subject) {
+    // The subject string is returned with different whitespace and component ordering between platforms.
+    // Here we just return the common name by searching for "CN=...." in the subject, knowing that
+    // the test certificates do not contain any escaped characters.
+    size_t pos = subject.find("CN=");
+    if (pos == std::string::npos) throw std::runtime_error("No common name in certificate subject");
+    std::string cn = subject.substr(pos);
+    pos = cn.find(',');
+    return pos == std::string::npos ? cn : cn.substr(0, pos);
 }

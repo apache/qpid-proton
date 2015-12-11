@@ -26,19 +26,50 @@
 
 namespace proton {
 
-ssl_domain::ssl_domain() : impl_(0) {}
+class ssl_domain_impl {
+  public:
+    ssl_domain_impl(bool is_server) : refcount_(1), server_type_(is_server), pn_domain_(0) {}
+    void incref() { refcount_++; }
+    void decref() {
+        if (--refcount_ == 0) {
+            if (pn_domain_) pn_ssl_domain_free(pn_domain_);
+            delete this;
+        }
+    }
+    pn_ssl_domain_t *pn_domain();
+  private:
+    int refcount_;
+    bool server_type_;
+    pn_ssl_domain_t *pn_domain_;
+    ssl_domain_impl(const ssl_domain_impl&);
+    ssl_domain_impl& operator=(const ssl_domain_impl&);
+};
 
-// Create on demand
-pn_ssl_domain_t *ssl_domain::init(bool server_type) {
-    if (impl_) return impl_;
-    impl_ = pn_ssl_domain(server_type ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
-    if (!impl_) throw error(MSG("SSL/TLS unavailable"));
-    return impl_;
+pn_ssl_domain_t *ssl_domain_impl::pn_domain() {
+    if (pn_domain_) return pn_domain_;
+    // Lazily create in case never actually used or configured.
+    pn_domain_ = pn_ssl_domain(server_type_ ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
+    if (!pn_domain_) throw error(MSG("SSL/TLS unavailable"));
+    return pn_domain_;
 }
 
-pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_; }
+ssl_domain::ssl_domain(bool is_server) : impl_(new ssl_domain_impl(is_server)) {}
 
-ssl_domain::~ssl_domain() { if (impl_) pn_ssl_domain_free(impl_); }
+ssl_domain::ssl_domain(const ssl_domain &x) {
+    impl_ = x.impl_;
+    impl_->incref();
+}
+ssl_domain& ssl_domain::operator=(const ssl_domain&x) {
+    if (this != &x) {
+        impl_ = x.impl_;
+        impl_->incref();
+    }
+    return *this;
+}
+ssl_domain::~ssl_domain() { impl_->decref(); }
+
+pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_->pn_domain(); }
+
 
 namespace {
 
@@ -51,17 +82,17 @@ void set_cred(pn_ssl_domain_t *dom, const std::string &main, const std::string &
 }
 }
 
-server_domain::server_domain(ssl_certificate &cert) {
-    set_cred(init(true), cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
+server_domain::server_domain(ssl_certificate &cert) : ssl_domain(true) {
+    set_cred(pn_domain(), cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
 }
 
 server_domain::server_domain(
     ssl_certificate &cert,
     const std::string &trust_db,
     const std::string &advertise_db,
-    ssl::verify_mode_t mode)
+    ssl::verify_mode_t mode) : ssl_domain(true)
 {
-    pn_ssl_domain_t* dom = init(true);
+    pn_ssl_domain_t* dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     if (pn_ssl_domain_set_trusted_ca_db(dom, trust_db.c_str()))
         throw error(MSG("SSL trust store initialization failure for " << trust_db));
@@ -70,8 +101,9 @@ server_domain::server_domain(
         throw error(MSG("SSL server configuration failure requiring client certificates using " << db));
 }
 
-server_domain::server_domain() {}
+server_domain::server_domain() : ssl_domain(true) {}
 server_domain::~server_domain() {}
+
 
 namespace {
 void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify_mode_t mode) {
@@ -82,17 +114,17 @@ void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify
 }
 }
 
-client_domain::client_domain(const std::string &trust_db, ssl::verify_mode_t mode) {
-    client_setup(init(false), trust_db, mode);
+client_domain::client_domain(const std::string &trust_db, ssl::verify_mode_t mode) : ssl_domain(false) {
+    client_setup(pn_domain(), trust_db, mode);
 }
 
-client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, ssl::verify_mode_t mode) {
-    pn_ssl_domain_t *dom = init(false);
+client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, ssl::verify_mode_t mode) : ssl_domain(false) {
+    pn_ssl_domain_t *dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     client_setup(dom, trust_db, mode);
 }
 
-client_domain::client_domain() {}
+client_domain::client_domain() : ssl_domain(false) {}
 client_domain::~client_domain() {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)

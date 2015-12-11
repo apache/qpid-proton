@@ -25,6 +25,7 @@ from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 from copy import copy
 import platform
+from os.path import dirname as dirname
 
 def cmdline(*args):
     """Adjust executable name args[0] for windows and/or valgrind"""
@@ -81,6 +82,11 @@ def pick_addr():
     # TODO aconway 2015-07-14: need a safer way to pick ports.
     p =  randrange(10000, 20000)
     return "127.0.0.1:%s" % p
+
+def ssl_certs_dir():
+    """Absolute path to the test SSL certificates"""
+    pn_root = dirname(dirname(dirname(sys.argv[0])))
+    return os.path.join(pn_root, "examples/cpp/ssl_certs")
 
 class Broker(object):
     """Run the test broker"""
@@ -236,6 +242,25 @@ Tock...
             self.assertEqual(expect, execute("recurring_timer", "-t", ".05", "-k", ".01"))
         finally:
             os.environ = env    # Restore environment
+
+    def test_ssl(self):
+        # SSL without SASL
+        expect="""Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
+"Hello World!"
+"""
+        addr = "amqps://" + pick_addr() + "/examples"
+        ignore_first_line, ignore_nl, ssl_hw = execute("ssl", addr, ssl_certs_dir()).partition('\n')
+        self.assertEqual(expect, ssl_hw)
+
+    def test_ssl_client_cert(self):
+        # SSL with SASL EXTERNAL
+        expect="""Inbound client certificate identity CN=test_client
+Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
+"Hello World!"
+"""
+        addr = "amqps://" + pick_addr() + "/examples"
+        ignore_first_line, ignore_nl, ssl_hw = execute("ssl_client_cert", addr, ssl_certs_dir()).partition('\n')
+        self.assertEqual(expect, ssl_hw)
 
 if __name__ == "__main__":
     unittest.main()
