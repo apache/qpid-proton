@@ -73,9 +73,14 @@ func makeEndpoint(s string) endpoint { return endpoint{str: s, done: make(chan s
 // Returns the error stored on the endpoint, which may not be different to err if there was
 // already a n error
 func (e *endpoint) closed(err error) error {
-	e.err.Set(err)
-	e.err.Set(Closed)
-	close(e.done)
+	select {
+	case <-e.done:
+		// Already closed
+	default:
+		e.err.Set(err)
+		e.err.Set(Closed)
+		close(e.done)
+	}
 	return e.err.Get()
 }
 
