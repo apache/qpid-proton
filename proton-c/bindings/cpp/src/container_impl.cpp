@@ -185,11 +185,9 @@ receiver container_impl::open_receiver(const proton::url &url) {
     return rcv;
 }
 
-acceptor container_impl::listen(const proton::url& url) {
+acceptor container_impl::listen(const proton::url& url, const connection_options &user_opts) {
     connection_options opts = server_connection_options(); // Defaults
-#ifdef PN_COMING_SOON
     opts.override(user_opts);
-#endif
     handler *h = opts.handler();
     pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());
@@ -197,16 +195,11 @@ acceptor container_impl::listen(const proton::url& url) {
         throw error(MSG("accept fail: " <<
                         pn_error_text(pn_io_error(reactor_.pn_io())))
                         << "(" << url << ")");
-#ifdef PROTON_1054_FIXED
     // Do not use pn_acceptor_set_ssl_domain().  Manage the incoming connections ourselves for
     // more flexibility (i.e. ability to change the server cert for a long running listener).
     listener_context& lc(listener_context::get(acptr));
     lc.connection_options = opts;
     lc.ssl = url.scheme() == url::AMQPS;
-#else
-    if (url.scheme() == url::AMQPS)
-        pn_acceptor_set_ssl_domain(acptr, server_connection_options_.server_domain().pn_domain());
-#endif
     return acceptor(acptr);
 }
 
@@ -233,15 +226,9 @@ void container_impl::server_connection_options(const connection_options &opts) {
 }
 
 void container_impl::configure_server_connection(connection &c) {
-#ifdef PN_1054_FIXED
-    pn_acceptor_t *pnp = pn_connection_acceptor(pn_cast(&c));
+    pn_acceptor_t *pnp = pn_connection_acceptor(connection_options::pn_connection(c));
     listener_context &lc(listener_context::get(pnp));
-    class connection_options &opts(lc.connection_options);
-#else
-    // Can't distinguish between multiple listeners yet.  See PROTON-1054
-    class connection_options &opts(server_connection_options_);
-#endif
-    opts.apply(c);
+    lc.connection_options.apply(c);
 }
 
 }

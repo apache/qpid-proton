@@ -48,6 +48,7 @@ pn_class_t cpp_context_class = PN_CLASS(cpp_context);
 // Handles
 PN_HANDLE(CONNECTION_CONTEXT)
 PN_HANDLE(CONTAINER_CONTEXT)
+PN_HANDLE(LISTENER_CONTEXT)
 }
 
 context::~context() {}
@@ -86,6 +87,20 @@ void container_context::set(const reactor& r, container& c) {
 container &container_context::get(pn_reactor_t *pn_reactor) {
     container *ctx = get_context<container>(pn_reactor_attachments(pn_reactor), CONTAINER_CONTEXT);
     if (!ctx) throw error(MSG("Reactor has no C++ container context"));
+    return *ctx;
+}
+
+listener_context& listener_context::get(pn_acceptor_t* a) {
+    // A Proton C pn_acceptor_t is really just a selectable
+    pn_selectable_t *sel = reinterpret_cast<pn_selectable_t*>(a);
+
+    listener_context* ctx =
+        get_context<listener_context>(pn_selectable_attachments(sel), LISTENER_CONTEXT);
+    if (!ctx) {
+        ctx =  context::create<listener_context>();
+        set_context(pn_selectable_attachments(sel), LISTENER_CONTEXT, context::pn_class(), ctx);
+        pn_decref(ctx);
+    }
     return *ctx;
 }
 

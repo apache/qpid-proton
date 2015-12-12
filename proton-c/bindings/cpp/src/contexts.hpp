@@ -76,6 +76,14 @@ class container_context {
     static container& get(pn_reactor_t*);
 };
 
+class listener_context : public context {
+  public:
+    static listener_context& get(pn_acceptor_t* c);
+    listener_context() : ssl(false) {}
+    class connection_options connection_options;
+    bool ssl;
+};
+
 }
 
 #endif  /*!PROTON_CPP_CONTEXTS_H*/

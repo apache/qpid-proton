@@ -67,11 +67,7 @@ receiver container::open_receiver(const proton::url &url) {
 }
 
 acceptor container::listen(const proton::url &url, const connection_options &opts) {
-#ifdef PN_COMING_SOON
     return impl_->listen(url, opts);
-#else
-    return impl_->listen(url);
-#endif
 }
 
 task container::schedule(int delay, handler *h) { return impl_->schedule(delay, h); }

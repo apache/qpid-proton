@@ -62,7 +62,7 @@ class container : public event_loop {
     /** Locally open a connection @see connection::open  */
     PN_CPP_EXTERN connection connect(const proton::url&, const connection_options &opts = connection_options());
 
-    /** Open a connection to url and create a receiver with source=url.path() */
+    /** Listen on url host and port for incoming connections. */
     PN_CPP_EXTERN acceptor listen(const proton::url&, const connection_options &opts = connection_options());
 
     /** Run the event loop, return when all connections and acceptors are closed. */

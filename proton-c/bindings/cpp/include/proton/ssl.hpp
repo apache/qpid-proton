@@ -104,9 +104,9 @@ class server_domain : private ssl_domain {
     PN_CPP_EXTERN ~server_domain();
 
   private:
-    // Bring pn_domain into scope and allow container_impl to use it
+    // Bring pn_domain into scope and allow connection_options to use it
     using ssl_domain::pn_domain;
-    friend class container_impl;
+    friend class connection_options;
 };
 
 

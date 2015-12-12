@@ -73,7 +73,6 @@ class connection_options::impl {
         {
             // SSL
             if (outbound && outbound->address().scheme() == url::AMQPS) {
-                // Configure outbound ssl options. pni_acceptor_readable handles the inbound case.
                 const char* id = resume_id.value.empty() ? NULL : resume_id.value.c_str();
                 pn_ssl_t *ssl = pn_ssl(pnt);
                 if (pn_ssl_init(ssl, client_domain.value.pn_domain(), id))
@@ -81,16 +80,14 @@ class connection_options::impl {
                 if (peer_hostname.set && !peer_hostname.value.empty())
                     if (pn_ssl_set_peer_hostname(ssl, peer_hostname.value.c_str()))
                         throw error(MSG("error in SSL/TLS peer hostname \"") << peer_hostname.value << '"');
-#ifdef PROTON_1054_FIXED
             } else if (!outbound) {
-                pn_acceptor_t *pnp = pn_connection_acceptor(pn_cast(&c));
+                pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
                 listener_context &lc(listener_context::get(pnp));
                 if (lc.ssl) {
                     pn_ssl_t *ssl = pn_ssl(pnt);
                     if (pn_ssl_init(ssl, server_domain.value.pn_domain(), NULL))
                         throw error(MSG("server SSL/TLS initialization error"));
                 }
-#endif
             }
 
             // SASL

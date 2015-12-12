@@ -38,9 +38,13 @@ class acceptor : public object<pn_acceptor_t>
 
     /** close the acceptor */
     PN_CPP_EXTERN void close();
-#ifndef PROTON_1057_FIXED
-    friend class container_impl;
-#endif
+
+    /** Return the current set of connection options applied to inbound connectons by the acceptor.
+     *
+     * Note that changes made to the connection options only affect connections accepted after this
+     * call returns.
+     */
+    PN_CPP_EXTERN class connection_options &connection_options();
 };
 
 }

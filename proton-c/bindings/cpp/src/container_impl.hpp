@@ -52,7 +52,7 @@ class container_impl
     PN_CPP_EXTERN sender open_sender(const url&);
     PN_CPP_EXTERN receiver open_receiver(connection &connection, const std::string &addr, bool dynamic, handler *h);
     PN_CPP_EXTERN receiver open_receiver(const url&);
-    PN_CPP_EXTERN class acceptor listen(const url&);
+    PN_CPP_EXTERN class acceptor listen(const url&, const connection_options &);
     PN_CPP_EXTERN duration timeout();
     PN_CPP_EXTERN void timeout(duration timeout);
     void client_connection_options(const connection_options &);
