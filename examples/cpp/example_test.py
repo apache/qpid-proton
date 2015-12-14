@@ -33,7 +33,8 @@ def cmdline(*args):
     if platform.system() == "Windows":
         args[0] += ".exe"
     if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
-        args = [os.environ["VALGRIND"], "-q"] + args
+        args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet",
+                "--leak-check=full"] + args
     return args
 
 def background(*args):
