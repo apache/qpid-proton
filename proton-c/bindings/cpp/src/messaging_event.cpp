@@ -139,7 +139,7 @@ void messaging_event::dispatch(handler &h) {
 
         case messaging_event::TRANSPORT_CLOSED:       handler->on_transport_closed(*this); break;
         default:
-            throw error(MSG("Unkown messaging event type " << type_));
+            throw error(MSG("Unknown messaging event type " << type_));
             break;
         }
     } else {

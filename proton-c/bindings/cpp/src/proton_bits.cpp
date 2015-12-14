@@ -32,7 +32,7 @@ std::string error_str(int code) {
   case PN_OVERFLOW: return "overflow";
   case PN_UNDERFLOW: return "underflow";
   case PN_STATE_ERR: return "invalid state";
-  case PN_ARG_ERR: return "invalud argument";
+  case PN_ARG_ERR: return "invalid argument";
   case PN_TIMEOUT: return "timeout";
   case PN_INTR: return "interrupt";
   default: return "unknown error code";
