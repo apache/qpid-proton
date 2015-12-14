@@ -106,7 +106,7 @@ struct pn_messenger_t {
   int draining;      // # links in drain state
   int connection_error;
   int flags;
-  pn_snd_settle_mode_t snd_settle_mode;
+  int snd_settle_mode;          /* pn_snd_settle_mode_t or -1 for unset */
   pn_rcv_settle_mode_t rcv_settle_mode;
   pn_tracer_t tracer;
   pn_ssl_verify_mode_t ssl_peer_authentication_mode;
@@ -665,7 +665,7 @@ pn_messenger_t *pn_messenger(const char *name)
     m->domain = pn_string(NULL);
     m->connection_error = 0;
     m->flags = PN_FLAGS_ALLOW_INSECURE_MECHS; // TODO: Change this back to 0 for the Proton 0.11 release
-    m->snd_settle_mode = PN_SND_SETTLED;
+    m->snd_settle_mode = -1;    /* Default depends on sender/receiver */
     m->rcv_settle_mode = PN_RCV_FIRST;
     m->tracer = NULL;
     m->ssl_peer_authentication_mode = PN_SSL_VERIFY_PEER_NAME;
@@ -1748,11 +1748,17 @@ pn_link_t *pn_messenger_link(pn_messenger_t *messenger, const char *address,
 
   if ((sender && pn_messenger_get_outgoing_window(messenger)) ||
       (!sender && pn_messenger_get_incoming_window(messenger))) {
-    // use required settlement (defaults to sending pre-settled messages)
-    pn_link_set_snd_settle_mode(link, messenger->snd_settle_mode);
+    if (messenger->snd_settle_mode == -1) { /* Choose default based on sender/receiver */
+      /* For a sender use MIXED so the application can decide whether each
+         message is settled or not. For a receiver request UNSETTLED, since the
+         user set an incoming_window which means they want to decide settlement.
+      */
+      pn_link_set_snd_settle_mode(link, sender ? PN_SND_MIXED : PN_SND_UNSETTLED);
+    } else {                    /* Respect user setting */
+      pn_link_set_snd_settle_mode(link, (pn_snd_settle_mode_t)messenger->snd_settle_mode);
+    }
     pn_link_set_rcv_settle_mode(link, messenger->rcv_settle_mode);
   }
-  // XXX
   if (pn_streq(name, "#")) {
     if (pn_link_is_sender(link)) {
       pn_terminus_set_dynamic(pn_link_target(link), true);
