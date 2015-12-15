@@ -459,10 +459,29 @@ class ApplicationEventTest(Test):
         self._wait_for(lambda: self.goodbye_rcvd is not None)
 
 
+class AuthenticationTestHandler(MessagingHandler):
+    def __init__(self):
+        super(AuthenticationTestHandler, self).__init__()
+        port = free_tcp_port()
+        self.url = "localhost:%i" % port
+
+    def on_start(self, event):
+        self.listener = event.container.listen(self.url)
+
+    def on_connection_opened(self, event):
+        event.connection.close()
+
+    def on_connection_opening(self, event):
+        assert event.connection.transport.user == "user@proton"
+
+    def on_connection_closed(self, event):
+        event.connection.close()
+        self.listener.close()
+
 class ContainerTest(Test):
     """Test container subclass of reactor."""
 
-    def test_event_container(self):
+    def test_event_has_container_attribute(self):
         class TestHandler(MessagingHandler):
             def __init__(self):
                 super(TestHandler, self).__init__()
@@ -486,4 +505,24 @@ class ContainerTest(Test):
                 assert event.container == event.reactor
                 assert event.container == container
         container.connect(test_handler.url, handler=ConnectionHandler())
+        container.run()
+
+    def test_authentication_via_url(self):
+        test_handler = AuthenticationTestHandler()
+        container = Container(test_handler)
+        container.connect("%s:password@%s" % ("user%40proton", test_handler.url))
+        container.run()
+
+    def test_authentication_via_container_attributes(self):
+        test_handler = AuthenticationTestHandler()
+        container = Container(test_handler)
+        container.user = "user@proton"
+        container.password = "password"
+        container.connect(test_handler.url)
+        container.run()
+
+    def test_authentication_via_kwargs(self):
+        test_handler = AuthenticationTestHandler()
+        container = Container(test_handler)
+        container.connect(test_handler.url, user="user@proton", password="password")
         container.run()

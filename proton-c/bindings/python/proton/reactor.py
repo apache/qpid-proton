@@ -500,6 +500,8 @@ class Connector(Handler):
         self.allow_insecure_mechs = True
         self.allowed_mechs = None
         self.sasl_enabled = True
+        self.user = None
+        self.password = None
 
     def _connect(self, connection):
         url = self.address.next()
@@ -513,8 +515,12 @@ class Connector(Handler):
             sasl.allow_insecure_mechs = self.allow_insecure_mechs
             if url.username:
                 connection.user = url.username
+            elif self.user:
+                connection.user = self.user
             if url.password:
                 connection.password = url.password
+            elif self.password:
+                connection.password = self.password
             if self.allowed_mechs:
                 sasl.allowed_mechs(self.allowed_mechs)
         transport.bind(connection)
@@ -625,6 +631,8 @@ class Container(Reactor):
             self.allow_insecure_mechs = True
             self.allowed_mechs = None
             self.sasl_enabled = True
+            self.user = None
+            self.password = None
             Wrapper.__setattr__(self, 'subclass', self.__class__)
 
     def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None, **kwargs):
@@ -668,6 +676,8 @@ class Container(Reactor):
         connector.allow_insecure_mechs = kwargs.get('allow_insecure_mechs', self.allow_insecure_mechs)
         connector.allowed_mechs = kwargs.get('allowed_mechs', self.allowed_mechs)
         connector.sasl_enabled = kwargs.get('sasl_enabled', self.sasl_enabled)
+        connector.user = kwargs.get('user', self.user)
+        connector.password = kwargs.get('password', self.password)
         conn._overrides = connector
         if url: connector.address = Urls([url])
         elif urls: connector.address = Urls(urls)
