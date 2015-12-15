@@ -48,7 +48,7 @@ class TransportReceiver extends TransportLink<ReceiverImpl>
         if(delta > 0)
         {
             getLink().addCredit(-delta);
-            setLinkCredit(getRemoteLinkCredit());
+            addCredit(-delta);
             setDeliveryCount(getRemoteDeliveryCount());
             getLink().setDrained(getLink().getDrained() + delta);
         }
