@@ -42,31 +42,23 @@ class messaging_adapter : public messaging_handler
     PN_CPP_EXTERN virtual void on_link_flow(event &e);
     PN_CPP_EXTERN virtual void on_delivery(event &e);
     PN_CPP_EXTERN virtual void on_unhandled(event &e);
-    PN_CPP_EXTERN virtual void on_connection_closed(event &e);
-    PN_CPP_EXTERN virtual void on_connection_closing(event &e);
-    PN_CPP_EXTERN virtual void on_connection_error(event &e);
-    PN_CPP_EXTERN virtual void on_connection_local_open(event &e);
     PN_CPP_EXTERN virtual void on_connection_remote_open(event &e);
     PN_CPP_EXTERN virtual void on_connection_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_connection_opened(event &e);
-    PN_CPP_EXTERN virtual void on_connection_opening(event &e);
-    PN_CPP_EXTERN virtual void on_session_closed(event &e);
-    PN_CPP_EXTERN virtual void on_session_closing(event &e);
-    PN_CPP_EXTERN virtual void on_session_error(event &e);
-    PN_CPP_EXTERN virtual void on_session_local_open(event &e);
     PN_CPP_EXTERN virtual void on_session_remote_open(event &e);
     PN_CPP_EXTERN virtual void on_session_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_session_opened(event &e);
-    PN_CPP_EXTERN virtual void on_session_opening(event &e);
-    PN_CPP_EXTERN virtual void on_link_closed(event &e);
-    PN_CPP_EXTERN virtual void on_link_closing(event &e);
-    PN_CPP_EXTERN virtual void on_link_error(event &e);
-    PN_CPP_EXTERN virtual void on_link_local_open(event &e);
     PN_CPP_EXTERN virtual void on_link_remote_open(event &e);
     PN_CPP_EXTERN virtual void on_link_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_link_opened(event &e);
-    PN_CPP_EXTERN virtual void on_link_opening(event &e);
     PN_CPP_EXTERN virtual void on_transport_tail_closed(event &e);
+
+    PN_CPP_EXTERN virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(event &e);
+    PN_CPP_EXTERN virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(event &e);
+    PN_CPP_EXTERN virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_link_error(event &e);
+    PN_CPP_EXTERN virtual void on_link_open(event &e);
   private:
     messaging_handler &delegate_;  // The handler for generated messaging_event's
 };

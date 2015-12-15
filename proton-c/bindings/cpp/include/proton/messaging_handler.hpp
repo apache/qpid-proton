@@ -51,34 +51,33 @@ class messaging_handler : public proton_handler
 
     ///@name Over-ride these member functions to handle events
     ///@{
-    PN_CPP_EXTERN virtual void on_accepted(event &e);
-    PN_CPP_EXTERN virtual void on_connection_closed(event &e);
-    PN_CPP_EXTERN virtual void on_connection_closing(event &e);
-    PN_CPP_EXTERN virtual void on_connection_error(event &e);
-    PN_CPP_EXTERN virtual void on_connection_opening(event &e);
-    PN_CPP_EXTERN virtual void on_connection_opened(event &e);
-    PN_CPP_EXTERN virtual void on_disconnected(event &e);
-    PN_CPP_EXTERN virtual void on_link_closed(event &e);
-    PN_CPP_EXTERN virtual void on_link_closing(event &e);
-    PN_CPP_EXTERN virtual void on_link_error(event &e);
-    PN_CPP_EXTERN virtual void on_link_opened(event &e);
-    PN_CPP_EXTERN virtual void on_link_opening(event &e);
-    PN_CPP_EXTERN virtual void on_message(event &e);
-    PN_CPP_EXTERN virtual void on_rejected(event &e);
-    PN_CPP_EXTERN virtual void on_released(event &e);
-    PN_CPP_EXTERN virtual void on_sendable(event &e);
-    PN_CPP_EXTERN virtual void on_session_closed(event &e);
-    PN_CPP_EXTERN virtual void on_session_closing(event &e);
-    PN_CPP_EXTERN virtual void on_session_error(event &e);
-    PN_CPP_EXTERN virtual void on_session_opened(event &e);
-    PN_CPP_EXTERN virtual void on_session_opening(event &e);
-    PN_CPP_EXTERN virtual void on_settled(event &e);
     PN_CPP_EXTERN virtual void on_start(event &e);
+    PN_CPP_EXTERN virtual void on_message(event &e);
+    PN_CPP_EXTERN virtual void on_sendable(event &e);
+    PN_CPP_EXTERN virtual void on_disconnect(event &e);
+
+    PN_CPP_EXTERN virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_link_open(event &e);
+    PN_CPP_EXTERN virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_link_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_delivery_accept(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_reject(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_release(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
+
+    PN_CPP_EXTERN virtual void on_transaction_declare(event &e);
+    PN_CPP_EXTERN virtual void on_transaction_commit(event &e);
+    PN_CPP_EXTERN virtual void on_transaction_abort(event &e);
+
     PN_CPP_EXTERN virtual void on_timer(event &e);
-    PN_CPP_EXTERN virtual void on_transaction_aborted(event &e);
-    PN_CPP_EXTERN virtual void on_transaction_committed(event &e);
-    PN_CPP_EXTERN virtual void on_transaction_declared(event &e);
-    PN_CPP_EXTERN virtual void on_transport_closed(event &e);
     ///@}
 
   private:

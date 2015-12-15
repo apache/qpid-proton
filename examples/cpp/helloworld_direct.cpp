@@ -48,11 +48,11 @@ class hello_world_direct : public proton::messaging_handler {
         std::cout << e.message().body() << std::endl;
     }
 
-    void on_accepted(proton::event &e) {
+    void on_delivery_accept(proton::event &e) {
         e.connection().close();
     }
 
-    void on_connection_closed(proton::event &e) {
+    void on_connection_close(proton::event &e) {
         acceptor.close();
     }
 };

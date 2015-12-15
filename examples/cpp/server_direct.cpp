@@ -61,7 +61,7 @@ class server : public proton::messaging_handler {
         return addr.str();
     }
 
-    void on_link_opening(proton::event& e) {
+    void on_link_open(proton::event& e) {
         proton::link link = e.link();
         if (!!link.sender() && link.remote_source().dynamic()) {
             link.source().address(generate_address());

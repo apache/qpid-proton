@@ -50,7 +50,7 @@ class client : public proton::messaging_handler {
         sender.send(req);
     }
 
-    void on_link_opened(proton::event &e) {
+    void on_link_open(proton::event &e) {
         if (e.link() == receiver)
             send_request();
     }

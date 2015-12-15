@@ -81,33 +81,26 @@ void messaging_handler::create_helpers() {
 
 messaging_handler::~messaging_handler(){}
 
-void messaging_handler::on_accepted(event &e) { on_unhandled(e); }
-void messaging_handler::on_connection_closed(event &e) { on_unhandled(e); }
-void messaging_handler::on_connection_closing(event &e) { on_unhandled(e); }
+void messaging_handler::on_delivery_accept(event &e) { on_unhandled(e); }
+void messaging_handler::on_connection_close(event &e) { on_unhandled(e); }
 void messaging_handler::on_connection_error(event &e) { on_unhandled(e); }
-void messaging_handler::on_connection_opened(event &e) { on_unhandled(e); }
-void messaging_handler::on_connection_opening(event &e) { on_unhandled(e); }
-void messaging_handler::on_disconnected(event &e) { on_unhandled(e); }
-void messaging_handler::on_link_closed(event &e) { on_unhandled(e); }
-void messaging_handler::on_link_closing(event &e) { on_unhandled(e); }
+void messaging_handler::on_connection_open(event &e) { on_unhandled(e); }
+void messaging_handler::on_disconnect(event &e) { on_unhandled(e); }
+void messaging_handler::on_link_close(event &e) { on_unhandled(e); }
 void messaging_handler::on_link_error(event &e) { on_unhandled(e); }
-void messaging_handler::on_link_opened(event &e) { on_unhandled(e); }
-void messaging_handler::on_link_opening(event &e) { on_unhandled(e); }
+void messaging_handler::on_link_open(event &e) { on_unhandled(e); }
 void messaging_handler::on_message(event &e) { on_unhandled(e); }
-void messaging_handler::on_rejected(event &e) { on_unhandled(e); }
-void messaging_handler::on_released(event &e) { on_unhandled(e); }
+void messaging_handler::on_delivery_reject(event &e) { on_unhandled(e); }
+void messaging_handler::on_delivery_release(event &e) { on_unhandled(e); }
 void messaging_handler::on_sendable(event &e) { on_unhandled(e); }
-void messaging_handler::on_session_closed(event &e) { on_unhandled(e); }
-void messaging_handler::on_session_closing(event &e) { on_unhandled(e); }
+void messaging_handler::on_session_close(event &e) { on_unhandled(e); }
 void messaging_handler::on_session_error(event &e) { on_unhandled(e); }
-void messaging_handler::on_session_opened(event &e) { on_unhandled(e); }
-void messaging_handler::on_session_opening(event &e) { on_unhandled(e); }
-void messaging_handler::on_settled(event &e) { on_unhandled(e); }
+void messaging_handler::on_session_open(event &e) { on_unhandled(e); }
+void messaging_handler::on_delivery_settle(event &e) { on_unhandled(e); }
 void messaging_handler::on_start(event &e) { on_unhandled(e); }
 void messaging_handler::on_timer(event &e) { on_unhandled(e); }
-void messaging_handler::on_transaction_aborted(event &e) { on_unhandled(e); }
-void messaging_handler::on_transaction_committed(event &e) { on_unhandled(e); }
-void messaging_handler::on_transaction_declared(event &e) { on_unhandled(e); }
-void messaging_handler::on_transport_closed(event &e) { on_unhandled(e); }
+void messaging_handler::on_transaction_abort(event &e) { on_unhandled(e); }
+void messaging_handler::on_transaction_commit(event &e) { on_unhandled(e); }
+void messaging_handler::on_transaction_declare(event &e) { on_unhandled(e); }
 
 }

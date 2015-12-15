@@ -44,7 +44,7 @@ std::string find_CN(const std::string &);
 struct server_handler : public proton::messaging_handler {
     proton::acceptor acceptor;
 
-    void on_connection_opened(proton::event &e) {
+    void on_connection_open(proton::event &e) {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             e.connection().transport().ssl().protocol() << std::endl;
         acceptor.close();
@@ -83,7 +83,7 @@ class hello_world_direct : public proton::messaging_handler {
         e.container().open_sender(url);
     }
 
-    void on_connection_opened(proton::event &e) {
+    void on_connection_open(proton::event &e) {
         std::string subject = e.connection().transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
@@ -96,7 +96,7 @@ class hello_world_direct : public proton::messaging_handler {
         e.sender().close();
     }
 
-    void on_accepted(proton::event &e) {
+    void on_delivery_accept(proton::event &e) {
         // All done.
         e.connection().close();
     }

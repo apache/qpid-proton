@@ -29,7 +29,7 @@
 using proton::connection_options;
 
 class handler_2 : public proton::messaging_handler {
-    void on_connection_opened(proton::event &e) {
+    void on_connection_open(proton::event &e) {
         std::cout << "connection events going to handler_2" << std::endl;
         std::cout << "connection max_frame_size: " << e.connection().transport().max_frame_size() <<
             ", idle timeout: " << e.connection().transport().idle_timeout() << std::endl;
@@ -51,7 +51,7 @@ class main_handler : public proton::messaging_handler {
         e.container().connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
     }
 
-    void on_connection_opened(proton::event &e) {
+    void on_connection_open(proton::event &e) {
         std::cout << "unexpected connection event on main handler" << std::endl;
         e.connection().close();
     }

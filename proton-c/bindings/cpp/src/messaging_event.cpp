@@ -111,33 +111,34 @@ void messaging_event::dispatch(handler &h) {
     if (handler) {
         switch(type_) {
 
-        case messaging_event::START:       handler->on_start(*this); break;
-        case messaging_event::SENDABLE:    handler->on_sendable(*this); break;
-        case messaging_event::MESSAGE:     handler->on_message(*this); break;
-        case messaging_event::ACCEPTED:    handler->on_accepted(*this); break;
-        case messaging_event::REJECTED:    handler->on_rejected(*this); break;
-        case messaging_event::RELEASED:    handler->on_released(*this); break;
-        case messaging_event::SETTLED:     handler->on_settled(*this); break;
+        case messaging_event::START:            handler->on_start(*this); break;
+        case messaging_event::SENDABLE:         handler->on_sendable(*this); break;
+        case messaging_event::MESSAGE:          handler->on_message(*this); break;
+        case messaging_event::DISCONNECT:       handler->on_disconnect(*this); break;
 
-        case messaging_event::CONNECTION_CLOSING:     handler->on_connection_closing(*this); break;
-        case messaging_event::CONNECTION_CLOSED:      handler->on_connection_closed(*this); break;
-        case messaging_event::CONNECTION_ERROR:       handler->on_connection_error(*this); break;
-        case messaging_event::CONNECTION_OPENING:     handler->on_connection_opening(*this); break;
-        case messaging_event::CONNECTION_OPENED:      handler->on_connection_opened(*this); break;
+        case messaging_event::CONNECTION_CLOSE: handler->on_connection_close(*this); break;
+        case messaging_event::CONNECTION_ERROR: handler->on_connection_error(*this); break;
+        case messaging_event::CONNECTION_OPEN:  handler->on_connection_open(*this); break;
 
-        case messaging_event::LINK_CLOSED:            handler->on_link_closed(*this); break;
-        case messaging_event::LINK_CLOSING:           handler->on_link_closing(*this); break;
-        case messaging_event::LINK_ERROR:             handler->on_link_error(*this); break;
-        case messaging_event::LINK_OPENING:           handler->on_link_opening(*this); break;
-        case messaging_event::LINK_OPENED:            handler->on_link_opened(*this); break;
+        case messaging_event::SESSION_CLOSE:    handler->on_session_close(*this); break;
+        case messaging_event::SESSION_ERROR:    handler->on_session_error(*this); break;
+        case messaging_event::SESSION_OPEN:     handler->on_session_open(*this); break;
 
-        case messaging_event::SESSION_CLOSED:         handler->on_session_closed(*this); break;
-        case messaging_event::SESSION_CLOSING:        handler->on_session_closing(*this); break;
-        case messaging_event::SESSION_ERROR:          handler->on_session_error(*this); break;
-        case messaging_event::SESSION_OPENING:        handler->on_session_opening(*this); break;
-        case messaging_event::SESSION_OPENED:         handler->on_session_opened(*this); break;
+        case messaging_event::LINK_CLOSE:       handler->on_link_close(*this); break;
+        case messaging_event::LINK_ERROR:       handler->on_link_error(*this); break;
+        case messaging_event::LINK_OPEN:        handler->on_link_open(*this); break;
 
-        case messaging_event::TRANSPORT_CLOSED:       handler->on_transport_closed(*this); break;
+        case messaging_event::DELIVERY_ACCEPT:  handler->on_delivery_accept(*this); break;
+        case messaging_event::DELIVERY_REJECT:  handler->on_delivery_reject(*this); break;
+        case messaging_event::DELIVERY_RELEASE: handler->on_delivery_release(*this); break;
+        case messaging_event::DELIVERY_SETTLE:  handler->on_delivery_settle(*this); break;
+
+        case messaging_event::TRANSACTION_DECLARE: handler->on_transaction_declare(*this); break;
+        case messaging_event::TRANSACTION_COMMIT:  handler->on_transaction_commit(*this); break;
+        case messaging_event::TRANSACTION_ABORT:   handler->on_transaction_abort(*this); break;
+
+        case messaging_event::TIMER:            handler->on_timer(*this); break;
+
         default:
             throw error(MSG("Unknown messaging event type " << type_));
             break;
@@ -155,36 +156,27 @@ void messaging_event::dispatch(handler &h) {
 std::string messaging_event::name() const {
     switch (type()) {
       case PROTON: return pn_event_type_name(pn_event_type_t(proton_event::type()));
-      case ACCEPTED: return "ACCEPTED";
-      case COMMIT: return "COMMIT";
-      case CONNECTION_CLOSED: return "CONNECTION_CLOSED";
-      case CONNECTION_CLOSING: return "CONNECTION_CLOSING";
+      case START:            return "START";
+      case MESSAGE:          return "MESSAGE";
+      case SENDABLE:         return "SENDABLE";
+      case DISCONNECT:       return "DISCONNECT";
+      case DELIVERY_ACCEPT:  return "DELIVERY_ACCEPT";
+      case DELIVERY_REJECT:  return "DELIVERY_REJECT";
+      case DELIVERY_RELEASE: return "DELIVERY_RELEASE";
+      case DELIVERY_SETTLE:  return "DELIVERY_SETTLE";
+      case CONNECTION_CLOSE: return "CONNECTION_CLOSE";
       case CONNECTION_ERROR: return "CONNECTION_ERROR";
-      case CONNECTION_OPENED: return "CONNECTION_OPENED";
-      case CONNECTION_OPENING: return "CONNECTION_OPENING";
-      case DISCONNECTED: return "DISCONNECTED";
-      case LINK_CLOSED: return "LINK_CLOSED";
-      case LINK_CLOSING: return "LINK_CLOSING";
-      case LINK_OPENED: return "LINK_OPENED";
-      case LINK_OPENING: return "LINK_OPENING";
-      case LINK_ERROR: return "LINK_ERROR";
-      case MESSAGE: return "MESSAGE";
-      case QUIT: return "QUIT";
-      case REJECTED: return "REJECTED";
-      case RELEASED: return "RELEASED";
-      case SENDABLE: return "SENDABLE";
-      case SESSION_CLOSED: return "SESSION_CLOSED";
-      case SESSION_CLOSING: return "SESSION_CLOSING";
-      case SESSION_OPENED: return "SESSION_OPENED";
-      case SESSION_OPENING: return "SESSION_OPENING";
-      case SESSION_ERROR: return "SESSION_ERROR";
-      case SETTLED: return "SETTLED";
-      case START: return "START";
-      case TIMER: return "TIMER";
-      case TRANSACTION_ABORTED: return "TRANSACTION_ABORTED";
-      case TRANSACTION_COMMITTED: return "TRANSACTION_COMMITTED";
-      case TRANSACTION_DECLARED: return "TRANSACTION_DECLARED";
-      case TRANSPORT_CLOSED: return "TRANSPORT_CLOSED";
+      case CONNECTION_OPEN:  return "CONNECTION_OPEN";
+      case LINK_CLOSE:       return "LINK_CLOSE";
+      case LINK_OPEN:        return "LINK_OPEN";
+      case LINK_ERROR:       return "LINK_ERROR";
+      case SESSION_CLOSE:    return "SESSION_CLOSE";
+      case SESSION_OPEN:     return "SESSION_OPEN";
+      case SESSION_ERROR:    return "SESSION_ERROR";
+      case TRANSACTION_ABORT:   return "TRANSACTION_ABORT";
+      case TRANSACTION_COMMIT:  return "TRANSACTION_COMMIT";
+      case TRANSACTION_DECLARE: return "TRANSACTION_DECLARE";
+      case TIMER:            return "TIMER";
       default: return "UNKNOWN";
     }
 }

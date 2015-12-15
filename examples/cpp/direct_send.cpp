@@ -59,7 +59,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_accepted(proton::event &e) {
+    void on_delivery_accept(proton::event &e) {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
@@ -68,7 +68,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_disconnected(proton::event &e) {
+    void on_disconnect(proton::event &e) {
         sent = confirmed;
     }
 };
