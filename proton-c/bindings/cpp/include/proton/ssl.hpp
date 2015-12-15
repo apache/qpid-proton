@@ -84,6 +84,7 @@ class ssl_domain {
   protected:
     ssl_domain(bool is_server);
     pn_ssl_domain_t *pn_domain();
+    void swap(ssl_domain &);
 
   private:
     ssl_domain_impl *impl_;

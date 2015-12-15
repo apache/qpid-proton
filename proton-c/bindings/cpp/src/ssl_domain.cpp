@@ -60,13 +60,12 @@ ssl_domain::ssl_domain(const ssl_domain &x) {
     impl_->incref();
 }
 ssl_domain& ssl_domain::operator=(const ssl_domain&x) {
-    if (this != &x) {
-        impl_ = x.impl_;
-        impl_->incref();
-    }
+    ssl_domain(x).swap(*this);
     return *this;
 }
 ssl_domain::~ssl_domain() { impl_->decref(); }
+
+void ssl_domain::swap(ssl_domain &x) { std::swap(impl_, x.impl_); }
 
 pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_->pn_domain(); }
 
