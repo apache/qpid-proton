@@ -3805,6 +3805,13 @@ class Event(Wrapper, EventBase):
     """Returns the reactor associated with the event."""
     return wrappers.get("pn_reactor", _none)(pn_event_reactor(self._impl))
 
+  def __getattr__(self, name):
+    r = self.reactor
+    if r and hasattr(r, 'subclass') and r.subclass.__name__.lower() == name:
+      return r
+    else:
+      return super(Event, self).__getattr__(name)
+
   @property
   def transport(self):
     """Returns the transport associated with the event, or null if none is associated with it."""

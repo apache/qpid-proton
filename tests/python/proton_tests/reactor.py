@@ -19,9 +19,9 @@ from __future__ import absolute_import
 #
 
 import time
-from .common import Test, SkipTest, TestServer
-from proton.reactor import Reactor, ApplicationEvent, EventInjector
-from proton.handlers import CHandshaker
+from .common import Test, SkipTest, TestServer, free_tcp_port
+from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
+from proton.handlers import CHandshaker, MessagingHandler
 from proton import Handler
 
 class Barf(Exception):
@@ -457,3 +457,33 @@ class ApplicationEventTest(Test):
         self._wait_for(lambda: self.hello_rcvd is not None)
         self.event_injector.trigger(self.goodbye_event)
         self._wait_for(lambda: self.goodbye_rcvd is not None)
+
+
+class ContainerTest(Test):
+    """Test container subclass of reactor."""
+
+    def test_event_container(self):
+        class TestHandler(MessagingHandler):
+            def __init__(self):
+                super(TestHandler, self).__init__()
+                port = free_tcp_port()
+                self.url = "localhost:%i" % port
+
+            def on_start(self, event):
+                self.listener = event.container.listen(self.url)
+
+            def on_connection_closing(self, event):
+                event.connection.close()
+                self.listener.close()
+        test_handler = TestHandler()
+        container = Container(test_handler)
+        class ConnectionHandler(MessagingHandler):
+            def __init__(self):
+                super(ConnectionHandler, self).__init__()
+
+            def on_connection_opened(self, event):
+                event.connection.close()
+                assert event.container == event.reactor
+                assert event.container == container
+        container.connect(test_handler.url, handler=ConnectionHandler())
+        container.run()
