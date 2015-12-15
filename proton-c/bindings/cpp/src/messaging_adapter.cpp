@@ -328,29 +328,14 @@ void messaging_adapter::on_link_opening(event &e) {
 
 void messaging_adapter::on_connection_error(event &e) {
     delegate_.on_connection_error(e);
-    proton_event *pe = dynamic_cast<proton_event*>(&e);
-    if (pe) {
-        pn_connection_t *connection = pn_event_connection(pe->pn_event());
-        pn_connection_close(connection);
-    }
 }
 
 void messaging_adapter::on_session_error(event &e) {
     delegate_.on_session_error(e);
-    proton_event *pe = dynamic_cast<proton_event*>(&e);
-    if (pe) {
-        pn_session_t *session = pn_event_session(pe->pn_event());
-        pn_session_close(session);
-    }
 }
 
 void messaging_adapter::on_link_error(event &e) {
     delegate_.on_link_error(e);
-    proton_event *pe = dynamic_cast<proton_event*>(&e);
-    if (pe) {
-        pn_link_t *link = pn_event_link(pe->pn_event());
-        pn_link_close(link);
-    }
 }
 
 void messaging_adapter::on_connection_closed(event &e) {
