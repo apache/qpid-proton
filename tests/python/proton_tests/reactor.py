@@ -19,7 +19,7 @@ from __future__ import absolute_import
 #
 
 import time
-from .common import Test, SkipTest, TestServer, free_tcp_port
+from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
 from proton.handlers import CHandshaker, MessagingHandler
 from proton import Handler
@@ -508,12 +508,14 @@ class ContainerTest(Test):
         container.run()
 
     def test_authentication_via_url(self):
+        ensureCanTestExtendedSASL()
         test_handler = AuthenticationTestHandler()
         container = Container(test_handler)
         container.connect("%s:password@%s" % ("user%40proton", test_handler.url))
         container.run()
 
     def test_authentication_via_container_attributes(self):
+        ensureCanTestExtendedSASL()
         test_handler = AuthenticationTestHandler()
         container = Container(test_handler)
         container.user = "user@proton"
@@ -522,6 +524,7 @@ class ContainerTest(Test):
         container.run()
 
     def test_authentication_via_kwargs(self):
+        ensureCanTestExtendedSASL()
         test_handler = AuthenticationTestHandler()
         container = Container(test_handler)
         container.connect(test_handler.url, user="user@proton", password="password")
