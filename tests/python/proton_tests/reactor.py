@@ -464,6 +464,7 @@ class AuthenticationTestHandler(MessagingHandler):
         super(AuthenticationTestHandler, self).__init__()
         port = free_tcp_port()
         self.url = "localhost:%i" % port
+        self.verified = False
 
     def on_start(self, event):
         self.listener = event.container.listen(self.url)
@@ -473,8 +474,13 @@ class AuthenticationTestHandler(MessagingHandler):
 
     def on_connection_opening(self, event):
         assert event.connection.transport.user == "user@proton"
+        self.verified = True
 
     def on_connection_closed(self, event):
+        event.connection.close()
+        self.listener.close()
+
+    def on_connection_error(self, event):
         event.connection.close()
         self.listener.close()
 
@@ -511,8 +517,9 @@ class ContainerTest(Test):
         ensureCanTestExtendedSASL()
         test_handler = AuthenticationTestHandler()
         container = Container(test_handler)
-        container.connect("%s:password@%s" % ("user%40proton", test_handler.url))
+        container.connect("%s:password@%s" % ("user%40proton", test_handler.url), reconnect=False)
         container.run()
+        assert test_handler.verified
 
     def test_authentication_via_container_attributes(self):
         ensureCanTestExtendedSASL()
@@ -520,12 +527,14 @@ class ContainerTest(Test):
         container = Container(test_handler)
         container.user = "user@proton"
         container.password = "password"
-        container.connect(test_handler.url)
+        container.connect(test_handler.url, reconnect=False)
         container.run()
+        assert test_handler.verified
 
     def test_authentication_via_kwargs(self):
         ensureCanTestExtendedSASL()
         test_handler = AuthenticationTestHandler()
         container = Container(test_handler)
-        container.connect(test_handler.url, user="user@proton", password="password")
+        container.connect(test_handler.url, user="user@proton", password="password", reconnect=False)
         container.run()
+        assert test_handler.verified
