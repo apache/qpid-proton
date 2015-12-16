@@ -24,6 +24,7 @@
  */
 
 #include "proton/export.hpp"
+#include "proton/error.hpp"
 #include "proton/comparable.hpp"
 
 #include <proton/codec.h>
@@ -39,7 +40,7 @@ namespace proton {
 
 /** type_id identifies an AMQP type. */
 enum type_id {
-    NULL_=PN_NULL,              ///< The null type, contains no data.
+    NULL_TYPE=PN_NULL,          ///< The null type, contains no data.
     BOOLEAN=PN_BOOL,            ///< Boolean true or false.
     UBYTE=PN_UBYTE,             ///< Unsigned 8 bit integer.
     BYTE=PN_BYTE,               ///< Signed 8 bit integer.
@@ -64,6 +65,13 @@ enum type_id {
     ARRAY=PN_ARRAY,             ///< A sequence of values of the same type.
     LIST=PN_LIST,               ///< A sequence of values, may be of mixed types.
     MAP=PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
+};
+
+/// Raised when there is a type mismatch, with the expected and actual type ID.
+struct type_mismatch : public error {
+    PN_CPP_EXTERN explicit type_mismatch(type_id want, type_id got, const std::string& =std::string()) throw();
+    type_id want; ///< Expected type_id
+    type_id got;  ///< Actual type_id
 };
 
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
@@ -144,10 +152,13 @@ typedef opaque<pn_uuid_t> amqp_uuid;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_uuid&);
 /// AMQP 32-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal32_t> amqp_decimal32;
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal32&);
 /// AMQP 64-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal64_t> amqp_decimal64;
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal64&);
 /// AMQP 128-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal128_t> amqp_decimal128;
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal128&);
 
 /// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
 struct amqp_timestamp : public comparable<amqp_timestamp> {
@@ -157,6 +168,7 @@ struct amqp_timestamp : public comparable<amqp_timestamp> {
     bool operator==(const amqp_timestamp& x) { return milliseconds == x.milliseconds; }
     bool operator<(const amqp_timestamp& x) { return milliseconds < x.milliseconds; }
 };
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_timestamp&);
 
 ///@cond INTERNAL
 template<class T, type_id A> struct cref {
@@ -180,8 +192,20 @@ template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(
 
 // TODO aconway 2015-06-16: described types.
 
-/** Return the name of a type. */
+/// Name of the AMQP type
 PN_CPP_EXTERN std::string type_name(type_id);
+
+///@name Attributes of a type_id value, returns same result as the
+/// corresponding std::type_traits tests for the corresponding C++ types.
+///@{
+PN_CPP_EXTERN bool type_id_atom(type_id);
+PN_CPP_EXTERN bool type_id_integral(type_id);
+PN_CPP_EXTERN bool type_id_signed(type_id); ///< CHAR and BOOL are not signed.
+PN_CPP_EXTERN bool type_id_floating_point(type_id);
+PN_CPP_EXTERN bool type_id_decimal(type_id);
+PN_CPP_EXTERN bool type_id_string_like(type_id);   ///< STRING, SYMBOL, BINARY
+PN_CPP_EXTERN bool type_id_container(type_id);
+///@}
 
 /** Print the name of a type. */
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
@@ -192,7 +216,7 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
  * for examples of use.
  */
 struct start {
-    PN_CPP_EXTERN start(type_id type=NULL_, type_id element=NULL_, bool described=false, size_t size=0);
+    PN_CPP_EXTERN start(type_id type=NULL_TYPE, type_id element=NULL_TYPE, bool described=false, size_t size=0);
     type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
     type_id element;         ///< the element type for array only.
     bool is_described;       ///< true if first value is a descriptor.

@@ -113,9 +113,9 @@ int main(int argc, char** argv) {
     if (argc != 2) FAIL("Usage: " << argv[0] << " tests-dir");
     tests_dir = argv[1];
 
-    failed += RUN_TEST(test_data_ostream);
-    failed += RUN_TEST(test_decoder_primitves_exact);
-    failed += RUN_TEST(test_encoder_primitives);
-    failed += RUN_TEST(test_value_conversions);
+    RUN_TEST(failed, test_data_ostream());
+    RUN_TEST(failed, test_decoder_primitves_exact());
+    RUN_TEST(failed, test_encoder_primitives());
+    RUN_TEST(failed, test_value_conversions());
     return failed;
 }

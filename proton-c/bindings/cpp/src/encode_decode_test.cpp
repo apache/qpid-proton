@@ -90,7 +90,7 @@ void map_test() {
 
 int main(int, char**) {
     int failed = 0;
-    failed += RUN_TEST(map_test);
-    failed += RUN_TEST(value_tests);
+    RUN_TEST(failed, map_test());
+    RUN_TEST(failed, value_tests());
     return failed;
 }

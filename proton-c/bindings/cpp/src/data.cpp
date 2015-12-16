@@ -110,7 +110,7 @@ int compare_next(data& a, data& b) {
     if (cmp) return cmp;
 
     switch (ta) {
-      case NULL_: return 0;
+      case NULL_TYPE: return 0;
       case ARRAY:
       case LIST:
       case MAP:

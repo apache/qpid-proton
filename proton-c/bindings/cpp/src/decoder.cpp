@@ -181,7 +181,7 @@ decoder operator>>(decoder d, message_id& id) {
 
 decoder operator>>(decoder d, amqp_null) {
     save_state ss(d.pn_object());
-    bad_type(NULL_, pre_get(d.pn_object()));
+    bad_type(NULL_TYPE, pre_get(d.pn_object()));
     return d;
 }
 

@@ -76,9 +76,9 @@ template <class T> struct is_same<T,T> { static const bool value=true; };
 template< class T > struct remove_const          { typedef T type; };
 template< class T > struct remove_const<const T> { typedef T type; };
 
-// Metafunction returning AMQP type for basic C++ types
+// Metafunction returning AMQP type for atomic C++ types
 template <class T, class Enable=void> struct type_id_of;
-template<> struct type_id_of<amqp_null> { static const type_id value=NULL_; };
+template<> struct type_id_of<amqp_null> { static const type_id value=NULL_TYPE; };
 template<> struct type_id_of<amqp_boolean> { static const type_id value=BOOLEAN; };
 template<> struct type_id_of<amqp_ubyte> { static const type_id value=UBYTE; };
 template<> struct type_id_of<amqp_byte> { static const type_id value=BYTE; };
@@ -105,8 +105,8 @@ template <class T> struct has_type_id<T, typename enable_if<!!type_id_of<T>::val
     static const bool value = true;
 };
 
-// Map arbitrary integral types to know AMQP integral types.
-template<size_t N, bool S> struct integer_type;
+// Map arbitrary integral types to known AMQP integral types.
+template<size_t SIZE, bool IS_SIGNED> struct integer_type;
 template<> struct integer_type<1, true> { typedef amqp_byte type; };
 template<> struct integer_type<2, true> { typedef amqp_short type; };
 template<> struct integer_type<4, true> { typedef amqp_int type; };
@@ -120,6 +120,7 @@ template<> struct integer_type<8, false> { typedef amqp_ulong type; };
 template <class T> struct is_unknown_integer {
     static const bool value = !has_type_id<T>::value && is_integral<T>::value;
 };
+
 
 }
 ///@endcond

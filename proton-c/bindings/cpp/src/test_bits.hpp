@@ -32,19 +32,18 @@ struct fail : public std::logic_error { fail(const std::string& what) : logic_er
 #define ASSERT_EQUAL(WANT, GOT) if (!((WANT) == (GOT))) \
         FAIL(#WANT << " !=  " << #GOT << ": " << WANT << " != " << GOT)
 
-int run_test(void (*testfn)(), const char* name) {
-    try {
-        testfn();
-        return 0;
-    } catch(const fail& e) {
-        std::cout << "FAIL " << name << std::endl << e.what();
-    } catch(const std::exception& e) {
-        std::cout << "ERROR " << name << std::endl << e.what();
-    }
-    return 1;
-}
-
-#define RUN_TEST(TEST) run_test(TEST, #TEST)
+#define RUN_TEST(BAD_COUNT, TEST)                                       \
+    do {                                                                \
+        try {                                                           \
+            TEST;                                                       \
+            break;                                                      \
+        } catch(const fail& e) {                                        \
+            std::cout << "FAIL " << #TEST << std::endl << e.what() << std::endl; \
+        } catch(const std::exception& e) {                              \
+            std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": " << e.what() << std::endl; \
+        }                                                               \
+            ++BAD_COUNT;                                                \
+    } while(0)
 
 template<class T> std::string str(const T& x) { std::ostringstream s; s << x; return s.str(); }
 

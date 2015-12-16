@@ -26,6 +26,7 @@ include_directories(
 
 set(qpid-proton-cpp-source
   src/acceptor.cpp
+  src/atom.cpp
   src/blocking_connection.cpp
   src/blocking_connection_impl.cpp
   src/blocking_fetcher.cpp
@@ -169,3 +170,4 @@ endmacro(add_cpp_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(encode_decode_test)
+add_cpp_test(atom_test)
