@@ -488,6 +488,7 @@ class ContainerTest(Test):
     """Test container subclass of reactor."""
 
     def test_event_has_container_attribute(self):
+        ensureCanTestExtendedSASL()
         class TestHandler(MessagingHandler):
             def __init__(self):
                 super(TestHandler, self).__init__()
