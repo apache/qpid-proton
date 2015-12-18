@@ -768,6 +768,11 @@ public class TransportImpl extends EndpointImpl
                             {
                                 attach.setTarget(link.getTarget());
                             }
+                            
+                            if(link.getAttachProperties() != null)
+                            {
+                            	attach.setProperties(link.getAttachProperties());
+                            }
 
                             attach.setRole(endpoint instanceof ReceiverImpl ? Role.RECEIVER : Role.SENDER);
 

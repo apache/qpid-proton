@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import java.util.Map;
 
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
@@ -180,6 +181,19 @@ public interface Link extends Endpoint
     @Deprecated
     void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
 
+    /**
+     * @see #setAttachProperties(Map)
+     */
+    Map getAttachProperties();
+    
+    /**
+     * Sets properties on the Attach frame, while attaching the Link to the Session.
+     * Hence, {@link #setAttachProperties(Map)} should be called during link-setup, i.e., before calling {@link #open()}.
+     * 
+     * Attach properties has no effect on Proton. Application is responsible for interpreting the properties. 
+     */
+    void setAttachProperties(Map properties);
+    
     public int drained();
 
     public int getRemoteCredit();
