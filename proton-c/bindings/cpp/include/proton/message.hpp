@@ -26,6 +26,7 @@
 #include "proton/export.hpp"
 #include "proton/message_id.hpp"
 #include "proton/value.hpp"
+#include "proton/duration.hpp"
 
 #include <string>
 #include <utility>
@@ -151,14 +152,92 @@ class message
      * list values in the body of the message will be encoded as AMQP DATA
      * and AMQP SEQUENCE sections, respectively. If inferred is false,
      * then all values in the body of the message will be encoded as AMQP
-     * VALUE sections regardless of their type. Use
-     * ::pn_message_set_inferred to set the value.
+     * VALUE sections regardless of their type.
      *
-     * @param[in] msg a message object
      * @return the value of the inferred flag for the message
      */
     PN_CPP_EXTERN bool inferred() const;
+    /** Get the inferred flag for a message. */
     PN_CPP_EXTERN void inferred(bool);
+
+    /**
+     * Get the durable flag for a message.
+     *
+     * The durable flag indicates that any parties taking responsibility
+     * for the message must durably store the content.
+     *
+     * @return the value of the durable flag
+     */
+    PN_CPP_EXTERN bool durable() const;
+    /** Get the durable flag for a message. */
+    PN_CPP_EXTERN void durable(bool);
+
+    /**
+     * Get the ttl for a message.
+     *
+     * The ttl for a message determines how long a message is considered
+     * live. When a message is held for retransmit, the ttl is
+     * decremented. Once the ttl reaches zero, the message is considered
+     * dead. Once a message is considered dead it may be dropped.
+     *
+     * @return the ttl in milliseconds
+     */
+    PN_CPP_EXTERN duration ttl() const;
+    /** Set the ttl for a message */
+    PN_CPP_EXTERN void ttl(duration);
+
+    /**
+     * Get the priority for a message.
+     *
+     * The priority of a message impacts ordering guarantees. Within a
+     * given ordered context, higher priority messages may jump ahead of
+     * lower priority messages.
+     *
+     * @return the message priority
+     */
+    PN_CPP_EXTERN uint8_t priority() const;
+    /** Get the priority for a message. */
+    PN_CPP_EXTERN void priority(uint8_t);
+
+    /**
+     * Get the first acquirer flag for a message.
+     *
+     * When set to true, the first acquirer flag for a message indicates
+     * that the recipient of the message is the first recipient to acquire
+     * the message, i.e. there have been no failed delivery attempts to
+     * other acquirers. Note that this does not mean the message has not
+     * been delivered to, but not acquired, by other recipients.
+     *
+     * @return the first acquirer flag for the message
+     */
+    PN_CPP_EXTERN bool first_acquirer() const;
+    /** Get the first acquirer flag for a message. */
+    PN_CPP_EXTERN void first_acquirer(bool);
+
+    /**
+     * Get the delivery count for a message.
+     *
+     * The delivery count field tracks how many attempts have been made to
+     * delivery a message.
+     *
+     * @return the delivery count for the message
+     */
+    PN_CPP_EXTERN uint32_t delivery_count() const;
+    /** Get the delivery count for a message. */
+    PN_CPP_EXTERN void delivery_count(uint32_t);
+
+    /**
+     * Get the group sequence for a message.
+     *
+     * The group sequence of a message identifies the relative ordering of
+     * messages within a group. The default value for the group sequence
+     * of a message is zero.
+     *
+     * @return the group sequence for the message
+     */
+    PN_CPP_EXTERN uint32_t sequence() const;
+    /** Get the group sequence for a message. */
+    PN_CPP_EXTERN void sequence(uint32_t);
 
   private:
     pn_message_t *message_;

@@ -285,7 +285,22 @@ void message::decode(proton::link link, proton::delivery delivery) {
     link.advance();
 }
 
+bool message::durable() const { return pn_message_is_durable(message_); }
+void message::durable(bool b) { pn_message_set_durable(message_, b); }
+
+duration message::ttl() const { return duration(pn_message_get_ttl(message_)); }
+void message::ttl(duration d) { pn_message_set_ttl(message_, d.milliseconds); }
+
+uint8_t message::priority() const { return pn_message_get_priority(message_); }
+void message::priority(uint8_t d) { pn_message_set_priority(message_, d); }
+
+bool message::first_acquirer() const { return pn_message_is_first_acquirer(message_); }
+void message::first_acquirer(bool b) { pn_message_set_first_acquirer(message_, b); }
+
+uint32_t message::delivery_count() const { return pn_message_get_delivery_count(message_); }
+void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(message_, d); }
+
+uint32_t message::sequence() const { return pn_message_get_group_sequence(message_); }
+void message::sequence(uint32_t d) { pn_message_set_group_sequence(message_, d); }
+
 }
-
-
-
