@@ -76,7 +76,7 @@ template <class T> struct is_same<T,T> { static const bool value=true; };
 template< class T > struct remove_const          { typedef T type; };
 template< class T > struct remove_const<const T> { typedef T type; };
 
-// Metafunction returning AMQP type for atomic C++ types
+// Metafunction returning AMQP type for scalar C++ types
 template <class T, class Enable=void> struct type_id_of;
 template<> struct type_id_of<amqp_null> { static const type_id value=NULL_TYPE; };
 template<> struct type_id_of<amqp_boolean> { static const type_id value=BOOLEAN; };

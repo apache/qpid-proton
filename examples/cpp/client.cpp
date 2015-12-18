@@ -58,7 +58,7 @@ class client : public proton::messaging_handler {
     void on_message(proton::event &e) {
         if (requests.empty()) return; // Spurious extra message!
         proton::message& response = e.message();
-        std::cout << '"' << requests.front() << '"' << " => " << response.body() << std::endl;
+        std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
         if (!requests.empty()) {
             send_request();

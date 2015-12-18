@@ -67,12 +67,26 @@ enum type_id {
     MAP=PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
 };
 
+/// Name of the AMQP type
+PN_CPP_EXTERN std::string type_name(type_id);
+
+/// Print the type_name
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
+
 /// Raised when there is a type mismatch, with the expected and actual type ID.
-struct type_mismatch : public error {
-    PN_CPP_EXTERN explicit type_mismatch(type_id want, type_id got, const std::string& =std::string());
+struct type_error : public decode_error {
+    PN_CPP_EXTERN explicit type_error(type_id want, type_id got, const std::string& =std::string());
     type_id want; ///< Expected type_id
     type_id got;  ///< Actual type_id
 };
+ 
+
+///@cond INTERNAL
+/// Provide a full set of comparison operators for proton:: types that have < and ==.
+template <class T> bool operator>(const T &a, const T &b) { return b < a; }
+template <class T> bool operator<=(const T &a, const T &b) { return !(a > b); }
+template <class T> bool operator>=(const T &a, const T &b) { return !(a < b); }
+template <class T> bool operator!=(const T &a, const T &b) { return !(a == b); }
 
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
@@ -107,26 +121,23 @@ typedef double amqp_double;
 
 /// AMQP UTF-8 encoded string.
 struct amqp_string : public std::string {
-    amqp_string(const std::string& s=std::string()) : std::string(s) {}
-    amqp_string(const char* s) : std::string(s) {}
-    amqp_string(const pn_bytes_t& b) : std::string(b.start, b.size) {}
-    operator pn_bytes_t() const { return pn_bytes(*this); }
+    explicit amqp_string(const std::string& s=std::string()) : std::string(s) {}
+    explicit amqp_string(const char* s) : std::string(s) {}
+    explicit amqp_string(const pn_bytes_t& b) : std::string(b.start, b.size) {}
 };
 
 /// AMQP ASCII encoded symbolic name.
 struct amqp_symbol : public std::string {
-    amqp_symbol(const std::string& s=std::string()) : std::string(s) {}
-    amqp_symbol(const char* s) : std::string(s) {}
-    amqp_symbol(const pn_bytes_t& b) : std::string(b.start, b.size) {}
-    operator pn_bytes_t() const { return pn_bytes(*this); }
+    explicit amqp_symbol(const std::string& s=std::string()) : std::string(s) {}
+    explicit amqp_symbol(const char* s) : std::string(s) {}
+    explicit amqp_symbol(const pn_bytes_t& b) : std::string(b.start, b.size) {}
 };
 
 /// AMQP variable-length binary data.
 struct amqp_binary : public std::string {
-    amqp_binary(const std::string& s=std::string()) : std::string(s) {}
-    amqp_binary(const char* s) : std::string(s) {}
-    amqp_binary(const pn_bytes_t& b) : std::string(b.start, b.size) {}
-    operator pn_bytes_t() const { return pn_bytes(*this); }
+    explicit amqp_binary(const std::string& s=std::string()) : std::string(s) {}
+    explicit amqp_binary(const char* s) : std::string(s) {}
+    explicit amqp_binary(const pn_bytes_t& b) : std::string(b.start, b.size) {}
 };
 
 /// Template for opaque proton proton types that can be treated as byte arrays.
@@ -170,40 +181,28 @@ struct amqp_timestamp : public comparable<amqp_timestamp> {
 };
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_timestamp&);
 
-///@cond INTERNAL
-template<class T, type_id A> struct cref {
-    typedef T cpp_type;
-    static const type_id type;
-
-    cref(const T& v) : value(v) {}
-    const T& value;
-};
-template <class T, type_id A> const type_id cref<T, A>::type = A;
-///@endcond INTERNAL
-
-/**
- * Indicate the desired AMQP type to use when encoding T.
- * For example to encode a vector as a list:
- *
- *     std::vector<amqp_int> v;
- *     encoder << as<LIST>(v);
- */
-template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
-
 // TODO aconway 2015-06-16: described types.
-
-/// Name of the AMQP type
-PN_CPP_EXTERN std::string type_name(type_id);
 
 ///@name Attributes of a type_id value, returns same result as the
 /// corresponding std::type_traits tests for the corresponding C++ types.
 ///@{
+/// Any scalar type
 PN_CPP_EXTERN bool type_id_is_scalar(type_id);
+/// One of the signed integer types: BYTE, SHORT, INT or LONG
+PN_CPP_EXTERN bool type_id_is_signed_int(type_id);
+/// One of the unsigned integer types: UBYTE, USHORT, UINT or ULONG
+PN_CPP_EXTERN bool type_id_is_unsigned_int(type_id);
+/// Any of the signed or unsigned integers, BOOL, CHAR or TIMESTAMP.
 PN_CPP_EXTERN bool type_id_is_integral(type_id);
-PN_CPP_EXTERN bool type_id_is_signed(type_id); ///< CHAR and BOOL are not signed.
+/// A floating point type, float or double
 PN_CPP_EXTERN bool type_id_is_floating_point(type_id);
+/// Any signed integer, float or double. BOOL, CHAR and TIMESTAMP are not signed.
+PN_CPP_EXTERN bool type_id_is_signed(type_id);
+/// Any DECIMAL type.
 PN_CPP_EXTERN bool type_id_is_decimal(type_id);
-PN_CPP_EXTERN bool type_id_is_string_like(type_id);   ///< STRING, SYMBOL, BINARY
+/// STRING, SYMBOL or BINARY
+PN_CPP_EXTERN bool type_id_is_string_like(type_id);
+/// Container types: MAP, LIST, ARRAY or DESCRIBED.
 PN_CPP_EXTERN bool type_id_is_container(type_id);
 ///@}
 

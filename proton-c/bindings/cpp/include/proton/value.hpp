@@ -43,9 +43,10 @@ class decoder;
 class value : public comparable<value> {
   public:
     PN_CPP_EXTERN value();
-    PN_CPP_EXTERN value(const value& x);
-    // TODO: Should enumerate specifically all the pointer types that can convert to value
-    // to avoid accidental conversions to bool this will require enable_if<> or the like
+    PN_CPP_EXTERN value(const value&);
+#if PN_HAS_CPP11
+    PN_CPP_EXTERN value(value&&);
+#endif
     template <class T> value(const T& x) : data_(data::create()) { data_.copy(x); }
 
     PN_CPP_EXTERN value& operator=(const value& x);
@@ -65,18 +66,27 @@ class value : public comparable<value> {
 
     /** Get the value. */
     template<class T> void get(T &t) const { decoder() >> t; }
+    template<class T> void get(map_ref<T> t) const { decoder() >> t; }
+    template<class T> void get(pairs_ref<T> t) const { decoder() >> t; }
+    template<class T> void get(sequence_ref<T> t) const { decoder() >> t; }
 
     /** Get the value. */
     template<class T> T get() const { T t; get(t); return t; }
 
+    // FIXME aconway 2015-12-28: friend ops.
     PN_CPP_EXTERN bool operator==(const value& x) const;
     PN_CPP_EXTERN bool operator<(const value& x) const;
+
+    PN_CPP_EXTERN void swap(value& v);
 
   friend PN_CPP_EXTERN class encoder operator<<(class encoder e, const value& dv);
   friend PN_CPP_EXTERN class decoder operator>>(class decoder d, value& dv);
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
 
   private:
+    value(data d);
+    value& ref(data d);
+
     data data_;
   friend class message;
 };

@@ -22,9 +22,10 @@
  *
  */
 
-#include "proton/data.hpp"
 #include "proton/export.hpp"
 #include "proton/message_id.hpp"
+#include "proton/annotation_key.hpp"
+#include "proton/pn_unique_ptr.hpp"
 #include "proton/value.hpp"
 #include "proton/duration.hpp"
 
@@ -38,22 +39,28 @@ namespace proton {
 class link;
 class delivery;
 class message_id;
+class annotation_key;
 
 /** An AMQP message. Value semantics, can be copied or assigned to make a new message. */
 class message
 {
   public:
+    typedef std::map<std::string, scalar> property_map;
+    typedef std::map<annotation_key, value> annotation_map;
+
     PN_CPP_EXTERN message();
     PN_CPP_EXTERN message(const message&);
-    PN_CPP_EXTERN message(const value&);
-
 #if PN_HAS_CPP11
     PN_CPP_EXTERN message(message&&);
 #endif
+    /// Constructor that sets the body from any type that can be assigned to a value.
+    template <class T> explicit message(const T& body_) { body() = body_; }
+
     PN_CPP_EXTERN ~message();
+
     PN_CPP_EXTERN message& operator=(const message&);
 
-    void swap(message& x);
+    PN_CPP_EXTERN void swap(message& x);
 
     /** Clear the message content and properties. */
     PN_CPP_EXTERN void clear();
@@ -99,47 +106,28 @@ class message
 
     ///@}
 
-    /** Set the body. */
-    PN_CPP_EXTERN void body(const value&);
+    /** Set the body, equivalent to body() = v */
+    template<class T> void body(const T& v) { body() = v; }
 
-    /** Get the body. Note data can be copied to a proton::value */
-    PN_CPP_EXTERN const data body() const;
+    /** Get the body. */
+    PN_CPP_EXTERN const value& body() const;
 
-    /** Get a reference to the body data, can be modified in-place. */
-    PN_CPP_EXTERN data body();
+    /** Get a reference to the body that can be modified in-place. */
+    PN_CPP_EXTERN value& body();
 
-    /** Set the application properties. Must be a map with string keys or an
-     * empty value. You can assign to a proton::value from a standard C++ map
-     * of std::string to proton::value.
-     */
-    PN_CPP_EXTERN void properties(const value&);
+    /** Application properties map, can be modified in place. */
+    PN_CPP_EXTERN property_map& properties();
+    PN_CPP_EXTERN const property_map& properties() const;
 
-    /** Get the application properties, which will be a map with string keys or
-     * an empty value. You can assign proton::value containing a map to a
-     * standard C++ map of std::string to proton::value.
-     */
-    PN_CPP_EXTERN const data properties() const;
+    /** Message annotations map, can be modified in place. */
+    PN_CPP_EXTERN annotation_map& annotations();
+    PN_CPP_EXTERN const annotation_map& annotations() const;
 
-    /** Get a reference to the application properties, can be modified in-place.*/
-    PN_CPP_EXTERN data properties();
+    /** Delivery instructions map, can be modified in place. */
+    PN_CPP_EXTERN annotation_map& instructions();
+    PN_CPP_EXTERN const annotation_map& instructions() const;
 
-    /** Set an individual application property. */
-    PN_CPP_EXTERN void property(const std::string &name, const value &);
-
-    /** Get an individual application property. Returns an empty value if not found. */
-    PN_CPP_EXTERN value property(const std::string &name) const;
-
-    /** Erase an application property. Returns false if there was no such property. */
-    PN_CPP_EXTERN bool erase_property(const std::string &name);
-
-    PN_CPP_EXTERN void annotations(const value&);
-    PN_CPP_EXTERN const data annotations() const;
-    PN_CPP_EXTERN data annotations();
-    PN_CPP_EXTERN void annotation(const proton::amqp_symbol &key, const value &val);
-    PN_CPP_EXTERN value annotation(const proton::amqp_symbol &key) const;
-    PN_CPP_EXTERN bool erase_annotation(const proton::amqp_symbol &key);
-
-    /** Encode into a string, growing the string if necessary. */
+    /** Encode entire message into a string, growing the string if necessary. */
     PN_CPP_EXTERN void encode(std::string &bytes) const;
 
     /** Return encoded message as a string */
@@ -148,7 +136,7 @@ class message
     /** Decode from string data into the message. */
     PN_CPP_EXTERN void decode(const std::string &bytes);
 
-    /// Decode the message from link corresponding to delivery.
+    /** Decode the message corresponding to a delivery from a link. */
     PN_CPP_EXTERN void decode(proton::link, proton::delivery);
 
     /**
@@ -160,8 +148,6 @@ class message
      * and AMQP SEQUENCE sections, respectively. If inferred is false,
      * then all values in the body of the message will be encoded as AMQP
      * VALUE sections regardless of their type.
-     *
-     * @return the value of the inferred flag for the message
      */
     PN_CPP_EXTERN bool inferred() const;
     /** Get the inferred flag for a message. */
@@ -247,7 +233,16 @@ class message
     PN_CPP_EXTERN void sequence(int32_t);
 
   private:
-    pn_message_t *message_;
+    pn_message_t *pn_msg() const;
+    struct impl {
+        PN_CPP_EXTERN impl();
+        PN_CPP_EXTERN ~impl();
+        mutable pn_message_t *msg;
+        mutable value body;
+    } impl_;
+    mutable property_map properties_;
+    mutable annotation_map annotations_;
+    mutable annotation_map instructions_;
 };
 
 }

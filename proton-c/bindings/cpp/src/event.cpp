@@ -77,5 +77,5 @@ class message &event::message() const {
     throw error(MSG("No message associated with event"));
 }
 
-event_loop::~event_loop() {}    // FIXME aconway 2015-12-28: move
+event_loop::~event_loop() {}
 }

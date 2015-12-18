@@ -18,6 +18,7 @@
  */
 
 #include "proton/message.hpp"
+#include "proton/scalar.hpp"
 #include "test_bits.hpp"
 #include <string>
 #include <fstream>
@@ -32,58 +33,99 @@ using namespace proton;
     m.ATTR(#ATTR); \
     ASSERT_EQUAL(std::string(#ATTR), m.ATTR())
 
-#define CHECK_STR_VALUE(ATTR) \
+#define CHECK_MESSAGE_ID(ATTR) \
     m.ATTR(#ATTR); \
-    ASSERT_EQUAL(std::string(#ATTR), m.ATTR().get<std::string>())
+    ASSERT_EQUAL(scalar(#ATTR), m.ATTR())
 
-void test_message() {
+void test_message_properties() {
     message m("hello");
     std::string s = m.body().get<std::string>();
     ASSERT_EQUAL("hello", s);
 
-    CHECK_STR_VALUE(id);
+    CHECK_MESSAGE_ID(id);
     CHECK_STR(user_id);
     CHECK_STR(address);
     CHECK_STR(subject);
     CHECK_STR(reply_to);
-    CHECK_STR_VALUE(correlation_id);
+    CHECK_MESSAGE_ID(correlation_id);
     CHECK_STR(content_type);
     CHECK_STR(content_encoding);
     CHECK_STR(group_id);
     CHECK_STR(reply_to_group_id);
-
     m.expiry_time(42);
     ASSERT_EQUAL(m.expiry_time().milliseconds, 42);
     m.creation_time(4242);
     ASSERT_EQUAL(m.creation_time().milliseconds, 4242);
 
-    m.property("foo", 12);
-    ASSERT_EQUAL(m.property("foo"), value(12));
-    m.property("xxx", false);
-    ASSERT_EQUAL(m.property("xxx"), value(false));
-    ASSERT(m.erase_property("xxx"));
-    ASSERT(m.property("xxx").empty());
-    ASSERT(!m.erase_property("yyy"));
+    message m2(m);
+    ASSERT_EQUAL("hello", m2.body().get<std::string>());
+    ASSERT_EQUAL(message_id("id"), m2.id());
+    ASSERT_EQUAL("user_id", m2.user_id());
+    ASSERT_EQUAL("address", m2.address());
+    ASSERT_EQUAL("subject", m2.subject());
+    ASSERT_EQUAL("reply_to", m2.reply_to());
+    ASSERT_EQUAL(message_id("correlation_id"), m2.correlation_id());
+    ASSERT_EQUAL("content_type", m2.content_type());
+    ASSERT_EQUAL("content_encoding", m2.content_encoding());
+    ASSERT_EQUAL("group_id", m2.group_id());
+    ASSERT_EQUAL("reply_to_group_id", m2.reply_to_group_id());
+    ASSERT_EQUAL(42, m2.expiry_time().milliseconds);
+    ASSERT_EQUAL(4242, m.creation_time().milliseconds);
 
-    std::map<std::string, proton::value> props;
-    m.properties().get(props);
-    ASSERT_EQUAL(props.size(), 1);
-    ASSERT_EQUAL(props["foo"], value(12));
-    props["bar"] = amqp_symbol("xyz");
-    props["foo"] = true;
-    m.properties(props);
-    ASSERT_EQUAL(m.property("foo"), value(true));
-    ASSERT_EQUAL(m.property("bar"), value(amqp_symbol("xyz")));
-    m.property("bar", amqp_binary("bar"));
-    std::map<std::string, proton::value> props2;
-    m.properties().get(props2);
-    ASSERT_EQUAL(2, props2.size());
-    ASSERT_EQUAL(props2["foo"], value(true));
-    ASSERT_EQUAL(props2["bar"], value(amqp_binary("bar")));
+    m2 = m;
+    ASSERT_EQUAL("hello", m2.body().get<std::string>());
+    ASSERT_EQUAL(message_id("id"), m2.id());
+    ASSERT_EQUAL("user_id", m2.user_id());
+    ASSERT_EQUAL("address", m2.address());
+    ASSERT_EQUAL("subject", m2.subject());
+    ASSERT_EQUAL("reply_to", m2.reply_to());
+    ASSERT_EQUAL(message_id("correlation_id"), m2.correlation_id());
+    ASSERT_EQUAL("content_type", m2.content_type());
+    ASSERT_EQUAL("content_encoding", m2.content_encoding());
+    ASSERT_EQUAL("group_id", m2.group_id());
+    ASSERT_EQUAL("reply_to_group_id", m2.reply_to_group_id());
+    ASSERT_EQUAL(42, m2.expiry_time().milliseconds);
+    ASSERT_EQUAL(4242, m.creation_time().milliseconds);
+}
+
+void test_message_maps() {
+    message m;
+
+    ASSERT(m.properties().empty());
+    ASSERT(m.annotations().empty());
+    ASSERT(m.instructions().empty());
+
+    m.properties()["foo"] = 12;
+    m.instructions()["bar"] = "xyz";
+    m.annotations()[23] = "23";
+
+    ASSERT_EQUAL(m.properties()["foo"], scalar(12));
+    ASSERT_EQUAL(m.instructions()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m.annotations()[23], scalar("23"));
+
+    message m2(m);
+    message::annotation_map& amap = m2.instructions();
+
+    ASSERT_EQUAL(m2.properties()["foo"], scalar(12));
+    ASSERT_EQUAL(m2.instructions()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m2.annotations()[23], scalar("23"));
+
+    m.properties()["foo"] = "newfoo";
+    m.instructions()[24] = 1000;
+    m.annotations().erase(23);
+
+    m2 = m;
+    ASSERT_EQUAL(1, m2.properties().size());
+    ASSERT_EQUAL(m2.properties()["foo"], scalar("newfoo"));
+    ASSERT_EQUAL(2, m2.instructions().size());
+    ASSERT_EQUAL(m2.instructions()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m2.instructions()[24], scalar(1000));
+    ASSERT(m2.annotations().empty());
 }
 
 int main(int argc, char** argv) {
     int failed = 0;
-    RUN_TEST(failed, test_message());
+    RUN_TEST(failed, test_message_properties());
+    RUN_TEST(failed, test_message_maps());
     return failed;
 }

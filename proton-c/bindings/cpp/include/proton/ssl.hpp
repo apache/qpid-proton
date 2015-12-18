@@ -79,7 +79,7 @@ class ssl_domain {
   public:
     PN_CPP_EXTERN ssl_domain(const ssl_domain&);
     PN_CPP_EXTERN ssl_domain& operator=(const ssl_domain&);
-    ~ssl_domain();
+    PN_CPP_EXTERN ~ssl_domain();
 
   protected:
     ssl_domain(bool is_server);

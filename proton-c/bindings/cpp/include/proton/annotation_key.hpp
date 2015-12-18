@@ -1,5 +1,5 @@
-#ifndef MESSAGE_ID_HPP
-#define MESSAGE_ID_HPP
+#ifndef ANNOTATION_KEY_HPP
+#define ANNOTATION_KEY_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -26,39 +26,33 @@ namespace proton {
 class encoder;
 class decoder;
 
-/** A message_id can contain one of the following types:
- * uint64_t, amqp_uuid, amqp_binary or amqp_string.
- */
-class message_id : public restricted_scalar {
+/** An annotation_key can contain one of the following types: uint64_t or amqp_symbol. */
+class annotation_key : public restricted_scalar {
   public:
-    message_id() { scalar_ = uint64_t(0); }
+    annotation_key() { scalar_ = uint64_t(0); }
 
     ///@name Assign a C++ value, deduce the AMQP type()
     ///@{
-    message_id& operator=(uint64_t x) { scalar_ = x; return *this; }
-    message_id& operator=(const amqp_uuid& x) { scalar_ = x; return *this; }
-    message_id& operator=(const amqp_binary& x) { scalar_ = x; return *this; }
-    message_id& operator=(const amqp_string& x) { scalar_ = x; return *this; }
-    /// std::string is encoded as amqp_string
-    message_id& operator=(const std::string& x) { scalar_ = amqp_string(x); return *this; }
-    /// char* is encoded as amqp_string
-    message_id& operator=(const char *x) { scalar_ = amqp_string(x); return *this; }
+    annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
+    annotation_key& operator=(const amqp_symbol& x) { scalar_ = x; return *this; }
+    /// std::string is encoded as amqp_symbol
+    annotation_key& operator=(const std::string& x) { scalar_ = amqp_symbol(x); return *this; }
+    /// char* is encoded as amqp_symbol
+    annotation_key& operator=(const char *x) { scalar_ = amqp_symbol(x); return *this; }
     ///@}
 
     /// Converting constructor from any type that we can assign from.
-    template <class T> message_id(T x) { *this = x; }
+    template <class T> annotation_key(T x) { *this = x; }
 
     void get(uint64_t& x) const { scalar_.get(x); }
-    void get(amqp_uuid& x) const { scalar_.get(x); }
-    void get(amqp_binary& x) const { scalar_.get(x); }
-    void get(amqp_string& x) const { scalar_.get(x); }
+    void get(amqp_symbol& x) const { scalar_.get(x); }
 
     template<class T> T get() const { T x; get(x); return x; }
 
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
-  friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
+  friend PN_CPP_EXTERN decoder operator>>(decoder, annotation_key&);
   friend class message;
 };
 
 }
-#endif // MESSAGE_ID_HPP
+#endif // ANNOTATION_KEY_HPP

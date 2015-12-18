@@ -39,8 +39,6 @@ class data;
 class data : public object<pn_data_t> {
   public:
     data(pn_data_t* d) : object<pn_data_t>(d) {}
-    data(const data& d) : object<pn_data_t>(d) {}
-    data& operator=(const data&);
 
     PN_CPP_EXTERN static data create();
 

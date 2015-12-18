@@ -34,6 +34,12 @@ struct error : public std::runtime_error { PN_CPP_EXTERN explicit error(const st
 /** Raised if timeout expires */
 struct timeout_error : public error { PN_CPP_EXTERN explicit timeout_error(const std::string&); };
 
+/** Raised if there is an error decoding AMQP data as a C++ value. */
+struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&); };
+
+/** Raised if there is an error encoding a C++ value as AMQP data. */
+struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&); };
+
 }
 
 #endif  /*!PROTON_CPP_EXCEPTIONS_H*/

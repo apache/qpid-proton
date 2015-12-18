@@ -44,11 +44,31 @@ struct pn_data_t;
 
 namespace proton {
 
+class scalar;
 class data;
 class message_id;
+class annotation_key;
+class value;
 
-/** Raised by encoder operations on error */
-struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&); };
+///@cond INTERNAL
+template<class T, type_id A> struct cref {
+    typedef T cpp_type;
+    static const type_id type;
+
+    cref(const T& v) : value(v) {}
+    const T& value;
+};
+template <class T, type_id A> const type_id cref<T, A>::type = A;
+///@endcond INTERNAL
+
+/**
+ * Indicate the desired AMQP type to use when encoding T.
+ * For example to encode a vector as a list:
+ *
+ *     std::vector<amqp_int> v;
+ *     encoder << as<LIST>(v);
+ */
+template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
 
 /**
  * Stream-like encoder from C++ values to AMQP values.
@@ -139,7 +159,9 @@ class encoder : public object<pn_data_t> {
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_symbol);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_binary);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const value&);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
     ///@}
 
     /**

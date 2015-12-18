@@ -19,6 +19,7 @@
  *
  */
 
+#include "proton/data.hpp"
 #include "proton/message.hpp"
 #include "proton/error.hpp"
 #include "proton/link.hpp"
@@ -31,24 +32,39 @@
 #include "msg.hpp"
 #include "proton_bits.hpp"
 
-#include <cstring>
+#include <string>
 #include <assert.h>
 
 namespace proton {
 
-message::message() : message_(::pn_message()) {}
+// impl exists so body is pre-constructed in reference mode (prevent it creating its own data)
+// for all message ctors.
+message::impl::impl() : msg(0), body(0) {}
 
-message::message(const message &m) : message_(::pn_message()) { *this = m; }
+message::impl::~impl() {
+    if (msg) {
+        body.ref(0);            // Clear the reference.
+        pn_message_free(msg);
+    }
+}
 
-#if defined(PN_HAS_CPP11) && PN_HAS_CPP11
-message::message(message &&m) : message_(::pn_message()) { swap(m); }
+// Lazy construct the message.
+pn_message_t* message::pn_msg() const {
+    if (!impl_.msg) impl_.msg = pn_message();
+    return impl_.msg;
+}
+
+message::message() {}
+
+message::message(const message &m) { *this = m; }
+
+#if PN_HAS_CPP11
+message::message(message &&m) { swap(m); }
 #endif
 
-message::message(const value& v) : message_(::pn_message()) { body(v); }
+message::~message() {}
 
-message::~message() { ::pn_message_free(message_); }
-
-void message::swap(message& m) { std::swap(message_, m.message_); }
+void message::swap(message& m) { std::swap(impl_.msg, m.impl_.msg); }
 
 message& message::operator=(const message& m) {
     // TODO aconway 2015-08-10: more efficient pn_message_copy function
@@ -58,7 +74,7 @@ message& message::operator=(const message& m) {
     return *this;
 }
 
-void message::clear() { pn_message_clear(message_); }
+void message::clear() { if (impl_.msg) pn_message_clear(impl_.msg); }
 
 namespace {
 void check(int err) {
@@ -66,7 +82,7 @@ void check(int err) {
 }
 } // namespace
 
-void message::id(const message_id& id) { data(pn_message_id(message_)).copy(id.value_); }
+void message::id(const message_id& id) { pn_message_set_id(pn_msg(), id.scalar_.atom_); }
 
 namespace {
 inline message_id from_pn_atom(const pn_atom_t& v) {
@@ -86,222 +102,169 @@ inline message_id from_pn_atom(const pn_atom_t& v) {
 }
 
 message_id message::id() const {
-    return from_pn_atom(pn_message_get_id(message_));
+    return from_pn_atom(pn_message_get_id(pn_msg()));
 }
 
 void message::user_id(const std::string &id) {
-    check(pn_message_set_user_id(message_, pn_bytes(id)));
+    check(pn_message_set_user_id(pn_msg(), pn_bytes(id)));
 }
 
 std::string message::user_id() const {
-    return str(pn_message_get_user_id(message_));
+    return str(pn_message_get_user_id(pn_msg()));
 }
 
 void message::address(const std::string &addr) {
-    check(pn_message_set_address(message_, addr.c_str()));
+    check(pn_message_set_address(pn_msg(), addr.c_str()));
 }
 
 std::string message::address() const {
-    const char* addr = pn_message_get_address(message_);
+    const char* addr = pn_message_get_address(pn_msg());
     return addr ? std::string(addr) : std::string();
 }
 
 void message::subject(const std::string &s) {
-    check(pn_message_set_subject(message_, s.c_str()));
+    check(pn_message_set_subject(pn_msg(), s.c_str()));
 }
 
 std::string message::subject() const {
-    const char* s = pn_message_get_subject(message_);
+    const char* s = pn_message_get_subject(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
 void message::reply_to(const std::string &s) {
-    check(pn_message_set_reply_to(message_, s.c_str()));
+    check(pn_message_set_reply_to(pn_msg(), s.c_str()));
 }
 
 std::string message::reply_to() const {
-    const char* s = pn_message_get_reply_to(message_);
+    const char* s = pn_message_get_reply_to(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
 void message::correlation_id(const message_id& id) {
-    data(pn_message_correlation_id(message_)).copy(id.value_);
+    data(pn_message_correlation_id(pn_msg())).copy(id.scalar_);
 }
 
 message_id message::correlation_id() const {
-    return from_pn_atom(pn_message_get_correlation_id(message_));
+    return from_pn_atom(pn_message_get_correlation_id(pn_msg()));
 }
 
 void message::content_type(const std::string &s) {
-    check(pn_message_set_content_type(message_, s.c_str()));
+    check(pn_message_set_content_type(pn_msg(), s.c_str()));
 }
 
 std::string message::content_type() const {
-    const char* s = pn_message_get_content_type(message_);
+    const char* s = pn_message_get_content_type(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
 void message::content_encoding(const std::string &s) {
-    check(pn_message_set_content_encoding(message_, s.c_str()));
+    check(pn_message_set_content_encoding(pn_msg(), s.c_str()));
 }
 
 std::string message::content_encoding() const {
-    const char* s = pn_message_get_content_encoding(message_);
+    const char* s = pn_message_get_content_encoding(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
 void message::expiry_time(amqp_timestamp t) {
-    pn_message_set_expiry_time(message_, t.milliseconds);
+    pn_message_set_expiry_time(pn_msg(), t.milliseconds);
 }
 amqp_timestamp message::expiry_time() const {
-    return amqp_timestamp(pn_message_get_expiry_time(message_));
+    return amqp_timestamp(pn_message_get_expiry_time(pn_msg()));
 }
 
 void message::creation_time(amqp_timestamp t) {
-    pn_message_set_creation_time(message_, t);
+    pn_message_set_creation_time(pn_msg(), t);
 }
 amqp_timestamp message::creation_time() const {
-    return pn_message_get_creation_time(message_);
+    return pn_message_get_creation_time(pn_msg());
 }
 
 void message::group_id(const std::string &s) {
-    check(pn_message_set_group_id(message_, s.c_str()));
+    check(pn_message_set_group_id(pn_msg(), s.c_str()));
 }
 
 std::string message::group_id() const {
-    const char* s = pn_message_get_group_id(message_);
+    const char* s = pn_message_get_group_id(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
 void message::reply_to_group_id(const std::string &s) {
-    check(pn_message_set_reply_to_group_id(message_, s.c_str()));
+    check(pn_message_set_reply_to_group_id(pn_msg(), s.c_str()));
 }
 
 std::string message::reply_to_group_id() const {
-    const char* s = pn_message_get_reply_to_group_id(message_);
+    const char* s = pn_message_get_reply_to_group_id(pn_msg());
     return s ? std::string(s) : std::string();
 }
 
-bool message::inferred() const { return pn_message_is_inferred(message_); }
+bool message::inferred() const { return pn_message_is_inferred(pn_msg()); }
 
-void message::inferred(bool b) { pn_message_set_inferred(message_, b); }
+void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 
-void message::body(const value& v) { body().copy(v); }
+const value& message::body() const { return impl_.body.ref(pn_message_body(pn_msg())); }
+value& message::body() { return impl_.body.ref(pn_message_body(pn_msg())); }
 
-const data message::body() const {
-    return pn_message_body(message_);
-}
+// MAP CACHING: the properties, annotations and instructions maps can either be
+// encoded in the pn_message pn_data_t structures OR decoded as C++ map members
+// of the message but not both. At least one of the pn_data_t or the map member
+// is always empty, the non-empty one is the authority.
 
-data message::body() {
-    return pn_message_body(message_);
-}
-
-void message::properties(const value& v) {
-    properties().copy(v);
-}
-
-const data message::properties() const {
-    return pn_message_properties(message_);
-}
-
-data message::properties() {
-    return pn_message_properties(message_);
-}
-
-namespace {
-typedef std::map<std::string, value> props_map;
-}
-
-void message::property(const std::string& name, const value &v) {
-    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
-    // Could avoid full encode/decode with linear scan of names. Need
-    // better codec suport for in-place modification of data.
-    props_map m;
-    if (!properties().empty())
-        properties().get(m);
-    m[name] = v;
-    properties(m);
-}
-
-value message::property(const std::string& name) const {
-    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
-    if (!properties().empty()) {
-        props_map m;
-        properties().get(m);
-        props_map::const_iterator i = m.find(name);
-        if (i != m.end())
-            return i->second;
+// Decode a map on demand
+template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
+    data d(get(msg));
+    if (map.empty() && !d.empty()) {
+        d.decoder() >> rewind() >> map;
+        d.clear();              // The map member is now the authority.
     }
-    return value();
+    return map;
 }
 
-bool message::erase_property(const std::string& name) {
-    // TODO aconway 2015-11-17: not efficient but avoids cache consistency problems.
-    if (!properties().empty()) {
-        props_map m;
-        properties().get(m);
-        if (m.erase(name)) {
-            properties(m);
-            return true;
-        }
+// Encode a map if necessary.
+template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
+    data d(get(msg));
+    if (d.empty() && !map.empty()) {
+        d.encoder() << map;
+        map.clear();        // The encoded pn_data_t  is now the authority.
     }
-    return false;
+    return map;
 }
 
-void message::annotations(const value& v) {
-    annotations().copy(v);
+message::property_map& message::properties() {
+    return get_map(pn_msg(), pn_message_properties, properties_);
 }
 
-const data message::annotations() const {
-    return pn_message_annotations(message_);
+const message::property_map& message::properties() const {
+    return get_map(pn_msg(), pn_message_properties, properties_);
 }
 
-data message::annotations() {
-    return pn_message_annotations(message_);
+
+message::annotation_map& message::annotations() {
+    return get_map(pn_msg(), pn_message_annotations, annotations_);
 }
 
-namespace {
-typedef std::map<proton::amqp_symbol, value> annotation_map;
+const message::annotation_map& message::annotations() const {
+    return get_map(pn_msg(), pn_message_annotations, annotations_);
 }
 
-void message::annotation(const proton::amqp_symbol &k, const value &v) {
-    annotation_map m;
-    if (!annotations().empty())
-        annotations().get(m);
-    m[k] = v;
-    annotations(m);
+
+message::annotation_map& message::instructions() {
+    return get_map(pn_msg(), pn_message_instructions, instructions_);
 }
 
-value message::annotation(const proton::amqp_symbol &k) const {
-    if (!annotations().empty()) {
-        annotation_map m;
-        annotations().get(m);
-        annotation_map::const_iterator i = m.find(k);
-        if (i != m.end())
-            return i->second;
-    }
-    return value();
-
-}
-
-bool message::erase_annotation(const proton::amqp_symbol &k) {
-    if (!annotations().empty()) {
-        annotation_map m;
-        annotations().get(m);
-        if (m.erase(k)) {
-            annotations(m);
-            return true;
-        }
-    }
-    return false;
+const message::annotation_map& message::instructions() const {
+    return get_map(pn_msg(), pn_message_instructions, instructions_);
 }
 
 void message::encode(std::string &s) const {
+    put_map(pn_msg(), pn_message_properties, properties_);
+    put_map(pn_msg(), pn_message_annotations, annotations_);
+    put_map(pn_msg(), pn_message_instructions, instructions_);
     size_t sz = s.capacity();
     if (sz < 512) sz = 512;
     while (true) {
         s.resize(sz);
-        int err = pn_message_encode(message_, const_cast<char*>(s.data()), &sz);
+        int err = pn_message_encode(pn_msg(), const_cast<char*>(s.data()), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
                 check(err);
@@ -320,7 +283,10 @@ std::string message::encode() const {
 }
 
 void message::decode(const std::string &s) {
-    check(pn_message_decode(message_, s.data(), s.size()));
+    properties_.clear();
+    annotations_.clear();
+    instructions_.clear();
+    check(pn_message_decode(pn_msg(), s.data(), s.size()));
 }
 
 void message::decode(proton::link link, proton::delivery delivery) {
@@ -333,22 +299,22 @@ void message::decode(proton::link link, proton::delivery delivery) {
     link.advance();
 }
 
-bool message::durable() const { return pn_message_is_durable(message_); }
-void message::durable(bool b) { pn_message_set_durable(message_, b); }
+bool message::durable() const { return pn_message_is_durable(pn_msg()); }
+void message::durable(bool b) { pn_message_set_durable(pn_msg(), b); }
 
-duration message::ttl() const { return duration(pn_message_get_ttl(message_)); }
-void message::ttl(duration d) { pn_message_set_ttl(message_, d.milliseconds); }
+duration message::ttl() const { return duration(pn_message_get_ttl(pn_msg())); }
+void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.milliseconds); }
 
-uint8_t message::priority() const { return pn_message_get_priority(message_); }
-void message::priority(uint8_t d) { pn_message_set_priority(message_, d); }
+uint8_t message::priority() const { return pn_message_get_priority(pn_msg()); }
+void message::priority(uint8_t d) { pn_message_set_priority(pn_msg(), d); }
 
-bool message::first_acquirer() const { return pn_message_is_first_acquirer(message_); }
-void message::first_acquirer(bool b) { pn_message_set_first_acquirer(message_, b); }
+bool message::first_acquirer() const { return pn_message_is_first_acquirer(pn_msg()); }
+void message::first_acquirer(bool b) { pn_message_set_first_acquirer(pn_msg(), b); }
 
-uint32_t message::delivery_count() const { return pn_message_get_delivery_count(message_); }
-void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(message_, d); }
+uint32_t message::delivery_count() const { return pn_message_get_delivery_count(pn_msg()); }
+void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(pn_msg(), d); }
 
-int32_t message::sequence() const { return pn_message_get_group_sequence(message_); }
-void message::sequence(int32_t d) { pn_message_set_group_sequence(message_, d); }
+int32_t message::sequence() const { return pn_message_get_group_sequence(pn_msg()); }
+void message::sequence(int32_t d) { pn_message_set_group_sequence(pn_msg(), d); }
 
 }

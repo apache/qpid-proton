@@ -27,4 +27,6 @@ error::error(const std::string& msg) : std::runtime_error(prefix+msg) {}
 
 timeout_error::timeout_error(const std::string& msg) : error(msg) {}
 
+decode_error::decode_error(const std::string& msg) : error("decode: "+msg) {}
+
 }

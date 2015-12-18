@@ -21,51 +21,62 @@
 #include "proton/type_traits.hpp"
 
 #include <proton/scalar.hpp>
+#include <proton/value.hpp>
+#include <proton/message_id.hpp>
+#include <proton/annotation_key.hpp>
+
+#include <sstream>
 
 using namespace std;
 using namespace proton;
 
 // Inserting and extracting simple C++ values.
 template <class T> void type_test(T x, type_id tid, T y) {
-    scalar v(x);
-    ASSERT_EQUAL(tid, v.type());
-    ASSERT(!v.empty());
-    ASSERT_EQUAL(x, v.get<T>());
+    scalar s(x);
+    ASSERT_EQUAL(tid, s.type());
+    ASSERT(!s.empty());
+    ASSERT_EQUAL(x, s.get<T>());
 
     scalar v2;
     ASSERT(v2.type() == NULL_TYPE);
     v2 = x;
     ASSERT_EQUAL(tid, v2.type());
     ASSERT_EQUAL(x, v2.get<T>());
-    ASSERT_EQUAL(v, v2);
-    ASSERT_EQUAL(str(x), str(v));
+    ASSERT_EQUAL(s, v2);
+    ASSERT_EQUAL(str(x), str(s));
 
     v2 = y;
-    ASSERT(v != v2);
-    ASSERT(v < v2);
-    ASSERT(v2 > v);
+    ASSERT(s != v2);
+    ASSERT(s < v2);
+    ASSERT(v2 > s);
 }
 
-#define ASSERT_MISMATCH(EXPR) \
-    try { (void)(EXPR); FAIL("expected type_mismatch: " #EXPR); } catch (type_mismatch) {}
+#define ASSERT_MISMATCH(EXPR, WANT, GOT)                        \
+    try {                                                       \
+        (void)(EXPR);                                           \
+        FAIL("expected type_error: " #EXPR);                    \
+    } catch (const type_error& e) {                             \
+        ASSERT_EQUAL(WANT, e.want);                             \
+        ASSERT_EQUAL(GOT, e.got);                               \
+    }
 
 void convert_test() {
     scalar a;
     ASSERT_EQUAL(NULL_TYPE, a.type());
     ASSERT(a.empty());
-    ASSERT_MISMATCH(a.get<float>());
+    ASSERT_MISMATCH(a.get<float>(), FLOAT, NULL_TYPE);
 
     a = amqp_binary("foo");
-    ASSERT_MISMATCH(a.get<int16_t>());
-    ASSERT_MISMATCH(a.as_int());
-    ASSERT_MISMATCH(a.as_double());
-    ASSERT_MISMATCH(a.get<amqp_string>());           // No strict conversion
+    ASSERT_MISMATCH(a.get<int16_t>(), SHORT, BINARY);
+    ASSERT_MISMATCH(a.as_int(), LONG, BINARY);
+    ASSERT_MISMATCH(a.as_double(), DOUBLE, BINARY);
+    ASSERT_MISMATCH(a.get<amqp_string>(), STRING, BINARY); // No strict conversion
     ASSERT_EQUAL(a.as_string(), std::string("foo")); // OK string-like conversion
 
     a = int16_t(42);
-    ASSERT_MISMATCH(a.get<std::string>());
-    ASSERT_MISMATCH(a.get<amqp_timestamp>());
-    ASSERT_MISMATCH(a.as_string());
+    ASSERT_MISMATCH(a.get<std::string>(), STRING, SHORT);
+    ASSERT_MISMATCH(a.get<amqp_timestamp>(), TIMESTAMP, SHORT);
+    ASSERT_MISMATCH(a.as_string(), STRING, SHORT);
     ASSERT_EQUAL(a.as_int(), 42);
     ASSERT_EQUAL(a.as_uint(), 42);
     ASSERT_EQUAL(a.as_double(), 42);
@@ -74,6 +85,33 @@ void convert_test() {
     ASSERT_EQUAL(a.as_int(), -42);
     ASSERT_EQUAL(a.as_uint(), uint64_t(-42));
     ASSERT_EQUAL(a.as_double(), -42);
+}
+
+void encode_decode_test() {
+    value v;
+    scalar a("foo");
+    v = a;                      // Assignment to value does encode, get<> does decode.
+    ASSERT_EQUAL(v, a);
+    ASSERT_EQUAL(std::string("foo"), v.get<std::string>());
+    scalar a2 = v.get<scalar>();
+    ASSERT_EQUAL(std::string("foo"), a2.get<std::string>());
+}
+
+void message_id_test() {
+    ASSERT_EQUAL(23, message_id(23).as_int());
+    ASSERT_EQUAL(23, message_id(23).get<uint64_t>());
+    ASSERT(message_id("foo") != message_id(amqp_binary("foo")));
+    ASSERT_EQUAL(scalar("foo"), message_id("foo"));
+    ASSERT_EQUAL("foo", message_id("foo").as_string());
+    ASSERT(message_id("a") < message_id("z"));
+    ASSERT_EQUAL(amqp_uuid(), message_id(amqp_uuid()).get<amqp_uuid>());
+}
+
+void annotation_key_test() {
+    ASSERT_EQUAL(23, annotation_key(23).as_int());
+    ASSERT_EQUAL(23, annotation_key(23).get<uint64_t>());
+    ASSERT_EQUAL("foo", annotation_key("foo").as_string());
+    ASSERT_EQUAL(scalar(amqp_symbol("foo")), annotation_key("foo"));
 }
 
 int main(int, char**) {
@@ -101,5 +139,9 @@ int main(int, char**) {
     RUN_TEST(failed, type_test(amqp_symbol("aaa"), SYMBOL, amqp_symbol("aaaa")));
     RUN_TEST(failed, type_test(amqp_binary("aaa"), BINARY, amqp_binary("aaaa")));
     RUN_TEST(failed, type_test(std::string("xxx"), STRING, std::string("yyy")));
+    RUN_TEST(failed, encode_decode_test());
+    RUN_TEST(failed, message_id_test());
+    RUN_TEST(failed, annotation_key_test());
+    RUN_TEST(failed, convert_test());
     return failed;
 }

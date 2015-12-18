@@ -44,11 +44,11 @@ struct pn_data_t;
 
 namespace proton {
 
+class scalar;
 class data;
 class message_id;
-
-/** Raised by decoder operations on error.*/
-struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&); };
+class annotation_key;
+class value;
 
 /** Skips a value with `dec >> skip()`. */
 struct skip{};
@@ -208,7 +208,9 @@ class decoder : public object<pn_data_t> {
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_uuid&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, std::string&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, message_id&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, annotation_key&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, value&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, scalar&);
     ///@}
 
     /** Extract and return a value of type T. */
@@ -256,8 +258,6 @@ class decoder : public object<pn_data_t> {
 
   private:
     PN_CPP_EXTERN void check_type(type_id);
-
-  friend class encoder;
 };
 
 /** Call decoder::start() in constructor, decoder::finish in destructor().
@@ -280,20 +280,13 @@ operator>>(decoder d, T& i)  {
 }
 
 ///@cond INTERNAL
-template <class T> struct sequence_ref {
-    sequence_ref(T& v) : value(v) {}
+template <class T> struct ref {
+    ref(T& v) : value(v) {}
     T& value;
 };
-
-template <class T> struct map_ref {
-    map_ref(T& v) : value(v) {}
-    T& value;
-};
-
-template <class T> struct pairs_ref {
-    pairs_ref(T& v) : value(v) {}
-    T& value;
-};
+template <class T> struct sequence_ref : public ref<T> { sequence_ref(T& v) : ref<T>(v) {} };
+template <class T> struct map_ref : public ref<T> { map_ref(T& v) : ref<T>(v) {} };
+template <class T> struct pairs_ref : public ref<T> { pairs_ref(T& v) : ref<T>(v) {} };
 ///@endcond
 
 /**

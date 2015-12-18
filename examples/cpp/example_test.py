@@ -125,17 +125,17 @@ class ExampleTest(unittest.TestCase):
     def test_helloworld(self):
         b = Broker.get()
         hw = execute("helloworld", b.addr)
-        self.assertEqual('"Hello World!"\n', hw)
+        self.assertEqual('Hello World!\n', hw)
 
     def test_helloworld_blocking(self):
         b = Broker.get()
         hw = execute("helloworld_blocking", b.addr)
-        self.assertEqual('"Hello World!"\n', hw)
+        self.assertEqual('Hello World!\n', hw)
 
     def test_helloworld_direct(self):
         addr = pick_addr()
         hw = execute("helloworld_direct", addr)
-        self.assertEqual('"Hello World!"\n', hw)
+        self.assertEqual('Hello World!\n', hw)
 
     def test_simple_send_recv(self):
         b = Broker.get()
@@ -165,10 +165,10 @@ class ExampleTest(unittest.TestCase):
         send_expect = "direct_send listening on amqp://%s\nall messages confirmed\n" % (addr)
         self.assertEqual(send_expect, verify(send))
 
-    CLIENT_EXPECT=""""Twas brillig, and the slithy toves" => "TWAS BRILLIG, AND THE SLITHY TOVES"
-"Did gire and gymble in the wabe." => "DID GIRE AND GYMBLE IN THE WABE."
-"All mimsy were the borogroves," => "ALL MIMSY WERE THE BOROGROVES,"
-"And the mome raths outgrabe." => "AND THE MOME RATHS OUTGRABE."
+    CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
+Did gire and gymble in the wabe. => DID GIRE AND GYMBLE IN THE WABE.
+All mimsy were the borogroves, => ALL MIMSY WERE THE BOROGROVES,
+And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
     def test_simple_recv_send(self):
         # Start receiver first, then run sender"""
@@ -247,7 +247,7 @@ Tock...
     def test_ssl(self):
         # SSL without SASL
         expect="""Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
-"Hello World!"
+Hello World!
 """
         addr = "amqps://" + pick_addr() + "/examples"
         ignore_first_line, ignore_nl, ssl_hw = execute("ssl", addr, ssl_certs_dir()).partition('\n')
@@ -257,7 +257,7 @@ Tock...
         # SSL with SASL EXTERNAL
         expect="""Inbound client certificate identity CN=test_client
 Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
-"Hello World!"
+Hello World!
 """
         addr = "amqps://" + pick_addr() + "/examples"
         ignore_first_line, ignore_nl, ssl_hw = execute("ssl_client_cert", addr, ssl_certs_dir()).partition('\n')

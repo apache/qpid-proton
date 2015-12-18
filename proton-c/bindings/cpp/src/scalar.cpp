@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "msg.hpp"
 #include "proton/scalar.hpp"
 #include "proton/type_traits.hpp"
 
@@ -25,37 +26,50 @@
 namespace proton {
 
 scalar::scalar() { atom_.type = PN_NULL; }
+scalar::scalar(const scalar& x) { set(x.atom_); }
+scalar& scalar::operator=(const scalar& x) { set(x.atom_); return *this; }
 
 type_id scalar::type() const { return type_id(atom_.type); }
 bool scalar::empty() const { return type() == NULL_TYPE; }
 
-scalar::scalar(bool x) { atom_.u.as_bool = x; atom_.type = PN_BOOL; }
-scalar::scalar(uint8_t x) { atom_.u.as_ubyte = x; atom_.type = PN_UBYTE; }
-scalar::scalar(int8_t x) { atom_.u.as_byte = x; atom_.type = PN_BYTE; }
-scalar::scalar(uint16_t x) { atom_.u.as_ushort = x; atom_.type = PN_USHORT; }
-scalar::scalar(int16_t x) { atom_.u.as_short = x; atom_.type = PN_SHORT; }
-scalar::scalar(uint32_t x) { atom_.u.as_uint = x; atom_.type = PN_UINT; }
-scalar::scalar(int32_t x) { atom_.u.as_int = x; atom_.type = PN_INT; }
-scalar::scalar(uint64_t x) { atom_.u.as_ulong = x; atom_.type = PN_ULONG; }
-scalar::scalar(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG; }
-scalar::scalar(wchar_t x) { atom_.u.as_char = pn_char_t(x); atom_.type = PN_CHAR; }
-scalar::scalar(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; }
-scalar::scalar(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; }
-scalar::scalar(amqp_timestamp x) { atom_.u.as_timestamp = x; atom_.type = PN_TIMESTAMP; }
-scalar::scalar(const amqp_decimal32& x) { atom_.u.as_decimal32 = x; atom_.type = PN_DECIMAL32; }
-scalar::scalar(const amqp_decimal64& x) { atom_.u.as_decimal64 = x; atom_.type = PN_DECIMAL64; }
-scalar::scalar(const amqp_decimal128& x) { atom_.u.as_decimal128 = x; atom_.type = PN_DECIMAL128; }
-scalar::scalar(const amqp_uuid& x) { atom_.u.as_uuid = x; atom_.type = PN_UUID; }
+void scalar::set(const std::string& x, pn_type_t t) {
+    atom_.type = t;
+    str_ = x;
+    atom_.u.as_bytes = pn_bytes(str_);
+}
 
-void scalar::set(const std::string& x) { str_ = x; atom_.u.as_bytes = pn_bytes(str_); }
-scalar::scalar(const amqp_string& x) { set(x); atom_.type = PN_STRING; }
-scalar::scalar(const amqp_symbol& x) { set(x); atom_.type = PN_SYMBOL; }
-scalar::scalar(const amqp_binary& x) { set(x); atom_.type = PN_BINARY; }
-scalar::scalar(const std::string& x) { *this = amqp_string(x); }
-scalar::scalar(const char* x) { *this = amqp_string(x); }
+void scalar::set(const pn_atom_t& atom) {
+    if (type_id_is_string_like(type_id(atom.type)))
+        set(str(atom.u.as_bytes), atom.type);
+    else
+        atom_ = atom;
+}
+
+scalar& scalar::operator=(bool x) { atom_.u.as_bool = x; atom_.type = PN_BOOL; return *this; }
+scalar& scalar::operator=(uint8_t x) { atom_.u.as_ubyte = x; atom_.type = PN_UBYTE; return *this; }
+scalar& scalar::operator=(int8_t x) { atom_.u.as_byte = x; atom_.type = PN_BYTE; return *this; }
+scalar& scalar::operator=(uint16_t x) { atom_.u.as_ushort = x; atom_.type = PN_USHORT; return *this; }
+scalar& scalar::operator=(int16_t x) { atom_.u.as_short = x; atom_.type = PN_SHORT; return *this; }
+scalar& scalar::operator=(uint32_t x) { atom_.u.as_uint = x; atom_.type = PN_UINT; return *this; }
+scalar& scalar::operator=(int32_t x) { atom_.u.as_int = x; atom_.type = PN_INT; return *this; }
+scalar& scalar::operator=(uint64_t x) { atom_.u.as_ulong = x; atom_.type = PN_ULONG; return *this; }
+scalar& scalar::operator=(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG; return *this; }
+scalar& scalar::operator=(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; return *this; }
+scalar& scalar::operator=(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; return *this; }
+scalar& scalar::operator=(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; return *this; }
+scalar& scalar::operator=(amqp_timestamp x) { atom_.u.as_timestamp = x; atom_.type = PN_TIMESTAMP; return *this; }
+scalar& scalar::operator=(const amqp_decimal32& x) { atom_.u.as_decimal32 = x; atom_.type = PN_DECIMAL32; return *this; }
+scalar& scalar::operator=(const amqp_decimal64& x) { atom_.u.as_decimal64 = x; atom_.type = PN_DECIMAL64; return *this; }
+scalar& scalar::operator=(const amqp_decimal128& x) { atom_.u.as_decimal128 = x; atom_.type = PN_DECIMAL128; return *this; }
+scalar& scalar::operator=(const amqp_uuid& x) { atom_.u.as_uuid = x; atom_.type = PN_UUID; return *this; }
+scalar& scalar::operator=(const amqp_string& x) { set(x, PN_STRING); return *this; }
+scalar& scalar::operator=(const amqp_symbol& x) { set(x, PN_SYMBOL); return *this; }
+scalar& scalar::operator=(const amqp_binary& x) { set(x, PN_BINARY); return *this; }
+scalar& scalar::operator=(const std::string& x) { set(x, PN_STRING); return *this; }
+scalar& scalar::operator=(const char* x) { set(x, PN_STRING); return *this; }
 
 void scalar::ok(pn_type_t t) const {
-    if (atom_.type != t) throw type_mismatch(type_id(t), type());
+    if (atom_.type != t) throw type_error(type_id(t), type());
 }
 
 void scalar::get(bool& x) const { ok(PN_BOOL); x = atom_.u.as_bool; }
@@ -75,9 +89,9 @@ void scalar::get(amqp_decimal32& x) const { ok(PN_DECIMAL32); x = atom_.u.as_dec
 void scalar::get(amqp_decimal64& x) const { ok(PN_DECIMAL64); x = atom_.u.as_decimal64; }
 void scalar::get(amqp_decimal128& x) const { ok(PN_DECIMAL128); x = atom_.u.as_decimal128; }
 void scalar::get(amqp_uuid& x) const { ok(PN_UUID); x = atom_.u.as_uuid; }
-void scalar::get(amqp_string& x) const { ok(PN_STRING); x = str_; }
-void scalar::get(amqp_symbol& x) const { ok(PN_SYMBOL); x = str_; }
-void scalar::get(amqp_binary& x) const { ok(PN_BINARY); x = str_; }
+void scalar::get(amqp_string& x) const { ok(PN_STRING); x = amqp_string(str_); }
+void scalar::get(amqp_symbol& x) const { ok(PN_SYMBOL); x = amqp_symbol(str_); }
+void scalar::get(amqp_binary& x) const { ok(PN_BINARY); x = amqp_binary(str_); }
 void scalar::get(std::string& x) const { x = get<amqp_string>(); }
 
 int64_t scalar::as_int() const {
@@ -94,13 +108,14 @@ int64_t scalar::as_int() const {
       case PN_CHAR: return atom_.u.as_char;
       case PN_ULONG: return int64_t(atom_.u.as_ulong);
       case PN_LONG: return atom_.u.as_long;
-      default: throw type_mismatch(LONG, type(), "cannot convert");
+      case PN_TIMESTAMP: return atom_.u.as_timestamp;
+      default: throw type_error(LONG, type(), "cannot convert");
     }
 }
 
 uint64_t scalar::as_uint() const {
     if  (!type_id_is_integral(type()))
-        throw type_mismatch(ULONG, type(), "cannot convert");
+        throw type_error(ULONG, type(), "cannot convert");
     return uint64_t(as_int());
 }
 
@@ -111,18 +126,19 @@ double scalar::as_double() const {
     switch (atom_.type) {
       case PN_DOUBLE: return atom_.u.as_double;
       case PN_FLOAT: return atom_.u.as_float;
-      default: throw type_mismatch(DOUBLE, type(), "cannot convert");
+      default: throw type_error(DOUBLE, type(), "cannot convert");
     }
 }
 
 std::string scalar::as_string() const {
     if (type_id_is_string_like(type()))
         return str_;
-    throw type_mismatch(DOUBLE, type(), "cannot convert");
+    throw type_error(STRING, type(), "cannot convert");
 }
 
-
 namespace {
+template<class T> int opaque_cmp(const T& x, const T& y) { return memcmp(&x, &y, sizeof(T)); }
+
 template <class T, class F> T type_switch(const scalar& a, F f) {
     switch(a.type()) {
       case BOOLEAN: return f(a.get<bool>());
@@ -170,16 +186,21 @@ struct ostream_op {
 
 } // namespace
 
-bool scalar::operator==(const scalar& x) const {
-    return type_switch<bool>(*this, equal_op(x));
+bool operator==(const scalar& x, const scalar& y) {
+    if (x.type() != y.type()) return false;
+    if (x.empty()) return true;
+    return type_switch<bool>(x, equal_op(y));
 }
 
-bool scalar::operator<(const scalar& x) const {
-    return type_switch<bool>(*this, less_op(x));
+bool operator<(const scalar& x, const scalar& y) {
+    if (x.type() != y.type()) return x.type() < y.type();
+    if (x.empty()) return false;
+    return type_switch<bool>(x, less_op(y));
 }
 
 std::ostream& operator<<(std::ostream& o, const scalar& a) {
+    if (a.empty()) return o << "<null>";
     return type_switch<std::ostream&>(a, ostream_op(o));
 }
 
-}
+} // namespace proton
