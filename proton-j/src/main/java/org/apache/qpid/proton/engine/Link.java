@@ -21,7 +21,9 @@
 package org.apache.qpid.proton.engine;
 
 import java.util.EnumSet;
+import java.util.Map;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -179,6 +181,29 @@ public interface Link extends Endpoint
      */
     @Deprecated
     void setRemoteSenderSettleMode(SenderSettleMode remoteSenderSettleMode);
+
+    /**
+     * Gets the local link properties.
+     *
+     * @see #setProperties(Map)
+     */
+    Map<Symbol, Object> getProperties();
+
+    /**
+     * Sets the local link properties, to be conveyed to the peer via the Attach frame when
+     * attaching the link to the session.
+     *
+     * Must be called during link setup, i.e. before calling the {@link #open()} method.
+     */
+    void setProperties(Map<Symbol, Object> properties);
+
+    /**
+     * Gets the remote link properties, as conveyed from the peer via the Attach frame
+     * when attaching the link to the session.
+     *
+     * @return the properties Map conveyed by the peer, or null if there was none.
+     */
+    Map<Symbol, Object> getRemoteProperties();
 
     public int drained();
 

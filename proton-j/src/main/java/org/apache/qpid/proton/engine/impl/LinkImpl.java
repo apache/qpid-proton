@@ -21,7 +21,9 @@
 package org.apache.qpid.proton.engine.impl;
 
 import java.util.EnumSet;
+import java.util.Map;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
 import org.apache.qpid.proton.amqp.transport.Source;
@@ -57,6 +59,8 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private LinkNode<LinkImpl> _node;
     private boolean _drain;
     private boolean _detached;
+    private Map<Symbol, Object> _properties;
+    private Map<Symbol, Object> _remoteProperties;
 
     LinkImpl(SessionImpl session, String name)
     {
@@ -370,6 +374,29 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     void setRemoteReceiverSettleMode(ReceiverSettleMode remoteReceiverSettleMode)
     {
         _remoteReceiverSettleMode = remoteReceiverSettleMode;
+    }
+
+    @Override
+    public Map<Symbol, Object> getProperties()
+    {
+        return _properties;
+    }
+
+    @Override
+    public void setProperties(Map<Symbol, Object> properties)
+    {
+        _properties = properties;
+    }
+
+    @Override
+    public Map<Symbol, Object> getRemoteProperties()
+    {
+        return _remoteProperties;
+    }
+
+    void setRemoteProperties(Map<Symbol, Object> remoteProperties)
+    {
+        _remoteProperties = remoteProperties;
     }
 
     @Override
