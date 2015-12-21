@@ -54,17 +54,17 @@ template <class T> class pn_ptr : public comparable<pn_ptr<T> >, private pn_ptr_
   friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }
   friend bool operator<(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ < b.ptr_; }
 
+    static pn_ptr take_ownership(T* p) { return pn_ptr<T>(p, true); }
+
   private:
     T *ptr_;
 
     // Note that it is the presence of the bool in the constructor signature that matters
     // to get the "transfer ownership" constructor: The value of the bool isn't checked.
     pn_ptr(T* p, bool) : ptr_(p) {}
-    template <class U> pn_ptr<U> take_ownership(U* p);
-    friend pn_ptr take_ownership<T>(T* p);
 };
 
-template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>(p, true); }
+template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_ownership(p); }
 
 ///@endcond INTERNAL
 
