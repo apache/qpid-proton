@@ -123,7 +123,7 @@ public interface SslDomain
      * In order to verify a peer, a trusted CA must be configured. See
      * {@link #setTrustedCaDb(String)}.
      *
-     * @note Servers must provide their own certificate when verifying a peer. See
+     * NOTE: Servers must provide their own certificate when verifying a peer. See
      * {@link #setCredentials(String, String, String)}).
      *
      * @param mode the level of validation to apply to the peer

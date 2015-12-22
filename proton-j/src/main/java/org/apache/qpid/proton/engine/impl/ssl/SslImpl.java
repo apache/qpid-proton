@@ -44,9 +44,9 @@ public class SslImpl implements Ssl
     private TransportException _initException;
 
     /**
-     * @param sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
-     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
-     * public Proton API.</p>
+     * @param domain must implement {@link org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider}. This is not possible
+     * enforce at the API level because {@link org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider} is not part of the
+     * public Proton API.
      */
     public SslImpl(SslDomain domain, SslPeerDetails peerDetails)
     {

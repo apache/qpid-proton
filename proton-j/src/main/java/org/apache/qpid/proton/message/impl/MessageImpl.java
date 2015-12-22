@@ -57,7 +57,7 @@ public class MessageImpl implements ProtonJMessage
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link MessageFactory} instead
+     * Client code outside this module should use {@link Message.Factory#create()} instead
      */
     @Deprecated public MessageImpl()
     {
@@ -65,7 +65,8 @@ public class MessageImpl implements ProtonJMessage
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link MessageFactory} instead
+     * Client code outside this module should instead use
+     * {@link Message.Factory#create(Header, DeliveryAnnotations, MessageAnnotations, Properties, ApplicationProperties, Section, Footer)}
      */
     @Deprecated public MessageImpl(Header header, DeliveryAnnotations deliveryAnnotations, MessageAnnotations messageAnnotations,
                        Properties properties, ApplicationProperties applicationProperties, Section body, Footer footer)

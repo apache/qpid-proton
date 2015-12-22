@@ -38,31 +38,31 @@ import org.apache.qpid.proton.engine.impl.TransportImpl;
  * </p>
  * <p>
  * <strong>Processing the input data received from another AMQP container.</strong>
+ * </p>
  * <ol>
  * <li>{@link #getInputBuffer()} </li>
  * <li>Write data into input buffer</li>
  * <li>{@link #processInput()}</li>
  * <li>Check the result, e.g. by calling {@link TransportResult#checkIsOk()}</li>
  * </ol>
- * </p>
  * <p>
  * <strong>Getting the output data to send to another AMQP container:</strong>
+ * </p>
  * <ol>
  * <li>{@link #getOutputBuffer()} </li>
  * <li>Read output from output buffer</li>
  * <li>{@link #outputConsumed()}</li>
  * </ol>
- * </p>
  *
  * <p>The following methods on the byte buffers returned by {@link #getInputBuffer()} and {@link #getOutputBuffer()}
  * must not be called:
+ * </p>
  * <ol>
  * <li> {@link ByteBuffer#clear()} </li>
  * <li> {@link ByteBuffer#compact()} </li>
  * <li> {@link ByteBuffer#flip()} </li>
  * <li> {@link ByteBuffer#mark()} </li>
  * </ol>
- * </p>
  */
 public interface Transport extends Endpoint
 {
@@ -226,7 +226,7 @@ public interface Transport extends Endpoint
 
     /**
      *
-     * @param local idle timeout in milliseconds
+     * @param timeout local idle timeout in milliseconds
      */
     void setIdleTimeout(int timeout);
     /**

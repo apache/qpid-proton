@@ -126,7 +126,7 @@ public interface Sasl
      * @param bytes written with up to size bytes of inbound data.
      * @param offset the offset in the array to begin writing at
      * @param size maximum number of bytes that bytes can accept.
-     * @return The number of bytes written to bytes, or an error code if < 0.
+     * @return The number of bytes written to bytes, or an error code if {@literal < 0}.
      */
     int recv(byte[] bytes, int offset, int size);
 
@@ -136,7 +136,7 @@ public interface Sasl
      * @param bytes The challenge/response data.
      * @param offset the point within the array at which the data starts at
      * @param size The number of data octets in bytes.
-     * @return The number of octets read from bytes, or an error code if < 0
+     * @return The number of octets read from bytes, or an error code if {@literal < 0}
      */
     int send(byte[] bytes, int offset, int size);
 
@@ -146,7 +146,7 @@ public interface Sasl
      *
      * Used by the server to set the result of the negotiation process.
      *
-     * @todo
+     * @param outcome the outcome of the SASL negotiation
      */
     void done(SaslOutcome outcome);
 

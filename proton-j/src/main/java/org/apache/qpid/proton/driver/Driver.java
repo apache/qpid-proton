@@ -67,7 +67,7 @@ public interface Driver
      *
      * @param timeout maximum time in milliseconds to wait. -1 means wait indefinitely.
      *
-     * @param returns true if woken up
+     * @return true if woken up
      */
     boolean doWait(long timeout);
 

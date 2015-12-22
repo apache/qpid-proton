@@ -28,7 +28,7 @@ public interface FrameHandler
     /**
      * @throws IllegalStateException if I am not currently accepting input
      * @see #isHandlingFrames()
-     * @returns false on end of stream
+     * @return false on end of stream
      */
     boolean handleFrame(TransportFrame frame);
 

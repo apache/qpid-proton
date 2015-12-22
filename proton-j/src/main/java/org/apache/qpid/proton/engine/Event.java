@@ -145,8 +145,7 @@ public interface Event extends Extendable
      * this method explicitly to be able to do more processing after all child
      * handlers have already processed the event. If handler does not invoke
      * this method it is invoked implicitly by {@link #dispatch(Handler)}
-     * 
-     * @param handler
+     *
      * @throws HandlerException
      */
     void delegate() throws HandlerException;

@@ -27,7 +27,7 @@ package org.apache.qpid.proton.engine;
  * so it's best instantiated as a static final member.
  * <pre><code>
  *   class Foo extends BaseHandler {
- *     private static ExtendableAccessor<Link, Bar> LINK_BAR = new ExtendableAccessor<>(Bar.class);
+ *     private static ExtendableAccessor&lt;Link, Bar&gt; LINK_BAR = new ExtendableAccessor&lt;&gt;(Bar.class);
  *     void onLinkRemoteOpen(Event e) {
  *       Bar bar = LINK_BAR.get(e.getLink());
  *       if (bar == null) {

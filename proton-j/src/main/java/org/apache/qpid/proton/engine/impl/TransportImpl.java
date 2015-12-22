@@ -139,7 +139,7 @@ public class TransportImpl extends EndpointImpl
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link EngineFactory} instead
+     * Client code outside this module should use {@link org.apache.qpid.proton.engine.Transport.Factory#create()} instead
      */
     @Deprecated public TransportImpl()
     {
@@ -288,7 +288,7 @@ public class TransportImpl extends EndpointImpl
 
     /**
      * This method is public as it is used by Python layer.
-     * @see Transport#input(byte[], int, int)
+     * @see org.apache.qpid.proton.engine.Transport#input(byte[], int, int)
      */
     public TransportResult oldApiCheckStateBeforeInput(int inputLength)
     {
@@ -361,8 +361,8 @@ public class TransportImpl extends EndpointImpl
     /**
      * {@inheritDoc}
      *
-     * <p>Note that sslDomain must implement {@link ProtonSslEngineProvider}. This is not possible
-     * enforce at the API level because {@link ProtonSslEngineProvider} is not part of the
+     * <p>Note that sslDomain must implement {@link org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider}.
+     * This is not possible enforce at the API level because {@link org.apache.qpid.proton.engine.impl.ssl.ProtonSslEngineProvider} is not part of the
      * public Proton API.</p>
      */
     @Override

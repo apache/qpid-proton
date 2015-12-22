@@ -32,8 +32,8 @@ public interface Sender extends Link
      * indicates pending deliveries
      *
      * @param credits the number of pending deliveries
-     * @todo is this absolute or cumulative?
      */
+    //TODO is this absolute or cumulative?
     public void offer(int credits);
 
     /**

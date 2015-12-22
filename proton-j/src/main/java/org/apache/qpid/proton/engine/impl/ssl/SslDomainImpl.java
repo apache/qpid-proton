@@ -37,7 +37,7 @@ public class SslDomainImpl implements SslDomain, ProtonSslEngineProvider, Proton
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link EngineFactory} instead
+     * Client code outside this module should use {@link SslDomain.Factory#create()} instead.
      */
     @Deprecated public SslDomainImpl()
     {

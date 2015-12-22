@@ -33,7 +33,7 @@ import org.apache.qpid.proton.message.impl.MessageImpl;
 /**
  * Represents a Message within Proton.
  *
- * Create instances of Message using a {@link MessageFactory} implementation.
+ * Create instances of Message using {@link Message.Factory}.
  *
  */
 public interface Message

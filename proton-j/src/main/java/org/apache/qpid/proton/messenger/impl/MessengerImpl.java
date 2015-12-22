@@ -104,7 +104,7 @@ public class MessengerImpl implements Messenger
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link MessengerFactory} instead
+     * Client code outside this module should use {@link Messenger.Factory#create()} instead
      */
     @Deprecated public MessengerImpl()
     {
@@ -113,7 +113,7 @@ public class MessengerImpl implements Messenger
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link MessengerFactory} instead
+     * Client code outside this module should use a {@link Messenger.Factory#create(String)} instead
      */
     @Deprecated public MessengerImpl(String name)
     {

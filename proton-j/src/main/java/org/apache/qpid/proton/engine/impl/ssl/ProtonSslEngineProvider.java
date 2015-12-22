@@ -25,7 +25,7 @@ public interface ProtonSslEngineProvider
     /**
      * Returns an SSL engine.
      *
-     * @param sslPeerDetails the details of the remote peer. If non-null, may be used to assist SSL session resumption.
+     * @param peerDetails the details of the remote peer. If non-null, may be used to assist SSL session resumption.
      */
     public ProtonSslEngine createSslEngine(SslPeerDetails peerDetails);
 }

@@ -42,7 +42,7 @@ public class ByteBufferUtils
     /**
      * Assumes {@code destination} is ready to be written.
      *
-     * @returns number of bytes poured which may be fewer than {@code sizeRequested} if
+     * @return number of bytes poured which may be fewer than {@code sizeRequested} if
      * {@code destination} has insufficient remaining
      */
     public static int pourArrayToBuffer(byte[] source, int offset, int sizeRequested, ByteBuffer destination)
@@ -54,7 +54,7 @@ public class ByteBufferUtils
 
     /**
      * Pours the contents of {@code source} into {@code destinationTransportInput}, calling
-     * the TransportInput many times if necessary.  If the TransportInput returns a {@link TransportResult}
+     * the TransportInput many times if necessary.  If the TransportInput returns a {@link org.apache.qpid.proton.engine.TransportResult}
      * other than ok, data may remain in source.
      */
     public static int pourAll(ByteBuffer source, TransportInput destinationTransportInput) throws TransportException
@@ -84,7 +84,7 @@ public class ByteBufferUtils
     /**
      * Assumes {@code source} is ready to be read.
      *
-     * @returns number of bytes poured which may be fewer than {@code sizeRequested} if
+     * @return number of bytes poured which may be fewer than {@code sizeRequested} if
      * {@code source} has insufficient remaining
      */
     public static int pourBufferToArray(ByteBuffer source, byte[] destination, int offset, int sizeRequested)

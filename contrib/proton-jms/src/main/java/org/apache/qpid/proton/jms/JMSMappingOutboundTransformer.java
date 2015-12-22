@@ -80,9 +80,8 @@ public class JMSMappingOutboundTransformer extends OutboundTransformer {
      * Perform the conversion between JMS Message and Proton Message without re-encoding it to array.
      * This is needed because some frameworks may elect to do this on their own way (Netty for instance using Nettybuffers)
      *
-     * @param msg
-     * @return
-     * @throws Exception
+     * @param msg the supplied JMS Message
+     * @return the converted Proton Message
      */
     public ProtonJMessage convert(Message msg)
             throws JMSException, UnsupportedEncodingException {
