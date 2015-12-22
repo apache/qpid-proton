@@ -248,6 +248,54 @@ bool message::erase_property(const std::string& name) {
     return false;
 }
 
+void message::annotations(const value& v) {
+    annotations().copy(v);
+}
+
+const data message::annotations() const {
+    return pn_message_annotations(message_);
+}
+
+data message::annotations() {
+    return pn_message_annotations(message_);
+}
+
+namespace {
+typedef std::map<proton::amqp_symbol, value> annotation_map;
+}
+
+void message::annotation(const proton::amqp_symbol &k, const value &v) {
+    annotation_map m;
+    if (!annotations().empty())
+        annotations().get(m);
+    m[k] = v;
+    annotations(m);
+}
+
+value message::annotation(const proton::amqp_symbol &k) const {
+    if (!annotations().empty()) {
+        annotation_map m;
+        annotations().get(m);
+        annotation_map::const_iterator i = m.find(k);
+        if (i != m.end())
+            return i->second;
+    }
+    return value();
+
+}
+
+bool message::erase_annotation(const proton::amqp_symbol &k) {
+    if (!annotations().empty()) {
+        annotation_map m;
+        annotations().get(m);
+        if (m.erase(k)) {
+            annotations(m);
+            return true;
+        }
+    }
+    return false;
+}
+
 void message::encode(std::string &s) const {
     size_t sz = s.capacity();
     if (sz < 512) sz = 512;

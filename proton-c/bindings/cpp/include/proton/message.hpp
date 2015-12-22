@@ -132,6 +132,13 @@ class message
     /** Erase an application property. Returns false if there was no such property. */
     PN_CPP_EXTERN bool erase_property(const std::string &name);
 
+    PN_CPP_EXTERN void annotations(const value&);
+    PN_CPP_EXTERN const data annotations() const;
+    PN_CPP_EXTERN data annotations();
+    PN_CPP_EXTERN void annotation(const proton::amqp_symbol &key, const value &val);
+    PN_CPP_EXTERN value annotation(const proton::amqp_symbol &key) const;
+    PN_CPP_EXTERN bool erase_annotation(const proton::amqp_symbol &key);
+
     /** Encode into a string, growing the string if necessary. */
     PN_CPP_EXTERN void encode(std::string &bytes) const;
 
