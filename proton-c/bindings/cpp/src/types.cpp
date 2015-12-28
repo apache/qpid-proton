@@ -95,15 +95,15 @@ std::string type_name(type_id t) {
     return "unknown";
 }
 
-static bool type_id_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
-static bool type_id_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
-bool type_id_integral(type_id t) { return t == BOOLEAN || t == CHAR || type_id_unsigned_int(t) || type_id_signed_int(t); }
-bool type_id_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
-bool type_id_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }
-bool type_id_signed(type_id t) { return type_id_signed_int(t) || type_id_floating_point(t) || type_id_decimal(t); }
-bool type_id_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
-bool type_id_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
-bool type_id_atom(type_id t) { return type_id_integral(t) || type_id_floating_point(t) || type_id_decimal(t) || type_id_string_like(t) || t == TIMESTAMP || t == UUID; }
+static bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
+static bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
+bool type_id_is_integral(type_id t) { return t == BOOLEAN || t == CHAR || type_id_is_unsigned_int(t) || type_id_is_signed_int(t); }
+bool type_id_is_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
+bool type_id_is_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }
+bool type_id_is_signed(type_id t) { return type_id_is_signed_int(t) || type_id_is_floating_point(t) || type_id_is_decimal(t); }
+bool type_id_is_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
+bool type_id_is_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
+bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_floating_point(t) || type_id_is_decimal(t) || type_id_is_string_like(t) || t == TIMESTAMP || t == UUID; }
 
 
 std::ostream& operator<<(std::ostream& o,type_id t) { return o << type_name(t); }

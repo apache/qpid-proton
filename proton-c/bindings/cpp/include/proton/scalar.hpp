@@ -1,5 +1,5 @@
-#ifndef ATOM_HPP
-#define ATOM_HPP
+#ifndef SCALAR_HPP
+#define SCALAR_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,47 +24,47 @@
 
 namespace proton {
 
-class atom;
+class scalar;
 
-/** atom holds an instance of an atomic proton type. */
-class atom : public comparable<atom> {
+/** scalar holds an instance of an atomic proton type. */
+class scalar : public comparable<scalar> {
   public:
-    PN_CPP_EXTERN atom();
+    PN_CPP_EXTERN scalar();
     // Use default assign and copy.
 
-    /// Type for the value in the atom, NULL_TYPE if empty()
+    /// Type for the value in the scalar, NULL_TYPE if empty()
     PN_CPP_EXTERN type_id type() const;
-    /// True if the atom is empty.
+    /// True if the scalar is empty.
     PN_CPP_EXTERN bool empty() const;
 
-    ///@name Create an atom, type() is deduced from the C++ type of the value.
+    ///@name Create an scalar, type() is deduced from the C++ type of the value.
     ///@{
-    PN_CPP_EXTERN explicit atom(bool);
-    PN_CPP_EXTERN explicit atom(uint8_t);
-    PN_CPP_EXTERN explicit atom(int8_t);
-    PN_CPP_EXTERN explicit atom(uint16_t);
-    PN_CPP_EXTERN explicit atom(int16_t);
-    PN_CPP_EXTERN explicit atom(uint32_t);
-    PN_CPP_EXTERN explicit atom(int32_t);
-    PN_CPP_EXTERN explicit atom(uint64_t);
-    PN_CPP_EXTERN explicit atom(int64_t);
-    PN_CPP_EXTERN explicit atom(wchar_t);
-    PN_CPP_EXTERN explicit atom(float);
-    PN_CPP_EXTERN explicit atom(double);
-    PN_CPP_EXTERN explicit atom(amqp_timestamp);
-    PN_CPP_EXTERN explicit atom(const amqp_decimal32&);
-    PN_CPP_EXTERN explicit atom(const amqp_decimal64&);
-    PN_CPP_EXTERN explicit atom(const amqp_decimal128&);
-    PN_CPP_EXTERN explicit atom(const amqp_uuid&);
-    PN_CPP_EXTERN explicit atom(const amqp_string&);
-    PN_CPP_EXTERN explicit atom(const amqp_symbol&);
-    PN_CPP_EXTERN explicit atom(const amqp_binary&);
-    PN_CPP_EXTERN explicit atom(const std::string& s); ///< Treated as an AMQP string
-    PN_CPP_EXTERN explicit atom(const char* s);        ///< Treated as an AMQP string
+    PN_CPP_EXTERN explicit scalar(bool);
+    PN_CPP_EXTERN explicit scalar(uint8_t);
+    PN_CPP_EXTERN explicit scalar(int8_t);
+    PN_CPP_EXTERN explicit scalar(uint16_t);
+    PN_CPP_EXTERN explicit scalar(int16_t);
+    PN_CPP_EXTERN explicit scalar(uint32_t);
+    PN_CPP_EXTERN explicit scalar(int32_t);
+    PN_CPP_EXTERN explicit scalar(uint64_t);
+    PN_CPP_EXTERN explicit scalar(int64_t);
+    PN_CPP_EXTERN explicit scalar(wchar_t);
+    PN_CPP_EXTERN explicit scalar(float);
+    PN_CPP_EXTERN explicit scalar(double);
+    PN_CPP_EXTERN explicit scalar(amqp_timestamp);
+    PN_CPP_EXTERN explicit scalar(const amqp_decimal32&);
+    PN_CPP_EXTERN explicit scalar(const amqp_decimal64&);
+    PN_CPP_EXTERN explicit scalar(const amqp_decimal128&);
+    PN_CPP_EXTERN explicit scalar(const amqp_uuid&);
+    PN_CPP_EXTERN explicit scalar(const amqp_string&);
+    PN_CPP_EXTERN explicit scalar(const amqp_symbol&);
+    PN_CPP_EXTERN explicit scalar(const amqp_binary&);
+    PN_CPP_EXTERN explicit scalar(const std::string& s); ///< Treated as an AMQP string
+    PN_CPP_EXTERN explicit scalar(const char* s);        ///< Treated as an AMQP string
     ///@}
 
-    /// Assign to an atom using the same rules as construction.
-    template <class T> atom& operator=(T x) { return *this = atom(x); }
+    /// Assign to an scalar using the same rules as construction.
+    template <class T> scalar& operator=(T x) { return *this = scalar(x); }
 
     ///@name get(T&) extracts the value if the types match exactly,
     ///i.e. if `type() == type_id_of<T>::value`
@@ -96,7 +96,7 @@ class atom : public comparable<atom> {
     ///@ get<T>() is like get(T&) but returns the value..
     template<class T> T get() const { T x; get(x); return x; }
 
-    ///@name as_ methods do "loose" conversion, they will convert the atom's
+    ///@name as_ methods do "loose" conversion, they will convert the scalar's
     ///value to the requested type if possible, else throw type_mismatch
     ///@{
     PN_CPP_EXTERN int64_t as_int() const;     ///< Allowed if type_id_integral(type())
@@ -105,11 +105,11 @@ class atom : public comparable<atom> {
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if type_id_string_like(type())
     ///@}
 
-    PN_CPP_EXTERN bool operator==(const atom& x) const;
+    PN_CPP_EXTERN bool operator==(const scalar& x) const;
     /// Note if the values are of different type(), operator< will compare the type()
-    PN_CPP_EXTERN bool operator<(const atom& x) const;
+    PN_CPP_EXTERN bool operator<(const scalar& x) const;
 
-  PN_CPP_EXTERN friend std::ostream& operator<<(std::ostream&, const atom&);
+  PN_CPP_EXTERN friend std::ostream& operator<<(std::ostream&, const scalar&);
 
   private:
     void ok(pn_type_t) const;
@@ -119,4 +119,4 @@ class atom : public comparable<atom> {
 };
 
 }
-#endif // ATOM_HPP
+#endif // SCALAR_HPP

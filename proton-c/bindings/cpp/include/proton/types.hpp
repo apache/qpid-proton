@@ -198,13 +198,13 @@ PN_CPP_EXTERN std::string type_name(type_id);
 ///@name Attributes of a type_id value, returns same result as the
 /// corresponding std::type_traits tests for the corresponding C++ types.
 ///@{
-PN_CPP_EXTERN bool type_id_atom(type_id);
-PN_CPP_EXTERN bool type_id_integral(type_id);
-PN_CPP_EXTERN bool type_id_signed(type_id); ///< CHAR and BOOL are not signed.
-PN_CPP_EXTERN bool type_id_floating_point(type_id);
-PN_CPP_EXTERN bool type_id_decimal(type_id);
-PN_CPP_EXTERN bool type_id_string_like(type_id);   ///< STRING, SYMBOL, BINARY
-PN_CPP_EXTERN bool type_id_container(type_id);
+PN_CPP_EXTERN bool type_id_is_scalar(type_id);
+PN_CPP_EXTERN bool type_id_is_integral(type_id);
+PN_CPP_EXTERN bool type_id_is_signed(type_id); ///< CHAR and BOOL are not signed.
+PN_CPP_EXTERN bool type_id_is_floating_point(type_id);
+PN_CPP_EXTERN bool type_id_is_decimal(type_id);
+PN_CPP_EXTERN bool type_id_is_string_like(type_id);   ///< STRING, SYMBOL, BINARY
+PN_CPP_EXTERN bool type_id_is_container(type_id);
 ///@}
 
 /** Print the name of a type. */

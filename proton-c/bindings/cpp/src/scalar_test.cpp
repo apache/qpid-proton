@@ -20,19 +20,19 @@
 #include "test_bits.hpp"
 #include "proton/type_traits.hpp"
 
-#include <proton/atom.hpp>
+#include <proton/scalar.hpp>
 
 using namespace std;
 using namespace proton;
 
 // Inserting and extracting simple C++ values.
 template <class T> void type_test(T x, type_id tid, T y) {
-    atom v(x);
+    scalar v(x);
     ASSERT_EQUAL(tid, v.type());
     ASSERT(!v.empty());
     ASSERT_EQUAL(x, v.get<T>());
 
-    atom v2;
+    scalar v2;
     ASSERT(v2.type() == NULL_TYPE);
     v2 = x;
     ASSERT_EQUAL(tid, v2.type());
@@ -50,7 +50,7 @@ template <class T> void type_test(T x, type_id tid, T y) {
     try { (void)(EXPR); FAIL("expected type_mismatch: " #EXPR); } catch (type_mismatch) {}
 
 void convert_test() {
-    atom a;
+    scalar a;
     ASSERT_EQUAL(NULL_TYPE, a.type());
     ASSERT(a.empty());
     ASSERT_MISMATCH(a.get<float>());
