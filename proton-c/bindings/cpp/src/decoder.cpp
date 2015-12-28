@@ -34,8 +34,7 @@ namespace proton {
  * to be returned by the decoder.
  *
  */
-static const std::string prefix("decode: ");
-decode_error::decode_error(const std::string& msg) throw() : error(prefix+msg) {}
+decode_error::decode_error(const std::string& msg) : error("decode: "+msg) {}
 
 namespace {
 struct save_state {
@@ -64,7 +63,7 @@ void decoder::decode(const char* i, size_t size) {
     save_state ss(pn_object());
     const char* end = i + size;
     while (i < end) {
-        i += check(pn_data_decode(pn_object(), i, end - i));
+        i += check(pn_data_decode(pn_object(), i, size_t(end - i)));
     }
 }
 
@@ -103,7 +102,7 @@ type_id pre_get(pn_data_t* data) {
 template <class T, class U> void extract(pn_data_t* data, T& value, U (*get)(pn_data_t*)) {
     save_state ss(data);
     bad_type(type_id_of<T>::value, pre_get(data));
-    value = get(data);
+    value = T(get(data));
     ss.cancel();                // No error, no rewind
 }
 
@@ -305,7 +304,7 @@ decoder operator>>(decoder d0, amqp_float& value) {
     save_state ss(d);
     switch (pre_get(d)) {
       case FLOAT: value = pn_data_get_float(d); break;
-      case DOUBLE: value = pn_data_get_double(d); break;
+      case DOUBLE: value = float(pn_data_get_double(d)); break;
       default: bad_type(FLOAT, type_id(pn_data_type(d)));
     }
     ss.cancel();

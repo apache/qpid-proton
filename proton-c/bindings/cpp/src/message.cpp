@@ -40,7 +40,7 @@ message::message() : message_(::pn_message()) {}
 
 message::message(const message &m) : message_(::pn_message()) { *this = m; }
 
-#if PN_HAS_CPP11
+#if defined(PN_HAS_CPP11) && PN_HAS_CPP11
 message::message(message &&m) : message_(::pn_message()) { swap(m); }
 #endif
 
@@ -301,7 +301,7 @@ void message::encode(std::string &s) const {
     if (sz < 512) sz = 512;
     while (true) {
         s.resize(sz);
-        int err = pn_message_encode(message_, (char *) s.data(), &sz);
+        int err = pn_message_encode(message_, const_cast<char*>(s.data()), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
                 check(err);
@@ -326,8 +326,8 @@ void message::decode(const std::string &s) {
 void message::decode(proton::link link, proton::delivery delivery) {
     std::string buf;
     buf.resize(delivery.pending());
-    ssize_t n = link.recv((char *) buf.data(), buf.size());
-    if (n != (ssize_t) buf.size()) throw error(MSG("link read failure"));
+    ssize_t n = link.recv(const_cast<char *>(buf.data()), buf.size());
+    if (n != ssize_t(buf.size())) throw error(MSG("link read failure"));
     clear();
     decode(buf);
     link.advance();
@@ -348,7 +348,7 @@ void message::first_acquirer(bool b) { pn_message_set_first_acquirer(message_, b
 uint32_t message::delivery_count() const { return pn_message_get_delivery_count(message_); }
 void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(message_, d); }
 
-uint32_t message::sequence() const { return pn_message_get_group_sequence(message_); }
-void message::sequence(uint32_t d) { pn_message_set_group_sequence(message_, d); }
+int32_t message::sequence() const { return pn_message_get_group_sequence(message_); }
+void message::sequence(int32_t d) { pn_message_set_group_sequence(message_, d); }
 
 }

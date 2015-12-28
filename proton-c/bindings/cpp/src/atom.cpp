@@ -38,7 +38,7 @@ atom::atom(uint32_t x) { atom_.u.as_uint = x; atom_.type = PN_UINT; }
 atom::atom(int32_t x) { atom_.u.as_int = x; atom_.type = PN_INT; }
 atom::atom(uint64_t x) { atom_.u.as_ulong = x; atom_.type = PN_ULONG; }
 atom::atom(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG; }
-atom::atom(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; }
+atom::atom(wchar_t x) { atom_.u.as_char = pn_char_t(x); atom_.type = PN_CHAR; }
 atom::atom(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; }
 atom::atom(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; }
 atom::atom(amqp_timestamp x) { atom_.u.as_timestamp = x; atom_.type = PN_TIMESTAMP; }
@@ -65,7 +65,7 @@ void atom::get(uint16_t& x) const { ok(PN_USHORT); x = atom_.u.as_ushort; }
 void atom::get(int16_t& x) const { ok(PN_SHORT); x = atom_.u.as_short; }
 void atom::get(uint32_t& x) const { ok(PN_UINT); x = atom_.u.as_uint; }
 void atom::get(int32_t& x) const { ok(PN_INT); x = atom_.u.as_int; }
-void atom::get(wchar_t& x) const { ok(PN_CHAR); x = atom_.u.as_char; }
+void atom::get(wchar_t& x) const { ok(PN_CHAR); x = wchar_t(atom_.u.as_char); }
 void atom::get(uint64_t& x) const { ok(PN_ULONG); x = atom_.u.as_ulong; }
 void atom::get(int64_t& x) const { ok(PN_LONG); x = atom_.u.as_long; }
 void atom::get(amqp_timestamp& x) const { ok(PN_TIMESTAMP); x = atom_.u.as_timestamp; }
@@ -81,7 +81,8 @@ void atom::get(amqp_binary& x) const { ok(PN_BINARY); x = str_; }
 void atom::get(std::string& x) const { x = get<amqp_string>(); }
 
 int64_t atom::as_int() const {
-    if (type_id_floating_point(type())) return as_double();
+    if (type_id_floating_point(type()))
+        return int64_t(as_double());
     switch (atom_.type) {
       case PN_BOOL: return atom_.u.as_bool;
       case PN_UBYTE: return atom_.u.as_ubyte;
@@ -91,7 +92,7 @@ int64_t atom::as_int() const {
       case PN_UINT: return atom_.u.as_uint;
       case PN_INT: return atom_.u.as_int;
       case PN_CHAR: return atom_.u.as_char;
-      case PN_ULONG: return atom_.u.as_ulong;
+      case PN_ULONG: return int64_t(atom_.u.as_ulong);
       case PN_LONG: return atom_.u.as_long;
       default: throw type_mismatch(LONG, type(), "cannot convert");
     }

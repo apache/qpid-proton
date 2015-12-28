@@ -68,23 +68,23 @@ void connector::connect() {
     if (!address_.password().empty())
         connection_.password(address_.password());
     t.bind(connection_);
-    pn_decref((void *)pnt);
+    pn_decref(pnt);
     // Apply options to the new transport.
     options_.apply(connection_);
     transport_configured_ = true;
 }
 
-void connector::on_connection_local_open(event &e) {
+void connector::on_connection_local_open(event &) {
     connect();
 }
 
-void connector::on_connection_remote_open(event &e) {
+void connector::on_connection_remote_open(event &) {
     if (reconnect_timer_) {
         reconnect_timer_->reset();
     }
 }
 
-void connector::on_connection_init(event &e) {
+void connector::on_connection_init(event &) {
 }
 
 void connector::on_transport_tail_closed(event &e) {
@@ -116,7 +116,7 @@ void connector::on_transport_closed(event &e) {
     connection_  = 0;
 }
 
-void connector::on_timer_task(event &e) {
+void connector::on_timer_task(event &) {
     connect();
 }
 

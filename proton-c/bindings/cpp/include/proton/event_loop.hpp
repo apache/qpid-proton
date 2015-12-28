@@ -31,7 +31,7 @@ namespace proton {
  */
 class event_loop {
   public:
-    PN_CPP_EXTERN virtual ~event_loop() {}
+    PN_CPP_EXTERN virtual ~event_loop();
 
     /// The AMQP container-id associated with this event loop.
     /// Any connections managed by this event loop will have this container id.

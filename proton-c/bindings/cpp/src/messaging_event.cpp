@@ -141,7 +141,6 @@ void messaging_event::dispatch(handler &h) {
 
         default:
             throw error(MSG("Unknown messaging event type " << type_));
-            break;
         }
     } else {
         h.on_unhandled(*this);
@@ -177,8 +176,8 @@ std::string messaging_event::name() const {
       case TRANSACTION_COMMIT:  return "TRANSACTION_COMMIT";
       case TRANSACTION_DECLARE: return "TRANSACTION_DECLARE";
       case TIMER:            return "TIMER";
-      default: return "UNKNOWN";
     }
+    return "unknown";
 }
 
 }

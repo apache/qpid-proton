@@ -29,7 +29,7 @@ namespace proton {
 
 /// Thrown if URL parsing fails.
 struct url_error : public error {
-    PN_CPP_EXTERN explicit url_error(const std::string&) throw();
+    PN_CPP_EXTERN explicit url_error(const std::string&);
 };
 
 

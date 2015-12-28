@@ -69,7 +69,7 @@ enum type_id {
 
 /// Raised when there is a type mismatch, with the expected and actual type ID.
 struct type_mismatch : public error {
-    PN_CPP_EXTERN explicit type_mismatch(type_id want, type_id got, const std::string& =std::string()) throw();
+    PN_CPP_EXTERN explicit type_mismatch(type_id want, type_id got, const std::string& =std::string());
     type_id want; ///< Expected type_id
     type_id got;  ///< Actual type_id
 };

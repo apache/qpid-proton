@@ -48,7 +48,7 @@ class data;
 class message_id;
 
 /** Raised by encoder operations on error */
-struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&) throw(); };
+struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&); };
 
 /**
  * Stream-like encoder from C++ values to AMQP values.

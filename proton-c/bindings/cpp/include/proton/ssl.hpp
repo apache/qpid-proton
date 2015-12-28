@@ -102,8 +102,6 @@ class server_domain : private ssl_domain {
     /** A server domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN server_domain();
 
-    PN_CPP_EXTERN ~server_domain();
-
   private:
     // Bring pn_domain into scope and allow connection_options to use it
     using ssl_domain::pn_domain;
@@ -118,8 +116,6 @@ class client_domain : private ssl_domain {
     PN_CPP_EXTERN client_domain(ssl_certificate&, const std::string &trust_db, ssl::verify_mode_t = ssl::VERIFY_PEER_NAME);
     /** A client domain restricted to available anonymous cipher suites on the platform. */
     PN_CPP_EXTERN client_domain();
-
-    PN_CPP_EXTERN ~client_domain();
 
   private:
     // Bring pn_domain into scope and allow connection_options to use it

@@ -242,9 +242,9 @@ class message
      *
      * @return the group sequence for the message
      */
-    PN_CPP_EXTERN uint32_t sequence() const;
+    PN_CPP_EXTERN int32_t sequence() const;
     /** Get the group sequence for a message. */
-    PN_CPP_EXTERN void sequence(uint32_t);
+    PN_CPP_EXTERN void sequence(int32_t);
 
   private:
     pn_message_t *message_;

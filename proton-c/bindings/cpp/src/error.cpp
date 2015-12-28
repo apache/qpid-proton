@@ -23,8 +23,8 @@ namespace proton {
 
 static const std::string prefix("proton: ");
 
-error::error(const std::string& msg) throw() : std::runtime_error(prefix+msg) {}
+error::error(const std::string& msg) : std::runtime_error(prefix+msg) {}
 
-timeout_error::timeout_error(const std::string& msg) throw() : error(msg) {}
+timeout_error::timeout_error(const std::string& msg) : error(msg) {}
 
 }

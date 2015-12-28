@@ -87,7 +87,7 @@ int compare_container(data& a, data& b) {
     int cmp = compare(sa.is_described, sb.is_described);
     if (cmp) return cmp;
     // Lexical sort (including descriptor if there is one)
-    size_t min_size = std::min(sa.size, sb.size) + int(sa.is_described);
+    size_t min_size = std::min(sa.size, sb.size) + size_t(sa.is_described);
     for (size_t i = 0; i < min_size; ++i) {
         cmp = compare_next(a, b);
         if (cmp) return cmp;

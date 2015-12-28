@@ -40,11 +40,11 @@ template <class T> class pn_ptr : public comparable<pn_ptr<T> >, private pn_ptr_
     pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
     pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
 
-#ifdef PN_HAS_CPP11
+#if PN_HAS_CPP11
     pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
 #endif
 
-    ~pn_ptr() { decref(ptr_); };
+    ~pn_ptr() { decref(ptr_); }
 
     pn_ptr& operator=(pn_ptr o) { std::swap(ptr_, o.ptr_); return *this; }
 

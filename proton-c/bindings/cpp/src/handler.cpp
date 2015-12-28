@@ -28,7 +28,7 @@ namespace proton {
 handler::handler() {}
 handler::~handler() {}
 
-void handler::on_unhandled(event &e) {}
+void handler::on_unhandled(event &) {}
 
 void handler::add_child_handler(handler &e) {
     children_.push_back(&e);

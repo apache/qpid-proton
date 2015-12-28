@@ -26,7 +26,7 @@
 
 namespace proton {
 
-url_error::url_error(const std::string& s) throw() : error(s) {}
+url_error::url_error(const std::string& s) : error(s) {}
 
 namespace {
 

@@ -107,7 +107,7 @@ class override_handler : public handler
                 container_impl_.configure_server_connection(c);
             }
         }
-        pn_handler_dispatch(base_handler.get(), cevent, (pn_event_type_t) type);
+        pn_handler_dispatch(base_handler.get(), cevent, pn_event_type_t(type));
     }
 };
 

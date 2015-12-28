@@ -153,7 +153,6 @@ void proton_event::dispatch(handler &h) {
           case PN_SELECTABLE_FINAL: handler->on_selectable_final(*this); break;
           default:
             throw error(MSG("Invalid Proton event type " << type_));
-            break;
         }
     } else {
         h.on_unhandled(*this);

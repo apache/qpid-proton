@@ -28,10 +28,10 @@
  * Assorted internal proton utilities.
  */
 
-std::string error_str(int code);
+std::string error_str(long code);
 
 /** Print the error string from pn_error_t, or from code if pn_error_t has no error. */
-std::string error_str(pn_error_t*, int code=0);
+std::string error_str(pn_error_t*, long code=0);
 
 /** Make a void* inspectable via operator <<. */
 struct inspectable { void* value; inspectable(void* o) : value(o) {} };

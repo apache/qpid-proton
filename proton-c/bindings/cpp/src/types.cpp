@@ -28,11 +28,12 @@ namespace proton {
 
 namespace {
 inline std::ostream& print_segment(std::ostream& o, const amqp_uuid& u, size_t begin, size_t end, const char* sep="") {
-    for (const char* p = &u[begin]; p < &u[end]; ++p) o << std::setw(2) << std::setfill('0') << ((int)*p & 0xff);
+    for (const char* p = &u[begin]; p < &u[end]; ++p)
+        o << std::setw(2) << std::setfill('0') << (int(*p) & 0xff);
     return o << sep;
 }
 
-std::string mismatch_message(type_id want, type_id got, const std::string& msg=std::string()) throw()
+std::string mismatch_message(type_id want, type_id got, const std::string& msg=std::string())
 {
     std::ostringstream s;
     s << "type mismatch: want " << type_name(want) << " got " << type_name(got);
@@ -42,7 +43,7 @@ std::string mismatch_message(type_id want, type_id got, const std::string& msg=s
 }
 
 type_mismatch::type_mismatch(type_id want_, type_id got_, const std::string &msg)
-    throw() : error(mismatch_message(want_, got_, msg)), want(want_), got(got_)
+    : error(mismatch_message(want_, got_, msg)), want(want_), got(got_)
 {}
 
 
@@ -90,12 +91,12 @@ std::string type_name(type_id t) {
       case ARRAY: return "array";
       case LIST: return "list";
       case  MAP: return "map";
-      default: return "unknown";
     }
+    return "unknown";
 }
 
-bool type_id_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
-bool type_id_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
+static bool type_id_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
+static bool type_id_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
 bool type_id_integral(type_id t) { return t == BOOLEAN || t == CHAR || type_id_unsigned_int(t) || type_id_signed_int(t); }
 bool type_id_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
 bool type_id_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }

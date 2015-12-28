@@ -84,6 +84,6 @@ void test_message() {
 
 int main(int argc, char** argv) {
     int failed = 0;
-    RUN_TEST(failed, test_message);
+    RUN_TEST(failed, test_message());
     return failed;
 }

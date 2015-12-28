@@ -37,7 +37,6 @@ namespace proton {
 namespace {
 void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); }
 #define CID_cpp_context CID_pn_object
-#define cpp_context_reify pn_object_reify
 #define cpp_context_initialize NULL
 #define cpp_context_finalize cpp_context_finalize
 #define cpp_context_hashcode NULL
@@ -46,14 +45,10 @@ void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); 
 pn_class_t cpp_context_class = PN_CLASS(cpp_context);
 
 // Handles
+#pragma GCC diagnostic ignored "-Wold-style-cast"
 PN_HANDLE(CONNECTION_CONTEXT)
 PN_HANDLE(CONTAINER_CONTEXT)
 PN_HANDLE(LISTENER_CONTEXT)
-}
-
-context::~context() {}
-void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
-pn_class_t* context::pn_class() { return &cpp_context_class; }
 
 void set_context(pn_record_t* record, pn_handle_t handle, const pn_class_t *clazz, void* value)
 {
@@ -66,6 +61,11 @@ T* get_context(pn_record_t* record, pn_handle_t handle) {
     return reinterpret_cast<T*>(pn_record_get(record, handle));
 }
 
+}
+
+context::~context() {}
+void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
+pn_class_t* context::pn_class() { return &cpp_context_class; }
 
 connection_context& connection_context::get(pn_connection_t* c) {
     connection_context* ctx =

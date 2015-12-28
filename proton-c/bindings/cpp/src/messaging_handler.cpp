@@ -40,7 +40,7 @@ class c_flow_controller : public proton_handler
 
     void redirect(event &e) {
         proton_event *pne = dynamic_cast<proton_event *>(&e);
-        pn_handler_dispatch(flowcontroller, pne->pn_event(), (pn_event_type_t) pne->type());
+        pn_handler_dispatch(flowcontroller, pne->pn_event(), pn_event_type_t(pne->type()));
     }
 
     virtual void on_link_local_open(event &e) { redirect(e); }

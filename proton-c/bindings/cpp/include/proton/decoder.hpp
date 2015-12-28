@@ -48,7 +48,7 @@ class data;
 class message_id;
 
 /** Raised by decoder operations on error.*/
-struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&) throw(); };
+struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const std::string&); };
 
 /** Skips a value with `dec >> skip()`. */
 struct skip{};

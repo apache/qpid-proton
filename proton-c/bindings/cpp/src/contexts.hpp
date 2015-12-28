@@ -41,13 +41,13 @@ class container_impl;
 // contexts are pn_objects managed by pn reference counts.
 class context {
   public:
+    virtual ~context();
+
     // Allocate a default-constructed T as a proton object. T must be a subclass of context.
     template <class T> static T *create() { return new(alloc(sizeof(T))) T(); }
 
     // Allocate a copy-constructed T as a proton object. T must be a subclass of context.
     template <class T> static T *create(const T& x) { return new(alloc(sizeof(T))) T(x); }
-
-    virtual ~context();
 
     static pn_class_t* pn_class();
 

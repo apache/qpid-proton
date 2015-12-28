@@ -31,10 +31,4 @@ if (CMAKE_CXX_COMPILER)
   if (HAS_STD_PTR)
     add_definitions(-DPN_HAS_STD_PTR=1)
   endif()
-
-  # Check for boost
-  find_path(BOOST_INCLUDE_DIR boost/shared_ptr.hpp PATH_SUFFIXES include)
-  if (BOOST_INCLUDE_DIR)
-    add_definitions(-DPN_HAS_BOOST=1)
-  endif()
 endif()

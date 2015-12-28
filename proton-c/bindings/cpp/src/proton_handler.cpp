@@ -68,6 +68,6 @@ void proton_handler::on_selectable_expired(event &e) { on_unhandled(e); }
 void proton_handler::on_selectable_error(event &e) { on_unhandled(e); }
 void proton_handler::on_selectable_final(event &e) { on_unhandled(e); }
 
-void proton_handler::on_unhandled(event &e) {}
+void proton_handler::on_unhandled(event &) {}
 
 }

@@ -29,6 +29,7 @@ namespace proton {
 class message_id : public comparable<message_id> {
   public:
     message_id() {}
+    message_id(const message_id& x) : value_(x.value_) {}
     message_id(const uint64_t& x) : value_(x) {}
     message_id(const amqp_uuid& x) : value_(x) {}
     message_id(const amqp_binary& x) : value_(x) {}

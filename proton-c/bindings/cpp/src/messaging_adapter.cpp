@@ -33,9 +33,9 @@
 #include "proton/message.h"
 
 namespace proton {
-messaging_adapter::messaging_adapter(messaging_handler &delegate_) :
-    messaging_handler(true, delegate_.prefetch_, delegate_.auto_settle_, delegate_.auto_accept_, delegate_.peer_close_iserror_),
-    delegate_(delegate_)
+messaging_adapter::messaging_adapter(messaging_handler &delegate) :
+    messaging_handler(true, delegate.prefetch_, delegate.auto_settle_, delegate.auto_accept_, delegate.peer_close_iserror_),
+    delegate_(delegate)
 {}
 
 
@@ -276,7 +276,7 @@ void messaging_adapter::on_link_close(event &e) {
         on_link_error(e);
 }
 
-void messaging_adapter::on_unhandled(event &e) {
+void messaging_adapter::on_unhandled(event &) {
 }
 
 }

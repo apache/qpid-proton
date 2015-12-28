@@ -23,15 +23,16 @@
  */
 #include <stdexcept>
 #include <string>
+#include "proton/config.hpp"
 #include "proton/export.hpp"
 
 namespace proton {
 
 /** Functions in the proton namespace throw a subclass of proton::error on error. */
-struct error : public std::runtime_error { PN_CPP_EXTERN explicit error(const std::string&) throw(); };
+struct error : public std::runtime_error { PN_CPP_EXTERN explicit error(const std::string&); };
 
 /** Raised if timeout expires */
-struct timeout_error : public error { PN_CPP_EXTERN explicit timeout_error(const std::string&) throw(); };
+struct timeout_error : public error { PN_CPP_EXTERN explicit timeout_error(const std::string&); };
 
 }
 

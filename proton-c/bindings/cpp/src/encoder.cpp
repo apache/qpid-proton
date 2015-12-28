@@ -30,7 +30,7 @@
 namespace proton {
 
 static const std::string prefix("encode: ");
-encode_error::encode_error(const std::string& msg) throw() : error(prefix+msg) {}
+encode_error::encode_error(const std::string& msg) : error(prefix+msg) {}
 
 namespace {
 struct save_state {
@@ -41,7 +41,7 @@ struct save_state {
     void cancel() { data = 0; }
 };
 
-void check(int result, pn_data_t* data) {
+void check(long result, pn_data_t* data) {
     if (result < 0)
         throw encode_error(error_str(pn_data_error(data), result));
 }
@@ -53,12 +53,12 @@ bool encoder::encode(char* buffer, size_t& size) {
     if (result == PN_OVERFLOW) {
         result = pn_data_encoded_size(pn_object());
         if (result >= 0) {
-            size = result;
+            size = size_t(result);
             return false;
         }
     }
     check(result, pn_object());
-    size = result;
+    size = size_t(result);
     ss.cancel();                // Don't restore state, all is well.
     pn_data_clear(pn_object());
     return true;

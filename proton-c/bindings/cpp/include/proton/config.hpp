@@ -27,40 +27,24 @@
  * Otherwise they can be enabled or disabled separately with -D on the compile line.
  */
 
-#if ((defined(__cplusplus) && __cplusplus >= 201100))
-
+#ifndef PN_HAS_CPP11
+#if (defined(__cplusplus) && __cplusplus >= 201100)
 #define PN_HAS_CPP11 1
+#else
+#define PN_HAS_CPP11 0
+#endif
+#endif
 
 #ifndef PN_HAS_STD_PTR
-#define PN_HAS_STD_PTR 1
+#define PN_HAS_STD_PTR PN_HAS_CPP11
 #endif
 
 #ifndef PN_HAS_LONG_LONG
-#define PN_HAS_LONG_LONG 1
+#define PN_HAS_LONG_LONG PN_HAS_CPP11
 #endif
 
 #ifndef PN_HAS_STATIC_ASSERT
-#define PN_HAS_STATIC_ASSERT 1
-#endif
-
-#ifndef PN_NOEXCEPT
-#define PN_NOEXCEPT noexcept
-#endif
-
-#else  // C++11
-
-#ifndef PN_NOEXCEPT
-#define PN_NOEXCEPT
-#endif
-
-#endif // C++11
-
-#if defined(BOOST_VERSION)
-
-#ifndef PN_HAS_BOOST
-#define PN_HAS_BOOST 1
-#endif
-
+#define PN_HAS_STATIC_ASSERT PN_HAS_CPP11
 #endif
 
 #endif // CONFIG_HPP

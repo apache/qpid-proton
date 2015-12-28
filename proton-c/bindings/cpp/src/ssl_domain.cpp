@@ -96,19 +96,17 @@ server_domain::server_domain(
     if (pn_ssl_domain_set_trusted_ca_db(dom, trust_db.c_str()))
         throw error(MSG("SSL trust store initialization failure for " << trust_db));
     const std::string &db = advertise_db.empty() ? trust_db : advertise_db;
-    if (pn_ssl_domain_set_peer_authentication(dom, (pn_ssl_verify_mode_t) mode, db.c_str()))
+    if (pn_ssl_domain_set_peer_authentication(dom, pn_ssl_verify_mode_t(mode), db.c_str()))
         throw error(MSG("SSL server configuration failure requiring client certificates using " << db));
 }
 
 server_domain::server_domain() : ssl_domain(true) {}
-server_domain::~server_domain() {}
-
 
 namespace {
 void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify_mode_t mode) {
     if (pn_ssl_domain_set_trusted_ca_db(dom, trust_db.c_str()))
         throw error(MSG("SSL trust store initialization failure for " << trust_db));
-    if (pn_ssl_domain_set_peer_authentication(dom, (pn_ssl_verify_mode_t) mode, NULL))
+    if (pn_ssl_domain_set_peer_authentication(dom, pn_ssl_verify_mode_t(mode), NULL))
         throw error(MSG("SSL client verify mode failure"));
 }
 }
@@ -124,7 +122,6 @@ client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db,
 }
 
 client_domain::client_domain() : ssl_domain(false) {}
-client_domain::~client_domain() {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}

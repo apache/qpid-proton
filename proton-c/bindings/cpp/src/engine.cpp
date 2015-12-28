@@ -71,7 +71,7 @@ buffer<char> engine::input() {
     ssize_t n = pn_transport_capacity(impl_->transport);
     if (n <= 0)
         return buffer<char>();
-    return buffer<char>(pn_transport_tail(impl_->transport), n);
+    return buffer<char>(pn_transport_tail(impl_->transport), size_t(n));
 }
 
 void engine::close_input() {
@@ -106,7 +106,7 @@ buffer<const char> engine::output() {
     ssize_t n = pn_transport_pending(impl_->transport);
     if (n <= 0)
         return buffer<const char>();
-    return buffer<const char>(pn_transport_head(impl_->transport), n);
+    return buffer<const char>(pn_transport_head(impl_->transport), size_t(n));
 }
 
 void engine::sent(size_t n) {
