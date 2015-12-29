@@ -21,7 +21,6 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/comparable.hpp"
 
 #include <memory>
 
@@ -34,7 +33,7 @@ class pn_ptr_base {
     PN_CPP_EXTERN static void decref(void* p);
 };
 
-template <class T> class pn_ptr : public comparable<pn_ptr<T> >, private pn_ptr_base {
+template <class T> class pn_ptr : private pn_ptr_base {
   public:
     pn_ptr() : ptr_(0) {}
     pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
@@ -71,7 +70,7 @@ template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_owner
 /**
  * Base class for proton object types
  */
-template <class T> class object : public comparable<object<T> > {
+template <class T> class object {
   public:
     bool operator!() const { return !object_; }
 

@@ -137,7 +137,6 @@ std::string scalar::as_string() const {
 }
 
 namespace {
-template<class T> int opaque_cmp(const T& x, const T& y) { return memcmp(&x, &y, sizeof(T)); }
 
 template <class T, class F> T type_switch(const scalar& a, F f) {
     switch(a.type()) {

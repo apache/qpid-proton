@@ -25,7 +25,6 @@
 
 #include "proton/export.hpp"
 #include "proton/error.hpp"
-#include "proton/comparable.hpp"
 
 #include <proton/codec.h>
 #include <proton/type_compat.h>
@@ -141,7 +140,7 @@ struct amqp_binary : public std::string {
 };
 
 /// Template for opaque proton proton types that can be treated as byte arrays.
-template <class P> struct opaque: public comparable<opaque<P> > {
+template <class P> struct opaque {
     P value;
     opaque(const P& p=P()) : value(p) {}
     operator P() const { return value; }
@@ -153,10 +152,10 @@ template <class P> struct opaque: public comparable<opaque<P> > {
     const char* end() const { return reinterpret_cast<const char*>(&value)+size(); }
     char& operator[](size_t i) { return *(begin()+i); }
     const char& operator[](size_t i) const { return *(begin()+i); }
-
-    bool operator==(const opaque& x) const { return std::equal(begin(), end(), x.begin()); }
-    bool operator<(const opaque& x) const { return std::lexicographical_compare(begin(), end(), x.begin(), x.end()); }
 };
+
+template <class T> bool operator==(const opaque<T>& x, const opaque<T>& y) { return std::equal(x.begin(), x.end(), y.begin()); }
+template <class T> bool operator<(const opaque<T>& x, const opaque<T>& y) { return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end()); }
 
 /// AMQP 16-byte UUID.
 typedef opaque<pn_uuid_t> amqp_uuid;
@@ -172,13 +171,13 @@ typedef opaque<pn_decimal128_t> amqp_decimal128;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal128&);
 
 /// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
-struct amqp_timestamp : public comparable<amqp_timestamp> {
+struct amqp_timestamp {
     pn_timestamp_t milliseconds;
     amqp_timestamp(::int64_t ms=0) : milliseconds(ms) {}
     operator pn_timestamp_t() const { return milliseconds; }
-    bool operator==(const amqp_timestamp& x) { return milliseconds == x.milliseconds; }
-    bool operator<(const amqp_timestamp& x) { return milliseconds < x.milliseconds; }
 };
+inline bool operator==(amqp_timestamp x, amqp_timestamp y) { return x.milliseconds == y.milliseconds; }
+inline bool operator<(amqp_timestamp x, amqp_timestamp y) { return x.milliseconds < y.milliseconds; }
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_timestamp&);
 
 // TODO aconway 2015-06-16: described types.

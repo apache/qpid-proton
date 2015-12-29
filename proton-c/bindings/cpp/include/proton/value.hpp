@@ -40,7 +40,7 @@ class decoder;
  * Assigning to a proton::value follows the encoder rules, converting from a
  * proton::value (or calling proton::value::get) follows the decoder rules.
  */
-class value : public comparable<value> {
+class value {
   public:
     PN_CPP_EXTERN value();
     PN_CPP_EXTERN value(const value&);
@@ -73,12 +73,10 @@ class value : public comparable<value> {
     /** Get the value. */
     template<class T> T get() const { T t; get(t); return t; }
 
-    // FIXME aconway 2015-12-28: friend ops.
-    PN_CPP_EXTERN bool operator==(const value& x) const;
-    PN_CPP_EXTERN bool operator<(const value& x) const;
-
     PN_CPP_EXTERN void swap(value& v);
 
+  friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
+  friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
   friend PN_CPP_EXTERN class encoder operator<<(class encoder e, const value& dv);
   friend PN_CPP_EXTERN class decoder operator>>(class decoder d, value& dv);
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);

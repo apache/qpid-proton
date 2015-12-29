@@ -29,7 +29,7 @@ class encoder;
 class decoder;
 
 /** scalar holds an instance of any scalar AMQP type. */
-class scalar : public comparable<scalar> {
+class scalar {
   public:
     PN_CPP_EXTERN scalar();
     PN_CPP_EXTERN scalar(const scalar&);
@@ -130,9 +130,9 @@ class scalar : public comparable<scalar> {
 };
 
 ///@internal base for restricted scalar types
-class restricted_scalar : public comparable<restricted_scalar> {
+class restricted_scalar {
   public:
-    operator scalar() const { return scalar_; }
+    operator const scalar&() const { return scalar_; }
     type_id type() const { return scalar_.type(); }
 
     ///@name as_ methods do "loose" conversion, they will convert the scalar's

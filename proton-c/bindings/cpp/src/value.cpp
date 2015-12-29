@@ -54,9 +54,9 @@ class decoder value::decoder() const { data_.decoder().rewind(); return data_.de
 
 type_id value::type() const { return decoder().type(); }
 
-bool value::operator==(const value& x) const { return data_.equal(x.data_); }
+bool operator==(const value& x, const value& y) { return x.data_.equal(y.data_); }
 
-bool value::operator<(const value& x) const { return data_.less(x.data_); }
+bool operator<(const value& x, const value& y) { return x.data_.less(y.data_); }
 
 std::ostream& operator<<(std::ostream& o, const value& v) {
     // pn_inspect prints strings with quotes which is not normal in C++.

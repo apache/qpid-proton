@@ -28,20 +28,20 @@
 namespace proton {
 
 /** Duration in milliseconds. */
-class duration : public comparable<duration>
+class duration
 {
   public:
     amqp_ulong milliseconds;
     explicit duration(amqp_ulong ms = 0) : milliseconds(ms) {}
-
-    bool operator<(duration d) { return milliseconds < d.milliseconds; }
-    bool operator==(duration d) { return milliseconds == d.milliseconds; }
 
     PN_CPP_EXTERN static const duration FOREVER; ///< Wait for ever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
     PN_CPP_EXTERN static const duration SECOND; ///< One second
     PN_CPP_EXTERN static const duration MINUTE; ///< One minute
 };
+
+inline bool operator<(duration x, duration y) { return x.milliseconds < y.milliseconds; }
+inline bool operator==(duration x, duration y) { return x.milliseconds == y.milliseconds; }
 
 inline duration operator*(duration d, amqp_ulong n) { return duration(d.milliseconds*n); }
 inline duration operator*(amqp_ulong n, duration d) { return d * n; }
