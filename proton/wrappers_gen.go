@@ -30,6 +30,8 @@ import (
 )
 
 // #include <proton/types.h>
+// #include <proton/error.h>
+// #include <proton/condition.h>
 // #include <proton/event.h>
 // #include <stdlib.h>
 // #include <proton/session.h>

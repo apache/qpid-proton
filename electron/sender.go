@@ -23,6 +23,7 @@ package electron
 import "C"
 
 import (
+	"fmt"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
 	"time"
@@ -90,9 +91,7 @@ const (
 	Unsent SentStatus = iota
 	// Message was sent but never acknowledged. It may or may not have been received.
 	Unacknowledged
-	// Message was sent pre-settled, no remote outcome is available.
-	Presettled
-	// Message was accepted by the receiver
+	// Message was accepted by the receiver (or was sent pre-settled, accept is assumed)
 	Accepted
 	// Message was rejected as invalid by the receiver
 	Rejected
@@ -118,7 +117,7 @@ func (s SentStatus) String() string {
 	case Unknown:
 		return "unknown"
 	default:
-		return "invalid"
+		return fmt.Sprintf("invalid(%d)", s)
 	}
 }
 
@@ -163,7 +162,7 @@ func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interfac
 			if ack != nil { // We must report an outcome
 				if s.SndSettle() == SndSettled {
 					delivery.Settle() // Pre-settle if required
-					ack <- Outcome{Presettled, nil, v}
+					ack <- Outcome{Accepted, nil, v}
 				} else {
 					s.handler().sentMessages[delivery] = sentMessage{ack, v}
 				}

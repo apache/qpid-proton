@@ -261,11 +261,10 @@ func (l Link) String() string {
 
 func (l Link) Type() string {
 	if l.IsSender() {
-		return "sender-link"
+		return "link(sender)"
 	} else {
-		return "receiver-link"
+		return "link(receiver)"
 	}
-
 }
 
 func cPtr(b []byte) *C.char {
