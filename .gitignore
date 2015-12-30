@@ -40,3 +40,8 @@ testresults
 # Go binding build output
 /proton-c/bindings/go/pkg
 /proton-c/bindings/go/bin
+
+# Python TOX test build output
+/proton-c/bindings/python/MANIFEST
+/proton-c/bindings/python/build
+

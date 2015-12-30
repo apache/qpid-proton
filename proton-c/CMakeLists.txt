@@ -552,9 +552,11 @@ if (BUILD_PYTHON)
   if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
      find_program(TOX_EXE "tox")
      if (TOX_EXE)
+       configure_file(
+         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
          to_native_path ("${py_path}" py_path)
          add_test (NAME python-tox-test
-		   WORKING_DIRECTORY ${py_src}
                    COMMAND ${env_py}
 		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
                    "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"

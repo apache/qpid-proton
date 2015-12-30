@@ -2,14 +2,15 @@
 envlist = py26,py27,py33,py34
 minversion = 1.4
 skipdist = True
+setupdir = @py_src@
 
 [testenv]
 usedevelop = False
 setenv =
     VIRTUAL_ENV={envdir}
     PKG_CONFIG_PATH=None
-    QPID_PROTON_SRC={toxinidir}/../../../
     DEBUG=True
+    QPID_PROTON_SRC=@CMAKE_SOURCE_DIR@
 passenv =
     PKG_CONFIG_PATH
     CFLAGS
@@ -17,7 +18,7 @@ passenv =
     VALGRIND
     CLASSPATH
 commands =
-    {toxinidir}/../../../tests/python/proton-test {posargs}
+    @CMAKE_SOURCE_DIR@/tests/python/proton-test {posargs}
 deps =
     unittest2
 
