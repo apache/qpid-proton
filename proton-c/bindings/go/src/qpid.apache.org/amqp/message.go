@@ -19,9 +19,9 @@ under the License.
 
 package amqp
 
+// #include "codec_shim.h"
 // #include <proton/types.h>
 // #include <proton/message.h>
-// #include <proton/codec.h>
 // #include <stdlib.h>
 //
 // /* Helper for setting message string fields */

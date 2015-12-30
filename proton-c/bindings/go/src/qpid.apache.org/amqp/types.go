@@ -19,7 +19,7 @@ under the License.
 
 package amqp
 
-// #include <proton/codec.h>
+//#include "codec_shim.h"
 import "C"
 
 import (
@@ -29,10 +29,6 @@ import (
 	"time"
 	"unsafe"
 )
-
-// Older proton versions don't define C.PN_INVALID, so define it here.
-// In C it is pn_type_t(-1), in Go use the bitwise NOT operator to get the same value.
-const pnInvalid = C.pn_type_t(^0)
 
 func (t C.pn_type_t) String() string {
 	switch C.pn_type_t(t) {
@@ -86,10 +82,9 @@ func (t C.pn_type_t) String() string {
 		return "list"
 	case C.PN_MAP:
 		return "map"
+	case C.PN_INVALID:
+		return "no-data"
 	default:
-		if t == pnInvalid {
-			return "no-data"
-		}
 		return fmt.Sprintf("unknown-type(%d)", t)
 	}
 }

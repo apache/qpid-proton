@@ -24,23 +24,22 @@ proton
 
 ## Using the Go packages
 
-Use `go get qpid.apache.org/electron` or check out the proton repository and set
-your GOPATH environment variable to include
-`/<path-to-proton>/proton-c/bindings/go`
+If you have the proton C library and headers installed you can get the latest go
+packages with
 
-The proton Go packages include C code so the cgo compiler needs to be able to
-find the proton library and include files.  There are a couple of ways to do
-this:
+    go get qpid.apache.org/electron
 
-1. Build proton in directory `$BUILD`. Source the script `$BUILD/config.sh` to set your environment.
+If proton is installed in a non-standard place (other than /usr or /usr/local) you
+can set these environment variables before `go get`, for example:
 
-2. Install proton to a standard prefix such as `/usr` or `/usr/local`. No need for further settings.
+    export CGO_LDFLAGS="-L/<my-proton>/lib[64]"
+    export CGO_CFLAGS="-I/<my-proton>/include"
+    go get qpid.apache.org/electron
 
-3. Install proton to a non-standard prefix `$PREFIX`. Set the following:
+If you have a proton build you don't need to `go get`, you can set your GOPATH
+to use the binding from the checkout with:
 
-        export LIBRARY_PATH=$PREFIX/lib:$LIBRARY_PATH
-        export C_INCLUDE_PATH=$PREFIX/include:$C_INCLUDE_PATH
-        export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+    source <path-to-proton>/config.sh
 
 Once you are set up, the go tools will work as normal. You can see documentation
 in your web browser at `localhost:6060` by running:

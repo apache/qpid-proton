@@ -21,6 +21,7 @@ package proton
 
 // #include <proton/connection.h>
 // #include <proton/event.h>
+// #include <proton/error.h>
 // #include <proton/handlers.h>
 // #include <proton/session.h>
 // #include <proton/transport.h>

@@ -258,7 +258,7 @@ var debug = flag.Bool("debug", false, "Debugging output from examples")
 var brokerName = flag.String("broker", "broker", "Name of broker executable to run")
 var count = flag.Int("count", 3, "Count of messages to send in tests")
 var connections = flag.Int("connections", 3, "Number of connections to make in tests")
-var dir = flag.String("dir", "", "Directory containing example sources or binaries")
+var dir = flag.String("dir", "electron", "Directory containing example sources or binaries")
 var expected int
 
 func TestMain(m *testing.M) {
