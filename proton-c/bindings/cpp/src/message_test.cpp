@@ -88,6 +88,19 @@ void test_message_properties() {
     ASSERT_EQUAL(4242, m.creation_time().milliseconds);
 }
 
+void test_message_body() {
+    std::string s("hello");
+    message m1(s.c_str());
+    ASSERT_EQUAL(s, m1.body().get<std::string>());
+    message m2(s);
+    ASSERT_EQUAL(s, m2.body().as_string());
+    message m3;
+    m3.body(s);
+    ASSERT_EQUAL(s, m3.body().as_string());
+    ASSERT_EQUAL(5, message(5).body().as_int());
+    ASSERT_EQUAL(3.1, message(3.1).body().as_double());
+}
+
 void test_message_maps() {
     message m;
 
@@ -126,6 +139,7 @@ void test_message_maps() {
 int main(int argc, char** argv) {
     int failed = 0;
     RUN_TEST(failed, test_message_properties());
+    RUN_TEST(failed, test_message_body());
     RUN_TEST(failed, test_message_maps());
     return failed;
 }

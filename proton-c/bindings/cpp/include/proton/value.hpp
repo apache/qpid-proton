@@ -73,6 +73,15 @@ class value {
     /** Get the value. */
     template<class T> T get() const { T t; get(t); return t; }
 
+    ///@name as_ methods do "loose" conversion, they will convert the scalar
+    ///value to the requested type if possible, else throw type_error
+    ///@{
+    PN_CPP_EXTERN int64_t as_int() const;     ///< Allowed if type_id_is_integral(type())
+    PN_CPP_EXTERN uint64_t as_uint() const;   ///< Allowed if type_id_is_integral(type())
+    PN_CPP_EXTERN double as_double() const;    ///< Allowed if type_id_is_floating_point(type())
+    PN_CPP_EXTERN std::string as_string() const; ///< Allowed if type_id_is_string_like(type())
+    ///@}
+
     PN_CPP_EXTERN void swap(value& v);
 
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);

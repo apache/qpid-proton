@@ -21,6 +21,7 @@
 
 #include "proton/data.hpp"
 #include "proton/value.hpp"
+#include "proton/scalar.hpp"
 
 #include <ostream>
 
@@ -70,5 +71,10 @@ std::ostream& operator<<(std::ostream& o, const value& v) {
         return o << v.data_;
     }
 }
+
+int64_t value::as_int() const { return get<scalar>().as_int(); }
+uint64_t value::as_uint() const { return get<scalar>().as_uint(); }
+double value::as_double() const { return get<scalar>().as_double(); }
+std::string value::as_string() const { return get<scalar>().as_string(); }
 
 }
