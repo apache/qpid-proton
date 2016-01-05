@@ -71,11 +71,11 @@ class session : public object<pn_session_t>, public endpoint
      */
     PN_CPP_EXTERN sender create_sender(const std::string& name=std::string());
 
-    /** Create and open a sender with target=addr and optional handler h */
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, handler *h=0);
+    /** Create and open a sender with target=addr and optional link options opts*/
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, const link_options &opts = link_options());
 
-    /** Create and open a receiver with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
+    /** Create and open a receiver with target=addr and optional link options opts */
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const link_options &opts = link_options());
 
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state() const;

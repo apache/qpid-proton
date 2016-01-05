@@ -88,11 +88,11 @@ class connection : public object<pn_connection_t>, endpoint
     /** Default session is created on first call and re-used for the lifetime of the connection */
     PN_CPP_EXTERN session default_session();
 
-    /** Create a sender on default_session() with target=addr and optional handler h */
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, handler *h=0);
+    /** Create a sender on default_session() with target=addr and link options=opts */
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, const link_options &opts = link_options());
 
-    /** Create a receiver on default_session() with target=addr and optional handler h */
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, bool dynamic=false, handler *h=0);
+    /** Create a receiver on default_session() with target=addr and optional link options opts */
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const link_options &opts = link_options());
 
     /** Return links on this connection matching the state mask. */
     PN_CPP_EXTERN link_range find_links(endpoint::state mask) const;

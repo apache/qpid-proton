@@ -28,6 +28,7 @@
 #include "proton/reactor.hpp"
 #include "proton/url.hpp"
 #include "proton/connection_options.hpp"
+#include "proton/link_options.hpp"
 
 #include <string>
 
@@ -68,11 +69,17 @@ class container : public event_loop {
     /** Run the event loop, return when all connections and acceptors are closed. */
     PN_CPP_EXTERN void run();
 
-    /** Open a connection to url and create a sender with target=url.path() */
-    PN_CPP_EXTERN sender open_sender(const proton::url &);
+    /** Open a new connection to url and create a sender with target=url.path().
+        Any supplied link or connection options will override the container's
+        template options. */
+    PN_CPP_EXTERN sender open_sender(const proton::url &, const proton::link_options &l = proton::link_options(),
+                                     const connection_options &c = connection_options());
 
-    /** Create a receiver on connection with source=url.path() */
-    PN_CPP_EXTERN receiver open_receiver(const url &);
+    /** Create a receiver on a new connection with source=url.path(). Any
+        supplied link or connection options will override the container's
+        template options. */
+    PN_CPP_EXTERN receiver open_receiver(const url &, const proton::link_options &l = proton::link_options(),
+                                         const connection_options &c = connection_options());
 
     /// Identifier for the container
     PN_CPP_EXTERN std::string id() const;
@@ -93,6 +100,12 @@ class container : public event_loop {
         applied to incoming connections.  These are applied before the
         first open event on the connection. */
     PN_CPP_EXTERN void server_connection_options(const connection_options &);
+
+    /** Copy the link options to a template applied to new links created and
+        opened by this container.  They are applied before the open event on the
+        link and may be overriden by link options in other methods. */
+    PN_CPP_EXTERN void link_options(const link_options &);
+
 
   private:
     pn_unique_ptr<container_impl> impl_;

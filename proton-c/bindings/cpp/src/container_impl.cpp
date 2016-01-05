@@ -167,21 +167,29 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     return conn;
 }
 
-sender container_impl::open_sender(const proton::url &url) {
-    connection conn = connect(url, connection_options());
+sender container_impl::open_sender(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
+    proton::link_options lopts(link_options_);
+    lopts.override(o1);
+    connection_options copts(client_connection_options_);
+    copts.override(o2);
+    connection conn = connect(url, copts);
     std::string path = url.path();
-    sender snd = conn.default_session().open_sender(id_ + '-' + path);
+    sender snd = conn.default_session().create_sender(id_ + '-' + path);
     snd.target().address(path);
-    snd.open();
+    snd.open(lopts);
     return snd;
 }
 
-receiver container_impl::open_receiver(const proton::url &url) {
-    connection conn = connect(url, connection_options());
+receiver container_impl::open_receiver(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
+    proton::link_options lopts(link_options_);
+    lopts.override(o1);
+    connection_options copts(client_connection_options_);
+    copts.override(o2);
+    connection conn = connect(url, copts);
     std::string path = url.path();
-    receiver rcv = conn.default_session().open_receiver(id_ + '-' + path);
+    receiver rcv = conn.default_session().create_receiver(id_ + '-' + path);
     rcv.source().address(path);
-    rcv.open();
+    rcv.open(lopts);
     return rcv;
 }
 
@@ -223,6 +231,10 @@ void container_impl::client_connection_options(const connection_options &opts) {
 
 void container_impl::server_connection_options(const connection_options &opts) {
     server_connection_options_ = opts;
+}
+
+void container_impl::link_options(const proton::link_options &opts) {
+    link_options_ = opts;
 }
 
 void container_impl::configure_server_connection(connection &c) {

@@ -41,6 +41,15 @@ class sender : public link
 
     /// Send a message on the link.
     PN_CPP_EXTERN delivery send(const message &m);
+
+    /** The number of deliveries that might be able to be sent if sufficient credit were
+        issued on the link.  See sender::offered().  Maintained by the application. */
+    PN_CPP_EXTERN int available();
+
+    /** Set the availability of deliveries for a sender. */
+    PN_CPP_EXTERN void offered(int c);
+
+
 };
 
 

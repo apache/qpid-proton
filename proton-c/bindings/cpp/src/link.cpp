@@ -31,7 +31,8 @@
 
 namespace proton {
 
-void link::open() {
+void link::open(const link_options &lo) {
+    lo.apply(*this);
     pn_link_open(pn_object());
 }
 
@@ -59,9 +60,9 @@ int link::credit() const {
     return pn_link_credit(pn_object());
 }
 
-void link::flow(int credit) {
-    pn_link_flow(pn_object(), credit);
-}
+int link::queued() { return pn_link_queued(pn_object()); }
+int link::unsettled() { return pn_link_unsettled(pn_object()); }
+int link::drained() { return pn_link_drained(pn_object()); }
 
 terminus link::source() const { return pn_link_source(pn_object()); }
 terminus link::target() const { return pn_link_target(pn_object()); }
@@ -107,5 +108,28 @@ link link::next(endpoint::state s) const
     return pn_link_next(pn_object(), s);
 }
 
+link::sender_settle_mode_t link::sender_settle_mode() {
+    return (sender_settle_mode_t) pn_link_snd_settle_mode(pn_object());
 }
 
+void link::sender_settle_mode(sender_settle_mode_t mode) {
+    pn_link_set_snd_settle_mode(pn_object(), (pn_snd_settle_mode_t) mode);
+}
+
+link::receiver_settle_mode_t link::receiver_settle_mode() {
+    return (receiver_settle_mode_t) pn_link_rcv_settle_mode(pn_object());
+}
+
+void link::receiver_settle_mode(receiver_settle_mode_t mode) {
+    pn_link_set_rcv_settle_mode(pn_object(), (pn_rcv_settle_mode_t) mode);
+}
+
+link::sender_settle_mode_t link::remote_sender_settle_mode() {
+    return (sender_settle_mode_t) pn_link_remote_snd_settle_mode(pn_object());
+}
+
+link::receiver_settle_mode_t link::remote_receiver_settle_mode() {
+    return (receiver_settle_mode_t) pn_link_remote_rcv_settle_mode(pn_object());
+}
+
+}

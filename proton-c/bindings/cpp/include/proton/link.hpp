@@ -27,6 +27,7 @@
 #include "proton/terminus.hpp"
 #include "proton/types.h"
 #include "proton/object.hpp"
+#include "proton/link_options.hpp"
 
 #include <string>
 
@@ -39,12 +40,25 @@ class receiver;
 class link : public object<pn_link_t> , public endpoint
 {
   public:
+    /// Sender settlement behaviour for a link
+    enum sender_settle_mode_t {
+        UNSETTLED = PN_SND_UNSETTLED,
+        SETTLED = PN_SND_SETTLED,
+        MIXED = PN_SND_MIXED
+    };
+
+    /// Receiver settlement behaviour for a link
+    enum receiver_settle_mode_t {
+        SETTLE_ALWAYS = PN_RCV_FIRST,
+        SETTLE_SECOND= PN_RCV_SECOND
+    };
+
     link(pn_link_t* l=0) : object<pn_link_t>(l) {}
 
     /** Locally open the link, not complete till messaging_handler::on_link_opened or
      * proton_handler::link_remote_open
      */
-    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void open(const link_options &opts = link_options());
 
     /** Locally close the link, not complete till messaging_handler::on_link_closed or
      * proton_handler::link_remote_close
@@ -62,8 +76,14 @@ class link : public object<pn_link_t> , public endpoint
     /** Credit available on the link */
     PN_CPP_EXTERN int credit() const;
 
-    /** Grant credit to the link */
-    PN_CPP_EXTERN void flow(int credit);
+    /** The number of queued deliveries for the link */
+    PN_CPP_EXTERN int queued();
+
+    /** The number of unsettled deliveries on the link */
+    PN_CPP_EXTERN int unsettled();
+
+    /** The count of credit returned.  */
+    PN_CPP_EXTERN int drained();
 
     /** Local source of the link. */
     PN_CPP_EXTERN terminus source() const;
@@ -100,6 +120,13 @@ class link : public object<pn_link_t> , public endpoint
 
     /** Navigate the links in a connection - get next link with state */
     PN_CPP_EXTERN link next(endpoint::state) const;
+
+    PN_CPP_EXTERN sender_settle_mode_t sender_settle_mode();
+    PN_CPP_EXTERN void sender_settle_mode(sender_settle_mode_t);
+    PN_CPP_EXTERN receiver_settle_mode_t receiver_settle_mode();
+    PN_CPP_EXTERN void receiver_settle_mode(receiver_settle_mode_t);
+    PN_CPP_EXTERN sender_settle_mode_t remote_sender_settle_mode();
+    PN_CPP_EXTERN receiver_settle_mode_t remote_receiver_settle_mode();
 };
 
 /// An iterator for links.

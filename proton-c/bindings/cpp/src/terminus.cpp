@@ -33,7 +33,7 @@ void terminus::type(type_t type) {
 }
 
 terminus::expiry_policy_t terminus::expiry_policy() const {
-    return expiry_policy_t(pn_terminus_get_type(object_));
+    return expiry_policy_t(pn_terminus_get_expiry_policy(object_));
 }
 
 void terminus::expiry_policy(expiry_policy_t policy) {
@@ -41,11 +41,19 @@ void terminus::expiry_policy(expiry_policy_t policy) {
 }
 
 terminus::distribution_mode_t terminus::distribution_mode() const {
-    return distribution_mode_t(pn_terminus_get_type(object_));
+    return distribution_mode_t(pn_terminus_get_distribution_mode(object_));
 }
 
 void terminus::distribution_mode(distribution_mode_t mode) {
     pn_terminus_set_distribution_mode(object_, pn_distribution_mode_t(mode));
+}
+
+terminus::durability_t terminus::durability() {
+    return (durability_t) pn_terminus_get_durability(object_);
+}
+
+void terminus::durability(durability_t mode) {
+    pn_terminus_set_durability(object_, (pn_durability_t) mode);
 }
 
 std::string terminus::address() const {

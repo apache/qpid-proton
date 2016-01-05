@@ -40,7 +40,7 @@ class client : public proton::messaging_handler {
     void on_start(proton::event &e) {
         sender = e.container().open_sender(url);
         // Create a receiver with a dynamically chosen unique address.
-        receiver = sender.connection().open_receiver("", true/*dynamic*/);
+        receiver = sender.connection().open_receiver("", proton::link_options().dynamic_address(true));
     }
 
     void send_request() {

@@ -21,6 +21,7 @@
 #include "proton/container.hpp"
 #include "messaging_event.hpp"
 #include "proton/connection.hpp"
+#include "proton/link_options.hpp"
 #include "proton/session.hpp"
 #include "proton/messaging_adapter.hpp"
 #include "proton/acceptor.hpp"
@@ -58,12 +59,12 @@ std::string container::id() const { return impl_->id_; }
 
 void container::run() { impl_->reactor_.run(); }
 
-sender container::open_sender(const proton::url &url) {
-    return impl_->open_sender(url);
+sender container::open_sender(const proton::url &url, const proton::link_options &lo, const connection_options &co) {
+    return impl_->open_sender(url, lo, co);
 }
 
-receiver container::open_receiver(const proton::url &url) {
-    return impl_->open_receiver(url);
+receiver container::open_receiver(const proton::url &url, const proton::link_options &lo, const connection_options &co) {
+    return impl_->open_receiver(url, lo, co);
 }
 
 acceptor container::listen(const proton::url &url, const connection_options &opts) {

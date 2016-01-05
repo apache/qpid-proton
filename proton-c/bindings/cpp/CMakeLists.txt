@@ -50,6 +50,7 @@ set(qpid-proton-cpp-source
   src/event.cpp
   src/handler.cpp
   src/link.cpp
+  src/link_options.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/messaging_event.cpp

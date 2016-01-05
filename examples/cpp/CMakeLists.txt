@@ -36,6 +36,7 @@ set(examples
   server_direct
   recurring_timer
   connection_options
+  queue_browser
   ssl
   ssl_client_cert
   encode_decode)

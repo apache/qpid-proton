@@ -78,7 +78,7 @@ struct type_error : public decode_error {
     type_id want; ///< Expected type_id
     type_id got;  ///< Actual type_id
 };
- 
+
 
 ///@cond INTERNAL
 /// Provide a full set of comparison operators for proton:: types that have < and ==.

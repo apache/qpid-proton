@@ -53,21 +53,18 @@ sender session::create_sender(const std::string& name) {
     return pn_sender(pn_object(), set_name(name, this).c_str());
 }
 
-sender session::open_sender(const std::string &addr, handler *h) {
+sender session::open_sender(const std::string &addr, const link_options &lo) {
     sender snd = create_sender();
     snd.target().address(addr);
-    if (h) snd.handler(*h);
-    snd.open();
+    snd.open(lo);
     return snd;
 }
 
-receiver session::open_receiver(const std::string &addr, bool dynamic, handler *h)
+receiver session::open_receiver(const std::string &addr, const link_options &lo)
 {
     receiver rcv = create_receiver();
     rcv.source().address(addr);
-    if (dynamic) rcv.source().dynamic(true);
-    if (h) rcv.handler(*h);
-    rcv.open();
+    rcv.open(lo);
     return rcv;
 }
 

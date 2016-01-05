@@ -98,13 +98,13 @@ session connection::default_session() {
     return ctx.default_session;
 }
 
-sender connection::open_sender(const std::string &addr, handler *h) {
-    return default_session().open_sender(addr, h);
+sender connection::open_sender(const std::string &addr, const link_options &opts) {
+    return default_session().open_sender(addr, opts);
 }
 
-receiver connection::open_receiver(const std::string &addr, bool dynamic, handler *h)
+receiver connection::open_receiver(const std::string &addr, const link_options &opts)
 {
-    return default_session().open_receiver(addr, dynamic, h);
+    return default_session().open_receiver(addr, opts);
 }
 
 endpoint::state connection::state() const { return pn_connection_state(pn_object()); }
