@@ -984,10 +984,10 @@ The address of the message.
 """)
 
   def _get_subject(self):
-    return pn_message_get_subject(self._msg)
+    return utf82unicode(pn_message_get_subject(self._msg))
 
   def _set_subject(self, value):
-    self._check(pn_message_set_subject(self._msg, value))
+    self._check(pn_message_set_subject(self._msg, unicode2utf8(value)))
 
   subject = property(_get_subject, _set_subject,
                      doc="""
@@ -1019,10 +1019,10 @@ The correlation-id for the message.
 """)
 
   def _get_content_type(self):
-    return pn_message_get_content_type(self._msg)
+    return symbol(utf82unicode(pn_message_get_content_type(self._msg)))
 
   def _set_content_type(self, value):
-    self._check(pn_message_set_content_type(self._msg, value))
+    self._check(pn_message_set_content_type(self._msg, unicode2utf8(value)))
 
   content_type = property(_get_content_type, _set_content_type,
                           doc="""
@@ -1030,10 +1030,10 @@ The content-type of the message.
 """)
 
   def _get_content_encoding(self):
-    return pn_message_get_content_encoding(self._msg)
+    return symbol(utf82unicode(pn_message_get_content_encoding(self._msg)))
 
   def _set_content_encoding(self, value):
-    self._check(pn_message_set_content_encoding(self._msg, value))
+    self._check(pn_message_set_content_encoding(self._msg, unicode2utf8(value)))
 
   content_encoding = property(_get_content_encoding, _set_content_encoding,
                               doc="""
@@ -1063,10 +1063,10 @@ The creation time of the message.
 """)
 
   def _get_group_id(self):
-    return pn_message_get_group_id(self._msg)
+    return utf82unicode(pn_message_get_group_id(self._msg))
 
   def _set_group_id(self, value):
-    self._check(pn_message_set_group_id(self._msg, value))
+    self._check(pn_message_set_group_id(self._msg, unicode2utf8(value)))
 
   group_id = property(_get_group_id, _set_group_id,
                       doc="""
@@ -1085,10 +1085,10 @@ The sequence of the message within its group.
 """)
 
   def _get_reply_to_group_id(self):
-    return pn_message_get_reply_to_group_id(self._msg)
+    return utf82unicode(pn_message_get_reply_to_group_id(self._msg))
 
   def _set_reply_to_group_id(self, value):
-    self._check(pn_message_set_reply_to_group_id(self._msg, value))
+    self._check(pn_message_set_reply_to_group_id(self._msg, unicode2utf8(value)))
 
   reply_to_group_id = property(_get_reply_to_group_id, _set_reply_to_group_id,
                                doc="""

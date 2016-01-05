@@ -45,8 +45,11 @@ class AccessorsTest(Test):
       gotten = getattr(self.msg, name)
       assert gotten == v, gotten
 
+  def _test_symbol(self, name):
+    self._test(name, symbol(None), (symbol(u"abc.123.#$%"), symbol(u"hello.world")))
+
   def _test_str(self, name):
-    self._test(name, None, ("asdf", "fdsa", ""))
+    self._test(name, None, (u"asdf", u"fdsa", u""))
 
   def _test_time(self, name):
     self._test(name, 0, (0, 123456789, 987654321))
@@ -86,10 +89,10 @@ class AccessorsTest(Test):
     self._test_str("reply_to")
 
   def testContentType(self):
-    self._test_str("content_type")
+    self._test_symbol("content_type")
 
   def testContentEncoding(self):
-    self._test_str("content_encoding")
+    self._test_symbol("content_encoding")
 
   def testExpiryTime(self):
     self._test_time("expiry_time")
