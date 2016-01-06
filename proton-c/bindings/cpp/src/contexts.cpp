@@ -45,7 +45,6 @@ void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); 
 pn_class_t cpp_context_class = PN_CLASS(cpp_context);
 
 // Handles
-#pragma GCC diagnostic ignored "-Wold-style-cast"
 PN_HANDLE(CONNECTION_CONTEXT)
 PN_HANDLE(CONTAINER_CONTEXT)
 PN_HANDLE(LISTENER_CONTEXT)

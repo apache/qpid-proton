@@ -41,11 +41,13 @@ namespace proton {
 
 //// Public container class.
 
-container::container(const std::string& id) :
-    impl_(new container_impl(*this, 0, id)) {}
+container::container(const std::string& id) {
+    impl_.reset(new container_impl(*this, 0, id));
+}
 
-container::container(messaging_handler &mhandler, const std::string& id) :
-    impl_(new container_impl(*this, &mhandler, id)) {}
+container::container(messaging_handler &mhandler, const std::string& id) {
+    impl_.reset(new container_impl(*this, &mhandler, id));
+}
 
 container::~container() {}
 

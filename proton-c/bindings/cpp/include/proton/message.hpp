@@ -67,6 +67,8 @@ class message
     ///@name Standard AMQP message properties
     ///@{
 
+    // FIXME aconway 2016-01-06: document, re-order with others.
+
     PN_CPP_EXTERN void id(const message_id& id);
     PN_CPP_EXTERN message_id id() const;
 
@@ -161,7 +163,7 @@ class message
      * @return the value of the durable flag
      */
     PN_CPP_EXTERN bool durable() const;
-    /** Get the durable flag for a message. */
+    /** Set the durable flag for a message. */
     PN_CPP_EXTERN void durable(bool);
 
     /**
@@ -188,7 +190,7 @@ class message
      * @return the message priority
      */
     PN_CPP_EXTERN uint8_t priority() const;
-    /** Get the priority for a message. */
+    /** Set the priority for a message. */
     PN_CPP_EXTERN void priority(uint8_t);
 
     /**
@@ -203,7 +205,7 @@ class message
      * @return the first acquirer flag for the message
      */
     PN_CPP_EXTERN bool first_acquirer() const;
-    /** Get the first acquirer flag for a message. */
+    /** Set the first acquirer flag for a message. */
     PN_CPP_EXTERN void first_acquirer(bool);
 
     /**
@@ -227,10 +229,12 @@ class message
      *
      * @return the group sequence for the message
      */
-    PN_CPP_EXTERN int32_t sequence() const;
-    /** Get the group sequence for a message. */
-    PN_CPP_EXTERN void sequence(int32_t);
+    PN_CPP_EXTERN int32_t group_sequence() const;
+    /** Set the group sequence for a message. */
+    PN_CPP_EXTERN void group_sequence(int32_t);
 
+
+    /** Override std::swap to efficiently swap messages. */
   friend PN_CPP_EXTERN void swap(message&, message&);
 
   private:

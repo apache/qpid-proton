@@ -314,7 +314,7 @@ void message::first_acquirer(bool b) { pn_message_set_first_acquirer(pn_msg(), b
 uint32_t message::delivery_count() const { return pn_message_get_delivery_count(pn_msg()); }
 void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(pn_msg(), d); }
 
-int32_t message::sequence() const { return pn_message_get_group_sequence(pn_msg()); }
-void message::sequence(int32_t d) { pn_message_set_group_sequence(pn_msg(), d); }
+int32_t message::group_sequence() const { return pn_message_get_group_sequence(pn_msg()); }
+void message::group_sequence(int32_t d) { pn_message_set_group_sequence(pn_msg(), d); }
 
 }

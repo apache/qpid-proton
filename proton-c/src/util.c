@@ -209,7 +209,8 @@ int pn_strcasecmp(const char *a, const char *b)
 {
   int diff;
   while (*b) {
-    diff = tolower(*a++)-tolower(*b++);
+    char aa = *a++, bb = *b++;
+    diff = tolower(aa)-tolower(bb);
     if ( diff!=0 ) return diff;
   }
   return *a;
@@ -219,7 +220,8 @@ int pn_strncasecmp(const char* a, const char* b, size_t len)
 {
   int diff = 0;
   while (*b && len > 0) {
-    diff = tolower(*a++)-tolower(*b++);
+    char aa = *a++, bb = *b++;
+    diff = tolower(aa)-tolower(bb);
     if ( diff!=0 ) return diff;
     --len;
   };
