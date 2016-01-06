@@ -118,3 +118,5 @@ install(FILES ${PROTON_ARTIFACTS}
 install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
         DESTINATION ${PYTHON_SITEARCH_PACKAGES}
         COMPONENT Python)
+
+set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")

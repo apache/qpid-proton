@@ -95,7 +95,7 @@ type or throw an exception if the types are not compatible.
 +-------------------------+-------------------------------+
 |BINARY                   |amqp_binary, std::string       |
 +-------------------------+-------------------------------+
-|DECIMAL<n>               |amqp_decimal<n>                |
+|DECIMAL32/64/128         |amqp_decimal32/64/128          |
 +-------------------------+-------------------------------+
 |TIMESTAMP                |amqp_timestamp                 |
 +-------------------------+-------------------------------+
