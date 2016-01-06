@@ -33,7 +33,7 @@ namespace proton {
 
 // Combine's Python's: endpoint_state_handler, incoming_message_handler, outgoing_message_handler
 
-class messaging_adapter : public messaging_handler
+class messaging_adapter : public proton_handler, public messaging_handler
 {
   public:
     PN_CPP_EXTERN messaging_adapter(messaging_handler &delegate);
@@ -59,6 +59,8 @@ class messaging_adapter : public messaging_handler
     PN_CPP_EXTERN virtual void on_link_close(event &e);
     PN_CPP_EXTERN virtual void on_link_error(event &e);
     PN_CPP_EXTERN virtual void on_link_open(event &e);
+
+    PN_CPP_EXTERN virtual void on_timer_task(event &e);
   private:
     messaging_handler &delegate_;  // The handler for generated messaging_event's
 };

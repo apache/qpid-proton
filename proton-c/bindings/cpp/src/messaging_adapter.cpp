@@ -276,6 +276,11 @@ void messaging_adapter::on_link_close(event &e) {
         on_link_error(e);
 }
 
+void messaging_adapter::on_timer_task(event& e)
+{
+    delegate_.on_timer(e);
+}
+
 void messaging_adapter::on_unhandled(event &) {
 }
 

@@ -29,13 +29,13 @@
 #include <map>
 
 class ticker : public proton::messaging_handler {
-    void on_timer_task(proton::event &e) {
+    void on_timer(proton::event &e) {
         std::cout << "Tick..." << std::endl;
     }
 };
 
 class tocker : public proton::messaging_handler {
-    void on_timer_task(proton::event &e) {
+    void on_timer(proton::event &e) {
         std::cout << "Tock..." << std::endl;
     }
 };
@@ -63,7 +63,7 @@ class recurring : public proton::messaging_handler {
         e.container().schedule(0);
     }
 
-    void on_timer_task(proton::event &e) {
+    void on_timer(proton::event &e) {
         if (!!cancel_task) {
             cancel_task.cancel();
             cancel_task = 0;

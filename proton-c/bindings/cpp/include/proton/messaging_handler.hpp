@@ -25,17 +25,24 @@
 #include "proton/proton_handler.hpp"
 #include "proton/event.h"
 
+#include <stdexcept>
+
 namespace proton {
 
 class event;
 class messaging_adapter;
+
+class messaging_exception : public std::runtime_error {
+  public:
+    messaging_exception(event& e);
+};
 
 /** messaging_handler base class. Provides a simpler set of events than
  * proton::proton_handler and automates some common tasks.  Subclass and
  * over-ride event handling member functions.
  * @see proton::messaging_event for meaning of events.
  */
-class messaging_handler : public proton_handler
+class messaging_handler : virtual public handler
 {
   public:
     /** Create a messaging_handler
