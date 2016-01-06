@@ -478,14 +478,16 @@ typedef struct Pn_rbkey_t {
   char *key_value;
 } Pn_rbkey_t;
 
-void Pn_rbkey_initialize(Pn_rbkey_t *rbkey) {
+void Pn_rbkey_initialize(void *vp_rbkey) {
+  Pn_rbkey_t *rbkey = (Pn_rbkey_t*)vp_rbkey;
   assert(rbkey);
   rbkey->registry = NULL;
   rbkey->method = NULL;
   rbkey->key_value = NULL;
 }
 
-void Pn_rbkey_finalize(Pn_rbkey_t *rbkey) {
+void Pn_rbkey_finalize(void *vp_rbkey) {
+  Pn_rbkey_t *rbkey = (Pn_rbkey_t*)vp_rbkey;
   if(rbkey && rbkey->registry && rbkey->method && rbkey->key_value) {
     rb_funcall((VALUE )rbkey->registry, rb_intern(rbkey->method), 1, rb_str_new2(rbkey->key_value));
   }
