@@ -45,9 +45,9 @@ delivery sender::send(const message &message) {
     amqp_ulong id = ++tag_counter;
     pn_delivery_t *dlv =
         pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
-    std::string buf;
+    std::vector<char> buf;
     message.encode(buf);
-    pn_link_send(pn_object(), buf.data(), buf.size());
+    pn_link_send(pn_object(), &buf[0], buf.size());
     pn_link_advance(pn_object());
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);

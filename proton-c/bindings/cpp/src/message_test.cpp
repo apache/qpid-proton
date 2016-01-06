@@ -104,36 +104,36 @@ void test_message_body() {
 void test_message_maps() {
     message m;
 
-    ASSERT(m.properties().empty());
-    ASSERT(m.annotations().empty());
-    ASSERT(m.instructions().empty());
+    ASSERT(m.application_properties().empty());
+    ASSERT(m.message_annotations().empty());
+    ASSERT(m.delivery_annotations().empty());
 
-    m.properties()["foo"] = 12;
-    m.instructions()["bar"] = "xyz";
-    m.annotations()[23] = "23";
+    m.application_properties()["foo"] = 12;
+    m.delivery_annotations()["bar"] = "xyz";
 
-    ASSERT_EQUAL(m.properties()["foo"], scalar(12));
-    ASSERT_EQUAL(m.instructions()["bar"], scalar("xyz"));
-    ASSERT_EQUAL(m.annotations()[23], scalar("23"));
+    m.message_annotations()[23] = "23";
+    ASSERT_EQUAL(m.application_properties()["foo"], scalar(12));
+    ASSERT_EQUAL(m.delivery_annotations()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m.message_annotations()[23], scalar("23"));
 
     message m2(m);
-    message::annotation_map& amap = m2.instructions();
+    message::annotation_map& amap = m2.delivery_annotations();
 
-    ASSERT_EQUAL(m2.properties()["foo"], scalar(12));
-    ASSERT_EQUAL(m2.instructions()["bar"], scalar("xyz"));
-    ASSERT_EQUAL(m2.annotations()[23], scalar("23"));
+    ASSERT_EQUAL(m2.application_properties()["foo"], scalar(12));
+    ASSERT_EQUAL(m2.delivery_annotations()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m2.message_annotations()[23], scalar("23"));
 
-    m.properties()["foo"] = "newfoo";
-    m.instructions()[24] = 1000;
-    m.annotations().erase(23);
+    m.application_properties()["foo"] = "newfoo";
+    m.delivery_annotations()[24] = 1000;
+    m.message_annotations().erase(23);
 
     m2 = m;
-    ASSERT_EQUAL(1, m2.properties().size());
-    ASSERT_EQUAL(m2.properties()["foo"], scalar("newfoo"));
-    ASSERT_EQUAL(2, m2.instructions().size());
-    ASSERT_EQUAL(m2.instructions()["bar"], scalar("xyz"));
-    ASSERT_EQUAL(m2.instructions()[24], scalar(1000));
-    ASSERT(m2.annotations().empty());
+    ASSERT_EQUAL(1, m2.application_properties().size());
+    ASSERT_EQUAL(m2.application_properties()["foo"], scalar("newfoo"));
+    ASSERT_EQUAL(2, m2.delivery_annotations().size());
+    ASSERT_EQUAL(m2.delivery_annotations()["bar"], scalar("xyz"));
+    ASSERT_EQUAL(m2.delivery_annotations()[24], scalar(1000));
+    ASSERT(m2.message_annotations().empty());
 }
 
 int main(int argc, char** argv) {

@@ -38,16 +38,15 @@ template <class T> class pn_unique_ptr {
   public:
     pn_unique_ptr(T* p=0) : ptr_(p) {}
 #if PN_HAS_CPP11
-    pn_unique_ptr(pn_unique_ptr&& x) : ptr_(0)  { swap(x); }
+    pn_unique_ptr(pn_unique_ptr&& x) : ptr_(0)  { std::swap(ptr_, x.ptr_); }
 #else
-    pn_unique_ptr(const pn_unique_ptr& x) : ptr_() { swap(const_cast<pn_unique_ptr<T>&>(x)); }
+    pn_unique_ptr(const pn_unique_ptr& x) : ptr_() { std::swap(ptr_, const_cast<pn_unique_ptr&>(x).ptr_); }
 #endif
     ~pn_unique_ptr() { delete(ptr_); }
     T& operator*() const { return *ptr_; }
     T* operator->() const { return ptr_; }
     T* get() const { return ptr_; }
-    void swap(pn_unique_ptr<T>& x) { std::swap(ptr_, x.ptr_); }
-    void reset(T* p = 0) { pn_unique_ptr<T> tmp(p); swap(tmp); }
+    void reset(T* p = 0) { pn_unique_ptr<T> tmp(p); std::swap(ptr_, tmp.ptr_); }
     T* release() { T *p = ptr_; ptr_ = 0; return p; }
     operator bool() const { return get(); }
     bool operator !() const { return get(); }

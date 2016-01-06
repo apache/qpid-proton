@@ -82,8 +82,7 @@ class value {
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if type_id_is_string_like(type())
     ///@}
 
-    PN_CPP_EXTERN void swap(value& v);
-
+  friend PN_CPP_EXTERN void swap(value&, value&);
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
   friend PN_CPP_EXTERN class encoder operator<<(class encoder e, const value& dv);

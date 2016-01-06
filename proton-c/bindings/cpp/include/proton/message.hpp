@@ -30,6 +30,7 @@
 #include "proton/duration.hpp"
 
 #include <string>
+#include <vector>
 #include <utility>
 
 struct pn_message_t;
@@ -60,12 +61,10 @@ class message
 
     PN_CPP_EXTERN message& operator=(const message&);
 
-    PN_CPP_EXTERN void swap(message& x);
-
     /** Clear the message content and properties. */
     PN_CPP_EXTERN void clear();
 
-    ///@name Standard AMQP properties
+    ///@name Standard AMQP message properties
     ///@{
 
     PN_CPP_EXTERN void id(const message_id& id);
@@ -116,25 +115,25 @@ class message
     PN_CPP_EXTERN value& body();
 
     /** Application properties map, can be modified in place. */
-    PN_CPP_EXTERN property_map& properties();
-    PN_CPP_EXTERN const property_map& properties() const;
+    PN_CPP_EXTERN property_map& application_properties();
+    PN_CPP_EXTERN const property_map& application_properties() const;
 
     /** Message annotations map, can be modified in place. */
-    PN_CPP_EXTERN annotation_map& annotations();
-    PN_CPP_EXTERN const annotation_map& annotations() const;
+    PN_CPP_EXTERN annotation_map& message_annotations();
+    PN_CPP_EXTERN const annotation_map& message_annotations() const;
 
-    /** Delivery instructions map, can be modified in place. */
-    PN_CPP_EXTERN annotation_map& instructions();
-    PN_CPP_EXTERN const annotation_map& instructions() const;
+    /** Delivery annotations map, can be modified in place. */
+    PN_CPP_EXTERN annotation_map& delivery_annotations();
+    PN_CPP_EXTERN const annotation_map& delivery_annotations() const;
 
-    /** Encode entire message into a string, growing the string if necessary. */
-    PN_CPP_EXTERN void encode(std::string &bytes) const;
+    /** Encode entire message into a byte vector, growing it if necessary. */
+    PN_CPP_EXTERN void encode(std::vector<char> &bytes) const;
 
-    /** Return encoded message as a string */
-    PN_CPP_EXTERN std::string encode() const;
+    /** Return encoded message as a byte vector */
+    PN_CPP_EXTERN std::vector<char> encode() const;
 
     /** Decode from string data into the message. */
-    PN_CPP_EXTERN void decode(const std::string &bytes);
+    PN_CPP_EXTERN void decode(const std::vector<char> &bytes);
 
     /** Decode the message corresponding to a delivery from a link. */
     PN_CPP_EXTERN void decode(proton::link, proton::delivery);
@@ -232,17 +231,19 @@ class message
     /** Get the group sequence for a message. */
     PN_CPP_EXTERN void sequence(int32_t);
 
+  friend PN_CPP_EXTERN void swap(message&, message&);
+
   private:
     pn_message_t *pn_msg() const;
-    struct impl {
+    mutable struct impl {
         PN_CPP_EXTERN impl();
         PN_CPP_EXTERN ~impl();
-        mutable pn_message_t *msg;
-        mutable value body;
+        pn_message_t *msg;
+        value body;
+        property_map application_properties;
+        annotation_map message_annotations;
+        annotation_map delivery_annotations;
     } impl_;
-    mutable property_map properties_;
-    mutable annotation_map annotations_;
-    mutable annotation_map instructions_;
 };
 
 }

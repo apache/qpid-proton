@@ -33,6 +33,7 @@
 #include "proton_bits.hpp"
 
 #include <string>
+#include <algorithm>
 #include <assert.h>
 
 namespace proton {
@@ -59,16 +60,16 @@ message::message() {}
 message::message(const message &m) { *this = m; }
 
 #if PN_HAS_CPP11
-message::message(message &&m) { swap(m); }
+message::message(message &&m) { swap(*this, m); }
 #endif
 
 message::~message() {}
 
-void message::swap(message& m) { std::swap(impl_.msg, m.impl_.msg); }
+void swap(message& x, message& y) { std::swap(x.impl_.msg, y.impl_.msg); }
 
 message& message::operator=(const message& m) {
     // TODO aconway 2015-08-10: more efficient pn_message_copy function
-    std::string data;
+    std::vector<char> data;
     m.encode(data);
     decode(data);
     return *this;
@@ -205,10 +206,10 @@ void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 const value& message::body() const { return impl_.body.ref(pn_message_body(pn_msg())); }
 value& message::body() { return impl_.body.ref(pn_message_body(pn_msg())); }
 
-// MAP CACHING: the properties, annotations and instructions maps can either be
-// encoded in the pn_message pn_data_t structures OR decoded as C++ map members
-// of the message but not both. At least one of the pn_data_t or the map member
-// is always empty, the non-empty one is the authority.
+// MAP CACHING: the properties and annotations maps can either be encoded in the
+// pn_message pn_data_t structures OR decoded as C++ map members of the message
+// but not both. At least one of the pn_data_t or the map member is always
+// empty, the non-empty one is the authority.
 
 // Decode a map on demand
 template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
@@ -230,41 +231,40 @@ template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
     return map;
 }
 
-message::property_map& message::properties() {
-    return get_map(pn_msg(), pn_message_properties, properties_);
+message::property_map& message::application_properties() {
+    return get_map(pn_msg(), pn_message_properties, impl_.application_properties);
 }
 
-const message::property_map& message::properties() const {
-    return get_map(pn_msg(), pn_message_properties, properties_);
-}
-
-
-message::annotation_map& message::annotations() {
-    return get_map(pn_msg(), pn_message_annotations, annotations_);
-}
-
-const message::annotation_map& message::annotations() const {
-    return get_map(pn_msg(), pn_message_annotations, annotations_);
+const message::property_map& message::application_properties() const {
+    return get_map(pn_msg(), pn_message_properties, impl_.application_properties);
 }
 
 
-message::annotation_map& message::instructions() {
-    return get_map(pn_msg(), pn_message_instructions, instructions_);
+message::annotation_map& message::message_annotations() {
+    return get_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
 }
 
-const message::annotation_map& message::instructions() const {
-    return get_map(pn_msg(), pn_message_instructions, instructions_);
+const message::annotation_map& message::message_annotations() const {
+    return get_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
 }
 
-void message::encode(std::string &s) const {
-    put_map(pn_msg(), pn_message_properties, properties_);
-    put_map(pn_msg(), pn_message_annotations, annotations_);
-    put_map(pn_msg(), pn_message_instructions, instructions_);
-    size_t sz = s.capacity();
-    if (sz < 512) sz = 512;
+
+message::annotation_map& message::delivery_annotations() {
+    return get_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+}
+
+const message::annotation_map& message::delivery_annotations() const {
+    return get_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+}
+
+void message::encode(std::vector<char> &s) const {
+    put_map(pn_msg(), pn_message_properties, impl_.application_properties);
+    put_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
+    put_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+    size_t sz = std::max(s.capacity(), size_t(512));
     while (true) {
         s.resize(sz);
-        int err = pn_message_encode(pn_msg(), const_cast<char*>(s.data()), &sz);
+        int err = pn_message_encode(pn_msg(), const_cast<char*>(&s[0]), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
                 check(err);
@@ -276,23 +276,23 @@ void message::encode(std::string &s) const {
     }
 }
 
-std::string message::encode() const {
-    std::string data;
+std::vector<char> message::encode() const {
+    std::vector<char> data;
     encode(data);
     return data;
 }
 
-void message::decode(const std::string &s) {
-    properties_.clear();
-    annotations_.clear();
-    instructions_.clear();
-    check(pn_message_decode(pn_msg(), s.data(), s.size()));
+void message::decode(const std::vector<char> &s) {
+    impl_.application_properties.clear();
+    impl_.message_annotations.clear();
+    impl_.delivery_annotations.clear();
+    check(pn_message_decode(pn_msg(), &s[0], s.size()));
 }
 
 void message::decode(proton::link link, proton::delivery delivery) {
-    std::string buf;
+    std::vector<char> buf;
     buf.resize(delivery.pending());
-    ssize_t n = link.recv(const_cast<char *>(buf.data()), buf.size());
+    ssize_t n = link.recv(const_cast<char *>(&buf[0]), buf.size());
     if (n != ssize_t(buf.size())) throw error(MSG("link read failure"));
     clear();
     decode(buf);

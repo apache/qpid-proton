@@ -32,7 +32,7 @@ value::value() : data_(data::create()) {}
 value::value(const value& x) : data_(data::create()) { data_.copy(x.data_); }
 
 #if PN_HAS_CPP11
-value::value(value&& x) : data_(0) { swap(x); }
+value::value(value&& x) : data_(0) { swap(*this, x); }
 #endif
 
 // Referencing an external value
@@ -43,7 +43,7 @@ value& value::ref(data d) { data_ = d; return *this; }
 
 value& value::operator=(const value& x) { data_.copy(x.data_); return *this; }
 
-void value::swap(value& x) { std::swap(data_, x.data_); }
+void swap(value& x, value& y) { std::swap(x.data_, y.data_); }
 
 void value::clear() { data_.clear(); }
 
