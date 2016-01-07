@@ -164,7 +164,7 @@ func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interfac
 			return
 		}
 
-		delivery, err2 := s.eLink.Send(m)
+		delivery, err2 := s.pLink.Send(m)
 		switch {
 		case err2 != nil:
 			Outcome{Unsent, err2, v}.send(ack)
@@ -176,7 +176,7 @@ func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interfac
 		default:
 			s.handler().sentMessages[delivery] = sentMessage{ack, v} // Register with handler
 		}
-		if s.eLink.Credit() > 0 { // Signal there is still credit
+		if s.pLink.Credit() > 0 { // Signal there is still credit
 			s.sendable()
 		}
 	})
@@ -244,9 +244,9 @@ func (s *sender) closed(err error) error {
 
 func newSender(ls linkSettings) *sender {
 	s := &sender{link: link{linkSettings: ls}, credit: make(chan struct{}, 1)}
-	s.endpoint.init(s.link.eLink.String())
-	s.handler().addLink(s.eLink, s)
-	s.link.eLink.Open()
+	s.endpoint.init(s.link.pLink.String())
+	s.handler().addLink(s.pLink, s)
+	s.link.pLink.Open()
 	return s
 }
 
@@ -269,6 +269,6 @@ func (in *IncomingSender) Accept() Endpoint {
 
 // Call in injected functions to check if the sender is valid.
 func (s *sender) valid() bool {
-	s2, ok := s.handler().links[s.eLink].(*sender)
+	s2, ok := s.handler().links[s.pLink].(*sender)
 	return ok && s2 == s
 }

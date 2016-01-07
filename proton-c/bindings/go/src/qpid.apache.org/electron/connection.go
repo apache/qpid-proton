@@ -104,7 +104,7 @@ type connection struct {
 	incoming    chan Incoming
 	handler     *handler
 	engine      *proton.Engine
-	eConnection proton.Connection
+	pConnection proton.Connection
 
 	defaultSession Session
 }
@@ -121,7 +121,7 @@ func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) 
 		set(c)
 	}
 	c.endpoint.init(c.engine.String())
-	c.eConnection = c.engine.Connection()
+	c.pConnection = c.engine.Connection()
 	go c.run()
 	return c, nil
 }
@@ -150,11 +150,11 @@ func (c *connection) Session(setting ...SessionOption) (Session, error) {
 		if c.Error() != nil {
 			return c.Error()
 		}
-		eSession, err := c.engine.Connection().Session()
+		pSession, err := c.engine.Connection().Session()
 		if err == nil {
-			eSession.Open()
+			pSession.Open()
 			if err == nil {
-				s = newSession(c, eSession, setting...)
+				s = newSession(c, pSession, setting...)
 			}
 		}
 		return err
@@ -218,21 +218,21 @@ type Incoming interface {
 }
 
 type incoming struct {
-	endpoint proton.Endpoint
+	pep      proton.Endpoint
 	acceptCh chan func() error
 }
 
 func makeIncoming(e proton.Endpoint) incoming {
-	return incoming{endpoint: e, acceptCh: make(chan func() error)}
+	return incoming{pep: e, acceptCh: make(chan func() error)}
 }
 
-func (in *incoming) String() string   { return fmt.Sprintf("%s: %s", in.endpoint.Type(), in.endpoint) }
+func (in *incoming) String() string   { return fmt.Sprintf("%s: %s", in.pep.Type(), in.pep) }
 func (in *incoming) Reject(err error) { in.acceptCh <- func() error { return err } }
 
 // Call in proton goroutine, wait for and call the accept function fr
 func (in *incoming) wait() error { return (<-in.acceptCh)() }
 
-func (in *incoming) pEndpoint() proton.Endpoint { return in.endpoint }
+func (in *incoming) pEndpoint() proton.Endpoint { return in.pep }
 
 // Called in app goroutine to send an accept function to proton and return the resulting endpoint.
 func (in *incoming) accept(f func() Endpoint) Endpoint {

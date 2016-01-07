@@ -78,13 +78,13 @@ func (r *receiver) Prefetch() bool { return r.prefetch }
 // Call in proton goroutine
 func newReceiver(ls linkSettings) *receiver {
 	r := &receiver{link: link{linkSettings: ls}}
-	r.endpoint.init(r.link.eLink.String())
+	r.endpoint.init(r.link.pLink.String())
 	if r.capacity < 1 {
 		r.capacity = 1
 	}
 	r.buffer = make(chan ReceivedMessage, r.capacity)
-	r.handler().addLink(r.eLink, r)
-	r.link.eLink.Open()
+	r.handler().addLink(r.pLink, r)
+	r.link.pLink.Open()
 	if r.prefetch {
 		r.flow(r.maxFlow())
 	}
@@ -92,11 +92,11 @@ func newReceiver(ls linkSettings) *receiver {
 }
 
 // Call in proton gorotine. Max additional credit we can request.
-func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.eLink.Credit() }
+func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.pLink.Credit() }
 
 func (r *receiver) flow(credit int) {
 	if credit > 0 {
-		r.eLink.Flow(credit)
+		r.pLink.Flow(credit)
 	}
 }
 
@@ -105,7 +105,7 @@ func (r *receiver) flow(credit int) {
 func (r *receiver) caller(inc int) {
 	r.engine().Inject(func() {
 		r.callers += inc
-		need := r.callers - (len(r.buffer) + r.eLink.Credit())
+		need := r.callers - (len(r.buffer) + r.pLink.Credit())
 		max := r.maxFlow()
 		if need > max {
 			need = max
@@ -152,20 +152,20 @@ func (r *receiver) ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error
 
 // Called in proton goroutine on MMessage event.
 func (r *receiver) message(delivery proton.Delivery) {
-	if r.eLink.State().RemoteClosed() {
-		localClose(r.eLink, r.eLink.RemoteCondition().Error())
+	if r.pLink.State().RemoteClosed() {
+		localClose(r.pLink, r.pLink.RemoteCondition().Error())
 		return
 	}
 	if delivery.HasMessage() {
 		m, err := delivery.Message()
 		if err != nil {
-			localClose(r.eLink, err)
+			localClose(r.pLink, err)
 			return
 		}
 		assert(m != nil)
-		r.eLink.Advance()
-		if r.eLink.Credit() < 0 {
-			localClose(r.eLink, fmt.Errorf("received message in excess of credit limit"))
+		r.pLink.Advance()
+		if r.pLink.Credit() < 0 {
+			localClose(r.pLink, fmt.Errorf("received message in excess of credit limit"))
 		} else {
 			// We never issue more credit than cap(buffer) so this will not block.
 			r.buffer <- ReceivedMessage{m, delivery, r}
@@ -185,7 +185,7 @@ type ReceivedMessage struct {
 	// Message is the received message.
 	Message amqp.Message
 
-	eDelivery proton.Delivery
+	pDelivery proton.Delivery
 	receiver  Receiver
 }
 
@@ -193,7 +193,7 @@ type ReceivedMessage struct {
 func (rm *ReceivedMessage) acknowledge(status uint64) error {
 	return rm.receiver.(*receiver).engine().Inject(func() {
 		// Deliveries are valid as long as the connection is, unless settled.
-		rm.eDelivery.SettleAs(uint64(status))
+		rm.pDelivery.SettleAs(uint64(status))
 	})
 }
 

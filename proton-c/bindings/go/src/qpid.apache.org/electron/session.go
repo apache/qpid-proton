@@ -36,7 +36,7 @@ type Session interface {
 
 type session struct {
 	endpoint
-	eSession   proton.Session
+	pSession   proton.Session
 	connection *connection
 	capacity   uint
 }
@@ -52,26 +52,26 @@ func IncomingCapacity(cap uint) SessionOption { return func(s *session) { s.capa
 func newSession(c *connection, es proton.Session, setting ...SessionOption) *session {
 	s := &session{
 		connection: c,
-		eSession:   es,
+		pSession:   es,
 	}
 	s.endpoint.init(es.String())
 	for _, set := range setting {
 		set(s)
 	}
-	c.handler.sessions[s.eSession] = s
-	s.eSession.SetIncomingCapacity(s.capacity)
-	s.eSession.Open()
+	c.handler.sessions[s.pSession] = s
+	s.pSession.SetIncomingCapacity(s.capacity)
+	s.pSession.Open()
 	return s
 }
 
 func (s *session) Connection() Connection     { return s.connection }
-func (s *session) eEndpoint() proton.Endpoint { return s.eSession }
+func (s *session) pEndpoint() proton.Endpoint { return s.pSession }
 func (s *session) engine() *proton.Engine     { return s.connection.engine }
 
 func (s *session) Close(err error) {
 	s.engine().Inject(func() {
 		if s.Error() == nil {
-			localClose(s.eSession, err)
+			localClose(s.pSession, err)
 		}
 	})
 }
