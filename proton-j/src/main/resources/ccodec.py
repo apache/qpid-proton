@@ -18,8 +18,9 @@
 #
 from org.apache.qpid.proton import Proton
 from org.apache.qpid.proton.amqp import Symbol, UnsignedByte, UnsignedInteger, \
-  UnsignedLong, Decimal32, Decimal64, Decimal128
+  UnsignedShort, UnsignedLong, Decimal32, Decimal64, Decimal128
 from org.apache.qpid.proton.codec.Data import DataType
+from cerror import *
 
 from java.util import UUID as JUUID, Date as JDate
 from java.nio import ByteBuffer
