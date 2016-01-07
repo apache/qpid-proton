@@ -1292,6 +1292,56 @@ class char(unicode):
   def __repr__(self):
     return "char(%s)" % unicode.__repr__(self)
 
+class byte(int):
+
+  def __repr__(self):
+    return "byte(%s)" % int.__repr__(self)
+
+class short(int):
+
+  def __repr__(self):
+    return "short(%s)" % int.__repr__(self)
+
+class int32(int):
+
+  def __repr__(self):
+      return "int32(%s)" % int.__repr__(self)
+
+class ubyte(int):
+
+  def __repr__(self):
+    return "ubyte(%s)" % int.__repr__(self)
+
+class ushort(int):
+
+  def __repr__(self):
+    return "ushort(%s)" % int.__repr__(self)
+
+class uint(long):
+
+  def __repr__(self):
+      return "uint(%s)" % long.__repr__(self)
+
+class float32(float):
+
+  def __repr__(self):
+    return "float32(%s)" % float.__repr__(self)
+
+class decimal32(int):
+
+  def __repr__(self):
+    return "decimal32(%s)" % int.__repr__(self)
+
+class decimal64(long):
+
+  def __repr__(self):
+    return "decimal64(%s)" % long.__repr__(self)
+
+class decimal128(bytes):
+
+  def __repr__(self):
+    return "decimal128(%s)" % bytes.__repr__(self)
+
 class Described(object):
 
   def __init__(self, descriptor, value):
@@ -1904,42 +1954,42 @@ class Data:
     If the current node is an unsigned byte, returns its value,
     returns 0 otherwise.
     """
-    return pn_data_get_ubyte(self._data)
+    return ubyte(pn_data_get_ubyte(self._data))
 
   def get_byte(self):
     """
     If the current node is a signed byte, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_byte(self._data)
+    return byte(pn_data_get_byte(self._data))
 
   def get_ushort(self):
     """
     If the current node is an unsigned short, returns its value,
     returns 0 otherwise.
     """
-    return pn_data_get_ushort(self._data)
+    return ushort(pn_data_get_ushort(self._data))
 
   def get_short(self):
     """
     If the current node is a signed short, returns its value, returns
     0 otherwise.
     """
-    return pn_data_get_short(self._data)
+    return short(pn_data_get_short(self._data))
 
   def get_uint(self):
     """
     If the current node is an unsigned int, returns its value, returns
     0 otherwise.
     """
-    return pn_data_get_uint(self._data)
+    return uint(pn_data_get_uint(self._data))
 
   def get_int(self):
     """
     If the current node is a signed int, returns its value, returns 0
     otherwise.
     """
-    return int(pn_data_get_int(self._data))
+    return int32(pn_data_get_int(self._data))
 
   def get_char(self):
     """
@@ -1974,7 +2024,7 @@ class Data:
     If the current node is a float, returns its value, raises 0
     otherwise.
     """
-    return pn_data_get_float(self._data)
+    return float32(pn_data_get_float(self._data))
 
   def get_double(self):
     """
@@ -1989,7 +2039,7 @@ class Data:
     If the current node is a decimal32, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_decimal32(self._data)
+    return decimal32(pn_data_get_decimal32(self._data))
 
   # XXX: need to convert
   def get_decimal64(self):
@@ -1997,7 +2047,7 @@ class Data:
     If the current node is a decimal64, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_decimal64(self._data)
+    return decimal64(pn_data_get_decimal64(self._data))
 
   # XXX: need to convert
   def get_decimal128(self):
@@ -2005,7 +2055,7 @@ class Data:
     If the current node is a decimal128, returns its value, returns 0
     otherwise.
     """
-    return pn_data_get_decimal128(self._data)
+    return decimal128(pn_data_get_decimal128(self._data))
 
   def get_uuid(self):
     """
@@ -2157,18 +2207,29 @@ class Data:
   put_mappings = {
     None.__class__: lambda s, _: s.put_null(),
     bool: put_bool,
-    dict: put_dict,
+    ubyte: put_ubyte,
+    ushort: put_ushort,
+    uint: put_uint,
+    ulong: put_ulong,
+    byte: put_byte,
+    short: put_short,
+    int32: put_int,
+    int: put_long,
+    long: put_long,
+    float32: put_float,
+    float: put_double,
+    decimal32: put_decimal32,
+    decimal64: put_decimal64,
+    decimal128: put_decimal128,
+    char: put_char,
+    timestamp: put_timestamp,
+    uuid.UUID: put_uuid,
+    bytes: put_binary,
+    unicode: put_string,
+    symbol: put_symbol,
     list: put_sequence,
     tuple: put_sequence,
-    unicode: put_string,
-    bytes: put_binary,
-    symbol: put_symbol,
-    long: put_long,
-    char: put_char,
-    ulong: put_ulong,
-    timestamp: put_timestamp,
-    float: put_double,
-    uuid.UUID: put_uuid,
+    dict: put_dict,
     Described: put_py_described,
     Array: put_py_array
     }
@@ -4132,5 +4193,15 @@ __all__ = [
            "dispatch",
            "symbol",
            "timestamp",
-           "ulong"
+           "ulong",
+           "byte",
+           "short",
+           "int32",
+           "ubyte",
+           "ushort",
+           "uint",
+           "float32",
+           "decimal32",
+           "decimal64",
+           "decimal128"
            ]

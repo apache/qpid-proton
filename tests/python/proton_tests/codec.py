@@ -136,6 +136,8 @@ class DataTest(Test):
   INT_TYPES = {
     "byte": (8, True),
     "ubyte": (8, False),
+    "short": (16, True),
+    "ushort": (16, False),
     "int": (32, True),
     "uint": (32, False),
     "long": (64, True),
@@ -203,6 +205,8 @@ class DataTest(Test):
 
   def testByteArray(self): self._test_int_array("byte")
   def testUbyteArray(self): self._test_int_array("ubyte")
+  def testShortArray(self): self._test_int_array("short")
+  def testUshortArray(self): self._test_int_array("ushort")
   def testIntArray(self): self._test_int_array("int")
   def testUintArray(self): self._test_int_array("uint")
   def testLongArray(self): self._test_int_array("long")
@@ -256,6 +260,8 @@ class DataTest(Test):
 
   def testByte(self): self._test_int("byte")
   def testUbyte(self): self._test_int("ubyte")
+  def testShort(self): self._test_int("short")
+  def testUshort(self): self._test("ushort")
   def testInt(self): self._test_int("int")
   def testUint(self): self._test_int("uint")
   def testLong(self): self._test_int("long")
@@ -279,25 +285,25 @@ class DataTest(Test):
                str2bin("of" "b\x00inary"))
 
   def testSymbol(self):
-    self._test("symbol", "this is a symbol test", "bleh", "blah")
+    self._test("symbol", symbol("this is a symbol test"), symbol("bleh"), symbol("blah"))
 
   def testTimestamp(self):
-    self._test("timestamp", 0, 12345, 1000000)
+    self._test("timestamp", timestamp(0), timestamp(12345), timestamp(1000000))
 
   def testChar(self):
-    self._test("char", 'a', 'b', 'c', unichar(0x20AC))
+    self._test("char", char('a'), char('b'), char('c'), char(unichar(0x20AC)))
 
   def testUUID(self):
     self._test("uuid", uuid4(), uuid4(), uuid4())
 
   def testDecimal32(self):
-    self._test("decimal32", 0, 1, 2, 3, 4, 2**30)
+    self._test("decimal32", decimal32(0), decimal32(1), decimal32(2), decimal32(3), decimal32(4), decimal32(2**30))
 
   def testDecimal64(self):
-    self._test("decimal64", 0, 1, 2, 3, 4, 2**60)
+    self._test("decimal64", decimal64(0), decimal64(1), decimal64(2), decimal64(3), decimal64(4), decimal64(2**60))
 
   def testDecimal128(self):
-    self._test("decimal128", str2bin("fdsaasdf;lkjjkl;"), str2bin("x"*16))
+    self._test("decimal128", decimal128(str2bin("fdsaasdf;lkjjkl;")), decimal128(str2bin("x"*16)))
 
   def testCopy(self):
     self.data.put_described()
