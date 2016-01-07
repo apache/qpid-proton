@@ -39,7 +39,7 @@ separate_arguments(GO_TEST_FLAGS)
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
 set(GO_ENV ${env_py} --
   "GOPATH=${CMAKE_CURRENT_SOURCE_DIR}"
-  "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include"
+  "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include -I${CMAKE_BINARY_DIR}/proton-c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
   CACHE INTERNAL "Run a command with Go environment variables")
 
