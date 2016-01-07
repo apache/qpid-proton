@@ -334,7 +334,7 @@ func (c Condition) Error() error {
 	if c.IsNil() || !c.IsSet() {
 		return nil
 	}
-	return amqp.Error{c.Name(), c.Description()}
+	return amqp.Error{Name: c.Name(), Description: c.Description()}
 }
 
 // Set a Go error into a condition.

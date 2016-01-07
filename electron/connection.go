@@ -120,7 +120,7 @@ func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) 
 	for _, set := range setting {
 		set(c)
 	}
-	c.endpoint = makeEndpoint(c.engine.String())
+	c.endpoint.init(c.engine.String())
 	c.eConnection = c.engine.Connection()
 	go c.run()
 	return c, nil
@@ -134,9 +134,15 @@ func (c *connection) run() {
 	c.closed(Closed)
 }
 
-func (c *connection) Close(err error) { c.err.Set(err); c.engine.Close(err) }
+func (c *connection) Close(err error) {
+	c.err.Set(err)
+	c.engine.Close(err)
+}
 
-func (c *connection) Disconnect(err error) { c.err.Set(err); c.engine.Disconnect(err) }
+func (c *connection) Disconnect(err error) {
+	c.err.Set(err)
+	c.engine.Disconnect(err)
+}
 
 func (c *connection) Session(setting ...SessionOption) (Session, error) {
 	var s Session

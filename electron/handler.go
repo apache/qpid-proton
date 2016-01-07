@@ -29,7 +29,7 @@ import (
 type handler struct {
 	delegator    *proton.MessagingAdapter
 	connection   *connection
-	links        map[proton.Link]Link
+	links        map[proton.Link]Endpoint
 	sentMessages map[proton.Delivery]sentMessage
 	sessions     map[proton.Session]*session
 }
@@ -37,7 +37,7 @@ type handler struct {
 func newHandler(c *connection) *handler {
 	h := &handler{
 		connection:   c,
-		links:        make(map[proton.Link]Link),
+		links:        make(map[proton.Link]Endpoint),
 		sentMessages: make(map[proton.Delivery]sentMessage),
 		sessions:     make(map[proton.Session]*session),
 	}
@@ -152,7 +152,7 @@ func (h *handler) incoming(in Incoming) {
 	}
 }
 
-func (h *handler) addLink(pl proton.Link, el Link) {
+func (h *handler) addLink(pl proton.Link, el Endpoint) {
 	h.links[pl] = el
 }
 

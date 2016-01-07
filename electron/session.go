@@ -53,8 +53,8 @@ func newSession(c *connection, es proton.Session, setting ...SessionOption) *ses
 	s := &session{
 		connection: c,
 		eSession:   es,
-		endpoint:   makeEndpoint(es.String()),
 	}
+	s.endpoint.init(es.String())
 	for _, set := range setting {
 		set(s)
 	}
@@ -81,7 +81,7 @@ func (s *session) Sender(setting ...LinkOption) (snd Sender, err error) {
 		if s.Error() != nil {
 			return s.Error()
 		}
-		l, err := localLink(s, true, setting...)
+		l, err := makeLocalLink(s, true, setting...)
 		if err == nil {
 			snd = newSender(l)
 		}
@@ -95,7 +95,7 @@ func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 		if s.Error() != nil {
 			return s.Error()
 		}
-		l, err := localLink(s, false, setting...)
+		l, err := makeLocalLink(s, false, setting...)
 		if err == nil {
 			rcv = newReceiver(l)
 		}

@@ -52,6 +52,9 @@ type Endpoint interface {
 	// Done returns a channel that will close when the endpoint closes.
 	// Error() will contain the reason.
 	Done() <-chan struct{}
+
+	// Called in handler goroutine when endpoint is remotely closed.
+	closed(err error) error
 }
 
 // DEVELOPER NOTES
@@ -64,7 +67,7 @@ type endpoint struct {
 	done chan struct{}
 }
 
-func makeEndpoint(s string) endpoint { return endpoint{str: s, done: make(chan struct{})} }
+func (e *endpoint) init(s string) { e.str = s; e.done = make(chan struct{}) }
 
 // Called in handler on a Closed event. Marks the endpoint as closed and the corresponding
 // proton.Endpoint pointer as invalid. Injected functions should check Error() to ensure
