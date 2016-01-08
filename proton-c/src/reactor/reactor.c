@@ -443,7 +443,15 @@ static void pni_timer_readable(pn_selectable_t *sel) {
 
 static void pni_timer_finalize(pn_selectable_t *sel) {
   pn_reactor_t *reactor = pni_reactor(sel);
-  pn_close(reactor->io, pn_selectable_get_fd(sel));
+  pn_socket_t fd = pn_selectable_get_fd(sel);
+  if (fd == reactor->wakeup[0]) {
+    for (int i = 0; i < 2; i++) {
+      if (reactor->wakeup[i] != PN_INVALID_SOCKET) {
+        pn_close(reactor->io, reactor->wakeup[i]);
+        reactor->wakeup[i] = PN_INVALID_SOCKET;
+      }
+    }
+  }
 }
 
 pn_selectable_t *pni_timer_selectable(pn_reactor_t *reactor) {
