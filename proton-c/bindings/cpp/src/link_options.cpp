@@ -25,6 +25,28 @@
 
 namespace proton {
 
+namespace {
+std::string lifetime_policy_symbol(lifetime_policy_t lp) {
+    switch (lp) {
+    case DELETE_ON_CLOSE: return "amqp:delete-on-close:list";
+    case DELETE_ON_NO_LINKS: return "amqp:delete-on-no-links:list";
+    case DELETE_ON_NO_MESSAGES: return "amqp:delete-on-no-messages:list";
+    case DELETE_ON_NO_LINKS_OR_MESSAGES: return "amqp:delete-on-no-links-or-messages:list";
+    default: break;
+    }
+    return "";
+}
+
+std::string distribution_mode_symbol(terminus::distribution_mode_t dm) {
+    switch (dm) {
+    case terminus::COPY: return "copy";
+    case terminus::MOVE: return "move";
+    default: break;
+    }
+    return "";
+}
+}
+
 template <class T> struct option {
     T value;
     bool set;
@@ -42,6 +64,8 @@ class link_options::impl {
     option<link_delivery_mode_t> delivery_mode;
     option<bool> dynamic_address;
     option<std::string> local_address;
+    option<lifetime_policy_t> lifetime_policy;
+    option<std::string> selector;
 
     void apply(link& l) {
         if (l.state() & endpoint::LOCAL_UNINIT) {
@@ -72,6 +96,24 @@ class link_options::impl {
                 else
                     l.detach_handler();
             }
+            if (dynamic_address.set) {
+                terminus t = sender ? l.target() : l.source();
+                t.dynamic(dynamic_address.value);
+                if (dynamic_address.value) {
+                    std::string lp, dm;
+                    if (lifetime_policy.set) lp = lifetime_policy_symbol(lifetime_policy.value);
+                    if (!sender && distribution_mode.set) dm = distribution_mode_symbol(distribution_mode.value);
+                    if (lp.size() || dm.size()) {
+                        encoder enc = t.dynamic_node_properties().encoder();
+                        enc << start::map();
+                        if (dm.size())
+                            enc << amqp_symbol("supported-dist-modes") << amqp_string(dm);
+                        if (lp.size())
+                            enc << amqp_symbol("lifetime-policy") << start::described()
+                                << amqp_symbol(lp) << start::list() << finish();
+                    }
+                }
+            }
             if (!sender) {
                 // receiver only options
                 if (distribution_mode.set) l.source().distribution_mode(distribution_mode.value);
@@ -79,8 +121,13 @@ class link_options::impl {
                     l.source().durability(terminus::DELIVERIES);
                     l.source().expiry_policy(terminus::EXPIRE_NEVER);
                 }
-                if (dynamic_address.set)
-                    l.source().dynamic(dynamic_address.value);
+                if (selector.set && selector.value.size()) {
+                    data d = l.source().filter();
+                    d.clear();
+                    encoder enc = d.encoder();
+                    enc << start::map() << amqp_symbol("selector") << start::described()
+                        << amqp_symbol("apache.org:selector-filter:string") << amqp_binary(selector.value) << finish();
+                }
             }
         }
     }
@@ -92,6 +139,8 @@ class link_options::impl {
         delivery_mode.override(x.delivery_mode);
         dynamic_address.override(x.dynamic_address);
         local_address.override(x.local_address);
+        lifetime_policy.override(x.lifetime_policy);
+        selector.override(x.selector);
     }
 
 };
@@ -116,6 +165,8 @@ link_options& link_options::durable_subscription(bool b) {impl_->durable_subscri
 link_options& link_options::delivery_mode(link_delivery_mode_t m) {impl_->delivery_mode = m; return *this; }
 link_options& link_options::dynamic_address(bool b) {impl_->dynamic_address = b; return *this; }
 link_options& link_options::local_address(const std::string &addr) {impl_->local_address = addr; return *this; }
+link_options& link_options::lifetime_policy(lifetime_policy_t lp) {impl_->lifetime_policy = lp; return *this; }
+link_options& link_options::selector(const std::string &str) {impl_->selector = str; return *this; }
 
 void link_options::apply(link& l) const { impl_->apply(l); }
 handler* link_options::handler() const { return impl_->handler.value; }

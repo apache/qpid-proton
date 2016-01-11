@@ -40,6 +40,14 @@ void terminus::expiry_policy(expiry_policy_t policy) {
     pn_terminus_set_expiry_policy(object_, pn_expiry_policy_t(policy));
 }
 
+uint32_t terminus::timeout() const {
+    return pn_terminus_get_timeout(object_);
+}
+
+void terminus::timeout(uint32_t seconds) {
+    pn_terminus_set_timeout(object_, seconds);
+}
+
 terminus::distribution_mode_t terminus::distribution_mode() const {
     return distribution_mode_t(pn_terminus_get_distribution_mode(object_));
 }
@@ -71,6 +79,14 @@ bool terminus::dynamic() const {
 
 void terminus::dynamic(bool d) {
     pn_terminus_set_dynamic(object_, d);
+}
+
+data terminus::filter() {
+    return pn_terminus_filter(object_);
+}
+
+data terminus::dynamic_node_properties() {
+    return pn_terminus_properties(object_);
 }
 
 }

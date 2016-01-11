@@ -25,6 +25,7 @@
 
 #include "proton/link.h"
 #include "proton/object.hpp"
+#include "proton/data.hpp"
 #include <string>
 
 namespace proton {
@@ -72,6 +73,8 @@ class terminus
     PN_CPP_EXTERN void type(type_t);
     PN_CPP_EXTERN expiry_policy_t expiry_policy() const;
     PN_CPP_EXTERN void expiry_policy(expiry_policy_t);
+    PN_CPP_EXTERN uint32_t timeout() const;    
+    PN_CPP_EXTERN void timeout(uint32_t seconds);
     PN_CPP_EXTERN distribution_mode_t distribution_mode() const;
     PN_CPP_EXTERN void distribution_mode(distribution_mode_t);
     PN_CPP_EXTERN durability_t durability();
@@ -80,7 +83,10 @@ class terminus
     PN_CPP_EXTERN void address(const std::string &);
     PN_CPP_EXTERN bool dynamic() const;
     PN_CPP_EXTERN void dynamic(bool);
-    // TODO: filter + related selector
+    /** Obtain a reference to the AMQP dynamic node properties for the terminus.  See also link_options::lifetime_policy. */
+    PN_CPP_EXTERN data dynamic_node_properties();
+    /** Obtain a reference to the AMQP filter set for the terminus.  See also link_options::selector. */
+    PN_CPP_EXTERN data filter();
 
 private:
     pn_terminus_t* object_;

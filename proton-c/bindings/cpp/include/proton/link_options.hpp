@@ -43,6 +43,21 @@ enum link_delivery_mode_t {
     AT_LEAST_ONCE
 };
 
+/** The lifetime of dynamically created nodes. */
+enum lifetime_policy_t {
+    // The policy is unspecified.
+    UNSPECIFIED = 0,
+    // The lifetime of the dynamic node is scoped to lifetime of the creating link.
+    DELETE_ON_CLOSE = 0x2B,
+    // The node will be deleted when it is neither the source nor the target of any link.
+    DELETE_ON_NO_LINKS = 0x2C,
+    // The node will be deleted when the creating link no longer exists and no messages remain at the node.
+    DELETE_ON_NO_MESSAGES = 0x2D,
+    // The node will be deleted when there are no links which have this node as
+    // their source or target, and there remain no messages at the node.
+    DELETE_ON_NO_LINKS_OR_MESSAGES = 0x2E
+};
+
 class handler;
 class link;
 
@@ -87,11 +102,15 @@ class link_options {
     PN_CPP_EXTERN link_options& durable_subscription(bool);
     /* Set the delivery mode on the link. */
     PN_CPP_EXTERN link_options& delivery_mode(link_delivery_mode_t);
-    /* Receiver-only option to request a dynamically generated node at the peer. */
+    /* Request a dynamically generated node at the peer. */
     PN_CPP_EXTERN link_options& dynamic_address(bool);
+    /* Set the lifetime policy for a receiver to a dynamically created node. */
+    PN_CPP_EXTERN link_options& lifetime_policy(lifetime_policy_t);
     /* Set the local address for the link. */
     PN_CPP_EXTERN link_options& local_address(const std::string &addr);
-    // TODO: selector/filter, dynamic node properties
+    /* Set a selector on the receiver to str.  This sets a single registered filter on the link of
+       type apache.org:selector-filter with value str. */
+    PN_CPP_EXTERN link_options& selector(const std::string &str);
 
   private:
     friend class link;
