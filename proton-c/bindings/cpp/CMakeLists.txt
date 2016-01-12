@@ -33,6 +33,7 @@ set(qpid-proton-cpp-source
   src/blocking_link.cpp
   src/blocking_receiver.cpp
   src/blocking_sender.cpp
+  src/condition.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp

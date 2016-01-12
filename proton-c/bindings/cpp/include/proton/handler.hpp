@@ -22,13 +22,12 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/event.h"
-#include "proton/pn_unique_ptr.hpp"
 
-#include <stdexcept>
+#include "proton/pn_unique_ptr.hpp"
 
 namespace proton {
 
+class condition;
 class event;
 class messaging_adapter;
 
@@ -84,7 +83,7 @@ class handler
     PN_CPP_EXTERN virtual void on_timer(event &e);
 
     PN_CPP_EXTERN virtual void on_unhandled(event &e);
-    PN_CPP_EXTERN virtual void on_unhandled_error(event &e);
+    PN_CPP_EXTERN virtual void on_unhandled_error(event &e, const condition &c);
     ///@}
 
   private:

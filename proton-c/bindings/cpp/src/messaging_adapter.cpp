@@ -28,12 +28,12 @@
 #include "messaging_event.hpp"
 #include "msg.hpp"
 
-#include "proton/link.h"
-#include "proton/handlers.h"
-#include "proton/delivery.h"
 #include "proton/connection.h"
-#include "proton/session.h"
+#include "proton/delivery.h"
+#include "proton/handlers.h"
+#include "proton/link.h"
 #include "proton/message.h"
+#include "proton/session.h"
 #include "proton/transport.h"
 
 namespace proton {

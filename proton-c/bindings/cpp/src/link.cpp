@@ -21,8 +21,9 @@
 #include "proton/link.hpp"
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
-#include "container_impl.hpp"
+
 #include "msg.hpp"
+#include "container_impl.hpp"
 #include "contexts.hpp"
 
 #include "proton/connection.h"
@@ -92,6 +93,14 @@ void link::detach_handler() {
 
 endpoint::state link::state() const {
     return pn_link_state(pn_object());
+}
+
+condition link::local_condition() const {
+    return condition(pn_link_condition(pn_object()));
+}
+
+condition link::remote_condition() const {
+    return condition(pn_link_remote_condition(pn_object()));
 }
 
 ssize_t link::recv(char* buffer, size_t size) {

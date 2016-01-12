@@ -34,19 +34,19 @@ namespace proton {
 namespace {
 struct link_opened : public blocking_connection_impl::condition {
     link_opened(link l) : pn_link(l) {}
-    bool operator()() const { return !(pn_link.state() & PN_REMOTE_UNINIT); }
+    bool operator()() const { return !(pn_link.state() & endpoint::REMOTE_UNINIT); }
     link pn_link;
 };
 
 struct link_closed : public blocking_connection_impl::condition {
     link_closed(link l) : pn_link(l) {}
-    bool operator()() const { return (pn_link.state() & PN_REMOTE_CLOSED); }
+    bool operator()() const { return (pn_link.state() & endpoint::REMOTE_CLOSED); }
     link pn_link;
 };
 
 struct link_not_open : public blocking_connection_impl::condition {
     link_not_open(link l) : pn_link(l) {}
-    bool operator()() const { return !(pn_link.state() & PN_REMOTE_ACTIVE); }
+    bool operator()() const { return !(pn_link.state() & endpoint::REMOTE_ACTIVE); }
     link pn_link;
 };
 
@@ -69,7 +69,7 @@ void blocking_link::wait_for_closed() {
 }
 
 void blocking_link::check_closed() {
-    if (link_.state() & PN_REMOTE_CLOSED) {
+    if (link_.state() & endpoint::REMOTE_CLOSED) {
         link_.close();
         throw error(MSG("Link detached: " << link_.name()));
     }

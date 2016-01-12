@@ -19,8 +19,9 @@
  *
  */
 
-#include "proton/connection.hpp"
 #include "proton/endpoint.hpp"
+
+#include "proton/connection.hpp"
 #include "proton/session.hpp"
 #include "proton/link.hpp"
 #include "proton/transport.hpp"

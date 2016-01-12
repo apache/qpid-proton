@@ -35,12 +35,19 @@ namespace proton {
 
 class sender;
 class receiver;
+class condition;
 
 /** Messages are transferred across a link. Base class for sender, receiver. */
 class link : public object<pn_link_t> , public endpoint
 {
   public:
     link(pn_link_t* l=0) : object<pn_link_t>(l) {}
+
+    /* Endpoint behaviours */
+
+    PN_CPP_EXTERN endpoint::state state() const;
+    PN_CPP_EXTERN condition local_condition() const;
+    PN_CPP_EXTERN condition remote_condition() const;
 
     /** Locally open the link, not complete till messaging_handler::on_link_opened or
      * proton_handler::link_remote_open
@@ -96,9 +103,6 @@ class link : public object<pn_link_t> , public endpoint
     /** Unset any custom handler */
     PN_CPP_EXTERN void detach_handler();
 
-    /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state() const;
-
     /** Get message data from current delivery on link */
     PN_CPP_EXTERN ssize_t recv(char* buffer, size_t size);
 
@@ -114,6 +118,7 @@ class link : public object<pn_link_t> , public endpoint
     PN_CPP_EXTERN void receiver_settle_mode(link_options::receiver_settle_mode);
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
+
 };
 
 /// An iterator for links.

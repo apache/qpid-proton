@@ -19,6 +19,7 @@
  *
  */
 #include "proton/transport.hpp"
+#include "proton/condition.hpp"
 #include "proton/connection.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
@@ -37,6 +38,10 @@ class ssl transport::ssl() const {
 
 class sasl transport::sasl() const {
     return proton::sasl(pn_sasl(pn_object()));
+}
+
+condition transport::condition() const {
+    return proton::condition(pn_transport_condition(pn_object()));
 }
 
 void transport::unbind() {

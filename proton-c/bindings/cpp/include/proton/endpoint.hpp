@@ -22,15 +22,10 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/connection.h"
+#include "proton/condition.hpp"
 #include "proton/comparable.hpp"
 
 namespace proton {
-
-class handler;
-class connection;
-class session;
-class link;
 
 /** endpoint is a base class for session, connection and link */
 class endpoint
@@ -59,8 +54,11 @@ class endpoint
     PN_CPP_EXTERN static const state REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
     ///@}
 
-    // TODO: condition, remote_condition, update_condition, get/handler
 
+    virtual condition local_condition() const = 0;
+    virtual condition remote_condition() const = 0;
+
+    virtual ~endpoint() {}
 };
 
 ///@cond INTERNAL

@@ -19,6 +19,7 @@
  *
  */
 #include "proton/session.hpp"
+
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/session.hpp"
@@ -76,6 +77,14 @@ session session::next(endpoint::state s) const
 }
 
 endpoint::state session::state() const { return pn_session_state(pn_object()); }
+
+condition session::local_condition() const {
+    return condition(pn_session_condition(pn_object()));
+}
+
+condition session::remote_condition() const {
+    return condition(pn_session_remote_condition(pn_object()));
+}
 
 link_range session::find_links(endpoint::state mask)  const {
     link_range r(connection().find_links(mask));
