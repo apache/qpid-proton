@@ -50,6 +50,7 @@ public class DeliveryImpl implements Delivery
     private boolean _remoteSettled;
     private DeliveryState _remoteDeliveryState;
     private DeliveryState _defaultDeliveryState = null;
+    private int _messageFormat = 0;
 
     /**
      * A bit-mask representing the outstanding work on this delivery received from the transport layer
@@ -104,8 +105,14 @@ public class DeliveryImpl implements Delivery
 
     public int getMessageFormat()
     {
-        return 0;
+        return this._messageFormat;
     }
+
+	@Override
+	public void setMessageFormat(int messageFormat)
+	{
+		this._messageFormat = messageFormat;
+	}
 
     public void disposition(final DeliveryState state)
     {
