@@ -42,6 +42,8 @@ public interface Delivery extends Extendable
     /** TODO is this required?? */
     public int getMessageFormat();
 
+    public void setMessageFormat(int messageFormat);
+
     /**
      * updates the state of the delivery
      *

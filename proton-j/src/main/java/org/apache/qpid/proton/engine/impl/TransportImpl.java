@@ -567,7 +567,7 @@ public class TransportImpl extends EndpointImpl
                 transfer.setMore(true);
             }
 
-            transfer.setMessageFormat(UnsignedInteger.ZERO);
+            transfer.setMessageFormat(UnsignedInteger.valueOf(delivery.getMessageFormat()));
 
             ByteBuffer payload = delivery.getData() ==  null ? null :
                 ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(),
