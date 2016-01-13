@@ -70,6 +70,7 @@ public class AMQPDefinedTypes
         PropertiesType.register( decoder, encoder );
         ApplicationPropertiesType.register(decoder, encoder);
         DataType.register(decoder, encoder);
+        DataListType.register(decoder, encoder);
         AmqpSequenceType.register(decoder, encoder);
         AmqpValueType.register(decoder, encoder);
         FooterType.register(decoder, encoder);
