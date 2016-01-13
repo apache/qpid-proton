@@ -39,8 +39,9 @@ public interface Delivery extends Extendable
 
     public DeliveryState getRemoteState();
 
-    /** TODO is this required?? */
-    public int getMessageFormat();
+    public void setMessageFormat(long messageFormat);
+
+    public long getMessageFormat();
 
     /**
      * updates the state of the delivery

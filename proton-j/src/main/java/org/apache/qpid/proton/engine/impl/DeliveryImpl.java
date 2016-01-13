@@ -29,6 +29,8 @@ import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 public class DeliveryImpl implements Delivery
 {
+    public static final long DEFAULT_MESSAGE_FORMAT = 0;
+
     private DeliveryImpl _linkPrevious;
     private DeliveryImpl _linkNext;
 
@@ -50,6 +52,7 @@ public class DeliveryImpl implements Delivery
     private boolean _remoteSettled;
     private DeliveryState _remoteDeliveryState;
     private DeliveryState _defaultDeliveryState = null;
+    private long _messageFormat = DEFAULT_MESSAGE_FORMAT;
 
     /**
      * A bit-mask representing the outstanding work on this delivery received from the transport layer
@@ -102,9 +105,21 @@ public class DeliveryImpl implements Delivery
         return _remoteSettled;
     }
 
-    public int getMessageFormat()
+    @Override
+    public void setMessageFormat(long messageFormat)
     {
-        return 0;
+        if(messageFormat < 0L || messageFormat >= (1L<<32))
+        {
+            throw new NumberFormatException("Value \""+messageFormat+"\" lies outside the range [" + 0L + "-" + (1L<<32) +").");
+        }
+
+        _messageFormat = messageFormat;
+    }
+
+    @Override
+    public long getMessageFormat()
+    {
+        return _messageFormat;
     }
 
     public void disposition(final DeliveryState state)

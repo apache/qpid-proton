@@ -567,7 +567,12 @@ public class TransportImpl extends EndpointImpl
                 transfer.setMore(true);
             }
 
-            transfer.setMessageFormat(UnsignedInteger.ZERO);
+            long messageFormat = delivery.getMessageFormat();
+            if(messageFormat == DeliveryImpl.DEFAULT_MESSAGE_FORMAT) {
+                transfer.setMessageFormat(UnsignedInteger.ZERO);
+            } else {
+                transfer.setMessageFormat(UnsignedInteger.valueOf(messageFormat));
+            }
 
             ByteBuffer payload = delivery.getData() ==  null ? null :
                 ByteBuffer.wrap(delivery.getData(), delivery.getDataOffset(),
