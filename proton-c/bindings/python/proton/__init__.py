@@ -3627,6 +3627,73 @@ class SSL(object):
       return name
     return None
 
+  SHA1 = PN_SSL_SHA1
+  SHA256 = PN_SSL_SHA256
+  SHA512 = PN_SSL_SHA512
+  MD5 = PN_SSL_MD5
+
+  CERT_COUNTRY_NAME = PN_SSL_CERT_SUBJECT_COUNTRY_NAME
+  CERT_STATE_OR_PROVINCE = PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE
+  CERT_CITY_OR_LOCALITY = PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY
+  CERT_ORGANIZATION_NAME = PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME
+  CERT_ORGANIZATION_UNIT = PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT
+  CERT_COMMON_NAME = PN_SSL_CERT_SUBJECT_COMMON_NAME
+
+  def get_cert_subject_subfield(self, subfield_name):
+    subfield_value = pn_ssl_get_remote_subject_subfield(self._ssl, subfield_name)
+    return subfield_value
+
+  def get_cert_subject(self):
+    subject = pn_ssl_get_remote_subject(self._ssl)
+    return subject
+
+  def get_cert_subject_unknown_subfield(self):
+    # Pass in an unhandled enum
+    return self.get_cert_subject_subfield(10)
+
+  # Convenience functions for obtaining the subfields of the subject field.
+  def get_cert_common_name(self):
+    return self.get_cert_subject_subfield(SSL.CERT_COMMON_NAME)
+
+  def get_cert_organization(self):
+    return self.get_cert_subject_subfield(SSL.CERT_ORGANIZATION_NAME)
+
+  def get_cert_organization_unit(self):
+    return self.get_cert_subject_subfield(SSL.CERT_ORGANIZATION_UNIT)
+
+  def get_cert_locality_or_city(self):
+    return self.get_cert_subject_subfield(SSL.CERT_CITY_OR_LOCALITY)
+
+  def get_cert_country(self):
+    return self.get_cert_subject_subfield(SSL.CERT_COUNTRY_NAME)
+
+  def get_cert_state_or_province(self):
+    return self.get_cert_subject_subfield(SSL.CERT_STATE_OR_PROVINCE)
+
+  def get_cert_fingerprint(self, fingerprint_length, digest_name):
+    rc, fingerprint_str = pn_ssl_get_cert_fingerprint(self._ssl, fingerprint_length, digest_name)
+    if rc > 0:
+      return fingerprint_str
+    return None
+
+  # Convenience functions for obtaining fingerprint for specific hashing algorithms
+  def get_cert_fingerprint_unknown_hash_alg(self):
+    return self.get_cert_fingerprint(41, 10)
+
+  def get_cert_fingerprint_sha1(self):
+    return self.get_cert_fingerprint(41, SSL.SHA1)
+
+  def get_cert_fingerprint_sha256(self):
+    # sha256 produces a fingerprint that is 64 characters long
+    return self.get_cert_fingerprint(65, SSL.SHA256)
+
+  def get_cert_fingerprint_sha512(self):
+    # sha512 produces a fingerprint that is 128 characters long
+    return self.get_cert_fingerprint(129, SSL.SHA512)
+
+  def get_cert_fingerprint_md5(self):
+    return self.get_cert_fingerprint(33, SSL.MD5)
+
   @property
   def remote_subject(self):
     return pn_ssl_get_remote_subject( self._ssl )
