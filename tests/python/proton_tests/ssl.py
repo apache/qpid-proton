@@ -23,7 +23,7 @@ from . import common
 import random
 import string
 import subprocess
-
+import sys
 from proton import *
 from .common import Skipped, pump
 
@@ -185,6 +185,63 @@ class SslTest(common.Test):
         server.connection.close()
         self._pump( client, server )
 
+    def test_certificate_fingerprint_and_subfields(self):
+        if "java" in sys.platform:
+            raise Skipped("Not yet implemented in Proton-J")
+
+        self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
+                                           self._testpath("server-private-key.pem"),
+                                           "server-password")
+        self.server_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
+        self.server_domain.set_peer_authentication( SSLDomain.VERIFY_PEER,
+                                                    self._testpath("ca-certificate.pem") )
+        server = SslTest.SslTestConnection( self.server_domain, mode=Transport.SERVER )
+
+        # give the client a certificate, but let's not require server authentication
+        self.client_domain.set_credentials(self._testpath("client-certificate1.pem"),
+                                           self._testpath("client-private-key1.pem"),
+                                           "client-password")
+        self.client_domain.set_peer_authentication( SSLDomain.ANONYMOUS_PEER )
+        client = SslTest.SslTestConnection( self.client_domain )
+
+        client.connection.open()
+        server.connection.open()
+        self._pump( client, server )
+
+        # Test the subject subfields
+        self.assertEqual("Client", server.ssl.get_cert_organization())
+        self.assertEqual("Dev", server.ssl.get_cert_organization_unit())
+        self.assertEqual("ST", server.ssl.get_cert_state_or_province())
+        self.assertEqual("US", server.ssl.get_cert_country())
+        self.assertEqual("City", server.ssl.get_cert_locality_or_city())
+        self.assertEqual("O=Server,CN=A1.Good.Server.domain.com", client.ssl.get_cert_subject())
+        self.assertEqual("O=Client,CN=127.0.0.1,C=US,ST=ST,L=City,OU=Dev", server.ssl.get_cert_subject())
+
+        self.assertEqual("03c97341abafe5861d6969c66a190d2846d905d6", server.ssl.get_cert_fingerprint_sha1())
+        self.assertEqual("ad86cc76278e69aef3a5c0dda13fc49831622f92d1364ce1ed361ff842b0143a", server.ssl.get_cert_fingerprint_sha256())
+        self.assertEqual("9fb3340ecee4471534d60be025358cae33ef2cc9442ca8bb7703a68db68d9ffb7963678292996011fa55a9a2524b84a40a11a2778f25797e78e23cf05623218d",
+                         server.ssl.get_cert_fingerprint_sha512())
+        self.assertEqual("0d4faa84a0bb6846eaec6b7493916b30", server.ssl.get_cert_fingerprint_md5())
+
+        # Test the various fingerprint algorithms
+        self.assertEqual("f390ddb4dc8a90bcf3528774b622a7f87f7322b5", client.ssl.get_cert_fingerprint_sha1())
+        self.assertEqual("c116e902345c99bc01dda14b7a5f1b8ae6a451eddb23e5336c996ba4d12bc122", client.ssl.get_cert_fingerprint_sha256())
+        self.assertEqual("8941c8ce00824ab7196bb1952787c90ef7f9bd837cbb0bb4823f57fc89e80033c75adc98b78801928d0035bcd6db6ddc9ab6da026c6548a66ede5c4f43f7e166",
+                         client.ssl.get_cert_fingerprint_sha512())
+        self.assertEqual("d008bf05afbc983a3f98ae56e3eba643", client.ssl.get_cert_fingerprint_md5())
+
+        self.assertEqual(None, client.ssl.get_cert_fingerprint(21, SSL.SHA1)) # Should be at least 41
+        self.assertEqual(None, client.ssl.get_cert_fingerprint(50, SSL.SHA256)) # Should be at least 65
+        self.assertEqual(None, client.ssl.get_cert_fingerprint(128, SSL.SHA512)) # Should be at least 129
+        self.assertEqual(None, client.ssl.get_cert_fingerprint(10, SSL.MD5)) # Should be at least 33
+        self.assertEqual(None, client.ssl.get_cert_subject_unknown_subfield())
+
+        self.assertNotEqual(None, client.ssl.get_cert_fingerprint(50, SSL.SHA1)) # Should be at least 41
+        self.assertNotEqual(None, client.ssl.get_cert_fingerprint(70, SSL.SHA256)) # Should be at least 65
+        self.assertNotEqual(None, client.ssl.get_cert_fingerprint(130, SSL.SHA512)) # Should be at least 129
+        self.assertNotEqual(None, client.ssl.get_cert_fingerprint(35, SSL.MD5)) # Should be at least 33
+        self.assertEqual(None, client.ssl.get_cert_fingerprint_unknown_hash_alg())
+
     def test_client_authentication(self):
         """ Force the client to authenticate.
         """
@@ -208,6 +265,7 @@ class SslTest(common.Test):
         client.connection.open()
         server.connection.open()
         self._pump( client, server )
+
         assert client.ssl.protocol_name() is not None
         client.connection.close()
         server.connection.close()
