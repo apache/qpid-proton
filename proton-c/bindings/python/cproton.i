@@ -233,6 +233,12 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
+char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl, pn_ssl_cert_subject_subfield field);
+%ignore pn_ssl_get_remote_subject_subfield;
+
+int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE, pn_ssl_hash_alg hash_alg);
+%ignore pn_ssl_get_cert_fingerprint;
+
 %rename(pn_ssl_get_peer_hostname) wrap_pn_ssl_get_peer_hostname;
 %inline %{
   int wrap_pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *VTEXT_OUT, size_t *VTEXT_SIZE) {
@@ -242,6 +248,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZ
   }
 %}
 %ignore pn_ssl_get_peer_hostname;
+
 
 %immutable PN_PYREF;
 %inline %{
