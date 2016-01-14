@@ -118,15 +118,19 @@ public interface Delivery extends Extendable
 
     /**
      * Sets the message-format for this Delivery, represented as an unsigned 32bit integral value,
-     * i.e. in range 0 to 2^32 -1 inclusive.
+     * i.e. in range 0 to 2^32 -1 inclusive.<p>
      *
-     * The default value is 0 as per the message format defined in the core AMQP 1.0 specification.
+     * The default value is 0 as per the message format defined in the core AMQP 1.0 specification.<p>
      *
-     * See the following for more details:
-     * <br>{@link http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-transfer}
-     * <br>{@link http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-message-format}
-     * <br>{@link http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#section-message-format}
-     * <br>{@link http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#definition-MESSAGE-FORMAT}
+     * See the following for more details:<br>
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-transfer">
+     *          http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-transfer</a><br>
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-message-format">
+     *          http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-message-format</a><br>
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#section-message-format">
+     *          http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#section-message-format</a><br>
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#definition-MESSAGE-FORMAT">
+     *          http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#definition-MESSAGE-FORMAT</a><br>
      *
      * @param messageFormat the message format
      * @throws IllegalArgumentException if the value given is outwith the allowed range.
