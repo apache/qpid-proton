@@ -1294,6 +1294,139 @@ const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl0)
   return ssl->subject;
 }
 
+int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t fingerprint_length, pn_ssl_hash_alg hash_alg)
+{
+    const char* digest_name = NULL;
+
+    // Assign the correct digest_name value based on the enum values.
+    switch (hash_alg) {
+        case PN_SSL_SHA1 :
+            if(fingerprint_length < 41) { // 40 hex characters + 1 '\0' character
+                ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be 41 or above for sha1 digest\n", fingerprint_length);
+                return PN_ERR;
+            }
+            digest_name = "sha1";
+            break;
+        case PN_SSL_SHA256 :
+            if(fingerprint_length < 65) { // 64 hex characters + 1 '\0' character
+                ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be 65 or above for sha256 digest\n", fingerprint_length);
+                return PN_ERR;
+            }
+            digest_name = "sha256";
+            break;
+        case PN_SSL_SHA512 :
+            if(fingerprint_length < 129) { // 128 hex characters + 1 '\0' character
+                ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be 129 or above for sha512 digest\n", fingerprint_length);
+                return PN_ERR;
+            }
+            digest_name = "sha512";
+            break;
+        case PN_SSL_MD5 :
+            if(fingerprint_length < 33) { // 32 hex characters + 1 '\0' character
+                ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be 33 or above for md5 digest\n", fingerprint_length);
+                return PN_ERR;
+            }
+            digest_name = "md5";
+            break;
+    }
+
+    const EVP_MD  *digest = EVP_get_digestbyname(digest_name);
+
+    pni_ssl_t *ssl = get_ssl_internal(ssl0);
+
+    // Obtain the X509 cert
+    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+
+    if(cert) {
+        unsigned int len;
+
+        unsigned char bytes[64]; // sha512 uses 64 octets, we will use that as the maximum.
+
+        // len will contain the length of the message digest.
+        // For example, if the digest_name is sha256, len will be populated with 32, if digest_name is sha1 len will be 20
+        // The err_code is > 0 on success
+        int err_code = X509_digest(cert, digest, bytes, &len);
+
+        char *cursor = fingerprint;
+
+        for (size_t i=0; i<len ; i++) {
+            // snprintf automatically appends a null character to the character sequence resulting from format substitution
+            cursor +=  snprintf((char *)cursor, fingerprint_length, "%02x", bytes[i]);
+            fingerprint_length = fingerprint_length - 2;
+        }
+
+        return err_code;
+    }
+    else {
+        ssl_log_error("No certificate is available yet \n");
+        return PN_ERR;
+    }
+
+    return 0;
+}
+
+
+const unsigned char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field)
+{
+    int openssl_field = 0;
+
+    // Assign openssl internal representations of field values to openssl_field
+    switch (field) {
+        case PN_SSL_CERT_SUBJECT_COUNTRY_NAME :
+            openssl_field = NID_countryName;
+            break;
+        case PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE :
+            openssl_field = NID_stateOrProvinceName;
+            break;
+        case PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY :
+            openssl_field = NID_localityName;
+            break;
+        case PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME :
+            openssl_field = NID_organizationName;
+            break;
+        case PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT :
+            openssl_field = NID_organizationalUnitName;
+            break;
+        case PN_SSL_CERT_SUBJECT_COMMON_NAME :
+            openssl_field = NID_commonName;
+            break;
+    }
+
+    pni_ssl_t *ssl = get_ssl_internal(ssl0);
+    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+
+    // X509_get_subject_name() returns the subject name field of the certificate. The returned value is an internal pointer which MUST NOT be freed.
+    // The subject usually contains these following sub fields.
+    // C = ISO3166 two character country code
+    // ST = state or province
+    // L = Locality; generally means city
+    // O = Organization - Company Name
+    // OU = Organization Unit - division or unit
+    // CN = CommonName
+    X509_NAME *name = X509_get_subject_name(cert);
+
+    // X509_NAME_get_index_by_NID() retrieves the next index matching nid after lastpos.
+    // lastpos should initially be set to -1. If there are no more entries -1 is returned.
+    // If nid is invalid (doesn't correspond to a valid OID) then -2 is returned.
+    // TODO - A server side cert subject field can have more than one common name like this - Subject: CN=www.domain1.com, CN=www.domain2.com, see https://bugzilla.mozilla.org/show_bug.cgi?id=380656
+    // For now, we will only return the first common name if there is more than one common name in the cert
+    int index = X509_NAME_get_index_by_NID(name, openssl_field, -1);
+
+    // If index is > -1, the field you are looking for has been found
+    if (index > -1) {
+        // Retrieve the X509_NAME_ENTRY from name (X509_NAME) corresponding to index
+        // The value returned (X509_NAME_ENTRY) is an internal pointer which must not be freed
+        X509_NAME_ENTRY *ne = X509_NAME_get_entry(name, index);
+        if(ne) {
+            // Retrieve the field value of ne in and ASN1_STRING structure
+            ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
+            return name_asn1->data;
+        }
+    }
+
+    return NULL;
+}
+
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)
 {
   return PN_EOS;
