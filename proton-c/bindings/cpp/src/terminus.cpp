@@ -24,6 +24,10 @@
 
 namespace proton {
 
+terminus::terminus(pn_terminus_t* t) :
+    object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t))
+{}
+
 terminus::type_t terminus::type() const {
     return type_t(pn_terminus_get_type(object_));
 }
@@ -81,12 +85,11 @@ void terminus::dynamic(bool d) {
     pn_terminus_set_dynamic(object_, d);
 }
 
-data terminus::filter() {
-    return pn_terminus_filter(object_);
-}
+value& terminus::filter() { return filter_; }
+const value& terminus::filter() const { return filter_; }
 
-data terminus::dynamic_node_properties() {
-    return pn_terminus_properties(object_);
-}
+
+value& terminus::node_properties() { return properties_; }
+const value& terminus::node_properties() const { return properties_; }
 
 }

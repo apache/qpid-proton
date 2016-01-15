@@ -59,7 +59,10 @@ url::url(const url& u) : url_(parse_allow_empty(u.str())) {}
 
 url::~url() { pn_url_free(url_); }
 
-url& url::operator=(const url& u) { replace(url_, parse_allow_empty(u.str())); return *this; }
+url& url::operator=(const url& u) {
+    if (this != &u) replace(url_, parse_allow_empty(u.str()));
+    return *this;
+}
 
 void url::parse(const std::string& s) { replace(url_, parse_throw(s)); }
 

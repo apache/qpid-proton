@@ -18,7 +18,6 @@
  */
 
 #include "proton_bits.hpp"
-
 #include "proton/data.hpp"
 #include "proton/value.hpp"
 #include "proton/scalar.hpp"
@@ -27,48 +26,59 @@
 
 namespace proton {
 
-value::value() : data_(data::create()) {}
-
-value::value(const value& x) : data_(data::create()) { data_.copy(x.data_); }
-
+value::value() {}
+value::value(const value& x) { *this = x; }
 #if PN_HAS_CPP11
-value::value(value&& x) : data_(0) { swap(*this, x); }
+value::value(value&& x) { swap(*this, x); }
 #endif
 
-// Referencing an external value
-value::value(data d) : data_(d) {}
-
-// Referencing an external value
-value& value::ref(data d) { data_ = d; return *this; }
-
-value& value::operator=(const value& x) { data_.copy(x.data_); return *this; }
+value& value::operator=(const value& x) {
+    if (this != &x) {
+        if (x.empty())
+            clear();
+        else
+            encode() << x;
+    }
+    return *this;
+}
 
 void swap(value& x, value& y) { std::swap(x.data_, y.data_); }
 
-void value::clear() { data_.clear(); }
+void value::clear() { if (!!data_) data_.clear(); }
 
-bool value::empty() const { return data_.empty(); }
+bool value::empty() const { return !data_ || data_.empty(); }
 
-class encoder value::encoder() { clear(); return data_.encoder(); }
+// On demand
+inline data& value::data() const { if (!data_) data_ = proton::data::create(); return data_; }
 
-class decoder value::decoder() const { data_.decoder().rewind(); return data_.decoder(); }
+class encoder value::encode() { clear(); return data().encoder(); }
 
-type_id value::type() const { return decoder().type(); }
+class decoder value::decode() const { return data().decoder() >> rewind(); }
 
-bool operator==(const value& x, const value& y) { return x.data_.equal(y.data_); }
+type_id value::type() const { return decode().type(); }
 
-bool operator<(const value& x, const value& y) { return x.data_.less(y.data_); }
+bool operator==(const value& x, const value& y) {
+    if (x.empty() && y.empty()) return true;
+    if (x.empty() || y.empty()) return false;
+    return  x.data().equal(y.data());
+}
+
+bool operator<(const value& x, const value& y) {
+    if (x.empty() && y.empty()) return false;
+    if (x.empty()) return true; // empty is < !empty
+    return x.data().less(y.data());
+}
 
 std::ostream& operator<<(std::ostream& o, const value& v) {
-    // pn_inspect prints strings with quotes which is not normal in C++.
     if (v.empty())
         return o << "<empty>";
+    // pn_inspect prints strings with quotes which is not normal in C++.
     switch (v.type()) {
       case STRING:
       case SYMBOL:
         return o << v.get<std::string>();
       default:
-        return o << v.data_;
+        return o << v.data();
     }
 }
 

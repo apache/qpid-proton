@@ -69,8 +69,6 @@ ssl_domain& ssl_domain::operator=(const ssl_domain&x) {
 
 ssl_domain::~ssl_domain() { impl_->decref(); }
 
-// FIXME void ssl_domain::swap(ssl_domain &x) { std::swap(impl_, x.impl_); }
-
 pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_->pn_domain(); }
 
 

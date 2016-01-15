@@ -19,6 +19,8 @@
  * under the License.
  */
 
+///@cond INTERNAL
+
 #include "proton/error.hpp"
 #include "proton/type_traits.hpp"
 #include "proton/types.hpp"
@@ -394,4 +396,6 @@ template <class K, class T, class C, class A> decoder operator>>(decoder d, std:
 #endif // PN_NO_CONTAINER_CONVERT
 
 }
+///@endcond
+
 #endif // DECODER_H

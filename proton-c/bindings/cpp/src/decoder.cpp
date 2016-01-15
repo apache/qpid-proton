@@ -153,8 +153,8 @@ decoder operator>>(decoder d, rewind) { d.rewind(); return d; }
 
 decoder operator>>(decoder d, value& v) {
     data ddata = d.data();
-    if (ddata == v.data_) throw decode_error("extract into self");
-    data vdata = v.encoder().data();
+    data vdata = v.encode().data();
+    if (d.data() == v.data_) throw decode_error("extract into self");
     {
         narrow n(ddata);
         check(vdata.appendn(ddata, 1));

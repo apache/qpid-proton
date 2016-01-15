@@ -97,7 +97,7 @@ void uniform_containers() {
     print(v);
     // You can also decode an AMQP map as a sequence of pairs using decoder() and proton::to_pairs
     std::vector<std::pair<std::string, int> > pairs2;
-    v.decoder() >> proton::to_pairs(pairs2);
+    v.decode() >> proton::to_pairs(pairs2);
     std::cout << pairs2 << std::endl;
 }
 
@@ -132,19 +132,19 @@ void insert_stream_operators() {
     proton::value v;
 
     // Create an array of INT with values [1, 2, 3]
-    v.encoder() << proton::start::array(proton::INT)
+    v.encode() << proton::start::array(proton::INT)
                 << proton::amqp_int(1) << proton::amqp_int(2) << proton::amqp_int(3)
                 << proton::finish();
     print(v);
 
     // Create a mixed-type list of the values [42, false, "x"].
-    v.encoder() << proton::start::list()
+    v.encode() << proton::start::list()
                 << proton::amqp_int(42) << false << proton::amqp_symbol("x")
                 << proton::finish();
     print(v);
 
     // Create a map { "k1":42, "k2": false }
-    v.encoder() << proton::start::map()
+    v.encode() << proton::start::map()
                 << "k1" << proton::amqp_int(42)
                 << proton::amqp_symbol("k2") << false
                 << proton::finish();
@@ -231,7 +231,7 @@ void print_next(proton::decoder& d) {
 
 // Print a value, for example purposes. Normal code can use operator<<
 void print(proton::value& v) {
-    proton::decoder d = v.decoder();
+    proton::decoder d = v.decode();
     d.rewind();
     while (d.more()) {
         print_next(d);

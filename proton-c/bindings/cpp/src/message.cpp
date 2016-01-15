@@ -38,44 +38,44 @@
 
 namespace proton {
 
-// impl exists so body is pre-constructed in reference mode (prevent it creating its own data)
-// for all message ctors.
-message::impl::impl() : msg(0), body(0) {}
-
-message::impl::~impl() {
-    if (msg) {
-        body.ref(0);            // Clear the reference.
-        pn_message_free(msg);
-    }
-}
-
-// Lazy construct the message.
-pn_message_t* message::pn_msg() const {
-    if (!impl_.msg) impl_.msg = pn_message();
-    return impl_.msg;
-}
-
-message::message() {}
-
-message::message(const message &m) { *this = m; }
+message::message() : pn_msg_(0) {}
+message::message(const message &m) : pn_msg_(0) { *this = m; }
 
 #if PN_HAS_CPP11
-message::message(message &&m) { swap(*this, m); }
+message::message(message &&m) : pn_msg_(0) { swap(*this, m); }
 #endif
 
-message::~message() {}
+message::~message() {
+    body_.data_ = data(0);      // Must release body before pn_message_free
+    pn_message_free(pn_msg_);
+}
 
-void swap(message& x, message& y) { std::swap(x.impl_.msg, y.impl_.msg); }
+void swap(message& x, message& y) {
+    using std::swap;
+    swap(x.pn_msg_, y.pn_msg_);
+    swap(x.body_, y.body_);
+    swap(x.application_properties_, y.application_properties_);
+    swap(x.message_annotations_, y.message_annotations_);
+    swap(x.delivery_annotations_, y.delivery_annotations_);
+}
+
+pn_message_t *message::pn_msg() const {
+    if (!pn_msg_) pn_msg_ = pn_message();
+    body_.data_ = pn_message_body(pn_msg_);
+    return pn_msg_;
+}
 
 message& message::operator=(const message& m) {
-    // TODO aconway 2015-08-10: more efficient pn_message_copy function
-    std::vector<char> data;
-    m.encode(data);
-    decode(data);
+    if (&m != this) {
+        // TODO aconway 2015-08-10: more efficient pn_message_copy function
+        std::vector<char> data;
+        m.encode(data);
+        decode(data);
+    }
     return *this;
 }
 
-void message::clear() { if (impl_.msg) pn_message_clear(impl_.msg); }
+void message::clear() { if (pn_msg_) pn_message_clear(pn_msg_); }
 
 namespace {
 void check(int err) {
@@ -203,8 +203,8 @@ bool message::inferred() const { return pn_message_is_inferred(pn_msg()); }
 
 void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 
-const value& message::body() const { return impl_.body.ref(pn_message_body(pn_msg())); }
-value& message::body() { return impl_.body.ref(pn_message_body(pn_msg())); }
+const value& message::body() const { pn_msg(); return body_; }
+value& message::body() { pn_msg(); return body_; }
 
 // MAP CACHING: the properties and annotations maps can either be encoded in the
 // pn_message pn_data_t structures OR decoded as C++ map members of the message
@@ -232,35 +232,35 @@ template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 }
 
 message::property_map& message::application_properties() {
-    return get_map(pn_msg(), pn_message_properties, impl_.application_properties);
+    return get_map(pn_msg(), pn_message_properties, application_properties_);
 }
 
 const message::property_map& message::application_properties() const {
-    return get_map(pn_msg(), pn_message_properties, impl_.application_properties);
+    return get_map(pn_msg(), pn_message_properties, application_properties_);
 }
 
 
 message::annotation_map& message::message_annotations() {
-    return get_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
+    return get_map(pn_msg(), pn_message_annotations, message_annotations_);
 }
 
 const message::annotation_map& message::message_annotations() const {
-    return get_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
+    return get_map(pn_msg(), pn_message_annotations, message_annotations_);
 }
 
 
 message::annotation_map& message::delivery_annotations() {
-    return get_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+    return get_map(pn_msg(), pn_message_instructions, delivery_annotations_);
 }
 
 const message::annotation_map& message::delivery_annotations() const {
-    return get_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+    return get_map(pn_msg(), pn_message_instructions, delivery_annotations_);
 }
 
 void message::encode(std::vector<char> &s) const {
-    put_map(pn_msg(), pn_message_properties, impl_.application_properties);
-    put_map(pn_msg(), pn_message_annotations, impl_.message_annotations);
-    put_map(pn_msg(), pn_message_instructions, impl_.delivery_annotations);
+    put_map(pn_msg(), pn_message_properties, application_properties_);
+    put_map(pn_msg(), pn_message_annotations, message_annotations_);
+    put_map(pn_msg(), pn_message_instructions, delivery_annotations_);
     size_t sz = std::max(s.capacity(), size_t(512));
     while (true) {
         s.resize(sz);
@@ -283,9 +283,9 @@ std::vector<char> message::encode() const {
 }
 
 void message::decode(const std::vector<char> &s) {
-    impl_.application_properties.clear();
-    impl_.message_annotations.clear();
-    impl_.delivery_annotations.clear();
+    application_properties_.clear();
+    message_annotations_.clear();
+    delivery_annotations_.clear();
     check(pn_message_decode(pn_msg(), &s[0], s.size()));
 }
 

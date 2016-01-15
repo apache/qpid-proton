@@ -19,6 +19,8 @@
  * under the License.
  */
 
+///@cond INTERNAL
+
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
 #include "proton/export.hpp"
@@ -32,13 +34,13 @@ namespace proton {
 
 class data;
 
-/**
+/**@internal
  * Holds a sequence of AMQP values, allows inserting and extracting via encoder() and decoder().
  * Cannot be directly instantiated, use `value`
  */
 class data : public object<pn_data_t> {
   public:
-    data(pn_data_t* d) : object<pn_data_t>(d) {}
+    data(pn_data_t* d=0) : object<pn_data_t>(d) {}
 
     PN_CPP_EXTERN static data create();
 
@@ -95,5 +97,7 @@ class data : public object<pn_data_t> {
 };
 
 }
-#endif // DATA_H
 
+///@endcond
+
+#endif // DATA_H

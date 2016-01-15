@@ -19,9 +19,12 @@
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
-  configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
-                  ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
-  add_custom_target (docs-cpp COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+  configure_file (
+    ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
+    ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
+  add_custom_target (docs-cpp
+    COMMAND ${CMAKE_COMMAND} -E remove_directory html # get rid of old files
+    COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
   add_dependencies (docs docs-cpp)
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"

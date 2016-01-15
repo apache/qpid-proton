@@ -29,4 +29,7 @@ timeout_error::timeout_error(const std::string& msg) : error(msg) {}
 
 decode_error::decode_error(const std::string& msg) : error("decode: "+msg) {}
 
+encode_error::encode_error(const std::string& msg) : error("encode: "+msg) {}
+
+
 }

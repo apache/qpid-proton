@@ -25,7 +25,7 @@
 
 #include "proton/link.h"
 #include "proton/object.hpp"
-#include "proton/data.hpp"
+#include "proton/value.hpp"
 #include <string>
 
 namespace proton {
@@ -38,7 +38,8 @@ class link;
 class terminus
 {
   public:
-    terminus(pn_terminus_t* t) : object_(t) {}
+    terminus(pn_terminus_t* t);
+
     /// Type of terminus
     enum type_t {
         TYPE_UNSPECIFIED = PN_UNSPECIFIED,
@@ -73,7 +74,7 @@ class terminus
     PN_CPP_EXTERN void type(type_t);
     PN_CPP_EXTERN expiry_policy_t expiry_policy() const;
     PN_CPP_EXTERN void expiry_policy(expiry_policy_t);
-    PN_CPP_EXTERN uint32_t timeout() const;    
+    PN_CPP_EXTERN uint32_t timeout() const;
     PN_CPP_EXTERN void timeout(uint32_t seconds);
     PN_CPP_EXTERN distribution_mode_t distribution_mode() const;
     PN_CPP_EXTERN void distribution_mode(distribution_mode_t);
@@ -83,13 +84,20 @@ class terminus
     PN_CPP_EXTERN void address(const std::string &);
     PN_CPP_EXTERN bool dynamic() const;
     PN_CPP_EXTERN void dynamic(bool);
-    /** Obtain a reference to the AMQP dynamic node properties for the terminus.  See also link_options::lifetime_policy. */
-    PN_CPP_EXTERN data dynamic_node_properties();
-    /** Obtain a reference to the AMQP filter set for the terminus.  See also link_options::selector. */
-    PN_CPP_EXTERN data filter();
+
+    /** Obtain a reference to the AMQP dynamic node properties for the terminus.
+     * See also link_options::lifetime_policy. */
+    PN_CPP_EXTERN value& node_properties();
+    PN_CPP_EXTERN const value& node_properties() const;
+
+    /** Obtain a reference to the AMQP filter set for the terminus.
+     * See also link_options::selector. */
+    PN_CPP_EXTERN value& filter();
+    PN_CPP_EXTERN const value& filter() const;
 
 private:
     pn_terminus_t* object_;
+    value properties_, filter_;
 };
 
 

@@ -41,6 +41,11 @@ template <class T> void value_test(T x, type_id tid, const std::string& s, T y) 
     ASSERT_EQUAL(tid, v2.type());
     ASSERT_EQUAL(x, v2.get<T>());
 
+    value v3(v);
+    v3 = x;
+    ASSERT_EQUAL(tid, v3.type());
+    ASSERT_EQUAL(x, v3.get<T>());
+
     ASSERT_EQUAL(v, v2);
     ASSERT_EQUAL(s, str(v));
     ASSERT(x != y);
@@ -65,7 +70,7 @@ void map_test() {
     ASSERT_EQUAL("{\"a\"=1, \"b\"=b\"xyz\"}",  str(v));
 
     std::vector<std::pair<string, value> > vec;
-    v.get(to_pairs(vec));
+    v.get_pairs(vec);
     ASSERT_EQUAL(2, vec.size());
     ASSERT_EQUAL(std::make_pair(std::string("a"), value(1)), vec[0]);
     ASSERT_EQUAL(std::make_pair(std::string("b"), value(amqp_binary("xyz"))), vec[1]);

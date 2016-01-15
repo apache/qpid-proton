@@ -104,7 +104,7 @@ class link_options::impl {
                     if (lifetime_policy.set) lp = lifetime_policy_symbol(lifetime_policy.value);
                     if (!sender && distribution_mode.set) dm = distribution_mode_symbol(distribution_mode.value);
                     if (lp.size() || dm.size()) {
-                        encoder enc = t.dynamic_node_properties().encoder();
+                        encoder enc = t.node_properties().encode();
                         enc << start::map();
                         if (dm.size())
                             enc << amqp_symbol("supported-dist-modes") << amqp_string(dm);
@@ -122,9 +122,7 @@ class link_options::impl {
                     l.source().expiry_policy(terminus::EXPIRE_NEVER);
                 }
                 if (selector.set && selector.value.size()) {
-                    data d = l.source().filter();
-                    d.clear();
-                    encoder enc = d.encoder();
+                    encoder enc = l.source().filter().encode();
                     enc << start::map() << amqp_symbol("selector") << start::described()
                         << amqp_symbol("apache.org:selector-filter:string") << amqp_binary(selector.value) << finish();
                 }

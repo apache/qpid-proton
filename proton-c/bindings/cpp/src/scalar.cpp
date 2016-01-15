@@ -27,7 +27,11 @@ namespace proton {
 
 scalar::scalar() { atom_.type = PN_NULL; }
 scalar::scalar(const scalar& x) { set(x.atom_); }
-scalar& scalar::operator=(const scalar& x) { set(x.atom_); return *this; }
+scalar& scalar::operator=(const scalar& x) {
+    if (this != &x)
+        set(x.atom_);
+    return *this;
+}
 
 type_id scalar::type() const { return type_id(atom_.type); }
 bool scalar::empty() const { return type() == NULL_TYPE; }

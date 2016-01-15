@@ -54,8 +54,9 @@ class message
 #if PN_HAS_CPP11
     PN_CPP_EXTERN message(message&&);
 #endif
-    /// Constructor that sets the body from any type that can be assigned to a value.
-    template <class T> explicit message(const T& body_) { body() = body_; }
+    /// Construct a message from any value that can be assigned to a proton::value
+    template <class T> message(const T& x) : pn_msg_(0) { body() = x; }
+
 
     PN_CPP_EXTERN ~message();
 
@@ -66,8 +67,6 @@ class message
 
     ///@name Standard AMQP message properties
     ///@{
-
-    // FIXME aconway 2016-01-06: document, re-order with others.
 
     PN_CPP_EXTERN void id(const message_id& id);
     PN_CPP_EXTERN message_id id() const;
@@ -234,20 +233,16 @@ class message
     PN_CPP_EXTERN void group_sequence(int32_t);
 
 
-    /** Override std::swap to efficiently swap messages. */
   friend PN_CPP_EXTERN void swap(message&, message&);
 
   private:
     pn_message_t *pn_msg() const;
-    mutable struct impl {
-        PN_CPP_EXTERN impl();
-        PN_CPP_EXTERN ~impl();
-        pn_message_t *msg;
-        value body;
-        property_map application_properties;
-        annotation_map message_annotations;
-        annotation_map delivery_annotations;
-    } impl_;
+
+    mutable pn_message_t *pn_msg_;
+    mutable value body_;
+    mutable property_map application_properties_;
+    mutable annotation_map message_annotations_;
+    mutable annotation_map delivery_annotations_;
 };
 
 }

@@ -18,16 +18,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 #include "proton/data.hpp"
-#include "proton/decoder.hpp"
 #include "proton/types.hpp"
 
 namespace proton {
-
-class data;
-class encoder;
-class decoder;
 
 /**
  * Holder for an AMQP value.
@@ -36,9 +30,6 @@ class decoder;
  * assignment and conversion operators to convert its contents easily to and
  * from native C++ types.
  *
- * See proton::encoder and proton::decoder for details of the conversion rules.
- * Assigning to a proton::value follows the encoder rules, converting from a
- * proton::value (or calling proton::value::get) follows the decoder rules.
  */
 class value {
   public:
@@ -47,30 +38,28 @@ class value {
 #if PN_HAS_CPP11
     PN_CPP_EXTERN value(value&&);
 #endif
-    template <class T> value(const T& x) : data_(data::create()) { data_.copy(x); }
+    PN_CPP_EXTERN value& operator=(const value&);
 
-    PN_CPP_EXTERN value& operator=(const value& x);
-    template <class T> value& operator=(const T& x) { data_.copy(x); return *this; }
+    template <class T> value(const T& x) : data_(proton::data::create()) { encode() << x; }
+    template <class T> value& operator=(const T& x) { encode() << x; return *this; }
 
     PN_CPP_EXTERN void clear();
     PN_CPP_EXTERN bool empty() const;
 
-    /** Encoder to encode complex data into this value. Note this clears the value. */
-    PN_CPP_EXTERN class encoder encoder();
-
-    /** Decoder to decode complex data from this value. Note this rewinds the decoder. */
-    PN_CPP_EXTERN class decoder decoder() const;
-
     /** Type of the current value*/
     PN_CPP_EXTERN type_id type() const;
 
-    /** Get the value. */
-    template<class T> void get(T &t) const { decoder() >> t; }
-    template<class T> void get(map_ref<T> t) const { decoder() >> t; }
-    template<class T> void get(pairs_ref<T> t) const { decoder() >> t; }
-    template<class T> void get(sequence_ref<T> t) const { decoder() >> t; }
+    /// Get the value.
+    template<class T> void get(T &t) const { decode() >> t; }
 
-    /** Get the value. */
+    /// Get an AMQP map as any type T that satisfies the map concept.
+    template<class T> void get_map(T& t) const { decode() >> to_map(t); }
+    /// Get a map as a as any type T that is a sequence pair-like types with first and second.
+    template<class T> void get_pairs(T& t) const { decode() >> to_pairs(t); }
+    /// Get an AMQP array or list as type T that satisfies the sequence concept. */
+    template<class T> void get_sequence(T& t) const { decode() >> to_sequence(t); }
+
+    /// Get the value as C++ type T.
     template<class T> T get() const { T t; get(t); return t; }
 
     ///@name as_ methods do "loose" conversion, they will convert the scalar
@@ -82,6 +71,12 @@ class value {
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if type_id_is_string_like(type())
     ///@}
 
+    ///@cond INTERNAL
+    PN_CPP_EXTERN encoder encode(); ///< Clear and return an encoder for this value.
+    PN_CPP_EXTERN decoder decode() const; ///< Rewind and return an encoder for this value.
+    PN_CPP_EXTERN class data& data() const; ///< Return a data reference, no clear or rewind.
+    ///@endcond
+
   friend PN_CPP_EXTERN void swap(value&, value&);
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
@@ -90,14 +85,10 @@ class value {
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
 
   private:
-    value(data d);
-    value& ref(data d);
-
-    data data_;
+    mutable class data data_;
   friend class message;
 };
 
 
 }
 #endif // VALUE_H
-

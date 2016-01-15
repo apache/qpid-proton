@@ -19,6 +19,8 @@
  * under the License.
  */
 
+///@cond INTERNAL
+
 #include "proton/error.hpp"
 #include "proton/types.hpp"
 #include "proton/type_traits.hpp"
@@ -40,6 +42,9 @@
 
 #endif // PN_NO_CONTAINER_CONVERT
 
+///@file
+///@internal
+
 struct pn_data_t;
 
 namespace proton {
@@ -50,7 +55,6 @@ class message_id;
 class annotation_key;
 class value;
 
-///@cond INTERNAL
 template<class T, type_id A> struct cref {
     typedef T cpp_type;
     static const type_id type;
@@ -59,7 +63,6 @@ template<class T, type_id A> struct cref {
     const T& value;
 };
 template <class T, type_id A> const type_id cref<T, A>::type = A;
-///@endcond INTERNAL
 
 /**
  * Indicate the desired AMQP type to use when encoding T.
@@ -262,4 +265,7 @@ template <class K, class T, class C, class A> encoder operator<<(encoder e, cons
 
 #endif // PN_NO_CONTAINER_CONVERT
 }
+
+///@endcond
+
 #endif // ENCODER_H

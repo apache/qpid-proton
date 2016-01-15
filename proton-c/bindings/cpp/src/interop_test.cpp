@@ -48,15 +48,15 @@ template <class T> T get(decoder& d) {
 // Test data ostream operator
 void test_data_ostream() {
     value dv;
-    dv.decoder().decode(read("primitives"));
+    dv.decode().decode(read("primitives"));
     ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dv));
 }
 
 // Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
 void test_decoder_primitves_exact() {
     value dv;
-    dv.decoder().decode(read("primitives"));
-    decoder d(dv.decoder());
+    dv.decode().decode(read("primitives"));
+    decoder d(dv.decode());
     ASSERT(d.more());
     try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(decode_error){}
     ASSERT_EQUAL(true, get<bool>(d));
@@ -81,7 +81,7 @@ void test_decoder_primitves_exact() {
 // Test inserting primitive sand encoding as AMQP.
 void test_encoder_primitives() {
     value dv;
-    encoder e = dv.encoder();
+    encoder e = dv.encode();
     e << true << false;
     e << ::uint8_t(42);
     e << ::uint16_t(42) << ::int16_t(-42);

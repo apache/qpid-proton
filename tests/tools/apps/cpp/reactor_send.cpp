@@ -92,7 +92,7 @@ class reactor_send : public proton::messaging_handler {
 
     void on_message(proton::event &e) {
         proton::message &msg = e.message();
-        msg.body().decoder() >> received_content_;
+        msg.body().decode() >> received_content_;
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
             received_++;
