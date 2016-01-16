@@ -45,7 +45,7 @@ set(qpid-proton-cpp-source
   src/duration.cpp
   src/encoder.cpp
   src/endpoint.cpp
-  src/engine.cpp
+  src/connection_engine.cpp
   src/error.cpp
   src/event.cpp
   src/handler.cpp
@@ -127,7 +127,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/te
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/libqpid-proton-cpp.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc @ONLY)
-install (FILES 
+install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "proton/engine.hpp"
+#include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
 
 #include "uuid.hpp"
@@ -30,7 +30,7 @@
 
 namespace proton {
 
-struct engine::impl {
+struct connection_engine::impl {
 
     impl(class handler& h, pn_transport_t *t) :
         handler(h), transport(t), connection(pn_connection()), collector(pn_collector())
@@ -56,35 +56,35 @@ struct engine::impl {
     pn_collector_t * collector;
 };
 
-engine::engine(handler &h, const std::string& id_) : impl_(new impl(h, pn_transport())) {
+connection_engine::connection_engine(handler &h, const std::string& id_) : impl_(new impl(h, pn_transport())) {
     if (!impl_->transport || !impl_->connection || !impl_->collector)
-        throw error("engine setup failed");
+        throw error("connection_engine setup failed");
     std::string id = id_.empty() ? uuid().str() : id_;
     pn_connection_set_container(impl_->connection, id.c_str());
-    impl_->check(pn_transport_bind(impl_->transport, impl_->connection), "engine bind: ");
+    impl_->check(pn_transport_bind(impl_->transport, impl_->connection), "connection_engine bind: ");
     pn_connection_collect(impl_->connection, impl_->collector);
 }
 
-engine::~engine() {}
+connection_engine::~connection_engine() {}
 
-buffer<char> engine::input() {
+buffer<char> connection_engine::input() {
     ssize_t n = pn_transport_capacity(impl_->transport);
     if (n <= 0)
         return buffer<char>();
     return buffer<char>(pn_transport_tail(impl_->transport), size_t(n));
 }
 
-void engine::close_input() {
+void connection_engine::close_input() {
     pn_transport_close_tail(impl_->transport);
     run();
 }
 
-void engine::received(size_t n) {
-    impl_->check(pn_transport_process(impl_->transport, n), "engine process: ");
+void connection_engine::received(size_t n) {
+    impl_->check(pn_transport_process(impl_->transport, n), "connection_engine process: ");
     run();
 }
 
-void engine::run() {
+void connection_engine::run() {
     for (pn_event_t *e = impl_->peek(); e; e = impl_->peek()) {
         switch (pn_event_type(e)) {
           case PN_CONNECTION_REMOTE_CLOSE:
@@ -96,37 +96,37 @@ void engine::run() {
           default:
             break;
         }
-        messaging_event mevent(e, pn_event_type(e), this);
+        messaging_event mevent(e, pn_event_type(e), 0);
         mevent.dispatch(impl_->handler);
         impl_->pop();
     }
 }
 
-buffer<const char> engine::output() {
+buffer<const char> connection_engine::output() {
     ssize_t n = pn_transport_pending(impl_->transport);
     if (n <= 0)
         return buffer<const char>();
     return buffer<const char>(pn_transport_head(impl_->transport), size_t(n));
 }
 
-void engine::sent(size_t n) {
+void connection_engine::sent(size_t n) {
     pn_transport_pop(impl_->transport, n);
     run();
 }
 
-void engine::close_output() {
+void connection_engine::close_output() {
     pn_transport_close_head(impl_->transport);
     run();
 }
 
-bool engine::closed() const {
+bool connection_engine::closed() const {
     return pn_transport_closed(impl_->transport);
 }
 
-class connection engine::connection() const {
+class connection connection_engine::connection() const {
     return impl_->connection;
 }
 
-std::string engine::id() const { return connection().container_id(); }
+std::string connection_engine::id() const { return connection().container_id(); }
 
 }

@@ -1,5 +1,5 @@
-#ifndef ENGINE_HPP
-#define ENGINE_HPP
+#ifndef CONNECTION_ENGINE_HPP
+#define CONNECTION_ENGINE_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,10 +21,10 @@
 
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/export.hpp"
-#include "proton/event_loop.hpp"
 
 #include <cstddef>
 #include <utility>
+#include <string>
 
 namespace proton {
 
@@ -47,8 +47,8 @@ template <class T> class buffer {
 };
 
 /**
- * An engine is an event_loop that manages a single AMQP connection.  It is
- * useful for integrating AMQP into an existing IO framework.
+ * A connection_engine manages a single AMQP connection.  It is useful for
+ * integrating AMQP into an existing IO framework.
  *
  * The engine provides a simple "bytes-in/bytes-out" interface. Incoming AMQP
  * bytes from any kind of data connection are fed into the engine and processed
@@ -74,19 +74,19 @@ template <class T> class buffer {
  * THREAD SAFETY: A single engine instance cannot be called concurrently, but
  * different engine instances can be processed concurrently in separate threads.
  */
-class engine : public event_loop {
+class connection_engine {
   public:
 
-    // TODO aconway 2015-11-02: engine() take connection-options.
+    // TODO aconway 2015-11-02: engine() take connection-options, handle SSL
     // TODO aconway 2015-11-02: engine needs to accept application events.
     // TODO aconway 2015-11-02: generalize reconnect logic for container and engine.
 
     /**
      * Create an engine that will advertise id as the AMQP container-id for its connection.
      */
-    PN_CPP_EXTERN engine(handler&, const std::string& id=std::string());
+    PN_CPP_EXTERN connection_engine(handler&, const std::string& id=std::string());
 
-    PN_CPP_EXTERN ~engine();
+    PN_CPP_EXTERN ~connection_engine();
 
     /**
      * Input buffer. If input.size() == 0 means no input can be accepted right now, but
@@ -130,18 +130,18 @@ class engine : public event_loop {
     PN_CPP_EXTERN void close_output();
 
     /**
-     * True if engine is closed. This can either be because close_input() and
+     * True if connection_engine is closed. This can either be because close_input() and
      * close_output() were called to indicate the external connection has
      * closed, or because AMQP close frames were received in the AMQP data.  In
      * either case no more input() buffer space or output() data will be
-     * available for this engine.
+     * available for this connection_engine.
      */
     PN_CPP_EXTERN bool closed() const;
 
-    /** The AMQP connection associated with this engine. */
+    /** The AMQP connection associated with this connection_engine. */
     PN_CPP_EXTERN class connection  connection() const;
 
-    /** The AMQP container-id associated with this engine. */
+    /** The AMQP container-id associated with this connection_engine. */
     PN_CPP_EXTERN  std::string id() const;
 
   private:
@@ -152,4 +152,4 @@ class engine : public event_loop {
 };
 
 }
-#endif // ENGINE_HPP
+#endif // CONNECTION_ENGINE_HPP

@@ -24,7 +24,6 @@
 #include "proton/link.h"
 
 #include "proton/container.hpp"
-#include "proton/engine.hpp"
 #include "proton/delivery.hpp"
 #include "proton/error.hpp"
 #include "proton_event.hpp"
@@ -37,10 +36,10 @@
 
 namespace proton {
 
-proton_event::proton_event(pn_event_t *ce, proton_event::event_type t, class event_loop *el) :
+proton_event::proton_event(pn_event_t *ce, proton_event::event_type t, class container *c) :
     pn_event_(ce),
     type_(t),
-    event_loop_(el)
+    container_(c)
 {}
 
 int proton_event::type() const { return type_; }
@@ -49,24 +48,10 @@ std::string proton_event::name() const { return pn_event_type_name(pn_event_type
 
 pn_event_t *proton_event::pn_event() const { return pn_event_; }
 
-event_loop& proton_event::event_loop() const {
-    if (!event_loop_)
-        throw error(MSG("No event_loop context for this event"));
-    return *event_loop_;
-}
-
 container& proton_event::container() const {
-    class container *c = dynamic_cast<class container*>(event_loop_);
-    if (!c)
+    if (!container_)
         throw error(MSG("No container context for this event"));
-    return *c;
-}
-
-engine& proton_event::engine() const {
-    class engine *e = dynamic_cast<class engine*>(event_loop_);
-    if (!e)
-        throw error(MSG("No engine context for this event"));
-    return *e;
+    return *container_;
 }
 
 connection proton_event::connection() const {
@@ -207,5 +192,3 @@ const proton_event::event_type proton_event::SELECTABLE_ERROR=PN_SELECTABLE_ERRO
 const proton_event::event_type proton_event::SELECTABLE_EXPIRED=PN_SELECTABLE_EXPIRED;
 const proton_event::event_type proton_event::SELECTABLE_FINAL=PN_SELECTABLE_FINAL;
 }
-
-

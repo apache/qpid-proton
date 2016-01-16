@@ -98,11 +98,12 @@ complex AMQP types. For details on converting between AMQP and C++ data types
 see the \ref encode_decode.cpp example and classes `proton::encoder`,
 `proton::decoder` and `proton::value`.
 
-`proton::engine` provides fewer facilities that `proton::container` but makes
-fewer (no) assumptions about application threading and IO. It may be easier to
-integrate with an existing IO framework, for multi-threaded applications or for
-non-socket IO. See the \ref select_broker.cpp example. The main application and
-AMQP logic is implemented the same way using the engine or the container.
+`proton::connection_engine` provides fewer facilities that `proton::container`
+but makes fewer (no) assumptions about application threading and IO. It may be
+easier to integrate with an existing IO framework, for multi-threaded
+applications or for non-socket IO. See the \ref select_broker.cpp example. The
+main application and AMQP logic is implemented the same way using the `connection_engine` or
+the container.
 
 Delivery Guarantees
 -------------------

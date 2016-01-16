@@ -23,7 +23,6 @@
 #include "proton/event.h"
 
 #include "proton/delivery.hpp"
-#include "proton/engine.hpp"
 #include "proton/error.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
@@ -39,18 +38,9 @@ event::event() {}
 
 event::~event() {}
 
-event_loop& event::event_loop() const {
-    throw error(MSG("No event_loop context for event"));
-}
-
 container& event::container() const {
     // Subclasses to override as appropriate
     throw error(MSG("No container context for event"));
-}
-
-engine& event::engine() const {
-    // Subclasses to override as appropriate
-    throw error(MSG("No engine context for event"));
 }
 
 connection event::connection() const {
@@ -77,5 +67,4 @@ class message &event::message() const {
     throw error(MSG("No message associated with event"));
 }
 
-event_loop::~event_loop() {}
 }

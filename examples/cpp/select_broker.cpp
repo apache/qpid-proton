@@ -20,7 +20,7 @@
 #include "options.hpp"
 #include "broker.hpp"
 
-#include "proton/engine.hpp"
+#include "proton/connection_engine.hpp"
 
 #include <sstream>
 #include <arpa/inet.h>
@@ -42,7 +42,7 @@ int do_accept(int listen_fd);
 
 class broker {
 
-    typedef std::map<int, proton::engine*> engine_map;
+    typedef std::map<int, proton::connection_engine*> engine_map;
 
     queues queues_;
     broker_handler handler_;
@@ -74,14 +74,14 @@ class broker {
                 if (fd == listen_fd) {
                     if (FD_ISSET(listen_fd, &readable_set)) {
                         int new_fd = do_accept(listen_fd);
-                        engines_[new_fd] = new proton::engine(handler_);
+                        engines_[new_fd] = new proton::connection_engine(handler_);
                         FD_SET(new_fd, &reading_);
                         FD_SET(new_fd, &writing_);
                     }
                     continue;
                 }
                 if (engines_.find(fd) != engines_.end()) {
-                    proton::engine& eng = *engines_[fd];
+                    proton::connection_engine& eng = *engines_[fd];
                     try {
                         if (FD_ISSET(fd, &readable_set))
                             readable(fd, eng);
@@ -109,7 +109,7 @@ class broker {
 
   private:
 
-    void readable(int fd, proton::engine& eng) {
+    void readable(int fd, proton::connection_engine& eng) {
         proton::buffer<char> input = eng.input();
         if (input.size()) {
             ssize_t n = check(read(fd, input.begin(), input.size()));
@@ -121,7 +121,7 @@ class broker {
         }
     }
 
-    void writable(int fd, proton::engine& eng) {
+    void writable(int fd, proton::connection_engine& eng) {
         proton::buffer<const char> output = eng.output();
         if (output.size()) {
             ssize_t n = check(write(fd, output.begin(), output.size()));
@@ -182,5 +182,3 @@ int main(int argc, char **argv) {
     }
     return 1;
 }
-
-

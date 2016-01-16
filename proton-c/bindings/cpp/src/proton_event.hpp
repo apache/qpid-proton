@@ -31,7 +31,6 @@ namespace proton {
 class handler;
 class container;
 class connection;
-class container;
 
 /** Event information for a proton::proton_handler */
 class proton_event : public event
@@ -273,9 +272,7 @@ class proton_event : public event
     ///@}
 
     virtual void dispatch(handler &h);
-    virtual class event_loop& event_loop() const;
     virtual class container& container() const;
-    virtual class engine& engine() const;
     virtual class connection connection() const;
     virtual class sender sender() const;
     virtual class receiver receiver() const;
@@ -288,12 +285,13 @@ class proton_event : public event
     pn_event_t* pn_event() const;
 
   protected:
-    proton_event(pn_event_t *, proton_event::event_type, class event_loop *);
+    proton_event(pn_event_t *, proton_event::event_type, class container*);
 
   private:
     mutable pn_event_t *pn_event_;
     event_type type_;
-    class event_loop *event_loop_;
+    class container *container_;
+  friend class messaging_event;
 };
 
 }

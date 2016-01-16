@@ -35,7 +35,6 @@ struct pn_connection_t;
 namespace proton {
 
 class handler;
-class engine;
 
 /** connection to a remote AMQP peer. */
 class connection : public object<pn_connection_t>, endpoint
@@ -43,14 +42,8 @@ class connection : public object<pn_connection_t>, endpoint
   public:
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
 
-    /// Get the event_loop, can be a container or an engine.
-    PN_CPP_EXTERN class event_loop &event_loop() const;
-
-    /// Get the container, throw an exception if event_loop is not a container.
+    /// Get the container, throw an exception if this connection is not managed by a container.
     PN_CPP_EXTERN class container &container() const;
-
-    /// Get the engine, throw an exception if event_loop is not an engine.
-    PN_CPP_EXTERN class engine &engine() const;
 
     /// Get the transport for the connection.
     PN_CPP_EXTERN class transport transport() const;
@@ -61,8 +54,7 @@ class connection : public object<pn_connection_t>, endpoint
     /// Set the AMQP host name for the connection
     PN_CPP_EXTERN void host(const std::string& h);
 
-    /// Return the container-ID for the connection. All connections have a container_id,
-    /// even if they don't have a container event_loop.
+    /// Return the container-ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
     // Set the container-ID for the connection
