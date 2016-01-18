@@ -29,16 +29,6 @@ can be built using the API.
 
 */
 
-/** \example helloworld_blocking.cpp
-
-The same as the basic helloworld.cpp, but using a
-synchronous/sequential style wrapper on top of the
-asynchronous/reactive API. The purpose of this example is just to show
-how different functionality can be easily layered should it be
-desired.
-
-*/
-
 /** \example simple_send.cpp
 
 An example of sending a fixed number of messages and tracking their
@@ -104,14 +94,7 @@ alternatives.
 
 */
 
-/** \example sync_client.cpp
-
-A variant of the client part, that uses a blocking/synchronous style
-instead of the reactive/asynchronous style.
-
-*/
-
-/** \example broker.hpp
+** \example broker.hpp
 
 Common logic for a simple "mini broker" that creates creates queues
 automatically when a client tries to send or subscribe. This file contains

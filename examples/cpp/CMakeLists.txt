@@ -24,13 +24,11 @@ include_directories(${ProtonCpp_INCLUDE_DIRS})
 set(examples
   broker
   helloworld
-  helloworld_blocking
   helloworld_direct
   simple_recv
   simple_send
   direct_recv
   direct_send
-  sync_client
   client
   server
   server_direct
