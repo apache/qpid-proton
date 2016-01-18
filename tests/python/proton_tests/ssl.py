@@ -186,6 +186,9 @@ class SslTest(common.Test):
         self._pump( client, server )
 
     def test_certificate_fingerprint_and_subfields(self):
+        if os.name=="nt":
+            raise Skipped("Windows support for certificate fingerprint and subfield not implemented yet")
+
         if "java" in sys.platform:
             raise Skipped("Not yet implemented in Proton-J")
 

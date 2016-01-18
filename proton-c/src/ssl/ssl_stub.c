@@ -147,3 +147,13 @@ int pn_ssl_get_ssf(pn_ssl_t *ssl)
 {
   return 0;
 }
+
+int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t fingerprint_length, pn_ssl_hash_alg hash_alg)
+{
+    return -1;
+}
+
+const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field)
+{
+    return NULL;
+}

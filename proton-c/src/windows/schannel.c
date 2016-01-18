@@ -1983,6 +1983,19 @@ static bool server_name_matches(const char *server_name, CERT_EXTENSION *alt_nam
   return matched;
 }
 
+const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field)
+{
+    return NULL;
+}
+
+int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
+                                          char *fingerprint,
+                                          size_t fingerprint_length,
+                                          pn_ssl_hash_alg hash_alg)
+{
+    return -1;
+}
+
 static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *server_name, bool tracing)
 {
   // Free/release the following before return:
