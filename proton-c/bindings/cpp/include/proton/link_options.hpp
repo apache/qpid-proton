@@ -58,7 +58,7 @@ enum lifetime_policy_t {
     DELETE_ON_NO_LINKS_OR_MESSAGES = 0x2E
 };
 
-class handler;
+class proton_handler;
 class link;
 
 /** Options for creating a link.
@@ -88,7 +88,7 @@ class link_options {
     PN_CPP_EXTERN void override(const link_options& other);
 
     /** Set a handler for events scoped to the link.  If NULL, link-scoped events on the link are discarded. */
-    PN_CPP_EXTERN link_options& handler(class handler *);
+    PN_CPP_EXTERN link_options& handler(class messaging_handler *);
     /** Receiver-only option to specify whether messages are browsed or
         consumed.  Setting browsing to true is Equivalent to setting
         distribution_mode(COPY).  Setting browsing to false is equivalent to
@@ -115,7 +115,7 @@ class link_options {
   private:
     friend class link;
     void apply(link&) const;
-    class handler* handler() const;
+    proton_handler* handler() const;
 
     class impl;
     pn_unique_ptr<impl> impl_;

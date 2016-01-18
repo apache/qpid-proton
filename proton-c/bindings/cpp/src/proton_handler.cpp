@@ -18,56 +18,62 @@
  * under the License.
  *
  */
-#include "proton/proton_handler.hpp"
+#include "proton_handler.hpp"
 #include "proton_event.hpp"
 
 namespace proton {
 
-proton_handler::proton_handler(){}
+proton_handler::proton_handler() {}
+proton_handler::~proton_handler() {}
 
 // Everything goes to on_unhandled() unless overriden by subclass
 
-void proton_handler::on_reactor_init(event &e) { on_unhandled(e); }
-void proton_handler::on_reactor_quiesced(event &e) { on_unhandled(e); }
-void proton_handler::on_reactor_final(event &e) { on_unhandled(e); }
-void proton_handler::on_timer_task(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_init(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_bound(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_unbound(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_local_open(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_local_close(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_remote_open(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_remote_close(event &e) { on_unhandled(e); }
-void proton_handler::on_connection_final(event &e) { on_unhandled(e); }
-void proton_handler::on_session_init(event &e) { on_unhandled(e); }
-void proton_handler::on_session_local_open(event &e) { on_unhandled(e); }
-void proton_handler::on_session_local_close(event &e) { on_unhandled(e); }
-void proton_handler::on_session_remote_open(event &e) { on_unhandled(e); }
-void proton_handler::on_session_remote_close(event &e) { on_unhandled(e); }
-void proton_handler::on_session_final(event &e) { on_unhandled(e); }
-void proton_handler::on_link_init(event &e) { on_unhandled(e); }
-void proton_handler::on_link_local_open(event &e) { on_unhandled(e); }
-void proton_handler::on_link_local_close(event &e) { on_unhandled(e); }
-void proton_handler::on_link_local_detach(event &e) { on_unhandled(e); }
-void proton_handler::on_link_remote_open(event &e) { on_unhandled(e); }
-void proton_handler::on_link_remote_close(event &e) { on_unhandled(e); }
-void proton_handler::on_link_remote_detach(event &e) { on_unhandled(e); }
-void proton_handler::on_link_flow(event &e) { on_unhandled(e); }
-void proton_handler::on_link_final(event &e) { on_unhandled(e); }
-void proton_handler::on_delivery(event &e) { on_unhandled(e); }
-void proton_handler::on_transport(event &e) { on_unhandled(e); }
-void proton_handler::on_transport_error(event &e) { on_unhandled(e); }
-void proton_handler::on_transport_head_closed(event &e) { on_unhandled(e); }
-void proton_handler::on_transport_tail_closed(event &e) { on_unhandled(e); }
-void proton_handler::on_transport_closed(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_init(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_updated(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_readable(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_writable(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_expired(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_error(event &e) { on_unhandled(e); }
-void proton_handler::on_selectable_final(event &e) { on_unhandled(e); }
+void proton_handler::on_reactor_init(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_reactor_quiesced(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_reactor_final(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_timer_task(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_init(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_bound(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_unbound(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_local_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_local_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_remote_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_remote_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_connection_final(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_init(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_local_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_local_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_remote_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_remote_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_session_final(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_init(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_local_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_local_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_local_detach(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_remote_open(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_remote_close(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_remote_detach(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_flow(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_link_final(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_delivery(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_transport(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_transport_error(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_transport_head_closed(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_transport_tail_closed(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_transport_closed(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_init(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_updated(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_readable(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_writable(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_expired(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_error(proton_event &e) { on_unhandled(e); }
+void proton_handler::on_selectable_final(proton_event &e) { on_unhandled(e); }
 
-void proton_handler::on_unhandled(event &) {}
+void proton_handler::on_unhandled(proton_event &) {}
+
+void proton_handler::add_child_handler(proton_handler &e) {
+  children_.push_back(&e);
+}
+
 
 }

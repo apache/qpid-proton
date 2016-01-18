@@ -26,15 +26,17 @@
 #include "proton/message.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/handler.hpp"
+
+#include "proton_handler.hpp"
 
 struct pn_session_t;
 struct pn_event_t;
 struct pn_record_t;
+struct pn_acceptor_t;
 
 namespace proton {
 
-class handler;
+class proton_handler;
 class container_impl;
 
 // Base class for C++ classes that are used as proton contexts.
@@ -62,7 +64,7 @@ class connection_context : public context {
 
     connection_context() : default_session(0), container_impl(0) {}
 
-    pn_unique_ptr<class handler> handler;
+    pn_unique_ptr<proton_handler> handler;
     pn_session_t *default_session;   // Owned by connection
     class container_impl* container_impl;
     message event_message;  // re-used by messaging_adapter for performance

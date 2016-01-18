@@ -32,7 +32,7 @@
 
 namespace proton {
 
-class handler;
+class proton_handler;
 class connection;
 
 /** Options for creating a connection.
@@ -63,7 +63,7 @@ class connection_options {
 
     // TODO: Document options
 
-    PN_CPP_EXTERN connection_options& handler(class handler *);
+    PN_CPP_EXTERN connection_options& handler(class messaging_handler *);
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
     PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
     PN_CPP_EXTERN connection_options& idle_timeout(uint32_t t);
@@ -82,7 +82,7 @@ class connection_options {
 
   private:
     void apply(connection&) const;
-    class handler* handler() const;
+    proton_handler* handler() const;
     static pn_connection_t *pn_connection(connection &);
     class client_domain &client_domain();
     class server_domain &server_domain();

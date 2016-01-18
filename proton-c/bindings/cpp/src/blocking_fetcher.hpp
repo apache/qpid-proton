@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+#include "proton/delivery.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/message.hpp"
 #include <string>

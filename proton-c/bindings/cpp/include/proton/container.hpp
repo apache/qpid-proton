@@ -87,7 +87,7 @@ class container {
     PN_CPP_EXTERN class reactor reactor() const;
 
     // Schedule a timer task event in delay milliseconds.
-    PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
+    PN_CPP_EXTERN task schedule(int delay, messaging_handler *h = 0);
 
     /** Copy the connection options to a template which will be
         applied to subsequent outgoing connections.  These are applied first
@@ -108,6 +108,7 @@ class container {
 
   private:
     pn_unique_ptr<container_impl> impl_;
+    friend class connector;
 };
 
 }

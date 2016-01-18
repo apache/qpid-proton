@@ -20,6 +20,7 @@
  */
 
 #include "proton/container.hpp"
+#include "proton/event.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/url.hpp"
 #include "proton/link_options.hpp"

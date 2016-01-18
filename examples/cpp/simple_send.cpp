@@ -22,6 +22,7 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
+#include "proton/event.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/value.hpp"

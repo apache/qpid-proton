@@ -19,10 +19,12 @@
 
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
+#include "proton/messaging_handler.hpp"
 
-#include "uuid.hpp"
-#include "proton_bits.hpp"
+#include "messaging_adapter.hpp"
 #include "messaging_event.hpp"
+#include "proton_bits.hpp"
+#include "uuid.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -32,7 +34,7 @@ namespace proton {
 
 struct connection_engine::impl {
 
-    impl(class handler& h, pn_transport_t *t) :
+    impl(class proton_handler& h, pn_transport_t *t) :
         handler(h), transport(t), connection(pn_connection()), collector(pn_collector())
     {}
 
@@ -50,13 +52,14 @@ struct connection_engine::impl {
     pn_event_t *peek() { return pn_collector_peek(collector); }
     void pop() { pn_collector_pop(collector); }
 
-    class handler& handler;
+    class proton_handler& handler;
     pn_transport_t *transport;
     pn_connection_t *connection;
     pn_collector_t * collector;
 };
 
-connection_engine::connection_engine(handler &h, const std::string& id_) : impl_(new impl(h, pn_transport())) {
+connection_engine::connection_engine(messaging_handler &h, const std::string& id_) :
+    impl_(new impl(*h.messaging_adapter_.get(), pn_transport())) {
     if (!impl_->transport || !impl_->connection || !impl_->collector)
         throw error("connection_engine setup failed");
     std::string id = id_.empty() ? uuid().str() : id_;
@@ -96,8 +99,8 @@ void connection_engine::run() {
           default:
             break;
         }
-        messaging_event mevent(e, pn_event_type(e), 0);
-        mevent.dispatch(impl_->handler);
+        proton_event pevent(e, pn_event_type(e), 0);
+        pevent.dispatch(impl_->handler);
         impl_->pop();
     }
 }
