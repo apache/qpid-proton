@@ -28,7 +28,7 @@
 
 namespace proton {
 
-class handler;
+class messaging_handler;
 class connection;
 
 /// Pointers to a byte range to use as a buffer.
@@ -84,7 +84,7 @@ class connection_engine {
     /**
      * Create an engine that will advertise id as the AMQP container-id for its connection.
      */
-    PN_CPP_EXTERN connection_engine(handler&, const std::string& id=std::string());
+    PN_CPP_EXTERN connection_engine(messaging_handler&, const std::string& id=std::string());
 
     PN_CPP_EXTERN ~connection_engine();
 

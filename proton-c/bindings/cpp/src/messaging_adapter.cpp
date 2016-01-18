@@ -32,11 +32,52 @@
 #include "proton/session.h"
 #include "proton/message.h"
 
+
 namespace proton {
-messaging_adapter::messaging_adapter(messaging_handler &delegate) :
-    messaging_handler(true, delegate.prefetch_, delegate.auto_settle_, delegate.auto_accept_, delegate.peer_close_iserror_),
-    delegate_(delegate)
-{}
+
+namespace {
+class c_flow_controller : public proton_handler
+{
+  public:
+    pn_handler_t *flowcontroller;
+
+    // TODO: pn_flowcontroller requires a window > 1.
+    c_flow_controller(int window) : flowcontroller(pn_flowcontroller(std::max(window, 2))) {}
+    ~c_flow_controller() {
+        pn_decref(flowcontroller);
+    }
+
+    void redirect(event &e) {
+        proton_event *pne = dynamic_cast<proton_event *>(&e);
+        pn_handler_dispatch(flowcontroller, pne->pn_event(), pn_event_type_t(pne->type()));
+    }
+
+    virtual void on_link_local_open(event &e) { redirect(e); }
+    virtual void on_link_remote_open(event &e) { redirect(e); }
+    virtual void on_link_flow(event &e) { redirect(e); }
+    virtual void on_delivery(event &e) { redirect(e); }
+};
+
+} // namespace
+
+void messaging_adapter::create_helpers() {
+  if (prefetch_ > 0) {
+    flow_controller_.reset(new c_flow_controller(prefetch_));
+    add_child_handler(*flow_controller_);
+  }
+}
+
+messaging_adapter::messaging_adapter(messaging_handler &delegate,
+                                     int prefetch, bool auto_accept, bool auto_settle, bool peer_close_iserror) :
+    delegate_(delegate),
+    prefetch_(prefetch),
+    auto_accept_(auto_accept),
+    auto_settle_(auto_settle),
+    peer_close_iserror_(peer_close_iserror)
+{
+    create_helpers();
+    //add_child_handler(*this);
+}
 
 
 messaging_adapter::~messaging_adapter(){}
@@ -142,11 +183,13 @@ void messaging_adapter::on_link_remote_close(event &e) {
         pn_link_t *lnk = pn_event_link(cevent);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             messaging_event mevent(messaging_event::LINK_ERROR, *pe);
-            on_link_error(mevent);
+            delegate_.on_link_error(mevent);
         }
         else {
             messaging_event mevent(messaging_event::LINK_CLOSE, *pe);
-            on_link_close(mevent);
+            delegate_.on_link_close(mevent);
+            if (peer_close_iserror_)
+              delegate_.on_link_error(mevent);
         }
         pn_link_close(lnk);
     }
@@ -159,11 +202,13 @@ void messaging_adapter::on_session_remote_close(event &e) {
         pn_session_t *session = pn_event_session(cevent);
         if (pn_condition_is_set(pn_session_remote_condition(session))) {
             messaging_event mevent(messaging_event::SESSION_ERROR, *pe);
-            on_session_error(mevent);
+            delegate_.on_session_error(mevent);
         }
         else {
             messaging_event mevent(messaging_event::SESSION_CLOSE, *pe);
-            on_session_close(mevent);
+            delegate_.on_session_close(mevent);
+            if (peer_close_iserror_)
+              delegate_.on_session_error(mevent);
         }
         pn_session_close(session);
     }
@@ -176,11 +221,13 @@ void messaging_adapter::on_connection_remote_close(event &e) {
         pn_connection_t *connection = pn_event_connection(cevent);
         if (pn_condition_is_set(pn_connection_remote_condition(connection))) {
             messaging_event mevent(messaging_event::CONNECTION_ERROR, *pe);
-            on_connection_error(mevent);
+            delegate_.on_connection_error(mevent);
         }
         else {
             messaging_event mevent(messaging_event::CONNECTION_CLOSE, *pe);
-            on_connection_close(mevent);
+            delegate_.on_connection_close(mevent);
+            if (peer_close_iserror_)
+              delegate_.on_connection_error(mevent);
         }
         pn_connection_close(connection);
     }
@@ -190,7 +237,7 @@ void messaging_adapter::on_connection_remote_open(event &e) {
     proton_event *pe = dynamic_cast<proton_event*>(&e);
     if (pe) {
         messaging_event mevent(messaging_event::CONNECTION_OPEN, *pe);
-        on_connection_open(mevent);
+        delegate_.on_connection_open(mevent);
         pn_connection_t *connection = pn_event_connection(pe->pn_event());
         if (!is_local_open(pn_connection_state(connection)) && is_local_unititialised(pn_connection_state(connection))) {
             pn_connection_open(connection);
@@ -202,7 +249,7 @@ void messaging_adapter::on_session_remote_open(event &e) {
     proton_event *pe = dynamic_cast<proton_event*>(&e);
     if (pe) {
         messaging_event mevent(messaging_event::SESSION_OPEN, *pe);
-        on_session_open(mevent);
+        delegate_.on_session_open(mevent);
         pn_session_t *session = pn_event_session(pe->pn_event());
         if (!is_local_open(pn_session_state(session)) && is_local_unititialised(pn_session_state(session))) {
             pn_session_open(session);
@@ -214,7 +261,7 @@ void messaging_adapter::on_link_remote_open(event &e) {
     proton_event *pe = dynamic_cast<proton_event*>(&e);
     if (pe) {
         messaging_event mevent(messaging_event::LINK_OPEN, *pe);
-        on_link_open(mevent);
+        delegate_.on_link_open(mevent);
         pn_link_t *link = pn_event_link(pe->pn_event());
         if (!is_local_open(pn_link_state(link)) && is_local_unititialised(pn_link_state(link))) {
             pn_link_open(link);
@@ -233,55 +280,9 @@ void messaging_adapter::on_transport_tail_closed(event &e) {
     }
 }
 
-
-void messaging_adapter::on_connection_open(event &e) {
-    delegate_.on_connection_open(e);
-}
-
-void messaging_adapter::on_session_open(event &e) {
-    delegate_.on_session_open(e);
-}
-
-void messaging_adapter::on_link_open(event &e) {
-    delegate_.on_link_open(e);
-}
-
-void messaging_adapter::on_connection_error(event &e) {
-    delegate_.on_connection_error(e);
-}
-
-void messaging_adapter::on_session_error(event &e) {
-    delegate_.on_session_error(e);
-}
-
-void messaging_adapter::on_link_error(event &e) {
-    delegate_.on_link_error(e);
-}
-
-void messaging_adapter::on_connection_close(event &e) {
-    delegate_.on_connection_close(e);
-    if (peer_close_iserror_)
-        on_connection_error(e);
-}
-
-void messaging_adapter::on_session_close(event &e) {
-    delegate_.on_session_close(e);
-    if (peer_close_iserror_)
-        on_session_error(e);
-}
-
-void messaging_adapter::on_link_close(event &e) {
-    delegate_.on_link_close(e);
-    if (peer_close_iserror_)
-        on_link_error(e);
-}
-
 void messaging_adapter::on_timer_task(event& e)
 {
     delegate_.on_timer(e);
-}
-
-void messaging_adapter::on_unhandled(event &) {
 }
 
 }

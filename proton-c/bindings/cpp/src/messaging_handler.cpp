@@ -26,58 +26,9 @@
 
 namespace proton {
 
-namespace {
-class c_flow_controller : public proton_handler
-{
-  public:
-    pn_handler_t *flowcontroller;
-
-    // TODO: pn_flowcontroller requires a window > 1.
-    c_flow_controller(int window) : flowcontroller(pn_flowcontroller(std::max(window, 2))) {}
-    ~c_flow_controller() {
-        pn_decref(flowcontroller);
-    }
-
-    void redirect(event &e) {
-        proton_event *pne = dynamic_cast<proton_event *>(&e);
-        pn_handler_dispatch(flowcontroller, pne->pn_event(), pn_event_type_t(pne->type()));
-    }
-
-    virtual void on_link_local_open(event &e) { redirect(e); }
-    virtual void on_link_remote_open(event &e) { redirect(e); }
-    virtual void on_link_flow(event &e) { redirect(e); }
-    virtual void on_delivery(event &e) { redirect(e); }
-};
-
-} // namespace
-
-
-
-
 messaging_handler::messaging_handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0),
-    peer_close_iserror_(peer_close_is_error0)
-{
-    create_helpers();
-}
-
-messaging_handler::messaging_handler(bool raw_handler, int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    prefetch_(prefetch0), auto_accept_(auto_accept0), auto_settle_(auto_settle0),
-    peer_close_iserror_(peer_close_is_error0)
-{
-    if (!raw_handler) {
-        create_helpers();
-    }
-}
-
-void messaging_handler::create_helpers() {
-    if (prefetch_ > 0) {
-        flow_controller_.reset(new c_flow_controller(prefetch_));
-        add_child_handler(*flow_controller_);
-    }
-    messaging_adapter_.reset(new messaging_adapter(*this));
-    add_child_handler(*messaging_adapter_);
-}
+    messaging_adapter_(new messaging_adapter(*this, prefetch0, auto_accept0, auto_settle0, peer_close_is_error0))
+{}
 
 messaging_handler::~messaging_handler(){}
 
@@ -103,4 +54,6 @@ void messaging_handler::on_transaction_abort(event &e) { on_unhandled(e); }
 void messaging_handler::on_transaction_commit(event &e) { on_unhandled(e); }
 void messaging_handler::on_transaction_declare(event &e) { on_unhandled(e); }
 
+void messaging_handler::on_unhandled(event &) {}
+void messaging_handler::on_unhandled_error(event &) {}
 }

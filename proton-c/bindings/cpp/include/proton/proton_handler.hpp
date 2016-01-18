@@ -30,7 +30,7 @@ class proton_event;
 
 /// Handler base class, subclass and over-ride event handling member functions.
 /// @see proton::proton_event for meaning of events.
-class proton_handler : virtual public handler
+class proton_handler : public handler
 {
   public:
     PN_CPP_EXTERN proton_handler();

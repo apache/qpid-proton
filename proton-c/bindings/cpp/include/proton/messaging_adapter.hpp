@@ -33,15 +33,17 @@ namespace proton {
 
 // Combine's Python's: endpoint_state_handler, incoming_message_handler, outgoing_message_handler
 
-class messaging_adapter : public proton_handler, public messaging_handler
+class messaging_adapter : public proton_handler
 {
   public:
-    PN_CPP_EXTERN messaging_adapter(messaging_handler &delegate);
+    PN_CPP_EXTERN messaging_adapter(messaging_handler &delegate,
+                                    int prefetch, bool auto_accept, bool auto_settle,
+                                    bool peer_close_is_error);
     PN_CPP_EXTERN virtual ~messaging_adapter();
+
     PN_CPP_EXTERN virtual void on_reactor_init(event &e);
     PN_CPP_EXTERN virtual void on_link_flow(event &e);
     PN_CPP_EXTERN virtual void on_delivery(event &e);
-    PN_CPP_EXTERN virtual void on_unhandled(event &e);
     PN_CPP_EXTERN virtual void on_connection_remote_open(event &e);
     PN_CPP_EXTERN virtual void on_connection_remote_close(event &e);
     PN_CPP_EXTERN virtual void on_session_remote_open(event &e);
@@ -49,20 +51,16 @@ class messaging_adapter : public proton_handler, public messaging_handler
     PN_CPP_EXTERN virtual void on_link_remote_open(event &e);
     PN_CPP_EXTERN virtual void on_link_remote_close(event &e);
     PN_CPP_EXTERN virtual void on_transport_tail_closed(event &e);
-
-    PN_CPP_EXTERN virtual void on_connection_close(event &e);
-    PN_CPP_EXTERN virtual void on_connection_error(event &e);
-    PN_CPP_EXTERN virtual void on_connection_open(event &e);
-    PN_CPP_EXTERN virtual void on_session_close(event &e);
-    PN_CPP_EXTERN virtual void on_session_error(event &e);
-    PN_CPP_EXTERN virtual void on_session_open(event &e);
-    PN_CPP_EXTERN virtual void on_link_close(event &e);
-    PN_CPP_EXTERN virtual void on_link_error(event &e);
-    PN_CPP_EXTERN virtual void on_link_open(event &e);
-
     PN_CPP_EXTERN virtual void on_timer_task(event &e);
+
   private:
     messaging_handler &delegate_;  // The handler for generated messaging_event's
+    int prefetch_;
+    bool auto_accept_;
+    bool auto_settle_;
+    bool peer_close_iserror_;
+    pn_unique_ptr<handler> flow_controller_;
+    void create_helpers();
 };
 
 }

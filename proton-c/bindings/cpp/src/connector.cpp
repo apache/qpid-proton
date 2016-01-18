@@ -106,7 +106,7 @@ void connector::on_transport_closed(event &e) {
                 }
                 else {
                     // log "Disconnected, reconnecting in " <<  delay << " milliseconds"
-                    connection_.container().schedule(delay, this);
+                    connection_.container().impl_.get()->schedule(delay, this);
                     return;
                 }
             }

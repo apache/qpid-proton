@@ -19,6 +19,8 @@
  *
  */
 #include "proton/connection_options.hpp"
+#include "proton/messaging_adapter.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
@@ -155,7 +157,7 @@ connection_options& connection_options::operator=(const connection_options& x) {
 
 void connection_options::override(const connection_options& x) { impl_->override(*x.impl_); }
 
-connection_options& connection_options::handler(class handler *h) { impl_->handler = h; return *this; }
+connection_options& connection_options::handler(class messaging_handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::max_channels(uint16_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::idle_timeout(uint32_t t) { impl_->idle_timeout = t; return *this; }

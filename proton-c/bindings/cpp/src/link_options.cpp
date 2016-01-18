@@ -20,6 +20,8 @@
  */
 #include "proton/link_options.hpp"
 #include "proton/link.hpp"
+#include "proton/messaging_adapter.hpp"
+#include "proton/messaging_handler.hpp"
 #include "msg.hpp"
 
 
@@ -156,7 +158,7 @@ link_options& link_options::operator=(const link_options& x) {
 
 void link_options::override(const link_options& x) { impl_->override(*x.impl_); }
 
-link_options& link_options::handler(class handler *h) { impl_->handler = h; return *this; }
+link_options& link_options::handler(class messaging_handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 link_options& link_options::browsing(bool b) { distribution_mode(b ? terminus::COPY : terminus::MOVE); return *this; }
 link_options& link_options::distribution_mode(terminus::distribution_mode_t m) { impl_->distribution_mode = m; return *this; }
 link_options& link_options::durable_subscription(bool b) {impl_->durable_subscription = b; return *this; }

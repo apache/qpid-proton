@@ -42,7 +42,7 @@ class messaging_exception : public std::runtime_error {
  * over-ride event handling member functions.
  * @see proton::messaging_event for meaning of events.
  */
-class messaging_handler : virtual public handler
+class messaging_handler
 {
   public:
     /** Create a messaging_handler
@@ -85,21 +85,17 @@ class messaging_handler : virtual public handler
     PN_CPP_EXTERN virtual void on_transaction_abort(event &e);
 
     PN_CPP_EXTERN virtual void on_timer(event &e);
+
+    PN_CPP_EXTERN virtual void on_unhandled(event &e);
+    PN_CPP_EXTERN virtual void on_unhandled_error(event &e);
     ///@}
 
   private:
-    int prefetch_;
-    bool auto_accept_;
-    bool auto_settle_;
-    bool peer_close_iserror_;
     pn_unique_ptr<messaging_adapter> messaging_adapter_;
-    pn_unique_ptr<handler> flow_controller_;
-    PN_CPP_EXTERN messaging_handler(
-        bool raw_handler, int prefetch=10, bool auto_accept=true,
-        bool auto_settle=true, bool peer_close_is_error=false);
-    friend class container_impl;
-    friend class messaging_adapter;
-    PN_CPP_EXTERN void create_helpers();
+    friend class container;
+    friend class connection_engine;
+    friend class connection_options;
+    friend class link_options;
 };
 
 }

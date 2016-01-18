@@ -126,7 +126,7 @@ pn_ptr<pn_handler_t> container_impl::cpp_handler(handler *h) {
     return h->pn_handler_;
 }
 
-container_impl::container_impl(container& c, handler *h, const std::string& id) :
+container_impl::container_impl(container& c, messaging_adapter *h, const std::string& id) :
     container_(c), reactor_(reactor::create()), handler_(h), id_(id),
     link_id_(0)
 {

@@ -19,6 +19,8 @@
 
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
+#include "proton/messaging_adapter.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include "uuid.hpp"
 #include "proton_bits.hpp"
@@ -56,7 +58,8 @@ struct connection_engine::impl {
     pn_collector_t * collector;
 };
 
-connection_engine::connection_engine(handler &h, const std::string& id_) : impl_(new impl(h, pn_transport())) {
+connection_engine::connection_engine(messaging_handler &h, const std::string& id_) :
+    impl_(new impl(*h.messaging_adapter_.get(), pn_transport())) {
     if (!impl_->transport || !impl_->connection || !impl_->collector)
         throw error("connection_engine setup failed");
     std::string id = id_.empty() ? uuid().str() : id_;

@@ -45,7 +45,7 @@ class task;
 class container_impl
 {
   public:
-    PN_CPP_EXTERN container_impl(container&, handler *, const std::string& id);
+    PN_CPP_EXTERN container_impl(container&, messaging_adapter*, const std::string& id);
     PN_CPP_EXTERN ~container_impl();
     PN_CPP_EXTERN connection connect(const url&, const connection_options&);
     PN_CPP_EXTERN sender open_sender(const url&, const proton::link_options &, const connection_options &);
@@ -71,7 +71,6 @@ class container_impl
     container& container_;
     reactor reactor_;
     handler *handler_;
-    pn_unique_ptr<messaging_adapter> messaging_adapter_;
     pn_unique_ptr<handler> override_handler_;
     pn_unique_ptr<handler> flow_controller_;
     std::string id_;
