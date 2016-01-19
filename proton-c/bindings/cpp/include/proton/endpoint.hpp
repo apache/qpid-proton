@@ -28,7 +28,6 @@ namespace proton {
 
 class handler;
 class connection;
-class transport;
 class session;
 class link;
 
