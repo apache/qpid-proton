@@ -35,9 +35,6 @@
 
 namespace proton {
 
-class event;
-class connection;
-class transport;
 class reconnect_timer;
 
 class connector : public proton_handler
