@@ -47,7 +47,7 @@ container::container(const std::string& id) {
     impl_.reset(new container_impl(*this, 0, id));
 }
 
-container::container(messaging_handler &mhandler, const std::string& id) {
+container::container(handler &mhandler, const std::string& id) {
     impl_.reset(new container_impl(*this, mhandler.messaging_adapter_.get(), id));
 }
 
@@ -75,7 +75,7 @@ acceptor container::listen(const proton::url &url, const connection_options &opt
     return impl_->listen(url, opts);
 }
 
-task container::schedule(int delay, messaging_handler *h) { return impl_->schedule(delay, h ? h->messaging_adapter_.get() : 0); }
+task container::schedule(int delay, handler *h) { return impl_->schedule(delay, h ? h->messaging_adapter_.get() : 0); }
 
 void container::client_connection_options(const connection_options &o) { impl_->client_connection_options(o); }
 

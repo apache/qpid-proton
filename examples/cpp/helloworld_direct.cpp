@@ -22,11 +22,11 @@
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"
 #include "proton/event.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 
 #include <iostream>
 
-class hello_world_direct : public proton::messaging_handler {
+class hello_world_direct : public proton::handler {
   private:
     proton::url url;
     proton::acceptor acceptor;

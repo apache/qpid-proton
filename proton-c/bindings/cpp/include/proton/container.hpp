@@ -35,7 +35,7 @@ namespace proton {
 
 class connection;
 class acceptor;
-class messaging_handler;
+class handler;
 class sender;
 class receiver;
 class link;
@@ -55,7 +55,7 @@ class container {
     PN_CPP_EXTERN container(const std::string& id=std::string());
 
     /// Container ID should be unique within your system. By default a random ID is generated.
-    PN_CPP_EXTERN container(messaging_handler& mhandler, const std::string& id=std::string());
+    PN_CPP_EXTERN container(handler& mhandler, const std::string& id=std::string());
 
     PN_CPP_EXTERN ~container();
 
@@ -87,7 +87,7 @@ class container {
     PN_CPP_EXTERN class reactor reactor() const;
 
     // Schedule a timer task event in delay milliseconds.
-    PN_CPP_EXTERN task schedule(int delay, messaging_handler *h = 0);
+    PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
 
     /** Copy the connection options to a template which will be
         applied to subsequent outgoing connections.  These are applied first

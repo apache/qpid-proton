@@ -19,7 +19,7 @@
 
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 
 #include "messaging_adapter.hpp"
 #include "messaging_event.hpp"
@@ -58,7 +58,7 @@ struct connection_engine::impl {
     pn_collector_t * collector;
 };
 
-connection_engine::connection_engine(messaging_handler &h, const std::string& id_) :
+connection_engine::connection_engine(handler &h, const std::string& id_) :
     impl_(new impl(*h.messaging_adapter_.get(), pn_transport())) {
     if (!impl_->transport || !impl_->connection || !impl_->collector)
         throw error("connection_engine setup failed");

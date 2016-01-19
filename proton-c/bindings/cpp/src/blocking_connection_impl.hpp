@@ -23,7 +23,7 @@
  */
 #include "proton/export.hpp"
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/types.h"
 #include <string>
@@ -35,7 +35,7 @@ namespace proton {
 class handler;
 class container;
 
-class blocking_connection_impl : public messaging_handler
+class blocking_connection_impl : public handler
 {
   public:
     blocking_connection_impl(const url &url, duration d);

@@ -63,7 +63,7 @@ class connection_options {
 
     // TODO: Document options
 
-    PN_CPP_EXTERN connection_options& handler(class messaging_handler *);
+    PN_CPP_EXTERN connection_options& handler(class handler *);
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
     PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
     PN_CPP_EXTERN connection_options& idle_timeout(uint32_t t);

@@ -21,12 +21,12 @@
 
 #include "proton/container.hpp"
 #include "proton/event.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
 
-class hello_world : public proton::messaging_handler {
+class hello_world : public proton::handler {
   private:
     proton::url url;
 

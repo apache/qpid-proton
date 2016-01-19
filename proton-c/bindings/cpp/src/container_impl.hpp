@@ -22,7 +22,7 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/link.hpp"
 #include "proton/duration.hpp"
