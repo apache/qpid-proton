@@ -284,7 +284,7 @@ class TransportSession
                                                       deliveryTag.getLength());
             UnsignedInteger messageFormat = transfer.getMessageFormat();
             if(messageFormat != null) {
-                delivery.setMessageFormat(messageFormat.longValue());
+                delivery.setMessageFormat(messageFormat.intValue());
             }
             TransportDelivery transportDelivery = new TransportDelivery(_incomingDeliveryId, delivery, transportReceiver);
             delivery.setTransportDelivery(transportDelivery);

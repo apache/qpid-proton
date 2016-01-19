@@ -145,9 +145,9 @@ public class DeliveryTest extends EngineTestBase
         LOGGER.fine(bold("======== About to create messages and send to the client"));
 
         sendMessageToClient("delivery1", "Msg1", null); // Don't set it, so it should be defaulted
-        sendMessageToClient("delivery2", "Msg2", 0L); // Explicitly set it to the default
-        sendMessageToClient("delivery3", "Msg3", 1L);
-        sendMessageToClient("delivery4", "Msg4", UnsignedInteger.MAX_VALUE.longValue()); // Limit
+        sendMessageToClient("delivery2", "Msg2", 0); // Explicitly set it to the default
+        sendMessageToClient("delivery3", "Msg3", 1);
+        sendMessageToClient("delivery4", "Msg4", UnsignedInteger.MAX_VALUE.intValue()); // Limit
 
         pumpServerToClient();
 
@@ -159,10 +159,10 @@ public class DeliveryTest extends EngineTestBase
         Delivery clientDelivery4 = receiveMessageFromServer("delivery4", "Msg4");
 
         // Verify the message format is as expected
-        assertEquals("Unexpected message format", 0L, clientDelivery1.getMessageFormat());
-        assertEquals("Unexpected message format", 0L, clientDelivery2.getMessageFormat());
-        assertEquals("Unexpected message format", 1L, clientDelivery3.getMessageFormat());
-        assertEquals("Unexpected message format", UnsignedInteger.MAX_VALUE.longValue(), clientDelivery4.getMessageFormat());
+        assertEquals("Unexpected message format", 0, clientDelivery1.getMessageFormat());
+        assertEquals("Unexpected message format", 0, clientDelivery2.getMessageFormat());
+        assertEquals("Unexpected message format", 1, clientDelivery3.getMessageFormat());
+        assertEquals("Unexpected message format", UnsignedInteger.MAX_VALUE.intValue(), clientDelivery4.getMessageFormat());
 
     }
 
@@ -197,7 +197,7 @@ public class DeliveryTest extends EngineTestBase
         return delivery;
     }
 
-    private Delivery sendMessageToClient(String deliveryTag, String messageContent, Long messageFormat)
+    private Delivery sendMessageToClient(String deliveryTag, String messageContent, Integer messageFormat)
     {
         byte[] tag = deliveryTag.getBytes(StandardCharsets.UTF_8);
 
@@ -212,7 +212,7 @@ public class DeliveryTest extends EngineTestBase
         Delivery serverDelivery = getServer().sender.delivery(tag);
 
         // Verify the default format of 0 is in place
-        assertEquals("Unexpected message format", 0L, serverDelivery.getMessageFormat());
+        assertEquals("Unexpected message format", 0, serverDelivery.getMessageFormat());
 
         // Set the message format explicitly if given, or leave it at the default
         if(messageFormat != null) {

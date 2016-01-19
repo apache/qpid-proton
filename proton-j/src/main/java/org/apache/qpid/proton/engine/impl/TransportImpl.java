@@ -567,7 +567,7 @@ public class TransportImpl extends EndpointImpl
                 transfer.setMore(true);
             }
 
-            long messageFormat = delivery.getMessageFormat();
+            int messageFormat = delivery.getMessageFormat();
             if(messageFormat == DeliveryImpl.DEFAULT_MESSAGE_FORMAT) {
                 transfer.setMessageFormat(UnsignedInteger.ZERO);
             } else {

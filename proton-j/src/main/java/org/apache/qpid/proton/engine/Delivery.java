@@ -117,8 +117,7 @@ public interface Delivery extends Extendable
     public DeliveryState getDefaultDeliveryState();
 
     /**
-     * Sets the message-format for this Delivery, represented as an unsigned 32bit integral value,
-     * i.e. in range 0 to 2^32 -1 inclusive.<p>
+     * Sets the message-format for this Delivery, representing the 32bit value using an int.
      *
      * The default value is 0 as per the message format defined in the core AMQP 1.0 specification.<p>
      *
@@ -133,17 +132,15 @@ public interface Delivery extends Extendable
      *          http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-messaging-v1.0-os.html#definition-MESSAGE-FORMAT</a><br>
      *
      * @param messageFormat the message format
-     * @throws IllegalArgumentException if the value given is outwith the allowed range.
      */
-    public void setMessageFormat(long messageFormat);
+    public void setMessageFormat(int messageFormat);
 
     /**
-     * Gets the message-format for this Delivery, represented as an unsigned 32bit integral value,
-     * i.e. in range 0 to 2^32 -1 inclusive.
+     * Gets the message-format for this Delivery, representing the 32bit value using an int.
      *
      * @return the message-format
-     * @see #setMessageFormat(long)
+     * @see #setMessageFormat(int)
      */
-    public long getMessageFormat();
+    public int getMessageFormat();
 
 }

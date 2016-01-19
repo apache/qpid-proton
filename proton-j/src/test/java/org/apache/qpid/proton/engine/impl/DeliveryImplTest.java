@@ -20,7 +20,6 @@
 package org.apache.qpid.proton.engine.impl;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -41,7 +40,7 @@ public class DeliveryImplTest
         DeliveryImpl delivery = new DeliveryImpl(null, Mockito.mock(LinkImpl.class), null);
 
         // lowest value and default
-        long newFormat = 0;
+        int newFormat = 0;
         delivery.setMessageFormat(newFormat);
         assertEquals("Unexpected message format", newFormat, delivery.getMessageFormat());
 
@@ -50,39 +49,8 @@ public class DeliveryImplTest
         assertEquals("Unexpected message format", newFormat, delivery.getMessageFormat());
 
         // Highest value
-        newFormat = (1L << 32) - 1;
+        newFormat = (1 << 32) - 1;
         delivery.setMessageFormat(newFormat);
         assertEquals("Unexpected message format", newFormat, delivery.getMessageFormat());
-    }
-
-    @Test
-    public void testSetMessageFormatWithNegativeNumberThrowsIAE() throws Exception
-    {
-        DeliveryImpl delivery = new DeliveryImpl(null, Mockito.mock(LinkImpl.class), null);
-        try
-        {
-            delivery.setMessageFormat(-1L);
-            fail("Expected exception to be thrown");
-        }
-        catch(IllegalArgumentException iae)
-        {
-            //expected
-        }
-    }
-
-    @Test
-    public void testSetMessageFormatWithValueAboveUnsignedIntRangeThrowsIAE() throws Exception
-    {
-        DeliveryImpl delivery = new DeliveryImpl(null, Mockito.mock(LinkImpl.class), null);
-        try
-        {
-            // 2^32 is first positive value outside allowed range
-            delivery.setMessageFormat(1L << 32);
-            fail("Expected exception to be thrown");
-        }
-        catch(IllegalArgumentException iae)
-        {
-            //expected
-        }
     }
 }
