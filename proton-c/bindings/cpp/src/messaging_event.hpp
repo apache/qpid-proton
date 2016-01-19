@@ -33,7 +33,7 @@ class connection;
 class message;
 
 /** An event for the proton::messaging_handler */
-class messaging_event : public proton_event
+class messaging_event : public event
 {
   public:
 
@@ -43,7 +43,6 @@ class messaging_event : public proton_event
 
     /** Event types for a messaging_handler */
     enum event_type {
-        PROTON = 0,  // Wrapped pn_event_t
         START,
         MESSAGE,
         SENDABLE,
@@ -67,11 +66,10 @@ class messaging_event : public proton_event
         TIMER
     };
 
-    messaging_event(pn_event_t *, proton_event::event_type, class container *);
     messaging_event(event_type t, proton_event &parent);
     ~messaging_event();
 
-    virtual PN_CPP_EXTERN void dispatch(handler &h);
+    virtual PN_CPP_EXTERN class container& container() const;
     virtual PN_CPP_EXTERN class connection connection() const;
     virtual PN_CPP_EXTERN class sender sender() const;
     virtual PN_CPP_EXTERN class receiver receiver() const;

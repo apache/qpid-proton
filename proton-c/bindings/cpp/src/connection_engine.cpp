@@ -99,8 +99,8 @@ void connection_engine::run() {
           default:
             break;
         }
-        messaging_event mevent(e, pn_event_type(e), 0);
-        mevent.dispatch(impl_->handler);
+        proton_event pevent(e, pn_event_type(e), 0);
+        pevent.dispatch(impl_->handler);
         impl_->pop();
     }
 }

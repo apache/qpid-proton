@@ -36,14 +36,15 @@ class connection;
 class proton_event : public event
 {
   public:
+    /// The type of an event
+    typedef int event_type;
+
+    proton_event(pn_event_t *, event_type, class container*);
 
     std::string name() const;
 
     ///@name Event types
     ///@{
-
-    /// The type of an event
-    typedef int event_type;
 
     /**
      * Defined as a programming convenience. No event of this type will
@@ -283,9 +284,6 @@ class proton_event : public event
     event_type type() const;
 
     pn_event_t* pn_event() const;
-
-  protected:
-    proton_event(pn_event_t *, proton_event::event_type, class container*);
 
   private:
     mutable pn_event_t *pn_event_;
