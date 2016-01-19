@@ -1,4 +1,4 @@
-version: {branch}.{build}
+version: '{branch}.{build}'
 configuration: RelWithDebInfo
 install:
 - cinst -y swig
