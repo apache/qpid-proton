@@ -20,15 +20,17 @@
  */
 
 #include "connector.hpp"
+
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/url.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/task.hpp"
 #include "proton/sasl.hpp"
+
 #include "container_impl.hpp"
+#include "proton_event.hpp"
 
 #include "proton/connection.h"
 #include "proton/transport.h"
@@ -74,24 +76,24 @@ void connector::connect() {
     transport_configured_ = true;
 }
 
-void connector::on_connection_local_open(event &) {
+void connector::on_connection_local_open(proton_event &) {
     connect();
 }
 
-void connector::on_connection_remote_open(event &) {
+void connector::on_connection_remote_open(proton_event &) {
     if (reconnect_timer_) {
         reconnect_timer_->reset();
     }
 }
 
-void connector::on_connection_init(event &) {
+void connector::on_connection_init(proton_event &) {
 }
 
-void connector::on_transport_tail_closed(event &e) {
+void connector::on_transport_tail_closed(proton_event &e) {
     on_transport_closed(e);
 }
 
-void connector::on_transport_closed(event &e) {
+void connector::on_transport_closed(proton_event &e) {
     if (!connection_) return;
     if (connection_.state() & endpoint::LOCAL_ACTIVE) {
         if (reconnect_timer_) {
@@ -116,7 +118,7 @@ void connector::on_transport_closed(event &e) {
     connection_  = 0;
 }
 
-void connector::on_timer_task(event &) {
+void connector::on_timer_task(proton_event &) {
     connect();
 }
 

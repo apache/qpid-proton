@@ -28,6 +28,8 @@
 #include "proton/duration.hpp"
 #include "proton/reactor.hpp"
 
+#include "proton_handler.hpp"
+
 #include "proton/reactor.h"
 
 #include <string>
@@ -61,8 +63,8 @@ class container_impl
     const proton::link_options& link_options() { return link_options_; }
 
     void configure_server_connection(connection &c);
-    task schedule(int delay, handler *h);
-    pn_ptr<pn_handler_t> cpp_handler(handler *h);
+    task schedule(int delay, proton_handler *h);
+    pn_ptr<pn_handler_t> cpp_handler(proton_handler *h);
 
     std::string next_link_name();
 
@@ -70,9 +72,9 @@ class container_impl
 
     container& container_;
     reactor reactor_;
-    handler *handler_;
-    pn_unique_ptr<handler> override_handler_;
-    pn_unique_ptr<handler> flow_controller_;
+    proton_handler *handler_;
+    pn_unique_ptr<proton_handler> override_handler_;
+    pn_unique_ptr<proton_handler> flow_controller_;
     std::string id_;
     uint64_t link_id_;
     connection_options client_connection_options_;

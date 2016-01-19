@@ -21,7 +21,6 @@
 #include "proton/container.hpp"
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
-#include "proton/handler.hpp"
 #include "proton/session.hpp"
 #include "proton/error.hpp"
 #include "connector.hpp"

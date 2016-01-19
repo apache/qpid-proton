@@ -18,11 +18,12 @@
  * under the License.
  *
  */
-#include "proton/link_options.hpp"
 #include "proton/link.hpp"
-#include "proton/messaging_adapter.hpp"
+#include "proton/link_options.hpp"
 #include "proton/messaging_handler.hpp"
+
 #include "msg.hpp"
+#include "messaging_adapter.hpp"
 
 
 namespace proton {
@@ -60,7 +61,7 @@ template <class T> struct option {
 
 class link_options::impl {
   public:
-    option<class handler*> handler;
+    option<proton_handler*> handler;
     option<terminus::distribution_mode_t> distribution_mode;
     option<bool> durable_subscription;
     option<link_delivery_mode_t> delivery_mode;
@@ -169,6 +170,6 @@ link_options& link_options::lifetime_policy(lifetime_policy_t lp) {impl_->lifeti
 link_options& link_options::selector(const std::string &str) {impl_->selector = str; return *this; }
 
 void link_options::apply(link& l) const { impl_->apply(l); }
-handler* link_options::handler() const { return impl_->handler.value; }
+proton_handler* link_options::handler() const { return impl_->handler.value; }
 
 } // namespace proton

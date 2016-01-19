@@ -24,6 +24,8 @@
 
 #include "proton/messaging_handler.hpp"
 
+#include "proton_handler.hpp"
+
 #include "proton/event.h"
 #include "proton/reactor.h"
 
@@ -41,17 +43,17 @@ class messaging_adapter : public proton_handler
                                     bool peer_close_is_error);
     PN_CPP_EXTERN virtual ~messaging_adapter();
 
-    PN_CPP_EXTERN virtual void on_reactor_init(event &e);
-    PN_CPP_EXTERN virtual void on_link_flow(event &e);
-    PN_CPP_EXTERN virtual void on_delivery(event &e);
-    PN_CPP_EXTERN virtual void on_connection_remote_open(event &e);
-    PN_CPP_EXTERN virtual void on_connection_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_session_remote_open(event &e);
-    PN_CPP_EXTERN virtual void on_session_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_link_remote_open(event &e);
-    PN_CPP_EXTERN virtual void on_link_remote_close(event &e);
-    PN_CPP_EXTERN virtual void on_transport_tail_closed(event &e);
-    PN_CPP_EXTERN virtual void on_timer_task(event &e);
+    PN_CPP_EXTERN void on_reactor_init(proton_event &e);
+    PN_CPP_EXTERN void on_link_flow(proton_event &e);
+    PN_CPP_EXTERN void on_delivery(proton_event &e);
+    PN_CPP_EXTERN void on_connection_remote_open(proton_event &e);
+    PN_CPP_EXTERN void on_connection_remote_close(proton_event &e);
+    PN_CPP_EXTERN void on_session_remote_open(proton_event &e);
+    PN_CPP_EXTERN void on_session_remote_close(proton_event &e);
+    PN_CPP_EXTERN void on_link_remote_open(proton_event &e);
+    PN_CPP_EXTERN void on_link_remote_close(proton_event &e);
+    PN_CPP_EXTERN void on_transport_tail_closed(proton_event &e);
+    PN_CPP_EXTERN void on_timer_task(proton_event &e);
 
   private:
     messaging_handler &delegate_;  // The handler for generated messaging_event's
@@ -59,7 +61,7 @@ class messaging_adapter : public proton_handler
     bool auto_accept_;
     bool auto_settle_;
     bool peer_close_iserror_;
-    pn_unique_ptr<handler> flow_controller_;
+    pn_unique_ptr<proton_handler> flow_controller_;
     void create_helpers();
 };
 

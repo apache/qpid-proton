@@ -23,6 +23,7 @@
 
 #include "proton/container.hpp"
 #include "proton/acceptor.hpp"
+#include "proton/event.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"

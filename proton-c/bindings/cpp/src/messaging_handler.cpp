@@ -19,9 +19,12 @@
  *
  */
 #include "proton/messaging_handler.hpp"
+
 #include "proton_event.hpp"
-#include "proton/messaging_adapter.hpp"
+#include "messaging_adapter.hpp"
+
 #include "proton/handlers.h"
+
 #include <algorithm>
 
 namespace proton {

@@ -19,14 +19,15 @@
  *
  */
 #include "proton/connection_options.hpp"
-#include "proton/messaging_adapter.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
+
 #include "contexts.hpp"
 #include "connector.hpp"
+#include "messaging_adapter.hpp"
 #include "msg.hpp"
 
 #include "proton/transport.h"
@@ -44,7 +45,7 @@ template <class T> struct option {
 
 class connection_options::impl {
   public:
-    option<class handler*> handler;
+    option<proton_handler*> handler;
     option<uint32_t> max_frame_size;
     option<uint16_t> max_channels;
     option<uint32_t> idle_timeout;
@@ -177,6 +178,6 @@ connection_options& connection_options::sasl_config_path(const std::string &p) {
 void connection_options::apply(connection& c) const { impl_->apply(c); }
 class client_domain &connection_options::client_domain() { return impl_->client_domain.value; }
 class server_domain &connection_options::server_domain() { return impl_->server_domain.value; }
-handler* connection_options::handler() const { return impl_->handler.value; }
+proton_handler* connection_options::handler() const { return impl_->handler.value; }
 pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }
 } // namespace proton

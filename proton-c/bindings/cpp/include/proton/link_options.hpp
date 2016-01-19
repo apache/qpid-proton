@@ -58,7 +58,7 @@ enum lifetime_policy_t {
     DELETE_ON_NO_LINKS_OR_MESSAGES = 0x2E
 };
 
-class handler;
+class proton_handler;
 class link;
 
 /** Options for creating a link.
@@ -115,7 +115,7 @@ class link_options {
   private:
     friend class link;
     void apply(link&) const;
-    class handler* handler() const;
+    proton_handler* handler() const;
 
     class impl;
     pn_unique_ptr<impl> impl_;

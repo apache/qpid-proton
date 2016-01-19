@@ -69,13 +69,13 @@ class messaging_event : public event
     messaging_event(event_type t, proton_event &parent);
     ~messaging_event();
 
-    virtual PN_CPP_EXTERN class container& container() const;
-    virtual PN_CPP_EXTERN class connection connection() const;
-    virtual PN_CPP_EXTERN class sender sender() const;
-    virtual PN_CPP_EXTERN class receiver receiver() const;
-    virtual PN_CPP_EXTERN class link link() const;
-    virtual PN_CPP_EXTERN class delivery delivery() const;
-    virtual PN_CPP_EXTERN class message& message() const;
+    PN_CPP_EXTERN class container& container() const;
+    PN_CPP_EXTERN class connection connection() const;
+    PN_CPP_EXTERN class sender sender() const;
+    PN_CPP_EXTERN class receiver receiver() const;
+    PN_CPP_EXTERN class link link() const;
+    PN_CPP_EXTERN class delivery delivery() const;
+    PN_CPP_EXTERN class message& message() const;
 
     PN_CPP_EXTERN event_type type() const;
 

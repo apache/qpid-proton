@@ -19,12 +19,12 @@
 
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
-#include "proton/messaging_adapter.hpp"
 #include "proton/messaging_handler.hpp"
 
-#include "uuid.hpp"
-#include "proton_bits.hpp"
+#include "messaging_adapter.hpp"
 #include "messaging_event.hpp"
+#include "proton_bits.hpp"
+#include "uuid.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -34,7 +34,7 @@ namespace proton {
 
 struct connection_engine::impl {
 
-    impl(class handler& h, pn_transport_t *t) :
+    impl(class proton_handler& h, pn_transport_t *t) :
         handler(h), transport(t), connection(pn_connection()), collector(pn_collector())
     {}
 
@@ -52,7 +52,7 @@ struct connection_engine::impl {
     pn_event_t *peek() { return pn_collector_peek(collector); }
     void pop() { pn_collector_pop(collector); }
 
-    class handler& handler;
+    class proton_handler& handler;
     pn_transport_t *transport;
     pn_connection_t *connection;
     pn_collector_t * collector;

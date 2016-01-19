@@ -21,10 +21,8 @@
 #include "proton/container.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/event.hpp"
-#include "messaging_event.hpp"
 #include "proton/connection.hpp"
 #include "proton/session.hpp"
-#include "proton/messaging_adapter.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
 #include "proton/url.hpp"
@@ -35,10 +33,12 @@
 #include "proton/sasl.hpp"
 #include "proton/transport.hpp"
 
-#include "msg.hpp"
-#include "container_impl.hpp"
 #include "connector.hpp"
+#include "container_impl.hpp"
 #include "contexts.hpp"
+#include "messaging_adapter.hpp"
+#include "messaging_event.hpp"
+#include "msg.hpp"
 #include "uuid.hpp"
 
 #include "proton/connection.h"
@@ -73,12 +73,12 @@ struct handler_context {
     }
 
     container *container_;
-    handler *handler_;
+    proton_handler *handler_;
 };
 
 
 // Used to sniff for connector events before the reactor's global handler sees them.
-class override_handler : public handler
+class override_handler : public proton_handler
 {
   public:
     pn_ptr<pn_handler_t> base_handler;
@@ -86,22 +86,19 @@ class override_handler : public handler
 
     override_handler(pn_handler_t *h, container_impl &c) : base_handler(h), container_impl_(c) {}
 
-    virtual void on_unhandled(event &e) {
-        proton_event *pne = dynamic_cast<proton_event *>(&e);
-        // If not a Proton reactor event, nothing to override, nothing to pass along.
-        if (!pne) return;
-        int type = pne->type();
-        if (!type) return;  // Also not from the reactor
+    virtual void on_unhandled(proton_event &pe) {
+        proton_event::event_type type = pe.type();
+        if (type==proton_event::EVENT_NONE) return;  // Also not from the reactor
 
-        pn_event_t *cevent = pne->pn_event();
+        pn_event_t *cevent = pe.pn_event();
         pn_connection_t *conn = pn_event_connection(cevent);
         if (conn) {
-            handler *override = connection_context::get(conn).handler.get();
-            if (override && type != PN_CONNECTION_INIT) {
+            proton_handler *override = connection_context::get(conn).handler.get();
+            if (override && type != proton_event::CONNECTION_INIT) {
                 // Send event to connector
-                e.dispatch(*override);
+                pe.dispatch(*override);
             }
-            else if (!override && type == PN_CONNECTION_INIT) {
+            else if (!override && type == proton_event::CONNECTION_INIT) {
                 // Newly accepted connection from lister socket
                 connection c(conn);
                 container_impl_.configure_server_connection(c);
@@ -113,7 +110,7 @@ class override_handler : public handler
 
 } // namespace
 
-pn_ptr<pn_handler_t> container_impl::cpp_handler(handler *h) {
+pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
     if (!h->pn_handler_) {
         h->pn_handler_ = take_ownership(
             pn_handler_new(&handler_context::dispatch,
@@ -154,7 +151,7 @@ container_impl::~container_impl() {}
 connection container_impl::connect(const proton::url &url, const connection_options &user_opts) {
     connection_options opts = client_connection_options(); // Defaults
     opts.override(user_opts);
-    handler *h = opts.handler();
+    proton_handler *h = opts.handler();
 
     pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection(chandler.get()));
@@ -196,7 +193,7 @@ receiver container_impl::open_receiver(const proton::url &url, const proton::lin
 acceptor container_impl::listen(const proton::url& url, const connection_options &user_opts) {
     connection_options opts = server_connection_options(); // Defaults
     opts.override(user_opts);
-    handler *h = opts.handler();
+    proton_handler *h = opts.handler();
     pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : pn_ptr<pn_handler_t>();
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());
     if (!acptr)
@@ -218,7 +215,7 @@ std::string container_impl::next_link_name() {
     return s.str();
 }
 
-task container_impl::schedule(int delay, handler *h) {
+task container_impl::schedule(int delay, proton_handler *h) {
     pn_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = cpp_handler(h);

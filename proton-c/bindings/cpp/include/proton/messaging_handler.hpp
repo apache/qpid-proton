@@ -21,9 +21,9 @@
  * under the License.
  *
  */
-
-#include "proton/proton_handler.hpp"
+#include "proton/export.hpp"
 #include "proton/event.h"
+#include "proton/pn_unique_ptr.hpp"
 
 #include <stdexcept>
 
@@ -31,11 +31,6 @@ namespace proton {
 
 class event;
 class messaging_adapter;
-
-class messaging_exception : public std::runtime_error {
-  public:
-    messaging_exception(event& e);
-};
 
 /** messaging_handler base class. Provides a simpler set of events than
  * proton::proton_handler and automates some common tasks.  Subclass and

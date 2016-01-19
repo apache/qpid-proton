@@ -25,6 +25,7 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/decoder.hpp"
+#include "proton/event.hpp"
 #include "proton/reactor.h"
 #include "proton/value.hpp"
 

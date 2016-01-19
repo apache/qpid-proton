@@ -21,6 +21,7 @@
 
 #include "proton/container.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
 #include "proton/url.hpp"
 #include "proton/transport.hpp"
 
