@@ -94,7 +94,7 @@ alternatives.
 
 */
 
-** \example broker.hpp
+/** \example broker.hpp
 
 Common logic for a simple "mini broker" that creates creates queues
 automatically when a client tries to send or subscribe. This file contains
@@ -112,14 +112,5 @@ A simple, single-threaded broker using the `proton::container`. You can use this
 to run other examples that reqiure an intermediary, or you can use any AMQP 1.0
 broker. This broker creates queues automatically when a client tries to send or
 subscribe.
-
-*/
-
-/** \example select_broker.cpp
-
-A simple, single-threaded, select-based broker using the `proton::engine`. This
-broker implementation uses the standard `select` call as an illustration of
-how to integrate proton with an external IO "framework", instead of letting
-the `proton::container` manage IO.
 
 */

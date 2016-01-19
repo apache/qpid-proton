@@ -27,6 +27,8 @@
 #include "contexts.hpp"
 #include "container_impl.hpp"
 
+#include <string>
+
 namespace proton {
 
 void session::open() {
@@ -38,19 +40,19 @@ connection session::connection() const {
 }
 
 namespace {
-std::string set_name(const std::string& name, session* s) {
-    if (name.empty())
-        return connection_context::get(s->connection()).container_impl->next_link_name();
-    return name;
+std::string link_name(const std::string& name, session* s) {
+    if (!name.empty()) return name;
+    std::string gen(connection_context::get(s->connection()).link_gen.next());
+    return gen;
 }
 }
 
 receiver session::create_receiver(const std::string& name) {
-    return pn_receiver(pn_object(), set_name(name, this).c_str());
+    return pn_receiver(pn_object(), link_name(name, this).c_str());
 }
 
 sender session::create_sender(const std::string& name) {
-    return pn_sender(pn_object(), set_name(name, this).c_str());
+    return pn_sender(pn_object(), link_name(name, this).c_str());
 }
 
 sender session::open_sender(const std::string &addr, const link_options &lo) {

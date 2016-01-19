@@ -29,6 +29,7 @@
 
 using namespace std;
 using namespace proton;
+using namespace test;
 
 std::string tests_dir;
 

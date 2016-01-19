@@ -61,7 +61,6 @@ void connector::reconnect_timer(const class reconnect_timer &rt) {
 }
 
 void connector::connect() {
-    connection_.container_id(connection_.container().id());
     connection_.host(address_.host_port());
     pn_transport_t *pnt = pn_transport();
     transport t(pnt);

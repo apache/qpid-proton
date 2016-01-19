@@ -248,7 +248,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   endif (ENABLE_WARNING_ERROR)
   # TODO aconway 2016-01-06: we should be able to clean up the code and turn on
   # some of these warnings.
-  set (CXX_WARNING_FLAGS "${WERROR} -pedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast")
+  set (CXX_WARNING_FLAGS "${WERROR} -pedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 endif()
 
 if (MSVC)
@@ -449,11 +449,11 @@ install (TARGETS qpid-proton
 # Install windows qpid-proton pdb files
 if (MSVC)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
-    DESTINATION bin 
+    DESTINATION bin
     CONFIGURATIONS Debug
     OPTIONAL)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
-    DESTINATION bin 
+    DESTINATION bin
     CONFIGURATIONS RelWithDebInfo
     OPTIONAL)
 endif (MSVC)
@@ -468,7 +468,7 @@ install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
-install (FILES 
+install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 

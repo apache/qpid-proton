@@ -67,6 +67,7 @@ class messaging_event : public event
     };
 
     messaging_event(event_type t, proton_event &parent);
+    messaging_event(event_type t, pn_event_t*);
     ~messaging_event();
 
     PN_CPP_EXTERN class container& container() const;

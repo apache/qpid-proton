@@ -47,7 +47,7 @@ class handler
      *@param peer_close_is_error treat orderly remote connection close as error.
      */
     PN_CPP_EXTERN handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
-                                    bool peer_close_is_error=false);
+                          bool peer_close_is_error=false);
 
     PN_CPP_EXTERN virtual ~handler();
 

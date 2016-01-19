@@ -48,6 +48,7 @@ set(qpid-proton-cpp-source
   src/connection_engine.cpp
   src/error.cpp
   src/event.cpp
+  src/id_generator.cpp
   src/link.cpp
   src/link_options.cpp
   src/message.cpp
@@ -76,6 +77,11 @@ set(qpid-proton-cpp-source
   src/value.cpp
   )
 
+if(MSVC)
+  list(APPEND qpid-proton-cpp-source src/windows/io.cpp)
+else(MSVC)
+  list(APPEND qpid-proton-cpp-source src/posix/io.cpp)
+endif(MSVC)
 
 set_source_files_properties (
   ${qpid-proton-cpp-source}
@@ -151,7 +157,7 @@ install (FILES
 
 ## Test
 if (ENABLE_VALGRIND AND VALGRIND_EXE)
-  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet --leak-check=full --trace-children=yes)
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet --leak-check=full --trace-children=yes)
 endif ()
 
 macro(add_cpp_test test)
@@ -171,3 +177,4 @@ add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(value_test)
 add_cpp_test(scalar_test)
+add_cpp_test(engine_test)

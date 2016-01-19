@@ -67,12 +67,11 @@ std::string connection::container_id() const {
     return id ? std::string(id) : std::string();
 }
 
-void connection::container_id(const std::string& id) {
-    pn_connection_set_container(pn_object(), id.c_str());
-}
-
 container& connection::container() const {
-    return container_context::get(pn_object_reactor(pn_object()));
+    pn_reactor_t *r = pn_object_reactor(pn_object());
+    if (!r)
+        throw error("connection does not have a container");
+    return container_context::get(r);
 }
 
 link_range connection::find_links(endpoint::state mask) const {

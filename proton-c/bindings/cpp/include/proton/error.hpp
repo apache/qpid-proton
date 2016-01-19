@@ -21,10 +21,11 @@
  * under the License.
  *
  */
-#include <stdexcept>
-#include <string>
 #include "proton/config.hpp"
 #include "proton/export.hpp"
+
+#include <stdexcept>
+#include <string>
 
 namespace proton {
 
@@ -40,6 +41,14 @@ struct decode_error : public error { PN_CPP_EXTERN explicit decode_error(const s
 /** Raised if there is an error encoding a C++ value as AMQP data. */
 struct encode_error : public error { PN_CPP_EXTERN explicit encode_error(const std::string&); };
 
-}
+/** Error reading or writing external IO. */
+struct io_error : public error { PN_CPP_EXTERN explicit io_error(const std::string&); };
 
+/** Attempt to use a closed resource (connnection, session or link). */
+struct closed_error : public io_error {
+    PN_CPP_EXTERN explicit closed_error(const std::string& = default_msg);
+    static const std::string default_msg;
+};
+
+}
 #endif  /*!PROTON_CPP_EXCEPTIONS_H*/

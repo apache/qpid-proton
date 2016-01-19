@@ -124,10 +124,9 @@ pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
 }
 
 container_impl::container_impl(container& c, messaging_adapter *h, const std::string& id) :
-    container_(c), reactor_(reactor::create()), handler_(h), id_(id),
-    link_id_(0)
+    container_(c), reactor_(reactor::create()), handler_(h),
+    id_(id.empty() ? uuid().str() : id), id_gen_()
 {
-    if (id_.empty()) id_ = uuid().str();
     container_context::set(reactor_, container_);
 
     // Set our own global handler that "subclasses" the existing one
@@ -138,7 +137,6 @@ container_impl::container_impl(container& c, messaging_adapter *h, const std::st
     if (handler_) {
         reactor_.pn_handler(cpp_handler(handler_).get());
     }
-
 
     // Note: we have just set up the following handlers that see events in this order:
     // messaging_handler (Proton C events), pn_flowcontroller (optional), messaging_adapter,
@@ -158,8 +156,10 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     pn_unique_ptr<connector> ctor(new connector(conn, opts));
     ctor->address(url);  // TODO: url vector
     connection_context& cc(connection_context::get(conn));
-    cc.container_impl = this;
     cc.handler.reset(ctor.release());
+    cc.link_gen.prefix(id_gen_.next() + "/");
+    pn_connection_set_container(conn.pn_object(), id_.c_str());
+
     conn.open();
     return conn;
 }
@@ -171,7 +171,7 @@ sender container_impl::open_sender(const proton::url &url, const proton::link_op
     copts.override(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
-    sender snd = conn.default_session().create_sender(id_ + '-' + path);
+    sender snd = conn.default_session().create_sender();
     snd.local_target().address(path);
     snd.open(lopts);
     return snd;
@@ -184,7 +184,7 @@ receiver container_impl::open_receiver(const proton::url &url, const proton::lin
     copts.override(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
-    receiver rcv = conn.default_session().create_receiver(id_ + '-' + path);
+    receiver rcv = conn.default_session().create_receiver();
     rcv.local_source().address(path);
     rcv.open(lopts);
     return rcv;
@@ -206,13 +206,6 @@ acceptor container_impl::listen(const proton::url& url, const connection_options
     lc.connection_options = opts;
     lc.ssl = url.scheme() == url::AMQPS;
     return acceptor(acptr);
-}
-
-std::string container_impl::next_link_name() {
-    std::ostringstream s;
-    // TODO aconway 2015-09-01: atomic operation
-    s << std::hex << ++link_id_ << "@" << id_;
-    return s.str();
 }
 
 task container_impl::schedule(int delay, proton_handler *h) {
@@ -237,6 +230,8 @@ void container_impl::link_options(const proton::link_options &opts) {
 void container_impl::configure_server_connection(connection &c) {
     pn_acceptor_t *pnp = pn_connection_acceptor(connection_options::pn_connection(c));
     listener_context &lc(listener_context::get(pnp));
+    connection_context::get(c).link_gen.prefix(id_gen_.next() + "/");
+    pn_connection_set_container(c.pn_object(), id_.c_str());
     lc.connection_options.apply(c);
 }
 

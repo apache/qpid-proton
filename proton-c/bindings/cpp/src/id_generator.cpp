@@ -17,21 +17,20 @@
  * under the License.
  */
 
-#include "proton/error.hpp"
+#include "proton/id_generator.hpp"
+#include <sstream>
 
 namespace proton {
 
-error::error(const std::string& msg) : std::runtime_error(msg) {}
+id_generator::id_generator(const std::string& s) : prefix_(s), count_(0) {}
 
-timeout_error::timeout_error(const std::string& msg) : error(msg) {}
+void id_generator::prefix(const std::string& s) { prefix_ = s; }
 
-decode_error::decode_error(const std::string& msg) : error("decode: "+msg) {}
-
-encode_error::encode_error(const std::string& msg) : error("encode: "+msg) {}
-
-io_error::io_error(const std::string& msg) : error(msg) {}
-
-closed_error::closed_error(const std::string& msg) : io_error(msg) {}
-const std::string closed_error::default_msg("closed");
+std::string id_generator::next() {
+    // TODO aconway 2016-01-19: more efficient conversion, fixed buffer.
+    std::ostringstream o;
+    o << prefix_ << std::hex << ++count_;
+    return o.str();
+}
 
 }

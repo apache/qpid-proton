@@ -51,8 +51,9 @@ class container_impl;
  */
 class container {
   public:
-    /// Container ID should be unique within your system. By default a random ID is generated.
-    PN_CPP_EXTERN container(const std::string& id=std::string());
+    /// Container ID should be unique within your system.
+    /// By default a random ID is generated.
+    PN_CPP_EXTERN container(const std::string& id="");
 
     /// Container ID should be unique within your system. By default a random ID is generated.
     PN_CPP_EXTERN container(handler& mhandler, const std::string& id=std::string());
@@ -109,6 +110,7 @@ class container {
   private:
     pn_unique_ptr<container_impl> impl_;
     friend class connector;
+  friend class link;
 };
 
 }

@@ -31,6 +31,7 @@ namespace proton {
 class proton_handler;
 class container;
 class connection;
+class connection_engine;
 
 /** Event information for a proton::proton_handler */
 class proton_event
@@ -290,6 +291,7 @@ class proton_event
     event_type type_;
     class container *container_;
   friend class messaging_event;
+  friend class connection_engine;
 };
 
 }

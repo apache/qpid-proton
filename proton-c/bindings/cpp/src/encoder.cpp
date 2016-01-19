@@ -28,6 +28,8 @@
 
 #include <proton/codec.h>
 
+#include <algorithm>
+
 namespace proton {
 
 namespace {
@@ -63,7 +65,8 @@ bool encoder::encode(char* buffer, size_t& size) {
 }
 
 void encoder::encode(std::string& s) {
-    size_t size = s.size();
+    s.resize(std::max(s.capacity(), size_t(1))); // Use full capacity, ensure not empty
+	size_t size = s.size();
     if (!encode(&s[0], size)) {
         s.resize(size);
         encode(&s[0], size);

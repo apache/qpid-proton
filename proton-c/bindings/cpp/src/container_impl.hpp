@@ -27,6 +27,7 @@
 #include "proton/link.hpp"
 #include "proton/duration.hpp"
 #include "proton/reactor.hpp"
+#include "proton/id_generator.hpp"
 
 #include "proton_handler.hpp"
 
@@ -76,7 +77,7 @@ class container_impl
     pn_unique_ptr<proton_handler> override_handler_;
     pn_unique_ptr<proton_handler> flow_controller_;
     std::string id_;
-    uint64_t link_id_;
+    id_generator id_gen_;
     connection_options client_connection_options_;
     connection_options server_connection_options_;
     proton::link_options link_options_;

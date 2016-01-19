@@ -106,7 +106,8 @@ class queues {
 
     // Get or create a queue.
     virtual queue &get(const std::string &address = std::string()) {
-        if (address.empty()) throw std::runtime_error("empty queue name");
+        if (address.empty())
+            throw std::runtime_error("empty queue name");
         queue*& q = queues_[address];
         if (!q) q = new queue(address);
         return *q;

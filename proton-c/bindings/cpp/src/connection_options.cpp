@@ -51,6 +51,7 @@ class connection_options::impl {
     option<duration> idle_timeout;
     option<duration> heartbeat;
     option<std::string> container_id;
+    option<std::string> link_prefix;
     option<reconnect_timer> reconnect;
     option<class client_domain> client_domain;
     option<class server_domain> server_domain;
@@ -85,11 +86,13 @@ class connection_options::impl {
                         throw error(MSG("error in SSL/TLS peer hostname \"") << peer_hostname.value << '"');
             } else if (!outbound) {
                 pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
-                listener_context &lc(listener_context::get(pnp));
-                if (lc.ssl) {
-                    pn_ssl_t *ssl = pn_ssl(pnt);
-                    if (pn_ssl_init(ssl, server_domain.value.pn_domain(), NULL))
-                        throw error(MSG("server SSL/TLS initialization error"));
+                if (pnp) {
+                    listener_context &lc(listener_context::get(pnp));
+                    if (lc.ssl) {
+                        pn_ssl_t *ssl = pn_ssl(pnt);
+                        if (pn_ssl_init(ssl, server_domain.value.pn_domain(), NULL))
+                            throw error(MSG("server SSL/TLS initialization error"));
+                    }
                 }
             }
 
@@ -121,6 +124,8 @@ class connection_options::impl {
                 outbound->reconnect_timer(reconnect.value);
             if (container_id.set)
                 pn_connection_set_container(pnc, container_id.value.c_str());
+            if (link_prefix.set)
+                connection_context::get(pnc).link_gen.prefix(link_prefix.value);
         }
     }
 
@@ -131,6 +136,7 @@ class connection_options::impl {
         idle_timeout.override(x.idle_timeout);
         heartbeat.override(x.heartbeat);
         container_id.override(x.container_id);
+        link_prefix.override(x.link_prefix);
         reconnect.override(x.reconnect);
         client_domain.override(x.client_domain);
         server_domain.override(x.server_domain);
@@ -164,6 +170,7 @@ connection_options& connection_options::max_channels(uint16_t n) { impl_->max_fr
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
 connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
+connection_options& connection_options::link_prefix(const std::string &id) { impl_->link_prefix = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::client_domain(const class client_domain &c) { impl_->client_domain = c; return *this; }
 connection_options& connection_options::server_domain(const class server_domain &c) { impl_->server_domain = c; return *this; }

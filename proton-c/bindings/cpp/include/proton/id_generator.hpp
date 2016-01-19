@@ -17,21 +17,25 @@
  * under the License.
  */
 
-#include "proton/error.hpp"
+#include "proton/types.hpp"
+
+#ifndef ID_GENERATOR_HPP
+#define ID_GENERATOR_HPP
 
 namespace proton {
 
-error::error(const std::string& msg) : std::runtime_error(msg) {}
+///@internal
+class id_generator {
+  public:
+    PN_CPP_EXTERN id_generator(const std::string &prefix="");
+    PN_CPP_EXTERN void prefix(const std::string &);
+    PN_CPP_EXTERN std::string next();
 
-timeout_error::timeout_error(const std::string& msg) : error(msg) {}
-
-decode_error::decode_error(const std::string& msg) : error("decode: "+msg) {}
-
-encode_error::encode_error(const std::string& msg) : error("encode: "+msg) {}
-
-io_error::io_error(const std::string& msg) : error(msg) {}
-
-closed_error::closed_error(const std::string& msg) : io_error(msg) {}
-const std::string closed_error::default_msg("closed");
+  private:
+    std::string prefix_;
+    uint64_t count_;
+};
 
 }
+
+#endif

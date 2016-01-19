@@ -29,6 +29,7 @@
 
 using namespace std;
 using namespace proton;
+using namespace test;
 
 // Inserting and extracting simple C++ values.
 template <class T> void type_test(T x, type_id tid, T y) {

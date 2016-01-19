@@ -46,13 +46,13 @@ static ssize_t transport_consume(pn_transport_t *transport);
 /*
  * Call this any time anything happens that may affect channel_max:
  * i.e. when the app indicates a preference, or when we receive the
- * OPEN frame from the remote peer.  And call it to do the final 
- * calculation just before we communicate our limit to the remote 
+ * OPEN frame from the remote peer.  And call it to do the final
+ * calculation just before we communicate our limit to the remote
  * peer by sending our OPEN frame.
  */
 static void pni_calculate_channel_max(pn_transport_t *transport) {
   /*
-   * The application cannot make the limit larger than 
+   * The application cannot make the limit larger than
    * what this library will allow.
    */
   transport->channel_max = (PN_IMPL_CHANNEL_MAX < transport->local_channel_max)
@@ -60,7 +60,7 @@ static void pni_calculate_channel_max(pn_transport_t *transport) {
                            : transport->local_channel_max;
 
   /*
-   * The remote peer's constraint is not valid until the 
+   * The remote peer's constraint is not valid until the
    * peer's open frame has been received.
    */
   if(transport->open_rcvd) {
@@ -409,18 +409,18 @@ static void pn_transport_initialize(void *object)
   transport->remote_max_frame = (uint32_t) 0xffffffff;
 
   /*
-   * We set the local limit on channels to 2^15, because 
+   * We set the local limit on channels to 2^15, because
    * parts of the code use the topmost bit (of a short)
    * as a flag.
-   * The peer that this transport connects to may also 
+   * The peer that this transport connects to may also
    * place its own limit on max channel number, and the
    * application may also set a limit.
-   * The maximum that we use will be the minimum of all 
+   * The maximum that we use will be the minimum of all
    * these constraints.
    */
-  // There is no constraint yet from remote peer, 
+  // There is no constraint yet from remote peer,
   // so set to max possible.
-  transport->remote_channel_max = 65535;  
+  transport->remote_channel_max = 65535;
   transport->local_channel_max  = PN_IMPL_CHANNEL_MAX;
   transport->channel_max        = transport->local_channel_max;
 
@@ -1183,7 +1183,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   int err = pn_data_scan(args, "D.[?HI]", &reply, &remote_channel, &next);
   if (err) return err;
 
-  // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max -- 
+  // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max --
   // express our displeasure by closing the connection with a framing error.
   if (remote_channel > transport->channel_max) {
     pn_do_error(transport,
@@ -2707,11 +2707,11 @@ uint16_t pn_transport_get_channel_max(pn_transport_t *transport)
 int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t requested_channel_max)
 {
   /*
-   * Once the OPEN frame has been sent, we have communicated our 
+   * Once the OPEN frame has been sent, we have communicated our
    * wishes to the remote client and there is no way to renegotiate.
    * After that point, we do not allow the application to make changes.
-   * Before that point, however, the app is free to either raise or 
-   * lower our local limit.  (But the app cannot raise it above the 
+   * Before that point, however, the app is free to either raise or
+   * lower our local limit.  (But the app cannot raise it above the
    * limit imposed by this library.)
    * The channel-max value will be finalized just before the OPEN frame
    * is sent.

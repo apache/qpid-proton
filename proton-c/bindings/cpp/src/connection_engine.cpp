@@ -21,7 +21,11 @@
 #include "proton/error.hpp"
 #include "proton/handler.hpp"
 
+#include "contexts.hpp"
 #include "messaging_adapter.hpp"
+#include "uuid.hpp"
+#include "msg.hpp"
+#include "proton_bits.hpp"
 #include "messaging_event.hpp"
 #include "proton_bits.hpp"
 #include "uuid.hpp"
@@ -30,106 +34,171 @@
 #include <proton/transport.h>
 #include <proton/event.h>
 
+#include <algorithm>
+
+#include <iosfwd>
+
 namespace proton {
 
-struct connection_engine::impl {
-
-    impl(class proton_handler& h, pn_transport_t *t) :
-        handler(h), transport(t), connection(pn_connection()), collector(pn_collector())
-    {}
-
-    ~impl() {
-        pn_transport_free(transport);
-        pn_connection_free(connection);
-        pn_collector_free(collector);
-    }
-
-    void check(int err, const std::string& msg) {
-        if (err)
-            throw proton::error(msg + error_str(pn_transport_error(transport), err));
-    }
-
-    pn_event_t *peek() { return pn_collector_peek(collector); }
-    void pop() { pn_collector_pop(collector); }
-
-    class proton_handler& handler;
-    pn_transport_t *transport;
-    pn_connection_t *connection;
-    pn_collector_t * collector;
-};
-
-connection_engine::connection_engine(handler &h, const std::string& id_) :
-    impl_(new impl(*h.messaging_adapter_.get(), pn_transport())) {
-    if (!impl_->transport || !impl_->connection || !impl_->collector)
-        throw error("connection_engine setup failed");
-    std::string id = id_.empty() ? uuid().str() : id_;
-    pn_connection_set_container(impl_->connection, id.c_str());
-    impl_->check(pn_transport_bind(impl_->transport, impl_->connection), "connection_engine bind: ");
-    pn_connection_collect(impl_->connection, impl_->collector);
+namespace {
+void set_error(connection_engine_context *ctx_, const std::string& reason) {
+    pn_condition_t *c = pn_transport_condition(ctx_->transport);
+    pn_condition_set_name(c, "io_error");
+    pn_condition_set_description(c, reason.c_str());
 }
 
-connection_engine::~connection_engine() {}
-
-buffer<char> connection_engine::input() {
-    ssize_t n = pn_transport_capacity(impl_->transport);
-    if (n <= 0)
-        return buffer<char>();
-    return buffer<char>(pn_transport_tail(impl_->transport), size_t(n));
+void close_transport(connection_engine_context *ctx_) {
+    if (pn_transport_pending(ctx_->transport) >= 0)
+        pn_transport_close_head(ctx_->transport);
+    if (pn_transport_capacity(ctx_->transport) >= 0)
+        pn_transport_close_tail(ctx_->transport);
 }
 
-void connection_engine::close_input() {
-    pn_transport_close_tail(impl_->transport);
-    run();
+std::string  make_id(const std::string s) { return s.empty() ? uuid().str() : s; }
 }
 
-void connection_engine::received(size_t n) {
-    impl_->check(pn_transport_process(impl_->transport, n), "connection_engine process: ");
-    run();
+connection_engine::container::container(const std::string& s) : id_(make_id(s)) {}
+
+std::string connection_engine::container::id() const { return id_; }
+
+connection_options connection_engine::container::make_options() {
+    connection_options opts = options_;
+    opts.container_id(id()).link_prefix(id_gen_.next()+"/");
+    return opts;
 }
 
-void connection_engine::run() {
-    for (pn_event_t *e = impl_->peek(); e; e = impl_->peek()) {
-        switch (pn_event_type(e)) {
-          case PN_CONNECTION_REMOTE_CLOSE:
-            pn_transport_close_tail(impl_->transport);
-            break;
-          case PN_CONNECTION_LOCAL_CLOSE:
-            pn_transport_close_head(impl_->transport);
-            break;
-          default:
-            break;
+void connection_engine::container::options(const connection_options &opts) {
+    options_ = opts;
+}
+
+connection_engine::connection_engine(class handler &h, const connection_options& opts) {
+    connection_ = proton::connection(take_ownership(pn_connection()).get());
+    pn_ptr<pn_transport_t> transport = take_ownership(pn_transport());
+    pn_ptr<pn_collector_t> collector = take_ownership(pn_collector());
+    if (!connection_ || !transport || !collector)
+        throw proton::error("engine create");
+    int err = pn_transport_bind(transport.get(), connection_.pn_object());
+    if (err)
+        throw error(msg() << "transport bind:" << pn_code(err));
+    pn_connection_collect(connection_.pn_object(), collector.get());
+
+    ctx_ = &connection_engine_context::get(connection_); // Creates context
+    ctx_->engine_handler = &h;
+    ctx_->transport = transport.release();
+    ctx_->collector = collector.release();
+    opts.apply(connection_);
+}
+
+connection_engine::~connection_engine() {
+    pn_transport_unbind(ctx_->transport);
+    pn_transport_free(ctx_->transport);
+    pn_ptr<pn_connection_t> c(connection_.pn_object());
+    connection_ = proton::connection();
+    pn_connection_free(c.release());
+    pn_collector_free(ctx_->collector);
+}
+
+bool connection_engine::process(int flags) {
+    if (closed()) throw closed_error("engine closed");
+    bool ok = process_nothrow(flags);
+    if (!ok && !error_str().empty()) throw io_error(error_str());
+    return ok;
+}
+
+bool connection_engine::process_nothrow(int flags) {
+    if (closed()) return false;
+    if (flags & WRITE) try_write();
+    dispatch();
+    if (flags & READ) try_read();
+    dispatch();
+
+    if (connection_.closed() && !closed()) {
+        dispatch();
+        while (can_write()) {
+            try_write(); // Flush final data.
         }
-        proton_event pevent(e, pn_event_type(e), 0);
-        pevent.dispatch(impl_->handler);
-        impl_->pop();
+        // no transport errors.
+        close_transport(ctx_);
+    }
+    if (closed()) {
+        pn_transport_unbind(ctx_->transport);
+        dispatch();
+        try { io_close(); } catch(const io_error&) {} // Tell the IO to close.
+    }
+    return !closed();
+}
+
+void connection_engine::dispatch() {
+    proton_handler& h = *ctx_->engine_handler->messaging_adapter_;
+    pn_collector_t* c = ctx_->collector;
+    for (pn_event_t *e = pn_collector_peek(c); e; e = pn_collector_peek(c)) {
+        if (pn_event_type(e) == PN_CONNECTION_INIT) {
+            // Make the messaging_adapter issue a START event.
+            proton_event(e, PN_REACTOR_INIT, 0).dispatch(h);
+        }
+        proton_event(e, pn_event_type(e), 0).dispatch(h);
+        pn_collector_pop(c);
     }
 }
 
-buffer<const char> connection_engine::output() {
-    ssize_t n = pn_transport_pending(impl_->transport);
-    if (n <= 0)
-        return buffer<const char>();
-    return buffer<const char>(pn_transport_head(impl_->transport), size_t(n));
+size_t connection_engine::can_read() const {
+    return std::max(ssize_t(0), pn_transport_capacity(ctx_->transport));
 }
 
-void connection_engine::sent(size_t n) {
-    pn_transport_pop(impl_->transport, n);
-    run();
+void connection_engine::try_read() {
+    size_t max = can_read();
+    if (max == 0) return;
+    try {
+        size_t n = io_read(pn_transport_tail(ctx_->transport), max);
+        if (n > max)
+            throw io_error(msg() << "read invalid size: " << n << " > " << max);
+        pn_transport_process(ctx_->transport, n);
+    } catch (const closed_error&) {
+        pn_transport_close_tail(ctx_->transport);
+    } catch (const io_error& e) {
+        set_error(ctx_, e.what());
+        pn_transport_close_tail(ctx_->transport);
+    }
 }
 
-void connection_engine::close_output() {
-    pn_transport_close_head(impl_->transport);
-    run();
+size_t connection_engine::can_write() const {
+    return std::max(ssize_t(0), pn_transport_pending(ctx_->transport));
+}
+
+void connection_engine::try_write() {
+    size_t max = can_write();
+    if (max == 0) return;
+    try {
+        size_t n = io_write(pn_transport_head(ctx_->transport), max);
+        if (n > max) {
+            throw io_error(msg() << "write invalid size: " << n << " > " << max);
+        }
+        pn_transport_pop(ctx_->transport, n);
+    } catch (const closed_error&) {
+        pn_transport_close_head(ctx_->transport);
+    } catch (const io_error& e) {
+        set_error(ctx_, e.what());
+        pn_transport_close_head(ctx_->transport);
+    }
 }
 
 bool connection_engine::closed() const {
-    return pn_transport_closed(impl_->transport);
+    return pn_transport_closed(ctx_->transport);
 }
 
-class connection connection_engine::connection() const {
-    return impl_->connection;
+std::string connection_engine::error_str() const {
+    pn_condition_t *c = pn_connection_remote_condition(connection_.pn_object());
+    if (!c || !pn_condition_is_set(c)) c = pn_transport_condition(ctx_->transport);
+    if (c && pn_condition_is_set(c)) {
+        std::ostringstream os;
+        os << pn_condition_get_name(c) << ": " << pn_condition_get_description(c);
+        return os.str();
+    }
+    return "";
 }
 
-std::string connection_engine::id() const { return connection().container_id(); }
+connection connection_engine::connection() const { return connection_.pn_object(); }
+
+const connection_options connection_engine::no_opts;
 
 }

@@ -22,17 +22,19 @@
 #include <proton/types.hpp>
 
 #include <string>
+#include <iosfwd>
 
 namespace proton {
 
-/// A simple random UUID-like value. Fallback if user does not provide a container id.
+/// A random UUID.
 struct uuid {
-    uuid();
+    PN_CPP_EXTERN uuid();
     uint8_t bytes[16];
-    std::string str();
-  private:
-    int b(int i) { return bytes[i]; }
+    PN_CPP_EXTERN std::string str()  const;
 };
+
+/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
 
 }
 

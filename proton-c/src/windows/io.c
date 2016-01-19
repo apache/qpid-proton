@@ -459,4 +459,3 @@ static int pni_socket_pair (pn_io_t *io, SOCKET sv[2]) {
   closesocket(sock);
   return 0;
 }
-

@@ -48,6 +48,7 @@ template <class T> class pn_ptr : private pn_ptr_base, public comparable<pn_ptr<
     pn_ptr& operator=(pn_ptr o) { std::swap(ptr_, o.ptr_); return *this; }
 
     T* get() const { return ptr_; }
+    T* release() { T *p = ptr_; ptr_ = 0; return p; }
     bool operator!() const { return !ptr_; }
 
   friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }

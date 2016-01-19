@@ -42,7 +42,8 @@ class connection : public object<pn_connection_t>, endpoint
   public:
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
 
-    /// Get the container, throw an exception if this connection is not managed by a container.
+    /// Get the container, throw an exception if this connection is not managed
+    /// by a container.
     PN_CPP_EXTERN class container &container() const;
 
     /// Get the transport for the connection.
@@ -56,9 +57,6 @@ class connection : public object<pn_connection_t>, endpoint
 
     /// Return the container-ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
-
-    // Set the container-ID for the connection
-    PN_CPP_EXTERN void container_id(const std::string& id);
 
     /** Initiate local open, not complete till messaging_handler::on_connection_opened()
      * or proton_handler::on_connection_remote_open()
@@ -95,14 +93,19 @@ class connection : public object<pn_connection_t>, endpoint
     /** Get the endpoint state */
     PN_CPP_EXTERN endpoint::state state() const;
 
+    /// True if the connection is fully closed, i.e. local and remote ends are closed.
+    bool closed() const { return (state()&LOCAL_CLOSED) && (state()&REMOTE_CLOSED); }
+
   private:
     PN_CPP_EXTERN void user(const std::string &);
     PN_CPP_EXTERN void password(const std::string &);
 
   friend class connection_context;
+  friend class connection_engine;
   friend class connection_options;
   friend class connector;
   friend class transport;
+  friend class container_impl;
 };
 
 }

@@ -69,6 +69,7 @@ class connection_options {
     PN_CPP_EXTERN connection_options& idle_timeout(duration);
     PN_CPP_EXTERN connection_options& heartbeat(duration);
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
+    PN_CPP_EXTERN connection_options& link_prefix(const std::string &id);
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
     PN_CPP_EXTERN connection_options& client_domain(const class client_domain &);
     PN_CPP_EXTERN connection_options& server_domain(const class server_domain &);
@@ -92,6 +93,7 @@ class connection_options {
 
   friend class container_impl;
   friend class connector;
+  friend class connection_engine;
 };
 
 } // namespace

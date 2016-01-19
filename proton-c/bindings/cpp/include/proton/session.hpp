@@ -61,14 +61,14 @@ class session : public object<pn_session_t>, public endpoint
      *@param name if specified must be unique, by default the container generates a name
      * of the form: <hex-digits> + "@" + container.id()
      */
-    PN_CPP_EXTERN receiver create_receiver(const std::string& name=std::string());
+    PN_CPP_EXTERN receiver create_receiver(const std::string& name="");
 
     /** An un-opened sender link, you can set link properties before calling open().
      *
      *@param name if specified must be unique, by default the container generates a name
      * of the form: <hex-digits> + "@" + container.id()
      */
-    PN_CPP_EXTERN sender create_sender(const std::string& name=std::string());
+    PN_CPP_EXTERN sender create_sender(const std::string& name="");
 
     /** Create and open a sender with target=addr and optional link options opts*/
     PN_CPP_EXTERN sender open_sender(const std::string &addr, const link_options &opts = link_options());

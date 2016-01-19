@@ -63,21 +63,15 @@ T* get_context(pn_record_t* record, pn_handle_t handle) {
 }
 
 context::~context() {}
+
 void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
+
 pn_class_t* context::pn_class() { return &cpp_context_class; }
 
-connection_context& connection_context::get(pn_connection_t* c) {
-    connection_context* ctx =
-        get_context<connection_context>(pn_connection_attachments(c), CONNECTION_CONTEXT);
-    if (!ctx) {
-        ctx =  context::create<connection_context>();
-        set_context(pn_connection_attachments(c), CONNECTION_CONTEXT, context::pn_class(), ctx);
-        pn_decref(ctx);
-    }
-    return *ctx;
-}
 
-connection_context& connection_context::get(const connection& c) { return get(c.pn_object()); }
+context::id connection_context::id(pn_connection_t* c) {
+    return context::id(pn_connection_attachments(c), CONNECTION_CONTEXT);
+}
 
 void container_context::set(const reactor& r, container& c) {
     set_context(pn_reactor_attachments(r.pn_object()), CONTAINER_CONTEXT, PN_VOID, &c);

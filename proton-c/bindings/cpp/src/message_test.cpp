@@ -27,6 +27,7 @@
 
 using namespace std;
 using namespace proton;
+using namespace test;
 
 
 #define CHECK_STR(ATTR) \
