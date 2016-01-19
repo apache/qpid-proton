@@ -68,7 +68,7 @@ void messaging_adapter::create_helpers() {
   }
 }
 
-messaging_adapter::messaging_adapter(messaging_handler &delegate,
+messaging_adapter::messaging_adapter(handler &delegate,
                                      int prefetch, bool auto_accept, bool auto_settle, bool peer_close_iserror) :
     delegate_(delegate),
     prefetch_(prefetch),

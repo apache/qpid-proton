@@ -20,7 +20,7 @@
  */
 
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/event.hpp"
 #include "proton/url.hpp"
 #include "proton/transport.hpp"
@@ -29,7 +29,7 @@
 
 using proton::connection_options;
 
-class handler_2 : public proton::messaging_handler {
+class handler_2 : public proton::handler {
     void on_connection_open(proton::event &e) {
         std::cout << "connection events going to handler_2" << std::endl;
         std::cout << "connection max_frame_size: " << e.connection().transport().max_frame_size() <<
@@ -38,7 +38,7 @@ class handler_2 : public proton::messaging_handler {
     }
 };
 
-class main_handler : public proton::messaging_handler {
+class main_handler : public proton::handler {
   private:
     proton::url url;
     handler_2 conn_handler;

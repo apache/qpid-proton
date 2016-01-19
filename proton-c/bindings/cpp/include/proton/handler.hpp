@@ -37,7 +37,7 @@ class messaging_adapter;
  * over-ride event handling member functions.
  * @see proton::messaging_event for meaning of events.
  */
-class messaging_handler
+class handler
 {
   public:
     /** Create a messaging_handler
@@ -46,10 +46,10 @@ class messaging_handler
      *@param auto_settle automatically settle on receipt of delivery for sent messages.
      *@param peer_close_is_error treat orderly remote connection close as error.
      */
-    PN_CPP_EXTERN messaging_handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
+    PN_CPP_EXTERN handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
                                     bool peer_close_is_error=false);
 
-    PN_CPP_EXTERN virtual ~messaging_handler();
+    PN_CPP_EXTERN virtual ~handler();
 
     ///@name Over-ride these member functions to handle events
     ///@{

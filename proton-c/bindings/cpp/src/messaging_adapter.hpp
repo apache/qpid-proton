@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 
 #include "proton_handler.hpp"
 
@@ -38,7 +38,7 @@ namespace proton {
 class messaging_adapter : public proton_handler
 {
   public:
-    PN_CPP_EXTERN messaging_adapter(messaging_handler &delegate,
+    PN_CPP_EXTERN messaging_adapter(handler &delegate,
                                     int prefetch, bool auto_accept, bool auto_settle,
                                     bool peer_close_is_error);
     PN_CPP_EXTERN virtual ~messaging_adapter();
@@ -56,7 +56,7 @@ class messaging_adapter : public proton_handler
     PN_CPP_EXTERN void on_timer_task(proton_event &e);
 
   private:
-    messaging_handler &delegate_;  // The handler for generated messaging_event's
+    handler &delegate_;  // The handler for generated messaging_event's
     int prefetch_;
     bool auto_accept_;
     bool auto_settle_;

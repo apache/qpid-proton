@@ -21,13 +21,13 @@
 
 #include "proton/container.hpp"
 #include "proton/event.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/link_options.hpp"
 
 #include <iostream>
 
-class browser : public proton::messaging_handler {
+class browser : public proton::handler {
   private:
     proton::url url;
 
