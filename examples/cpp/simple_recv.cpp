@@ -22,7 +22,8 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/value.hpp"
 #include "proton/message_id.hpp"
@@ -32,7 +33,7 @@
 
 
 
-class simple_recv : public proton::messaging_handler {
+class simple_recv : public proton::handler {
   private:
     proton::url url;
     proton::receiver receiver;

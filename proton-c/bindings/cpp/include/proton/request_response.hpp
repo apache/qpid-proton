@@ -24,7 +24,7 @@
 #include "proton/blocking_receiver.hpp"
 #include "proton/blocking_sender.hpp"
 #include "proton/export.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/pn_unique_ptr.hpp"
 
 #include <string>

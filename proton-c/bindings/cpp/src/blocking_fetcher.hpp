@@ -21,14 +21,15 @@
  * under the License.
  *
  */
-#include "proton/messaging_handler.hpp"
+#include "proton/delivery.hpp"
+#include "proton/handler.hpp"
 #include "proton/message.hpp"
 #include <string>
 #include <deque>
 
 namespace proton {
 
-class blocking_fetcher : public messaging_handler {
+class blocking_fetcher : public handler {
   public:
     blocking_fetcher(int prefetch);
     void on_message(event &e);

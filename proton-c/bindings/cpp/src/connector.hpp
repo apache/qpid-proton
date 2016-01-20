@@ -22,19 +22,19 @@
  *
  */
 
-#include "proton/proton_handler.hpp"
+#include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/url.hpp"
 #include "proton/event.h"
 #include "proton/reactor.h"
+
+#include "proton_handler.hpp"
+
 #include <string>
 
 
 namespace proton {
 
-class event;
-class connection;
-class transport;
 class reconnect_timer;
 
 class connector : public proton_handler
@@ -48,12 +48,12 @@ class connector : public proton_handler
     void apply_options();
     void reconnect_timer(const class reconnect_timer &);
     bool transport_configured();
-    virtual void on_connection_local_open(event &e);
-    virtual void on_connection_remote_open(event &e);
-    virtual void on_connection_init(event &e);
-    virtual void on_transport_closed(event &e);
-    virtual void on_transport_tail_closed(event &e);
-    virtual void on_timer_task(event &e);
+    virtual void on_connection_local_open(proton_event &e);
+    virtual void on_connection_remote_open(proton_event &e);
+    virtual void on_connection_init(proton_event &e);
+    virtual void on_transport_closed(proton_event &e);
+    virtual void on_transport_tail_closed(proton_event &e);
+    virtual void on_timer_task(proton_event &e);
 
   private:
     connection connection_;

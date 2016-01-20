@@ -22,9 +22,10 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/decoder.hpp"
+#include "proton/event.hpp"
 #include "proton/reactor.h"
 #include "proton/value.hpp"
 
@@ -36,7 +37,7 @@
 
 
 
-class reactor_send : public proton::messaging_handler {
+class reactor_send : public proton::handler {
   private:
     proton::url url_;
     proton::message message_;
@@ -53,7 +54,7 @@ class reactor_send : public proton::messaging_handler {
   public:
 
     reactor_send(const std::string &url, int c, int size, bool replying)
-        : messaging_handler(1024), // prefetch=1024
+        : handler(1024), // prefetch=1024
           url_(url), sent_(0), confirmed_(0), total_(c),
           received_(0), received_bytes_(0), replying_(replying) {
         if (replying_)

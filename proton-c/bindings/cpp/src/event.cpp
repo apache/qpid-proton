@@ -25,7 +25,6 @@
 #include "proton/delivery.hpp"
 #include "proton/error.hpp"
 #include "proton/event.hpp"
-#include "proton/handler.hpp"
 #include "proton/receiver.hpp"
 #include "proton/sender.hpp"
 

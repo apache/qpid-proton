@@ -18,9 +18,12 @@
  * under the License.
  *
  */
-#include "proton/link_options.hpp"
 #include "proton/link.hpp"
+#include "proton/link_options.hpp"
+#include "proton/handler.hpp"
+
 #include "msg.hpp"
+#include "messaging_adapter.hpp"
 
 
 namespace proton {
@@ -58,7 +61,7 @@ template <class T> struct option {
 
 class link_options::impl {
   public:
-    option<class handler*> handler;
+    option<proton_handler*> handler;
     option<terminus::distribution_mode_t> distribution_mode;
     option<bool> durable_subscription;
     option<link_delivery_mode_t> delivery_mode;
@@ -156,7 +159,7 @@ link_options& link_options::operator=(const link_options& x) {
 
 void link_options::override(const link_options& x) { impl_->override(*x.impl_); }
 
-link_options& link_options::handler(class handler *h) { impl_->handler = h; return *this; }
+link_options& link_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 link_options& link_options::browsing(bool b) { distribution_mode(b ? terminus::COPY : terminus::MOVE); return *this; }
 link_options& link_options::distribution_mode(terminus::distribution_mode_t m) { impl_->distribution_mode = m; return *this; }
 link_options& link_options::durable_subscription(bool b) {impl_->durable_subscription = b; return *this; }
@@ -167,6 +170,6 @@ link_options& link_options::lifetime_policy(lifetime_policy_t lp) {impl_->lifeti
 link_options& link_options::selector(const std::string &str) {impl_->selector = str; return *this; }
 
 void link_options::apply(link& l) const { impl_->apply(l); }
-handler* link_options::handler() const { return impl_->handler.value; }
+proton_handler* link_options::handler() const { return impl_->handler.value; }
 
 } // namespace proton

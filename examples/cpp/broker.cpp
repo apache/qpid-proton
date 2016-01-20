@@ -36,7 +36,7 @@ class broker {
   public:
     broker(const proton::url& url) : handler_(url, queues_) {}
 
-    proton::messaging_handler& handler() { return handler_; }
+    proton::handler& handler() { return handler_; }
 
   private:
 

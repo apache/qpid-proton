@@ -39,9 +39,6 @@ class event {
   public:
     virtual PN_CPP_EXTERN ~event();
 
-    /// Dispatch this event to a handler.
-    virtual PN_CPP_EXTERN void dispatch(handler &h) = 0;
-
     /// Return the name of the event type
     virtual PN_CPP_EXTERN std::string name() const = 0;
 

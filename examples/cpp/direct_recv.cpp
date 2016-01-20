@@ -23,7 +23,8 @@
 
 #include "proton/container.hpp"
 #include "proton/acceptor.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
 #include "proton/value.hpp"
@@ -31,7 +32,7 @@
 #include <iostream>
 #include <map>
 
-class direct_recv : public proton::messaging_handler {
+class direct_recv : public proton::handler {
   private:
     proton::url url;
     uint64_t expected;

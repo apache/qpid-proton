@@ -26,7 +26,7 @@
 
 namespace proton {
 
-blocking_fetcher::blocking_fetcher(int prefetch) : messaging_handler(prefetch, false /*auto_accept*/) {}
+blocking_fetcher::blocking_fetcher(int prefetch) : handler(prefetch, false /*auto_accept*/) {}
 
 void blocking_fetcher::on_message(event &e) {
     messages_.push_back(e.message());

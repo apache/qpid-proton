@@ -36,7 +36,6 @@ namespace proton {
 
 class container;
 class handler;
-class transport;
 
 /** A session is a collection of links */
 class session : public object<pn_session_t>, public endpoint

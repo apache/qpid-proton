@@ -104,7 +104,7 @@ class link : public object<pn_link_t> , public endpoint
     PN_CPP_EXTERN class session session() const;
 
     /** Set a custom handler for this link. */
-    PN_CPP_EXTERN void handler(class handler &);
+    PN_CPP_EXTERN void handler(proton_handler &);
 
     /** Unset any custom handler */
     PN_CPP_EXTERN void detach_handler();

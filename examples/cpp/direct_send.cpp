@@ -24,13 +24,14 @@
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/handler.hpp"
 #include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
 
-class simple_send : public proton::messaging_handler {
+class simple_send : public proton::handler {
   private:
     proton::url url;
     int sent;

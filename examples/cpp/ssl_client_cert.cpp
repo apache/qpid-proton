@@ -21,7 +21,8 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/handler.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
@@ -43,7 +44,7 @@ std::string cert_directory;
 std::string find_CN(const std::string &);
 
 
-struct server_handler : public proton::messaging_handler {
+struct server_handler : public proton::handler {
     proton::acceptor inbound_listener;
 
     void on_connection_open(proton::event &e) {
@@ -66,7 +67,7 @@ struct server_handler : public proton::messaging_handler {
 };
 
 
-class hello_world_direct : public proton::messaging_handler {
+class hello_world_direct : public proton::handler {
   private:
     proton::url url;
     server_handler s_handler;

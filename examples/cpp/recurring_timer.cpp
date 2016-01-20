@@ -22,26 +22,27 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/handler.hpp"
 #include "proton/task.hpp"
 
 #include <iostream>
 #include <map>
 
-class ticker : public proton::messaging_handler {
+class ticker : public proton::handler {
     void on_timer(proton::event &e) {
         std::cout << "Tick..." << std::endl;
     }
 };
 
-class tocker : public proton::messaging_handler {
+class tocker : public proton::handler {
     void on_timer(proton::event &e) {
         std::cout << "Tock..." << std::endl;
     }
 };
 
 
-class recurring : public proton::messaging_handler {
+class recurring : public proton::handler {
   private:
     int remaining_msecs, tick_ms;
     ticker tick_handler;

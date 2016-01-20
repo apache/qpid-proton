@@ -23,12 +23,12 @@
 #include "msg.hpp"
 
 #include "proton/error.hpp"
-#include "proton/handler.hpp"
 
 #include "proton/object.h"
-#include "proton/message.h"
-#include "proton/session.h"
 #include "proton/link.h"
+#include "proton/message.h"
+#include "proton/reactor.h"
+#include "proton/session.h"
 
 #include <typeinfo>
 

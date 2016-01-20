@@ -32,7 +32,7 @@
 
 namespace proton {
 
-class handler;
+class proton_handler;
 class connection;
 
 /** Options for creating a connection.
@@ -82,7 +82,7 @@ class connection_options {
 
   private:
     void apply(connection&) const;
-    class handler* handler() const;
+    proton_handler* handler() const;
     static pn_connection_t *pn_connection(connection &);
     class client_domain &client_domain();
     class server_domain &server_domain();

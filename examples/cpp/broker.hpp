@@ -27,7 +27,10 @@
  * the important differences between the examples.
  */
 
-#include "proton/messaging_handler.hpp"
+#include "proton/event.hpp"
+#include "proton/message.hpp"
+#include "proton/handler.hpp"
+#include "proton/sender.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
@@ -131,7 +134,7 @@ class queues {
 
 
 /** Common handler logic for brokers. */
-class broker_handler : public proton::messaging_handler {
+class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_HANDLER_H
-#define PROTON_CPP_HANDLER_H
+#ifndef PROTON_CPP_MESSAGING_HANDLER_H
+#define PROTON_CPP_MESSAGING_HANDLER_H
 
 /*
  *
@@ -22,48 +22,77 @@
  *
  */
 #include "proton/export.hpp"
-#include "proton/event.hpp"
 #include "proton/event.h"
-#include "proton/reactor.h"
-#include <vector>
+#include "proton/pn_unique_ptr.hpp"
+
+#include <stdexcept>
 
 namespace proton {
 
-/** Base class for event handlers.
- *
- * A handler can have child handlers which are called in order, after the parent handler.
- *
- * Note: handlers are not deleted automatically. They must not be deleted while
- * they are still in use.
- *
- * There are two simple strategies you can use:
- *
- * 1. Destroy handlers only after the container that uses them is closed.
- *
- * 2. Allocate handlers with `new` and call `delete this` in the appropriate
- * `on_*_closed` or `on_*_final` event that indicates the handler is no longer needed.
- *
+class event;
+class messaging_adapter;
+
+/** messaging_handler base class. Provides a simpler set of events than
+ * proton::proton_handler and automates some common tasks.  Subclass and
+ * over-ride event handling member functions.
+ * @see proton::messaging_event for meaning of events.
  */
-class handler {
+class handler
+{
   public:
-    PN_CPP_EXTERN handler();
+    /** Create a messaging_handler
+     *@param prefetch set flow control to automatically pre-fetch this many messages
+     *@param auto_accept automatically accept received messages after on_message()
+     *@param auto_settle automatically settle on receipt of delivery for sent messages.
+     *@param peer_close_is_error treat orderly remote connection close as error.
+     */
+    PN_CPP_EXTERN handler(int prefetch=10, bool auto_accept=true, bool auto_settle=true,
+                                    bool peer_close_is_error=false);
+
     PN_CPP_EXTERN virtual ~handler();
 
-    /// Called if a handler function is not over-ridden to handle an event.
+    ///@name Over-ride these member functions to handle events
+    ///@{
+    PN_CPP_EXTERN virtual void on_start(event &e);
+    PN_CPP_EXTERN virtual void on_message(event &e);
+    PN_CPP_EXTERN virtual void on_sendable(event &e);
+    PN_CPP_EXTERN virtual void on_disconnect(event &e);
+
+    PN_CPP_EXTERN virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_link_open(event &e);
+    PN_CPP_EXTERN virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_link_error(event &e);
+
+    PN_CPP_EXTERN virtual void on_delivery_accept(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_reject(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_release(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
+
+    PN_CPP_EXTERN virtual void on_transaction_declare(event &e);
+    PN_CPP_EXTERN virtual void on_transaction_commit(event &e);
+    PN_CPP_EXTERN virtual void on_transaction_abort(event &e);
+
+    PN_CPP_EXTERN virtual void on_timer(event &e);
+
     PN_CPP_EXTERN virtual void on_unhandled(event &e);
+    PN_CPP_EXTERN virtual void on_unhandled_error(event &e);
+    ///@}
 
-    /// Add a child handler, equivalent to this->push_back(&h)
-    /// h must not be deleted before this handler.
-    PN_CPP_EXTERN virtual void add_child_handler(handler &h);
-
-  public:
-    std::vector<handler*> children_;
-    typedef std::vector<handler*>::iterator iterator;
   private:
-    pn_ptr<pn_handler_t> pn_handler_;
-    friend class container_impl;
+    pn_unique_ptr<messaging_adapter> messaging_adapter_;
+    friend class container;
+    friend class connection_engine;
+    friend class connection_options;
+    friend class link_options;
 };
 
 }
 
-#endif  /*!PROTON_CPP_HANDLER_H*/
+#endif  /*!PROTON_CPP_MESSAGING_HANDLER_H*/
