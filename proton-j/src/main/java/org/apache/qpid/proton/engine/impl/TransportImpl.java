@@ -385,7 +385,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processDetach()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null)
@@ -458,7 +458,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processSenderFlow()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null)
@@ -673,7 +673,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processReceiverFlow()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null)
@@ -721,7 +721,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processAttach()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
 
@@ -841,7 +841,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processBegin()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null)
@@ -922,7 +922,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processEnd()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             EndpointImpl endpoint = _connectionEndpoint.getTransportHead();
             while(endpoint != null)
