@@ -207,21 +207,19 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void setChannelMax(int n)
+    public void setChannelMax(int channelMax)
     {
         if(_isOpenSent)
         {
           throw new IllegalArgumentException("Cannot change channel max after open frame has been sent");
         }
 
-        if(n < CHANNEL_MAX_LIMIT)
+        if(channelMax < 0 || channelMax >= (1<<16))
         {
-            _channelMax = n;
+            throw new NumberFormatException("Value \""+channelMax+"\" lies outside the range [0-" + (1<<16) +").");
         }
-        else
-        {
-            _channelMax = CHANNEL_MAX_LIMIT;
-        }
+
+        _channelMax = channelMax;
     }
 
     @Override

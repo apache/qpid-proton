@@ -216,10 +216,35 @@ public interface Transport extends Endpoint
 
     int getRemoteMaxFrameSize();
 
+    /**
+     * Gets the local channel-max value to be advertised to the remote peer
+     *
+     * @return the local channel-max value
+     * @see #setChannelMax(int)
+     */
     int getChannelMax();
 
-    void setChannelMax(int n);
+    /**
+     * Set the local value of channel-max, to be advertised to the peer on the
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-open">
+     * Open frame</a> emitted by the transport.
+     *
+     * The remote peers advertised channel-max can be observed using {@link #getRemoteChannelMax()}.
+     *
+     * @param channelMax the local channel-max to advertise to the peer, in range [0 - 2^16).
+     * @throws IllegalArgumentException if the value supplied is outside range [0 - 2^16).
+     */
+    void setChannelMax(int channelMax);
 
+    /**
+     * Gets the remote value of channel-max, as advertised by the peer on its
+     * <a href="http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-open">
+     * Open frame</a>.
+     *
+     * The local peers advertised channel-max can be observed using {@link #getChannelMax()}.
+     *
+     * @return the remote channel-max value
+     */
     int getRemoteChannelMax();
 
     ErrorCondition getCondition();

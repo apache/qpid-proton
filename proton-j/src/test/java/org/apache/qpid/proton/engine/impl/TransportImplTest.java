@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
@@ -225,6 +226,44 @@ public class TransportImplTest
         catch(IllegalStateException ise)
         {
             //expected, sasl must be initiated before processing begins
+        }
+    }
+
+    @Test
+    public void testChannelMaxDefault() throws Exception
+    {
+        Transport transport = Proton.transport();
+
+        assertEquals("Unesxpected value for channel-max", 65535, transport.getChannelMax());
+    }
+
+    @Test
+    public void testSetGetChannelMax() throws Exception
+    {
+        Transport transport = Proton.transport();
+
+        int channelMax = 456;
+        transport.setChannelMax(channelMax);
+        assertEquals("Unesxpected value for channel-max", channelMax, transport.getChannelMax());
+    }
+
+    @Test
+    public void testSetChannelMaxOutsideLegalUshortRangeThrowsIAE() throws Exception
+    {
+        Transport transport = Proton.transport();
+
+        try {
+            transport.setChannelMax( 1 << 16);
+            fail("Expected exception to be thrown");
+        } catch (IllegalArgumentException iae ){
+            // Expected
+        }
+
+        try {
+            transport.setChannelMax(-1);
+            fail("Expected exception to be thrown");
+        } catch (IllegalArgumentException iae ){
+            // Expected
         }
     }
 
