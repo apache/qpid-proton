@@ -1093,9 +1093,9 @@ public class TransportImpl extends EndpointImpl
             }
             else
             {
-                // TODO check null
                 transportSession = _localSessions.get(begin.getRemoteChannel().intValue());
                 if (transportSession == null) {
+                    // TODO handle failure rather than just throwing a nicer NPE
                     throw new NullPointerException("uncorrelated channel: " + begin.getRemoteChannel());
                 }
                 session = transportSession.getSession();
