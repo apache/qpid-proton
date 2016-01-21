@@ -805,10 +805,10 @@ public class TransportImpl extends EndpointImpl
 
     private void processOpen()
     {
-        if ((_condition != null ||
+        if (!_isOpenSent && (_condition != null ||
              (_connectionEndpoint != null &&
-              _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)) &&
-            !_isOpenSent) {
+              _connectionEndpoint.getLocalState() != EndpointState.UNINITIALIZED)))
+        {
             Open open = new Open();
             if (_connectionEndpoint != null) {
                 String cid = _connectionEndpoint.getLocalContainerId();
