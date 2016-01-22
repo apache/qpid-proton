@@ -76,9 +76,9 @@ class link_options::impl {
             if (local_address.set) {
                 const char *addr = local_address.value.empty() ? NULL : local_address.value.c_str();
                 if (sender)
-                    l.target().address(addr);
+                    l.local_target().address(addr);
                 else
-                    l.source().address(addr);
+                    l.local_source().address(addr);
             }
             if (delivery_mode.set) {
                 switch (delivery_mode.value) {
@@ -100,7 +100,7 @@ class link_options::impl {
                     l.detach_handler();
             }
             if (dynamic_address.set) {
-                terminus t = sender ? l.target() : l.source();
+                terminus t = sender ? l.local_target() : l.local_source();
                 t.dynamic(dynamic_address.value);
                 if (dynamic_address.value) {
                     std::string lp, dm;
@@ -119,13 +119,13 @@ class link_options::impl {
             }
             if (!sender) {
                 // receiver only options
-                if (distribution_mode.set) l.source().distribution_mode(distribution_mode.value);
+                if (distribution_mode.set) l.local_source().distribution_mode(distribution_mode.value);
                 if (durable_subscription.set && durable_subscription.value) {
-                    l.source().durability(terminus::DELIVERIES);
-                    l.source().expiry_policy(terminus::EXPIRE_NEVER);
+                    l.local_source().durability(terminus::DELIVERIES);
+                    l.local_source().expiry_policy(terminus::EXPIRE_NEVER);
                 }
                 if (selector.set && selector.value.size()) {
-                    encoder enc = l.source().filter().encode();
+                    encoder enc = l.local_source().filter().encode();
                     enc << start::map() << amqp_symbol("selector") << start::described()
                         << amqp_symbol("apache.org:selector-filter:string") << amqp_binary(selector.value) << finish();
                 }

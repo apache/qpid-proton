@@ -86,9 +86,9 @@ class link : public object<pn_link_t> , public endpoint
     PN_CPP_EXTERN int drained();
 
     /** Local source of the link. */
-    PN_CPP_EXTERN terminus source() const;
+    PN_CPP_EXTERN terminus local_source() const;
     /** Local target of the link. */
-    PN_CPP_EXTERN terminus target() const;
+    PN_CPP_EXTERN terminus local_target() const;
     /** Remote source of the link. */
     PN_CPP_EXTERN terminus remote_source() const;
     /** Remote target of the link. */

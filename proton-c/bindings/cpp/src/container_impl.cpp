@@ -172,7 +172,7 @@ sender container_impl::open_sender(const proton::url &url, const proton::link_op
     connection conn = connect(url, copts);
     std::string path = url.path();
     sender snd = conn.default_session().create_sender(id_ + '-' + path);
-    snd.target().address(path);
+    snd.local_target().address(path);
     snd.open(lopts);
     return snd;
 }
@@ -185,7 +185,7 @@ receiver container_impl::open_receiver(const proton::url &url, const proton::lin
     connection conn = connect(url, copts);
     std::string path = url.path();
     receiver rcv = conn.default_session().create_receiver(id_ + '-' + path);
-    rcv.source().address(path);
+    rcv.local_source().address(path);
     rcv.open(lopts);
     return rcv;
 }

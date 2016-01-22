@@ -65,8 +65,8 @@ class server : public proton::handler {
     void on_link_open(proton::event& e) {
         proton::link link = e.link();
         if (!!link.sender() && link.remote_source().dynamic()) {
-            link.source().address(generate_address());
-            senders[link.source().address()] = link.sender();
+            link.local_source().address(generate_address());
+            senders[link.local_source().address()] = link.sender();
         }
     }
 

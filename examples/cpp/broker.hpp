@@ -144,21 +144,21 @@ class broker_handler : public proton::handler {
             proton::terminus remote_source(lnk.remote_source());
             queue &q = remote_source.dynamic() ?
                 queues_.dynamic() : queues_.get(remote_source.address());
-            lnk.source().address(q.name());
+            lnk.local_source().address(q.name());
             q.subscribe(lnk.sender());
             std::cout << "broker outgoing link from " << q.name() << std::endl;
         }
         else {                  // Receiver
             std::string address = lnk.remote_target().address();
             if (!address.empty()) {
-                lnk.target().address(address);
+                lnk.local_target().address(address);
                 std::cout << "broker incoming link to " << address << std::endl;
             }
         }
     }
 
     void unsubscribe (proton::sender lnk) {
-        std::string address = lnk.source().address();
+        std::string address = lnk.local_source().address();
         if (queues_.get(address).unsubscribe(lnk))
             queues_.erase(address);
     }
@@ -187,13 +187,13 @@ class broker_handler : public proton::handler {
 
     void on_sendable(proton::event &e) {
         proton::link lnk = e.link();
-        std::string address = lnk.source().address();
+        std::string address = lnk.local_source().address();
         proton::sender s = lnk.sender();
         queues_.get(address).dispatch(&s);
     }
 
     void on_message(proton::event &e) {
-        std::string address = e.link().target().address();
+        std::string address = e.link().local_target().address();
         queues_.get(address).publish(e.message(), e.link().receiver());
     }
 

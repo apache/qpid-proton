@@ -40,7 +40,7 @@ blocking_sender::blocking_sender(blocking_connection &c, const std::string &addr
     blocking_link(c)
 {
     open(c.impl_->connection_.open_sender(address));
-    std::string ta = link_.target().address();
+    std::string ta = link_.local_target().address();
     std::string rta = link_.remote_target().address();
     if (ta.empty() || ta.compare(rta) != 0) {
         wait_for_closed();

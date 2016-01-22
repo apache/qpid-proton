@@ -55,7 +55,7 @@ sender session::create_sender(const std::string& name) {
 
 sender session::open_sender(const std::string &addr, const link_options &lo) {
     sender snd = create_sender();
-    snd.target().address(addr);
+    snd.local_target().address(addr);
     snd.open(lo);
     return snd;
 }
@@ -63,7 +63,7 @@ sender session::open_sender(const std::string &addr, const link_options &lo) {
 receiver session::open_receiver(const std::string &addr, const link_options &lo)
 {
     receiver rcv = create_receiver();
-    rcv.source().address(addr);
+    rcv.local_source().address(addr);
     rcv.open(lo);
     return rcv;
 }
@@ -84,4 +84,3 @@ link_range session::find_links(endpoint::state mask)  const {
 }
 
 } // namespace proton
-

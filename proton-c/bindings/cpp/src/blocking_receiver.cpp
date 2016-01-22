@@ -47,7 +47,7 @@ blocking_receiver::blocking_receiver(
     blocking_link(c), fetcher_(new blocking_fetcher(credit))
 {
     open(c.impl_->connection_.open_receiver(addr, link_options().dynamic_address(dynamic).handler(fetcher_.get())));
-    std::string sa = link_.source().address();
+    std::string sa = link_.local_source().address();
     std::string rsa = link_.remote_source().address();
     if (!sa.empty() && sa.compare(rsa) != 0) {
         wait_for_closed();
