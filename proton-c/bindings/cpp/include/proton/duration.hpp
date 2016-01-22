@@ -31,8 +31,8 @@ namespace proton {
 class duration
 {
   public:
-    amqp_ulong milliseconds;
-    explicit duration(amqp_ulong ms = 0) : milliseconds(ms) {}
+    uint64_t milliseconds;
+    explicit duration(uint64_t ms = 0) : milliseconds(ms) {}
 
     PN_CPP_EXTERN static const duration FOREVER; ///< Wait for ever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all

@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
         main_handler handler(url);
         proton::container container(handler);
         // Global connection options for future connections on container.
-        container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(15000));
+        container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
         container.run();
         return 0;
     } catch (const std::exception& e) {

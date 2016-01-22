@@ -48,8 +48,8 @@ class connection_options::impl {
     option<proton_handler*> handler;
     option<uint32_t> max_frame_size;
     option<uint16_t> max_channels;
-    option<uint32_t> idle_timeout;
-    option<uint32_t> heartbeat;
+    option<duration> idle_timeout;
+    option<duration> heartbeat;
     option<std::string> container_id;
     option<reconnect_timer> reconnect;
     option<class client_domain> client_domain;
@@ -113,7 +113,7 @@ class connection_options::impl {
             if (max_channels.set)
                 pn_transport_set_channel_max(pnt, max_channels.value);
             if (idle_timeout.set)
-                pn_transport_set_idle_timeout(pnt, idle_timeout.value);
+                pn_transport_set_idle_timeout(pnt, idle_timeout.value.milliseconds);
         }
         // Only apply connection options if uninit.
         if (uninit) {
@@ -161,8 +161,8 @@ void connection_options::override(const connection_options& x) { impl_->override
 connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::max_channels(uint16_t n) { impl_->max_frame_size = n; return *this; }
-connection_options& connection_options::idle_timeout(uint32_t t) { impl_->idle_timeout = t; return *this; }
-connection_options& connection_options::heartbeat(uint32_t t) { impl_->heartbeat = t; return *this; }
+connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
+connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::client_domain(const class client_domain &c) { impl_->client_domain = c; return *this; }

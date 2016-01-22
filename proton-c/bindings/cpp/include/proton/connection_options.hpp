@@ -66,8 +66,8 @@ class connection_options {
     PN_CPP_EXTERN connection_options& handler(class handler *);
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
     PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
-    PN_CPP_EXTERN connection_options& idle_timeout(uint32_t t);
-    PN_CPP_EXTERN connection_options& heartbeat(uint32_t t);
+    PN_CPP_EXTERN connection_options& idle_timeout(duration);
+    PN_CPP_EXTERN connection_options& heartbeat(duration);
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
     PN_CPP_EXTERN connection_options& client_domain(const class client_domain &);
