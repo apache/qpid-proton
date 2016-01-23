@@ -24,11 +24,12 @@
 
 #include "proton/export.hpp"
 #include "proton/types.hpp"
+#include "proton/comparable.hpp"
 
 namespace proton {
 
 /** Duration in milliseconds. */
-class duration
+class duration : public comparable<duration>
 {
   public:
     uint64_t milliseconds;

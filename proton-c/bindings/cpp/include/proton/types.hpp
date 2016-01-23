@@ -23,6 +23,7 @@
  * Defines C++ types representing AMQP types.
  */
 
+#include "proton/comparable.hpp"
 #include "proton/export.hpp"
 #include "proton/error.hpp"
 
@@ -79,14 +80,7 @@ struct type_error : public decode_error {
     type_id got;  ///< Actual type_id
 };
 
-
 ///@cond INTERNAL
-/// Provide a full set of comparison operators for proton:: types that have < and ==.
-template <class T> bool operator>(const T &a, const T &b) { return b < a; }
-template <class T> bool operator<=(const T &a, const T &b) { return !(a > b); }
-template <class T> bool operator>=(const T &a, const T &b) { return !(a < b); }
-template <class T> bool operator!=(const T &a, const T &b) { return !(a == b); }
-
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
 ///@endcond
@@ -140,7 +134,7 @@ struct amqp_binary : public std::string {
 };
 
 /// Template for opaque proton proton types that can be treated as byte arrays.
-template <class P> struct opaque {
+template <class P> struct opaque : public comparable<opaque<P> > {
     P value;
     opaque(const P& p=P()) : value(p) {}
     operator P() const { return value; }
@@ -171,7 +165,7 @@ typedef opaque<pn_decimal128_t> amqp_decimal128;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal128&);
 
 /// AMQP timestamp, milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
-struct amqp_timestamp {
+struct amqp_timestamp : public comparable<amqp_timestamp> {
     pn_timestamp_t milliseconds;
     amqp_timestamp(::int64_t ms=0) : milliseconds(ms) {}
     operator pn_timestamp_t() const { return milliseconds; }

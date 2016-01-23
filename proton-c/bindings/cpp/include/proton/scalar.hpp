@@ -19,7 +19,9 @@
  * under the License.
  */
 
+#include "proton/comparable.hpp"
 #include "proton/types.hpp"
+
 #include <iosfwd>
 #include <string>
 
@@ -29,7 +31,7 @@ class encoder;
 class decoder;
 
 /** scalar holds an instance of any scalar AMQP type. */
-class scalar {
+class scalar : public comparable<scalar> {
   public:
     PN_CPP_EXTERN scalar();
     PN_CPP_EXTERN scalar(const scalar&);
@@ -130,7 +132,7 @@ class scalar {
 };
 
 ///@internal base for restricted scalar types
-class restricted_scalar {
+class restricted_scalar : public comparable<restricted_scalar> {
   public:
     operator const scalar&() const { return scalar_; }
     type_id type() const { return scalar_.type(); }

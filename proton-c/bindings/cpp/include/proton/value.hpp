@@ -31,7 +31,7 @@ namespace proton {
  * from native C++ types.
  *
  */
-class value {
+class value : public comparable<value> {
   public:
     PN_CPP_EXTERN value();
     PN_CPP_EXTERN value(const value&);

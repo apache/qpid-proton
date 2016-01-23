@@ -23,6 +23,7 @@
  */
 #include "proton/export.hpp"
 #include "proton/connection.h"
+#include "proton/comparable.hpp"
 
 namespace proton {
 
@@ -63,7 +64,8 @@ class endpoint
 };
 
 ///@cond INTERNAL
-template <class T> class iter_base {
+
+template <class T> class iter_base  : public comparable<iter_base<T> > {
   public:
     typedef T value_type;
 
