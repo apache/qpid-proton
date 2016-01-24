@@ -53,8 +53,8 @@ class connection_options::impl {
     option<std::string> container_id;
     option<std::string> link_prefix;
     option<reconnect_timer> reconnect;
-    option<class client_domain> client_domain;
-    option<class server_domain> server_domain;
+    option<class ssl_client_options> ssl_client_options;
+    option<class ssl_server_options> ssl_server_options;
     option<std::string> peer_hostname;
     option<std::string> resume_id;
     option<bool> sasl_enabled;
@@ -79,7 +79,7 @@ class connection_options::impl {
             if (outbound && outbound->address().scheme() == url::AMQPS) {
                 const char* id = resume_id.value.empty() ? NULL : resume_id.value.c_str();
                 pn_ssl_t *ssl = pn_ssl(pnt);
-                if (pn_ssl_init(ssl, client_domain.value.pn_domain(), id))
+                if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), id))
                     throw error(MSG("client SSL/TLS initialization error"));
                 if (peer_hostname.set && !peer_hostname.value.empty())
                     if (pn_ssl_set_peer_hostname(ssl, peer_hostname.value.c_str()))
@@ -90,7 +90,7 @@ class connection_options::impl {
                     listener_context &lc(listener_context::get(pnp));
                     if (lc.ssl) {
                         pn_ssl_t *ssl = pn_ssl(pnt);
-                        if (pn_ssl_init(ssl, server_domain.value.pn_domain(), NULL))
+                        if (pn_ssl_init(ssl, ssl_server_options.value.pn_domain(), NULL))
                             throw error(MSG("server SSL/TLS initialization error"));
                     }
                 }
@@ -138,8 +138,8 @@ class connection_options::impl {
         container_id.override(x.container_id);
         link_prefix.override(x.link_prefix);
         reconnect.override(x.reconnect);
-        client_domain.override(x.client_domain);
-        server_domain.override(x.server_domain);
+        ssl_client_options.override(x.ssl_client_options);
+        ssl_server_options.override(x.ssl_server_options);
         resume_id.override(x.resume_id);
         peer_hostname.override(x.peer_hostname);
         sasl_enabled.override(x.sasl_enabled);
@@ -172,8 +172,8 @@ connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
 connection_options& connection_options::link_prefix(const std::string &id) { impl_->link_prefix = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
-connection_options& connection_options::client_domain(const class client_domain &c) { impl_->client_domain = c; return *this; }
-connection_options& connection_options::server_domain(const class server_domain &c) { impl_->server_domain = c; return *this; }
+connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
+connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
 connection_options& connection_options::resume_id(const std::string &id) { impl_->resume_id = id; return *this; }
 connection_options& connection_options::peer_hostname(const std::string &name) { impl_->peer_hostname = name; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
@@ -183,8 +183,8 @@ connection_options& connection_options::sasl_config_name(const std::string &n) {
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
-class client_domain &connection_options::client_domain() { return impl_->client_domain.value; }
-class server_domain &connection_options::server_domain() { return impl_->server_domain.value; }
+class ssl_client_options &connection_options::ssl_client_options() { return impl_->ssl_client_options.value; }
+class ssl_server_options &connection_options::ssl_server_options() { return impl_->ssl_server_options.value; }
 proton_handler* connection_options::handler() const { return impl_->handler.value; }
 pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }
 } // namespace proton

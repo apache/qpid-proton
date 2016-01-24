@@ -53,6 +53,7 @@ pn_ssl_domain_t *ssl_domain_impl::pn_domain() {
     return pn_domain_;
 }
 
+namespace internal {
 ssl_domain::ssl_domain(bool is_server) : impl_(new ssl_domain_impl(is_server)) {}
 
 ssl_domain::ssl_domain(const ssl_domain &x) {
@@ -60,7 +61,7 @@ ssl_domain::ssl_domain(const ssl_domain &x) {
     impl_->incref();
 }
 
-ssl_domain& ssl_domain::operator=(const ssl_domain&x) {
+ssl_domain& internal::ssl_domain::operator=(const ssl_domain&x) {
     impl_->decref();
     impl_ = x.impl_;
     impl_->incref();
@@ -71,6 +72,7 @@ ssl_domain::~ssl_domain() { impl_->decref(); }
 
 pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_->pn_domain(); }
 
+} // namespace internal
 
 namespace {
 
@@ -83,15 +85,15 @@ void set_cred(pn_ssl_domain_t *dom, const std::string &main, const std::string &
 }
 }
 
-server_domain::server_domain(ssl_certificate &cert) : ssl_domain(true) {
+ssl_server_options::ssl_server_options(ssl_certificate &cert) : internal::ssl_domain(true) {
     set_cred(pn_domain(), cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
 }
 
-server_domain::server_domain(
+ssl_server_options::ssl_server_options(
     ssl_certificate &cert,
     const std::string &trust_db,
     const std::string &advertise_db,
-    enum ssl::verify_mode mode) : ssl_domain(true)
+    enum ssl::verify_mode mode) : internal::ssl_domain(true)
 {
     pn_ssl_domain_t* dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
@@ -102,7 +104,7 @@ server_domain::server_domain(
         throw error(MSG("SSL server configuration failure requiring client certificates using " << db));
 }
 
-server_domain::server_domain() : ssl_domain(true) {}
+ssl_server_options::ssl_server_options() : ssl_domain(true) {}
 
 namespace {
 void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, enum ssl::verify_mode mode) {
@@ -113,17 +115,17 @@ void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, enum ssl::v
 }
 }
 
-client_domain::client_domain(const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
+ssl_client_options::ssl_client_options(const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
     client_setup(pn_domain(), trust_db, mode);
 }
 
-client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
+ssl_client_options::ssl_client_options(ssl_certificate &cert, const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
     pn_ssl_domain_t *dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     client_setup(dom, trust_db, mode);
 }
 
-client_domain::client_domain() : ssl_domain(false) {}
+ssl_client_options::ssl_client_options() : ssl_domain(false) {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}

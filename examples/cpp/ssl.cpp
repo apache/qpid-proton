@@ -30,8 +30,8 @@
 #include <iostream>
 
 using proton::connection_options;
-using proton::client_domain;
-using proton::server_domain;
+using proton::ssl_client_options;
+using proton::ssl_server_options;
 using proton::ssl_certificate;
 
 // Helper functions defined below.
@@ -68,14 +68,14 @@ class hello_world_direct : public proton::handler {
     void on_start(proton::event &e) {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
-        server_domain sdomain(server_cert);
+        ssl_server_options ssl_srv(server_cert);
         connection_options server_opts;
-        server_opts.server_domain(sdomain).handler(&s_handler);
+        server_opts.ssl_server_options(ssl_srv).handler(&s_handler);
         e.container().server_connection_options(server_opts);
 
         // Configure client with a Certificate Authority database populated with the server's self signed certificate.
         connection_options client_opts;
-        client_opts.client_domain(platform_CA("tserver"));
+        client_opts.ssl_client_options(platform_CA("tserver"));
         // Validate the server certificate against the known name in the certificate.
         client_opts.peer_hostname("test_server");
         e.container().client_connection_options(client_opts);

@@ -67,13 +67,14 @@ class ssl_certificate {
     std::string certdb_extra_;
     std::string passwd_;
     bool pw_set_;
-    friend class client_domain;
-    friend class server_domain;
+    friend class ssl_client_options;
+    friend class ssl_server_options;
 };
 
 
 class ssl_domain_impl;
 
+namespace internal {
 // Base class for SSL configuration
 class ssl_domain {
   public:
@@ -88,37 +89,39 @@ class ssl_domain {
   private:
     ssl_domain_impl *impl_;
 };
+}
+
 
 /** SSL/TLS configuration for inbound connections created from a listener */
-class server_domain : private ssl_domain {
+class ssl_server_options : private internal::ssl_domain {
   public:
-    /** A server domain based on the supplied X509 certificate specifier. */
-    PN_CPP_EXTERN server_domain(ssl_certificate &cert);
-    /** A server domain requiring connecting clients to provide a client certificate. */
-    PN_CPP_EXTERN server_domain(ssl_certificate &cert, const std::string &trust_db,
+    /** SSL options for servers based on the supplied X509 certificate specifier. */
+    PN_CPP_EXTERN ssl_server_options(ssl_certificate &cert);
+    /** SSL options for servers requiring connecting clients to provide a client certificate. */
+    PN_CPP_EXTERN ssl_server_options(ssl_certificate &cert, const std::string &trust_db,
                                 const std::string &advertise_db = std::string(),
                                 enum ssl::verify_mode mode = ssl::VERIFY_PEER);
-    /** A server domain restricted to available anonymous cipher suites on the platform. */
-    PN_CPP_EXTERN server_domain();
+    /** SSL options for servers restricted to available anonymous cipher suites on the platform. */
+    PN_CPP_EXTERN ssl_server_options();
 
   private:
     // Bring pn_domain into scope and allow connection_options to use it
-    using ssl_domain::pn_domain;
+    using internal::ssl_domain::pn_domain;
     friend class connection_options;
 };
 
 
-/** SSL/TLS configuration for outgoing connections created */
-class client_domain : private ssl_domain {
+/** SSL/TLS configuration for outgoing connections */
+class ssl_client_options : private internal::ssl_domain {
   public:
-    PN_CPP_EXTERN client_domain(const std::string &trust_db, enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
-    PN_CPP_EXTERN client_domain(ssl_certificate&, const std::string &trust_db, enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+    PN_CPP_EXTERN ssl_client_options(const std::string &trust_db, enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
+    PN_CPP_EXTERN ssl_client_options(ssl_certificate&, const std::string &trust_db, enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
     /** A client domain restricted to available anonymous cipher suites on the platform. */
-    PN_CPP_EXTERN client_domain();
+    PN_CPP_EXTERN ssl_client_options();
 
   private:
     // Bring pn_domain into scope and allow connection_options to use it
-    using ssl_domain::pn_domain;
+    using internal::ssl_domain::pn_domain;
     friend class connection_options;
 };
 

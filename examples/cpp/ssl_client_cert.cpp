@@ -31,8 +31,8 @@
 #include <iostream>
 
 using proton::connection_options;
-using proton::client_domain;
-using proton::server_domain;
+using proton::ssl_client_options;
+using proton::ssl_server_options;
 using proton::ssl_certificate;
 using proton::sasl;
 
@@ -80,18 +80,18 @@ class hello_world_direct : public proton::handler {
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         std::string client_CA = platform_CA("tclient");
         // Specify an SSL domain with CA's for client certificate verification.
-        server_domain sdomain(server_cert, client_CA);
+        ssl_server_options srv_ssl(server_cert, client_CA);
         connection_options server_opts;
-        server_opts.server_domain(sdomain).handler(&s_handler);
+        server_opts.ssl_server_options(srv_ssl).handler(&s_handler);
         server_opts.allowed_mechs("EXTERNAL");
         e.container().server_connection_options(server_opts);
 
         // Configure client.
         ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
         std::string server_CA = platform_CA("tserver");
-        client_domain cdomain(client_cert, server_CA);
+        ssl_client_options ssl_cli(client_cert, server_CA);
         connection_options client_opts;
-        client_opts.client_domain(cdomain).allowed_mechs("EXTERNAL");
+        client_opts.ssl_client_options(ssl_cli).allowed_mechs("EXTERNAL");
         // Validate the server certificate against this name:
         client_opts.peer_hostname("test_server");
         e.container().client_connection_options(client_opts);

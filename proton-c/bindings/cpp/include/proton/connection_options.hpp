@@ -71,8 +71,8 @@ class connection_options {
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
     PN_CPP_EXTERN connection_options& link_prefix(const std::string &id);
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
-    PN_CPP_EXTERN connection_options& client_domain(const class client_domain &);
-    PN_CPP_EXTERN connection_options& server_domain(const class server_domain &);
+    PN_CPP_EXTERN connection_options& ssl_client_options(const class ssl_client_options &);
+    PN_CPP_EXTERN connection_options& ssl_server_options(const class ssl_server_options &);
     PN_CPP_EXTERN connection_options& peer_hostname(const std::string &name);
     PN_CPP_EXTERN connection_options& resume_id(const std::string &id);
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
@@ -85,8 +85,8 @@ class connection_options {
     void apply(connection&) const;
     proton_handler* handler() const;
     static pn_connection_t *pn_connection(connection &);
-    class client_domain &client_domain();
-    class server_domain &server_domain();
+    class ssl_client_options &ssl_client_options();
+    class ssl_server_options &ssl_server_options();
 
     class impl;
     pn_unique_ptr<impl> impl_;
