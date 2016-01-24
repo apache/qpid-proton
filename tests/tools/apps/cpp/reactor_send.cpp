@@ -36,7 +36,6 @@
 #include <stdio.h>
 
 
-
 class reactor_send : public proton::handler {
   private:
     proton::url url_;
@@ -84,6 +83,7 @@ class reactor_send : public proton::handler {
 
     void on_accepted(proton::event &e) {
         confirmed_++;
+        e.delivery().settle();
         if (confirmed_ == total_) {
             std::cout << "all messages confirmed" << std::endl;
             if (!replying_)
@@ -98,6 +98,7 @@ class reactor_send : public proton::handler {
         if (received_ < total_) {
             received_++;
         }
+        e.delivery().settle();
         if (received_ == total_) {
             e.receiver().close();
             e.connection().close();

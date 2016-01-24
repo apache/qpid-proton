@@ -40,6 +40,7 @@ class Send(MessagingHandler):
             self.message.reply_to = "localhost/test"
 
     def on_start(self, event):
+        event.container.sasl_enabled = False
         event.container.create_sender(self.url)
 
     def on_sendable(self, event):
