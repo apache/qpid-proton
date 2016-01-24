@@ -32,32 +32,6 @@
 
 namespace proton {
 
-/** The message delivery policy to establish when opening the link. */
-enum link_delivery_mode_t {
-    // No set policy.  The application must settle messages itself according to its own policy.
-    NONE = 0,
-    // Outgoing messages are settled immediately by the link.  There are no duplicates.
-    AT_MOST_ONCE,
-    // The receiver settles the delivery first with an accept/reject/release disposition.
-    // The sender waits to settle until after the disposition notification is received.
-    AT_LEAST_ONCE
-};
-
-/** The lifetime of dynamically created nodes. */
-enum lifetime_policy_t {
-    // The policy is unspecified.
-    UNSPECIFIED = 0,
-    // The lifetime of the dynamic node is scoped to lifetime of the creating link.
-    DELETE_ON_CLOSE = 0x2B,
-    // The node will be deleted when it is neither the source nor the target of any link.
-    DELETE_ON_NO_LINKS = 0x2C,
-    // The node will be deleted when the creating link no longer exists and no messages remain at the node.
-    DELETE_ON_NO_MESSAGES = 0x2D,
-    // The node will be deleted when there are no links which have this node as
-    // their source or target, and there remain no messages at the node.
-    DELETE_ON_NO_LINKS_OR_MESSAGES = 0x2E
-};
-
 class proton_handler;
 class link;
 
@@ -79,6 +53,46 @@ class link;
  */
 class link_options {
   public:
+    /** The message delivery policy to establish when opening a link. */
+    enum delivery_mode {
+        // No set policy.  The application must settle messages itself according to its own policy.
+        DELIVERY_MODE_NONE = 0,
+        // Outgoing messages are settled immediately by the link.  There are no duplicates.
+        AT_MOST_ONCE,
+        // The receiver settles the delivery first with an accept/reject/release disposition.
+        // The sender waits to settle until after the disposition notification is received.
+        AT_LEAST_ONCE
+    };
+
+    /// Sender settlement behaviour for a link
+    enum sender_settle_mode {
+        UNSETTLED = PN_SND_UNSETTLED,
+        SETTLED = PN_SND_SETTLED,
+        MIXED = PN_SND_MIXED
+    };
+
+    /// Receiver settlement behaviour for a link
+    enum receiver_settle_mode {
+        SETTLE_ALWAYS = PN_RCV_FIRST,
+        SETTLE_SECOND= PN_RCV_SECOND
+    };
+
+    /** The lifetime of dynamically created nodes. */
+    enum lifetime_policy {
+        // The policy is unspecified.
+        LIFETIME_UNSPECIFIED = 0,
+        // The lifetime of the dynamic node is scoped to lifetime of the creating link.
+        DELETE_ON_CLOSE = 0x2B,
+        // The node will be deleted when it is neither the source nor the target of any link.
+        DELETE_ON_NO_LINKS = 0x2C,
+        // The node will be deleted when the creating link no longer exists and no messages remain at the node.
+        DELETE_ON_NO_MESSAGES = 0x2D,
+        // The node will be deleted when there are no links which have this node as
+        // their source or target, and there remain no messages at the node.
+        DELETE_ON_NO_LINKS_OR_MESSAGES = 0x2E
+    };
+
+
     PN_CPP_EXTERN link_options();
     PN_CPP_EXTERN link_options(const link_options&);
     PN_CPP_EXTERN ~link_options();
@@ -94,18 +108,18 @@ class link_options {
         distribution_mode(COPY).  Setting browsing to false is equivalent to
         setting distribution_mode(MOVE). */
     PN_CPP_EXTERN link_options& browsing(bool);
-    /** Set the distribution mode for message transfer.  See terminus::distribution_mode_t. */
-    PN_CPP_EXTERN link_options& distribution_mode(terminus::distribution_mode_t);
+    /** Set the distribution mode for message transfer.  See terminus::distribution_mode. */
+    PN_CPP_EXTERN link_options& distribution_mode(enum terminus::distribution_mode);
     /* Receiver-only option to create a durable subsription on the receiver.
        Equivalent to setting the terminus durability to termins::DELIVERIES and
        the expiry policy to terminus::EXPIRE_NEVER. */
     PN_CPP_EXTERN link_options& durable_subscription(bool);
     /* Set the delivery mode on the link. */
-    PN_CPP_EXTERN link_options& delivery_mode(link_delivery_mode_t);
+    PN_CPP_EXTERN link_options& delivery_mode(delivery_mode);
     /* Request a dynamically generated node at the peer. */
     PN_CPP_EXTERN link_options& dynamic_address(bool);
     /* Set the lifetime policy for a receiver to a dynamically created node. */
-    PN_CPP_EXTERN link_options& lifetime_policy(lifetime_policy_t);
+    PN_CPP_EXTERN link_options& lifetime_policy(lifetime_policy);
     /* Set the local address for the link. */
     PN_CPP_EXTERN link_options& local_address(const std::string &addr);
     /* Set a selector on the receiver to str.  This sets a single registered filter on the link of

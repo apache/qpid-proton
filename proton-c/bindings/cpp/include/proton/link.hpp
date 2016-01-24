@@ -40,19 +40,6 @@ class receiver;
 class link : public object<pn_link_t> , public endpoint
 {
   public:
-    /// Sender settlement behaviour for a link
-    enum sender_settle_mode_t {
-        UNSETTLED = PN_SND_UNSETTLED,
-        SETTLED = PN_SND_SETTLED,
-        MIXED = PN_SND_MIXED
-    };
-
-    /// Receiver settlement behaviour for a link
-    enum receiver_settle_mode_t {
-        SETTLE_ALWAYS = PN_RCV_FIRST,
-        SETTLE_SECOND= PN_RCV_SECOND
-    };
-
     link(pn_link_t* l=0) : object<pn_link_t>(l) {}
 
     /** Locally open the link, not complete till messaging_handler::on_link_opened or
@@ -121,12 +108,12 @@ class link : public object<pn_link_t> , public endpoint
     /** Navigate the links in a connection - get next link with state */
     PN_CPP_EXTERN link next(endpoint::state) const;
 
-    PN_CPP_EXTERN sender_settle_mode_t sender_settle_mode();
-    PN_CPP_EXTERN void sender_settle_mode(sender_settle_mode_t);
-    PN_CPP_EXTERN receiver_settle_mode_t receiver_settle_mode();
-    PN_CPP_EXTERN void receiver_settle_mode(receiver_settle_mode_t);
-    PN_CPP_EXTERN sender_settle_mode_t remote_sender_settle_mode();
-    PN_CPP_EXTERN receiver_settle_mode_t remote_receiver_settle_mode();
+    PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
+    PN_CPP_EXTERN void sender_settle_mode(link_options::sender_settle_mode);
+    PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
+    PN_CPP_EXTERN void receiver_settle_mode(link_options::receiver_settle_mode);
+    PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
+    PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
 };
 
 /// An iterator for links.

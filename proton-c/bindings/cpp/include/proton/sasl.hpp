@@ -30,7 +30,7 @@ namespace proton {
 class sasl {
   public:
     /** The result of the SASL negotiation */
-    enum outcome_t {
+    enum outcome {
         NONE = PN_SASL_NONE,   /** negotiation not completed */
         OK = PN_SASL_OK,       /** authentication succeeded */
         AUTH = PN_SASL_AUTH,   /** failed due to bad credentials */
@@ -41,8 +41,8 @@ class sasl {
 
     sasl(pn_sasl_t* s) : object_(s) {}
     PN_CPP_EXTERN static bool extended();
-    PN_CPP_EXTERN void done(outcome_t);
-    PN_CPP_EXTERN outcome_t outcome() const;
+    PN_CPP_EXTERN void done(enum outcome);
+    PN_CPP_EXTERN enum outcome outcome() const;
     PN_CPP_EXTERN std::string user() const;
     PN_CPP_EXTERN std::string mech() const;
 

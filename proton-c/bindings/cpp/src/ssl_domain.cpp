@@ -91,7 +91,7 @@ server_domain::server_domain(
     ssl_certificate &cert,
     const std::string &trust_db,
     const std::string &advertise_db,
-    ssl::verify_mode_t mode) : ssl_domain(true)
+    enum ssl::verify_mode mode) : ssl_domain(true)
 {
     pn_ssl_domain_t* dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
@@ -105,7 +105,7 @@ server_domain::server_domain(
 server_domain::server_domain() : ssl_domain(true) {}
 
 namespace {
-void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify_mode_t mode) {
+void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, enum ssl::verify_mode mode) {
     if (pn_ssl_domain_set_trusted_ca_db(dom, trust_db.c_str()))
         throw error(MSG("SSL trust store initialization failure for " << trust_db));
     if (pn_ssl_domain_set_peer_authentication(dom, pn_ssl_verify_mode_t(mode), NULL))
@@ -113,11 +113,11 @@ void client_setup(pn_ssl_domain_t *dom, const std::string &trust_db, ssl::verify
 }
 }
 
-client_domain::client_domain(const std::string &trust_db, ssl::verify_mode_t mode) : ssl_domain(false) {
+client_domain::client_domain(const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
     client_setup(pn_domain(), trust_db, mode);
 }
 
-client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, ssl::verify_mode_t mode) : ssl_domain(false) {
+client_domain::client_domain(ssl_certificate &cert, const std::string &trust_db, enum ssl::verify_mode mode) : ssl_domain(false) {
     pn_ssl_domain_t *dom = pn_domain();
     set_cred(dom, cert.certdb_main_, cert.certdb_extra_, cert.passwd_, cert.pw_set_);
     client_setup(dom, trust_db, mode);

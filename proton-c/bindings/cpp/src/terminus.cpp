@@ -28,19 +28,19 @@ terminus::terminus(pn_terminus_t* t) :
     object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t))
 {}
 
-terminus::type_t terminus::type() const {
-    return type_t(pn_terminus_get_type(object_));
+enum terminus::type terminus::type() const {
+    return (enum type)pn_terminus_get_type(object_);
 }
 
-void terminus::type(type_t type) {
-    pn_terminus_set_type(object_, pn_terminus_type_t(type));
+void terminus::type(enum type type0) {
+    pn_terminus_set_type(object_, pn_terminus_type_t(type0));
 }
 
-terminus::expiry_policy_t terminus::expiry_policy() const {
-    return expiry_policy_t(pn_terminus_get_expiry_policy(object_));
+enum terminus::expiry_policy terminus::expiry_policy() const {
+    return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
 }
 
-void terminus::expiry_policy(expiry_policy_t policy) {
+void terminus::expiry_policy(enum expiry_policy policy) {
     pn_terminus_set_expiry_policy(object_, pn_expiry_policy_t(policy));
 }
 
@@ -52,20 +52,20 @@ void terminus::timeout(uint32_t seconds) {
     pn_terminus_set_timeout(object_, seconds);
 }
 
-terminus::distribution_mode_t terminus::distribution_mode() const {
-    return distribution_mode_t(pn_terminus_get_distribution_mode(object_));
+enum terminus::distribution_mode terminus::distribution_mode() const {
+    return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
 }
 
-void terminus::distribution_mode(distribution_mode_t mode) {
+void terminus::distribution_mode(enum distribution_mode mode) {
     pn_terminus_set_distribution_mode(object_, pn_distribution_mode_t(mode));
 }
 
-terminus::durability_t terminus::durability() {
-    return (durability_t) pn_terminus_get_durability(object_);
+enum terminus::durability terminus::durability() {
+    return (enum durability) pn_terminus_get_durability(object_);
 }
 
-void terminus::durability(durability_t mode) {
-    pn_terminus_set_durability(object_, (pn_durability_t) mode);
+void terminus::durability(enum durability d) {
+    pn_terminus_set_durability(object_, (pn_durability_t) d);
 }
 
 std::string terminus::address() const {
@@ -78,7 +78,7 @@ void terminus::address(const std::string &addr) {
 }
 
 bool terminus::dynamic() const {
-    return type_t(pn_terminus_is_dynamic(object_));
+    return pn_terminus_is_dynamic(object_);
 }
 
 void terminus::dynamic(bool d) {

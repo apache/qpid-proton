@@ -41,7 +41,7 @@ class terminus
     terminus(pn_terminus_t* t);
 
     /// Type of terminus
-    enum type_t {
+    enum type{
         TYPE_UNSPECIFIED = PN_UNSPECIFIED,
         SOURCE = PN_SOURCE,
         TARGET = PN_TARGET,
@@ -49,14 +49,14 @@ class terminus
     };
 
     /// Durability
-    enum durability_t {
+    enum durability {
         NONDURABLE = PN_NONDURABLE,
         CONFIGURATION = PN_CONFIGURATION,
         DELIVERIES = PN_DELIVERIES
     };
 
     /// Expiry policy
-    enum expiry_policy_t {
+    enum expiry_policy {
         EXPIRE_WITH_LINK = PN_EXPIRE_WITH_LINK,
         EXPIRE_WITH_SESSION = PN_EXPIRE_WITH_SESSION,
         EXPIRE_WITH_CONNECTION = PN_EXPIRE_WITH_CONNECTION,
@@ -64,22 +64,22 @@ class terminus
     };
 
     /// Distribution mode
-    enum distribution_mode_t {
+    enum distribution_mode {
         MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
         COPY = PN_DIST_MODE_COPY,
         MOVE = PN_DIST_MODE_MOVE
     };
 
-    PN_CPP_EXTERN type_t type() const;
-    PN_CPP_EXTERN void type(type_t);
-    PN_CPP_EXTERN expiry_policy_t expiry_policy() const;
-    PN_CPP_EXTERN void expiry_policy(expiry_policy_t);
+    PN_CPP_EXTERN enum type type() const;
+    PN_CPP_EXTERN void type(enum type);
+    PN_CPP_EXTERN enum expiry_policy expiry_policy() const;
+    PN_CPP_EXTERN void expiry_policy(enum expiry_policy);
     PN_CPP_EXTERN uint32_t timeout() const;
     PN_CPP_EXTERN void timeout(uint32_t seconds);
-    PN_CPP_EXTERN distribution_mode_t distribution_mode() const;
-    PN_CPP_EXTERN void distribution_mode(distribution_mode_t);
-    PN_CPP_EXTERN durability_t durability();
-    PN_CPP_EXTERN void durability(durability_t);
+    PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
+    PN_CPP_EXTERN void distribution_mode(enum distribution_mode);
+    PN_CPP_EXTERN enum durability durability();
+    PN_CPP_EXTERN void durability(enum durability);
     PN_CPP_EXTERN std::string address() const;
     PN_CPP_EXTERN void address(const std::string &);
     PN_CPP_EXTERN bool dynamic() const;

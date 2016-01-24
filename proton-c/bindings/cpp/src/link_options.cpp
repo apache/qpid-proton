@@ -29,18 +29,18 @@
 namespace proton {
 
 namespace {
-std::string lifetime_policy_symbol(lifetime_policy_t lp) {
+std::string lifetime_policy_symbol(enum link_options::lifetime_policy lp) {
     switch (lp) {
-    case DELETE_ON_CLOSE: return "amqp:delete-on-close:list";
-    case DELETE_ON_NO_LINKS: return "amqp:delete-on-no-links:list";
-    case DELETE_ON_NO_MESSAGES: return "amqp:delete-on-no-messages:list";
-    case DELETE_ON_NO_LINKS_OR_MESSAGES: return "amqp:delete-on-no-links-or-messages:list";
+    case link_options::DELETE_ON_CLOSE: return "amqp:delete-on-close:list";
+    case link_options::DELETE_ON_NO_LINKS: return "amqp:delete-on-no-links:list";
+    case link_options::DELETE_ON_NO_MESSAGES: return "amqp:delete-on-no-messages:list";
+    case link_options::DELETE_ON_NO_LINKS_OR_MESSAGES: return "amqp:delete-on-no-links-or-messages:list";
     default: break;
     }
     return "";
 }
 
-std::string distribution_mode_symbol(terminus::distribution_mode_t dm) {
+std::string distribution_mode_symbol(enum terminus::distribution_mode dm) {
     switch (dm) {
     case terminus::COPY: return "copy";
     case terminus::MOVE: return "move";
@@ -62,12 +62,12 @@ template <class T> struct option {
 class link_options::impl {
   public:
     option<proton_handler*> handler;
-    option<terminus::distribution_mode_t> distribution_mode;
+    option<enum terminus::distribution_mode> distribution_mode;
     option<bool> durable_subscription;
-    option<link_delivery_mode_t> delivery_mode;
+    option<enum delivery_mode> delivery_mode;
     option<bool> dynamic_address;
     option<std::string> local_address;
-    option<lifetime_policy_t> lifetime_policy;
+    option<enum lifetime_policy> lifetime_policy;
     option<std::string> selector;
 
     void apply(link& l) {
@@ -83,11 +83,11 @@ class link_options::impl {
             if (delivery_mode.set) {
                 switch (delivery_mode.value) {
                 case AT_MOST_ONCE:
-                    l.sender_settle_mode(link::SETTLED);
+                    l.sender_settle_mode(link_options::SETTLED);
                     break;
                 case AT_LEAST_ONCE:
-                        l.sender_settle_mode(link::UNSETTLED);
-                        l.receiver_settle_mode(link::SETTLE_ALWAYS);
+                        l.sender_settle_mode(link_options::UNSETTLED);
+                        l.receiver_settle_mode(link_options::SETTLE_ALWAYS);
                     break;
                 default:
                     break;
@@ -161,12 +161,12 @@ void link_options::override(const link_options& x) { impl_->override(*x.impl_); 
 
 link_options& link_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 link_options& link_options::browsing(bool b) { distribution_mode(b ? terminus::COPY : terminus::MOVE); return *this; }
-link_options& link_options::distribution_mode(terminus::distribution_mode_t m) { impl_->distribution_mode = m; return *this; }
+link_options& link_options::distribution_mode(enum terminus::distribution_mode m) { impl_->distribution_mode = m; return *this; }
 link_options& link_options::durable_subscription(bool b) {impl_->durable_subscription = b; return *this; }
-link_options& link_options::delivery_mode(link_delivery_mode_t m) {impl_->delivery_mode = m; return *this; }
+link_options& link_options::delivery_mode(enum delivery_mode m) {impl_->delivery_mode = m; return *this; }
 link_options& link_options::dynamic_address(bool b) {impl_->dynamic_address = b; return *this; }
 link_options& link_options::local_address(const std::string &addr) {impl_->local_address = addr; return *this; }
-link_options& link_options::lifetime_policy(lifetime_policy_t lp) {impl_->lifetime_policy = lp; return *this; }
+link_options& link_options::lifetime_policy(enum lifetime_policy lp) {impl_->lifetime_policy = lp; return *this; }
 link_options& link_options::selector(const std::string &str) {impl_->selector = str; return *this; }
 
 void link_options::apply(link& l) const { impl_->apply(l); }

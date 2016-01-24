@@ -44,8 +44,8 @@ std::string ssl::protocol() const {
     return std::string();
 }
 
-ssl::resume_status_t ssl::resume_status() const {
-    return ssl::resume_status_t(pn_ssl_resume_status(object_));
+enum ssl::resume_status ssl::resume_status() const {
+    return (enum ssl::resume_status)pn_ssl_resume_status(object_);
 }
 
 void ssl::peer_hostname(const std::string &hostname) {
