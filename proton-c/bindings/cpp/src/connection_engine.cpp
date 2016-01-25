@@ -54,7 +54,7 @@ void close_transport(connection_engine_context *ctx_) {
         pn_transport_close_tail(ctx_->transport);
 }
 
-std::string  make_id(const std::string s) { return s.empty() ? uuid().str() : s; }
+std::string  make_id(const std::string s="") { return s.empty() ? uuid().str() : s; }
 }
 
 connection_engine::container::container(const std::string& s) : id_(make_id(s)) {}
@@ -87,6 +87,16 @@ connection_engine::connection_engine(class handler &h, const connection_options&
     ctx_->transport = transport.release();
     ctx_->collector = collector.release();
     opts.apply(connection_);
+    // Provide defaults for connection_id and link_prefix if not set.
+    std::string cid = connection_.container_id();
+    if (cid.empty()) {
+        cid = make_id();
+        pn_connection_set_container(connection_.pn_object(), cid.c_str());
+    }
+    id_generator &link_gen = connection_context::get(connection_).link_gen;
+    if (link_gen.prefix().empty()) {
+        link_gen.prefix(make_id()+"/");
+    }
 }
 
 connection_engine::~connection_engine() {

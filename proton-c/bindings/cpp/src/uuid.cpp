@@ -24,14 +24,39 @@
 #include <sstream>
 #include <iomanip>
 
+#ifdef WIN32
+#include <process.h>
+#define GETPID _getpid
+#else
+#include <unistd.h>
+#define GETPID getpid
+#endif
+
 namespace proton {
 
-uuid::uuid() {
-    static bool seeded = false;
-    if (!seeded) {
-        std::srand(std::time(0)); // use current time as seed for random generator
-        seeded = true;
+namespace {
+
+
+// Seed the random number generated once at startup.
+struct seed {
+    seed() {
+        // A hash of time and PID, time alone is a bad seed as programs started
+        // within the same second will get the same seed.
+        long secs = time(0);
+        long pid = GETPID();
+        std::srand(((secs*181)*((pid-83)*359))%104729);
     }
+} seed_;
+
+struct ios_guard {
+    std::ios &guarded;
+    std::ios old;
+    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
+    ~ios_guard() { guarded.copyfmt(old); }
+};
+}
+
+uuid::uuid() {
     int r = std::rand();
     for (size_t i = 0; i < sizeof(bytes); ++i ) {
         bytes[i] = r & 0xFF;
@@ -44,17 +69,6 @@ uuid::uuid() {
 
     // From RFC4122, the top two bits of byte 8 get set to 01
     bytes[8] = (bytes[8] & 0x3F) | 0x80;
-}
-
-namespace {
-
-struct ios_guard {
-    std::ios &guarded;
-    std::ios old;
-    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
-    ~ios_guard() { guarded.copyfmt(old); }
-};
-
 }
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)

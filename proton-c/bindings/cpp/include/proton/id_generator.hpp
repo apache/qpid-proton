@@ -17,6 +17,7 @@
  * under the License.
  */
 
+///@internal
 #include "proton/types.hpp"
 
 #ifndef ID_GENERATOR_HPP
@@ -24,12 +25,13 @@
 
 namespace proton {
 
-///@internal
+///@cond INTERNAL
 class id_generator {
   public:
     PN_CPP_EXTERN id_generator(const std::string &prefix="");
-    PN_CPP_EXTERN void prefix(const std::string &);
     PN_CPP_EXTERN std::string next();
+    void prefix(const std::string &p) { prefix_ = p; }
+    const std::string& prefix() const { return prefix_; }
 
   private:
     std::string prefix_;
@@ -37,5 +39,5 @@ class id_generator {
 };
 
 }
-
+///@endcond
 #endif

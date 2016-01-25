@@ -134,7 +134,7 @@ descriptor connect(const proton::url& u) {
         auto_addrinfo addr;
         gai_check(::getaddrinfo(u.host().empty() ? 0 : u.host().c_str(),
                                 u.port().empty() ? 0 : u.port().c_str(),
-                                0, &addr.ptr));
+                                0, &addr.ptr), u.str()+": ");
         fd = check(::socket(addr->ai_family, SOCK_STREAM, 0), "connect: ");
         check(::connect(fd, addr->ai_addr, addr->ai_addrlen), "connect: ");
         return fd;

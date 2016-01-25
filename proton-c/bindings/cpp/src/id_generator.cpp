@@ -24,8 +24,6 @@ namespace proton {
 
 id_generator::id_generator(const std::string& s) : prefix_(s), count_(0) {}
 
-void id_generator::prefix(const std::string& s) { prefix_ = s; }
-
 std::string id_generator::next() {
     // TODO aconway 2016-01-19: more efficient conversion, fixed buffer.
     std::ostringstream o;

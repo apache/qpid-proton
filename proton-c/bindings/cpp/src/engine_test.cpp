@@ -137,28 +137,33 @@ struct link_handler : public record_handler {
 };
 
 void test_engine_prefix() {
+    // Set container ID and prefix explicitly
     engine_pair<link_handler, link_handler> e(
-        connection_options().container_id("a").link_prefix("a/"),
-        connection_options().container_id("b").link_prefix("b/"));
+        connection_options().container_id("a").link_prefix("x/"),
+        connection_options().container_id("b").link_prefix("y/"));
     e.a.connection().open();
+    ASSERT_EQUAL("a", e.a.connection().container_id());
+    e.b.connection().open();
+    ASSERT_EQUAL("b", e.b.connection().container_id());
 
-    e.a.connection().open_sender("x");
+    e.a.connection().open_sender("");
     while (e.ha.links.size() + e.hb.links.size() < 2) e.process();
-    ASSERT_EQUAL("a/1", e.ha.pop().name());
-    ASSERT_EQUAL("a/1", e.hb.pop().name());
+    ASSERT_EQUAL("x/1", e.ha.pop().name());
+    ASSERT_EQUAL("x/1", e.hb.pop().name());
 
-    e.a.connection().open_receiver("y");
+    e.a.connection().open_receiver("");
     while (e.ha.links.size() + e.hb.links.size() < 2) e.process();
-    ASSERT_EQUAL("a/2", e.ha.pop().name());
-    ASSERT_EQUAL("a/2", e.hb.pop().name());
+    ASSERT_EQUAL("x/2", e.ha.pop().name());
+    ASSERT_EQUAL("x/2", e.hb.pop().name());
 
-    e.b.connection().open_receiver("z");
+    e.b.connection().open_receiver("");
     while (e.ha.links.size() + e.hb.links.size() < 2) e.process();
-    ASSERT_EQUAL("b/1", e.ha.pop().name());
-    ASSERT_EQUAL("b/1", e.hb.pop().name());
+    ASSERT_EQUAL("y/1", e.ha.pop().name());
+    ASSERT_EQUAL("y/1", e.hb.pop().name());
 }
 
 void test_container_prefix() {
+    /// Let the container set the options.
     engine_pair<link_handler, link_handler> e;
     e.a.connection().open();
 
