@@ -24,20 +24,20 @@
 #include <proton/handler.hpp>
 #include <proton/event.hpp>
 #include <proton/types.hpp>
+#include <proton/link.hpp>
 #include <deque>
 #include <algorithm>
 
-using namespace std;
 using namespace proton;
 using namespace test;
 
 // One end of an in-memory connection
 struct mem_pipe {
-    mem_pipe(deque<char>& r, deque<char>& w) : read(r), write(w) {}
-    struct deque<char>  &read, &write;
+    mem_pipe(std::deque<char>& r, std::deque<char>& w) : read(r), write(w) {}
+    struct std::deque<char>  &read, &write;
 };
 
-struct mem_queues : public pair<deque<char>, deque<char> > {
+struct mem_queues : public std::pair<std::deque<char>, std::deque<char> > {
     mem_pipe a() { return mem_pipe(first, second); }
     mem_pipe b() { return mem_pipe(second, first); }
 };
@@ -53,7 +53,7 @@ struct mem_engine : public connection_engine {
 
     size_t io_read(char* buf, size_t size) {
         if (!read_error.empty()) throw io_error(read_error);
-        size = min(socket.read.size(), size);
+        size = std::min(socket.read.size(), size);
         copy(socket.read.begin(), socket.read.begin()+size, buf);
         socket.read.erase(socket.read.begin(), socket.read.begin()+size);
         return size;
@@ -77,7 +77,7 @@ struct debug_handler : handler {
 };
 
 struct record_handler : handler {
-    vector<string> events;
+    std::deque<std::string> events;
     void on_unhandled(event& e) {
         events.push_back(e.name());
     }
@@ -107,27 +107,27 @@ void test_process_amqp() {
     ASSERT(e.a.socket.write.empty());
     e.a.process(connection_engine::WRITE);
 
-    string wrote(e.a.socket.write.begin(), e.a.socket.write.end());
+    std::string wrote(e.a.socket.write.begin(), e.a.socket.write.end());
     e.a.process(connection_engine::WRITE);
     ASSERT_EQUAL(8, wrote.size());
     ASSERT_EQUAL("AMQP", wrote.substr(0,4));
 
     e.b.process();              // Read and write AMQP
-    ASSERT_EQUAL("AMQP", string(e.b.socket.write.begin(), e.b.socket.write.begin()+4));
+    ASSERT_EQUAL("AMQP", std::string(e.b.socket.write.begin(), e.b.socket.write.begin()+4));
     ASSERT(e.b.socket.read.empty());
     ASSERT(e.a.socket.write.empty());
-    ASSERT_EQUAL(many<string>() + "START", e.ha.events);
+    ASSERT_EQUAL(many<std::string>() + "START", e.ha.events);
 }
 
 
 struct link_handler : public record_handler {
-    std::deque<link> links;
+    std::deque<proton::link> links;
     void on_link_open(event& e) {
         links.push_back(e.link());
     }
 
-    link pop() {
-        link l;
+    proton::link pop() {
+        proton::link l;
         if (!links.empty()) {
             l = links.front();
             links.pop_front();
@@ -182,7 +182,7 @@ void test_container_prefix() {
     ASSERT_EQUAL("2/1", e.ha.pop().name());
     ASSERT_EQUAL("2/1", e.hb.pop().name());
 
-    // TODO aconway 2016-01-22: check we respect name set in link-options.
+    // TODO aconway 2016-01-22: check we respect name set in linkn-options.
 };
 
 int main(int, char**) {
