@@ -238,9 +238,19 @@ class EventImpl implements Event
         if (context instanceof Transport) {
             return (Transport) context;
         } else if (context instanceof Connection) {
-        	return ((Connection)context).getTransport();	
+            return ((Connection)context).getTransport();
         } else {
-            return null;
+            Session session = getSession();
+            if (session == null) {
+                return null;
+            }
+
+            Connection connection = session.getConnection();
+            if (connection == null) {
+                return null;
+            }
+
+            return connection.getTransport();
         }
     }
 
