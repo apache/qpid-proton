@@ -27,6 +27,7 @@
 #include "proton/event.hpp"
 #include "proton/receiver.hpp"
 #include "proton/sender.hpp"
+#include "proton/transport.hpp"
 
 #include "msg.hpp"
 #include "contexts.hpp"
@@ -42,8 +43,16 @@ container& event::container() const {
     throw error(MSG("No container context for event"));
 }
 
+transport event::transport() const {
+    throw error(MSG("No transport context for event"));
+}
+
 connection event::connection() const {
     throw error(MSG("No connection context for event"));
+}
+
+session event::session() const {
+    throw error(MSG("No session context for event"));
 }
 
 sender event::sender() const {

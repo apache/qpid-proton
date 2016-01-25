@@ -275,7 +275,9 @@ class proton_event
     void dispatch(proton_handler& h);
 
     class container& container() const;
+    class transport transport() const;
     class connection connection() const;
+    class session session() const;
     class sender sender() const;
     class receiver receiver() const;
     class link link() const;

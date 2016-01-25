@@ -30,6 +30,7 @@
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 
+#include "proton/connection.h"
 #include "proton/transport.h"
 
 namespace proton {

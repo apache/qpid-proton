@@ -24,6 +24,7 @@
 
 #include "proton/error.hpp"
 
+#include "proton/connection.h"
 #include "proton/object.h"
 #include "proton/link.h"
 #include "proton/message.h"

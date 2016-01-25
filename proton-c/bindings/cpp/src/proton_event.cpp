@@ -26,6 +26,7 @@
 #include "proton/error.hpp"
 #include "proton/receiver.hpp"
 #include "proton/sender.hpp"
+#include "proton/transport.hpp"
 
 #include "msg.hpp"
 #include "contexts.hpp"
@@ -54,11 +55,25 @@ container& proton_event::container() const {
     return *container_;
 }
 
+transport proton_event::transport() const {
+    pn_transport_t *t = pn_event_transport(pn_event());
+    if (!t)
+        throw error(MSG("No transport context for this event"));
+    return t;
+}
+
 connection proton_event::connection() const {
     pn_connection_t *conn = pn_event_connection(pn_event());
     if (!conn)
         throw error(MSG("No connection context for this event"));
     return conn;
+}
+
+session proton_event::session() const {
+    pn_session_t *sess = pn_event_session(pn_event());
+    if (!sess)
+        throw error(MSG("No session context for this event"));
+    return sess;
 }
 
 link proton_event::link() const {

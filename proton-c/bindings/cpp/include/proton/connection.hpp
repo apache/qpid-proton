@@ -35,12 +35,19 @@ struct pn_connection_t;
 namespace proton {
 
 class handler;
+class engine;
 
 /** connection to a remote AMQP peer. */
-class connection : public object<pn_connection_t>, endpoint
+class connection : public object<pn_connection_t>, public endpoint
 {
   public:
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
+
+    /* Endpoint behaviours */
+
+    PN_CPP_EXTERN endpoint::state state() const;
+    PN_CPP_EXTERN condition local_condition() const;
+    PN_CPP_EXTERN condition remote_condition() const;
 
     /// Get the container, throw an exception if this connection is not managed
     /// by a container.
@@ -89,9 +96,6 @@ class connection : public object<pn_connection_t>, endpoint
 
     /** Return sessions on this connection matching the state mask. */
     PN_CPP_EXTERN session_range find_sessions(endpoint::state mask) const;
-
-    /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state() const;
 
     /// True if the connection is fully closed, i.e. local and remote ends are closed.
     bool closed() const { return (state()&LOCAL_CLOSED) && (state()&REMOTE_CLOSED); }

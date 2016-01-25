@@ -43,6 +43,12 @@ class session : public object<pn_session_t>, public endpoint
   public:
     session(pn_session_t* s=0) : object<pn_session_t>(s) {}
 
+    /* Endpoint behaviours */
+
+    PN_CPP_EXTERN endpoint::state state() const;
+    PN_CPP_EXTERN condition local_condition() const;
+    PN_CPP_EXTERN condition remote_condition() const;
+
     /** Initiate local open, not complete till messaging_handler::on_session_opened()
      * or proton_handler::on_session_remote_open()
      */
@@ -75,9 +81,6 @@ class session : public object<pn_session_t>, public endpoint
 
     /** Create and open a receiver with target=addr and optional link options opts */
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const link_options &opts = link_options());
-
-    /** Get the endpoint state */
-    PN_CPP_EXTERN endpoint::state state() const;
 
     /** Navigate the sessions in a connection - get next session with endpoint state*/
     PN_CPP_EXTERN session next(endpoint::state) const;

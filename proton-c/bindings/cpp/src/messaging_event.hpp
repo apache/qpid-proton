@@ -46,7 +46,8 @@ class messaging_event : public event
         START,
         MESSAGE,
         SENDABLE,
-        DISCONNECT,
+        TRANSPORT_CLOSE,
+        TRANSPORT_ERROR,
         CONNECTION_OPEN,
         CONNECTION_CLOSE,
         CONNECTION_ERROR,
@@ -70,15 +71,17 @@ class messaging_event : public event
     messaging_event(event_type t, pn_event_t*);
     ~messaging_event();
 
-    PN_CPP_EXTERN class container& container() const;
-    PN_CPP_EXTERN class connection connection() const;
-    PN_CPP_EXTERN class sender sender() const;
-    PN_CPP_EXTERN class receiver receiver() const;
-    PN_CPP_EXTERN class link link() const;
-    PN_CPP_EXTERN class delivery delivery() const;
-    PN_CPP_EXTERN class message& message() const;
+    class container& container() const;
+    class transport transport() const;
+    class connection connection() const;
+    class session session() const;
+    class sender sender() const;
+    class receiver receiver() const;
+    class link link() const;
+    class delivery delivery() const;
+    class message& message() const;
 
-    PN_CPP_EXTERN event_type type() const;
+    event_type type() const;
 
   private:
   friend class messaging_adapter;
