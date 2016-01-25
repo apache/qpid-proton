@@ -20,7 +20,10 @@
 package org.apache.qpid.proton.engine.impl;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 
+import org.apache.qpid.proton.engine.Record;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -52,5 +55,23 @@ public class DeliveryImplTest
         newFormat = (1 << 32) - 1;
         delivery.setMessageFormat(newFormat);
         assertEquals("Unexpected message format", newFormat, delivery.getMessageFormat());
+    }
+
+    @Test
+    public void testAttachmentsNonNull() throws Exception
+    {
+        DeliveryImpl delivery = new DeliveryImpl(null, Mockito.mock(LinkImpl.class), null);
+
+        assertNotNull("Expected attachments to be non-null", delivery.attachments());
+    }
+
+    @Test
+    public void testAttachmentsReturnsSameRecordOnSuccessiveCalls() throws Exception
+    {
+        DeliveryImpl delivery = new DeliveryImpl(null, Mockito.mock(LinkImpl.class), null);
+
+        Record attachments = delivery.attachments();
+        Record attachments2 = delivery.attachments();
+        assertSame("Expected to get the same attachments", attachments, attachments2);
     }
 }

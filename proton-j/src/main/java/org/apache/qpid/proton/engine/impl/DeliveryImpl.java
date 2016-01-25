@@ -42,7 +42,7 @@ public class DeliveryImpl implements Delivery
     private DeliveryImpl _transportWorkPrev;
     boolean _transportWork;
 
-    private Record _attachments = new RecordImpl();
+    private Record _attachments;
     private Object _context;
 
     private final byte[] _tag;
@@ -411,6 +411,11 @@ public class DeliveryImpl implements Delivery
 
     public Record attachments()
     {
+        if(_attachments == null)
+        {
+            _attachments = new RecordImpl();
+        }
+
         return _attachments;
     }
 
