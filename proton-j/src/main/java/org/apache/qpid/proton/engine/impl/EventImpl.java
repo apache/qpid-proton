@@ -240,7 +240,11 @@ class EventImpl implements Event
         } else if (context instanceof Connection) {
         	return ((Connection)context).getTransport();	
         } else {
-            return null;
+        	Session session = getSession();
+        	if (session == null) {
+        		return null;
+        	}
+        	return session.getConnection().getTransport();
         }
     }
 
