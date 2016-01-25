@@ -27,12 +27,6 @@ include_directories(
 set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/scalar.cpp
-  src/blocking_connection.cpp
-  src/blocking_connection_impl.cpp
-  src/blocking_fetcher.cpp
-  src/blocking_link.cpp
-  src/blocking_receiver.cpp
-  src/blocking_sender.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp
@@ -62,7 +56,6 @@ set(qpid-proton-cpp-source
   src/reactor.cpp
   src/receiver.cpp
   src/reconnect_timer.cpp
-  src/request_response.cpp
   src/sasl.cpp
   src/sender.cpp
   src/session.cpp

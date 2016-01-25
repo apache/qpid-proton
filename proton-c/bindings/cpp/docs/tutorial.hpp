@@ -388,25 +388,6 @@ Finally when we receive a message we look up its `reply_to` in our senders map a
 \until }
 \until }
 
-Synchronous Request/Response
-----------------------------
-
-The event-driven style of programming is extremely powerful, especially for
-server or mixed client-server programs. However for simple client-only programs
-a synchronous or blocking style of programming is sometimes simpler.
-
-`proton::blocking_connection` allows a blocking style of programming,
-`proton::request_response` automates the common case of synchronous
-request/response, send a request and block for the response.
-
-\ref sync_client.cpp is our request/response client in blocking style. Here's the key section
-
-\dontinclude sync_client.cpp
-\skip conn(
-\until }
-
-*/
-
 /* TODO selector and browser
 
 Many brokers offer the ability to consume messages based on a 'selector'
