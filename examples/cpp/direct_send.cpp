@@ -69,7 +69,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_disconnect(proton::event &e) {
+    void on_transport_close(proton::event &e) {
         sent = confirmed;
     }
 };

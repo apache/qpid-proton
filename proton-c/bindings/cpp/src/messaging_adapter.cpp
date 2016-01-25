@@ -34,6 +34,7 @@
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/message.h"
+#include "proton/transport.h"
 
 namespace proton {
 
@@ -246,8 +247,14 @@ void messaging_adapter::on_link_remote_open(proton_event &pe) {
 void messaging_adapter::on_transport_tail_closed(proton_event &pe) {
     pn_connection_t *conn = pn_event_connection(pe.pn_event());
     if (conn && is_local_open(pn_connection_state(conn))) {
-        messaging_event mevent(messaging_event::DISCONNECT, pe);
-        delegate_.on_disconnect(mevent);
+        pn_transport_t *t = pn_event_transport(pe.pn_event());
+        if (pn_condition_is_set(pn_transport_condition(t))) {
+            messaging_event mevent(messaging_event::TRANSPORT_ERROR, pe);
+            delegate_.on_transport_error(mevent);
+        } else {
+            messaging_event mevent(messaging_event::TRANSPORT_CLOSE, pe);
+            delegate_.on_transport_close(mevent);
+        }
     }
 }
 

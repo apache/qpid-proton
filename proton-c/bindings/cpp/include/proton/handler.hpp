@@ -56,7 +56,9 @@ class handler
     PN_CPP_EXTERN virtual void on_start(event &e);
     PN_CPP_EXTERN virtual void on_message(event &e);
     PN_CPP_EXTERN virtual void on_sendable(event &e);
-    PN_CPP_EXTERN virtual void on_disconnect(event &e);
+
+    PN_CPP_EXTERN virtual void on_transport_close(event &e);
+    PN_CPP_EXTERN virtual void on_transport_error(event &e);
 
     PN_CPP_EXTERN virtual void on_connection_open(event &e);
     PN_CPP_EXTERN virtual void on_connection_close(event &e);

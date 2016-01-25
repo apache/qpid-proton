@@ -174,7 +174,7 @@ class broker_handler : public proton::handler {
         remove_stale_consumers(e.connection());
     }
 
-    void on_disconnect(proton::event &e) {
+    void on_transport_close(proton::event &e) {
         remove_stale_consumers(e.connection());
     }
 

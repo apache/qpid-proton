@@ -96,7 +96,8 @@ std::string messaging_event::name() const {
       case START:            return "START";
       case MESSAGE:          return "MESSAGE";
       case SENDABLE:         return "SENDABLE";
-      case DISCONNECT:       return "DISCONNECT";
+      case TRANSPORT_CLOSE:  return "TRANSPORT_CLOSE";
+      case TRANSPORT_ERROR:  return "TRANSPORT_ERROR";
       case DELIVERY_ACCEPT:  return "DELIVERY_ACCEPT";
       case DELIVERY_REJECT:  return "DELIVERY_REJECT";
       case DELIVERY_RELEASE: return "DELIVERY_RELEASE";
