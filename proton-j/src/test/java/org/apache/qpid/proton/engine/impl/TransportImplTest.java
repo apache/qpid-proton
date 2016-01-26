@@ -24,12 +24,14 @@ import static org.apache.qpid.proton.engine.impl.TransportTestHelper.stringOfLen
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 import org.apache.qpid.proton.Proton;
@@ -47,6 +49,7 @@ import org.apache.qpid.proton.engine.Collector;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.EndpointState;
+import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Link;
 import org.apache.qpid.proton.engine.Receiver;
 import org.apache.qpid.proton.engine.Sender;
@@ -565,6 +568,127 @@ public class TransportImplTest
 
         assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
         assertTrue("Unexpected frame type", transport.writes.get(3) instanceof Transfer);
+    }
+
+    @Test
+    public void testEmitFlowEventOnSend()
+    {
+        doEmitFlowOnSendTestImpl(true);
+    }
+
+    public void testSupressFlowEventOnSend()
+    {
+        doEmitFlowOnSendTestImpl(false);
+    }
+
+    void doEmitFlowOnSendTestImpl(boolean emitFlowEventOnSend)
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        transport.setEmitFlowEventOnSend(emitFlowEventOnSend);
+
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        Collector collector = Collector.Factory.create();
+        connection.collect(collector);
+
+        Session session = connection.session();
+        session.open();
+
+        String linkName = "mySender";
+        Sender sender = session.sender(linkName);
+        sender.open();
+
+        sendMessage(sender, "tag1", "content1");
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 0, transport.writes.size());
+
+        assertEvents(collector, Event.Type.CONNECTION_INIT, Event.Type.SESSION_INIT, Event.Type.SESSION_LOCAL_OPEN,
+                                Event.Type.TRANSPORT, Event.Type.LINK_INIT, Event.Type.LINK_LOCAL_OPEN, Event.Type.TRANSPORT);
+
+        // Now open the connection, expect the Open and Begin frames but
+        // nothing else as we haven't opened the receiver itself yet.
+        connection.open();
+
+        pumpMockTransport(transport);
+
+        assertEvents(collector, Event.Type.CONNECTION_LOCAL_OPEN, Event.Type.TRANSPORT);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+        assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
+        assertTrue("Unexpected frame type", transport.writes.get(2) instanceof Attach);
+
+        transport.handleFrame(new TransportFrame(0, new Open(), null));
+
+        Begin begin = new Begin();
+        begin.setRemoteChannel(UnsignedShort.valueOf((short) 0));
+        transport.handleFrame(new TransportFrame(0, begin, null));
+
+        Attach attach = new Attach();
+        attach.setHandle(UnsignedInteger.ZERO);
+        attach.setRole(Role.RECEIVER);
+        attach.setName(linkName);
+        attach.setInitialDeliveryCount(UnsignedInteger.ZERO);
+        transport.handleFrame(new TransportFrame(0, attach, null));
+
+        Flow flow = new Flow();
+        flow.setHandle(UnsignedInteger.ZERO);
+        flow.setDeliveryCount(UnsignedInteger.ZERO);
+        flow.setNextIncomingId(UnsignedInteger.ONE);
+        flow.setNextOutgoingId(UnsignedInteger.ZERO);
+        flow.setIncomingWindow(UnsignedInteger.valueOf(1024));
+        flow.setOutgoingWindow(UnsignedInteger.valueOf(1024));
+        flow.setLinkCredit(UnsignedInteger.valueOf(10));
+
+        transport.handleFrame(new TransportFrame(0, flow, null));
+
+        assertEvents(collector, Event.Type.CONNECTION_REMOTE_OPEN, Event.Type.SESSION_REMOTE_OPEN,
+                                Event.Type.LINK_REMOTE_OPEN, Event.Type.LINK_FLOW);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(3) instanceof Transfer);
+
+        if(emitFlowEventOnSend)
+        {
+            assertEvents(collector, Event.Type.LINK_FLOW);
+        }
+        else
+        {
+            assertNoEvents(collector);
+        }
+    }
+
+    private void assertNoEvents(Collector collector)
+    {
+        assertEvents(collector);
+    }
+
+    private void assertEvents(Collector collector, Event.Type... expectedEventTypes)
+    {
+
+        if(expectedEventTypes.length == 0)
+        {
+            assertNull("Expected no events, but at least one was present: " + collector.peek(), collector.peek());
+        }
+        else
+        {
+            ArrayList<Event.Type> eventTypesList = new ArrayList<Event.Type>();
+            Event event = null;
+            while ((event = collector.peek()) != null) {
+                eventTypesList.add(event.getType());
+                collector.pop();
+            }
+
+            assertArrayEquals("Unexpected event types: " + eventTypesList, expectedEventTypes, eventTypesList.toArray(new Event.Type[0]));
+        }
     }
 
     private void pumpMockTransport(MockTransportImpl transport)

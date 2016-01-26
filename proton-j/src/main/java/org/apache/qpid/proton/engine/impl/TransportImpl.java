@@ -116,6 +116,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _init;
     private boolean _processingStarted;
+    private boolean _emitFlowEventOnSend = true;
 
     private FrameHandler _frameHandler = this;
     private boolean _head_closed = false;
@@ -611,7 +612,7 @@ public class TransportImpl extends EndpointImpl
                 tpLink.setInProgressDelivery(delivery);
             }
 
-            if (snd.getLocalState() != EndpointState.CLOSED) {
+            if (_emitFlowEventOnSend && snd.getLocalState() != EndpointState.CLOSED) {
                 getConnectionImpl().put(Event.Type.LINK_FLOW, snd);
             }
         }
@@ -1656,5 +1657,17 @@ public class TransportImpl extends EndpointImpl
 
     public Reactor getReactor() {
         return _reactor;
+    }
+
+    @Override
+    public void setEmitFlowEventOnSend(boolean emitFlowEventOnSend)
+    {
+        _emitFlowEventOnSend = emitFlowEventOnSend;
+    }
+
+    @Override
+    public boolean isEmitFlowEventOnSend()
+    {
+        return _emitFlowEventOnSend;
     }
 }

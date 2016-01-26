@@ -270,4 +270,16 @@ public interface Transport extends Endpoint
     long getFramesInput();
 
     long getFramesOutput();
+
+    /**
+     * Configure whether a synthetic Flow event should be emitted when messages are sent,
+     * reflecting a change in the credit level on the link that may prompt other action.
+     *
+     * Defaults to true.
+     *
+     * @param emitFlowEventOnSend true if a flow event should be emitted, false otherwise
+     */
+    void setEmitFlowEventOnSend(boolean emitFlowEventOnSend);
+
+    boolean isEmitFlowEventOnSend();
 }
