@@ -61,8 +61,6 @@ void handler::on_transaction_commit(event &e) { on_unhandled(e); }
 void handler::on_transaction_declare(event &e) { on_unhandled(e); }
 
 void handler::on_unhandled(event &) {}
-// XXXXX: FIXME - temporarily disabled exception to keep tests passing
-//void handler::on_unhandled_error(event &, const condition& c) { throw std::runtime_error(c.str()); }
-void handler::on_unhandled_error(event &, const condition& c) {}
+void handler::on_unhandled_error(event &, const condition& c) { throw std::runtime_error(c.str()); }
 
 }
