@@ -31,6 +31,7 @@
 #include "proton/message.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
+#include "proton/transport.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
@@ -117,7 +118,7 @@ class queues {
         if (address.empty()) {
             throw std::runtime_error("empty queue name");
         }
-        
+
         queue*& q = queues_[address];
 
         if (!q) q = new queue(address);
@@ -175,7 +176,7 @@ class broker_handler : public proton::handler {
 
     void unsubscribe(proton::sender lnk) {
         std::string address = lnk.local_source().address();
-        
+
         if (queues_.get(address).unsubscribe(lnk)) {
             queues_.erase(address);
         }
@@ -197,9 +198,17 @@ class broker_handler : public proton::handler {
         remove_stale_consumers(e.connection());
     }
 
+    void on_transport_error(proton::event &e) {
+        std::cout << "broker client disconnect: " << e.transport().condition().str() << std::endl;
+    }
+
+    void on_unhandled_error(proton::event &e, const proton::condition &c) {
+        std::cerr << "broker error: " << e.name() << ":" << c.str() << std::endl;
+    }
+
     void remove_stale_consumers(proton::connection connection) {
         proton::link_range r = connection.find_links(proton::endpoint::REMOTE_ACTIVE);
-        
+
         for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
             if (!!l->sender()) {
                 unsubscribe(l->sender());
