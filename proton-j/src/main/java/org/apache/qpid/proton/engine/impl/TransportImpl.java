@@ -489,7 +489,7 @@ public class TransportImpl extends EndpointImpl
 
     private void processTransportWork()
     {
-        if(_connectionEndpoint != null)
+        if(_connectionEndpoint != null && _isOpenSent)
         {
             DeliveryImpl delivery = _connectionEndpoint.getTransportWorkHead();
             while(delivery != null)
