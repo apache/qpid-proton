@@ -20,6 +20,7 @@
  */
 #include "proton/handler.hpp"
 
+#include "proton/error.hpp"
 #include "proton/transport.hpp"
 
 #include "proton_event.hpp"
@@ -61,6 +62,6 @@ void handler::on_transaction_commit(event &e) { on_unhandled(e); }
 void handler::on_transaction_declare(event &e) { on_unhandled(e); }
 
 void handler::on_unhandled(event &) {}
-void handler::on_unhandled_error(event &, const condition& c) { throw std::runtime_error(c.str()); }
+void handler::on_unhandled_error(event &, const condition& c) { throw proton::error(c.str()); }
 
 }
