@@ -34,22 +34,14 @@ namespace io {
 const descriptor INVALID_DESCRIPTOR = -1;
 
 std::string error_str() {
-#ifdef USE_STRERROR_R
-    char buf[256];
-    strerror_r(errno, buf, sizeof(buf));
-    return buf;
-#elifdef USE_STRERROR_S
-    char buf[256];
-    strerror_s(buf, sizeof(buf), errno);
-    return buf;
-#elifdef USE_OLD_STRERROR
-    char buf[256];
-    strncpy(buf, strerror(errno), sizeof(buf));
-    return buf;
+    char buf[512] = "Unknown error";
+#ifdef _GNU_SOURCE
+    // GNU strerror_r returns the message
+    return ::strerror_r(errno, buf, sizeof(buf));
 #else
-    std::ostringstream os;
-    os <<  "system error (" << errno << ")";
-    return os.str();
+    // POSIX strerror_r doesn't return the buffer
+    ::strerror_r(errno, buf, sizeof(buf));
+    return std::string(buf)
 #endif
 }
 
