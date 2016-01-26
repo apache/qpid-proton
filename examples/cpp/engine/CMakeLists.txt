@@ -21,38 +21,17 @@ find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 
-set(examples
-  broker
-  helloworld
-  simple_recv
-  simple_send
-  direct_recv
-  direct_send
-  client
-  server)
-
-foreach(example ${examples})
-  set(extra_source "")
-  if (example EQUAL broker)
-    set(extra_source broker.hpp)
-  endif()
+foreach(example
+    broker
+    helloworld
+    simple_recv
+    simple_send
+    direct_recv
+    direct_send
+    client
+    server)
   add_executable(engine-${example} ${example}.cpp ${extra_source})
   target_link_libraries(engine-${example} ${ProtonCpp_LIBRARIES})
   set_source_files_properties(engine-${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
   set_target_properties(engine-${example} PROPERTIES OUTPUT_NAME ${example})
 endforeach()
-
-set(env_py "${CMAKE_SOURCE_DIR}/proton-c/env.py")
-set(test_bin_dir "$<TARGET_FILE_DIR:engine-broker>")
-
-if (WIN32)
-  # Ignore existing path (usualy containting spaces, escape chars).
-  # Choose just enough path for Windows, ';' separated.
-  set(test_path "${test_bin_dir}" "$<TARGET_FILE_DIR:qpid-proton>" "$<TARGET_FILE_DIR:qpid-proton-cpp>")
-else(WIN32)
-  # ':' separated path with test_bin_dir first.
-  set(test_path "${test_bin_dir}:$ENV{PATH}")
-endif(WIN32)
-
-add_test(NAME cpp_example_engine_test
-  COMMAND ${PYTHON_EXECUTABLE} ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)

@@ -57,7 +57,6 @@ int main(int argc, char **argv) {
 
         hello_world hw(url);
         proton::container(hw).run();
-
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

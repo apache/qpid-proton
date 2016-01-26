@@ -20,179 +20,210 @@
 # This is a test script to run the examples and verify that they behave as expected.
 
 import unittest
-import os, sys, socket, time
+import os, sys, socket, time, re
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 from copy import copy
 import platform
 from os.path import dirname as dirname
-
-def cmdline(*args):
-    """Adjust executable name args[0] for windows and/or valgrind"""
-    args = list(args)
-    if platform.system() == "Windows":
-        args[0] += ".exe"
-    if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
-        args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet",
-                "--leak-check=full"] + args
-    return args
-
-def background(*args):
-    """Run executable in the backround, return the popen"""
-    p = Popen(cmdline(*args), stdout=PIPE, stderr=sys.stderr)
-    p.args = args               # Save arguments for debugging output
-    return p
-
-def verify(p):
-    """Wait for executable to exit and verify status."""
-    try:
-        out, err = p.communicate()
-    except Exception as e:
-        raise Exception("Error running %s: %s", p.args, e)
-    if p.returncode:
-        raise Exception("""%s exit code %s
-vvvvvvvvvvvvvvvv
-%s
-^^^^^^^^^^^^^^^^
-""" % (p.args, p.returncode, out))
-    if platform.system() == "Windows":
-        # Just \n please
-        if out:
-            out = out.translate(None, '\r')
-    return out
-
-def execute(*args):
-    return verify(background(*args))
-
-NULL = open(os.devnull, 'w')
-
-def wait_addr(addr, timeout=10):
-    """Wait up to timeout for something to listen on port"""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            c = socket.create_connection(addr.split(":"), deadline - time.time())
-            c.close()
-            return
-        except socket.error as e:
-            time.sleep(0.01)
-    raise Exception("Timed out waiting for %s", addr)
+from threading import Thread, Event
 
 def pick_addr():
     """Pick a new host:port address."""
-    # TODO aconway 2015-07-14: need a safer way to pick ports.
+    # TODO Conway 2015-07-14: need a safer way to pick ports.
     p =  randrange(10000, 20000)
     return "127.0.0.1:%s" % p
 
-def ssl_certs_dir():
-    """Absolute path to the test SSL certificates"""
-    pn_root = dirname(dirname(dirname(sys.argv[0])))
-    return os.path.join(pn_root, "examples/cpp/ssl_certs")
+class ProcError(Exception):
+    """An exception that captures failed process output"""
+    def __init__(self, proc, what="non-0 exit"):
+        out = proc.out.strip()
+        if out:
+            out = "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^\n" % out
+        else:
+            out = ", no output)"
+        super(Exception, self, ).__init__(
+            "%s %s, code=%s%s" % (proc.args, what, proc.returncode, out))
 
-class Broker(object):
-    """Run the test broker"""
+class Proc(Popen):
+    """A example process that stores its stdout and can scan it for a 'ready' pattern'"""
 
-    @classmethod
-    def get(cls):
-        if not hasattr(cls, "_broker"):
-            cls._broker = Broker()
-        return cls._broker
+    if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
+        env_args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet", "--leak-check=full"]
+    else:
+        env_args = []
 
-    @classmethod
-    def stop(cls):
-        if cls.get() and cls._broker.process:
-            cls._broker.process.kill()
-            cls._broker = None
-
-    def __init__(self):
-        broker_exe = os.environ.get("TEST_BROKER") or "broker"
-        self.addr = pick_addr()
-        cmd = cmdline(broker_exe, "-a", self.addr)
+    def __init__(self, args, ready=None, timeout=10, **kwargs):
+        """Start an example process"""
+        args = list(args)
+        if platform.system() == "Windows":
+            args[0] += ".exe"
+        self.timeout = timeout
+        self.args = args
+        self.out = ""
+        args = self.env_args + args
         try:
-            self.process = Popen(cmd, stdout=NULL, stderr=sys.stderr)
-            wait_addr(self.addr)
-            self.addr += "/examples"
-        except Exception as e:
-            raise Exception("Error running %s: %s", cmd, e)
+            Popen.__init__(self, args, stdout=PIPE, stderr=STDOUT, **kwargs)
+        except Exception, e:
+            raise ProcError(self, str(e))
+        # Start reader thread.
+        self.pattern = ready
+        self.ready = Event()
+        self.error = None
+        self.thread = Thread(target=self.run_)
+        self.thread.daemon = True
+        self.thread.start()
+        if self.pattern:
+            self.wait_ready()
 
-class ExampleTest(unittest.TestCase):
-    """Run the examples, verify they behave as expected."""
+    def run_(self):
+        try:
+            while True:
+                l = self.stdout.readline()
+                if not l: break
+                self.out += l.translate(None, "\r")
+                if self.pattern is not None:
+                    if re.search(self.pattern, l):
+                        self.ready.set()
+            if self.wait() != 0:
+                self.error = ProcError(self)
+        except Exception, e:
+            self.error = sys.exc_info()
+        finally:
+            self.ready.set()
+
+    def safe_kill(self):
+        """Kill and clean up zombie but don't wait forever. No exceptions."""
+        try:
+            self.kill()
+            self.thread.join(self.timeout)
+        except: pass
+        return self.out
+
+    def check_(self):
+        if self.error:
+            if isinstance(self.error, Exception):
+                raise self.error
+            raise self.error[0], self.error[1], self.error[2] # with traceback
+
+    def wait_ready(self):
+        """Wait for ready to appear in output"""
+        if self.ready.wait(self.timeout):
+            self.check_()
+            return self.out
+        else:
+            self.safe_kill()
+            raise ProcError(self, "timeout waiting for '%s'" % self.pattern)
+
+    def wait_exit(self):
+        """Wait for process to exit, return output. Raise ProcError on failure."""
+        self.thread.join(self.timeout)
+        if self.poll() is not None:
+            self.check_()
+            return self.out
+        else:
+            raise ProcError(self, "timeout waiting for exit")
+
+
+class ExampleTestCase(unittest.TestCase):
+    def setUp(self):
+        self.procs = []
+
+    def tearDown(self):
+        for p in self.procs:
+            p.safe_kill()
+
+    def proc(self, *args, **kwargs):
+        p = Proc(*args, **kwargs)
+        self.procs.append(p)
+        return p
+
+
+class BrokerTestCase(ExampleTestCase):
+    """
+    ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
+    """
 
     @classmethod
-    def tearDownClass(self):
-        Broker.stop()
+    def setUpClass(cls):
+        cls.addr = pick_addr() + "/examples"
+        cls.broker = Proc(["broker", "-a", cls.addr], ready="listening")
+        cls.broker.wait_ready()
 
-    def test_helloworld(self):
-        b = Broker.get()
-        hw = execute("helloworld", b.addr)
-        self.assertEqual('Hello World!\n', hw)
+    @classmethod
+    def tearDownClass(cls):
+        cls.broker.safe_kill()
 
-    def test_helloworld_direct(self):
-        addr = pick_addr()
-        hw = execute("helloworld_direct", addr)
-        self.assertEqual('Hello World!\n', hw)
+    def tearDown(self):
+        super(BrokerTestCase, self).tearDown()
+        b = type(self).broker
+        if b.poll() !=  None: # Broker crashed
+            type(self).setUpClass() # Start another for the next test.
+            raise ProcError(b, "broker crash")
 
-    def test_simple_send_recv(self):
-        b = Broker.get()
-        send = execute("simple_send", "-a", b.addr)
-        self.assertEqual("all messages confirmed\n", send)
-        recv = execute("simple_recv", "-a", b.addr)
-        recv_expect = "simple_recv listening on amqp://%s\n" % (b.addr)
-        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
-        self.assertEqual(recv_expect, recv)
 
-    def test_simple_send_direct_recv(self):
-        addr = pick_addr()
-        recv = background("direct_recv", "-a", addr)
-        wait_addr(addr)
-        self.assertEqual("all messages confirmed\n", execute("simple_send", "-a", addr))
-        recv_expect = "direct_recv listening on amqp://%s\n" % (addr)
-        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
-        self.assertEqual(recv_expect, verify(recv))
-
-    def test_simple_recv_direct_send(self):
-        addr = pick_addr()
-        send = background("direct_send", "-a", addr)
-        wait_addr(addr)
-        recv_expect = "simple_recv listening on amqp://%s\n" % (addr)
-        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
-        self.assertEqual(recv_expect, execute("simple_recv", "-a", addr))
-        send_expect = "direct_send listening on amqp://%s\nall messages confirmed\n" % (addr)
-        self.assertEqual(send_expect, verify(send))
-
-    CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
+CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
 Did gire and gymble in the wabe. => DID GIRE AND GYMBLE IN THE WABE.
 All mimsy were the borogroves, => ALL MIMSY WERE THE BOROGROVES,
 And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
+
+def recv_expect(name, addr):
+    return "%s listening on amqp://%s\n%s" % (
+        name, addr, "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)]))
+
+class ContainerExampleTest(BrokerTestCase):
+    """Run the container examples, verify they behave as expected."""
+
+    def test_helloworld(self):
+        self.assertEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
+
+    def test_helloworld_direct(self):
+        self.assertEqual('Hello World!\n', self.proc(["helloworld_direct", pick_addr()]).wait_exit())
+
+    def test_simple_send_recv(self):
+        self.assertEqual("all messages confirmed\n",
+                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
+
     def test_simple_recv_send(self):
         # Start receiver first, then run sender"""
-        b = Broker.get()
-        recv = background("simple_recv", "-a", b.addr)
-        self.assertEqual("all messages confirmed\n", execute("simple_send", "-a", b.addr))
-        recv_expect = "simple_recv listening on amqp://%s\n" % (b.addr)
-        recv_expect += "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
-        self.assertEqual(recv_expect, verify(recv))
+        recv = self.proc(["simple_recv", "-a", self.addr])
+        self.assertEqual("all messages confirmed\n",
+                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
+
+
+    def test_simple_send_direct_recv(self):
+        addr = pick_addr()
+        recv = self.proc(["direct_recv", "-a", addr], "listening")
+        self.assertEqual("all messages confirmed\n",
+                         self.proc(["simple_send", "-a", addr]).wait_exit())
+        self.assertEqual(recv_expect("direct_recv", addr), recv.wait_exit())
+
+    def test_simple_recv_direct_send(self):
+        addr = pick_addr()
+        send = self.proc(["direct_send", "-a", addr], "listening")
+        self.assertEqual(recv_expect("simple_recv", addr),
+                         self.proc(["simple_recv", "-a", addr]).wait_exit())
+
+        self.assertEqual(
+            "direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+            send.wait_exit())
 
     def test_request_response(self):
-        b = Broker.get()
-        server = background("server", "-a", b.addr)
-        try:
-            self.assertEqual(execute("client", "-a", b.addr), self.CLIENT_EXPECT)
-        finally:
-            server.kill()
+        server = self.proc(["server", "-a", self.addr], "connected")
+        self.assertEqual(CLIENT_EXPECT,
+                         self.proc(["client", "-a", self.addr]).wait_exit())
 
     def test_request_response_direct(self):
         addr = pick_addr()
-        server = background("server_direct", "-a", addr+"/examples")
-        wait_addr(addr)
-        try:
-            self.assertEqual(execute("client", "-a", addr+"/examples"), self.CLIENT_EXPECT)
-        finally:
-            server.kill()
+        server = self.proc(["server_direct", "-a", addr+"/examples"], "listening")
+        self.assertEqual(CLIENT_EXPECT,
+                         self.proc(["client", "-a", addr+"/examples"]).wait_exit())
 
     def test_encode_decode(self):
-        expect="""
+        want="""
 == Array, list and map of uniform type.
 array<int>[int(1), int(2), int(3)]
 [ 1 2 3 ]
@@ -215,7 +246,7 @@ list[int(42), boolean(false), symbol(x)]
 map{string(k1):int(42), symbol(k2):boolean(false)}
 """
         self.maxDiff = None
-        self.assertEqual(expect, execute("encode_decode"))
+        self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
 
     def test_recurring_timer(self):
         env = copy(os.environ)        # Disable valgrind, this test is time-sensitive.
@@ -227,18 +258,22 @@ Tick...
 Tock...
 """
             self.maxDiff = None
-            self.assertEqual(expect, execute("recurring_timer", "-t", ".05", "-k", ".01"))
+            self.assertEqual(expect, self.proc(["recurring_timer", "-t", ".05", "-k", ".01"]).wait_exit())
         finally:
             os.environ = env    # Restore environment
 
+    def ssl_certs_dir(self):
+        """Absolute path to the test SSL certificates"""
+        pn_root = dirname(dirname(dirname(sys.argv[0])))
+        return os.path.join(pn_root, "examples/cpp/ssl_certs")
+
     def test_ssl(self):
         # SSL without SASL
-        expect="""Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
-Hello World!
-"""
         addr = "amqps://" + pick_addr() + "/examples"
-        ignore_first_line, ignore_nl, ssl_hw = execute("ssl", addr, ssl_certs_dir()).partition('\n')
-        self.assertEqual(expect, ssl_hw)
+        out = self.proc(["ssl", addr, self.ssl_certs_dir()]).wait_exit()
+        expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
+        self.assertIn(expect, out)
+
 
     def test_ssl_client_cert(self):
         # SSL with SASL EXTERNAL
@@ -247,8 +282,48 @@ Outgoing client connection connected via SSL.  Server certificate identity CN=te
 Hello World!
 """
         addr = "amqps://" + pick_addr() + "/examples"
-        ignore_first_line, ignore_nl, ssl_hw = execute("ssl_client_cert", addr, ssl_certs_dir()).partition('\n')
-        self.assertEqual(expect, ssl_hw)
+        out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()]).wait_exit()
+        self.assertIn(expect, out)
+
+
+class ConnectionEngineExampleTest(BrokerTestCase):
+    """Run the connction_engine examples, verify they behave as expected."""
+
+    def test_helloworld(self):
+        self.assertEqual('Hello World!\n',
+                         self.proc(["helloworld", self.addr]).wait_exit())
+
+    def test_simple_send_recv(self):
+        self.assertEqual("all messages confirmed\n",
+                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
+
+    def test_simple_recv_send(self):
+        # Start receiver first, then run sender"""
+        recv = self.proc(["simple_recv", "-a", self.addr])
+        self.assertEqual("all messages confirmed\n", self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
+
+
+    def test_simple_send_direct_recv(self):
+        addr = pick_addr()
+        recv = self.proc(["direct_recv", "-a", addr], "listening")
+        self.assertEqual("all messages confirmed\n",
+                         self.proc(["simple_send", "-a", addr]).wait_exit())
+        self.assertEqual(recv_expect("direct_recv", addr), recv.wait_exit())
+
+    def test_simple_recv_direct_send(self):
+        addr = pick_addr()
+        send = self.proc(["direct_send", "-a", addr], "listening")
+        self.assertEqual(recv_expect("simple_recv", addr),
+                         self.proc(["simple_recv", "-a", addr]).wait_exit())
+        self.assertEqual("direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+                         send.wait_exit())
+
+    def test_request_response(self):
+        server = self.proc(["server", "-a", self.addr], "connected")
+        self.assertEqual(CLIENT_EXPECT,
+                         self.proc(["client", "-a", self.addr]).wait_exit())
 
 if __name__ == "__main__":
     unittest.main()

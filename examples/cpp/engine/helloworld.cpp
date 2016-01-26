@@ -54,7 +54,6 @@ class hello_world : public proton::handler {
 int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
-
         hello_world hw(url.path());
         proton::io::socket_engine(url, hw).run();
 

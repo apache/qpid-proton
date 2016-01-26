@@ -71,7 +71,7 @@ class server : public proton::handler {
         if (!senders[reply_to]) {
             senders[reply_to] = connection.open_sender(reply_to);
         }
-        
+
         senders[reply_to].send(reply);
     }
 };
@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 
     try {
         opts.parse();
-        
+
         server srv(address);
         proton::container(srv).run();
 

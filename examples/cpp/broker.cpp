@@ -62,10 +62,10 @@ int main(int argc, char **argv) {
     options opts(argc, argv);
 
     opts.add_value(url, 'a', "address", "listen on URL", "URL");
-    
+
     try {
         opts.parse();
-        
+
         broker b(url);
         proton::container(b.handler()).run();
 
