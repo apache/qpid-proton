@@ -31,16 +31,14 @@
 #include <iostream>
 #include <map>
 
-
-
 class simple_recv : public proton::handler {
   private:
     proton::url url;
     proton::receiver receiver;
     uint64_t expected;
     uint64_t received;
-  public:
 
+  public:
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_start(proton::event &e) {
@@ -50,11 +48,15 @@ class simple_recv : public proton::handler {
 
     void on_message(proton::event &e) {
         proton::message& msg = e.message();
-        if (msg.id().get<uint64_t>() < received)
-            return; // ignore duplicate
+        
+        if (msg.id().get<uint64_t>() < received) {
+            return; // Ignore duplicate
+        }
+        
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;
+            
             if (received == expected) {
                 e.receiver().close();
                 e.connection().close();
@@ -64,22 +66,26 @@ class simple_recv : public proton::handler {
 };
 
 int main(int argc, char **argv) {
-    // Command line options
     std::string address("127.0.0.1:5672/examples");
+    
     int message_count = 100;
     options opts(argc, argv);
+
     opts.add_value(address, 'a', "address", "connect to and receive from URL", "URL");
     opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
 
     try {
         opts.parse();
+        
         simple_recv recv(address, message_count);
         proton::container(recv).run();
+
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+    
     return 1;
 }

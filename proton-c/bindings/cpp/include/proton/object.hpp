@@ -1,5 +1,6 @@
 #ifndef OBJECT_HPP
 #define OBJECT_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,6 +20,8 @@
  * under the License.
  */
 
+/// @cond INTERNAL
+
 #include "proton/config.hpp"
 #include "proton/export.hpp"
 #include "proton/comparable.hpp"
@@ -26,7 +29,6 @@
 
 namespace proton {
 
-///@cond INTERNAL
 class pn_ptr_base {
   protected:
     PN_CPP_EXTERN static void incref(void* p);
@@ -51,9 +53,6 @@ template <class T> class pn_ptr : private pn_ptr_base, public comparable<pn_ptr<
     T* release() { T *p = ptr_; ptr_ = 0; return p; }
     bool operator!() const { return !ptr_; }
 
-  friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }
-  friend bool operator<(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ < b.ptr_; }
-
     static pn_ptr take_ownership(T* p) { return pn_ptr<T>(p, true); }
 
   private:
@@ -62,21 +61,17 @@ template <class T> class pn_ptr : private pn_ptr_base, public comparable<pn_ptr<
     // Note that it is the presence of the bool in the constructor signature that matters
     // to get the "transfer ownership" constructor: The value of the bool isn't checked.
     pn_ptr(T* p, bool) : ptr_(p) {}
+
+    friend bool operator==(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ == b.ptr_; }
+    friend bool operator<(const pn_ptr& a, const pn_ptr& b) { return a.ptr_ < b.ptr_; }
 };
 
 template <class T> pn_ptr<T> take_ownership(T* p) { return pn_ptr<T>::take_ownership(p); }
 
-///@endcond INTERNAL
-
-/**
- * Base class for proton object types
- */
+/// Base class for proton object types.
 template <class T> class object : public comparable<object<T> > {
   public:
     bool operator!() const { return !object_; }
-
-  friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
-  friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 
   protected:
     object(pn_ptr<T> o) : object_(o) {}
@@ -84,7 +79,13 @@ template <class T> class object : public comparable<object<T> > {
 
   private:
     pn_ptr<T> object_;
+
+    friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
+    friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 };
 
 }
+
+/// @endcond
+
 #endif // OBJECT_HPP

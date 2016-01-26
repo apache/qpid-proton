@@ -1,5 +1,6 @@
 #ifndef SCALAR_HPP
 #define SCALAR_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -30,11 +31,16 @@ namespace proton {
 class encoder;
 class decoder;
 
-/** scalar holds an instance of any scalar AMQP type. */
+/// A holder for an instance of any scalar AMQP type.
 class scalar : public comparable<scalar> {
   public:
+    /// Create an empty scalar.
     PN_CPP_EXTERN scalar();
+
+    /// Copy a scalar.
     PN_CPP_EXTERN scalar(const scalar&);
+
+    /// Copy a scalar.
     PN_CPP_EXTERN scalar& operator=(const scalar&);
 
     /// Type for the value in the scalar, NULL_TYPE if empty()
@@ -43,8 +49,11 @@ class scalar : public comparable<scalar> {
     /// True if the scalar is empty.
     PN_CPP_EXTERN bool empty() const;
 
-    ///@name Assign a C++ value, deduce the AMQP type()
-    ///@{
+    /// @name Assignment operators
+    ///
+    /// Assign a C++ value and deduce the AMQP type().
+    ///
+    /// @{
     PN_CPP_EXTERN scalar& operator=(bool);
     PN_CPP_EXTERN scalar& operator=(uint8_t);
     PN_CPP_EXTERN scalar& operator=(int8_t);
@@ -67,13 +76,17 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN scalar& operator=(const amqp_binary&);
     PN_CPP_EXTERN scalar& operator=(const std::string& s); ///< Treated as an AMQP string
     PN_CPP_EXTERN scalar& operator=(const char* s);        ///< Treated as an AMQP string
-    ///@}
+    /// @}
 
-    /// Construct from any type that we can assign from.
+    /// Create a scalar from any type that we can assign from.
     template <class T> explicit scalar(T x) { *this = x; }
 
-    ///@name get(T&) extracts the value if the types match exactly, throws type_error otherwise.
-    ///@{
+    /// @name Get methods
+    ///
+    /// get(T&) extracts the value if the types match exactly and
+    /// throws type_error otherwise.
+    ///
+    /// @{
     PN_CPP_EXTERN void get(bool&) const;
     PN_CPP_EXTERN void get(uint8_t&) const;
     PN_CPP_EXTERN void get(int8_t&) const;
@@ -95,24 +108,29 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN void get(amqp_symbol&) const;
     PN_CPP_EXTERN void get(amqp_binary&) const;
     PN_CPP_EXTERN void get(std::string&) const; ///< Treated as an AMQP string
-    ///@}
+    /// @}
 
-    ///@ get<T>() is like get(T&) but returns the value..
+    /// get<T>() is like get(T&) but returns the value.
     template<class T> T get() const { T x; get(x); return x; }
 
-    ///@name as_ methods do "loose" conversion, they will convert the scalar's
-    ///value to the requested type if possible, else throw type_error
-    ///@{
-    PN_CPP_EXTERN int64_t as_int() const;     ///< Allowed if type_id_is_integral(type())
-    PN_CPP_EXTERN uint64_t as_uint() const;   ///< Allowed if type_id_is_integral(type())
-    PN_CPP_EXTERN double as_double() const;    ///< Allowed if type_id_is_floating_point(type())
+    /// @name As methods
+    ///
+    /// As methods do "loose" conversion.  They will convert the
+    /// scalar's value to the requested type if possible, else throw
+    /// type_error.
+    ///
+    /// @{
+    PN_CPP_EXTERN int64_t as_int() const;        ///< Allowed if type_id_is_integral(type())
+    PN_CPP_EXTERN uint64_t as_uint() const;      ///< Allowed if type_id_is_integral(type())
+    PN_CPP_EXTERN double as_double() const;      ///< Allowed if type_id_is_floating_point(type())
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if type_id_is_string_like(type())
-    ///@}
+    /// @}
 
+    /// @cond INTERNAL
+    
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const scalar&);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
   friend PN_CPP_EXTERN decoder operator>>(decoder, scalar&);
-
 
     /// Scalars with different type() are considered unequal even if the values
     /// are equal as numbers or strings.
@@ -121,6 +139,8 @@ class scalar : public comparable<scalar> {
     /// For scalars of different type(), operator< sorts by order of type().
   friend PN_CPP_EXTERN bool operator<(const scalar& x, const scalar& y);
 
+    /// @endcond
+    
   private:
     void ok(pn_type_t) const;
     void set(const std::string&, pn_type_t);
@@ -131,29 +151,39 @@ class scalar : public comparable<scalar> {
   friend class message;
 };
 
-///@internal base for restricted scalar types
+/// @cond INTERNAL
+/// XXX should it be public?
+    
+/// Base class for restricted scalar types.
 class restricted_scalar : public comparable<restricted_scalar> {
   public:
     operator const scalar&() const { return scalar_; }
     type_id type() const { return scalar_.type(); }
 
-    ///@name as_ methods do "loose" conversion, they will convert the scalar's
-    ///value to the requested type if possible, else throw type_error
-    ///@{
+    /// @name As methods
+    ///
+    /// As methods do "loose" conversion.  They will convert the
+    /// scalar's value to the requested type if possible, else throw
+    /// type_error.
+    ///
+    /// @{
     int64_t as_int() const { return scalar_.as_int(); }
     uint64_t as_uint() const { return scalar_.as_uint(); }
     double as_double() const { return scalar_.as_double();  }
     std::string as_string() const { return scalar_.as_string(); }
-    ///@}
-
-  friend std::ostream& operator<<(std::ostream& o, const restricted_scalar& x)  { return o << x.scalar_; }
-  friend bool operator<(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ < y.scalar_; }
-  friend bool operator==(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ == y.scalar_; }
+    /// @}
 
   protected:
     restricted_scalar() {}
     scalar scalar_;
+
+    friend std::ostream& operator<<(std::ostream& o, const restricted_scalar& x)  { return o << x.scalar_; }
+    friend bool operator<(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ < y.scalar_; }
+    friend bool operator==(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ == y.scalar_; }
 };
 
+/// @endcond
+
 }
+
 #endif // SCALAR_HPP

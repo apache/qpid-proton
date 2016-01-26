@@ -39,7 +39,6 @@ class broker {
     proton::handler& handler() { return handler_; }
 
   private:
-
     class my_handler : public broker_handler {
       public:
         my_handler(const proton::url& u, queues& qs) : broker_handler(qs), url_(u) {}
@@ -59,19 +58,23 @@ class broker {
 };
 
 int main(int argc, char **argv) {
-    // Command line options
     proton::url url("0.0.0.0");
     options opts(argc, argv);
+
     opts.add_value(url, 'a', "address", "listen on URL", "URL");
+    
     try {
         opts.parse();
+        
         broker b(url);
         proton::container(b.handler()).run();
+
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

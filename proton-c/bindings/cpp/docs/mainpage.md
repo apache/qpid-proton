@@ -1,112 +1,136 @@
-Introduction     {#mainpage}
-============
+# Introduction {#mainpage}
 
-This is the C++ API for the proton AMQP protocol engine. It allows you to write
-client and server applications that send and receive AMQP messages.
+This is the C++ API for the Proton AMQP protocol engine. It allows you
+to write client and server applications that send and receive AMQP
+messages.
 
 The best way to start is with the \ref tutorial "tutorial".
 
-An overview of the model
-------------------------
+## An overview of the AMQP model
 
-Messages are transferred between connected peers over 'links'. At the sending
-peer the link is called a sender. At the receiving peer it is called a
-receiver. Messages are sent by senders and received by receivers. Links may have
-named 'source' and 'target' addresses (see "sources and targets" below.)
+Messages are transferred between connected peers over *links*. The
+sending end of a link is a `proton::sender`, and the receiving end is
+a `proton::receiver`.  Links have named 'source' and 'target'
+addresses.  See "Sources and Targets" below for more information.
 
-Links are established over sessions. Sessions are established over
-connections. Connections are (generally) established between two uniquely
-identified containers. Though a connection can have multiple sessions, often
-this is not needed. The container API allows you to ignore sessions unless you
-actually require them.
+Links are grouped in a `proton::session`. Messages for links in the
+same session are sent sequentially.  Messages on different sessions
+can be interleaved, so a large message being sent on one session does
+not block messages being sent on other sessions.
 
-The sending of a message over a link is called a delivery. The message
-is the content sent, including all meta-data such as headers and
-annotations. The delivery is the protocol exchange associated with the
-transfer of that content.
+Sessions are created over a `proton::connection`, which represents the
+network connection. You can create links directly on a connection
+using its default session if you don't need multiple sessions.
 
-To indicate that a delivery is complete, either the sender or the
-receiver 'settles' it. When the other side learns that it has been
-settled, they will no longer communicate about that delivery. The
-receiver can also indicate whether they accept or reject the
-message.
+`proton::message` represents the message: the body (content), headers,
+annotations, and so on. A `proton::delivery` represents the act of
+transferring a message over a link. The receiver acknowledges the
+delivery by accepting or rejecting it. The delivery is *settled* when
+both ends are done with it.  Different settlement methods give
+different levels of reliability: *at-most-once*, *at-least-once*, and
+*exactly-once*. See "Delivery Guarantees" below for details.
 
-Three different delivery levels or 'guarantees' can be achieved: at-most-once,
-at-least-once or exactly-once. See below for details.
+## Sources and targets
 
-### Sources and targets ###
+Every link has two addresses, *source* and *target*. The most common
+pattern for using these addresses is as follows:
 
-Every link has two addresses, *source* and *target*. The most common pattern for
-using these addresses is as follows:
+When a client creates a *receiver* link, it sets the *source*
+address. This means "I want to receive messages from this source."
+This is often referred to as "subscribing" to the source. When a
+client creates a *sender* link, it sets the *target* address. This
+means "I want to send to this target."
 
-When a client creates a *receiver* link, it sets the *source* address. This
-means "I want to receive messages from this source." This is often referred to
-as "subscribing" to the source. When a client creates a *sender* link, it sets
-the *target* address. This means "I want to send to this target."
+In the case of a broker, the source or target usually refers to a
+queue or topic. In general they can refer to any AMQP-capable node.
 
-In the case of a broker, the source or target usually refers to a queue or
-topic. In general they can refer to any AMQP-capable node.
+In the *request-response* pattern, a request message carries a
+*reply-to* address for the response message. This can be any AMQP
+address, but it is often useful to create a temporary address for just
+the response message.
 
-In the *request-response* pattern, a request message carries a *reply-to*
-address for the response message. This can be any AMQP address, but it is often
-useful to create a temporary address for just the response message.
+The most common approach is for the client to create a *receiver* for
+the response with the *dynamic* flag set. This asks the server to
+generate a unique *source* address automatically and discard it when
+the link closes. The client uses this "dynamic" source address as the
+reply-to when it sends the request, and the response is delivered to
+the client's dynamic receiver.
 
-The most common approach is for the client to create a *receiver* for the
-response with the *dynamic* flag set. This asks the server to generate a unique
-*source* address automatically and discard it when the link closes. The client
-uses this "dynamic" source address as the reply-to when it sends the request,
-and the response is delivered to the client's dynamic receiver.
+In the case of a broker, a dynamic address usually corresponds to a
+temporary queue, but any AMQP request-response server can use this
+technique. The \ref server_direct.cpp example illustrates how to
+implement a queueless request-response server.
 
-In the case of a broker a dynamic address usually corresponds to a temporary
-queue but any AMQP request-response server can use this technique. The \ref
-server_direct.cpp example illustrates how to implement a queueless
-request-response server.
+## Anatomy of a Proton application
 
-Commonly used classes
----------------------
+To send AMQP commands, call methods on classes like
+`proton::connection`, `proton::sender`, `proton::receiver`, or
+`proton::delivery`. To handle incoming commands, implement the
+`proton::handler` interface. The handler receives calls like
+`on_message` (a message is received), `on_link_open` (a link is
+opened), and `on_sendable` (a link is ready to send messages).
 
-A brief summary of some of the key classes follows.
+Messages are represented by `proton::message`. AMQP defines a type
+encoding that you can use for interoperability, but you can also use
+any encoding you wish and pass binary data as the
+`proton::message::body`. `proton::value` and `proton::scalar` provide
+conversion between AMQP and C++ data types.
 
-The `proton::container` class is the main entry point into the API, allowing
-connections and links to be established. Applications are structured as one or
-more event handlers.
+<!-- See the example \ref encode_decode.cpp. -->
 
-The easiest way to implement a handler is to define a subclass of
-`proton::messaging_handler` and over-ride the event handling member functions
-that interest you.
+There are two alternative ways to manage handlers and AMQP objects,
+the `proton::container` and the `proton::connection_engine`. You can
+code your application so that it can be run with either. Say you find
+the `proton::container` easier to get started but later need more
+flexibility.  You can switch to the `proton::connection_engine` with
+little or no change to your handlers.
 
-To send messages, call `proton::container::create_sender()` to create a
-`proton::sender` and then call `proton::sender::send()`. This is typically done
-when the sender is *sendable*, a condition indicated by the
-`proton::messaging_handler::on_sendable()` event, to avoid execessive build up
-of messages.
+### %proton::container
 
-To receive messages, call `proton::container::create_receiver()` to create a
-`proton::receiver`.  When messages are recieved the
-`proton::messaging_handler::on_message()` event handler function will be called.
+`proton::container` is a *reactor* framework that manages multiple
+connections and dispatches events to handlers. You implement
+`proton::handler` with your logic to react to events, and register it
+with the container. The container lets you open multiple connections
+and links, receive incoming connections and links, and send, receive,
+and acknowledge messages.
 
-Other key classes:
+The reactor handles IO for multiple connections using sockets and
+`poll`. It dispatches events to your handlers in a single thread,
+where you call `proton::container::run`. The container is not
+thread-safe: once it is running you can only operate on Proton objects
+from your handler methods.
 
-- proton::message represents an AMQP message, which has a body, headers and other properties.
-- proton::connection represents a connection to a remote AMQP endpoint.
-- proton::delivery holds the delivery status of a message.
-- proton::event carries details of an event.
+### %proton::connection_engine
 
-The library provides intuitive default conversions between AMQP and C++ types
-for message data q, but also allows detailed examination and construction of
-complex AMQP types. For details on converting between AMQP and C++ data types
-see the \ref encode_decode.cpp example and classes `proton::encoder`,
-`proton::decoder` and `proton::value`.
+`proton::connection_engine` dispatches events for a *single
+connection*. The subclass `proton::io::socket_engine` does
+socket-based IO. An application with a single connection is just like
+using `proton::container` except you attach your handler to a
+`proton::io::socket_engine` instead. You can compare examples, such as
+\ref helloworld.cpp and \ref engine/helloworld.cpp.
 
-`proton::connection_engine` provides fewer facilities that `proton::container`
-but makes fewer (no) assumptions about application threading and IO. It may be
-easier to integrate with an existing IO framework, for multi-threaded
-applications or for non-socket IO. See the \ref select_broker.cpp example. The
-main application and AMQP logic is implemented the same way using the `connection_engine` or
-the container.
+Now consider multiple connections. `proton::container` is easy to use
+but restricted to a single thread. `proton::connection_engine` is not
+thread-safe either, but *each engine is independent*. You can process
+different connections in different threads, or use a thread pool to
+process a dynamic set of connections.
 
-Delivery Guarantees
--------------------
+The engine does not provide built-in polling and listening like the
+`proton::container`, but you can drive engines using any polling or
+threading strategy and any IO library (for example, epoll, kqueue,
+solaris completion ports, IOCP proactor, boost::asio, libevent, etc.)
+This can be important for optimizing performance or supporting diverse
+platforms. The example \ref engine/broker.cpp shows a broker using
+sockets and poll, but you can see how the code could be adapted.
+
+`proton::connection_engine` also does not dictate the IO mechanism,
+but it is an abstract class. `proton::socket_engine` provides
+ready-made socket-based IO, but you can write your own subclass with
+any IO code. Just override the `io_read`, `io_write` and `io_close`
+methods. For example, the proton test suite implements an in-memory
+connection using `std::deque` for test purposes.
+
+## Delivery guarantees
 
 For *at-most-once*, the sender settles the message as soon as it sends
 it. If the connection is lost before the message is received by the

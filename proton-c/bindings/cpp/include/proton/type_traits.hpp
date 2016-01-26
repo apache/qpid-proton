@@ -1,5 +1,6 @@
 #ifndef TYPE_TRAITS_HPP
 #define TYPE_TRAITS_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,17 +20,20 @@
  * under the License.
  */
 
-/**@file
- * Internal: Type traits for mapping between AMQP and C++ types.
- *
- * Also provides workarounds for missing type_traits classes on older C++ compilers.
- * @cond INTERNAL
- */
+/// @cond INTERNAL
+
+/// @file
+///
+/// Internal: Type traits for mapping between AMQP and C++ types.
+///
+/// Also provides workarounds for missing type_traits classes on older
+/// C++ compilers.
 
 #include "proton/config.hpp"
 #include "proton/types.hpp"
 
 namespace proton {
+
 class value;
 
 template <bool, class T=void> struct enable_if {};
@@ -121,8 +125,8 @@ template <class T> struct is_unknown_integer {
     static const bool value = !has_type_id<T>::value && is_integral<T>::value;
 };
 
-
 }
-///@endcond
+
+/// @endcond
 
 #endif // TYPE_TRAITS_HPP

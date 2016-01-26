@@ -32,7 +32,6 @@ class selected_recv : public proton::handler {
     proton::url url;
 
   public:
-
     selected_recv(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
@@ -48,11 +47,14 @@ class selected_recv : public proton::handler {
 int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
+
         selected_recv recv(url);
         proton::container(recv).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
 #include "proton/link.hpp"
@@ -31,11 +32,12 @@ struct pn_connection_t;
 
 namespace proton {
 
-/// A receiving link
-class receiver : public link
-{
+/// A link for receiving messages.
+class receiver : public link {
   public:
+    /// @cond INTERNAL
     receiver(pn_link_t* r=0) : link(r) {}
+    /// @endcond
 
     /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
@@ -43,4 +45,4 @@ class receiver : public link
 
 }
 
-#endif  /*!PROTON_CPP_RECEIVER_H*/
+#endif // PROTON_CPP_RECEIVER_H

@@ -1,5 +1,6 @@
 #ifndef TYPES_H
 #define TYPES_H
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,71 +20,71 @@
  * under the License.
  */
 
-/**@file
- * Defines C++ types representing AMQP types.
- */
+/// @file
+///
+/// Defines C++ types representing AMQP types.
 
 #include "proton/comparable.hpp"
 #include "proton/export.hpp"
 #include "proton/error.hpp"
 
-#include <proton/codec.h>
+#include <proton/codec.h> // XXX everywhere else folks are using "codec.h"
 #include <proton/type_compat.h>
-
 #include <algorithm>
 #include <bitset>
 #include <string>
 #include <memory.h>
-#include <algorithm>
 
 namespace proton {
 
-/** type_id identifies an AMQP type. */
+/// An identifier for AMQP types.
 enum type_id {
-    NULL_TYPE=PN_NULL,          ///< The null type, contains no data.
-    BOOLEAN=PN_BOOL,            ///< Boolean true or false.
-    UBYTE=PN_UBYTE,             ///< Unsigned 8 bit integer.
-    BYTE=PN_BYTE,               ///< Signed 8 bit integer.
-    USHORT=PN_USHORT,           ///< Unsigned 16 bit integer.
-    SHORT=PN_SHORT,             ///< Signed 16 bit integer.
-    UINT=PN_UINT,               ///< Unsigned 32 bit integer.
-    INT=PN_INT,                 ///< Signed 32 bit integer.
-    CHAR=PN_CHAR,               ///< 32 bit unicode character.
-    ULONG=PN_ULONG,             ///< Unsigned 64 bit integer.
-    LONG=PN_LONG,               ///< Signed 64 bit integer.
-    TIMESTAMP=PN_TIMESTAMP,     ///< Signed 64 bit milliseconds since the epoch.
-    FLOAT=PN_FLOAT,             ///< 32 bit binary floating point.
-    DOUBLE=PN_DOUBLE,           ///< 64 bit binary floating point.
-    DECIMAL32=PN_DECIMAL32,     ///< 32 bit decimal floating point.
-    DECIMAL64=PN_DECIMAL64,     ///< 64 bit decimal floating point.
-    DECIMAL128=PN_DECIMAL128,   ///< 128 bit decimal floating point.
-    UUID=PN_UUID,               ///< 16 byte UUID.
-    BINARY=PN_BINARY,           ///< Variable length sequence of bytes.
-    STRING=PN_STRING,           ///< Variable length utf8-encoded string.
-    SYMBOL=PN_SYMBOL,           ///< Variable length encoded string.
-    DESCRIBED=PN_DESCRIBED,     ///< A descriptor and a value.
-    ARRAY=PN_ARRAY,             ///< A sequence of values of the same type.
-    LIST=PN_LIST,               ///< A sequence of values, may be of mixed types.
-    MAP=PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
+    NULL_TYPE = PN_NULL,          ///< The null type, contains no data.
+    BOOLEAN = PN_BOOL,            ///< Boolean true or false.
+    UBYTE = PN_UBYTE,             ///< Unsigned 8 bit integer.
+    BYTE = PN_BYTE,               ///< Signed 8 bit integer.
+    USHORT = PN_USHORT,           ///< Unsigned 16 bit integer.
+    SHORT = PN_SHORT,             ///< Signed 16 bit integer.
+    UINT = PN_UINT,               ///< Unsigned 32 bit integer.
+    INT = PN_INT,                 ///< Signed 32 bit integer.
+    CHAR = PN_CHAR,               ///< 32 bit unicode character.
+    ULONG = PN_ULONG,             ///< Unsigned 64 bit integer.
+    LONG = PN_LONG,               ///< Signed 64 bit integer.
+    TIMESTAMP = PN_TIMESTAMP,     ///< Signed 64 bit milliseconds since the epoch.
+    FLOAT = PN_FLOAT,             ///< 32 bit binary floating point.
+    DOUBLE = PN_DOUBLE,           ///< 64 bit binary floating point.
+    DECIMAL32 = PN_DECIMAL32,     ///< 32 bit decimal floating point.
+    DECIMAL64 = PN_DECIMAL64,     ///< 64 bit decimal floating point.
+    DECIMAL128 = PN_DECIMAL128,   ///< 128 bit decimal floating point.
+    UUID = PN_UUID,               ///< 16 byte UUID.
+    BINARY = PN_BINARY,           ///< Variable length sequence of bytes.
+    STRING = PN_STRING,           ///< Variable length utf8-encoded string.
+    SYMBOL = PN_SYMBOL,           ///< Variable length encoded string.
+    DESCRIBED = PN_DESCRIBED,     ///< A descriptor and a value.
+    ARRAY = PN_ARRAY,             ///< A sequence of values of the same type.
+    LIST = PN_LIST,               ///< A sequence of values, may be of mixed types.
+    MAP = PN_MAP                  ///< A sequence of key:value pairs, may be of mixed types.
 };
 
-/// Name of the AMQP type
+/// Get the name of the AMQP type.
 PN_CPP_EXTERN std::string type_name(type_id);
 
-/// Print the type_name
+/// Print the type name.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
-/// Raised when there is a type mismatch, with the expected and actual type ID.
+/// @cond INTERNAL
+
+/// XXX change namespace
+/// Raised when there is a type mismatch, with the expected and actual
+/// type ID.
 struct type_error : public decode_error {
     PN_CPP_EXTERN explicit type_error(type_id want, type_id got, const std::string& =std::string());
     type_id want; ///< Expected type_id
     type_id got;  ///< Actual type_id
 };
 
-///@cond INTERNAL
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
-///@endcond
 
 /// AMQP NULL type.
 struct amqp_null {};
@@ -133,7 +134,8 @@ struct amqp_binary : public std::string {
     explicit amqp_binary(const pn_bytes_t& b) : std::string(b.start, b.size) {}
 };
 
-/// Template for opaque proton proton types that can be treated as byte arrays.
+/// Template for opaque proton proton types that can be treated as
+/// byte arrays.
 template <class P> struct opaque : public comparable<opaque<P> > {
     P value;
     opaque(const P& p=P()) : value(p) {}
@@ -154,12 +156,15 @@ template <class T> bool operator<(const opaque<T>& x, const opaque<T>& y) { retu
 /// AMQP 16-byte UUID.
 typedef opaque<pn_uuid_t> amqp_uuid;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_uuid&);
+
 /// AMQP 32-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal32_t> amqp_decimal32;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal32&);
+
 /// AMQP 64-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal64_t> amqp_decimal64;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal64&);
+
 /// AMQP 128-bit decimal floating point (IEEE 854).
 typedef opaque<pn_decimal128_t> amqp_decimal128;
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_decimal128&);
@@ -174,11 +179,18 @@ inline bool operator==(amqp_timestamp x, amqp_timestamp y) { return x.millisecon
 inline bool operator<(amqp_timestamp x, amqp_timestamp y) { return x.milliseconds < y.milliseconds; }
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const amqp_timestamp&);
 
+/// @endcond
+
 // TODO aconway 2015-06-16: described types.
 
-///@name Attributes of a type_id value, returns same result as the
-/// corresponding std::type_traits tests for the corresponding C++ types.
-///@{
+/// @name Type test functions
+///    
+/// Attributes of a type_id value, returns same result as the
+/// corresponding std::type_traits tests for the corresponding C++
+/// types.
+///
+/// @{
+
 /// Any scalar type
 PN_CPP_EXTERN bool type_id_is_scalar(type_id);
 /// One of the signed integer types: BYTE, SHORT, INT or LONG
@@ -197,16 +209,19 @@ PN_CPP_EXTERN bool type_id_is_decimal(type_id);
 PN_CPP_EXTERN bool type_id_is_string_like(type_id);
 /// Container types: MAP, LIST, ARRAY or DESCRIBED.
 PN_CPP_EXTERN bool type_id_is_container(type_id);
-///@}
 
-/** Print the name of a type. */
+/// @}
+
+/// Print the name of a type.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
-/** Information needed to start extracting or inserting a container type.
- *
- * See encoder::operator<<(encoder&, const start&) and decoder::operator>>(decoder&, start&)
- * for examples of use.
- */
+/// @cond INTERNAL
+/// XXX change namespace
+    
+/// Information needed to start extracting or inserting a container type.
+///
+/// See encoder::operator<<(encoder&, const start&) and
+/// decoder::operator>>(decoder&, start&) for examples of use.
 struct start {
     PN_CPP_EXTERN start(type_id type=NULL_TYPE, type_id element=NULL_TYPE, bool described=false, size_t size=0);
     type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
@@ -214,18 +229,23 @@ struct start {
     bool is_described;       ///< true if first value is a descriptor.
     size_t size;             ///< the element count excluding the descriptor (if any)
 
-    /** Return a start for an array */
+    /// Return a start for an array.
     PN_CPP_EXTERN static start array(type_id element, bool described=false);
-    /** Return a start for a list */
+
+    /// Return a start for a list.
     PN_CPP_EXTERN static start list();
-    /** Return a start for a map */
+
+    /// Return a start for a map.
     PN_CPP_EXTERN static start map();
-    /** Return a start for a described type */
+
+    /// Return a start for a described type.
     PN_CPP_EXTERN static start described();
 };
 
-/** Finish inserting or extracting a container value. */
+/// Finish inserting or extracting a container value.
 struct finish {};
+
+/// @endcond
 
 }
 

@@ -43,6 +43,7 @@ else()
   set (OPTIONAL_ARG OPTIONAL)
   add_custom_target(docs)
 endif()
+add_custom_target(doc DEPENDS docs)
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)

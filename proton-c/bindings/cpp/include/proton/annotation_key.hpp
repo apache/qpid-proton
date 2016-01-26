@@ -1,5 +1,6 @@
 #ifndef ANNOTATION_KEY_HPP
 #define ANNOTATION_KEY_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,36 +24,53 @@
 #include "proton/scalar.hpp"
 
 namespace proton {
+    
 class encoder;
 class decoder;
 
-/** An annotation_key can contain one of the following types: uint64_t or amqp_symbol. */
+/// A key for use with AMQP annotation maps.
+///
+/// An annotation_key can contain either a uint64_t or a
+/// proton::amqp::amqp_symbol.
 class annotation_key : public restricted_scalar {
   public:
+    /// Create an empty key.
     annotation_key() { scalar_ = uint64_t(0); }
 
-    ///@name Assign a C++ value, deduce the AMQP type()
-    ///@{
+    /// @name Assignment operators
+    ///
+    /// Assign a C++ value, deducing the AMQP type().
+    ///
+    /// @{
     annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
     annotation_key& operator=(const amqp_symbol& x) { scalar_ = x; return *this; }
-    /// std::string is encoded as amqp_symbol
+    /// `std::string` is encoded as proton::amqp::amqp_symbol.
     annotation_key& operator=(const std::string& x) { scalar_ = amqp_symbol(x); return *this; }
-    /// char* is encoded as amqp_symbol
+    /// `char*` is encoded as proton::amqp::amqp_symbol.
     annotation_key& operator=(const char *x) { scalar_ = amqp_symbol(x); return *this; }
-    ///@}
+    /// @}
 
-    /// Converting constructor from any type that we can assign from.
+    /// A constructor that converts from any type that we can assign
+    /// from.
     template <class T> annotation_key(T x) { *this = x; }
 
+    /// @name Get methods
+    ///
+    /// @{
     void get(uint64_t& x) const { scalar_.get(x); }
     void get(amqp_symbol& x) const { scalar_.get(x); }
+    /// @}
 
+    /// Return the value as type T.
     template<class T> T get() const { T x; get(x); return x; }
 
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
-  friend PN_CPP_EXTERN decoder operator>>(decoder, annotation_key&);
-  friend class message;
+    /// @cond INTERNAL
+    friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
+    friend PN_CPP_EXTERN decoder operator>>(decoder, annotation_key&);
+    friend class message;
+    /// @endcond
 };
 
 }
+
 #endif // ANNOTATION_KEY_HPP

@@ -32,7 +32,6 @@ class browser : public proton::handler {
     proton::url url;
 
   public:
-
     browser(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
@@ -42,19 +41,24 @@ class browser : public proton::handler {
 
     void on_message(proton::event &e) {
         std::cout << e.message().body() << std::endl;
-        if (e.receiver().queued() == 0 && e.receiver().drained() > 0)
+
+        if (e.receiver().queued() == 0 && e.receiver().drained() > 0) {
             e.connection().close();
+        }
     }
 };
 
 int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
+
         browser b(url);
         proton::container(b).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

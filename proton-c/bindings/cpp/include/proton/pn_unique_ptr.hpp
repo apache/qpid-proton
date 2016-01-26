@@ -19,21 +19,22 @@
  * under the License.
  */
 
+/// @cond INTERNAL
+/// XXX discuss where this gets exposed
+    
 #include "proton/config.hpp"
 #include <memory>
 
 namespace proton {
 
-/**
- * A simple unique ownership pointer, used as a return value from functions that
- * transfer ownership to the caller.
- *
- * pn_unique_ptr return values should be converted immediately to
- * std::unique_ptr if that is available or std::auto_ptr (by calling release())
- * for older C++. You should not use pn_unique_ptr in your own code, it is a
- * limited pointer class designed only to work around differences between C++11
- * and C++03.
- */
+/// A simple unique ownership pointer, used as a return value from
+/// functions that transfer ownership to the caller.
+///
+/// pn_unique_ptr return values should be converted immediately to
+/// std::unique_ptr if that is available or std::auto_ptr (by calling
+/// release()) for older C++. You should not use pn_unique_ptr in your
+/// own code.  It is a limited pointer class designed only to work
+/// around differences between C++11 and C++03.
 template <class T> class pn_unique_ptr {
   public:
     pn_unique_ptr(T* p=0) : ptr_(p) {}
@@ -59,5 +60,8 @@ template <class T> class pn_unique_ptr {
     T* ptr_;
 };
 
+/// @endcond
+
 }
+
 #endif // UNIQUE_PTR_HPP

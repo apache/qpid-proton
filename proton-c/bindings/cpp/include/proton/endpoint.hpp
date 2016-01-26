@@ -27,42 +27,42 @@
 
 namespace proton {
 
-/** endpoint is a base class for session, connection and link */
-class endpoint
-{
+/// The base class for session, connection, and link.
+class endpoint {
   public:
-    /** state is a bit mask of state_bit values.
-     *
-     * A state mask is matched against an endpoint as follows: If the state mask
-     * contains both local and remote flags, then an exact match against those
-     * flags is performed. If state contains only local or only remote flags,
-     * then a match occurs if any of the local or remote flags are set
-     * respectively.
-     *
-     * @see connection::links, connection::sessions
-     */
+    /// A bit mask of state bit values.
+    ///
+    /// A state mask is matched against an endpoint as follows: If the
+    /// state mask contains both local and remote flags, then an exact
+    /// match against those flags is performed. If state contains only
+    /// local or only remote flags, then a match occurs if any of the
+    /// local or remote flags are set respectively.
+    ///
+    /// @see connection::find_links, connection::find_sessions
     typedef int state;
 
-    /// endpoint state bit values @{
-    PN_CPP_EXTERN static const state LOCAL_UNINIT;    ///< Local endpoint is un-initialized
-    PN_CPP_EXTERN static const state REMOTE_UNINIT;   ///< Remote endpoint is un-initialized
-    PN_CPP_EXTERN static const state LOCAL_ACTIVE;    ///< Local endpoint is active
-    PN_CPP_EXTERN static const state REMOTE_ACTIVE;   ///< Remote endpoint is active
-    PN_CPP_EXTERN static const state LOCAL_CLOSED;    ///< Local endpoint has been closed
-    PN_CPP_EXTERN static const state REMOTE_CLOSED;   ///< Remote endpoint has been closed
-    PN_CPP_EXTERN static const state LOCAL_MASK;      ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
-    PN_CPP_EXTERN static const state REMOTE_MASK;     ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
-    ///@}
+    PN_CPP_EXTERN static const state LOCAL_UNINIT;  ///< Local endpoint is uninitialized
+    PN_CPP_EXTERN static const state REMOTE_UNINIT; ///< Remote endpoint is uninitialized
+    PN_CPP_EXTERN static const state LOCAL_ACTIVE;  ///< Local endpoint is active
+    PN_CPP_EXTERN static const state REMOTE_ACTIVE; ///< Remote endpoint is active
+    PN_CPP_EXTERN static const state LOCAL_CLOSED;  ///< Local endpoint has been closed
+    PN_CPP_EXTERN static const state REMOTE_CLOSED; ///< Remote endpoint has been closed
+    PN_CPP_EXTERN static const state LOCAL_MASK;    ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
+    PN_CPP_EXTERN static const state REMOTE_MASK;   ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
 
 
+    /// Get the local error condition.
     virtual condition local_condition() const = 0;
+
+    /// Get the error condition of the remote endpoint.
     virtual condition remote_condition() const = 0;
 
     virtual ~endpoint() {}
 };
 
-///@cond INTERNAL
-
+/// @cond INTERNAL
+/// XXX important to expose?
+    
 template <class T> class iter_base  : public comparable<iter_base<T> > {
   public:
     typedef T value_type;
@@ -79,7 +79,6 @@ template <class T> class iter_base  : public comparable<iter_base<T> > {
     T ptr_;
     endpoint::state state_;
 };
-///@endcond INTERNAL
 
 /// An iterator range.
 template<class I> class range {
@@ -92,7 +91,9 @@ template<class I> class range {
   private:
     I begin_, end_;
 };
+    
+/// @endcond
 
 }
 
-#endif  /*!PROTON_CPP_H*/
+#endif // PROTON_CPP_H

@@ -1,5 +1,6 @@
 #ifndef REACTOR_HPP
 #define REACTOR_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,6 +19,9 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/// @cond INTERNAL
+/// XXX remove
 
 #include "proton/object.hpp"
 #include "proton/duration.hpp"
@@ -91,4 +95,7 @@ class reactor : public object<pn_reactor_t> {
 };
 
 }
+
+/// @endcond
+
 #endif // REACTOR_HPP

@@ -1,4 +1,4 @@
-#
+##
 ## Licensed to the Apache Software Foundation (ASF) under one
 ## or more contributor license agreements.  See the NOTICE file
 ## distributed with this work for additional information
@@ -19,31 +19,38 @@
 
 # Project options
 
-PROJECT_NAME           = proton-cpp
-PROJECT_NUMBER         = @PN_VERSION_MAJOR@.@PN_VERSION_MINOR@
-PROJECT_BRIEF          = "Proton C++ API"
-OUTPUT_DIRECTORY       = .
-OUTPUT_LANGUAGE        = English
-BRIEF_MEMBER_DESC      = YES
-REPEAT_BRIEF           = YES
-INLINE_INHERITED_MEMB  = YES
-JAVADOC_AUTOBRIEF      = YES
-MULTILINE_CPP_IS_BRIEF = NO
-INHERIT_DOCS           = YES
-BUILTIN_STL_SUPPORT    = YES
-INLINE_SIMPLE_STRUCTS  = YES
+PROJECT_NAME            = "Qpid Proton C++"
+PROJECT_NUMBER          = @PN_VERSION_MAJOR@.@PN_VERSION_MINOR@.@PN_VERSION_POINT@
+OUTPUT_DIRECTORY        = .
+OUTPUT_LANGUAGE         = English
+BRIEF_MEMBER_DESC       = YES
+REPEAT_BRIEF            = YES
+INLINE_INHERITED_MEMB   = YES
+JAVADOC_AUTOBRIEF       = YES
+MULTILINE_CPP_IS_BRIEF  = NO
+INHERIT_DOCS            = YES
+BUILTIN_STL_SUPPORT     = YES
+INLINE_SIMPLE_STRUCTS   = YES
+EXTRACT_LOCAL_CLASSES   = NO
+HIDE_UNDOC_CLASSES      = YES
+HIDE_COMPOUND_REFERENCE = YES
+HIDE_SCOPE_NAMES        = YES
+MAX_INITIALIZER_LINES   = 0
+ALPHABETICAL_INDEX      = NO
 
-# Build related configuration options
+# Redefine protected as private and strip out the PN_CPP_EXTERN macro
 
-EXTRACT_ALL            = YES
-INTERNAL_DOCS          = NO
+ENABLE_PREPROCESSING = YES
+MACRO_EXPANSION = YES
+EXPAND_ONLY_PREDEF = YES
+PREDEFINED = protected=private PN_CPP_EXTERN=
 
-# configuration options related to warning and progress messages
+# Configuration options related to warning and progress messages
 
 QUIET                  = YES
 WARNINGS               = YES
 
-# configuration options related to the input files
+# Configuration options related to the input files
 
 INPUT = @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/docs @CMAKE_SOURCE_DIR@/examples/cpp/README.hpp
 FILE_PATTERNS          = *.hpp *.md
@@ -53,17 +60,14 @@ EXAMPLE_RECURSIVE      = YES
 
 # View and list options
 
-GENERATE_TREEVIEW      = YES
-GENERATE_TODOLIST      = NO
-GENERATE_TESTLIST      = NO
-GENERATE_BUGLIST       = NO
-GENERATE_DEPRECATEDLIST= YES
+GENERATE_TODOLIST       = NO
+GENERATE_TESTLIST       = NO
+GENERATE_BUGLIST        = NO
+GENERATE_DEPRECATEDLIST = YES
 
-
-# configuration options related to the HTML output
+# Configuration options related to the output format
 
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
-
 GENERATE_LATEX         = NO

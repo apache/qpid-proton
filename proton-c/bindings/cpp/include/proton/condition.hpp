@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+
 #include "proton/export.hpp"
 #include "proton/value.hpp"
 
@@ -30,22 +31,29 @@ struct pn_condition_t;
 
 namespace proton {
 
-/** condition allows access to error or other special circumstance information */
-class condition
-{
+/// Describes an endpoint error state.
+class condition {
   public:
+    /// @cond INTERNAL
     condition(pn_condition_t* c) : condition_(c) {}
+    /// @endcond
 
-    /** Assert no condition set */
+    /// @cond INTERNAL
+    /// XXX want to discuss
+    /// Assert no condition set.
     bool operator!() const;
-    /** Condition name */
+    /// @endcond
+
+    /// Condition name.
     std::string name() const;
-    /** Descriptive string for condition */
+
+    /// Descriptive string for condition.
     std::string description() const;
-    /** Extra information for condition n*/
+
+    /// Extra information for condition n*/
     value info() const;
 
-    /** Simple printable string for condition */
+    /// Simple printable string for condition.
     std::string str() const;
 
   private:
@@ -54,4 +62,4 @@ class condition
 
 }
 
-#endif  /*!PROTON_CPP_CONDITION_H*/
+#endif // PROTON_CPP_CONDITION_H

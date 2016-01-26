@@ -22,6 +22,9 @@
  *
  */
 
+/// @cond INTERNAL
+/// XXX more discussion
+
 #include "proton/export.hpp"
 #include "proton/types.hpp"
 #include "proton/reactor.hpp"
@@ -55,9 +58,12 @@ class reconnect_timer
     int32_t next_delay_;
     pn_timestamp_t timeout_deadline_;
     reactor reactor_;
+
     friend class connector;
 };
 
+/// @endcond
+    
 }
 
-#endif  /*!PROTON_CPP_RECONNECT_H*/
+#endif // PROTON_CPP_RECONNECT_H

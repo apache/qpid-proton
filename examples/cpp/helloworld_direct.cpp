@@ -30,8 +30,8 @@ class hello_world_direct : public proton::handler {
   private:
     proton::url url;
     proton::acceptor acceptor;
-  public:
 
+  public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
     void on_start(proton::event &e) {
@@ -60,14 +60,17 @@ class hello_world_direct : public proton::handler {
 
 int main(int argc, char **argv) {
     try {
-        // Pick an "unusual" port since we are going to be talking to ourselves, not a broker.
+        // Pick an "unusual" port since we are going to be talking to
+        // ourselves, not a broker.
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:8888/examples";
 
         hello_world_direct hwd(url);
         proton::container(hwd).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

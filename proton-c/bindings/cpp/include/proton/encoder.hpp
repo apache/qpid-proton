@@ -1,5 +1,6 @@
 #ifndef ENCODER_H
 #define ENCODER_H
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +20,8 @@
  * under the License.
  */
 
-///@cond INTERNAL
+/// @cond INTERNAL
+/// XXX change namespace, review better
 
 #include "proton/error.hpp"
 #include "proton/types.hpp"
@@ -42,8 +44,8 @@
 
 #endif // PN_NO_CONTAINER_CONVERT
 
-///@file
-///@internal
+/// @file
+/// @internal
 
 struct pn_data_t;
 
@@ -62,6 +64,7 @@ template<class T, type_id A> struct cref {
     cref(const T& v) : value(v) {}
     const T& value;
 };
+
 template <class T, type_id A> const type_id cref<T, A>::type = A;
 
 /**
@@ -264,8 +267,9 @@ template <class K, class T, class C, class A> encoder operator<<(encoder e, cons
 #endif // PN_HAS_CPP11
 
 #endif // PN_NO_CONTAINER_CONVERT
+
 }
 
-///@endcond
+/// @endcond
 
 #endif // ENCODER_H

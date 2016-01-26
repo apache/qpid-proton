@@ -21,6 +21,10 @@
  * under the License.
  *
  */
+
+/// @cond INTERNAL
+/// XXX needs more discussion
+    
 #include "proton/export.hpp"
 #include "proton/object.hpp"
 
@@ -28,15 +32,17 @@
 
 namespace proton {
 
-/** A task for timer events */
+/// A task for timer events.
 class task : public object<pn_task_t> {
   public:
     task(pn_task_t* t) : object<pn_task_t>(t) {}
 
-    /** Cancel the scheduled task. */
+    /// Cancel the scheduled task.
     PN_CPP_EXTERN void cancel();
 };
 
 }
 
-#endif  /*!PROTON_CPP_TASK_H*/
+/// @endcond
+
+#endif // PROTON_CPP_TASK_H

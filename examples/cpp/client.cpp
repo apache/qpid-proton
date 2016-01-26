@@ -48,19 +48,24 @@ class client : public proton::handler {
         proton::message req;
         req.body(requests.front());
         req.reply_to(receiver.remote_source().address());
+
         sender.send(req);
     }
 
     void on_link_open(proton::event &e) {
-        if (e.link() == receiver)
+        if (e.link() == receiver) {
             send_request();
+        }
     }
 
     void on_message(proton::event &e) {
         if (requests.empty()) return; // Spurious extra message!
+
         proton::message& response = e.message();
+
         std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
+
         if (!requests.empty()) {
             send_request();
         } else {
@@ -70,9 +75,9 @@ class client : public proton::handler {
 };
 
 int main(int argc, char **argv) {
-    // Command line options
     proton::url url("127.0.0.1:5672/examples");
     options opts(argc, argv);
+
     opts.add_value(url, 'a', "address", "connect and send to URL", "URL");
 
     try {
@@ -93,5 +98,6 @@ int main(int argc, char **argv) {
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

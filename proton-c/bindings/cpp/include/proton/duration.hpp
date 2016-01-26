@@ -28,17 +28,21 @@
 
 namespace proton {
 
-/** Duration in milliseconds. */
-class duration : public comparable<duration>
-{
+/// A span of time in milliseconds.
+class duration : public comparable<duration> {
   public:
+    /// @cond INTERNAL
+    /// XXX public and mutable?
     uint64_t milliseconds;
+    /// @endcond
+
+    /// Create a duration.
     explicit duration(uint64_t ms = 0) : milliseconds(ms) {}
 
-    PN_CPP_EXTERN static const duration FOREVER; ///< Wait for ever
+    PN_CPP_EXTERN static const duration FOREVER;   ///< Wait for ever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
-    PN_CPP_EXTERN static const duration SECOND; ///< One second
-    PN_CPP_EXTERN static const duration MINUTE; ///< One minute
+    PN_CPP_EXTERN static const duration SECOND;    ///< One second
+    PN_CPP_EXTERN static const duration MINUTE;    ///< One minute
 };
 
 inline bool operator<(duration x, duration y) { return x.milliseconds < y.milliseconds; }
@@ -49,6 +53,7 @@ inline duration operator*(amqp_ulong n, duration d) { return d * n; }
 
 inline amqp_timestamp operator+(amqp_timestamp ts, duration d) { return amqp_timestamp(ts.milliseconds+d.milliseconds); }
 inline amqp_timestamp operator+(duration d, amqp_timestamp ts) { return ts + d; }
+
 }
 
-#endif  /*!PROTON_CPP_DURATION_H*/
+#endif // PROTON_CPP_DURATION_H

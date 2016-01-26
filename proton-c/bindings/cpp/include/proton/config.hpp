@@ -1,5 +1,6 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +20,17 @@
  * under the License.
  */
 
-/**@file
- *
- * Configuration macros, can be set via -D compiler options or in code.
- *
- * On a C++11 compliant compiler, all C++11 features are enabled by default.
- * Otherwise they can be enabled or disabled separately with -D on the compile line.
- */
+/// @cond INTERNAL
+/// XXX discuss
+
+/// @file
+///
+/// Configuration macros.  They can be set via -D compiler options or
+/// in code.
+///
+/// On a C++11 compliant compiler, all C++11 features are enabled by
+/// default.  Otherwise they can be enabled or disabled separately
+/// with -D on the compile line.
 
 #ifndef PN_HAS_CPP11
 #if (defined(__cplusplus) && __cplusplus >= 201100)
@@ -48,3 +53,5 @@
 #endif
 
 #endif // CONFIG_HPP
+
+/// @endcond

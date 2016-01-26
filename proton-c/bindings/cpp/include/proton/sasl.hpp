@@ -21,40 +21,59 @@
  * under the License.
  *
  */
+
 #include "proton/export.hpp"
 #include "proton/sasl.h"
 #include <string>
 
 namespace proton {
 
+/// SASL information.
 class sasl {
   public:
-    /** The result of the SASL negotiation */
+    /// The result of the SASL negotiation.
     enum outcome {
-        NONE = PN_SASL_NONE,   /** negotiation not completed */
-        OK = PN_SASL_OK,       /** authentication succeeded */
-        AUTH = PN_SASL_AUTH,   /** failed due to bad credentials */
-        SYS = PN_SASL_SYS,     /** failed due to a system error */
-        PERM = PN_SASL_PERM,   /** failed due to unrecoverable error */
-        TEMP = PN_SASL_TEMP    /** failed due to transient error */
+        NONE = PN_SASL_NONE,   ///< Negotiation not completed
+        OK = PN_SASL_OK,       ///< Authentication succeeded
+        AUTH = PN_SASL_AUTH,   ///< Failed due to bad credentials
+        SYS = PN_SASL_SYS,     ///< Failed due to a system error
+        PERM = PN_SASL_PERM,   ///< Failed due to unrecoverable error
+        TEMP = PN_SASL_TEMP    ///< Failed due to transient error
     };
 
+    /// @cond INTERNAL
+    /// XXX need to discuss
     sasl(pn_sasl_t* s) : object_(s) {}
     PN_CPP_EXTERN static bool extended();
     PN_CPP_EXTERN void done(enum outcome);
+    /// @endcond
+
+    /// Get the outcome.
     PN_CPP_EXTERN enum outcome outcome() const;
+
+    /// Get the user name.
     PN_CPP_EXTERN std::string user() const;
+
+    /// Get the mechanism.
     PN_CPP_EXTERN std::string mech() const;
 
+    /// @cond INTERNAL
     PN_CPP_EXTERN void allow_insecure_mechs(bool);
+    /// @endcond
+
+    /// True if insecure mechanisms are permitted.
     PN_CPP_EXTERN bool allow_insecure_mechs();
+
+    /// @cond INTERNAL
+    /// XXX setters? versus connection options
     PN_CPP_EXTERN void allowed_mechs(const std::string &);
     PN_CPP_EXTERN void config_name(const std::string&);
     PN_CPP_EXTERN void config_path(const std::string&);
+    /// @endcond
 private:
     pn_sasl_t* object_;
 };
 
 }
 
-#endif  /*!PROTON_CPP_SASL_H*/
+#endif // PROTON_CPP_SASL_H

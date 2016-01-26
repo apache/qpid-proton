@@ -364,12 +364,12 @@ typedef enum {
  * Get the fingerprint of the certificate. The certificate fingerprint (as displayed in the Fingerprints section when
  * looking at a certificate with say the Firefox browser) is the hexadecimal hash of the entire certificate.
  * The fingerprint is not part of the certificate, rather it is computed from the certificate and can be used to uniquely identify a certificate.
- * @param[in] ssl the ssl client/server to query
+ * @param[in] ssl0 the ssl client/server to query
  * @param[in] fingerprint char pointer. The certificate fingerprint (in hex format) will be populated in this array.
  *            If sha1 is the digest name, the fingerprint is 41 characters long (40 + 1 '\0' character), 65 characters long for
  *            sha256 and 129 characters long for sha512 and 33 characters for md5.
  * @param[in] fingerprint_length - Must be at >= 33 for md5, >= 41 for sha1, >= 65 for sha256 and >=129 for sha512.
- * @param[in] the hash algorithm to use. Must be of type pn_ssl_hash_alg (currently supports sha1, sha256, sha512 and md5)
+ * @param[in] hash_alg the hash algorithm to use. Must be of type pn_ssl_hash_alg (currently supports sha1, sha256, sha512 and md5)
  * @return error code - Returns 0 on success. Return a value less than zero if there were any errors. Upon execution of this function,
  *                      char *fingerprint will contain the appropriate null terminated hex fingerprint
  */
@@ -386,8 +386,8 @@ PN_EXTERN int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
  * O = Organization - Company Name
  * OU = Organization Unit - division or unit
  * CN = CommonName
- * @param[in] ssl the ssl client/server to query
- * @param[in] The enumeration pn_ssl_cert_subject_subfield representing the required sub field.
+ * @param[in] ssl0 the ssl client/server to query
+ * @param[in] field The enumeration pn_ssl_cert_subject_subfield representing the required sub field.
  * @return A null terminated string which contains the requested sub field value which is valid until the ssl object is destroyed.
  */
 PN_EXTERN const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field);

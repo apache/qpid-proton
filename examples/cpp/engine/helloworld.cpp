@@ -31,7 +31,6 @@ class hello_world : public proton::handler {
     std::string address_;
 
   public:
-
     hello_world(const std::string& address) : address_(address) {}
 
     void on_start(proton::event &e) {
@@ -55,11 +54,14 @@ class hello_world : public proton::handler {
 int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
+
         hello_world hw(url.path());
         proton::io::socket_engine(url, hw).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

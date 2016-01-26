@@ -3,7 +3,7 @@
 // that shows messed-up line numbers in \skip \until code extracts so this file
 // is markdown wrapped in a C++ comment - which works.
 
-/*! \page tutorial Tutorial
+/**\page tutorial Tutorial
 
 This is a brief tutorial that will walk you through the fundamentals of building
 messaging applications in incremental steps. There are further examples, in
@@ -28,6 +28,10 @@ It usually defaults to `127.0.0.1:5672/examples`, but you can change this if
 your broker is on a different host or port, or you want to use a different queue
 or topic name (the ADDRESS part of the URL). URL details are at `proton::url`
 
+The first part of the tutorial uses the `proton::container`, later we will
+show some of the same examples implemented using the `proton::connection_engine`.
+Most of the code is the same for either approach.
+
 Hello World!
 ------------
 
@@ -39,14 +43,14 @@ receiving. In a realistic system the sender and receiver would normally be in
 different processes. The complete example is \ref helloworld.cpp
 
 We will include the following classes: `proton::container` runs an event loop
-which dispatches events to a `proton::messaging_handler`. This allows a *reactive*
+which dispatches events to a `proton::handler`. This allows a *reactive*
 style of programming which is well suited to messaging applications. `proton::url` is a simple parser for the URL format mentioned above.
 
 \skip   proton/container
 \until  proton/url
 
 We will define a class `hello_world` which is a subclass of
-`proton::messaging_handler` and over-rides functions to handle the events
+`proton::handler` and over-rides functions to handle the events
 of interest in sending and receiving a message.
 
 \skip class hello_world
@@ -121,18 +125,18 @@ as before.
 However we also handle two new events. We now close the connection from
 the senders side once the message has been accepted.
 The acceptance of the message is an indication of successful transfer to the
-peer. We are notified of that event through the `on_accepted()`
+peer. We are notified of that event through the `on_delivery_accept()`
 callback.
 
-\skip on_accepted
+\skip on_delivery_accept
 \until }
 
 Then, once the connection has been closed, of which we are
-notified through the `on_closed()` callback, we stop accepting incoming
+notified through the `on_connection_close()` callback, we stop accepting incoming
 connections at which point there is no work to be done and the
 event loop exits, and the run() method will return.
 
-\skip on_closed
+\skip on_connection_close
 \until }
 
 So now we have our example working without a broker involved!
@@ -193,7 +197,7 @@ to track the confirmation of the messages we have sent. We only close the
 connection and exit when the receiver has received all the messages we wanted to
 send.
 
-\skip on_accepted
+\skip on_delivery_accept
 \until }
 \until }
 
@@ -209,7 +213,7 @@ library will automatically try to reconnect for us, and when our sender
 is sendable again, we can restart from the point we know the receiver
 got to.
 
-\skip on_disconnected
+\skip on_disconnect
 \until }
 
 \dontinclude simple_recv.cpp
@@ -283,7 +287,7 @@ link, we listen for incoming connections.
 When we have received confirmation of all the messages we sent, we can
 close the acceptor in order to exit.
 
-\skip on_accepted
+\skip on_delivery_accept
 \until }
 \until }
 
@@ -340,11 +344,11 @@ reply_to address to be the dynamically assigned address of our receiver.
 
 We need to use the address assigned by the broker as the `reply_to` address of
 our requests, so we can't send them until our receiver has been set up. To do
-that, we add an `on_link_opened()` method to our handler class, and if the link
+that, we add an `on_link_open()` method to our handler class, and if the link
 associated with event is the receiver, we use that as the trigger to send our
 first request.
 
-\skip on_link_opened
+\skip on_link_open
 \until }
 
 When we receive a reply, we send the next request.
@@ -374,7 +378,7 @@ Next we need to handle incoming requests for links with dynamic addresses from
 the client.  We give the link a unique address and record it in our `senders`
 map.
 
-\skip on_link_opening
+\skip on_link_open
 \until }
 
 Note we are interested in *sender* links above because we are implementing the
@@ -388,21 +392,37 @@ Finally when we receive a message we look up its `reply_to` in our senders map a
 \until }
 \until }
 
-/* TODO selector and browser
+Connection Engine
+-----------------
 
-Many brokers offer the ability to consume messages based on a 'selector'
-that defines which messages are of interest based on particular values
-of the headers. The following example shows how that can be achieved:
+The `proton::connection_engine` is an alternative to the container. For simple
+applications with a single connection, its use is about the same as the the
+`proton::container`, but it allows more flexibility for multi-threaded
+applications or applications with unusual IO requirements.
 
-\todo TODO selected_recv.cpp
+\dontinclude engine/helloworld.cpp
 
-When creating the receiver, we specify a Selector object as an option.
-The options argument can take a single object or a list. Another option
-that is sometimes of interest when using a broker is the ability to
-'browse' the messages on a queue, rather than consuming them. This is
-done in AMQP by specifying a distribution mode of 'copy' (instead of
-'move' which is the expected default for queues). An example of that is
-shown next:
+We'll look at the \ref engine/helloworld.cpp example step-by-step to see how it differs
+from the container \ref helloworld.cpp version.
 
-\todo TODO queue_browser.cpp
+First we include the `proton::io::socket_engine` class, which is a `proton::connection_engine`
+that uses socket IO.
+
+\skipline proton/io.hpp
+
+Our `hello_world` class differs only in the `on_start()` method. Instead of
+calling `container.connect()`, we simply call `proton::connection::open` to open the
+engine's' connection:
+
+\skip on_start
+\until }
+
+Our `main` function only differs in that it creates and runs a `socket_engine`
+instead of a `container`.
+
+\skip main
+\until }
+\until }
+\until }
+
 */

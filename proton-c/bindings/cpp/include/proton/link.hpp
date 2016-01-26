@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+
 #include "proton/endpoint.hpp"
 #include "proton/export.hpp"
 #include "proton/message.hpp"
@@ -37,81 +38,104 @@ class sender;
 class receiver;
 class condition;
 
-/** Messages are transferred across a link. Base class for sender, receiver. */
-class link : public object<pn_link_t> , public endpoint
-{
+/// A named channel for sending or receiving messages.  It is the base
+/// class for sender and receiver.
+class link : public object<pn_link_t> , public endpoint {
   public:
+    /// @cond INTERNAL
     link(pn_link_t* l=0) : object<pn_link_t>(l) {}
+    /// @endcond
 
-    /* Endpoint behaviours */
+    // Endpoint behaviours
 
+    /// Get the state of this link.
     PN_CPP_EXTERN endpoint::state state() const;
+
     PN_CPP_EXTERN condition local_condition() const;
     PN_CPP_EXTERN condition remote_condition() const;
 
-    /** Locally open the link, not complete till messaging_handler::on_link_opened or
-     * proton_handler::link_remote_open
-     */
+    /// Locally open the link.  The operation is not complete till
+    /// handler::on_link_open.
     PN_CPP_EXTERN void open(const link_options &opts = link_options());
 
-    /** Locally close the link, not complete till messaging_handler::on_link_closed or
-     * proton_handler::link_remote_close
-     */
+    /// Locally close the link.  The operation is not complete till
+    /// handler::on_link_close.
     PN_CPP_EXTERN void close();
 
-    /** Return sender if this link is a sender, 0 if not. */
+    /// Return sender if this link is a sender, 0 if not.
     PN_CPP_EXTERN class sender sender();
+
+    /// Return sender if this link is a sender, 0 if not.
     PN_CPP_EXTERN const class sender sender() const;
 
-    /** Return receiver if this link is a receiver, 0 if not. */
+    /// Return receiver if this link is a receiver, 0 if not.
     PN_CPP_EXTERN class receiver receiver();
+
+    /// Return receiver if this link is a receiver, 0 if not.
     PN_CPP_EXTERN const class receiver receiver() const;
 
-    /** Credit available on the link */
+    /// Credit available on the link.
     PN_CPP_EXTERN int credit() const;
 
-    /** The number of queued deliveries for the link */
+    /// The number of deliveries queued on the link.
     PN_CPP_EXTERN int queued();
 
-    /** The number of unsettled deliveries on the link */
+    /// @cond INTERNAL
+    /// XXX ask about when this is used
+    /// The number of unsettled deliveries on the link.
     PN_CPP_EXTERN int unsettled();
+    /// @endcond
 
-    /** The count of credit returned.  */
+    /// @cond INTERNAL
+    /// XXX revisit mind-melting API inherited from C
     PN_CPP_EXTERN int drained();
+    /// @endcond
 
-    /** Local source of the link. */
+    /// Local source of the link.
     PN_CPP_EXTERN terminus local_source() const;
-    /** Local target of the link. */
+    
+    /// Local target of the link.
     PN_CPP_EXTERN terminus local_target() const;
-    /** Remote source of the link. */
+    
+    /// Remote source of the link.
     PN_CPP_EXTERN terminus remote_source() const;
-    /** Remote target of the link. */
+    
+    /// Remote target of the link.
     PN_CPP_EXTERN terminus remote_target() const;
 
-    /** Link name */
+    /// Get the link name.
     PN_CPP_EXTERN std::string name() const;
 
-    /** Connection that owns this link */
+    /// Connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
 
-    /** Session that owns this link */
+    /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-    /** Set a custom handler for this link. */
+    /// @cond INTERNAL
+    /// XXX settle open questions
+    
+    /// Set a custom handler for this link.
     PN_CPP_EXTERN void handler(proton_handler &);
 
-    /** Unset any custom handler */
+    /// Unset any custom handler.
     PN_CPP_EXTERN void detach_handler();
 
-    /** Get message data from current delivery on link */
+    /// @cond INTERNAL
+
+    /// XXX ask about use case, revisit names
+    /// Get message data from current delivery on link.
     PN_CPP_EXTERN ssize_t recv(char* buffer, size_t size);
 
-    /** Advance the link one delivery */
+    /// XXX ask about use case, revisit names
+    /// Advance the link one delivery.
     PN_CPP_EXTERN bool advance();
 
-    /** Navigate the links in a connection - get next link with state */
+    /// XXX remove
+    /// Navigate the links in a connection - get next link with state.
     PN_CPP_EXTERN link next(endpoint::state) const;
 
+    /// XXX local versus remote, mutability
     PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
     PN_CPP_EXTERN void sender_settle_mode(link_options::sender_settle_mode);
     PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
@@ -119,8 +143,11 @@ class link : public object<pn_link_t> , public endpoint
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
 
+    /// @endcond
 };
 
+/// @cond INTERNAL
+/// XXX important to expose?
 /// An iterator for links.
 class link_iterator : public iter_base<link> {
   public:
@@ -134,12 +161,14 @@ class link_iterator : public iter_base<link> {
   private:
     const session* session_;
 };
+/// @endcond
 
 /// A range of links.
 typedef range<link_iterator> link_range;
+
 }
 
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 
-#endif  /*!PROTON_CPP_LINK_H*/
+#endif // PROTON_CPP_LINK_H

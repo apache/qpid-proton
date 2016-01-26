@@ -1,6 +1,6 @@
-
 #ifndef SOCKET_IO_HPP
 #define SOCKET_IO_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -24,42 +24,52 @@
 
 namespace proton {
 
-/** IO using sockets, file descriptors or handles.
- *
- * Note that you can use proton::connection_engine to communicate using AMQP
- * over your own IO implementation or to integrate an existing IO framework of
- * your choice.
- */
+/// IO using sockets, file descriptors, or handles.
+
+/// Note that you can use proton::connection_engine to communicate
+/// using AMQP over your own IO implementation or to integrate an
+/// existing IO framework of your choice.
+
 namespace io {
 
-///@name Setup and tear-down IO functionality.
+/// @name Setup and teardown
 ///
-/// Call proton::io::initialize before using any functions in the proton::io namespace.
-/// Call proton::io::finalize when you are done.
+/// Call proton::io::initialize before using any functions in the
+/// proton::io namespace.  Call proton::io::finalize when you are
+/// done.
 ///
-/// You can call initialize/finalize more than once as long as they are in
-/// matching pairs. Use proton::io::guard to call initialize/finalize around a scope.
+/// You can call initialize/finalize more than once as long as they
+/// are in matching pairs. Use proton::io::guard to call
+/// initialize/finalize around a scope.
 ///
-/// Note on POSIX systems these are no-ops, but they are required for Windows.
+/// Note that on POSIX systems these are no-ops, but they are required
+/// for Windows.
 ///
-///@{
-///
-/// Initialize the proton::io subsystem
+/// @{
+
+/// Initialize the proton::io subsystem.
 PN_CPP_EXTERN void initialize();
 
-/// Finalize the proton::io subsystem
-PN_CPP_EXTERN void finalize(); //nothrow
+/// Finalize the proton::io subsystem.
+PN_CPP_EXTERN void finalize(); // nothrow
+
+/// Use to call io::initialize and io::finalize around a scope.
 struct guard {
     guard() { initialize(); }
     ~guard() { finalize(); }
 };
-///@}
 
+/// @}
+
+/// An IO resource.
 typedef int64_t descriptor;
 
+/// @cond INTERNAL
+/// don't know what it is
 PN_CPP_EXTERN extern const descriptor INVALID_DESCRIPTOR;
+/// @endcond
 
-// Return the string describing the most recent IO error.
+/// Return a string describing the most recent IO error.
 PN_CPP_EXTERN std::string error_str();
 
 /// Open a TCP connection to the host:port (port can be a service name or number) from a proton::url.
@@ -90,6 +100,7 @@ class listener {
     descriptor socket_;
 };
 
+/// A connection_engine for socket-based IO.
 class socket_engine : public connection_engine {
   public:
     /// Wrap an open socket. Sets non-blocking mode.
@@ -101,6 +112,7 @@ class socket_engine : public connection_engine {
     /// Get the socket descriptor.
     descriptor socket() const { return socket_; }
 
+    /// Start the engine.
     PN_CPP_EXTERN void run();
 
   protected:

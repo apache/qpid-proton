@@ -1,5 +1,6 @@
 #ifndef MESSAGE_ID_HPP
 #define MESSAGE_ID_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,18 +24,28 @@
 #include "proton/scalar.hpp"
 
 namespace proton {
+    
 class encoder;
 class decoder;
 
-/** A message_id can contain one of the following types:
- * uint64_t, amqp_uuid, amqp_binary or amqp_string.
- */
+/// An AMQP message ID.
+///    
+/// It can contain one of the following types:
+///
+///  - uint64_t
+///  - proton::amqp::amqp_uuid
+///  - proton::amqp::amqp_binary
+///  - proton::amqp::amqp_string
 class message_id : public restricted_scalar {
   public:
+    /// Create an empty (0) message ID.
     message_id() { scalar_ = uint64_t(0); }
 
-    ///@name Assign a C++ value, deduce the AMQP type()
-    ///@{
+    /// @name Assignment operators
+    ///
+    /// Assign a C++ value, deduce the AMQP type()
+    ///
+    /// @{
     message_id& operator=(uint64_t x) { scalar_ = x; return *this; }
     message_id& operator=(const amqp_uuid& x) { scalar_ = x; return *this; }
     message_id& operator=(const amqp_binary& x) { scalar_ = x; return *this; }
@@ -43,21 +54,31 @@ class message_id : public restricted_scalar {
     message_id& operator=(const std::string& x) { scalar_ = amqp_string(x); return *this; }
     /// char* is encoded as amqp_string
     message_id& operator=(const char *x) { scalar_ = amqp_string(x); return *this; }
-    ///@}
+    /// @}
 
-    /// Converting constructor from any type that we can assign from.
+    /// Create a message ID from any type that we can assign from.
     template <class T> message_id(T x) { *this = x; }
 
+    /// @name Get methods
+    ///
+    /// get(T&) extracts the value if the types match exactly and
+    /// throws type_error otherwise.
+    ///
+    /// @{
     void get(uint64_t& x) const { scalar_.get(x); }
     void get(amqp_uuid& x) const { scalar_.get(x); }
     void get(amqp_binary& x) const { scalar_.get(x); }
     void get(amqp_string& x) const { scalar_.get(x); }
+    /// @}
 
+    /// Return the value as type T.
     template<class T> T get() const { T x; get(x); return x; }
 
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
-  friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
-  friend class message;
+    /// @cond INTERNAL
+    friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
+    friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
+    friend class message;
+    /// @endcond
 };
 
 }

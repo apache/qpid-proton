@@ -37,8 +37,8 @@ class simple_send : public proton::handler {
     int sent;
     int confirmed;
     int total;
-  public:
 
+  public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_start(proton::event &e) {
@@ -47,12 +47,15 @@ class simple_send : public proton::handler {
 
     void on_sendable(proton::event &e) {
         proton::sender sender = e.sender();
+        
         while (sender.credit() && sent < total) {
             proton::message msg;
-            msg.id(sent + 1);
             std::map<std::string, int> m;
-            m["sequence"] = sent+1;
+            m["sequence"] = sent + 1;
+            
+            msg.id(sent + 1);
             msg.body(m);
+
             sender.send(msg);
             sent++;
         }
@@ -60,6 +63,7 @@ class simple_send : public proton::handler {
 
     void on_delivery_accept(proton::event &e) {
         confirmed++;
+        
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
             e.connection().close();
@@ -72,21 +76,25 @@ class simple_send : public proton::handler {
 };
 
 int main(int argc, char **argv) {
-    // Command line options
     std::string address("127.0.0.1:5672/examples");
     int message_count = 100;
     options opts(argc, argv);
+
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
+
     try {
         opts.parse();
+
         simple_send send(address, message_count);
         proton::container(send).run();
+
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
     }
+
     return 1;
 }

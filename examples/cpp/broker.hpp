@@ -1,5 +1,6 @@
 #ifndef BROKER_HPP
 #define BROKER_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +20,12 @@
  * under the License.
  */
 
-/**@file
- *
- * Common code used by different broker examples.
- *
- * The examples add functionality as needed, this helps to make it easier to see
- * the important differences between the examples.
- */
+/// @file
+///
+/// Common code used by different broker examples.
+///
+/// The examples add functionality as needed, this helps to make it
+/// easier to see the important differences between the examples.
 
 #include "proton/event.hpp"
 #include "proton/message.hpp"
@@ -39,7 +39,7 @@
 #include <list>
 #include <sstream>
 
-/** A simple implementation of a queue. */
+/// A simple implementation of a queue.
 class queue {
   public:
     queue(const std::string &name, bool dynamic = false) : name_(name), dynamic_(dynamic) {}
@@ -66,26 +66,34 @@ class queue {
     }
 
     bool deliver_to(proton::sender *s) {
-        // deliver to single sender if supplied, else all consumers
+        // Deliver to single sender if supplied, else all consumers
         int count = s ? 1 : consumers_.size();
+
         if (!count) return false;
+
         bool result = false;
         sender_list::iterator it = consumers_.begin();
-        if (!s && count)
-            s = &*it;
 
+        if (!s && count) {
+            s = &*it;
+        }
+            
         while (messages_.size()) {
             if (s->credit()) {
                 const proton::message& m = messages_.front();
+
                 s->send(m);
                 messages_.pop_front();
                 result = true;
             }
-            if (--count)
+            
+            if (--count) {
                 it++;
-            else
+            } else {
                 return result;
+            }
         }
+        
         return false;
     }
 
@@ -99,17 +107,21 @@ class queue {
     sender_list consumers_;
 };
 
-/** A collection of queues and queue factory, used by a broker */
+/// A collection of queues and queue factory, used by a broker.
 class queues {
   public:
     queues() : next_id_(0) {}
 
     // Get or create a queue.
     virtual queue &get(const std::string &address = std::string()) {
-        if (address.empty())
+        if (address.empty()) {
             throw std::runtime_error("empty queue name");
+        }
+        
         queue*& q = queues_[address];
+
         if (!q) q = new queue(address);
+
         return *q;
     }
 
@@ -118,6 +130,7 @@ class queues {
         std::ostringstream os;
         os << "q" << next_id_++;
         queue *q = queues_[os.str()] = new queue(os.str(), true);
+
         return *q;
     }
 
@@ -130,7 +143,7 @@ class queues {
   protected:
     typedef std::map<std::string, queue *> queue_map;
     queue_map queues_;
-    uint64_t next_id_;       // Use to generate unique queue IDs.
+    uint64_t next_id_; // Use to generate unique queue IDs.
 };
 
 
@@ -141,15 +154,17 @@ class broker_handler : public proton::handler {
 
     void on_link_open(proton::event &e) {
         proton::link lnk = e.link();
+
         if (!!lnk.sender()) {
             proton::terminus remote_source(lnk.remote_source());
             queue &q = remote_source.dynamic() ?
                 queues_.dynamic() : queues_.get(remote_source.address());
             lnk.local_source().address(q.name());
+
             q.subscribe(lnk.sender());
             std::cout << "broker outgoing link from " << q.name() << std::endl;
-        }
-        else {                  // Receiver
+        } else {
+            // Receiver
             std::string address = lnk.remote_target().address();
             if (!address.empty()) {
                 lnk.local_target().address(address);
@@ -158,16 +173,20 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void unsubscribe (proton::sender lnk) {
+    void unsubscribe(proton::sender lnk) {
         std::string address = lnk.local_source().address();
-        if (queues_.get(address).unsubscribe(lnk))
+        
+        if (queues_.get(address).unsubscribe(lnk)) {
             queues_.erase(address);
+        }
     }
 
     void on_link_close(proton::event &e) {
         proton::link lnk = e.link();
-        if (!!lnk.sender())
+
+        if (!!lnk.sender()) {
             unsubscribe(lnk.sender());
+        }
     }
 
     void on_connection_close(proton::event &e) {
@@ -179,10 +198,12 @@ class broker_handler : public proton::handler {
     }
 
     void remove_stale_consumers(proton::connection connection) {
-      proton::link_range r = connection.find_links(proton::endpoint::REMOTE_ACTIVE);
+        proton::link_range r = connection.find_links(proton::endpoint::REMOTE_ACTIVE);
+        
         for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
-            if (!!l->sender())
+            if (!!l->sender()) {
                 unsubscribe(l->sender());
+            }
         }
     }
 
@@ -190,17 +211,18 @@ class broker_handler : public proton::handler {
         proton::link lnk = e.link();
         std::string address = lnk.local_source().address();
         proton::sender s = lnk.sender();
+
         queues_.get(address).dispatch(&s);
     }
 
     void on_message(proton::event &e) {
         std::string address = e.link().local_target().address();
+        
         queues_.get(address).publish(e.message(), e.link().receiver());
     }
 
   protected:
     queues& queues_;
 };
-
 
 #endif // BROKER_HPP

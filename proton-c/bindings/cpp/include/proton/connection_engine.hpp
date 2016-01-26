@@ -1,5 +1,6 @@
 #ifndef CONNECTION_ENGINE_HPP
 #define CONNECTION_ENGINE_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,41 +34,40 @@
 namespace proton {
 
 class connection_engine_context;
-
 class handler;
 class connection;
 
 // TODO aconway 2016-01-23: doc contrast with container.
 
-/**
- * A connection_engine manages a single AMQP connection.  It is useful for
- * integrating AMQP into an existing IO framework.
- *
- * The engine provides a simple "bytes-in/bytes-out" interface. Incoming AMQP
- * bytes from any kind of data connection are fed into the engine and processed
- * to dispatch events to a proton::handler.  The resulting AMQP output data is
- * available from the engine and can sent back over the connection.
- *
- * The engine does no IO of its own. It assumes a two-way flow of bytes over
- * some externally-managed "connection". The "connection" could be a socket
- * managed by select, poll, epoll or some other mechanism, or it could be
- * something else such as an RDMA connection, a shared-memory buffer or a Unix
- * pipe.
- *
- * The application is coded the same way for engine or container: you implement
- * proton::handler. Handlers attached to an engine will receive transport,
- * connection, session, link and message events. They will not receive reactor,
- * selectable or timer events, the engine assumes those are managed externally.
- *
- * THREAD SAFETY: A single engine instance cannot be called concurrently, but
- * different engine instances can be processed concurrently in separate threads.
- */
+/// An interface for connection-oriented IO integration.  A
+/// connection_engine manages a single AMQP connection.  It is useful
+/// for integrating AMQP into an existing IO framework.
+///
+/// The engine provides a simple "bytes-in/bytes-out" interface. Incoming AMQP
+/// bytes from any kind of data connection are fed into the engine and processed
+/// to dispatch events to a proton::handler.  The resulting AMQP output data is
+/// available from the engine and can sent back over the connection.
+///
+/// The engine does no IO of its own. It assumes a two-way flow of bytes over
+/// some externally-managed "connection". The "connection" could be a socket
+/// managed by select, poll, epoll or some other mechanism, or it could be
+/// something else such as an RDMA connection, a shared-memory buffer or a Unix
+/// pipe.
+///
+/// The application is coded the same way for engine or container: you implement
+/// proton::handler. Handlers attached to an engine will receive transport,
+/// connection, session, link and message events. They will not receive reactor,
+/// selectable or timer events, the engine assumes those are managed externally.
+///
+/// THREAD SAFETY: A single engine instance cannot be called concurrently, but
+/// different engine instances can be processed concurrently in separate threads.
 class connection_engine {
   public:
     // FIXME aconway 2016-01-23: DOC
     class container {
       public:
-        /// Create a container with id, default to random UUID if id == "".
+        /// Create a container with id.  Default to random UUID if id
+        /// == "".
         PN_CPP_EXTERN container(const std::string &id = "");
 
         /// Return the container-id
@@ -90,7 +90,7 @@ class connection_engine {
         connection_options options_;
     };
 
-    /** Create a connection engine that dispatches to handler. */
+    /// Create a connection engine that dispatches to handler.
     PN_CPP_EXTERN connection_engine(handler&, const connection_options& = no_opts);
 
     PN_CPP_EXTERN virtual ~connection_engine();
@@ -117,29 +117,33 @@ class connection_engine {
     /// @return true if process should be called again, i.e. !closed()
     PN_CPP_EXTERN bool process(int io_flags=READ|WRITE);
 
-    /// Non-throwing version of process.
-    /// Use closed() and error_str() to check the status of the engine.
+    /// Non-throwing version of process.  Use closed() and error_str()
+    /// to check the status of the engine.
     PN_CPP_EXTERN bool process_nothrow(int io_flags=READ|WRITE);
 
-    /**
-     * True if the engine is closed, meaning there are no further
-     * events to process and close_io has been called.
-     * Call error_str() to get an error description.
-     */
+    /// True if the engine is closed, meaning there are no further
+    /// events to process and close_io has been called.  Call
+    /// error_str() to get an error description.
     PN_CPP_EXTERN bool closed() const;
 
-    /** If the engine was closed by an error, return a pointer */
+    /// If the engine was closed by an error, return a pointer.
     PN_CPP_EXTERN std::string error_str() const;
 
-    /** Get the AMQP connection associated with this connection_engine. */
+    /// Get the AMQP connection associated with this connection_engine.
     PN_CPP_EXTERN class connection connection() const;
 
-    /** Get the transport object connection associated with this connection_engine. */
+    /// Get the transport associated with this connection_engine.
     PN_CPP_EXTERN class transport transport() const;
 
-    /** Disconnect the engine. Calls io::close and dispatches final events to
-     * the handler. Neither the handler nor the io will be used after this call.
-     */
+    /// Disconnect the engine.
+    ///
+    /// @internal
+    ///
+    /// XXX calls io::close?
+    /// 
+    /// Calls io::close and dispatches final events to the
+    /// handler. Neither the handler nor the io will be used after
+    /// this call.
     PN_CPP_EXTERN void disconnect();
 
   protected:
@@ -166,7 +170,6 @@ class connection_engine {
     PN_CPP_EXTERN static const connection_options no_opts;
 
   private:
-
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
@@ -178,6 +181,6 @@ class connection_engine {
     connection_engine_context* ctx_;
 };
 
-
 }
+
 #endif // CONNECTION_ENGINE_HPP

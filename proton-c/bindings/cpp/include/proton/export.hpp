@@ -23,6 +23,7 @@
  */
 
 /// @cond INTERNAL
+
 /// import/export macros
 #if defined(WIN32) && !defined(PN_CPP_DECLARE_STATIC)
   //
@@ -44,6 +45,7 @@
 #else
 #  define PN_CPP_EXTERN PN_CPP_IMPORT
 #endif
-///@endcond
 
-#endif  /*!PN_CPP_IMPORTEXPORT_H*/
+/// @endcond
+
+#endif // PN_CPP_IMPORTEXPORT_H

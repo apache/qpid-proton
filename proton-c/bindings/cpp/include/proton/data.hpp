@@ -1,5 +1,6 @@
 #ifndef DATA_H
 #define DATA_H
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,7 +20,8 @@
  * under the License.
  */
 
-///@cond INTERNAL
+/// @cond INTERNAL
+/// XXX remove
 
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
@@ -34,10 +36,9 @@ namespace proton {
 
 class data;
 
-/**@internal
- * Holds a sequence of AMQP values, allows inserting and extracting via encoder() and decoder().
- * Cannot be directly instantiated, use `value`
- */
+/// Holds a sequence of AMQP values, allows inserting and extracting
+/// via encoder() and decoder().  Cannot be directly instantiated, use
+/// `value`.
 class data : public object<pn_data_t> {
   public:
     data(pn_data_t* d=0) : object<pn_data_t>(d) {}
@@ -98,6 +99,6 @@ class data : public object<pn_data_t> {
 
 }
 
-///@endcond
+/// @endcond
 
 #endif // DATA_H

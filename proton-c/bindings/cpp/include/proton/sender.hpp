@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+
 #include "proton/export.hpp"
 #include "proton/delivery.hpp"
 #include "proton/link.hpp"
@@ -33,26 +34,31 @@ struct pn_connection_t;
 
 namespace proton {
 
-/// A sending link
+/// A link for sending messages.
 class sender : public link
 {
   public:
+    /// @cond INTERNAL
     sender(pn_link_t* s=0) : link(s) {}
+    /// @endcond
 
     /// Send a message on the link.
     PN_CPP_EXTERN delivery send(const message &m);
 
-    /** The number of deliveries that might be able to be sent if sufficient credit were
-        issued on the link.  See sender::offered().  Maintained by the application. */
+    /// @cond INTERNAL
+    /// XXX undiscussed
+    
+    /// The number of deliveries that might be able to be sent if
+    /// sufficient credit were issued on the link.  See
+    /// sender::offered().  Maintained by the application.
     PN_CPP_EXTERN int available();
 
-    /** Set the availability of deliveries for a sender. */
+    /// Set the availability of deliveries for a sender.
     PN_CPP_EXTERN void offered(int c);
 
-
+    /// @endcond
 };
-
 
 }
 
-#endif  /*!PROTON_CPP_SENDER_H*/
+#endif // PROTON_CPP_SENDER_H
