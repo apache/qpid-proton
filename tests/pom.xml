@@ -30,21 +30,19 @@
     <version>0.12.0-beta</version>
   </parent>
 
-  <description>The Proton system tests execute against either the Java or the C implementations,
-based on the chosen profile.
+  <description>The Proton python system tests execute against the Java or C implementation, using Maven (via this pom) and CMake/CTest respectively.
 
-To execute, &quot;mvn test&quot;.
+To run the tests against proton-j, execute:
+
+mvn test
 
 Example of advanced usage (all of the -D flags are optional):
 
 mvn test \
--Dproton.pythontest.pattern='proton_tests.transport.TransportTest.*' \
+-Dproton.pythontest.pattern='proton_tests.transport.ClientTransportTest.*' \
 -Dproton.pythontest.invocations=20 \
--Dproton.pythontest.always_colorize=true \
--Dproton-c-build-dir=/path/to/build/dir
-
-By default, the proton-jni profile looks for the JNI jar and native libraries under
-directory &lt;basedir&gt;/build/proton-c.</description>
+-Dproton.pythontest.always_colorize=true
+  </description>
 
   <scm>
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>

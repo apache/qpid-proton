@@ -92,6 +92,13 @@ Additional packages required for testing the language bindings:
     # alternatively ruby depedencies on non-RPM based systems
     $ gem install minitest rspec simplecov
 
+If wishing to run a particular subset of python tests against proton-j, a
+pattern can be set via the Java system property "proton.pythontest.pattern"
+when running the Maven build directly:
+
+    # Run the tests in transport.py class ClientTransportTest against proton-j:
+    $ mvn test -Dproton.pythontest.pattern='proton_tests.transport.ClientTransportTest.*'
+
 
 Mailing list
 ------------
