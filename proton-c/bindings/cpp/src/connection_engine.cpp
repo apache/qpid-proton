@@ -108,15 +108,8 @@ connection_engine::~connection_engine() {
     pn_collector_free(ctx_->collector);
 }
 
-bool connection_engine::process(int flags) {
-    if (closed()) throw closed_error("engine closed");
-    bool ok = process_nothrow(flags);
-    if (!ok && !error_str().empty()) throw io_error(error_str());
-    return ok;
-}
-
-bool connection_engine::process_nothrow(int flags) {
-    if (closed()) return false;
+void connection_engine::process(int flags) {
+    if (closed()) return;
     if (flags & WRITE) try_write();
     dispatch();
     if (flags & READ) try_read();
@@ -135,7 +128,6 @@ bool connection_engine::process_nothrow(int flags) {
         dispatch();
         try { io_close(); } catch(const io_error&) {} // Tell the IO to close.
     }
-    return !closed();
 }
 
 void connection_engine::dispatch() {
@@ -159,12 +151,14 @@ void connection_engine::try_read() {
     size_t max = can_read();
     if (max == 0) return;
     try {
-        size_t n = io_read(pn_transport_tail(ctx_->transport), max);
-        if (n > max)
-            throw io_error(msg() << "read invalid size: " << n << " > " << max);
-        pn_transport_process(ctx_->transport, n);
-    } catch (const closed_error&) {
-        pn_transport_close_tail(ctx_->transport);
+        std::pair<size_t, bool> r = io_read(pn_transport_tail(ctx_->transport), max);
+        if (r.second) {
+            if (r.first > max)
+                throw io_error(msg() << "read invalid size: " << r.first << ">" << max);
+            pn_transport_process(ctx_->transport, r.first);
+        } else {
+            pn_transport_close_tail(ctx_->transport);
+        }
     } catch (const io_error& e) {
         set_error(ctx_, e.what());
         pn_transport_close_tail(ctx_->transport);
@@ -194,17 +188,6 @@ void connection_engine::try_write() {
 
 bool connection_engine::closed() const {
     return pn_transport_closed(ctx_->transport);
-}
-
-std::string connection_engine::error_str() const {
-    pn_condition_t *c = pn_connection_remote_condition(connection_.pn_object());
-    if (!c || !pn_condition_is_set(c)) c = pn_transport_condition(ctx_->transport);
-    if (c && pn_condition_is_set(c)) {
-        std::ostringstream os;
-        os << pn_condition_get_name(c) << ": " << pn_condition_get_description(c);
-        return os.str();
-    }
-    return "";
 }
 
 connection connection_engine::connection() const { return connection_.pn_object(); }

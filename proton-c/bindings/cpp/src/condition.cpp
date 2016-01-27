@@ -1,5 +1,5 @@
 /*
- * 
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,10 @@
 namespace proton {
 
 bool condition::operator!() const {
+    return !pn_condition_is_set(condition_);
+}
+
+bool condition::empty() const {
     return !pn_condition_is_set(condition_);
 }
 

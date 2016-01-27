@@ -116,7 +116,7 @@ class socket_engine : public connection_engine {
     PN_CPP_EXTERN void run();
 
   protected:
-    PN_CPP_EXTERN size_t io_read(char* buf, size_t max);
+    PN_CPP_EXTERN std::pair<size_t, bool> io_read(char* buf, size_t max);
     PN_CPP_EXTERN size_t io_write(const char*, size_t);
     PN_CPP_EXTERN void io_close();
 

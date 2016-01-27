@@ -90,10 +90,13 @@ socket_engine::socket_engine(const url& u, handler& h, const connection_options 
     init();
 }
 
-size_t socket_engine::io_read(char *buf, size_t size) {
+std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
     int n = ::recv(socket_, buf, size, 0);
-    if (n == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK) return 0;
-    return check(n, "read: ");
+    if (n > 0) return std::make_pair(n, true);
+    if (n == 0) return std::make_pair(0, false);
+    if (n == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
+        return std::make_pair(0, true);
+    throw io_error("read: " + error_str());
 }
 
 size_t socket_engine::io_write(const char *buf, size_t size) {

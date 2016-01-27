@@ -51,12 +51,12 @@ struct mem_engine : public connection_engine {
     mem_engine(mem_pipe s, handler &h, const connection_options &opts)
         : connection_engine(h, opts), socket(s) {}
 
-    size_t io_read(char* buf, size_t size) {
+    std::pair<size_t, bool> io_read(char* buf, size_t size) {
         if (!read_error.empty()) throw io_error(read_error);
         size = std::min(socket.read.size(), size);
         copy(socket.read.begin(), socket.read.begin()+size, buf);
         socket.read.erase(socket.read.begin(), socket.read.begin()+size);
-        return size;
+        return std::make_pair(size, true);
     }
 
     size_t io_write(const char* buf, size_t size) {

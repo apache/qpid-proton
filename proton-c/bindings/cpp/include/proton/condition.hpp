@@ -40,8 +40,11 @@ class condition {
 
     /// @cond INTERNAL
     /// XXX want to discuss
-    /// Assert no condition set.
+    /// No condition set.
     PN_CPP_EXPORT bool operator!() const;
+
+    /// No condition has been set.
+    PN_CPP_EXPORT bool empty() const;
     /// @endcond
 
     /// Condition name.

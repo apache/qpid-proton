@@ -36,7 +36,6 @@ struct pn_connection_t;
 namespace proton {
 
 class handler;
-class engine;
 
 /// A connection to a remote AMQP peer.
 class connection : public object<pn_connection_t>, public endpoint {

@@ -74,16 +74,13 @@ socket_engine::socket_engine(const url& u, handler& h, const connection_options&
     init();
 }
 
-size_t socket_engine::io_read(char *buf, size_t size) {
+std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
     ssize_t n = ::read(socket_, buf, size);
-    if (n > 0)
-        return n;
-    if (n == 0)
-        throw proton::closed_error();
+    if (n > 0) return std::make_pair(n, true);
+    if (n == 0) return std::make_pair(0, false);
     if (errno == EAGAIN || errno == EWOULDBLOCK)
-        return 0;
-    check(n, "read: ");
-    return n;
+        return std::make_pair(0, true);
+    throw io_error("read: " + error_str());
 }
 
 size_t socket_engine::io_write(const char *buf, size_t size) {

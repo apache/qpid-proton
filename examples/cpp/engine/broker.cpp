@@ -133,14 +133,13 @@ class broker {
                     flags |= proton::io::socket_engine::READ;
                 if (FD_ISSET(eng->socket(), &writable_set))
                     flags |= proton::io::socket_engine::WRITE;
-                if (flags) eng->process_nothrow(flags);
+                if (flags) eng->process(flags);
                 // Set reading/writing bits for next time around
                 fd_set_if(eng->can_read(), eng->socket(), &reading_);
                 fd_set_if(eng->can_write(), eng->socket(), &writing_);
 
                 if (eng->closed()) {
-                    std::cout << "closed fd=" << eng->socket() << " "
-                              << eng->error_str() << std::endl;
+                    std::cout << "closed fd=" << eng->socket() << std::endl;
                     engines_.erase(j);
                     delete eng;
                 }
