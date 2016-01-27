@@ -88,7 +88,7 @@ if (EPYDOC_EXE)
      PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
      ${PY_DOC_FILES}
-     DEPENDENCIES ${SWIG_MODULE_${cproton}_REAL_NAME})
+     DEPENDS ${SWIG_MODULE_${cproton}_REAL_NAME})
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"

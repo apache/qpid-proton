@@ -33,7 +33,7 @@ from __future__ import absolute_import
 
 from cproton import *
 from .wrapper import Wrapper
-from . import _compat
+from proton import _compat
 
 import weakref, socket, sys, threading
 
