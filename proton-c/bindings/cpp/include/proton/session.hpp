@@ -44,6 +44,8 @@ class session : public object<pn_session_t>, public endpoint
   public:
     /// @cond INTERNAL
     session(pn_session_t* s=0) : object<pn_session_t>(s) {}
+    //session(const session& s)  : object<pn_session_t>(s.pn_object()) {}
+    //session& operator=(const session& s) = default;
     /// @endcond
 
     // Endpoint behaviours
