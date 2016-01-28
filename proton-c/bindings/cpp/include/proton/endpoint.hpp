@@ -21,6 +21,7 @@
  * under the License.
  *
  */
+#include "proton/config.hpp"
 #include "proton/export.hpp"
 #include "proton/condition.hpp"
 #include "proton/comparable.hpp"
@@ -30,6 +31,8 @@ namespace proton {
 /// The base class for session, connection, and link.
 class endpoint {
   public:
+    PN_CPP_EXTERN virtual ~endpoint();
+
     /// A bit mask of state bit values.
     ///
     /// A state mask is matched against an endpoint as follows: If the
@@ -57,12 +60,20 @@ class endpoint {
     /// Get the error condition of the remote endpoint.
     virtual condition remote_condition() const = 0;
 
-    virtual ~endpoint() {}
+#if PN_HAS_CPP11
+    // Make everything explicit for C++11 compilers
+    endpoint() = default;
+    endpoint& operator=(const endpoint&) = default;
+    endpoint& operator=(endpoint&&) = default;
+
+    endpoint(const endpoint&) = default;
+    endpoint(endpoint&&) = default;
+#endif
 };
 
 /// @cond INTERNAL
 /// XXX important to expose?
-    
+
 template <class T> class iter_base  : public comparable<iter_base<T> > {
   public:
     typedef T value_type;
@@ -91,7 +102,7 @@ template<class I> class range {
   private:
     I begin_, end_;
 };
-    
+
 /// @endcond
 
 }

@@ -41,6 +41,8 @@ const int endpoint::REMOTE_CLOSED = PN_REMOTE_CLOSED;
 const int endpoint::LOCAL_MASK = PN_LOCAL_MASK;
 const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
 
+endpoint::~endpoint() {}
+
 session_iterator session_iterator::operator++() {
     ptr_ = ptr_.next(state_);
     return *this;
