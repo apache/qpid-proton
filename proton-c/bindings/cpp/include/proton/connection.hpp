@@ -42,8 +42,6 @@ class connection : public object<pn_connection_t>, public endpoint {
   public:
     /// @cond INTERNAL
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
-    //connection(const connection& c)  : object<pn_connection_t>(c.pn_object()) {}
-    //connection& operator=(const connection& c) = default;
     /// @endcond
 
     /// Get the state of this connection.

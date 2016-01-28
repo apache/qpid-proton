@@ -44,8 +44,6 @@ class link : public object<pn_link_t> , public endpoint {
   public:
     /// @cond INTERNAL
     link(pn_link_t* l=0) : object<pn_link_t>(l) {}
-    //link(const link& l)  : object<pn_link_t>(l.pn_object()) {}
-    //link& operator=(const link& l) = default;
     /// @endcond
 
     // Endpoint behaviours
