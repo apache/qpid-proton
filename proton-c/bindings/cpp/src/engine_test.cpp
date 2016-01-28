@@ -34,7 +34,7 @@ using namespace test;
 // One end of an in-memory connection
 struct mem_pipe {
     mem_pipe(std::deque<char>& r, std::deque<char>& w) : read(r), write(w) {}
-    struct std::deque<char>  &read, &write;
+    std::deque<char>  &read, &write;
 };
 
 struct mem_queues : public std::pair<std::deque<char>, std::deque<char> > {
