@@ -41,6 +41,10 @@ void link::close() {
     pn_link_close(pn_object());
 }
 
+void link::detach() {
+    pn_link_detach(pn_object());
+}
+
 sender link::sender() {
     return pn_link_is_sender(pn_object()) ? proton::sender(pn_object()) : proton::sender();
 }

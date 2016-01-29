@@ -62,6 +62,11 @@ class link : public object<pn_link_t> , public endpoint {
     /// handler::on_link_close.
     PN_CPP_EXTERN void close();
 
+    /// Suspend the link without closing it.  A suspended link may be
+    /// reopened with the same or different link options if supported by
+    /// the peer.
+    PN_CPP_EXTERN void detach();
+
     /// Return sender if this link is a sender, 0 if not.
     PN_CPP_EXTERN class sender sender();
 
