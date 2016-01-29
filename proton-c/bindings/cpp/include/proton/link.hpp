@@ -64,7 +64,8 @@ class link : public object<pn_link_t> , public endpoint {
 
     /// Suspend the link without closing it.  A suspended link may be
     /// reopened with the same or different link options if supported by
-    /// the peer.
+    /// the peer. A suspended durable subscriptions becomes inactive
+    /// without cancelling it.
     PN_CPP_EXTERN void detach();
 
     /// Return sender if this link is a sender, 0 if not.
@@ -98,13 +99,13 @@ class link : public object<pn_link_t> , public endpoint {
 
     /// Local source of the link.
     PN_CPP_EXTERN terminus local_source() const;
-    
+
     /// Local target of the link.
     PN_CPP_EXTERN terminus local_target() const;
-    
+
     /// Remote source of the link.
     PN_CPP_EXTERN terminus remote_source() const;
-    
+
     /// Remote target of the link.
     PN_CPP_EXTERN terminus remote_target() const;
 
@@ -119,7 +120,7 @@ class link : public object<pn_link_t> , public endpoint {
 
     /// @cond INTERNAL
     /// XXX settle open questions
-    
+
     /// Set a custom handler for this link.
     PN_CPP_EXTERN void handler(proton_handler &);
 
