@@ -227,7 +227,7 @@ static int pni_scanner_alpha(pn_scanner_t *scanner, const char *str)
   }
 
   pni_scanner_emit(scanner, type, str, n);
-  return type == PN_TOK_ERR ? pn_scanner_err(scanner, PN_ERR, "unrecognized keyword") : 0;
+  return 0;
 }
 
 static int pni_scanner_symbol(pn_scanner_t *scanner, const char *str)
