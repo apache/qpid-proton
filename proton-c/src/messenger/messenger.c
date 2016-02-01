@@ -1495,7 +1495,7 @@ int pn_messenger_start(pn_messenger_t *messenger)
   // returned. Currently no attempt is made to check the name part of the
   // address, as the intent here is to fail fast if the addressed host
   // is invalid or unavailable.
-  if (messenger->flags | PN_FLAGS_CHECK_ROUTES) {
+  if (messenger->flags & PN_FLAGS_CHECK_ROUTES) {
     pn_list_t *substitutions = pn_list(PN_WEAKREF, 0);
     pn_transform_get_substitutions(messenger->routes, substitutions);
     for (size_t i = 0; i < pn_list_size(substitutions) && error == 0; i++) {
