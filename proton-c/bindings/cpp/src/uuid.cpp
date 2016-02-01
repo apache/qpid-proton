@@ -73,7 +73,7 @@ uuid::uuid() {
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
 std::ostream& operator<<(std::ostream& o, const uuid& u) {
-    ios_guard guard(o);
+    ios_guard restore_flags(o);
     o << std::hex << std::setfill('0');
     static const int segments[] = {4,2,2,2,6}; // 1 byte is 2 hex chars.
     const uint8_t *p = u.bytes;

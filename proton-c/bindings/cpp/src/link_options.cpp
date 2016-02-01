@@ -74,11 +74,10 @@ class link_options::impl {
         if (l.state() & endpoint::LOCAL_UNINIT) {
             bool sender = !l.receiver();
             if (local_address.set) {
-                const char *addr = local_address.value.empty() ? NULL : local_address.value.c_str();
                 if (sender)
-                    l.local_target().address(addr);
+                    l.local_target().address(local_address.value);
                 else
-                    l.local_source().address(addr);
+                    l.local_source().address(local_address.value);
             }
             if (delivery_mode.set) {
                 switch (delivery_mode.value) {

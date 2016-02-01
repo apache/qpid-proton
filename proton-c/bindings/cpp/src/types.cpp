@@ -27,7 +27,15 @@
 namespace proton {
 
 namespace {
+struct ios_guard {
+    std::ios &guarded;
+    std::ios old;
+    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
+    ~ios_guard() { guarded.copyfmt(old); }
+};
+
 inline std::ostream& print_segment(std::ostream& o, const amqp_uuid& u, size_t begin, size_t end, const char* sep="") {
+    ios_guard restore_flags(o);
     for (const char* p = &u[begin]; p < &u[end]; ++p)
         o << std::setw(2) << std::setfill('0') << (int(*p) & 0xff);
     return o << sep;

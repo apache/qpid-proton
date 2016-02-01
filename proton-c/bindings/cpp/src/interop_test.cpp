@@ -111,7 +111,10 @@ void test_value_conversions() {
 
 int main(int argc, char** argv) {
     int failed = 0;
-    if (argc != 2) FAIL("Usage: " << argv[0] << " tests-dir");
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " tests-dir" << endl;
+        return 1;
+    }
     tests_dir = argv[1];
 
     RUN_TEST(failed, test_data_ostream());

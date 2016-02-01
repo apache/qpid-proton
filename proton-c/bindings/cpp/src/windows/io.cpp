@@ -90,6 +90,8 @@ socket_engine::socket_engine(const url& u, handler& h, const connection_options 
     init();
 }
 
+socket_engine::~socket_engine() {}
+
 std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
     int n = ::recv(socket_, buf, size, 0);
     if (n > 0) return std::make_pair(n, true);

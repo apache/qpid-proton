@@ -109,6 +109,8 @@ class socket_engine : public connection_engine {
     /// Create socket engine connected to url.
     PN_CPP_EXTERN socket_engine(const url&, handler&, const connection_options& = no_opts);
 
+    PN_CPP_EXTERN ~socket_engine();
+
     /// Get the socket descriptor.
     descriptor socket() const { return socket_; }
 
