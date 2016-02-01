@@ -600,7 +600,7 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
     free(sasl->included_mechanisms);
     sasl->included_mechanisms = mechs ? pn_strdup(mechs) : NULL;
-    if (strcmp(mechs, "ANONYMOUS")==0 ) {
+    if (mechs && strcmp(mechs, "ANONYMOUS")==0 ) {
       pn_transport_t *transport = get_transport_internal(sasl0);
       pni_sasl_force_anonymous(transport);
     }
