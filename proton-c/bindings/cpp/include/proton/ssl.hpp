@@ -126,6 +126,7 @@ class ssl_domain {
 
   private:
     ssl_domain_impl *impl_;
+    bool server_type_;
 };
 
 }

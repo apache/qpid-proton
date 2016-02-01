@@ -28,49 +28,49 @@ namespace proton {
 
 class ssl_domain_impl {
   public:
-    ssl_domain_impl(bool is_server) : refcount_(1), server_type_(is_server), pn_domain_(0) {}
+    ssl_domain_impl(bool is_server) : refcount_(1) {
+            pn_domain_ = pn_ssl_domain(is_server ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
+            if (!pn_domain_) throw error(MSG("SSL/TLS unavailable"));
+    }
     void incref() { refcount_++; }
     void decref() {
         if (--refcount_ == 0) {
-            if (pn_domain_) pn_ssl_domain_free(pn_domain_);
+            pn_ssl_domain_free(pn_domain_);
             delete this;
         }
     }
-    pn_ssl_domain_t *pn_domain();
+    pn_ssl_domain_t *pn_domain() { return pn_domain_; }
   private:
     int refcount_;
-    bool server_type_;
     pn_ssl_domain_t *pn_domain_;
     ssl_domain_impl(const ssl_domain_impl&);
     ssl_domain_impl& operator=(const ssl_domain_impl&);
 };
 
-pn_ssl_domain_t *ssl_domain_impl::pn_domain() {
-    if (pn_domain_) return pn_domain_;
-    // Lazily create in case never actually used or configured.
-    pn_domain_ = pn_ssl_domain(server_type_ ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
-    if (!pn_domain_) throw error(MSG("SSL/TLS unavailable"));
-    return pn_domain_;
-}
-
 namespace internal {
-ssl_domain::ssl_domain(bool is_server) : impl_(new ssl_domain_impl(is_server)) {}
+ssl_domain::ssl_domain(bool is_server) : impl_(0), server_type_(is_server) {}
 
 ssl_domain::ssl_domain(const ssl_domain &x) {
     impl_ = x.impl_;
-    impl_->incref();
+    if (impl_) impl_->incref();
 }
 
 ssl_domain& internal::ssl_domain::operator=(const ssl_domain&x) {
-    impl_->decref();
+    if (impl_) impl_->decref();
     impl_ = x.impl_;
-    impl_->incref();
+    if (impl_) impl_->incref();
     return *this;
 }
 
-ssl_domain::~ssl_domain() { impl_->decref(); }
+ssl_domain::~ssl_domain() { if (impl_) impl_->decref(); }
 
-pn_ssl_domain_t *ssl_domain::pn_domain() { return impl_->pn_domain(); }
+pn_ssl_domain_t *ssl_domain::pn_domain() {
+    if (!impl_)
+        // Lazily create in case never actually used or configured.
+        // The pn_ssl_domain_t is a heavy object.
+        impl_ = new ssl_domain_impl(server_type_);
+    return impl_->pn_domain();
+}
 
 } // namespace internal
 
