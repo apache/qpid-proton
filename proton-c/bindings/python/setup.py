@@ -147,18 +147,18 @@ class Configure(build_ext):
         # be used to override where this setup gets the Proton C sources from
         # (see bundle.fetch_libqpid_proton())
         if 'QPID_PROTON_SRC' not in os.environ:
-            if not os.path.exists(os.path.join(setup_path, 'tox.ini')):
+            if not os.path.exists(os.path.join(setup_path, 'CMakeLists.txt')):
                 bundledir = os.path.join(base, "bundled")
                 if not os.path.exists(bundledir):
                     os.makedirs(bundledir)
                 bundle.fetch_libqpid_proton(bundledir)
                 libqpid_proton_dir = os.path.abspath(os.path.join(bundledir, 'qpid-proton'))
             else:
-                # This should happen just in **dev** environemnts since
-                # tox.ini is not shipped with the driver. It should only
-                # be triggered when calling `setup.py`. This can happen either
-                # manually or when calling `tox` in the **sdist** step. Tox will
-                # defined the `QPID_PROTON_SRC` itself.
+                # setup.py is being invoked from within the proton source tree
+                # (CMakeLists.txt is not present in the python source dist).
+                # In this case build using the local sources.  This use case is
+                # specifically for developers working on the proton source
+                # code.
                 proton_c = os.path.join(setup_path, '..', '..', '..')
                 libqpid_proton_dir = os.path.abspath(proton_c)
         else:
