@@ -665,8 +665,10 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
 
     switch (desc) {
     case HEADER:
-      pn_data_scan(msg->data, "D.[oBIoI]", &msg->durable, &msg->priority,
+      err = pn_data_scan(msg->data, "D.[oBIoI]", &msg->durable, &msg->priority,
                    &msg->ttl, &msg->first_acquirer, &msg->delivery_count);
+      if (err) return pn_error_format(msg->error, err, "data error: %s",
+                                      pn_error_text(pn_data_error(msg->data)));
       break;
     case PROPERTIES:
       {
