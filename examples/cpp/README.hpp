@@ -96,6 +96,12 @@ alternatives.
 
 */
 
+/** @example recurring_timer.cpp
+
+Shows how to implement recurring time-based events using the scheduler. 
+
+*/
+
 /** @example broker.hpp
 
 Common logic for a simple "mini broker" that creates creates queues
