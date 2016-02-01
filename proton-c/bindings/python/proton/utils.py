@@ -76,6 +76,8 @@ class BlockingSender(BlockingLink):
     def send(self, msg, timeout=False, error_states=None):
         delivery = self.link.send(msg)
         self.connection.wait(lambda: _is_settled(delivery), msg="Sending on sender %s" % self.link.name, timeout=timeout)
+        if delivery.link.snd_settle_mode != Link.SND_SETTLED:
+            delivery.settle()
         bad = error_states
         if bad is None:
             bad = [Delivery.REJECTED, Delivery.RELEASED]
