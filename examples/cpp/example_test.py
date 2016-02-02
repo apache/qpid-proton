@@ -53,7 +53,7 @@ class Proc(Popen):
     else:
         env_args = []
 
-    def __init__(self, args, ready=None, timeout=10, **kwargs):
+    def __init__(self, args, ready=None, timeout=10, skip_valgrind=False, **kwargs):
         """Start an example process"""
         args = list(args)
         if platform.system() == "Windows":
@@ -61,7 +61,8 @@ class Proc(Popen):
         self.timeout = timeout
         self.args = args
         self.out = ""
-        args = self.env_args + args
+        if not skip_valgrind:
+            args = self.env_args + args
         try:
             Popen.__init__(self, args, stdout=PIPE, stderr=STDOUT, **kwargs)
         except Exception, e:
@@ -249,18 +250,13 @@ map{string(k1):int(42), symbol(k2):boolean(false)}
         self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
 
     def test_recurring_timer(self):
-        env = copy(os.environ)        # Disable valgrind, this test is time-sensitive.
-        if "VALGRIND" in os.environ:
-            del os.environ["VALGRIND"]
-        try:
-            expect="""Tick...
+        expect="""Tick...
 Tick...
 Tock...
 """
-            self.maxDiff = None
-            self.assertEqual(expect, self.proc(["recurring_timer", "-t", ".05", "-k", ".01"]).wait_exit())
-        finally:
-            os.environ = env    # Restore environment
+        self.maxDiff = None
+        # Disable valgrind, this test is time-sensitive.
+        self.assertEqual(expect, self.proc(["recurring_timer", "-t", ".05", "-k", ".01"], skip_valgrind=True).wait_exit())
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
@@ -270,7 +266,8 @@ Tock...
     def test_ssl(self):
         # SSL without SASL
         addr = "amqps://" + pick_addr() + "/examples"
-        out = self.proc(["ssl", addr, self.ssl_certs_dir()]).wait_exit()
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
         self.assertIn(expect, out)
 
@@ -282,7 +279,8 @@ Outgoing client connection connected via SSL.  Server certificate identity CN=te
 Hello World!
 """
         addr = "amqps://" + pick_addr() + "/examples"
-        out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()]).wait_exit()
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         self.assertIn(expect, out)
 
 
