@@ -60,13 +60,13 @@ void map_test() {
     m["a"] = 1;
     m["b"] = 2;
     m["c"] = 3;
-    value v = m;
+    value v(m);
     ASSERT_EQUAL("{\"a\"=1, \"b\"=2, \"c\"=3}",  str(v));
     std::map<value, value> mv;
     v.get(mv);
-    ASSERT_EQUAL(mv["a"], value(amqp_int(1)));
-    mv["b"] = amqp_binary("xyz");
-    mv.erase("c");
+    ASSERT_EQUAL(mv[value("a")], value(amqp_int(1)));
+    mv[value("b")] = amqp_binary("xyz");
+    mv.erase(value("c"));
     v = value(mv);
     ASSERT_EQUAL("{\"a\"=1, \"b\"=b\"xyz\"}",  str(v));
 

@@ -45,8 +45,11 @@ class value : public comparable<value> {
     /// Copy a value.
     PN_CPP_EXTERN value& operator=(const value&);
 
-    /// Create a value from C++ type T.
-    template <class T> value(const T& x) : data_(proton::data::create()) { encode() << x; }
+    /// Explicit conversion from from C++ type T.
+    template <class T> explicit value(const T& x) : data_(proton::data::create()) { encode() << x; }
+
+    /// Allow implicit conversion from a proton::scalar.
+    value(const scalar& x) { encode() << x; }
 
     /// Create a value from C++ type T.
     template <class T> value& operator=(const T& x) { encode() << x; return *this; }
