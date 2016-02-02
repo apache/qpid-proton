@@ -86,5 +86,10 @@ template <class T> std::ostream& operator<<(std::ostream& o, const std::vector<T
 template <class T> std::ostream& operator<<(std::ostream& o, const std::deque<T>& s) {
     return o << test::many<T>(s);
 }
+
+template <class U, class V> std::ostream& operator<<(std::ostream& o, const std::pair<U, V>& p) {
+    return o << "( " << p.first << " , " << p.second << " )";
 }
+}
+
 #endif // TEST_BITS_HPP

@@ -40,7 +40,7 @@ std::string condition::description() const {
 
 value condition::info() const {
     pn_data_t* t = pn_condition_info(condition_);
-    return t ? t : value();
+    return t ? value(t) : value();
 }
 
 std::string condition::str() const {
