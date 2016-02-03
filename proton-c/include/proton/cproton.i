@@ -57,6 +57,8 @@ typedef unsigned long int uintptr_t;
 %immutable PN_OBJECT;
 %immutable PN_VOID;
 %immutable PN_WEAKREF;
+/* Treat pn_handle_t like uintptr_t - syntactically it is a C void* but really it's just an int */
+%apply uintptr_t { pn_handle_t };
 %include "proton/object.h"
 
 %ignore pn_error_format;

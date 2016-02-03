@@ -1153,9 +1153,9 @@ void pn_data_widen(pn_data_t *data)
 pn_handle_t pn_data_point(pn_data_t *data)
 {
   if (data->current) {
-    return data->current;
+    return (pn_handle_t)(uintptr_t)data->current;
   } else {
-    return -data->parent;
+    return (pn_handle_t)(uintptr_t)-data->parent;
   }
 }
 
@@ -1166,8 +1166,8 @@ bool pn_data_restore(pn_data_t *data, pn_handle_t point)
     data->parent = -((pn_shandle_t) point);
     data->current = 0;
     return true;
-  } else if (point && point <= data->size) {
-    data->current = point;
+  } else if (spoint && spoint <= data->size) {
+    data->current = spoint;
     pni_node_t *current = pni_data_current(data);
     data->parent = current->parent;
     return true;

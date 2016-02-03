@@ -346,7 +346,7 @@ pn_handle_t pn_map_head(pn_map_t *map)
   for (size_t i = 0; i < map->capacity; i++)
   {
     if (map->entries[i].state != PNI_ENTRY_FREE) {
-      return i + 1;
+      return (pn_handle_t)(i + 1);
     }
   }
 
@@ -355,9 +355,9 @@ pn_handle_t pn_map_head(pn_map_t *map)
 
 pn_handle_t pn_map_next(pn_map_t *map, pn_handle_t entry)
 {
-  for (size_t i = entry; i < map->capacity; i++) {
+  for (size_t i = (size_t)entry; i < map->capacity; i++) {
     if (map->entries[i].state != PNI_ENTRY_FREE) {
-      return i + 1;
+      return (pn_handle_t)(i + 1);
     }
   }
 
@@ -368,14 +368,14 @@ void *pn_map_key(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
-  return map->entries[entry - 1].key;
+  return map->entries[(size_t)entry - 1].key;
 }
 
 void *pn_map_value(pn_map_t *map, pn_handle_t entry)
 {
   assert(map);
   assert(entry);
-  return map->entries[entry - 1].value;
+  return map->entries[(size_t)entry - 1].value;
 }
 
 struct pn_hash_t {

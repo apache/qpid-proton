@@ -23,9 +23,8 @@
 set(CMAKE_SWIG_FLAGS "-threads")
 
 include_directories (${PYTHON_INCLUDE_PATH})
-if (BUILD_WITH_CXX)
-   SET_SOURCE_FILES_PROPERTIES(cproton.i PROPERTIES CPLUSPLUS ON)
-endif (BUILD_WITH_CXX)
+
+set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
