@@ -27,6 +27,9 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
 
+CONNECTION_PROPERTIES={'connection': 'properties'}
+OFFERED_CAPABILITIES = {'offered': 'capabilities'}
+DESIRED_CAPABILITIES = {'desired': 'capabilities'}
 
 class EchoServer(MessagingHandler, Thread):
     """
@@ -48,7 +51,7 @@ class EchoServer(MessagingHandler, Thread):
         self.acceptor = event.container.listen(self.url)
         self.container = event.container
         self.event.set()
-
+        
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
@@ -72,6 +75,24 @@ class EchoServer(MessagingHandler, Thread):
         self.event.wait(self.timeout)
 
 
+class ConnPropertiesServer(EchoServer):
+     def __init__(self, url, timeout):
+        EchoServer.__init__(self, url, timeout)
+        self.properties_received = False
+        self.offered_capabilities_received = False
+        self.desired_capabilities_received = False
+
+     def on_link_opening(self, event):
+        if event.link.is_sender:
+            conn = event.link.connection
+                   
+            if conn.remote_properties == CONNECTION_PROPERTIES:
+                self.properties_received = True
+            if conn.remote_offered_capabilities == OFFERED_CAPABILITIES:
+                self.offered_capabilities_received = True
+            if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
+                self.desired_capabilities_received = True
+        
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
 
@@ -93,3 +114,18 @@ class SyncRequestResponseTest(Test):
         finally:
             client.connection.close()
         server.join(timeout=self.timeout)
+
+
+    def test_connection_properties(self):
+        server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
+        server.start()
+        server.wait()
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
+                                        offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
+        client = SyncRequestResponse(connection)
+        client.connection.close()
+        server.join(timeout=self.timeout)
+        self.assertEquals(server.properties_received, True)
+        self.assertEquals(server.offered_capabilities_received, True)
+        self.assertEquals(server.desired_capabilities_received, True)
+

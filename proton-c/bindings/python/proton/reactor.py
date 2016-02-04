@@ -177,9 +177,9 @@ class Reactor(Wrapper):
         else:
             raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
 
-    def connection(self, handler=None):
+    def connection(self, handler=None, **kwargs):
         impl = _chandler(handler, self.on_error)
-        result = Connection.wrap(pn_reactor_connection(self._impl, impl))
+        result = Connection.wrap(pn_reactor_connection(self._impl, impl), **kwargs)
         pn_decref(impl)
         return result
 
@@ -669,7 +669,7 @@ class Container(Reactor):
         allowed. These options can also be set at container scope.
 
         """
-        conn = self.connection(handler)
+        conn = self.connection(handler, **kwargs)
         conn.container = self.container_id or str(generate_uuid())
 
         connector = Connector(conn)
