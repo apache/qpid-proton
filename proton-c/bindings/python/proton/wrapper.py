@@ -33,7 +33,7 @@ EMPTY_ATTRS = EmptyAttrs()
 
 class Wrapper(object):
 
-    def __init__(self, impl_or_constructor, get_context=None, **kwargs):
+    def __init__(self, impl_or_constructor, get_context=None):
         init = False
         if callable(impl_or_constructor):
             # we are constructing a new object
@@ -59,7 +59,7 @@ class Wrapper(object):
         self.__dict__["_impl"] = impl
         self.__dict__["_attrs"] = attrs
         self.__dict__["_record"] = record
-        if init: self._init(**kwargs)
+        if init: self._init()
 
     def __getattr__(self, name):
         attrs = self.__dict__["_attrs"]

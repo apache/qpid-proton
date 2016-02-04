@@ -2439,20 +2439,20 @@ class Connection(Wrapper, Endpoint):
   """
 
   @staticmethod
-  def wrap(impl, **kwargs):
+  def wrap(impl):
     if impl is None:
       return None
     else:
-      return Connection(impl, **kwargs)
+      return Connection(impl)
 
-  def __init__(self, impl=pn_connection, **kwargs):
-    Wrapper.__init__(self, impl, pn_connection_attachments, **kwargs)
+  def __init__(self, impl=pn_connection):
+    Wrapper.__init__(self, impl, pn_connection_attachments)
 
   def _init(self, **kwargs):
     Endpoint._init(self)
-    self.offered_capabilities = kwargs.get('offered_capabilities')
-    self.desired_capabilities = kwargs.get('desired_capabilities')
-    self.properties = kwargs.get('properties')
+    self.offered_capabilities = None
+    self.desired_capabilities = None
+    self.properties = None
 
   def _get_attachments(self):
     return pn_connection_attachments(self._impl)

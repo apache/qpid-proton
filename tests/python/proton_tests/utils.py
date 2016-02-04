@@ -22,14 +22,15 @@ from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
-from proton import Message, Url, generate_uuid
+from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
 
-CONNECTION_PROPERTIES={'connection': 'properties'}
-OFFERED_CAPABILITIES = {'offered': 'capabilities'}
-DESIRED_CAPABILITIES = {'desired': 'capabilities'}
+CONNECTION_PROPERTIES={u'connection': u'properties'}
+OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
+DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
+
 
 class EchoServer(MessagingHandler, Thread):
     """
@@ -120,8 +121,7 @@ class SyncRequestResponseTest(Test):
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
         server.start()
         server.wait()
-        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES,
-                                        offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
         client = SyncRequestResponse(connection)
         client.connection.close()
         server.join(timeout=self.timeout)
