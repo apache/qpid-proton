@@ -99,7 +99,8 @@ set_target_properties (
 ## Install
 
 install(TARGETS qpid-proton-cpp
-  EXPORT  proton
+  EXPORT  proton-cpp
+  RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
