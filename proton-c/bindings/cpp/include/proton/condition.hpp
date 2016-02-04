@@ -41,23 +41,23 @@ class condition {
     /// @cond INTERNAL
     /// XXX want to discuss
     /// No condition set.
-    PN_CPP_EXPORT bool operator!() const;
+    PN_CPP_EXTERN bool operator!() const;
 
     /// No condition has been set.
-    PN_CPP_EXPORT bool empty() const;
+    PN_CPP_EXTERN bool empty() const;
     /// @endcond
 
     /// Condition name.
-    PN_CPP_EXPORT std::string name() const;
+    PN_CPP_EXTERN std::string name() const;
 
     /// Descriptive string for condition.
-    PN_CPP_EXPORT std::string description() const;
+    PN_CPP_EXTERN std::string description() const;
 
     /// Extra information for condition n*/
-    PN_CPP_EXPORT value info() const;
+    PN_CPP_EXTERN value info() const;
 
     /// Simple printable string for condition.
-    PN_CPP_EXPORT std::string str() const;
+    PN_CPP_EXTERN std::string str() const;
 
   private:
     pn_condition_t* condition_;
