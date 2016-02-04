@@ -2445,10 +2445,10 @@ class Connection(Wrapper, Endpoint):
     else:
       return Connection(impl)
 
-  def __init__(self, impl=pn_connection):
+  def __init__(self, impl = pn_connection):
     Wrapper.__init__(self, impl, pn_connection_attachments)
 
-  def _init(self, **kwargs):
+  def _init(self):
     Endpoint._init(self)
     self.offered_capabilities = None
     self.desired_capabilities = None

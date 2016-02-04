@@ -83,16 +83,15 @@ class ConnPropertiesServer(EchoServer):
         self.offered_capabilities_received = False
         self.desired_capabilities_received = False
 
-     def on_link_opening(self, event):
-        if event.link.is_sender:
-            conn = event.link.connection
+     def on_connection_opening(self, event):
+        conn = event.connection
                    
-            if conn.remote_properties == CONNECTION_PROPERTIES:
-                self.properties_received = True
-            if conn.remote_offered_capabilities == OFFERED_CAPABILITIES:
-                self.offered_capabilities_received = True
-            if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
-                self.desired_capabilities_received = True
+        if conn.remote_properties == CONNECTION_PROPERTIES:
+            self.properties_received = True
+        if conn.remote_offered_capabilities == OFFERED_CAPABILITIES:
+            self.offered_capabilities_received = True
+        if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
+            self.desired_capabilities_received = True
         
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
