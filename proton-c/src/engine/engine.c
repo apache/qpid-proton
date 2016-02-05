@@ -1490,6 +1490,11 @@ static void pn_disposition_clear(pn_disposition_t *ds)
 #define pn_delivery_compare NULL
 #define pn_delivery_inspect NULL
 
+pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
+  pn_delivery_tag_t dtag = {size, bytes};
+  return dtag;
+}
+
 pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 {
   assert(link);

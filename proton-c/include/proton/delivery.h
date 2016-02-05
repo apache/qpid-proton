@@ -46,7 +46,6 @@ extern "C" {
  */
 typedef pn_bytes_t pn_delivery_tag_t;
 
-#ifndef SWIG  // older versions of SWIG choke on this:
 /**
  * Construct a delivery tag.
  *
@@ -54,11 +53,7 @@ typedef pn_bytes_t pn_delivery_tag_t;
  * @param[in] size the size of the tag
  * @return the delivery tag
  */
-static inline pn_delivery_tag_t pn_dtag(const char *bytes, size_t size) {
-  pn_delivery_tag_t dtag = {size, bytes};
-  return dtag;
-}
-#endif
+PN_EXTERN pn_delivery_tag_t pn_dtag(const char *bytes, size_t size);
 
 /**
  * Create a delivery on a link.

@@ -94,6 +94,7 @@ PN_HANDLE(PNI_PYTRACER);
 
 
 // These are not used/needed in the python binding
+%ignore pn_dtag;
 %ignore pn_message_get_id;
 %ignore pn_message_set_id;
 %ignore pn_message_get_correlation_id;
