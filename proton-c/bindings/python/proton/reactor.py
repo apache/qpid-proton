@@ -671,7 +671,11 @@ class Container(Reactor):
         """
         conn = self.connection(handler)
         conn.container = self.container_id or str(generate_uuid())
-
+        
+        conn.offered_capabilities = kwargs.get('offered_capabilities')
+        conn.desired_capabilities = kwargs.get('desired_capabilities')
+        conn.properties = kwargs.get('properties')
+        
         connector = Connector(conn)
         connector.allow_insecure_mechs = kwargs.get('allow_insecure_mechs', self.allow_insecure_mechs)
         connector.allowed_mechs = kwargs.get('allowed_mechs', self.allowed_mechs)

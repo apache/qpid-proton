@@ -22,10 +22,14 @@ from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
-from proton import Message, Url, generate_uuid
+from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
+
+CONNECTION_PROPERTIES={u'connection': u'properties'}
+OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
+DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
 
 
 class EchoServer(MessagingHandler, Thread):
@@ -48,7 +52,7 @@ class EchoServer(MessagingHandler, Thread):
         self.acceptor = event.container.listen(self.url)
         self.container = event.container
         self.event.set()
-
+        
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
@@ -72,6 +76,23 @@ class EchoServer(MessagingHandler, Thread):
         self.event.wait(self.timeout)
 
 
+class ConnPropertiesServer(EchoServer):
+     def __init__(self, url, timeout):
+        EchoServer.__init__(self, url, timeout)
+        self.properties_received = False
+        self.offered_capabilities_received = False
+        self.desired_capabilities_received = False
+
+     def on_connection_opening(self, event):
+        conn = event.connection
+                   
+        if conn.remote_properties == CONNECTION_PROPERTIES:
+            self.properties_received = True
+        if conn.remote_offered_capabilities == OFFERED_CAPABILITIES:
+            self.offered_capabilities_received = True
+        if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
+            self.desired_capabilities_received = True
+        
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
 
@@ -93,3 +114,17 @@ class SyncRequestResponseTest(Test):
         finally:
             client.connection.close()
         server.join(timeout=self.timeout)
+
+
+    def test_connection_properties(self):
+        server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
+        server.start()
+        server.wait()
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES)
+        client = SyncRequestResponse(connection)
+        client.connection.close()
+        server.join(timeout=self.timeout)
+        self.assertEquals(server.properties_received, True)
+        self.assertEquals(server.offered_capabilities_received, True)
+        self.assertEquals(server.desired_capabilities_received, True)
+
