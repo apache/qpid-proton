@@ -20,7 +20,7 @@
 # This is a test script to run the examples and verify that they behave as expected.
 
 import unittest
-import os, sys, socket, time, re
+import os, sys, socket, time, re, inspect
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 from copy import copy
@@ -70,6 +70,8 @@ class Proc(Popen):
         # Start reader thread.
         self.pattern = ready
         self.ready = Event()
+        # Help with Python 2.5, 2.6, 2.7 changes to Event.wait(), Event.is_set
+        self.ready_set = False
         self.error = None
         self.thread = Thread(target=self.run_)
         self.thread.daemon = True
@@ -85,12 +87,14 @@ class Proc(Popen):
                 self.out += l.translate(None, "\r")
                 if self.pattern is not None:
                     if re.search(self.pattern, l):
+                        self.ready_set = True
                         self.ready.set()
             if self.wait() != 0:
                 self.error = ProcError(self)
         except Exception, e:
             self.error = sys.exc_info()
         finally:
+            self.ready_set = True
             self.ready.set()
 
     def safe_kill(self):
@@ -109,7 +113,8 @@ class Proc(Popen):
 
     def wait_ready(self):
         """Wait for ready to appear in output"""
-        if self.ready.wait(self.timeout):
+        self.ready.wait(self.timeout)
+        if self.ready_set:
             self.check_()
             return self.out
         else:
@@ -126,41 +131,90 @@ class Proc(Popen):
             raise ProcError(self, "timeout waiting for exit")
 
 
+def count_tests(cls):
+    methods = inspect.getmembers(cls, predicate=inspect.ismethod)
+    tests = [ i for i,j in methods if i.startswith('test_') ]
+    return len(tests)
+
+class CompatSetupClass(object):
+    # Roughly provides setUpClass and tearDownClass functionality for older python versions
+    # in our test scenarios
+    def __init__(self, target):
+        self.completed = False
+        self.test_count = count_tests(target)
+        self.target = target
+        self.global_setup = False
+
+    def note_setup(self):
+        if not self.global_setup:
+            self.global_setup = True
+            self.target.setup_class()
+
+    def note_teardown(self):
+        self.test_count -=  1
+        if self.test_count == 0:
+            self.completed = True
+            self.target.teardown_class()
+        
+
 class ExampleTestCase(unittest.TestCase):
+
+    @classmethod
+    def setup_class(cls):
+        pass
+
+    @classmethod
+    def teardown_class(cls):
+        pass
+
+    def completed(self):
+        cls = self.__class__
+        return cls.compat_ and cls.compat_.completed
+
     def setUp(self):
+        cls = self.__class__
+        if not hasattr(cls, "compat_"):
+            cls.compat_ = CompatSetupClass(cls)
+        if cls.compat_.completed:
+            # Last test for this class already seen.
+            raise Exception("Test sequencing error")
+        cls.compat_.note_setup()
         self.procs = []
 
     def tearDown(self):
         for p in self.procs:
             p.safe_kill()
+        self.__class__.compat_.note_teardown()
 
     def proc(self, *args, **kwargs):
         p = Proc(*args, **kwargs)
         self.procs.append(p)
         return p
 
-
 class BrokerTestCase(ExampleTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
     """
 
+    # setUpClass not available until 2.7
     @classmethod
-    def setUpClass(cls):
+    def setup_class(cls):
         cls.addr = pick_addr() + "/examples"
         cls.broker = Proc(["broker", "-a", cls.addr], ready="listening")
         cls.broker.wait_ready()
 
+    # tearDownClass not available until 2.7
     @classmethod
-    def tearDownClass(cls):
+    def teardown_class(cls):
         cls.broker.safe_kill()
 
     def tearDown(self):
         super(BrokerTestCase, self).tearDown()
-        b = type(self).broker
-        if b.poll() !=  None: # Broker crashed
-            type(self).setUpClass() # Start another for the next test.
-            raise ProcError(b, "broker crash")
+        if not self.completed():
+            b = type(self).broker
+            if b.poll() !=  None: # Broker crashed
+                type(self).setUpClass() # Start another for the next test.
+                raise ProcError(b, "broker crash")
 
 
 CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
@@ -269,7 +323,8 @@ Tock...
         # Disable valgrind when using OpenSSL
         out = self.proc(["ssl", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
-        self.assertIn(expect, out)
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
 
 
     def test_ssl_client_cert(self):
@@ -281,7 +336,8 @@ Hello World!
         addr = "amqps://" + pick_addr() + "/examples"
         # Disable valgrind when using OpenSSL
         out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
-        self.assertIn(expect, out)
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
 
 
 class ConnectionEngineExampleTest(BrokerTestCase):
