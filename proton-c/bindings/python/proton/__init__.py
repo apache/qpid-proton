@@ -2214,7 +2214,6 @@ class Data:
     byte: put_byte,
     short: put_short,
     int32: put_int,
-    int: put_long,
     long: put_long,
     float32: put_float,
     float: put_double,
