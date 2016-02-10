@@ -40,7 +40,7 @@
   //
   // Non-Windows (Linux, etc.) definitions:
   //
-#  define PN_EXPORT
+#  define PN_EXPORT __attribute ((visibility ("default")))
 #  define PN_IMPORT
 #endif
 

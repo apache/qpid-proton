@@ -198,9 +198,12 @@ if (APPLE)
   set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
 
+# Make LTO default to off until we can figure out the valgrind issues
+set (NOENABLE_LINKTIME_OPTIMIZATION ON)
+
 # Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
 # overridden on a platform specific basis above by NOENABLE_<whatever>
-set (OPTIONS WARNING_ERROR UNDEFINED_ERROR)
+set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS)
 
 foreach (OPTION ${OPTIONS})
   if (NOT NOENABLE_${OPTION})
@@ -211,6 +214,8 @@ endforeach (OPTION)
 # And add the option here too with help text
 option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ${DEFAULT_WARNING_ERROR})
 option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_UNDEFINED_ERROR})
+option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
+option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
 
 # Set any additional compiler specific flags
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -241,6 +246,15 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (CATCH_UNDEFINED "-Wl,--no-undefined")
     set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
   endif (ENABLE_UNDEFINED_ERROR)
+
+  if (ENABLE_LINKTIME_OPTIMIZATION)
+    set (LTO "-flto")
+  endif (ENABLE_LINKTIME_OPTIMIZATION)
+
+  if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
+    set (CMAKE_C_FLAGS "-fvisibility=hidden")
+    set (CMAKE_CXX_FLAGS "-fvisibility=hidden")
+  endif (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -381,13 +395,13 @@ source_group("API Header Files" FILES ${qpid-proton-include})
 set_source_files_properties (
   ${qpid-proton-core}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
   )
 
 set_source_files_properties (
   ${qpid-proton-platform}
   PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
@@ -406,7 +420,7 @@ set_target_properties (
   PROPERTIES
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
-  LINK_FLAGS "${CATCH_UNDEFINED}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
 if (MSVC)
