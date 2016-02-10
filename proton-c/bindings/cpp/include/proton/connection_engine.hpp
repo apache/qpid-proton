@@ -61,7 +61,8 @@ class connection;
 ///
 /// THREAD SAFETY: A single engine instance cannot be called concurrently, but
 /// different engine instances can be processed concurrently in separate threads.
-class connection_engine {
+class
+PN_CPP_CLASS_EXTERN connection_engine {
   public:
     // FIXME aconway 2016-01-23: DOC
     class container {

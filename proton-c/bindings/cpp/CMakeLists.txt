@@ -79,7 +79,7 @@ endif(MSVC)
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CXX_WARNING_FLAGS}"
+  COMPILE_FLAGS "${CXX_WARNING_FLAGS} ${LTO}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -92,7 +92,7 @@ set_target_properties (
   LINKER_LANGUAGE CXX
   VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
   SOVERSION "${PN_LIB_SOMAJOR}"
-  LINK_FLAGS "${CATCH_UNDEFINED}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
 ## Install

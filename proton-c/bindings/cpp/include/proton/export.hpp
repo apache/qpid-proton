@@ -31,19 +31,25 @@
   //
 #  define PN_CPP_EXPORT __declspec(dllexport)
 #  define PN_CPP_IMPORT __declspec(dllimport)
+#  define PN_CPP_CLASS_EXPORT
+#  define PN_CPP_CLASS_IMPORT
 #else
   //
   // Non-Windows (Linux, etc.) definitions:
   //
-#  define PN_CPP_EXPORT
+#  define PN_CPP_EXPORT __attribute ((visibility ("default")))
 #  define PN_CPP_IMPORT
+#  define PN_CPP_CLASS_EXPORT __attribute ((visibility ("default")))
+#  define PN_CPP_CLASS_IMPORT
 #endif
 
 // For qpid-proton-cpp library symbols
 #ifdef qpid_proton_cpp_EXPORTS
 #  define PN_CPP_EXTERN PN_CPP_EXPORT
+#  define PN_CPP_CLASS_EXTERN PN_CPP_CLASS_EXPORT
 #else
 #  define PN_CPP_EXTERN PN_CPP_IMPORT
+#  define PN_CPP_CLASS_EXTERN PN_CPP_CLASS_IMPORT
 #endif
 
 /// @endcond

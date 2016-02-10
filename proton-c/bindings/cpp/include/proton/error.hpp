@@ -34,7 +34,8 @@ namespace proton {
 ///    
 /// All exceptions thrown from functions in the proton namespace are
 /// subclasses of proton::error.
-struct error : public std::runtime_error {
+struct
+PN_CPP_CLASS_EXTERN error : public std::runtime_error {
     /// @cond INTERNAL
     /// XXX do we intend users to construct these (and subclasses)?
     PN_CPP_EXTERN explicit error(const std::string&);
@@ -42,7 +43,8 @@ struct error : public std::runtime_error {
 };
 
 /// Raised if a timeout expires.
-struct timeout_error : public error {
+struct
+PN_CPP_CLASS_EXTERN timeout_error : public error {
     /// @cond INTERNAL
     PN_CPP_EXTERN explicit timeout_error(const std::string&);
     /// @endcond
@@ -52,12 +54,14 @@ struct timeout_error : public error {
 /// XXX change namespace
     
 /// Raised if there is an error decoding AMQP data as a C++ value.
-struct decode_error : public error {
+struct
+PN_CPP_CLASS_EXTERN  decode_error : public error {
     PN_CPP_EXTERN explicit decode_error(const std::string&);
 };
 
 /// Raised if there is an error encoding a C++ value as AMQP data.
-struct encode_error : public error {
+struct
+PN_CPP_CLASS_EXTERN  encode_error : public error {
     PN_CPP_EXTERN explicit encode_error(const std::string&);
 };
 
@@ -67,12 +71,14 @@ struct encode_error : public error {
 /// XXX need to discuss
     
 /// Error reading or writing external IO.
-struct io_error : public error {
+struct
+PN_CPP_CLASS_EXTERN  io_error : public error {
     PN_CPP_EXTERN explicit io_error(const std::string&);
 };
 
 /// Attempt to use a closed resource (connnection, session, or link).
-struct closed_error : public io_error {
+struct
+PN_CPP_CLASS_EXTERN  closed_error : public io_error {
     PN_CPP_EXTERN explicit closed_error(const std::string& = default_msg);
     static const std::string default_msg;
 };

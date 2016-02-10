@@ -38,7 +38,8 @@ namespace proton {
 class handler;
 
 /// A connection to a remote AMQP peer.
-class connection : public object<pn_connection_t>, public endpoint {
+class
+PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint {
   public:
     /// @cond INTERNAL
     connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}

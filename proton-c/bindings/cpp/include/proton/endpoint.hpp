@@ -29,7 +29,8 @@
 namespace proton {
 
 /// The base class for session, connection, and link.
-class endpoint {
+class
+PN_CPP_CLASS_EXTERN endpoint {
   public:
     PN_CPP_EXTERN virtual ~endpoint();
 

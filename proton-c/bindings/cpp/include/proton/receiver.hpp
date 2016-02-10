@@ -33,7 +33,8 @@ struct pn_connection_t;
 namespace proton {
 
 /// A link for receiving messages.
-class receiver : public link {
+class
+PN_CPP_CLASS_EXTERN receiver : public link {
   public:
     /// @cond INTERNAL
     receiver(pn_link_t* r=0) : link(r) {}

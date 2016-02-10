@@ -37,7 +37,8 @@ class messaging_adapter;
 /// Subclass and override event-handling member functions.
 ///
 /// @see proton::event
-class handler
+class
+PN_CPP_CLASS_EXTERN handler
 {
   public:
     /// @cond INTERNAL

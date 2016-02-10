@@ -30,7 +30,8 @@ struct pn_url_t;
 namespace proton {
 
 /// Raised if URL parsing fails.
-struct url_error : public error {
+struct
+PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
     PN_CPP_EXTERN explicit url_error(const std::string&);
     /// @endcond

@@ -35,7 +35,8 @@ struct pn_connection_t;
 namespace proton {
 
 /// A link for sending messages.
-class sender : public link
+class
+PN_CPP_CLASS_EXTERN sender : public link
 {
   public:
     /// @cond INTERNAL
