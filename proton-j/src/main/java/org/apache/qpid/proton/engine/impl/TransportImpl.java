@@ -48,6 +48,7 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
+import org.apache.qpid.proton.engine.ExternalWebSocketHandler;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -56,6 +57,7 @@ import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.WebSocket;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.reactor.Reactor;
@@ -108,6 +110,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _closeReceived;
     private Open _open;
+    private WebSocketImpl _webSocket;
     private SaslImpl _sasl;
     private SslImpl _ssl;
     private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
@@ -355,6 +358,20 @@ public class TransportImpl extends EndpointImpl
         }
         return _sasl;
 
+    }
+
+    @Override
+    public WebSocket webSocket(ExternalWebSocketHandler externalWebSocket)
+    {
+        if (_webSocket == null)
+        {
+            init();
+            _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket);
+            TransportWrapper transportWrapper = _webSocket.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
+        }
+        return _webSocket;
     }
 
     /**
