@@ -113,6 +113,7 @@ struct pni_ssl_t {
   bool write_blocked;   // SSL blocked until data is written to network
 
   char *subject;
+  X509 *peer_certificate;
 };
 
 static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
@@ -152,6 +153,7 @@ static void release_ssl_socket( pni_ssl_t * );
 static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
 static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
+static X509 *get_peer_certificate(pni_ssl_t *ssl);
 
 static void ssl_vlog(pn_transport_t *transport, const char *fmt, va_list ap)
 {
@@ -798,6 +800,7 @@ void pn_ssl_free(pn_transport_t *transport)
   if (ssl->inbuf) free((void *)ssl->inbuf);
   if (ssl->outbuf) free((void *)ssl->outbuf);
   if (ssl->subject) free(ssl->subject);
+  if (ssl->peer_certificate) X509_free(ssl->peer_certificate);
   free(ssl);
 }
 
@@ -1203,6 +1206,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
     ssl_log( transport, "Client SSL socket created." );
   }
   ssl->subject = NULL;
+  ssl->peer_certificate = NULL;
   return 0;
 }
 
@@ -1273,12 +1277,22 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl0, char *hostname, size_t *bufsize)
   return 0;
 }
 
+static X509 *get_peer_certificate(pni_ssl_t *ssl)
+{
+  // Cache for multiple use and final X509_free
+  if (!ssl->peer_certificate && ssl->ssl) {
+    ssl->peer_certificate = SSL_get_peer_certificate(ssl->ssl);
+    // May still be NULL depending on timing or type of SSL connection
+  }
+  return ssl->peer_certificate;
+}
+
 const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl0)
 {
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl || !ssl->ssl) return NULL;
   if (!ssl->subject) {
-    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+    X509 *cert = get_peer_certificate(ssl);
     if (!cert) return NULL;
     X509_NAME *subject = X509_get_subject_name(cert);
     if (!subject) return NULL;
@@ -1337,7 +1351,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
 
     pni_ssl_t *ssl = get_ssl_internal(ssl0);
 
-    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+    X509 *cert = get_peer_certificate(ssl);
 
     if(cert) {
         unsigned int len;
@@ -1397,7 +1411,7 @@ const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subje
     }
 
     pni_ssl_t *ssl = get_ssl_internal(ssl0);
-    X509 *cert = SSL_get_peer_certificate(ssl->ssl);
+    X509 *cert = get_peer_certificate(ssl);
 
     X509_NAME *subject_name = X509_get_subject_name(cert);
 
