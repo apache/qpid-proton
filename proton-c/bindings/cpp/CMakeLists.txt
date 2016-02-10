@@ -42,7 +42,6 @@ set(qpid-proton-cpp-source
   src/endpoint.cpp
   src/connection_engine.cpp
   src/error.cpp
-  src/event.cpp
   src/id_generator.cpp
   src/link.cpp
   src/link_options.cpp
