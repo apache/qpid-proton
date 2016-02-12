@@ -19,14 +19,18 @@
  * under the License.
  */
 
+#include <proton/import_export.h>
+#include <proton/type_compat.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**@file
  *
  * Control log messages that are not associated with a transport.
  * See pn_transport_trace for transport-related logging.
  */
-
-#include <proton/import_export.h>
-#include <proton/type_compat.h>
 
 /** Callback for customized logging. */
 typedef void (*pn_logger_t)(const char *message);
@@ -46,5 +50,9 @@ PN_EXTERN void pn_log_enable(bool enabled);
  * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
  */
 PN_EXTERN void pn_log_logger(pn_logger_t logger);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

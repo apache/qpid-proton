@@ -42,8 +42,8 @@ typedef struct {
   const char *payload;
 } pn_frame_t;
 
-PN_EXTERN ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
-PN_EXTERN size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
+ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, uint32_t max);
+size_t pn_write_frame(char *bytes, size_t size, pn_frame_t frame);
 
 #ifdef __cplusplus
 }
