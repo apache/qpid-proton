@@ -38,6 +38,7 @@ import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.TransportImpl;
+import org.apache.qpid.proton.engine.WebSocket;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
@@ -81,6 +82,7 @@ public class IOHandler extends BaseHandler {
         Sasl sasl = transport.sasl();
         sasl.client();
         sasl.setMechanisms("ANONYMOUS");
+        WebSocket webSocket = transport.webSocket(null, false);
         transport.bind(connection);
     }
 

@@ -44,6 +44,7 @@ public class WebSocketImpl implements WebSocket
     private final ByteBuffer _inputBuffer;
     private final ByteBuffer _outputBuffer;
 
+    private Boolean _webSocketEnabled = false;
     private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
 
     /**
@@ -51,19 +52,31 @@ public class WebSocketImpl implements WebSocket
      * returned by {@link WebSocketTransportWrapper#getInputBuffer()} and
      * {@link WebSocketTransportWrapper#getOutputBuffer()}.
      */
-    WebSocketImpl(TransportImpl transport, int maxFrameSize, ExternalWebSocketHandler externalWebSocketHandler)
+    WebSocketImpl(TransportImpl transport, int maxFrameSize, ExternalWebSocketHandler externalWebSocketHandler, Boolean isEnabled)
     {
         _transport = transport;
         _inputBuffer = newWriteableBuffer(maxFrameSize);
         _outputBuffer = newWriteableBuffer(maxFrameSize);
         _externalWebSocketHandler = externalWebSocketHandler;
+        _webSocketEnabled = isEnabled;
+    }
+
+    public void setEnabled(Boolean isEnabled)
+    {
+        _webSocketEnabled = isEnabled;
     }
 
     @Override
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
     {
-        // TODO: Implement function
-        return null;
+        return new WebSocketSniffer(new WebSocketTransportWrapper(input, output), new PlainTransportWrapper(output, input))
+        {
+            protected boolean isDeterminationMade()
+            {
+                _selectedTransportWrapper = _wrapper1;
+                return true;
+            }
+        };
     }
 
     @Override
@@ -131,60 +144,116 @@ public class WebSocketImpl implements WebSocket
         @Override
         public int capacity()
         {
-            // TODO: Implement function
-            return 0;
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+                return 0;
+            }
+            else
+            {
+                return _underlyingInput.capacity();
+            }
         }
 
         @Override
         public int position()
         {
-            // TODO: Implement function
-            return 0;
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+                return 0;
+            }
+            else
+            {
+                return _underlyingInput.position();
+            }
         }
 
         @Override
         public ByteBuffer tail()
         {
-            // TODO: Implement function
-            return null;
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+                return null;
+            }
+            else
+            {
+                return _underlyingInput.tail();
+            }
         }
 
         @Override
         public void process() throws TransportException
         {
-            // TODO: Implement function
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+            }
+            else
+            {
+                _underlyingInput.process();
+            }
         }
 
         @Override
         public void close_tail()
         {
-            // TODO: Implement function
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+            }
+            else
+            {
+                _underlyingInput.close_tail();
+            }
         }
 
         @Override
         public int pending()
         {
-            // TODO: Implement function
-            return 0;
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+                return 0;
+            }
+            else
+            {
+                return _underlyingOutput.pending();
+            }
         }
 
         @Override
         public ByteBuffer head()
         {
-            // TODO: Implement function
-            return null;
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+                return null;
+            }
+            else
+            {
+                return _underlyingOutput.head();
+            }
         }
 
         @Override
         public void pop(int bytes)
         {
-            // TODO: Implement function
+            if (_webSocketEnabled)
+            {
+                // TODO: Implement function
+            }
+            else
+            {
+                _underlyingOutput.pop(bytes);
+            }
         }
 
         @Override
         public void close_head()
         {
-            // TODO: Implement function
+            _underlyingOutput.close_head();
         }
     }
 }

@@ -361,15 +361,19 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public WebSocket webSocket(ExternalWebSocketHandler externalWebSocket)
+    public WebSocket webSocket(ExternalWebSocketHandler externalWebSocket, Boolean isEnabled)
     {
         if (_webSocket == null)
         {
             init();
-            _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket);
+            _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket, isEnabled);
             TransportWrapper transportWrapper = _webSocket.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
+        }
+        else
+        {
+            _webSocket.setEnabled(isEnabled);
         }
         return _webSocket;
     }

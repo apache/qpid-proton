@@ -193,7 +193,7 @@ public interface Transport extends Endpoint
      * This method is expected to be called at most once. A subsequent invocation will return the same
      * {@link WebSocket} object, regardless of the parameters supplied.
      */
-    WebSocket webSocket(ExternalWebSocketHandler externalWebSocketHandler);
+    WebSocket webSocket(ExternalWebSocketHandler externalWebSocketHandler, Boolean isEnabled);
 
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.
