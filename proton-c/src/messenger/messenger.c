@@ -2357,9 +2357,13 @@ int pn_messenger_set_flags(pn_messenger_t *messenger, const int flags)
 {
   if (!messenger)
     return PN_ARG_ERR;
-  if (flags != 0 && (flags ^ PN_FLAGS_CHECK_ROUTES) != 0)
+  if (flags == 0) {
+    messenger->flags = 0;
+  } else if (flags & (PN_FLAGS_CHECK_ROUTES | PN_FLAGS_ALLOW_INSECURE_MECHS)) {
+    messenger->flags |= flags;
+  } else {
     return PN_ARG_ERR;
-  messenger->flags = flags;
+  }
   return 0;
 }
 
