@@ -19,7 +19,7 @@
 
 include(CheckIncludeFiles)
 
-include_directories(${CMAKE_SOURCE_DIR}/examples/include)
+include_directories(${CMAKE_SOURCE_DIR}/examples/c/include)
 
 CHECK_INCLUDE_FILES("inttypes.h" INTTYPES_AVAILABLE)
 if (INTTYPES_AVAILABLE)

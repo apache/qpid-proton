@@ -19,8 +19,6 @@
  *
  */
 
-#include "pncompat/misc_funcs.inc"
-
 #include <stdio.h>
 #include <proton/codec.h>
 #include <proton/error.h>
@@ -128,16 +126,10 @@ int main(int argc, char **argv)
     return 0;
   }
 
-  int c;
-
-  while ( (c = getopt(argc, argv, "h")) != -1 ) {
-    switch(c) {
-    case 'h':
-      usage(argv[0]);
-      return 0;
-      break;
-
-    case '?':
+  // There are no actual options for proton-dump so just scan for anything
+  // starting with '-' and print the usage message if we find something.
+  for (int c = 1; c < argc; c++) {
+    if (*argv[c]=='-') {
       usage(argv[0]);
       return 1;
     }

@@ -92,10 +92,6 @@ include_directories ("${CMAKE_CURRENT_BINARY_DIR}/include")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-# TODO: This is only needed because the proton executable can use getopt on windows
-# if/when this executable gets sorted out remove
-include_directories ("${CMAKE_SOURCE_DIR}/examples/c/include")
-
 set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py)
 
 add_custom_command (
@@ -428,13 +424,21 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
-add_executable (proton-dump src/proton-dump.c)
+add_executable (
+  proton-dump
+  src/proton-dump.c
+  # Internal dependencies
+  src/buffer.c
+  src/util.c
+  src/framing/framing.c
+  )
 target_link_libraries (proton-dump qpid-proton)
 
 set_target_properties (
   proton-dump
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
+  LINK_FLAGS "${LTO}"
   )
 
 macro(pn_c_files)
