@@ -203,9 +203,9 @@ endif (APPLE)
 set (OPTIONS WARNING_ERROR UNDEFINED_ERROR)
 
 foreach (OPTION ${OPTIONS})
-  if (NOT "NOENABLE_${OPTION}")
+  if (NOT NOENABLE_${OPTION})
     set ("DEFAULT_${OPTION}" ON)
-  endif (NOT "NOENABLE_${OPTION}")
+  endif ()
 endforeach (OPTION)
 
 # And add the option here too with help text
