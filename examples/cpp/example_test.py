@@ -53,7 +53,7 @@ class Proc(Popen):
     else:
         env_args = []
 
-    def __init__(self, args, ready=None, timeout=10, skip_valgrind=False, **kwargs):
+    def __init__(self, args, ready=None, timeout=30, skip_valgrind=False, **kwargs):
         """Start an example process"""
         args = list(args)
         if platform.system() == "Windows":
