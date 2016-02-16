@@ -44,6 +44,12 @@ pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
 char *pn_strdup(const char *src);
 char *pn_strndup(const char *src, size_t n);
+/**
+ * Strips the port from the hostname and returns a char pointer to the newly allocated host string.
+ * The pointer returned must be freed by the caller.
+ */
+char *pni_get_FQDN(const char *hostname);
+
 int pn_strcasecmp(const char* a, const char* b);
 int pn_strncasecmp(const char* a, const char* b, size_t len);
 
