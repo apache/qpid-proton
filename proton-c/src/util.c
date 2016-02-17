@@ -272,3 +272,22 @@ pn_timestamp_t pn_timestamp_min( pn_timestamp_t a, pn_timestamp_t b )
   return b;
 }
 
+char *pni_get_FQDN(const char *hostname)
+{
+    if (!hostname)
+        return 0;
+
+    const char *end = strrchr(hostname, ':');
+
+    int len = end ? (sizeof(char) * (end - hostname)) : strlen(hostname);
+
+    char *retval = (char*) malloc((len + 1) * sizeof(char *));
+
+    if (!retval)
+        return 0;
+
+    strncpy(retval, (char*)hostname, len);
+    retval[len] = '\0';
+    return retval;
+}
+

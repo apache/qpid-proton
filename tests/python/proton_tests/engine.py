@@ -176,6 +176,19 @@ class ConnectionTest(Test):
     assert self.c1.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
     assert self.c2.state == Endpoint.LOCAL_CLOSED | Endpoint.REMOTE_CLOSED
 
+  def test_remote_hostname(self):
+    if "java" in sys.platform:
+      raise Skipped()
+    hostname = "test-hostname"
+    hostname_with_port = hostname + ":9999"
+    self.c1.hostname = hostname_with_port
+    self.c1.open()
+    self.pump()
+    assert self.c2.remote_hostname == hostname
+    self.c1.close()
+    self.c2.close()
+    self.pump()
+
   def test_capabilities(self):
     self.c1.offered_capabilities = Array(UNDESCRIBED, Data.SYMBOL,
                                          symbol("O_one"),

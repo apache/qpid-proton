@@ -1773,6 +1773,7 @@ static ssize_t transport_consume(pn_transport_t *transport)
   return consumed;
 }
 
+
 static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endpoint)
 {
   if (endpoint->type == CONNECTION)
@@ -1787,9 +1788,12 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       const char *cid = pn_string_get(connection->container);
       pni_calculate_channel_max(transport);
+
+      char *host = pni_get_FQDN(pn_connection_get_hostname(connection));
+
       int err = pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[SS?I?H?InnCCC]", OPEN,
                               cid ? cid : "",
-                              pn_string_get(connection->hostname),
+                              host,
                               // if not zero, advertise our max frame size and idle timeout
                               (bool)transport->local_max_frame, transport->local_max_frame,
                               (bool)transport->channel_max, transport->channel_max,
@@ -1797,6 +1801,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
                               connection->offered_capabilities,
                               connection->desired_capabilities,
                               connection->properties);
+      free(host);
       if (err) return err;
       transport->open_sent = true;
     }
@@ -1804,6 +1809,7 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
 
   return 0;
 }
+
 
 static uint16_t allocate_alias(pn_hash_t *aliases, uint32_t max_index, int * valid)
 {

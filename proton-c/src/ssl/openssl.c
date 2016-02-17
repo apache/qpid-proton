@@ -831,7 +831,9 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
   // Set up hostname from any bound connection
   if (transport->connection) {
     if (pn_string_size(transport->connection->hostname)) {
-      pn_ssl_set_peer_hostname((pn_ssl_t *) transport, pn_string_get(transport->connection->hostname));
+      char *host = pni_get_FQDN(pn_connection_get_hostname(transport->connection));
+      pn_ssl_set_peer_hostname((pn_ssl_t *) transport, host);
+      free(host);
     }
   }
 
