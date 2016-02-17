@@ -32,7 +32,7 @@ namespace proton {
 class duration : public comparable<duration> {
   public:
     /// @cond INTERNAL
-    /// XXX public and mutable?
+    /// XXX public and mutable? - make this private
     uint64_t milliseconds;
     /// @endcond
 

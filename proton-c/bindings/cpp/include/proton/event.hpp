@@ -42,8 +42,13 @@ class event {
   public:
     virtual PN_CPP_EXTERN ~event() {}
 
+    /// @cond INTERNAL
+    /// XXX Perhaps remove
     /// Return the name of the event type.
     virtual PN_CPP_EXTERN std::string name() const = 0;
+    /// @endcond
+
+    // XXX all throw proton::error if the type in question is not available
 
     /// Get the container.
     ///
@@ -51,7 +56,7 @@ class event {
     /// container
     virtual PN_CPP_EXTERN class container& container() const = 0;
 
-    /// Get transport
+    /// Get transport.
     virtual PN_CPP_EXTERN class transport transport() const = 0;
     /// Get connection.
     virtual PN_CPP_EXTERN class connection connection() const = 0;
@@ -82,6 +87,9 @@ class event {
     ///
     /// @throw proton::error if no message
     virtual PN_CPP_EXTERN class message &message() const = 0;
+
+    // XXX Should we have a notion of application data?  Perhaps this
+    // is relevant to timer and app events.
 };
 
 }

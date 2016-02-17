@@ -21,7 +21,8 @@
 
 /// @cond INTERNAL
 /// XXX discuss where this gets exposed
-    
+/// XXX decision - move to proton::internal and leave it undocumented
+
 #include "proton/config.hpp"
 #include <memory>
 

@@ -64,7 +64,7 @@ PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint
     PN_CPP_EXTERN std::string host() const;
 
     /// @cond INTERNAL
-    /// XXX this should be a connection option, right?
+    /// XXX this should be a connection option, right? - make private
     /// Set the AMQP host name for the connection
     PN_CPP_EXTERN void host(const std::string& h);
     /// @endcond

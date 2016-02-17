@@ -62,6 +62,8 @@ class container {
     /// random ID is generated.
     PN_CPP_EXTERN container(const std::string& id="");
 
+    // XXX why "" above and std::string below?
+    
     /// Create a container with an event handler.
     ///
     /// Container ID should be unique within your system. By default a
@@ -101,7 +103,7 @@ class container {
 
     /// @cond INTERNAL
 
-    /// XXX remove
+    /// XXX remove or make private
     /// The reactor associated with this container.
     PN_CPP_EXTERN class reactor reactor() const;
 

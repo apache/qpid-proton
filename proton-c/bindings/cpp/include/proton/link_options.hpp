@@ -86,7 +86,7 @@ class link_options {
     /// Receiver settlement behaviour for a link.
     enum receiver_settle_mode {
         SETTLE_ALWAYS = PN_RCV_FIRST,
-        SETTLE_SECOND= PN_RCV_SECOND
+        SETTLE_SECOND = PN_RCV_SECOND
     };
     /// @endcond
 

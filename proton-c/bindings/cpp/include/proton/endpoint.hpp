@@ -45,6 +45,8 @@ PN_CPP_CLASS_EXTERN endpoint {
     /// @see connection::find_links, connection::find_sessions
     typedef int state;
 
+    // XXX use an enum instead to handle name collision
+
     PN_CPP_EXTERN static const state LOCAL_UNINIT;  ///< Local endpoint is uninitialized
     PN_CPP_EXTERN static const state REMOTE_UNINIT; ///< Remote endpoint is uninitialized
     PN_CPP_EXTERN static const state LOCAL_ACTIVE;  ///< Local endpoint is active
@@ -54,6 +56,7 @@ PN_CPP_CLASS_EXTERN endpoint {
     PN_CPP_EXTERN static const state LOCAL_MASK;    ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
     PN_CPP_EXTERN static const state REMOTE_MASK;   ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
 
+    /// XXX add endpoint state boolean operations
 
     /// Get the local error condition.
     virtual condition local_condition() const = 0;
@@ -73,7 +76,7 @@ PN_CPP_CLASS_EXTERN endpoint {
 };
 
 /// @cond INTERNAL
-/// XXX important to expose?
+/// XXX move to internal
 
 template <class T> class iter_base  : public comparable<iter_base<T> > {
   public:
@@ -92,6 +95,8 @@ template <class T> class iter_base  : public comparable<iter_base<T> > {
     endpoint::state state_;
 };
 
+/// @endcond
+
 /// An iterator range.
 template<class I> class range {
   public:
@@ -103,8 +108,6 @@ template<class I> class range {
   private:
     I begin_, end_;
 };
-
-/// @endcond
 
 }
 

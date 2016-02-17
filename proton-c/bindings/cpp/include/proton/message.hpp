@@ -60,7 +60,10 @@ class message {
     PN_CPP_EXTERN message(const message&);
 
 #if PN_HAS_CPP11
+    /// Move a message.
     PN_CPP_EXTERN message(message&&);
+
+    // XXX move assignment operator? - do this in general for CPP11
 #endif
 
     /// Create a message with its body set from any value that can be
@@ -84,6 +87,7 @@ class message {
     /// @cond INTERNAL
     /// XXX consider just user, in order to be consistent with similar
     /// fields elsewhere in the API
+    /// XXX ask gordon about use case - decision sort of: "user" instead of "user_id"
     PN_CPP_EXTERN void user_id(const std::string &user);
     PN_CPP_EXTERN std::string user_id() const;
     /// @endcond
@@ -100,6 +104,8 @@ class message {
 
     /// @cond INTERNAL
     /// XXX should a delivery know its own link already?
+    /// XXX also, determine the use case for this
+    /// XXX decision - 1) lose the link arg, 2) make private
     ///
     /// Decode the message corresponding to a delivery from a link.
     PN_CPP_EXTERN void decode(proton::link, proton::delivery);
@@ -142,9 +148,11 @@ class message {
     PN_CPP_EXTERN void content_encoding(const std::string &s);
     PN_CPP_EXTERN std::string content_encoding() const;
 
+    // XXX amqp_timestamp -> timestamp
     PN_CPP_EXTERN void expiry_time(amqp_timestamp t);
     PN_CPP_EXTERN amqp_timestamp expiry_time() const;
 
+    // XXX amqp_timestamp -> timestamp
     PN_CPP_EXTERN void creation_time(amqp_timestamp t);
     PN_CPP_EXTERN amqp_timestamp creation_time() const;
 
@@ -158,6 +166,7 @@ class message {
     /// body of the message will be encoded as AMQP VALUE sections
     /// regardless of their type.
     PN_CPP_EXTERN bool inferred() const;
+
     /// Set the inferred flag for a message.
     PN_CPP_EXTERN void inferred(bool);
 
@@ -270,6 +279,7 @@ class message {
 
     /// @cond INTERNAL
     /// XXX settle necessity (there were some other options)
+    /// XXX decision - declare this separately; it is part of the api
     friend PN_CPP_EXTERN void swap(message&, message&);
     /// @endcond
 };

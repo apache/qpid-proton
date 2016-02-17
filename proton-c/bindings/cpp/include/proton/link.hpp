@@ -95,6 +95,7 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
 
     /// @cond INTERNAL
     /// XXX revisit mind-melting API inherited from C
+    /// XXX flush() ? drain, and drain_completed (sender and receiver ends)
     PN_CPP_EXTERN int drained();
     /// @endcond
 
@@ -120,7 +121,7 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     PN_CPP_EXTERN class session session() const;
 
     /// @cond INTERNAL
-    /// XXX settle open questions
+    /// XXX settle open questions - remove from API
 
     /// Set a custom handler for this link.
     PN_CPP_EXTERN void handler(proton_handler &);
@@ -130,19 +131,21 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
 
     /// @cond INTERNAL
 
-    /// XXX ask about use case, revisit names
+    /// XXX ask about use case, revisit names - make private
     /// Get message data from current delivery on link.
     PN_CPP_EXTERN ssize_t recv(char* buffer, size_t size);
 
-    /// XXX ask about use case, revisit names
+    /// XXX ask about use case, revisit names - make private
     /// Advance the link one delivery.
     PN_CPP_EXTERN bool advance();
 
-    /// XXX remove
+    /// XXX make private
     /// Navigate the links in a connection - get next link with state.
     PN_CPP_EXTERN link next(endpoint::state) const;
 
     /// XXX local versus remote, mutability
+    /// XXX - remove setters
+    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
     PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
     PN_CPP_EXTERN void sender_settle_mode(link_options::sender_settle_mode);
     PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();

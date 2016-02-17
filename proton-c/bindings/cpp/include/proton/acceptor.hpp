@@ -33,11 +33,10 @@ namespace proton {
 /// A context for accepting inbound connections.
 ///
 /// @see container::listen
-class acceptor : public object<pn_acceptor_t>
-{
+class acceptor : public object<pn_acceptor_t> {
   public:
     /// @cond INTERNAL
-    /// XXX important to expose?
+    /// XXX important to expose? - make these private
     acceptor(pn_acceptor_t* a=0) : object<pn_acceptor_t>(a) {}
     /// @endcond
 
@@ -54,4 +53,4 @@ class acceptor : public object<pn_acceptor_t>
 
 }
 
-#endif  // PROTON_CPP_ACCEPTOR_H
+#endif // PROTON_CPP_ACCEPTOR_H

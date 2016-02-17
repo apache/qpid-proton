@@ -1,5 +1,6 @@
 #ifndef COMPARABLE_HPP
 #define COMPARABLE_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,11 +20,14 @@
  * under the License.
  */
 
+/// @cond INTERNAL
+/// XXX revisit with alan - adds spurious superclasses
+/// XXX decision - remove; use type traits to include this behavior
 
-///@cond INTERNAL
 namespace proton {
 
-/// Base class for comparable types with operator< and operator==. Provides remaining operators.
+/// Base class for comparable types with operator< and
+/// operator==. Provides remaining operators.
 template <class T> class comparable {};
 
 template <class T> bool operator>(const comparable<T> &a, const comparable<T> &b) {

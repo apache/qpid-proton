@@ -21,7 +21,7 @@
  */
 
 /// @cond INTERNAL
-/// XXX discuss
+/// XXX discuss some more - not clear this should be public
 
 /// @file
 ///
@@ -31,6 +31,9 @@
 /// On a C++11 compliant compiler, all C++11 features are enabled by
 /// default.  Otherwise they can be enabled or disabled separately
 /// with -D on the compile line.
+
+/// XXX resolve the difference in usage between PN_HAS_CPP11 and the
+/// others
 
 #ifndef PN_HAS_CPP11
 #if (defined(__cplusplus) && __cplusplus >= 201100)

@@ -38,14 +38,14 @@ class condition {
     condition(pn_condition_t* c) : condition_(c) {}
     /// @endcond
 
-    /// @cond INTERNAL
-    /// XXX want to discuss
     /// No condition set.
     PN_CPP_EXTERN bool operator!() const;
 
+    /// XXX add C++11 explicit bool conversion with a note about
+    /// C++11-only usage
+    
     /// No condition has been set.
     PN_CPP_EXTERN bool empty() const;
-    /// @endcond
 
     /// Condition name.
     PN_CPP_EXTERN std::string name() const;
@@ -53,11 +53,14 @@ class condition {
     /// Descriptive string for condition.
     PN_CPP_EXTERN std::string description() const;
 
-    /// Extra information for condition n*/
+    /// Extra information for condition.
     PN_CPP_EXTERN value info() const;
 
+    /// @cond INTERNAL
     /// Simple printable string for condition.
+    /// XXX not sure about this as a convention 
     PN_CPP_EXTERN std::string str() const;
+    /// @endcond
 
   private:
     pn_condition_t* condition_;

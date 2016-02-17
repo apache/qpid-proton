@@ -64,10 +64,7 @@ struct guard {
 /// An IO resource.
 typedef int64_t descriptor;
 
-/// @cond INTERNAL
-/// don't know what it is
 PN_CPP_EXTERN extern const descriptor INVALID_DESCRIPTOR;
-/// @endcond
 
 /// Return a string describing the most recent IO error.
 PN_CPP_EXTERN std::string error_str();

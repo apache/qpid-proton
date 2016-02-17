@@ -25,7 +25,9 @@
 
 namespace proton {
 
-///@cond INTERNAL
+/// @cond INTERNAL
+/// XXX should this be in the interface at all?
+/// XXX decision - make this private
 class id_generator {
   public:
     PN_CPP_EXTERN id_generator(const std::string &prefix="");
@@ -39,5 +41,7 @@ class id_generator {
 };
 
 }
-///@endcond
+
+/// @endcond
+
 #endif

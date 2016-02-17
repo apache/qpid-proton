@@ -78,6 +78,11 @@ PN_CPP_CLASS_EXTERN handler
     /// A message can be sent.
     PN_CPP_EXTERN virtual void on_sendable(event &e);
 
+    // XXX _open is not present because it's
+
+    // XXX you get close and error on a failure, and you get the error first
+    // XXX - for each _error item, document that you will get _close as well
+    
     /// The underlying network transport has closed.
     PN_CPP_EXTERN virtual void on_transport_close(event &e);
     /// The underlying network transport has closed with an error
@@ -114,6 +119,11 @@ PN_CPP_CLASS_EXTERN handler
     /// The remote peer settled an outgoing message.
     PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
 
+    // XXX are we missing on_delivery_modify?
+    // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle
+
+    // XXX note that AMQP modified state is indicated in _release
+
     /// The remote peer declared a transaction.
     PN_CPP_EXTERN virtual void on_transaction_declare(event &e);
     /// The remote peer committed a transaction.
@@ -123,6 +133,7 @@ PN_CPP_CLASS_EXTERN handler
 
     /// @cond INTERNAL
     /// XXX settle API questions around task
+    /// XXX register functions instead of having these funny generic events
     /// A timer fired.
     PN_CPP_EXTERN virtual void on_timer(event &e);
     /// @endcond
