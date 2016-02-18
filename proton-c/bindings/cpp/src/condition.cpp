@@ -19,7 +19,6 @@
  *
  */
 #include "proton/condition.hpp"
-
 #include "proton/condition.h"
 
 namespace proton {

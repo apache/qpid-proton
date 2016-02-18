@@ -29,11 +29,11 @@ class encoder;
 class decoder;
 
 /// An AMQP message ID.
-///    
+///
 /// It can contain one of the following types:
 ///
 ///  - uint64_t
-///  - proton::amqp::amqp_uuid
+///  - proton::uuid
 ///  - proton::amqp::amqp_binary
 ///  - proton::amqp::amqp_string
 class message_id : public restricted_scalar {
@@ -47,7 +47,7 @@ class message_id : public restricted_scalar {
     ///
     /// @{
     message_id& operator=(uint64_t x) { scalar_ = x; return *this; }
-    message_id& operator=(const amqp_uuid& x) { scalar_ = x; return *this; }
+    message_id& operator=(const uuid& x) { scalar_ = x; return *this; }
     message_id& operator=(const amqp_binary& x) { scalar_ = x; return *this; }
     message_id& operator=(const amqp_string& x) { scalar_ = x; return *this; }
     /// std::string is encoded as amqp_string
@@ -66,7 +66,7 @@ class message_id : public restricted_scalar {
     ///
     /// @{
     void get(uint64_t& x) const { scalar_.get(x); }
-    void get(amqp_uuid& x) const { scalar_.get(x); }
+    void get(uuid& x) const { scalar_.get(x); }
     void get(amqp_binary& x) const { scalar_.get(x); }
     void get(amqp_string& x) const { scalar_.get(x); }
     /// @}

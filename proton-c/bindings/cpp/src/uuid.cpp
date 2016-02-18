@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "uuid.hpp"
+#include "proton/uuid.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -56,9 +56,19 @@ struct ios_guard {
 };
 }
 
-uuid::uuid() {
+uuid uuid::make(const char* bytes) {
+    uuid u;
+    if (bytes)
+        std::copy(bytes, bytes + u.size(), u.begin());
+    else
+        std::fill(u.begin(), u.end(), 0);
+    return u;
+}
+
+uuid uuid::random() {
+    uuid bytes;
     int r = std::rand();
-    for (size_t i = 0; i < sizeof(bytes); ++i ) {
+    for (size_t i = 0; i < bytes.size(); ++i ) {
         bytes[i] = r & 0xFF;
         r >>= 8;
         if (!r) r = std::rand();
@@ -69,6 +79,7 @@ uuid::uuid() {
 
     // From RFC4122, the top two bits of byte 8 get set to 01
     bytes[8] = (bytes[8] & 0x3F) | 0x80;
+    return bytes;
 }
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
@@ -76,7 +87,7 @@ std::ostream& operator<<(std::ostream& o, const uuid& u) {
     ios_guard restore_flags(o);
     o << std::hex << std::setfill('0');
     static const int segments[] = {4,2,2,2,6}; // 1 byte is 2 hex chars.
-    const uint8_t *p = u.bytes;
+    const char *p = u.begin();
     for (size_t i = 0; i < sizeof(segments)/sizeof(segments[0]); ++i) {
         if (i > 0)
             o << '-';

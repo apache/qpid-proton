@@ -108,7 +108,7 @@ class url {
     PN_CPP_EXTERN std::string username() const;
     PN_CPP_EXTERN void username(const std::string&);
     /// @endcond
-    
+
     PN_CPP_EXTERN std::string password() const;
     PN_CPP_EXTERN void password(const std::string&);
 

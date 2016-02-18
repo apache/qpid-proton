@@ -18,8 +18,13 @@
  */
 
 #include "msg.hpp"
+#include "types_internal.hpp"
+
+#include "proton/decimal.hpp"
 #include "proton/scalar.hpp"
+#include "proton/timestamp.hpp"
 #include "proton/type_traits.hpp"
+#include "proton/uuid.hpp"
 
 #include <ostream>
 
@@ -61,11 +66,32 @@ scalar& scalar::operator=(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG
 scalar& scalar::operator=(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; return *this; }
 scalar& scalar::operator=(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; return *this; }
 scalar& scalar::operator=(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; return *this; }
-scalar& scalar::operator=(amqp_timestamp x) { atom_.u.as_timestamp = x; atom_.type = PN_TIMESTAMP; return *this; }
-scalar& scalar::operator=(const amqp_decimal32& x) { atom_.u.as_decimal32 = x; atom_.type = PN_DECIMAL32; return *this; }
-scalar& scalar::operator=(const amqp_decimal64& x) { atom_.u.as_decimal64 = x; atom_.type = PN_DECIMAL64; return *this; }
-scalar& scalar::operator=(const amqp_decimal128& x) { atom_.u.as_decimal128 = x; atom_.type = PN_DECIMAL128; return *this; }
-scalar& scalar::operator=(const amqp_uuid& x) { atom_.u.as_uuid = x; atom_.type = PN_UUID; return *this; }
+scalar& scalar::operator=(timestamp x) { atom_.u.as_timestamp = x.ms(); atom_.type = PN_TIMESTAMP; return *this; }
+
+scalar& scalar::operator=(const decimal32& x) {
+    byte_copy(atom_.u.as_decimal32, x);
+    atom_.type = PN_DECIMAL32;
+    return *this;
+}
+
+scalar& scalar::operator=(const decimal64& x) {
+    byte_copy(atom_.u.as_decimal64, x);
+    atom_.type = PN_DECIMAL64;
+    return *this;
+}
+
+scalar& scalar::operator=(const decimal128& x) {
+    byte_copy(atom_.u.as_decimal128, x);
+    atom_.type = PN_DECIMAL128;
+    return *this;
+}
+
+scalar& scalar::operator=(const uuid& x) {
+    byte_copy(atom_.u.as_uuid, x);
+    atom_.type = PN_UUID;
+    return *this;
+}
+
 scalar& scalar::operator=(const amqp_string& x) { set(x, PN_STRING); return *this; }
 scalar& scalar::operator=(const amqp_symbol& x) { set(x, PN_SYMBOL); return *this; }
 scalar& scalar::operator=(const amqp_binary& x) { set(x, PN_BINARY); return *this; }
@@ -86,13 +112,13 @@ void scalar::get(int32_t& x) const { ok(PN_INT); x = atom_.u.as_int; }
 void scalar::get(wchar_t& x) const { ok(PN_CHAR); x = wchar_t(atom_.u.as_char); }
 void scalar::get(uint64_t& x) const { ok(PN_ULONG); x = atom_.u.as_ulong; }
 void scalar::get(int64_t& x) const { ok(PN_LONG); x = atom_.u.as_long; }
-void scalar::get(amqp_timestamp& x) const { ok(PN_TIMESTAMP); x = atom_.u.as_timestamp; }
+void scalar::get(timestamp& x) const { ok(PN_TIMESTAMP); x = atom_.u.as_timestamp; }
 void scalar::get(float& x) const { ok(PN_FLOAT); x = atom_.u.as_float; }
 void scalar::get(double& x) const { ok(PN_DOUBLE); x = atom_.u.as_double; }
-void scalar::get(amqp_decimal32& x) const { ok(PN_DECIMAL32); x = atom_.u.as_decimal32; }
-void scalar::get(amqp_decimal64& x) const { ok(PN_DECIMAL64); x = atom_.u.as_decimal64; }
-void scalar::get(amqp_decimal128& x) const { ok(PN_DECIMAL128); x = atom_.u.as_decimal128; }
-void scalar::get(amqp_uuid& x) const { ok(PN_UUID); x = atom_.u.as_uuid; }
+void scalar::get(decimal32& x) const { ok(PN_DECIMAL32); byte_copy(x, atom_.u.as_decimal32); }
+void scalar::get(decimal64& x) const { ok(PN_DECIMAL64); byte_copy(x, atom_.u.as_decimal64); }
+void scalar::get(decimal128& x) const { ok(PN_DECIMAL128); byte_copy(x, atom_.u.as_decimal128); }
+void scalar::get(uuid& x) const { ok(PN_UUID); byte_copy(x, atom_.u.as_uuid); }
 void scalar::get(amqp_string& x) const { ok(PN_STRING); x = amqp_string(str_); }
 void scalar::get(amqp_symbol& x) const { ok(PN_SYMBOL); x = amqp_symbol(str_); }
 void scalar::get(amqp_binary& x) const { ok(PN_BINARY); x = amqp_binary(str_); }
@@ -154,13 +180,13 @@ template <class T, class F> T type_switch(const scalar& a, F f) {
       case CHAR: return f(a.get<wchar_t>());
       case ULONG: return f(a.get<uint64_t>());
       case LONG: return f(a.get<int64_t>());
-      case TIMESTAMP: return f(a.get<amqp_timestamp>());
+      case TIMESTAMP: return f(a.get<timestamp>());
       case FLOAT: return f(a.get<float>());
       case DOUBLE: return f(a.get<double>());
-      case DECIMAL32: return f(a.get<amqp_decimal32>());
-      case DECIMAL64: return f(a.get<amqp_decimal64>());
-      case DECIMAL128: return f(a.get<amqp_decimal128>());
-      case UUID: return f(a.get<amqp_uuid>());
+      case DECIMAL32: return f(a.get<decimal32>());
+      case DECIMAL64: return f(a.get<decimal64>());
+      case DECIMAL128: return f(a.get<decimal128>());
+      case UUID: return f(a.get<uuid>());
       case BINARY: return f(a.get<amqp_binary>());
       case STRING: return f(a.get<amqp_string>());
       case SYMBOL: return f(a.get<amqp_symbol>());

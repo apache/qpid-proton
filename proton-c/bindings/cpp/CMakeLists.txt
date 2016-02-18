@@ -36,6 +36,7 @@ set(qpid-proton-cpp-source
   src/contexts.cpp
   src/data.cpp
   src/decoder.cpp
+  src/decimal.cpp
   src/delivery.cpp
   src/duration.cpp
   src/encoder.cpp

@@ -154,13 +154,13 @@ class encoder : public object<pn_data_t> {
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_char);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ulong);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_long);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_timestamp);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, timestamp);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_float);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_double);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal32);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal64);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_decimal128);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_uuid);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal32);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal64);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal128);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, uuid);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_string);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_symbol);
   friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_binary);

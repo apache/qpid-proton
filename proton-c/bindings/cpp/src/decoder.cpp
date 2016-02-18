@@ -19,10 +19,13 @@
 
 #include "proton/data.hpp"
 #include "proton/decoder.hpp"
+#include "proton/decimal.hpp"
 #include "proton/value.hpp"
 #include "proton/message_id.hpp"
 #include "proton/annotation_key.hpp"
 #include "proton_bits.hpp"
+
+#include "types_internal.hpp"
 #include "msg.hpp"
 
 #include <proton/codec.h>
@@ -96,11 +99,17 @@ type_id pre_get(pn_data_t* data) {
     return t;
 }
 
+template <class T, class U> void assign(T& x, const U& y) { x = y; }
+void assign(uuid& x, const pn_uuid_t y) { byte_copy(x, y); }
+void assign(decimal32& x, const pn_decimal32_t y) { byte_copy(x, y); }
+void assign(decimal64& x, const pn_decimal64_t y)  { byte_copy(x, y); }
+void assign(decimal128& x, const pn_decimal128_t y) { byte_copy(x, y); }
+
 // Simple extract with no type conversion.
 template <class T, class U> void extract(pn_data_t* data, T& x, U (*get)(pn_data_t*)) {
     save_state ss(data);
     bad_type(type_id_of<T>::value, pre_get(data));
-    x = T(get(data));
+    assign(x, get(data));
     ss.cancel();                // No error, no rewind
 }
 
@@ -312,7 +321,7 @@ decoder operator>>(decoder d, amqp_char &x) {
     return d;
 }
 
-decoder operator>>(decoder d, amqp_timestamp &x) {
+decoder operator>>(decoder d, timestamp &x) {
     extract(d.pn_object(), x, pn_data_get_timestamp);
     return d;
 }
@@ -341,22 +350,22 @@ decoder operator>>(decoder d0, amqp_double &x) {
     return d0;
 }
 
-decoder operator>>(decoder d, amqp_decimal32 &x) {
+decoder operator>>(decoder d, decimal32 &x) {
     extract(d.pn_object(), x, pn_data_get_decimal32);
     return d;
 }
 
-decoder operator>>(decoder d, amqp_decimal64 &x) {
+decoder operator>>(decoder d, decimal64 &x) {
     extract(d.pn_object(), x, pn_data_get_decimal64);
     return d;
 }
 
-decoder operator>>(decoder d, amqp_decimal128 &x)  {
+decoder operator>>(decoder d, decimal128 &x)  {
     extract(d.pn_object(), x, pn_data_get_decimal128);
     return d;
 }
 
-decoder operator>>(decoder d, amqp_uuid &x)  {
+decoder operator>>(decoder d, uuid &x)  {
     extract(d.pn_object(), x, pn_data_get_uuid);
     return d;
 }

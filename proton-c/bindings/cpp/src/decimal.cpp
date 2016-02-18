@@ -1,5 +1,3 @@
-#ifndef UUID_HPP
-#define UUID_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,23 +17,11 @@
  * under the License.
  */
 
-#include <proton/types.hpp>
-
-#include <string>
-#include <iosfwd>
+#include "proton/decimal.hpp"
+#include <iostream>
 
 namespace proton {
-
-/// A random UUID.
-struct uuid {
-    PN_CPP_EXTERN uuid();
-    uint8_t bytes[16];
-    PN_CPP_EXTERN std::string str()  const;
-};
-
-/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
-
+std::ostream& operator<<(std::ostream& o, const decimal32& ) { return o << "<decimal32>"; }
+std::ostream& operator<<(std::ostream& o, const decimal64& ) { return o << "<decimal32>"; }
+std::ostream& operator<<(std::ostream& o, const decimal128& ) { return o << "<decimal32>"; }
 }
-
-#endif // UUID_HPP

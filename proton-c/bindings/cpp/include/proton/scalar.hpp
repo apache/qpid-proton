@@ -28,8 +28,13 @@
 
 namespace proton {
 
-class encoder;
+class decimal128;
+class decimal32;
+class decimal64;
 class decoder;
+class encoder;
+class timestamp;
+class uuid;
 
 /// A holder for an instance of any scalar AMQP type.
 class scalar : public comparable<scalar> {
@@ -66,11 +71,11 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN scalar& operator=(wchar_t);
     PN_CPP_EXTERN scalar& operator=(float);
     PN_CPP_EXTERN scalar& operator=(double);
-    PN_CPP_EXTERN scalar& operator=(amqp_timestamp);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal32&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal64&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_decimal128&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_uuid&);
+    PN_CPP_EXTERN scalar& operator=(timestamp);
+    PN_CPP_EXTERN scalar& operator=(const decimal32&);
+    PN_CPP_EXTERN scalar& operator=(const decimal64&);
+    PN_CPP_EXTERN scalar& operator=(const decimal128&);
+    PN_CPP_EXTERN scalar& operator=(const uuid&);
     PN_CPP_EXTERN scalar& operator=(const amqp_string&);
     PN_CPP_EXTERN scalar& operator=(const amqp_symbol&);
     PN_CPP_EXTERN scalar& operator=(const amqp_binary&);
@@ -99,11 +104,11 @@ class scalar : public comparable<scalar> {
     PN_CPP_EXTERN void get(wchar_t&) const;
     PN_CPP_EXTERN void get(float&) const;
     PN_CPP_EXTERN void get(double&) const;
-    PN_CPP_EXTERN void get(amqp_timestamp&) const;
-    PN_CPP_EXTERN void get(amqp_decimal32&) const;
-    PN_CPP_EXTERN void get(amqp_decimal64&) const;
-    PN_CPP_EXTERN void get(amqp_decimal128&) const;
-    PN_CPP_EXTERN void get(amqp_uuid&) const;
+    PN_CPP_EXTERN void get(timestamp&) const;
+    PN_CPP_EXTERN void get(decimal32&) const;
+    PN_CPP_EXTERN void get(decimal64&) const;
+    PN_CPP_EXTERN void get(decimal128&) const;
+    PN_CPP_EXTERN void get(uuid&) const;
     PN_CPP_EXTERN void get(amqp_string&) const;
     PN_CPP_EXTERN void get(amqp_symbol&) const;
     PN_CPP_EXTERN void get(amqp_binary&) const;

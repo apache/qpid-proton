@@ -148,13 +148,11 @@ class message {
     PN_CPP_EXTERN void content_encoding(const std::string &s);
     PN_CPP_EXTERN std::string content_encoding() const;
 
-    // XXX amqp_timestamp -> timestamp
-    PN_CPP_EXTERN void expiry_time(amqp_timestamp t);
-    PN_CPP_EXTERN amqp_timestamp expiry_time() const;
+    PN_CPP_EXTERN void expiry_time(timestamp t);
+    PN_CPP_EXTERN timestamp expiry_time() const;
 
-    // XXX amqp_timestamp -> timestamp
-    PN_CPP_EXTERN void creation_time(amqp_timestamp t);
-    PN_CPP_EXTERN amqp_timestamp creation_time() const;
+    PN_CPP_EXTERN void creation_time(timestamp t);
+    PN_CPP_EXTERN timestamp creation_time() const;
 
     /// Get the inferred flag for a message.
     ///

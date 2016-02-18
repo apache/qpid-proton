@@ -27,19 +27,6 @@
 namespace proton {
 
 namespace {
-struct ios_guard {
-    std::ios &guarded;
-    std::ios old;
-    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
-    ~ios_guard() { guarded.copyfmt(old); }
-};
-
-inline std::ostream& print_segment(std::ostream& o, const amqp_uuid& u, size_t begin, size_t end, const char* sep="") {
-    ios_guard restore_flags(o);
-    for (const char* p = &u[begin]; p < &u[end]; ++p)
-        o << std::setw(2) << std::setfill('0') << (int(*p) & 0xff);
-    return o << sep;
-}
 
 std::string mismatch_message(type_id want, type_id got, const std::string& msg=std::string()) {
     std::ostringstream s;
@@ -52,23 +39,6 @@ std::string mismatch_message(type_id want, type_id got, const std::string& msg=s
 type_error::type_error(type_id want_, type_id got_, const std::string &msg)
     : decode_error(mismatch_message(want_, got_, msg)), want(want_), got(got_)
 {}
-
-std::ostream& operator<<(std::ostream& o, const amqp_decimal32&) { return o << "<decimal32>"; }
-std::ostream& operator<<(std::ostream& o, const amqp_decimal64&) { return o << "<decimal64>"; }
-std::ostream& operator<<(std::ostream& o, const amqp_decimal128&) { return o << "<decimal128>"; }
-std::ostream& operator<<(std::ostream& o, const amqp_timestamp& ts) { return o << "timestamp:" << ts.milliseconds; }
-
-std::ostream& operator<<(std::ostream& o, const amqp_uuid& u) {
-    std::ios_base::fmtflags ff = o.flags();
-    o.flags(std::ios_base::hex);
-    print_segment(o, u, 0, 4, "-");
-    print_segment(o, u, 4, 6, "-");
-    print_segment(o, u, 6, 8, "-");
-    print_segment(o, u, 8, 10, "-");
-    print_segment(o, u, 10, 16);
-    o.flags(ff);
-    return o;
-}
 
 std::string type_name(type_id t) {
     switch (t) {

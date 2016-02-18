@@ -24,6 +24,7 @@
 #include <proton/value.hpp>
 #include <proton/message_id.hpp>
 #include <proton/annotation_key.hpp>
+#include <proton/decimal.hpp>
 
 #include <sstream>
 
@@ -76,7 +77,7 @@ void convert_test() {
 
     a = int16_t(42);
     ASSERT_MISMATCH(a.get<std::string>(), STRING, SHORT);
-    ASSERT_MISMATCH(a.get<amqp_timestamp>(), TIMESTAMP, SHORT);
+    ASSERT_MISMATCH(a.get<timestamp>(), TIMESTAMP, SHORT);
     ASSERT_MISMATCH(a.as_string(), STRING, SHORT);
     ASSERT_EQUAL(a.as_int(), 42);
     ASSERT_EQUAL(a.as_uint(), 42);
@@ -105,7 +106,8 @@ void message_id_test() {
     ASSERT_EQUAL(scalar("foo"), message_id("foo"));
     ASSERT_EQUAL("foo", message_id("foo").as_string());
     ASSERT(message_id("a") < message_id("z"));
-    ASSERT_EQUAL(amqp_uuid(), message_id(amqp_uuid()).get<amqp_uuid>());
+    uuid r = uuid::random();
+    ASSERT_EQUAL(r, message_id(r).get<uuid>());
 }
 
 void annotation_key_test() {
@@ -114,6 +116,8 @@ void annotation_key_test() {
     ASSERT_EQUAL("foo", annotation_key("foo").as_string());
     ASSERT_EQUAL(scalar(amqp_symbol("foo")), annotation_key("foo"));
 }
+
+template <class T> T make(const char c) { T x; std::fill(x.begin(), x.end(), c); return x; }
 
 int main(int, char**) {
     int failed = 0;
@@ -129,13 +133,11 @@ int main(int, char**) {
     RUN_TEST(failed, type_test(wchar_t(23), CHAR, wchar_t(24)));
     RUN_TEST(failed, type_test(amqp_float(1.234), FLOAT, amqp_float(2.345)));
     RUN_TEST(failed, type_test(amqp_double(11.2233), DOUBLE, amqp_double(12)));
-    RUN_TEST(failed, type_test(amqp_timestamp(0), TIMESTAMP, amqp_timestamp(1)));
-    RUN_TEST(failed, type_test(amqp_decimal32(0), DECIMAL32, amqp_decimal32(1)));
-    RUN_TEST(failed, type_test(amqp_decimal64(0), DECIMAL64, amqp_decimal64(1)));
-    pn_decimal128_t da = {0}, db = {1};
-    RUN_TEST(failed, type_test(amqp_decimal128(da), DECIMAL128, amqp_decimal128(db)));
-    pn_uuid_t ua = {0}, ub = {1};
-    RUN_TEST(failed, type_test(amqp_uuid(ua), UUID, amqp_uuid(ub)));
+    RUN_TEST(failed, type_test(timestamp(0), TIMESTAMP, timestamp(1)));
+    RUN_TEST(failed, type_test(make<decimal32>(0), DECIMAL32, make<decimal32>(1)));
+    RUN_TEST(failed, type_test(make<decimal64>(0), DECIMAL64, make<decimal64>(1)));
+    RUN_TEST(failed, type_test(make<decimal128>(0), DECIMAL128, make<decimal128>(1)));
+    RUN_TEST(failed, type_test(uuid::make("a"), UUID, uuid::make("x")));
     RUN_TEST(failed, type_test(amqp_string("aaa"), STRING, amqp_string("aaaa")));
     RUN_TEST(failed, type_test(amqp_symbol("aaa"), SYMBOL, amqp_symbol("aaaa")));
     RUN_TEST(failed, type_test(amqp_binary("aaa"), BINARY, amqp_binary("aaaa")));

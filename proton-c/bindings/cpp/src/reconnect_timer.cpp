@@ -46,7 +46,7 @@ int reconnect_timer::next_delay() {
         return -1;
     if (!reactor_)
         throw error(MSG("reconnect timer missing reactor reference"));
-    pn_timestamp_t now = reactor_.now();
+    pn_timestamp_t now = reactor_.now().ms();
 
     if (retries_ == 1) {
         if (timeout_ >= 0)

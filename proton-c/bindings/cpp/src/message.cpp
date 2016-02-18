@@ -91,7 +91,7 @@ inline message_id from_pn_atom(const pn_atom_t& v) {
     case PN_ULONG:
       return message_id(amqp_ulong(v.u.as_ulong));
     case PN_UUID:
-      return message_id(amqp_uuid(v.u.as_uuid));
+      return message_id(uuid::make(reinterpret_cast<const char*>(&v.u.as_uuid)));
     case PN_BINARY:
       return message_id(amqp_binary(v.u.as_bytes));
     case PN_STRING:
@@ -167,18 +167,18 @@ std::string message::content_encoding() const {
     return s ? std::string(s) : std::string();
 }
 
-void message::expiry_time(amqp_timestamp t) {
-    pn_message_set_expiry_time(pn_msg(), t.milliseconds);
+void message::expiry_time(timestamp t) {
+    pn_message_set_expiry_time(pn_msg(), t.ms());
 }
-amqp_timestamp message::expiry_time() const {
-    return amqp_timestamp(pn_message_get_expiry_time(pn_msg()));
+timestamp message::expiry_time() const {
+    return timestamp(pn_message_get_expiry_time(pn_msg()));
 }
 
-void message::creation_time(amqp_timestamp t) {
-    pn_message_set_creation_time(pn_msg(), t);
+void message::creation_time(timestamp t) {
+    pn_message_set_creation_time(pn_msg(), t.ms());
 }
-amqp_timestamp message::creation_time() const {
-    return pn_message_get_creation_time(pn_msg());
+timestamp message::creation_time() const {
+    return timestamp(pn_message_get_creation_time(pn_msg()));
 }
 
 void message::group_id(const std::string &s) {
@@ -303,7 +303,7 @@ bool message::durable() const { return pn_message_is_durable(pn_msg()); }
 void message::durable(bool b) { pn_message_set_durable(pn_msg(), b); }
 
 duration message::ttl() const { return duration(pn_message_get_ttl(pn_msg())); }
-void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.milliseconds); }
+void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.ms()); }
 
 uint8_t message::priority() const { return pn_message_get_priority(pn_msg()); }
 void message::priority(uint8_t d) { pn_message_set_priority(pn_msg(), d); }

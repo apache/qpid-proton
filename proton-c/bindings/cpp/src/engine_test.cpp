@@ -19,7 +19,7 @@
 
 
 #include "test_bits.hpp"
-#include "uuid.hpp"
+#include <proton/uuid.hpp>
 #include <proton/connection_engine.hpp>
 #include <proton/handler.hpp>
 #include <proton/event.hpp>

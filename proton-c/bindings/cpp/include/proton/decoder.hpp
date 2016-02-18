@@ -26,6 +26,8 @@
 #include "proton/type_traits.hpp"
 #include "proton/types.hpp"
 #include "proton/object.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/uuid.hpp"
 #include <iosfwd>
 
 #ifndef PN_NO_CONTAINER_CONVERT
@@ -98,11 +100,11 @@ type or throw an exception if the types are not compatible.
 +-------------------------+-------------------------------+
 |BINARY                   |amqp_binary, std::string       |
 +-------------------------+-------------------------------+
-|DECIMAL32/64/128         |amqp_decimal32/64/128          |
+|DECIMAL32/64/128         |decimal32/64/128               |
 +-------------------------+-------------------------------+
-|TIMESTAMP                |amqp_timestamp                 |
+|TIMESTAMP                |timestamp                      |
 +-------------------------+-------------------------------+
-|UUID                     |amqp_uuid                      |
+|UUID                     |uuid                           |
 +-------------------------+-------------------------------+
 
 The special proton::value type can hold any AMQP type, simple or compound.
@@ -202,13 +204,13 @@ class decoder : public object<pn_data_t> {
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_char&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_ulong&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_long&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_timestamp&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, timestamp&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_float&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_double&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal32&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal64&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_decimal128&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, amqp_uuid&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, decimal32&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, decimal64&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, decimal128&);
+    PN_CPP_EXTERN friend decoder operator>>(decoder, uuid&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, std::string&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, message_id&);
     PN_CPP_EXTERN friend decoder operator>>(decoder, annotation_key&);

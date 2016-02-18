@@ -1,5 +1,6 @@
+#ifndef CODEC_HPP
+#define CODEC_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,27 +17,23 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/duration.hpp"
-#include "proton/timestamp.hpp"
 
-#include <limits>
-#include <iostream>
+#include "proton/type_traits.hpp"
+
+///@file
+/// Internal helpers for encode/decode/type conversion.
 
 namespace proton {
 
-const duration duration::FOREVER(std::numeric_limits<int64_t>::max());
-const duration duration::IMMEDIATE(0);
-const duration duration::SECOND(1000);
-const duration duration::MINUTE(SECOND * 60);
-
-std::ostream& operator<<(std::ostream& o, timestamp ts) {
-    return o << "timestamp:" << ts.ms() << "ms";
+/// Byte copy between two objects, only enabled if their sizes are equal.
+template <class T, class U>
+typename enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from) {
+    const char *p = reinterpret_cast<const char*>(&from);
+    std::copy(p, p + sizeof(T), reinterpret_cast<char*>(&to));
 }
 
-std::ostream& operator<<(std::ostream& o, duration d) {
-    return o << d.ms() << "ms";
-}
 
 }
+
+#endif // CODEC_HPP

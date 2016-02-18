@@ -22,6 +22,8 @@
 
 #include "proton/data.hpp"
 #include "proton/types.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/uuid.hpp"
 
 namespace proton {
 

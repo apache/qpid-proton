@@ -25,6 +25,7 @@
 
 #include "proton/object.hpp"
 #include "proton/duration.hpp"
+#include "proton/timestamp.hpp"
 
 struct pn_reactor_t;
 struct pn_io_t;
@@ -69,8 +70,8 @@ class reactor : public object<pn_reactor_t> {
     /// Set timeout, process() will return if there is no activity within the timeout.
     PN_CPP_EXTERN void timeout(duration timeout);
 
-    PN_CPP_EXTERN amqp_timestamp mark();
-    PN_CPP_EXTERN amqp_timestamp now();
+    PN_CPP_EXTERN timestamp mark();
+    PN_CPP_EXTERN timestamp now();
 
     PN_CPP_EXTERN task schedule(int, pn_handler_t*);
 

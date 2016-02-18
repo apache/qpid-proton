@@ -19,6 +19,7 @@
 
 #include "proton_bits.hpp"
 #include "proton/data.hpp"
+#include "proton/decimal.hpp"
 
 #include <proton/codec.h>
 
@@ -126,13 +127,13 @@ int compare_next(data& a, data& b) {
       case CHAR: return compare_simple<amqp_char>(a, b);
       case ULONG: return compare_simple<amqp_ulong>(a, b);
       case LONG: return compare_simple<amqp_long>(a, b);
-      case TIMESTAMP: return compare_simple<amqp_timestamp>(a, b);
+      case TIMESTAMP: return compare_simple<timestamp>(a, b);
       case FLOAT: return compare_simple<amqp_float>(a, b);
       case DOUBLE: return compare_simple<amqp_double>(a, b);
-      case DECIMAL32: return compare_simple<amqp_decimal32>(a, b);
-      case DECIMAL64: return compare_simple<amqp_decimal64>(a, b);
-      case DECIMAL128: return compare_simple<amqp_decimal128>(a, b);
-      case UUID: return compare_simple<amqp_uuid>(a, b);
+      case DECIMAL32: return compare_simple<decimal32>(a, b);
+      case DECIMAL64: return compare_simple<decimal64>(a, b);
+      case DECIMAL128: return compare_simple<decimal128>(a, b);
+      case UUID: return compare_simple<uuid>(a, b);
       case BINARY: return compare_simple<amqp_binary>(a, b);
       case STRING: return compare_simple<amqp_string>(a, b);
       case SYMBOL: return compare_simple<amqp_symbol>(a, b);

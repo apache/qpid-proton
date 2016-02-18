@@ -20,15 +20,14 @@
 #include "proton/connection_engine.hpp"
 #include "proton/error.hpp"
 #include "proton/handler.hpp"
+#include "proton/uuid.hpp"
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
-#include "uuid.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
 #include "messaging_event.hpp"
 #include "proton_bits.hpp"
-#include "uuid.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -54,7 +53,7 @@ void close_transport(connection_engine_context *ctx_) {
         pn_transport_close_tail(ctx_->transport);
 }
 
-std::string  make_id(const std::string s="") { return s.empty() ? uuid().str() : s; }
+std::string  make_id(const std::string s="") { return s.empty() ? uuid::random().str() : s; }
 }
 
 connection_engine::container::container(const std::string& s) : id_(make_id(s)) {}

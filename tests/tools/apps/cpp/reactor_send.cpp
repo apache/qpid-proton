@@ -74,8 +74,7 @@ class reactor_send : public proton::handler {
         while (sender.credit() && sent_ < total_) {
             id_value_ = sent_ + 1;
             message_.correlation_id(id_value_);
-            proton::amqp_timestamp reactor_now(reactor_.now());
-            message_.creation_time(reactor_now);
+            message_.creation_time(reactor_.now());
             sender.send(message_);
             sent_++;
         }

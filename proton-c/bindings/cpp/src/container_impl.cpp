@@ -32,6 +32,7 @@
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 #include "proton/transport.hpp"
+#include "proton/uuid.hpp"
 
 #include "connector.hpp"
 #include "container_impl.hpp"
@@ -39,7 +40,6 @@
 #include "messaging_adapter.hpp"
 #include "messaging_event.hpp"
 #include "msg.hpp"
-#include "uuid.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
@@ -125,7 +125,7 @@ pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
 
 container_impl::container_impl(container& c, messaging_adapter *h, const std::string& id) :
     container_(c), reactor_(reactor::create()), handler_(h),
-    id_(id.empty() ? uuid().str() : id), id_gen_()
+    id_(id.empty() ? uuid::random().str() : id), id_gen_()
 {
     container_context::set(reactor_, container_);
 
