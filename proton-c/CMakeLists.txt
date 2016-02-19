@@ -290,7 +290,6 @@ pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX
 
 add_subdirectory(bindings)
 add_subdirectory(docs/api)
-add_subdirectory(docs/man)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 set (qpid-proton-platform
@@ -424,23 +423,6 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
-add_executable (
-  proton-dump
-  src/proton-dump.c
-  # Internal dependencies
-  src/buffer.c
-  src/util.c
-  src/framing/framing.c
-  )
-target_link_libraries (proton-dump qpid-proton)
-
-set_target_properties (
-  proton-dump
-  PROPERTIES
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS}"
-  LINK_FLAGS "${LTO}"
-  )
-
 macro(pn_c_files)
   foreach (src_file ${ARGN})
     if (${src_file} MATCHES "^.*[.]c$")
@@ -452,13 +434,9 @@ macro(pn_c_files)
   endforeach (src_file)
 endmacro(pn_c_files)
 
-pn_c_files (${qpid-proton-core} ${qpid-proton-platform} src/proton-dump.c)
+pn_c_files (${qpid-proton-core} ${qpid-proton-platform})
 
 # Install executables and libraries
-install (TARGETS proton-dump
-  RUNTIME DESTINATION bin
-  ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-  LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 install (TARGETS qpid-proton
   EXPORT  proton
   RUNTIME DESTINATION bin
