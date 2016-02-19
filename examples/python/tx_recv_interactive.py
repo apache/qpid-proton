@@ -21,7 +21,7 @@
 from __future__ import print_function
 import sys
 import threading
-from proton.reactor import ApplicationEvent, Container
+from proton.reactor import ApplicationEvent, Container, EventInjector
 from proton.handlers import MessagingHandler, TransactionHandler
 
 class TxRecv(MessagingHandler, TransactionHandler):
@@ -67,7 +67,8 @@ class TxRecv(MessagingHandler, TransactionHandler):
 
 try:
     reactor = Container(TxRecv())
-    events = reactor.get_event_trigger()
+    events = EventInjector()
+    reactor.selectable(events)
     thread = threading.Thread(target=reactor.run)
     thread.daemon=True
     thread.start()
