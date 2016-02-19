@@ -28,7 +28,7 @@ if (DOXYGEN_FOUND)
   install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-c"
            COMPONENT documentation
-           ${OPTIONAL_ARG})
+           OPTIONAL)
 
   set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES html)
 endif (DOXYGEN_FOUND)

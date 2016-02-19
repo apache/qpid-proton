@@ -23,31 +23,12 @@ include(CheckSymbolExists)
 
 include(soversion.cmake)
 
-if(WIN32 AND NOT CYGWIN)
-  # linking against Windows native libraries, including mingw
-  set (PN_WINAPI TRUE)
-  set (PLATFORM_LIBS ws2_32 Rpcrt4)
-  list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
-endif(WIN32 AND NOT CYGWIN)
-
-# Can't use ${CMAKE_VERSION) as it is not available in all versions of cmake 2.6
-if ("${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}" VERSION_LESS "2.8.0")
-  # OPTIONAL does not exist in install before 2.8 so always make docs and install
-  set (OPTIONAL_ARG "")
-  add_custom_target(docs ALL)
-  # There are bugs in the OpenSSL detection that mean -lcrypto is missed from the link line
-  # so turn off unknown symbol warnings
-  set (NOENABLE_UNDEFINED_ERROR ON)
-  set (OLD_ADD_TEST_COMMAND ON)
-else()
-  set (OPTIONAL_ARG OPTIONAL)
-  add_custom_target(docs)
-endif()
+add_custom_target(docs)
 add_custom_target(doc DEPENDS docs)
 
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
-find_package (PythonInterp REQUIRED)
+find_package(PythonInterp REQUIRED)
 find_package(SWIG)
 # FindSwig.cmake "forgets" make its outputs advanced like a good citizen
 mark_as_advanced(SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
@@ -61,6 +42,11 @@ mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
 # Find saslpasswd2 executable to generate test config
 find_program(SASLPASSWD_EXE saslpasswd2 DOC "Program used to make SASL user db for testing")
 mark_as_advanced(SASLPASSWD_EXE)
+
+if(WIN32 AND NOT CYGWIN)
+  # linking against Windows native libraries, including mingw
+  set (PN_WINAPI TRUE)
+endif(WIN32 AND NOT CYGWIN)
 
 set(ssl_impl, none)
 if(PN_WINAPI)
@@ -183,6 +169,11 @@ else (C99_ATOLL)
     message(FATAL_ERROR "No atoll API found")
   endif (WINAPI_ATOI64)
 endif (C99_ATOLL)
+
+if (PN_WINAPI)
+  set (PLATFORM_LIBS ws2_32 Rpcrt4)
+  list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
+endif (PN_WINAPI)
 
 # Try to keep any platform specific overrides together here:
 
@@ -520,28 +511,15 @@ if (BUILD_PYTHON)
   set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
   to_native_path ("${py_pythonpath}" py_pythonpath)
 
-  if (NOT OLD_ADD_TEST_COMMAND)
-    to_native_path ("${py_path}" py_path)
-    add_test (NAME python-test
-              COMMAND ${env_py}
-                "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
-                "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-                "SASLPASSWD=${SASLPASSWD_EXE}"
-                ${VALGRIND_ENV}
-                ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
-    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
-  else (NOT OLD_ADD_TEST_COMMAND)
-    list (APPEND py_path "${Proton_BINARY_DIR}/tests/tools/apps/c")
-    to_native_path ("${py_path}" py_path)
-    add_test (python-test
-                ${env_py}
-                "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
-                "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-                "SASLPASSWD=${SASLPASSWD_EXE}"
-                ${VALGRIND_ENV}
-                ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
-    set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
-  endif (NOT OLD_ADD_TEST_COMMAND)
+  to_native_path ("${py_path}" py_path)
+  add_test (NAME python-test
+            COMMAND ${env_py}
+              "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+              "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+              "SASLPASSWD=${SASLPASSWD_EXE}"
+              ${VALGRIND_ENV}
+              ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
   # Eventually, we'll get rid of this check when other
   # platforms will be supported. Since `setup.py` will skip

@@ -92,7 +92,7 @@ if (EPYDOC_EXE)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
            DESTINATION "${PROTON_SHARE}/docs/api-py"
            COMPONENT documentation
-           ${OPTIONAL_ARG})
+           OPTIONAL)
 endif (EPYDOC_EXE)
 
 find_program(SPHINX_EXE sphinx-build)
@@ -105,7 +105,7 @@ if (SPHINX_EXE)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
            DESTINATION "${PROTON_SHARE}/docs/tutorial-py"
            COMPONENT documentation
-           ${OPTIONAL_ARG})
+           OPTIONAL)
 endif (SPHINX_EXE)
 
 install(FILES ${CPROTON_ARTIFACTS}
