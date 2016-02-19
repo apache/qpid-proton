@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -122,7 +121,7 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
   }
 }
 
-static inline int pn_create_socket(int af);
+static inline int pn_create_socket(int af, int protocol);
 
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
@@ -133,7 +132,7 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return PN_INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket(addr->ai_family);
+  pn_socket_t sock = pn_create_socket(addr->ai_family, addr->ai_protocol);
   if (sock == PN_INVALID_SOCKET) {
     freeaddrinfo(addr);
     pn_i_error_from_errno(io->error, "pn_create_socket");
@@ -175,7 +174,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
     return PN_INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pn_create_socket(addr->ai_family);
+  pn_socket_t sock = pn_create_socket(addr->ai_family, addr->ai_protocol);
   if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "pn_create_socket");
     freeaddrinfo(addr);
@@ -200,8 +199,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
 
 pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 {
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_UNSPEC;
+  struct sockaddr_storage addr;
   socklen_t addrlen = sizeof(addr);
   pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
   if (sock == PN_INVALID_SOCKET) {
@@ -231,12 +229,8 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t len) {
   return count;
 }
 
-static inline int pn_create_socket(int af) {
-  struct protoent * pe_tcp = getprotobyname("tcp");
-  if (pe_tcp == NULL) {
-    return -1;
-  }
-  return socket(af, SOCK_STREAM, pe_tcp->p_proto);
+static inline int pn_create_socket(int af, int protocol) {
+  return socket(af, SOCK_STREAM, protocol);
 }
 #elif defined(SO_NOSIGPIPE)
 ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
@@ -246,14 +240,9 @@ ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
   return count;
 }
 
-static inline int pn_create_socket(int af) {
-  struct protoent * pe_tcp;
+static inline int pn_create_socket(int af, int protocol) {
   int sock;
-  pe_tcp = getprotobyname("tcp");
-  if (pe_tcp == NULL) {
-    return -1;
-  }
-  sock = socket(af, SOCK_STREAM, pe_tcp->p_proto);
+  sock = socket(af, SOCK_STREAM, protocol);
   if (sock == -1) return sock;
 
   int optval = 1;

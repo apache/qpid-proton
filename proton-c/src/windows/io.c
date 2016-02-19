@@ -169,7 +169,7 @@ static void pn_configure_sock(pn_io_t *io, pn_socket_t sock) {
   }
 }
 
-static inline pn_socket_t pni_create_socket(int domain);
+static inline pn_socket_t pni_create_socket(int domain, int protocol);
 
 static const char *amqp_service(const char *port) {
   // Help older Windows to know about amqp[s] ports
@@ -189,7 +189,7 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pni_create_socket(addr->ai_family);
+  pn_socket_t sock = pni_create_socket(addr->ai_family, addr->ai_protocol);
   if (sock == INVALID_SOCKET) {
     pni_win32_error(io->error, "pni_create_socket", WSAGetLastError());
     return INVALID_SOCKET;
@@ -243,7 +243,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
     return INVALID_SOCKET;
   }
 
-  pn_socket_t sock = pni_create_socket(addr->ai_family);
+  pn_socket_t sock = pni_create_socket(addr->ai_family, addr->ai_protocol);
   if (sock == INVALID_SOCKET) {
     pni_win32_error(io->error, "proton pni_create_socket", WSAGetLastError());
     freeaddrinfo(addr);
@@ -272,8 +272,7 @@ pn_socket_t pn_connect(pn_io_t *io, const char *hostarg, const char *port)
 
 pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t size)
 {
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;
+  struct sockaddr_storage addr;
   socklen_t addrlen = sizeof(addr);
   iocpdesc_t *listend = pni_iocpdesc_map_get(io->iocp, listen_sock);
   pn_socket_t accept_sock;
@@ -309,12 +308,8 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t s
   }
 }
 
-static inline pn_socket_t pni_create_socket(int domain) {
-  struct protoent * pe_tcp = getprotobyname("tcp");
-  if (pe_tcp == NULL) {
-    return -1;
-  }
-  return socket(domain, SOCK_STREAM, pe_tcp->p_proto);
+static inline pn_socket_t pni_create_socket(int domain, int protocol) {
+  return socket(domain, SOCK_STREAM, protocol);
 }
 
 ssize_t pn_send(pn_io_t *io, pn_socket_t sockfd, const void *buf, size_t len) {

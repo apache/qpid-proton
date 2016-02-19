@@ -155,8 +155,7 @@ listener::listener(const std::string& host, const std::string &port) : socket_(I
 listener::~listener() { ::close(socket_); }
 
 descriptor listener::accept(std::string& host_str, std::string& port_str) {
-    struct sockaddr_in addr;
-    ::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_storage addr;
     socklen_t size = sizeof(addr);
     int fd = check(::accept(socket_, (struct sockaddr *)&addr, &size), "accept: ");
     char host[NI_MAXHOST], port[NI_MAXSERV];
