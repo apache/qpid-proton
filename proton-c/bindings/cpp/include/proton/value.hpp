@@ -32,7 +32,7 @@ namespace proton {
 /// A proton::value can hold any AMQP data value, simple or compound.
 /// It has assignment and conversion operators to convert its contents
 /// easily to and from native C++ types.
-class value : public comparable<value> {
+class value : private comparable<value> {
   public:
     /// Create an empty value.
     PN_CPP_EXTERN value();

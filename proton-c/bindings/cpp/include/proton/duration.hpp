@@ -31,7 +31,7 @@
 namespace proton {
 
 /// A span of time in milliseconds.
-class duration : public comparable<duration> {
+class duration : private comparable<duration> {
   public:
     explicit duration(int64_t ms = 0) : ms_(ms) {}
     duration& operator=(int64_t ms) { ms_ = ms; return *this; }

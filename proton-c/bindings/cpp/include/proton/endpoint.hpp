@@ -78,7 +78,7 @@ PN_CPP_CLASS_EXTERN endpoint {
 /// @cond INTERNAL
 /// XXX move to internal
 
-template <class T> class iter_base  : public comparable<iter_base<T> > {
+template <class T> class iter_base {
   public:
     typedef T value_type;
 

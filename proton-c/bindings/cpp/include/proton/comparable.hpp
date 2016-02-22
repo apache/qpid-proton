@@ -28,26 +28,15 @@ namespace proton {
 
 /// Base class for comparable types with operator< and
 /// operator==. Provides remaining operators.
-template <class T> class comparable {};
-
-template <class T> bool operator>(const comparable<T> &a, const comparable<T> &b) {
-    return static_cast<const T&>(b) < static_cast<const T&>(a);
-}
-
-template <class T> bool operator<=(const comparable<T> &a, const comparable<T> &b) {
-    return !(static_cast<const T&>(a) > static_cast<const T&>(b));
-}
-
-template <class T> bool operator>=(const comparable<T> &a, const comparable<T> &b) {
-    return !(static_cast<const T&>(a) < static_cast<const T&>(b));
-}
-
-template <class T> bool operator!=(const comparable<T> &a, const comparable<T> &b) {
-    return !(static_cast<const T&>(a) == static_cast<const T&>(b));
-}
-
-}
+template <class T> class comparable {
+    friend bool operator>(const T &a, const T &b) { return b < a; }
+    friend bool operator<=(const T &a, const T &b) { return !(a > b); }
+    friend bool operator>=(const T &a, const T &b) { return !(a < b); }
+    friend bool operator!=(const T &a, const T &b) { return !(a == b); }
+};
 
 ///@endcond
+
+}
 
 #endif // COMPARABLE_HPP

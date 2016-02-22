@@ -37,7 +37,7 @@ class timestamp;
 class uuid;
 
 /// A holder for an instance of any scalar AMQP type.
-class scalar : public comparable<scalar> {
+class scalar : private comparable<scalar> {
   public:
     /// Create an empty scalar.
     PN_CPP_EXTERN scalar();
@@ -160,7 +160,7 @@ class scalar : public comparable<scalar> {
 /// XXX should it be public?
     
 /// Base class for restricted scalar types.
-class restricted_scalar : public comparable<restricted_scalar> {
+class restricted_scalar : private comparable<restricted_scalar> {
   public:
     operator const scalar&() const { return scalar_; }
     type_id type() const { return scalar_.type(); }

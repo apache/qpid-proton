@@ -23,7 +23,7 @@
 
 namespace proton {
 /// A timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
-class timestamp : public comparable<timestamp> {
+class timestamp : private comparable<timestamp> {
   public:
     explicit timestamp(int64_t ms = 0) : ms_(ms) {}
     timestamp& operator=(int64_t ms) { ms_ = ms; return *this; }

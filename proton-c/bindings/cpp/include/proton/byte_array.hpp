@@ -28,7 +28,7 @@ namespace proton {
 
 /// Used to represent fixed-sized data types that don't have a natural C++ representation
 /// as an array of bytes.
-template <size_t N> class byte_array : public comparable<byte_array<N> > {
+template <size_t N> class byte_array : private comparable<byte_array<N> > {
   public:
     /// Initially all 0.
     byte_array() : bytes_() {}
