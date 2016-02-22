@@ -2,6 +2,9 @@ version: '{branch}.{build}'
 configuration: RelWithDebInfo
 install:
 - cinst -y swig
+cache:
+- C:\ProgramData\chocolatey\bin -> appveyor.yml
+- C:\ProgramData\chocolatey\lib -> appveyor.yml
 before_build:
 - mkdir BLD
 - cd BLD
