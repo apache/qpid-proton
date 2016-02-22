@@ -27,7 +27,9 @@ endif ()
 macro (pn_add_c_test test file)
   add_executable (${test} ${file})
   target_link_libraries (${test} qpid-proton)
-  pn_c_files (${file})
+  if (BUILD_WITH_CXX)
+    set_source_files_properties (${file} PROPERTIES LANGUAGE CXX)
+  endif (BUILD_WITH_CXX)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME ${test}
               COMMAND ${env_py}

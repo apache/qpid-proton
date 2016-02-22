@@ -105,13 +105,9 @@ install(TARGETS qpid-proton-cpp
 
 # Install windows qpid-proton-cpp pdb files
 if (MSVC)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
+  install(FILES $<TARGET_PDB_FILE:qpid-proton-cpp>
     DESTINATION bin
-    CONFIGURATIONS Debug
-    OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
-    DESTINATION bin
-    CONFIGURATIONS RelWithDebInfo
+    CONFIGURATIONS RelWithDebInfo Debug
     OPTIONAL)
 endif (MSVC)
 
@@ -138,12 +134,15 @@ set(PROTONCPPLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_SHARED_LIB
 set(PROTONCPPLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif ()
 
+include(WriteBasicConfigVersionFile)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/ProtonCppConfigVersion.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake @ONLY)
+write_basic_config_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
+  VERSION ${PN_VERSION}
+  COMPATIBILITY AnyNewerVersion)
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake

@@ -336,9 +336,9 @@ set (qpid-proton-core
   src/messenger/store.c
   src/messenger/transform.c
   src/selectable.c
+  )
 
-  src/config.h
-
+set (qpid-proton-extra-deps
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
@@ -391,12 +391,20 @@ set_source_files_properties (
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
+if (BUILD_WITH_CXX)
+  set_source_files_properties (
+    ${qpid-proton-core} ${qpid-proton-platform}
+    PROPERTIES LANGUAGE CXX
+    )
+endif (BUILD_WITH_CXX)
+
 add_library (
   qpid-proton SHARED
 
   ${qpid-proton-core}
   ${qpid-proton-platform}
   ${qpid-proton-include}
+  ${qpid-proton-extra-deps}
   )
 
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
@@ -414,19 +422,6 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
-macro(pn_c_files)
-  foreach (src_file ${ARGN})
-    if (${src_file} MATCHES "^.*[.]c$")
-      if (BUILD_WITH_CXX)
-        # tell CMake to use C++ for proton source files ending in ".c"
-        set_source_files_properties (${src_file} PROPERTIES LANGUAGE CXX)
-      endif (BUILD_WITH_CXX)
-    endif (${src_file} MATCHES "^.*[.]c$")
-  endforeach (src_file)
-endmacro(pn_c_files)
-
-pn_c_files (${qpid-proton-core} ${qpid-proton-platform})
-
 # Install executables and libraries
 install (TARGETS qpid-proton
   EXPORT  proton
@@ -436,13 +431,9 @@ install (TARGETS qpid-proton
 
 # Install windows qpid-proton pdb files
 if (MSVC)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/Debug/qpid-proton${CMAKE_DEBUG_POSTFIX}.pdb
+  install(FILES $<TARGET_PDB_FILE:qpid-proton>
     DESTINATION bin
-    CONFIGURATIONS Debug
-    OPTIONAL)
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/qpid-proton.pdb
-    DESTINATION bin
-    CONFIGURATIONS RelWithDebInfo
+    CONFIGURATIONS RelWithDebInfo Debug
     OPTIONAL)
 endif (MSVC)
 
@@ -468,12 +459,15 @@ set(PROTONLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_SHARED_LIBRARY_SU
 set(PROTONLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif ()
 
+include(WriteBasicConfigVersionFile)
+
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake @ONLY)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfigVersion.cmake.in
-  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake @ONLY)
+write_basic_config_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
+  VERSION ${PN_VERSION}
+  COMPATIBILITY AnyNewerVersion)
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
