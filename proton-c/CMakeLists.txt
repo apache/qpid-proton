@@ -239,8 +239,8 @@ if (CMAKE_COMPILER_IS_GNUCC)
   endif (ENABLE_LINKTIME_OPTIMIZATION)
 
   if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
-    set (CMAKE_C_FLAGS "-fvisibility=hidden")
-    set (CMAKE_CXX_FLAGS "-fvisibility=hidden")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
   endif (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
 endif (CMAKE_COMPILER_IS_GNUCC)
 
