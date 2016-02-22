@@ -19,12 +19,12 @@
  *
  */
 package org.apache.qpid.proton.engine.impl.ssl;
+
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pour;
 import static org.apache.qpid.proton.engine.impl.TransportTestHelper.assertByteBufferContentEquals;
 import static org.apache.qpid.proton.engine.impl.TransportTestHelper.pourBufferToString;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 

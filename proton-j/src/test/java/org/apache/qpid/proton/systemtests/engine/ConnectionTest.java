@@ -18,7 +18,6 @@
  */
 package org.apache.qpid.proton.systemtests.engine;
 
-
 import static java.util.EnumSet.of;
 import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.CLOSED;
@@ -26,7 +25,6 @@ import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assume.assumeTrue;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,7 +40,6 @@ import org.apache.qpid.proton.engine.Endpoint;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Session;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.AmqpFramer;
 import org.junit.Ignore;
 import org.junit.Test;

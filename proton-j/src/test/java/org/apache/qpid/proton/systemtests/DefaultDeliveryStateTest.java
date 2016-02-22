@@ -46,7 +46,6 @@ import org.apache.qpid.proton.engine.Sender;
 import org.apache.qpid.proton.message.Message;
 import org.junit.Test;
 
-
 public class DefaultDeliveryStateTest extends EngineTestBase
 {
     private static final Logger LOGGER = Logger.getLogger(DefaultDeliveryStateTest.class.getName());
@@ -74,15 +73,11 @@ public class DefaultDeliveryStateTest extends EngineTestBase
         getServer().connection = Proton.connection();
         getServer().transport.bind(getServer().connection);
 
-
-
         LOGGER.fine(bold("======== About to open connections"));
         getClient().connection.open();
         getServer().connection.open();
 
         doOutputInputCycle();
-
-
 
         LOGGER.fine(bold("======== About to open sessions"));
         getClient().session = getClient().connection.session();
@@ -98,7 +93,6 @@ public class DefaultDeliveryStateTest extends EngineTestBase
 
         pumpServerToClient();
         assertEndpointState(getClient().session, ACTIVE, ACTIVE);
-
 
         LOGGER.fine(bold("======== About to create reciever"));
 
@@ -121,7 +115,6 @@ public class DefaultDeliveryStateTest extends EngineTestBase
         assertEndpointState(getClient().receiver, ACTIVE, UNINITIALIZED);
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== About to set up implicitly created sender"));
 

@@ -22,9 +22,6 @@ import static org.apache.qpid.proton.engine.Transport.DEFAULT_MAX_FRAME_SIZE;
 import static org.apache.qpid.proton.engine.impl.AmqpHeader.HEADER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-import static org.junit.matchers.JUnitMatchers.containsString;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.inOrder;
@@ -43,14 +40,10 @@ import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResult.Status;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.hamcrest.Description;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatcher;
 import org.mockito.InOrder;
 
@@ -75,7 +68,6 @@ public class FrameParserTest
     @Test
     public void testInputOfInvalidProtocolHeader_causesErrorAndRefusesFurtherInput()
     {
-        String headerMismatchMessage = "AMQP header mismatch";
         ByteBuffer buffer = _frameParser.tail();
         buffer.put("hello".getBytes());
         _frameParser.process();
