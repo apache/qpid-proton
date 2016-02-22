@@ -12,5 +12,6 @@ build:
   verbosity: normal
 test_script:
 - cd BLD
-- ctest -V -C RelWithDebInfo
+- cmake --build . --target install --config %CONFIGURATION%
+- ctest -V -C %CONFIGURATION%
 - cd ..
