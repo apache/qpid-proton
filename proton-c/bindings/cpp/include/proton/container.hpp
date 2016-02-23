@@ -60,10 +60,11 @@ class container {
     ///
     /// Container ID should be unique within your system. By default a
     /// random ID is generated.
-    PN_CPP_EXTERN container(const std::string& id="");
+    ///
+    /// This container will not be very useful unless event handlers are supplied
+    /// as options when creating a connection/listener/sender or receiver.
+    PN_CPP_EXTERN container(const std::string& id=std::string());
 
-    // XXX why "" above and std::string below?
-    
     /// Create a container with an event handler.
     ///
     /// Container ID should be unique within your system. By default a
@@ -102,11 +103,6 @@ class container {
     PN_CPP_EXTERN std::string id() const;
 
     /// @cond INTERNAL
-
-    /// XXX remove or make private
-    /// The reactor associated with this container.
-    PN_CPP_EXTERN class reactor reactor() const;
-
     /// XXX settle some API questions
     /// Schedule a timer task event in delay milliseconds.
     PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
@@ -130,10 +126,13 @@ class container {
     /// options in other methods.
     PN_CPP_EXTERN void link_options(const link_options &);
 
+    /// @cond INTERNAL
   private:
+    /// The reactor associated with this container.
+    class reactor reactor() const;
+
     pn_unique_ptr<container_impl> impl_;
 
-    /// @cond INTERNAL
     friend class connector;
     friend class link;
     /// @endcond

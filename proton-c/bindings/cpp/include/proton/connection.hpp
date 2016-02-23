@@ -40,10 +40,12 @@ class handler;
 /// A connection to a remote AMQP peer.
 class
 PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint {
-  public:
     /// @cond INTERNAL
-    connection(pn_connection_t* c=0) : object<pn_connection_t>(c) {}
+    connection(pn_connection_t* c) : object<pn_connection_t>(c) {}
     /// @endcond
+
+  public:
+    connection() : object<pn_connection_t>(0) {}
 
     /// Get the state of this connection.
     PN_CPP_EXTERN endpoint::state state() const;
@@ -114,19 +116,23 @@ PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint
     bool closed() const { return (state() & LOCAL_CLOSED) && (state() & REMOTE_CLOSED); }
     /// @endcond
 
-  private:
-    PN_CPP_EXTERN void user(const std::string &);
-    PN_CPP_EXTERN void password(const std::string &);
-    PN_CPP_EXTERN void host(const std::string& h);
-
     /// @cond INTERNAL
+  private:
+    void user(const std::string &);
+    void password(const std::string &);
+    void host(const std::string& h);
+
     friend class connection_context;
     friend class connection_engine;
     friend class connection_options;
     friend class connector;
-    friend class transport;
     friend class container_impl;
+    friend class transport;
     friend class session;
+    friend class link;
+    friend class reactor;
+    friend class proton_event;
+    friend class override_handler;
     /// @endcond
 };
 

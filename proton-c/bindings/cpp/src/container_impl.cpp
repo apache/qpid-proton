@@ -76,6 +76,7 @@ struct handler_context {
     proton_handler *handler_;
 };
 
+} // namespace
 
 // Used to sniff for connector events before the reactor's global handler sees them.
 class override_handler : public proton_handler
@@ -107,8 +108,6 @@ class override_handler : public proton_handler
         pn_handler_dispatch(base_handler.get(), cevent, pn_event_type_t(type));
     }
 };
-
-} // namespace
 
 pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
     if (!h->pn_handler_) {

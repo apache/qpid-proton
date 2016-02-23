@@ -43,7 +43,7 @@ PN_CPP_CLASS_EXTERN handler
   public:
     /// @cond INTERNAL
     /// XXX move configuration to connection or container
-    
+
     /// Create a handler.
     ///
     /// @param prefetch set flow control to automatically pre-fetch

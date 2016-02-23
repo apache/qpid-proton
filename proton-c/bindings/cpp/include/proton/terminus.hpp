@@ -40,10 +40,12 @@ class link;
 ///
 /// @see proton::link
 class terminus {
-  public:
     /// @cond INTERNAL
     terminus(pn_terminus_t* t);
     /// @endcond
+
+  public:
+    terminus() : object_(0) {}
 
     /// Type of terminus
     enum type {
@@ -133,9 +135,13 @@ class terminus {
     /// See also link_options::selector.
     PN_CPP_EXTERN const value& filter() const;
 
+    /// @cond INTERNAL
   private:
     pn_terminus_t* object_;
     value properties_, filter_;
+
+    friend class link;
+    /// @endcond
 };
 
 }

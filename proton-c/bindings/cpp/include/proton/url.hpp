@@ -41,10 +41,10 @@ PN_CPP_CLASS_EXTERN url_error : public error {
 ///
 ///  Proton URLs take the form
 /// `<scheme>://<username>:<password>@<host>:<port>/<path>`.
-///    
+///
 /// - Scheme can be `amqp` or `amqps`.  Host is a DNS name or IP
 ///   address (v4 or v6).
-///    
+///
 /// - Port can be a number or a symbolic service name such as `amqp`.
 ///
 /// - Path is normally used as a link source or target address.  On a
@@ -134,11 +134,10 @@ class url {
     PN_CPP_EXTERN void defaults();
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     pn_url_t* url_;
 
-    /// @cond INTERNAL
-    
     friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
 
     /// Parse `url` from istream.  This automatically fills in

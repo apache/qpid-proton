@@ -36,10 +36,12 @@ class sasl;
 
 /// A network layer supporting an AMQP connection.
 class transport : public object<pn_transport_t> {
-  public:
     /// @cond INTERNAL
     transport(pn_transport_t* t) : object<pn_transport_t>(t) {}
     /// @endcond 
+
+  public:
+    transport() : object<pn_transport_t>(0) {}
 
     /// @cond INTERNAL
     /// XXX what if a transport is associated with multiple connections?
@@ -69,7 +71,10 @@ class transport : public object<pn_transport_t> {
     /// @endcond
 
     /// @cond INTERNAL
+    friend class connection;
     friend class connection_options;
+    friend class connector;
+    friend class proton_event;
     /// @endcond
 };
 

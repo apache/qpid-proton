@@ -134,6 +134,7 @@ class connection_options {
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string &);
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     void apply(connection&) const;
     proton_handler* handler() const;
@@ -144,7 +145,6 @@ class connection_options {
     class impl;
     pn_unique_ptr<impl> impl_;
 
-    /// @cond INTERNAL
     friend class container_impl;
     friend class connector;
     friend class connection_engine;

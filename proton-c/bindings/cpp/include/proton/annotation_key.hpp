@@ -63,8 +63,8 @@ class annotation_key : public restricted_scalar {
     template<class T> T get() const { T x; get(x); return x; }
 
     /// @cond INTERNAL
-    friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
-    friend PN_CPP_EXTERN decoder operator>>(decoder, annotation_key&);
+    friend encoder operator<<(encoder, const annotation_key&);
+    friend decoder operator>>(decoder, annotation_key&);
     friend class message;
     /// @endcond
 };

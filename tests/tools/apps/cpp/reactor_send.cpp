@@ -50,7 +50,6 @@ class reactor_send : public proton::handler {
     proton::binary received_content_;
     bool replying_;
     proton::message_id id_value_;
-    proton::reactor reactor_;
   public:
 
     reactor_send(const std::string &url, int c, int size, bool replying)
@@ -66,7 +65,6 @@ class reactor_send : public proton::handler {
 
     void on_start(proton::event &e) {
         e.container().open_sender(url_);
-        reactor_ = e.container().reactor();
     }
 
     void on_sendable(proton::event &e) {

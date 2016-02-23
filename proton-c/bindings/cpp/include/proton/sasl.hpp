@@ -30,7 +30,13 @@ namespace proton {
 
 /// SASL information.
 class sasl {
+    /// @cond INTERNAL
+    sasl(pn_sasl_t* s) : object_(s) {}
+    /// @endcond
+
   public:
+    sasl() : object_(0) {}
+
     /// The result of the SASL negotiation.
     enum outcome {
         NONE = PN_SASL_NONE,   ///< Negotiation not completed
@@ -43,7 +49,6 @@ class sasl {
 
     /// @cond INTERNAL
     /// XXX need to discuss
-    sasl(pn_sasl_t* s) : object_(s) {}
     PN_CPP_EXTERN static bool extended();
     PN_CPP_EXTERN void done(enum outcome);
     /// @endcond
@@ -70,8 +75,13 @@ class sasl {
     PN_CPP_EXTERN void config_name(const std::string&);
     PN_CPP_EXTERN void config_path(const std::string&);
     /// @endcond
-private:
+
+    /// @cond INTERNAL
+  private:
     pn_sasl_t* object_;
+
+    friend class transport;
+    /// @endcond
 };
 
 }

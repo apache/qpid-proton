@@ -164,6 +164,7 @@ class link_options {
     PN_CPP_EXTERN link_options& selector(const std::string &str);
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     void apply(link&) const;
     proton_handler* handler() const;
@@ -171,7 +172,6 @@ class link_options {
     class impl;
     pn_unique_ptr<impl> impl_;
 
-    /// @cond INTERNAL
     friend class link;
     /// @endcond
 };

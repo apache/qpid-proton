@@ -33,7 +33,13 @@ class connection_options;
 
 /// SSL information.
 class ssl {
+    /// @cond INTERNAL
+    ssl(pn_ssl_t* s) : object_(s) {}
+    /// @endcond
+
   public:
+    ssl() : object_(0) {}
+
     /// Determines the level of peer validation.
     enum verify_mode {
         /// Require peer to provide a valid identifying certificate
@@ -50,10 +56,6 @@ class ssl {
         NEW = PN_SSL_RESUME_NEW,         ///< Session renegotiated, not resumed
         REUSED = PN_SSL_RESUME_REUSED    ///< Session resumed from previous session
     };
-
-    /// @cond INTERNAL
-    ssl(pn_ssl_t* s) : object_(s) {}
-    /// @endcond
 
     /// @cond INTERNAL
 
@@ -82,8 +84,12 @@ class ssl {
 
     /// @endcond
 
+    /// @cond INTERNAL
   private:
     pn_ssl_t* object_;
+
+    friend class transport;
+    /// @endcond
 };
 
 class ssl_certificate {

@@ -38,17 +38,19 @@ namespace proton {
 class
 PN_CPP_CLASS_EXTERN sender : public link
 {
-  public:
     /// @cond INTERNAL
-    sender(pn_link_t* s=0) : link(s) {}
+    sender(pn_link_t* s) : link(s) {}
     /// @endcond
+
+  public:
+    sender() : link(0) {}
 
     /// Send a message on the link.
     PN_CPP_EXTERN delivery send(const message &m);
 
     /// @cond INTERNAL
     /// XXX undiscussed
-    
+
     /// The number of deliveries that might be able to be sent if
     /// sufficient credit were issued on the link.  See
     /// sender::offered().  Maintained by the application.
@@ -58,6 +60,11 @@ PN_CPP_CLASS_EXTERN sender : public link
     PN_CPP_EXTERN void offered(int c);
 
     /// @endcond
+
+  /// @cond INTERNAL
+  friend class link;
+  friend class session;
+  /// @endcond
 };
 
 }

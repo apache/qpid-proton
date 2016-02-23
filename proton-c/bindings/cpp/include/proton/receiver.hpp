@@ -35,13 +35,20 @@ namespace proton {
 /// A link for receiving messages.
 class
 PN_CPP_CLASS_EXTERN receiver : public link {
-  public:
     /// @cond INTERNAL
-    receiver(pn_link_t* r=0) : link(r) {}
+    receiver(pn_link_t* r) : link(r) {}
     /// @endcond
+
+  public:
+    receiver() : link(0) {}
 
     /// Add credit to the link
     PN_CPP_EXTERN void flow(int count);
+
+  /// @cond INTERNAL
+  friend class link;
+  friend class session;
+  /// @endcond
 };
 
 }

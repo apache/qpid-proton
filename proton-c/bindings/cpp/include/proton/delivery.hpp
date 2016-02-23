@@ -34,10 +34,12 @@ namespace proton {
 /// proton::link.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
 class delivery : public object<pn_delivery_t> {
-  public:
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d=0) : object<pn_delivery_t>(d) {}
+    delivery(pn_delivery_t* d) : object<pn_delivery_t>(d) {}
     /// @endcond
+
+  public:
+    delivery() : object<pn_delivery_t>(0) {}
 
     /// Delivery state values.
     enum state {
@@ -117,6 +119,11 @@ class delivery : public object<pn_delivery_t> {
 
     /// Get the remote state for a delivery.
     PN_CPP_EXTERN state remote_state() const;
+
+    /// @cond INTERNAL
+    friend class proton_event;
+    friend class sender;
+    /// @endcond
 };
 
 }
