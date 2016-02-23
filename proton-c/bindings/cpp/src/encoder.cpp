@@ -45,7 +45,7 @@ struct save_state {
 
 void check(long result, pn_data_t* data) {
     if (result < 0)
-        throw encode_error(error_str(pn_data_error(data), result));
+        throw conversion_error(error_str(pn_data_error(data), result));
 }
 }
 
@@ -90,7 +90,7 @@ encoder operator<<(encoder e, const start& s) {
       case LIST: pn_data_put_list(e.pn_object()); break;
       case DESCRIBED: pn_data_put_described(e.pn_object()); break;
       default:
-        throw encode_error(MSG("" << s.type << " is not a container type"));
+        throw conversion_error(MSG("" << s.type << " is not a container type"));
     }
     pn_data_enter(e.pn_object());
     return e;
@@ -147,7 +147,7 @@ encoder operator<<(encoder e, amqp_binary x) { return insert(e, e.pn_object(), x
 
 encoder operator<<(encoder e, const value& v) {
     data edata = e.data();
-    if (edata == v.data_) throw encode_error("cannot insert into self");
+    if (edata == v.data_) throw conversion_error("cannot insert into self");
     data vdata = v.decode().data();
     check(edata.append(vdata), e.pn_object());
     return e;

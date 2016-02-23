@@ -24,11 +24,13 @@
 
 namespace proton {
 
-/// IO using sockets, file descriptors, or handles.
-
-/// Note that you can use proton::connection_engine to communicate
-/// using AMQP over your own IO implementation or to integrate an
-/// existing IO framework of your choice.
+/// IO using sockets, file descriptors, or handles, for use with
+/// proton::connection_engine.
+///
+/// Note that you can use proton::connection_engine to communicate using AMQP
+/// over your own IO implementation or to integrate an existing IO framework of
+/// your choice, this implementation is provided as a convenience if sockets is
+/// sufficient for your needs.
 
 namespace io {
 

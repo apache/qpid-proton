@@ -22,6 +22,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
+#include "proton/error.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
@@ -123,6 +124,11 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Get the AMQP connection associated with this connection_engine.
     PN_CPP_EXTERN class connection connection() const;
 
+    /// Thrown by io_read and io_write functions to indicate an error.
+    struct PN_CPP_CLASS_EXTERN io_error : public error {
+        PN_CPP_EXTERN explicit io_error(const std::string&);
+    };
+
   protected:
     /// Do a non-blocking read on the IO stream.
     ///
@@ -130,7 +136,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// size==0 means no data could be read without blocking, the stream is still open.
     /// Returns pair(0, false) if the stream closed.
     ///
-    ///@throw proton::io_error if there is a read error.
+    ///@throw proton::connection_engine::io_error if there is a read error.
     virtual std::pair<size_t, bool> io_read(char* buf, size_t max) = 0;
 
     /// Do a non-blocking write of up to max bytes from buf.
@@ -138,7 +144,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Return the number of byes written , 0 if no data could be written
     /// without blocking.
     ///
-    ///throw proton::io_error if there is a write error.
+    ///throw proton::connection_engine::io_error if there is a write error.
     virtual size_t io_write(const char*, size_t) = 0;
 
     /// Close the io, no more _io methods will be called after this is called.

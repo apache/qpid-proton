@@ -55,7 +55,7 @@ struct narrow {
 
 template <class T> T check(T result) {
     if (result < 0)
-        throw decode_error("" + error_str(result));
+        throw conversion_error("" + error_str(result));
     return result;
 }
 
@@ -89,13 +89,13 @@ data decoder::data() { return proton::data(pn_object()); }
 namespace {
 
 void bad_type(type_id want, type_id got) {
-    if (want != got) throw type_error(want, got);
+    if (want != got) throw make_conversion_error(want, got);
 }
 
 type_id pre_get(pn_data_t* data) {
-    if (!pn_data_next(data)) throw decode_error("no more data");
+    if (!pn_data_next(data)) throw conversion_error("no more data");
     type_id t = type_id(pn_data_type(data));
-    if (t < 0) throw decode_error("invalid data");
+    if (t < 0) throw conversion_error("invalid data");
     return t;
 }
 
@@ -145,7 +145,7 @@ decoder operator>>(decoder d0, start& s) {
         s.size = 1;
         break;
       default:
-        throw decode_error(MSG("" << s.type << " is not a container type"));
+        throw conversion_error(MSG("" << s.type << " is not a container type"));
     }
     pn_data_enter(d);
     ss.cancel();
@@ -163,12 +163,12 @@ decoder operator>>(decoder d, rewind) { d.rewind(); return d; }
 decoder operator>>(decoder d, value& v) {
     data ddata = d.data();
     data vdata = v.encode().data();
-    if (d.data() == v.data_) throw decode_error("extract into self");
+    if (d.data() == v.data_) throw conversion_error("extract into self");
     {
         narrow n(ddata);
         check(vdata.appendn(ddata, 1));
     }
-    if (!ddata.next()) throw decode_error("no more data");
+    if (!ddata.next()) throw conversion_error("no more data");
     return d;
 }
 
@@ -180,7 +180,7 @@ decoder operator>>(decoder d, message_id& x) {
       case STRING:
         return d >> x.scalar_;
       default:
-        throw decode_error("expected one of ulong, uuid, binary or string but found " +
+        throw conversion_error("expected one of ulong, uuid, binary or string but found " +
                            type_name(d.type()));
     };
 }
@@ -191,7 +191,7 @@ decoder operator>>(decoder d, annotation_key& x) {
       case SYMBOL:
         return d >> x.scalar_;
       default:
-        throw decode_error("expected one of ulong or symbol but found " + type_name(d.type()));
+        throw conversion_error("expected one of ulong or symbol but found " + type_name(d.type()));
     };
 }
 
@@ -205,7 +205,7 @@ decoder operator>>(decoder d, scalar& x) {
     save_state ss(d.pn_object());
     type_id got = pre_get(d.pn_object());
     if (!type_id_is_scalar(got))
-        throw decode_error("expected scalar, found "+type_name(got));
+        throw conversion_error("expected scalar, found "+type_name(got));
     x.set(pn_data_get_atom(d.pn_object()));
     ss.cancel();                // No error, no rewind
     return d;
@@ -385,9 +385,9 @@ decoder operator>>(decoder d0, std::string &x) {
 
 void assert_map_scope(const scope& s) {
     if (s.type != MAP)
-        throw decode_error("cannot decode "+type_name(s.type)+" as map");
+        throw conversion_error("cannot decode "+type_name(s.type)+" as map");
     if (s.size % 2 != 0)
-        throw decode_error("odd number of elements in map");
+        throw conversion_error("odd number of elements in map");
 }
 
 

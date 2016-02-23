@@ -91,7 +91,7 @@ class value : private comparable<value> {
     /// @name As methods
     ///
     /// As methods do "loose" conversion, they will convert the scalar
-    /// value to the requested type if possible, else throw type_error.
+    /// value to the requested type if possible, else throw conversion_error.
     ///
     /// @{
     PN_CPP_EXTERN int64_t as_int() const;        ///< Allowed if `type_id_is_integral(type())`

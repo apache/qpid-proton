@@ -62,7 +62,7 @@ class message_id : public restricted_scalar {
     /// @name Get methods
     ///
     /// get(T&) extracts the value if the types match exactly and
-    /// throws type_error otherwise.
+    /// throws conversion_error otherwise.
     ///
     /// @{
     void get(uint64_t& x) const { scalar_.get(x); }

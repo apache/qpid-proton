@@ -53,13 +53,14 @@ template <class T> void type_test(T x, type_id tid, T y) {
     ASSERT(v2 > s);
 }
 
-#define ASSERT_MISMATCH(EXPR, WANT, GOT)                        \
-    try {                                                       \
-        (void)(EXPR);                                           \
-        FAIL("expected type_error: " #EXPR);                    \
-    } catch (const type_error& e) {                             \
-        ASSERT_EQUAL(WANT, e.want);                             \
-        ASSERT_EQUAL(GOT, e.got);                               \
+#define ASSERT_MISMATCH(EXPR, WANT, GOT)                                \
+    try {                                                               \
+        (void)(EXPR);                                                   \
+        FAIL("expected conversion_error: " #EXPR);                      \
+    } catch (const conversion_error& e) {                               \
+        std::ostringstream want;                                        \
+        want << "unexpected type, want: " << (WANT) << " got: " << (GOT); \
+        ASSERT_EQUAL(want.str(), std::string(e.what()));                \
     }
 
 void convert_test() {

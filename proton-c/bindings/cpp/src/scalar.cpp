@@ -99,7 +99,7 @@ scalar& scalar::operator=(const std::string& x) { set(x, PN_STRING); return *thi
 scalar& scalar::operator=(const char* x) { set(x, PN_STRING); return *this; }
 
 void scalar::ok(pn_type_t t) const {
-    if (atom_.type != t) throw type_error(type_id(t), type());
+    if (atom_.type != t) throw make_conversion_error(type_id(t), type());
 }
 
 void scalar::get(bool& x) const { ok(PN_BOOL); x = atom_.u.as_bool; }
@@ -139,13 +139,13 @@ int64_t scalar::as_int() const {
       case PN_ULONG: return int64_t(atom_.u.as_ulong);
       case PN_LONG: return atom_.u.as_long;
       case PN_TIMESTAMP: return atom_.u.as_timestamp;
-      default: throw type_error(LONG, type(), "cannot convert");
+      default: throw make_conversion_error(LONG, type());
     }
 }
 
 uint64_t scalar::as_uint() const {
     if  (!type_id_is_integral(type()))
-        throw type_error(ULONG, type(), "cannot convert");
+        throw make_conversion_error(ULONG, type());
     return uint64_t(as_int());
 }
 
@@ -156,14 +156,14 @@ double scalar::as_double() const {
     switch (atom_.type) {
       case PN_DOUBLE: return atom_.u.as_double;
       case PN_FLOAT: return atom_.u.as_float;
-      default: throw type_error(DOUBLE, type(), "cannot convert");
+      default: throw make_conversion_error(DOUBLE, type());
     }
 }
 
 std::string scalar::as_string() const {
     if (type_id_is_string_like(type()))
         return str_;
-    throw type_error(STRING, type(), "cannot convert");
+    throw make_conversion_error(STRING, type());
 }
 
 namespace {

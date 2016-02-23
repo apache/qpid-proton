@@ -57,6 +57,8 @@ void close_transport(connection_engine_context *ctx_) {
 std::string  make_id(const std::string s="") { return s.empty() ? uuid::random().str() : s; }
 }
 
+connection_engine::io_error::io_error(const std::string& msg) : error(msg) {}
+
 class connection_engine::container::impl {
   public:
     impl(const std::string s="") : id_(make_id(s)) {}
@@ -189,8 +191,6 @@ void connection_engine::try_write() {
             throw io_error(msg() << "write invalid size: " << n << " > " << max);
         }
         pn_transport_pop(ctx_->transport, n);
-    } catch (const closed_error&) {
-        pn_transport_close_head(ctx_->transport);
     } catch (const io_error& e) {
         set_error(ctx_, e.what());
         pn_transport_close_head(ctx_->transport);

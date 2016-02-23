@@ -73,15 +73,6 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
 /// @cond INTERNAL
 
-/// XXX change namespace
-/// Raised when there is a type mismatch, with the expected and actual
-/// type ID.
-struct type_error : public decode_error {
-    PN_CPP_EXTERN explicit type_error(type_id want, type_id got, const std::string& =std::string());
-    type_id want; ///< Expected type_id
-    type_id got;  ///< Actual type_id
-};
-
 PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
 PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
 

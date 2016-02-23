@@ -59,22 +59,22 @@ void test_decoder_primitves_exact() {
     dv.decode().decode(read("primitives"));
     decoder d(dv.decode());
     ASSERT(d.more());
-    try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(decode_error){}
+    try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(conversion_error){}
     ASSERT_EQUAL(true, get<bool>(d));
     ASSERT_EQUAL(false, get<bool>(d));
-    try { get< ::int8_t>(d); FAIL("got ubyte as byte"); } catch(decode_error){}
+    try { get< ::int8_t>(d); FAIL("got ubyte as byte"); } catch(conversion_error){}
     ASSERT_EQUAL(42, get< ::uint8_t>(d));
-    try { get< ::int32_t>(d); FAIL("got uint as ushort"); } catch(decode_error){}
+    try { get< ::int32_t>(d); FAIL("got uint as ushort"); } catch(conversion_error){}
     ASSERT_EQUAL(42, get< ::uint16_t>(d));
-    try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(decode_error){}
+    try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(conversion_error){}
     ASSERT_EQUAL(-42, get< ::int16_t>(d));
     ASSERT_EQUAL(12345, get< ::uint32_t>(d));
     ASSERT_EQUAL(-12345, get< ::int32_t>(d));
     ASSERT_EQUAL(12345, get< ::uint64_t>(d));
     ASSERT_EQUAL(-12345, get< ::int64_t>(d));
-    try { get<double>(d); FAIL("got float as double"); } catch(decode_error){}
+    try { get<double>(d); FAIL("got float as double"); } catch(conversion_error){}
     ASSERT_EQUAL(0.125, get<float>(d));
-    try { get<float>(d); FAIL("got double as float"); } catch(decode_error){}
+    try { get<float>(d); FAIL("got double as float"); } catch(conversion_error){}
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());
 }
@@ -103,8 +103,8 @@ void test_value_conversions() {
     ASSERT_EQUAL(3, (v=amqp_byte(3)).get<long>());
     ASSERT_EQUAL(1.0, (v=amqp_float(1.0)).get<double>());
     ASSERT_EQUAL(1.0, (v=amqp_double(1.0)).get<float>());
-    try { (void)(v = amqp_byte(1)).get<bool>(); FAIL("got byte as bool"); } catch (decode_error) {}
-    try { (void)(v = true).get<float>(); FAIL("got bool as float"); } catch (decode_error) {}
+    try { (void)(v = amqp_byte(1)).get<bool>(); FAIL("got byte as bool"); } catch (conversion_error) {}
+    try { (void)(v = true).get<float>(); FAIL("got bool as float"); } catch (conversion_error) {}
 }
 
 // TODO aconway 2015-06-11: interop test is not complete.

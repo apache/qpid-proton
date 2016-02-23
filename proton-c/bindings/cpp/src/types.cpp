@@ -26,20 +26,6 @@
 
 namespace proton {
 
-namespace {
-
-std::string mismatch_message(type_id want, type_id got, const std::string& msg=std::string()) {
-    std::ostringstream s;
-    s << "want " << want << " got " << got;
-    if (!msg.empty()) s << ": " << msg;
-    return s.str();
-}
-} // namespace
-
-type_error::type_error(type_id want_, type_id got_, const std::string &msg)
-    : decode_error(mismatch_message(want_, got_, msg)), want(want_), got(got_)
-{}
-
 std::string type_name(type_id t) {
     switch (t) {
       case NULL_TYPE: return "null";

@@ -89,7 +89,7 @@ class scalar : private comparable<scalar> {
     /// @name Get methods
     ///
     /// get(T&) extracts the value if the types match exactly and
-    /// throws type_error otherwise.
+    /// throws conversion_error otherwise.
     ///
     /// @{
     PN_CPP_EXTERN void get(bool&) const;
@@ -122,7 +122,7 @@ class scalar : private comparable<scalar> {
     ///
     /// As methods do "loose" conversion.  They will convert the
     /// scalar's value to the requested type if possible, else throw
-    /// type_error.
+    /// conversion_error.
     ///
     /// @{
     PN_CPP_EXTERN int64_t as_int() const;        ///< Allowed if type_id_is_integral(type())
@@ -169,7 +169,7 @@ class restricted_scalar : private comparable<restricted_scalar> {
     ///
     /// As methods do "loose" conversion.  They will convert the
     /// scalar's value to the requested type if possible, else throw
-    /// type_error.
+    /// conversion_error.
     ///
     /// @{
     int64_t as_int() const { return scalar_.as_int(); }

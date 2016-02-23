@@ -48,12 +48,12 @@ std::string error_str() {
 namespace {
 
 template <class T> T check(T result, const std::string& msg=std::string()) {
-    if (result < 0) throw io_error(msg + error_str());
+    if (result < 0) throw connection_engine::io_error(msg + error_str());
     return result;
 }
 
 void gai_check(int result, const std::string& msg="") {
-    if (result) throw io_error(msg + gai_strerror(result));
+    if (result) throw connection_engine::io_error(msg + gai_strerror(result));
 }
 
 }

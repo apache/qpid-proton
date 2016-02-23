@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 
 template <class T> T check(T result, const std::string& msg="io_error: ") {
     if (result < 0)
-        throw proton::io_error(msg + proton::io::error_str());
+        throw proton::connection_engine::io_error(msg + proton::io::error_str());
     return result;
 }
 

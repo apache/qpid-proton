@@ -31,67 +31,25 @@
 namespace proton {
 
 /// The base proton error.
-///    
+///
 /// All exceptions thrown from functions in the proton namespace are
 /// subclasses of proton::error.
 struct
 PN_CPP_CLASS_EXTERN error : public std::runtime_error {
-    /// @cond INTERNAL
-    /// XXX do we intend users to construct these (and subclasses)?
-    /// XXX don't need to be extern?
     PN_CPP_EXTERN explicit error(const std::string&);
-    /// @endcond
 };
 
 /// Raised if a timeout expires.
 struct
 PN_CPP_CLASS_EXTERN timeout_error : public error {
-    /// @cond INTERNAL
     PN_CPP_EXTERN explicit timeout_error(const std::string&);
-    /// @endcond
 };
 
-/// @cond INTERNAL
-/// XXX change namespace to proton::amqp with encoder and decoder?
-
-/// Raised if there is an error decoding AMQP data as a C++ value.
+/// Raised if there is an error converting between AMQP and C++ data.
 struct
-PN_CPP_CLASS_EXTERN decode_error : public error {
-    PN_CPP_EXTERN explicit decode_error(const std::string&);
+PN_CPP_CLASS_EXTERN conversion_error : public error {
+    PN_CPP_EXTERN explicit conversion_error(const std::string&);
 };
-
-/// Raised if there is an error encoding a C++ value as AMQP data.
-struct
-PN_CPP_CLASS_EXTERN encode_error : public error {
-    PN_CPP_EXTERN explicit encode_error(const std::string&);
-};
-
-/// @endcond
-
-/// @cond INTERNAL
-/// XXX need to discuss
-
-/// XXX move this with connection_engine to an io package?
-/// Error reading or writing external IO.
-struct
-PN_CPP_CLASS_EXTERN io_error : public error {
-    // XXX needs to remain public and exposed - it's part of the connection_engine SPI
-    PN_CPP_EXTERN explicit io_error(const std::string&);
-};
-
-/// XXX do we need something this fine grained? and is it really an
-/// *io* error?
-/// XXX doesn't appear to be thrown anywhere - consider removing
-/// Attempt to use a closed resource (connnection, session, or link).
-/// XXX decision - remove
-struct
-PN_CPP_CLASS_EXTERN closed_error : public io_error {
-    PN_CPP_EXTERN explicit closed_error(const std::string& = default_msg);
-    static const std::string default_msg;
-};
-
-/// @endcond
-
 }
 
 #endif // PROTON_CPP_EXCEPTIONS_H

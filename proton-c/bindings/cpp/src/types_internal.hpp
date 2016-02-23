@@ -20,6 +20,8 @@
  */
 
 #include "proton/type_traits.hpp"
+#include "proton/error.hpp"
+#include <sstream>
 
 ///@file
 /// Internal helpers for encode/decode/type conversion.
@@ -33,6 +35,13 @@ typename enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from)
     std::copy(p, p + sizeof(T), reinterpret_cast<char*>(&to));
 }
 
+inline conversion_error
+make_conversion_error(type_id want, type_id got, const std::string& msg=std::string()) {
+    std::ostringstream s;
+    s << "unexpected type, want: " << want << " got: " << got;
+    if (!msg.empty()) s << ": " << msg;
+    return conversion_error(s.str());
+}
 
 }
 
