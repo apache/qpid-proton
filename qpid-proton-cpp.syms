@@ -1,0 +1,627 @@
+# XXX acceptor symbols, but not connector?
+proton::acceptor::close()
+proton::acceptor::connection_options()
+
+proton::condition::description() const
+proton::condition::empty() const
+proton::condition::info() const
+proton::condition::name() const
+proton::condition::operator!() const
+proton::condition::what() const
+
+proton::connection::close()
+proton::connection::container() const
+proton::connection::container_id() const
+proton::connection::default_session()
+proton::connection::host(std::string const&)
+proton::connection::host() const
+proton::connection::links() const
+proton::connection::local_condition() const
+proton::connection::open()
+proton::connection::open_receiver(std::string const&, proton::link_options const&)
+proton::connection::open_sender(std::string const&, proton::link_options const&)
+proton::connection::open_session()
+proton::connection::password(std::string const&)
+proton::connection::release()
+proton::connection::remote_condition() const
+proton::connection::sessions() const
+proton::connection::state() const
+proton::connection::transport() const
+proton::connection::user(std::string const&)
+proton::connection::~connection()
+
+proton::connection_engine::can_read() const
+proton::connection_engine::can_write() const
+proton::connection_engine::closed() const
+proton::connection_engine::connection() const
+proton::connection_engine::connection_engine(proton::handler&, proton::connection_options const&)
+proton::connection_engine::container::container(std::string const&)
+proton::connection_engine::container::id() const
+proton::connection_engine::container::make_options()
+proton::connection_engine::container::options(proton::connection_options const&)
+proton::connection_engine::container::~container()
+proton::connection_engine::dispatch()
+proton::connection_engine::io_error::io_error(std::string const&)
+proton::connection_engine::io_error::~io_error()
+proton::connection_engine::no_opts
+proton::connection_engine::process(int)
+proton::connection_engine::try_read()
+proton::connection_engine::try_write()
+proton::connection_engine::~connection_engine()
+
+proton::connection_options::connection_options()
+proton::connection_options::connection_options(proton::connection_options const&)
+proton::connection_options::container_id(std::string const&)
+proton::connection_options::handler(proton::handler*)
+proton::connection_options::heartbeat(proton::duration)
+proton::connection_options::idle_timeout(proton::duration)
+proton::connection_options::link_prefix(std::string const&)
+proton::connection_options::max_channels(unsigned short)
+proton::connection_options::max_frame_size(unsigned int)
+proton::connection_options::operator=(proton::connection_options const&)
+proton::connection_options::override(proton::connection_options const&)
+proton::connection_options::reconnect(proton::reconnect_timer const&)
+proton::connection_options::sasl_allow_insecure_mechs(bool)
+proton::connection_options::sasl_allowed_mechs(std::string const&)
+proton::connection_options::sasl_config_name(std::string const&)
+proton::connection_options::sasl_config_path(std::string const&)
+proton::connection_options::sasl_enabled(bool)
+proton::connection_options::ssl_client_options(proton::ssl_client_options const&)
+proton::connection_options::ssl_server_options(proton::ssl_server_options const&)
+proton::connection_options::~connection_options()
+
+proton::container::client_connection_options(proton::connection_options const&)
+proton::container::connect(proton::url const&, proton::connection_options const&)
+proton::container::container(proton::handler&, std::string const&)
+proton::container::container(std::string const&)
+proton::container::id() const
+proton::container::listen(proton::url const&, proton::connection_options const&)
+proton::container::open_receiver(proton::url const&, proton::link_options const&, proton::connection_options const&)
+proton::container::open_sender(proton::url const&, proton::link_options const&, proton::connection_options const&)
+proton::container::run()
+proton::container::schedule(int, proton::handler*)
+proton::container::server_connection_options(proton::connection_options const&)
+proton::container::~container()
+
+proton::conversion_error::conversion_error(std::string const&)
+proton::conversion_error::~conversion_error()
+
+proton::delivery::clear()
+proton::delivery::link() const
+proton::delivery::partial() const
+proton::delivery::pending() const
+proton::delivery::readable() const
+proton::delivery::remote_state() const
+proton::delivery::settle()
+proton::delivery::settle(proton::delivery::state)
+proton::delivery::settled() const
+proton::delivery::update(proton::delivery::state)
+proton::delivery::updated() const
+proton::delivery::writable() const
+
+proton::duration::FOREVER
+proton::duration::IMMEDIATE
+proton::duration::MINUTE
+proton::duration::SECOND
+
+proton::endpoint::LOCAL_ACTIVE
+proton::endpoint::LOCAL_CLOSED
+proton::endpoint::LOCAL_MASK
+proton::endpoint::LOCAL_UNINIT
+proton::endpoint::REMOTE_ACTIVE
+proton::endpoint::REMOTE_CLOSED
+proton::endpoint::REMOTE_MASK
+proton::endpoint::REMOTE_UNINIT
+proton::endpoint::~endpoint()
+
+proton::error::error(std::string const&)
+proton::error::~error()
+
+proton::handler::handler(int, bool, bool, bool)
+
+# XXX Do these default implementations actually need to be exported?
+# The API user never uses them directly he only overrides virtuals
+proton::handler::on_connection_close(proton::event&)
+proton::handler::on_connection_error(proton::event&)
+proton::handler::on_connection_open(proton::event&)
+proton::handler::on_delivery_accept(proton::event&)
+proton::handler::on_delivery_reject(proton::event&)
+proton::handler::on_delivery_release(proton::event&)
+proton::handler::on_delivery_settle(proton::event&)
+proton::handler::on_link_close(proton::event&)
+proton::handler::on_link_error(proton::event&)
+proton::handler::on_link_open(proton::event&)
+proton::handler::on_message(proton::event&)
+proton::handler::on_sendable(proton::event&)
+proton::handler::on_session_close(proton::event&)
+proton::handler::on_session_error(proton::event&)
+proton::handler::on_session_open(proton::event&)
+proton::handler::on_start(proton::event&)
+proton::handler::on_timer(proton::event&)
+proton::handler::on_transport_close(proton::event&)
+proton::handler::on_transport_error(proton::event&)
+proton::handler::on_unhandled(proton::event&)
+proton::handler::on_unhandled_error(proton::event&, proton::condition const&)
+proton::handler::~handler()
+
+# XXX I wonder how much of these internal symbols can just not be exported
+proton::internal::assert_map_scope(proton::internal::scope const&)
+proton::internal::data::append(proton::internal::data)
+proton::internal::data::appendn(proton::internal::data, int)
+proton::internal::data::clear()
+proton::internal::data::copy(proton::internal::data const&)
+proton::internal::data::create()
+proton::internal::data::decoder()
+proton::internal::data::empty() const
+proton::internal::data::encoder()
+proton::internal::data::equal(proton::internal::data const&) const
+proton::internal::data::less(proton::internal::data const&) const
+proton::internal::data::narrow()
+proton::internal::data::next() const
+proton::internal::data::point() const
+proton::internal::data::restore(unsigned long)
+proton::internal::data::type() const
+proton::internal::data::widen()
+proton::internal::decoder::backup()
+proton::internal::decoder::check_type(proton::type_id)
+proton::internal::decoder::decode(char const*, unsigned long)
+proton::internal::decoder::decode(std::string const&)
+proton::internal::decoder::more() const
+proton::internal::decoder::operator>>(bool&)
+proton::internal::decoder::operator>>(double&)
+proton::internal::decoder::operator>>(float&)
+proton::internal::decoder::operator>>(int&)
+proton::internal::decoder::operator>>(long&)
+proton::internal::decoder::operator>>(proton::annotation_key&)
+proton::internal::decoder::operator>>(proton::decimal128&)
+proton::internal::decoder::operator>>(proton::decimal32&)
+proton::internal::decoder::operator>>(proton::decimal64&)
+proton::internal::decoder::operator>>(proton::internal::assert_type)
+proton::internal::decoder::operator>>(proton::internal::finish)
+proton::internal::decoder::operator>>(proton::internal::rewind)
+proton::internal::decoder::operator>>(proton::internal::skip)
+proton::internal::decoder::operator>>(proton::internal::start&)
+proton::internal::decoder::operator>>(proton::message_id&)
+proton::internal::decoder::operator>>(proton::scalar&)
+proton::internal::decoder::operator>>(proton::timestamp&)
+proton::internal::decoder::operator>>(proton::uuid&)
+proton::internal::decoder::operator>>(proton::value&)
+proton::internal::decoder::operator>>(short&)
+proton::internal::decoder::operator>>(signed char&)
+proton::internal::decoder::operator>>(std::string&)
+proton::internal::decoder::operator>>(unsigned char&)
+proton::internal::decoder::operator>>(unsigned int&)
+proton::internal::decoder::operator>>(unsigned long&)
+proton::internal::decoder::operator>>(unsigned short&)
+proton::internal::decoder::operator>>(wchar_t&)
+proton::internal::decoder::rewind()
+proton::internal::decoder::skip()
+proton::internal::decoder::type() const
+proton::internal::encoder::encode(char*, unsigned long&)
+proton::internal::encoder::encode(std::string&)
+proton::internal::encoder::encode()
+proton::internal::encoder::insert(proton::value const&)
+proton::internal::encoder::operator<<(bool)
+proton::internal::encoder::operator<<(double)
+proton::internal::encoder::operator<<(float)
+proton::internal::encoder::operator<<(int)
+proton::internal::encoder::operator<<(long)
+proton::internal::encoder::operator<<(proton::binary const&)
+proton::internal::encoder::operator<<(proton::decimal128)
+proton::internal::encoder::operator<<(proton::decimal32)
+proton::internal::encoder::operator<<(proton::decimal64)
+proton::internal::encoder::operator<<(proton::internal::finish const&)
+proton::internal::encoder::operator<<(proton::internal::start const&)
+proton::internal::encoder::operator<<(proton::scalar const&)
+proton::internal::encoder::operator<<(proton::symbol const&)
+proton::internal::encoder::operator<<(proton::timestamp)
+proton::internal::encoder::operator<<(proton::uuid const&)
+proton::internal::encoder::operator<<(short)
+proton::internal::encoder::operator<<(signed char)
+proton::internal::encoder::operator<<(std::string const&)
+proton::internal::encoder::operator<<(unsigned char)
+proton::internal::encoder::operator<<(unsigned int)
+proton::internal::encoder::operator<<(unsigned long)
+proton::internal::encoder::operator<<(unsigned short)
+proton::internal::encoder::operator<<(wchar_t)
+proton::internal::operator<<(std::ostream&, proton::internal::data const&)
+proton::internal::operator<<(std::ostream&, proton::internal::encoder const&)
+proton::internal::pn_ptr_base::decref(void*)
+proton::internal::pn_ptr_base::incref(void*)
+proton::internal::ssl_domain::operator=(proton::internal::ssl_domain const&)
+proton::internal::ssl_domain::ssl_domain(proton::internal::ssl_domain const&)
+proton::internal::ssl_domain::~ssl_domain()
+proton::internal::start::array(proton::type_id, bool)
+proton::internal::start::described()
+proton::internal::start::list()
+proton::internal::start::map()
+proton::internal::start::start(proton::type_id, proton::type_id, bool, unsigned long)
+
+# XXX Not sure how much of this should be exposed
+proton::io::INVALID_DESCRIPTOR
+proton::io::connect(proton::url const&)
+proton::io::error_str()
+proton::io::finalize()
+proton::io::initialize()
+
+proton::io::listener::accept(std::string&, std::string&)
+proton::io::listener::listener(std::string const&, std::string const&)
+proton::io::listener::~listener()
+
+proton::io::socket_engine::io_close()
+proton::io::socket_engine::io_read(char*, unsigned long)
+proton::io::socket_engine::io_write(char const*, unsigned long)
+proton::io::socket_engine::run()
+proton::io::socket_engine::socket_engine(long, proton::handler&, proton::connection_options const&)
+proton::io::socket_engine::socket_engine(proton::url const&, proton::handler&, proton::connection_options const&)
+proton::io::socket_engine::~socket_engine()
+
+proton::link::advance()
+proton::link::close()
+proton::link::connection() const
+proton::link::credit() const
+proton::link::detach()
+proton::link::detach_handler()
+proton::link::drained()
+proton::link::handler(proton::proton_handler&)
+proton::link::local_condition() const
+proton::link::local_source() const
+proton::link::local_target() const
+proton::link::name() const
+proton::link::open(proton::link_options const&)
+proton::link::queued()
+proton::link::receiver()
+proton::link::receiver() const
+proton::link::receiver_settle_mode()
+proton::link::receiver_settle_mode(proton::link_options::receiver_settle_mode)
+proton::link::recv(char*, unsigned long)
+proton::link::remote_condition() const
+proton::link::remote_receiver_settle_mode()
+proton::link::remote_sender_settle_mode()
+proton::link::remote_source() const
+proton::link::remote_target() const
+proton::link::sender()
+proton::link::sender() const
+proton::link::sender_settle_mode()
+proton::link::sender_settle_mode(proton::link_options::sender_settle_mode)
+proton::link::session() const
+proton::link::state() const
+proton::link::unsettled()
+proton::link::~link()
+
+proton::link_iterator::operator++()
+
+proton::link_options::browsing(bool)
+proton::link_options::delivery_mode(proton::link_options::delivery_mode)
+proton::link_options::distribution_mode(proton::terminus::distribution_mode)
+proton::link_options::durable_subscription(bool)
+proton::link_options::dynamic_address(bool)
+proton::link_options::handler(proton::handler*)
+proton::link_options::lifetime_policy(proton::link_options::lifetime_policy)
+proton::link_options::link_options()
+proton::link_options::link_options(proton::link_options const&)
+proton::link_options::local_address(std::string const&)
+proton::link_options::operator=(proton::link_options const&)
+proton::link_options::override(proton::link_options const&)
+proton::link_options::selector(std::string const&)
+proton::link_options::~link_options()
+
+proton::message::address(std::string const&)
+proton::message::address() const
+proton::message::application_properties()
+proton::message::application_properties() const
+proton::message::body()
+proton::message::body() const
+proton::message::clear()
+proton::message::content_encoding(std::string const&)
+proton::message::content_encoding() const
+proton::message::content_type(std::string const&)
+proton::message::content_type() const
+proton::message::correlation_id() const
+proton::message::correlation_id(proton::message_id const&)
+proton::message::creation_time() const
+proton::message::creation_time(proton::timestamp)
+proton::message::decode(std::vector<char, std::allocator<char> > const&)
+proton::message::delivery_annotations()
+proton::message::delivery_annotations() const
+proton::message::delivery_count() const
+proton::message::delivery_count(unsigned int)
+proton::message::durable() const
+proton::message::durable(bool)
+proton::message::encode() const
+proton::message::encode(std::vector<char, std::allocator<char> >&) const
+proton::message::expiry_time() const
+proton::message::expiry_time(proton::timestamp)
+proton::message::first_acquirer() const
+proton::message::first_acquirer(bool)
+proton::message::group_id(std::string const&)
+proton::message::group_id() const
+proton::message::group_sequence() const
+proton::message::group_sequence(int)
+proton::message::id() const
+proton::message::id(proton::message_id const&)
+proton::message::inferred() const
+proton::message::inferred(bool)
+proton::message::message()
+proton::message::message(proton::message const&)
+proton::message::message_annotations()
+proton::message::message_annotations() const
+proton::message::operator=(proton::message const&)
+proton::message::priority() const
+proton::message::priority(unsigned char)
+proton::message::reply_to(std::string const&)
+proton::message::reply_to() const
+proton::message::reply_to_group_id(std::string const&)
+proton::message::reply_to_group_id() const
+proton::message::subject(std::string const&)
+proton::message::subject() const
+proton::message::ttl() const
+proton::message::ttl(proton::duration)
+proton::message::user_id(std::string const&)
+proton::message::user_id() const
+proton::message::~message()
+
+proton::operator<(proton::scalar const&, proton::scalar const&)
+proton::operator<(proton::value const&, proton::value const&)
+proton::operator<<(std::ostream&, proton::decimal128 const&)
+proton::operator<<(std::ostream&, proton::decimal32 const&)
+proton::operator<<(std::ostream&, proton::decimal64 const&)
+proton::operator<<(std::ostream&, proton::duration)
+proton::operator<<(std::ostream&, proton::scalar const&)
+proton::operator<<(std::ostream&, proton::timestamp)
+proton::operator<<(std::ostream&, proton::type_id)
+proton::operator<<(std::ostream&, proton::url const&)
+proton::operator<<(std::ostream&, proton::uuid const&)
+proton::operator<<(std::ostream&, proton::value const&)
+proton::operator==(proton::scalar const&, proton::scalar const&)
+proton::operator==(proton::value const&, proton::value const&)
+proton::operator>>(std::istream&, proton::url&)
+
+proton::receiver::flow(int)
+proton::receiver::~receiver()
+proton::reconnect_timer::next_delay(proton::timestamp)
+proton::reconnect_timer::reconnect_timer(unsigned int, int, unsigned int, bool, int, int)
+proton::reconnect_timer::reset()
+
+proton::sasl::allow_insecure_mechs()
+proton::sasl::allow_insecure_mechs(bool)
+proton::sasl::allowed_mechs(std::string const&)
+proton::sasl::config_name(std::string const&)
+proton::sasl::config_path(std::string const&)
+proton::sasl::done(proton::sasl::outcome)
+proton::sasl::extended()
+proton::sasl::mech() const
+proton::sasl::outcome() const
+proton::sasl::user() const
+
+proton::scalar::as_double() const
+proton::scalar::as_int() const
+proton::scalar::as_string() const
+proton::scalar::as_uint() const
+proton::scalar::empty() const
+proton::scalar::get(bool&) const
+proton::scalar::get(double&) const
+proton::scalar::get(float&) const
+proton::scalar::get(int&) const
+proton::scalar::get(long&) const
+proton::scalar::get(proton::binary&) const
+proton::scalar::get(proton::decimal128&) const
+proton::scalar::get(proton::decimal32&) const
+proton::scalar::get(proton::decimal64&) const
+proton::scalar::get(proton::symbol&) const
+proton::scalar::get(proton::timestamp&) const
+proton::scalar::get(proton::uuid&) const
+proton::scalar::get(short&) const
+proton::scalar::get(signed char&) const
+proton::scalar::get(std::string&) const
+proton::scalar::get(unsigned char&) const
+proton::scalar::get(unsigned int&) const
+proton::scalar::get(unsigned long&) const
+proton::scalar::get(unsigned short&) const
+proton::scalar::get(wchar_t&) const
+proton::scalar::operator=(bool)
+proton::scalar::operator=(char const*)
+proton::scalar::operator=(double)
+proton::scalar::operator=(float)
+proton::scalar::operator=(int)
+proton::scalar::operator=(long)
+proton::scalar::operator=(proton::binary const&)
+proton::scalar::operator=(proton::decimal128 const&)
+proton::scalar::operator=(proton::decimal32 const&)
+proton::scalar::operator=(proton::decimal64 const&)
+proton::scalar::operator=(proton::scalar const&)
+proton::scalar::operator=(proton::symbol const&)
+proton::scalar::operator=(proton::timestamp)
+proton::scalar::operator=(proton::uuid const&)
+proton::scalar::operator=(short)
+proton::scalar::operator=(signed char)
+proton::scalar::operator=(std::string const&)
+proton::scalar::operator=(unsigned char)
+proton::scalar::operator=(unsigned int)
+proton::scalar::operator=(unsigned long)
+proton::scalar::operator=(unsigned short)
+proton::scalar::operator=(wchar_t)
+proton::scalar::scalar()
+proton::scalar::scalar(proton::scalar const&)
+proton::scalar::type() const
+
+proton::sender::available()
+proton::sender::offered(int)
+proton::sender::send(proton::message const&)
+proton::sender::~sender()
+
+proton::session::connection() const
+proton::session::create_receiver(std::string const&)
+proton::session::create_sender(std::string const&)
+proton::session::links() const
+proton::session::local_condition() const
+proton::session::open()
+proton::session::open_receiver(std::string const&, proton::link_options const&)
+proton::session::open_sender(std::string const&, proton::link_options const&)
+proton::session::remote_condition() const
+proton::session::state() const
+proton::session::~session()
+proton::session_iterator::operator++()
+
+proton::ssl::cipher() const
+proton::ssl::peer_hostname(std::string const&)
+proton::ssl::peer_hostname() const
+proton::ssl::protocol() const
+proton::ssl::remote_subject() const
+proton::ssl::resume_status() const
+proton::ssl::ssf() const
+
+proton::ssl_certificate::ssl_certificate(std::string const&, std::string const&)
+proton::ssl_certificate::ssl_certificate(std::string const&, std::string const&, std::string const&)
+
+proton::ssl_client_options::ssl_client_options()
+proton::ssl_client_options::ssl_client_options(proton::ssl_certificate&, std::string const&, proton::ssl::verify_mode)
+proton::ssl_client_options::ssl_client_options(std::string const&, proton::ssl::verify_mode)
+
+proton::ssl_server_options::ssl_server_options()
+proton::ssl_server_options::ssl_server_options(proton::ssl_certificate&)
+proton::ssl_server_options::ssl_server_options(proton::ssl_certificate&, std::string const&, std::string const&, proton::ssl::verify_mode)
+
+proton::swap(proton::message&, proton::message&)
+proton::swap(proton::value&, proton::value&)
+
+proton::task::cancel()
+
+proton::terminus::address(std::string const&)
+proton::terminus::address() const
+proton::terminus::distribution_mode() const
+proton::terminus::distribution_mode(proton::terminus::distribution_mode)
+proton::terminus::durability()
+proton::terminus::durability(proton::terminus::durability)
+proton::terminus::dynamic() const
+proton::terminus::dynamic(bool)
+proton::terminus::expiry_policy() const
+proton::terminus::expiry_policy(proton::terminus::expiry_policy)
+proton::terminus::filter()
+proton::terminus::filter() const
+proton::terminus::node_properties()
+proton::terminus::node_properties() const
+proton::terminus::timeout() const
+proton::terminus::timeout(unsigned int)
+proton::terminus::type() const
+proton::terminus::type(proton::terminus::type)
+
+proton::timeout_error::timeout_error(std::string const&)
+proton::timeout_error::~timeout_error()
+
+proton::timestamp::now()
+
+proton::transport::bind(proton::connection&)
+proton::transport::condition() const
+proton::transport::connection() const
+proton::transport::idle_timeout() const
+proton::transport::max_channels() const
+proton::transport::max_frame_size() const
+proton::transport::remote_idle_timeout() const
+proton::transport::remote_max_channels() const
+proton::transport::remote_max_frame_size() const
+proton::transport::sasl() const
+proton::transport::ssl() const
+proton::transport::unbind()
+
+proton::type_id_is_container(proton::type_id)
+proton::type_id_is_decimal(proton::type_id)
+proton::type_id_is_floating_point(proton::type_id)
+proton::type_id_is_integral(proton::type_id)
+proton::type_id_is_scalar(proton::type_id)
+proton::type_id_is_signed(proton::type_id)
+proton::type_id_is_signed_int(proton::type_id)
+proton::type_id_is_string_like(proton::type_id)
+proton::type_id_is_unsigned_int(proton::type_id)
+
+# XXX Why is this a free function not a member function?
+proton::type_name(proton::type_id)
+
+proton::url::defaults()
+proton::url::empty() const
+proton::url::host(std::string const&)
+proton::url::host() const
+proton::url::host_port() const
+proton::url::operator=(proton::url const&)
+proton::url::parse(char const*)
+proton::url::parse(std::string const&)
+proton::url::password(std::string const&)
+proton::url::password() const
+proton::url::path(std::string const&)
+proton::url::path() const
+proton::url::port(std::string const&)
+proton::url::port() const
+proton::url::port_int() const
+proton::url::scheme(std::string const&)
+proton::url::scheme() const
+proton::url::str() const
+proton::url::url()
+proton::url::url(char const*, bool)
+proton::url::url(proton::url const&)
+proton::url::url(std::string const&, bool)
+proton::url::username(std::string const&)
+proton::url::username() const
+proton::url::~url()
+
+proton::url_error::url_error(std::string const&)
+proton::url_error::~url_error()
+
+proton::uuid::make(char const*)
+proton::uuid::random()
+proton::uuid::str() const
+
+proton::value::as_double() const
+proton::value::as_int() const
+proton::value::as_string() const
+proton::value::as_uint() const
+proton::value::clear()
+proton::value::decode() const
+proton::value::empty() const
+proton::value::encode()
+proton::value::operator=(proton::value const&)
+proton::value::type() const
+proton::value::value()
+proton::value::value(pn_data_t*)
+proton::value::value(proton::value const&)
+
+# Only types with the following info can be thrown across shared abject boundary
+# Or correctly dynamically cast by user
+typeinfo for proton::connection
+typeinfo for proton::connection_engine
+typeinfo for proton::connection_engine::io_error
+typeinfo for proton::conversion_error
+typeinfo for proton::endpoint
+typeinfo for proton::error
+typeinfo for proton::handler
+typeinfo for proton::link
+typeinfo for proton::receiver
+typeinfo for proton::sender
+typeinfo for proton::session
+typeinfo for proton::timeout_error
+typeinfo for proton::url_error
+typeinfo name for proton::connection
+typeinfo name for proton::connection_engine
+typeinfo name for proton::connection_engine::io_error
+typeinfo name for proton::conversion_error
+typeinfo name for proton::endpoint
+typeinfo name for proton::error
+typeinfo name for proton::handler
+typeinfo name for proton::link
+typeinfo name for proton::receiver
+typeinfo name for proton::sender
+typeinfo name for proton::session
+typeinfo name for proton::timeout_error
+typeinfo name for proton::url_error
+vtable for proton::connection
+vtable for proton::connection_engine
+vtable for proton::connection_engine::io_error
+vtable for proton::conversion_error
+vtable for proton::endpoint
+vtable for proton::error
+vtable for proton::handler
+vtable for proton::link
+vtable for proton::receiver
+vtable for proton::sender
+vtable for proton::session
+vtable for proton::timeout_error
+vtable for proton::url_error
