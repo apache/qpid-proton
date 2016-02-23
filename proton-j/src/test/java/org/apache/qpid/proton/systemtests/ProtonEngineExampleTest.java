@@ -19,15 +19,15 @@
 package org.apache.qpid.proton.systemtests;
 
 import static java.util.EnumSet.of;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static junit.framework.Assert.assertTrue;
 import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.CLOSED;
 import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
 import static org.apache.qpid.proton.systemtests.TestLoggingHelper.bold;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.logging.Logger;
@@ -89,15 +89,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
         getServer().connection = Proton.connection();
         getServer().transport.bind(getServer().connection);
 
-
-
         LOGGER.fine(bold("======== About to open connections"));
         getClient().connection.open();
         getServer().connection.open();
 
         doOutputInputCycle();
-
-
 
         LOGGER.fine(bold("======== About to open sessions"));
         getClient().session = getClient().connection.session();
@@ -113,8 +109,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         pumpServerToClient();
         assertEndpointState(getClient().session, ACTIVE, ACTIVE);
-
-
 
         LOGGER.fine(bold("======== About to create sender"));
 
@@ -137,8 +131,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
         assertEndpointState(getClient().sender, ACTIVE, UNINITIALIZED);
 
         pumpClientToServer();
-
-
 
         LOGGER.fine(bold("======== About to set up implicitly created receiver"));
 
@@ -166,7 +158,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
         getServer().receiver.flow(1);
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== About to create a message and send it to the server"));
 
         getClient().message = Proton.message();
@@ -188,7 +179,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
         assertTrue("sender has not advanced", senderAdvanced);
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== About to process the message on the server"));
 
@@ -217,7 +207,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
         pumpServerToClient();
         assertEquals(Accepted.getInstance(), getClient().delivery.getRemoteState());
 
-
         LOGGER.fine(bold("======== About to accept and settle the message on the client"));
 
         Delivery clientDelivery = getClient().connection.getWorkHead();
@@ -231,7 +220,6 @@ public class ProtonEngineExampleTest extends EngineTestBase
         assertNull("Now we've settled, the delivery should no longer be in the work list", getClient().connection.getWorkHead());
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== About to settle the message on the server"));
 
@@ -250,13 +238,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
         getServer().receiver.flow(1);
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== About to close client's sender"));
 
         getClient().sender.close();
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== Server about to process client's link closure"));
 
@@ -265,13 +251,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== About to close client's session"));
 
         getClient().session.close();
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== Server about to process client's session closure"));
 
@@ -280,13 +264,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== About to close client's connection"));
 
         getClient().connection.close();
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== Server about to process client's connection closure"));
 
@@ -295,9 +277,7 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== Checking client has nothing more to pump"));
-
 
         assertClientHasNothingToOutput();
 
@@ -324,15 +304,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
         getServer().connection = Proton.connection();
         getServer().transport.bind(getServer().connection);
 
-
-
         LOGGER.fine(bold("======== About to open connections"));
         getClient().connection.open();
         getServer().connection.open();
 
         doOutputInputCycle();
-
-
 
         LOGGER.fine(bold("======== About to open and close client session"));
         getClient().session = getClient().connection.session();
@@ -352,13 +328,11 @@ public class ProtonEngineExampleTest extends EngineTestBase
         pumpServerToClient();
         assertEndpointState(getClient().session, CLOSED, CLOSED);
 
-
         LOGGER.fine(bold("======== About to close client's connection"));
 
         getClient().connection.close();
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== Server about to process client's connection closure"));
 
@@ -367,16 +341,12 @@ public class ProtonEngineExampleTest extends EngineTestBase
 
         pumpServerToClient();
 
-
         LOGGER.fine(bold("======== Checking client has nothing more to pump"));
-
 
         assertClientHasNothingToOutput();
 
         LOGGER.fine(bold("======== Done!"));
     }
-
-
 
     /**
      * Simulates creating a local terminus using the properties supplied by the remote link endpoint.

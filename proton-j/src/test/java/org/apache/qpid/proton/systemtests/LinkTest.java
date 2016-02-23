@@ -19,12 +19,12 @@
 package org.apache.qpid.proton.systemtests;
 
 import static java.util.EnumSet.of;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
 import static org.apache.qpid.proton.engine.EndpointState.ACTIVE;
 import static org.apache.qpid.proton.engine.EndpointState.UNINITIALIZED;
 import static org.apache.qpid.proton.systemtests.TestLoggingHelper.bold;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -59,7 +59,6 @@ public class LinkTest extends EngineTestBase
         Map<Symbol, Object> senderProps = new HashMap<>();
         senderProps.put(SND_PROP, SND_PROP_VAL);
 
-
         LOGGER.fine(bold("======== About to create transports"));
 
         getClient().transport = Proton.transport();
@@ -76,13 +75,11 @@ public class LinkTest extends EngineTestBase
         getServer().connection = Proton.connection();
         getServer().transport.bind(getServer().connection);
 
-
         LOGGER.fine(bold("======== About to open connections"));
         getClient().connection.open();
         getServer().connection.open();
 
         doOutputInputCycle();
-
 
         LOGGER.fine(bold("======== About to open sessions"));
         getClient().session = getClient().connection.session();
@@ -98,7 +95,6 @@ public class LinkTest extends EngineTestBase
 
         pumpServerToClient();
         assertEndpointState(getClient().session, ACTIVE, ACTIVE);
-
 
         LOGGER.fine(bold("======== About to create reciever"));
 
@@ -124,7 +120,6 @@ public class LinkTest extends EngineTestBase
         assertEndpointState(getClient().receiver, ACTIVE, UNINITIALIZED);
 
         pumpClientToServer();
-
 
         LOGGER.fine(bold("======== About to set up implicitly created sender"));
 
