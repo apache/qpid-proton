@@ -551,6 +551,7 @@ function(add_jar_from_filelist _TARGET_NAME CMAKE_JAVA_SOURCE_FILE_LIST)
 
 endfunction()
 
+# Apache Qpid Proton: make the install files optional so as not to error if there is no symlink
 function(INSTALL_JAR _TARGET_NAME _DESTINATION)
     get_property(__FILES
         TARGET
@@ -565,6 +566,7 @@ function(INSTALL_JAR _TARGET_NAME _DESTINATION)
                 ${__FILES}
             DESTINATION
                 ${_DESTINATION}
+            OPTIONAL
         )
     else ()
         message(SEND_ERROR "The target ${_TARGET_NAME} is not known in this scope.")
