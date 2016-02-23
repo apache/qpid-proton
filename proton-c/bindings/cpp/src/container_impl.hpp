@@ -21,17 +21,17 @@
  * under the License.
  *
  */
+
+#include "id_generator.hpp"
+
+#include "proton/connection.hpp"
+#include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/handler.hpp"
-#include "proton/connection.hpp"
 #include "proton/link.hpp"
-#include "proton/duration.hpp"
-#include "proton/reactor.hpp"
-#include "proton/id_generator.hpp"
-
-#include "proton_handler.hpp"
-
 #include "proton/reactor.h"
+#include "proton/reactor.hpp"
+#include "proton_handler.hpp"
 
 #include <string>
 

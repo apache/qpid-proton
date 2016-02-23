@@ -23,10 +23,11 @@
 #include "proton/uuid.hpp"
 
 #include "contexts.hpp"
+#include "id_generator.hpp"
 #include "messaging_adapter.hpp"
+#include "messaging_event.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "messaging_event.hpp"
 #include "proton_bits.hpp"
 
 #include <proton/connection.h>
@@ -56,18 +57,29 @@ void close_transport(connection_engine_context *ctx_) {
 std::string  make_id(const std::string s="") { return s.empty() ? uuid::random().str() : s; }
 }
 
-connection_engine::container::container(const std::string& s) : id_(make_id(s)) {}
+class connection_engine::container::impl {
+  public:
+    impl(const std::string s="") : id_(make_id(s)) {}
 
-std::string connection_engine::container::id() const { return id_; }
+    const std::string id_;
+    id_generator id_gen_;
+    connection_options options_;
+};
+
+connection_engine::container::container(const std::string& s) : impl_(new impl(s)) {}
+
+connection_engine::container::~container() {}
+
+std::string connection_engine::container::id() const { return impl_->id_; }
 
 connection_options connection_engine::container::make_options() {
-    connection_options opts = options_;
-    opts.container_id(id()).link_prefix(id_gen_.next()+"/");
+    connection_options opts = impl_->options_;
+    opts.container_id(id()).link_prefix(impl_->id_gen_.next()+"/");
     return opts;
 }
 
 void connection_engine::container::options(const connection_options &opts) {
-    options_ = opts;
+    impl_->options_ = opts;
 }
 
 connection_engine::connection_engine(class handler &h, const connection_options& opts) {

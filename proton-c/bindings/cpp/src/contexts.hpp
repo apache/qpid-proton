@@ -27,8 +27,8 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/connection_engine.hpp"
-#include "proton/id_generator.hpp"
 
+#include "id_generator.hpp"
 #include "proton_handler.hpp"
 
 struct pn_session_t;

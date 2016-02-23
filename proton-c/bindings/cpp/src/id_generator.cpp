@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "proton/id_generator.hpp"
+#include "id_generator.hpp"
 #include <sstream>
 
 namespace proton {

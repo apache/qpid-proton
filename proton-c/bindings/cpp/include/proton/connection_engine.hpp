@@ -23,7 +23,6 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/export.hpp"
-#include "proton/id_generator.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 
@@ -70,6 +69,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
         /// Create a container with id.  Default to random UUID if id
         /// == "".
         PN_CPP_EXTERN container(const std::string &id = "");
+        PN_CPP_EXTERN ~container();
 
         /// Return the container-id
         PN_CPP_EXTERN std::string id() const;
@@ -86,11 +86,9 @@ PN_CPP_CLASS_EXTERN connection_engine {
         PN_CPP_EXTERN void options(const connection_options&);
 
       private:
-        const std::string id_;
-        id_generator id_gen_;
-        connection_options options_;
+        class impl;
+        pn_unique_ptr<impl> impl_;
     };
-
     /// Create a connection engine that dispatches to handler.
     PN_CPP_EXTERN connection_engine(handler&, const connection_options& = no_opts);
 
