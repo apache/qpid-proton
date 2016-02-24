@@ -67,7 +67,7 @@ mvn test \
             <protonJythonIgnoreFile>${basedir}/java/pythonTests.ignore</protonJythonIgnoreFile>
             <protonJythonTestRoot>${basedir}/python</protonJythonTestRoot>
             <protonJythonBinding>${basedir}/../proton-c/bindings/python</protonJythonBinding>
-            <protonJythonShim>${basedir}/../proton-j/src/main/resources</protonJythonShim>
+            <protonJythonShim>${basedir}/java/shim</protonJythonShim>
             <protonJythonTestScript>${basedir}/python/proton-test</protonJythonTestScript>
             <protonJythonTestXmlOutputDirectory>${testReportOutputDirectory}</protonJythonTestXmlOutputDirectory>
             <java.util.logging.config.file>${project.build.outputDirectory}/logging.properties</java.util.logging.config.file>
