@@ -919,7 +919,7 @@ public class DataImpl implements Data
     {
         StringBuilder sb = new StringBuilder();
         render(sb, _first);
-        return String.format("Data[current=%h, parent=%h]{\n%s}",
+        return String.format("Data[current=%h, parent=%h]{%n%s}",
                              System.identityHashCode(_current),
                              System.identityHashCode(_parent),
                              sb);

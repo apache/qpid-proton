@@ -283,7 +283,6 @@ class FrameParser implements TransportInput
                     state = State.PRE_PARSE;
 
                 case PRE_PARSE:
-                    ;
                     if(size < 8)
                     {
                         frameParsingError = new TransportException("specified frame size %d smaller than minimum frame header "

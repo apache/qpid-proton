@@ -325,7 +325,7 @@ class TransportSession
             delivery.getLink().getTransportLink().decrementLinkCredit();
             delivery.getLink().getTransportLink().incrementDeliveryCount();
         }
-        if(Boolean.TRUE == transfer.getSettled())
+        if(Boolean.TRUE.equals(transfer.getSettled()))
         {
             delivery.setRemoteSettled(true);
         }
