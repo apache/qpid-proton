@@ -384,7 +384,7 @@ public class ReactorImpl implements Reactor, Extendable {
 
 
     // pni_timer_finalize from reactor.c
-    private class TimerFree implements Callback {
+    private static class TimerFree implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {

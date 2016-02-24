@@ -61,7 +61,7 @@ public class ModifiedType  extends AbstractDescribedType<Modified,List> implemen
     }
 
 
-    public final class ModifiedWrapper extends AbstractList
+    public static final class ModifiedWrapper extends AbstractList
     {
         private final Modified _impl;
 

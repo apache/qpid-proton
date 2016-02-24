@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 class Transform
 {
 
-    private class Rule {
+    private static class Rule {
 
         String _pattern;
         String _substitution;

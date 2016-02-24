@@ -1477,7 +1477,7 @@ public class MessengerImpl implements Messenger
         }
     }
 
-    private class ConnectionContext
+    private static class ConnectionContext
     {
         private Address _address;
         private Connector _connector;

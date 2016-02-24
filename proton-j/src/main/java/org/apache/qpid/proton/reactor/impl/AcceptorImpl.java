@@ -72,7 +72,7 @@ public class AcceptorImpl implements Acceptor {
         }
     }
 
-    private class AcceptorFree implements Callback {
+    private static class AcceptorFree implements Callback {
         @Override
         public void run(Selectable selectable) {
             try {

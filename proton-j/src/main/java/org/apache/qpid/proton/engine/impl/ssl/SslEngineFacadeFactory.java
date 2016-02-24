@@ -537,7 +537,7 @@ public class SslEngineFacadeFactory
         }
     }
 
-    private final class AlwaysTrustingTrustManager implements X509TrustManager
+    private static final class AlwaysTrustingTrustManager implements X509TrustManager
     {
         @Override
         public X509Certificate[] getAcceptedIssuers()

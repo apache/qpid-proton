@@ -493,7 +493,7 @@ public class ConnectionImpl extends EndpointImpl implements ProtonJConnection
         return _transport;
     }
 
-    private class WorkSequence implements Iterator<DeliveryImpl>
+    private static class WorkSequence implements Iterator<DeliveryImpl>
     {
         private DeliveryImpl _next;
 

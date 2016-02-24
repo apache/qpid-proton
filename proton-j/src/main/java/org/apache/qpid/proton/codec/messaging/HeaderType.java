@@ -63,7 +63,7 @@ public class HeaderType extends AbstractDescribedType<Header,List> implements De
     }
 
 
-    public final class HeaderWrapper extends AbstractList
+    public static final class HeaderWrapper extends AbstractList
     {
         private final Header _impl;
 
