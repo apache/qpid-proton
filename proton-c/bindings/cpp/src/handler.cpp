@@ -57,9 +57,6 @@ void handler::on_delivery_accept(event &e) { on_unhandled(e); }
 void handler::on_delivery_reject(event &e) { on_unhandled(e); }
 void handler::on_delivery_release(event &e) { on_unhandled(e); }
 void handler::on_delivery_settle(event &e) { on_unhandled(e); }
-void handler::on_transaction_abort(event &e) { on_unhandled(e); }
-void handler::on_transaction_commit(event &e) { on_unhandled(e); }
-void handler::on_transaction_declare(event &e) { on_unhandled(e); }
 
 void handler::on_unhandled(event &) {}
 void handler::on_unhandled_error(event &, const condition& c) { throw proton::error(c.str()); }

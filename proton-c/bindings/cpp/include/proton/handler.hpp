@@ -78,16 +78,25 @@ PN_CPP_CLASS_EXTERN handler
     /// A message can be sent.
     PN_CPP_EXTERN virtual void on_sendable(event &e);
 
-    // XXX _open is not present because it's
+    /// transport_open is not present because currently there is no specific
+    /// low level event to hang it from - you should put any initialisation code
+    /// that needs a transport into the conection_open event.
+    /// XXX Actually this makes me wonder if we shouldn't just introduce this event
+    /// XXX and call its handler immediately before on_connection_open, just for the
+    /// XXX symmetry of the API.
 
-    // XXX you get close and error on a failure, and you get the error first
-    // XXX - for each _error item, document that you will get _close as well
-    
     /// The underlying network transport has closed.
     PN_CPP_EXTERN virtual void on_transport_close(event &e);
     /// The underlying network transport has closed with an error
     /// condition.
     PN_CPP_EXTERN virtual void on_transport_error(event &e);
+
+    /// Note that every ..._open event is paired with a ..._close event which can clean
+    /// up any resources created by the ..._open handler.
+    /// In particular this is still true if an error is reported with an ..._error event.
+    /// This makes resource management easier so that the error handling logic doesn't also
+    /// have to manage the resource clean up, but can just assume that the close event will
+    /// be along in a minute to handle the clean up.
 
     /// The remote peer opened the connection.
     PN_CPP_EXTERN virtual void on_connection_open(event &e);
@@ -124,13 +133,6 @@ PN_CPP_CLASS_EXTERN handler
 
     // XXX note that AMQP modified state is indicated in _release
 
-    /// The remote peer declared a transaction.
-    PN_CPP_EXTERN virtual void on_transaction_declare(event &e);
-    /// The remote peer committed a transaction.
-    PN_CPP_EXTERN virtual void on_transaction_commit(event &e);
-    /// The remote peer aborted a transaction.
-    PN_CPP_EXTERN virtual void on_transaction_abort(event &e);
-
     /// @cond INTERNAL
     /// XXX settle API questions around task
     /// XXX register functions instead of having these funny generic events
@@ -145,10 +147,10 @@ PN_CPP_CLASS_EXTERN handler
 
     /// @}
 
+    /// @cond INTERNAL
   private:
     pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
-    /// @cond INTERNAL
     friend class container;
     friend class connection_engine;
     friend class connection_options;

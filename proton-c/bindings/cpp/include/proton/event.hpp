@@ -37,7 +37,7 @@ class connection;
 
 /// A context for a proton event.
 ///
-/// @see proton::handler    
+/// @see proton::handler
 class event {
   public:
     virtual PN_CPP_EXTERN ~event() {}
