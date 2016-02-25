@@ -31,6 +31,7 @@
 #include "proton/delivery.h"
 #include "msg.hpp"
 #include "proton_bits.hpp"
+#include "types_internal.hpp"
 
 #include <string>
 #include <algorithm>
@@ -85,25 +86,8 @@ void check(int err) {
 
 void message::id(const message_id& id) { pn_message_set_id(pn_msg(), id.scalar_.atom_); }
 
-namespace {
-inline message_id from_pn_atom(const pn_atom_t& v) {
-  switch (v.type) {
-    case PN_ULONG:
-      return message_id(amqp_ulong(v.u.as_ulong));
-    case PN_UUID:
-      return message_id(uuid::make(reinterpret_cast<const char*>(&v.u.as_uuid)));
-    case PN_BINARY:
-      return message_id(amqp_binary(v.u.as_bytes));
-    case PN_STRING:
-      return message_id(amqp_string(v.u.as_bytes));
-    default:
-      return message_id();
-  }
-}
-}
-
 message_id message::id() const {
-    return from_pn_atom(pn_message_get_id(pn_msg()));
+    return pn_message_get_id(pn_msg());
 }
 
 void message::user_id(const std::string &id) {
@@ -146,7 +130,7 @@ void message::correlation_id(const message_id& id) {
 }
 
 message_id message::correlation_id() const {
-    return from_pn_atom(pn_message_get_correlation_id(pn_msg()));
+    return pn_message_get_correlation_id(pn_msg());
 }
 
 void message::content_type(const std::string &s) {

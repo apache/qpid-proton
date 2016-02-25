@@ -71,38 +71,6 @@ PN_CPP_EXTERN std::string type_name(type_id);
 /// Print the type name.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 
-/// @cond INTERNAL
-
-PN_CPP_EXTERN pn_bytes_t pn_bytes(const std::string&);
-PN_CPP_EXTERN std::string str(const pn_bytes_t& b);
-
-/// AMQP NULL type.
-struct amqp_null {};
-/// AMQP boolean type.
-typedef bool amqp_boolean;
-/// AMQP unsigned 8-bit type.
-typedef ::uint8_t amqp_ubyte;
-/// AMQP signed 8-bit integer type.
-typedef ::int8_t amqp_byte;
-/// AMQP unsigned 16-bit integer type.
-typedef ::uint16_t amqp_ushort;
-/// AMQP signed 16-bit integer type.
-typedef ::int16_t amqp_short;
-/// AMQP unsigned 32-bit integer type.
-typedef ::uint32_t amqp_uint;
-/// AMQP signed 32-bit integer type.
-typedef ::int32_t amqp_int;
-/// AMQP 32-bit unicode character type.
-typedef wchar_t amqp_char;
-/// AMQP unsigned 64-bit integer type.
-typedef ::uint64_t amqp_ulong;
-/// AMQP signed 64-bit integer type.
-typedef ::int64_t amqp_long;
-/// AMQP 32-bit floating-point type.
-typedef float amqp_float;
-/// AMQP 64-bit floating-point type.
-typedef double amqp_double;
-
 /// AMQP UTF-8 encoded string.
 struct amqp_string : public std::string {
     explicit amqp_string(const std::string& s=std::string()) : std::string(s) {}
@@ -124,12 +92,10 @@ struct amqp_binary : public std::string {
     explicit amqp_binary(const pn_bytes_t& b) : std::string(b.start, b.size) {}
 };
 
-/// @endcond
-
 // TODO aconway 2015-06-16: described types.
 
 /// @name Type test functions
-///    
+///
 /// Attributes of a type_id value, returns same result as the
 /// corresponding std::type_traits tests for the corresponding C++
 /// types.

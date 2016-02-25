@@ -20,6 +20,7 @@
 #include "proton/decoder.hpp"
 #include "proton/encoder.hpp"
 #include "proton/value.hpp"
+#include "proton/amqp.hpp"
 #include "test_bits.hpp"
 #include <string>
 #include <sstream>
@@ -98,12 +99,12 @@ void test_encoder_primitives() {
 void test_value_conversions() {
     value v;
     ASSERT_EQUAL(true, (v=true).get<bool>());
-    ASSERT_EQUAL(2, (v=amqp_byte(2)).get<int>());
-    ASSERT_EQUAL(3, (v=amqp_byte(3)).get<long>());
-    ASSERT_EQUAL(3, (v=amqp_byte(3)).get<long>());
-    ASSERT_EQUAL(1.0, (v=amqp_float(1.0)).get<double>());
-    ASSERT_EQUAL(1.0, (v=amqp_double(1.0)).get<float>());
-    try { (void)(v = amqp_byte(1)).get<bool>(); FAIL("got byte as bool"); } catch (conversion_error) {}
+    ASSERT_EQUAL(2, (v=amqp::byte_type(2)).get<int>());
+    ASSERT_EQUAL(3, (v=amqp::byte_type(3)).get<long>());
+    ASSERT_EQUAL(3, (v=amqp::byte_type(3)).get<long>());
+    ASSERT_EQUAL(1.0, (v=amqp::float_type(1.0)).get<double>());
+    ASSERT_EQUAL(1.0, (v=amqp::double_type(1.0)).get<float>());
+    try { (void)(v = int8_t(1)).get<bool>(); FAIL("got byte as bool"); } catch (conversion_error) {}
     try { (void)(v = true).get<float>(); FAIL("got bool as float"); } catch (conversion_error) {}
 }
 

@@ -1,6 +1,5 @@
-#ifndef COMPARABLE_HPP
-#define COMPARABLE_HPP
-
+#ifndef BINARY_HPP
+#define BINARY_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -20,19 +19,19 @@
  * under the License.
  */
 
+#include <string>
+
 namespace proton {
 
-/// Base class for comparable types with operator< and
-/// operator==. Provides remaining operators.
-template <class T> class comparable {
-    friend bool operator>(const T &a, const T &b) { return b < a; }
-    friend bool operator<=(const T &a, const T &b) { return !(a > b); }
-    friend bool operator>=(const T &a, const T &b) { return !(a < b); }
-    friend bool operator!=(const T &a, const T &b) { return !(a == b); }
+/// symbol is a std::string that represents the AMQP symbol type.
+/// A symbol can only contain 7-bit ASCII characters.
+///
+class binary : public std::string {
+  public:
+    explicit binary(const std::string& s=std::string()) : std::string(s) {}
+    explicit binary(const char* s) : std::string(s) {}
 };
-
-///@endcond
 
 }
 
-#endif // COMPARABLE_HPP
+#endif // BINARY_HPP

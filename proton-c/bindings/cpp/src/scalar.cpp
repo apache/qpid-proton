@@ -20,8 +20,10 @@
 #include "msg.hpp"
 #include "types_internal.hpp"
 
+#include "proton/binary.hpp"
 #include "proton/decimal.hpp"
 #include "proton/scalar.hpp"
+#include "proton/symbol.hpp"
 #include "proton/timestamp.hpp"
 #include "proton/type_traits.hpp"
 #include "proton/uuid.hpp"
@@ -31,7 +33,9 @@
 namespace proton {
 
 scalar::scalar() { atom_.type = PN_NULL; }
+scalar::scalar(const pn_atom_t& a) { set(a); }
 scalar::scalar(const scalar& x) { set(x.atom_); }
+
 scalar& scalar::operator=(const scalar& x) {
     if (this != &x)
         set(x.atom_);
@@ -92,10 +96,9 @@ scalar& scalar::operator=(const uuid& x) {
     return *this;
 }
 
-scalar& scalar::operator=(const amqp_string& x) { set(x, PN_STRING); return *this; }
-scalar& scalar::operator=(const amqp_symbol& x) { set(x, PN_SYMBOL); return *this; }
-scalar& scalar::operator=(const amqp_binary& x) { set(x, PN_BINARY); return *this; }
 scalar& scalar::operator=(const std::string& x) { set(x, PN_STRING); return *this; }
+scalar& scalar::operator=(const symbol& x) { set(x, PN_SYMBOL); return *this; }
+scalar& scalar::operator=(const binary& x) { set(x, PN_BINARY); return *this; }
 scalar& scalar::operator=(const char* x) { set(x, PN_STRING); return *this; }
 
 void scalar::ok(pn_type_t t) const {
@@ -119,10 +122,9 @@ void scalar::get(decimal32& x) const { ok(PN_DECIMAL32); byte_copy(x, atom_.u.as
 void scalar::get(decimal64& x) const { ok(PN_DECIMAL64); byte_copy(x, atom_.u.as_decimal64); }
 void scalar::get(decimal128& x) const { ok(PN_DECIMAL128); byte_copy(x, atom_.u.as_decimal128); }
 void scalar::get(uuid& x) const { ok(PN_UUID); byte_copy(x, atom_.u.as_uuid); }
-void scalar::get(amqp_string& x) const { ok(PN_STRING); x = amqp_string(str_); }
-void scalar::get(amqp_symbol& x) const { ok(PN_SYMBOL); x = amqp_symbol(str_); }
-void scalar::get(amqp_binary& x) const { ok(PN_BINARY); x = amqp_binary(str_); }
-void scalar::get(std::string& x) const { x = get<amqp_string>(); }
+void scalar::get(std::string& x) const { ok(PN_STRING); x = std::string(str_); }
+void scalar::get(symbol& x) const { ok(PN_SYMBOL); x = symbol(str_); }
+void scalar::get(binary& x) const { ok(PN_BINARY); x = binary(str_); }
 
 int64_t scalar::as_int() const {
     if (type_id_is_floating_point(type()))
@@ -187,9 +189,9 @@ template <class T, class F> T type_switch(const scalar& a, F f) {
       case DECIMAL64: return f(a.get<decimal64>());
       case DECIMAL128: return f(a.get<decimal128>());
       case UUID: return f(a.get<uuid>());
-      case BINARY: return f(a.get<amqp_binary>());
-      case STRING: return f(a.get<amqp_string>());
-      case SYMBOL: return f(a.get<amqp_symbol>());
+      case BINARY: return f(a.get<binary>());
+      case STRING: return f(a.get<std::string>());
+      case SYMBOL: return f(a.get<symbol>());
       default:
         throw error("bad scalar type");
     }

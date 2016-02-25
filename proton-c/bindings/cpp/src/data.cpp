@@ -18,8 +18,12 @@
  */
 
 #include "proton_bits.hpp"
+
+#include "proton/amqp.hpp"
+#include "proton/binary.hpp"
 #include "proton/data.hpp"
 #include "proton/decimal.hpp"
+#include "proton/symbol.hpp"
 
 #include <proton/codec.h>
 
@@ -117,26 +121,26 @@ int compare_next(data& a, data& b) {
       case MAP:
       case DESCRIBED:
         return compare_container(a, b);
-      case BOOLEAN: return compare_simple<amqp_boolean>(a, b);
-      case UBYTE: return compare_simple<amqp_ubyte>(a, b);
-      case BYTE: return compare_simple<amqp_byte>(a, b);
-      case USHORT: return compare_simple<amqp_ushort>(a, b);
-      case SHORT: return compare_simple<amqp_short>(a, b);
-      case UINT: return compare_simple<amqp_uint>(a, b);
-      case INT: return compare_simple<amqp_int>(a, b);
-      case CHAR: return compare_simple<amqp_char>(a, b);
-      case ULONG: return compare_simple<amqp_ulong>(a, b);
-      case LONG: return compare_simple<amqp_long>(a, b);
+      case BOOLEAN: return compare_simple<bool>(a, b);
+      case UBYTE: return compare_simple<amqp::ubyte_type>(a, b);
+      case BYTE: return compare_simple<amqp::byte_type>(a, b);
+      case USHORT: return compare_simple<amqp::ushort_type>(a, b);
+      case SHORT: return compare_simple<amqp::short_type>(a, b);
+      case UINT: return compare_simple<amqp::uint_type>(a, b);
+      case INT: return compare_simple<amqp::int_type>(a, b);
+      case CHAR: return compare_simple<amqp::char_type>(a, b);
+      case ULONG: return compare_simple<amqp::ulong_type>(a, b);
+      case LONG: return compare_simple<amqp::long_type>(a, b);
       case TIMESTAMP: return compare_simple<timestamp>(a, b);
-      case FLOAT: return compare_simple<amqp_float>(a, b);
-      case DOUBLE: return compare_simple<amqp_double>(a, b);
+      case FLOAT: return compare_simple<amqp::float_type>(a, b);
+      case DOUBLE: return compare_simple<amqp::double_type>(a, b);
       case DECIMAL32: return compare_simple<decimal32>(a, b);
       case DECIMAL64: return compare_simple<decimal64>(a, b);
       case DECIMAL128: return compare_simple<decimal128>(a, b);
       case UUID: return compare_simple<uuid>(a, b);
-      case BINARY: return compare_simple<amqp_binary>(a, b);
-      case STRING: return compare_simple<amqp_string>(a, b);
-      case SYMBOL: return compare_simple<amqp_symbol>(a, b);
+      case BINARY: return compare_simple<amqp::binary_type>(a, b);
+      case STRING: return compare_simple<amqp::string_type>(a, b);
+      case SYMBOL: return compare_simple<amqp::symbol_type>(a, b);
     }
     // Invalid but equal type_id, treat as equal.
     return 0;

@@ -21,6 +21,7 @@
 
 #include "options.hpp"
 
+#include "proton/binary.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
@@ -46,7 +47,7 @@ class reactor_send : public proton::handler {
     int total_;
     int received_;
     size_t received_bytes_;
-    proton::amqp_binary received_content_;
+    proton::binary received_content_;
     bool replying_;
     proton::message_id id_value_;
     proton::reactor reactor_;
@@ -58,7 +59,7 @@ class reactor_send : public proton::handler {
           received_(0), received_bytes_(0), replying_(replying) {
         if (replying_)
             message_.reply_to("localhost/test");
-        proton::amqp_binary content;
+        proton::binary content;
         content.assign((size_t) size, 'X');
         message_.body(content);
     }

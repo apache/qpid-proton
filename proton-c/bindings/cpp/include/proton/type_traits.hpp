@@ -34,9 +34,11 @@
 
 namespace proton {
 
+class binary;
 class decimal128;
 class decimal32;
 class decimal64;
+class symbol;
 class timestamp;
 class uuid;
 class value;
@@ -87,27 +89,26 @@ template< class T > struct remove_const<const T> { typedef T type; };
 
 // Metafunction returning AMQP type for scalar C++ types
 template <class T, class Enable=void> struct type_id_of;
-template<> struct type_id_of<amqp_null> { static const type_id value=NULL_TYPE; };
-template<> struct type_id_of<amqp_boolean> { static const type_id value=BOOLEAN; };
-template<> struct type_id_of<amqp_ubyte> { static const type_id value=UBYTE; };
-template<> struct type_id_of<amqp_byte> { static const type_id value=BYTE; };
-template<> struct type_id_of<amqp_ushort> { static const type_id value=USHORT; };
-template<> struct type_id_of<amqp_short> { static const type_id value=SHORT; };
-template<> struct type_id_of<amqp_uint> { static const type_id value=UINT; };
-template<> struct type_id_of<amqp_int> { static const type_id value=INT; };
-template<> struct type_id_of<amqp_char> { static const type_id value=CHAR; };
-template<> struct type_id_of<amqp_ulong> { static const type_id value=ULONG; };
-template<> struct type_id_of<amqp_long> { static const type_id value=LONG; };
+template<> struct type_id_of<bool> { static const type_id value=BOOLEAN; };
+template<> struct type_id_of<uint8_t> { static const type_id value=UBYTE; };
+template<> struct type_id_of<int8_t> { static const type_id value=BYTE; };
+template<> struct type_id_of<uint16_t> { static const type_id value=USHORT; };
+template<> struct type_id_of<int16_t> { static const type_id value=SHORT; };
+template<> struct type_id_of<uint32_t> { static const type_id value=UINT; };
+template<> struct type_id_of<int32_t> { static const type_id value=INT; };
+template<> struct type_id_of<wchar_t> { static const type_id value=CHAR; };
+template<> struct type_id_of<uint64_t> { static const type_id value=ULONG; };
+template<> struct type_id_of<int64_t> { static const type_id value=LONG; };
 template<> struct type_id_of<timestamp> { static const type_id value=TIMESTAMP; };
-template<> struct type_id_of<amqp_float> { static const type_id value=FLOAT; };
-template<> struct type_id_of<amqp_double> { static const type_id value=DOUBLE; };
+template<> struct type_id_of<float> { static const type_id value=FLOAT; };
+template<> struct type_id_of<double> { static const type_id value=DOUBLE; };
 template<> struct type_id_of<decimal32> { static const type_id value=DECIMAL32; };
 template<> struct type_id_of<decimal64> { static const type_id value=DECIMAL64; };
 template<> struct type_id_of<decimal128> { static const type_id value=DECIMAL128; };
 template<> struct type_id_of<uuid> { static const type_id value=UUID; };
-template<> struct type_id_of<amqp_binary> { static const type_id value=BINARY; };
-template<> struct type_id_of<amqp_string> { static const type_id value=STRING; };
-template<> struct type_id_of<amqp_symbol> { static const type_id value=SYMBOL; };
+template<> struct type_id_of<binary> { static const type_id value=BINARY; };
+template<> struct type_id_of<std::string> { static const type_id value=STRING; };
+template<> struct type_id_of<symbol> { static const type_id value=SYMBOL; };
 
 template <class T, class Enable=void> struct has_type_id : public false_type {};
 template <class T> struct has_type_id<T, typename enable_if<!!type_id_of<T>::value>::type>  {
@@ -116,14 +117,14 @@ template <class T> struct has_type_id<T, typename enable_if<!!type_id_of<T>::val
 
 // Map arbitrary integral types to known AMQP integral types.
 template<size_t SIZE, bool IS_SIGNED> struct integer_type;
-template<> struct integer_type<1, true> { typedef amqp_byte type; };
-template<> struct integer_type<2, true> { typedef amqp_short type; };
-template<> struct integer_type<4, true> { typedef amqp_int type; };
-template<> struct integer_type<8, true> { typedef amqp_long type; };
-template<> struct integer_type<1, false> { typedef amqp_ubyte type; };
-template<> struct integer_type<2, false> { typedef amqp_ushort type; };
-template<> struct integer_type<4, false> { typedef amqp_uint type; };
-template<> struct integer_type<8, false> { typedef amqp_ulong type; };
+template<> struct integer_type<1, true> { typedef int8_t type; };
+template<> struct integer_type<2, true> { typedef int16_t type; };
+template<> struct integer_type<4, true> { typedef int32_t type; };
+template<> struct integer_type<8, true> { typedef int64_t type; };
+template<> struct integer_type<1, false> { typedef uint8_t type; };
+template<> struct integer_type<2, false> { typedef uint16_t type; };
+template<> struct integer_type<4, false> { typedef uint32_t type; };
+template<> struct integer_type<8, false> { typedef uint64_t type; };
 
 // True if T is an integer type that does not have a type_id mapping.
 template <class T> struct is_unknown_integer {

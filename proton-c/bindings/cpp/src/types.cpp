@@ -71,13 +71,6 @@ bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_
 std::ostream& operator<<(std::ostream& o, type_id t) { return o << type_name(t); }
 
 
-pn_bytes_t pn_bytes(const std::string& s) {
-    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
-    return b;
-}
-
-std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
-
 start::start(type_id t, type_id e, bool d, size_t s) : type(t), element(e), is_described(d), size(s) {}
 start start::array(type_id element, bool described) { return start(ARRAY, element, described); }
 start start::list() { return start(LIST); }

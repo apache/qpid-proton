@@ -18,6 +18,7 @@
  */
 
 #include <proton/value.hpp>
+#include <proton/symbol.hpp>
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -108,7 +109,7 @@ void mixed_containers() {
 
     std::vector<proton::value> l;
     l.push_back(proton::value(42));
-    l.push_back(proton::value(proton::amqp_string("foo")));
+    l.push_back(proton::value(std::string("foo")));
     // By default, a sequence of proton::value is treated as an AMQP list.
     v = l;
     print(v);
@@ -118,8 +119,7 @@ void mixed_containers() {
 
     std::map<proton::value, proton::value> m;
     m[proton::value("five")] = proton::value(5);
-    m[proton::value(4)] = proton::value("four");
-    v = m;
+    m[proton::value(4)] = proton::value("four"); v = m;
     print(v);
     std::map<proton::value, proton::value> m2;
     v.get(m2);
@@ -133,20 +133,20 @@ void insert_stream_operators() {
 
     // Create an array of INT with values [1, 2, 3]
     v.encode() << proton::start::array(proton::INT)
-                << proton::amqp_int(1) << proton::amqp_int(2) << proton::amqp_int(3)
+                << int32_t(1) << int32_t(2) << int32_t(3)
                 << proton::finish();
     print(v);
 
     // Create a mixed-type list of the values [42, false, "x"].
     v.encode() << proton::start::list()
-                << proton::amqp_int(42) << false << proton::amqp_symbol("x")
+                << int32_t(42) << false << proton::symbol("x")
                 << proton::finish();
     print(v);
 
     // Create a map { "k1":42, "k2": false }
     v.encode() << proton::start::map()
-                << "k1" << proton::amqp_int(42)
-                << proton::amqp_symbol("k2") << false
+                << "k1" << int32_t(42)
+                << proton::symbol("k2") << false
                 << proton::finish();
     print(v);
 }

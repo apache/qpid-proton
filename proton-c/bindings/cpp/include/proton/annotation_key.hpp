@@ -22,16 +22,16 @@
 
 #include "proton/types.hpp"
 #include "proton/scalar.hpp"
+#include "proton/symbol.hpp"
 
 namespace proton {
-    
+
 class encoder;
 class decoder;
 
 /// A key for use with AMQP annotation maps.
 ///
-/// An annotation_key can contain either a uint64_t or a
-/// proton::amqp::amqp_symbol.
+/// An annotation_key can contain either a uint64_t or a proton::symbol.
 class annotation_key : public restricted_scalar {
   public:
     /// Create an empty key.
@@ -43,11 +43,9 @@ class annotation_key : public restricted_scalar {
     ///
     /// @{
     annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
-    annotation_key& operator=(const amqp_symbol& x) { scalar_ = x; return *this; }
-    /// `std::string` is encoded as proton::amqp::amqp_symbol.
-    annotation_key& operator=(const std::string& x) { scalar_ = amqp_symbol(x); return *this; }
-    /// `char*` is encoded as proton::amqp::amqp_symbol.
-    annotation_key& operator=(const char *x) { scalar_ = amqp_symbol(x); return *this; }
+    annotation_key& operator=(const symbol& x) { scalar_ = x; return *this; }
+    /// `char*` is encoded as proton::amqp::symbol.
+    annotation_key& operator=(const char *x) { scalar_ = symbol(x); return *this; }
     /// @}
 
     /// A constructor that converts from any type that we can assign
@@ -58,7 +56,7 @@ class annotation_key : public restricted_scalar {
     ///
     /// @{
     void get(uint64_t& x) const { scalar_.get(x); }
-    void get(amqp_symbol& x) const { scalar_.get(x); }
+    void get(symbol& x) const { scalar_.get(x); }
     /// @}
 
     /// Return the value as type T.

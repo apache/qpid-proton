@@ -28,15 +28,19 @@
 
 namespace proton {
 
+class binary;
 class decimal128;
 class decimal32;
 class decimal64;
 class decoder;
 class encoder;
+class symbol;
 class timestamp;
 class uuid;
 
 /// A holder for an instance of any scalar AMQP type.
+/// The conversions for scalar types are documented in proton::amqp.
+///
 class scalar : private comparable<scalar> {
   public:
     /// Create an empty scalar.
@@ -56,7 +60,8 @@ class scalar : private comparable<scalar> {
 
     /// @name Assignment operators
     ///
-    /// Assign a C++ value and deduce the AMQP type().
+    /// Assign a C++ value as the corresponding AMQP type.
+    /// See proton::amqp for the list of type correspondences.
     ///
     /// @{
     PN_CPP_EXTERN scalar& operator=(bool);
@@ -76,11 +81,10 @@ class scalar : private comparable<scalar> {
     PN_CPP_EXTERN scalar& operator=(const decimal64&);
     PN_CPP_EXTERN scalar& operator=(const decimal128&);
     PN_CPP_EXTERN scalar& operator=(const uuid&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_string&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_symbol&);
-    PN_CPP_EXTERN scalar& operator=(const amqp_binary&);
-    PN_CPP_EXTERN scalar& operator=(const std::string& s); ///< Treated as an AMQP string
-    PN_CPP_EXTERN scalar& operator=(const char* s);        ///< Treated as an AMQP string
+    PN_CPP_EXTERN scalar& operator=(const std::string&);
+    PN_CPP_EXTERN scalar& operator=(const symbol&);
+    PN_CPP_EXTERN scalar& operator=(const binary&);
+    PN_CPP_EXTERN scalar& operator=(const char* s); ///< Treated as an AMQP string
     /// @}
 
     /// Create a scalar from any type that we can assign from.
@@ -109,10 +113,9 @@ class scalar : private comparable<scalar> {
     PN_CPP_EXTERN void get(decimal64&) const;
     PN_CPP_EXTERN void get(decimal128&) const;
     PN_CPP_EXTERN void get(uuid&) const;
-    PN_CPP_EXTERN void get(amqp_string&) const;
-    PN_CPP_EXTERN void get(amqp_symbol&) const;
-    PN_CPP_EXTERN void get(amqp_binary&) const;
-    PN_CPP_EXTERN void get(std::string&) const; ///< Treated as an AMQP string
+    PN_CPP_EXTERN void get(symbol&) const;
+    PN_CPP_EXTERN void get(binary&) const;
+    PN_CPP_EXTERN void get(std::string&) const;
     /// @}
 
     /// get<T>() is like get(T&) but returns the value.
@@ -132,7 +135,7 @@ class scalar : private comparable<scalar> {
     /// @}
 
     /// @cond INTERNAL
-    
+
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const scalar&);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
   friend PN_CPP_EXTERN decoder operator>>(decoder, scalar&);
@@ -145,8 +148,9 @@ class scalar : private comparable<scalar> {
   friend PN_CPP_EXTERN bool operator<(const scalar& x, const scalar& y);
 
     /// @endcond
-    
+
   private:
+    scalar(const pn_atom_t& a);
     void ok(pn_type_t) const;
     void set(const std::string&, pn_type_t);
     void set(const pn_atom_t&);
@@ -154,11 +158,10 @@ class scalar : private comparable<scalar> {
     std::string str_;           // Owner of string-like data.
 
   friend class message;
+  friend class restricted_scalar;
 };
 
 /// @cond INTERNAL
-/// XXX should it be public?
-    
 /// Base class for restricted scalar types.
 class restricted_scalar : private comparable<restricted_scalar> {
   public:
@@ -180,13 +183,16 @@ class restricted_scalar : private comparable<restricted_scalar> {
 
   protected:
     restricted_scalar() {}
+    restricted_scalar(const pn_atom_t& a) : scalar_(a) {}
+
     scalar scalar_;
+
+  friend class message;
 
     friend std::ostream& operator<<(std::ostream& o, const restricted_scalar& x)  { return o << x.scalar_; }
     friend bool operator<(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ < y.scalar_; }
     friend bool operator==(const restricted_scalar& x, const restricted_scalar& y)  { return x.scalar_ == y.scalar_; }
 };
-
 /// @endcond
 
 }

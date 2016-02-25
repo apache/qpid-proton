@@ -22,8 +22,6 @@
 #include <proton/byte_array.hpp>
 #include <proton/export.hpp>
 
-#include <proton/types.h>        // FIXME aconway 2016-02-18: cleanup
-
 #include <string>
 #include <iosfwd>
 

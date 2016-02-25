@@ -19,7 +19,11 @@
 
 #include "test_bits.hpp"
 
+#include <proton/amqp.hpp>
+#include <proton/binary.hpp>
+#include <proton/symbol.hpp>
 #include <proton/value.hpp>
+
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -64,8 +68,8 @@ void map_test() {
     ASSERT_EQUAL("{\"a\"=1, \"b\"=2, \"c\"=3}",  str(v));
     std::map<value, value> mv;
     v.get(mv);
-    ASSERT_EQUAL(mv[value("a")], value(amqp_int(1)));
-    mv[value("b")] = amqp_binary("xyz");
+    ASSERT_EQUAL(mv[value("a")], value(amqp::int_type(1)));
+    mv[value("b")] = amqp::binary_type("xyz");
     mv.erase(value("c"));
     v = value(mv);
     ASSERT_EQUAL("{\"a\"=1, \"b\"=b\"xyz\"}",  str(v));
@@ -74,26 +78,26 @@ void map_test() {
     v.get_pairs(vec);
     ASSERT_EQUAL(2, vec.size());
     ASSERT_EQUAL(std::make_pair(std::string("a"), value(1)), vec[0]);
-    ASSERT_EQUAL(std::make_pair(std::string("b"), value(amqp_binary("xyz"))), vec[1]);
+    ASSERT_EQUAL(std::make_pair(std::string("b"), value(amqp::binary_type("xyz"))), vec[1]);
 }
 
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, value_test(false, BOOLEAN, "false", true));
-    RUN_TEST(failed, value_test(amqp_ubyte(42), UBYTE, "42", amqp_ubyte(50)));
-    RUN_TEST(failed, value_test(amqp_byte(-42), BYTE, "-42", amqp_byte(-40)));
-    RUN_TEST(failed, value_test(amqp_ushort(4242), USHORT, "4242", amqp_ushort(5252)));
-    RUN_TEST(failed, value_test(amqp_short(-4242), SHORT, "-4242", amqp_short(3)));
-    RUN_TEST(failed, value_test(amqp_uint(4242), UINT, "4242", amqp_uint(5252)));
-    RUN_TEST(failed, value_test(amqp_int(-4242), INT, "-4242", amqp_int(3)));
-    RUN_TEST(failed, value_test(amqp_ulong(4242), ULONG, "4242", amqp_ulong(5252)));
-    RUN_TEST(failed, value_test(amqp_long(-4242), LONG, "-4242", amqp_long(3)));
-    RUN_TEST(failed, value_test(amqp_float(1.234), FLOAT, "1.234", amqp_float(2.345)));
-    RUN_TEST(failed, value_test(amqp_double(11.2233), DOUBLE, "11.2233", amqp_double(12)));
-    RUN_TEST(failed, value_test(amqp_string("aaa"), STRING, "aaa", amqp_string("aaaa")));
+    RUN_TEST(failed, value_test(amqp::ubyte_type(42), UBYTE, "42", amqp::ubyte_type(50)));
+    RUN_TEST(failed, value_test(amqp::byte_type(-42), BYTE, "-42", amqp::byte_type(-40)));
+    RUN_TEST(failed, value_test(amqp::ushort_type(4242), USHORT, "4242", amqp::ushort_type(5252)));
+    RUN_TEST(failed, value_test(amqp::short_type(-4242), SHORT, "-4242", amqp::short_type(3)));
+    RUN_TEST(failed, value_test(amqp::uint_type(4242), UINT, "4242", amqp::uint_type(5252)));
+    RUN_TEST(failed, value_test(amqp::int_type(-4242), INT, "-4242", amqp::int_type(3)));
+    RUN_TEST(failed, value_test(amqp::ulong_type(4242), ULONG, "4242", amqp::ulong_type(5252)));
+    RUN_TEST(failed, value_test(amqp::long_type(-4242), LONG, "-4242", amqp::long_type(3)));
+    RUN_TEST(failed, value_test(amqp::float_type(1.234), FLOAT, "1.234", amqp::float_type(2.345)));
+    RUN_TEST(failed, value_test(amqp::double_type(11.2233), DOUBLE, "11.2233", amqp::double_type(12)));
+    RUN_TEST(failed, value_test(amqp::string_type("aaa"), STRING, "aaa", amqp::string_type("aaaa")));
     RUN_TEST(failed, value_test(std::string("xxx"), STRING, "xxx", std::string("yyy")));
-    RUN_TEST(failed, value_test(amqp_symbol("aaa"), SYMBOL, "aaa", amqp_symbol("aaaa")));
-    RUN_TEST(failed, value_test(amqp_binary("aaa"), BINARY, "b\"aaa\"", amqp_binary("aaaa")));
+    RUN_TEST(failed, value_test(amqp::symbol_type("aaa"), SYMBOL, "aaa", amqp::symbol_type("aaaa")));
+    RUN_TEST(failed, value_test(amqp::binary_type("aaa"), BINARY, "b\"aaa\"", amqp::binary_type("aaaa")));
     RUN_TEST(failed, map_test());
     return failed;
 }

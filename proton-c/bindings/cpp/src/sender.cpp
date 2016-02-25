@@ -38,11 +38,11 @@ namespace proton {
 
 namespace {
 // TODO: revisit if thread safety required
-amqp_ulong tag_counter = 0;
+uint64_t tag_counter = 0;
 }
 
 delivery sender::send(const message &message) {
-    amqp_ulong id = ++tag_counter;
+    uint64_t id = ++tag_counter;
     pn_delivery_t *dlv =
         pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
     std::vector<char> buf;

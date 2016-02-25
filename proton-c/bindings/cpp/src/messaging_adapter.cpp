@@ -133,7 +133,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
     } else {
         // sender
         if (dlv.updated()) {
-            amqp_ulong rstate = dlv.remote_state();
+            uint64_t rstate = dlv.remote_state();
             if (rstate == PN_ACCEPTED) {
                 messaging_event mevent(messaging_event::DELIVERY_ACCEPT, pe);
                 delegate_.on_delivery_accept(mevent);

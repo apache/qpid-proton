@@ -23,6 +23,7 @@
 #include "proton/value.hpp"
 #include "proton/message_id.hpp"
 #include "proton/annotation_key.hpp"
+#include "proton/amqp.hpp"
 #include "proton_bits.hpp"
 
 #include "types_internal.hpp"
@@ -195,12 +196,6 @@ decoder operator>>(decoder d, annotation_key& x) {
     };
 }
 
-decoder operator>>(decoder d, amqp_null) {
-    save_state ss(d.pn_object());
-    bad_type(NULL_TYPE, pre_get(d.pn_object()));
-    return d;
-}
-
 decoder operator>>(decoder d, scalar& x) {
     save_state ss(d.pn_object());
     type_id got = pre_get(d.pn_object());
@@ -211,12 +206,12 @@ decoder operator>>(decoder d, scalar& x) {
     return d;
 }
 
-decoder operator>>(decoder d, amqp_boolean &x) {
+decoder operator>>(decoder d, amqp::boolean_type &x) {
     extract(d.pn_object(), x, pn_data_get_bool);
     return d;
 }
 
-decoder operator>>(decoder d0, amqp_ubyte &x) {
+decoder operator>>(decoder d0, amqp::ubyte_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -227,7 +222,7 @@ decoder operator>>(decoder d0, amqp_ubyte &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_byte &x) {
+decoder operator>>(decoder d0, amqp::byte_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -238,7 +233,7 @@ decoder operator>>(decoder d0, amqp_byte &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_ushort &x) {
+decoder operator>>(decoder d0, amqp::ushort_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -250,7 +245,7 @@ decoder operator>>(decoder d0, amqp_ushort &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_short &x) {
+decoder operator>>(decoder d0, amqp::short_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -262,7 +257,7 @@ decoder operator>>(decoder d0, amqp_short &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_uint &x) {
+decoder operator>>(decoder d0, amqp::uint_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -275,7 +270,7 @@ decoder operator>>(decoder d0, amqp_uint &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_int &x) {
+decoder operator>>(decoder d0, amqp::int_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -288,7 +283,7 @@ decoder operator>>(decoder d0, amqp_int &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_ulong &x) {
+decoder operator>>(decoder d0, amqp::ulong_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -302,7 +297,7 @@ decoder operator>>(decoder d0, amqp_ulong &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_long &x) {
+decoder operator>>(decoder d0, amqp::long_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -316,7 +311,7 @@ decoder operator>>(decoder d0, amqp_long &x) {
     return d0;
 }
 
-decoder operator>>(decoder d, amqp_char &x) {
+decoder operator>>(decoder d, amqp::char_type &x) {
     extract(d.pn_object(), x, pn_data_get_char);
     return d;
 }
@@ -326,7 +321,7 @@ decoder operator>>(decoder d, timestamp &x) {
     return d;
 }
 
-decoder operator>>(decoder d0, amqp_float &x) {
+decoder operator>>(decoder d0, amqp::float_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
@@ -338,7 +333,7 @@ decoder operator>>(decoder d0, amqp_float &x) {
     return d0;
 }
 
-decoder operator>>(decoder d0, amqp_double &x) {
+decoder operator>>(decoder d0, amqp::double_type &x) {
     pn_data_t* d = d0.pn_object();
     save_state ss(d);
     switch (pre_get(d)) {

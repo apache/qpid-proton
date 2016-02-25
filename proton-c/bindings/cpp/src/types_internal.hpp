@@ -43,6 +43,15 @@ make_conversion_error(type_id want, type_id got, const std::string& msg=std::str
     return conversion_error(s.str());
 }
 
+/// Convert std::string to pn_bytes_t
+inline pn_bytes_t pn_bytes(const std::string& s) {
+    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
+    return b;
+}
+
+/// Convert pn_bytes_t to str
+inline std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
+
 }
 
 #endif // CODEC_HPP

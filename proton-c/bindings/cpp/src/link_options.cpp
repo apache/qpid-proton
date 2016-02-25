@@ -18,6 +18,8 @@
  * under the License.
  *
  */
+
+#include "proton/binary.hpp"
 #include "proton/link.hpp"
 #include "proton/link_options.hpp"
 #include "proton/handler.hpp"
@@ -109,10 +111,10 @@ class link_options::impl {
                         encoder enc = t.node_properties().encode();
                         enc << start::map();
                         if (dm.size())
-                            enc << amqp_symbol("supported-dist-modes") << amqp_string(dm);
+                            enc << symbol("supported-dist-modes") << std::string(dm);
                         if (lp.size())
-                            enc << amqp_symbol("lifetime-policy") << start::described()
-                                << amqp_symbol(lp) << start::list() << finish();
+                            enc << symbol("lifetime-policy") << start::described()
+                                << symbol(lp) << start::list() << finish();
                     }
                 }
             }
@@ -125,8 +127,8 @@ class link_options::impl {
                 }
                 if (selector.set && selector.value.size()) {
                     encoder enc = l.local_source().filter().encode();
-                    enc << start::map() << amqp_symbol("selector") << start::described()
-                        << amqp_symbol("apache.org:selector-filter:string") << amqp_binary(selector.value) << finish();
+                    enc << start::map() << symbol("selector") << start::described()
+                        << symbol("apache.org:selector-filter:string") << binary(selector.value) << finish();
                 }
             }
         }

@@ -69,52 +69,13 @@ template <class T, type_id A> const type_id cref<T, A>::type = A;
 
 /**
  * Indicate the desired AMQP type to use when encoding T.
- * For example to encode a vector as a list:
- *
- *     std::vector<amqp_int> v;
- *     encoder << as<LIST>(v);
  */
 template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
 
-/**
- * Stream-like encoder from C++ values to AMQP values.
- *
- * types.hpp defines a C++ type for each AMQP type. For simple types they are
- * just typedefs for corresponding native C++ types. These types encode as the
- * corresponding AMQP type.
- *
- * There are some special case conversions:
- *
- * - Integer types other than those mentioned in types.hpp encode as the AMQP
- *   integer type of matching size and signedness.
- * - std::string or char* insert as AMQP STRING.
- *
- * For example to encode an AMQP INT, BOOLEAN and STRING these are equivalent:
- *
- *     enc << proton::amqp_int(1) << proton::amqp_boolean(true) << proton::amqp_string("foo");
- *     enc << int32_t(1) << true << "foo";
- *
- * You can force the encoding using the `proton::as` template function, for example:
- *
- *     uint64_t i = 100;
- *     enc << as<proton::SHORT>(i);
- *
- * C++ standard containers can be inserted. By default:
- *
- * - std::map and std::unordered_map encode as AMQP MAP
- * - std::vector, std::deque, std::list, std::array or std::forward_list encode as an AMQP ARRAY.
- * - std::vector<proton::value> etc. encode as AMQP LIST
- *
- * Again you can force the encoding using proton::as<LIST>() or proton::as<ARRAY>()
- *
- * Note that you can encode a sequence of pairs as a map, which allows you to control the
- * encoded order if that is important:
- *
- *     std::vector<std::pair<T1, T2> > v;
- *     enc << proton::as<MAP>(v);
- *
- * You can also insert containers element-by-element, see operator<<(encoder&, const start&)
- */
+/// Stream-like encoder from AMQP bytes to C++ values.
+///
+/// Internal use only, see proton::value, proton::scalar and proton::amqp
+/// for the recommended ways to manage AMQP data.
 class encoder : public object<pn_data_t> {
   public:
     encoder(pn_data_t* e) : object<pn_data_t>(e) {}
@@ -143,27 +104,26 @@ class encoder : public object<pn_data_t> {
     /** @name Insert simple types.
      *@{
      */
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_null);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_boolean);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ubyte);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_byte);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ushort);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_short);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_uint);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_int);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_char);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_ulong);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_long);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, bool);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, uint8_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, int8_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, uint16_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, int16_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, uint32_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, int32_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, wchar_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, uint64_t);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, int64_t);
   friend PN_CPP_EXTERN encoder operator<<(encoder, timestamp);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_float);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_double);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, float);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, double);
   friend PN_CPP_EXTERN encoder operator<<(encoder, decimal32);
   friend PN_CPP_EXTERN encoder operator<<(encoder, decimal64);
   friend PN_CPP_EXTERN encoder operator<<(encoder, decimal128);
   friend PN_CPP_EXTERN encoder operator<<(encoder, uuid);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_string);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_symbol);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, amqp_binary);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, std::string);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, symbol);
+  friend PN_CPP_EXTERN encoder operator<<(encoder, binary);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
   friend PN_CPP_EXTERN encoder operator<<(encoder, const value&);
@@ -172,13 +132,6 @@ class encoder : public object<pn_data_t> {
 
     /**
      * Start a container type.
-     *
-     * Use one of the static functions start::array(), start::list(),
-     * start::map() or start::described() to create an appropriate start value
-     * and insert it into the encoder, followed by the contained elements.  For
-     * example:
-     *
-     *      enc << start::list() << amqp_int(1) << amqp_symbol("two") << 3.0 << finish();
      */
   friend PN_CPP_EXTERN encoder operator<<(encoder, const start&);
 
@@ -197,10 +150,9 @@ class encoder : public object<pn_data_t> {
     ///@}
 };
 
-// Need to disambiguate char* conversion to bool and std::string as amqp_string.
-inline encoder operator<<(encoder e, char* s) { return e << amqp_string(s); }
-inline encoder operator<<(encoder e, const char* s) { return e << amqp_string(s); }
-inline encoder operator<<(encoder e, const std::string& s) { return e << amqp_string(s); }
+// Treat char* as string
+inline encoder operator<<(encoder e, char* s) { return e << std::string(s); }
+inline encoder operator<<(encoder e, const char* s) { return e << std::string(s); }
 
 // operator << for integer types that are not covered by the standard overrides.
 template <class T>

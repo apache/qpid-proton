@@ -32,6 +32,9 @@ namespace proton {
 /// A proton::value can hold any AMQP data value, simple or compound.
 /// It has assignment and conversion operators to convert its contents
 /// easily to and from native C++ types.
+///
+/// The conversions for scalar types are documented in proton::amqp.
+///
 class value : private comparable<value> {
   public:
     /// Create an empty value.
