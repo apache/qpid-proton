@@ -76,10 +76,12 @@ class message_id : public restricted_scalar {
     friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
     friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
 
+    /// @cond INTERNAL
   private:
     message_id(const pn_atom_t& a): restricted_scalar(a) {}
 
   friend class message;
+    /// @endcond
 };
 
 }

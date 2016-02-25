@@ -41,6 +41,9 @@ class delivery : public object<pn_delivery_t> {
   public:
     delivery() : object<pn_delivery_t>(0) {}
 
+    /// Return the link for this delivery
+    PN_CPP_EXTERN class link link() const;
+
     /// Delivery state values.
     enum state {
         NONE = 0,               ///< Unknown state

@@ -20,10 +20,13 @@
  */
 
 #include "proton/delivery.hpp"
+#include <proton/link.hpp>
+
 #include "proton/delivery.h"
 
 namespace proton {
 
+link delivery::link() const { return pn_delivery_link(pn_object()); }
 bool delivery::settled() const { return pn_delivery_settled(pn_object()); }
 
 void delivery::settle() { pn_delivery_settle(pn_object()); }

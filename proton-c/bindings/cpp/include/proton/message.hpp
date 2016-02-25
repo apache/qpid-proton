@@ -102,15 +102,6 @@ class message {
     /// Decode from string data into the message.
     PN_CPP_EXTERN void decode(const std::vector<char> &bytes);
 
-    /// @cond INTERNAL
-    /// XXX should a delivery know its own link already?
-    /// XXX also, determine the use case for this
-    /// XXX decision - 1) lose the link arg, 2) make private
-    ///
-    /// Decode the message corresponding to a delivery from a link.
-    PN_CPP_EXTERN void decode(proton::link, proton::delivery);
-    /// @endcond
-
     /// @}
 
     /// @name Routing
@@ -266,6 +257,7 @@ class message {
 
     /// @}
 
+    /// @cond INTERNAL
   private:
     pn_message_t *pn_msg() const;
 
@@ -275,12 +267,15 @@ class message {
     mutable annotation_map message_annotations_;
     mutable annotation_map delivery_annotations_;
 
-    /// @cond INTERNAL
-    /// XXX settle necessity (there were some other options)
-    /// XXX decision - declare this separately; it is part of the api
-    friend PN_CPP_EXTERN void swap(message&, message&);
+    /// Decode the message corresponding to a delivery from a link.
+    void decode(proton::delivery);
+
+    friend void swap(message&, message&);
+    friend class messaging_adapter;
     /// @endcond
 };
+
+PN_CPP_EXTERN void swap(message&, message&);
 
 }
 

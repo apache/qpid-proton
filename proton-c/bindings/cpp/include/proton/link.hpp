@@ -42,10 +42,12 @@ class condition;
 /// class for sender and receiver.
 class
 PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
-  public:
     /// @cond INTERNAL
-    link(pn_link_t* l=0) : object<pn_link_t>(l) {}
+    link(pn_link_t* l) : object<pn_link_t>(l) {}
     /// @endcond
+
+  public:
+    link() : object<pn_link_t>(0) {}
 
     // Endpoint behaviours
 
@@ -120,34 +122,34 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-    /// @cond INTERNAL
-    /// XXX settle open questions - remove from API
-
-    /// Set a custom handler for this link.
-    PN_CPP_EXTERN void handler(proton_handler &);
-
-    /// Unset any custom handler.
-    PN_CPP_EXTERN void detach_handler();
-
     /// XXX local versus remote, mutability
-    /// XXX - remove setters
     /// XXX - local_sender_settle_mode and local_receiver_settle_mode
     PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
-    PN_CPP_EXTERN void sender_settle_mode(link_options::sender_settle_mode);
     PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
-    PN_CPP_EXTERN void receiver_settle_mode(link_options::receiver_settle_mode);
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
 
-    /// @endcond
-  private:
-    PN_CPP_EXTERN ssize_t recv(char* buffer, size_t size);
-    PN_CPP_EXTERN bool advance();
-    PN_CPP_EXTERN link next(endpoint::state) const;
-
     /// @cond INTERNAL
+  private:
+    // Used by link_options
+    void handler(proton_handler &);
+    void detach_handler();
+    void sender_settle_mode(link_options::sender_settle_mode);
+    void receiver_settle_mode(link_options::receiver_settle_mode);
+    // Used by message to decode message from a delivery
+    ssize_t recv(char* buffer, size_t size);
+    bool advance();
+    // Used by link_iterator
+    link next(endpoint::state) const;
+
+    friend class connection;
+    friend class delivery;
+    friend class receiver;
+    friend class sender;
     friend class message;
+    friend class proton_event;
     friend class link_iterator;
+    friend class link_options;
     /// @endcond
 };
 
