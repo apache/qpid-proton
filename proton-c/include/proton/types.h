@@ -47,7 +47,13 @@ typedef int32_t  pn_sequence_t;
 typedef uint32_t pn_millis_t;
 #define PN_MILLIS_MAX (~0U)
 typedef uint32_t pn_seconds_t;
+
 typedef int64_t  pn_timestamp_t;
+
+/** Return a timestamp for the time now. */
+PN_EXTERN pn_timestamp_t pn_timestamp_now(void);
+
+
 typedef uint32_t pn_char_t;
 typedef uint32_t pn_decimal32_t;
 typedef uint64_t pn_decimal64_t;

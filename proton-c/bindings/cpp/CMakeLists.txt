@@ -64,6 +64,7 @@ set(qpid-proton-cpp-source
   src/ssl_domain.cpp
   src/task.cpp
   src/terminus.cpp
+  src/timestamp.cpp
   src/transport.cpp
   src/types.cpp
   src/url.cpp

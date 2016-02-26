@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,20 +15,13 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 
-#include "platform.h"
+#include <proton/timestamp.hpp>
 #include <proton/types.h>
-#include <stdlib.h>
-#include <string.h>
 
-pn_bytes_t pn_bytes(size_t size, const char *start)
-{
-  pn_bytes_t bytes = {size, start};
-  return bytes;
+namespace proton {
+timestamp timestamp::now() {
+    return timestamp(pn_timestamp_now());
 }
-
-pn_timestamp_t pn_timestamp_now() {
-  return pn_i_now();
 }

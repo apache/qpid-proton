@@ -25,13 +25,16 @@ namespace proton {
 /// A timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
 class timestamp : private comparable<timestamp> {
   public:
-    explicit timestamp(int64_t ms = 0) : ms_(ms) {}
-    timestamp& operator=(int64_t ms) { ms_ = ms; return *this; }
-    int64_t milliseconds() const { return ms_; }
-    int64_t ms() const { return ms_; }
+    typedef int64_t numeric_type;
+    PN_CPP_EXTERN static timestamp now();
+
+    explicit timestamp(numeric_type ms = 0) : ms_(ms) {}
+    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }
+    numeric_type milliseconds() const { return ms_; }
+    numeric_type ms() const { return ms_; }
 
   private:
-    int64_t ms_;
+    numeric_type ms_;
 };
 
 inline bool operator==(timestamp x, timestamp y) { return x.ms() == y.ms(); }
