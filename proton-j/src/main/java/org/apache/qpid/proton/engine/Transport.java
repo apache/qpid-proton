@@ -188,12 +188,12 @@ public interface Transport extends Endpoint
     Sasl sasl() throws IllegalStateException;
 
     /**
-     * Wrap this transport's output and input to apply WebSocket wrap and unwrap respectively.
+     * Wrap this transport's output and input to apply WebSocket wrapBuffer and unwrapBuffer respectively.
      *
      * This method is expected to be called at most once. A subsequent invocation will return the same
      * {@link WebSocket} object, regardless of the parameters supplied.
      */
-    WebSocket webSocket(ExternalWebSocketHandler externalWebSocketHandler, Boolean isEnabled);
+    WebSocket webSocket();
 
     /**
      * Wrap this transport's output and input to apply SSL encryption and decryption respectively.

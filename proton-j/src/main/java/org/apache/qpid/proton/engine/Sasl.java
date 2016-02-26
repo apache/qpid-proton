@@ -165,6 +165,16 @@ public interface Sasl
     void plain(String username, String password);
 
     /**
+     * Configure the SASL layer to use the WebSocket
+     *
+     * A utility function to configure SASL layer to use
+     * WebSocket wrapBuffer/unwrapBuffer.
+     *
+     * @param webSocket WebSocketInpl for wrapBuffer/unwrapBuffer frames
+     */
+    void setWebSocket(WebSocket webSocket);
+
+    /**
      * Retrieve the outcome of SASL negotiation.
      */
     SaslOutcome getOutcome();

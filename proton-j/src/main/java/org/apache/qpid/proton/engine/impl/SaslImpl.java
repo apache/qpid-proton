@@ -43,6 +43,7 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
+import org.apache.qpid.proton.engine.WebSocket;
 
 public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>, SaslFrameHandler
 {
@@ -84,6 +85,8 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private Role _role;
     private boolean _allowSkip = true;
 
+    private WebSocket _webSocket = null;
+
     /**
      * @param maxFrameSize the size of the input and output buffers
      * returned by {@link SaslTransportWrapper#getInputBuffer()} and
@@ -121,7 +124,10 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
     private void writeSaslOutput()
     {
         process();
-        _frameWriter.readBytes(_outputBuffer);
+        ByteBuffer _tempBuffer = newWriteableBuffer(_outputBuffer.capacity());
+        _frameWriter.readBytes(_tempBuffer);
+        _tempBuffer.flip();
+        _webSocket.wrapBuffer(_tempBuffer, _outputBuffer);
 
         if(_logger.isLoggable(Level.FINER))
         {
@@ -450,6 +456,12 @@ public class SaslImpl implements Sasl, SaslFrameBody.SaslFrameBodyHandler<Void>,
         System.arraycopy(passwordBytes, 0, data, 2+usernameBytes.length, passwordBytes.length);
 
         setChallengeResponse(new Binary(data));
+    }
+
+    @Override
+    public void setWebSocket(WebSocket webSocket)
+    {
+        this._webSocket = (WebSocketImpl)webSocket;
     }
 
     @Override

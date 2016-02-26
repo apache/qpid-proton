@@ -25,6 +25,8 @@ import org.apache.qpid.proton.engine.impl.TransportInput;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
+import java.nio.ByteBuffer;
+
 /*
  * Provides interface for WebSocket
  */
@@ -44,8 +46,20 @@ public interface WebSocket
         PN_WS_FAILED
     }
 
-    TransportWrapper wrap(TransportInput inputProcessor, TransportOutput outputProcessor);
-    TransportWrapper unwrap(TransportInput inputProcessor, TransportOutput outputProcessor);
+
+    /**
+     * Add WebSocket frame to send the given buffer
+     *
+     * @return The WebSocket frame to send.
+     */
+    void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
+
+    /**
+     * Remove WebSocket frame from the given buffer
+     *
+     * @return The payload of the given WebSocket frame.
+     */
+    void unwrapBuffer(ByteBuffer buffer);
 
     /**
      * Access the current state of the layer.

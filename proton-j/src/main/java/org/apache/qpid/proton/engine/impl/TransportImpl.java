@@ -17,6 +17,7 @@
 
 package org.apache.qpid.proton.engine.impl;
 
+import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.newWriteableBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuffer;
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
@@ -48,7 +49,6 @@ import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
-import org.apache.qpid.proton.engine.ExternalWebSocketHandler;
 import org.apache.qpid.proton.engine.ProtonJTransport;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Ssl;
@@ -110,7 +110,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _closeReceived;
     private Open _open;
-    private WebSocketImpl _webSocket;
+    private WebSocketImpl _webSocketImpl;
     private SaslImpl _sasl;
     private SslImpl _ssl;
     private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
@@ -335,7 +335,11 @@ public class TransportImpl extends EndpointImpl
         processEnd();
         processClose();
 
-        _frameWriter.readBytes(outputBuffer);
+
+        ByteBuffer _tempBuffer = newWriteableBuffer(outputBuffer.capacity());
+        _frameWriter.readBytes(_tempBuffer);
+        _tempBuffer.flip();
+        _webSocketImpl.wrapBuffer(_tempBuffer, outputBuffer);
 
         return _isCloseSent || _head_closed;
     }
@@ -361,21 +365,18 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public WebSocket webSocket(ExternalWebSocketHandler externalWebSocket, Boolean isEnabled)
+    public WebSocket webSocket()
     {
-        if (_webSocket == null)
+        if (_webSocketImpl == null)
         {
             init();
-            _webSocket = new WebSocketImpl(this, _remoteMaxFrameSize, externalWebSocket, isEnabled);
-            TransportWrapper transportWrapper = _webSocket.wrap(_inputProcessor, _outputProcessor);
+            _webSocketImpl = new WebSocketImpl(_remoteMaxFrameSize);
+            _sasl.setWebSocket(_webSocketImpl);
+            TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
         }
-        else
-        {
-            _webSocket.setEnabled(isEnabled);
-        }
-        return _webSocket;
+        return _webSocketImpl;
     }
 
     /**
