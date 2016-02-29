@@ -39,9 +39,9 @@ class url;
 class handler;
 class task;
 
-class reactor : public object<pn_reactor_t> {
+class reactor : public internal::object<pn_reactor_t> {
   public:
-    reactor(pn_reactor_t* r = 0) : object<pn_reactor_t>(r) {}
+    reactor(pn_reactor_t* r = 0) : internal::object<pn_reactor_t>(r) {}
 
     /** Create a new reactor. */
     PN_CPP_EXTERN static reactor create();

@@ -39,9 +39,9 @@ class data;
 /// Holds a sequence of AMQP values, allows inserting and extracting
 /// via encoder() and decoder().  Cannot be directly instantiated, use
 /// `value`.
-class data : public object<pn_data_t> {
+class data : public internal::object<pn_data_t> {
   public:
-    data(pn_data_t* d=0) : object<pn_data_t>(d) {}
+    data(pn_data_t* d=0) : internal::object<pn_data_t>(d) {}
 
     PN_CPP_EXTERN static data create();
 
@@ -93,7 +93,7 @@ class data : public object<pn_data_t> {
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
   friend class value;
   private:
-    data(pn_ptr<pn_data_t> d) : object<pn_data_t>(d) {}
+    data(internal::pn_ptr<pn_data_t> d) : internal::object<pn_data_t>(d) {}
     class decoder decoder() const { return const_cast<data*>(this)->decoder(); }
 };
 

@@ -95,7 +95,7 @@ class proton_handler
     std::vector<proton_handler*> children_;
     typedef std::vector<proton_handler*>::iterator iterator;
     friend class proton_event;
-    pn_ptr<pn_handler_t> pn_handler_;
+    internal::pn_ptr<pn_handler_t> pn_handler_;
     friend class container_impl;
 };
 

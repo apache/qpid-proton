@@ -41,13 +41,13 @@ class condition;
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
 class
-PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
+PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint {
     /// @cond INTERNAL
-    link(pn_link_t* l) : object<pn_link_t>(l) {}
+    link(pn_link_t* l) : internal::object<pn_link_t>(l) {}
     /// @endcond
 
   public:
-    link() : object<pn_link_t>(0) {}
+    link() : internal::object<pn_link_t>(0) {}
 
     // Endpoint behaviours
 

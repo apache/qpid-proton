@@ -65,7 +65,7 @@ class container_impl
 
     void configure_server_connection(connection &c);
     task schedule(int delay, proton_handler *h);
-    pn_ptr<pn_handler_t> cpp_handler(proton_handler *h);
+    internal::pn_ptr<pn_handler_t> cpp_handler(proton_handler *h);
 
     std::string next_link_name();
 

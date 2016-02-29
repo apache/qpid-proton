@@ -39,13 +39,13 @@ class handler;
 
 /// A connection to a remote AMQP peer.
 class
-PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint {
+PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, public endpoint {
     /// @cond INTERNAL
-    connection(pn_connection_t* c) : object<pn_connection_t>(c) {}
+    connection(pn_connection_t* c) : internal::object<pn_connection_t>(c) {}
     /// @endcond
 
   public:
-    connection() : object<pn_connection_t>(0) {}
+    connection() : internal::object<pn_connection_t>(0) {}
 
     /// Get the state of this connection.
     PN_CPP_EXTERN endpoint::state state() const;

@@ -28,6 +28,7 @@
 #include <memory>
 
 namespace proton {
+namespace internal {
 
 class pn_ptr_base {
   protected:
@@ -84,7 +85,7 @@ template <class T> class object : private comparable<object<T> > {
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 };
 
-}
+}}
 
 /// @endcond
 

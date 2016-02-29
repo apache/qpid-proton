@@ -33,13 +33,13 @@ namespace proton {
 /// A context for accepting inbound connections.
 ///
 /// @see container::listen
-class acceptor : public object<pn_acceptor_t> {
+class acceptor : public internal::object<pn_acceptor_t> {
     /// @cond INTERNAL
-    acceptor(pn_acceptor_t* a) : object<pn_acceptor_t>(a) {}
+    acceptor(pn_acceptor_t* a) : internal::object<pn_acceptor_t>(a) {}
     /// @endcond
 
   public:
-    acceptor() : object<pn_acceptor_t>(0) {}
+    acceptor() : internal::object<pn_acceptor_t>(0) {}
 
     /// Close the acceptor.
     PN_CPP_EXTERN void close();

@@ -33,13 +33,13 @@ namespace proton {
 /// A message transfer.  Every delivery exists within the context of a
 /// proton::link.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
-class delivery : public object<pn_delivery_t> {
+class delivery : public internal::object<pn_delivery_t> {
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d) : object<pn_delivery_t>(d) {}
+    delivery(pn_delivery_t* d) : internal::object<pn_delivery_t>(d) {}
     /// @endcond
 
   public:
-    delivery() : object<pn_delivery_t>(0) {}
+    delivery() : internal::object<pn_delivery_t>(0) {}
 
     /// Return the link for this delivery
     PN_CPP_EXTERN class link link() const;

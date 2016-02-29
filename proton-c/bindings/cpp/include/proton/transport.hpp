@@ -34,10 +34,9 @@ class connection;
 class condition;
 class sasl;
 
-/// A network layer supporting an AMQP connection.
-class transport : public object<pn_transport_t> {
+class transport : public internal::object<pn_transport_t> {
     /// @cond INTERNAL
-    transport(pn_transport_t* t) : object<pn_transport_t>(t) {}
+    transport(pn_transport_t* t) : internal::object<pn_transport_t>(t) {}
     /// @endcond 
 
   public:

@@ -76,9 +76,9 @@ template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(
 ///
 /// Internal use only, see proton::value, proton::scalar and proton::amqp
 /// for the recommended ways to manage AMQP data.
-class encoder : public object<pn_data_t> {
+class encoder : public internal::object<pn_data_t> {
   public:
-    encoder(pn_data_t* e) : object<pn_data_t>(e) {}
+    encoder(pn_data_t* e) : internal::object<pn_data_t>(e) {}
 
     /**
      * Encode the current values into buffer and update size to reflect the number of bytes encoded.

@@ -85,9 +85,9 @@ void connection_engine::container::options(const connection_options &opts) {
 }
 
 connection_engine::connection_engine(class handler &h, const connection_options& opts) {
-    connection_ = proton::connection(take_ownership(pn_connection()).get());
-    pn_ptr<pn_transport_t> transport = take_ownership(pn_transport());
-    pn_ptr<pn_collector_t> collector = take_ownership(pn_collector());
+    connection_ = proton::connection(internal::take_ownership(pn_connection()).get());
+    internal::pn_ptr<pn_transport_t> transport = internal::take_ownership(pn_transport());
+    internal::pn_ptr<pn_collector_t> collector = internal::take_ownership(pn_collector());
     if (!connection_ || !transport || !collector)
         throw proton::error("engine create");
     int err = pn_transport_bind(transport.get(), connection_.pn_object());
@@ -115,7 +115,7 @@ connection_engine::connection_engine(class handler &h, const connection_options&
 connection_engine::~connection_engine() {
     pn_transport_unbind(ctx_->transport);
     pn_transport_free(ctx_->transport);
-    pn_ptr<pn_connection_t> c(connection_.pn_object());
+    internal::pn_ptr<pn_connection_t> c(connection_.pn_object());
     connection_ = proton::connection();
     pn_connection_free(c.release());
     pn_collector_free(ctx_->collector);

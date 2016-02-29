@@ -40,11 +40,11 @@ class handler;
 
 /// A container of links.
 class
-PN_CPP_CLASS_EXTERN session : public object<pn_session_t>, public endpoint
+PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint
 {
   public:
     /// @cond INTERNAL
-    session(pn_session_t* s=0) : object<pn_session_t>(s) {}
+    session(pn_session_t* s=0) : internal::object<pn_session_t>(s) {}
     /// @endcond
 
     // Endpoint behaviours
