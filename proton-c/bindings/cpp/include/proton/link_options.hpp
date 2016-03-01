@@ -170,7 +170,7 @@ class link_options {
     proton_handler* handler() const;
 
     class impl;
-    pn_unique_ptr<impl> impl_;
+    internal::pn_unique_ptr<impl> impl_;
 
     friend class link;
     /// @endcond

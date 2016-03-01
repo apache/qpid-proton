@@ -57,7 +57,6 @@ bool connector::transport_configured() { return transport_configured_; }
 void connector::reconnect_timer(const class reconnect_timer &rt) {
     delete reconnect_timer_;
     reconnect_timer_ = new class reconnect_timer(rt);
-    reconnect_timer_->reactor_ = connection_.container().reactor();
 }
 
 void connector::connect() {
@@ -98,7 +97,7 @@ void connector::on_transport_closed(proton_event &e) {
         if (reconnect_timer_) {
             e.connection().transport().unbind();
             transport_configured_ = false;
-            int delay = reconnect_timer_->next_delay();
+            int delay = reconnect_timer_->next_delay(timestamp::now());
             if (delay >= 0) {
                 if (delay == 0) {
                     // log "Disconnected, reconnecting..."

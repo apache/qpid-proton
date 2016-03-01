@@ -24,6 +24,7 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
+#include "proton/duration.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/types.hpp"
@@ -143,7 +144,7 @@ class connection_options {
     class ssl_server_options &ssl_server_options();
 
     class impl;
-    pn_unique_ptr<impl> impl_;
+    internal::pn_unique_ptr<impl> impl_;
 
     friend class container_impl;
     friend class connector;

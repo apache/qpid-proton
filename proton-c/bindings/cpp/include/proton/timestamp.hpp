@@ -41,6 +41,7 @@ inline bool operator==(timestamp x, timestamp y) { return x.ms() == y.ms(); }
 inline bool operator<(timestamp x, timestamp y) { return x.ms() < y.ms(); }
 
 inline timestamp operator+(timestamp ts, duration d) { return timestamp(ts.ms() + d.ms()); }
+inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.ms() - t1.ms()); }
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
 
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, timestamp);

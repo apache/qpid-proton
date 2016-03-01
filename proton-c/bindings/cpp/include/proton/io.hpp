@@ -21,6 +21,7 @@
  */
 
 #include <proton/connection_engine.hpp>
+#include <proton/url.hpp>
 
 namespace proton {
 

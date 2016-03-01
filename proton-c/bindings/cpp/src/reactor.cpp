@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "proton/reactor.hpp"
+#include "reactor.hpp"
+
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/task.hpp"

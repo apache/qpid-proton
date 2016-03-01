@@ -21,6 +21,7 @@
 
 #include "contexts.hpp"
 #include "msg.hpp"
+#include "reactor.hpp"
 
 #include "proton/error.hpp"
 

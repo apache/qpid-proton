@@ -30,7 +30,7 @@
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/reactor.h"
-#include "proton/reactor.hpp"
+#include "reactor.hpp"
 #include "proton_handler.hpp"
 
 #include <string>
@@ -74,8 +74,8 @@ class container_impl
     container& container_;
     reactor reactor_;
     proton_handler *handler_;
-    pn_unique_ptr<proton_handler> override_handler_;
-    pn_unique_ptr<proton_handler> flow_controller_;
+    internal::pn_unique_ptr<proton_handler> override_handler_;
+    internal::pn_unique_ptr<proton_handler> flow_controller_;
     std::string id_;
     id_generator id_gen_;
     connection_options client_connection_options_;

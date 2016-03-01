@@ -88,7 +88,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
       private:
         class impl;
-        pn_unique_ptr<impl> impl_;
+        internal::pn_unique_ptr<impl> impl_;
     };
     /// Create a connection engine that dispatches to handler.
     PN_CPP_EXTERN connection_engine(handler&, const connection_options& = no_opts);

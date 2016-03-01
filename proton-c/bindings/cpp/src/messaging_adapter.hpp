@@ -61,7 +61,7 @@ class messaging_adapter : public proton_handler
     bool auto_accept_;
     bool auto_settle_;
     bool peer_close_iserror_;
-    pn_unique_ptr<proton_handler> flow_controller_;
+    internal::pn_unique_ptr<proton_handler> flow_controller_;
     void create_helpers();
 };
 

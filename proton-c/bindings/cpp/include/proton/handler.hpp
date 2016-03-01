@@ -149,7 +149,7 @@ PN_CPP_CLASS_EXTERN handler
 
     /// @cond INTERNAL
   private:
-    pn_unique_ptr<messaging_adapter> messaging_adapter_;
+    internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
     friend class container;
     friend class connection_engine;

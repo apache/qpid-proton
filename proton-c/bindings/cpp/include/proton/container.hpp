@@ -25,7 +25,6 @@
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/reactor.hpp"
 #include "proton/url.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/link_options.hpp"
@@ -131,7 +130,7 @@ class container {
     /// The reactor associated with this container.
     class reactor reactor() const;
 
-    pn_unique_ptr<container_impl> impl_;
+    internal::pn_unique_ptr<container_impl> impl_;
 
     friend class connector;
     friend class link;

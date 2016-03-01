@@ -20,13 +20,12 @@
  */
 
 /// @cond INTERNAL
-/// XXX discuss where this gets exposed
-/// XXX decision - move to proton::internal and leave it undocumented
 
 #include "proton/config.hpp"
 #include <memory>
 
 namespace proton {
+namespace internal {
 
 /// A simple unique ownership pointer, used as a return value from
 /// functions that transfer ownership to the caller.
@@ -61,8 +60,8 @@ template <class T> class pn_unique_ptr {
     T* ptr_;
 };
 
-/// @endcond
+}}
 
-}
+/// @endcond
 
 #endif // UNIQUE_PTR_HPP

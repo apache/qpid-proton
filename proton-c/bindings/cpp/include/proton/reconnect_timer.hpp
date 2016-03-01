@@ -26,8 +26,9 @@
 /// XXX more discussion
 
 #include "proton/export.hpp"
+#include "proton/duration.hpp"
+#include "proton/timestamp.hpp"
 #include "proton/types.hpp"
-#include "proton/reactor.hpp"
 #include <string>
 
 namespace proton {
@@ -45,25 +46,23 @@ class reconnect_timer
     PN_CPP_EXTERN void reset();
 
     /** Obtain the timer's computed time to delay before attempting a reconnection attempt (in milliseconds).  -1 means that the retry limit or timeout has been exceeded and reconnection attempts should cease. */
-    PN_CPP_EXTERN int next_delay();
+    PN_CPP_EXTERN int next_delay(timestamp now);
 
   private:
-    int32_t first_delay_;
-    int32_t max_delay_;
-    int32_t increment_;
+    duration first_delay_;
+    duration max_delay_;
+    duration increment_;
     bool doubling_;
     int32_t max_retries_;
-    int32_t timeout_;
+    duration timeout_;
     int32_t retries_;
-    int32_t next_delay_;
-    pn_timestamp_t timeout_deadline_;
-    reactor reactor_;
+    duration next_delay_;
+    timestamp timeout_deadline_;
 
     friend class connector;
 };
 
 /// @endcond
-    
 }
 
 #endif // PROTON_CPP_RECONNECT_H
