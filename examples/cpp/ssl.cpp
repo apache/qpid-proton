@@ -74,10 +74,11 @@ class hello_world_direct : public proton::handler {
         e.container().server_connection_options(server_opts);
 
         // Configure client with a Certificate Authority database populated with the server's self signed certificate.
+        // Since the test certifcate's credentials are unlikely to match this host's name, downgrade the verification
+        // from VERIFY_PEER_NAME to VERIFY_PEER.
         connection_options client_opts;
-        client_opts.ssl_client_options(platform_CA("tserver"));
-        // Validate the server certificate against the known name in the certificate.
-        client_opts.peer_hostname("test_server");
+        ssl_client_options ssl_cli(platform_CA("tserver"), proton::ssl::VERIFY_PEER);
+        client_opts.ssl_client_options(ssl_cli);
         e.container().client_connection_options(client_opts);
 
         s_handler.acceptor = e.container().listen(url);

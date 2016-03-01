@@ -63,12 +63,6 @@ PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint
     /// Return the AMQP host name for the connection.
     PN_CPP_EXTERN std::string host() const;
 
-    /// @cond INTERNAL
-    /// XXX this should be a connection option, right? - make private
-    /// Set the AMQP host name for the connection
-    PN_CPP_EXTERN void host(const std::string& h);
-    /// @endcond
-
     /// Return the container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
@@ -123,6 +117,7 @@ PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint
   private:
     PN_CPP_EXTERN void user(const std::string &);
     PN_CPP_EXTERN void password(const std::string &);
+    PN_CPP_EXTERN void host(const std::string& h);
 
     /// @cond INTERNAL
     friend class connection_context;
@@ -131,6 +126,7 @@ PN_CPP_CLASS_EXTERN connection : public object<pn_connection_t>, public endpoint
     friend class connector;
     friend class transport;
     friend class container_impl;
+    friend class session;
     /// @endcond
 };
 

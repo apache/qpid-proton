@@ -83,17 +83,17 @@ class hello_world_direct : public proton::handler {
         ssl_server_options srv_ssl(server_cert, client_CA);
         connection_options server_opts;
         server_opts.ssl_server_options(srv_ssl).handler(&s_handler);
-        server_opts.allowed_mechs("EXTERNAL");
+        server_opts.sasl_allowed_mechs("EXTERNAL");
         e.container().server_connection_options(server_opts);
 
         // Configure client.
         ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
         std::string server_CA = platform_CA("tserver");
-        ssl_client_options ssl_cli(client_cert, server_CA);
+        // Since the test certifcate's credentials are unlikely to match this host's name, downgrade the verification
+        // from VERIFY_PEER_NAME to VERIFY_PEER.
+        ssl_client_options ssl_cli(client_cert, server_CA, proton::ssl::VERIFY_PEER);
         connection_options client_opts;
-        client_opts.ssl_client_options(ssl_cli).allowed_mechs("EXTERNAL");
-        // Validate the server certificate against this name:
-        client_opts.peer_hostname("test_server");
+        client_opts.ssl_client_options(ssl_cli).sasl_allowed_mechs("EXTERNAL");
         e.container().client_connection_options(client_opts);
 
         s_handler.inbound_listener = e.container().listen(url);

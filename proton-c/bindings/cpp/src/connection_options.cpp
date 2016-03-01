@@ -56,11 +56,9 @@ class connection_options::impl {
     option<reconnect_timer> reconnect;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
-    option<std::string> peer_hostname;
-    option<std::string> resume_id;
     option<bool> sasl_enabled;
-    option<std::string> allowed_mechs;
-    option<bool> allow_insecure_mechs;
+    option<std::string> sasl_allowed_mechs;
+    option<bool> sasl_allow_insecure_mechs;
     option<std::string> sasl_config_name;
     option<std::string> sasl_config_path;
 
@@ -78,13 +76,9 @@ class connection_options::impl {
         {
             // SSL
             if (outbound && outbound->address().scheme() == url::AMQPS) {
-                const char* id = resume_id.value.empty() ? NULL : resume_id.value.c_str();
                 pn_ssl_t *ssl = pn_ssl(pnt);
-                if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), id))
+                if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
                     throw error(MSG("client SSL/TLS initialization error"));
-                if (peer_hostname.set && !peer_hostname.value.empty())
-                    if (pn_ssl_set_peer_hostname(ssl, peer_hostname.value.c_str()))
-                        throw error(MSG("error in SSL/TLS peer hostname \"") << peer_hostname.value << '"');
             } else if (!outbound) {
                 pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
                 if (pnp) {
@@ -102,10 +96,10 @@ class connection_options::impl {
             if (!sasl_enabled.set || sasl_enabled.value) {
                 if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
                     t.sasl();          // Force a sasl instance.  Lazily create one otherwise.
-                if (allow_insecure_mechs.set)
-                    t.sasl().allow_insecure_mechs(allow_insecure_mechs.value);
-                if (allowed_mechs.set)
-                    t.sasl().allowed_mechs(allowed_mechs.value);
+                if (sasl_allow_insecure_mechs.set)
+                    t.sasl().allow_insecure_mechs(sasl_allow_insecure_mechs.value);
+                if (sasl_allowed_mechs.set)
+                    t.sasl().allowed_mechs(sasl_allowed_mechs.value);
                 if (sasl_config_name.set)
                     t.sasl().config_name(sasl_config_name.value);
                 if (sasl_config_path.set)
@@ -141,11 +135,9 @@ class connection_options::impl {
         reconnect.override(x.reconnect);
         ssl_client_options.override(x.ssl_client_options);
         ssl_server_options.override(x.ssl_server_options);
-        resume_id.override(x.resume_id);
-        peer_hostname.override(x.peer_hostname);
         sasl_enabled.override(x.sasl_enabled);
-        allow_insecure_mechs.override(x.allow_insecure_mechs);
-        allowed_mechs.override(x.allowed_mechs);
+        sasl_allow_insecure_mechs.override(x.sasl_allow_insecure_mechs);
+        sasl_allowed_mechs.override(x.sasl_allowed_mechs);
         sasl_config_name.override(x.sasl_config_name);
         sasl_config_path.override(x.sasl_config_path);
     }
@@ -175,11 +167,9 @@ connection_options& connection_options::link_prefix(const std::string &id) { imp
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
-connection_options& connection_options::resume_id(const std::string &id) { impl_->resume_id = id; return *this; }
-connection_options& connection_options::peer_hostname(const std::string &name) { impl_->peer_hostname = name; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
-connection_options& connection_options::allow_insecure_mechs(bool b) { impl_->allow_insecure_mechs = b; return *this; }
-connection_options& connection_options::allowed_mechs(const std::string &s) { impl_->allowed_mechs = s; return *this; }
+connection_options& connection_options::sasl_allow_insecure_mechs(bool b) { impl_->sasl_allow_insecure_mechs = b; return *this; }
+connection_options& connection_options::sasl_allowed_mechs(const std::string &s) { impl_->sasl_allowed_mechs = s; return *this; }
 connection_options& connection_options::sasl_config_name(const std::string &n) { impl_->sasl_config_name = n; return *this; }
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 

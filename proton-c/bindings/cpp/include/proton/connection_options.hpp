@@ -114,24 +114,16 @@ class connection_options {
     /// Set SSL server options.
     PN_CPP_EXTERN connection_options& ssl_server_options(const class ssl_server_options &);
 
-    /// @cond INTERNAL
-
-    /// XXX remove - confirmed
-    PN_CPP_EXTERN connection_options& peer_hostname(const std::string &name);
-
-    /// XXX remove - confirmed
-    PN_CPP_EXTERN connection_options& resume_id(const std::string &id);
-    
-    /// @endcond
-
     /// Enable or disable SASL.
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
-    
-    /// @cond INTERNAL
-    /// XXX sasl_ prefix - confirmed
-    PN_CPP_EXTERN connection_options& allow_insecure_mechs(bool);
-    PN_CPP_EXTERN connection_options& allowed_mechs(const std::string &);
-    /// @endcond
+
+    /// Force the enabling of SASL mechanisms that disclose clear text
+    /// passwords over the connection.  By default, such mechanisms
+    /// are disabled.
+    PN_CPP_EXTERN connection_options& sasl_allow_insecure_mechs(bool);
+
+    /// Specify the allowed mechanisms for use on the connection.
+    PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string &);
 
     /// Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string &);

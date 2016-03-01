@@ -161,18 +161,15 @@ class ssl_server_options : private internal::ssl_domain {
 /// SSL configuration for outbound connections.
 class ssl_client_options : private internal::ssl_domain {
   public:
-    /// Create SSL client options.
+    /// Create SSL client options (no client certificate).
     PN_CPP_EXTERN ssl_client_options(const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// Create SSL client options.
-    ///
-    /// @internal
-    /// XXX how is this distinct?
+    /// Create SSL client options with a client certificate.
     PN_CPP_EXTERN ssl_client_options(ssl_certificate&, const std::string &trust_db,
                                      enum ssl::verify_mode = ssl::VERIFY_PEER_NAME);
 
-    /// Server SSL options restricted to available anonymous cipher
+    /// SSL connections restricted to available anonymous cipher
     /// suites on the platform.
     PN_CPP_EXTERN ssl_client_options();
 
