@@ -177,18 +177,26 @@ class Configure(build_ext):
             os.makedirs(build_include)
             os.mkdir(os.path.join(build_include, 'proton'))
 
+        # Create copy of environment variables and modify PYTHONPATH to preserve
+        # all others environment variables defined by user. When `env` is specified
+        # Popen will not inherit environment variables of the current process.
+        proton_envs = os.environ.copy()
+        default_path = proton_envs.get('PYTHONPATH')
+        proton_envs['PYTHONPATH'] = proton_base if not default_path else '{0}{1}{2}'.format(
+            proton_base, os.pathsep, default_path)
+
         # Generate `protocol.h` by calling the python
         # script found in the source dir.
         with open(os.path.join(build_include, 'protocol.h'), 'wb') as header:
             subprocess.Popen([sys.executable, os.path.join(proton_src, 'protocol.h.py')],
-                              env={'PYTHONPATH': proton_base}, stdout=header)
+                              env=proton_envs, stdout=header)
 
         # Generate `encodings.h` by calling the python
         # script found in the source dir.
         with open(os.path.join(build_include, 'encodings.h'), 'wb') as header:
             subprocess.Popen([sys.executable,
                               os.path.join(proton_src, 'codec', 'encodings.h.py')],
-                              env={'PYTHONPATH': proton_base}, stdout=header)
+                              env=proton_envs, stdout=header)
 
         # Create a custom, temporary, version.h file mapping the
         # major and minor versions from the downloaded tarball. This version should
