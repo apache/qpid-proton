@@ -29,20 +29,16 @@
 #include "proton/object.hpp"
 #include <iosfwd>
 
-#ifndef PN_NO_CONTAINER_CONVERT
-
 #include <vector>
 #include <deque>
 #include <list>
 #include <map>
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 #include <array>
 #include <forward_list>
 #include <unordered_map>
-#endif // PN_HAS_CPP11
-
-#endif // PN_NO_CONTAINER_CONVERT
+#endif // PN_CPP_HAS_CPP11
 
 /// @file
 /// @internal
@@ -189,7 +185,6 @@ template <class T> encoder operator<<(encoder e, cref<T, MAP> m){
     return e;
 }
 
-#ifndef PN_NO_CONTAINER_CONVERT
 // Encode as ARRAY
 template <class T, class A> encoder operator<<(encoder e, const std::vector<T, A>& v) { return e << as<ARRAY>(v); }
 template <class T, class A> encoder operator<<(encoder e, const std::deque<T, A>& v) { return e << as<ARRAY>(v); }
@@ -203,7 +198,7 @@ template <class A> encoder operator<<(encoder e, const std::list<value, A>& v) {
 // Encode as MAP
 template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::map<K, T, C, A>& v) { return e << as<MAP>(v); }
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 
 // Encode as ARRAY.
 template <class T, class A> encoder operator<<(encoder e, const std::forward_list<T, A>& v) { return e << as<ARRAY>(v); }
@@ -216,10 +211,7 @@ template <std::size_t N> encoder operator<<(encoder e, const std::array<value, N
 // Encode as map.
 template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
 
-#endif // PN_HAS_CPP11
-
-#endif // PN_NO_CONTAINER_CONVERT
-
+#endif // PN_CPP_HAS_CPP11
 }
 
 /// @endcond

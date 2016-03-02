@@ -42,7 +42,7 @@ template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr
     pn_ptr(T* p) : ptr_(p) { incref(ptr_); }
     pn_ptr(const pn_ptr& o) : ptr_(o.ptr_) { incref(ptr_); }
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     pn_ptr(pn_ptr&& o) : ptr_(0) { std::swap(ptr_, o.ptr_); }
 #endif
 

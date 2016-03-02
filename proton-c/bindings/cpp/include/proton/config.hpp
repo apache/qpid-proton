@@ -21,7 +21,6 @@
  */
 
 /// @cond INTERNAL
-/// XXX discuss some more - not clear this should be public
 
 /// @file
 ///
@@ -32,27 +31,20 @@
 /// default.  Otherwise they can be enabled or disabled separately
 /// with -D on the compile line.
 
-/// XXX resolve the difference in usage between PN_HAS_CPP11 and the
-/// others
-
-#ifndef PN_HAS_CPP11
-#if (defined(__cplusplus) && __cplusplus >= 201100)
-#define PN_HAS_CPP11 1
+#ifndef PN_CPP_HAS_CPP11
+#if defined(__cplusplus) && __cplusplus >= 201100
+#define PN_CPP_HAS_CPP11 1
 #else
-#define PN_HAS_CPP11 0
+#define PN_CPP_HAS_CPP11 0
 #endif
 #endif
 
-#ifndef PN_HAS_STD_PTR
-#define PN_HAS_STD_PTR PN_HAS_CPP11
+#ifndef PN_CPP_HAS_STD_PTR
+#define PN_CPP_HAS_STD_PTR PN_CPP_HAS_CPP11
 #endif
 
-#ifndef PN_HAS_LONG_LONG
-#define PN_HAS_LONG_LONG PN_HAS_CPP11
-#endif
-
-#ifndef PN_HAS_STATIC_ASSERT
-#define PN_HAS_STATIC_ASSERT PN_HAS_CPP11
+#ifndef PN_CPP_HAS_LONG_LONG
+#define PN_CPP_HAS_LONG_LONG PN_CPP_HAS_CPP11
 #endif
 
 #endif // CONFIG_HPP

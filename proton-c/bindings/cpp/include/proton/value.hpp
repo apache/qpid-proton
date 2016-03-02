@@ -43,7 +43,7 @@ class value : private comparable<value> {
     /// Copy a value.
     PN_CPP_EXTERN value(const value&);
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     PN_CPP_EXTERN value(value&&);
 #endif
 

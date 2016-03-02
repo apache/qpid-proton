@@ -73,7 +73,7 @@ template <> struct is_signed<signed short> : public true_type {};
 template <> struct is_signed<signed int> : public true_type {};
 template <> struct is_signed<signed long> : public true_type {};
 
-#if PN_HAS_LONG_LONG
+#if PN_CPP_HAS_LONG_LONG
 template <> struct is_integral<unsigned long long> : public true_type {};
 template <> struct is_integral<signed long long> : public true_type {};
 template <> struct is_signed<unsigned long long> : public false_type {};

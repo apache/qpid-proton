@@ -38,7 +38,7 @@ namespace internal {
 template <class T> class pn_unique_ptr {
   public:
     pn_unique_ptr(T* p=0) : ptr_(p) {}
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     pn_unique_ptr(pn_unique_ptr&& x) : ptr_(0)  { std::swap(ptr_, x.ptr_); }
 #else
     pn_unique_ptr(const pn_unique_ptr& x) : ptr_() { std::swap(ptr_, const_cast<pn_unique_ptr&>(x).ptr_); }
@@ -52,7 +52,7 @@ template <class T> class pn_unique_ptr {
     operator bool() const { return get(); }
     bool operator !() const { return get(); }
 
-#if PN_HAS_STD_PTR
+#if PN_CPP_HAS_STD_PTR
     operator std::unique_ptr<T>() { T *p = ptr_; ptr_ = 0; return std::unique_ptr<T>(p); }
 #endif
 

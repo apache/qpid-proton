@@ -64,7 +64,7 @@ PN_CPP_CLASS_EXTERN endpoint {
     /// Get the error condition of the remote endpoint.
     virtual condition remote_condition() const = 0;
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     // Make everything explicit for C++11 compilers
     endpoint() = default;
     endpoint& operator=(const endpoint&) = default;

@@ -59,7 +59,7 @@ class message {
     /// Copy a message.
     PN_CPP_EXTERN message(const message&);
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
     /// Move a message.
     PN_CPP_EXTERN message(message&&);
 

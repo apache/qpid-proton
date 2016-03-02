@@ -30,20 +30,16 @@
 #include "proton/uuid.hpp"
 #include <iosfwd>
 
-#ifndef PN_NO_CONTAINER_CONVERT
-
 #include <vector>
 #include <deque>
 #include <list>
 #include <map>
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 #include <array>
 #include <forward_list>
 #include <unordered_map>
-#endif // PN_HAS_CPP11
-
-#endif // PN_NO_CONTAINER_CONVERT
+#endif // PN_CPP_HAS_CPP11
 
 struct pn_data_t;
 
@@ -295,8 +291,6 @@ template <class T> decoder operator>>(decoder d, pairs_ref<T> ref)  {
     return d;
 }
 
-#ifndef PN_NO_CONTAINER_CONVERT
-
 // Decode to sequence.
 template <class T, class A> decoder operator>>(decoder d, std::vector<T, A>& v) { return d >> to_sequence(v); }
 template <class T, class A> decoder operator>>(decoder d, std::deque<T, A>& v) { return d >> to_sequence(v); }
@@ -305,7 +299,7 @@ template <class T, class A> decoder operator>>(decoder d, std::list<T, A>& v) { 
 // Decode to map.
 template <class K, class T, class C, class A> decoder operator>>(decoder d, std::map<K, T, C, A>& v) { return d >> to_map(v); }
 
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 
 // Decode to sequence.
 template <class T, class A> decoder operator>>(decoder d, std::forward_list<T, A>& v) { return d >> to_sequence(v); }
@@ -314,9 +308,7 @@ template <class T, std::size_t N> decoder operator>>(decoder d, std::array<T, N>
 // Decode to map.
 template <class K, class T, class C, class A> decoder operator>>(decoder d, std::unordered_map<K, T, C, A>& v) { return d >> to_map(v); }
 
-#endif // PN_HAS_CPP11
-#endif // PN_NO_CONTAINER_CONVERT
-
+#endif // PN_CPP_HAS_CPP11
 }
 
 /// @endcond

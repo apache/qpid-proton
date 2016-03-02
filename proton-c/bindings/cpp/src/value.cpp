@@ -28,7 +28,7 @@ namespace proton {
 
 value::value() {}
 value::value(const value& x) { *this = x; }
-#if PN_HAS_CPP11
+#if PN_CPP_HAS_CPP11
 value::value(value&& x) { swap(*this, x); }
 #endif
 
