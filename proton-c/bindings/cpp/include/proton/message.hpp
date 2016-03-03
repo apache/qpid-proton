@@ -270,12 +270,10 @@ class message {
     /// Decode the message corresponding to a delivery from a link.
     void decode(proton::delivery);
 
-    friend void swap(message&, message&);
+    PN_CPP_EXTERN friend void swap(message&, message&);
     friend class messaging_adapter;
     /// @endcond
 };
-
-PN_CPP_EXTERN void swap(message&, message&);
 
 }
 
