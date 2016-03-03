@@ -58,11 +58,8 @@ class condition {
     /// Extra information for condition.
     PN_CPP_EXTERN value info() const;
 
-    /// @cond INTERNAL
     /// Simple printable string for condition.
-    /// XXX not sure about this as a convention 
-    PN_CPP_EXTERN std::string str() const;
-    /// @endcond
+    PN_CPP_EXTERN std::string what() const;
 
     /// @cond INTERNAL
   private:

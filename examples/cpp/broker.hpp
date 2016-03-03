@@ -199,11 +199,11 @@ class broker_handler : public proton::handler {
     }
 
     void on_transport_error(proton::event &e) {
-        std::cout << "broker client disconnect: " << e.transport().condition().str() << std::endl;
+        std::cout << "broker client disconnect: " << e.transport().condition().what() << std::endl;
     }
 
     void on_unhandled_error(proton::event &e, const proton::condition &c) {
-        std::cerr << "broker error: " << e.name() << ":" << c.str() << std::endl;
+        std::cerr << "broker error: " << e.name() << ":" << c.what() << std::endl;
     }
 
     void remove_stale_consumers(proton::connection connection) {

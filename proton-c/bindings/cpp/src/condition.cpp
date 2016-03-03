@@ -46,7 +46,7 @@ value condition::info() const {
     return t ? value(t) : value();
 }
 
-std::string condition::str() const {
+std::string condition::what() const {
     if (!*this) {
         return "No error condition";
     } else {

@@ -59,6 +59,6 @@ void handler::on_delivery_release(event &e) { on_unhandled(e); }
 void handler::on_delivery_settle(event &e) { on_unhandled(e); }
 
 void handler::on_unhandled(event &) {}
-void handler::on_unhandled_error(event &, const condition& c) { throw proton::error(c.str()); }
+void handler::on_unhandled_error(event &, const condition& c) { throw proton::error(c.what()); }
 
 }
