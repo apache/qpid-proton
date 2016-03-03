@@ -40,13 +40,10 @@ class transport : public internal::object<pn_transport_t> {
     /// @endcond 
 
   public:
-    transport() : object<pn_transport_t>(0) {}
+    transport() : internal::object<pn_transport_t>(0) {}
 
-    /// @cond INTERNAL
-    /// XXX what if a transport is associated with multiple connections?
     /// Get the connection associated with this transport.
     PN_CPP_EXTERN class connection connection() const;
-    /// @endcond
 
     /// Get SSL information.
     PN_CPP_EXTERN class ssl ssl() const;
