@@ -48,14 +48,14 @@ class task;
 class container_impl
 {
   public:
-    PN_CPP_EXTERN container_impl(container&, messaging_adapter*, const std::string& id);
-    PN_CPP_EXTERN ~container_impl();
-    PN_CPP_EXTERN connection connect(const url&, const connection_options&);
-    PN_CPP_EXTERN sender open_sender(const url&, const proton::link_options &, const connection_options &);
-    PN_CPP_EXTERN receiver open_receiver(const url&, const proton::link_options &, const connection_options &);
-    PN_CPP_EXTERN class acceptor listen(const url&, const connection_options &);
-    PN_CPP_EXTERN duration timeout();
-    PN_CPP_EXTERN void timeout(duration timeout);
+    container_impl(container&, messaging_adapter*, const std::string& id);
+    ~container_impl();
+    connection connect(const url&, const connection_options&);
+    sender open_sender(const url&, const proton::link_options &, const connection_options &);
+    receiver open_receiver(const url&, const proton::link_options &, const connection_options &);
+    class acceptor listen(const url&, const connection_options &);
+    duration timeout();
+    void timeout(duration timeout);
     void client_connection_options(const connection_options &);
     const connection_options& client_connection_options() { return client_connection_options_; }
     void server_connection_options(const connection_options &);

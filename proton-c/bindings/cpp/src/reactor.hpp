@@ -44,36 +44,36 @@ class reactor : public internal::object<pn_reactor_t> {
     reactor(pn_reactor_t* r = 0) : internal::object<pn_reactor_t>(r) {}
 
     /** Create a new reactor. */
-    PN_CPP_EXTERN static reactor create();
+    static reactor create();
 
     /** Open a connection to url and create a receiver with source=url.path() */
-    PN_CPP_EXTERN acceptor listen(const proton::url &);
+    acceptor listen(const proton::url &);
 
     /** Run the event loop, return when all connections and acceptors are closed. */
-    PN_CPP_EXTERN void run();
+    void run();
 
     /** Start the reactor, you must call process() to process events */
-    PN_CPP_EXTERN void start();
+    void start();
 
     /** Process events, return true if there are more events to process. */
-    PN_CPP_EXTERN bool process();
+    bool process();
 
     /** Stop the reactor, causes run() to return and process() to return false. */
-    PN_CPP_EXTERN void stop();
+    void stop();
 
     /// Identifier for the container
-    PN_CPP_EXTERN std::string id() const;
+    std::string id() const;
 
     /// Get timeout, process() will return if there is no activity within the timeout.
-    PN_CPP_EXTERN duration timeout();
+    duration timeout();
 
     /// Set timeout, process() will return if there is no activity within the timeout.
-    PN_CPP_EXTERN void timeout(duration timeout);
+    void timeout(duration timeout);
 
-    PN_CPP_EXTERN timestamp mark();
-    PN_CPP_EXTERN timestamp now();
+    timestamp mark();
+    timestamp now();
 
-    PN_CPP_EXTERN task schedule(int, pn_handler_t*);
+    task schedule(int, pn_handler_t*);
 
     class connection connection(pn_handler_t*) const;
 
@@ -87,9 +87,9 @@ class reactor : public internal::object<pn_reactor_t> {
 
     pn_io_t* pn_io() const;
 
-    PN_CPP_EXTERN void wakeup();
-    PN_CPP_EXTERN bool quiesced();
-    PN_CPP_EXTERN void yield();
+    void wakeup();
+    bool quiesced();
+    void yield();
 
   friend class container_impl;
   friend class container_context;

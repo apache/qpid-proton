@@ -38,22 +38,22 @@ namespace proton {
 class messaging_adapter : public proton_handler
 {
   public:
-    PN_CPP_EXTERN messaging_adapter(handler &delegate,
+    messaging_adapter(handler &delegate,
                                     int prefetch, bool auto_accept, bool auto_settle,
                                     bool peer_close_is_error);
-    PN_CPP_EXTERN virtual ~messaging_adapter();
+    virtual ~messaging_adapter();
 
-    PN_CPP_EXTERN void on_reactor_init(proton_event &e);
-    PN_CPP_EXTERN void on_link_flow(proton_event &e);
-    PN_CPP_EXTERN void on_delivery(proton_event &e);
-    PN_CPP_EXTERN void on_connection_remote_open(proton_event &e);
-    PN_CPP_EXTERN void on_connection_remote_close(proton_event &e);
-    PN_CPP_EXTERN void on_session_remote_open(proton_event &e);
-    PN_CPP_EXTERN void on_session_remote_close(proton_event &e);
-    PN_CPP_EXTERN void on_link_remote_open(proton_event &e);
-    PN_CPP_EXTERN void on_link_remote_close(proton_event &e);
-    PN_CPP_EXTERN void on_transport_tail_closed(proton_event &e);
-    PN_CPP_EXTERN void on_timer_task(proton_event &e);
+    void on_reactor_init(proton_event &e);
+    void on_link_flow(proton_event &e);
+    void on_delivery(proton_event &e);
+    void on_connection_remote_open(proton_event &e);
+    void on_connection_remote_close(proton_event &e);
+    void on_session_remote_open(proton_event &e);
+    void on_session_remote_close(proton_event &e);
+    void on_link_remote_open(proton_event &e);
+    void on_link_remote_close(proton_event &e);
+    void on_transport_tail_closed(proton_event &e);
+    void on_timer_task(proton_event &e);
 
   private:
     handler &delegate_;  // The handler for generated messaging_event's
