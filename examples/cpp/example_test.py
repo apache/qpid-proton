@@ -321,7 +321,7 @@ Tock...
         # SSL without SASL
         addr = "amqps://" + pick_addr() + "/examples"
         # Disable valgrind when using OpenSSL
-        out = self.proc(["ssl", addr, self.ssl_certs_dir()]).wait_exit()
+        out = self.proc(["ssl", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
@@ -335,7 +335,7 @@ Hello World!
 """
         addr = "amqps://" + pick_addr() + "/examples"
         # Disable valgrind when using OpenSSL
-        out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()]).wait_exit()
+        out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
 
