@@ -26,6 +26,16 @@ import java.util.Map;
 
 public interface WebSocketHandler
 {
+    enum WebSocketMessageType
+    {
+        WEB_SOCKET_MESSAGE_TYPE_EMPTY,
+        WEB_SOCKET_MESSAGE_TYPE_AMQP,
+        WEB_SOCKET_MESSAGE_TYPE_PING,
+        WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED,
+        WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH,
+        WEB_SOCKET_MESSAGE_TYPE_INVALID
+    }
+
     String createUpgradeRequest(
             String hostName,
             String webSocketPath,
@@ -34,6 +44,6 @@ public interface WebSocketHandler
             Map<String, String> additionalHeaders);
     Boolean validateUpgradeReply(ByteBuffer buffer);
     void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
-    void unwrapBuffer(ByteBuffer buffer);
+    WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
     void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
 }

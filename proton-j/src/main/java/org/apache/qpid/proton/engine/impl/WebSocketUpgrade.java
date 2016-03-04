@@ -1,11 +1,14 @@
 package org.apache.qpid.proton.engine.impl;
 
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
-import java.util.Base64;
-import java.util.Map;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.*;
 
-public class WebSocketUpgradeRequest
+public class WebSocketUpgrade
 {
+    public static final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     private final byte _colon = ':';
     private final byte _slash = '/';
 
@@ -13,10 +16,11 @@ public class WebSocketUpgradeRequest
     private String _path = "";
     private String _port = "";
     private String _protocol = "AMQPWSB10";
+    private String _webSocketKey = "";
 
     private Map<String, String> _additionalHeaders = null;
 
-    public WebSocketUpgradeRequest(
+    public WebSocketUpgrade(
             String hostName,
             String webSocketPath,
             int webSocketPort,
@@ -95,7 +99,7 @@ public class WebSocketUpgradeRequest
      */
     public void setAdditionalHeaders(Map<String, String> additionalHeaders)
     {
-        this._additionalHeaders = additionalHeaders;
+        _additionalHeaders = additionalHeaders;
     }
 
     /**
@@ -103,7 +107,7 @@ public class WebSocketUpgradeRequest
      */
     public void clearAdditionalHeaders()
     {
-        this._additionalHeaders.clear();
+        _additionalHeaders.clear();
     }
 
     /**
@@ -114,9 +118,9 @@ public class WebSocketUpgradeRequest
         byte[] key = new byte[16];
         for (int i = 0; i < 16; i++)
         {
-            key[i] = (byte) (int) (Math.random() * 255);
+            key[i] = (byte) (int) (Math.random() * 256);
         }
-        return String.valueOf(Base64.getEncoder().encode(key));
+        return Base64.getEncoder().encodeToString(key).trim();
     }
 
     public String createUpgradeRequest()
@@ -127,22 +131,22 @@ public class WebSocketUpgradeRequest
         if (this._protocol.isEmpty())
             throw new InvalidParameterException("protocol header has no value");
 
-        String webSocketKey = createWebSocketKey();
+        this._webSocketKey = createWebSocketKey();
 
         String _endOfLine = "\r\n";
         StringBuilder stringBuilder = new StringBuilder()
                 .append("GET ").append(this._path).append(" HTTP/1.1").append(_endOfLine)
                 .append("Connection: Upgrade").append(_endOfLine)
-                .append("Upgrade: setWebSocket").append(_endOfLine)
+                .append("Upgrade: websocket").append(_endOfLine)
                 .append("Sec-WebSocket-Version: 13").append(_endOfLine)
-                .append("Sec-WebSocket-Key: ").append(webSocketKey).append(_endOfLine)
+                .append("Sec-WebSocket-Key: ").append(this._webSocketKey).append(_endOfLine)
                 .append("Sec-WebSocket-Protocol: ").append(this._protocol).append(_endOfLine);
 
         stringBuilder.append("Host: ").append(this._host + this._port).append(_endOfLine);
 
-        if (this._additionalHeaders != null)
+        if (_additionalHeaders != null)
         {
-            for (Map.Entry<String, String> entry : this._additionalHeaders.entrySet())
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
             {
                 stringBuilder.append(entry.getKey() + ": " + entry.getValue()).append(_endOfLine);
             }
@@ -151,5 +155,72 @@ public class WebSocketUpgradeRequest
         stringBuilder.append(_endOfLine);
 
         return stringBuilder.toString();
+    }
+
+    public Boolean validateUpgradeReply(byte[] responseBytes)
+    {
+        String httpString = new String(responseBytes, StandardCharsets.UTF_8);
+
+        Boolean isStatusLineOk = false;
+        Boolean isUpgradeHeaderOk = false;
+        Boolean isConnectionHeaderOk = false;
+        Boolean isProtocolHeaderOk = false;
+        Boolean isAcceptHeaderOk = false;
+
+        Scanner scanner = new Scanner(httpString);
+        while (scanner.hasNextLine())
+        {
+            String line = scanner.nextLine();
+
+            if ((line.toLowerCase().contains("http/1.1")) && (line.contains("101")) && (line.toLowerCase().contains("switching protocols")))
+            {
+                isStatusLineOk = true;
+                continue;
+            }
+            if ((line.toLowerCase().contains("upgrade")) && (line.toLowerCase().contains("websocket")))
+            {
+                isUpgradeHeaderOk = true;
+                continue;
+            }
+            if ((line.toLowerCase().contains("connection")) && (line.toLowerCase().contains("upgrade")))
+            {
+                isConnectionHeaderOk = true;
+                continue;
+            }
+            if (line.toLowerCase().contains("sec-websocket-protocol") && (line.toLowerCase().contains("amqpwsb10")))
+            {
+                isProtocolHeaderOk = true;
+                continue;
+            }
+            if (line.toLowerCase().contains("sec-websocket-accept"))
+            {
+                MessageDigest messageDigest = null;
+                try
+                {
+                    messageDigest = MessageDigest.getInstance("SHA-1");
+                } catch (NoSuchAlgorithmException e)
+                {
+                    break;
+                }
+
+                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes()));
+
+                if (line.contains(expectedKey))
+                {
+                    isAcceptHeaderOk = true;
+                }
+                continue;
+            }
+        }
+        scanner.close();
+
+        if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) && (isProtocolHeaderOk) && (isAcceptHeaderOk))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 }
