@@ -42,7 +42,7 @@ PN_CPP_CLASS_EXTERN endpoint {
     /// local or only remote flags, then a match occurs if any of the
     /// local or remote flags are set respectively.
     ///
-    /// @see connection::find_links, connection::find_sessions
+    /// @see connection::links, connection::sessions
     typedef int state;
 
     // XXX use an enum instead to handle name collision
@@ -75,40 +75,36 @@ PN_CPP_CLASS_EXTERN endpoint {
 #endif
 };
 
-/// @cond INTERNAL
-/// XXX move to internal
+namespace internal {
 
-template <class T> class iter_base {
+template <class T, class D> class iter_base {
   public:
     typedef T value_type;
 
-    T& operator*() const { return *ptr_; }
-    const T* operator->() const { return &ptr_; }
-    operator bool() const { return !!ptr_; }
-    bool operator !() const { return !ptr_; }
-    bool operator==(const iter_base<T>& x) const { return ptr_ == x.ptr_; }
-    bool operator!=(const iter_base<T>& x) const { return ptr_ != x.ptr_; }
+    T operator*() const { return obj_; }
+    T* operator->() const { return const_cast<T*>(&obj_); }
+    D operator++(int) { D x(*this); ++(*this); return x; }
+    bool operator==(const iter_base<T, D>& x) const { return obj_ == x.obj_; }
+    bool operator!=(const iter_base<T, D>& x) const { return obj_ != x.obj_; }
 
   protected:
-    explicit iter_base(T p = 0, endpoint::state s = 0) : ptr_(p), state_(s) {}
-    T ptr_;
-    endpoint::state state_;
+    explicit iter_base(T p = 0) : obj_(p) {}
+    T obj_;
 };
 
-/// @endcond
-
-/// An iterator range.
-template<class I> class range {
+template<class I> class iter_range {
   public:
     typedef I iterator;
 
-    explicit range(I begin = I(), I end = I()) : begin_(begin), end_(end) {}
+    explicit iter_range(I begin = I(), I end = I()) : begin_(begin), end_(end) {}
     I begin() const { return begin_; }
     I end() const { return end_; }
+    bool empty() const { return begin_ == end_; }
   private:
     I begin_, end_;
 };
 
-}
+} // namespace internal
+} // namespace proton
 
 #endif // PROTON_CPP_H

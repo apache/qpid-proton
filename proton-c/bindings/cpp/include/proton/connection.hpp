@@ -101,10 +101,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
                                          const link_options &opts = link_options());
 
     /// Return links on this connection matching the state mask.
-    PN_CPP_EXTERN link_range find_links(endpoint::state mask) const;
+    PN_CPP_EXTERN link_range links() const;
 
     /// Return sessions on this connection matching the state mask.
-    PN_CPP_EXTERN session_range find_sessions(endpoint::state mask) const;
+    PN_CPP_EXTERN session_range sessions() const;
 
     /// @cond INTERNAL
     ///

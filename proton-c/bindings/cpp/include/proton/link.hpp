@@ -129,7 +129,6 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
     PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
 
-    /// @cond INTERNAL
   private:
     // Used by link_options
     void handler(proton_handler &);
@@ -139,39 +138,30 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     // Used by message to decode message from a delivery
     ssize_t recv(char* buffer, size_t size);
     bool advance();
-    // Used by link_iterator
-    link next(endpoint::state) const;
 
-    friend class connection;
-    friend class delivery;
-    friend class receiver;
-    friend class sender;
-    friend class message;
-    friend class proton_event;
-    friend class link_iterator;
-    friend class link_options;
-    /// @endcond
+  friend class connection;
+  friend class delivery;
+  friend class receiver;
+  friend class sender;
+  friend class message;
+  friend class proton_event;
+  friend class link_iterator;
+  friend class link_options;
 };
 
-/// @cond INTERNAL
-/// XXX important to expose?
 /// An iterator for links.
-class link_iterator : public iter_base<link> {
+class link_iterator : public internal::iter_base<link, link_iterator> {
   public:
-    explicit link_iterator(link p = 0, endpoint::state s = 0) :
-        iter_base<link>(p, s), session_(0) {}
-    explicit link_iterator(const link_iterator& i, const session& ssn) :
-        iter_base<link>(i.ptr_, i.state_), session_(&ssn) {}
+    explicit link_iterator(link l = 0, pn_session_t* s = 0) :
+        internal::iter_base<link, link_iterator>(l), session_(s) {}
     PN_CPP_EXTERN link_iterator operator++();
-    link_iterator operator++(int) { link_iterator x(*this); ++(*this); return x; }
 
   private:
-    const session* session_;
+    pn_session_t* session_;
 };
-/// @endcond
 
 /// A range of links.
-typedef range<link_iterator> link_range;
+typedef internal::iter_range<link_iterator> link_range;
 
 }
 

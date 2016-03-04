@@ -43,15 +43,4 @@ const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
 
 endpoint::~endpoint() {}
 
-session_iterator session_iterator::operator++() {
-    ptr_ = ptr_.next(state_);
-    return *this;
-}
-
-link_iterator link_iterator::operator++() {
-    do {
-        ptr_ = ptr_.next(state_);
-    } while (!!ptr_ && session_ && ptr_.session() != *session_);
-    return *this;
-}
 }

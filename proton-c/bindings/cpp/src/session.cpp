@@ -71,11 +71,6 @@ receiver session::open_receiver(const std::string &addr, const link_options &lo)
     return rcv;
 }
 
-session session::next(endpoint::state s) const
-{
-    return pn_session_next(pn_object(), s);
-}
-
 endpoint::state session::state() const { return pn_session_state(pn_object()); }
 
 condition session::local_condition() const {
@@ -86,12 +81,17 @@ condition session::remote_condition() const {
     return condition(pn_session_remote_condition(pn_object()));
 }
 
-link_range session::find_links(endpoint::state mask)  const {
-    link_range r(connection().find_links(mask));
-    link_iterator i(r.begin(), *this);
-    if (i && *this != i->session())
-        ++i;
+link_range session::links()  const {
+    link_range r(connection().links());
+    if (r.empty()) return r;
+    link_iterator i(*r.begin(), pn_object());
+    if (*this != (*i).session()) ++i;
     return link_range(i);
+}
+
+session_iterator session_iterator::operator++() {
+    obj_ = pn_session_next(obj_.pn_object(), 0);
+    return *this;
 }
 
 } // namespace proton

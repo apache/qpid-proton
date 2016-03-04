@@ -75,12 +75,12 @@ container& connection::container() const {
     return container_context::get(r);
 }
 
-link_range connection::find_links(endpoint::state mask) const {
-    return link_range(link_iterator(pn_link_head(pn_object(), mask)));
+link_range connection::links() const {
+    return link_range(link_iterator(pn_link_head(pn_object(), 0)));
 }
 
-session_range connection::find_sessions(endpoint::state mask) const {
-    return session_range(session_iterator(pn_session_head(pn_object(), mask)));
+session_range connection::sessions() const {
+    return session_range(session_iterator(pn_session_head(pn_object(), 0)));
 }
 
 session connection::open_session() { return pn_session(pn_object()); }
