@@ -196,16 +196,14 @@ class BlockingConnection(Handler):
     """
     A synchronous style connection wrapper.
     """
-    def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None,
-                 properties=None, offered_capabilities=None, desired_capabilities=None):
+    def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None, **kwargs):
         self.disconnected = False
         self.timeout = timeout or 60
         self.container = container or Container()
         self.container.timeout = self.timeout
         self.container.start()
         self.url = Url(url).defaults()
-        self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False, heartbeat=heartbeat,
-                                           properties=properties, offered_capabilities=offered_capabilities, desired_capabilities=desired_capabilities)
+        self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False, heartbeat=heartbeat, **kwargs)
         self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
                   msg="Opening connection")
 

@@ -17,20 +17,21 @@
 # under the License.
 #
 
-import os, time
+import os, time, sys
 from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
-from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol
+from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol, ConnectionException
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
-
+from .common import Skipped
 CONNECTION_PROPERTIES={u'connection': u'properties'}
 OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
 DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
-
+ANONYMOUS='ANONYMOUS'
+EXTERNAL='EXTERNAL'
 
 class EchoServer(MessagingHandler, Thread):
     """
@@ -127,4 +128,43 @@ class SyncRequestResponseTest(Test):
         self.assertEquals(server.properties_received, True)
         self.assertEquals(server.offered_capabilities_received, True)
         self.assertEquals(server.desired_capabilities_received, True)
+
+    def test_allowed_mechs_external(self):
+        # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used. 
+        if "java" in sys.platform:
+            raise Skipped("")
+        port = free_tcp_port()
+        # We have constructed ConnPropertiesServer with host="127.0.0.1", so it is ok to hardcode the hostname in the error message string.
+        error_message = 'Connection amqp://127.0.0.1:' + str(port) + ' disconnected'
+        server = ConnPropertiesServer(Url(host="127.0.0.1", port=port), timeout=self.timeout)
+        server.start()
+        server.wait()
+        exception_occurred = False
+        try:
+            # This will cause an exception because we are specifying allowed_mechs as EXTERNAL. The SASL handshake will fail because the server is not setup to handle EXTERNAL
+            connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
+        except ConnectionException as e:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            self.assertEquals(error_message, str(exc_value))
+            exception_occurred = True
+
+        self.assertEquals(True, exception_occurred)
+
+        server.join(timeout=self.timeout)
+
+    def test_allowed_mechs_anonymous(self):
+        # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used.
+        server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
+        server.start()
+        server.wait()
+        # An ANONYMOUS allowed_mechs will work, anonymous connections are allowed by ConnPropertiesServer
+        connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=ANONYMOUS)
+        client = SyncRequestResponse(connection)
+        client.connection.close()
+        server.join(timeout=self.timeout)
+        self.assertEquals(server.properties_received, True)
+        self.assertEquals(server.offered_capabilities_received, True)
+        self.assertEquals(server.desired_capabilities_received, True)
+        
+        
 
