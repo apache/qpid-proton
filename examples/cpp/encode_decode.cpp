@@ -77,7 +77,7 @@ void uniform_containers() {
     std::cout << a1 << std::endl;
 
     // You can specify that a container should be encoded as an AMQP list instead.
-    v = proton::as<proton::LIST>(a1);
+    v = proton::internal::as<proton::LIST>(a1);
     print(v);
     std::cout << v.get<std::vector<int> >() << std::endl;
 
@@ -94,11 +94,11 @@ void uniform_containers() {
     std::vector<std::pair<std::string, int> > pairs;
     pairs.push_back(std::make_pair("z", 3));
     pairs.push_back(std::make_pair("a", 4));
-    v = proton::as<proton::MAP>(pairs);
+    v = proton::internal::as<proton::MAP>(pairs);
     print(v);
     // You can also decode an AMQP map as a sequence of pairs using decoder() and proton::to_pairs
     std::vector<std::pair<std::string, int> > pairs2;
-    v.decode() >> proton::to_pairs(pairs2);
+    v.decode() >> proton::internal::to_pairs(pairs2);
     std::cout << pairs2 << std::endl;
 }
 
@@ -132,22 +132,22 @@ void insert_stream_operators() {
     proton::value v;
 
     // Create an array of INT with values [1, 2, 3]
-    v.encode() << proton::start::array(proton::INT)
-                << int32_t(1) << int32_t(2) << int32_t(3)
-                << proton::finish();
+    v.encode() << proton::internal::start::array(proton::INT)
+               << int32_t(1) << int32_t(2) << int32_t(3)
+               << proton::internal::finish();
     print(v);
 
     // Create a mixed-type list of the values [42, false, "x"].
-    v.encode() << proton::start::list()
-                << int32_t(42) << false << proton::symbol("x")
-                << proton::finish();
+    v.encode() << proton::internal::start::list()
+               << int32_t(42) << false << proton::symbol("x")
+               << proton::internal::finish();
     print(v);
 
     // Create a map { "k1":42, "k2": false }
-    v.encode() << proton::start::map()
-                << "k1" << int32_t(42)
-                << proton::symbol("k2") << false
-                << proton::finish();
+    v.encode() << proton::internal::start::map()
+               << "k1" << int32_t(42)
+               << proton::symbol("k2") << false
+               << proton::internal::finish();
     print(v);
 }
 
@@ -168,9 +168,9 @@ int main(int, char**) {
 // NOTE this is for example puroses only: There is a built in ostream operator<< for values.
 //
 //
-void print_next(proton::decoder& d) {
+void print_next(proton::internal::decoder& d) {
     proton::type_id type = d.type();
-    proton::start s;
+    proton::internal::start s;
     switch (type) {
       case proton::ARRAY: {
           d >> s;
@@ -185,7 +185,7 @@ void print_next(proton::decoder& d) {
               print_next(d);
           }
           std::cout << "]";
-          d >> proton::finish();
+          d >> proton::internal::finish();
           break;
       }
       case proton::LIST: {
@@ -196,7 +196,7 @@ void print_next(proton::decoder& d) {
               print_next(d);
           }
           std::cout << "]";
-          d >> proton::finish();
+          d >> proton::internal::finish();
           break;
       }
       case proton::MAP: {
@@ -209,7 +209,7 @@ void print_next(proton::decoder& d) {
               print_next(d);
           }
           std::cout << "}";
-          d >> proton::finish();
+          d >> proton::internal::finish();
           break;
       }
       case proton::DESCRIBED: {
@@ -217,7 +217,7 @@ void print_next(proton::decoder& d) {
           std::cout << "described(";
           print_next(d);      // Descriptor
           print_next(d);      // value
-          d >> proton::finish();
+          d >> proton::internal::finish();
           break;
       }
       default:
@@ -231,7 +231,7 @@ void print_next(proton::decoder& d) {
 
 // Print a value, for example purposes. Normal code can use operator<<
 void print(proton::value& v) {
-    proton::decoder d = v.decode();
+    proton::internal::decoder d = v.decode();
     d.rewind();
     while (d.more()) {
         print_next(d);

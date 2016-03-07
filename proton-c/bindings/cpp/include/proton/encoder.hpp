@@ -48,10 +48,11 @@ struct pn_data_t;
 namespace proton {
 
 class scalar;
-class data;
-class message_id;
-class annotation_key;
 class value;
+
+namespace internal {
+
+class data;
 
 template<class T, type_id A> struct cref {
     typedef T cpp_type;
@@ -72,12 +73,13 @@ template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(
 ///
 /// Internal use only, see proton::value, proton::scalar and proton::amqp
 /// for the recommended ways to manage AMQP data.
-class encoder : public internal::object<pn_data_t> {
+class encoder : public object<pn_data_t> {
   public:
-    encoder(pn_data_t* e) : internal::object<pn_data_t>(e) {}
+    encoder(pn_data_t* e) : object<pn_data_t>(e) {}
 
     /**
-     * Encode the current values into buffer and update size to reflect the number of bytes encoded.
+     * Encode the current values into buffer and update size to reflect the
+     * number of bytes encoded.
      *
      * Clears the encoder.
      *
@@ -95,45 +97,39 @@ class encoder : public internal::object<pn_data_t> {
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
 
-    PN_CPP_EXTERN class data data();
+    PN_CPP_EXTERN encoder operator<<(bool);
+    PN_CPP_EXTERN encoder operator<<(uint8_t);
+    PN_CPP_EXTERN encoder operator<<(int8_t);
+    PN_CPP_EXTERN encoder operator<<(uint16_t);
+    PN_CPP_EXTERN encoder operator<<(int16_t);
+    PN_CPP_EXTERN encoder operator<<(uint32_t);
+    PN_CPP_EXTERN encoder operator<<(int32_t);
+    PN_CPP_EXTERN encoder operator<<(wchar_t);
+    PN_CPP_EXTERN encoder operator<<(uint64_t);
+    PN_CPP_EXTERN encoder operator<<(int64_t);
+    PN_CPP_EXTERN encoder operator<<(timestamp);
+    PN_CPP_EXTERN encoder operator<<(float);
+    PN_CPP_EXTERN encoder operator<<(double);
+    PN_CPP_EXTERN encoder operator<<(decimal32);
+    PN_CPP_EXTERN encoder operator<<(decimal64);
+    PN_CPP_EXTERN encoder operator<<(decimal128);
+    PN_CPP_EXTERN encoder operator<<(const uuid&);
+    PN_CPP_EXTERN encoder operator<<(const std::string&);
+    PN_CPP_EXTERN encoder operator<<(const symbol&);
+    PN_CPP_EXTERN encoder operator<<(const binary&);
+    PN_CPP_EXTERN encoder operator<<(const scalar&);
 
-    /** @name Insert simple types.
-     *@{
-     */
-  friend PN_CPP_EXTERN encoder operator<<(encoder, bool);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, uint8_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, int8_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, uint16_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, int16_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, uint32_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, int32_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, wchar_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, uint64_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, int64_t);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, timestamp);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, float);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, double);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal32);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal64);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, decimal128);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, uuid);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, std::string);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, symbol);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, binary);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const annotation_key&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const value&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
-    ///@}
+    /// Start encoding a complex type.
+    PN_CPP_EXTERN encoder operator<<(const start&);
+    /// Finish a complex type
+    PN_CPP_EXTERN encoder operator<<(const finish&);
 
-    /**
-     * Start a container type.
-     */
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const start&);
+    // FIXME aconway 2016-03-03: hide
+    PN_CPP_EXTERN void insert(const value& v);
 
-    /** Finish a container type. See operator<<(encoder&, const start&) */
-  friend PN_CPP_EXTERN encoder operator<<(encoder e, finish);
+  private:
 
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const encoder&);
 
     /**@name Insert values returned by the as<type_id> helper.
      *@{
@@ -150,11 +146,16 @@ class encoder : public internal::object<pn_data_t> {
 inline encoder operator<<(encoder e, char* s) { return e << std::string(s); }
 inline encoder operator<<(encoder e, const char* s) { return e << std::string(s); }
 
+
+// FIXME aconway 2016-03-08: explain
+template <class T> typename enable_if<is_same<T, value>::value, encoder>::type
+operator<<(encoder e, const T& x) { e.insert(x); return e; }
+    ///@}
+
 // operator << for integer types that are not covered by the standard overrides.
-template <class T>
-typename enable_if<is_unknown_integer<T>::value, encoder>::type operator<<(encoder e, T i)  {
-    typename integer_type<sizeof(T), is_signed<T>::value>::type v = i;
-    return e << v;              // Insert as a known integer type
+template <class T> typename enable_integer<T, encoder>::type
+operator<<(encoder e, T i)  {
+    return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
 }
 
 // TODO aconway 2015-06-16: described array insertion.
@@ -212,6 +213,7 @@ template <std::size_t N> encoder operator<<(encoder e, const std::array<value, N
 template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
 
 #endif // PN_CPP_HAS_CPP11
+}
 }
 
 /// @endcond

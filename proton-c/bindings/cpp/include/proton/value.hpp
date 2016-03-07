@@ -47,17 +47,11 @@ class value : private comparable<value> {
     PN_CPP_EXTERN value(value&&);
 #endif
 
-    /// Copy a value.
+    /// Construct from any allowed type T. @see proton::amqp for allowed types.
+    /// Ignore the default parameter, it restricts the template to match only allowed types.
+    template <class T> value(const T& x, typename enable_amqp_type<T>::type* = 0) { encode() << x; }
+
     PN_CPP_EXTERN value& operator=(const value&);
-
-    /// Explicit conversion from from C++ type T.
-    template <class T> explicit value(const T& x) : data_(proton::data::create()) { encode() << x; }
-
-    /// Allow implicit conversion from a proton::scalar.
-    value(const scalar& x) { encode() << x; }
-
-    /// Create a value from C++ type T.
-    template <class T> value& operator=(const T& x) { encode() << x; return *this; }
 
     /// Remove any contained data.
     PN_CPP_EXTERN void clear();
@@ -65,7 +59,7 @@ class value : private comparable<value> {
     /// True if the value contains no data.
     PN_CPP_EXTERN bool empty() const;
 
-    /// Get the type of the current value.
+    /// Get the type ID for the current value.
     PN_CPP_EXTERN type_id type() const;
 
     /// @name Get methods
@@ -78,13 +72,13 @@ class value : private comparable<value> {
     template<class T> void get(T &t) const { decode() >> t; }
 
     /// Get an AMQP map as any type T that satisfies the map concept.
-    template<class T> void get_map(T& t) const { decode() >> to_map(t); }
+    template<class T> void get_map(T& t) const { decode() >> internal::to_map(t); }
 
     /// Get a map as a as any type T that is a sequence pair-like types with first and second.
-    template<class T> void get_pairs(T& t) const { decode() >> to_pairs(t); }
+    template<class T> void get_pairs(T& t) const { decode() >> internal::to_pairs(t); }
 
     /// Get an AMQP array or list as type T that satisfies the sequence concept. */
-    template<class T> void get_sequence(T& t) const { decode() >> to_sequence(t); }
+    template<class T> void get_sequence(T& t) const { decode() >> internal::to_sequence(t); }
 
     /// @}
 
@@ -103,25 +97,25 @@ class value : private comparable<value> {
     PN_CPP_EXTERN std::string as_string() const; ///< Allowed if `type_id_is_string_like(type())`
     /// @}
 
-    /// @cond INTERNAL
-    /// XXX undiscussed
-    PN_CPP_EXTERN encoder encode();              ///< Clear and return an encoder for this value.
-    PN_CPP_EXTERN decoder decode() const;        ///< Rewind and return an encoder for this value.
-    PN_CPP_EXTERN class data& data() const;      ///< Return a data reference, no clear or rewind.
-    /// @endcond
+  friend PN_CPP_EXTERN void swap(value&, value&);
+  friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
+  friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
+
+    ///@cond INTERNAL
+    PN_CPP_EXTERN internal::encoder encode();
+    PN_CPP_EXTERN internal::decoder decode() const;
+    PN_CPP_EXTERN explicit value(pn_data_t*); ///< Copies the data
+    ///@endcond
 
   private:
-    mutable class data data_;
 
-    /// @cond INTERNAL
-    friend PN_CPP_EXTERN void swap(value&, value&);
-    friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
-    friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
-    friend PN_CPP_EXTERN class encoder operator<<(class encoder e, const value& dv);
-    friend PN_CPP_EXTERN class decoder operator>>(class decoder d, value& dv);
-    friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value& dv);
-    friend class message;
-    /// @endcond
+    mutable class internal::data data_;
+    internal::data& data() const;   // On-demand access.
+
+  friend class message;
+  friend class internal::encoder;
+  friend class internal::decoder;
 };
 
 }

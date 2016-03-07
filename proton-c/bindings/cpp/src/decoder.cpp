@@ -32,6 +32,7 @@
 #include <proton/codec.h>
 
 namespace proton {
+namespace internal {
 
 /**@file
  *
@@ -85,8 +86,6 @@ void decoder::backup() { ::pn_data_prev(pn_object()); }
 
 void decoder::skip() { ::pn_data_next(pn_object()); }
 
-data decoder::data() { return proton::data(pn_object()); }
-
 namespace {
 
 void bad_type(type_id want, type_id got) {
@@ -126,8 +125,8 @@ type_id decoder::type() const {
     return pre_get(pn_object());
 }
 
-decoder operator>>(decoder d0, start& s) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(start& s) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     s.type = pre_get(d);
     switch (s.type) {
@@ -150,91 +149,93 @@ decoder operator>>(decoder d0, start& s) {
     }
     pn_data_enter(d);
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d, finish) { pn_data_exit(d.pn_object()); return d; }
+// FIXME aconway 2016-03-08: remove
+decoder decoder::operator>>(struct finish) { pn_data_exit(pn_object()); return *this; }
 
-decoder operator>>(decoder d, skip) { pn_data_next(d.pn_object()); return d; }
+decoder decoder::operator>>(struct skip) { pn_data_next(pn_object()); return *this; }
 
-decoder operator>>(decoder d, assert_type a) { bad_type(a.type, d.type()); return d; }
+decoder decoder::operator>>(struct assert_type a) { bad_type(a.type, type()); return *this; }
 
-decoder operator>>(decoder d, rewind) { d.rewind(); return d; }
+decoder decoder::operator>>(struct rewind) { rewind(); return *this; }
 
-decoder operator>>(decoder d, value& v) {
-    data ddata = d.data();
-    data vdata = v.encode().data();
-    if (d.data() == v.data_) throw conversion_error("extract into self");
+decoder decoder::operator>>(value& v) {
+    data mine(pn_object());
+    if (mine == v.data_)
+        throw conversion_error("extract into self");
+    v.clear();
     {
-        narrow n(ddata);
-        check(vdata.appendn(ddata, 1));
+        narrow n(pn_object());
+        check(v.data().appendn(mine, 1));
     }
-    if (!ddata.next()) throw conversion_error("no more data");
-    return d;
+    if (!mine.next()) throw conversion_error("no more data");
+    return *this;
 }
 
-decoder operator>>(decoder d, message_id& x) {
-    switch (d.type()) {
+decoder decoder::operator>>(message_id& x) {
+    switch (type()) {
       case ULONG:
       case UUID:
       case BINARY:
       case STRING:
-        return d >> x.scalar_;
+        return *this >> x.scalar_;
       default:
-        throw conversion_error("expected one of ulong, uuid, binary or string but found " +
-                           type_name(d.type()));
+        throw conversion_error(
+            msg() << "expected one of ulong, uuid, binary or string but found " << type());
     };
 }
 
-decoder operator>>(decoder d, annotation_key& x) {
-    switch (d.type()) {
+decoder decoder::operator>>(annotation_key& x) {
+    switch (type()) {
       case ULONG:
       case SYMBOL:
-        return d >> x.scalar_;
+        return *this >> x.scalar_;
       default:
-        throw conversion_error("expected one of ulong or symbol but found " + type_name(d.type()));
+        throw conversion_error("expected one of ulong or symbol but found " + type_name(type()));
     };
 }
 
-decoder operator>>(decoder d, scalar& x) {
-    save_state ss(d.pn_object());
-    type_id got = pre_get(d.pn_object());
+decoder decoder::operator>>(scalar& x) {
+    save_state ss(pn_object());
+    type_id got = pre_get(pn_object());
     if (!type_id_is_scalar(got))
         throw conversion_error("expected scalar, found "+type_name(got));
-    x.set(pn_data_get_atom(d.pn_object()));
+    x.set(pn_data_get_atom(pn_object()));
     ss.cancel();                // No error, no rewind
-    return d;
+    return *this;
 }
 
-decoder operator>>(decoder d, amqp::boolean_type &x) {
-    extract(d.pn_object(), x, pn_data_get_bool);
-    return d;
+decoder decoder::operator>>(amqp::boolean_type &x) {
+    extract(pn_object(), x, pn_data_get_bool);
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::ubyte_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::ubyte_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case UBYTE: x = pn_data_get_ubyte(d); break;
       default: bad_type(UBYTE, type_id(type_id(pn_data_type(d))));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::byte_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::byte_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case BYTE: x = pn_data_get_byte(d); break;
       default: bad_type(BYTE, type_id(type_id(pn_data_type(d))));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::ushort_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::ushort_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case UBYTE: x = pn_data_get_ubyte(d); break;
@@ -242,11 +243,11 @@ decoder operator>>(decoder d0, amqp::ushort_type &x) {
       default: bad_type(USHORT, type_id(type_id(pn_data_type(d))));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::short_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::short_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case BYTE: x = pn_data_get_byte(d); break;
@@ -254,11 +255,11 @@ decoder operator>>(decoder d0, amqp::short_type &x) {
       default: bad_type(SHORT, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::uint_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::uint_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case UBYTE: x = pn_data_get_ubyte(d); break;
@@ -267,11 +268,11 @@ decoder operator>>(decoder d0, amqp::uint_type &x) {
       default: bad_type(UINT, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::int_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::int_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case BYTE: x = pn_data_get_byte(d); break;
@@ -280,11 +281,11 @@ decoder operator>>(decoder d0, amqp::int_type &x) {
       default: bad_type(INT, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::ulong_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::ulong_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case UBYTE: x = pn_data_get_ubyte(d); break;
@@ -294,11 +295,11 @@ decoder operator>>(decoder d0, amqp::ulong_type &x) {
       default: bad_type(ULONG, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::long_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::long_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case BYTE: x = pn_data_get_byte(d); break;
@@ -308,21 +309,21 @@ decoder operator>>(decoder d0, amqp::long_type &x) {
       default: bad_type(LONG, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d, amqp::char_type &x) {
-    extract(d.pn_object(), x, pn_data_get_char);
-    return d;
+decoder decoder::operator>>(amqp::char_type &x) {
+    extract(pn_object(), x, pn_data_get_char);
+    return *this;
 }
 
-decoder operator>>(decoder d, timestamp &x) {
-    extract(d.pn_object(), x, pn_data_get_timestamp);
-    return d;
+decoder decoder::operator>>(timestamp &x) {
+    extract(pn_object(), x, pn_data_get_timestamp);
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::float_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::float_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case FLOAT: x = pn_data_get_float(d); break;
@@ -330,11 +331,11 @@ decoder operator>>(decoder d0, amqp::float_type &x) {
       default: bad_type(FLOAT, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d0, amqp::double_type &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(amqp::double_type &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case FLOAT: x = pn_data_get_float(d); break;
@@ -342,31 +343,31 @@ decoder operator>>(decoder d0, amqp::double_type &x) {
       default: bad_type(DOUBLE, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
-decoder operator>>(decoder d, decimal32 &x) {
-    extract(d.pn_object(), x, pn_data_get_decimal32);
-    return d;
+decoder decoder::operator>>(decimal32 &x) {
+    extract(pn_object(), x, pn_data_get_decimal32);
+    return *this;
 }
 
-decoder operator>>(decoder d, decimal64 &x) {
-    extract(d.pn_object(), x, pn_data_get_decimal64);
-    return d;
+decoder decoder::operator>>(decimal64 &x) {
+    extract(pn_object(), x, pn_data_get_decimal64);
+    return *this;
 }
 
-decoder operator>>(decoder d, decimal128 &x)  {
-    extract(d.pn_object(), x, pn_data_get_decimal128);
-    return d;
+decoder decoder::operator>>(decimal128 &x)  {
+    extract(pn_object(), x, pn_data_get_decimal128);
+    return *this;
 }
 
-decoder operator>>(decoder d, uuid &x)  {
-    extract(d.pn_object(), x, pn_data_get_uuid);
-    return d;
+decoder decoder::operator>>(uuid &x)  {
+    extract(pn_object(), x, pn_data_get_uuid);
+    return *this;
 }
 
-decoder operator>>(decoder d0, std::string &x) {
-    pn_data_t* d = d0.pn_object();
+decoder decoder::operator>>(std::string &x) {
+    pn_data_t* d = pn_object();
     save_state ss(d);
     switch (pre_get(d)) {
       case STRING: x = str(pn_data_get_string(d)); break;
@@ -375,7 +376,7 @@ decoder operator>>(decoder d0, std::string &x) {
       default: bad_type(STRING, type_id(pn_data_type(d)));
     }
     ss.cancel();
-    return d0;
+    return *this;
 }
 
 void assert_map_scope(const scope& s) {
@@ -386,4 +387,5 @@ void assert_map_scope(const scope& s) {
 }
 
 
-}
+} // internal
+} // proton

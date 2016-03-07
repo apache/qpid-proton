@@ -47,7 +47,7 @@ message::message(message &&m) : pn_msg_(0) { swap(*this, m); }
 #endif
 
 message::~message() {
-    body_.data_ = data(0);      // Must release body before pn_message_free
+    body_.data_ = internal::data(0);      // Must release body before pn_message_free
     pn_message_free(pn_msg_);
 }
 
@@ -126,7 +126,7 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    data(pn_message_correlation_id(pn_msg())).copy(id.scalar_);
+    internal::data(pn_message_correlation_id(pn_msg())).copy(id.scalar_);
 }
 
 message_id message::correlation_id() const {
@@ -197,9 +197,9 @@ value& message::body() { pn_msg(); return body_; }
 
 // Decode a map on demand
 template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    data d(get(msg));
+    internal::data d(get(msg));
     if (map.empty() && !d.empty()) {
-        d.decoder() >> rewind() >> map;
+        d.decoder() >> internal::rewind() >> map;
         d.clear();              // The map member is now the authority.
     }
     return map;
@@ -207,7 +207,7 @@ template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 
 // Encode a map if necessary.
 template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    data d(get(msg));
+    internal::data d(get(msg));
     if (d.empty() && !map.empty()) {
         d.encoder() << map;
         map.clear();        // The encoded pn_data_t  is now the authority.

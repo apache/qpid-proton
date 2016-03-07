@@ -20,37 +20,26 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
-#include "proton/scalar.hpp"
-#include "proton/symbol.hpp"
+#include <proton/scalar.hpp>
+#include <proton/symbol.hpp>
+#include <proton/types.hpp>
 
 namespace proton {
-
-class encoder;
-class decoder;
 
 /// A key for use with AMQP annotation maps.
 ///
 /// An annotation_key can contain either a uint64_t or a proton::symbol.
 class annotation_key : public restricted_scalar {
   public:
-    /// Create an empty key.
-    annotation_key() { scalar_ = uint64_t(0); }
+    annotation_key(uint64_t x = 0) { *this = x; }
+    annotation_key(const symbol& x) { *this = x; }
+    /// `char*` is encoded as proton::amqp::symbol.
+    annotation_key(const char *x) { *this = x; }
 
-    /// @name Assignment operators
-    ///
-    /// Assign a C++ value, deducing the AMQP type().
-    ///
-    /// @{
     annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
     annotation_key& operator=(const symbol& x) { scalar_ = x; return *this; }
     /// `char*` is encoded as proton::amqp::symbol.
     annotation_key& operator=(const char *x) { scalar_ = symbol(x); return *this; }
-    /// @}
-
-    /// A constructor that converts from any type that we can assign
-    /// from.
-    template <class T> annotation_key(T x) { *this = x; }
 
     /// @name Get methods
     ///
@@ -62,11 +51,8 @@ class annotation_key : public restricted_scalar {
     /// Return the value as type T.
     template<class T> T get() const { T x; get(x); return x; }
 
-    /// @cond INTERNAL
-    PN_CPP_EXTERN friend encoder operator<<(encoder, const annotation_key&);
-    PN_CPP_EXTERN friend decoder operator>>(decoder, annotation_key&);
-    friend class message;
-    /// @endcond
+  friend class message;
+  friend class internal::decoder;
 };
 
 }

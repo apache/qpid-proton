@@ -125,37 +125,6 @@ PN_CPP_EXTERN bool type_id_is_container(type_id);
 
 /// Print the name of a type.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
-
-/// @cond INTERNAL
-/// XXX change namespace
-    
-/// Information needed to start extracting or inserting a container type.
-///
-/// See encoder::operator<<(encoder&, const start&) and
-/// decoder::operator>>(decoder&, start&) for examples of use.
-struct start {
-    PN_CPP_EXTERN start(type_id type=NULL_TYPE, type_id element=NULL_TYPE, bool described=false, size_t size=0);
-    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
-    type_id element;         ///< the element type for array only.
-    bool is_described;       ///< true if first value is a descriptor.
-    size_t size;             ///< the element count excluding the descriptor (if any)
-
-    /// Return a start for an array.
-    PN_CPP_EXTERN static start array(type_id element, bool described=false);
-
-    /// Return a start for a list.
-    PN_CPP_EXTERN static start list();
-
-    /// Return a start for a map.
-    PN_CPP_EXTERN static start map();
-
-    /// Return a start for a described type.
-    PN_CPP_EXTERN static start described();
-};
-
-/// Finish inserting or extracting a container value.
-struct finish {};
-
 /// @endcond
 
 }

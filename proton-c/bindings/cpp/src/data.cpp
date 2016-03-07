@@ -30,6 +30,7 @@
 #include <ostream>
 
 namespace proton {
+namespace internal {
 
 data& data::copy(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); return *this; }
 
@@ -69,8 +70,8 @@ std::ostream& operator<<(std::ostream& o, const data& d) {
 
 data data::create() { return internal::take_ownership(pn_data(0)); }
 
-encoder data::encoder() { return proton::encoder(pn_object()); }
-decoder data::decoder() { return proton::decoder(pn_object()); }
+class encoder data::encoder() { return internal::encoder(pn_object()); }
+class decoder data::decoder() { return internal:: decoder(pn_object()); }
 
 type_id data::type() const { return decoder().type(); }
 
@@ -167,5 +168,5 @@ bool data::equal(const data& x) const {
 bool data::less(const data& x) const {
     return compare(const_cast<data&>(*this), const_cast<data&>(x)) < 0;
 }
-
+}
 }

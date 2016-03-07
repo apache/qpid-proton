@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
+#include <proton/types.hpp>
+#include <proton/type_traits.hpp>
 #include <proton/codec.h>
 #include <ostream>
 #include <iomanip>
@@ -70,11 +71,11 @@ bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_
 
 std::ostream& operator<<(std::ostream& o, type_id t) { return o << type_name(t); }
 
-
+namespace internal {
 start::start(type_id t, type_id e, bool d, size_t s) : type(t), element(e), is_described(d), size(s) {}
 start start::array(type_id element, bool described) { return start(ARRAY, element, described); }
 start start::list() { return start(LIST); }
 start start::map() { return start(MAP); }
 start start::described() { return start(DESCRIBED, NULL_TYPE, true); }
-
+}
 }

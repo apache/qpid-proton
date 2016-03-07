@@ -67,8 +67,9 @@ class message {
 #endif
 
     /// Create a message with its body set from any value that can be
-    /// assigned to a proton::value.
-    template <class T> message(const T& x) : pn_msg_(0) { body() = x; }
+    /// assigned to a proton::value. proton::amqp for encoding
+    template <class T> message(const T& x, typename enable_amqp_type<T>::type * = 0) :
+        pn_msg_(0) { body() = x; }
 
     PN_CPP_EXTERN ~message();
 
@@ -109,7 +110,7 @@ class message {
 
     PN_CPP_EXTERN void address(const std::string &addr);
     PN_CPP_EXTERN std::string address() const;
-    
+
     PN_CPP_EXTERN void reply_to(const std::string &addr);
     PN_CPP_EXTERN std::string reply_to() const;
 
@@ -122,7 +123,7 @@ class message {
     /// @{
 
     /// Set the body, equivalent to body() = v
-    template<class T> void body(const T& v) { body() = v; }
+    template<class T> typename enable_amqp_type<T>::type body(const T& v) { body() = v; }
 
     /// Get the body.
     PN_CPP_EXTERN const value& body() const;

@@ -30,7 +30,7 @@ namespace proton {
 
 /// Byte copy between two objects, only enabled if their sizes are equal.
 template <class T, class U>
-typename enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from) {
+typename internal::enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from) {
     const char *p = reinterpret_cast<const char*>(&from);
     std::copy(p, p + sizeof(T), reinterpret_cast<char*>(&to));
 }

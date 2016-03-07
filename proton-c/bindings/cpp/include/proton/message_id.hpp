@@ -25,9 +25,6 @@
 
 namespace proton {
 
-class encoder;
-class decoder;
-
 /// An AMQP message ID.
 ///
 /// It can contain one of the following types:
@@ -73,15 +70,11 @@ class message_id : public restricted_scalar {
     /// Return the value as type T.
     template<class T> T get() const { T x; get(x); return x; }
 
-    friend PN_CPP_EXTERN encoder operator<<(encoder, const message_id&);
-    friend PN_CPP_EXTERN decoder operator>>(decoder, message_id&);
-
-    /// @cond INTERNAL
   private:
     message_id(const pn_atom_t& a): restricted_scalar(a) {}
 
   friend class message;
-    /// @endcond
+  friend class internal::decoder;
 };
 
 }

@@ -108,13 +108,13 @@ class link_options::impl {
                     if (lifetime_policy.set) lp = lifetime_policy_symbol(lifetime_policy.value);
                     if (!sender && distribution_mode.set) dm = distribution_mode_symbol(distribution_mode.value);
                     if (lp.size() || dm.size()) {
-                        encoder enc = t.node_properties().encode();
-                        enc << start::map();
+                        internal::encoder enc = t.node_properties().encode();
+                        enc << internal::start::map();
                         if (dm.size())
                             enc << symbol("supported-dist-modes") << std::string(dm);
                         if (lp.size())
-                            enc << symbol("lifetime-policy") << start::described()
-                                << symbol(lp) << start::list() << finish();
+                            enc << symbol("lifetime-policy") << internal::start::described()
+                                << symbol(lp) << internal::start::list() << internal::finish();
                     }
                 }
             }
@@ -126,9 +126,9 @@ class link_options::impl {
                     l.local_source().expiry_policy(terminus::EXPIRE_NEVER);
                 }
                 if (selector.set && selector.value.size()) {
-                    encoder enc = l.local_source().filter().encode();
-                    enc << start::map() << symbol("selector") << start::described()
-                        << symbol("apache.org:selector-filter:string") << binary(selector.value) << finish();
+                    internal::encoder enc = l.local_source().filter().encode();
+                    enc << internal::start::map() << symbol("selector") << internal::start::described()
+                        << symbol("apache.org:selector-filter:string") << binary(selector.value) << internal::finish();
                 }
             }
         }

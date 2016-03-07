@@ -32,11 +32,14 @@ class binary;
 class decimal128;
 class decimal32;
 class decimal64;
-class decoder;
-class encoder;
 class symbol;
 class timestamp;
 class uuid;
+
+namespace internal {
+class decoder;
+class encoder;
+}
 
 /// A holder for an instance of any scalar AMQP type.
 /// The conversions for scalar types are documented in proton::amqp.
@@ -137,8 +140,6 @@ class scalar : private comparable<scalar> {
     /// @cond INTERNAL
 
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const scalar&);
-  friend PN_CPP_EXTERN encoder operator<<(encoder, const scalar&);
-  friend PN_CPP_EXTERN decoder operator>>(decoder, scalar&);
 
     /// Scalars with different type() are considered unequal even if the values
     /// are equal as numbers or strings.
@@ -159,6 +160,9 @@ class scalar : private comparable<scalar> {
 
   friend class message;
   friend class restricted_scalar;
+  friend class internal::encoder;
+  friend class internal::decoder;
+
 };
 
 /// @cond INTERNAL

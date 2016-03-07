@@ -28,6 +28,8 @@ namespace proton {
 
 value::value() {}
 value::value(const value& x) { *this = x; }
+value::value(pn_data_t* p) { if (p) data().copy(internal::data(p)); }
+
 #if PN_CPP_HAS_CPP11
 value::value(value&& x) { swap(*this, x); }
 #endif
@@ -37,7 +39,7 @@ value& value::operator=(const value& x) {
         if (x.empty())
             clear();
         else
-            encode() << x;
+            data().copy(x.data());
     }
     return *this;
 }
@@ -49,11 +51,13 @@ void value::clear() { if (!!data_) data_.clear(); }
 bool value::empty() const { return !data_ || data_.empty(); }
 
 // On demand
-inline data& value::data() const { if (!data_) data_ = proton::data::create(); return data_; }
+internal::data& value::data() const {
+    if (!data_) data_ = internal::data::create(); return data_;
+}
 
-class encoder value::encode() { clear(); return data().encoder(); }
+internal::encoder value::encode() { clear(); return data().encoder(); }
 
-class decoder value::decode() const { return data().decoder() >> rewind(); }
+internal::decoder value::decode() const { return data().decoder() >> internal::rewind(); }
 
 type_id value::type() const { return decode().type(); }
 

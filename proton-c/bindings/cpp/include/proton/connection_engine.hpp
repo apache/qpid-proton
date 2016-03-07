@@ -64,7 +64,6 @@ class connection;
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
-    // FIXME aconway 2016-01-23: DOC
     class container {
       public:
         /// Create a container with id.  Default to random UUID if id
