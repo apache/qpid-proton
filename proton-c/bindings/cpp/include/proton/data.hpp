@@ -1,5 +1,5 @@
-#ifndef DATA_H
-#define DATA_H
+#ifndef PROTON_DATA_HPP
+#define PROTON_DATA_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,56 +20,42 @@
  * under the License.
  */
 
-/// @cond INTERNAL
-/// XXX remove
-
-#include "proton/decoder.hpp"
-#include "proton/encoder.hpp"
-#include "proton/export.hpp"
-#include "proton/object.hpp"
-
-#include <iosfwd>
+#include <proton/object.hpp>
+#include <proton/types_fwd.hpp>
+#include <proton/type_id.hpp>
 
 struct pn_data_t;
 
 namespace proton {
-namespace internal {
 
-class data;
+class value;
 
-/// Holds a sequence of AMQP values, allows inserting and extracting
-/// via encoder() and decoder().  Cannot be directly instantiated, use
-/// `value`.
-class data : public object<pn_data_t> {
+namespace codec {
+
+/// Wrapper for a proton data object.
+class data : public internal::object<pn_data_t> {
   public:
-    data(pn_data_t* d=0) : object<pn_data_t>(d) {}
+    data(pn_data_t* d=0) : internal::object<pn_data_t>(d) {}
 
     PN_CPP_EXTERN static data create();
 
-    // Copy the contents of another data object t this one.
-    PN_CPP_EXTERN data& copy(const data&);
-
-    template<class T> typename enable_amqp_type<T, data>::type& copy(T &t) {
-        clear(); encoder() << t; return *this;
-    }
+    // Copy the contents of another data object.
+    PN_CPP_EXTERN void copy(const data&);
 
     /** Clear the data. */
     PN_CPP_EXTERN void clear();
 
+    /** Rewind current position to the start */
+    PN_CPP_EXTERN void rewind();
+
     /** True if there are no values. */
     PN_CPP_EXTERN bool empty() const;
 
-    /** Encoder to encode into this value */
-    PN_CPP_EXTERN class encoder encoder();
-
-    /** Decoder to decode from this value */
-    PN_CPP_EXTERN class decoder decoder();
-
     /** Return the data cursor position */
-    PN_CPP_EXTERN uintptr_t point() const;
+    PN_CPP_EXTERN void* point() const;
 
     /** Restore the cursor position to a previously saved position */
-    PN_CPP_EXTERN void restore(uintptr_t h);
+    PN_CPP_EXTERN void restore(void* h);
 
     PN_CPP_EXTERN void narrow();
 
@@ -79,29 +65,52 @@ class data : public object<pn_data_t> {
 
     PN_CPP_EXTERN int appendn(data src, int limit);
 
-    PN_CPP_EXTERN bool next() const;
+    PN_CPP_EXTERN bool next();
 
-    /** Rewind and return the type of the first value*/
-    PN_CPP_EXTERN type_id type() const;
+    PN_CPP_EXTERN bool prev();
 
-    /** Rewind and decode the first value */
-    template<class T> void get(T &t) const { decoder().rewind(); decoder() >> t; }
-
-    template<class T> T get() const { T t; get(t); return t; }
-
-    PN_CPP_EXTERN bool equal(const data& x) const;
-    PN_CPP_EXTERN bool less(const data& x) const;
-
-    /** Human readable representation of data. */
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
-  friend class value;
-  private:
-    data(pn_ptr<pn_data_t> d) : object<pn_data_t>(d) {}
-    class decoder decoder() const { return const_cast<data*>(this)->decoder(); }
 };
 
-}
-}
-/// @endcond
+/// state_guard saves the state and restores it in dtor unless cancel() is called.
+struct state_guard {
+    data& data_;
+    void* point_;
+    bool cancel_;
 
-#endif // DATA_H
+    state_guard(data& d) : data_(d), point_(data_.point()), cancel_(false) {}
+    ~state_guard() { if (!cancel_) data_.restore(point_); }
+    void cancel() { cancel_ = true; }
+};
+
+/// Narrow the data object, widen it in dtor.
+struct narrow_guard {
+    data& data_;
+    narrow_guard(data& d) : data_(d) { data_.narrow(); }
+    ~narrow_guard() { data_.widen(); }
+};
+
+// Start encoding a complex type.
+struct start {
+    start(type_id type_=NULL_TYPE, type_id element_=NULL_TYPE,
+          bool described_=false, size_t size_=0) :
+        type(type_), element(element_), is_described(described_), size(size_) {}
+
+    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
+    type_id element;         ///< the element type for array only.
+    bool is_described;       ///< true if first value is a descriptor.
+    size_t size;             ///< the element count excluding the descriptor (if any)
+
+    PN_CPP_EXTERN static start array(type_id element, bool described=false) { return start(ARRAY, element, described); }
+    PN_CPP_EXTERN static start list() { return start(LIST); }
+    PN_CPP_EXTERN static start map() { return start(MAP); }
+    PN_CPP_EXTERN static start described() { return start(DESCRIBED, NULL_TYPE, true); }
+};
+
+/// Finish inserting or extracting a complex type.
+struct finish {};
+
+} // codec
+} // proton
+
+#endif // PROTON_DATA_HPP

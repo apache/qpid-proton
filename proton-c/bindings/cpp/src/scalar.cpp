@@ -43,6 +43,7 @@ scalar& scalar::operator=(const scalar& x) {
 }
 
 type_id scalar::type() const { return type_id(atom_.type); }
+
 bool scalar::empty() const { return type() == NULL_TYPE; }
 
 void scalar::set(const std::string& x, pn_type_t t) {
@@ -57,6 +58,28 @@ void scalar::set(const pn_atom_t& atom) {
     else
         atom_ = atom;
 }
+
+scalar::scalar(bool x) { *this = x; }
+scalar::scalar(uint8_t x) { *this = x; }
+scalar::scalar(int8_t x) { *this = x; }
+scalar::scalar(uint16_t x) { *this = x; }
+scalar::scalar(int16_t x) { *this = x; }
+scalar::scalar(uint32_t x) { *this = x; }
+scalar::scalar(int32_t x) { *this = x; }
+scalar::scalar(uint64_t x) { *this = x; }
+scalar::scalar(int64_t x) { *this = x; }
+scalar::scalar(wchar_t x) { *this = x; }
+scalar::scalar(float x) { *this = x; }
+scalar::scalar(double x) { *this = x; }
+scalar::scalar(timestamp x) { *this = x; }
+scalar::scalar(const decimal32& x) { *this = x; }
+scalar::scalar(const decimal64& x) { *this = x; }
+scalar::scalar(const decimal128& x) { *this = x; }
+scalar::scalar(const uuid& x) { *this = x; }
+scalar::scalar(const std::string& x) { *this = x; }
+scalar::scalar(const symbol& x) { *this = x; }
+scalar::scalar(const binary& x) { *this = x; }
+scalar::scalar(const char* x) { *this = x; }
 
 scalar& scalar::operator=(bool x) { atom_.u.as_bool = x; atom_.type = PN_BOOL; return *this; }
 scalar& scalar::operator=(uint8_t x) { atom_.u.as_ubyte = x; atom_.type = PN_UBYTE; return *this; }
@@ -193,7 +216,7 @@ template <class T, class F> T type_switch(const scalar& a, F f) {
       case STRING: return f(a.get<std::string>());
       case SYMBOL: return f(a.get<symbol>());
       default:
-        throw error("bad scalar type");
+        throw std::logic_error("bad proton::scalar type");
     }
 }
 

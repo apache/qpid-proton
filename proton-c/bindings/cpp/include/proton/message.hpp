@@ -22,12 +22,13 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/message_id.hpp"
-#include "proton/annotation_key.hpp"
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/value.hpp"
-#include "proton/duration.hpp"
+#include <proton/map.hpp>
+#include <proton/annotation_key.hpp>
+#include <proton/duration.hpp>
+#include <proton/export.hpp>
+#include <proton/message_id.hpp>
+#include <proton/pn_unique_ptr.hpp>
+#include <proton/value.hpp>
 
 #include <string>
 #include <vector>
@@ -67,9 +68,8 @@ class message {
 #endif
 
     /// Create a message with its body set from any value that can be
-    /// assigned to a proton::value. proton::amqp for encoding
-    template <class T> message(const T& x, typename enable_amqp_type<T>::type * = 0) :
-        pn_msg_(0) { body() = x; }
+    /// converted to a proton::value.
+    PN_CPP_EXTERN message(const value& x);
 
     PN_CPP_EXTERN ~message();
 
@@ -122,8 +122,8 @@ class message {
     /// @name Content
     /// @{
 
-    /// Set the body, equivalent to body() = v
-    template<class T> typename enable_amqp_type<T>::type body(const T& v) { body() = v; }
+    /// Set the body, equivalent to body() = x
+    PN_CPP_EXTERN void body(const value& x);
 
     /// Get the body.
     PN_CPP_EXTERN const value& body() const;

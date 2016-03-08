@@ -23,7 +23,7 @@
 #include <proton/connection_engine.hpp>
 #include <proton/handler.hpp>
 #include <proton/event.hpp>
-#include <proton/types.hpp>
+#include <proton/types_fwd.hpp>
 #include <proton/link.hpp>
 #include <deque>
 #include <algorithm>

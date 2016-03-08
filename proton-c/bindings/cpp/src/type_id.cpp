@@ -17,13 +17,11 @@
  * under the License.
  */
 
-#include <proton/types.hpp>
-#include <proton/type_traits.hpp>
-#include <proton/codec.h>
+#include "types_internal.hpp"
+
+#include <proton/type_id.hpp>
+
 #include <ostream>
-#include <iomanip>
-#include <algorithm>
-#include <sstream>
 
 namespace proton {
 
@@ -58,24 +56,10 @@ std::string type_name(type_id t) {
     return "unknown";
 }
 
-bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
-bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
-bool type_id_is_integral(type_id t) { return t == BOOLEAN || t == CHAR || t == TIMESTAMP || type_id_is_unsigned_int(t) || type_id_is_signed_int(t); }
-bool type_id_is_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
-bool type_id_is_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }
-bool type_id_is_signed(type_id t) { return type_id_is_signed_int(t) || type_id_is_floating_point(t) || type_id_is_decimal(t); }
-bool type_id_is_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
-bool type_id_is_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
-bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_floating_point(t) || type_id_is_decimal(t) || type_id_is_string_like(t) || t == TIMESTAMP || t == UUID; }
-
-
 std::ostream& operator<<(std::ostream& o, type_id t) { return o << type_name(t); }
 
-namespace internal {
-start::start(type_id t, type_id e, bool d, size_t s) : type(t), element(e), is_described(d), size(s) {}
-start start::array(type_id element, bool described) { return start(ARRAY, element, described); }
-start start::list() { return start(LIST); }
-start start::map() { return start(MAP); }
-start start::described() { return start(DESCRIBED, NULL_TYPE, true); }
+void assert_type_equal(type_id want, type_id got) {
+    if (want != got) throw make_conversion_error(want, got);
 }
-}
+
+} // proton

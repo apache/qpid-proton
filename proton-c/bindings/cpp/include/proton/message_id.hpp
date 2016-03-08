@@ -20,8 +20,11 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
-#include "proton/scalar.hpp"
+#include <proton/binary.hpp>
+#include <proton/scalar.hpp>
+#include <proton/uuid.hpp>
+
+#include <string>
 
 namespace proton {
 
@@ -36,11 +39,18 @@ namespace proton {
 ///
 class message_id : public restricted_scalar {
   public:
-    message_id(uint64_t x = 0) { scalar_ = x; }
+    /// An empty message_id has a uint64_t == 0 value.
+    message_id() { scalar_ = uint64_t(0); }
+    message_id(const message_id& x) { scalar_ = x; }
+    message_id& operator=(const message_id& x) { scalar_ = x; return *this; }
+
+    message_id(uint64_t x) { scalar_ = x; }
     message_id(const uuid& x) { scalar_ = x; }
     message_id(const binary& x) { scalar_ = x; }
     message_id(const std::string& x) { scalar_ = x; }
-    message_id(const char *x) { scalar_ = std::string(x); }
+
+    /// Extra conversion - treat char* as amqp::STRING
+    message_id(const char* x) { scalar_ = x; }
 
     /// @name Assignment operators
     ///
@@ -51,8 +61,6 @@ class message_id : public restricted_scalar {
     message_id& operator=(const uuid& x) { scalar_ = x; return *this; }
     message_id& operator=(const binary& x) { scalar_ = x; return *this; }
     message_id& operator=(const std::string& x) { scalar_ = x; return *this; }
-    /// char* is encoded as std::string
-    message_id& operator=(const char *x) { scalar_ = std::string(x); return *this; }
     /// @}
 
     /// @name Get methods
@@ -74,7 +82,7 @@ class message_id : public restricted_scalar {
     message_id(const pn_atom_t& a): restricted_scalar(a) {}
 
   friend class message;
-  friend class internal::decoder;
+  friend class codec::decoder;
 };
 
 }

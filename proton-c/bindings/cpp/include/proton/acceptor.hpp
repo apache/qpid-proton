@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/reactor.h"
-#include "proton/export.hpp"
-#include "proton/object.hpp"
+#include <proton/reactor.h>
+#include <proton/export.hpp>
+#include <proton/object.hpp>
 
 struct pn_connection_t;
 

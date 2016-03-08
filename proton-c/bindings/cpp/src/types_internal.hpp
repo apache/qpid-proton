@@ -30,7 +30,7 @@ namespace proton {
 
 /// Byte copy between two objects, only enabled if their sizes are equal.
 template <class T, class U>
-typename internal::enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from) {
+typename codec::enable_if<sizeof(T) == sizeof(U)>::type byte_copy(T &to, const U &from) {
     const char *p = reinterpret_cast<const char*>(&from);
     std::copy(p, p + sizeof(T), reinterpret_cast<char*>(&to));
 }
@@ -51,6 +51,16 @@ inline pn_bytes_t pn_bytes(const std::string& s) {
 
 /// Convert pn_bytes_t to str
 inline std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
+
+inline bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
+inline bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
+inline bool type_id_is_integral(type_id t) { return t == BOOLEAN || t == CHAR || t == TIMESTAMP || type_id_is_unsigned_int(t) || type_id_is_signed_int(t); }
+inline bool type_id_is_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
+inline bool type_id_is_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }
+inline bool type_id_is_signed(type_id t) { return type_id_is_signed_int(t) || type_id_is_floating_point(t) || type_id_is_decimal(t); }
+inline bool type_id_is_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
+inline bool type_id_is_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
+inline bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_floating_point(t) || type_id_is_decimal(t) || type_id_is_string_like(t) || t == TIMESTAMP || t == UUID; }
 
 }
 

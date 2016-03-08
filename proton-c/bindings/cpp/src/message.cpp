@@ -19,16 +19,17 @@
  *
  */
 
-#include "proton/data.hpp"
-#include "proton/message.hpp"
+#include "proton/delivery.hpp"
 #include "proton/error.hpp"
 #include "proton/link.hpp"
-#include "proton/delivery.hpp"
-#include "proton/message.h"
-#include "proton/sender.hpp"
-#include "proton/receiver.hpp"
+#include "proton/message.hpp"
 #include "proton/message_id.hpp"
-#include "proton/delivery.h"
+#include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/timestamp.hpp"
+
+#include "proton/message.h"
+
 #include "msg.hpp"
 #include "proton_bits.hpp"
 #include "types_internal.hpp"
@@ -46,8 +47,10 @@ message::message(const message &m) : pn_msg_(0) { *this = m; }
 message::message(message &&m) : pn_msg_(0) { swap(*this, m); }
 #endif
 
+message::message(const value& x) : pn_msg_(0) { body() = x; }
+
 message::~message() {
-    body_.data_ = internal::data(0);      // Must release body before pn_message_free
+    body_.data_ = codec::data(0);      // Must release body before pn_message_free
     pn_message_free(pn_msg_);
 }
 
@@ -126,7 +129,8 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    internal::data(pn_message_correlation_id(pn_msg())).copy(id.scalar_);
+    codec::encoder e(pn_message_correlation_id(pn_msg()));
+    e << id.scalar_;
 }
 
 message_id message::correlation_id() const {
@@ -187,6 +191,8 @@ bool message::inferred() const { return pn_message_is_inferred(pn_msg()); }
 
 void message::inferred(bool b) { pn_message_set_inferred(pn_msg(), b); }
 
+void message::body(const value& x) { body() = x; }
+
 const value& message::body() const { pn_msg(); return body_; }
 value& message::body() { pn_msg(); return body_; }
 
@@ -197,9 +203,10 @@ value& message::body() { pn_msg(); return body_; }
 
 // Decode a map on demand
 template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    internal::data d(get(msg));
+    codec::decoder d(get(msg));
     if (map.empty() && !d.empty()) {
-        d.decoder() >> internal::rewind() >> map;
+        d.rewind();
+        d >> map;
         d.clear();              // The map member is now the authority.
     }
     return map;
@@ -207,10 +214,10 @@ template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 
 // Encode a map if necessary.
 template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    internal::data d(get(msg));
-    if (d.empty() && !map.empty()) {
-        d.encoder() << map;
-        map.clear();        // The encoded pn_data_t  is now the authority.
+    codec::encoder e(get(msg));
+    if (e.empty() && !map.empty()) {
+        e << map;
+        map.clear();            // The encoded pn_data_t  is now the authority.
     }
     return map;
 }

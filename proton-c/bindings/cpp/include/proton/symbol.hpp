@@ -26,8 +26,8 @@ namespace proton {
 ///
 class symbol : public std::string {
   public:
-    explicit symbol(const std::string& s=std::string()) : std::string(s) {}
-    explicit symbol(const char* s) : std::string(s) {}
+    symbol(const std::string& s=std::string()) : std::string(s) {}
+    symbol(const char* s) : std::string(s) {}
 };
 
 }

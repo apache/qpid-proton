@@ -20,62 +20,27 @@
  * under the License.
  */
 
-/// @cond INTERNAL
-/// XXX change namespace, review better
-
-#include "proton/error.hpp"
-#include "proton/types.hpp"
-#include "proton/type_traits.hpp"
-#include "proton/object.hpp"
-#include <iosfwd>
-
-#include <vector>
-#include <deque>
-#include <list>
-#include <map>
-
-#if PN_CPP_HAS_CPP11
-#include <array>
-#include <forward_list>
-#include <unordered_map>
-#endif // PN_CPP_HAS_CPP11
-
-/// @file
-/// @internal
-
-struct pn_data_t;
+#include <proton/data.hpp>
+#include <proton/type_traits.hpp>
 
 namespace proton {
 
 class scalar;
 class value;
 
-namespace internal {
-
-class data;
-
-template<class T, type_id A> struct cref {
-    typedef T cpp_type;
-    static const type_id type;
-
-    cref(const T& v) : value(v) {}
-    const T& value;
-};
-
-template <class T, type_id A> const type_id cref<T, A>::type = A;
-
-/**
- * Indicate the desired AMQP type to use when encoding T.
- */
-template <type_id A, class T> cref<T, A> as(const T& value) { return cref<T, A>(value); }
+namespace codec {
 
 /// Stream-like encoder from AMQP bytes to C++ values.
 ///
 /// Internal use only, see proton::value, proton::scalar and proton::amqp
 /// for the recommended ways to manage AMQP data.
-class encoder : public object<pn_data_t> {
+class encoder : public data {
   public:
-    encoder(pn_data_t* e) : object<pn_data_t>(e) {}
+    ///@internal
+    explicit encoder(const data& d) : data(d) {}
+
+    /// Encoder into v. Clears any current value in v.
+    PN_CPP_EXTERN explicit encoder(value& v);
 
     /**
      * Encode the current values into buffer and update size to reflect the
@@ -97,126 +62,98 @@ class encoder : public object<pn_data_t> {
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
 
-    PN_CPP_EXTERN encoder operator<<(bool);
-    PN_CPP_EXTERN encoder operator<<(uint8_t);
-    PN_CPP_EXTERN encoder operator<<(int8_t);
-    PN_CPP_EXTERN encoder operator<<(uint16_t);
-    PN_CPP_EXTERN encoder operator<<(int16_t);
-    PN_CPP_EXTERN encoder operator<<(uint32_t);
-    PN_CPP_EXTERN encoder operator<<(int32_t);
-    PN_CPP_EXTERN encoder operator<<(wchar_t);
-    PN_CPP_EXTERN encoder operator<<(uint64_t);
-    PN_CPP_EXTERN encoder operator<<(int64_t);
-    PN_CPP_EXTERN encoder operator<<(timestamp);
-    PN_CPP_EXTERN encoder operator<<(float);
-    PN_CPP_EXTERN encoder operator<<(double);
-    PN_CPP_EXTERN encoder operator<<(decimal32);
-    PN_CPP_EXTERN encoder operator<<(decimal64);
-    PN_CPP_EXTERN encoder operator<<(decimal128);
-    PN_CPP_EXTERN encoder operator<<(const uuid&);
-    PN_CPP_EXTERN encoder operator<<(const std::string&);
-    PN_CPP_EXTERN encoder operator<<(const symbol&);
-    PN_CPP_EXTERN encoder operator<<(const binary&);
-    PN_CPP_EXTERN encoder operator<<(const scalar&);
-    PN_CPP_EXTERN encoder operator<<(const null&);
+    PN_CPP_EXTERN encoder& operator<<(bool);
+    PN_CPP_EXTERN encoder& operator<<(uint8_t);
+    PN_CPP_EXTERN encoder& operator<<(int8_t);
+    PN_CPP_EXTERN encoder& operator<<(uint16_t);
+    PN_CPP_EXTERN encoder& operator<<(int16_t);
+    PN_CPP_EXTERN encoder& operator<<(uint32_t);
+    PN_CPP_EXTERN encoder& operator<<(int32_t);
+    PN_CPP_EXTERN encoder& operator<<(wchar_t);
+    PN_CPP_EXTERN encoder& operator<<(uint64_t);
+    PN_CPP_EXTERN encoder& operator<<(int64_t);
+    PN_CPP_EXTERN encoder& operator<<(timestamp);
+    PN_CPP_EXTERN encoder& operator<<(float);
+    PN_CPP_EXTERN encoder& operator<<(double);
+    PN_CPP_EXTERN encoder& operator<<(decimal32);
+    PN_CPP_EXTERN encoder& operator<<(decimal64);
+    PN_CPP_EXTERN encoder& operator<<(decimal128);
+    PN_CPP_EXTERN encoder& operator<<(const uuid&);
+    PN_CPP_EXTERN encoder& operator<<(const std::string&);
+    PN_CPP_EXTERN encoder& operator<<(const symbol&);
+    PN_CPP_EXTERN encoder& operator<<(const binary&);
+    PN_CPP_EXTERN encoder& operator<<(const scalar&);
+    PN_CPP_EXTERN encoder& operator<<(const null&);
 
-    /// Start encoding a complex type.
-    PN_CPP_EXTERN encoder operator<<(const start&);
+    /// Inserts proton::value.
+    PN_CPP_EXTERN encoder& operator<<(exact_cref<value>);
+
+    PN_CPP_EXTERN encoder& operator<<(const start&);
     /// Finish a complex type
-    PN_CPP_EXTERN encoder operator<<(const finish&);
+    PN_CPP_EXTERN encoder& operator<<(const finish&);
 
-    // FIXME aconway 2016-03-03: hide
-    PN_CPP_EXTERN void insert(const value& v);
+    // XXX doc
+    template <class T> struct list_cref { T& ref; list_cref(T& r) : ref(r) {} };
+    template <class T> struct map_cref { T& ref;  map_cref(T& r) : ref(r) {} };
+
+    template <class T> struct array_cref {
+        start array_start;
+        T& ref;
+        array_cref(T& r, type_id el, bool described) : array_start(ARRAY, el, described), ref(r) {}
+    };
+
+    template <class T> static list_cref<T> list(T& x) { return list_cref<T>(x); }
+    template <class T> static map_cref<T> map(T& x) { return map_cref<T>(x); }
+    template <class T> static array_cref<T> array(T& x, type_id element, bool described=false) {
+        return array_cref<T>(x, element, described);
+    }
+
+    template <class T> encoder& operator<<(const map_cref<T>& x) {
+        state_guard sg(*this);
+        *this << start::map();
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << i->first << i->second;
+        *this << finish();
+        return *this;
+    }
+
+    template <class T> encoder& operator<<(const list_cref<T>& x) {
+        state_guard sg(*this);
+        *this << start::list();
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << *i;
+        *this << finish();
+        return *this;
+    }
+
+    template <class T> encoder& operator<<(const array_cref<T>& x) {
+        state_guard sg(*this);
+        *this << x.array_start;
+        for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
+            *this << *i;
+        *this << finish();
+        return *this;
+    }
 
   private:
-
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const encoder&);
-
-    /**@name Insert values returned by the as<type_id> helper.
-     *@{
-     */
-  template <class T, type_id A> friend PN_CPP_EXTERN encoder operator<<(encoder, cref<T, A>);
-  template <class T> friend encoder operator<<(encoder, cref<T, ARRAY>);
-  template <class T> friend encoder operator<<(encoder, cref<T, LIST>);
-  template <class T> friend encoder operator<<(encoder, cref<T, MAP>);
-    // TODO aconway 2015-06-16: described values.
-    ///@}
+    template<class T, class U> encoder& insert(const T& x, int (*put)(pn_data_t*, U));
+    void check(long result);
 };
 
+///@internal
+/// Invalid template to  prevent pointers being implicitly converted to bool.
+template <class T> void* operator<<(encoder&, const T*);
+
 // Treat char* as string
-inline encoder operator<<(encoder e, char* s) { return e << std::string(s); }
-inline encoder operator<<(encoder e, const char* s) { return e << std::string(s); }
-
-
-// FIXME aconway 2016-03-08: explain
-template <class T> typename enable_if<is_same<T, value>::value, encoder>::type
-operator<<(encoder e, const T& x) { e.insert(x); return e; }
-    ///@}
+inline encoder& operator<<(encoder& e, const char* s) { return e << std::string(s); }
 
 // operator << for integer types that are not covered by the standard overrides.
-template <class T> typename enable_integer<T, encoder>::type
-operator<<(encoder e, T i)  {
+template <class T> typename codec::enable_unknown_integer<T, encoder&>::type
+operator<<(encoder& e, T i)  {
     return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
 }
 
-// TODO aconway 2015-06-16: described array insertion.
-
-template <class T> encoder operator<<(encoder e, cref<T, ARRAY> a) {
-    e << start::array(type_id_of<typename T::value_type>::value);
-    for (typename T::const_iterator i = a.value.begin(); i != a.value.end(); ++i)
-        e << *i;
-    e << finish();
-    return e;
-}
-
-template <class T> encoder operator<<(encoder e, cref<T, LIST> l) {
-    e << start::list();
-    for (typename T::const_iterator i = l.value.begin(); i != l.value.end(); ++i)
-        e << *i;
-    e << finish();
-    return e;
-}
-
-template <class T> encoder operator<<(encoder e, cref<T, MAP> m){
-    e << start::map();
-    for (typename T::const_iterator i = m.value.begin(); i != m.value.end(); ++i) {
-        e << i->first;
-        e << i->second;
-    }
-    e << finish();
-    return e;
-}
-
-// Encode as ARRAY
-template <class T, class A> encoder operator<<(encoder e, const std::vector<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, class A> encoder operator<<(encoder e, const std::deque<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, class A> encoder operator<<(encoder e, const std::list<T, A>& v) { return e << as<ARRAY>(v); }
-
-// Encode as LIST
-template <class A> encoder operator<<(encoder e, const std::vector<value, A>& v) { return e << as<LIST>(v); }
-template <class A> encoder operator<<(encoder e, const std::deque<value, A>& v) { return e << as<LIST>(v); }
-template <class A> encoder operator<<(encoder e, const std::list<value, A>& v) { return e << as<LIST>(v); }
-
-// Encode as MAP
-template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::map<K, T, C, A>& v) { return e << as<MAP>(v); }
-
-#if PN_CPP_HAS_CPP11
-
-// Encode as ARRAY.
-template <class T, class A> encoder operator<<(encoder e, const std::forward_list<T, A>& v) { return e << as<ARRAY>(v); }
-template <class T, std::size_t N> encoder operator<<(encoder e, const std::array<T, N>& v) { return e << as<ARRAY>(v); }
-
-// Encode as LIST.
-template <class A> encoder operator<<(encoder e, const std::forward_list<value, A>& v) { return e << as<LIST>(v); }
-template <std::size_t N> encoder operator<<(encoder e, const std::array<value, N>& v) { return e << as<LIST>(v); }
-
-// Encode as map.
-template <class K, class T, class C, class A> encoder operator<<(encoder e, const std::unordered_map<K, T, C, A>& v) { return e << as<MAP>(v); }
-
-#endif // PN_CPP_HAS_CPP11
-}
-}
-
-/// @endcond
+} // internal
+} // proton
 
 #endif // ENCODER_H

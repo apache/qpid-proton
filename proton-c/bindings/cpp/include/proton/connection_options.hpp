@@ -22,15 +22,18 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/duration.hpp"
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/reconnect_timer.hpp"
-#include "proton/types.hpp"
+#include <proton/config.hpp>
+#include <proton/export.hpp>
+#include <proton/duration.hpp>
+#include <proton/pn_unique_ptr.hpp>
+#include <proton/reconnect_timer.hpp>
+#include <proton/types_fwd.hpp>
+
 
 #include <vector>
 #include <string>
+
+struct pn_connection_t;
 
 namespace proton {
 

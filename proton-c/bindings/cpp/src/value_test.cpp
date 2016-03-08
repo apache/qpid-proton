@@ -19,66 +19,84 @@
 
 #include "test_bits.hpp"
 
-#include <proton/amqp.hpp>
-#include <proton/binary.hpp>
-#include <proton/symbol.hpp>
-#include <proton/value.hpp>
+#include <proton/types.hpp>
+#include <proton/error.hpp>
 
-#include <algorithm>
-#include <iostream>
-#include <iterator>
-#include <map>
-#include <sstream>
-#include <vector>
 
 using namespace std;
 using namespace proton;
 using namespace test;
 
 // Inserting and extracting simple C++ values.
-template <class T> void value_test(T x, type_id tid, const std::string& s, T y) {
-    value v(x);
-    ASSERT_EQUAL(tid, v.type());
-    ASSERT_EQUAL(x, v.get<T>());
+template <class T> void simple_type_test(T x, type_id tid, const std::string& s, T y) {
+    value vx(x);
+    ASSERT_EQUAL(tid, vx.type());
+    ASSERT_EQUAL(x, get<T>(vx));
+
+    value vxa = x;
+    ASSERT_EQUAL(tid, vxa.type());
+    ASSERT_EQUAL(x, get<T>(vxa));
 
     value v2;
     v2 = x;
     ASSERT_EQUAL(tid, v2.type());
-    ASSERT_EQUAL(x, v2.get<T>());
+    ASSERT_EQUAL(x, get<T>(v2));
 
-    value v3(v);
-    v3 = x;
+    value v3(vx);
     ASSERT_EQUAL(tid, v3.type());
-    ASSERT_EQUAL(x, v3.get<T>());
+    ASSERT_EQUAL(x, get<T>(v3));
 
-    ASSERT_EQUAL(v, v2);
-    ASSERT_EQUAL(s, str(v));
-    ASSERT(x != y);
-    ASSERT(x < y);
-    ASSERT(y > x);
+    value v4 = vx;
+    ASSERT_EQUAL(tid, v4.type());
+    ASSERT_EQUAL(x, get<T>(v4));
+
+
+    ASSERT_EQUAL(vx, v2);
+    ASSERT_EQUAL(s, str(vx));
+    value vy(y);
+    ASSERT(vx != vy);
+    ASSERT(vx < vy);
+    ASSERT(vy > vx);
 }
 
-// Map values
-void map_test() {
-    std::map<string, int> m;
-    m["a"] = 1;
-    m["b"] = 2;
-    m["c"] = 3;
-    value v(m);
-    ASSERT_EQUAL("{\"a\"=1, \"b\"=2, \"c\"=3}",  str(v));
-    std::map<value, value> mv;
-    v.get(mv);
-    ASSERT_EQUAL(mv[value("a")], value(amqp::int_type(1)));
-    mv[value("b")] = amqp::binary_type("xyz");
-    mv.erase(value("c"));
-    v = value(mv);
-    ASSERT_EQUAL("{\"a\"=1, \"b\"=b\"xyz\"}",  str(v));
+template <class T> void simple_integral_test() {
+    typedef typename codec::integer_type<sizeof(T), codec::is_signed<T>::value>::type int_type;
+    simple_type_test(T(3), codec::type_id_of<int_type>::value, "3", T(4));
+}
 
-    std::vector<std::pair<string, value> > vec;
-    v.get_pairs(vec);
-    ASSERT_EQUAL(2, vec.size());
-    ASSERT_EQUAL(std::make_pair(std::string("a"), value(1)), vec[0]);
-    ASSERT_EQUAL(std::make_pair(std::string("b"), value(amqp::binary_type("xyz"))), vec[1]);
+// Inserting and extracting arrays from a container T of type U
+template <class T> void sequence_test(type_id tid, const many<typename T::value_type>& values) {
+    T x(values.begin(), values.end());
+
+    value vx(x);                // construt
+    ASSERT_EQUAL(tid, vx.type());
+    ASSERT_EQUAL(x, get<T>(vx));
+
+    value v2;                   // assign
+    v2 = x;
+    ASSERT_EQUAL(tid, v2.type());
+    ASSERT_EQUAL(x, get<T>(v2));
+    ASSERT_EQUAL(vx, v2);
+
+    T y(x);
+    *y.begin() = *(++y.begin()); // Second element is bigger so y is lexicographically bigger than x
+    value vy(y);
+    ASSERT(vx != vy);
+    ASSERT(vx < vy);
+    ASSERT(vy > vx);
+}
+
+template <class T, class U> void map_test(const U& values) {
+    T m(values.begin(), values.end());
+    value v(m);
+    ASSERT_EQUAL(MAP, v.type());
+    T m2(v.get<T>());
+    ASSERT_EQUAL(m.size(), m2.size());
+    ASSERT_EQUAL(m, m2);
+}
+
+template <class T> T make(const char c) {
+    T x; std::fill(x.begin(), x.end(), c); return x;
 }
 
 void null_test() {
@@ -99,22 +117,77 @@ void null_test() {
 
 int main(int, char**) {
     int failed = 0;
-    RUN_TEST(failed, value_test(false, BOOLEAN, "false", true));
-    RUN_TEST(failed, value_test(amqp::ubyte_type(42), UBYTE, "42", amqp::ubyte_type(50)));
-    RUN_TEST(failed, value_test(amqp::byte_type(-42), BYTE, "-42", amqp::byte_type(-40)));
-    RUN_TEST(failed, value_test(amqp::ushort_type(4242), USHORT, "4242", amqp::ushort_type(5252)));
-    RUN_TEST(failed, value_test(amqp::short_type(-4242), SHORT, "-4242", amqp::short_type(3)));
-    RUN_TEST(failed, value_test(amqp::uint_type(4242), UINT, "4242", amqp::uint_type(5252)));
-    RUN_TEST(failed, value_test(amqp::int_type(-4242), INT, "-4242", amqp::int_type(3)));
-    RUN_TEST(failed, value_test(amqp::ulong_type(4242), ULONG, "4242", amqp::ulong_type(5252)));
-    RUN_TEST(failed, value_test(amqp::long_type(-4242), LONG, "-4242", amqp::long_type(3)));
-    RUN_TEST(failed, value_test(amqp::float_type(1.234), FLOAT, "1.234", amqp::float_type(2.345)));
-    RUN_TEST(failed, value_test(amqp::double_type(11.2233), DOUBLE, "11.2233", amqp::double_type(12)));
-    RUN_TEST(failed, value_test(amqp::string_type("aaa"), STRING, "aaa", amqp::string_type("aaaa")));
-    RUN_TEST(failed, value_test(std::string("xxx"), STRING, "xxx", std::string("yyy")));
-    RUN_TEST(failed, value_test(amqp::symbol_type("aaa"), SYMBOL, "aaa", amqp::symbol_type("aaaa")));
-    RUN_TEST(failed, value_test(amqp::binary_type("aaa"), BINARY, "b\"aaa\"", amqp::binary_type("aaaa")));
-    RUN_TEST(failed, map_test());
-    RUN_TEST(failed, null_test());
+    RUN_TEST(failed, simple_type_test(false, BOOLEAN, "false", true));
+    RUN_TEST(failed, simple_type_test(uint8_t(42), UBYTE, "42", uint8_t(50)));
+    RUN_TEST(failed, simple_type_test(int8_t(-42), BYTE, "-42", int8_t(-40)));
+    RUN_TEST(failed, simple_type_test(uint16_t(4242), USHORT, "4242", uint16_t(5252)));
+    RUN_TEST(failed, simple_type_test(int16_t(-4242), SHORT, "-4242", int16_t(3)));
+    RUN_TEST(failed, simple_type_test(uint32_t(4242), UINT, "4242", uint32_t(5252)));
+    RUN_TEST(failed, simple_type_test(int32_t(-4242), INT, "-4242", int32_t(3)));
+    RUN_TEST(failed, simple_type_test(uint64_t(4242), ULONG, "4242", uint64_t(5252)));
+    RUN_TEST(failed, simple_type_test(int64_t(-4242), LONG, "-4242", int64_t(3)));
+    RUN_TEST(failed, simple_type_test(wchar_t('X'), CHAR, "X", wchar_t('Y')));
+    RUN_TEST(failed, simple_type_test(float(1.234), FLOAT, "1.234", float(2.345)));
+    RUN_TEST(failed, simple_type_test(double(11.2233), DOUBLE, "11.2233", double(12)));
+    RUN_TEST(failed, simple_type_test(timestamp(1234), TIMESTAMP, "1234", timestamp(12345)));
+    RUN_TEST(failed, simple_type_test(make<decimal32>(0), DECIMAL32, "<decimal32>", make<decimal32>(1)));
+    RUN_TEST(failed, simple_type_test(make<decimal64>(0), DECIMAL64, "<decimal64>", make<decimal64>(1)));
+    RUN_TEST(failed, simple_type_test(make<decimal128>(0), DECIMAL128, "<decimal128>", make<decimal128>(1)));
+    RUN_TEST(failed, simple_type_test(
+                 uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff"),
+                 UUID, "00112233-4455-6677-8899-aabbccddeeff",
+                 uuid::copy("\xff\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")));
+    RUN_TEST(failed, simple_type_test(std::string("xxx"), STRING, "xxx", std::string("yyy")));
+    RUN_TEST(failed, simple_type_test(symbol("aaa"), SYMBOL, "aaa", symbol("aaaa")));
+    RUN_TEST(failed, simple_type_test(binary("aaa"), BINARY, "b\"aaa\"", binary("aaaa")));
+
+    // Test native C++ integral types.
+    RUN_TEST(failed, simple_integral_test<char>());
+    RUN_TEST(failed, simple_integral_test<signed char>());
+    RUN_TEST(failed, simple_integral_test<unsigned char>());
+    RUN_TEST(failed, simple_integral_test<short>());
+    RUN_TEST(failed, simple_integral_test<int>());
+    RUN_TEST(failed, simple_integral_test<long>());
+    RUN_TEST(failed, simple_integral_test<unsigned short>());
+    RUN_TEST(failed, simple_integral_test<unsigned int>());
+    RUN_TEST(failed, simple_integral_test<unsigned long>());
+#if PN_HAS_LONG_LONG
+    RUN_TEST(failed, simple_integral_test<long long>());
+    RUN_TEST(failed, simple_integral_test<unsigned long long>());
+#endif
+
+    // Sequence tests
+    RUN_TEST(failed, sequence_test<std::list<bool> >(ARRAY, many<bool>() + false + true));
+    RUN_TEST(failed, sequence_test<std::vector<int> >(ARRAY, many<int>() + -1 + 2));
+    RUN_TEST(failed, sequence_test<std::deque<std::string> >(ARRAY, many<std::string>() + "a" + "b"));
+    RUN_TEST(failed, sequence_test<std::deque<symbol> >(ARRAY, many<symbol>() + "a" + "b"));
+    RUN_TEST(failed, sequence_test<std::vector<value> >(LIST, many<value>() + value(0) + value("a")));
+    RUN_TEST(failed, sequence_test<std::vector<scalar> >(LIST, many<scalar>() + scalar(0) + scalar("a")));
+
+    // // Map tests
+    typedef std::pair<std::string, uint64_t> pair;
+    many<pair> pairs;
+    pairs << pair("a", 0) << pair("b", 1) << pair("c", 2);
+
+    RUN_TEST(failed, (map_test<std::map<std::string, uint64_t> >(pairs)));
+    RUN_TEST(failed, (map_test<std::vector<pair> >(pairs)));
+
+    many<std::pair<value,value> > value_pairs(pairs);
+    RUN_TEST(failed, (map_test<std::map<value, value> >(value_pairs)));
+
+    many<std::pair<scalar,scalar> > scalar_pairs(pairs);
+    RUN_TEST(failed, (map_test<std::map<scalar, scalar> >(scalar_pairs)));
+
+    annotation_key ak(pairs[0].first);
+    std::pair<annotation_key, message_id> p(pairs[0]);
+    many<std::pair<annotation_key, message_id> > restricted_pairs(pairs);
+    RUN_TEST(failed, (map_test<std::map<annotation_key, message_id> >(restricted_pairs)));
+
+#if PN_CPP_HAS_CPP11
+    RUN_TEST(failed, sequence_test<std::forward_list<binary> >(ARRAY, many<binary>() + binary("xx") + binary("yy")));
+    RUN_TEST(failed, (map_test<std::unordered_map<std::string, uint64_t> >(pairs)));
+#endif
+
+    value vv((pn_data_t*)(0));
     return failed;
 }

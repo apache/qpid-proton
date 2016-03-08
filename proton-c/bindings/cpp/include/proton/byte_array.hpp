@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <proton/config.hpp>
+#include <proton/types_fwd.hpp>
 #include <proton/comparable.hpp>
 
 #include <algorithm>
@@ -30,19 +30,21 @@ namespace proton {
 /// as an array of bytes.
 template <size_t N> class byte_array : private comparable<byte_array<N> > {
   public:
+    typedef uint8_t value_type;
+
     /// Initially all 0.
-    byte_array() : bytes_() {}
+    byte_array() { std::fill(bytes_, bytes_+N, '\0'); }
 
     /// Returns N
     static size_t size() { return N; }
 
-    char* begin() { return bytes_; }
-    char* end() { return bytes_+N; }
-    char& operator[](size_t i) { return bytes_[i]; }
+    uint8_t* begin() { return bytes_; }
+    uint8_t* end() { return bytes_+N; }
+    uint8_t& operator[](size_t i) { return bytes_[i]; }
 
-    const char* begin() const { return bytes_; }
-    const char* end() const { return bytes_+N; }
-    const char& operator[](size_t i) const { return bytes_[i]; }
+    const uint8_t* begin() const { return bytes_; }
+    const uint8_t* end() const { return bytes_+N; }
+    const uint8_t& operator[](size_t i) const { return bytes_[i]; }
 
     friend bool operator==(const byte_array& x, const byte_array& y) {
         return std::equal(x.begin(), x.end(), y.begin());
@@ -53,7 +55,7 @@ template <size_t N> class byte_array : private comparable<byte_array<N> > {
     }
 
   private:
-    char bytes_[N];
+    uint8_t bytes_[N];
 };
 
 }

@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/link.hpp"
-#include "proton/connection.hpp"
-#include "proton/message.hpp"
+#include <proton/export.hpp>
+#include <proton/link.hpp>
+#include <proton/connection.hpp>
+#include <proton/message.hpp>
 #include <vector>
 #include <string>
 

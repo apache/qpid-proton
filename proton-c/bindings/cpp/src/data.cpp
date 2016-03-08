@@ -19,28 +19,35 @@
 
 #include "proton_bits.hpp"
 
-#include "proton/amqp.hpp"
-#include "proton/binary.hpp"
-#include "proton/data.hpp"
-#include "proton/decimal.hpp"
-#include "proton/symbol.hpp"
+#include <proton/binary.hpp>
+#include <proton/data.hpp>
+#include <proton/decimal.hpp>
+#include <proton/encoder.hpp>
+#include <proton/message_id.hpp>
+#include <proton/symbol.hpp>
+#include <proton/timestamp.hpp>
+#include <proton/value.hpp>
 
 #include <proton/codec.h>
 
 #include <ostream>
 
 namespace proton {
-namespace internal {
+namespace codec {
 
-data& data::copy(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); return *this; }
+data data::create() { return internal::take_ownership(pn_data(0)).get(); }
+
+void data::copy(const data& x) { ::pn_data_copy(pn_object(), x.pn_object()); }
 
 void data::clear() { ::pn_data_clear(pn_object()); }
 
+void data::rewind() { ::pn_data_rewind(pn_object()); }
+
 bool data::empty() const { return ::pn_data_size(pn_object()) == 0; }
 
-uintptr_t data::point() const { return uintptr_t(pn_data_point(pn_object())); }
+void* data::point() const { return pn_data_point(pn_object()); }
 
-void data::restore(uintptr_t h) { pn_data_restore(pn_object(), pn_handle_t(h)); }
+void data::restore(void* h) { pn_data_restore(pn_object(), pn_handle_t(h)); }
 
 void data::narrow() { pn_data_narrow(pn_object()); }
 
@@ -50,123 +57,15 @@ int data::append(data src) { return pn_data_append(pn_object(), src.pn_object())
 
 int data::appendn(data src, int limit) { return pn_data_appendn(pn_object(), src.pn_object(), limit);}
 
-bool data::next() const { return pn_data_next(pn_object()); }
+bool data::next() { return pn_data_next(pn_object()); }
 
-
-namespace {
-struct save_state {
-    data data_;
-    uintptr_t handle;
-    save_state(data d) : data_(d), handle(data_.point()) {}
-    ~save_state() { if (!!data_) data_.restore(handle); }
-};
-}
+bool data::prev() { return pn_data_prev(pn_object()); }
 
 std::ostream& operator<<(std::ostream& o, const data& d) {
-    save_state s(d.pn_object());
-    d.decoder().rewind();
+    state_guard sg(const_cast<data&>(d));
+    const_cast<data&>(d).rewind();
     return o << inspectable(d.pn_object());
 }
 
-data data::create() { return internal::take_ownership(pn_data(0)); }
-
-class encoder data::encoder() { return internal::encoder(pn_object()); }
-class decoder data::decoder() { return internal:: decoder(pn_object()); }
-
-type_id data::type() const { return decoder().type(); }
-
-namespace {
-
-// Compare nodes, return -1 if a<b, 0 if a==b, +1 if a>b
-// Forward-declare so we can use it recursively.
-int compare_next(data& a, data& b);
-
-template <class T> int compare(const T& a, const T& b) {
-    if (a < b) return -1;
-    else if (a > b) return +1;
-    else return 0;
-}
-
-int compare_container(data& a, data& b) {
-    scope sa(a.decoder()), sb(b.decoder());
-    // Compare described vs. not-described.
-    int cmp = compare(sa.is_described, sb.is_described);
-    if (cmp) return cmp;
-    // Lexical sort (including descriptor if there is one)
-    size_t min_size = std::min(sa.size, sb.size) + size_t(sa.is_described);
-    for (size_t i = 0; i < min_size; ++i) {
-        cmp = compare_next(a, b);
-        if (cmp) return cmp;
-    }
-    return compare(sa.size, sb.size);
-}
-
-template <class T> int compare_simple(data& a, data& b) {
-    T va = T();
-    T vb = T();
-    a.decoder() >> va;
-    b.decoder() >> vb;
-    return compare(va, vb);
-}
-
-int compare_next(data& a, data& b) {
-    // Sort by type_id first.
-    type_id ta = a.type(), tb = b.type();
-    int cmp = compare(ta, tb);
-    if (cmp) return cmp;
-
-    switch (ta) {
-      case NULL_TYPE: return 0;
-      case ARRAY:
-      case LIST:
-      case MAP:
-      case DESCRIBED:
-        return compare_container(a, b);
-      case BOOLEAN: return compare_simple<bool>(a, b);
-      case UBYTE: return compare_simple<amqp::ubyte_type>(a, b);
-      case BYTE: return compare_simple<amqp::byte_type>(a, b);
-      case USHORT: return compare_simple<amqp::ushort_type>(a, b);
-      case SHORT: return compare_simple<amqp::short_type>(a, b);
-      case UINT: return compare_simple<amqp::uint_type>(a, b);
-      case INT: return compare_simple<amqp::int_type>(a, b);
-      case CHAR: return compare_simple<amqp::char_type>(a, b);
-      case ULONG: return compare_simple<amqp::ulong_type>(a, b);
-      case LONG: return compare_simple<amqp::long_type>(a, b);
-      case TIMESTAMP: return compare_simple<timestamp>(a, b);
-      case FLOAT: return compare_simple<amqp::float_type>(a, b);
-      case DOUBLE: return compare_simple<amqp::double_type>(a, b);
-      case DECIMAL32: return compare_simple<decimal32>(a, b);
-      case DECIMAL64: return compare_simple<decimal64>(a, b);
-      case DECIMAL128: return compare_simple<decimal128>(a, b);
-      case UUID: return compare_simple<uuid>(a, b);
-      case BINARY: return compare_simple<amqp::binary_type>(a, b);
-      case STRING: return compare_simple<amqp::string_type>(a, b);
-      case SYMBOL: return compare_simple<amqp::symbol_type>(a, b);
-    }
-    // Invalid but equal type_id, treat as equal.
-    return 0;
-}
-
-int compare(data& a, data& b) {
-    save_state s1(a);
-    save_state s2(b);
-    a.decoder().rewind();
-    b.decoder().rewind();
-    while (a.decoder().more() && b.decoder().more()) {
-        int cmp = compare_next(a, b);
-        if (cmp != 0) return cmp;
-    }
-    if (b.decoder().more()) return -1;
-    if (a.decoder().more()) return 1;
-    return 0;
-}
-} // namespace
-
-bool data::equal(const data& x) const {
-    return compare(const_cast<data&>(*this), const_cast<data&>(x)) == 0;
-}
-bool data::less(const data& x) const {
-    return compare(const_cast<data&>(*this), const_cast<data&>(x)) < 0;
-}
-}
-}
+} // codec
+} // proton

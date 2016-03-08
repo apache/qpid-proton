@@ -18,10 +18,12 @@
  */
 
 #include "msg.hpp"
+
 #include <proton/io.hpp>
 #include <proton/url.hpp>
 
 #include <errno.h>
+#include <string.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>

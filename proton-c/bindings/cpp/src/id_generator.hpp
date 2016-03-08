@@ -18,7 +18,7 @@
  */
 
 ///@internal
-#include "proton/types.hpp"
+#include "proton/types_fwd.hpp"
 
 #ifndef ID_GENERATOR_HPP
 #define ID_GENERATOR_HPP

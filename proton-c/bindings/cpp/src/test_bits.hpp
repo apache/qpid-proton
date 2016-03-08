@@ -19,13 +19,13 @@
  * under the License.
  */
 
+#include "msg.hpp"
+#include <proton/types.hpp>
+
 #include <stdexcept>
 #include <iostream>
-#include <vector>
-#include <deque>
 #include <iterator>
 #include <sstream>
-#include "msg.hpp"
 
 namespace test {
 
@@ -59,15 +59,17 @@ template<class T> std::string str(const T& x) { std::ostringstream s; s << x; re
 template <class T> struct many : public std::vector<T> {
     many() {}
     template<class S> explicit many(const S& s) : std::vector<T>(s.begin(), s.end()) {}
-    many operator+(const T& t) { many<T> l(*this); l.push_back(t); return l; }
+    many& operator+=(const T& t) { this->push_back(t); return *this; }
+    many& operator<<(const T& t) { return *this += t; }
+    many operator+(const T& t) { many<T> l(*this); return l += t; }
 };
 
 template <class T, class S> bool operator==(const many<T>& m, const S& s) {
-    return S(m.begin(), m.end()) == s;
+    return m.size() == s.size() && S(m.begin(), m.end()) == s;
 }
 
 template <class T, class S> bool operator==(const S& s, const many<T>& m) {
-    return S(m.begin(), m.end()) == s;
+    return m.size() == s.size() && S(m.begin(), m.end()) == s;
 }
 
 template <class T> std::ostream& operator<<(std::ostream& o, const many<T>& m) {
@@ -87,9 +89,27 @@ template <class T> std::ostream& operator<<(std::ostream& o, const std::deque<T>
     return o << test::many<T>(s);
 }
 
+template <class T> std::ostream& operator<<(std::ostream& o, const std::list<T>& s) {
+    return o << test::many<T>(s);
+}
+
+template <class K, class T> std::ostream& operator<<(std::ostream& o, const std::map<K, T>& x) {
+    return o << test::many<std::pair<K, T> >(x);
+}
+
 template <class U, class V> std::ostream& operator<<(std::ostream& o, const std::pair<U, V>& p) {
     return o << "( " << p.first << " , " << p.second << " )";
 }
+
+#if PN_CPP_HAS_CPP11
+template <class K, class T> std::ostream& operator<<(std::ostream& o, const std::unordered_map<K, T>& x) {
+    return o << test::many<std::pair<const K, T> >(x);
+}
+
+template <class T> std::ostream& operator<<(std::ostream& o, const std::forward_list<T>& s) {
+    return o << test::many<T>(s);
+}
+#endif
 }
 
 #endif // TEST_BITS_HPP

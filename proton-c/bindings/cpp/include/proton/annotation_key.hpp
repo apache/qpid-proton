@@ -22,7 +22,6 @@
 
 #include <proton/scalar.hpp>
 #include <proton/symbol.hpp>
-#include <proton/types.hpp>
 
 namespace proton {
 
@@ -31,15 +30,22 @@ namespace proton {
 /// An annotation_key can contain either a uint64_t or a proton::symbol.
 class annotation_key : public restricted_scalar {
   public:
-    annotation_key(uint64_t x = 0) { *this = x; }
-    annotation_key(const symbol& x) { *this = x; }
-    /// `char*` is encoded as proton::amqp::symbol.
-    annotation_key(const char *x) { *this = x; }
+    /// An empty annotation key has a uint64_t == 0 value.
+    annotation_key() { scalar_ = uint64_t(0); }
+    annotation_key(const annotation_key& x) { scalar_ = x; }
+    annotation_key& operator=(const annotation_key& x) { scalar_ = x; return *this; }
+
+    annotation_key(uint64_t x) { scalar_ = x; }
+    annotation_key(const symbol& x) { scalar_ = x; }
+
+    ///@name Extra conversions for strings, treated as amqp::SYMBOL.
+    ///@{
+    annotation_key(const std::string& x) { scalar_ = symbol(x); }
+    annotation_key(const char *x) {scalar_ = symbol(x); }
+    ///@}
 
     annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
     annotation_key& operator=(const symbol& x) { scalar_ = x; return *this; }
-    /// `char*` is encoded as proton::amqp::symbol.
-    annotation_key& operator=(const char *x) { scalar_ = symbol(x); return *this; }
 
     /// @name Get methods
     ///
@@ -52,7 +58,7 @@ class annotation_key : public restricted_scalar {
     template<class T> T get() const { T x; get(x); return x; }
 
   friend class message;
-  friend class internal::decoder;
+  friend class codec::decoder;
 };
 
 }

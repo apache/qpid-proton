@@ -19,8 +19,8 @@
 
 #include "test_bits.hpp"
 
-#include "proton/amqp.hpp"
 #include "proton/binary.hpp"
+#include "proton/error.hpp"
 #include "proton/type_traits.hpp"
 
 #include <proton/scalar.hpp>
@@ -126,25 +126,25 @@ template <class T> T make(const char c) { T x; std::fill(x.begin(), x.end(), c);
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, type_test(false, BOOLEAN, true));
-    RUN_TEST(failed, type_test(amqp::ubyte_type(42), UBYTE, amqp::ubyte_type(50)));
-    RUN_TEST(failed, type_test(amqp::byte_type('x'), BYTE, amqp::byte_type('y')));
-    RUN_TEST(failed, type_test(amqp::ushort_type(4242), USHORT, amqp::ushort_type(5252)));
-    RUN_TEST(failed, type_test(amqp::short_type(-4242), SHORT, amqp::short_type(3)));
-    RUN_TEST(failed, type_test(amqp::uint_type(4242), UINT, amqp::uint_type(5252)));
-    RUN_TEST(failed, type_test(amqp::int_type(-4242), INT, amqp::int_type(3)));
-    RUN_TEST(failed, type_test(amqp::ulong_type(4242), ULONG, amqp::ulong_type(5252)));
-    RUN_TEST(failed, type_test(amqp::long_type(-4242), LONG, amqp::long_type(3)));
+    RUN_TEST(failed, type_test(uint8_t(42), UBYTE, uint8_t(50)));
+    RUN_TEST(failed, type_test(int8_t('x'), BYTE, int8_t('y')));
+    RUN_TEST(failed, type_test(uint16_t(4242), USHORT, uint16_t(5252)));
+    RUN_TEST(failed, type_test(int16_t(-4242), SHORT, int16_t(3)));
+    RUN_TEST(failed, type_test(uint32_t(4242), UINT, uint32_t(5252)));
+    RUN_TEST(failed, type_test(int32_t(-4242), INT, int32_t(3)));
+    RUN_TEST(failed, type_test(uint64_t(4242), ULONG, uint64_t(5252)));
+    RUN_TEST(failed, type_test(int64_t(-4242), LONG, int64_t(3)));
     RUN_TEST(failed, type_test(wchar_t(23), CHAR, wchar_t(24)));
-    RUN_TEST(failed, type_test(amqp::float_type(1.234), FLOAT, amqp::float_type(2.345)));
-    RUN_TEST(failed, type_test(amqp::double_type(11.2233), DOUBLE, amqp::double_type(12)));
+    RUN_TEST(failed, type_test(float(1.234), FLOAT, float(2.345)));
+    RUN_TEST(failed, type_test(double(11.2233), DOUBLE, double(12)));
     RUN_TEST(failed, type_test(timestamp(0), TIMESTAMP, timestamp(1)));
     RUN_TEST(failed, type_test(make<decimal32>(0), DECIMAL32, make<decimal32>(1)));
     RUN_TEST(failed, type_test(make<decimal64>(0), DECIMAL64, make<decimal64>(1)));
     RUN_TEST(failed, type_test(make<decimal128>(0), DECIMAL128, make<decimal128>(1)));
-    RUN_TEST(failed, type_test(uuid::make("a"), UUID, uuid::make("x")));
-    RUN_TEST(failed, type_test(amqp::string_type("aaa"), STRING, amqp::string_type("aaaa")));
-    RUN_TEST(failed, type_test(amqp::symbol_type("aaa"), SYMBOL, amqp::symbol_type("aaaa")));
-    RUN_TEST(failed, type_test(amqp::binary_type("aaa"), BINARY, amqp::binary_type("aaaa")));
+    RUN_TEST(failed, type_test(uuid::copy("a"), UUID, uuid::copy("x")));
+    RUN_TEST(failed, type_test(std::string("aaa"), STRING, std::string("aaaa")));
+    RUN_TEST(failed, type_test(symbol("aaa"), SYMBOL, symbol("aaaa")));
+    RUN_TEST(failed, type_test(binary("aaa"), BINARY, binary("aaaa")));
     RUN_TEST(failed, type_test(std::string("xxx"), STRING, std::string("yyy")));
     RUN_TEST(failed, encode_decode_test());
     RUN_TEST(failed, message_id_test());

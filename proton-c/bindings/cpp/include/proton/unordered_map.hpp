@@ -1,5 +1,6 @@
+#ifndef PROTON_UNORDERED_MAP_HPP
+#define PROTON_UNORDERED_MAP_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +17,24 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/duration.hpp"
-#include "proton/timestamp.hpp"
 
-#include <limits>
-#include <iostream>
+#include <unordered_map>
+#include <proton/encoder.hpp>
+#include <proton/decoder.hpp>
 
 namespace proton {
+namespace codec {
 
-const duration duration::FOREVER(std::numeric_limits<duration::numeric_type>::max());
-const duration duration::IMMEDIATE(0);
-const duration duration::SECOND(1000);
-const duration duration::MINUTE(SECOND * 60);
+/// Encode std::unordered_map<K, T> as amqp::UNORDERED_MAP.
+template <class K, class T, class C, class A>
+encoder& operator<<(encoder& e, const std::unordered_map<K, T, C, A>& m) { return e << encoder::map(m); }
 
-std::ostream& operator<<(std::ostream& o, duration d) { return o << d.ms(); }
+/// Decode to std::unordered_map<K, T> from amqp::UNORDERED_MAP.
+template <class K, class T, class C, class A>
+decoder& operator>>(decoder& d, std::unordered_map<K, T, C, A>& m) { return d >> decoder::associative(m); }
 
-}
+} // internal
+} // proton
+
+#endif // PROTON_UNORDERED_MAP_HPP

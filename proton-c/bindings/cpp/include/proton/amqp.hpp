@@ -19,20 +19,12 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
+#include <proton/types_fwd.hpp>
 
 #include <string>
 
 namespace proton {
 
-class uuid;
-class binary;
-class symbol;
-class timestamp;
-class uuid;
-class decimal32;
-class decimal64;
-class decimal128;
 
 /// This namespace contains typedefs to associate AMQP scalar type names with
 /// the corresponding C++ types. These are provided as a convenience for those

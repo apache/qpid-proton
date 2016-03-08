@@ -1,5 +1,5 @@
-#ifndef TYPE_TRAITS_HPP
-#define TYPE_TRAITS_HPP
+#ifndef PROTON_TYPE_TRAITS_HPP
+#define PROTON_TYPE_TRAITS_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -29,22 +29,12 @@
 /// Also provides workarounds for missing type_traits classes on older
 /// C++ compilers.
 
-#include "proton/config.hpp"
-#include "proton/types.hpp"
+#include <proton/config.hpp>
+#include <proton/types_fwd.hpp>
+#include <proton/type_id.hpp>
 
 namespace proton {
-
-class binary;
-class decimal128;
-class decimal32;
-class decimal64;
-class scalar;
-class symbol;
-class timestamp;
-class uuid;
-class value;
-
-namespace internal {
+namespace codec {
 
 class decoder;
 class encoder;
@@ -139,26 +129,11 @@ template <class T> struct is_unknown_integer {
     static const bool value = !has_type_id<T>::value && is_integral<T>::value;
 };
 
-// Types for SFINAE tests.
+namespace is_encodable_impl {   // Protected the world from wildcard operator<<
+
 typedef char yes;
 typedef double no;
 struct wildcard { wildcard(...); };
-
-namespace is_decodable_impl {   // Protected the world from wildcard operator<<
-
-no operator>>(wildcard, wildcard); // Fallback
-
-template<typename T> struct is_decodable {
-    static char test(decoder);
-    static double test(...);         // Failed test, no match.
-    static decoder& d;
-    static T &t;
-    static bool const value = (sizeof(test(d >> t)) == sizeof(yes));
-};
-} // namespace is_decodable_impl
-
-
-namespace is_encodable_impl {   // Protected the world from wildcard operator<<
 
 no operator<<(wildcard, wildcard); // Fallback
 
@@ -169,51 +144,39 @@ template<typename T> struct is_encodable {
     static const T& t;
     static bool const value = sizeof(test(e << t)) == sizeof(yes);
 };
+// Avoid recursion
+template <> struct is_encodable<value> : public true_type {};
 
 } // namespace is_encodable_impl
 
 /// is_encodable<T>::value is true if there is an operator<< for encoder and T.
 using is_encodable_impl::is_encodable;
 
-/// Metafunction: is_decodable<T>::value is true if `T t; decoder >> t` is valid.
-using is_decodable_impl::is_decodable;
+/// An enabler template for C++ values that can be converted to AMQP values.
+template<class T, class U=void> struct enable_amqp_type :
+        public enable_if<is_encodable<T>::value, U> {};
 
+/// Enabler for encodable types excluding proton::value.
+template<class T, class U=void> struct assignable : enable_amqp_type<T, U> {};
+template<class U> struct assignable<value, U> : public false_type {};
+/// An enabler for integer types that are not directly AMQP types.
+template <class T, class U=void> struct enable_unknown_integer :
+        public enable_if<is_unknown_integer<T>::value, U> {};
 
-// Start encoding a complex type.
-struct start {
-    PN_CPP_EXTERN start(type_id type=NULL_TYPE, type_id element=NULL_TYPE, bool described=false, size_t size=0);
-    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
-    type_id element;         ///< the element type for array only.
-    bool is_described;       ///< true if first value is a descriptor.
-    size_t size;             ///< the element count excluding the descriptor (if any)
+/// Using `exact_cref<const T>` as an argument type instead of `const &T`
+/// ensures that the function will only accept references to an existing T, and
+/// not to a temporary T created by implicit conversion.
+template <class T> struct exact_cref;
 
-    /// Return a start for an array.
-    PN_CPP_EXTERN static start array(type_id element, bool described=false);
-
-    /// Return a start for a list.
-    PN_CPP_EXTERN static start list();
-
-    /// Return a start for a map.
-    PN_CPP_EXTERN static start map();
-
-    /// Return a start for a described type.
-    PN_CPP_EXTERN static start described();
+template <class T> struct exact_cref {
+    template <class U> exact_cref(
+        const U& r,
+        typename enable_if<is_same<T,U>::value>::type* = 0) : ref(r) {}
+    operator const T&() const { return ref; }
+    const T& ref;
 };
 
-/// Finish inserting or extracting a container value.
-struct finish {};
+} // internal
+} // proton
 
-} // namespace internal
-
-/// An enabler template for C++ values that can be converted to AMQP.
-template<class T, class U=void> struct enable_amqp_type :
-        public internal::enable_if<internal::is_encodable<T>::value, U> {};
-
-/// An enabler for integer types.
-template <class T, class U=void> struct enable_integer :
-        public internal::enable_if<internal::is_unknown_integer<T>::value, U> {};
-} // namespace proton
-
-/// @endcond
-
-#endif // TYPE_TRAITS_HPP
+#endif // PROTON_TYPE_TRAITS_HPP

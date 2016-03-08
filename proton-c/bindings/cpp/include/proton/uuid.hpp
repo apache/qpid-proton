@@ -30,9 +30,9 @@ namespace proton {
 /// A 16-byte universally unique identifier.
 class uuid : public byte_array<16> {
   public:
-    /// Return a uuid copied from bytes, bytes must point to at least sizeof(uuid) bytes.
+    /// Return a uuid copied from bytes, bytes must point to at least 16 bytes.
     /// If bytes==0 the UUID is zero initialized.
-    PN_CPP_EXTERN static uuid make(const char* bytes=0);
+    PN_CPP_EXTERN static uuid copy(const char* bytes=0);
 
     /// Return a simple randomly-generated UUID. Used by the proton library to
     /// generate default UUIDs.  For specific security, performance or

@@ -20,23 +20,17 @@
  * under the License.
  */
 
-#include "proton/comparable.hpp"
-#include "proton/types.hpp"
+#include <proton/export.hpp>
+#include <proton/comparable.hpp>
+#include <proton/types_fwd.hpp>
+#include <proton/type_id.hpp>
 
 #include <iosfwd>
 #include <string>
 
 namespace proton {
 
-class binary;
-class decimal128;
-class decimal32;
-class decimal64;
-class symbol;
-class timestamp;
-class uuid;
-
-namespace internal {
+namespace codec {
 class decoder;
 class encoder;
 }
@@ -60,6 +54,34 @@ class scalar : private comparable<scalar> {
 
     /// True if the scalar is empty.
     PN_CPP_EXTERN bool empty() const;
+
+    /// @name Construct from a C++ value.
+    /// See proton::amqp for the list of type correspondences.
+    ///
+    /// @{
+    PN_CPP_EXTERN scalar(bool x);
+    PN_CPP_EXTERN scalar(uint8_t x);
+    PN_CPP_EXTERN scalar(int8_t x);
+    PN_CPP_EXTERN scalar(uint16_t x);
+    PN_CPP_EXTERN scalar(int16_t x);
+    PN_CPP_EXTERN scalar(uint32_t x);
+    PN_CPP_EXTERN scalar(int32_t x);
+    PN_CPP_EXTERN scalar(uint64_t x);
+    PN_CPP_EXTERN scalar(int64_t x);
+    PN_CPP_EXTERN scalar(wchar_t x);
+    PN_CPP_EXTERN scalar(float x);
+    PN_CPP_EXTERN scalar(double x);
+    PN_CPP_EXTERN scalar(timestamp x);
+    PN_CPP_EXTERN scalar(const decimal32& x);
+    PN_CPP_EXTERN scalar(const decimal64& x);
+    PN_CPP_EXTERN scalar(const decimal128& x);
+    PN_CPP_EXTERN scalar(const uuid& x);
+    PN_CPP_EXTERN scalar(const std::string& x);
+    PN_CPP_EXTERN scalar(const symbol& x);
+    PN_CPP_EXTERN scalar(const binary& x);
+    PN_CPP_EXTERN scalar(const char* s); ///< Treated as an AMQP string
+    /// @}
+
 
     /// @name Assignment operators
     ///
@@ -90,8 +112,6 @@ class scalar : private comparable<scalar> {
     PN_CPP_EXTERN scalar& operator=(const char* s); ///< Treated as an AMQP string
     /// @}
 
-    /// Create a scalar from any type that we can assign from.
-    template <class T> explicit scalar(T x) { *this = x; }
 
     /// @name Get methods
     ///
@@ -160,9 +180,8 @@ class scalar : private comparable<scalar> {
 
   friend class message;
   friend class restricted_scalar;
-  friend class internal::encoder;
-  friend class internal::decoder;
-
+  friend class codec::encoder;
+  friend class codec::decoder;
 };
 
 /// @cond INTERNAL
@@ -188,6 +207,7 @@ class restricted_scalar : private comparable<restricted_scalar> {
   protected:
     restricted_scalar() {}
     restricted_scalar(const pn_atom_t& a) : scalar_(a) {}
+    restricted_scalar(const restricted_scalar& x) : scalar_(x.scalar_) {}
 
     scalar scalar_;
 

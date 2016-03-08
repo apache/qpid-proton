@@ -43,7 +43,7 @@ struct msg {
     msg(const msg& m) : os(m.str()) {}
     std::string str() const { return os.str(); }
     operator std::string() const { return str(); }
-    template <class T> msg& operator<<(const T& t) { os <<t; return *this; }
+    template <class T> msg& operator<<(const T& t) { os << t; return *this; }
 };
 
 inline std::ostream& operator<<(std::ostream& o, const msg& m) { return o << m.str(); }

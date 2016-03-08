@@ -66,7 +66,7 @@ set(qpid-proton-cpp-source
   src/terminus.cpp
   src/timestamp.cpp
   src/transport.cpp
-  src/types.cpp
+  src/type_id.cpp
   src/url.cpp
   src/uuid.cpp
   src/value.cpp

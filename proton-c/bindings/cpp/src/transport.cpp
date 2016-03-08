@@ -18,13 +18,18 @@
  * under the License.
  *
  */
+
+#include "proton/error.hpp"
 #include "proton/transport.hpp"
 #include "proton/condition.hpp"
 #include "proton/connection.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
-#include "msg.hpp"
 #include "proton/transport.h"
+#include "proton/error.h"
+
+#include "msg.hpp"
+
 
 namespace proton {
 

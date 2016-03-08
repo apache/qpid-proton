@@ -60,7 +60,6 @@ Make sure to stop the broker first or use a different port for `direct_recv`.
 */
 
 /// @cond INTERNAL
-/// XXX change namespaces
 /** @example encode_decode.cpp
 
 Shows how C++ data types can be converted to and from AMQP types.

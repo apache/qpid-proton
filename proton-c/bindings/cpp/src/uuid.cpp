@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "proton/uuid.hpp"
+#include <proton/uuid.hpp>
+#include <proton/types_fwd.hpp>
 
 #include <cstdlib>
 #include <ctime>
@@ -56,7 +57,7 @@ struct ios_guard {
 };
 }
 
-uuid uuid::make(const char* bytes) {
+uuid uuid::copy(const char* bytes) {
     uuid u;
     if (bytes)
         std::copy(bytes, bytes + u.size(), u.begin());
@@ -87,12 +88,13 @@ std::ostream& operator<<(std::ostream& o, const uuid& u) {
     ios_guard restore_flags(o);
     o << std::hex << std::setfill('0');
     static const int segments[] = {4,2,2,2,6}; // 1 byte is 2 hex chars.
-    const char *p = u.begin();
+    const uint8_t *p = reinterpret_cast<const uint8_t*>(u.begin());
     for (size_t i = 0; i < sizeof(segments)/sizeof(segments[0]); ++i) {
         if (i > 0)
             o << '-';
-        for (int j = 0; j < segments[i]; ++j)
+        for (int j = 0; j < segments[i]; ++j) {
             o << std::setw(2) << int(*(p++));
+        }
     }
     return o;
 }

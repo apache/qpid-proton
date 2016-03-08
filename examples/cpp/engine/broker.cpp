@@ -24,7 +24,6 @@
 
 #include <iostream>
 
-// FIXME aconway 2016-01-23: port broker to windows, need io::poller.
 #ifdef WIN32
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"

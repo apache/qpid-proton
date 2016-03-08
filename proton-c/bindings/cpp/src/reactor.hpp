@@ -28,6 +28,7 @@
 #include "proton/timestamp.hpp"
 
 struct pn_reactor_t;
+struct pn_handler_t;
 struct pn_io_t;
 
 namespace proton {

@@ -20,8 +20,8 @@
  * under the License.
  */
 
-#include "proton/types.hpp"
-#include "proton/error.hpp"
+#include <proton/types_fwd.hpp>
+#include <proton/error.hpp>
 
 #include <iosfwd>
 

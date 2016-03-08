@@ -1,5 +1,6 @@
+#ifndef PROTON_TYPES_FWD_HPP
+#define PROTON_TYPES_FWD_HPP
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,21 +17,31 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "proton/duration.hpp"
-#include "proton/timestamp.hpp"
 
-#include <limits>
-#include <iostream>
+
+///@file
+///
+/// Forward declarations for all the C++ types used by proton to represent AMQP types.
+
+#include <proton/type_compat.h>
+#include <string>
 
 namespace proton {
 
-const duration duration::FOREVER(std::numeric_limits<duration::numeric_type>::max());
-const duration duration::IMMEDIATE(0);
-const duration duration::SECOND(1000);
-const duration duration::MINUTE(SECOND * 60);
-
-std::ostream& operator<<(std::ostream& o, duration d) { return o << d.ms(); }
+class binary;
+class decimal128;
+class decimal32;
+class decimal64;
+class scalar;
+class symbol;
+class timestamp;
+class duration;
+class uuid;
+class uuid;
+class value;
+struct null {};
 
 }
+
+#endif // PROTON_TYPES_FWD_HPP

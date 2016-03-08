@@ -13,7 +13,7 @@
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
-nn * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
@@ -22,26 +22,19 @@ nn * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 #include "test_bits.hpp"
 
 #include <proton/types.hpp>
-#include <proton/binary.hpp>
-#include <proton/decimal.hpp>
-#include <proton/decoder.hpp>
-#include <proton/encoder.hpp>
-#include <proton/symbol.hpp>
-#include <proton/value.hpp>
-#include <proton/scalar.hpp>
-#include <proton/annotation_key.hpp>
-#include <proton/message_id.hpp>
+#include <proton/data.hpp>
 
 using namespace test;
 using namespace proton;
 
 template <class T> void  simple_type_test(const T& x) {
-    ASSERT(internal::is_encodable<T>::value);
-    ASSERT(internal::is_decodable<T>::value);
+    ASSERT(codec::is_encodable<T>::value);
     value v;
-    v.encode() << x;
+    codec::encoder e(v);
+    e << x;
     T y;
-    v.decode() >> y;
+    codec::decoder d(v);
+    d >> y;
     ASSERT_EQUAL(x, y);
 }
 
@@ -51,8 +44,7 @@ template <class T> T make_fill(const char c) {
 }
 
 template <class T> void  uncodable_type_test() {
-    ASSERT(!internal::is_encodable<T>::value);
-    ASSERT(!internal::is_decodable<T>::value);
+    ASSERT(!codec::is_encodable<T>::value);
 }
 
 int main(int, char**) {
@@ -75,8 +67,7 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(make_fill<decimal32>(0)));
     RUN_TEST(failed, simple_type_test(make_fill<decimal64>(0)));
     RUN_TEST(failed, simple_type_test(make_fill<decimal128>(0)));
-    // FIXME aconway 2016-03-07: 
-    //    RUN_TEST(failed, simple_type_test(uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")));
+    RUN_TEST(failed, simple_type_test(uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")));
     RUN_TEST(failed, simple_type_test(std::string("xxx")));
     RUN_TEST(failed, simple_type_test(symbol("aaa")));
     RUN_TEST(failed, simple_type_test(binary("aaa")));
@@ -108,13 +99,15 @@ int main(int, char**) {
     value v(23);                // Make sure we can take a non-const ref also
     RUN_TEST(failed, simple_type_test(v));
     RUN_TEST(failed, simple_type_test(scalar(23)));
-    RUN_TEST(failed, simple_type_test(static_cast<annotation_key>(42)));
-    RUN_TEST(failed, simple_type_test(static_cast<message_id>(42)));
+    RUN_TEST(failed, simple_type_test(annotation_key(42)));
+    RUN_TEST(failed, simple_type_test(message_id(42)));
 
     // Make sure we reject uncodable types
     RUN_TEST(failed, (uncodable_type_test<std::pair<int, float> >()));
     RUN_TEST(failed, (uncodable_type_test<std::pair<scalar, value> >()));
     RUN_TEST(failed, (uncodable_type_test<std::basic_string<wchar_t> >()));
+    RUN_TEST(failed, (uncodable_type_test<codec::data>()));
+    RUN_TEST(failed, (uncodable_type_test<pn_data_t*>()));
 
     return failed;
 }

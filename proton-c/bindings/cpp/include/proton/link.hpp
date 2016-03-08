@@ -22,13 +22,15 @@
  *
  */
 
-#include "proton/endpoint.hpp"
-#include "proton/export.hpp"
-#include "proton/message.hpp"
-#include "proton/terminus.hpp"
-#include "proton/types.h"
-#include "proton/object.hpp"
-#include "proton/link_options.hpp"
+#include <proton/endpoint.hpp>
+#include <proton/export.hpp>
+#include <proton/message.hpp>
+#include <proton/terminus.hpp>
+
+#include <proton/object.hpp>
+#include <proton/link_options.hpp>
+
+#include <proton/types.h>
 
 #include <string>
 
@@ -165,7 +167,7 @@ typedef internal::iter_range<link_iterator> link_range;
 
 }
 
-#include "proton/sender.hpp"
-#include "proton/receiver.hpp"
+#include <proton/sender.hpp>
+#include <proton/receiver.hpp>
 
 #endif // PROTON_CPP_LINK_H
