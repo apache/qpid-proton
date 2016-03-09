@@ -526,7 +526,9 @@ class Connector(Handler):
         transport.bind(connection)
         if self.heartbeat:
             transport.idle_timeout = self.heartbeat
-        if url.scheme == 'amqps' and self.ssl_domain:
+        if url.scheme == 'amqps':
+            if not self.ssl_domain:
+                raise SSLUnavailable("amqps: SSL libraries not found")
             self.ssl = SSL(transport, self.ssl_domain)
             self.ssl.peer_hostname = url.host
 
@@ -693,6 +695,8 @@ class Container(Reactor):
             connector.reconnect = reconnect
         elif reconnect is None:
             connector.reconnect = Backoff()
+        # use container's default client domain if none specified.  This is
+        # only necessary of the URL specifies the "amqps:" scheme
         connector.ssl_domain = ssl_domain or (self.ssl and self.ssl.client)
         conn._session_policy = SessionPerConnection() #todo: make configurable
         conn.open()
@@ -821,8 +825,12 @@ class Container(Reactor):
         url = Url(url)
         acceptor = self.acceptor(url.host, url.port)
         ssl_config = ssl_domain
-        if not ssl_config and url.scheme == 'amqps' and self.ssl:
-            ssl_config = self.ssl.server
+        if not ssl_config and url.scheme == 'amqps':
+            # use container's default server domain
+            if self.ssl:
+                ssl_config = self.ssl.server
+            else:
+                raise SSLUnavailable("amqps: SSL libraries not found")
         if ssl_config:
             acceptor.set_ssl_domain(ssl_config)
         return acceptor
