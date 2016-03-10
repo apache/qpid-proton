@@ -949,9 +949,10 @@ class MessengerSSLTests(common.Test):
         self.server.certificate = _testpath(cert)
         self.server.private_key = _testpath(key)
         self.server.password = password
+        port = common.free_tcp_ports()[0]
         try:
             self.server.start()
-            self.server.subscribe("amqps://~0.0.0.0:%s" % common.free_tcp_ports()[0])
+            self.server.subscribe("amqps://~0.0.0.0:%s" % port)
             if exception is not None:
                 assert False, "expected failure did not occur"
         except MessengerException:
