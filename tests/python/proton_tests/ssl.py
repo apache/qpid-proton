@@ -949,9 +949,10 @@ class MessengerSSLTests(common.Test):
         self.server.certificate = _testpath(cert)
         self.server.private_key = _testpath(key)
         self.server.password = password
+        port = common.free_tcp_ports()[0]
         try:
             self.server.start()
-            self.server.subscribe("amqps://~0.0.0.0:12345")
+            self.server.subscribe("amqps://~0.0.0.0:%s" % port)
             if exception is not None:
                 assert False, "expected failure did not occur"
         except MessengerException:
@@ -989,7 +990,8 @@ class MessengerSSLTests(common.Test):
             self.server.private_key = _testpath("client-private-key.pem")
             self.server.password = "client-password"
         self.server.start()
-        self.server.subscribe("amqps://~0.0.0.0:12345")
+        port = common.free_tcp_ports()[0]
+        self.server.subscribe("amqps://~0.0.0.0:%s" % port)
         self.server.incoming_window = 10
 
         self.client.trusted_certificates = _testpath(trusted)
@@ -1002,7 +1004,7 @@ class MessengerSSLTests(common.Test):
         self.server.recv()
 
         msg = Message()
-        msg.address = "amqps://127.0.0.1:12345"
+        msg.address = "amqps://127.0.0.1:%s" % port
         # make sure a large, uncompressible message body works!
         msg.body = "".join(random.choice(string.ascii_letters)
                            for x in range(10099))
