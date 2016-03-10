@@ -34,17 +34,33 @@ public interface WebSocket
 {
     public enum WebSocketState
     {
-        /** WebSocket */
+        /**
+         * WebSocket
+         */
         PN_WS_NOT_STARTED,
-        /** Pending connection */
+        /**
+         * Pending connection
+         */
         PN_WS_CONNECTING,
-        /** Connected and messages flow */
+        /**
+         * Connected and messages flow
+         */
         PN_WS_CONNECTED_FLOW,
-        /** Connected and ping-pong */
+        /**
+         * Connected and ping-pong
+         */
         PN_WS_CONNECTED_PONG,
-        /** Connection closed */
+        /**
+         * Connected and received a close
+         */
+        PN_WS_CONNECTED_CLOSING,
+        /**
+         * Connection closed
+         */
         PN_WS_CLOSED,
-        /** Connection failed */
+        /**
+         * Connection failed
+         */
         PN_WS_FAILED
     }
 
@@ -62,9 +78,44 @@ public interface WebSocket
     WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer);
 
     /**
+     * Access the handler for WebSocket functions.
+     *
+     * @return The WebSocket handler class.
+     */
+    WebSocketHandler getWebSocketHandler();
+
+    /**
      * Access the current state of the layer.
      *
      * @return The state of the WebSocket layer.
      */
     WebSocketState getState();
+
+    /**
+     * Access if WebSocket enabled .
+     *
+     * @return True if WebSocket enabled otherwise false.
+     */
+    Boolean getEnabled();
+
+    /**
+     * Access the output buffer (read only).
+     *
+     * @return The current output buffer.
+     */
+    ByteBuffer getOutputBuffer();
+
+    /**
+     * Access the input buffer (read only).
+     *
+     * @return The current input buffer.
+     */
+    ByteBuffer getInputBuffer();
+
+    /**
+     * Access the ping buffer (read only).
+     *
+     * @return The ping input buffer.
+     */
+    ByteBuffer getPingBuffer();
 }

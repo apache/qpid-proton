@@ -26,18 +26,13 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.WebSocket;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 public class WebSocketImpl implements WebSocket
 {
-    private static final Logger _logger = Logger.getLogger(WebSocketImpl.class.getName());
-
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
@@ -48,7 +43,6 @@ public class WebSocketImpl implements WebSocket
     private int _webSocketHeaderSize = 0;
 
     private WebSocketHandler _webSocketHandler;
-    private Boolean _isWebSocketEnabled = false;
     private WebSocketState _state = WebSocketState.PN_WS_NOT_STARTED;
 
     private String _host = "";
@@ -56,6 +50,8 @@ public class WebSocketImpl implements WebSocket
     private int _port = 0;
     private String _protocol = "";
     private Map<String, String> _additionalHeaders = null;
+
+    protected Boolean _isWebSocketEnabled = false;
 
     public WebSocketImpl(int maxFrameSize)
     {
@@ -65,13 +61,7 @@ public class WebSocketImpl implements WebSocket
         _isWebSocketEnabled = false;
     }
 
-    public void configure(
-            String host,
-            String path,
-            int port,
-            String protocol,
-            Map<String, String> additionalHeaders,
-            WebSocketHandler webSocketHandler)
+    public void configure(String host, String path, int port, String protocol, Map<String, String> additionalHeaders, WebSocketHandler webSocketHandler)
     {
         _host = host;
         _path = path;
@@ -79,7 +69,8 @@ public class WebSocketImpl implements WebSocket
         _protocol = protocol;
         _additionalHeaders = additionalHeaders;
 
-        if (webSocketHandler != null) {
+        if (webSocketHandler != null)
+        {
             _webSocketHandler = webSocketHandler;
         }
         else
@@ -88,33 +79,6 @@ public class WebSocketImpl implements WebSocket
         }
 
         _isWebSocketEnabled = true;
-    }
-
-    private void writeUpgradeRequest()
-    {
-        _outputBuffer.clear();
-        String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
-
-        System.out.println("WEBSOCKETIMPL is sending: ");
-        System.out.println(request);
-        System.out.println("***************************************************");
-
-        _outputBuffer.put(request.getBytes());
-
-        if (_logger.isLoggable(Level.FINER))
-        {
-            _logger.log(Level.FINER, "Finished writing WebSocket UpgradeRequest. Output Buffer : " + _outputBuffer);
-        }
-    }
-
-    private void writePong()
-    {
-        _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
-
-        if (_logger.isLoggable(Level.FINER))
-        {
-            _logger.log(Level.FINER, "Ping has been received, sending pong. Output Buffer : " + _outputBuffer);
-        }
     }
 
     public TransportWrapper wrap(final TransportInput input, final TransportOutput output)
@@ -130,22 +94,25 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
-    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer) {
+    public void wrapBuffer(ByteBuffer srcBuffer, ByteBuffer dstBuffer)
+    {
         if (_isWebSocketEnabled)
         {
             _webSocketHandler.wrapBuffer(srcBuffer, dstBuffer);
         }
         else
         {
+            dstBuffer.clear();
             dstBuffer.put(srcBuffer);
         }
     }
 
     @Override
-    public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer) {
+    public WebSocketHandler.WebSocketMessageType unwrapBuffer(ByteBuffer buffer)
+    {
         if (_isWebSocketEnabled)
         {
-            return _webSocketHandler.unwrapBuffer(buffer, null);
+            return _webSocketHandler.unwrapBuffer(buffer);
         }
         else
         {
@@ -160,19 +127,82 @@ public class WebSocketImpl implements WebSocket
     }
 
     @Override
+    public ByteBuffer getOutputBuffer()
+    {
+        return _outputBuffer;
+    }
+
+    @Override
+    public ByteBuffer getInputBuffer()
+    {
+        return _inputBuffer;
+    }
+
+    @Override
+    public ByteBuffer getPingBuffer()
+    {
+        return _pingBuffer;
+    }
+
+    @Override
+    public Boolean getEnabled()
+    {
+        return _isWebSocketEnabled;
+    }
+
+    @Override
+    public WebSocketHandler getWebSocketHandler()
+    {
+        return _webSocketHandler;
+    }
+
+    @Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder
-                .append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled)
-                .append(", state=").append(_state)
-                .append(", protocol=").append(_protocol)
-                .append(", host=").append(_host)
-                .append(", path=").append(_path)
-                .append(", port=").append(_port)
-                .append("]");
+        builder.append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled).append(", state=").append(_state).append(", protocol=").append(_protocol).append(", host=").append(_host).append(", path=").append(_path).append(", port=").append(_port);
 
-        return builder.toString();    }
+        if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
+        {
+            builder.append(", additionalHeaders=");
+
+            for (Map.Entry<String, String> entry : _additionalHeaders.entrySet())
+            {
+                builder.append(entry.getKey() + ":" + entry.getValue()).append(", ");
+            }
+
+            int lastIndex = builder.lastIndexOf(", ");
+            builder.delete(lastIndex, lastIndex + 2);
+        }
+
+        builder.append("]");
+
+        return builder.toString();
+    }
+
+    protected void writeUpgradeRequest()
+    {
+        _outputBuffer.clear();
+        String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
+
+        System.out.println("WEBSOCKETIMPL is sending: ");
+        System.out.println(request);
+        System.out.println("***************************************************");
+
+        _outputBuffer.put(request.getBytes());
+    }
+
+    protected void writePong()
+    {
+        _webSocketHandler.createPong(_pingBuffer, _outputBuffer);
+    }
+
+    protected void writeClose()
+    {
+        _outputBuffer.clear();
+        _pingBuffer.flip();
+        _outputBuffer.put(_pingBuffer);
+    }
 
     private class WebSocketTransportWrapper implements TransportWrapper
     {
@@ -190,19 +220,14 @@ public class WebSocketImpl implements WebSocket
 
         private void processInput() throws TransportException
         {
-            switch (_state) {
-                case PN_WS_NOT_STARTED:
-                    break;
+            switch (_state)
+            {
                 case PN_WS_CONNECTING:
                     if (_webSocketHandler.validateUpgradeReply(_inputBuffer))
                     {
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
                     }
-
-                    if (_logger.isLoggable(Level.FINER))
-                    {
-                        _logger.log(Level.FINER, WebSocketImpl.this + " about to call plain input");
-                    }
+                    _inputBuffer.compact();
                     break;
                 case PN_WS_CONNECTED_FLOW:
                 case PN_WS_CONNECTED_PONG:
@@ -224,18 +249,23 @@ public class WebSocketImpl implements WebSocket
 
                         switch (unwrapBuffer(_inputBuffer))
                         {
-                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
                             case WEB_SOCKET_MESSAGE_TYPE_AMQP:
+                            case WEB_SOCKET_MESSAGE_TYPE_EMPTY:
+                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
                             case WEB_SOCKET_MESSAGE_TYPE_INVALID_MASKED:
                             case WEB_SOCKET_MESSAGE_TYPE_INVALID_LENGTH:
-                            case WEB_SOCKET_MESSAGE_TYPE_INVALID:
                                 int bytes = pourAll(_inputBuffer, _underlyingInput);
-                                if (bytes == Transport.END_OF_STREAM) {
+                                if (bytes == Transport.END_OF_STREAM)
+                                {
                                     _tail_closed = true;
                                 }
                                 _inputBuffer.compact();
 
                                 _underlyingInput.process();
+                                break;
+                            case WEB_SOCKET_MESSAGE_TYPE_CLOSE:
+                                _pingBuffer.put(_inputBuffer);
+                                _state = WebSocketState.PN_WS_CONNECTED_CLOSING;
                                 break;
                             case WEB_SOCKET_MESSAGE_TYPE_PING:
                                 _pingBuffer.put(_inputBuffer);
@@ -244,10 +274,9 @@ public class WebSocketImpl implements WebSocket
                         }
                     }
                     break;
+                case PN_WS_NOT_STARTED:
                 case PN_WS_CLOSED:
-                    break;
                 case PN_WS_FAILED:
-                    break;
                 default:
                     break;
             }
@@ -315,24 +344,12 @@ public class WebSocketImpl implements WebSocket
 
                 switch (_state)
                 {
-                    case PN_WS_NOT_STARTED:
-                        _underlyingInput.process();
-                        break;
                     case PN_WS_CONNECTING:
-                        try
-                        {
-                            processInput();
-                        } finally
-                        {
-                            _inputBuffer.compact();
-                        }
-                        break;
                     case PN_WS_CONNECTED_FLOW:
                         processInput();
                         break;
+                    case PN_WS_NOT_STARTED:
                     case PN_WS_FAILED:
-                        _underlyingInput.process();
-                        break;
                     default:
                         _underlyingInput.process();
                 }
@@ -401,13 +418,20 @@ public class WebSocketImpl implements WebSocket
                     case PN_WS_CONNECTED_FLOW:
                         _underlyingOutputSize = _underlyingOutput.pending();
 
-                        wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+                        if (_underlyingOutputSize > 0)
+                        {
+                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
 
-                        _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
+                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
 
-                        _head.limit(_outputBuffer.position());
+                            _head.limit(_outputBuffer.position());
 
-                        return _outputBuffer.position();
+                            return _outputBuffer.position();
+                        }
+                        else
+                        {
+                            return _underlyingOutputSize;
+                        }
                     case PN_WS_CONNECTED_PONG:
                         _state = WebSocketState.PN_WS_CONNECTED_FLOW;
 
@@ -424,10 +448,25 @@ public class WebSocketImpl implements WebSocket
                         {
                             return _outputBuffer.position();
                         }
+                    case PN_WS_CONNECTED_CLOSING:
+                        _state = WebSocketState.PN_WS_CLOSED;
+
+                        writeClose();
+
+                        _head.limit(_outputBuffer.position());
+
+                        if (_head_closed)
+                        {
+                            _state = WebSocketState.PN_WS_FAILED;
+                            return Transport.END_OF_STREAM;
+                        }
+                        else
+                        {
+                            return _outputBuffer.position();
+                        }
                     case PN_WS_FAILED:
-                        return Transport.END_OF_STREAM;
                     default:
-                        return 0;
+                        return Transport.END_OF_STREAM;
                 }
             }
             else
@@ -441,10 +480,12 @@ public class WebSocketImpl implements WebSocket
         {
             if (_isWebSocketEnabled)
             {
-                switch (_state) {
+                switch (_state)
+                {
                     case PN_WS_CONNECTING:
                     case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
+                    case PN_WS_CONNECTED_CLOSING:
                         return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
@@ -482,6 +523,7 @@ public class WebSocketImpl implements WebSocket
                         break;
                     case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
+                    case PN_WS_CONNECTED_CLOSING:
                         if (_outputBuffer.position() != 0)
                         {
                             _outputBuffer.flip();
