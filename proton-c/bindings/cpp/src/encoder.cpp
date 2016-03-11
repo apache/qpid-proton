@@ -147,14 +147,23 @@ encoder encoder::operator<<(const binary& x) { return do_put(*this, pn_object(),
 
 encoder encoder::operator<<(const scalar& x) { return do_put(*this, pn_object(), x.atom_, pn_data_put_atom); }
 
+encoder encoder::operator<<(const null&) {
+    save_state ss(pn_object());         // Save state in case of error.
+    check(pn_data_put_null(pn_object()), pn_object());
+    ss.cancel();                // Don't restore state, all is good.
+    return *this;
+}
+
 void encoder::insert(const value& v) {
     data mine(pn_object());
     if (mine == v.data_)
         throw conversion_error("cannot insert into self");
-    if (v.empty())
-        throw conversion_error("cannot insert empty value");
-    v.decode();                 // Rewind
-    check(mine.append(v.data()), pn_object());
+    if (v.empty()) {
+        pn_data_put_null(pn_object());
+    } else {
+        v.decode();                 // Rewind
+        check(mine.append(v.data()), pn_object());
+    }
 }
 
 std::ostream& operator<<(std::ostream& o, const encoder& e) {

@@ -161,6 +161,12 @@ decoder decoder::operator>>(struct assert_type a) { bad_type(a.type, type()); re
 
 decoder decoder::operator>>(struct rewind) { rewind(); return *this; }
 
+decoder decoder::operator>>(null&) {
+    save_state ss(pn_object());
+    bad_type(NULL_TYPE, pre_get(pn_object()));
+    return *this;
+}
+
 decoder decoder::operator>>(value& v) {
     data mine(pn_object());
     if (mine == v.data_)

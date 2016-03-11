@@ -131,6 +131,7 @@ class decoder : public object<pn_data_t> {
     PN_CPP_EXTERN decoder operator>>(annotation_key&);
     PN_CPP_EXTERN decoder operator>>(scalar&);
     PN_CPP_EXTERN decoder operator>>(value&);
+    PN_CPP_EXTERN decoder operator>>(null&);
     ///@}
 
     // start extracting complex type.

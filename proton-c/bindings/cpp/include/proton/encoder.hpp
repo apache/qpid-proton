@@ -118,6 +118,7 @@ class encoder : public object<pn_data_t> {
     PN_CPP_EXTERN encoder operator<<(const symbol&);
     PN_CPP_EXTERN encoder operator<<(const binary&);
     PN_CPP_EXTERN encoder operator<<(const scalar&);
+    PN_CPP_EXTERN encoder operator<<(const null&);
 
     /// Start encoding a complex type.
     PN_CPP_EXTERN encoder operator<<(const start&);

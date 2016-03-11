@@ -27,12 +27,15 @@
 namespace proton {
 
 value::value() {}
+value::value(const null&) {}
 value::value(const value& x) { *this = x; }
 value::value(pn_data_t* p) { if (p) data().copy(internal::data(p)); }
 
 #if PN_CPP_HAS_CPP11
 value::value(value&& x) { swap(*this, x); }
 #endif
+
+value& value::operator=(const null&) { clear(); return *this; }
 
 value& value::operator=(const value& x) {
     if (this != &x) {
@@ -59,7 +62,7 @@ internal::encoder value::encode() { clear(); return data().encoder(); }
 
 internal::decoder value::decode() const { return data().decoder() >> internal::rewind(); }
 
-type_id value::type() const { return decode().type(); }
+type_id value::type() const { return empty() ? NULL_TYPE : decode().type(); }
 
 bool operator==(const value& x, const value& y) {
     if (x.empty() && y.empty()) return true;
@@ -75,7 +78,7 @@ bool operator<(const value& x, const value& y) {
 
 std::ostream& operator<<(std::ostream& o, const value& v) {
     if (v.empty())
-        return o << "<empty>";
+        return o << "<null>";
     // pn_inspect prints strings with quotes which is not normal in C++.
     switch (v.type()) {
       case STRING:
@@ -84,6 +87,11 @@ std::ostream& operator<<(std::ostream& o, const value& v) {
       default:
         return o << v.data();
     }
+}
+
+void value::get(null&) const {
+    if (type() != NULL_TYPE)
+        throw conversion_error("value is not null");
 }
 
 int64_t value::as_int() const { return get<scalar>().as_int(); }

@@ -127,6 +127,8 @@ PN_CPP_EXTERN bool type_id_is_container(type_id);
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 /// @endcond
 
+struct null {};
+
 }
 
 #endif // TYPES_H

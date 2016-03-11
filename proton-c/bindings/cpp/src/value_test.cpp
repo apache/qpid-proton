@@ -81,6 +81,22 @@ void map_test() {
     ASSERT_EQUAL(std::make_pair(std::string("b"), value(amqp::binary_type("xyz"))), vec[1]);
 }
 
+void null_test() {
+    value v;
+    ASSERT(v.empty());
+    ASSERT_EQUAL(NULL_TYPE, v.type());
+    null n;
+    v.get(n);
+    value v2(n);
+    ASSERT(v.empty());
+    ASSERT_EQUAL(NULL_TYPE, v.type());
+    v = "foo";
+    ASSERT_EQUAL(STRING, v.type());
+    try { v.get<null>(); FAIL("Expected conversion_error"); } catch (conversion_error) {}
+    v = null();
+    v.get<null>();
+}
+
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, value_test(false, BOOLEAN, "false", true));
@@ -99,5 +115,6 @@ int main(int, char**) {
     RUN_TEST(failed, value_test(amqp::symbol_type("aaa"), SYMBOL, "aaa", amqp::symbol_type("aaaa")));
     RUN_TEST(failed, value_test(amqp::binary_type("aaa"), BINARY, "b\"aaa\"", amqp::binary_type("aaaa")));
     RUN_TEST(failed, map_test());
+    RUN_TEST(failed, null_test());
     return failed;
 }

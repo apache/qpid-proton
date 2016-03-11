@@ -37,8 +37,10 @@ namespace proton {
 ///
 class value : private comparable<value> {
   public:
-    /// Create an empty value.
+    /// Create a null value.
     PN_CPP_EXTERN value();
+    /// Create a null value.
+    PN_CPP_EXTERN value(const null&);
 
     /// Copy a value.
     PN_CPP_EXTERN value(const value&);
@@ -50,13 +52,14 @@ class value : private comparable<value> {
     /// Construct from any allowed type T. @see proton::amqp for allowed types.
     /// Ignore the default parameter, it restricts the template to match only allowed types.
     template <class T> value(const T& x, typename enable_amqp_type<T>::type* = 0) { encode() << x; }
+    PN_CPP_EXTERN value& operator=(const null&);
 
     PN_CPP_EXTERN value& operator=(const value&);
 
-    /// Remove any contained data.
+    /// Reset the value to null
     PN_CPP_EXTERN void clear();
 
-    /// True if the value contains no data.
+    /// True if the value is null
     PN_CPP_EXTERN bool empty() const;
 
     /// Get the type ID for the current value.
@@ -80,6 +83,7 @@ class value : private comparable<value> {
     /// Get an AMQP array or list as type T that satisfies the sequence concept. */
     template<class T> void get_sequence(T& t) const { decode() >> internal::to_sequence(t); }
 
+    PN_CPP_EXTERN void get(null&) const;
     /// @}
 
     /// Get the value as C++ type T.
