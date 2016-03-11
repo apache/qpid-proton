@@ -139,7 +139,7 @@ int main(int, char**) {
                  uuid::copy("\xff\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff")));
     RUN_TEST(failed, simple_type_test(std::string("xxx"), STRING, "xxx", std::string("yyy")));
     RUN_TEST(failed, simple_type_test(symbol("aaa"), SYMBOL, "aaa", symbol("aaaa")));
-    RUN_TEST(failed, simple_type_test(binary("aaa"), BINARY, "b\"aaa\"", binary("aaaa")));
+    RUN_TEST(failed, simple_type_test(binary("\010aaa"), BINARY, "b\"\\x08aaa\"", binary("aaaa")));
 
     // Test native C++ integral types.
     RUN_TEST(failed, simple_integral_test<char>());

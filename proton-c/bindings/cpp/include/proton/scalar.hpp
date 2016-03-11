@@ -20,6 +20,7 @@
  * under the License.
  */
 
+#include <proton/binary.hpp>
 #include <proton/export.hpp>
 #include <proton/comparable.hpp>
 #include <proton/types_fwd.hpp>
@@ -173,10 +174,10 @@ class scalar : private comparable<scalar> {
   private:
     scalar(const pn_atom_t& a);
     void ok(pn_type_t) const;
-    void set(const std::string&, pn_type_t);
+    void set(const binary&, pn_type_t);
     void set(const pn_atom_t&);
     pn_atom_t atom_;
-    std::string str_;           // Owner of string-like data.
+    binary bytes_;              // Hold binary data.
 
   friend class message;
   friend class restricted_scalar;

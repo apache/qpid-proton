@@ -46,15 +46,15 @@ type_id scalar::type() const { return type_id(atom_.type); }
 
 bool scalar::empty() const { return type() == NULL_TYPE; }
 
-void scalar::set(const std::string& x, pn_type_t t) {
+void scalar::set(const binary& x, pn_type_t t) {
     atom_.type = t;
-    str_ = x;
-    atom_.u.as_bytes = pn_bytes(str_);
+    bytes_ = x;
+    atom_.u.as_bytes = pn_bytes(bytes_);
 }
 
 void scalar::set(const pn_atom_t& atom) {
     if (type_id_is_string_like(type_id(atom.type)))
-        set(str(atom.u.as_bytes), atom.type);
+        set(bin(atom.u.as_bytes), atom.type);
     else
         atom_ = atom;
 }
@@ -119,10 +119,10 @@ scalar& scalar::operator=(const uuid& x) {
     return *this;
 }
 
-scalar& scalar::operator=(const std::string& x) { set(x, PN_STRING); return *this; }
-scalar& scalar::operator=(const symbol& x) { set(x, PN_SYMBOL); return *this; }
+scalar& scalar::operator=(const std::string& x) { set(binary(x), PN_STRING); return *this; }
+scalar& scalar::operator=(const symbol& x) { set(binary(x), PN_SYMBOL); return *this; }
 scalar& scalar::operator=(const binary& x) { set(x, PN_BINARY); return *this; }
-scalar& scalar::operator=(const char* x) { set(x, PN_STRING); return *this; }
+scalar& scalar::operator=(const char* x) { set(binary(std::string(x)), PN_STRING); return *this; }
 
 void scalar::ok(pn_type_t t) const {
     if (atom_.type != t) throw make_conversion_error(type_id(t), type());
@@ -145,9 +145,12 @@ void scalar::get(decimal32& x) const { ok(PN_DECIMAL32); byte_copy(x, atom_.u.as
 void scalar::get(decimal64& x) const { ok(PN_DECIMAL64); byte_copy(x, atom_.u.as_decimal64); }
 void scalar::get(decimal128& x) const { ok(PN_DECIMAL128); byte_copy(x, atom_.u.as_decimal128); }
 void scalar::get(uuid& x) const { ok(PN_UUID); byte_copy(x, atom_.u.as_uuid); }
-void scalar::get(std::string& x) const { ok(PN_STRING); x = std::string(str_); }
-void scalar::get(symbol& x) const { ok(PN_SYMBOL); x = symbol(str_); }
-void scalar::get(binary& x) const { ok(PN_BINARY); x = binary(str_); }
+void scalar::get(std::string& x) const {
+    ok(PN_STRING);
+    x = bytes_.str();
+}
+void scalar::get(symbol& x) const { ok(PN_SYMBOL); x = symbol(bytes_.str()); }
+void scalar::get(binary& x) const { ok(PN_BINARY); x = bytes_; }
 
 int64_t scalar::as_int() const {
     if (type_id_is_floating_point(type()))
@@ -187,7 +190,7 @@ double scalar::as_double() const {
 
 std::string scalar::as_string() const {
     if (type_id_is_string_like(type()))
-        return str_;
+        return bytes_.str();
     throw make_conversion_error(STRING, type());
 }
 

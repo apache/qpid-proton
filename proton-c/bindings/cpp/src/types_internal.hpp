@@ -19,8 +19,9 @@
  * under the License.
  */
 
-#include "proton/type_traits.hpp"
-#include "proton/error.hpp"
+#include <proton/type_traits.hpp>
+#include <proton/error.hpp>
+#include <proton/binary.hpp>
 #include <sstream>
 
 ///@file
@@ -49,8 +50,13 @@ inline pn_bytes_t pn_bytes(const std::string& s) {
     return b;
 }
 
-/// Convert pn_bytes_t to str
+inline pn_bytes_t pn_bytes(const binary& s) {
+    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
+    return b;
+}
+
 inline std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
+inline binary bin(const pn_bytes_t& b) { return binary(b.start, b.start+b.size); }
 
 inline bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
 inline bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }

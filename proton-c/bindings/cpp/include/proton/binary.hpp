@@ -19,18 +19,32 @@
  * under the License.
  */
 
-#include <string>
+#include <proton/export.hpp>
+#include <proton/types_fwd.hpp>
+
+#include <iosfwd>
+#include <vector>
 
 namespace proton {
 
-/// symbol is a std::string that represents the AMQP symbol type.
-/// A symbol can only contain 7-bit ASCII characters.
-///
-class binary : public std::string {
+/// Arbitrary binary data.
+class binary : public std::vector<char> {
   public:
-    explicit binary(const std::string& s=std::string()) : std::string(s) {}
-    explicit binary(const char* s) : std::string(s) {}
+    typedef std::vector<char> byte_vector;
+
+    explicit binary() : byte_vector() {}
+    explicit binary(size_t n) : byte_vector(n) {}
+    explicit binary(size_t n, char x) : byte_vector(n, x) {}
+    template <class Iter> binary(Iter first, Iter last) : byte_vector(first, last) {}
+    explicit binary(const std::string& s) : byte_vector(s.begin(), s.end()) {}
+
+    std::string str() const { return std::string(begin(), end()); }
+
+    binary& operator=(const binary& x) { byte_vector::operator=(x); return *this; }
+    binary& operator=(const std::string& x) { assign(x.begin(), x.end()); return *this; }
 };
+
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const binary&);
 
 }
 

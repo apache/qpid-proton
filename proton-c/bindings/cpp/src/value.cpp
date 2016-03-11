@@ -176,8 +176,8 @@ std::ostream& operator<<(std::ostream& o, exact_cref<value> v) {
     if (v.ref.empty())
         return o << "<null>";
     switch (v.ref.type()) {
-      case STRING:
-      case SYMBOL: return o << get<std::string>(v.ref);
+      case STRING: return o << get<std::string>(v.ref);
+      case SYMBOL: return o << get<symbol>(v.ref);
       case DECIMAL32: return o << get<decimal32>(v.ref);
       case DECIMAL64: return o << get<decimal64>(v.ref);
       case DECIMAL128: return o << get<decimal128>(v.ref);

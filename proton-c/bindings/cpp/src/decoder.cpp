@@ -80,16 +80,21 @@ void assign(uuid& x, const pn_uuid_t y) { byte_copy(x, y); }
 void assign(decimal32& x, const pn_decimal32_t y) { byte_copy(x, y); }
 void assign(decimal64& x, const pn_decimal64_t y)  { byte_copy(x, y); }
 void assign(decimal128& x, const pn_decimal128_t y) { byte_copy(x, y); }
+void
+assign(std::string& x, const pn_bytes_t y) { x = str(y); }
+void assign(symbol& x, const pn_bytes_t y) { x = str(y); }
+void assign(binary& x, const pn_bytes_t y) { x = bin(y); }
 
 } // namespace
 
 
 // Simple extract with no type conversion.
-template <class T, class U> void decoder::extract(T& x, U (*get)(pn_data_t*)) {
+template <class T, class U> decoder& decoder::extract(T& x, U (*get)(pn_data_t*)) {
     state_guard sg(*this);
     assert_type_equal(type_id_of<T>::value, pre_get());
     assign(x, get(pn_object()));
     sg.cancel();                // No error, cancel the reset.
+    return *this;
 }
 
 type_id decoder::next_type() {
@@ -179,10 +184,7 @@ decoder& decoder::operator>>(scalar& x) {
     return *this;
 }
 
-decoder& decoder::operator>>(bool &x) {
-    extract(x, pn_data_get_bool);
-    return *this;
-}
+decoder& decoder::operator>>(bool &x) { return extract(x, pn_data_get_bool); }
 
 decoder& decoder::operator>>(uint8_t &x) {
     state_guard sg(*this);
@@ -276,15 +278,9 @@ decoder& decoder::operator>>(int64_t &x) {
     return *this;
 }
 
-decoder& decoder::operator>>(wchar_t &x) {
-    extract(x, pn_data_get_char);
-    return *this;
-}
+decoder& decoder::operator>>(wchar_t &x) { return extract(x, pn_data_get_char); }
 
-decoder& decoder::operator>>(timestamp &x) {
-    extract(x, pn_data_get_timestamp);
-    return *this;
-}
+decoder& decoder::operator>>(timestamp &x) { return extract(x, pn_data_get_timestamp); }
 
 decoder& decoder::operator>>(float &x) {
     state_guard sg(*this);
@@ -308,37 +304,14 @@ decoder& decoder::operator>>(double &x) {
     return *this;
 }
 
-decoder& decoder::operator>>(decimal32 &x) {
-    extract(x, pn_data_get_decimal32);
-    return *this;
-}
+decoder& decoder::operator>>(decimal32 &x) { return extract(x, pn_data_get_decimal32); }
+decoder& decoder::operator>>(decimal64 &x) { return extract(x, pn_data_get_decimal64); }
+decoder& decoder::operator>>(decimal128 &x)  { return extract(x, pn_data_get_decimal128); }
 
-decoder& decoder::operator>>(decimal64 &x) {
-    extract(x, pn_data_get_decimal64);
-    return *this;
-}
-
-decoder& decoder::operator>>(decimal128 &x)  {
-    extract(x, pn_data_get_decimal128);
-    return *this;
-}
-
-decoder& decoder::operator>>(uuid &x)  {
-    extract(x, pn_data_get_uuid);
-    return *this;
-}
-
-decoder& decoder::operator>>(std::string &x) {
-    state_guard sg(*this);
-    switch (pre_get()) {
-      case STRING: x = str(pn_data_get_string(pn_object())); break;
-      case BINARY: x = str(pn_data_get_binary(pn_object())); break;
-      case SYMBOL: x = str(pn_data_get_symbol(pn_object())); break;
-      default: assert_type_equal(STRING, type_id(pn_data_type(pn_object())));
-    }
-    sg.cancel();
-    return *this;
-}
+decoder& decoder::operator>>(uuid &x)  { return extract(x, pn_data_get_uuid); }
+decoder& decoder::operator>>(binary &x)  { return extract(x, pn_data_get_binary); }
+decoder& decoder::operator>>(symbol &x)  { return extract(x, pn_data_get_symbol); }
+decoder& decoder::operator>>(std::string &x)  { return extract(x, pn_data_get_string); }
 
 } // codec
 } // proton

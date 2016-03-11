@@ -81,6 +81,8 @@ class decoder : public data {
     PN_CPP_EXTERN decoder& operator>>(decimal128&);
     PN_CPP_EXTERN decoder& operator>>(uuid&);
     PN_CPP_EXTERN decoder& operator>>(std::string&);
+    PN_CPP_EXTERN decoder& operator>>(symbol&);
+    PN_CPP_EXTERN decoder& operator>>(binary&);
     PN_CPP_EXTERN decoder& operator>>(message_id&);
     PN_CPP_EXTERN decoder& operator>>(annotation_key&);
     PN_CPP_EXTERN decoder& operator>>(scalar&);
@@ -153,7 +155,7 @@ class decoder : public data {
 
   private:
     type_id pre_get();
-    template <class T, class U> void extract(T& x, U (*get)(pn_data_t*));
+    template <class T, class U> decoder& extract(T& x, U (*get)(pn_data_t*));
 
   friend class message;
 };

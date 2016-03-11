@@ -30,7 +30,7 @@ namespace proton {
 /// as an array of bytes.
 template <size_t N> class byte_array : private comparable<byte_array<N> > {
   public:
-    typedef uint8_t value_type;
+    typedef char value_type;
 
     /// Initially all 0.
     byte_array() { std::fill(bytes_, bytes_+N, '\0'); }
