@@ -1304,4 +1304,38 @@ public class WebSocketHandlerImplTest
 
         spyWebSocketHandler.unwrapBuffer(srcBuffer);
     }
+
+    @Test
+    public void testCalculateHeaderSize_zero_payload()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        assertEquals(webSocketHandler.calculateHeaderSize(0), 0);
+    }
+
+    @Test
+    public void testCalculateHeaderSize_small_payload()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        assertEquals(webSocketHandler.calculateHeaderSize(
+                WebSocketHeader.PAYLOAD_SHORT_MAX),
+                WebSocketHeader.MIN_HEADER_LENGTH_MASKED);
+    }
+
+    @Test
+    public void testCalculateHeaderSize_medium_payload()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        assertEquals(webSocketHandler.calculateHeaderSize(
+                WebSocketHeader.PAYLOAD_MEDIUM_MAX),
+                WebSocketHeader.MED_HEADER_LENGTH_MASKED);
+    }
+
+    @Test
+    public void testCalculateHeaderSize_large_payload()
+    {
+        WebSocketHandlerImpl webSocketHandler = new WebSocketHandlerImpl();
+        assertEquals(webSocketHandler.calculateHeaderSize(
+                WebSocketHeader.PAYLOAD_LARGE_MAX),
+                WebSocketHeader.MAX_HEADER_LENGTH_MASKED);
+    }
 }

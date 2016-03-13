@@ -46,4 +46,6 @@ public interface WebSocketHandler
     WebSocketMessageType unwrapBuffer(ByteBuffer srcBuffer);
 
     void createPong(ByteBuffer srcBuffer, ByteBuffer dstBuffer);
+
+    int calculateHeaderSize(int payloadSize);
 }

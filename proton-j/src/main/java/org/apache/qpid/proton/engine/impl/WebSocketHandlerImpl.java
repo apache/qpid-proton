@@ -282,4 +282,25 @@ public class WebSocketHandlerImpl implements WebSocketHandler
 
         return maskingKey;
     }
+
+    public int calculateHeaderSize(int payloadSize)
+    {
+        int retVal = 0;
+        if (payloadSize > 0)
+        {
+            if (payloadSize <= WebSocketHeader.PAYLOAD_SHORT_MAX)
+            {
+                retVal = WebSocketHeader.MIN_HEADER_LENGTH_MASKED;
+            }
+            else if (payloadSize <= WebSocketHeader.PAYLOAD_MEDIUM_MAX)
+            {
+                retVal = WebSocketHeader.MED_HEADER_LENGTH_MASKED;
+            }
+            else
+            {
+                retVal = WebSocketHeader.MAX_HEADER_LENGTH_MASKED;
+            }
+        }
+        return retVal;
+    }
 }

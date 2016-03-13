@@ -33,6 +33,7 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
 public class WebSocketImpl implements WebSocket
 {
+    private int _maxFrameSize = 4*1024 + 16*WebSocketHeader.MED_HEADER_LENGTH_MASKED;
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
@@ -53,11 +54,11 @@ public class WebSocketImpl implements WebSocket
 
     protected Boolean _isWebSocketEnabled = false;
 
-    public WebSocketImpl(int maxFrameSize)
+    public WebSocketImpl()
     {
-        _inputBuffer = newWriteableBuffer(maxFrameSize);
-        _outputBuffer = newWriteableBuffer(maxFrameSize);
-        _pingBuffer = newWriteableBuffer(maxFrameSize);
+        _inputBuffer = newWriteableBuffer(_maxFrameSize);
+        _outputBuffer = newWriteableBuffer(_maxFrameSize);
+        _pingBuffer = newWriteableBuffer(_maxFrameSize);
         _isWebSocketEnabled = false;
     }
 
@@ -184,11 +185,6 @@ public class WebSocketImpl implements WebSocket
     {
         _outputBuffer.clear();
         String request = _webSocketHandler.createUpgradeRequest(_host, _path, _port, _protocol, _additionalHeaders);
-
-        System.out.println("WEBSOCKETIMPL is sending: ");
-        System.out.println(request);
-        System.out.println("***************************************************");
-
         _outputBuffer.put(request.getBytes());
     }
 
@@ -420,13 +416,8 @@ public class WebSocketImpl implements WebSocket
 
                         if (_underlyingOutputSize > 0)
                         {
-                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
-
-                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
-
-                            _head.limit(_outputBuffer.position());
-
-                            return _outputBuffer.position();
+                            _webSocketHeaderSize = _webSocketHandler.calculateHeaderSize(_underlyingOutputSize);
+                            return _underlyingOutputSize + _webSocketHeaderSize;
                         }
                         else
                         {
@@ -483,9 +474,20 @@ public class WebSocketImpl implements WebSocket
                 switch (_state)
                 {
                     case PN_WS_CONNECTING:
-                    case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
                     case PN_WS_CONNECTED_CLOSING:
+                        return _head;
+                    case PN_WS_CONNECTED_FLOW:
+                        _underlyingOutputSize = _underlyingOutput.pending();
+
+                        if (_underlyingOutputSize > 0)
+                        {
+                            wrapBuffer(_underlyingOutput.head(), _outputBuffer);
+
+                            _webSocketHeaderSize = _outputBuffer.position() - _underlyingOutputSize;
+
+                            _head.limit(_outputBuffer.position());
+                        }
                         return _head;
                     case PN_WS_NOT_STARTED:
                     case PN_WS_CLOSED:
@@ -532,7 +534,6 @@ public class WebSocketImpl implements WebSocket
                             _head.position(0);
                             _head.limit(_outputBuffer.position());
                             _underlyingOutput.pop(bytes - _webSocketHeaderSize);
-                            _webSocketHeaderSize = 0;
                         }
                         else
                         {
