@@ -18,22 +18,19 @@
  * under the License.
  *
 */
-
 package org.apache.qpid.proton.engine.impl;
 
-import org.apache.qpid.proton.engine.WebSocketHandler;
-import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.WebSocket;
-
-import java.nio.ByteBuffer;
-import java.util.Map;
+import org.apache.qpid.proton.engine.*;
 
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.*;
 
+import java.nio.ByteBuffer;
+
+import java.util.Map;
+
 public class WebSocketImpl implements WebSocket
 {
-    private int _maxFrameSize = 4*1024 + 16*WebSocketHeader.MED_HEADER_LENGTH_MASKED;
+    private int _maxFrameSize = (4 * 1024) + (16 * WebSocketHeader.MED_HEADER_LENGTH_MASKED);
     private boolean _tail_closed = false;
     private final ByteBuffer _inputBuffer;
     private boolean _head_closed = false;
@@ -161,7 +158,13 @@ public class WebSocketImpl implements WebSocket
     public String toString()
     {
         StringBuilder builder = new StringBuilder();
-        builder.append("WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled).append(", state=").append(_state).append(", protocol=").append(_protocol).append(", host=").append(_host).append(", path=").append(_path).append(", port=").append(_port);
+        builder.append(
+                "WebSocketImpl [isWebSocketEnabled=").append(_isWebSocketEnabled)
+                .append(", state=").append(_state)
+                .append(", protocol=").append(_protocol)
+                .append(", host=").append(_host)
+                .append(", path=").append(_path)
+                .append(", port=").append(_port);
 
         if ((_additionalHeaders != null) && (!_additionalHeaders.isEmpty()))
         {
@@ -402,7 +405,8 @@ public class WebSocketImpl implements WebSocket
                             return _outputBuffer.position();
                         }
                     case PN_WS_CONNECTING:
-                        if (_head_closed && _outputBuffer.position() == 0)
+
+                        if (_head_closed && (_outputBuffer.position() == 0))
                         {
                             _state = WebSocketState.PN_WS_FAILED;
                             return Transport.END_OF_STREAM;
