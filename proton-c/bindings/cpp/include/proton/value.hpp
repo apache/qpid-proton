@@ -29,11 +29,31 @@
 
 namespace proton {
 
+///@internal - separate value data from implicit conversion constructors to avoid recursions.
+class value_base {
+  public:
+
+    /// Get the type ID for the current value.
+    PN_CPP_EXTERN type_id type() const;
+
+    /// True if the value is null
+    PN_CPP_EXTERN bool empty() const;
+
+  protected:
+    codec::data& data() const;
+    mutable class codec::data data_;
+
+  friend class message;
+  friend class codec::encoder;
+  friend class codec::decoder;
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value_base&);
+};
+
 /// A holder for any single AMQP value, simple or complex (can be list, array, map etc.)
 ///
 /// @see proton::amqp for conversions rules between C++ and AMQP types.
 ///
-class value : private comparable<value> {
+class value : public value_base, private comparable<value> {
   public:
     /// Create a null value.
     PN_CPP_EXTERN value();
@@ -69,12 +89,6 @@ class value : private comparable<value> {
     /// Reset the value to null
     PN_CPP_EXTERN void clear();
 
-    /// True if the value is null
-    PN_CPP_EXTERN bool empty() const;
-
-    /// Get the type ID for the current value.
-    PN_CPP_EXTERN type_id type() const;
-
     /// @name Get methods
     ///
     /// Extract the value to type T.
@@ -105,18 +119,10 @@ class value : private comparable<value> {
   friend PN_CPP_EXTERN void swap(value&, value&);
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, codec::exact_cref<value>);
-
-  private:
-    codec::data& data() const;
-    mutable class codec::data data_;
-
-  friend class message;
-  friend class codec::encoder;
-  friend class codec::decoder;
 };
 
-template<class T> T get(codec::exact_cref<value> v) { T x; v.ref.get(x); return x; }
+template<class T> T get(const value_base& v) { return codec::decoder(v).extract<T>(); }
+
 
 } // proton
 

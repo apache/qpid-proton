@@ -27,6 +27,7 @@ namespace proton {
 
 class scalar;
 class value;
+class value_base;
 
 namespace codec {
 
@@ -40,7 +41,7 @@ class encoder : public data {
     explicit encoder(const data& d) : data(d) {}
 
     /// Encoder into v. Clears any current value in v.
-    PN_CPP_EXTERN explicit encoder(value& v);
+    PN_CPP_EXTERN explicit encoder(value_base& v);
 
     /**
      * Encode the current values into buffer and update size to reflect the
@@ -86,7 +87,7 @@ class encoder : public data {
     PN_CPP_EXTERN encoder& operator<<(const null&);
 
     /// Inserts proton::value.
-    PN_CPP_EXTERN encoder& operator<<(exact_cref<value>);
+    PN_CPP_EXTERN encoder& operator<<(const value_base&);
 
     PN_CPP_EXTERN encoder& operator<<(const start&);
     /// Finish a complex type

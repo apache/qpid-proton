@@ -44,7 +44,7 @@ void encoder::check(long result) {
 }
 
 
-encoder::encoder(value& v) : data(v.data()) {
+encoder::encoder(value_base& v) : data(v.data()) {
     clear();
 }
 
@@ -142,12 +142,13 @@ encoder& encoder::operator<<(const binary& x) { return insert(x, pn_data_put_amq
 
 encoder& encoder::operator<<(const scalar& x) { return insert(x.atom_, pn_data_put_atom); }
 
-encoder& encoder::operator<<(exact_cref<value> x) {
-    if (*this == x.ref.data_)
+encoder& encoder::operator<<(const value_base& x) {
+    if (*this == x.data_)
         throw conversion_error("cannot insert into self");
-    if (x.ref.empty())
+    if (x.empty())
         pn_data_put_null(pn_object());
-    decoder d(x.ref);                 // Rewind
+    data d = x.data();
+    d.rewind();
     check(append(d));
     return *this;
 }

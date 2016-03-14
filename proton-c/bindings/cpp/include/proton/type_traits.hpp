@@ -163,19 +163,6 @@ template<class U> struct assignable<value, U> : public false_type {};
 template <class T, class U=void> struct enable_unknown_integer :
         public enable_if<is_unknown_integer<T>::value, U> {};
 
-/// Using `exact_cref<const T>` as an argument type instead of `const &T`
-/// ensures that the function will only accept references to an existing T, and
-/// not to a temporary T created by implicit conversion.
-template <class T> struct exact_cref;
-
-template <class T> struct exact_cref {
-    template <class U> exact_cref(
-        const U& r,
-        typename enable_if<is_same<T,U>::value>::type* = 0) : ref(r) {}
-    operator const T&() const { return ref; }
-    const T& ref;
-};
-
 } // internal
 } // proton
 

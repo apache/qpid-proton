@@ -30,6 +30,7 @@ class annotation_key;
 class message_id;
 class scalar;
 class value;
+class value_base;
 
 namespace codec {
 
@@ -43,7 +44,7 @@ class decoder : public data {
     explicit decoder(const data& d) : data(d) {}
 
     /// Attach decoder to a proton::value. The decoder is rewound to the start of the data.
-    PN_CPP_EXTERN explicit decoder(codec::exact_cref<value>);
+    PN_CPP_EXTERN explicit decoder(const value_base&);
 
     /// Decode AMQP data from a buffer and add it to the end of the decoders stream. */
     PN_CPP_EXTERN void decode(const char* buffer, size_t size);
@@ -86,7 +87,7 @@ class decoder : public data {
     PN_CPP_EXTERN decoder& operator>>(message_id&);
     PN_CPP_EXTERN decoder& operator>>(annotation_key&);
     PN_CPP_EXTERN decoder& operator>>(scalar&);
-    PN_CPP_EXTERN decoder& operator>>(value&);
+    PN_CPP_EXTERN decoder& operator>>(value_base&);
     PN_CPP_EXTERN decoder& operator>>(null&);
     ///@}
 
@@ -152,6 +153,9 @@ class decoder : public data {
         }
         return *this;
     }
+
+    /// Extract and return a value.
+    template <class T> T extract() { T x; *this >> x; return x; }
 
   private:
     type_id pre_get();

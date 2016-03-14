@@ -42,7 +42,7 @@ namespace codec {
  * to be returned by the decoder.
  */
 
-decoder::decoder(exact_cref<value> v) : data(v.ref.data()) { rewind(); }
+decoder::decoder(const value_base& v) : data(v.data()) { rewind(); }
 
 namespace {
 template <class T> T check(T result) {
@@ -139,13 +139,14 @@ decoder& decoder::operator>>(null&) {
     return *this;
 }
 
-decoder& decoder::operator>>(value& v) {
-    if (*this == v.data_)
+decoder& decoder::operator>>(value_base& x) {
+    if (*this == x.data_)
         throw conversion_error("extract into self");
-    v.clear();
+    data d = x.data();
+    d.clear();
     {
         narrow_guard n(*this);
-        check(v.data().appendn(pn_object(), 1));
+        check(d.appendn(*this, 1));
     }
     next();
     return *this;
