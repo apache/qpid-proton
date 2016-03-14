@@ -71,13 +71,13 @@ void uniform_containers() {
     v = a;
     print(v);
     std::list<int> a1;
-    v.get(a1);                  // Decode as a C++ std::list instead
+    proton::get(v, a1);
     std::cout << a1 << std::endl;
 
     // You can specify that a container should be encoded as an AMQP list instead.
     v = proton::codec::encoder::list(a1);
     print(v);
-    std::cout << v.get<std::vector<int> >() << std::endl;
+    std::cout << proton::get<std::vector<int> >(v) << std::endl;
 
     // C++ map types (types with key_type, mapped_type) convert to an AMQP map by default.
     std::map<std::string, int> m;
@@ -85,7 +85,7 @@ void uniform_containers() {
     m["two"] = 2;
     v = m;
     print(v);
-    std::cout << v.get<std::map<std::string, int> >() << std::endl;
+    std::cout << proton::get<std::map<std::string, int> >(v) << std::endl;
 
     // A sequence of pairs encodes as an AMQP MAP, which lets you control the encoded order.
     std::vector<std::pair<std::string, int> > pairs;
@@ -121,16 +121,15 @@ void mixed_containers() {
     // By default, a sequence of proton::value is treated as an AMQP list.
     v = l;
     print(v);
-    std::vector<proton::value> l2;
-    v.get(l2);
+    std::vector<proton::value> l2 = proton::get<std::vector<proton::value> >(v);
     std::cout << l2 << std::endl;
 
     std::map<proton::value, proton::value> m;
     m[proton::value("five")] = proton::value(5);
     m[proton::value(4)] = proton::value("four"); v = m;
     print(v);
-    std::map<proton::value, proton::value> m2;
-    v.get(m2);
+    typedef std::map<proton::value, proton::value> value_map;
+    value_map m2(proton::get<value_map>(v));
     std::cout << m2 << std::endl;
 }
 

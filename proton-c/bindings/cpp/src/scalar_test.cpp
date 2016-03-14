@@ -60,13 +60,10 @@ template <class T> void type_test(T x, type_id tid, T y) {
     try {                                                               \
         (void)(EXPR);                                                   \
         FAIL("expected conversion_error: " #EXPR);                      \
-    } catch (const conversion_error& e) {                               \
-        std::ostringstream want;                                        \
-        want << "unexpected type, want: " << (WANT) << " got: " << (GOT); \
-        ASSERT_EQUAL(want.str(), std::string(e.what()));                \
-    }
+    } catch (const conversion_error& e) {}
 
-void convert_test() {
+// FIXME aconway 2016-03-15: new coerce stuff.
+void coerce_test() {
     scalar a;
     ASSERT_EQUAL(NULL_TYPE, a.type());
     ASSERT(a.empty());
@@ -98,8 +95,8 @@ void encode_decode_test() {
     scalar a("foo");
     v = a;                      // Assignment to value does encode, get<> does decode.
     ASSERT_EQUAL(v, a);
-    ASSERT_EQUAL(std::string("foo"), v.get<std::string>());
-    scalar a2 = v.get<scalar>();
+    ASSERT_EQUAL(std::string("foo"), get<std::string>(v));
+    scalar a2 = get<scalar>(v);
     ASSERT_EQUAL(std::string("foo"), a2.get<std::string>());
 }
 
@@ -149,6 +146,6 @@ int main(int, char**) {
     RUN_TEST(failed, encode_decode_test());
     RUN_TEST(failed, message_id_test());
     RUN_TEST(failed, annotation_key_test());
-    RUN_TEST(failed, convert_test());
+    RUN_TEST(failed, coerce_test());
     return failed;
 }

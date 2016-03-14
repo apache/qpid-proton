@@ -23,6 +23,7 @@
 #include <proton/comparable.hpp>
 
 #include <algorithm>
+#include <iterator>
 
 namespace proton {
 
@@ -30,32 +31,51 @@ namespace proton {
 /// as an array of bytes.
 template <size_t N> class byte_array : private comparable<byte_array<N> > {
   public:
-    typedef char value_type;
+    ///@name Sequence container typedefs
+    ///@{
+    typedef uint8_t                                   value_type;
+    typedef value_type*			              pointer;
+    typedef const value_type*                         const_pointer;
+    typedef value_type&                   	      reference;
+    typedef const value_type&             	      const_reference;
+    typedef value_type*          		      iterator;
+    typedef const value_type*			      const_iterator;
+    typedef std::size_t                    	      size_type;
+    typedef std::ptrdiff_t                   	      difference_type;
+    typedef std::reverse_iterator<iterator>	      reverse_iterator;
+    typedef std::reverse_iterator<const_iterator>     const_reverse_iterator;
+    ///@}
 
-    /// Initially all 0.
+    /// 0-initialized byte array
     byte_array() { std::fill(bytes_, bytes_+N, '\0'); }
 
-    /// Returns N
+    /// Size of the array
     static size_t size() { return N; }
 
-    uint8_t* begin() { return bytes_; }
-    uint8_t* end() { return bytes_+N; }
-    uint8_t& operator[](size_t i) { return bytes_[i]; }
+    ///@name Array operators
+    ///@{
+    value_type* begin() { return bytes_; }
+    value_type* end() { return bytes_+N; }
+    value_type& operator[](size_t i) { return bytes_[i]; }
 
-    const uint8_t* begin() const { return bytes_; }
-    const uint8_t* end() const { return bytes_+N; }
-    const uint8_t& operator[](size_t i) const { return bytes_[i]; }
+    const value_type* begin() const { return bytes_; }
+    const value_type* end() const { return bytes_+N; }
+    const value_type& operator[](size_t i) const { return bytes_[i]; }
+    ///@}
 
-    friend bool operator==(const byte_array& x, const byte_array& y) {
-        return std::equal(x.begin(), x.end(), y.begin());
-    }
+    ///@name Comparison operators
+    ///@{
+  friend bool operator==(const byte_array& x, const byte_array& y) {
+      return std::equal(x.begin(), x.end(), y.begin());
+  }
 
-    friend bool operator<(const byte_array& x, const byte_array& y) {
-        return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
-    }
+  friend bool operator<(const byte_array& x, const byte_array& y) {
+      return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
+  }
+    ///@}
 
   private:
-    uint8_t bytes_[N];
+    value_type bytes_[N];
 };
 
 }

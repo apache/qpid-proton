@@ -30,7 +30,7 @@ namespace codec {
 /// std::list<T> for most T is encoded as an AMQP array.
 template <class T, class A>
 encoder& operator<<(encoder& e, const std::list<T, A>& x) {
-    return e << encoder::array(x, type_id_of<T>::value);
+    return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// Specialize for std::list<value>, encode as AMQP list (variable type)

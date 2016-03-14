@@ -24,55 +24,62 @@
 #include <proton/types_fwd.hpp>
 #include <proton/type_id.hpp>
 
+///@file
+
 struct pn_data_t;
 
 namespace proton {
 
 class value;
+///@defgroup codec Internal details of AMQP encoding.
+///
+/// You can use these classes on an experimental basis to create your own AMQP
+/// encodings for C++ types, but they may change in the future. For examples of use
+/// see the built-in encodings, for example in proton/vector.hpp or proton/map.hpp
 
+/// @ingroup codec
 namespace codec {
 
 /// Wrapper for a proton data object.
 class data : public internal::object<pn_data_t> {
   public:
+    /// Wrap an existing proton-C data object.
     data(pn_data_t* d=0) : internal::object<pn_data_t>(d) {}
 
+    /// Create a new data object.
     PN_CPP_EXTERN static data create();
 
-    // Copy the contents of another data object.
+    /// Copy the contents of another data object.
     PN_CPP_EXTERN void copy(const data&);
 
-    /** Clear the data. */
+    /// Clear the data.
     PN_CPP_EXTERN void clear();
 
-    /** Rewind current position to the start */
+    /// Rewind current position to the start.
     PN_CPP_EXTERN void rewind();
 
-    /** True if there are no values. */
+    /// True if there are no values.
     PN_CPP_EXTERN bool empty() const;
 
-    /** Return the data cursor position */
-    PN_CPP_EXTERN void* point() const;
-
-    /** Restore the cursor position to a previously saved position */
-    PN_CPP_EXTERN void restore(void* h);
-
-    PN_CPP_EXTERN void narrow();
-
-    PN_CPP_EXTERN void widen();
-
+    /// Append the contents of another data object.
     PN_CPP_EXTERN int append(data src);
 
+    /// Append up to limit items from data object.
     PN_CPP_EXTERN int appendn(data src, int limit);
 
+  protected:
+    PN_CPP_EXTERN void* point() const;
+    PN_CPP_EXTERN void restore(void* h);
+    PN_CPP_EXTERN void narrow();
+    PN_CPP_EXTERN void widen();
     PN_CPP_EXTERN bool next();
-
     PN_CPP_EXTERN bool prev();
 
+  friend struct state_guard;
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
 };
 
-/// state_guard saves the state and restores it in dtor unless cancel() is called.
+// state_guard saves the state and restores it in dtor unless cancel() is called.
 struct state_guard {
     data& data_;
     void* point_;
@@ -81,13 +88,6 @@ struct state_guard {
     state_guard(data& d) : data_(d), point_(data_.point()), cancel_(false) {}
     ~state_guard() { if (!cancel_) data_.restore(point_); }
     void cancel() { cancel_ = true; }
-};
-
-/// Narrow the data object, widen it in dtor.
-struct narrow_guard {
-    data& data_;
-    narrow_guard(data& d) : data_(d) { data_.narrow(); }
-    ~narrow_guard() { data_.widen(); }
 };
 
 // Start encoding a complex type.
@@ -107,10 +107,11 @@ struct start {
     PN_CPP_EXTERN static start described() { return start(DESCRIBED, NULL_TYPE, true); }
 };
 
-/// Finish inserting or extracting a complex type.
+// Finish inserting or extracting a complex type.
 struct finish {};
 
 } // codec
+
 } // proton
 
-#endif // PROTON_DATA_HPP
+#endif  /*!PROTON_DATA_HPP*/

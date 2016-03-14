@@ -31,7 +31,7 @@ namespace codec {
 /// std::deque<T> for most T is encoded as an amqp::ARRAY (same type elements)
 template <class T, class A>
 encoder& operator<<(encoder& e, const std::deque<T, A>& x) {
-    return e << encoder::array(x, type_id_of<T>::value);
+    return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// std::deque<value> encodes as amqp::LIST (mixed type elements)

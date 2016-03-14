@@ -27,6 +27,7 @@
 #include <proton/decimal.hpp>
 #include <proton/encoder.hpp>
 #include <proton/message_id.hpp>
+#include <proton/scalar_base.hpp>
 #include <proton/symbol.hpp>
 #include <proton/timestamp.hpp>
 #include <proton/value.hpp>
@@ -100,11 +101,11 @@ encoder& encoder::operator<<(const finish&) {
 
 namespace {
 
-template <class T, class U> T convert(const U &x) { return x; }
-template <> pn_uuid_t convert(const uuid& x) { pn_uuid_t y; byte_copy(y, x); return  y; }
-template <> pn_decimal32_t convert(const decimal32 &x) { pn_decimal32_t y; byte_copy(y, x); return  y; }
-template <> pn_decimal64_t convert(const decimal64 &x) { pn_decimal64_t y; byte_copy(y, x); return  y; }
-template <> pn_decimal128_t convert(const decimal128 &x) { pn_decimal128_t y; byte_copy(y, x); return  y; }
+template <class T, class U> T coerce(const U &x) { return x; }
+template <> pn_uuid_t coerce(const uuid& x) { pn_uuid_t y; byte_copy(y, x); return  y; }
+template <> pn_decimal32_t coerce(const decimal32 &x) { pn_decimal32_t y; byte_copy(y, x); return  y; }
+template <> pn_decimal64_t coerce(const decimal64 &x) { pn_decimal64_t y; byte_copy(y, x); return  y; }
+template <> pn_decimal128_t coerce(const decimal128 &x) { pn_decimal128_t y; byte_copy(y, x); return  y; }
 
 int pn_data_put_amqp_string(pn_data_t *d, const std::string& x) { return pn_data_put_string(d, pn_bytes(x)); }
 int pn_data_put_amqp_binary(pn_data_t *d, const binary& x) { return pn_data_put_binary(d, pn_bytes(x)); }
@@ -114,7 +115,7 @@ int pn_data_put_amqp_symbol(pn_data_t *d, const symbol& x) { return pn_data_put_
 template <class T, class U>
 encoder& encoder::insert(const T& x, int (*put)(pn_data_t*, U)) {
     state_guard sg(*this);         // Save state in case of error.
-    check(put(pn_object(), convert<U>(x)));
+    check(put(pn_object(), coerce<U>(x)));
     sg.cancel();                // Don't restore state, all is good.
     return *this;
 }
@@ -139,14 +140,16 @@ encoder& encoder::operator<<(const uuid& x) { return insert(x, pn_data_put_uuid)
 encoder& encoder::operator<<(const std::string& x) { return insert(x, pn_data_put_amqp_string); }
 encoder& encoder::operator<<(const symbol& x) { return insert(x, pn_data_put_amqp_symbol); }
 encoder& encoder::operator<<(const binary& x) { return insert(x, pn_data_put_amqp_binary); }
+encoder& encoder::operator<<(const null&) { pn_data_put_null(pn_object()); return *this; }
 
-encoder& encoder::operator<<(const scalar& x) { return insert(x.atom_, pn_data_put_atom); }
+encoder& encoder::operator<<(const scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
 
 encoder& encoder::operator<<(const value_base& x) {
     if (*this == x.data_)
         throw conversion_error("cannot insert into self");
-    if (x.empty())
-        pn_data_put_null(pn_object());
+    if (x.empty()) {
+        return *this << null();
+    }
     data d = x.data();
     d.rewind();
     check(append(d));

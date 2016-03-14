@@ -36,19 +36,19 @@ namespace proton {
 /// subclasses of proton::error.
 struct
 PN_CPP_CLASS_EXTERN error : public std::runtime_error {
-  PN_CPP_EXTERN explicit error(const std::string&);
+    PN_CPP_EXTERN explicit error(const std::string&); ///< Construct with message
 };
 
 /// Raised if a timeout expires.
 struct
 PN_CPP_CLASS_EXTERN timeout_error : public error {
-  PN_CPP_EXTERN explicit timeout_error(const std::string&);
+    PN_CPP_EXTERN explicit timeout_error(const std::string&);  ///< Construct with message
 };
 
 /// Raised if there is an error converting between AMQP and C++ data.
 struct
 PN_CPP_CLASS_EXTERN conversion_error : public error {
-  PN_CPP_EXTERN explicit conversion_error(const std::string&);
+    PN_CPP_EXTERN explicit conversion_error(const std::string&);  ///< Construct with message
 };
 
 }

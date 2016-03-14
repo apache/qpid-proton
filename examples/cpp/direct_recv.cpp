@@ -49,16 +49,16 @@ class direct_recv : public proton::handler {
 
     void on_message(proton::event &e) {
         proton::message& msg = e.message();
-        
-        if (msg.id().get<uint64_t>() < received) {
+
+        if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }
-        
+
         if (expected == 0 || received < expected) {
             std::cout << msg.body() << std::endl;
             received++;
         }
-        
+
         if (received == expected) {
             e.receiver().close();
             e.connection().close();

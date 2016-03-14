@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef PROTON_TYPE_ID_HPP
+#define PROTON_TYPE_ID_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,6 +19,10 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+///@file
+///
+/// Type-identifiers for AMQP types.
 
 #include <proton/export.hpp>
 #include <proton/codec.h>
@@ -64,6 +68,19 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 /// Throw a conversion_error if want != got with a message including the names of the types.
 PN_CPP_EXTERN void assert_type_equal(type_id want, type_id got);
 
+///@name Test propreties of a type_id.
+///@{
+inline bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
+inline bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }
+inline bool type_id_is_integral(type_id t) { return t == BOOLEAN || t == CHAR || t == TIMESTAMP || type_id_is_unsigned_int(t) || type_id_is_signed_int(t); }
+inline bool type_id_is_floating_point(type_id t) { return t == FLOAT || t == DOUBLE; }
+inline bool type_id_is_decimal(type_id t) { return t == DECIMAL32 || t == DECIMAL64 || t == DECIMAL128; }
+inline bool type_id_is_signed(type_id t) { return type_id_is_signed_int(t) || type_id_is_floating_point(t) || type_id_is_decimal(t); }
+inline bool type_id_is_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
+inline bool type_id_is_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
+inline bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_floating_point(t) || type_id_is_decimal(t) || type_id_is_string_like(t) || t == TIMESTAMP || t == UUID; }
+///}
+
 } // proton
 
-#endif // TYPES_H
+#endif  /*!PROTON_TYPE_ID_HPP*/

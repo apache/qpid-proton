@@ -24,9 +24,13 @@
 ///
 /// Forward declarations for all the C++ types used by proton to represent AMQP types.
 
+#include <proton/config.hpp>
+
 #include <proton/type_compat.h>
+
 #include <string>
 
+/// The proton namespace
 namespace proton {
 
 class binary;
@@ -40,8 +44,13 @@ class duration;
 class uuid;
 class uuid;
 class value;
-struct null {};
 
+struct null {
+    null() {}
+#if PN_CPP_HAS_CPP11
+    null(std::nullptr_t) {}
+#endif
+};
 }
 
 #endif // PROTON_TYPES_FWD_HPP

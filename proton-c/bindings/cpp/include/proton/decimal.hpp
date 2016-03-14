@@ -49,12 +49,15 @@ class decimal64 : public byte_array<8> {};
 
 /// 128-bit decimal floating point.
 class decimal128 : public byte_array<16> {};
+///@}
 
+/// Print decimal values
+///@{
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal32&);
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal64&);
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal128&);
-
 ///@}
+
 
 }
 

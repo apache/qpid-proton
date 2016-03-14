@@ -25,6 +25,7 @@
 
 namespace proton {
 
+///@details
 /// IO using sockets, file descriptors, or handles, for use with
 /// proton::connection_engine.
 ///
@@ -32,7 +33,6 @@ namespace proton {
 /// over your own IO implementation or to integrate an existing IO framework of
 /// your choice, this implementation is provided as a convenience if sockets is
 /// sufficient for your needs.
-
 namespace io {
 
 /// @name Setup and teardown
@@ -67,6 +67,7 @@ struct guard {
 /// An IO resource.
 typedef int64_t descriptor;
 
+/// An invalid descriptor.
 PN_CPP_EXTERN extern const descriptor INVALID_DESCRIPTOR;
 
 /// Return a string describing the most recent IO error.

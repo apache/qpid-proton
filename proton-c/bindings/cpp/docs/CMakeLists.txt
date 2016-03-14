@@ -18,6 +18,7 @@
 #
 
 find_package(Doxygen)
+
 if (DOXYGEN_FOUND)
   configure_file (
     ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in

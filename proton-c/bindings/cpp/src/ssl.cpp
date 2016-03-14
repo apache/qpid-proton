@@ -59,7 +59,7 @@ std::string ssl::peer_hostname() const {
     if (pn_ssl_get_peer_hostname(object_, NULL, &len) || len == 0)
         return hostname;
     hostname.reserve(len);
-    if (!pn_ssl_get_peer_hostname(object_, const_cast<char *>(hostname.data()), &len))
+    if (!pn_ssl_get_peer_hostname(object_, const_cast<char*>(hostname.c_str()), &len))
         hostname.resize(len - 1);
     else
         hostname.resize(0);

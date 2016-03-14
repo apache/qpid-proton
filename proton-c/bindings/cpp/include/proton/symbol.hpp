@@ -26,8 +26,12 @@ namespace proton {
 ///
 class symbol : public std::string {
   public:
+    /// Construct from a std::string
     symbol(const std::string& s=std::string()) : std::string(s) {}
+    /// Construct from a C-string
     symbol(const char* s) : std::string(s) {}
+    /// Construct from any sequence of char
+    template<class Iter> symbol(Iter start, Iter finish) : std::string(start, finish) {}
 };
 
 }

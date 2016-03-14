@@ -60,8 +60,8 @@ template <class T> void simple_type_test(T x, type_id tid, const std::string& s,
 }
 
 template <class T> void simple_integral_test() {
-    typedef typename codec::integer_type<sizeof(T), codec::is_signed<T>::value>::type int_type;
-    simple_type_test(T(3), codec::type_id_of<int_type>::value, "3", T(4));
+    typedef typename internal::integer_type<sizeof(T), internal::is_signed<T>::value>::type int_type;
+    simple_type_test(T(3), internal::type_id_of<int_type>::value, "3", T(4));
 }
 
 // Inserting and extracting arrays from a container T of type U
@@ -90,7 +90,7 @@ template <class T, class U> void map_test(const U& values) {
     T m(values.begin(), values.end());
     value v(m);
     ASSERT_EQUAL(MAP, v.type());
-    T m2(v.get<T>());
+    T m2(get<T>(v));
     ASSERT_EQUAL(m.size(), m2.size());
     ASSERT_EQUAL(m, m2);
 }
@@ -103,17 +103,49 @@ void null_test() {
     value v;
     ASSERT(v.empty());
     ASSERT_EQUAL(NULL_TYPE, v.type());
+    get<null>(v);
     null n;
-    v.get(n);
+    get(v, n);
     value v2(n);
     ASSERT(v.empty());
     ASSERT_EQUAL(NULL_TYPE, v.type());
     v = "foo";
     ASSERT_EQUAL(STRING, v.type());
-    try { v.get<null>(); FAIL("Expected conversion_error"); } catch (conversion_error) {}
+    try { get<null>(v); FAIL("Expected conversion_error"); } catch (conversion_error) {}
     v = null();
-    v.get<null>();
+    get<null>(v);
 }
+
+void get_coerce_test() {
+    // Valid conversions
+    ASSERT_EQUAL(true, coerce<bool>(value(true)));
+
+    ASSERT_EQUAL(1, coerce<uint8_t>(value(uint8_t(1))));
+    ASSERT_EQUAL(-1, coerce<int8_t>(value(int8_t(-1))));
+
+    ASSERT_EQUAL(2, coerce<uint16_t>(value(uint8_t(2))));
+    ASSERT_EQUAL(-2, coerce<int16_t>(value(int8_t(-2))));
+
+    ASSERT_EQUAL(3, coerce<uint32_t>(value(uint16_t(3))));
+    ASSERT_EQUAL(-3, coerce<int32_t>(value(int16_t(-3))));
+
+    ASSERT_EQUAL(4, coerce<uint64_t>(value(uint32_t(4))));
+    ASSERT_EQUAL(-4, coerce<int64_t>(value(int32_t(-4))));
+
+    ASSERT_CLOSE(1.2, coerce<float>(value(double(1.2))), 0.001);
+    ASSERT_CLOSE(3.4, coerce<double>(value(float(3.4))), 0.001);
+
+    ASSERT_EQUAL(std::string("foo"), coerce<std::string>(value(symbol("foo"))));
+
+    // Bad conversions
+    try { get<bool>(value(int8_t(1))); FAIL("byte as bool"); } catch (conversion_error) {}
+    try { get<uint8_t>(value(true)); FAIL("bool as uint8_t"); } catch (conversion_error) {}
+    try { get<uint8_t>(value(int8_t(1))); FAIL("int8 as uint8"); } catch (conversion_error) {}
+    try { get<int16_t>(value(uint16_t(1))); FAIL("uint16 as int16"); } catch (conversion_error) {}
+    try { get<int16_t>(value(int32_t(1))); FAIL("int32 as int16"); } catch (conversion_error) {}
+    try { get<symbol>(value(std::string())); FAIL("string as symbol"); } catch (conversion_error) {}
+}
+
 
 int main(int, char**) {
     int failed = 0;
@@ -188,6 +220,6 @@ int main(int, char**) {
     RUN_TEST(failed, (map_test<std::unordered_map<std::string, uint64_t> >(pairs)));
 #endif
 
-    value vv((pn_data_t*)(0));
+    RUN_TEST(failed, get_coerce_test());
     return failed;
 }

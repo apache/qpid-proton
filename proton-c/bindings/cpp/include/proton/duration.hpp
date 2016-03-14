@@ -33,11 +33,13 @@ namespace proton {
 /// A span of time in milliseconds.
 class duration : private comparable<duration> {
   public:
-    typedef uint64_t numeric_type;
-    explicit duration(numeric_type ms = 0) : ms_(ms) {}
-    duration& operator=(numeric_type ms) { ms_ = ms; return *this; }
-    numeric_type milliseconds() const { return ms_; }
-    numeric_type ms() const { return ms_; }
+    typedef uint64_t numeric_type; ///< Numeric type used to store milliseconds
+
+    explicit duration(numeric_type ms = 0) : ms_(ms) {} ///< Construct from milliseconds
+    duration& operator=(numeric_type ms) { ms_ = ms; return *this; } ///< Assign
+
+    numeric_type milliseconds() const { return ms_; } ///< Return milliseconds
+    numeric_type ms() const { return ms_; }           ///< Return milliseconds
 
     PN_CPP_EXTERN static const duration FOREVER;   ///< Wait for ever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
@@ -48,8 +50,11 @@ class duration : private comparable<duration> {
     numeric_type ms_;
 };
 
+/// Print duration
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, duration);
 
+///@name Comparison and arithmetic operators
+///@{
 inline bool operator<(duration x, duration y) { return x.ms() < y.ms(); }
 inline bool operator==(duration x, duration y) { return x.ms() == y.ms(); }
 
@@ -57,7 +62,7 @@ inline duration operator+(duration x, duration y) { return duration(x.ms() + y.m
 inline duration operator-(duration x, duration y) { return duration(x.ms() - y.ms()); }
 inline duration operator*(duration d, uint64_t n) { return duration(d.ms()*n); }
 inline duration operator*(uint64_t n, duration d) { return d * n; }
-
+///@}
 }
 
 #endif // PROTON_CPP_DURATION_H

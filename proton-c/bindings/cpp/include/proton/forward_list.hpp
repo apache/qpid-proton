@@ -30,7 +30,7 @@ namespace codec {
 /// std::forward_list<T> for most T is encoded as an AMQP array.
 template <class T, class A>
 encoder& operator<<(encoder& e, const std::forward_list<T, A>& x) {
-    return e << encoder::array(x, type_id_of<T>::value);
+    return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// Specialize for std::forward_list<value>, encode as AMQP forward_list (variable type)

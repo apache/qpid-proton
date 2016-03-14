@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include <proton/scalar.hpp>
+#include <proton/scalar_base.hpp>
 #include <proton/symbol.hpp>
 
 namespace proton {
@@ -28,39 +28,46 @@ namespace proton {
 /// A key for use with AMQP annotation maps.
 ///
 /// An annotation_key can contain either a uint64_t or a proton::symbol.
-class annotation_key : public restricted_scalar {
+class annotation_key : public scalar_base {
   public:
+    using scalar_base::type;
+
     /// An empty annotation key has a uint64_t == 0 value.
-    annotation_key() { scalar_ = uint64_t(0); }
-    annotation_key(const annotation_key& x) { scalar_ = x; }
-    annotation_key& operator=(const annotation_key& x) { scalar_ = x; return *this; }
+    annotation_key() { put_(uint64_t(0)); }
 
-    annotation_key(uint64_t x) { scalar_ = x; }
-    annotation_key(const symbol& x) { scalar_ = x; }
+    /// Construct from any type that can be assigned
+    template <class T> annotation_key(const T& x) { *this = x; }
 
+    ///@name Assign from a uint64_t or symbol.
+    ///@{
+    annotation_key& operator=(uint64_t x) { put_(x); return *this; }
+    annotation_key& operator=(const symbol& x) { put_(x); return *this; }
+    ///@}
     ///@name Extra conversions for strings, treated as amqp::SYMBOL.
     ///@{
-    annotation_key(const std::string& x) { scalar_ = symbol(x); }
-    annotation_key(const char *x) {scalar_ = symbol(x); }
+    annotation_key& operator=(const std::string& x) { put_(symbol(x)); return *this; }
+    annotation_key& operator=(const char *x) { put_(symbol(x)); return *this; }
     ///@}
 
-    annotation_key& operator=(uint64_t x) { scalar_ = x; return *this; }
-    annotation_key& operator=(const symbol& x) { scalar_ = x; return *this; }
-
-    /// @name Get methods
-    ///
-    /// @{
-    void get(uint64_t& x) const { scalar_.get(x); }
-    void get(symbol& x) const { scalar_.get(x); }
-    /// @}
-
-    /// Return the value as type T.
-    template<class T> T get() const { T x; get(x); return x; }
-
+    ///@cond INTERNAL
   friend class message;
   friend class codec::decoder;
+    ///@endcond
 };
 
+///@cond internal
+template <class T> T get(const annotation_key& x);
+///@endcond
+
+/// Get the uint64_t value or throw conversion_error. @related annotation_key
+template<> inline uint64_t get<uint64_t>(const annotation_key& x) { return internal::get<uint64_t>(x); }
+/// Get the @ref symbol value or throw conversion_error. @related annotation_key
+template<> inline symbol get<symbol>(const annotation_key& x) { return internal::get<symbol>(x); }
+/// Get the @ref binary value or throw conversion_error. @related annotation_key
+
+/// @copydoc scalar::coerce
+/// @related annotation_key
+template<class T> T coerce(const annotation_key& x) { return internal::coerce<T>(x); }
 }
 
 #endif // ANNOTATION_KEY_HPP

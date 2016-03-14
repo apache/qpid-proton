@@ -21,7 +21,7 @@
  */
 
 #include <proton/binary.hpp>
-#include <proton/scalar.hpp>
+#include <proton/scalar_base.hpp>
 #include <proton/uuid.hpp>
 
 #include <string>
@@ -37,53 +37,49 @@ namespace proton {
 ///  - proton::uuid
 ///  - proton::binary
 ///
-class message_id : public restricted_scalar {
+class message_id : public scalar_base {
   public:
     /// An empty message_id has a uint64_t == 0 value.
-    message_id() { scalar_ = uint64_t(0); }
-    message_id(const message_id& x) { scalar_ = x; }
-    message_id& operator=(const message_id& x) { scalar_ = x; return *this; }
+    message_id() { put_(uint64_t(0)); }
 
-    message_id(uint64_t x) { scalar_ = x; }
-    message_id(const uuid& x) { scalar_ = x; }
-    message_id(const binary& x) { scalar_ = x; }
-    message_id(const std::string& x) { scalar_ = x; }
-
-    /// Extra conversion - treat char* as amqp::STRING
-    message_id(const char* x) { scalar_ = x; }
+    /// Construct from any type that can be assigned
+    template <class T> message_id(const T& x) { *this = x; }
 
     /// @name Assignment operators
-    ///
     /// Assign a C++ value, deduce the AMQP type()
     ///
     /// @{
-    message_id& operator=(uint64_t x) { scalar_ = x; return *this; }
-    message_id& operator=(const uuid& x) { scalar_ = x; return *this; }
-    message_id& operator=(const binary& x) { scalar_ = x; return *this; }
-    message_id& operator=(const std::string& x) { scalar_ = x; return *this; }
+    message_id& operator=(uint64_t x) { put_(x); return *this; }
+    message_id& operator=(const uuid& x) { put_(x); return *this; }
+    message_id& operator=(const binary& x) { put_(x); return *this; }
+    message_id& operator=(const std::string& x) { put_(x); return *this; }
+    message_id& operator=(const char* x) { put_(x); return *this; } ///< Treated as amqp::STRING
     /// @}
-
-    /// @name Get methods
-    ///
-    /// get(T&) extracts the value if the types match exactly and
-    /// throws conversion_error otherwise.
-    ///
-    /// @{
-    void get(uint64_t& x) const { scalar_.get(x); }
-    void get(uuid& x) const { scalar_.get(x); }
-    void get(binary& x) const { scalar_.get(x); }
-    void get(std::string& x) const { scalar_.get(x); }
-    /// @}
-
-    /// Return the value as type T.
-    template<class T> T get() const { T x; get(x); return x; }
 
   private:
-    message_id(const pn_atom_t& a): restricted_scalar(a) {}
+    message_id(const pn_atom_t& a): scalar_base(a) {}
 
+    ///@cond INTERNAL
   friend class message;
   friend class codec::decoder;
+    ///@endcond
 };
 
+///@cond internal
+template <class T> T get(const message_id& x);
+///@endcond
+
+/// Get the uint64_t value or throw conversion_error. @related message_id
+template<> inline uint64_t get<uint64_t>(const message_id& x) { return internal::get<uint64_t>(x); }
+/// Get the @ref uuid value or throw conversion_error. @related message_id
+template<> inline uuid get<uuid>(const message_id& x) { return internal::get<uuid>(x); }
+/// Get the @ref binary value or throw conversion_error. @related message_id
+template<> inline binary get<binary>(const message_id& x) { return internal::get<binary>(x); }
+/// Get the std::string value or throw conversion_error. @related message_id
+template<> inline std::string get<std::string>(const message_id& x) { return internal::get<std::string>(x); }
+
+/// @copydoc scalar::coerce
+/// @related message_id
+template<class T> T coerce(const message_id& x) { return internal::coerce<T>(x); }
 }
 #endif // MESSAGE_ID_HPP

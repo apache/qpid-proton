@@ -87,7 +87,7 @@ void check(int err) {
 }
 } // namespace
 
-void message::id(const message_id& id) { pn_message_set_id(pn_msg(), id.scalar_.atom_); }
+void message::id(const message_id& id) { pn_message_set_id(pn_msg(), id.atom_); }
 
 message_id message::id() const {
     return pn_message_get_id(pn_msg());
@@ -130,7 +130,7 @@ std::string message::reply_to() const {
 
 void message::correlation_id(const message_id& id) {
     codec::encoder e(pn_message_correlation_id(pn_msg()));
-    e << id.scalar_;
+    e << id;
 }
 
 message_id message::correlation_id() const {

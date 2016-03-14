@@ -20,10 +20,12 @@
  */
 
 #include <proton/data.hpp>
+#include <proton/types_fwd.hpp>
 #include <proton/type_traits.hpp>
 
 #include <utility>
 
+// Proton namespace
 namespace proton {
 
 class annotation_key;
@@ -32,19 +34,23 @@ class scalar;
 class value;
 class value_base;
 
+/// @ingroup codec
 namespace codec {
 
 /// Stream-like decoder from AMQP bytes to C++ values.
 ///
-/// Internal use only, see proton::value, proton::scalar and proton::amqp
+/// Internal use only, see proton::value, proton::scalar and \ref types
 /// for the recommended ways to manage AMQP data.
 class decoder : public data {
   public:
-    ///@internal
-    explicit decoder(const data& d) : data(d) {}
+
+    /// Wrap Proton-C data object.
+    /// The exact flag if set means decode only when there is an exact match
+    /// between the AMQP and C++ type. If not set then perform automatic conversions.
+    explicit decoder(const data& d, bool exact=false) : data(d), exact_(exact) {}
 
     /// Attach decoder to a proton::value. The decoder is rewound to the start of the data.
-    PN_CPP_EXTERN explicit decoder(const value_base&);
+    PN_CPP_EXTERN explicit decoder(const value_base&, bool exact=false);
 
     /// Decode AMQP data from a buffer and add it to the end of the decoders stream. */
     PN_CPP_EXTERN void decode(const char* buffer, size_t size);
@@ -59,11 +65,9 @@ class decoder : public data {
     /// @throw conversion_error if no more values. @see decoder::more().
     PN_CPP_EXTERN type_id next_type();
 
-    /** @name Extract simple types
-     * Overloads to extract simple types.
-     * @throw conversion_error if the decoder is empty or has an incompatible type.
-     * @{
-     */
+    /// @name Extract built-in types
+    /// @throw conversion_error if the decoder is empty or has an incompatible type.
+    /// @{
     PN_CPP_EXTERN decoder& operator>>(bool&);
     PN_CPP_EXTERN decoder& operator>>(uint8_t&);
     PN_CPP_EXTERN decoder& operator>>(int8_t&);
@@ -96,10 +100,10 @@ class decoder : public data {
     /// Call finish() to "exit" the container and move on to the next value.
     PN_CPP_EXTERN decoder& operator>>(start&);
 
-    // Finish decoding a container type, and move on to the next value in the stream.
+    /// Finish decoding a container type, and move on to the next value in the stream.
     PN_CPP_EXTERN decoder& operator>>(const finish&);
 
-    // XXX doc
+    ///@cond INTERNAL
     template <class T> struct sequence_ref { T& ref; sequence_ref(T& r) : ref(r) {} };
     template <class T> struct associative_ref { T& ref; associative_ref(T& r) : ref(r) {} };
     template <class T> struct pair_sequence_ref { T& ref;  pair_sequence_ref(T& r) : ref(r) {} };
@@ -107,6 +111,7 @@ class decoder : public data {
     template <class T> static sequence_ref<T> sequence(T& x) { return sequence_ref<T>(x); }
     template <class T> static associative_ref<T> associative(T& x) { return associative_ref<T>(x); }
     template <class T> static pair_sequence_ref<T> pair_sequence(T& x) { return pair_sequence_ref<T>(x); }
+    ///@endcond
 
     /** Extract any AMQP sequence (ARRAY, LIST or MAP) to a C++ sequence
      * container of T if the elements types are convertible to T. A MAP is
@@ -124,6 +129,7 @@ class decoder : public data {
 
     /** Extract an AMQP MAP to a C++ associative container */
     template <class T> decoder& operator>>(associative_ref<T> r)  {
+        using namespace internal;
         start s;
         *this >> s;
         assert_type_equal(MAP, s.type);
@@ -140,6 +146,7 @@ class decoder : public data {
     /// Extract an AMQP MAP to a C++ push_back sequence of pairs
     /// preserving encoded order.
     template <class T> decoder& operator>>(pair_sequence_ref<T> r)  {
+        using namespace internal;
         start s;
         *this >> s;
         assert_type_equal(MAP, s.type);
@@ -154,30 +161,32 @@ class decoder : public data {
         return *this;
     }
 
-    /// Extract and return a value.
-    template <class T> T extract() { T x; *this >> x; return x; }
-
   private:
     type_id pre_get();
     template <class T, class U> decoder& extract(T& x, U (*get)(pn_data_t*));
+    bool exact_;
 
   friend class message;
 };
 
+template<class T> T get(decoder& d) {
+    assert_type_equal(internal::type_id_of<T>::value, d.next_type());
+    T x;
+    d >> x;
+    return x;
+}
+
 // operator >> for integer types that are not covered by the standard overrides.
-template <class T> typename codec::enable_unknown_integer<T, decoder&>::type
+template <class T> typename internal::enable_if<internal::is_unknown_integer<T>::value, decoder&>::type
 operator>>(decoder& d, T& i)  {
+    using namespace internal;
     typename integer_type<sizeof(T), is_signed<T>::value>::type v;
     d >> v;                     // Extract as a known integer type
     i = v;                      // C++ conversion to the target type.
     return d;
 }
 
-///@cond INTERNAL
-
-} // internal
+} // codec
 } // proton
-
-/// @endcond
 
 #endif // PROTON_DECODER_HPP

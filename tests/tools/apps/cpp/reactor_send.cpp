@@ -91,7 +91,7 @@ class reactor_send : public proton::handler {
 
     void on_message(proton::event &e) {
         proton::message &msg = e.message();
-        received_content_ = msg.body().get<proton::binary>();
+        received_content_ = proton::get<proton::binary>(msg.body());
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
             received_++;

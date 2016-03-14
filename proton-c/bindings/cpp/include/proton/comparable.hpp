@@ -22,6 +22,8 @@
 
 namespace proton {
 
+///@cond INTERNAL
+
 /// Base class for comparable types with operator< and
 /// operator==. Provides remaining operators.
 template <class T> class comparable {

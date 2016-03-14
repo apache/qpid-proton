@@ -22,28 +22,32 @@
 #include "proton/duration.hpp"
 
 namespace proton {
-/// A timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
+/// 64 bit timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
 class timestamp : private comparable<timestamp> {
   public:
-    typedef int64_t numeric_type;
-    PN_CPP_EXTERN static timestamp now();
+    typedef int64_t numeric_type; ///< Numeric type holding milliseconds value
+    PN_CPP_EXTERN static timestamp now(); ///< Current wall-clock time
 
-    explicit timestamp(numeric_type ms = 0) : ms_(ms) {}
-    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }
-    numeric_type milliseconds() const { return ms_; }
-    numeric_type ms() const { return ms_; }
+    explicit timestamp(numeric_type ms = 0) : ms_(ms) {} ///< Construct from milliseconds
+    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }  ///< Assign from milliseconds
+    numeric_type milliseconds() const { return ms_; } ///< Get milliseconds
+    numeric_type ms() const { return ms_; }           ///< Get milliseconds
 
   private:
     numeric_type ms_;
 };
 
+///@name Comparison and arithmetic operators
+///@{
 inline bool operator==(timestamp x, timestamp y) { return x.ms() == y.ms(); }
 inline bool operator<(timestamp x, timestamp y) { return x.ms() < y.ms(); }
 
 inline timestamp operator+(timestamp ts, duration d) { return timestamp(ts.ms() + d.ms()); }
 inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.ms() - t1.ms()); }
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
+///@}
 
+/// Printable format.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, timestamp);
 
 }

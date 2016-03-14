@@ -75,6 +75,7 @@ PN_CPP_CLASS_EXTERN endpoint {
 #endif
 };
 
+///@cond INTERNAL
 namespace internal {
 
 template <class T, class D> class iter_base {
@@ -86,7 +87,7 @@ template <class T, class D> class iter_base {
     D operator++(int) { D x(*this); ++(*this); return x; }
     bool operator==(const iter_base<T, D>& x) const { return obj_ == x.obj_; }
     bool operator!=(const iter_base<T, D>& x) const { return obj_ != x.obj_; }
-
+    ///@}
   protected:
     explicit iter_base(T p = 0) : obj_(p) {}
     T obj_;
@@ -105,6 +106,8 @@ template<class I> class iter_range {
 };
 
 } // namespace internal
+///@endcond
+
 } // namespace proton
 
 #endif // PROTON_CPP_H

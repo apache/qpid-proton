@@ -26,15 +26,22 @@
 #include <iostream>
 #include <iterator>
 #include <sstream>
+#include <math.h>
 
 namespace test {
 
 struct fail : public std::logic_error { fail(const std::string& what) : logic_error(what) {} };
 
+bool close(double want, double got, double delta) {
+    return fabs(want-got) <= delta;
+}
+
 #define FAIL(WHAT) throw fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
 #define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
 #define ASSERT_EQUAL(WANT, GOT) if (!((WANT) == (GOT))) \
         FAIL(#WANT << " !=  " << #GOT << ": " << (WANT) << " != " << (GOT))
+#define ASSERT_CLOSE(WANT, GOT, DELTA) if (!close((WANT), (GOT), (DELTA))) \
+        FAIL(#WANT << " != " << #GOT << ": " << (WANT) << " != " << (GOT))
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \

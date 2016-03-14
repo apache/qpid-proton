@@ -40,7 +40,7 @@ using namespace test;
 
 void test_message_properties() {
     message m("hello");
-    std::string s = m.body().get<std::string>();
+    std::string s = get<std::string>(m.body());
     ASSERT_EQUAL("hello", s);
 
     CHECK_MESSAGE_ID(id);
@@ -59,7 +59,7 @@ void test_message_properties() {
     ASSERT_EQUAL(m.creation_time().ms(), 4242);
 
     message m2(m);
-    ASSERT_EQUAL("hello", m2.body().get<std::string>());
+    ASSERT_EQUAL("hello", get<std::string>(m2.body()));
     ASSERT_EQUAL(message_id("id"), m2.id());
     ASSERT_EQUAL("user_id", m2.user_id());
     ASSERT_EQUAL("address", m2.address());
@@ -74,7 +74,7 @@ void test_message_properties() {
     ASSERT_EQUAL(4242, m.creation_time().ms());
 
     m2 = m;
-    ASSERT_EQUAL("hello", m2.body().get<std::string>());
+    ASSERT_EQUAL("hello", get<std::string>(m2.body()));
     ASSERT_EQUAL(message_id("id"), m2.id());
     ASSERT_EQUAL("user_id", m2.user_id());
     ASSERT_EQUAL("address", m2.address());
@@ -92,14 +92,14 @@ void test_message_properties() {
 void test_message_body() {
     std::string s("hello");
     message m1(s.c_str());
-    ASSERT_EQUAL(s, m1.body().get<std::string>());
+    ASSERT_EQUAL(s, get<std::string>(m1.body()));
     message m2(s);
-    ASSERT_EQUAL(s, m2.body().as_string());
+    ASSERT_EQUAL(s, coerce<std::string>(m2.body()));
     message m3;
     m3.body(s);
-    ASSERT_EQUAL(s, m3.body().as_string());
-    ASSERT_EQUAL(5, message(5).body().as_int());
-    ASSERT_EQUAL(3.1, message(3.1).body().as_double());
+    ASSERT_EQUAL(s, coerce<std::string>(m3.body()));
+    ASSERT_EQUAL(5, coerce<int64_t>(message(5).body()));
+    ASSERT_EQUAL(3.1, coerce<double>(message(3.1).body()));
 }
 
 void test_message_maps() {

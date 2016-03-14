@@ -25,7 +25,8 @@
 
 namespace proton {
 
-
+/// AMQP typedefs for C++ types
+///
 /// This namespace contains typedefs to associate AMQP scalar type names with
 /// the corresponding C++ types. These are provided as a convenience for those
 /// familiar with AMQP, you do not need to use them, you can use the C++ types
@@ -38,31 +39,31 @@ namespace amqp {
 
 ///@name Typedefs for AMQP numeric types.
 ///@{
-///@ Boolean true or false.
+
+/// Boolean true or false.
 typedef bool boolean_type;
-///@ 8-bit unsigned byte 
+/// 8-bit unsigned byte 
 typedef uint8_t ubyte_type;
-///@ 8-bit signed byte
+/// 8-bit signed byte
 typedef int8_t byte_type;
-///@ 16-bit unsigned short integer
+/// 16-bit unsigned short integer
 typedef uint16_t ushort_type;
-///@ 16-bit signed short integer
+/// 16-bit signed short integer
 typedef int16_t short_type;
-///@ 32-bit unsigned integer
+/// 32-bit unsigned integer
 typedef uint32_t uint_type;
-///@ 32-bit signed integer
+/// 32-bit signed integer
 typedef int32_t int_type;
-///@ 64-bit unsigned long integer
+/// 64-bit unsigned long integer
 typedef uint64_t ulong_type;
-///@ 64-bit signed long integer
+/// 64-bit signed long integer
 typedef int64_t long_type;
-///@ 32-bit unicode code point
+/// 32-bit unicode code point
 typedef wchar_t char_type;
-///@ 32-bit binary floating point
+/// 32-bit binary floating point
 typedef float float_type;
-///@ 64-bit binary floating point
+/// 64-bit binary floating point
 typedef double double_type;
-///@}
 
 /// An AMQP string is unicode  UTF-8 encoded.
 typedef std::string string_type;
@@ -79,15 +80,14 @@ typedef proton::timestamp timestamp_type;
 /// A 16-byte universally unique identifier.
 typedef proton::uuid uuid_type;
 
-///@name AMQP decimal floating point types.
-///
-/// These are not usable as arithmetic types in C++. You can pass them on over
-/// AMQP or convert the raw bytes using a decimal support library. @see proton::decimal.
-/// @{
+/// 32 bit decimal floating point
 typedef proton::decimal32 decimal32_type;
+
+/// 64 bit decimal floating point
 typedef proton::decimal64 decimal64_type;
+
+/// 128 bit decimal floating point
 typedef proton::decimal128 decimal128_type;
-///@}
 
 }}
 

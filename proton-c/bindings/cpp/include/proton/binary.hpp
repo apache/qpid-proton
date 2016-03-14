@@ -28,22 +28,24 @@
 namespace proton {
 
 /// Arbitrary binary data.
-class binary : public std::vector<char> {
+class binary : public std::vector<uint8_t> {
   public:
-    typedef std::vector<char> byte_vector;
+    ///@name Constructors @{
+    explicit binary() : std::vector<value_type>() {}
+    explicit binary(size_t n) : std::vector<value_type>(n) {}
+    explicit binary(size_t n, value_type x) : std::vector<value_type>(n, x) {}
+    explicit binary(const std::string& s) : std::vector<value_type>(s.begin(), s.end()) {}
+    template <class Iter> binary(Iter first, Iter last) : std::vector<value_type>(first, last) {}
+    ///@}
 
-    explicit binary() : byte_vector() {}
-    explicit binary(size_t n) : byte_vector(n) {}
-    explicit binary(size_t n, char x) : byte_vector(n, x) {}
-    template <class Iter> binary(Iter first, Iter last) : byte_vector(first, last) {}
-    explicit binary(const std::string& s) : byte_vector(s.begin(), s.end()) {}
+    /// Convert to std::string
+    operator std::string() const { return std::string(begin(), end()); }
 
-    std::string str() const { return std::string(begin(), end()); }
-
-    binary& operator=(const binary& x) { byte_vector::operator=(x); return *this; }
+    /// Assignment
     binary& operator=(const std::string& x) { assign(x.begin(), x.end()); return *this; }
 };
 
+/// Print binary value
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const binary&);
 
 }

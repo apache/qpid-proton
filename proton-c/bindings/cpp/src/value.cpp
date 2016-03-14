@@ -31,15 +31,12 @@ namespace proton {
 using namespace codec;
 
 value::value() {}
-value::value(const null&) {}
 value::value(const value& x) { *this = x; }
 value::value(const codec::data& x) { if (!x.empty()) data().copy(x); }
 #if PN_CPP_HAS_CPP11
 value::value(value&& x) { swap(*this, x); }
 value& value::operator=(value&& x) { swap(*this, x); return *this; }
 #endif
-
-value& value::operator=(const null&) { clear(); return *this; }
 
 value& value::operator=(const value& x) {
     if (this != &x) {
@@ -176,27 +173,17 @@ std::ostream& operator<<(std::ostream& o, const value_base& x) {
     decoder d(x);
     // Print std::string and proton::foo types using their own operator << consistent with C++.
     switch (d.next_type()) {
-      case STRING: return o << d.extract<std::string>();
-      case SYMBOL: return o << d.extract<symbol>();
-      case DECIMAL32: return o << d.extract<decimal32>();
-      case DECIMAL64: return o << d.extract<decimal64>();
-      case DECIMAL128: return o << d.extract<decimal128>();
-      case UUID: return o << d.extract<uuid>();
-      case TIMESTAMP: return o << d.extract<timestamp>();
+      case STRING: return o << get<std::string>(d);
+      case SYMBOL: return o << get<symbol>(d);
+      case DECIMAL32: return o << get<decimal32>(d);
+      case DECIMAL64: return o << get<decimal64>(d);
+      case DECIMAL128: return o << get<decimal128>(d);
+      case UUID: return o << get<uuid>(d);
+      case TIMESTAMP: return o << get<timestamp>(d);
       default:
         // Use pn_inspect for other types.
         return o << d;
     }
 }
-
-void value::get(null&) const {
-    if (type() != NULL_TYPE)
-        throw conversion_error("value is not null");
-}
-
-int64_t value::as_int() const { return get<scalar>().as_int(); }
-uint64_t value::as_uint() const { return get<scalar>().as_uint(); }
-double value::as_double() const { return get<scalar>().as_double(); }
-std::string value::as_string() const { return get<scalar>().as_string(); }
 
 }

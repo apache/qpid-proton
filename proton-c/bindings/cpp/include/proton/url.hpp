@@ -33,7 +33,7 @@ namespace proton {
 struct
 PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
-    PN_CPP_EXTERN explicit url_error(const std::string&);
+    PN_CPP_EXTERN explicit url_error(const std::string&); ///< Construct with message
     /// @endcond
 };
 

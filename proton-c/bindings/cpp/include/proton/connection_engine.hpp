@@ -125,7 +125,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
     /// Thrown by io_read and io_write functions to indicate an error.
     struct PN_CPP_CLASS_EXTERN io_error : public error {
-        PN_CPP_EXTERN explicit io_error(const std::string&);
+        PN_CPP_EXTERN explicit io_error(const std::string&); ///< Construct with message
     };
 
   protected:

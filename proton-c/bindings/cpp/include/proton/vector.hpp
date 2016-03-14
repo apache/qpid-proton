@@ -30,7 +30,7 @@ namespace codec {
 
 /// Encode std::vector<T> as amqp::ARRAY (same type elements)
 template <class T, class A> encoder& operator<<(encoder& e, const std::vector<T, A>& x) {
-    return e << encoder::array(x, type_id_of<T>::value);
+    return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
 /// Encode std::vector<value> encode as amqp::LIST (mixed type elements)

@@ -66,7 +66,7 @@ class server : public proton::handler {
 
     void on_link_open(proton::event& e) {
         proton::link link = e.link();
-        
+
         if (!!link.sender() && link.remote_source().dynamic()) {
             link.local_source().address(generate_address());
             senders[link.local_source().address()] = link.sender();
@@ -75,18 +75,18 @@ class server : public proton::handler {
 
     void on_message(proton::event &e) {
         std::cout << "Received " << e.message().body() << std::endl;
-        
+
         std::string reply_to = e.message().reply_to();
         sender_map::iterator it = senders.find(reply_to);
-        
+
         if (it == senders.end()) {
             std::cout << "No link for reply_to: " << reply_to << std::endl;
         } else {
             proton::sender sender = it->second;
             proton::message reply;
-            
+
             reply.address(reply_to);
-            reply.body(to_upper(e.message().body().get<std::string>()));
+            reply.body(to_upper(proton::get<std::string>(e.message().body())));
             reply.correlation_id(e.message().correlation_id());
 
             sender.send(reply);
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
     try {
         opts.parse();
-        
+
         server srv(address);
         proton::container(srv).run();
 

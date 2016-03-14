@@ -42,13 +42,6 @@ string read(string filename) {
     return string(istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
 }
 
-template <class T> T get(decoder& d) {
-    assert_type_equal(type_id_of<T>::value, d.next_type());
-    T v;
-    d >> v;
-    return v;
-}
-
 // Test data ostream operator
 void test_data_ostream() {
     value dv;
@@ -98,19 +91,6 @@ void test_encoder_primitives() {
     ASSERT_EQUAL(read("primitives"), data);
 }
 
-// Test type conversions.
-void test_value_conversions() {
-    value v;
-    ASSERT_EQUAL(true, (v=true).get<bool>());
-    ASSERT_EQUAL(2, (v=int8_t(2)).get<int>());
-    ASSERT_EQUAL(3, (v=int8_t(3)).get<long>());
-    ASSERT_EQUAL(3, (v=int8_t(3)).get<long>());
-    ASSERT_EQUAL(1.0, (v=float(1.0)).get<double>());
-    ASSERT_EQUAL(1.0, (v=double(1.0)).get<float>());
-    try { (void)(v = int8_t(1)).get<bool>(); FAIL("got byte as bool"); } catch (conversion_error) {}
-    try { (void)(v = true).get<float>(); FAIL("got bool as float"); } catch (conversion_error) {}
-}
-
 // TODO aconway 2015-06-11: interop test is not complete.
 
 int main(int argc, char** argv) {
@@ -124,6 +104,5 @@ int main(int argc, char** argv) {
     RUN_TEST(failed, test_data_ostream());
     RUN_TEST(failed, test_decoder_primitves_exact());
     RUN_TEST(failed, test_encoder_primitives());
-    RUN_TEST(failed, test_value_conversions());
     return failed;
 }

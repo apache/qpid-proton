@@ -1,5 +1,5 @@
-#ifndef ENCODER_H
-#define ENCODER_H
+#ifndef PROTON_ENCODER_HPP
+#define PROTON_ENCODER_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -21,23 +21,24 @@
  */
 
 #include <proton/data.hpp>
+#include <proton/types_fwd.hpp>
 #include <proton/type_traits.hpp>
 
 namespace proton {
 
-class scalar;
-class value;
+class scalar_base;
 class value_base;
 
+/// @ingroup codec
 namespace codec {
 
 /// Stream-like encoder from AMQP bytes to C++ values.
 ///
-/// Internal use only, see proton::value, proton::scalar and proton::amqp
+/// Internal use only, see proton::value, proton::scalar and \ref types
 /// for the recommended ways to manage AMQP data.
 class encoder : public data {
   public:
-    ///@internal
+    /// Wrap Proton-C data object.
     explicit encoder(const data& d) : data(d) {}
 
     /// Encoder into v. Clears any current value in v.
@@ -63,6 +64,8 @@ class encoder : public data {
     /** Encode the current values into a std::string. Clears the encoder. */
     PN_CPP_EXTERN std::string encode();
 
+    /// @name Insert built-in types
+    /// @{
     PN_CPP_EXTERN encoder& operator<<(bool);
     PN_CPP_EXTERN encoder& operator<<(uint8_t);
     PN_CPP_EXTERN encoder& operator<<(int8_t);
@@ -83,17 +86,24 @@ class encoder : public data {
     PN_CPP_EXTERN encoder& operator<<(const std::string&);
     PN_CPP_EXTERN encoder& operator<<(const symbol&);
     PN_CPP_EXTERN encoder& operator<<(const binary&);
-    PN_CPP_EXTERN encoder& operator<<(const scalar&);
+    PN_CPP_EXTERN encoder& operator<<(const scalar_base&);
     PN_CPP_EXTERN encoder& operator<<(const null&);
+    ///@}
 
-    /// Inserts proton::value.
+    /// Insert a proton::value.
+    /// @internal NOTE insert value_base, not value to avoid recursive implicit conversions.
     PN_CPP_EXTERN encoder& operator<<(const value_base&);
 
+    /// Start a complex type
     PN_CPP_EXTERN encoder& operator<<(const start&);
     /// Finish a complex type
     PN_CPP_EXTERN encoder& operator<<(const finish&);
 
-    // XXX doc
+    ///@cond INTERNAL
+
+    // Undefined template to  prevent pointers being implicitly converted to bool.
+    template <class T> void* operator<<(const T*);
+
     template <class T> struct list_cref { T& ref; list_cref(T& r) : ref(r) {} };
     template <class T> struct map_cref { T& ref;  map_cref(T& r) : ref(r) {} };
 
@@ -135,26 +145,47 @@ class encoder : public data {
         *this << finish();
         return *this;
     }
+    ///@endcond
 
   private:
     template<class T, class U> encoder& insert(const T& x, int (*put)(pn_data_t*, U));
     void check(long result);
 };
 
-///@internal
-/// Invalid template to  prevent pointers being implicitly converted to bool.
-template <class T> void* operator<<(encoder&, const T*);
 
-// Treat char* as string
+/// Treat char* as string
 inline encoder& operator<<(encoder& e, const char* s) { return e << std::string(s); }
 
-// operator << for integer types that are not covered by the standard overrides.
-template <class T> typename codec::enable_unknown_integer<T, encoder&>::type
+/// operator << for integer types that are not covered by the standard overrides.
+template <class T> typename internal::enable_if<internal::is_unknown_integer<T>::value, encoder&>::type
 operator<<(encoder& e, T i)  {
+    using namespace internal;
     return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
 }
 
-} // internal
+///@cond INTERNAL
+namespace is_encodable_impl {   // Protected the world from wildcard operator<<
+
+using namespace internal;
+
+sfinae::no operator<<(sfinae::wildcard, sfinae::wildcard); // Fallback
+
+template<typename T> struct is_encodable : public sfinae {
+    static yes test(encoder);
+    static no test(...);         // Failed test, no match.
+    static encoder &e;
+    static const T& t;
+    static bool const value = sizeof(test(e << t)) == sizeof(yes);
+};
+// Avoid recursion
+template <> struct is_encodable<value> : public true_type {};
+
+} // namespace is_encodable_impl
+
+using is_encodable_impl::is_encodable;
+///@endcond
+
+} // codec
 } // proton
 
-#endif // ENCODER_H
+#endif  /*!PROTON_ENCODER_HPP*/

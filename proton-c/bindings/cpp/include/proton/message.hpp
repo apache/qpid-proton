@@ -164,7 +164,7 @@ class message {
 
     /// @name Transfer headers
     /// @{
-    
+
     /// Get the durable flag for a message.
     ///
     /// The durable flag indicates that any parties taking
@@ -206,7 +206,7 @@ class message {
     /// does not mean the message has not been delivered to, but not
     /// acquired, by other recipients.
     PN_CPP_EXTERN bool first_acquirer() const;
-    
+
     /// Set the first acquirer flag for a message.
     PN_CPP_EXTERN void first_acquirer(bool);
 
@@ -240,7 +240,7 @@ class message {
     PN_CPP_EXTERN void group_sequence(int32_t);
 
     /// @}
-    
+
     /// @name Extended attributes
     /// @{
 
