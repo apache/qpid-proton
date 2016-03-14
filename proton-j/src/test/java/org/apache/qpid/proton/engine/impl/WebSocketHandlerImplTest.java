@@ -24,6 +24,7 @@ import org.apache.qpid.proton.engine.WebSocketHandler;
 import org.apache.qpid.proton.engine.WebSocketHeader;
 import org.junit.Test;
 
+import javax.xml.bind.DatatypeConverter;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.*;
@@ -96,7 +97,8 @@ public class WebSocketHandlerImplTest
                 String keyBase64 = line.substring(19);
                 if (keyBase64.length() == 24)
                 {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
+                    byte[] decoded = DatatypeConverter.parseBase64Binary(keyBase64);
+
                     if (decoded.length == 16)
                     {
                         isWebSocketKeyHeaderOk = true;

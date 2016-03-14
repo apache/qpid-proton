@@ -22,6 +22,7 @@ package org.apache.qpid.proton.engine.impl;
 import org.junit.Test;
 import org.mockito.Mock;
 
+import javax.xml.bind.DatatypeConverter;
 import java.lang.reflect.Field;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
@@ -41,6 +42,8 @@ import static org.mockito.Mockito.when;
 
 public class WebSocketUpgradeTest
 {
+    final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
     @Test
     public void testCreateUpgradeRequest_all_param()
     {
@@ -102,12 +105,13 @@ public class WebSocketUpgradeTest
                 String keyBase64 = line.substring(19);
                 if (keyBase64.length() == 24)
                 {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
+                    byte[] decoded = DatatypeConverter.parseBase64Binary(keyBase64);
                     if (decoded.length == 16)
                     {
                         isWebSocketKeyHeaderOk = true;
                     }
                 }
+
                 continue;
             }
             if (line.equals("Sec-WebSocket-Protocol: " + webSocketProtocol))
@@ -208,7 +212,7 @@ public class WebSocketUpgradeTest
                 String keyBase64 = line.substring(19);
                 if (keyBase64.length() == 24)
                 {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
+                    byte[] decoded = DatatypeConverter.parseBase64Binary(keyBase64);
                     if (decoded.length == 16)
                     {
                         isWebSocketKeyHeaderOk = true;
@@ -296,7 +300,7 @@ public class WebSocketUpgradeTest
                 String keyBase64 = line.substring(19);
                 if (keyBase64.length() == 24)
                 {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
+                    byte[] decoded = DatatypeConverter.parseBase64Binary(keyBase64);
                     if (decoded.length == 16)
                     {
                         isWebSocketKeyHeaderOk = true;
@@ -389,7 +393,7 @@ public class WebSocketUpgradeTest
                 String keyBase64 = line.substring(19);
                 if (keyBase64.length() == 24)
                 {
-                    byte[] decoded = Base64.getDecoder().decode(keyBase64);
+                    byte[] decoded = DatatypeConverter.parseBase64Binary(keyBase64);
                     if (decoded.length == 16)
                     {
                         isWebSocketKeyHeaderOk = true;
@@ -458,7 +462,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -471,7 +474,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
                     "Upgrade: websocket\n" +
@@ -491,7 +494,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_invalid_key()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -506,7 +508,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
                     "Upgrade: websocket\n" +
@@ -526,7 +528,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_plain_key()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -549,7 +550,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_missing_status_line()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -562,7 +562,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "Upgrade: websocket\n" +
                     "Server: XXXYYYZZZ\n" +
@@ -581,7 +581,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_missing_upgrade_header()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -594,7 +593,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
                     "Server: XXXYYYZZZ\n" +
@@ -613,7 +612,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_missing_protocol_header()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -626,7 +624,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
                     "Upgrade: websocket\n" +
@@ -645,7 +643,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_missing_connection_header()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -658,7 +655,7 @@ public class WebSocketUpgradeTest
         try
         {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+            String serverKey = DatatypeConverter.printBase64Binary(messageDigest.digest((keyBase64 + RFC_GUID).getBytes())).trim();
 
             String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
                     "Upgrade: websocket\n" +
@@ -677,7 +674,6 @@ public class WebSocketUpgradeTest
     @Test
     public void testvalidateUpgradeReply_missing_accept_header()
     {
-        final String RFC_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
@@ -685,25 +681,15 @@ public class WebSocketUpgradeTest
 
         WebSocketUpgrade webSocketUpgrade = new WebSocketUpgrade(hostName, webSocketPath, webSocketPort, webSocketProtocol, null);
         String upgradeRequest = webSocketUpgrade.createUpgradeRequest();
-        String keyBase64 = upgradeRequest.substring(upgradeRequest.lastIndexOf("Sec-WebSocket-Key: ") + 19, upgradeRequest.lastIndexOf("Sec-WebSocket-Key: ") + 43);
 
-        try
-        {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
-            String serverKey = Base64.getEncoder().encodeToString(messageDigest.digest((keyBase64 + RFC_GUID).getBytes()));
+        String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
+                "Upgrade: websocket\n" +
+                "Server: XXXYYYZZZ\n" +
+                "Sec-WebSocket-Protocol: " + webSocketProtocol + "\n" +
+                "Connection: Upgrade\n" +
+                "Date: Thu, 03 Mar 2016 22:46:15 GMT";
 
-            String responseStr = "HTTP/1.1 101 Switching Protocols\n" +
-                    "Upgrade: websocket\n" +
-                    "Server: XXXYYYZZZ\n" +
-                    "Sec-WebSocket-Protocol: " + webSocketProtocol + "\n" +
-                    "Connection: Upgrade\n" +
-                    "Date: Thu, 03 Mar 2016 22:46:15 GMT";
-
-            assertFalse(webSocketUpgrade.validateUpgradeReply(responseStr.getBytes()));
-        } catch (NoSuchAlgorithmException e)
-        {
-            assertTrue(false);
-        }
+        assertFalse(webSocketUpgrade.validateUpgradeReply(responseStr.getBytes()));
     }
 
     @Test
