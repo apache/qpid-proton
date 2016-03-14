@@ -29,7 +29,6 @@ import java.security.SecureRandom;
 
 import java.util.*;
 
-
 public class WebSocketHandlerImpl implements WebSocketHandler
 {
     private WebSocketUpgrade _webSocketUpgrade = null;

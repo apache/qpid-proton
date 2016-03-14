@@ -20,14 +20,11 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.junit.Test;
-import org.mockito.Mock;
 
 import javax.xml.bind.DatatypeConverter;
-import java.lang.reflect.Field;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
@@ -35,10 +32,6 @@ import java.util.Scanner;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class WebSocketUpgradeTest
 {
@@ -47,6 +40,7 @@ public class WebSocketUpgradeTest
     @Test
     public void testCreateUpgradeRequest_all_param()
     {
+
         String hostName = "host_XXX";
         String webSocketPath = "path1/path2";
         int webSocketPort = 1234567890;
