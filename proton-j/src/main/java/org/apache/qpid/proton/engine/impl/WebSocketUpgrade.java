@@ -1,5 +1,6 @@
 package org.apache.qpid.proton.engine.impl;
 
+import javax.xml.bind.DatatypeConverter;
 import java.nio.charset.StandardCharsets;
 
 import java.security.InvalidParameterException;
@@ -113,7 +114,7 @@ public class WebSocketUpgrade
             key[i] = (byte) (int) (Math.random() * 256);
         }
 
-        return Base64.getEncoder().encodeToString(key).trim();
+        return DatatypeConverter.printBase64Binary(key).trim();
     }
 
     public String createUpgradeRequest()
@@ -205,7 +206,7 @@ public class WebSocketUpgrade
                     break;
                 }
 
-                String expectedKey = Base64.getEncoder().encodeToString(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes()));
+                String expectedKey = DatatypeConverter.printBase64Binary(messageDigest.digest((this._webSocketKey + RFC_GUID).getBytes())).trim();
 
                 if (line.contains(expectedKey))
                 {
@@ -218,8 +219,7 @@ public class WebSocketUpgrade
 
         scanner.close();
 
-        if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) &&
-                (isProtocolHeaderOk) && (isAcceptHeaderOk))
+        if ((isStatusLineOk) && (isUpgradeHeaderOk) && (isConnectionHeaderOk) && (isProtocolHeaderOk) && (isAcceptHeaderOk))
         {
             return true;
         }
