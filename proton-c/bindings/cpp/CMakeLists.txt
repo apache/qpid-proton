@@ -27,6 +27,7 @@ include_directories(
 set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/binary.cpp
+  src/byte_array.cpp
   src/scalar_base.cpp
   src/condition.cpp
   src/connection.cpp

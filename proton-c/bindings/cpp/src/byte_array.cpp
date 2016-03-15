@@ -17,21 +17,23 @@
  * under the License.
  */
 
-#include "proton/decimal.hpp"
-#include <iostream>
+
+#include "types_internal.hpp"
+
+#include <proton/byte_array.hpp>
+
+#include <ostream>
+#include <iomanip>
 
 namespace proton {
+namespace internal {
 
-std::ostream& operator<<(std::ostream& o, const decimal32& d) {
-    return o << "decimal32(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
+void print_hex(std::ostream& o, const uint8_t* p, size_t n) {
+    ios_guard restore_flags(o);
+    o << "0x" << std::hex << std::setfill('0');
+    for (size_t i = 0; i < n; ++i) {
+        o << std::setw(2) << printable_byte(p[i]);
+    }
 }
 
-std::ostream& operator<<(std::ostream& o, const decimal64& d) {
-    return o << "decimal64(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
-}
-
-std::ostream& operator<<(std::ostream& o, const decimal128& d) {
-    return o << "decimal128(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
-}
-
-}
+}}

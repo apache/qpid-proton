@@ -162,9 +162,9 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(float(1.234), FLOAT, "1.234", float(2.345)));
     RUN_TEST(failed, simple_type_test(double(11.2233), DOUBLE, "11.2233", double(12)));
     RUN_TEST(failed, simple_type_test(timestamp(1234), TIMESTAMP, "1234", timestamp(12345)));
-    RUN_TEST(failed, simple_type_test(make<decimal32>(0), DECIMAL32, "<decimal32>", make<decimal32>(1)));
-    RUN_TEST(failed, simple_type_test(make<decimal64>(0), DECIMAL64, "<decimal64>", make<decimal64>(1)));
-    RUN_TEST(failed, simple_type_test(make<decimal128>(0), DECIMAL128, "<decimal128>", make<decimal128>(1)));
+    RUN_TEST(failed, simple_type_test(make<decimal32>(1), DECIMAL32, "decimal32(0x01010101)", make<decimal32>(2)));
+    RUN_TEST(failed, simple_type_test(make<decimal64>(3), DECIMAL64, "decimal64(0x0303030303030303)", make<decimal64>(4)));
+    RUN_TEST(failed, simple_type_test(make<decimal128>(5), DECIMAL128, "decimal128(0x05050505050505050505050505050505)", make<decimal128>(6)));
     RUN_TEST(failed, simple_type_test(
                  uuid::copy("\x00\x11\x22\x33\x44\x55\x66\x77\x88\x99\xaa\xbb\xcc\xdd\xee\xff"),
                  UUID, "00112233-4455-6677-8899-aabbccddeeff",

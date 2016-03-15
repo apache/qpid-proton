@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "types_internal.hpp"
+
 #include <proton/binary.hpp>
 
 #include <ostream>
@@ -27,18 +29,15 @@
 namespace proton {
 
 std::ostream& operator<<(std::ostream& o, const binary& x) {
-    std::ios_base::fmtflags flags = o.flags();
-    char fill = o.fill();
-    o << std::setfill('0') << "b\"";
+    ios_guard restore_flags(o);
+    o << std::hex << std::setfill('0') << "b\"";
     for (binary::const_iterator i = x.begin(); i != x.end(); ++i) {
-        if (!isprint(*i) && !isspace(*i)) {
-            o << std::hex << "\\x" << std::setw(2) << static_cast<unsigned>(*i);
-            o.flags(flags);
+        if (!isprint(*i) && !isspace(*i)) { // Non-printables in hex.
+            o << "\\x" << std::setw(2) << printable_byte(*i);
         } else {
-            o << *i;
+            o << char(*i);
         }
     }
-    o.fill(fill);
     return o << '"';
 }
 

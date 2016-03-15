@@ -27,6 +27,10 @@
 
 namespace proton {
 
+namespace internal {
+void print_hex(std::ostream& o, const uint8_t* p, size_t n);
+}
+
 /// Used to represent fixed-sized data types that don't have a natural C++ representation
 /// as an array of bytes.
 template <size_t N> class byte_array : private comparable<byte_array<N> > {
@@ -73,6 +77,12 @@ template <size_t N> class byte_array : private comparable<byte_array<N> > {
       return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());
   }
     ///@}
+
+    /// Print byte array in hex.
+  friend std::ostream& operator<<(std::ostream& o, const byte_array& b) {
+      internal::print_hex(o, b.begin(), b.size());
+      return o;
+  }
 
   private:
     value_type bytes_[N];

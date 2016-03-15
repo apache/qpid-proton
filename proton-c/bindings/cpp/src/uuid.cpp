@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "types_internal.hpp"
+
 #include <proton/uuid.hpp>
 #include <proton/types_fwd.hpp>
 
@@ -49,12 +51,6 @@ struct seed {
     }
 } seed_;
 
-struct ios_guard {
-    std::ios &guarded;
-    std::ios old;
-    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
-    ~ios_guard() { guarded.copyfmt(old); }
-};
 }
 
 uuid uuid::copy(const char* bytes) {
@@ -93,7 +89,7 @@ std::ostream& operator<<(std::ostream& o, const uuid& u) {
         if (i > 0)
             o << '-';
         for (int j = 0; j < segments[i]; ++j) {
-            o << std::setw(2) << int(*(p++));
+            o << std::setw(2) << printable_byte(*(p++));
         }
     }
     return o;
