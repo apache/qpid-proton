@@ -32,6 +32,10 @@ class condition;
 class event;
 class messaging_adapter;
 
+namespace io {
+class connection_engine;
+}
+
 /// Callback functions for handling proton events.
 ///
 /// Subclass and override event-handling member functions.
@@ -131,7 +135,7 @@ PN_CPP_CLASS_EXTERN handler
     internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
     friend class container;
-    friend class connection_engine;
+    friend class io::connection_engine;
     friend class connection_options;
     friend class link_options;
     /// @endcond

@@ -34,6 +34,10 @@ class connection;
 class condition;
 class sasl;
 
+namespace io {
+class connection_engine;
+}
+
 class transport : public internal::object<pn_transport_t> {
     /// @cond INTERNAL
     transport(pn_transport_t* t) : internal::object<pn_transport_t>(t) {}
@@ -71,6 +75,7 @@ class transport : public internal::object<pn_transport_t> {
     friend class connection_options;
     friend class connector;
     friend class proton_event;
+    friend class io::connection_engine;
     /// @endcond
 };
 

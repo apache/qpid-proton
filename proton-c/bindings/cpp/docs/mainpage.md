@@ -103,10 +103,10 @@ from your handler methods.
 ### %proton::connection_engine
 
 `proton::connection_engine` dispatches events for a *single
-connection*. The subclass `proton::io::socket_engine` does
+connection*. The subclass `proton::io::socket::engine` does
 socket-based IO. An application with a single connection is just like
 using `proton::container` except you attach your handler to a
-`proton::io::socket_engine` instead. You can compare examples, such as
+`proton::io::socket::engine` instead. You can compare examples, such as
 \ref helloworld.cpp and \ref engine/helloworld.cpp.
 
 Now consider multiple connections. `proton::container` is easy to use
@@ -124,7 +124,7 @@ platforms. The example \ref engine/broker.cpp shows a broker using
 sockets and poll, but you can see how the code could be adapted.
 
 `proton::connection_engine` also does not dictate the IO mechanism,
-but it is an abstract class. `proton::socket_engine` provides
+but it is an abstract class. `proton::socket::engine` provides
 ready-made socket-based IO, but you can write your own subclass with
 any IO code. Just override the `io_read`, `io_write` and `io_close`
 methods. For example, the proton test suite implements an in-memory

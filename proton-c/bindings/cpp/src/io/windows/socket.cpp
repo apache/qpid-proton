@@ -18,7 +18,8 @@
  */
 
 #include "msg.hpp"
-#include <proton/io.hpp>
+
+#include <proton/io/socket.hpp>
 #include <proton/url.hpp>
 
 #define FD_SETSIZE 2048
@@ -39,6 +40,7 @@
 
 namespace proton {
 namespace io {
+namespace socket {
 
 const descriptor INVALID_DESCRIPTOR = INVALID_SOCKET;
 
@@ -50,18 +52,21 @@ std::string error_str() {
     return err;
 }
 
+io_error::io_error(const std::string& s) : error(s) {}
+
 namespace {
 
 template <class T> T check(T result, const std::string& msg=std::string()) {
     if (result == SOCKET_ERROR)
-        throw connection_engine::io_error(msg + error_str());
+        throw io_error(msg + error_str());
     return result;
 }
 
 void gai_check(int result, const std::string& msg="") {
     if (result)
-        throw connection_engine::io_error(msg + gai_strerror(result));
+        throw io_error(msg + gai_strerror(result));
 }
+
 } // namespace
 
 void initialize() {
@@ -73,56 +78,70 @@ void finalize() {
     WSACleanup();
 }
 
-void socket_engine::init() {
+void engine::init() {
     u_long nonblock = 1;
     check(::ioctlsocket(socket_, FIONBIO, &nonblock), "ioctlsocket: ");
 }
 
-socket_engine::socket_engine(descriptor fd, handler& h, const connection_options &opts)
+engine::engine(descriptor fd, handler& h, const connection_options &opts)
     : connection_engine(h, opts), socket_(fd)
 {
     init();
 }
 
-socket_engine::socket_engine(const url& u, handler& h, const connection_options &opts)
+engine::engine(const url& u, handler& h, const connection_options &opts)
     : connection_engine(h, opts), socket_(connect(u))
 {
     init();
 }
 
-socket_engine::~socket_engine() {}
+engine::~engine() {}
 
-std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
-    int n = ::recv(socket_, buf, size, 0);
-    if (n > 0) return std::make_pair(n, true);
-    if (n == 0) return std::make_pair(0, false);
-    if (n == SOCKET_ERROR && WSAGetLastError() == WSAEWOULDBLOCK)
-        return std::make_pair(0, true);
-    throw connection_engine::io_error("read: " + error_str());
-}
-
-size_t socket_engine::io_write(const char *buf, size_t size) {
-    int n = ::send(socket_, buf, size, 0);
-    if (n == SOCKET_ERROR && n == WSAEWOULDBLOCK) return 0;
-    return check(n, "write: ");
-}
-
-void socket_engine::io_close() { ::closesocket(socket_); }
-
-void socket_engine::run() {
-    fd_set self;
-    FD_ZERO(&self);
-    FD_SET(socket_, &self);
-    while (!closed()) {
-        process();
-        if (!closed()) {
-            int n = ::select(FD_SETSIZE,
-                           can_read() ? &self : NULL,
-                           can_write() ? &self : NULL,
-                           NULL, NULL);
-            check(n, "select: ");
-        }
+void engine::read() {
+    mutable_buffer rbuf = read_buffer();
+    if (rbuf.size > 0) {
+        int n = ::recv(socket_, rbuf.data, rbuf.size, 0);
+        if (n > 0)
+            read_done(n);
+        else if (n == 0)
+            read_close();
+        else if (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
+            close("io_error", error_str());
     }
+}
+
+void engine::write() {
+    const_buffer wbuf = write_buffer();
+    if (wbuf.size > 0) {
+    int n = ::send(socket_, wbuf.data, wbuf.size, 0);
+    if (n > 0)
+        write_done(n);
+    else if (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
+        close("io_error", error_str());
+    }
+}
+
+void engine::run() {
+    while (dispatch()) {
+        fd_set rd, wr;
+        FD_ZERO(&rd);
+        if (read_buffer().size)
+            FD_SET(socket_, &rd);
+        FD_ZERO(&wr);
+        if (write_buffer().size)
+            FD_SET(socket_, &wr);
+        int n = ::select(FD_SETSIZE, &rd, &wr, NULL, NULL);
+        if (n < 0) {
+            close("io_error", error_str());
+            break;
+        }
+        if (FD_ISSET(socket_, &rd)) {
+            read();
+        }
+        if (FD_ISSET(socket_, &wr))
+            write();
+    }
+    ::closesocket(socket_);
 }
 
 namespace {
@@ -142,6 +161,7 @@ static const char *amqp_service(const char *port) {
   return port;
 }
 }
+
 
 descriptor connect(const proton::url& u) {
     // convert "0.0.0.0" to "127.0.0.1" on Windows for outgoing sockets
@@ -194,4 +214,4 @@ descriptor listener::accept(std::string& host_str, std::string& port_str) {
     return fd;
 }
 
-}}
+}}}

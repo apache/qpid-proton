@@ -405,7 +405,7 @@ applications or applications with unusual IO requirements.
 We'll look at the \ref engine/helloworld.cpp example step-by-step to see how it differs
 from the container \ref helloworld.cpp version.
 
-First we include the `proton::io::socket_engine` class, which is a `proton::connection_engine`
+First we include the `proton::io::socket::engine` class, which is a `proton::connection_engine`
 that uses socket IO.
 
 \skipline proton/io.hpp
@@ -417,7 +417,7 @@ engine's' connection:
 \skip on_start
 \until }
 
-Our `main` function only differs in that it creates and runs a `socket_engine`
+Our `main` function only differs in that it creates and runs a `socket::engine`
 instead of a `container`.
 
 \skip main

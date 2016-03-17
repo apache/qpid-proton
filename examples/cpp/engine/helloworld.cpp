@@ -22,7 +22,7 @@
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 
 #include <iostream>
 
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     try {
         proton::url url(argc > 1 ? argv[1] : "127.0.0.1:5672/examples");
         hello_world hw(url.path());
-        proton::io::socket_engine(url, hw).run();
+        proton::io::socket::engine(url, hw).run();
 
         return 0;
     } catch (const std::exception& e) {

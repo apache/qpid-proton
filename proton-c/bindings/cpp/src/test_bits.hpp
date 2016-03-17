@@ -30,18 +30,29 @@
 
 namespace test {
 
-struct fail : public std::logic_error { fail(const std::string& what) : logic_error(what) {} };
+struct fail : public std::logic_error {
+    fail(const std::string& what) : logic_error(what) {}
+};
 
-bool close(double want, double got, double delta) {
-    return fabs(want-got) <= delta;
+template <class T, class U>
+void assert_equal(const T& want, const U& got, const std::string& what) {
+    if (!(want == got))
+        throw fail(MSG(what << " " << want << " != " << got));
 }
 
-#define FAIL(WHAT) throw fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
-#define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
-#define ASSERT_EQUAL(WANT, GOT) if (!((WANT) == (GOT))) \
-        FAIL(#WANT << " !=  " << #GOT << ": " << (WANT) << " != " << (GOT))
-#define ASSERT_CLOSE(WANT, GOT, DELTA) if (!close((WANT), (GOT), (DELTA))) \
-        FAIL(#WANT << " != " << #GOT << ": " << (WANT) << " != " << (GOT))
+void assert_equalish(double want, double got, double delta, const std::string& what)
+{
+    if (!(fabs(want-got) <= delta))
+        throw fail(MSG(what << " " << want << " !=~ " << got));
+}
+
+#define FAIL_MSG(WHAT) (MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT).str())
+#define FAIL(WHAT) throw fail(FAIL_MSG(WHAT))
+#define ASSERT(TEST) do { if (!(TEST)) FAIL("failed ASSERT(" #TEST ")"); } while(false)
+#define ASSERT_EQUAL(WANT, GOT) \
+    assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
+#define ASSERT_EQUALISH(WANT, GOT, DELTA) \
+    assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \

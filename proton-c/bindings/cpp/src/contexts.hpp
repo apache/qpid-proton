@@ -26,7 +26,7 @@
 #include "proton/message.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/connection_engine.hpp"
+#include "proton/io/connection_engine.hpp"
 
 #include "id_generator.hpp"
 #include "proton_handler.hpp"
@@ -96,19 +96,6 @@ class connection_context : public context {
   protected:
     static context::id id(pn_connection_t*);
     static context::id id(const connection& c) { return id(c.pn_object()); }
-};
-
-// Connection context with information used by the connection_engine.
-class connection_engine_context : public connection_context {
-  public:
-    connection_engine_context() :  engine_handler(0), transport(0), collector(0) {}
-
-    class handler *engine_handler;
-    pn_transport_t  *transport;
-    pn_collector_t  *collector;
-    static connection_engine_context& get(const connection &c) {
-        return ref<connection_engine_context>(id(c));
-    }
 };
 
 void container_context(const reactor&, container&);

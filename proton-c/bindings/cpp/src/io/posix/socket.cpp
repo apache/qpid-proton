@@ -19,7 +19,7 @@
 
 #include "msg.hpp"
 
-#include <proton/io.hpp>
+#include <proton/io/socket.hpp>
 #include <proton/url.hpp>
 
 #include <errno.h>
@@ -27,11 +27,15 @@
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <unistd.h>
 
 namespace proton {
 namespace io {
+namespace socket {
+
+io_error::io_error(const std::string& s) : error(s) {}
 
 const descriptor INVALID_DESCRIPTOR = -1;
 
@@ -50,66 +54,80 @@ std::string error_str() {
 namespace {
 
 template <class T> T check(T result, const std::string& msg=std::string()) {
-    if (result < 0) throw connection_engine::io_error(msg + error_str());
+    if (result < 0) throw io_error(msg + error_str());
     return result;
 }
 
 void gai_check(int result, const std::string& msg="") {
-    if (result) throw connection_engine::io_error(msg + gai_strerror(result));
+    if (result) throw io_error(msg + gai_strerror(result));
 }
 
 }
 
-void socket_engine::init() {
+void engine::init() {
     check(fcntl(socket_, F_SETFL, fcntl(socket_, F_GETFL, 0) | O_NONBLOCK), "set nonblock: ");
 }
 
-socket_engine::socket_engine(descriptor fd, handler& h, const connection_options &opts)
+engine::engine(descriptor fd, handler& h, const connection_options &opts)
     : connection_engine(h, opts), socket_(fd)
 {
     init();
 }
 
-socket_engine::socket_engine(const url& u, handler& h, const connection_options& opts)
+engine::engine(const url& u, handler& h, const connection_options& opts)
     : connection_engine(h, opts), socket_(connect(u))
 {
     init();
 }
 
-socket_engine::~socket_engine() {}
+engine::~engine() {}
 
-std::pair<size_t, bool> socket_engine::io_read(char *buf, size_t size) {
-    ssize_t n = ::read(socket_, buf, size);
-    if (n > 0) return std::make_pair(n, true);
-    if (n == 0) return std::make_pair(0, false);
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-        return std::make_pair(0, true);
-    throw io_error("read: " + error_str());
+void engine::read() {
+    mutable_buffer rbuf = read_buffer();
+    if (rbuf.size > 0) {
+        ssize_t n = ::read(socket_, rbuf.data, rbuf.size);
+        if (n > 0)
+            read_done(n);
+        else if (n == 0)
+            read_close();
+        else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+            close("io_error", error_str());
+    }
 }
 
-size_t socket_engine::io_write(const char *buf, size_t size) {
-    ssize_t n = ::write(socket_, buf, size);
-    if (n == EAGAIN || n == EWOULDBLOCK) return 0;
-    if (n < 0) check(n, "write: ");
-    return n;
-}
-
-void socket_engine::io_close() { ::close(socket_); }
-
-void socket_engine::run() {
-    fd_set self;
-    FD_ZERO(&self);
-    FD_SET(socket_, &self);
-    while (!closed()) {
-        process();
-        if (!closed()) {
-            int n = select(FD_SETSIZE,
-                           can_read() ? &self : NULL,
-                           can_write() ? &self : NULL,
-                           NULL, NULL);
-            check(n, "select: ");
+void engine::write() {
+    const_buffer wbuf = write_buffer();
+    if (wbuf.size > 0) {
+        ssize_t n = ::write(socket_, wbuf.data, wbuf.size);
+        if (n > 0)
+            write_done(n);
+        else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            close("io_error", error_str());
         }
     }
+}
+
+void engine::run() {
+    while (dispatch()) {
+        fd_set rd, wr;
+        FD_ZERO(&rd);
+        if (read_buffer().size)
+            FD_SET(socket_, &rd);
+        FD_ZERO(&wr);
+        if (write_buffer().size)
+            FD_SET(socket_, &wr);
+        int n = ::select(FD_SETSIZE, &rd, &wr, NULL, NULL);
+        if (n < 0) {
+            close("select: ", error_str());
+            break;
+        }
+        if (FD_ISSET(socket_, &rd)) {
+            read();
+        }
+        if (FD_ISSET(socket_, &wr))
+            write();
+    }
+    ::close(socket_);
 }
 
 namespace {
@@ -172,4 +190,5 @@ descriptor listener::accept(std::string& host_str, std::string& port_str) {
 // Empty stubs, only needed on windows.
 void initialize() {}
 void finalize() {}
-}}
+
+}}}

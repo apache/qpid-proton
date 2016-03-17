@@ -23,7 +23,7 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
@@ -82,10 +82,10 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         proton::url url(address);
-        proton::io::listener listener(url.host(), url.port());
+        proton::io::socket::listener listener(url.host(), url.port());
         std::cout << "direct_send listening on " << url << std::endl;
         simple_send handler(message_count);
-        proton::io::socket_engine(listener.accept(), handler).run();
+        proton::io::socket::engine(listener.accept(), handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

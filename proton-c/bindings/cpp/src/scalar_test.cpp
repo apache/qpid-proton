@@ -62,7 +62,6 @@ template <class T> void type_test(T x, type_id tid, T y) {
         FAIL("expected conversion_error: " #EXPR);                      \
     } catch (const conversion_error& e) {}
 
-// FIXME aconway 2016-03-15: new coerce stuff.
 void coerce_test() {
     scalar a;
     ASSERT_EQUAL(NULL_TYPE, a.type());

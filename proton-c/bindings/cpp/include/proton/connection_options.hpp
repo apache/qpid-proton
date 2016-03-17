@@ -40,6 +40,10 @@ namespace proton {
 class proton_handler;
 class connection;
 
+namespace io {
+class connection_engine;
+}
+
 /// Options for creating a connection.
 ///
 /// Options can be "chained" like this:
@@ -149,7 +153,7 @@ class connection_options {
 
     friend class container_impl;
     friend class connector;
-    friend class connection_engine;
+    friend class io::connection_engine;
     /// @endcond
 };
 

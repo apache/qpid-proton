@@ -1,5 +1,5 @@
-#ifndef SOCKET_IO_HPP
-#define SOCKET_IO_HPP
+#ifndef PROTON_IO_IO_HPP
+#define PROTON_IO_IO_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,30 +20,26 @@
  * under the License.
  */
 
-#include <proton/connection_engine.hpp>
+#include <proton/io/connection_engine.hpp>
 #include <proton/url.hpp>
 
-namespace proton {
 
-///@details
-/// IO using sockets, file descriptors, or handles, for use with
-/// proton::connection_engine.
-///
-/// Note that you can use proton::connection_engine to communicate using AMQP
-/// over your own IO implementation or to integrate an existing IO framework of
-/// your choice, this implementation is provided as a convenience if sockets is
-/// sufficient for your needs.
+namespace proton {
 namespace io {
+namespace socket {
+
+struct
+PN_CPP_CLASS_EXTERN io_error : public proton::error {
+    PN_CPP_EXTERN explicit io_error(const std::string&); ///< Construct with message
+};
 
 /// @name Setup and teardown
 ///
-/// Call proton::io::initialize before using any functions in the
-/// proton::io namespace.  Call proton::io::finalize when you are
-/// done.
+/// Call initialize() before using any functions in the proton::io::socket
+/// namespace.  Call finalize() when you are done.
 ///
-/// You can call initialize/finalize more than once as long as they
-/// are in matching pairs. Use proton::io::guard to call
-/// initialize/finalize around a scope.
+/// You can call initialize/finalize more than once as long as they are in
+/// matching pairs. Use \ref guard to call initialize/finalize around a scope.
 ///
 /// Note that on POSIX systems these are no-ops, but they are required
 /// for Windows.
@@ -101,27 +97,27 @@ class listener {
     descriptor socket_;
 };
 
-/// A connection_engine for socket-based IO.
-class socket_engine : public connection_engine {
+/// A \ref connection_engine with non-blocking socket IO.
+class engine : public connection_engine {
   public:
     /// Wrap an open socket. Sets non-blocking mode.
-    PN_CPP_EXTERN socket_engine(descriptor socket_, handler&, const connection_options& = no_opts);
+    PN_CPP_EXTERN engine(descriptor socket_, handler&, const connection_options& = connection_options());
 
     /// Create socket engine connected to url.
-    PN_CPP_EXTERN socket_engine(const url&, handler&, const connection_options& = no_opts);
+    PN_CPP_EXTERN engine(const url&, handler&, const connection_options& = connection_options());
 
-    PN_CPP_EXTERN ~socket_engine();
+    PN_CPP_EXTERN ~engine();
 
-    /// Get the socket descriptor.
-    descriptor socket() const { return socket_; }
-
-    /// Start the engine.
+    /// Run the engine until it closes
     PN_CPP_EXTERN void run();
 
-  protected:
-    PN_CPP_EXTERN std::pair<size_t, bool> io_read(char* buf, size_t max);
-    PN_CPP_EXTERN size_t io_write(const char*, size_t);
-    PN_CPP_EXTERN void io_close();
+    /// Non-blocking read from socket to engine
+    PN_CPP_EXTERN void read();
+
+    /// Non-blocking write from engine to socket
+    PN_CPP_EXTERN void write();
+
+    descriptor socket() const { return socket_; }
 
   private:
     void init();
@@ -129,6 +125,6 @@ class socket_engine : public connection_engine {
     descriptor socket_;
 };
 
-}} // proton::io
+}}}
 
-#endif // SOCKET_IO_HPP
+#endif  /*!PROTON_IO_IO_HPP*/

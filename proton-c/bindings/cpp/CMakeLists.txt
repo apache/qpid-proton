@@ -28,7 +28,6 @@ set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
-  src/scalar_base.cpp
   src/condition.cpp
   src/connection.cpp
   src/connection_options.cpp
@@ -37,21 +36,21 @@ set(qpid-proton-cpp-source
   src/container_impl.cpp
   src/contexts.cpp
   src/data.cpp
-  src/decoder.cpp
   src/decimal.cpp
+  src/decoder.cpp
   src/delivery.cpp
   src/duration.cpp
   src/encoder.cpp
   src/endpoint.cpp
-  src/connection_engine.cpp
   src/error.cpp
+  src/handler.cpp
   src/id_generator.cpp
+  src/io/connection_engine.cpp
   src/link.cpp
   src/link_options.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/messaging_event.cpp
-  src/handler.cpp
   src/object.cpp
   src/proton_bits.cpp
   src/proton_event.cpp
@@ -60,6 +59,7 @@ set(qpid-proton-cpp-source
   src/receiver.cpp
   src/reconnect_timer.cpp
   src/sasl.cpp
+  src/scalar_base.cpp
   src/sender.cpp
   src/session.cpp
   src/ssl.cpp
@@ -75,9 +75,9 @@ set(qpid-proton-cpp-source
   )
 
 if(MSVC)
-  list(APPEND qpid-proton-cpp-source src/windows/io.cpp)
+  list(APPEND qpid-proton-cpp-source src/io/windows/socket.cpp)
 else(MSVC)
-  list(APPEND qpid-proton-cpp-source src/posix/io.cpp)
+  list(APPEND qpid-proton-cpp-source src/io/posix/socket.cpp)
 endif(MSVC)
 
 set_source_files_properties (

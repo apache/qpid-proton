@@ -90,7 +90,7 @@ class Proc(Popen):
                         self.ready_set = True
                         self.ready.set()
             if self.wait() != 0:
-                self.error = ProcError(self)
+                raise ProcError(self)
         except Exception, e:
             self.error = sys.exc_info()
         finally:

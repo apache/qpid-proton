@@ -37,6 +37,10 @@ namespace proton {
 
 class handler;
 
+namespace io {
+class connection_engine;
+}
+
 /// A connection to a remote AMQP peer.
 class
 PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, public endpoint {
@@ -123,7 +127,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     void host(const std::string& h);
 
     friend class connection_context;
-    friend class connection_engine;
+    friend class io::connection_engine;
     friend class connection_options;
     friend class connector;
     friend class container_impl;

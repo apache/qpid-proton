@@ -132,8 +132,8 @@ void get_coerce_test() {
     ASSERT_EQUAL(4, coerce<uint64_t>(value(uint32_t(4))));
     ASSERT_EQUAL(-4, coerce<int64_t>(value(int32_t(-4))));
 
-    ASSERT_CLOSE(1.2, coerce<float>(value(double(1.2))), 0.001);
-    ASSERT_CLOSE(3.4, coerce<double>(value(float(3.4))), 0.001);
+    ASSERT_EQUALISH(1.2, coerce<float>(value(double(1.2))), 0.001);
+    ASSERT_EQUALISH(3.4, coerce<double>(value(float(3.4))), 0.001);
 
     ASSERT_EQUAL(std::string("foo"), coerce<std::string>(value(symbol("foo"))));
 

@@ -21,7 +21,7 @@
 
 #include "options.hpp"
 
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         simple_recv handler(address, message_count);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

@@ -20,7 +20,7 @@
  */
 
 #include "options.hpp"
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/url.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
         requests.push_back("All mimsy were the borogroves,");
         requests.push_back("And the mome raths outgrabe.");
         client handler(address, requests);
-        proton::io::socket_engine(address, handler).run();
+        proton::io::socket::engine(address, handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

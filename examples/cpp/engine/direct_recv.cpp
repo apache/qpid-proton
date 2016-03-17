@@ -21,7 +21,7 @@
 
 #include "options.hpp"
 
-#include "proton/io.hpp"
+#include "proton/io/socket.hpp"
 #include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
@@ -70,10 +70,10 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         proton::url url(address);
-        proton::io::listener listener(url.host(), url.port());
+        proton::io::socket::listener listener(url.host(), url.port());
         std::cout << "direct_recv listening on " << url << std::endl;
         direct_recv handler(message_count);
-        proton::io::socket_engine(listener.accept(), handler).run();
+        proton::io::socket::engine(listener.accept(), handler).run();
         return 0;
     } catch (const bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
