@@ -28,6 +28,10 @@
 #include <deque>
 #include <algorithm>
 
+#if __cplusplus < 201103L
+#define override
+#endif
+
 using namespace proton;
 using namespace test;
 
@@ -51,7 +55,7 @@ struct mem_engine : public connection_engine {
     mem_engine(mem_pipe s, handler &h, const connection_options &opts)
         : connection_engine(h, opts), socket(s) {}
 
-    std::pair<size_t, bool> io_read(char* buf, size_t size) {
+    std::pair<size_t, bool> io_read(char* buf, size_t size) override {
         if (!read_error.empty()) throw io_error(read_error);
         size = std::min(socket.read.size(), size);
         copy(socket.read.begin(), socket.read.begin()+size, buf);
@@ -59,26 +63,26 @@ struct mem_engine : public connection_engine {
         return std::make_pair(size, true);
     }
 
-    size_t io_write(const char* buf, size_t size) {
+    size_t io_write(const char* buf, size_t size) override {
         if (!write_error.empty()) throw io_error(write_error);
         socket.write.insert(socket.write.begin(), buf, buf+size);
         return size;
     }
 
-    void io_close() {
+    void io_close() override {
         read_error = write_error = "closed";
     }
 };
 
 struct debug_handler : handler {
-    void on_unhandled(event& e) {
+    void on_unhandled(event& e) override {
         std::cout << e.name() << std::endl;
     }
 };
 
 struct record_handler : handler {
     std::deque<std::string> events;
-    void on_unhandled(event& e) {
+    void on_unhandled(event& e) override {
         events.push_back(e.name());
     }
 };
@@ -122,7 +126,7 @@ void test_process_amqp() {
 
 struct link_handler : public record_handler {
     std::deque<proton::link> links;
-    void on_link_open(event& e) {
+    void on_link_open(event& e) override {
         links.push_back(e.link());
     }
 

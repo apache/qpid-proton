@@ -31,6 +31,8 @@
 #include <iostream>
 #include <map>
 
+#include "fake_cpp11.hpp"
+
 class simple_send : public proton::handler {
   private:
     proton::url url;
@@ -42,12 +44,12 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         acceptor = e.container().listen(url);
         std::cout << "direct_send listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::event &e) override {
         proton::sender sender = e.sender();
 
         while (sender.credit() && sent < total) {
@@ -63,7 +65,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::event &e) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -74,7 +76,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::event &e) override {
         sent = confirmed;
     }
 };
@@ -83,7 +85,7 @@ int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
     int message_count = 100;
     options opts(argc, argv);
-    
+
     opts.add_value(address, 'a', "address", "listen and send on URL", "URL");
     opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
 

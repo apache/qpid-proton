@@ -27,6 +27,8 @@
 
 #include <iostream>
 
+#include "fake_cpp11.hpp"
+
 class browser : public proton::handler {
   private:
     proton::url url;
@@ -34,12 +36,12 @@ class browser : public proton::handler {
   public:
     browser(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         proton::connection conn = e.container().connect(url);
         conn.open_receiver(url.path(), proton::link_options().browsing(true));
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         std::cout << e.message().body() << std::endl;
 
         if (e.receiver().queued() == 0 && e.receiver().drained() > 0) {

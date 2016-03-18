@@ -32,6 +32,8 @@
 #include <iostream>
 #include <map>
 
+#include "fake_cpp11.hpp"
+
 class direct_recv : public proton::handler {
   private:
     proton::url url;
@@ -42,12 +44,12 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         acceptor = e.container().listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         proton::message& msg = e.message();
 
         if (proton::coerce<uint64_t>(msg.id()) < received) {

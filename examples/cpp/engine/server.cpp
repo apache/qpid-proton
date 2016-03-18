@@ -33,6 +33,8 @@
 #include <string>
 #include <cctype>
 
+#include "../fake_cpp11.hpp"
+
 class server : public proton::handler {
   private:
     typedef std::map<std::string, proton::sender> sender_map;
@@ -43,7 +45,7 @@ class server : public proton::handler {
 
     server(const std::string &u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         e.connection().open();
         e.connection().open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
@@ -56,7 +58,7 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         std::cout << "Received " << e.message().body() << std::endl;
         std::string reply_to = e.message().reply_to();
         proton::message reply;

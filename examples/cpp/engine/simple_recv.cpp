@@ -32,7 +32,7 @@
 #include <iostream>
 #include <map>
 
-
+#include "../fake_cpp11.hpp"
 
 class simple_recv : public proton::handler {
   private:
@@ -44,13 +44,13 @@ class simple_recv : public proton::handler {
 
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         e.connection().open();
         receiver = e.connection().open_receiver(url.path());
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         proton::message& msg = e.message();
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate

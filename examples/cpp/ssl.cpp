@@ -29,6 +29,8 @@
 
 #include <iostream>
 
+#include "fake_cpp11.hpp"
+
 using proton::connection_options;
 using proton::ssl_client_options;
 using proton::ssl_server_options;
@@ -45,13 +47,13 @@ std::string find_CN(const std::string &);
 struct server_handler : public proton::handler {
     proton::acceptor acceptor;
 
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::event &e) override {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             e.connection().transport().ssl().protocol() << std::endl;
         acceptor.close();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         std::cout << e.message().body() << std::endl;
     }
 };
@@ -65,7 +67,7 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e)  override {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
@@ -85,20 +87,20 @@ class hello_world_direct : public proton::handler {
         e.container().open_sender(url);
     }
 
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::event &e) override {
         std::string subject = e.connection().transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::event &e) override {
         proton::message m;
         m.body("Hello World!");
         e.sender().send(m);
         e.sender().close();
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::event &e) override {
         // All done.
         e.connection().close();
     }

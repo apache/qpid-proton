@@ -30,6 +30,8 @@
 #include <iostream>
 #include <map>
 
+#include "fake_cpp11.hpp"
+
 class simple_send : public proton::handler {
   private:
     proton::url url;
@@ -41,18 +43,18 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         sender = e.container().open_sender(url);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::event &e) override {
         proton::sender sender = e.sender();
-        
+
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
             m["sequence"] = sent + 1;
-            
+
             msg.id(sent + 1);
             msg.body(m);
 
@@ -61,16 +63,16 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::event &e) override {
         confirmed++;
-        
+
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
             e.connection().close();
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::event &e) override {
         sent = confirmed;
     }
 };

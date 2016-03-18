@@ -31,6 +31,8 @@
 #include <iostream>
 #include <map>
 
+#include "../fake_cpp11.hpp"
+
 class direct_recv : public proton::handler {
   private:
     uint64_t expected;
@@ -39,11 +41,11 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(int c) : expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         e.connection().open();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         proton::message& msg = e.message();
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate

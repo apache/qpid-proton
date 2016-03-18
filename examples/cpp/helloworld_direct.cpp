@@ -26,6 +26,8 @@
 
 #include <iostream>
 
+#include "fake_cpp11.hpp"
+
 class hello_world_direct : public proton::handler {
   private:
     proton::url url;
@@ -34,26 +36,26 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         acceptor = e.container().listen(url);
         e.container().open_sender(url);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::event &e) override {
         proton::message m("Hello World!");
         e.sender().send(m);
         e.sender().close();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         std::cout << e.message().body() << std::endl;
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_delivery_accept(proton::event &e) override {
         e.connection().close();
     }
 
-    void on_connection_close(proton::event &e) {
+    void on_connection_close(proton::event &e) override {
         acceptor.close();
     }
 };

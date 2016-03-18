@@ -26,6 +26,8 @@
 
 #include <iostream>
 
+#include "../fake_cpp11.hpp"
+
 class hello_world : public proton::handler {
   private:
     std::string address_;
@@ -33,19 +35,19 @@ class hello_world : public proton::handler {
   public:
     hello_world(const std::string& address) : address_(address) {}
 
-    void on_start(proton::event &e) {
+    void on_start(proton::event &e) override {
         e.connection().open();
         e.connection().open_receiver(address_);
         e.connection().open_sender(address_);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_sendable(proton::event &e) override {
         proton::message m("Hello World!");
         e.sender().send(m);
         e.sender().close();
     }
 
-    void on_message(proton::event &e) {
+    void on_message(proton::event &e) override {
         std::cout << e.message().body() << std::endl;
         e.connection().close();
     }

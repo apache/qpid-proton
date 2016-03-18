@@ -29,6 +29,9 @@
 #include "proton/container.hpp"
 #include "proton/value.hpp"
 
+
+#include "fake_cpp11.hpp"
+
 class broker {
   public:
     broker(const proton::url& url) : handler_(url, queues_) {}
@@ -41,7 +44,7 @@ class broker {
       public:
         my_handler(const proton::url& u, queues& qs) : broker_handler(qs), url_(u) {}
 
-        void on_start(proton::event &e) {
+        void on_start(proton::event &e) override {
             e.container().listen(url_);
             std::cout << "broker listening on " << url_ << std::endl;
         }
