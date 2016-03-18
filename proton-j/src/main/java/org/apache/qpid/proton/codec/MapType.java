@@ -150,6 +150,10 @@ public class MapType extends AbstractPrimitiveType<Map>
             int size = decoder.readRawInt();
             // todo - limit the decoder with size
             int count = decoder.readRawInt();
+            if (count > decoder.getByteBufferRemaining()) {
+                throw new IllegalArgumentException("Map element count "+count+" is specified to be greater than the amount of data available ("+
+                                                   decoder.getByteBufferRemaining()+")");
+            }
             Map map = new LinkedHashMap(count);
             for(int i = 0; i < count; i++)
             {
