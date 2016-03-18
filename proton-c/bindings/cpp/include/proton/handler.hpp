@@ -72,11 +72,11 @@ PN_CPP_CLASS_EXTERN handler
     /// @{
 
     /// The event loop is starting.
-    virtual void on_start(event &e);
+    PN_CPP_EXTERN virtual void on_start(event &e);
     /// A message is received.
-    virtual void on_message(event &e);
+    PN_CPP_EXTERN virtual void on_message(event &e);
     /// A message can be sent.
-    virtual void on_sendable(event &e);
+    PN_CPP_EXTERN virtual void on_sendable(event &e);
 
     /// transport_open is not present because currently there is no specific
     /// low level event to hang it from - you should put any initialisation code
@@ -86,10 +86,10 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX symmetry of the API.
 
     /// The underlying network transport has closed.
-    virtual void on_transport_close(event &e);
+    PN_CPP_EXTERN virtual void on_transport_close(event &e);
     /// The underlying network transport has closed with an error
     /// condition.
-    virtual void on_transport_error(event &e);
+    PN_CPP_EXTERN virtual void on_transport_error(event &e);
 
     /// Note that every ..._open event is paired with a ..._close event which can clean
     /// up any resources created by the ..._open handler.
@@ -99,34 +99,34 @@ PN_CPP_CLASS_EXTERN handler
     /// be along in a minute to handle the clean up.
 
     /// The remote peer opened the connection.
-    virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_connection_open(event &e);
     /// The remote peer closed the connection.
-    virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_close(event &e);
     /// The remote peer closed the connection with an error condition.
-    virtual void on_connection_error(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(event &e);
 
     /// The remote peer opened the session.
-    virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_open(event &e);
     /// The remote peer closed the session.
-    virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(event &e);
     /// The remote peer closed the session with an error condition.
-    virtual void on_session_error(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(event &e);
 
     /// The remote peer opened the link.
-    virtual void on_link_open(event &e);
+    PN_CPP_EXTERN virtual void on_link_open(event &e);
     /// The remote peer closed the link.
-    virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_link_close(event &e);
     /// The remote peer closed the link with an error condition.
-    virtual void on_link_error(event &e);
+    PN_CPP_EXTERN virtual void on_link_error(event &e);
 
     /// The remote peer accepted an outgoing message.
-    virtual void on_delivery_accept(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_accept(event &e);
     /// The remote peer rejected an outgoing message.
-    virtual void on_delivery_reject(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_reject(event &e);
     /// The remote peer released an outgoing message.
-    virtual void on_delivery_release(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_release(event &e);
     /// The remote peer settled an outgoing message.
-    virtual void on_delivery_settle(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
 
     // XXX are we missing on_delivery_modify?
     // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle
@@ -137,13 +137,13 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX settle API questions around task
     /// XXX register functions instead of having these funny generic events
     /// A timer fired.
-    virtual void on_timer(event &e);
+    PN_CPP_EXTERN virtual void on_timer(event &e);
     /// @endcond
 
     /// Fallback event handling.
-    virtual void on_unhandled(event &e);
+    PN_CPP_EXTERN virtual void on_unhandled(event &e);
     /// Fallback error handling.
-    virtual void on_unhandled_error(event &e, const condition &c);
+    PN_CPP_EXTERN virtual void on_unhandled_error(event &e, const condition &c);
 
     /// @}
 
