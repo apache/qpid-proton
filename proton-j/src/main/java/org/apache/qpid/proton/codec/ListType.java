@@ -155,6 +155,11 @@ public class ListType extends AbstractPrimitiveType<List>
             int size = decoder.readRawInt();
             // todo - limit the decoder with size
             int count = decoder.readRawInt();
+            // Ensure we do not allocate an array of size greater then the available data, otherwise there is a risk for an OOM error
+            if (count > decoder.getByteBufferRemaining()) {
+                throw new IllegalArgumentException("List element count "+count+" is specified to be greater than the amount of data available ("+
+                                                   decoder.getByteBufferRemaining()+")");
+            }
             List list = new ArrayList(count);
             for(int i = 0; i < count; i++)
             {
