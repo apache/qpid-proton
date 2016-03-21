@@ -82,7 +82,7 @@ public class IOHandler extends BaseHandler {
         Sasl sasl = transport.sasl();
         sasl.client();
         sasl.setMechanisms("ANONYMOUS");
-        WebSocket webSocket = transport.webSocket();
+        transport.webSocket();
         transport.bind(connection);
     }
 

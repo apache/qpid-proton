@@ -26,6 +26,7 @@ import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 /*
  * Provides interface for WebSocket
@@ -64,6 +65,10 @@ public interface WebSocket
         PN_WS_FAILED
     }
 
+    /**
+     * Configure WebSocket connection
+     */
+    void configure(String host, String path, int port, String protocol, Map<String, String> additionalHeaders, WebSocketHandler webSocketHandler);
 
     /**
      * Add WebSocket frame to send the given buffer
