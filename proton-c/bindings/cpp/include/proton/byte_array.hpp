@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include "proton/export.hpp"
 #include <proton/types_fwd.hpp>
 #include <proton/comparable.hpp>
 
@@ -26,9 +27,8 @@
 #include <iterator>
 
 namespace proton {
-
 namespace internal {
-void print_hex(std::ostream& o, const uint8_t* p, size_t n);
+PN_CPP_EXTERN void print_hex(std::ostream& o, const uint8_t* p, size_t n);
 }
 
 /// Used to represent fixed-sized data types that don't have a natural C++ representation
