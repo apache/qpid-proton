@@ -64,6 +64,7 @@ PN_CPP_CLASS_EXTERN sender : public link
   /// @cond INTERNAL
   friend class link;
   friend class session;
+  friend class messaging_adapter;
   /// @endcond
 };
 

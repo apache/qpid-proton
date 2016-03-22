@@ -54,16 +54,14 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_link_open(proton::event &e) override {
-        if (e.link() == receiver) {
+    void on_link_open(proton::event &e, proton::link &l) override {
+        if (l == receiver) {
             send_request();
         }
     }
 
-    void on_message(proton::event &e) override {
+    void on_message(proton::event &e, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
-
-        proton::message& response = e.message();
 
         std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());

@@ -32,13 +32,13 @@
 #include "fake_cpp11.hpp"
 
 class ticker : public proton::handler {
-    void on_timer(proton::event &e) {
+    void on_timer(proton::event &e) override {
         std::cout << "Tick..." << std::endl;
     }
 };
 
 class tocker : public proton::handler {
-    void on_timer(proton::event &e) {
+    void on_timer(proton::event &e) override {
         std::cout << "Tock..." << std::endl;
     }
 };

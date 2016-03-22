@@ -47,9 +47,7 @@ class simple_send : public proton::handler {
         sender = e.container().open_sender(url);
     }
 
-    void on_sendable(proton::event &e) override {
-        proton::sender sender = e.sender();
-
+    void on_sendable(proton::event &e, proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -63,7 +61,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) override {
+    void on_delivery_accept(proton::event &e, proton::delivery &) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -72,7 +70,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::event &e) override {
+    void on_transport_close(proton::event &e, proton::transport &) override {
         sent = confirmed;
     }
 };

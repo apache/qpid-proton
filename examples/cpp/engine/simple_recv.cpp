@@ -44,13 +44,12 @@ class simple_recv : public proton::handler {
 
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_connection_open(proton::event &e) override {
-        receiver = e.connection().open_receiver(url.path());
+    void on_connection_open(proton::event &e, proton::connection &c) override {
+        receiver = c.open_receiver(url.path());
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) override {
-        proton::message& msg = e.message();
+    void on_message(proton::event &e, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {

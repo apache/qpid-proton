@@ -60,10 +60,10 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e) override {
+    void on_message(proton::event &e, proton::message &m) override {
         std::cout << "Received " << e.message().body() << std::endl;
 
-        std::string reply_to = e.message().reply_to();
+        std::string reply_to = m.reply_to();
         proton::message reply;
 
         reply.address(reply_to);

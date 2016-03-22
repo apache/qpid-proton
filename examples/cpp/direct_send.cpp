@@ -49,9 +49,7 @@ class simple_send : public proton::handler {
         std::cout << "direct_send listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::event &e) override {
-        proton::sender sender = e.sender();
-
+    void on_sendable(proton::event &e, proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -65,18 +63,18 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) override {
+    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
         confirmed++;
 
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
 
-            e.connection().close();
+            d.link().connection().close();
             acceptor.close();
         }
     }
 
-    void on_transport_close(proton::event &e) override {
+    void on_transport_close(proton::event &e, proton::transport &) override {
         sent = confirmed;
     }
 };
@@ -85,7 +83,7 @@ int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
     int message_count = 100;
     options opts(argc, argv);
-
+    
     opts.add_value(address, 'a', "address", "listen and send on URL", "URL");
     opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
 

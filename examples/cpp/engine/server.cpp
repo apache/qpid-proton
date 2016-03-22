@@ -45,8 +45,8 @@ class server : public proton::handler {
 
     server(const std::string &u) : url(u) {}
 
-    void on_connection_open(proton::event &e) override {
-        e.connection().open_receiver(url.path());
+    void on_connection_open(proton::event &e, proton::connection &c) override {
+        c.open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
     }
 
@@ -57,9 +57,9 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e) override {
-        std::cout << "Received " << e.message().body() << std::endl;
-        std::string reply_to = e.message().reply_to();
+    void on_message(proton::event &e, proton::message &m) override {
+        std::cout << "Received " << m.body() << std::endl;
+        std::string reply_to = m.reply_to();
         proton::message reply;
         reply.address(reply_to);
         reply.body(to_upper(proton::get<std::string>(e.message().body())));

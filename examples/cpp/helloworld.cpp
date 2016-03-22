@@ -41,14 +41,14 @@ class hello_world : public proton::handler {
         conn.open_sender(url.path());
     }
 
-    void on_sendable(proton::event &e) override {
+    void on_sendable(proton::event &e, proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) override {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::event &e, proton::message &m) override {
+        std::cout << m.body() << std::endl;
         e.connection().close();
     }
 };

@@ -30,6 +30,14 @@ namespace proton {
 
 class condition;
 class event;
+class transport;
+class connection;
+class session;
+class link;
+class sender;
+class receiver;
+class delivery;
+class message;
 class messaging_adapter;
 
 namespace io {
@@ -57,9 +65,9 @@ PN_CPP_CLASS_EXTERN handler
     /// The event loop is starting.
     PN_CPP_EXTERN virtual void on_start(event &e);
     /// A message is received.
-    PN_CPP_EXTERN virtual void on_message(event &e);
+    PN_CPP_EXTERN virtual void on_message(event &e, message &m);
     /// A message can be sent.
-    PN_CPP_EXTERN virtual void on_sendable(event &e);
+    PN_CPP_EXTERN virtual void on_sendable(event &e, sender &s);
 
     /// transport_open is not present because currently there is no specific
     /// low level event to hang it from - you should put any initialisation code
@@ -69,10 +77,10 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX symmetry of the API.
 
     /// The underlying network transport has closed.
-    PN_CPP_EXTERN virtual void on_transport_close(event &e);
+    PN_CPP_EXTERN virtual void on_transport_close(event &e, transport &t);
     /// The underlying network transport has closed with an error
     /// condition.
-    PN_CPP_EXTERN virtual void on_transport_error(event &e);
+    PN_CPP_EXTERN virtual void on_transport_error(event &e, transport &t);
 
     /// Note that every ..._open event is paired with a ..._close event which can clean
     /// up any resources created by the ..._open handler.
@@ -82,34 +90,34 @@ PN_CPP_CLASS_EXTERN handler
     /// be along in a minute to handle the clean up.
 
     /// The remote peer opened the connection.
-    PN_CPP_EXTERN virtual void on_connection_open(event &e);
+    PN_CPP_EXTERN virtual void on_connection_open(event &e, connection &c);
     /// The remote peer closed the connection.
-    PN_CPP_EXTERN virtual void on_connection_close(event &e);
+    PN_CPP_EXTERN virtual void on_connection_close(event &e, connection &c);
     /// The remote peer closed the connection with an error condition.
-    PN_CPP_EXTERN virtual void on_connection_error(event &e);
+    PN_CPP_EXTERN virtual void on_connection_error(event &e, connection &c);
 
     /// The remote peer opened the session.
-    PN_CPP_EXTERN virtual void on_session_open(event &e);
+    PN_CPP_EXTERN virtual void on_session_open(event &e, session &s);
     /// The remote peer closed the session.
-    PN_CPP_EXTERN virtual void on_session_close(event &e);
+    PN_CPP_EXTERN virtual void on_session_close(event &e, session &s);
     /// The remote peer closed the session with an error condition.
-    PN_CPP_EXTERN virtual void on_session_error(event &e);
+    PN_CPP_EXTERN virtual void on_session_error(event &e, session &s);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_link_open(event &e);
+    PN_CPP_EXTERN virtual void on_link_open(event &e, link& l);
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_link_close(event &e);
+    PN_CPP_EXTERN virtual void on_link_close(event &e, link& l);
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_link_error(event &e);
+    PN_CPP_EXTERN virtual void on_link_error(event &e, link& l);
 
     /// The remote peer accepted an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_accept(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_accept(event &e, delivery &d);
     /// The remote peer rejected an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_reject(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_reject(event &e, delivery &d);
     /// The remote peer released an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_release(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_release(event &e, delivery &d);
     /// The remote peer settled an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_settle(event &e);
+    PN_CPP_EXTERN virtual void on_delivery_settle(event &e, delivery &d);
 
     // XXX are we missing on_delivery_modify?
     // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle

@@ -49,9 +49,7 @@ class direct_recv : public proton::handler {
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) override {
-        proton::message& msg = e.message();
-
+    void on_message(proton::event &e, proton::message &msg) override {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }

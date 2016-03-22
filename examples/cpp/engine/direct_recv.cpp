@@ -41,8 +41,7 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(int c) : expected(c), received(0) {}
 
-    void on_message(proton::event &e) override {
-        proton::message& msg = e.message();
+    void on_message(proton::event &e, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {

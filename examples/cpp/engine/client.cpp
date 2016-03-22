@@ -41,9 +41,9 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_connection_open(proton::event &e) override {
-        sender = e.connection().open_sender(url.path());
-        receiver = e.connection().open_receiver("", proton::link_options().dynamic_address(true));
+    void on_connection_open(proton::event &e, proton::connection &c) override {
+        sender = c.open_sender(url.path());
+        receiver = c.open_receiver("", proton::link_options().dynamic_address(true));
     }
 
     void send_request() {
@@ -53,14 +53,13 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_link_open(proton::event &e) override {
-        if (e.link() == receiver)
+    void on_link_open(proton::event &e, proton::link &l) override {
+        if (l == receiver)
             send_request();
     }
 
-    void on_message(proton::event &e) override {
+    void on_message(proton::event &e, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
-        proton::message& response = e.message();
         std::cout << requests.front() << " => " << response.body() << std::endl;
         requests.erase(requests.begin());
         if (!requests.empty()) {

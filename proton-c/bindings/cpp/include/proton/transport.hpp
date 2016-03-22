@@ -76,6 +76,7 @@ class transport : public internal::object<pn_transport_t> {
     friend class connector;
     friend class proton_event;
     friend class io::connection_engine;
+    friend class messaging_adapter;
     /// @endcond
 };
 

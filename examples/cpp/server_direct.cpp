@@ -66,17 +66,15 @@ class server : public proton::handler {
         return addr.str();
     }
 
-    void on_link_open(proton::event& e) override {
-        proton::link link = e.link();
-
+    void on_link_open(proton::event& e, proton::link &link) override {
         if (!!link.sender() && link.remote_source().dynamic()) {
             link.local_source().address(generate_address());
             senders[link.local_source().address()] = link.sender();
         }
     }
 
-    void on_message(proton::event &e) override {
-        std::cout << "Received " << e.message().body() << std::endl;
+    void on_message(proton::event &e, proton::message &m) override {
+        std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = e.message().reply_to();
         sender_map::iterator it = senders.find(reply_to);

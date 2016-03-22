@@ -41,21 +41,21 @@ class hello_world_direct : public proton::handler {
         e.container().open_sender(url);
     }
 
-    void on_sendable(proton::event &e) override {
+    void on_sendable(proton::event &e, proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) override {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::event &e, proton::message &m) override {
+        std::cout << m.body() << std::endl;
     }
 
-    void on_delivery_accept(proton::event &e) override {
+    void on_delivery_accept(proton::event &e, proton::delivery &) override {
         e.connection().close();
     }
 
-    void on_connection_close(proton::event &e) override {
+    void on_connection_close(proton::event &, proton::connection &) override {
         acceptor.close();
     }
 };

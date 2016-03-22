@@ -35,19 +35,19 @@ class hello_world : public proton::handler {
   public:
     hello_world(const std::string& address) : address_(address) {}
 
-    void on_connection_open(proton::event &e) override {
-        e.connection().open_receiver(address_);
-        e.connection().open_sender(address_);
+    void on_connection_open(proton::event &e, proton::connection &c) override {
+        c.open_receiver(address_);
+        c.open_sender(address_);
     }
 
-    void on_sendable(proton::event &e) override {
+    void on_sendable(proton::event &e, proton::sender &s) override {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) override {
-        std::cout << e.message().body() << std::endl;
+    void on_message(proton::event &e, proton::message &m) override {
+        std::cout << m.body() << std::endl;
         e.connection().close();
     }
 };
