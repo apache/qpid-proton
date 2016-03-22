@@ -29,6 +29,7 @@
 #include "proton/event.hpp"
 #include "proton/reactor.h"
 #include "proton/value.hpp"
+#include "proton/link_options.hpp"
 
 #include <iostream>
 #include <map>
@@ -53,8 +54,7 @@ class reactor_send : public proton::handler {
   public:
 
     reactor_send(const std::string &url, int c, int size, bool replying)
-        : handler(1024), // prefetch=1024
-          url_(url), sent_(0), confirmed_(0), total_(c),
+        : url_(url), sent_(0), confirmed_(0), total_(c),
           received_(0), received_bytes_(0), replying_(replying) {
         if (replying_)
             message_.reply_to("localhost/test");
@@ -64,6 +64,7 @@ class reactor_send : public proton::handler {
     }
 
     void on_start(proton::event &e) {
+        e.container().link_options(proton::link_options().credit_window(1024));
         e.container().open_sender(url_);
     }
 

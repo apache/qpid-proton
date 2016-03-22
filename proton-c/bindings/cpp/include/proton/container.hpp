@@ -134,6 +134,7 @@ class container {
 
     friend class connector;
     friend class link;
+    friend class messaging_adapter;
     /// @endcond
 };
 

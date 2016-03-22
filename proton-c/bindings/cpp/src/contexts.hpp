@@ -127,6 +127,15 @@ class listener_context : public context {
     bool ssl;
 };
 
+class link_context : public context {
+  public:
+    static link_context& get(pn_link_t* l);
+    link_context() : credit_window(10), auto_accept(true), auto_settle(true) {}
+    int credit_window;
+    bool auto_accept;
+    bool auto_settle;
+};
+
 }
 
 #endif  /*!PROTON_CPP_CONTEXTS_H*/

@@ -137,17 +137,16 @@ container_impl::container_impl(container& c, messaging_adapter *h, const std::st
         reactor_.pn_handler(cpp_handler(handler_).get());
     }
 
-    // Note: we have just set up the following handlers that see events in this order:
-    // messaging_handler (Proton C events), pn_flowcontroller (optional), messaging_adapter,
-    // messaging_handler (Messaging events from the messaging_adapter, i.e. the delegate),
-    // connector override, the reactor's default globalhandler (pn_iohandler)
+    // Note: we have just set up the following handlers that see
+    // events in this order: messaging_adapter, connector override,
+    // the reactor's default globalhandler (pn_iohandler)
 }
 
 container_impl::~container_impl() {}
 
 connection container_impl::connect(const proton::url &url, const connection_options &user_opts) {
     connection_options opts = client_connection_options(); // Defaults
-    opts.override(user_opts);
+    opts.update(user_opts);
     proton_handler *h = opts.handler();
 
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
@@ -165,9 +164,9 @@ connection container_impl::connect(const proton::url &url, const connection_opti
 
 sender container_impl::open_sender(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
     proton::link_options lopts(link_options_);
-    lopts.override(o1);
+    lopts.update(o1);
     connection_options copts(client_connection_options_);
-    copts.override(o2);
+    copts.update(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
     sender snd = conn.default_session().create_sender();
@@ -178,9 +177,9 @@ sender container_impl::open_sender(const proton::url &url, const proton::link_op
 
 receiver container_impl::open_receiver(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
     proton::link_options lopts(link_options_);
-    lopts.override(o1);
+    lopts.update(o1);
     connection_options copts(client_connection_options_);
-    copts.override(o2);
+    copts.update(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
     receiver rcv = conn.default_session().create_receiver();
@@ -191,7 +190,7 @@ receiver container_impl::open_receiver(const proton::url &url, const proton::lin
 
 acceptor container_impl::listen(const proton::url& url, const connection_options &user_opts) {
     connection_options opts = server_connection_options(); // Defaults
-    opts.override(user_opts);
+    opts.update(user_opts);
     proton_handler *h = opts.handler();
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     pn_acceptor_t *acptr = pn_reactor_acceptor(reactor_.pn_object(), url.host().c_str(), url.port().c_str(), chandler.get());

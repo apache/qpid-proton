@@ -41,7 +41,7 @@ template <class T> struct option {
 
     option() : value(), set(false) {}
     option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void override(const option<T>& x) { if (x.set) *this = x.value; }
+    void update(const option<T>& x) { if (x.set) *this = x.value; }
 };
 
 class connection_options::impl {
@@ -124,22 +124,22 @@ class connection_options::impl {
         }
     }
 
-    void override(const impl& x) {
-        handler.override(x.handler);
-        max_frame_size.override(x.max_frame_size);
-        max_channels.override(x.max_channels);
-        idle_timeout.override(x.idle_timeout);
-        heartbeat.override(x.heartbeat);
-        container_id.override(x.container_id);
-        link_prefix.override(x.link_prefix);
-        reconnect.override(x.reconnect);
-        ssl_client_options.override(x.ssl_client_options);
-        ssl_server_options.override(x.ssl_server_options);
-        sasl_enabled.override(x.sasl_enabled);
-        sasl_allow_insecure_mechs.override(x.sasl_allow_insecure_mechs);
-        sasl_allowed_mechs.override(x.sasl_allowed_mechs);
-        sasl_config_name.override(x.sasl_config_name);
-        sasl_config_path.override(x.sasl_config_path);
+    void update(const impl& x) {
+        handler.update(x.handler);
+        max_frame_size.update(x.max_frame_size);
+        max_channels.update(x.max_channels);
+        idle_timeout.update(x.idle_timeout);
+        heartbeat.update(x.heartbeat);
+        container_id.update(x.container_id);
+        link_prefix.update(x.link_prefix);
+        reconnect.update(x.reconnect);
+        ssl_client_options.update(x.ssl_client_options);
+        ssl_server_options.update(x.ssl_server_options);
+        sasl_enabled.update(x.sasl_enabled);
+        sasl_allow_insecure_mechs.update(x.sasl_allow_insecure_mechs);
+        sasl_allowed_mechs.update(x.sasl_allowed_mechs);
+        sasl_config_name.update(x.sasl_config_name);
+        sasl_config_path.update(x.sasl_config_path);
     }
 
 };
@@ -155,7 +155,7 @@ connection_options& connection_options::operator=(const connection_options& x) {
     return *this;
 }
 
-void connection_options::override(const connection_options& x) { impl_->override(*x.impl_); }
+void connection_options::update(const connection_options& x) { impl_->update(*x.impl_); }
 
 connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }

@@ -26,6 +26,7 @@
 
 #include "contexts.hpp"
 #include "messaging_event.hpp"
+#include "container_impl.hpp"
 #include "msg.hpp"
 
 #include "proton/connection.h"
@@ -38,49 +39,7 @@
 
 namespace proton {
 
-namespace {
-class c_flow_controller : public proton_handler
-{
-  public:
-    pn_handler_t *flowcontroller;
-
-    // TODO: pn_flowcontroller requires a window > 1.
-    c_flow_controller(int window) : flowcontroller(pn_flowcontroller(std::max(window, 2))) {}
-    ~c_flow_controller() {
-        pn_decref(flowcontroller);
-    }
-
-    void redirect(proton_event &pne) {
-        pn_handler_dispatch(flowcontroller, pne.pn_event(), pn_event_type_t(pne.type()));
-    }
-
-    virtual void on_link_local_open(proton_event &e) { redirect(e); }
-    virtual void on_link_remote_open(proton_event &e) { redirect(e); }
-    virtual void on_link_flow(proton_event &e) { redirect(e); }
-    virtual void on_delivery(proton_event &e) { redirect(e); }
-};
-
-} // namespace
-
-void messaging_adapter::create_helpers() {
-  if (prefetch_ > 0) {
-    flow_controller_.reset(new c_flow_controller(prefetch_));
-    add_child_handler(*flow_controller_);
-  }
-}
-
-messaging_adapter::messaging_adapter(handler &delegate,
-                                     int prefetch, bool auto_accept, bool auto_settle, bool peer_close_iserror) :
-    delegate_(delegate),
-    prefetch_(prefetch),
-    auto_accept_(auto_accept),
-    auto_settle_(auto_settle),
-    peer_close_iserror_(peer_close_iserror)
-{
-    create_helpers();
-    //add_child_handler(*this);
-}
-
+messaging_adapter::messaging_adapter(handler &delegate) : delegate_(delegate) {}
 
 messaging_adapter::~messaging_adapter(){}
 
@@ -98,11 +57,13 @@ void messaging_adapter::on_link_flow(proton_event &pe) {
         messaging_event mevent(messaging_event::SENDABLE, pe);
         delegate_.on_sendable(mevent);;
     }
+    credit_topup(lnk);
 }
 
 void messaging_adapter::on_delivery(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
+    link_context& lctx = link_context::get(lnk);
     delivery dlv = pe.delivery();
 
     if (pn_link_is_receiver(lnk)) {
@@ -118,11 +79,11 @@ void messaging_adapter::on_delivery(proton_event &pe) {
             mevent.message_ = &msg;
             mevent.message_->decode(dlv);
             if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
-                if (auto_accept_)
+                if (lctx.auto_accept)
                     dlv.release();
             } else {
                 delegate_.on_message(mevent);
-                if (auto_accept_ && !dlv.settled())
+                if (lctx.auto_accept && !dlv.settled())
                     dlv.accept();
             }
         }
@@ -130,6 +91,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
             messaging_event mevent(messaging_event::DELIVERY_SETTLE, pe);
             delegate_.on_delivery_settle(mevent);
         }
+        credit_topup(lnk);
     } else {
         // sender
         if (dlv.updated()) {
@@ -151,7 +113,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
                 messaging_event mevent(messaging_event::DELIVERY_SETTLE, pe);
                 delegate_.on_delivery_settle(mevent);
             }
-            if (auto_settle_)
+            if (lctx.auto_settle)
                 dlv.settle();
         }
     }
@@ -172,7 +134,7 @@ bool is_local_unititialised(pn_state_t state) {
 void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
-    if (peer_close_iserror_ || pn_condition_is_set(pn_link_remote_condition(lnk))) {
+    if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
         messaging_event mevent(messaging_event::LINK_ERROR, pe);
         delegate_.on_link_error(mevent);
     }
@@ -184,7 +146,7 @@ void messaging_adapter::on_link_remote_close(proton_event &pe) {
 void messaging_adapter::on_session_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_session_t *session = pn_event_session(cevent);
-    if (peer_close_iserror_ || pn_condition_is_set(pn_session_remote_condition(session))) {
+    if (pn_condition_is_set(pn_session_remote_condition(session))) {
         messaging_event mevent(messaging_event::SESSION_ERROR, pe);
         delegate_.on_session_error(mevent);
     }
@@ -196,7 +158,7 @@ void messaging_adapter::on_session_remote_close(proton_event &pe) {
 void messaging_adapter::on_connection_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_connection_t *connection = pn_event_connection(cevent);
-    if (peer_close_iserror_ || pn_condition_is_set(pn_connection_remote_condition(connection))) {
+    if (pn_condition_is_set(pn_connection_remote_condition(connection))) {
         messaging_event mevent(messaging_event::CONNECTION_ERROR, pe);
         delegate_.on_connection_error(mevent);
     }
@@ -223,13 +185,22 @@ void messaging_adapter::on_session_remote_open(proton_event &pe) {
     }
 }
 
+void messaging_adapter::on_link_local_open(proton_event &pe) {
+    credit_topup(pn_event_link(pe.pn_event()));
+}
+
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
     messaging_event mevent(messaging_event::LINK_OPEN, pe);
     delegate_.on_link_open(mevent);
-    pn_link_t *link = pn_event_link(pe.pn_event());
-    if (!is_local_open(pn_link_state(link)) && is_local_unititialised(pn_link_state(link))) {
-        pn_link_open(link);
+    pn_link_t *pnlink = pn_event_link(pe.pn_event());
+    if (!is_local_open(pn_link_state(pnlink)) && is_local_unititialised(pn_link_state(pnlink))) {
+        link lnk(pnlink);
+        if (pe.container_)
+            lnk.open(pe.container_->impl_->link_options_);
+        else
+            lnk.open();    // No default for engine
     }
+    credit_topup(pnlink);
 }
 
 void messaging_adapter::on_transport_tail_closed(proton_event &pe) {
@@ -249,6 +220,16 @@ void messaging_adapter::on_timer_task(proton_event& pe)
 {
     messaging_event mevent(messaging_event::TIMER, pe);
     delegate_.on_timer(mevent);
+}
+
+void messaging_adapter::credit_topup(pn_link_t *link) {
+    if (link && pn_link_is_receiver(link)) {
+        int window = link_context::get(link).credit_window;
+        if (window) {
+            int delta = window - pn_link_credit(link);
+            pn_link_flow(link, delta);
+        }
+    }
 }
 
 }

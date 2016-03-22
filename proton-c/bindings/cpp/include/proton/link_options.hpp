@@ -120,9 +120,6 @@ class link_options {
     /// Copy options.
     PN_CPP_EXTERN link_options& operator=(const link_options&);
 
-    /// Override with options from other.
-    PN_CPP_EXTERN void override(const link_options& other);
-
     /// Set a handler for events scoped to the link.  If NULL,
     /// link-scoped events on the link are discarded.
     PN_CPP_EXTERN link_options& handler(class handler *);
@@ -155,6 +152,18 @@ class link_options {
     /// Set the local address for the link.
     PN_CPP_EXTERN link_options& local_address(const std::string &addr);
 
+    /// Automatically accept inbound messages that aren't otherwise
+    /// released, rejected or modified (default value:true).
+    PN_CPP_EXTERN link_options& auto_accept(bool);
+
+    /// Automatically settle messages (default value: true).
+    PN_CPP_EXTERN link_options& auto_settle(bool);
+
+    /// Set automated flow control to pre-fetch this many messages
+    /// (default value:10).  Set to zero to disable automatic credit
+    /// replenishing.
+    PN_CPP_EXTERN link_options& credit_window(int);
+
     /// @cond INTERNAL
     /// XXX need to discuss spec issues, jms versus amqp filters
     ///
@@ -168,11 +177,13 @@ class link_options {
   private:
     void apply(link&) const;
     proton_handler* handler() const;
+    PN_CPP_EXTERN void update(const link_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     friend class link;
+    friend class container_impl;
     /// @endcond
 };
 

@@ -50,6 +50,7 @@ pn_class_t cpp_context_class = PN_CLASS(cpp_context);
 PN_HANDLE(CONNECTION_CONTEXT)
 PN_HANDLE(CONTAINER_CONTEXT)
 PN_HANDLE(LISTENER_CONTEXT)
+PN_HANDLE(LINK_CONTEXT)
 
 void set_context(pn_record_t* record, pn_handle_t handle, const pn_class_t *clazz, void* value)
 {
@@ -94,6 +95,17 @@ listener_context& listener_context::get(pn_acceptor_t* a) {
     if (!ctx) {
         ctx =  context::create<listener_context>();
         set_context(pn_selectable_attachments(sel), LISTENER_CONTEXT, context::pn_class(), ctx);
+        pn_decref(ctx);
+    }
+    return *ctx;
+}
+
+link_context& link_context::get(pn_link_t* l) {
+    link_context* ctx =
+        get_context<link_context>(pn_link_attachments(l), LINK_CONTEXT);
+    if (!ctx) {
+        ctx =  context::create<link_context>();
+        set_context(pn_link_attachments(l), LINK_CONTEXT, context::pn_class(), ctx);
         pn_decref(ctx);
     }
     return *ctx;

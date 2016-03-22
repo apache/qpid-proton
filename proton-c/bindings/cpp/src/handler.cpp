@@ -32,9 +32,7 @@
 
 namespace proton {
 
-handler::handler(int prefetch0, bool auto_accept0, bool auto_settle0, bool peer_close_is_error0) :
-    messaging_adapter_(new messaging_adapter(*this, prefetch0, auto_accept0, auto_settle0, peer_close_is_error0))
-{}
+handler::handler() : messaging_adapter_(new messaging_adapter(*this)) {}
 
 handler::~handler(){}
 

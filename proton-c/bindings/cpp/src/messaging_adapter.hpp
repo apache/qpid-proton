@@ -38,9 +38,7 @@ namespace proton {
 class messaging_adapter : public proton_handler
 {
   public:
-    messaging_adapter(handler &delegate,
-                                    int prefetch, bool auto_accept, bool auto_settle,
-                                    bool peer_close_is_error);
+    messaging_adapter(handler &delegate);
     virtual ~messaging_adapter();
 
     void on_reactor_init(proton_event &e);
@@ -50,6 +48,7 @@ class messaging_adapter : public proton_handler
     void on_connection_remote_close(proton_event &e);
     void on_session_remote_open(proton_event &e);
     void on_session_remote_close(proton_event &e);
+    void on_link_local_open(proton_event &e);
     void on_link_remote_open(proton_event &e);
     void on_link_remote_close(proton_event &e);
     void on_transport_tail_closed(proton_event &e);
@@ -57,12 +56,7 @@ class messaging_adapter : public proton_handler
 
   private:
     handler &delegate_;  // The handler for generated messaging_event's
-    int prefetch_;
-    bool auto_accept_;
-    bool auto_settle_;
-    bool peer_close_iserror_;
-    internal::pn_unique_ptr<proton_handler> flow_controller_;
-    void create_helpers();
+    void credit_topup(pn_link_t*);
 };
 
 }

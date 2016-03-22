@@ -294,6 +294,7 @@ class proton_event
     class container *container_;
   friend class messaging_event;
   friend class connection_engine;
+  friend class messaging_adapter;
 };
 
 }

@@ -83,6 +83,7 @@ class container_impl
     proton::link_options link_options_;
 
   friend class container;
+  friend class messaging_adapter;
 };
 
 }

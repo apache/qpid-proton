@@ -26,6 +26,7 @@
 
 #include "msg.hpp"
 #include "messaging_adapter.hpp"
+#include "contexts.hpp"
 
 
 namespace proton {
@@ -58,7 +59,7 @@ template <class T> struct option {
 
     option() : value(), set(false) {}
     option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void override(const option<T>& x) { if (x.set) *this = x.value; }
+    void update(const option<T>& x) { if (x.set) *this = x.value; }
 };
 
 class link_options::impl {
@@ -71,6 +72,9 @@ class link_options::impl {
     option<std::string> local_address;
     option<enum lifetime_policy> lifetime_policy;
     option<std::string> selector;
+    option<bool> auto_accept;
+    option<bool> auto_settle;
+    option<int> credit_window;
 
     void apply(link& l) {
         if (l.state() & endpoint::LOCAL_UNINIT) {
@@ -118,6 +122,7 @@ class link_options::impl {
                     }
                 }
             }
+            if (auto_settle.set) link_context::get(l.pn_object()).auto_settle = auto_settle.value;
             if (!sender) {
                 // receiver only options
                 if (distribution_mode.set) l.local_source().distribution_mode(distribution_mode.value);
@@ -130,19 +135,24 @@ class link_options::impl {
                     enc << codec::start::map() << symbol("selector") << codec::start::described()
                         << symbol("apache.org:selector-filter:string") << binary(selector.value) << codec::finish();
                 }
+                if (auto_accept.set) link_context::get(l.pn_object()).auto_accept = auto_accept.value;
+                if (credit_window.set) link_context::get(l.pn_object()).credit_window = credit_window.value;
             }
         }
     }
 
-    void override(const impl& x) {
-        handler.override(x.handler);
-        distribution_mode.override(x.distribution_mode);
-        durable_subscription.override(x.durable_subscription);
-        delivery_mode.override(x.delivery_mode);
-        dynamic_address.override(x.dynamic_address);
-        local_address.override(x.local_address);
-        lifetime_policy.override(x.lifetime_policy);
-        selector.override(x.selector);
+    void update(const impl& x) {
+        handler.update(x.handler);
+        distribution_mode.update(x.distribution_mode);
+        durable_subscription.update(x.durable_subscription);
+        delivery_mode.update(x.delivery_mode);
+        dynamic_address.update(x.dynamic_address);
+        local_address.update(x.local_address);
+        lifetime_policy.update(x.lifetime_policy);
+        selector.update(x.selector);
+        auto_accept.update(x.auto_accept);
+        auto_settle.update(x.auto_settle);
+        credit_window.update(x.credit_window);
     }
 
 };
@@ -158,7 +168,7 @@ link_options& link_options::operator=(const link_options& x) {
     return *this;
 }
 
-void link_options::override(const link_options& x) { impl_->override(*x.impl_); }
+void link_options::update(const link_options& x) { impl_->update(*x.impl_); }
 
 link_options& link_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 link_options& link_options::browsing(bool b) { distribution_mode(b ? terminus::COPY : terminus::MOVE); return *this; }
@@ -169,6 +179,9 @@ link_options& link_options::dynamic_address(bool b) {impl_->dynamic_address = b;
 link_options& link_options::local_address(const std::string &addr) {impl_->local_address = addr; return *this; }
 link_options& link_options::lifetime_policy(enum lifetime_policy lp) {impl_->lifetime_policy = lp; return *this; }
 link_options& link_options::selector(const std::string &str) {impl_->selector = str; return *this; }
+link_options& link_options::auto_accept(bool b) {impl_->auto_accept = b; return *this; }
+link_options& link_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
+link_options& link_options::credit_window(int w) {impl_->credit_window = w; return *this; }
 
 void link_options::apply(link& l) const { impl_->apply(l); }
 proton_handler* link_options::handler() const { return impl_->handler.value; }

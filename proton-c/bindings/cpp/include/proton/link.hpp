@@ -151,6 +151,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
   friend class proton_event;
   friend class link_iterator;
   friend class link_options;
+  friend class messaging_adapter;
 };
 
 /// An iterator for links.

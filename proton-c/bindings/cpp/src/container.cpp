@@ -81,4 +81,6 @@ void container::client_connection_options(const connection_options &o) { impl_->
 
 void container::server_connection_options(const connection_options &o) { impl_->server_connection_options(o); }
 
+void container::link_options(const class link_options &o) { impl_->link_options(o); }
+
 } // namespace proton
