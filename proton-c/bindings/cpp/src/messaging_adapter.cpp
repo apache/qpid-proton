@@ -147,13 +147,21 @@ bool is_local_unititialised(pn_state_t state) {
 void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
-    link l(lnk);
-    if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
-        messaging_event mevent(messaging_event::LINK_ERROR, pe);
-        delegate_.on_link_error(mevent, l);
+    messaging_event clevent(messaging_event::LINK_CLOSE, pe);
+    messaging_event eevent(messaging_event::LINK_ERROR, pe);
+    if (pn_link_is_receiver(lnk)) {
+        receiver r = link(lnk).receiver();
+        if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
+            delegate_.on_receiver_error(eevent, r);
+        }
+        delegate_.on_receiver_close(clevent, r);
+    } else {
+        sender s = link(lnk).sender();
+        if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
+            delegate_.on_sender_error(eevent, s);
+        }
+        delegate_.on_sender_close(clevent, s);
     }
-    messaging_event mevent(messaging_event::LINK_CLOSE, pe);
-    delegate_.on_link_close(mevent, l);
     pn_link_close(lnk);
 }
 
@@ -209,16 +217,22 @@ void messaging_adapter::on_link_local_open(proton_event &pe) {
 
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
     messaging_event mevent(messaging_event::LINK_OPEN, pe);
-    pn_link_t *link = pn_event_link(pe.pn_event());
-    class link l(link);
-    delegate_.on_link_open(mevent, l);
-    if (!is_local_open(pn_link_state(link)) && is_local_unititialised(pn_link_state(link))) {
+    pn_link_t *lnk = pn_event_link(pe.pn_event());
+    if (pn_link_is_receiver(lnk)) {
+      receiver r = link(lnk).receiver();
+      delegate_.on_receiver_open(mevent, r);
+    } else {
+      sender s = link(lnk).sender();
+      delegate_.on_sender_open(mevent, s);
+    }
+    if (!is_local_open(pn_link_state(lnk)) && is_local_unititialised(pn_link_state(lnk))) {
+        link l(lnk);
         if (pe.container_)
             l.open(pe.container_->impl_->link_options_);
         else
             l.open();    // No default for engine
     }
-    credit_topup(link);
+    credit_topup(lnk);
 }
 
 void messaging_adapter::on_transport_tail_closed(proton_event &pe) {

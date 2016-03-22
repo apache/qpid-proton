@@ -33,8 +33,7 @@
 
 namespace proton {
 
-// Combine's Python's: endpoint_state_handler, incoming_message_handler, outgoing_message_handler
-
+/// Convert the low level proton-c events to the higher level proton::handler calls
 class messaging_adapter : public proton_handler
 {
   public:

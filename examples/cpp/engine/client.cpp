@@ -53,9 +53,8 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_link_open(proton::event &e, proton::link &l) override {
-        if (l == receiver)
-            send_request();
+    void on_receiver_open(proton::event &e, proton::receiver &) override {
+        send_request();
     }
 
     void on_message(proton::event &e, proton::message &response) override {

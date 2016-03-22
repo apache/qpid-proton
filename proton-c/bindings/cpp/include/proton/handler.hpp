@@ -104,11 +104,18 @@ PN_CPP_CLASS_EXTERN handler
     PN_CPP_EXTERN virtual void on_session_error(event &e, session &s);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_link_open(event &e, link& l);
+    PN_CPP_EXTERN virtual void on_receiver_open(event &e, receiver& l);
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_link_close(event &e, link& l);
+    PN_CPP_EXTERN virtual void on_receiver_close(event &e, receiver& l);
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_link_error(event &e, link& l);
+    PN_CPP_EXTERN virtual void on_receiver_error(event &e, receiver& l);
+
+    /// The remote peer opened the link.
+    PN_CPP_EXTERN virtual void on_sender_open(event &e, sender& l);
+    /// The remote peer closed the link.
+    PN_CPP_EXTERN virtual void on_sender_close(event &e, sender& l);
+    /// The remote peer closed the link with an error condition.
+    PN_CPP_EXTERN virtual void on_sender_error(event &e, sender& l);
 
     /// The remote peer accepted an outgoing message.
     PN_CPP_EXTERN virtual void on_delivery_accept(event &e, delivery &d);

@@ -100,7 +100,11 @@ struct record_handler : public handler {
     std::deque<proton::session> sessions;
     std::deque<std::string> errors;
 
-    void on_link_open(event& e, link &l) override {
+    void on_receiver_open(event& e, receiver &l) override {
+        links.push_back(l);
+    }
+
+    void on_sender_open(event& e, sender &l) override {
         links.push_back(l);
     }
 

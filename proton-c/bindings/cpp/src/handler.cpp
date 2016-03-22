@@ -48,9 +48,12 @@ void handler::on_connection_open(event &e, connection &) { on_unhandled(e); }
 void handler::on_session_close(event &e, session &) { on_unhandled(e); }
 void handler::on_session_error(event &e, session &s) { on_unhandled_error(e, s.remote_condition()); }
 void handler::on_session_open(event &e, session &) { on_unhandled(e); }
-void handler::on_link_close(event &e, link &) { on_unhandled(e); }
-void handler::on_link_error(event &e, link &l) { on_unhandled_error(e, l.remote_condition()); }
-void handler::on_link_open(event &e, link &) { on_unhandled(e); }
+void handler::on_receiver_close(event &e, receiver &) { on_unhandled(e); }
+void handler::on_receiver_error(event &e, receiver &l) { on_unhandled_error(e, l.remote_condition()); }
+void handler::on_receiver_open(event &e, receiver &) { on_unhandled(e); }
+void handler::on_sender_close(event &e, sender &) { on_unhandled(e); }
+void handler::on_sender_error(event &e, sender &l) { on_unhandled_error(e, l.remote_condition()); }
+void handler::on_sender_open(event &e, sender &) { on_unhandled(e); }
 void handler::on_delivery_accept(event &e, delivery &) { on_unhandled(e); }
 void handler::on_delivery_reject(event &e, delivery &) { on_unhandled(e); }
 void handler::on_delivery_release(event &e, delivery &) { on_unhandled(e); }

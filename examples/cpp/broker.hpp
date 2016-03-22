@@ -154,23 +154,21 @@ class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_link_open(proton::event &e, proton::link &lnk) override {
+    void on_sender_open(proton::event &e, proton::sender &sender) override {
+        proton::terminus remote_source(sender.remote_source());
+        queue &q = remote_source.dynamic() ?
+            queues_.dynamic() : queues_.get(remote_source.address());
+        sender.local_source().address(q.name());
 
-        if (!!lnk.sender()) {
-            proton::terminus remote_source(lnk.remote_source());
-            queue &q = remote_source.dynamic() ?
-                queues_.dynamic() : queues_.get(remote_source.address());
-            lnk.local_source().address(q.name());
+        q.subscribe(sender);
+        std::cout << "broker outgoing link from " << q.name() << std::endl;
+    }
 
-            q.subscribe(lnk.sender());
-            std::cout << "broker outgoing link from " << q.name() << std::endl;
-        } else {
-            // Receiver
-            std::string address = lnk.remote_target().address();
-            if (!address.empty()) {
-                lnk.local_target().address(address);
-                std::cout << "broker incoming link to " << address << std::endl;
-            }
+    void on_receiver_open(proton::event &e, proton::receiver &receiver) override {
+        std::string address = receiver.remote_target().address();
+        if (!address.empty()) {
+            receiver.local_target().address(address);
+            std::cout << "broker incoming link to " << address << std::endl;
         }
     }
 
@@ -182,10 +180,8 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_link_close(proton::event &e, proton::link &lnk) override {
-        if (!!lnk.sender()) {
-            unsubscribe(lnk.sender());
-        }
+    void on_sender_close(proton::event &e, proton::sender &sender) override {
+        unsubscribe(sender);
     }
 
     void on_connection_close(proton::event &e, proton::connection &c) override {

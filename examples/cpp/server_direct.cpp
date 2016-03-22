@@ -66,10 +66,10 @@ class server : public proton::handler {
         return addr.str();
     }
 
-    void on_link_open(proton::event& e, proton::link &link) override {
-        if (!!link.sender() && link.remote_source().dynamic()) {
-            link.local_source().address(generate_address());
-            senders[link.local_source().address()] = link.sender();
+    void on_sender_open(proton::event& e, proton::sender &sender) override {
+        if (sender.remote_source().dynamic()) {
+            sender.local_source().address(generate_address());
+            senders[sender.local_source().address()] = sender;
         }
     }
 
