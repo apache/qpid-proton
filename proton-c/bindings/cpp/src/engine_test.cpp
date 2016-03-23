@@ -104,11 +104,11 @@ struct record_handler : public handler {
         links.push_back(e.link());
     }
 
-    void on_session_open(event& e) {
+    void on_session_open(event& e) override {
         sessions.push_back(e.session());
     }
 
-    void on_unhandled_error(event& e, const condition& c) {
+    void on_unhandled_error(event& e, const condition& c) override {
         errors.push_back(e.name() + "/" + c.what());
     }
 };
