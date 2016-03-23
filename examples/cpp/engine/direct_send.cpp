@@ -42,10 +42,6 @@ class simple_send : public proton::handler {
   public:
     simple_send(int c) : sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) override {
-        e.connection().open();
-    }
-
     void on_sendable(proton::event &e) override {
         proton::sender sender = e.sender();
         while (sender.credit() && sent < total) {

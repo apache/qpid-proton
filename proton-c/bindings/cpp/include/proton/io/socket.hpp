@@ -100,10 +100,10 @@ class listener {
 /// A \ref connection_engine with non-blocking socket IO.
 class engine : public connection_engine {
   public:
-    /// Wrap an open socket. Sets non-blocking mode.
+    /// Wrap an open socket. Does not automatically open the connection.
     PN_CPP_EXTERN engine(descriptor socket_, handler&, const connection_options& = connection_options());
 
-    /// Create socket engine connected to url.
+    /// Create socket engine connected to url, open the connection as a client.
     PN_CPP_EXTERN engine(const url&, handler&, const connection_options& = connection_options());
 
     PN_CPP_EXTERN ~engine();

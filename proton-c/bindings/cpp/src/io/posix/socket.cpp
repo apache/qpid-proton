@@ -78,6 +78,7 @@ engine::engine(const url& u, handler& h, const connection_options& opts)
     : connection_engine(h, opts), socket_(connect(u))
 {
     init();
+    connection().open();
 }
 
 engine::~engine() {}

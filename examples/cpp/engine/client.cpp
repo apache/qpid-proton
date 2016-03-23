@@ -41,8 +41,7 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_start(proton::event &e) override {
-        e.connection().open();
+    void on_connection_open(proton::event &e) override {
         sender = e.connection().open_sender(url.path());
         receiver = e.connection().open_receiver("", proton::link_options().dynamic_address(true));
     }

@@ -127,8 +127,7 @@ int main(int argc, char **argv) {
 #include "proton/container.hpp"
 #include "proton/value.hpp"
 
-
-#include "fake_cpp11.hpp"
+#include "../fake_cpp11.hpp"
 
 class broker {
   public:

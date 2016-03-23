@@ -44,8 +44,7 @@ class simple_send : public proton::handler {
 
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) override {
-        e.connection().open();
+    void on_connection_open(proton::event &e) override {
         sender = e.connection().open_sender(url.path());
     }
 

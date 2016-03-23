@@ -35,8 +35,7 @@ class hello_world : public proton::handler {
   public:
     hello_world(const std::string& address) : address_(address) {}
 
-    void on_start(proton::event &e) override {
-        e.connection().open();
+    void on_connection_open(proton::event &e) override {
         e.connection().open_receiver(address_);
         e.connection().open_sender(address_);
     }

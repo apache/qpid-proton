@@ -109,15 +109,6 @@ bool connection_engine::dispatch() {
          e;
          e = pn_collector_peek(collector_.get()))
     {
-        switch (pn_event_type(e)) {
-          case PN_CONNECTION_INIT:
-            // FIXME aconway 2016-03-21: don't use START in connection handlers
-            // reserve it for containers.
-            proton_event(e, PN_REACTOR_INIT, 0).dispatch(h);
-            break;
-          default:
-            break;
-        }
         proton_event(e, pn_event_type(e), 0).dispatch(h);
         pn_collector_pop(collector_.get());
     }
