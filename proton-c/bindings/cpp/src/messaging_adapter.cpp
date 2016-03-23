@@ -39,10 +39,21 @@
 
 namespace proton {
 
+namespace {
+void credit_topup(pn_link_t *link) {
+    if (link && pn_link_is_receiver(link)) {
+        int window = link_context::get(link).credit_window;
+        if (window) {
+            int delta = window - pn_link_credit(link);
+            pn_link_flow(link, delta);
+        }
+    }
+}
+}
+
 messaging_adapter::messaging_adapter(handler &delegate) : delegate_(delegate) {}
 
 messaging_adapter::~messaging_adapter(){}
-
 
 void messaging_adapter::on_reactor_init(proton_event &pe) {
     messaging_event mevent(messaging_event::START, pe);
@@ -220,16 +231,6 @@ void messaging_adapter::on_timer_task(proton_event& pe)
 {
     messaging_event mevent(messaging_event::TIMER, pe);
     delegate_.on_timer(mevent);
-}
-
-void messaging_adapter::credit_topup(pn_link_t *link) {
-    if (link && pn_link_is_receiver(link)) {
-        int window = link_context::get(link).credit_window;
-        if (window) {
-            int delta = window - pn_link_credit(link);
-            pn_link_flow(link, delta);
-        }
-    }
 }
 
 }

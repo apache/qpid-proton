@@ -56,7 +56,6 @@ class messaging_adapter : public proton_handler
 
   private:
     handler &delegate_;  // The handler for generated messaging_event's
-    void credit_topup(pn_link_t*);
 };
 
 }
