@@ -122,7 +122,7 @@ class link_options::impl {
                     }
                 }
             }
-            if (auto_settle.set) link_context::get(l.pn_object()).auto_settle = auto_settle.value;
+            if (auto_settle.set) l.context().auto_settle = auto_settle.value;
             if (!sender) {
                 // receiver only options
                 if (distribution_mode.set) l.local_source().distribution_mode(distribution_mode.value);
@@ -135,8 +135,8 @@ class link_options::impl {
                     enc << codec::start::map() << symbol("selector") << codec::start::described()
                         << symbol("apache.org:selector-filter:string") << binary(selector.value) << codec::finish();
                 }
-                if (auto_accept.set) link_context::get(l.pn_object()).auto_accept = auto_accept.value;
-                if (credit_window.set) link_context::get(l.pn_object()).credit_window = credit_window.value;
+                if (auto_accept.set) l.context().auto_accept = auto_accept.value;
+                if (credit_window.set) l.context().credit_window = credit_window.value;
             }
         }
     }

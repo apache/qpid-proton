@@ -39,6 +39,7 @@ namespace proton {
 class sender;
 class receiver;
 class condition;
+class link_context;
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
@@ -142,6 +143,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     // Used by message to decode message from a delivery
     ssize_t recv(char* buffer, size_t size);
     bool advance();
+    link_context &context();
 
   friend class connection;
   friend class delivery;

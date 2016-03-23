@@ -146,4 +146,8 @@ link_iterator link_iterator::operator++() {
     return *this;
 }
 
+link_context &link::context() {
+    return link_context::get(pn_object());
+}
+
 }
