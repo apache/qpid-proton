@@ -136,7 +136,7 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX settle API questions around task
     /// XXX register functions instead of having these funny generic events
     /// A timer fired.
-    PN_CPP_EXTERN virtual void on_timer(event &e);
+    PN_CPP_EXTERN virtual void on_timer(event &e, container &c);
     /// @endcond
 
     /// Fallback event handling.

@@ -32,13 +32,13 @@
 #include "fake_cpp11.hpp"
 
 class ticker : public proton::handler {
-    void on_timer(proton::event &e) override {
+    void on_timer(proton::event &e, proton::container &) override {
         std::cout << "Tick..." << std::endl;
     }
 };
 
 class tocker : public proton::handler {
-    void on_timer(proton::event &e) override {
+    void on_timer(proton::event &e, proton::container &) override {
         std::cout << "Tock..." << std::endl;
     }
 };
@@ -54,28 +54,28 @@ class recurring : public proton::handler {
 
     recurring(int msecs, int tickms) : remaining_msecs(msecs), tick_ms(tickms), cancel_task(0) {}
 
-    proton::task ticktock(proton::event &e) {
+    proton::task ticktock(proton::container &c) {
         // Show timer events in separate handlers.
-        e.container().schedule(tick_ms, &tick_handler);
-        return e.container().schedule(tick_ms * 3, &tock_handler);
+        c.schedule(tick_ms, &tick_handler);
+        return c.schedule(tick_ms * 3, &tock_handler);
     }
 
     void on_container_start(proton::event &e, proton::container &c) override {
         // Demonstrate cancel(), we will cancel the first tock on the first recurring::on_timer_task
-        cancel_task = ticktock(e);
+        cancel_task = ticktock(c);
         c.schedule(0);
     }
 
-    void on_timer(proton::event &e) override {
+    void on_timer(proton::event &e, proton::container &c) override {
         if (!!cancel_task) {
             cancel_task.cancel();
             cancel_task = 0;
-            e.container().schedule(tick_ms * 4);
+            c.schedule(tick_ms * 4);
         } else {
             remaining_msecs -= tick_ms * 4;
             if (remaining_msecs > 0) {
-                ticktock(e);
-                e.container().schedule(tick_ms * 4);
+                ticktock(c);
+                c.schedule(tick_ms * 4);
             }
         }
     }

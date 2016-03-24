@@ -39,7 +39,7 @@ handler::~handler(){}
 void handler::on_container_start(event &e, container &) { on_unhandled(e); }
 void handler::on_message(event &e, message &) { on_unhandled(e); }
 void handler::on_sendable(event &e, sender &) { on_unhandled(e); }
-void handler::on_timer(event &e) { on_unhandled(e); }
+void handler::on_timer(event &e, container &) { on_unhandled(e); }
 void handler::on_transport_close(event &e, transport &) { on_unhandled(e); }
 void handler::on_transport_error(event &e, transport &t) { on_unhandled_error(e, t.condition()); }
 void handler::on_connection_close(event &e, connection &) { on_unhandled(e); }
