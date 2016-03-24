@@ -58,7 +58,9 @@ messaging_adapter::~messaging_adapter(){}
 
 void messaging_adapter::on_reactor_init(proton_event &pe) {
     messaging_event mevent(messaging_event::START, pe);
-    delegate_.on_start(mevent);
+    // Container specific event
+    if (pe.container())
+        delegate_.on_container_start(mevent, *pe.container());
 }
 
 void messaging_adapter::on_link_flow(proton_event &pe) {
@@ -227,8 +229,8 @@ void messaging_adapter::on_link_remote_open(proton_event &pe) {
     }
     if (!is_local_open(pn_link_state(lnk)) && is_local_unititialised(pn_link_state(lnk))) {
         link l(lnk);
-        if (pe.container_)
-            l.open(pe.container_->impl_->link_options_);
+        if (pe.container())
+            l.open(pe.container()->impl_->link_options_);
         else
             l.open();    // No default for engine
     }

@@ -141,8 +141,8 @@ class broker {
       public:
         my_handler(const proton::url& u, queues& qs) : broker_handler(qs), url_(u) {}
 
-        void on_start(proton::event &e) override {
-            e.container().listen(url_);
+        void on_container_start(proton::event &e, proton::container &c) override {
+            c.listen(url_);
             std::cout << "broker listening on " << url_ << std::endl;
         }
 

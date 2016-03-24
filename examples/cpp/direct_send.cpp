@@ -44,8 +44,8 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) override {
-        acceptor = e.container().listen(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        acceptor = c.listen(url);
         std::cout << "direct_send listening on " << url << std::endl;
     }
 

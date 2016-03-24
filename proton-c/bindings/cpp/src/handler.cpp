@@ -36,7 +36,7 @@ handler::handler() : messaging_adapter_(new messaging_adapter(*this)) {}
 
 handler::~handler(){}
 
-void handler::on_start(event &e) { on_unhandled(e); }
+void handler::on_container_start(event &e, container &) { on_unhandled(e); }
 void handler::on_message(event &e, message &) { on_unhandled(e); }
 void handler::on_sendable(event &e, sender &) { on_unhandled(e); }
 void handler::on_timer(event &e) { on_unhandled(e); }

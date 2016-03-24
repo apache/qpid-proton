@@ -29,6 +29,7 @@
 namespace proton {
 
 class condition;
+class container;
 class event;
 class transport;
 class connection;
@@ -63,7 +64,7 @@ PN_CPP_CLASS_EXTERN handler
     /// @{
 
     /// The event loop is starting.
-    PN_CPP_EXTERN virtual void on_start(event &e);
+    PN_CPP_EXTERN virtual void on_container_start(event &e, container &c);
     /// A message is received.
     PN_CPP_EXTERN virtual void on_message(event &e, message &m);
     /// A message can be sent.

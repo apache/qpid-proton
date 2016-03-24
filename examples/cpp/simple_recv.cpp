@@ -43,8 +43,8 @@ class simple_recv : public proton::handler {
   public:
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) override {
-        receiver = e.container().open_receiver(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        receiver = c.open_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 

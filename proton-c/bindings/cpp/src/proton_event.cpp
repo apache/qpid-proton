@@ -49,10 +49,8 @@ std::string proton_event::name() const { return pn_event_type_name(pn_event_type
 
 pn_event_t *proton_event::pn_event() const { return pn_event_; }
 
-container& proton_event::container() const {
-    if (!container_)
-        throw error(MSG("No container context for this event"));
-    return *container_;
+container* proton_event::container() const {
+    return container_;
 }
 
 transport proton_event::transport() const {

@@ -36,9 +36,9 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) override {
-        acceptor = e.container().listen(url);
-        e.container().open_sender(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        acceptor = c.listen(url);
+        c.open_sender(url);
     }
 
     void on_sendable(proton::event &e, proton::sender &s) override {

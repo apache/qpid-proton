@@ -77,7 +77,7 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) override {
+    void on_container_start(proton::event &e, proton::container &c) override {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         std::string client_CA = platform_CA("tclient");
@@ -86,7 +86,7 @@ class hello_world_direct : public proton::handler {
         connection_options server_opts;
         server_opts.ssl_server_options(srv_ssl).handler(&s_handler);
         server_opts.sasl_allowed_mechs("EXTERNAL");
-        e.container().server_connection_options(server_opts);
+        c.server_connection_options(server_opts);
 
         // Configure client.
         ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
@@ -96,10 +96,10 @@ class hello_world_direct : public proton::handler {
         ssl_client_options ssl_cli(client_cert, server_CA, proton::ssl::VERIFY_PEER);
         connection_options client_opts;
         client_opts.ssl_client_options(ssl_cli).sasl_allowed_mechs("EXTERNAL");
-        e.container().client_connection_options(client_opts);
+        c.client_connection_options(client_opts);
 
-        s_handler.inbound_listener = e.container().listen(url);
-        e.container().open_sender(url);
+        s_handler.inbound_listener = c.listen(url);
+        c.open_sender(url);
     }
 
     void on_connection_open(proton::event &e, proton::connection &c) override {

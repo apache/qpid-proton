@@ -67,13 +67,13 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) override {
+    void on_container_start(proton::event &e, proton::container &c) override {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
         connection_options server_opts;
         server_opts.ssl_server_options(ssl_srv).handler(&s_handler);
-        e.container().server_connection_options(server_opts);
+        c.server_connection_options(server_opts);
 
         // Configure client with a Certificate Authority database populated with the server's self signed certificate.
         // Since the test certifcate's credentials are unlikely to match this host's name, downgrade the verification
@@ -81,10 +81,10 @@ class hello_world_direct : public proton::handler {
         connection_options client_opts;
         ssl_client_options ssl_cli(platform_CA("tserver"), proton::ssl::VERIFY_PEER);
         client_opts.ssl_client_options(ssl_cli);
-        e.container().client_connection_options(client_opts);
+        c.client_connection_options(client_opts);
 
-        s_handler.acceptor = e.container().listen(url);
-        e.container().open_sender(url);
+        s_handler.acceptor = c.listen(url);
+        c.open_sender(url);
     }
 
     void on_connection_open(proton::event &e, proton::connection &c) override {

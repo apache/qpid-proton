@@ -48,10 +48,10 @@ class main_handler : public proton::handler {
   public:
     main_handler(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) override {
+    void on_container_start(proton::event &e, proton::container &c) override {
         // Connection options for this connection.  Merged with and overriding the container's
         // client_connection_options() settings.
-        e.container().connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
+        c.connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
     }
 
     void on_connection_open(proton::event &e, proton::connection &c) override {

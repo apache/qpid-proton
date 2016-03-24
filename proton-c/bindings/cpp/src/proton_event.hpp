@@ -274,7 +274,8 @@ class proton_event
 
     void dispatch(proton_handler& h);
 
-    class container& container() const;
+    class container* container() const;
+
     class transport transport() const;
     class connection connection() const;
     class session session() const;
@@ -292,9 +293,6 @@ class proton_event
     mutable pn_event_t *pn_event_;
     event_type type_;
     class container *container_;
-  friend class messaging_event;
-  friend class connection_engine;
-  friend class messaging_adapter;
 };
 
 }

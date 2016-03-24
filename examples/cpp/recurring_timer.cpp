@@ -60,10 +60,10 @@ class recurring : public proton::handler {
         return e.container().schedule(tick_ms * 3, &tock_handler);
     }
 
-    void on_start(proton::event &e) override {
+    void on_container_start(proton::event &e, proton::container &c) override {
         // Demonstrate cancel(), we will cancel the first tock on the first recurring::on_timer_task
         cancel_task = ticktock(e);
-        e.container().schedule(0);
+        c.schedule(0);
     }
 
     void on_timer(proton::event &e) override {

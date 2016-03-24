@@ -44,8 +44,8 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u) {}
 
-    void on_start(proton::event &e) override {
-        connection = e.container().connect(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        connection = c.connect(url);
         connection.open_receiver(url.path());
 
         std::cout << "server connected to " << url << std::endl;

@@ -40,8 +40,8 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_start(proton::event &e) override {
-        sender = e.container().open_sender(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        sender = c.open_sender(url);
         // Create a receiver with a dynamically chosen unique address.
         receiver = sender.connection().open_receiver("", proton::link_options().dynamic_address(true));
     }

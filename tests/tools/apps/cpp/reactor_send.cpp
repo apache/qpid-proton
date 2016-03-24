@@ -37,6 +37,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#if __cplusplus < 201103L
+#define override
+#endif
 
 class reactor_send : public proton::handler {
   private:
@@ -63,14 +66,12 @@ class reactor_send : public proton::handler {
         message_.body(content);
     }
 
-    void on_start(proton::event &e) {
-        e.container().link_options(proton::link_options().credit_window(1024));
-        e.container().open_sender(url_);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        c.link_options(proton::link_options().credit_window(1024));
+        c.open_sender(url_);
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
-
+    void on_sendable(proton::event &e, proton::sender &sender) override {
         while (sender.credit() && sent_ < total_) {
             id_value_ = sent_ + 1;
             message_.correlation_id(id_value_);
@@ -80,18 +81,17 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_accepted(proton::event &e) {
+    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
         confirmed_++;
-        e.delivery().settle();
+        d.settle();
         if (confirmed_ == total_) {
             std::cout << "all messages confirmed" << std::endl;
             if (!replying_)
-                e.connection().close();
+                d.link().connection().close();
         }
     }
 
-    void on_message(proton::event &e) {
-        proton::message &msg = e.message();
+    void on_message(proton::event &e, proton::message &msg) override {
         received_content_ = proton::get<proton::binary>(msg.body());
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
@@ -104,7 +104,7 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_disconnected(proton::event &e) {
+    void on_transport_close(proton::event &e, proton::transport &) override {
         sent_ = confirmed_;
     }
 };

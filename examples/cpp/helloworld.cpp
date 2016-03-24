@@ -35,8 +35,8 @@ class hello_world : public proton::handler {
   public:
     hello_world(const proton::url& u) : url(u) {}
 
-    void on_start(proton::event &e) override {
-        proton::connection conn = e.container().connect(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        proton::connection conn = c.connect(url);
         conn.open_receiver(url.path());
         conn.open_sender(url.path());
     }

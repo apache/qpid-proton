@@ -44,8 +44,8 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) override {
-        acceptor = e.container().listen(url);
+    void on_container_start(proton::event &e, proton::container &c) override {
+        acceptor = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
