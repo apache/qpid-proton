@@ -47,9 +47,9 @@ class hello_world : public proton::handler {
         s.close();
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
-        e.connection().close();
+        d.connection().close();
     }
 };
 

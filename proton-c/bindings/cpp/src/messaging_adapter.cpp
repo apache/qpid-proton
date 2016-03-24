@@ -97,7 +97,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
                 if (lctx.auto_accept)
                     dlv.release();
             } else {
-                delegate_.on_message(mevent, msg);
+                delegate_.on_message(mevent, dlv, msg);
                 if (lctx.auto_accept && !dlv.settled())
                     dlv.accept();
             }

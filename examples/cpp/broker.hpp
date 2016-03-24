@@ -214,9 +214,9 @@ class broker_handler : public proton::handler {
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
-        std::string address = e.link().local_target().address();
-        queues_.get(address).publish(m, e.link().receiver());
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+        std::string address = d.link().local_target().address();
+        queues_.get(address).publish(m, d.link().receiver());
     }
 
   protected:

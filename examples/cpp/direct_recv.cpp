@@ -49,7 +49,7 @@ class direct_recv : public proton::handler {
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e, proton::message &msg) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }
@@ -60,8 +60,8 @@ class direct_recv : public proton::handler {
         }
 
         if (received == expected) {
-            e.receiver().close();
-            e.connection().close();
+            d.link().close();
+            d.connection().close();
 
             if (!!acceptor) acceptor.close();
         }

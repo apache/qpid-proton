@@ -66,7 +66,7 @@ PN_CPP_CLASS_EXTERN handler
     /// The event loop is starting.
     PN_CPP_EXTERN virtual void on_container_start(event &e, container &c);
     /// A message is received.
-    PN_CPP_EXTERN virtual void on_message(event &e, message &m);
+    PN_CPP_EXTERN virtual void on_message(event &e, delivery &d, message &m);
     /// A message can be sent.
     PN_CPP_EXTERN virtual void on_sendable(event &e, sender &s);
 

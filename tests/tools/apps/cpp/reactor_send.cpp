@@ -87,20 +87,20 @@ class reactor_send : public proton::handler {
         if (confirmed_ == total_) {
             std::cout << "all messages confirmed" << std::endl;
             if (!replying_)
-                d.link().connection().close();
+                d.connection().close();
         }
     }
 
-    void on_message(proton::event &e, proton::message &msg) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
         received_content_ = proton::get<proton::binary>(msg.body());
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
             received_++;
         }
-        e.delivery().settle();
+        d.settle();
         if (received_ == total_) {
-            e.receiver().close();
-            e.connection().close();
+            d.link().close();
+            d.connection().close();
         }
     }
 

@@ -44,6 +44,12 @@ class delivery : public internal::object<pn_delivery_t> {
     /// Return the link for this delivery
     PN_CPP_EXTERN class link link() const;
 
+    /// Return the session for this delivery
+    PN_CPP_EXTERN class session session() const;
+
+    /// Return the connection for this delivery
+    PN_CPP_EXTERN class connection connection() const;
+
     /// Delivery state values.
     enum state {
         NONE = 0,               ///< Unknown state

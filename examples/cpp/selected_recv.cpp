@@ -41,7 +41,7 @@ class selected_recv : public proton::handler {
         conn.open_receiver(url.path(), proton::link_options().selector("colour = 'green'"));
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };

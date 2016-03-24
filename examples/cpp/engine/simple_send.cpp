@@ -59,11 +59,11 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &) override {
+    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-            e.connection().close();
+            d.connection().close();
         }
     }
 

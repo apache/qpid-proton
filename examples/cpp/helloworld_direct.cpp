@@ -47,12 +47,12 @@ class hello_world_direct : public proton::handler {
         s.close();
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &) override {
-        e.connection().close();
+    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
+        d.connection().close();
     }
 
     void on_connection_close(proton::event &, proton::connection &) override {

@@ -58,7 +58,7 @@ class client : public proton::handler {
         send_request();
     }
 
-    void on_message(proton::event &e, proton::message &response) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
 
         std::cout << requests.front() << " => " << response.body() << std::endl;
@@ -67,7 +67,7 @@ class client : public proton::handler {
         if (!requests.empty()) {
             send_request();
         } else {
-            e.connection().close();
+            d.connection().close();
         }
     }
 };

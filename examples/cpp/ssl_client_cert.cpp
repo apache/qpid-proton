@@ -63,7 +63,7 @@ struct server_handler : public proton::handler {
         inbound_listener.close();
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };
@@ -115,9 +115,9 @@ class hello_world_direct : public proton::handler {
         s.close();
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &) override {
+    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
         // All done.
-        e.connection().close();
+        d.connection().close();
     }
 };
 

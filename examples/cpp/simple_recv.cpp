@@ -48,7 +48,7 @@ class simple_recv : public proton::handler {
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e, proton::message &msg) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received) {
             return; // Ignore duplicate
         }
@@ -58,8 +58,8 @@ class simple_recv : public proton::handler {
             received++;
 
             if (received == expected) {
-                e.receiver().close();
-                e.connection().close();
+                d.link().close();
+                d.connection().close();
             }
         }
     }

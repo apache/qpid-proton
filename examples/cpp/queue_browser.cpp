@@ -41,11 +41,11 @@ class browser : public proton::handler {
         conn.open_receiver(url.path(), proton::link_options().browsing(true));
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
 
-        if (e.receiver().queued() == 0 && e.receiver().drained() > 0) {
-            e.connection().close();
+        if (d.link().queued() == 0 && d.link().drained() > 0) {
+            d.connection().close();
         }
     }
 };

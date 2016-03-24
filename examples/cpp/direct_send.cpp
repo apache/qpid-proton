@@ -69,7 +69,7 @@ class simple_send : public proton::handler {
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
 
-            d.link().connection().close();
+            d.connection().close();
             acceptor.close();
         }
     }

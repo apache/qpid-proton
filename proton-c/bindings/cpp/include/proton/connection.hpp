@@ -134,6 +134,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     friend class transport;
     friend class session;
     friend class link;
+    friend class delivery;
     friend class reactor;
     friend class proton_event;
     friend class override_handler;

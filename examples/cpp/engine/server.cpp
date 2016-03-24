@@ -57,15 +57,15 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e, proton::message &m) override {
+    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
         std::cout << "Received " << m.body() << std::endl;
         std::string reply_to = m.reply_to();
         proton::message reply;
         reply.address(reply_to);
-        reply.body(to_upper(proton::get<std::string>(e.message().body())));
-        reply.correlation_id(e.message().correlation_id());
+        reply.body(to_upper(proton::get<std::string>(m.body())));
+        reply.correlation_id(m.correlation_id());
         if (!senders[reply_to])
-            senders[reply_to] = e.connection().open_sender(reply_to);
+            senders[reply_to] = d.connection().open_sender(reply_to);
         senders[reply_to].send(reply);
     }
 };
