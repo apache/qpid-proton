@@ -71,7 +71,6 @@ class messaging_event : public event
     messaging_event(event_type t, pn_event_t*);
     ~messaging_event();
 
-    class container& container() const;
     class transport transport() const;
     class connection connection() const;
     class session session() const;

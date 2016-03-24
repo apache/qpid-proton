@@ -50,12 +50,6 @@ messaging_event::~messaging_event() {}
 
 messaging_event::event_type messaging_event::type() const { return type_; }
 
-container& messaging_event::container() const {
-    if (parent_event_)
-        return *parent_event_->container();
-    throw error(MSG("No container context for event"));
-}
-
 transport messaging_event::transport() const {
     if (parent_event_)
         return parent_event_->transport();
