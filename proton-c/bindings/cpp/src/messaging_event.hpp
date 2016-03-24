@@ -78,7 +78,6 @@ class messaging_event : public event
     class receiver receiver() const;
     class link link() const;
     class delivery delivery() const;
-    class message& message() const;
 
     event_type type() const;
 
@@ -86,7 +85,6 @@ class messaging_event : public event
   friend class messaging_adapter;
     event_type type_;
     proton_event *parent_event_;
-    class message *message_;
     messaging_event operator=(const messaging_event&);
     messaging_event(const messaging_event&);
 };

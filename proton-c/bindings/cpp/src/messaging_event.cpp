@@ -43,7 +43,7 @@
 namespace proton {
 
 messaging_event::messaging_event(event_type t, proton_event &p) :
-    type_(t), parent_event_(&p), message_(0)
+    type_(t), parent_event_(&p)
 {}
 
 messaging_event::~messaging_event() {}
@@ -90,12 +90,6 @@ delivery messaging_event::delivery() const {
     if (parent_event_)
         return parent_event_->delivery();
     throw error(MSG("No delivery context for event"));
-}
-
-message &messaging_event::message() const {
-    if (type_ != messaging_event::MESSAGE || !parent_event_)
-        throw error(MSG("event type does not provide message"));
-    return *message_;
 }
 
 std::string messaging_event::name() const {

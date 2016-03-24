@@ -86,11 +86,6 @@ class event {
     /// @throw proton::error if no delivery
     virtual PN_CPP_EXTERN class delivery delivery() const = 0;
 
-    /// Get message.
-    ///
-    /// @throw proton::error if no message
-    virtual PN_CPP_EXTERN class message &message() const = 0;
-
     // XXX Should we have a notion of application data?  Perhaps this
     // is relevant to timer and app events.
 };

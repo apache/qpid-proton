@@ -91,8 +91,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
             // Avoid expensive heap malloc/free overhead.
             // See PROTON-998
             class message &msg(ctx.event_message);
-            mevent.message_ = &msg;
-            mevent.message_->decode(dlv);
+            msg.decode(dlv);
             if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                 if (lctx.auto_accept)
                     dlv.release();

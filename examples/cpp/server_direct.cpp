@@ -87,7 +87,7 @@ class server : public proton::handler {
 
             reply.address(reply_to);
             reply.body(to_upper(proton::get<std::string>(m.body())));
-            reply.correlation_id(e.message().correlation_id());
+            reply.correlation_id(m.correlation_id());
 
             sender.send(reply);
         }
