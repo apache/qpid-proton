@@ -2496,7 +2496,14 @@ class Connection(Wrapper, Endpoint):
   def _set_hostname(self, name):
     return pn_connection_set_hostname(self._impl, unicode2utf8(name))
 
-  hostname = property(_get_hostname, _set_hostname)
+  hostname = property(_get_hostname, _set_hostname,
+                      doc="""
+Set the name of the host (either fully qualified or relative) to which this
+connection is connecting to.  This information may be used by the remote
+peer to determine the correct back-end service to connect the client to.
+This value will be sent in the Open performative, and will be used by SSL
+and SASL layers to identify the peer.
+""")
 
   def _get_user(self):
     return utf82unicode(pn_connection_get_user(self._impl))

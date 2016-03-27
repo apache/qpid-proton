@@ -42,6 +42,7 @@ import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.apache.qpid.proton.reactor.Selector;
+import org.apache.qpid.proton.messenger.impl.Address;
 
 public class IOHandler extends BaseHandler {
 
@@ -87,20 +88,34 @@ public class IOHandler extends BaseHandler {
     // pni_handle_bound(...) from connection.c
     private void handleBound(Reactor reactor, Event event) {
         Connection connection = event.getConnection();
+        String url = reactor.getConnectionAddress(connection);
         String hostname = connection.getHostname();
-        if (hostname == null || hostname.equals("")) {
-            return;
-        }
-
-        int colonIndex = hostname.indexOf(':');
         int port = 5672;
-        if (colonIndex >= 0) {
+
+        if (url != null) {
+            Address address = new Address(url);
+            hostname = address.getHost();
             try {
-                port = Integer.parseInt(hostname.substring(colonIndex+1));
+                port = Integer.parseInt(address.getImpliedPort());
             } catch(NumberFormatException nfe) {
-                throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+                throw new IllegalArgumentException("Not a valid host: " + url, nfe);
             }
-            hostname = hostname.substring(0, colonIndex);
+        } else if (hostname != null && !hostname.equals("")) {
+            // Backward compatibility with old code that illegally overloaded
+            // the connection's hostname
+            int colonIndex = hostname.indexOf(':');
+            if (colonIndex >= 0) {
+                try {
+                    port = Integer.parseInt(hostname.substring(colonIndex+1));
+                } catch(NumberFormatException nfe) {
+                    throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+                }
+                hostname = hostname.substring(0, colonIndex);
+            }
+        } else {
+            // The transport connection already exists (like Acceptor), so no
+            // socket needed.
+            return;
         }
 
         Transport transport = event.getConnection().getTransport();

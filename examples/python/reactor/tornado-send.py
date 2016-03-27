@@ -20,21 +20,20 @@
 
 import sys, tornado.ioloop
 from tornado_app import TornadoApp
-from proton import Message
+from proton import Message, Url
 from proton.handlers import CHandshaker
 
 class Send:
 
-    def __init__(self, host, message):
-        self.host = host
+    def __init__(self, message, target):
         self.message = message
+        self.target = target if target is not None else "examples"
         # Use the handlers property to add some default handshaking
         # behaviour.
         self.handlers = [CHandshaker()]
 
     def on_connection_init(self, event):
         conn = event.connection
-        conn.hostname = self.host
 
         # Every session or link could have their own handler(s) if we
         # wanted simply by setting the "handler" slot on the
@@ -46,6 +45,7 @@ class Send:
         # the events go to its parent connection. If the connection
         # doesn't have a handler, the events go to the reactor.
         snd = ssn.sender("sender")
+        snd.target.address = self.target
         conn.open()
         ssn.open()
         snd.open()
@@ -61,8 +61,8 @@ class Send:
 
 class Program:
 
-    def __init__(self, hostname, content):
-        self.hostname = hostname
+    def __init__(self, url, content):
+        self.url = url
         self.content = content
 
     def on_reactor_init(self, event):
@@ -72,11 +72,13 @@ class Program:
         # for this connection will go to the Send object instead of
         # going to the reactor. If you were to omit the Send object,
         # all the events would go to the reactor.
-        event.reactor.connection(Send(self.hostname, Message(self.content)))
+        event.reactor.connection_to_host(self.url.host, self.url.port,
+                                         Send(Message(self.content),
+                                              self.url.path))
 
 args = sys.argv[1:]
-hostname = args.pop() if args else "localhost"
+url = Url(args.pop() if args else "localhost:5672/examples")
 content = args.pop() if args else "Hello World!"
 
-TornadoApp(Program(hostname, content))
+TornadoApp(Program(url, content))
 tornado.ioloop.IOLoop.instance().start()

@@ -32,6 +32,8 @@
 #include "proton/delivery.h"
 #include "proton/event.h"
 #include "proton/handlers.h"
+#include "proton/transport.h"
+#include "proton/url.h"
 
 static int quiet = 0;
 
@@ -148,6 +150,23 @@ static void event_handler(pn_handler_t *handler,
         }
     } break;
 
+    case PN_TRANSPORT_ERROR: {
+        // The connection to the peer failed.
+        //
+        pn_transport_t *tport = pn_event_transport(event);
+        pn_condition_t *cond = pn_transport_condition(tport);
+        fprintf(stderr, "Network transport failed!\n");
+        if (pn_condition_is_set(cond)) {
+            const char *name = pn_condition_get_name(cond);
+            const char *desc = pn_condition_get_description(cond);
+            fprintf(stderr, "    Error: %s  Description: %s\n",
+                    (name) ? name : "<error name not provided>",
+                    (desc) ? desc : "<no description provided>");
+        }
+        // pn_reactor_process() will exit with a false return value, stopping
+        // the main loop.
+    } break;
+
     default:
         break;
     }
@@ -211,11 +230,20 @@ int main(int argc, char** argv)
     }
 
     pn_reactor_t *reactor = pn_reactor();
-    pn_connection_t *conn = pn_reactor_connection(reactor, handler);
+
+    pn_url_t *url = pn_url_parse(address);
+    if (url == NULL) {
+        fprintf(stderr, "Invalid host address %s\n", address);
+        exit(1);
+    }
+    pn_connection_t *conn = pn_reactor_connection_to_host(reactor,
+                                                          pn_url_get_host(url),
+                                                          pn_url_get_port(url),
+                                                          handler);
+    pn_decref(url);
 
     // the container name should be unique for each client
     pn_connection_set_container(conn, container);
-    pn_connection_set_hostname(conn, address);  // FIXME
 
     // wait up to 5 seconds for activity before returning from
     // pn_reactor_process()

@@ -24,6 +24,7 @@
 #include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
+#include <proton/url.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +33,7 @@
 
 // XXX: overloaded for both directions
 PN_HANDLE(PN_TRANCTX)
+PN_HANDLE(PNI_CONN_URL)
 
 static pn_transport_t *pni_transport(pn_selectable_t *sel) {
   pn_record_t *record = pn_selectable_attachments(sel);
@@ -110,20 +112,55 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
   assert(event);
 
   pn_connection_t *conn = pn_event_connection(event);
-  const char *hostname = pn_connection_get_hostname(conn);
-  if (!hostname) {
+  pn_record_t *record = pn_connection_attachments(conn);
+  pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_URL);
+  const char *host = NULL;
+  const char *port = "5672";
+  pn_string_t *str = NULL;
+
+  if (url) {
+      host = pn_url_get_host(url);
+      const char *uport = pn_url_get_port(url);
+      if (uport) {
+          port = uport;
+      } else {
+          const char *scheme = pn_url_get_scheme(url);
+          if (scheme && strcmp(scheme, "amqps") == 0) {
+              port = "5671";
+          }
+      }
+      if (!pn_connection_get_user(conn)) {
+          // user did not manually set auth info
+          const char *user = pn_url_get_username(url);
+          if (user) pn_connection_set_user(conn, user);
+          const char *passwd = pn_url_get_password(url);
+          if (passwd) pn_connection_set_password(conn, passwd);
+      }
+  } else {
+      // for backward compatibility, see if the connection's hostname can be
+      // used for the remote address.  See JIRA PROTON-1133
+      const char *hostname = pn_connection_get_hostname(conn);
+      if (hostname) {
+          str = pn_string(hostname);
+          host = pn_string_buffer(str);
+          // see if a port has been included in the hostname.  This is not
+          // allowed by the spec, but the old reactor interface allowed it.
+          char *colon = strrchr(host, ':');
+          if (colon) {
+              port = colon + 1;
+              colon[0] = '\0';
+          }
+      }
+  }
+
+  // host will be NULL if this connection was created via the acceptor, which
+  // creates its own transport/socket when created.
+  if (!host) {
       return;
   }
-  pn_string_t *str = pn_string(hostname);
-  char *host = pn_string_buffer(str);
-  const char *port = "5672";
-  char *colon = strrchr(host, ':');
-  if (colon) {
-    port = colon + 1;
-    colon[0] = '\0';
-  }
-  pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
+
   pn_transport_t *transport = pn_event_transport(event);
+  pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
   // invalid sockets are ignored by poll, so we need to do this manualy
   if (sock == PN_INVALID_SOCKET) {
     pn_condition_t *cond = pn_transport_condition(transport);
@@ -132,7 +169,7 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
     pn_transport_close_tail(transport);
     pn_transport_close_head(transport);
   }
-  pn_free(str);
+  if (str) pn_free(str);
   pn_reactor_selectable_transport(reactor, sock, transport);
 }
 
@@ -263,4 +300,43 @@ pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor, pn_handler_t *hand
   pni_record_init_reactor(record, reactor);
   pn_decref(connection);
   return connection;
+}
+
+pn_connection_t *pn_reactor_connection_to_host(pn_reactor_t *reactor,
+                                               const char *host,
+                                               const char *port,
+                                               pn_handler_t *handler) {
+    pn_connection_t *connection = pn_reactor_connection(reactor, handler);
+    pn_reactor_set_connection_host(reactor, connection, host, port);
+    return connection;
+}
+
+
+void pn_reactor_set_connection_host(pn_reactor_t *reactor,
+                                    pn_connection_t *connection,
+                                    const char *host,
+                                    const char *port)
+{
+    (void)reactor;  // ignored
+    pn_url_t *url = pn_url();
+    pn_url_set_host(url, host);
+    pn_url_set_port(url, port);
+    pn_record_t *record = pn_connection_attachments(connection);
+    if (!pn_record_has(record, PNI_CONN_URL)) {
+        pn_record_def(record, PNI_CONN_URL, PN_OBJECT);
+    }
+    pn_record_set(record, PNI_CONN_URL, url);
+    pn_decref(url);
+}
+
+
+const char *pn_reactor_get_connection_address(pn_reactor_t *reactor,
+                                              pn_connection_t *connection)
+{
+    (void)reactor;  // ignored
+    if (!connection) return NULL;
+    pn_record_t *record = pn_connection_attachments(connection);
+    pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_URL);
+    if (!url) return NULL;
+    return pn_url_str(url);
 }

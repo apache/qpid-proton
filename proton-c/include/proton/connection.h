@@ -326,10 +326,17 @@ PN_EXTERN const char *pn_connection_get_user(pn_connection_t *connection);
 PN_EXTERN const char *pn_connection_get_hostname(pn_connection_t *connection);
 
 /**
- * Set the value of the AMQP Hostname used by a connection object.
+ * Set the name of the host (either fully qualified or relative) to which this
+ * connection is connecting to.  This information may be used by the remote
+ * peer to determine the correct back-end service to connect the client to.
+ * This value will be sent in the Open performative, and will be used by SSL
+ * and SASL layers to identify the peer.
+ *
+ * @note Note that it is illegal to set the hostname to a numeric IP address or
+ * include a port number.
  *
  * @param[in] connection the connection object
- * @param[in] hostname the hostname
+ * @param[in] hostname the RFC1035 compliant host name
  */
 PN_EXTERN void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
 

@@ -165,6 +165,9 @@ public class ReactorTest {
         Connection connection = reactor.connection(connectionHandler);
         assertNotNull(connection);
         assertTrue("connection should be one of the reactor's children", reactor.children().contains(connection));
+        reactor.setConnectionHost(connection, "127.0.0.1", 5672);
+        assertEquals("connection address configuration failed",
+                     reactor.getConnectionAddress(connection), "127.0.0.1:5672");
         TestHandler reactorHandler = new TestHandler();
         reactor.getHandler().add(reactorHandler);
         reactor.run();
@@ -240,7 +243,9 @@ public class ReactorTest {
             @Override
             public void onConnectionInit(Event event) {
                 super.onConnectionInit(event);
-                event.getConnection().setHostname("127.0.0.1:" + listeningPort);
+                event.getReactor().setConnectionHost(event.getConnection(),
+                                                     "127.0.0.1",
+                                                     listeningPort);
                 event.getConnection().open();
             }
             @Override
@@ -300,17 +305,14 @@ public class ReactorTest {
 
     private static class SourceHandler extends BaseHandler {
         private int remaining;
-        private final int port;
 
-        protected SourceHandler(int count, int port) {
+        protected SourceHandler(int count) {
             remaining = count;
-            this.port = port;
         }
 
         @Override
         public void onConnectionInit(Event event) {
             Connection conn = event.getConnection();
-            conn.setHostname("127.0.0.1:" + port);
             Session ssn = conn.session();
             Sender snd = ssn.sender("sender");
             conn.open();
@@ -352,9 +354,9 @@ public class ReactorTest {
         SinkHandler snk = new SinkHandler();
         sh.add(snk);
 
-        SourceHandler src = new SourceHandler(count, ((AcceptorImpl)acceptor).getPortNumber());
-        reactor.connection(src);
-
+        SourceHandler src = new SourceHandler(count);
+        reactor.connectionToHost("127.0.0.1", ((AcceptorImpl)acceptor).getPortNumber(),
+                                 src);
         reactor.run();
         reactor.free();
         assertEquals("Did not receive the expected number of messages", count, snk.received);
@@ -575,7 +577,6 @@ public class ReactorTest {
             public void onConnectionInit(Event event) {
                 super.onConnectionInit(event);
                 Connection connection = event.getConnection();
-                connection.setHostname("127.0.0.1:" + serverSocket.getLocalPort());
                 connection.open();
                 try {
                     serverSocket.close();
@@ -587,7 +588,7 @@ public class ReactorTest {
             }
         }
         TestHandler connectionHandler = new ConnectionHandler();
-        reactor.connection(connectionHandler);
+        reactor.connectionToHost("127.0.0.1", serverSocket.getLocalPort(), connectionHandler);
         reactor.run();
         reactor.free();
         serverSocket.close();

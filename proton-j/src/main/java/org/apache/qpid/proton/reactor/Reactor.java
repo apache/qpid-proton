@@ -130,15 +130,16 @@ public interface Reactor {
     void setHandler(Handler handler);
 
     /**
-     * @return a set containing the child objects associated wit this reactor.
-     *         This will contain any active instances of: {@link Task} - created
-     *         using the {@link #schedule(int, Handler)} method,
+     * @return a set containing the child objects associated with this reactor.
+     *         This will contain any active instances of: {@link Task} -
+     *         created using the {@link #schedule(int, Handler)} method,
      *         {@link Connection} - created using the
-     *         {@link #connection(Handler)} method, {@link Acceptor} -
-     *         created using the {@link #acceptor(String, int)} method.
+     *         {@link #connectionToHost(String, int, Handler)} method,
+     *         {@link Acceptor} - created using the
+     *         {@link #acceptor(String, int)} method,
      *         {@link #acceptor(String, int, Handler)} method, or
-     *         {@link Selectable} - created using the {@link #selectable()}
-     *         method.
+     *         {@link Selectable} - created using the
+     *         {@link #selectable()} method.
      */
     Set<ReactorChild> children();
 
@@ -245,10 +246,50 @@ public interface Reactor {
      *                connection.  Typically the host and port to connect to
      *                would be supplied to the connection object inside the
      *                logic which handles the {@link Type#CONNECTION_INIT}
-     *                event.
+     *                event via
+     *                {@link #setConnectionHost(Connection, String, int)}
+     * @return the newly created connection object.
+     * @deprecated Use {@link #connectionToHost(String, int, Handler)} instead.
+     */
+    @Deprecated
+    Connection connection(Handler handler);
+
+    /**
+     * Creates a new out-bound connection to the given host and port.
+     * <p>
+     * This method will cause Reactor to set up a network connection to the
+     * host and create a Connection for it.
+     * @param host the host to connect to (e.g. "localhost")
+     * @param port the port used for the connection.
+     * @param handler a handler that is notified when events occur for the
+     *                connection.
      * @return the newly created connection object.
      */
-    Connection connection(Handler handler);
+    Connection connectionToHost(String host, int port, Handler handler);
+
+    /**
+     * Set the host address used by the connection
+     * <p>
+     * This method will set/change the host address used by the Reactor to
+     * create an outbound network connection for the given Connection
+     * @param c the Connection to assign the address to
+     * @param host the address of the host to connect to (e.g. "localhost")
+     * @param port the port to use for the connection.
+     */
+    void setConnectionHost(Connection c, String host, int port);
+
+    /**
+     * Get the address used by the connection
+     * <p>
+     * This method will retrieve the Connection's address as set by
+     * {@link #setConnectionHost(Connection, String, int)}.
+     * @param c the Connection
+     * @return a string containing the address in the following format:
+     * <pre>
+     *   host[:port]
+     * </pre>
+     */
+    String getConnectionAddress(Connection c);
 
     /**
      * Creates a new acceptor.  This is equivalent to calling:

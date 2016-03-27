@@ -42,12 +42,10 @@ public class Send extends BaseHandler {
 
     private class SendHandler extends BaseHandler {
 
-        private final String hostname;
         private final Message message;
         private int nextTag = 0;
 
-        private SendHandler(String hostname, Message message) {
-            this.hostname = hostname;
+        private SendHandler(Message message) {
             this.message = message;
 
             // Add a child handler that performs some default handshaking
@@ -58,7 +56,6 @@ public class Send extends BaseHandler {
         @Override
         public void onConnectionInit(Event event) {
             Connection conn = event.getConnection();
-            conn.setHostname(hostname);
 
             // Every session or link could have their own handler(s) if we
             // wanted simply by adding the handler to the given session
@@ -111,11 +108,13 @@ public class Send extends BaseHandler {
         }
     }
 
-    private final String hostname;
+    private final String host;
+    private final int port;
     private final Message message;
 
-    private Send(String hostname, String content) {
-        this.hostname = hostname;
+    private Send(String host, int port, String content) {
+        this.host = host;
+        this.port = port;
         message = Proton.message();
         message.setBody(new AmqpValue(content));
     }
@@ -128,14 +127,22 @@ public class Send extends BaseHandler {
         // for this connection will go to the SendHandler object instead of
         // going to the reactor. If you were to omit the SendHandler object,
         // all the events would go to the reactor.
-        event.getReactor().connection(new SendHandler(hostname, message));
+        event.getReactor().connectionToHost(host, port, new SendHandler(message));
     }
 
     public static void main(String[] args) throws IOException {
-        String hostname = args.length > 0 ? args[0] : "localhost";
+        int port = 5672;
+        String host = "localhost";
+        if (args.length > 0) {
+            String[] parts = args[0].split(":", 2);
+            host = parts[0];
+            if (parts.length > 1) {
+                port = Integer.parseInt(parts[1]);
+            }
+        }
         String content = args.length > 1 ? args[1] : "Hello World!";
 
-        Reactor r = Proton.reactor(new Send(hostname, content));
+        Reactor r = Proton.reactor(new Send(host, port, content));
         r.run();
     }
 

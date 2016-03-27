@@ -44,13 +44,11 @@ public class ProtonJInterop {
 
     private static class SendHandler extends BaseHandler {
 
-        private final String hostname;
         private int numMsgs;
         private int count = 0;
         private boolean result = false;
 
-        private SendHandler(String hostname, int numMsgs) {
-            this.hostname = hostname;
+        private SendHandler(int numMsgs) {
             this.numMsgs = numMsgs;
             add(new Handshaker());
         }
@@ -58,7 +56,6 @@ public class ProtonJInterop {
         @Override
         public void onConnectionInit(Event event) {
             Connection conn = event.getConnection();
-            conn.setHostname(hostname);
             Session ssn = conn.session();
             Sender snd = ssn.sender("sender");
             conn.open();
@@ -111,14 +108,19 @@ public class ProtonJInterop {
 
     private static class Send extends BaseHandler {
         private final SendHandler sendHandler;
+        private final String host;
+        private final int port;
 
-        private Send(String hostname, int numMsgs) {
-            sendHandler = new SendHandler(hostname, numMsgs);
+        private Send(String host, int port, int numMsgs) {
+            this.host = host;
+            this.port = port;
+            sendHandler = new SendHandler(numMsgs);
         }
 
         @Override
         public void onReactorInit(Event event) {
-            event.getReactor().connection(sendHandler);
+            Reactor r = event.getReactor();
+            r.connectionToHost(host, port, sendHandler);
         }
 
         public boolean getResult() {
@@ -185,7 +187,7 @@ public class ProtonJInterop {
             boolean result = false;
 
             if ("send".equalsIgnoreCase(args[0])) {
-                Send send = new Send("localhost:" + port, numMsgs);
+                Send send = new Send("localhost", port, numMsgs);
                 Reactor r = Proton.reactor(send);
                 r.run();
                 result = send.getResult();

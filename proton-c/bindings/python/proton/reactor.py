@@ -178,10 +178,41 @@ class Reactor(Wrapper):
             raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
 
     def connection(self, handler=None):
+        """Deprecated: use connection_to_host() instead
+        """
         impl = _chandler(handler, self.on_error)
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
-        pn_decref(impl)
+        if impl: pn_decref(impl)
         return result
+
+    def connection_to_host(self, host, port, handler=None):
+        """Create an outgoing Connection that will be managed by the reactor.
+        The reator's pn_iohandler will create a socket connection to the host
+        once the connection is opened.
+        """
+        conn = self.connection(handler)
+        self.set_connection_host(conn, host, port)
+        return conn
+
+    def set_connection_host(self, connection, host, port):
+        """Change the address used by the connection.  The address is
+        used by the reactor's iohandler to create an outgoing socket
+        connection.  This must be set prior to opening the connection.
+        """
+        pn_reactor_set_connection_host(self._impl,
+                                       connection._impl,
+                                       unicode2utf8(str(host)),
+                                       unicode2utf8(str(port)))
+
+    def get_connection_address(self, connection):
+        """This may be used to retrieve the host address used by the reactor to
+        establish the outgoing socket connection.
+        @return: string containing the address in URL format or None if no
+        address assigned.  Use the proton.Url class to create a Url object from
+        the returned value.
+        """
+        _url = pn_reactor_get_connection_address(self._impl, connection._impl)
+        return utf82unicode(_url)
 
     def selectable(self, handler=None):
         impl = _chandler(handler, self.on_error)
@@ -503,11 +534,11 @@ class Connector(Handler):
         self.user = None
         self.password = None
 
-    def _connect(self, connection):
+    def _connect(self, connection, reactor):
+        assert(reactor is not None)
         url = self.address.next()
-        # IoHandler uses the hostname to determine where to try to connect to
-        connection.hostname = "%s:%s" % (url.host, url.port)
-        logging.info("connecting to %s..." % connection.hostname)
+        reactor.set_connection_host(connection, url.host, str(url.port))
+        logging.info("connecting to %s..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
@@ -533,7 +564,7 @@ class Connector(Handler):
             self.ssl.peer_hostname = url.host
 
     def on_connection_local_open(self, event):
-        self._connect(event.connection)
+        self._connect(event.connection, event.reactor)
 
     def on_connection_remote_open(self, event):
         logging.info("connected to %s" % event.connection.hostname)
@@ -551,7 +582,7 @@ class Connector(Handler):
                 delay = self.reconnect.next()
                 if delay == 0:
                     logging.info("Disconnected, reconnecting...")
-                    self._connect(self.connection)
+                    self._connect(self.connection, event.reactor)
                 else:
                     logging.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
@@ -560,7 +591,7 @@ class Connector(Handler):
                 self.connection = None
 
     def on_timer_task(self, event):
-        self._connect(self.connection)
+        self._connect(self.connection, event.reactor)
 
     def on_connection_remote_close(self, event):
         self.connection = None
