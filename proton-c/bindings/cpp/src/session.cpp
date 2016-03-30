@@ -41,23 +41,13 @@ connection session::connection() const {
 }
 
 namespace {
-std::string link_name(const std::string& name, session* s) {
-    if (!name.empty()) return name;
-    std::string gen(connection_context::get(s->connection()).link_gen.next());
-    return gen;
+std::string next_link_name(const connection& c) {
+    return connection_context::get(c).link_gen.next();
 }
-}
-
-receiver session::create_receiver(const std::string& name) {
-    return pn_receiver(pn_object(), link_name(name, this).c_str());
-}
-
-sender session::create_sender(const std::string& name) {
-    return pn_sender(pn_object(), link_name(name, this).c_str());
 }
 
 sender session::open_sender(const std::string &addr, const link_options &lo) {
-    sender snd = create_sender();
+    sender snd = pn_sender(pn_object(), next_link_name(connection()).c_str());
     snd.local_target().address(addr);
     snd.open(lo);
     return snd;
@@ -65,7 +55,7 @@ sender session::open_sender(const std::string &addr, const link_options &lo) {
 
 receiver session::open_receiver(const std::string &addr, const link_options &lo)
 {
-    receiver rcv = create_receiver();
+    receiver rcv = pn_receiver(pn_object(), next_link_name(connection()).c_str());
     rcv.local_source().address(addr);
     rcv.open(lo);
     return rcv;

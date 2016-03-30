@@ -169,10 +169,7 @@ sender container_impl::open_sender(const proton::url &url, const proton::link_op
     copts.update(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
-    sender snd = conn.default_session().create_sender();
-    snd.local_target().address(path);
-    snd.open(lopts);
-    return snd;
+    return conn.default_session().open_sender(path, lopts);
 }
 
 receiver container_impl::open_receiver(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
@@ -182,10 +179,7 @@ receiver container_impl::open_receiver(const proton::url &url, const proton::lin
     copts.update(o2);
     connection conn = connect(url, copts);
     std::string path = url.path();
-    receiver rcv = conn.default_session().create_receiver();
-    rcv.local_source().address(path);
-    rcv.open(lopts);
-    return rcv;
+    return conn.default_session().open_receiver(path, lopts);
 }
 
 acceptor container_impl::listen(const proton::url& url, const connection_options &user_opts) {

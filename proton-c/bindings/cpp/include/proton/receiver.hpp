@@ -42,9 +42,6 @@ PN_CPP_CLASS_EXTERN receiver : public link {
   public:
     receiver() : link(0) {}
 
-    /// Add credit to the link
-    PN_CPP_EXTERN void flow(int count);
-
   /// @cond INTERNAL
   friend class link;
   friend class session;

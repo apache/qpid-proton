@@ -42,7 +42,7 @@ class ssl transport::ssl() const {
 }
 
 class sasl transport::sasl() const {
-    return proton::sasl(pn_sasl(pn_object()));
+    return pn_sasl(pn_object());
 }
 
 condition transport::condition() const {

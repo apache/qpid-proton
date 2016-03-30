@@ -54,8 +54,4 @@ delivery sender::send(const message &message) {
     return dlv;
 }
 
-int sender::available() { return pn_link_available(pn_object()); }
-void sender::offered(int c) { pn_link_offered(pn_object(), c); }
-
-
 }

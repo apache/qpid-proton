@@ -25,6 +25,8 @@
 #include "proton/export.hpp"
 #include "proton/value.hpp"
 
+#include "proton/config.hpp"
+
 #include <string>
 
 struct pn_condition_t;
@@ -32,13 +34,26 @@ struct pn_condition_t;
 namespace proton {
 
 /// Describes an endpoint error state.
+///
+/// This class has only one purpose: it can be used to get access to information about why
+/// an endpoint (a link, session, connection) or a transport has closed.
+///
+/// The information that is requuired (for instance the condition name and/or description)
+/// should be extracted immediately from the condition in order to enforce this conditions
+/// cannot be copied or assigned.
 class condition {
     /// @cond INTERNAL
     condition(pn_condition_t* c) : condition_(c) {}
     /// @endcond
 
   public:
-    condition() : condition_(0) {}
+#if PN_CPP_HAS_CPP11
+    condition() = delete;
+    condition(const condition&) = delete;
+    condition(condition&&) = default;
+    condition& operator=(const condition&) = delete;
+    condition& operator=(condition&&) = delete;
+#endif
 
     /// No condition set.
     PN_CPP_EXTERN bool operator!() const;
@@ -63,7 +78,7 @@ class condition {
 
     /// @cond INTERNAL
   private:
-    pn_condition_t* condition_;
+    pn_condition_t* const condition_;
 
     friend class transport;
     friend class connection;

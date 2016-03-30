@@ -69,25 +69,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get the connection this session belongs to.
     PN_CPP_EXTERN class connection connection() const;
 
-    /// @cond INTERNAL
-    /// XXX consider removing
-
-    /// An unopened receiver link, you can set link properties before calling open().
-    ///
-    /// @param name if specified must be unique, by default the
-    /// container generates a name of the form: <hex-digits> + "@" +
-    /// container.id()
-    PN_CPP_EXTERN receiver create_receiver(const std::string& name="");
-
-    /// An unopened sender link, you can set link properties before calling open().
-    ///
-    /// @param name if specified must be unique, by default the
-    /// container generates a name of the form: <hex-digits> + "@" +
-    /// container.id()
-    PN_CPP_EXTERN sender create_sender(const std::string& name="");
-
-    /// @endcond
-
     /// Open a sender for `addr`.
     PN_CPP_EXTERN sender open_sender(const std::string &addr, const link_options &opts = link_options());
 

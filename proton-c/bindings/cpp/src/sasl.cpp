@@ -23,8 +23,6 @@
 
 namespace proton {
 
-bool sasl::extended() { return pn_sasl_extended(); }
-void sasl::done(enum outcome outcome0) { pn_sasl_done(object_, static_cast<pn_sasl_outcome_t>(outcome0)); }
 enum sasl::outcome sasl::outcome() const { return static_cast<enum outcome>(pn_sasl_outcome(object_)); }
 
 std::string sasl::user() const {

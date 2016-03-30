@@ -29,8 +29,4 @@
 
 namespace proton {
 
-void receiver::flow(int count) {
-    pn_link_flow(pn_object(), count);
-}
-
 }
