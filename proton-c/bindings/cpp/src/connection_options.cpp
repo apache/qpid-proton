@@ -145,9 +145,11 @@ class connection_options::impl {
 };
 
 connection_options::connection_options() : impl_(new impl()) {}
+
 connection_options::connection_options(const connection_options& x) : impl_(new impl()) {
     *this = x;
 }
+
 connection_options::~connection_options() {}
 
 connection_options& connection_options::operator=(const connection_options& x) {
@@ -155,7 +157,16 @@ connection_options& connection_options::operator=(const connection_options& x) {
     return *this;
 }
 
-void connection_options::update(const connection_options& x) { impl_->update(*x.impl_); }
+connection_options& connection_options::update(const connection_options& x) {
+    impl_->update(*x.impl_);
+    return *this;
+}
+
+connection_options connection_options::update(const connection_options& x) const {
+    connection_options copy(*this);
+    copy.update(x);
+    return copy;
+}
 
 connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }

@@ -131,60 +131,40 @@ class Proc(Popen):
             raise ProcError(self, "timeout waiting for exit")
 
 
-def count_tests(cls):
-    methods = inspect.getmembers(cls, predicate=inspect.ismethod)
-    tests = [ i for i,j in methods if i.startswith('test_') ]
-    return len(tests)
+if hasattr(unittest.TestCase, 'setUpClass') and  hasattr(unittest.TestCase, 'tearDownClass'):
+    TestCase = unittest.TestCase
+else:
+    class TestCase(unittest.TestCase):
+        """
+        Roughly provides setUpClass and tearDownClass functionality for older python
+        versions in our test scenarios. If subclasses override setUp or tearDown
+        they *must* call the superclass.
+        """
+        def setUp(self):
+            if not hasattr(type(self), '_setup_class_count'):
+                type(self)._setup_class_count = len(
+                    inspect.getmembers(
+                        type(self),
+                        predicate=lambda(m): inspect.ismethod(m) and m.__name__.startswith('test_')))
+                type(self).setUpClass()
 
-class CompatSetupClass(object):
-    # Roughly provides setUpClass and tearDownClass functionality for older python versions
-    # in our test scenarios
-    def __init__(self, target):
-        self.completed = False
-        self.test_count = count_tests(target)
-        self.target = target
-        self.global_setup = False
+        def tearDown(self):
+            self.assertTrue(self._setup_class_count > 0)
+            self._setup_class_count -=  1
+            if self._setup_class_count == 0:
+                type(self).tearDownClass()
 
-    def note_setup(self):
-        if not self.global_setup:
-            self.global_setup = True
-            self.target.setup_class()
 
-    def note_teardown(self):
-        self.test_count -=  1
-        if self.test_count == 0:
-            self.completed = True
-            self.target.teardown_class()
-        
-
-class ExampleTestCase(unittest.TestCase):
-
-    @classmethod
-    def setup_class(cls):
-        pass
-
-    @classmethod
-    def teardown_class(cls):
-        pass
-
-    def completed(self):
-        cls = self.__class__
-        return cls.compat_ and cls.compat_.completed
-
+class ExampleTestCase(TestCase):
+    """TestCase that manages started processes"""
     def setUp(self):
-        cls = self.__class__
-        if not hasattr(cls, "compat_"):
-            cls.compat_ = CompatSetupClass(cls)
-        if cls.compat_.completed:
-            # Last test for this class already seen.
-            raise Exception("Test sequencing error")
-        cls.compat_.note_setup()
+        super(ExampleTestCase, self).setUp()
         self.procs = []
 
     def tearDown(self):
         for p in self.procs:
             p.safe_kill()
-        self.__class__.compat_.note_teardown()
+        super(ExampleTestCase, self).tearDown()
 
     def proc(self, *args, **kwargs):
         p = Proc(*args, **kwargs)
@@ -194,27 +174,26 @@ class ExampleTestCase(unittest.TestCase):
 class BrokerTestCase(ExampleTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
+    Subclasses must set `broker_exe` class variable with the name of the broker executable.
     """
 
-    # setUpClass not available until 2.7
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.addr = pick_addr() + "/examples"
-        cls.broker = Proc(["broker", "-a", cls.addr], ready="listening")
+        cls.broker = None       # In case Proc throws, create the attribute.
+        cls.broker = Proc([cls.broker_exe, "-a", cls.addr], ready="listening")
         cls.broker.wait_ready()
 
-    # tearDownClass not available until 2.7
     @classmethod
-    def teardown_class(cls):
-        cls.broker.safe_kill()
+    def tearDownClass(cls):
+        if cls.broker: cls.broker.safe_kill()
 
     def tearDown(self):
+        b = type(self).broker
+        if b and b.poll() !=  None: # Broker crashed
+            type(self).setUpClass() # Start another for the next test.
+            raise ProcError(b, "broker crash")
         super(BrokerTestCase, self).tearDown()
-        if not self.completed():
-            b = type(self).broker
-            if b.poll() !=  None: # Broker crashed
-                type(self).setUpClass() # Start another for the next test.
-                raise ProcError(b, "broker crash")
 
 
 CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
@@ -229,6 +208,8 @@ def recv_expect(name, addr):
 
 class ContainerExampleTest(BrokerTestCase):
     """Run the container examples, verify they behave as expected."""
+
+    broker_exe = "broker"
 
     def test_helloworld(self):
         self.assertEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
@@ -341,8 +322,8 @@ Hello World!
         self.assertEqual(expect_found, True)
 
 
-class ConnectionEngineExampleTest(BrokerTestCase):
-    """Run the connction_engine examples, verify they behave as expected."""
+class EngineTestCase(BrokerTestCase):
+    """Run selected clients to test a connction_engine broker."""
 
     def test_helloworld(self):
         self.assertEqual('Hello World!\n',
@@ -379,6 +360,9 @@ class ConnectionEngineExampleTest(BrokerTestCase):
         server = self.proc(["server", "-a", self.addr], "connected")
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())
+
+class MtBrokerTest(EngineTestCase):
+    broker_exe = "mt_broker"
 
 if __name__ == "__main__":
     unittest.main()

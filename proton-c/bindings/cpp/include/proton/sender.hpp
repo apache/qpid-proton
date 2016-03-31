@@ -25,6 +25,7 @@
 #include "proton/export.hpp"
 #include "proton/link.hpp"
 #include "proton/message.hpp"
+#include "proton/tracker.hpp"
 
 #include "proton/types.h"
 #include <string>
@@ -32,8 +33,6 @@
 struct pn_connection_t;
 
 namespace proton {
-
-class tracker;
 
 /// A link for sending messages.
 class

@@ -139,14 +139,18 @@ class connection_options {
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string &);
     /// @endcond
 
-    /// @cond INTERNAL
+    /// Update option values from values set in other.
+    PN_CPP_EXTERN connection_options& update(const connection_options& other);
+
+    /// Copy and update option values from values set in other.
+    PN_CPP_EXTERN connection_options update(const connection_options& other) const;
+
   private:
     void apply(connection&) const;
     proton_handler* handler() const;
     static pn_connection_t *pn_connection(connection &);
     class ssl_client_options &ssl_client_options();
     class ssl_server_options &ssl_server_options();
-    PN_CPP_EXTERN void update(const connection_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
@@ -154,7 +158,6 @@ class connection_options {
     friend class container_impl;
     friend class connector;
     friend class io::connection_engine;
-    /// @endcond
 };
 
 }

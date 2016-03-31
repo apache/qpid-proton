@@ -50,6 +50,18 @@ class connection_engine;
 ///
 /// Subclass and override event-handling member functions.
 ///
+/// Close and error handling: there are several objects that have on_X_close and on_X_error functions.
+/// They are called as follows:
+///
+/// - If X is closed cleanly, with no error status then on_X_close() is called.
+/// - If X is closed with an error then on_X_error() is called followed by on_X_close()
+///   Note the error condition is also available in on_X_close from X::condition().
+///
+/// By default, if you do not implement on_X_error, it will call
+/// on_unhandled_error().  If you do not implement on_unhandled_error() it will
+/// throw a proton::error exception, which may not be what you want but does
+/// help to identify forgotten error handling quickly.
+///
 /// @see proton::event
 class
 PN_CPP_CLASS_EXTERN handler

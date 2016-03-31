@@ -74,8 +74,6 @@ struct in_memory_engine : public connection_engine {
 /// A pair of engines that talk to each other in-memory.
 struct engine_pair {
     byte_stream ab, ba;
-    connection_engine::container cont;
-
     in_memory_engine a, b;
 
     engine_pair(handler& ha, handler& hb,
@@ -152,49 +150,7 @@ void test_engine_prefix() {
     ASSERT_EQUAL("y/1", quick_pop(hb.receivers).name());
 }
 
-void test_container_prefix() {
-    /// Let the container set the options.
-    record_handler ha, hb;
-    connection_engine::container ca("a"), cb("b");
-    engine_pair e(ha, hb, ca.make_options(), cb.make_options());
-
-    ASSERT_EQUAL("a", e.a.connection().container_id());
-    ASSERT_EQUAL("b", e.b.connection().container_id());
-
-    e.a.connection().open();
-    sender s = e.a.connection().open_sender("x");
-    ASSERT_EQUAL("1/1", s.name());
-
-    while (ha.senders.empty() || hb.receivers.empty()) e.process();
-
-    ASSERT_EQUAL("1/1", quick_pop(ha.senders).name());
-    ASSERT_EQUAL("1/1", quick_pop(hb.receivers).name());
-
-    e.a.connection().open_receiver("y");
-    while (ha.receivers.empty() || hb.senders.empty()) e.process();
-    ASSERT_EQUAL("1/2", quick_pop(ha.receivers).name());
-    ASSERT_EQUAL("1/2", quick_pop(hb.senders).name());
-
-    // Open a second connection in each container, make sure links have different IDs.
-    record_handler ha2, hb2;
-    engine_pair e2(ha2, hb2, ca.make_options(), cb.make_options());
-
-    ASSERT_EQUAL("a", e2.a.connection().container_id());
-    ASSERT_EQUAL("b", e2.b.connection().container_id());
-
-    e2.b.connection().open();
-    receiver r = e2.b.connection().open_receiver("z");
-    ASSERT_EQUAL("2/1", r.name());
-
-    while (ha2.senders.empty() || hb2.receivers.empty()) e2.process();
-
-    ASSERT_EQUAL("2/1", quick_pop(ha2.senders).name());
-    ASSERT_EQUAL("2/1", quick_pop(hb2.receivers).name());
-};
-
 void test_endpoint_close() {
-    // Make sure conditions are sent to the remote end.
-
     record_handler ha, hb;
     engine_pair e(ha, hb);
     e.a.connection().open();
@@ -246,7 +202,6 @@ void test_transport_close() {
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, test_engine_prefix());
-    RUN_TEST(failed, test_container_prefix());
     RUN_TEST(failed, test_endpoint_close());
     RUN_TEST(failed, test_transport_close());
     return failed;

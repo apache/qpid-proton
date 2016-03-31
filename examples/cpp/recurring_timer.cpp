@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
     // Command line options
     double running_time = 5;
     double tick = 0.25;
-    options opts(argc, argv);
+    example::options opts(argc, argv);
     opts.add_value(running_time, 't', "running time", "running time in seconds", "RUNTIME");
     opts.add_value(tick, 'k', "tick time", "tick time as fraction of second", "TICK");
     try {
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
         recurring recurring_handler(int(running_time * 1000), int(tick * 1000));
         proton::container(recurring_handler).run();
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

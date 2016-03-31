@@ -99,7 +99,7 @@ class server : public proton::handler {
 
 int main(int argc, char **argv) {
     std::string address("amqp://127.0.0.1:5672/examples");
-    options opts(argc, argv);
+    example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "listen on URL", "URL");
 
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
         proton::container(srv).run();
 
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

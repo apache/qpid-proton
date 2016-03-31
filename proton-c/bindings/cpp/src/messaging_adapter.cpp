@@ -68,7 +68,10 @@ void messaging_adapter::on_link_flow(proton_event &pe) {
     pn_event_t *pne = pe.pn_event();
     pn_link_t *lnk = pn_event_link(pne);
     sender s(lnk);
-    if (lnk && pn_link_is_sender(lnk) && pn_link_credit(lnk) > 0) {
+    int state = pn_link_state(lnk);
+    if (lnk && pn_link_is_sender(lnk) && pn_link_credit(lnk) > 0 &&
+        (state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE))
+    {
         // create on_message extended event
         delegate_.on_sendable(s);
     }

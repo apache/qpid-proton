@@ -42,38 +42,7 @@
 namespace proton {
 namespace io {
 
-namespace {
-std::string  make_id(const std::string s="") {
-    return s.empty() ? uuid::random().str() : s;
-}
-}
-
-class connection_engine::container::impl {
-  public:
-    impl(const std::string s="") : id_(make_id(s)) {}
-
-    const std::string id_;
-    id_generator id_gen_;
-    connection_options options_;
-};
-
-connection_engine::container::container(const std::string& s) : impl_(new impl(s)) {}
-
-connection_engine::container::~container() {}
-
-std::string connection_engine::container::id() const { return impl_->id_; }
-
-connection_options connection_engine::container::make_options() {
-    connection_options opts = impl_->options_;
-    opts.container_id(id()).link_prefix(impl_->id_gen_.next()+"/");
-    return opts;
-}
-
-void connection_engine::container::options(const connection_options &opts) {
-    impl_->options_ = opts;
-}
-
-connection_engine::connection_engine(class handler &h, const connection_options& opts) :
+connection_engine::connection_engine(class handler &h, const connection_options& opts):
     handler_(h),
     connection_(internal::take_ownership(pn_connection()).get()),
     transport_(internal::take_ownership(pn_transport()).get()),
@@ -85,16 +54,12 @@ connection_engine::connection_engine(class handler &h, const connection_options&
     pn_connection_collect(connection_.pn_object(), collector_.get());
     opts.apply(connection_);
 
-    // Provide defaults for connection_id and link_prefix if not set.
-    std::string cid = connection_.container_id();
-    if (cid.empty()) {
-        cid = make_id();
-        pn_connection_set_container(connection_.pn_object(), cid.c_str());
-    }
+    // Provide local random defaults for connection_id and link_prefix if not by opts.
+    if (connection_.container_id().empty())
+        pn_connection_set_container(connection_.pn_object(), uuid::random().str().c_str());
     id_generator &link_gen = connection_context::get(connection_).link_gen;
-    if (link_gen.prefix().empty()) {
-        link_gen.prefix(make_id()+"/");
-    }
+    if (link_gen.prefix().empty())
+        link_gen.prefix(uuid::random().str()+"/");
 }
 
 connection_engine::~connection_engine() {
@@ -108,11 +73,15 @@ bool connection_engine::dispatch() {
          e;
          e = pn_collector_peek(collector_.get()))
     {
-        proton_event(e, 0).dispatch(h);
+        proton_event pe(e, 0);
+        try {
+            pe.dispatch(h);
+        } catch (const std::exception& e) {
+            close(error_condition("exception", e.what()));
+        }
         pn_collector_pop(collector_.get());
     }
-    return !(pn_transport_closed(transport_.pn_object()) ||
-          (connection().closed() && write_buffer().size == 0));
+    return !(pn_transport_closed(transport_.pn_object()));
 }
 
 mutable_buffer connection_engine::read_buffer() {
@@ -124,7 +93,8 @@ mutable_buffer connection_engine::read_buffer() {
 }
 
 void connection_engine::read_done(size_t n) {
-    pn_transport_process(transport_.pn_object(), n);
+    if (n > 0)
+        pn_transport_process(transport_.pn_object(), n);
 }
 
 void connection_engine::read_close() {
@@ -140,7 +110,8 @@ const_buffer connection_engine::write_buffer() const {
 }
 
 void connection_engine::write_done(size_t n) {
-    pn_transport_pop(transport_.pn_object(), n);
+    if (n > 0)
+        pn_transport_pop(transport_.pn_object(), n);
 }
 
 void connection_engine::write_close() {
@@ -159,6 +130,10 @@ proton::connection connection_engine::connection() const {
 
 proton::transport connection_engine::transport() const {
     return transport_;
+}
+
+void connection_engine::work_queue(class work_queue* wq) {
+    connection_context::get(connection()).work_queue = wq;
 }
 
 }}

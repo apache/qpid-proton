@@ -40,6 +40,8 @@ struct pn_acceptor_t;
 namespace proton {
 
 class proton_handler;
+class work_queue;
+
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -81,12 +83,13 @@ class context {
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : default_session(0) {}
+    connection_context() : default_session(0), work_queue(0) {}
 
     // Used by all connections
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
     id_generator link_gen;      // Link name generator.
+    class work_queue* work_queue; // Work queue if this is proton::controller connection.
 
     internal::pn_unique_ptr<proton_handler> handler;
 

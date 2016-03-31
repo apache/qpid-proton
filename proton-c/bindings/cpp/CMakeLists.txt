@@ -25,6 +25,7 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(qpid-proton-cpp-source
+  ${qpid-proton-mt-source}
   src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
@@ -79,11 +80,10 @@ set(qpid-proton-cpp-source
   src/value.cpp
   )
 
-if(MSVC)
-  list(APPEND qpid-proton-cpp-source src/io/windows/socket.cpp)
-else(MSVC)
-  list(APPEND qpid-proton-cpp-source src/io/posix/socket.cpp)
-endif(MSVC)
+if (BUILD_CPP_MT)
+  list(APPEND qpid-proton-cpp-source src/controller.cpp)
+endif()
+
 
 set_source_files_properties (
   ${qpid-proton-cpp-source}
@@ -103,6 +103,9 @@ set_target_properties (
   SOVERSION "${PN_LIB_SOMAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
+if (BUILD_CPP_MT)
+  set_target_properties(qpid-proton-cpp PROPERTIES CXX_STANDARD 11)
+endif()
 
 ## Install
 

@@ -17,7 +17,7 @@
 # under the License.
 #
 
-include_directories("${CMAKE_SOURCE_DIR}/examples/cpp")
+include_directories("${CMAKE_SOURCE_DIR}/examples/cpp" "${CMAKE_SOURCE_DIR}/examples/cpp/lib")
 add_executable(reactor_send_cpp reactor_send.cpp)
 
 target_link_libraries(reactor_send_cpp qpid-proton qpid-proton-cpp)

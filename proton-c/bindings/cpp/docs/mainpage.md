@@ -4,7 +4,7 @@ This is the C++ API for the Proton AMQP protocol engine. It allows you
 to write client and server applications that send and receive AMQP
 messages.
 
-The best way to start is with the \ref tutorial "tutorial".
+The best way to start is with the @ref tutorial
 
 ## An overview of the AMQP model
 
@@ -22,13 +22,13 @@ Sessions are created over a `proton::connection`, which represents the
 network connection. You can create links directly on a connection
 using its default session if you don't need multiple sessions.
 
-`proton::message` represents the message: the body (content), headers,
-annotations, and so on. A `proton::delivery` represents the act of
-transferring a message over a link. The receiver acknowledges the
-delivery by accepting or rejecting it. The delivery is *settled* when
-both ends are done with it.  Different settlement methods give
-different levels of reliability: *at-most-once*, *at-least-once*, and
-*exactly-once*. See "Delivery Guarantees" below for details.
+`proton::message` represents the message: the body (content), properties,
+headers and annotations. A `proton::delivery` represents the act of transferring
+a message over a link. The receiver acknowledges the delivery by accepting or
+rejecting it. The delivery is *settled* when both ends are done with it.
+Different settlement methods give different levels of reliability:
+*at-most-once*, *at-least-once*, and *exactly-once*. See "Delivery Guarantees"
+below for details.
 
 ## Sources and targets
 
@@ -58,77 +58,8 @@ the client's dynamic receiver.
 
 In the case of a broker, a dynamic address usually corresponds to a
 temporary queue, but any AMQP request-response server can use this
-technique. The \ref server_direct.cpp example illustrates how to
+technique. The @ref server_direct.cpp example illustrates how to
 implement a queueless request-response server.
-
-## Anatomy of a Proton application
-
-To send AMQP commands, call methods on classes like
-`proton::connection`, `proton::sender`, `proton::receiver`, or
-`proton::delivery`. To handle incoming commands, implement the
-`proton::handler` interface. The handler receives calls like
-`on_message` (a message is received), `on_link_open` (a link is
-opened), and `on_sendable` (a link is ready to send messages).
-
-Messages are represented by `proton::message`. AMQP defines a type
-encoding that you can use for interoperability, but you can also use
-any encoding you wish and pass binary data as the
-`proton::message::body`. `proton::value` and `proton::scalar` provide
-conversion between AMQP and C++ data types.
-
-<!-- See the example \ref encode_decode.cpp. -->
-
-There are two alternative ways to manage handlers and AMQP objects,
-the `proton::container` and the `proton::connection_engine`. You can
-code your application so that it can be run with either. Say you find
-the `proton::container` easier to get started but later need more
-flexibility.  You can switch to the `proton::connection_engine` with
-little or no change to your handlers.
-
-### %proton::container
-
-`proton::container` is a *reactor* framework that manages multiple
-connections and dispatches events to handlers. You implement
-`proton::handler` with your logic to react to events, and register it
-with the container. The container lets you open multiple connections
-and links, receive incoming connections and links, and send, receive,
-and acknowledge messages.
-
-The reactor handles IO for multiple connections using sockets and
-`poll`. It dispatches events to your handlers in a single thread,
-where you call `proton::container::run`. The container is not
-thread-safe: once it is running you can only operate on Proton objects
-from your handler methods.
-
-### %proton::connection_engine
-
-`proton::connection_engine` dispatches events for a *single
-connection*. The subclass `proton::io::socket::engine` does
-socket-based IO. An application with a single connection is just like
-using `proton::container` except you attach your handler to a
-`proton::io::socket::engine` instead. You can compare examples, such as
-\ref helloworld.cpp and \ref engine/helloworld.cpp.
-
-Now consider multiple connections. `proton::container` is easy to use
-but restricted to a single thread. `proton::connection_engine` is not
-thread-safe either, but *each engine is independent*. You can process
-different connections in different threads, or use a thread pool to
-process a dynamic set of connections.
-
-The engine does not provide built-in polling and listening like the
-`proton::container`, but you can drive engines using any polling or
-threading strategy and any IO library (for example, epoll, kqueue,
-solaris completion ports, IOCP proactor, boost::asio, libevent, etc.)
-This can be important for optimizing performance or supporting diverse
-platforms. The example \ref engine/broker.cpp shows a broker using
-sockets and poll, but you can see how the code could be adapted.
-
-`proton::connection_engine` also does not dictate the IO mechanism,
-but it is an abstract class. `proton::socket::engine` provides
-ready-made socket-based IO, but you can write your own subclass with
-any IO code. Just override the `io_read`, `io_write` and `io_close`
-methods. For example, the proton test suite implements an in-memory
-connection using `std::deque` for test purposes.
 
 ## Delivery guarantees
 
@@ -152,3 +83,68 @@ informs the sender of all the unsettled deliveries it knows about, and
 from this the sender can deduce which need to be redelivered. The
 sender likewise informs the receiver which deliveries it knows about,
 from which the receiver can deduce which have already been settled.
+
+## Anatomy of a Proton application
+
+To send AMQP commands, call methods on classes like `proton::connection`,
+`proton::sender`, `proton::receiver`, or `proton::delivery`.
+
+To handle incoming commands, subclass the `proton::handler` interface. The
+handler member functions are called when AMQP protocol events occur on a
+connection. For example `proton::handler::on_message` is called when a message
+is received.
+
+Messages are represented by `proton::message`. AMQP defines a type
+encoding that you can use for interoperability, but you can also use
+any encoding you wish and pass binary data as the
+`proton::message::body`. `proton::value` and `proton::scalar` provide
+conversion between AMQP and C++ data types.
+
+There are several ways to manage handlers and AMQP objects, for different types
+of application. All of them use the same `proton::handler` sub-classes so code
+can be re-used if you change your approach.
+
+### %proton::container - easy single-threaded applications
+
+`proton::container` is an easy way to get started with single threaded
+applications. It manages the low-level socket connection and polling for you so
+you can write portable applications using just the @ref proton API. You an use
+proton::connection::connect() and proton::container::listen() to create
+connections. The container polls multiple connections and calls protocol eventsa
+on your `proton::handler` sub-classes.
+
+The container has two limitations:
+- it is not thread-safe, all container work must happen in a single thread.
+- it provides portable IO handling for you but cannot be used for different types of IO.
+
+### %proton::mt::controller - multi-threaded applications
+
+The proton::controller is similar to the proton::container but it can process
+connections in multiple threads concurrently. It uses the `proton::handler` like
+the container. If you follow the recommended model you can re-use statefull,
+per-connection, handlers with the controller. See @ref mt_page and the examples
+@ref mt/broker.cpp and @ref mt/epoll\_controller.cpp
+
+Default controller IO implementations are provided but you can also implement
+your own controller using the proton::io::connection_engine, read on...
+
+### %proton::io::connection_engine - integrating with foreign IO
+
+The `proton::io::connection_engine` is different from the other proton APIs. You
+might think of it as more like an SPI (Service Provided Interface).
+
+The engine provides a very low-level way of driving a proton::handler: You feed
+raw byte-sequence fragments of an AMQP-encoded stream to the engine and it
+converts that into calls on a proton::handler. The engine provides you with
+outgoing protocol stream bytes in return.
+
+The engine is deliberately very simple and low level. It does no IO, no
+thread-related locking, and is written in simple C++98 compatible code.
+
+You can use the engine directly to connect your application to any kind of IO
+framework or library, memory-based streams or any other source/sink for byte
+stream data.
+
+You can also use the engine to build a custom implementation of
+proton::mt::controller and proton::mt::work\_queue so portable proton
+applications using the controller can run without modification on your platform.

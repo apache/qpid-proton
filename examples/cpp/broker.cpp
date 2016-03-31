@@ -61,7 +61,7 @@ class broker {
 
 int main(int argc, char **argv) {
     proton::url url("0.0.0.0");
-    options opts(argc, argv);
+    example::options opts(argc, argv);
 
     opts.add_value(url, 'a', "address", "listen on URL", "URL");
 
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
         proton::container(b.handler()).run();
 
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

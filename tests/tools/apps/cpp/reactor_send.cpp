@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
     int message_count = 10;
     int message_size = 100;
     bool replying = false;
-    options opts(argc, argv);
+    example::options opts(argc, argv);
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_value(message_count, 'c', "messages", "send COUNT messages", "COUNT");
     opts.add_value(message_size, 'b', "bytes", "send binary messages BYTES long", "BYTES");
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
         reactor_send send(address, message_count, message_size, replying);
         proton::container(send).run();
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

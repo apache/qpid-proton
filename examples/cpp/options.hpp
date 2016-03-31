@@ -25,6 +25,7 @@
 #include <vector>
 #include <stdexcept>
 
+namespace example {
 /** bad_option is thrown for option parsing errors */
 struct bad_option : public std::runtime_error {
     bad_option(const std::string& s) : std::runtime_error(s) {}
@@ -169,5 +170,6 @@ class options {
     opts opts_;
     bool help_;
 };
+}
 
 #endif // OPTIONS_HPP

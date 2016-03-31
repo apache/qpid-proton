@@ -22,13 +22,16 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
+#include <proton/config.hpp>
+#include <proton/export.hpp>
+#include <proton/value.hpp>
 
 #include <stdexcept>
 #include <string>
 
 namespace proton {
+
+class value;
 
 /// The base proton error.
 ///

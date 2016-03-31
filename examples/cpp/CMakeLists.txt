@@ -20,7 +20,10 @@
 find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
+link_libraries(${ProtonCpp_LIBRARIES})
+add_compile_options(${CXX_WARNING_FLAGS})
 
+# Single-threaded examples.
 foreach(example
     broker
     helloworld
@@ -40,12 +43,9 @@ foreach(example
     ssl_client_cert
     encode_decode)
   add_executable(${example} ${example}.cpp)
-  target_link_libraries(${example} ${ProtonCpp_LIBRARIES})
-  set_source_files_properties(${example}.cpp PROPERTIES COMPILE_FLAGS "${CXX_WARNING_FLAGS}")
 endforeach()
 
-add_subdirectory(engine)
-
+# Python test runner
 set(env_py ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py)
 
 function(set_test_path dir)
@@ -61,7 +61,16 @@ set_test_path("$<TARGET_FILE_DIR:broker>")
 add_test(NAME cpp_container_example_test
   COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
-set_test_path("$<TARGET_FILE_DIR:engine-broker>")
-
-add_test(NAME cpp_engine_example_test
-  COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ConnectionEngineExampleTest)
+# TODO aconway 2016-04-26: need portable MT and IO examples.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND BUILD_CPP_MT)
+  set(controller_src mt/epoll_controller.cpp)
+  foreach(example
+      broker
+      )
+    add_executable(mt_${example} mt/${example}.cpp ${controller_src})
+    target_link_libraries(mt_${example} pthread)
+    set_target_properties(mt_${example} PROPERTIES CXX_STANDARD 11)
+  endforeach()
+  add_test(NAME cpp_mt_example_test
+    COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
+endif()

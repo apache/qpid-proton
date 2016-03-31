@@ -20,6 +20,7 @@
  * under the License.
  */
 
+#include "proton/config.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/error.hpp"
@@ -38,27 +39,44 @@ struct pn_collector_t;
 namespace proton {
 
 class handler;
+class work_queue;            // Only used for multi-threaded connection_engines.
 
-/// Contains classes to integrate proton into different IO and threading environments.
+/** @page integration
+
+This namespace contains a low-level "Service Provider Interface" that can be
+used to implement the proton API over any native or 3rd party IO library.
+
+The io::connection_engine is the core engine that converts raw AMQP bytes read
+from any IO source into proton::handler event calls, and generates AMQP
+byte-encoded output that can be written to any IO destination.
+
+The integration needs to implement two user-visible interfaces:
+ - proton::controller lets the user initiate or listen for connections.
+ - proton::work_queue lets the user serialize their own work with a connection.
+
+ @see epoll_controller.cpp for an example of an integration.
+
+[TODO controller doesn't belong in the mt namespace, a single-threaded
+integration would need a controller too.]
+
+*/
 namespace io {
-
-///@cond INTERNAL
-class connection_engine_context;
-///
 
 /// Pointer to a mutable memory region with a size.
 struct mutable_buffer {
-    char* data;
-    size_t size;
+    char* data;                 ///< Beginning of the buffered data.
+    size_t size;                ///< Number of bytes in the buffer.
 
+    /// Construct a buffer starting at data_ with size_ bytes.
     mutable_buffer(char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
 /// Pointer to a const memory region with a size.
 struct const_buffer {
-    const char* data;
-    size_t size;
+    const char* data;           ///< Beginning of the buffered data.
+    size_t size;                ///< Number of bytes in the buffer.
 
+    /// Construct a buffer starting at data_ with size_ bytes.
     const_buffer(const char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
@@ -88,39 +106,16 @@ struct const_buffer {
 /// epoll) or an async-request driven proactor (e.g. windows completion ports,
 /// boost.asio, libuv etc.)
 ///
+/// The engine never throws exceptions.
+///
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
-    // TODO aconway 2016-03-18: this will change
-    class container {
-      public:
-        /// Create a container with id.  Default to random UUID.
-        PN_CPP_EXTERN container(const std::string &id = "");
-        PN_CPP_EXTERN ~container();
-
-        /// Return the container-id
-        PN_CPP_EXTERN std::string id() const;
-
-        /// Make options to configure a new engine, using the default options.
-        ///
-        /// Call this once for each new engine as the options include a generated unique link_prefix.
-        /// You can modify the configuration before creating the engine but you should not
-        /// modify the container_id or link_prefix.
-        PN_CPP_EXTERN connection_options make_options();
-
-        /// Set the default options to be used for connection engines.
-        /// The container will set the container_id and link_prefix when make_options is called.
-        PN_CPP_EXTERN void options(const connection_options&);
-
-      private:
-        class impl;
-        internal::pn_unique_ptr<impl> impl_;
-    };
-
     /// Create a connection engine that dispatches to handler.
+    // TODO aconway 2016-04-06: no options, only via handler.
     PN_CPP_EXTERN connection_engine(handler&, const connection_options& = connection_options());
 
-    PN_CPP_EXTERN virtual ~connection_engine();
+    PN_CPP_EXTERN ~connection_engine();
 
     /// The engine's read buffer. Read data into this buffer then call read_done() when complete.
     /// Returns mutable_buffer(0, 0) if the engine cannot currently read data.
@@ -132,6 +127,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     PN_CPP_EXTERN void read_done(size_t n);
 
     /// Indicate that the read side of the transport is closed and no more data will be read.
+    /// Note that there may still be events to dispatch() or data to write.
     PN_CPP_EXTERN void read_close();
 
     /// The engine's write buffer. Write data from this buffer then call write_done()
@@ -141,9 +137,11 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
     /// Indicate that the first n bytes of write_buffer() have been written successfully.
     /// This changes the buffer, call write_buffer() to get the updated buffer.
+
     PN_CPP_EXTERN void write_done(size_t n);
 
-    /// Indicate that the write side of the transport has closed and no more data will be written.
+    /// Indicate that the write side of the transport has closed and no more data can be written.
+    /// Note that there may still be events to dispatch() or data to read.
     PN_CPP_EXTERN void write_close();
 
     /// Close the engine with an error that will be passed to handler::on_transport_error().
@@ -154,15 +152,14 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Dispatch all available events and call the corresponding \ref handler methods.
     ///
     /// Returns true if the engine is still active, false if it is finished and
-    /// can be destroyed. The engine is finished when either of the following is
-    /// true:
+    /// can be destroyed. The engine is finished when all events are dispatched
+    /// and one of the following is true:
     ///
     /// - both read_close() and write_close() have been called, no more IO is possible.
-    /// - The AMQP connection() is closed AND write_buffer() is empty.
+    /// - The AMQP connection() is closed AND the write_buffer() is empty.
     ///
-    /// May expand the read_buffer() and/or the write_buffer().
+    /// May modify the read_buffer() and/or the write_buffer().
     ///
-    /// @throw any exceptions thrown by the \ref handler.
     PN_CPP_EXTERN bool dispatch();
 
     /// Get the AMQP connection associated with this connection_engine.
@@ -170,6 +167,12 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
     /// Get the transport associated with this connection_engine.
     PN_CPP_EXTERN proton::transport transport() const;
+
+    /// For controller connections, set the connection's work_queue. Set
+    /// via plain pointer, not std::shared_ptr so the connection_engine can be
+    /// compiled with C++03.  The work_queue must outlive the engine. The
+    /// std::shared_ptr<work_queue> will be available via work_queue::get(this->connection())
+    PN_CPP_EXTERN void work_queue(class work_queue*);
 
   private:
     connection_engine(const connection_engine&);
@@ -180,6 +183,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     proton::transport transport_;
     proton::internal::pn_ptr<pn_collector_t> collector_;
 };
+
 }}
 
 #endif // CONNECTION_ENGINE_HPP
