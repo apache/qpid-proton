@@ -192,6 +192,7 @@ target_link_libraries(qpid-proton-bitcode)
 
 
 # Compile the send-async.c and recv-async.c examples into JavaScript
+include_directories(${PN_PATH}/../examples/c/include)
 add_executable(send-async.js ${PN_PATH}/../examples/c/messenger/send-async.c)
 target_link_libraries(send-async.js qpid-proton-bitcode)
 
