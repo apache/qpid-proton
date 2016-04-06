@@ -50,6 +50,9 @@ class delivery : public internal::object<pn_delivery_t> {
     /// Return the connection for this delivery
     PN_CPP_EXTERN class connection connection() const;
 
+    /// Return the container for this delivery
+    PN_CPP_EXTERN class container &container() const;
+
     /// Delivery state values.
     enum state {
         NONE = 0,               ///< Unknown state

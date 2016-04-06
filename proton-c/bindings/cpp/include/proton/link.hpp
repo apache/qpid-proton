@@ -119,6 +119,9 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Get the link name.
     PN_CPP_EXTERN std::string name() const;
 
+    /// Return the container for this link
+    PN_CPP_EXTERN class container &container() const;
+
     /// Connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
 

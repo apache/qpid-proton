@@ -36,6 +36,10 @@ void session::open() {
     pn_session_open(pn_object());
 }
 
+container& session::container() const {
+    return connection().container();
+}
+
 connection session::connection() const {
     return pn_session_connection(pn_object());
 }
