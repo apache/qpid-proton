@@ -19,8 +19,8 @@
  *
  */
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 
@@ -35,19 +35,19 @@ class hello_world : public proton::handler {
   public:
     hello_world(const proton::url& u) : url(u) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);
         conn.open_receiver(url.path());
         conn.open_sender(url.path());
     }
 
-    void on_sendable(proton::event &e, proton::sender &s) override {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
         d.connection().close();
     }

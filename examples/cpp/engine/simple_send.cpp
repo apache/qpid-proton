@@ -23,7 +23,6 @@
 
 #include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/value.hpp"
@@ -43,11 +42,11 @@ class simple_send : public proton::handler {
 
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_connection_open(proton::event &e, proton::connection &c) override {
+    void on_connection_open(proton::connection &c) override {
         c.open_sender(url.path());
     }
 
-    void on_sendable(proton::event &e, proton::sender &sender) override {
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             msg.id(sent + 1);
@@ -59,7 +58,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed++;
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
@@ -67,7 +66,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::event &e, proton::transport &) override {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

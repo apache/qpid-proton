@@ -24,7 +24,6 @@
 #include "proton/connection.hpp"
 #include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 
@@ -45,7 +44,7 @@ class server : public proton::handler {
 
     server(const std::string &u) : url(u) {}
 
-    void on_connection_open(proton::event &e, proton::connection &c) override {
+    void on_connection_open(proton::connection &c) override {
         c.open_receiver(url.path());
         std::cout << "server connected to " << url << std::endl;
     }
@@ -57,7 +56,7 @@ class server : public proton::handler {
         return uc;
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << "Received " << m.body() << std::endl;
         std::string reply_to = m.reply_to();
         proton::message reply;

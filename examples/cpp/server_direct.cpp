@@ -23,8 +23,8 @@
 
 #include "proton/acceptor.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
+#include "proton/sender.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
@@ -45,7 +45,7 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u), address_counter(0) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         c.listen(url);
         std::cout << "server listening on " << url << std::endl;
     }
@@ -66,14 +66,14 @@ class server : public proton::handler {
         return addr.str();
     }
 
-    void on_sender_open(proton::event& e, proton::sender &sender) override {
+    void on_sender_open(proton::sender &sender) override {
         if (sender.remote_source().dynamic()) {
             sender.local_source().address(generate_address());
             senders[sender.local_source().address()] = sender;
         }
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

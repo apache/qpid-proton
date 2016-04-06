@@ -19,8 +19,8 @@
  *
  */
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/link_options.hpp"
@@ -36,12 +36,12 @@ class browser : public proton::handler {
   public:
     browser(const proton::url& u) : url(u) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);
         conn.open_receiver(url.path(), proton::link_options().browsing(true));
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
 
         if (d.link().queued() == 0 && d.link().drained() > 0) {

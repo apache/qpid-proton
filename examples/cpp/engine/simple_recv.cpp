@@ -23,7 +23,6 @@
 
 #include "proton/io/socket.hpp"
 #include "proton/url.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/value.hpp"
@@ -44,12 +43,12 @@ class simple_recv : public proton::handler {
 
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_connection_open(proton::event &e, proton::connection &c) override {
+    void on_connection_open(proton::connection &c) override {
         receiver = c.open_receiver(url.path());
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e, proton::delivery& d, proton::message &msg) override {
+    void on_message(proton::delivery& d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {

@@ -21,7 +21,6 @@
 
 #include "options.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 
@@ -40,7 +39,7 @@ class client : public proton::handler {
   public:
     client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         sender = c.open_sender(url);
         // Create a receiver with a dynamically chosen unique address.
         receiver = sender.connection().open_receiver("", proton::link_options().dynamic_address(true));
@@ -54,11 +53,11 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_receiver_open(proton::event &e, proton::receiver &) override {
+    void on_receiver_open(proton::receiver &) override {
         send_request();
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &response) override {
+    void on_message(proton::delivery &d, proton::message &response) override {
         if (requests.empty()) return; // Spurious extra message!
 
         std::cout << requests.front() << " => " << response.body() << std::endl;

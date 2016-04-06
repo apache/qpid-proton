@@ -22,7 +22,6 @@
 #include <proton/uuid.hpp>
 #include <proton/io/connection_engine.hpp>
 #include <proton/handler.hpp>
-#include <proton/event.hpp>
 #include <proton/types_fwd.hpp>
 #include <proton/link.hpp>
 #include <deque>
@@ -100,20 +99,20 @@ struct record_handler : public handler {
     std::deque<proton::session> sessions;
     std::deque<std::string> errors;
 
-    void on_receiver_open(event& e, receiver &l) override {
+    void on_receiver_open(receiver &l) override {
         links.push_back(l);
     }
 
-    void on_sender_open(event& e, sender &l) override {
+    void on_sender_open(sender &l) override {
         links.push_back(l);
     }
 
-    void on_session_open(event& e, session &s) override {
+    void on_session_open(session &s) override {
         sessions.push_back(s);
     }
 
-    void on_unhandled_error(event& e, const condition& c) override {
-        errors.push_back(e.name() + "/" + c.what());
+    void on_unhandled_error(const condition& c) override {
+        errors.push_back(c.what());
     }
 };
 
@@ -230,7 +229,7 @@ void test_transport_close() {
     ASSERT(e.a.dispatch());
     while (!e.b.connection().closed()) e.process();
     ASSERT_EQUAL(1, hb.errors.size());
-    ASSERT_EQUAL("trasport_error/oops: engine failure", hb.errors.front());
+    ASSERT_EQUAL("oops: engine failure", hb.errors.front());
     ASSERT_EQUAL("oops", e.b.connection().remote_condition().name());
     ASSERT_EQUAL("engine failure", e.b.connection().remote_condition().description());
 }

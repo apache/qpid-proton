@@ -34,7 +34,6 @@
 #include "connector.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
-#include "messaging_event.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"

@@ -20,7 +20,6 @@
  */
 #include "proton/container.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/event.hpp"
 #include "proton/connection.hpp"
 #include "proton/session.hpp"
 #include "proton/acceptor.hpp"
@@ -38,8 +37,8 @@
 #include "container_impl.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
-#include "messaging_event.hpp"
 #include "msg.hpp"
+#include "proton_event.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"

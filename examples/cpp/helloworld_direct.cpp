@@ -20,9 +20,11 @@
  */
 
 #include "proton/acceptor.hpp"
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
+#include "proton/sender.hpp"
 
 #include <iostream>
 
@@ -36,26 +38,26 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         acceptor = c.listen(url);
         c.open_sender(url);
     }
 
-    void on_sendable(proton::event &e, proton::sender &s) override {
+    void on_sendable(proton::sender &s) override {
         proton::message m("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
+    void on_delivery_accept(proton::delivery &d) override {
         d.connection().close();
     }
 
-    void on_connection_close(proton::event &, proton::connection &) override {
+    void on_connection_close(proton::connection &) override {
         acceptor.close();
     }
 };

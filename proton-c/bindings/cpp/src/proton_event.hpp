@@ -21,7 +21,6 @@
  * under the License.
  *
  */
-#include "proton/event.hpp"
 #include "proton/link.hpp"
 
 #include "proton/event.h"

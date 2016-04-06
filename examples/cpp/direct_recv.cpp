@@ -21,9 +21,10 @@
 
 #include "options.hpp"
 
-#include "proton/container.hpp"
 #include "proton/acceptor.hpp"
-#include "proton/event.hpp"
+#include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
@@ -44,12 +45,12 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         acceptor = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }

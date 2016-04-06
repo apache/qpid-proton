@@ -22,7 +22,6 @@
 #include "options.hpp"
 
 #include "proton/io/socket.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
 #include "proton/url.hpp"
@@ -41,7 +40,7 @@ class direct_recv : public proton::handler {
   public:
     direct_recv(int c) : expected(c), received(0) {}
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received)
             return; // ignore duplicate
         if (expected == 0 || received < expected) {

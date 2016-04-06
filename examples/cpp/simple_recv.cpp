@@ -21,12 +21,13 @@
 
 #include "options.hpp"
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
-#include "proton/value.hpp"
 #include "proton/message_id.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
@@ -43,12 +44,12 @@ class simple_recv : public proton::handler {
   public:
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         receiver = c.open_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) override {
         if (msg.id().get<uint64_t>() < received) {
             return; // Ignore duplicate
         }
