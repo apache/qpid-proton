@@ -149,11 +149,6 @@ void proton_event::dispatch(proton_handler &handler) {
       default:
         throw error(MSG("Invalid Proton event type " << type_));
     }
-
-    // recurse through children
-    for (proton_handler::iterator child = handler.children_.begin(); child != handler.children_.end(); ++child) {
-        dispatch(**child);
-    }
 }
 
 }

@@ -109,16 +109,13 @@ class override_handler : public proton_handler
 };
 
 internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
-    if (!h->pn_handler_) {
-        h->pn_handler_ = internal::take_ownership(
-            pn_handler_new(&handler_context::dispatch,
-                           sizeof(struct handler_context),
-                           &handler_context::cleanup));
-        handler_context &hc = handler_context::get(h->pn_handler_.get());
-        hc.container_ = &container_;
-        hc.handler_ = h;
-    }
-    return h->pn_handler_;
+    pn_handler_t *handler = pn_handler_new(&handler_context::dispatch,
+                                           sizeof(struct handler_context),
+                                           &handler_context::cleanup);
+    handler_context &hc = handler_context::get(handler);
+    hc.container_ = &container_;
+    hc.handler_ = h;
+    return internal::take_ownership(handler);
 }
 
 container_impl::container_impl(container& c, messaging_adapter *h, const std::string& id) :
