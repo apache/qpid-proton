@@ -49,7 +49,9 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     private static final int CLEAR_CHUNK_SIZE = 2;
     private static final char CLEARTEXT_PADDING = '_';
     private SSLException _nextException;
-
+    private int _applicationBufferSize = CLEAR_CHUNK_SIZE;
+    private int _packetBufferSize = MAX_ENCODED_CHUNK_SIZE;
+    
     /**
      * Converts a_ to <-A->.  z_ is special and encodes as <> (to give us packets of different lengths).
      * If dst is not sufficiently large ({@value #SHORT_ENCODED_CHUNK_SIZE} in our encoding), we return
@@ -185,13 +187,23 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
 
     private int getApplicationBufferSize()
     {
-        return CLEAR_CHUNK_SIZE;
+        return _applicationBufferSize;
     }
 
     @Override
     public int getPacketBufferSize()
     {
-        return MAX_ENCODED_CHUNK_SIZE;
+        return _packetBufferSize;
+    }
+    
+    public void setApplicationBufferSize(int value)
+    {
+       	_applicationBufferSize = value;
+    }
+    
+    public void setPacketBufferSize(int value)
+    {
+       	_packetBufferSize = value;
     }
 
     @Override
