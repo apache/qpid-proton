@@ -86,17 +86,6 @@ class proton_handler
     virtual void on_selectable_final(proton_event &e);
     virtual void on_unhandled(proton_event &e);
     ///@}
-
-    /// Add a child handler, equivalent to this->push_back(&h)
-    /// h must not be deleted before this handler.
-    void add_child_handler(proton_handler &h);
-
-  private:
-    std::vector<proton_handler*> children_;
-    typedef std::vector<proton_handler*>::iterator iterator;
-    friend class proton_event;
-    internal::pn_ptr<pn_handler_t> pn_handler_;
-    friend class container_impl;
 };
 
 }

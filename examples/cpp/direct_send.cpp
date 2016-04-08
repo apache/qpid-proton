@@ -24,7 +24,6 @@
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/value.hpp"
 
@@ -44,12 +43,12 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         acceptor = c.listen(url);
         std::cout << "direct_send listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::event &e, proton::sender &sender) override {
+    void on_sendable(proton::sender &sender) override {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -63,7 +62,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
+    void on_delivery_accept(proton::delivery &d) override {
         confirmed++;
 
         if (confirmed == total) {
@@ -74,7 +73,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::event &e, proton::transport &) override {
+    void on_transport_close(proton::transport &) override {
         sent = confirmed;
     }
 };

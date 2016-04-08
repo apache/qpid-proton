@@ -27,9 +27,9 @@
 /// The examples add functionality as needed, this helps to make it
 /// easier to see the important differences between the examples.
 
-#include "proton/event.hpp"
-#include "proton/message.hpp"
+#include "proton/connection.hpp"
 #include "proton/handler.hpp"
+#include "proton/message.hpp"
 #include "proton/sender.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
@@ -154,7 +154,7 @@ class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_sender_open(proton::event &e, proton::sender &sender) override {
+    void on_sender_open(proton::sender &sender) override {
         proton::terminus remote_source(sender.remote_source());
         queue &q = remote_source.dynamic() ?
             queues_.dynamic() : queues_.get(remote_source.address());
@@ -164,7 +164,7 @@ class broker_handler : public proton::handler {
         std::cout << "broker outgoing link from " << q.name() << std::endl;
     }
 
-    void on_receiver_open(proton::event &e, proton::receiver &receiver) override {
+    void on_receiver_open(proton::receiver &receiver) override {
         std::string address = receiver.remote_target().address();
         if (!address.empty()) {
             receiver.local_target().address(address);
@@ -180,24 +180,24 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_sender_close(proton::event &e, proton::sender &sender) override {
+    void on_sender_close(proton::sender &sender) override {
         unsubscribe(sender);
     }
 
-    void on_connection_close(proton::event &e, proton::connection &c) override {
+    void on_connection_close(proton::connection &c) override {
         remove_stale_consumers(c);
     }
 
-    void on_transport_close(proton::event &e, proton::transport &t) override {
+    void on_transport_close(proton::transport &t) override {
         remove_stale_consumers(t.connection());
     }
 
-    void on_transport_error(proton::event &e, proton::transport &t) override {
+    void on_transport_error(proton::transport &t) override {
         std::cout << "broker client disconnect: " << t.condition().what() << std::endl;
     }
 
-    void on_unhandled_error(proton::event &e, const proton::condition &c) override {
-        std::cerr << "broker error: " << e.name() << ":" << c.what() << std::endl;
+    void on_unhandled_error(const proton::condition &c) override {
+        std::cerr << "broker error: " << c.what() << std::endl;
     }
 
     void remove_stale_consumers(proton::connection connection) {
@@ -208,13 +208,13 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_sendable(proton::event &e, proton::sender &s) override {
+    void on_sendable(proton::sender &s) override {
         std::string address = s.local_source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::string address = d.link().local_target().address();
         queues_.get(address).publish(m, d.link().receiver());
     }

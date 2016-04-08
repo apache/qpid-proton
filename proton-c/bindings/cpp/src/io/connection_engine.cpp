@@ -25,10 +25,9 @@
 #include "contexts.hpp"
 #include "id_generator.hpp"
 #include "messaging_adapter.hpp"
-#include "messaging_event.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "proton_bits.hpp"
+#include "proton_event.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>

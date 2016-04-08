@@ -66,6 +66,9 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// handler::on_session_close().
     PN_CPP_EXTERN void close();
 
+    /// Return the container for this session
+    PN_CPP_EXTERN class container &container() const;
+
     /// Get the connection this session belongs to.
     PN_CPP_EXTERN class connection connection() const;
 

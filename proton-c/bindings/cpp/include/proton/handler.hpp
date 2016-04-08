@@ -64,11 +64,11 @@ PN_CPP_CLASS_EXTERN handler
     /// @{
 
     /// The event loop is starting.
-    PN_CPP_EXTERN virtual void on_container_start(event &e, container &c);
+    PN_CPP_EXTERN virtual void on_container_start(container &c);
     /// A message is received.
-    PN_CPP_EXTERN virtual void on_message(event &e, delivery &d, message &m);
+    PN_CPP_EXTERN virtual void on_message(delivery &d, message &m);
     /// A message can be sent.
-    PN_CPP_EXTERN virtual void on_sendable(event &e, sender &s);
+    PN_CPP_EXTERN virtual void on_sendable(sender &s);
 
     /// transport_open is not present because currently there is no specific
     /// low level event to hang it from - you should put any initialisation code
@@ -78,10 +78,10 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX symmetry of the API.
 
     /// The underlying network transport has closed.
-    PN_CPP_EXTERN virtual void on_transport_close(event &e, transport &t);
+    PN_CPP_EXTERN virtual void on_transport_close(transport &t);
     /// The underlying network transport has closed with an error
     /// condition.
-    PN_CPP_EXTERN virtual void on_transport_error(event &e, transport &t);
+    PN_CPP_EXTERN virtual void on_transport_error(transport &t);
 
     /// Note that every ..._open event is paired with a ..._close event which can clean
     /// up any resources created by the ..._open handler.
@@ -91,41 +91,41 @@ PN_CPP_CLASS_EXTERN handler
     /// be along in a minute to handle the clean up.
 
     /// The remote peer opened the connection.
-    PN_CPP_EXTERN virtual void on_connection_open(event &e, connection &c);
+    PN_CPP_EXTERN virtual void on_connection_open(connection &c);
     /// The remote peer closed the connection.
-    PN_CPP_EXTERN virtual void on_connection_close(event &e, connection &c);
+    PN_CPP_EXTERN virtual void on_connection_close(connection &c);
     /// The remote peer closed the connection with an error condition.
-    PN_CPP_EXTERN virtual void on_connection_error(event &e, connection &c);
+    PN_CPP_EXTERN virtual void on_connection_error(connection &c);
 
     /// The remote peer opened the session.
-    PN_CPP_EXTERN virtual void on_session_open(event &e, session &s);
+    PN_CPP_EXTERN virtual void on_session_open(session &s);
     /// The remote peer closed the session.
-    PN_CPP_EXTERN virtual void on_session_close(event &e, session &s);
+    PN_CPP_EXTERN virtual void on_session_close(session &s);
     /// The remote peer closed the session with an error condition.
-    PN_CPP_EXTERN virtual void on_session_error(event &e, session &s);
+    PN_CPP_EXTERN virtual void on_session_error(session &s);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_receiver_open(event &e, receiver& l);
+    PN_CPP_EXTERN virtual void on_receiver_open(receiver& l);
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_receiver_close(event &e, receiver& l);
+    PN_CPP_EXTERN virtual void on_receiver_close(receiver& l);
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_receiver_error(event &e, receiver& l);
+    PN_CPP_EXTERN virtual void on_receiver_error(receiver& l);
 
     /// The remote peer opened the link.
-    PN_CPP_EXTERN virtual void on_sender_open(event &e, sender& l);
+    PN_CPP_EXTERN virtual void on_sender_open(sender& l);
     /// The remote peer closed the link.
-    PN_CPP_EXTERN virtual void on_sender_close(event &e, sender& l);
+    PN_CPP_EXTERN virtual void on_sender_close(sender& l);
     /// The remote peer closed the link with an error condition.
-    PN_CPP_EXTERN virtual void on_sender_error(event &e, sender& l);
+    PN_CPP_EXTERN virtual void on_sender_error(sender& l);
 
     /// The remote peer accepted an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_accept(event &e, delivery &d);
+    PN_CPP_EXTERN virtual void on_delivery_accept(delivery &d);
     /// The remote peer rejected an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_reject(event &e, delivery &d);
+    PN_CPP_EXTERN virtual void on_delivery_reject(delivery &d);
     /// The remote peer released an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_release(event &e, delivery &d);
+    PN_CPP_EXTERN virtual void on_delivery_release(delivery &d);
     /// The remote peer settled an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_settle(event &e, delivery &d);
+    PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
 
     // XXX are we missing on_delivery_modify?
     // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle
@@ -136,13 +136,11 @@ PN_CPP_CLASS_EXTERN handler
     /// XXX settle API questions around task
     /// XXX register functions instead of having these funny generic events
     /// A timer fired.
-    PN_CPP_EXTERN virtual void on_timer(event &e, container &c);
+    PN_CPP_EXTERN virtual void on_timer(container &c);
     /// @endcond
 
-    /// Fallback event handling.
-    PN_CPP_EXTERN virtual void on_unhandled(event &e);
     /// Fallback error handling.
-    PN_CPP_EXTERN virtual void on_unhandled_error(event &e, const condition &c);
+    PN_CPP_EXTERN virtual void on_unhandled_error(const condition &c);
 
     /// @}
 

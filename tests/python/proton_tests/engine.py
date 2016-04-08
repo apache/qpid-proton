@@ -2665,10 +2665,16 @@ class SaslEventTest(CollectorTest):
     s.allowed_mechs("ANONYMOUS PLAIN")
     transport.bind(conn)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
-    transport.push(str2bin('AMQP\x03\x01\x00\x00\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@'
-                           '\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS\x00\x00\x00\x10'
-                           '\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00AMQP\x00\x01\x00'
-                           '\x00'))
+    transport.push(str2bin(
+        # SASL
+        'AMQP\x03\x01\x00\x00'
+        # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
+        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        # @sasl-outcome(68) [code=0]
+        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        # AMQP
+        'AMQP\x00\x01\x00\x00'
+         ))
     self.expect(Event.TRANSPORT)
     p = transport.pending()
     bytes = transport.peek(p)
@@ -2676,6 +2682,7 @@ class SaslEventTest(CollectorTest):
 
     server = Transport(Transport.SERVER)
     server.push(bytes)
+    assert s.outcome == SASL.OK
     assert server.sasl().outcome == SASL.OK
 
   def testPipelinedServerWriteFirst(self):
@@ -2690,14 +2697,21 @@ class SaslEventTest(CollectorTest):
     p = transport.pending()
     bytes = transport.peek(p)
     transport.pop(p)
-    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND, Event.TRANSPORT)
-    transport.push(str2bin('AMQP\x03\x01\x00\x00\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@'
-                           '\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS\x00\x00\x00\x10'
-                           '\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00AMQP\x00\x01\x00'
-                           '\x00'))
+    self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
+    transport.push(str2bin(
+        # SASL
+        'AMQP\x03\x01\x00\x00'
+        # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
+        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        # @sasl-outcome(68) [code=0]
+        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        # AMQP
+        'AMQP\x00\x01\x00\x00'
+        ))
     self.expect(Event.TRANSPORT)
     p = transport.pending()
     bytes = transport.peek(p)
     transport.pop(p)
+    assert s.outcome == SASL.OK
     # XXX: the bytes above appear to be correct, but we don't get any
     # sort of event indicating that the transport is authenticated

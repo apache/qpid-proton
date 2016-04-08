@@ -20,12 +20,12 @@
  */
 
 #include "proton/acceptor.hpp"
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/transport.hpp"
+#include "proton/connection.hpp"
+#include "proton/container.hpp"
+#include "proton/handler.hpp"
 #include "proton/ssl.hpp"
+#include "proton/transport.hpp"
 
 #include <iostream>
 
@@ -47,13 +47,13 @@ std::string find_CN(const std::string &);
 struct server_handler : public proton::handler {
     proton::acceptor acceptor;
 
-    void on_connection_open(proton::event &e, proton::connection &c) override {
+    void on_connection_open(proton::connection &c) override {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             c.transport().ssl().protocol() << std::endl;
         acceptor.close();
     }
 
-    void on_message(proton::event &e, proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };
@@ -67,7 +67,7 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const proton::url& u) : url(u) {}
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
@@ -87,20 +87,20 @@ class hello_world_direct : public proton::handler {
         c.open_sender(url);
     }
 
-    void on_connection_open(proton::event &e, proton::connection &c) override {
+    void on_connection_open(proton::connection &c) override {
         std::string subject = c.transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
     }
 
-    void on_sendable(proton::event &e, proton::sender &s) override {
+    void on_sendable(proton::sender &s) override {
         proton::message m;
         m.body("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_delivery_accept(proton::event &e, proton::delivery &d) override {
+    void on_delivery_accept(proton::delivery &d) override {
         // All done.
         d.connection().close();
     }

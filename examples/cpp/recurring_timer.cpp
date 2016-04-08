@@ -22,7 +22,6 @@
 #include "options.hpp"
 
 #include "proton/container.hpp"
-#include "proton/event.hpp"
 #include "proton/handler.hpp"
 #include "proton/task.hpp"
 
@@ -32,13 +31,13 @@
 #include "fake_cpp11.hpp"
 
 class ticker : public proton::handler {
-    void on_timer(proton::event &e, proton::container &) override {
+    void on_timer(proton::container &) override {
         std::cout << "Tick..." << std::endl;
     }
 };
 
 class tocker : public proton::handler {
-    void on_timer(proton::event &e, proton::container &) override {
+    void on_timer(proton::container &) override {
         std::cout << "Tock..." << std::endl;
     }
 };
@@ -60,13 +59,13 @@ class recurring : public proton::handler {
         return c.schedule(tick_ms * 3, &tock_handler);
     }
 
-    void on_container_start(proton::event &e, proton::container &c) override {
+    void on_container_start(proton::container &c) override {
         // Demonstrate cancel(), we will cancel the first tock on the first recurring::on_timer_task
         cancel_task = ticktock(c);
         c.schedule(0);
     }
 
-    void on_timer(proton::event &e, proton::container &c) override {
+    void on_timer(proton::container &c) override {
         if (!!cancel_task) {
             cancel_task.cancel();
             cancel_task = 0;
