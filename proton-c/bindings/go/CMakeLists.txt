@@ -65,7 +65,7 @@ add_test(
   WORKING_DIRECTORY $ENV{PWD})
 
 # Make available to examples/go/CMakeLists
-set(GO_TARGETS ${targets} CACHE INTERNAL "Go package library targets")
+set(GO_TARGETS go-build CACHE INTERNAL "Go package library targets")
 
 # Clean up go output directories.
 list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
