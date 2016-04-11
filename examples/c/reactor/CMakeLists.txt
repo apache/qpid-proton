@@ -17,6 +17,11 @@
 # under the License.
 #
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-add_subdirectory(messenger)
-add_subdirectory(reactor)
+find_package(Proton REQUIRED)
+
+include_directories(${Proton_INCLUDE_DIRS})
+add_executable(sender sender.c)
+add_executable(receiver receiver.c)
+target_link_libraries(sender ${Proton_LIBRARIES})
+target_link_libraries(receiver ${Proton_LIBRARIES})
+
