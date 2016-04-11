@@ -12,9 +12,11 @@ public class SimpleSslTransportWrapperBufferSizeTest
     @Test
     public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInput() throws Exception
     {
+    	// set the underlyingInput.Buffer to very small value
     	RememberingTransportInput underlyingInput = new RememberingTransportInput();
     	underlyingInput.setInputBufferSize(1);
         
+    	// set the SslInputBuffer and intermediateDecodeBuffer to large values
     	CapitalisingDummySslEngine dummySslEngine = new CapitalisingDummySslEngine();
         dummySslEngine.setApplicationBufferSize(100);
         dummySslEngine.setPacketBufferSize(100);
