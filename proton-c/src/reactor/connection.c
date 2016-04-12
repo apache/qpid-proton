@@ -142,13 +142,14 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
       const char *hostname = pn_connection_get_hostname(conn);
       if (hostname) {
           str = pn_string(hostname);
-          host = pn_string_buffer(str);
+          char *h = pn_string_buffer(str);
           // see if a port has been included in the hostname.  This is not
           // allowed by the spec, but the old reactor interface allowed it.
-          char *colon = strrchr(host, ':');
+          char *colon = strrchr(h, ':');
           if (colon) {
+              *colon = '\0';
+              host = h;
               port = colon + 1;
-              colon[0] = '\0';
           }
       }
   }
@@ -169,7 +170,7 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
     pn_transport_close_tail(transport);
     pn_transport_close_head(transport);
   }
-  if (str) pn_free(str);
+  pn_free(str);
   pn_reactor_selectable_transport(reactor, sock, transport);
 }
 
