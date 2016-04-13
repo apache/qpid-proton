@@ -78,11 +78,15 @@ static void event_handler(pn_handler_t *handler,
     case PN_CONNECTION_INIT: {
         // Create and open all the endpoints needed to send a message
         //
-        pn_connection_t *conn = pn_event_connection(event);
+        pn_connection_t *conn;
+        pn_session_t *ssn;
+        pn_link_t *sender;
+
+        conn = pn_event_connection(event);
         pn_connection_open(conn);
-        pn_session_t *ssn = pn_session(conn);
+        ssn = pn_session(conn);
         pn_session_open(ssn);
-        pn_link_t *sender = pn_sender(ssn, "MySender");
+        sender = pn_sender(ssn, "MySender");
         // we do not wait for ack until the last message
         pn_link_set_snd_settle_mode(sender, PN_SND_MIXED);
         if (!data->anon) {
@@ -95,13 +99,13 @@ static void event_handler(pn_handler_t *handler,
         // the remote has given us some credit, now we can send messages
         //
         static long tag = 0;  // a simple tag generator
+        pn_delivery_t *delivery;
         pn_link_t *sender = pn_event_link(event);
         int credit = pn_link_credit(sender);
         while (credit > 0 && data->count > 0) {
             --credit;
             --data->count;
             ++tag;
-            pn_delivery_t *delivery;
             delivery = pn_delivery(sender,
                                    pn_dtag((const char *)&tag, sizeof(tag)));
             pn_link_send(sender, data->msg_data, data->msg_len);
@@ -152,8 +156,8 @@ static void event_handler(pn_handler_t *handler,
             if (done) {
                 // initiate clean shutdown of the endpoints
                 pn_link_t *link = pn_delivery_link(dlv);
-                pn_link_close(link);
                 pn_session_t *ssn = pn_link_session(link);
+                pn_link_close(link);
                 pn_session_close(ssn);
                 pn_connection_close(pn_session_connection(ssn));
             }
@@ -202,6 +206,11 @@ int main(int argc, char** argv)
     char *container = "SendExample";
     int anon = 0;
     int c;
+    pn_message_t *message = NULL;
+    pn_data_t *body = NULL;
+    pn_reactor_t *reactor = NULL;
+    pn_url_t *url = NULL;
+    pn_connection_t *conn = NULL;
 
     /* Create a handler for the connection's events.  event_handler() will be
      * called for each event and delete_handler will be called when the
@@ -249,9 +258,9 @@ int main(int argc, char** argv)
     // once.  All transmits will use the same pre-encoded message simply for
     // speed.
     //
-    pn_message_t *message = pn_message();
+    message = pn_message();
     pn_message_set_address(message, app_data->target);
-    pn_data_t *body = pn_message_body(message);
+    body = pn_message_body(message);
     pn_data_clear(body);
 
     // This message's body contains a single string
@@ -271,7 +280,7 @@ int main(int argc, char** argv)
             if (rc == PN_OVERFLOW) {
                 free(buf);
                 len *= 2;
-                buf = malloc(len);
+                buf = (char *)malloc(len);
             }
         } while (rc == PN_OVERFLOW);
         app_data->msg_len = len;
@@ -279,17 +288,17 @@ int main(int argc, char** argv)
     }
     pn_decref(message);   // message no longer needed
 
-    pn_reactor_t *reactor = pn_reactor();
+    reactor = pn_reactor();
 
-    pn_url_t *url = pn_url_parse(address);
+    url = pn_url_parse(address);
     if (url == NULL) {
         fprintf(stderr, "Invalid host address %s\n", address);
         exit(1);
     }
-    pn_connection_t *conn = pn_reactor_connection_to_host(reactor,
-                                                          pn_url_get_host(url),
-                                                          pn_url_get_port(url),
-                                                          handler);
+    conn = pn_reactor_connection_to_host(reactor,
+                                         pn_url_get_host(url),
+                                         pn_url_get_port(url),
+                                         handler);
     pn_decref(url);
 
     // the container name should be unique for each client

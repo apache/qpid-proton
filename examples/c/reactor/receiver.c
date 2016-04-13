@@ -80,11 +80,15 @@ static void event_handler(pn_handler_t *handler,
     case PN_CONNECTION_INIT: {
         // Create and open all the endpoints needed to send a message
         //
-        pn_connection_t *conn = pn_event_connection(event);
+        pn_connection_t *conn;
+        pn_session_t *ssn;
+        pn_link_t *receiver;
+
+        conn = pn_event_connection(event);
         pn_connection_open(conn);
-        pn_session_t *ssn = pn_session(conn);
+        ssn = pn_session(conn);
         pn_session_open(ssn);
-        pn_link_t *receiver = pn_receiver(ssn, "MyReceiver");
+        receiver = pn_receiver(ssn, "MyReceiver");
         pn_terminus_set_address(pn_link_source(receiver), data->source);
         pn_link_open(receiver);
         // cannot receive without granting credit:
@@ -94,6 +98,7 @@ static void event_handler(pn_handler_t *handler,
     case PN_DELIVERY: {
         // A message has been received
         //
+        pn_link_t *link = NULL;
         pn_delivery_t *dlv = pn_event_delivery(event);
         if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
             // A full message has arrived
@@ -122,7 +127,7 @@ static void event_handler(pn_handler_t *handler,
                 }
             }
 
-            pn_link_t *link = pn_delivery_link(dlv);
+            link = pn_delivery_link(dlv);
 
             if (!pn_delivery_settled(dlv)) {
                 // remote has not settled, so it is tracking the delivery.  Ack
@@ -142,8 +147,8 @@ static void event_handler(pn_handler_t *handler,
                 }
             } else if (--data->count == 0) {
                 // done receiving, close the endpoints
-                pn_link_close(link);
                 pn_session_t *ssn = pn_link_session(link);
+				pn_link_close(link);
                 pn_session_close(ssn);
                 pn_connection_close(pn_session_connection(ssn));
             }
@@ -187,6 +192,10 @@ int main(int argc, char** argv)
 {
     char *address = "localhost";
     char *container = "ReceiveExample";
+    int c;
+    pn_reactor_t *reactor = NULL;
+    pn_url_t *url = NULL;
+    pn_connection_t *conn = NULL;
 
     /* create a handler for the connection's events.
      * event_handler will be called for each event.  The handler will allocate
@@ -211,7 +220,6 @@ int main(int argc, char** argv)
 
     /* command line options */
     opterr = 0;
-    int c;
     while((c = getopt(argc, argv, "i:a:c:s:qh")) != -1) {
         switch(c) {
         case 'h': usage(); break;
@@ -229,17 +237,17 @@ int main(int argc, char** argv)
         }
     }
 
-    pn_reactor_t *reactor = pn_reactor();
+    reactor = pn_reactor();
 
-    pn_url_t *url = pn_url_parse(address);
+    url = pn_url_parse(address);
     if (url == NULL) {
         fprintf(stderr, "Invalid host address %s\n", address);
         exit(1);
     }
-    pn_connection_t *conn = pn_reactor_connection_to_host(reactor,
-                                                          pn_url_get_host(url),
-                                                          pn_url_get_port(url),
-                                                          handler);
+    conn = pn_reactor_connection_to_host(reactor,
+                                         pn_url_get_host(url),
+                                         pn_url_get_port(url),
+                                         handler);
     pn_decref(url);
 
     // the container name should be unique for each client
