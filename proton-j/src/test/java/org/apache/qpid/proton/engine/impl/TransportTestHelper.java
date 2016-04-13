@@ -21,6 +21,7 @@ package org.apache.qpid.proton.engine.impl;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 public class TransportTestHelper
 {
@@ -47,7 +48,7 @@ public class TransportTestHelper
     {
         byte[] buf = new byte[sizeRequested];
         int numberRead = ByteBufferUtils.pourBufferToArray(source, buf, 0, sizeRequested);
-        return new String(buf, 0, numberRead);
+        return new String(buf, 0, numberRead, StandardCharsets.UTF_8);
     }
 
     public static String stringOfLength(String value, int repeat)
