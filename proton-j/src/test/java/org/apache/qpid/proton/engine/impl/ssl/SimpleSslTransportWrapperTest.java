@@ -117,16 +117,6 @@ public class SimpleSslTransportWrapperTest
     }
 
     @Test
-    public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInput() throws Exception
-    {
-        _underlyingInput.setInputBufferSize(1);
-
-        putBytesIntoTransport("<-A->");
-
-        assertEquals("a_", _underlyingInput.getAcceptedInput());
-    }
-
-    @Test
     public void testSslUnwrapThrowsException_returnsErrorResultAndRefusesFurtherInput() throws Exception
     {
         SSLException sslException = new SSLException("unwrap exception");

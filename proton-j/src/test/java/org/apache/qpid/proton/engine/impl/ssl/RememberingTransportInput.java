@@ -30,7 +30,7 @@ class RememberingTransportInput implements TransportInput
     private StringBuilder _receivedInput = new StringBuilder();
     private String _nextError;
     private int _inputBufferSize = 1024;
-    private ByteBuffer _buffer = ByteBuffer.allocate(_inputBufferSize);
+    private ByteBuffer _buffer;
 
     String getAcceptedInput()
     {
@@ -46,24 +46,29 @@ class RememberingTransportInput implements TransportInput
     @Override
     public int capacity()
     {
+    	init();
         return _buffer.remaining();
     }
 
     @Override
     public int position()
     {
+    	init();
         return _buffer.position();
     }
 
     @Override
     public ByteBuffer tail()
     {
+    	init();
         return _buffer;
     }
 
     @Override
     public void process() throws TransportException
     {
+    	init();
+    	
         if(_nextError != null)
         {
             throw new TransportException(_nextError);
@@ -90,5 +95,13 @@ class RememberingTransportInput implements TransportInput
     public void setInputBufferSize(int inputBufferSize)
     {
         _inputBufferSize = inputBufferSize;
+    }
+    
+    private void init()
+    {
+    	if (_buffer == null)
+    	{
+    		_buffer = ByteBuffer.allocate(_inputBufferSize);
+    	}
     }
 }

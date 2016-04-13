@@ -121,21 +121,27 @@ public class SimpleSslTransportWrapper implements SslTransportWrapper
                     throw new TransportException("bytes left unconsumed");
                 }
             } else {
-                ByteBuffer tail = _underlyingInput.tail();
                 _decodedInputBuffer.flip();
-                int limit = _decodedInputBuffer.limit();
-                int overflow = _decodedInputBuffer.remaining() - capacity;
-                if (overflow > 0) {
-                    _decodedInputBuffer.limit(limit - overflow);
-                }
-                tail.put(_decodedInputBuffer);
-                _decodedInputBuffer.limit(limit);
+                
+                do
+                {
+	                ByteBuffer tail = _underlyingInput.tail();
+	                int limit = _decodedInputBuffer.limit();
+	                int overflow = _decodedInputBuffer.remaining() - capacity;
+	                if (overflow > 0) {
+	                    _decodedInputBuffer.limit(limit - overflow);
+	                }
+	                tail.put(_decodedInputBuffer);
+	                _decodedInputBuffer.limit(limit);
+	                _underlyingInput.process();
+	                capacity = _underlyingInput.capacity();
+	                if (capacity == Transport.END_OF_STREAM) {
+	                    _tail_closed = true;
+	                    break;
+	                }
+                }while (_decodedInputBuffer.hasRemaining());
+                
                 _decodedInputBuffer.compact();
-                _underlyingInput.process();
-                capacity = _underlyingInput.capacity();
-                if (capacity == Transport.END_OF_STREAM) {
-                    _tail_closed = true;
-                }
             }
 
             switch (status) {
