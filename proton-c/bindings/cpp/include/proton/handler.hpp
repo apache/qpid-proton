@@ -37,6 +37,7 @@ class session;
 class link;
 class sender;
 class receiver;
+class tracker;
 class delivery;
 class message;
 class messaging_adapter;
@@ -118,19 +119,16 @@ PN_CPP_CLASS_EXTERN handler
     /// The remote peer closed the link with an error condition.
     PN_CPP_EXTERN virtual void on_sender_error(sender& l);
 
-    /// The remote peer accepted an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_accept(delivery &d);
-    /// The remote peer rejected an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_reject(delivery &d);
-    /// The remote peer released an outgoing message.
-    PN_CPP_EXTERN virtual void on_delivery_release(delivery &d);
-    /// The remote peer settled an outgoing message.
+    /// The receiving peer accepted a transfer.
+    PN_CPP_EXTERN virtual void on_tracker_accept(tracker &d);
+    /// The receiving peer rejected a transfer.
+    PN_CPP_EXTERN virtual void on_tracker_reject(tracker &d);
+    /// The receiving peer released a transfer.
+    PN_CPP_EXTERN virtual void on_tracker_release(tracker &d);
+    /// The receiving peer settled a transfer.
+    PN_CPP_EXTERN virtual void on_tracker_settle(tracker &d);
+    /// The sending peer settled a transfer.
     PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
-
-    // XXX are we missing on_delivery_modify?
-    // XXX on_delivery_accept (and co) is a more discriminated on_delivery_settle
-
-    // XXX note that AMQP modified state is indicated in _release
 
     /// @cond INTERNAL
     /// XXX settle API questions around task

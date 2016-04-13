@@ -22,9 +22,9 @@
 #include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
+#include "proton/tracker.hpp"
 
 #include <iostream>
 
@@ -53,8 +53,8 @@ class hello_world_direct : public proton::handler {
         std::cout << m.body() << std::endl;
     }
 
-    void on_delivery_accept(proton::delivery &d) override {
-        d.connection().close();
+    void on_tracker_accept(proton::tracker &t) override {
+        t.connection().close();
     }
 
     void on_connection_close(proton::connection &) override {

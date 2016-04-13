@@ -28,9 +28,11 @@
 /// easier to see the important differences between the examples.
 
 #include "proton/connection.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/message.hpp"
 #include "proton/sender.hpp"
+#include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
 
@@ -215,8 +217,8 @@ class broker_handler : public proton::handler {
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {
-        std::string address = d.link().local_target().address();
-        queues_.get(address).publish(m, d.link().receiver());
+        std::string address = d.receiver().local_target().address();
+        queues_.get(address).publish(m, d.receiver());
     }
 
   protected:

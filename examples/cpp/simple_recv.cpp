@@ -59,7 +59,7 @@ class simple_recv : public proton::handler {
             received++;
 
             if (received == expected) {
-                d.link().close();
+                d.receiver().close();
                 d.connection().close();
             }
         }

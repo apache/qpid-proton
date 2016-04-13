@@ -80,22 +80,6 @@ link proton_event::link() const {
     return lnk;
 }
 
-sender proton_event::sender() const {
-    if (!link().sender()) throw error(MSG("No sender context for this event"));
-    return link().sender();
-}
-
-receiver proton_event::receiver() const {
-    if (!link().receiver()) throw error(MSG("No receiver context for this event"));
-    return link().receiver();
-}
-
-delivery proton_event::delivery() const {
-    pn_delivery_t* dlv = pn_event_delivery(pn_event());
-    if (!dlv) throw error(MSG("No delivery context for this event"));
-    return dlv;
-}
-
 void proton_event::dispatch(proton_handler &handler) {
     switch(type_) {
 

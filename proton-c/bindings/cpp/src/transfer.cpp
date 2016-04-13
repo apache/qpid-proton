@@ -19,32 +19,33 @@
  *
  */
 
+#include "proton/delivery.hpp"
+
+#include "proton/connection.hpp"
 #include "proton/link.hpp"
-#include "proton/sender.hpp"
-#include "proton/tracker.hpp"
+#include "proton/session.hpp"
 
 #include "proton/delivery.h"
 #include "proton/link.h"
-#include "proton/types.h"
+#include "proton/session.h"
 
 namespace proton {
 
-namespace {
-// TODO: revisit if thread safety required
-uint64_t tag_counter = 0;
+session transfer::session() const { return pn_link_session(pn_delivery_link(pn_object())); }
+connection transfer::connection() const { return pn_session_connection(pn_link_session(pn_delivery_link(pn_object()))); }
+container& transfer::container() const { return connection().container(); }
+
+bool transfer::settled() const { return pn_delivery_settled(pn_object()); }
+
+void transfer::settle() { pn_delivery_settle(pn_object()); }
+
+void transfer::update(enum state state) { pn_delivery_update(pn_object(), state); }
+
+void transfer::settle(enum state state) {
+    update(state);
+    settle();
 }
 
-tracker sender::send(const message &message) {
-    uint64_t id = ++tag_counter;
-    pn_delivery_t *dlv =
-        pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
-    std::vector<char> buf;
-    message.encode(buf);
-    pn_link_send(pn_object(), &buf[0], buf.size());
-    pn_link_advance(pn_object());
-    if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
-        pn_delivery_settle(dlv);
-    return dlv;
-}
-
+bool transfer::updated()  const { return pn_delivery_updated(pn_object()); }
+enum transfer::state transfer::state() const { return static_cast<enum state>(pn_delivery_remote_state(pn_object())); }
 }

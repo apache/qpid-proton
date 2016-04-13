@@ -26,6 +26,7 @@
 #include "proton/handler.hpp"
 #include "proton/sasl.hpp"
 #include "proton/ssl.hpp"
+#include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 
 #include <iostream>
@@ -115,9 +116,9 @@ class hello_world_direct : public proton::handler {
         s.close();
     }
 
-    void on_delivery_accept(proton::delivery &d) override {
+    void on_tracker_accept(proton::tracker &t) override {
         // All done.
-        d.connection().close();
+        t.connection().close();
     }
 };
 

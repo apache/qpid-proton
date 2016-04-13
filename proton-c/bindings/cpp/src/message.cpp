@@ -283,7 +283,7 @@ void message::decode(const std::vector<char> &s) {
 void message::decode(proton::delivery delivery) {
     std::vector<char> buf;
     buf.resize(delivery.pending());
-    proton::link link = delivery.link();
+    proton::link link = delivery.receiver();
     ssize_t n = link.recv(const_cast<char *>(&buf[0]), buf.size());
     if (n != ssize_t(buf.size())) throw error(MSG("link read failure"));
     clear();

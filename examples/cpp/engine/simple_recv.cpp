@@ -27,6 +27,7 @@
 #include "proton/link.hpp"
 #include "proton/value.hpp"
 #include "proton/message_id.hpp"
+#include "proton/delivery.hpp"
 
 #include <iostream>
 #include <map>
@@ -55,7 +56,7 @@ class simple_recv : public proton::handler {
             std::cout << msg.body() << std::endl;
             received++;
             if (received == expected) {
-                d.link().close();
+                d.receiver().close();
                 d.connection().close();
             }
         }

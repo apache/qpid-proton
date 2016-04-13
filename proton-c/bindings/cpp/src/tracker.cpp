@@ -1,6 +1,3 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,41 +19,11 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/link.hpp"
-#include "proton/message.hpp"
+#include "proton/tracker.hpp"
 
-#include "proton/types.h"
-#include <string>
-
-struct pn_connection_t;
+#include "proton/sender.hpp"
 
 namespace proton {
 
-class tracker;
-
-/// A link for sending messages.
-class
-PN_CPP_CLASS_EXTERN sender : public link
-{
-    /// @cond INTERNAL
-    sender(pn_link_t* s) : link(s) {}
-    /// @endcond
-
-  public:
-    sender() : link(0) {}
-
-    /// Send a message on the link.
-    PN_CPP_EXTERN tracker send(const message &m);
-
-  /// @cond INTERNAL
-  friend class link;
-  friend class tracker;
-  friend class session;
-  friend class messaging_adapter;
-  /// @endcond
-};
-
+sender tracker::sender() const { return pn_delivery_link(pn_object()); }
 }
-
-#endif // PROTON_CPP_SENDER_H

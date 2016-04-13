@@ -21,6 +21,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/link_options.hpp"
@@ -44,7 +45,7 @@ class browser : public proton::handler {
     void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
 
-        if (d.link().queued() == 0 && d.link().drained() > 0) {
+        if (d.receiver().queued() == 0 && d.receiver().drained() > 0) {
             d.connection().close();
         }
     }

@@ -22,13 +22,14 @@
 #include "options.hpp"
 
 #include "proton/binary.hpp"
-#include "proton/container.hpp"
-#include "proton/handler.hpp"
 #include "proton/connection.hpp"
+#include "proton/container.hpp"
 #include "proton/decoder.hpp"
-#include "proton/reactor.h"
-#include "proton/value.hpp"
+#include "proton/delivery.hpp"
+#include "proton/handler.hpp"
 #include "proton/link_options.hpp"
+#include "proton/tracker.hpp"
+#include "proton/value.hpp"
 
 #include <iostream>
 #include <map>
@@ -80,13 +81,13 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::delivery &d) override {
+    void on_tracker_accept(proton::tracker &t) override {
         confirmed_++;
-        d.settle();
+        t.settle();
         if (confirmed_ == total_) {
             std::cout << "all messages confirmed" << std::endl;
             if (!replying_)
-                d.connection().close();
+                t.connection().close();
         }
     }
 
@@ -98,7 +99,7 @@ class reactor_send : public proton::handler {
         }
         d.settle();
         if (received_ == total_) {
-            d.link().close();
+            d.receiver().close();
             d.connection().close();
         }
     }

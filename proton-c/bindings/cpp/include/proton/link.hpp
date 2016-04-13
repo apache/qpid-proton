@@ -149,7 +149,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     link_context &context();
 
   friend class connection;
-  friend class delivery;
+  friend class transfer;
   friend class receiver;
   friend class sender;
   friend class message;

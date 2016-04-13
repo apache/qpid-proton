@@ -26,6 +26,7 @@
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/value.hpp"
+#include "proton/tracker.hpp"
 
 #include <iostream>
 #include <map>
@@ -62,13 +63,13 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::delivery &d) override {
+    void on_tracker_accept(proton::tracker &t) override {
         confirmed++;
 
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
 
-            d.connection().close();
+            t.connection().close();
             acceptor.close();
         }
     }

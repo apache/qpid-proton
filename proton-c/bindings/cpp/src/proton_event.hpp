@@ -278,10 +278,7 @@ class proton_event
     class transport transport() const;
     class connection connection() const;
     class session session() const;
-    class sender sender() const;
-    class receiver receiver() const;
     class link link() const;
-    class delivery delivery() const;
 
     /** Get type of event */
     event_type type() const;

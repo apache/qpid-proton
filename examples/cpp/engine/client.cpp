@@ -22,8 +22,10 @@
 #include "options.hpp"
 #include "proton/io/socket.hpp"
 #include "proton/url.hpp"
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
+#include "proton/tracker.hpp"
 
 #include <iostream>
 #include <vector>

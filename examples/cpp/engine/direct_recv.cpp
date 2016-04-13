@@ -21,6 +21,7 @@
 
 #include "options.hpp"
 
+#include "proton/delivery.hpp"
 #include "proton/io/socket.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
@@ -48,7 +49,7 @@ class direct_recv : public proton::handler {
             received++;
         }
         if (received == expected) {
-            d.link().close();
+            d.receiver().close();
             d.connection().close();
         }
     }

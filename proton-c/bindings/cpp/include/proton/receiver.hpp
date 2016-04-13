@@ -44,7 +44,9 @@ PN_CPP_CLASS_EXTERN receiver : public link {
 
   /// @cond INTERNAL
   friend class link;
+  friend class delivery;
   friend class session;
+  friend class messaging_adapter;
   /// @endcond
 };
 

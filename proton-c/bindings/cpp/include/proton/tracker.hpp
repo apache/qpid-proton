@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DELIVERY_H
-#define PROTON_CPP_DELIVERY_H
+#ifndef PROTON_CPP_TRACKER_H
+#define PROTON_CPP_TRACKER_H
 
 /*
  *
@@ -31,51 +31,22 @@
 
 namespace proton {
 
-class receiver;
-
 /// A message transfer.  Every delivery exists within the context of a
 /// proton::link.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
-class delivery : public transfer {
+class tracker : public transfer {
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d) : transfer(d) {}
+    tracker(pn_delivery_t* d) : transfer(d) {}
     /// @endcond
 
   public:
-    // Return the receiver for this delivery
-    PN_CPP_EXTERN class receiver receiver() const;
+    // Return the sender for this tracker
+    PN_CPP_EXTERN class sender sender() const;
 
-    /// Settle with ACCEPTED state
-    PN_CPP_EXTERN void accept() { settle(ACCEPTED); }
-
-    /// Settle with REJECTED state
-    PN_CPP_EXTERN void reject() { settle(REJECTED); }
-
-    /// Settle with RELEASED state
-    PN_CPP_EXTERN void release() { settle(RELEASED); }
-
-    /// Settle with MODIFIED state
-    PN_CPP_EXTERN void modify() { settle(MODIFIED); }
-
-    /// @cond INTERNAL
-  private:
-    /// Get the size of the current delivery.
-    size_t pending() const;
-
-    /// Check if a delivery is complete.
-    bool partial() const;
-
-    /// Check if a delivery is readable.
-    ///
-    /// A delivery is considered readable if it is the current
-    /// delivery on an incoming link.
-    bool readable() const;
-
-  friend class message;
   friend class messaging_adapter;
-    /// @endcond
+  friend class sender;
 };
 
 }
 
-#endif // PROTON_CPP_DELIVERY_H
+#endif // PROTON_CPP_TRACKER_H

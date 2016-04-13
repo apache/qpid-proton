@@ -25,6 +25,7 @@
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
+#include "proton/tracker.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>

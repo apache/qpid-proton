@@ -66,7 +66,9 @@ set(qpid-proton-cpp-source
   src/task.cpp
   src/terminus.cpp
   src/timestamp.cpp
+  src/tracker.cpp
   src/transport.cpp
+  src/transfer.cpp
   src/type_id.cpp
   src/url.cpp
   src/uuid.cpp

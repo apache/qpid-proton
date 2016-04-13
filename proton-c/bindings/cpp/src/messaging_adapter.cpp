@@ -21,8 +21,10 @@
 
 #include "messaging_adapter.hpp"
 
+#include "proton/delivery.hpp"
 #include "proton/sender.hpp"
 #include "proton/error.hpp"
+#include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 
 #include "contexts.hpp"
@@ -76,11 +78,12 @@ void messaging_adapter::on_link_flow(proton_event &pe) {
 void messaging_adapter::on_delivery(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
+    pn_delivery_t *dlv = pn_event_delivery(cevent);
     link_context& lctx = link_context::get(lnk);
-    delivery dlv = pe.delivery();
 
     if (pn_link_is_receiver(lnk)) {
-        if (!dlv.partial() && dlv.readable()) {
+        delivery d(dlv);
+        if (!d.partial() && d.readable()) {
             // generate on_message
             pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
             connection_context& ctx = connection_context::get(pnc);
@@ -88,39 +91,40 @@ void messaging_adapter::on_delivery(proton_event &pe) {
             // Avoid expensive heap malloc/free overhead.
             // See PROTON-998
             class message &msg(ctx.event_message);
-            msg.decode(dlv);
+            msg.decode(d);
             if (pn_link_state(lnk) & PN_LOCAL_CLOSED) {
                 if (lctx.auto_accept)
-                    dlv.release();
+                    d.release();
             } else {
-                delegate_.on_message(dlv, msg);
-                if (lctx.auto_accept && !dlv.settled())
-                    dlv.accept();
+                delegate_.on_message(d, msg);
+                if (lctx.auto_accept && !d.settled())
+                    d.accept();
             }
         }
-        else if (dlv.updated() && dlv.settled()) {
-            delegate_.on_delivery_settle(dlv);
+        else if (d.updated() && d.settled()) {
+            delegate_.on_delivery_settle(d);
         }
         credit_topup(lnk);
     } else {
+        tracker t(dlv);
         // sender
-        if (dlv.updated()) {
-            uint64_t rstate = dlv.remote_state();
+        if (t.updated()) {
+            uint64_t rstate = t.state();
             if (rstate == PN_ACCEPTED) {
-                delegate_.on_delivery_accept(dlv);
+                delegate_.on_tracker_accept(t);
             }
             else if (rstate == PN_REJECTED) {
-                delegate_.on_delivery_reject(dlv);
+                delegate_.on_tracker_reject(t);
             }
             else if (rstate == PN_RELEASED || rstate == PN_MODIFIED) {
-                delegate_.on_delivery_release(dlv);
+                delegate_.on_tracker_release(t);
             }
 
-            if (dlv.settled()) {
-                delegate_.on_delivery_settle(dlv);
+            if (t.settled()) {
+                delegate_.on_tracker_settle(t);
             }
             if (lctx.auto_settle)
-                dlv.settle();
+                t.settle();
         }
     }
 }
@@ -141,13 +145,13 @@ void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
     if (pn_link_is_receiver(lnk)) {
-        receiver r = link(lnk).receiver();
+        receiver r(lnk);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_receiver_error(r);
         }
         delegate_.on_receiver_close(r);
     } else {
-        sender s = link(lnk).sender();
+        sender s(lnk);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_sender_error(s);
         }
@@ -203,10 +207,10 @@ void messaging_adapter::on_link_local_open(proton_event &pe) {
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
     pn_link_t *lnk = pn_event_link(pe.pn_event());
     if (pn_link_is_receiver(lnk)) {
-      receiver r = link(lnk).receiver();
+      receiver r(lnk);
       delegate_.on_receiver_open(r);
     } else {
-      sender s = link(lnk).sender();
+      sender s(lnk);
       delegate_.on_sender_open(s);
     }
     if (!is_local_open(pn_link_state(lnk)) && is_local_unititialised(pn_link_state(lnk))) {

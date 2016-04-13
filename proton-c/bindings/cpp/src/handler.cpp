@@ -54,9 +54,10 @@ void handler::on_receiver_open(receiver &) {}
 void handler::on_sender_close(sender &) {}
 void handler::on_sender_error(sender &l) { on_unhandled_error(l.remote_condition()); }
 void handler::on_sender_open(sender &) {}
-void handler::on_delivery_accept(delivery &) {}
-void handler::on_delivery_reject(delivery &) {}
-void handler::on_delivery_release(delivery &) {}
+void handler::on_tracker_accept(tracker &) {}
+void handler::on_tracker_reject(tracker &) {}
+void handler::on_tracker_release(tracker &) {}
+void handler::on_tracker_settle(tracker &) {}
 void handler::on_delivery_settle(delivery &) {}
 
 void handler::on_unhandled_error(const condition& c) { throw proton::error(c.what()); }

@@ -19,7 +19,9 @@
  *
  */
 
+#include "proton/delivery.hpp"
 #include "proton/handler.hpp"
+#include "proton/tracker.hpp"
 #include "proton/url.hpp"
 #include "proton/io/socket.hpp"
 
