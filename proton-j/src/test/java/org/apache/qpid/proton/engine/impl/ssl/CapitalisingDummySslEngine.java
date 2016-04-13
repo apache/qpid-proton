@@ -41,7 +41,7 @@ import javax.net.ssl.SSLException;
 public class CapitalisingDummySslEngine implements ProtonSslEngine
 {
     static final int SHORT_ENCODED_CHUNK_SIZE = 2;
-    private static final int MAX_ENCODED_CHUNK_SIZE = 5;
+    static final int MAX_ENCODED_CHUNK_SIZE = 5;
     private static final char ENCODED_TEXT_BEGIN = '<';
     private static final char ENCODED_TEXT_END = '>';
     private static final char ENCODED_TEXT_INNER_CHAR = '-';
@@ -49,6 +49,9 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     private static final int CLEAR_CHUNK_SIZE = 2;
     private static final char CLEARTEXT_PADDING = '_';
     private SSLException _nextException;
+    private int _applicationBufferSize = CLEAR_CHUNK_SIZE;
+    private int _packetBufferSize = MAX_ENCODED_CHUNK_SIZE;
+    private int _unwrapCount;
 
     /**
      * Converts a_ to <-A->.  z_ is special and encodes as <> (to give us packets of different lengths).
@@ -116,6 +119,8 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     public SSLEngineResult unwrap(ByteBuffer src, ByteBuffer dst)
             throws SSLException
     {
+        _unwrapCount++;
+
         if(_nextException != null)
         {
             throw _nextException;
@@ -185,13 +190,23 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
 
     private int getApplicationBufferSize()
     {
-        return CLEAR_CHUNK_SIZE;
+        return _applicationBufferSize;
     }
 
     @Override
     public int getPacketBufferSize()
     {
-        return MAX_ENCODED_CHUNK_SIZE;
+        return _packetBufferSize;
+    }
+
+    public void setApplicationBufferSize(int value)
+    {
+        _applicationBufferSize = value;
+    }
+
+    public void setPacketBufferSize(int value)
+    {
+        _packetBufferSize = value;
     }
 
     @Override
@@ -243,5 +258,9 @@ public class CapitalisingDummySslEngine implements ProtonSslEngine
     public void rejectNextEncodedPacket(SSLException nextException)
     {
         _nextException = nextException;
+    }
+
+    int getUnwrapCount() {
+        return _unwrapCount;
     }
 }
