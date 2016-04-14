@@ -531,7 +531,7 @@ public class WebSocketImpl implements WebSocket
                     case PN_WS_CONNECTED_FLOW:
                     case PN_WS_CONNECTED_PONG:
                     case PN_WS_CONNECTED_CLOSING:
-                        if (_outputBuffer.position() != 0)
+                        if ((bytes >= _webSocketHeaderSize) && (_outputBuffer.position() != 0))
                         {
                             _outputBuffer.flip();
                             _outputBuffer.position(bytes);
@@ -540,6 +540,10 @@ public class WebSocketImpl implements WebSocket
                             _head.limit(_outputBuffer.position());
                             _underlyingOutput.pop(bytes - _webSocketHeaderSize);
                             _webSocketHeaderSize = 0;
+                        }
+                        else if ((bytes > 0) && (bytes < _webSocketHeaderSize))
+                        {
+                            _webSocketHeaderSize -= bytes;
                         }
                         else
                         {
