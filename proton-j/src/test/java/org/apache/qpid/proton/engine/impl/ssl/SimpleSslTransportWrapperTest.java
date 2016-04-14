@@ -220,7 +220,7 @@ public class SimpleSslTransportWrapperTest
 
         assertEquals("Unexpected initial capacity", sslEngineBufferSize, _sslWrapper.capacity());
 
-        // Process the first two 'encoded packets' (<-A-><-B-><-C->). This will require 3 'proper' unwraps, and
+        // Process the first three 'encoded packets' (<-A-><-B-><-C->). This will require 3 'proper' unwraps, and
         // as each decoded packet is 2 bytes, each of those will require 2 underlying input processes.
         int numberPoured = pour(encodedByteSource, _sslWrapper.tail());
         assertEquals("Unexpected number of bytes poured into the wrapper input buffer", sslEngineBufferSize, numberPoured);
@@ -284,7 +284,6 @@ public class SimpleSslTransportWrapperTest
         }
         catch (TransportException te)
         {
-            System.out.println("Caught exception:" + te);
             // expected.
         }
 
