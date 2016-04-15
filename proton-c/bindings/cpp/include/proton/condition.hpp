@@ -71,7 +71,7 @@ class condition {
     PN_CPP_EXTERN std::string description() const;
 
     /// Extra information for condition.
-    PN_CPP_EXTERN value info() const;
+    PN_CPP_EXTERN value properties() const;
 
     /// Simple printable string for condition.
     PN_CPP_EXTERN std::string what() const;
