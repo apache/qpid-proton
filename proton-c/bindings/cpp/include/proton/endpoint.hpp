@@ -58,11 +58,8 @@ PN_CPP_CLASS_EXTERN endpoint {
 
     /// XXX add endpoint state boolean operations
 
-    /// Get the local error condition.
-    virtual condition local_condition() const = 0;
-
     /// Get the error condition of the remote endpoint.
-    virtual condition remote_condition() const = 0;
+    virtual class condition condition() const = 0;
 
 #if PN_CPP_HAS_CPP11
     // Make everything explicit for C++11 compilers

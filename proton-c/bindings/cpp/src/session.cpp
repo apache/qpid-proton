@@ -67,12 +67,8 @@ receiver session::open_receiver(const std::string &addr, const link_options &lo)
 
 endpoint::state session::state() const { return pn_session_state(pn_object()); }
 
-condition session::local_condition() const {
-    return condition(pn_session_condition(pn_object()));
-}
-
-condition session::remote_condition() const {
-    return condition(pn_session_remote_condition(pn_object()));
+condition session::condition() const {
+    return pn_session_remote_condition(pn_object());
 }
 
 link_range session::links()  const {

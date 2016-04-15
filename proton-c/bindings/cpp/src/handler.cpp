@@ -43,16 +43,16 @@ void handler::on_timer(container &) {}
 void handler::on_transport_close(transport &) {}
 void handler::on_transport_error(transport &t) { on_unhandled_error(t.condition()); }
 void handler::on_connection_close(connection &) {}
-void handler::on_connection_error(connection &c) { on_unhandled_error(c.remote_condition()); }
+void handler::on_connection_error(connection &c) { on_unhandled_error(c.condition()); }
 void handler::on_connection_open(connection &) {}
 void handler::on_session_close(session &) {}
-void handler::on_session_error(session &s) { on_unhandled_error(s.remote_condition()); }
+void handler::on_session_error(session &s) { on_unhandled_error(s.condition()); }
 void handler::on_session_open(session &) {}
 void handler::on_receiver_close(receiver &) {}
-void handler::on_receiver_error(receiver &l) { on_unhandled_error(l.remote_condition()); }
+void handler::on_receiver_error(receiver &l) { on_unhandled_error(l.condition()); }
 void handler::on_receiver_open(receiver &) {}
 void handler::on_sender_close(sender &) {}
-void handler::on_sender_error(sender &l) { on_unhandled_error(l.remote_condition()); }
+void handler::on_sender_error(sender &l) { on_unhandled_error(l.condition()); }
 void handler::on_sender_open(sender &) {}
 void handler::on_tracker_accept(tracker &) {}
 void handler::on_tracker_reject(tracker &) {}

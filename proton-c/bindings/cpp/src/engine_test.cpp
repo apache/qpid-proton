@@ -230,8 +230,8 @@ void test_transport_close() {
     while (!e.b.connection().closed()) e.process();
     ASSERT_EQUAL(1, hb.errors.size());
     ASSERT_EQUAL("oops: engine failure", hb.errors.front());
-    ASSERT_EQUAL("oops", e.b.connection().remote_condition().name());
-    ASSERT_EQUAL("engine failure", e.b.connection().remote_condition().description());
+    ASSERT_EQUAL("oops", e.b.connection().condition().name());
+    ASSERT_EQUAL("engine failure", e.b.connection().condition().description());
 }
 
 int main(int, char**) {

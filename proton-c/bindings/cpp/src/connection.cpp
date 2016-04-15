@@ -108,12 +108,8 @@ receiver connection::open_receiver(const std::string &addr, const link_options &
 
 endpoint::state connection::state() const { return pn_connection_state(pn_object()); }
 
-condition connection::local_condition() const {
-    return condition(pn_connection_condition(pn_object()));
-}
-
-condition connection::remote_condition() const {
-    return condition(pn_connection_remote_condition(pn_object()));
+condition connection::condition() const {
+    return pn_connection_remote_condition(pn_object());
 }
 
 void connection::user(const std::string &name) { pn_connection_set_user(pn_object(), name.c_str()); }

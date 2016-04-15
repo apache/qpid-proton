@@ -54,8 +54,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Get the state of this connection.
     PN_CPP_EXTERN endpoint::state state() const;
 
-    PN_CPP_EXTERN condition local_condition() const;
-    PN_CPP_EXTERN condition remote_condition() const;
+    PN_CPP_EXTERN class condition condition() const;
 
     /// Get the container.
     ///

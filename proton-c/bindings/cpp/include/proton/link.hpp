@@ -57,8 +57,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Get the state of this link.
     PN_CPP_EXTERN endpoint::state state() const;
 
-    PN_CPP_EXTERN condition local_condition() const;
-    PN_CPP_EXTERN condition remote_condition() const;
+    PN_CPP_EXTERN class condition condition() const;
 
     /// Locally open the link.  The operation is not complete till
     /// handler::on_link_open.

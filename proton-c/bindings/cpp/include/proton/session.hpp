@@ -52,8 +52,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Get the state of this session.
     PN_CPP_EXTERN endpoint::state state() const;
 
-    PN_CPP_EXTERN condition local_condition() const;
-    PN_CPP_EXTERN condition remote_condition() const;
+    PN_CPP_EXTERN class condition condition() const;
 
     /// @cond INTERNAL
     /// XXX needs to take connection options
