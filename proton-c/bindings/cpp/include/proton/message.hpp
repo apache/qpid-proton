@@ -108,6 +108,10 @@ class message {
     /// @name Routing
     /// @{
 
+    PN_CPP_EXTERN void to(const std::string &addr);
+    PN_CPP_EXTERN std::string to() const;
+
+    /// These are aliases for to()
     PN_CPP_EXTERN void address(const std::string &addr);
     PN_CPP_EXTERN std::string address() const;
 
@@ -245,8 +249,8 @@ class message {
     /// @{
 
     /// Application properties map, can be modified in place.
-    PN_CPP_EXTERN property_map& application_properties();
-    PN_CPP_EXTERN const property_map& application_properties() const;
+    PN_CPP_EXTERN property_map& properties();
+    PN_CPP_EXTERN const property_map& properties() const;
 
     /// Message annotations map, can be modified in place.
     PN_CPP_EXTERN annotation_map& message_annotations();

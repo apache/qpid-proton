@@ -101,13 +101,22 @@ std::string message::user_id() const {
     return str(pn_message_get_user_id(pn_msg()));
 }
 
-void message::address(const std::string &addr) {
+void message::to(const std::string &addr) {
     check(pn_message_set_address(pn_msg(), addr.c_str()));
 }
 
-std::string message::address() const {
+std::string message::to() const {
     const char* addr = pn_message_get_address(pn_msg());
     return addr ? std::string(addr) : std::string();
+}
+
+void message::address(const std::string &addr) {
+  check(pn_message_set_address(pn_msg(), addr.c_str()));
+}
+
+std::string message::address() const {
+  const char* addr = pn_message_get_address(pn_msg());
+  return addr ? std::string(addr) : std::string();
 }
 
 void message::subject(const std::string &s) {
@@ -222,11 +231,11 @@ template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
     return map;
 }
 
-message::property_map& message::application_properties() {
+message::property_map& message::properties() {
     return get_map(pn_msg(), pn_message_properties, application_properties_);
 }
 
-const message::property_map& message::application_properties() const {
+const message::property_map& message::properties() const {
     return get_map(pn_msg(), pn_message_properties, application_properties_);
 }
 

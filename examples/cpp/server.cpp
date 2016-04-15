@@ -66,7 +66,7 @@ class server : public proton::handler {
         std::string reply_to = m.reply_to();
         proton::message reply;
 
-        reply.address(reply_to);
+        reply.to(reply_to);
         reply.body(to_upper(proton::get<std::string>(m.body())));
         reply.correlation_id(m.correlation_id());
 
