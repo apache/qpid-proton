@@ -93,7 +93,7 @@ void connector::on_transport_tail_closed(proton_event &e) {
 
 void connector::on_transport_closed(proton_event &e) {
     if (!connection_) return;
-    if (connection_.state() & endpoint::LOCAL_ACTIVE) {
+    if (connection_.local_active()) {
         if (reconnect_timer_) {
             e.connection().transport().unbind();
             transport_configured_ = false;

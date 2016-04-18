@@ -77,7 +77,7 @@ class link_options::impl {
     option<int> credit_window;
 
     void apply(link& l) {
-        if (l.state() & endpoint::LOCAL_UNINIT) {
+        if (l.uninitialized()) {
             bool sender = !l.receiver();
             if (local_address.set) {
                 if (sender)

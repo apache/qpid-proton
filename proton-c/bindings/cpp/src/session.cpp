@@ -36,6 +36,11 @@ void session::open() {
     pn_session_open(pn_object());
 }
 
+void session::close()
+{
+    pn_session_close(pn_object());
+}
+
 container& session::container() const {
     return connection().container();
 }
@@ -64,8 +69,6 @@ receiver session::open_receiver(const std::string &addr, const link_options &lo)
     rcv.open(lo);
     return rcv;
 }
-
-endpoint::state session::state() const { return pn_session_state(pn_object()); }
 
 condition session::condition() const {
     return pn_session_remote_condition(pn_object());

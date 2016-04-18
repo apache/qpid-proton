@@ -99,10 +99,6 @@ void link::detach_handler() {
     pn_record_set_handler(record, 0);
 }
 
-endpoint::state link::state() const {
-    return pn_link_state(pn_object());
-}
-
 condition link::condition() const {
     return pn_link_remote_condition(pn_object());
 }

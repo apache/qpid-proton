@@ -34,32 +34,21 @@ PN_CPP_CLASS_EXTERN endpoint {
   public:
     PN_CPP_EXTERN virtual ~endpoint();
 
-    /// A bit mask of state bit values.
-    ///
-    /// A state mask is matched against an endpoint as follows: If the
-    /// state mask contains both local and remote flags, then an exact
-    /// match against those flags is performed. If state contains only
-    /// local or only remote flags, then a match occurs if any of the
-    /// local or remote flags are set respectively.
-    ///
-    /// @see connection::links, connection::sessions
-    typedef int state;
-
-    // XXX use an enum instead to handle name collision
-
-    PN_CPP_EXTERN static const state LOCAL_UNINIT;  ///< Local endpoint is uninitialized
-    PN_CPP_EXTERN static const state REMOTE_UNINIT; ///< Remote endpoint is uninitialized
-    PN_CPP_EXTERN static const state LOCAL_ACTIVE;  ///< Local endpoint is active
-    PN_CPP_EXTERN static const state REMOTE_ACTIVE; ///< Remote endpoint is active
-    PN_CPP_EXTERN static const state LOCAL_CLOSED;  ///< Local endpoint has been closed
-    PN_CPP_EXTERN static const state REMOTE_CLOSED; ///< Remote endpoint has been closed
-    PN_CPP_EXTERN static const state LOCAL_MASK;    ///< Mask including all LOCAL_ bits (UNINIT, ACTIVE, CLOSED)
-    PN_CPP_EXTERN static const state REMOTE_MASK;   ///< Mask including all REMOTE_ bits (UNINIT, ACTIVE, CLOSED)
-
-    /// XXX add endpoint state boolean operations
+    /// True if the connection is uninitialized
+    virtual bool uninitialized() const = 0;
+    /// True if the local end is active
+    virtual bool local_active() const = 0;
+    /// True if the remote end is active
+    virtual bool remote_active() const = 0;
+    /// True if the connection is fully closed, i.e. local and remote
+    /// ends are closed.
+    virtual bool closed() const = 0;
 
     /// Get the error condition of the remote endpoint.
     virtual class condition condition() const = 0;
+
+    /// Close endpoint
+    virtual void close() = 0;
 
 #if PN_CPP_HAS_CPP11
     // Make everything explicit for C++11 compilers

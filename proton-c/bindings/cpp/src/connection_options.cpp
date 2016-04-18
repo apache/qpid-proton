@@ -67,7 +67,7 @@ class connection_options::impl {
         pn_transport_t *pnt = pn_connection_transport(pnc);
         connector *outbound = dynamic_cast<connector*>(
             connection_context::get(c).handler.get());
-        bool uninit = (c.state() & endpoint::LOCAL_UNINIT);
+        bool uninit = c.uninitialized();
 
         // pnt is NULL between reconnect attempts.
         // Only apply transport options if uninit or outbound with

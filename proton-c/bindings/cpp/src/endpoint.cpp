@@ -24,22 +24,36 @@
 #include "proton/connection.hpp"
 #include "proton/session.hpp"
 #include "proton/link.hpp"
-#include "proton/transport.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/link.h"
 
+namespace {
+
+inline bool uninitialized(int state) { return state & PN_LOCAL_UNINIT; }
+inline bool local_active(int state) { return state & PN_LOCAL_ACTIVE; }
+inline bool remote_active(int state) { return state & PN_REMOTE_ACTIVE; }
+inline bool closed(int state) { return (state & PN_LOCAL_CLOSED) && (state & PN_REMOTE_CLOSED); }
+
+}
+
 namespace proton {
 
-const int endpoint::LOCAL_UNINIT = PN_LOCAL_UNINIT;
-const int endpoint::REMOTE_UNINIT = PN_REMOTE_UNINIT;
-const int endpoint::LOCAL_ACTIVE = PN_LOCAL_ACTIVE;
-const int endpoint::REMOTE_ACTIVE = PN_REMOTE_ACTIVE;
-const int endpoint::LOCAL_CLOSED = PN_LOCAL_CLOSED;
-const int endpoint::REMOTE_CLOSED = PN_REMOTE_CLOSED;
-const int endpoint::LOCAL_MASK = PN_LOCAL_MASK;
-const int endpoint::REMOTE_MASK = PN_REMOTE_MASK;
+bool connection::uninitialized() const { return ::uninitialized(pn_connection_state(pn_object())); }
+bool connection::local_active() const { return ::local_active(pn_connection_state(pn_object())); }
+bool connection::remote_active() const { return ::remote_active(pn_connection_state(pn_object())); }
+bool connection::closed() const { return ::closed(pn_connection_state(pn_object())); }
+
+bool session::uninitialized() const { return ::uninitialized(pn_session_state(pn_object())); }
+bool session::local_active() const { return ::local_active(pn_session_state(pn_object())); }
+bool session::remote_active() const { return ::remote_active(pn_session_state(pn_object())); }
+bool session::closed() const { return ::closed(pn_session_state(pn_object())); }
+
+bool link::uninitialized() const { return ::uninitialized(pn_link_state(pn_object())); }
+bool link::local_active() const { return ::local_active(pn_link_state(pn_object())); }
+bool link::remote_active() const { return ::remote_active(pn_link_state(pn_object())); }
+bool link::closed() const { return ::closed(pn_link_state(pn_object())); }
 
 endpoint::~endpoint() {}
 

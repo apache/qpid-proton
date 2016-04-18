@@ -106,8 +106,6 @@ receiver connection::open_receiver(const std::string &addr, const link_options &
     return default_session().open_receiver(addr, opts);
 }
 
-endpoint::state connection::state() const { return pn_connection_state(pn_object()); }
-
 condition connection::condition() const {
     return pn_connection_remote_condition(pn_object());
 }

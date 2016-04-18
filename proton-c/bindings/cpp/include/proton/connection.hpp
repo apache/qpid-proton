@@ -52,7 +52,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     connection() : internal::object<pn_connection_t>(0) {}
 
     /// Get the state of this connection.
-    PN_CPP_EXTERN endpoint::state state() const;
+    PN_CPP_EXTERN bool uninitialized() const;
+    PN_CPP_EXTERN bool local_active() const;
+    PN_CPP_EXTERN bool remote_active() const;
+    PN_CPP_EXTERN bool closed() const;
 
     PN_CPP_EXTERN class condition condition() const;
 
@@ -114,9 +117,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// XXX not yet discussed, why this convenience but not others?
     /// opened?  should this not be on endpoint?
     ///
-    /// True if the connection is fully closed, i.e. local and remote
-    /// ends are closed.
-    bool closed() const { return (state() & LOCAL_CLOSED) && (state() & REMOTE_CLOSED); }
     /// @endcond
 
     /// @cond INTERNAL

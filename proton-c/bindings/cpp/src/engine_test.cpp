@@ -222,7 +222,7 @@ void test_transport_close() {
     record_handler ha, hb;
     engine_pair e(ha, hb);
     e.a.connection().open();
-    while (!e.a.connection().state() & endpoint::REMOTE_ACTIVE) e.process();
+    while (!e.a.connection().remote_active()) e.process();
 
     e.a.close("oops", "engine failure");
     // Closed but we still have output data to flush so a.dispatch() is true.
