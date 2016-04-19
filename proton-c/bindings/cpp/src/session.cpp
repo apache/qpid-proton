@@ -70,7 +70,7 @@ receiver session::open_receiver(const std::string &addr, const link_options &lo)
     return rcv;
 }
 
-condition session::condition() const {
+error_condition session::error() const {
     return pn_session_remote_condition(pn_object());
 }
 

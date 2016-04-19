@@ -20,10 +20,10 @@
  * under the License.
  */
 
-#include "proton/condition.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/error.hpp"
+#include "proton/error_condition.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/transport.hpp"

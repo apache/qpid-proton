@@ -111,7 +111,7 @@ struct record_handler : public handler {
         sessions.push_back(s);
     }
 
-    void on_unhandled_error(const condition& c) override {
+    void on_unhandled_error(const proton::error_condition& c) override {
         errors.push_back(c.what());
     }
 };
@@ -186,35 +186,33 @@ void test_container_prefix() {
 void test_endpoint_close() {
     // Make sure conditions are sent to the remote end.
 
-    // FIXME aconway 2016-03-22: re-enable these tests when we can set error conditions.
+    record_handler ha, hb;
+    engine_pair e(ha, hb);
+    e.a.connection().open();
+    e.a.connection().open_sender("x");
+    e.a.connection().open_receiver("y");
+    while (ha.links.size() < 2 || hb.links.size() < 2) e.process();
+    link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
+    link bx = quick_pop(hb.links), by = quick_pop(hb.links);
 
-    // record_handler ha, hb;
-    // engine_pair e(ha, hb);
-    // e.a.connection().open();
-    // e.a.connection().open_sender("x");
-    // e.a.connection().open_receiver("y");
-    // while (ha.links.size() < 2 || hb.links.size() < 2) e.process();
-    // link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
-    // link bx = quick_pop(hb.links), by = quick_pop(hb.links);
+    // Close a link
+    ax.close(proton::error_condition("err", "foo bar"));
+    while (!bx.closed()) e.process();
+    proton::error_condition c = bx.error();
+    ASSERT_EQUAL("err", c.name());
+    ASSERT_EQUAL("foo bar", c.description());
+    ASSERT_EQUAL("err: foo bar", c.what());
 
-    // // Close a link
-    // ax.close(condition("err", "foo bar"));
-    // while (!(bx.state() & endpoint::REMOTE_CLOSED)) e.process();
-    // condition c = bx.remote_condition();
-    // ASSERT_EQUAL("err", c.name());
-    // ASSERT_EQUAL("foo bar", c.description());
-    // ASSERT_EQUAL("err: foo bar", ax.local_condition().what());
+    // Close a link with an empty condition
+    ay.close(proton::error_condition());
+    while (!by.closed()) e.process();
+    ASSERT(by.error().empty());
 
-    // // Close a link with an empty condition
-    // ay.close(condition());
-    // while (!(by.state() & endpoint::REMOTE_CLOSED)) e.process();
-    // ASSERT(by.remote_condition().empty());
-
-    // // Close a connection
-    // connection ca = e.a.connection(), cb = e.b.connection();
-    // ca.close(condition("conn", "bad connection"));
-    // while (!cb.closed()) e.process();
-    // ASSERT_EQUAL("conn: bad connection", cb.remote_condition().what());
+    // Close a connection
+    connection ca = e.a.connection(), cb = e.b.connection();
+    ca.close(proton::error_condition("conn", "bad connection"));
+    while (!cb.closed()) e.process();
+    ASSERT_EQUAL("conn: bad connection", cb.error().what());
 }
 
 void test_transport_close() {
@@ -230,8 +228,8 @@ void test_transport_close() {
     while (!e.b.connection().closed()) e.process();
     ASSERT_EQUAL(1, hb.errors.size());
     ASSERT_EQUAL("oops: engine failure", hb.errors.front());
-    ASSERT_EQUAL("oops", e.b.connection().condition().name());
-    ASSERT_EQUAL("engine failure", e.b.connection().condition().description());
+    ASSERT_EQUAL("oops", e.b.connection().error().name());
+    ASSERT_EQUAL("engine failure", e.b.connection().error().description());
 }
 
 int main(int, char**) {

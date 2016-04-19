@@ -23,7 +23,7 @@
  */
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/condition.hpp"
+#include "proton/error_condition.hpp"
 #include "proton/comparable.hpp"
 
 namespace proton {
@@ -43,10 +43,11 @@ PN_CPP_CLASS_EXTERN endpoint {
     virtual bool closed() const = 0;
 
     /// Get the error condition of the remote endpoint.
-    virtual class condition condition() const = 0;
+    virtual class error_condition error() const = 0;
 
     /// Close endpoint
     virtual void close() = 0;
+    virtual void close(const error_condition&) = 0;
 
 #if PN_CPP_HAS_CPP11
     // Make everything explicit for C++11 compilers

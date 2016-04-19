@@ -38,7 +38,7 @@ namespace proton {
 
 class sender;
 class receiver;
-class condition;
+class error_condition;
 class link_context;
 
 /// A named channel for sending or receiving messages.  It is the base
@@ -57,7 +57,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
-    PN_CPP_EXTERN class condition condition() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
     /// Locally open the link.  The operation is not complete till
     /// handler::on_link_open.
@@ -66,6 +66,10 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Locally close the link.  The operation is not complete till
     /// handler::on_link_close.
     PN_CPP_EXTERN void close();
+
+    /// Initiate close with an error condition.
+    /// The operation is not complete till handler::on_connection_close().
+    PN_CPP_EXTERN void close(const error_condition&);
 
     /// Suspend the link without closing it.  A suspended link may be
     /// reopened with the same or different link options if supported by

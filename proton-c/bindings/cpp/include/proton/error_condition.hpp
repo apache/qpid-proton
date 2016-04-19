@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_CONDITION_H
-#define PROTON_CPP_CONDITION_H
+#ifndef PROTON_CPP_ERROR_CONDITION_H
+#define PROTON_CPP_ERROR_CONDITION_H
 
 /*
  *
@@ -34,25 +34,22 @@ struct pn_condition_t;
 namespace proton {
 
 /// Describes an endpoint error state.
-///
-/// This class has only one purpose: it can be used to get access to information about why
-/// an endpoint (a link, session, connection) or a transport has closed.
-///
-/// The information that is requuired (for instance the condition name and/or description)
-/// should be extracted immediately from the condition in order to enforce this conditions
-/// cannot be copied or assigned.
-class condition {
+class error_condition {
     /// @cond INTERNAL
-    condition(pn_condition_t* c) : condition_(c) {}
+    error_condition(pn_condition_t* c);
     /// @endcond
 
   public:
+    error_condition() {}
+    PN_CPP_EXTERN error_condition(std::string description);
+    PN_CPP_EXTERN error_condition(std::string name, std::string description);
+    PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
+
 #if PN_CPP_HAS_CPP11
-    condition() = delete;
-    condition(const condition&) = delete;
-    condition(condition&&) = default;
-    condition& operator=(const condition&) = delete;
-    condition& operator=(condition&&) = delete;
+    error_condition(const error_condition&) = default;
+    error_condition(error_condition&&) = default;
+    error_condition& operator=(const error_condition&) = default;
+    error_condition& operator=(error_condition&&) = default;
 #endif
 
     /// No condition set.
@@ -78,7 +75,9 @@ class condition {
 
     /// @cond INTERNAL
   private:
-    pn_condition_t* const condition_;
+    std::string name_;
+    std::string description_;
+    proton::value properties_;
 
     friend class transport;
     friend class connection;
@@ -89,4 +88,4 @@ class condition {
 
 }
 
-#endif // PROTON_CPP_CONDITION_H
+#endif // PROTON_CPP_ERROR_CONDITION_H

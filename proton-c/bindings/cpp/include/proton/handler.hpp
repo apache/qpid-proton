@@ -28,7 +28,7 @@
 
 namespace proton {
 
-class condition;
+class error_condition;
 class container;
 class event;
 class transport;
@@ -138,7 +138,7 @@ PN_CPP_CLASS_EXTERN handler
     /// @endcond
 
     /// Fallback error handling.
-    PN_CPP_EXTERN virtual void on_unhandled_error(const condition &c);
+    PN_CPP_EXTERN virtual void on_unhandled_error(const error_condition &c);
 
     /// @}
 

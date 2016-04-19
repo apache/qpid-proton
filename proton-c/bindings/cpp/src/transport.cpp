@@ -21,7 +21,7 @@
 
 #include "proton/error.hpp"
 #include "proton/transport.hpp"
-#include "proton/condition.hpp"
+#include "proton/error_condition.hpp"
 #include "proton/connection.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
@@ -45,18 +45,18 @@ class sasl transport::sasl() const {
     return pn_sasl(pn_object());
 }
 
-condition transport::condition() const {
-    return proton::condition(pn_transport_condition(pn_object()));
+error_condition transport::error() const {
+    return proton::error_condition(pn_transport_condition(pn_object()));
 }
 
 void transport::unbind() {
     if (pn_transport_unbind(pn_object()))
-        throw error(MSG("transport::unbind failed " << pn_error_text(pn_transport_error(pn_object()))));
+        throw proton::error(MSG("transport::unbind failed " << pn_error_text(pn_transport_error(pn_object()))));
 }
 
 void transport::bind(class connection &conn) {
     if (pn_transport_bind(pn_object(), conn.pn_object()))
-        throw error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
+        throw proton::error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
 }
 
 uint32_t transport::max_frame_size() const {

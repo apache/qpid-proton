@@ -31,7 +31,7 @@ struct pn_transport_t;
 namespace proton {
 
 class connection;
-class condition;
+class error_condition;
 class sasl;
 
 namespace io {
@@ -56,7 +56,7 @@ class transport : public internal::object<pn_transport_t> {
     PN_CPP_EXTERN class sasl sasl() const;
 
     /// Get the error condition.
-    PN_CPP_EXTERN class condition condition() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
     /// @cond INTERNAL
     /// XXX need to discuss, local versus remote

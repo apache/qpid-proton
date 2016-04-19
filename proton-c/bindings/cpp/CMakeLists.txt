@@ -28,7 +28,6 @@ set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
-  src/condition.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp
@@ -43,6 +42,7 @@ set(qpid-proton-cpp-source
   src/encoder.cpp
   src/endpoint.cpp
   src/error.cpp
+  src/error_condition.cpp
   src/handler.cpp
   src/id_generator.cpp
   src/io/connection_engine.cpp

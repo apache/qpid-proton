@@ -56,7 +56,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
-    PN_CPP_EXTERN class condition condition() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
     /// Get the container.
     ///
@@ -83,6 +83,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Initiate local close.  The operation is not complete till
     /// handler::on_connection_close().
     PN_CPP_EXTERN void close();
+
+    /// Initiate close with an error condition.
+    /// The operation is not complete till handler::on_connection_close().
+    PN_CPP_EXTERN void close(const error_condition&);
 
     /// @cond INTERNAL
     /// XXX undiscussed

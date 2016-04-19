@@ -71,7 +71,7 @@ std::string connection::container_id() const {
 container& connection::container() const {
     pn_reactor_t *r = pn_object_reactor(pn_object());
     if (!r)
-        throw error("connection does not have a container");
+        throw proton::error("connection does not have a container");
     return container_context::get(r);
 }
 
@@ -106,7 +106,7 @@ receiver connection::open_receiver(const std::string &addr, const link_options &
     return default_session().open_receiver(addr, opts);
 }
 
-condition connection::condition() const {
+error_condition connection::error() const {
     return pn_connection_remote_condition(pn_object());
 }
 

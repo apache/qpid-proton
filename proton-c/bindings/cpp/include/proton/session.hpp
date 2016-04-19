@@ -54,7 +54,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
-    PN_CPP_EXTERN class condition condition() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
     /// @cond INTERNAL
     /// XXX needs to take connection options
@@ -66,6 +66,11 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Initiate local close.  The operation is not complete till
     /// handler::on_session_close().
     PN_CPP_EXTERN void close();
+
+    /// Initiate close with an error condition.
+    /// The operation is not complete till handler::on_connection_close().
+    PN_CPP_EXTERN void close(const error_condition&);
+
 
     /// Return the container for this session
     PN_CPP_EXTERN class container &container() const;
