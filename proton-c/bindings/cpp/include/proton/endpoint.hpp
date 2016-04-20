@@ -34,12 +34,10 @@ PN_CPP_CLASS_EXTERN endpoint {
   public:
     PN_CPP_EXTERN virtual ~endpoint();
 
-    /// True if the connection is uninitialized
+    /// True if the local end is uninitialized
     virtual bool uninitialized() const = 0;
     /// True if the local end is active
-    virtual bool local_active() const = 0;
-    /// True if the remote end is active
-    virtual bool remote_active() const = 0;
+    virtual bool active() const = 0;
     /// True if the connection is fully closed, i.e. local and remote
     /// ends are closed.
     virtual bool closed() const = 0;

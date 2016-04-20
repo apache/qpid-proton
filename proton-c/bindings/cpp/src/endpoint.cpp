@@ -32,8 +32,7 @@
 namespace {
 
 inline bool uninitialized(int state) { return state & PN_LOCAL_UNINIT; }
-inline bool local_active(int state) { return state & PN_LOCAL_ACTIVE; }
-inline bool remote_active(int state) { return state & PN_REMOTE_ACTIVE; }
+inline bool active(int state) { return state & PN_LOCAL_ACTIVE; }
 inline bool closed(int state) { return (state & PN_LOCAL_CLOSED) && (state & PN_REMOTE_CLOSED); }
 
 }
@@ -41,18 +40,15 @@ inline bool closed(int state) { return (state & PN_LOCAL_CLOSED) && (state & PN_
 namespace proton {
 
 bool connection::uninitialized() const { return ::uninitialized(pn_connection_state(pn_object())); }
-bool connection::local_active() const { return ::local_active(pn_connection_state(pn_object())); }
-bool connection::remote_active() const { return ::remote_active(pn_connection_state(pn_object())); }
+bool connection::active() const { return ::active(pn_connection_state(pn_object())); }
 bool connection::closed() const { return ::closed(pn_connection_state(pn_object())); }
 
 bool session::uninitialized() const { return ::uninitialized(pn_session_state(pn_object())); }
-bool session::local_active() const { return ::local_active(pn_session_state(pn_object())); }
-bool session::remote_active() const { return ::remote_active(pn_session_state(pn_object())); }
+bool session::active() const { return ::active(pn_session_state(pn_object())); }
 bool session::closed() const { return ::closed(pn_session_state(pn_object())); }
 
 bool link::uninitialized() const { return ::uninitialized(pn_link_state(pn_object())); }
-bool link::local_active() const { return ::local_active(pn_link_state(pn_object())); }
-bool link::remote_active() const { return ::remote_active(pn_link_state(pn_object())); }
+bool link::active() const { return ::active(pn_link_state(pn_object())); }
 bool link::closed() const { return ::closed(pn_link_state(pn_object())); }
 
 endpoint::~endpoint() {}

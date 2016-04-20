@@ -205,7 +205,7 @@ class broker_handler : public proton::handler {
     void remove_stale_consumers(proton::connection connection) {
         proton::link_range r = connection.links();
         for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
-            if (!!l->sender() && l->remote_active())
+            if (!!l->sender() && l->active())
                 unsubscribe(l->sender());
         }
     }

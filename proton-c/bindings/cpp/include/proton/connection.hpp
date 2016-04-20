@@ -53,8 +53,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Get the state of this connection.
     PN_CPP_EXTERN bool uninitialized() const;
-    PN_CPP_EXTERN bool local_active() const;
-    PN_CPP_EXTERN bool remote_active() const;
+    PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
     PN_CPP_EXTERN class condition condition() const;
@@ -111,13 +110,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Return sessions on this connection matching the state mask.
     PN_CPP_EXTERN session_range sessions() const;
-
-    /// @cond INTERNAL
-    ///
-    /// XXX not yet discussed, why this convenience but not others?
-    /// opened?  should this not be on endpoint?
-    ///
-    /// @endcond
 
     /// @cond INTERNAL
   private:

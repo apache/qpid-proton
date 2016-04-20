@@ -51,8 +51,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     /// Get the state of this session.
     PN_CPP_EXTERN bool uninitialized() const;
-    PN_CPP_EXTERN bool local_active() const;
-    PN_CPP_EXTERN bool remote_active() const;
+    PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
     PN_CPP_EXTERN class condition condition() const;

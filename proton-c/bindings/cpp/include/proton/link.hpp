@@ -54,8 +54,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
 
     // Endpoint behaviours
     PN_CPP_EXTERN bool uninitialized() const;
-    PN_CPP_EXTERN bool local_active() const;
-    PN_CPP_EXTERN bool remote_active() const;
+    PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
 
     PN_CPP_EXTERN class condition condition() const;
