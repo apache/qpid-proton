@@ -23,11 +23,9 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
 #include "proton/transfer.hpp"
 
-#include "proton/delivery.h"
-#include "proton/disposition.h"
+struct pn_delivery_t;
 
 namespace proton {
 
@@ -36,15 +34,16 @@ namespace proton {
 /// particular message may correspond to multiple deliveries.
 class tracker : public transfer {
     /// @cond INTERNAL
-    tracker(pn_delivery_t* d) : transfer(d) {}
+    tracker(pn_delivery_t* d);
     /// @endcond
 
   public:
+    tracker() {}
+
     // Return the sender for this tracker
     PN_CPP_EXTERN class sender sender() const;
 
-  friend class messaging_adapter;
-  friend class sender;
+  friend class internal::factory<tracker>;
 };
 
 }

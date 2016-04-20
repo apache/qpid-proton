@@ -38,10 +38,12 @@ class receiver;
 /// particular message may correspond to multiple deliveries.
 class delivery : public transfer {
     /// @cond INTERNAL
-    delivery(pn_delivery_t* d) : transfer(d) {}
+    delivery(pn_delivery_t* d);
     /// @endcond
 
   public:
+    delivery() {}
+
     // Return the receiver for this delivery
     PN_CPP_EXTERN class receiver receiver() const;
 
@@ -71,6 +73,7 @@ class delivery : public transfer {
     /// delivery on a receiver.
     bool readable() const;
 
+  friend class internal::factory<delivery>;
   friend class message;
   friend class messaging_adapter;
     /// @endcond

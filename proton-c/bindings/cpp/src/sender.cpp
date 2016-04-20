@@ -27,7 +27,11 @@
 #include "proton/link.h"
 #include "proton/types.h"
 
+#include "proton_bits.hpp"
+
 namespace proton {
+
+sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
 
 void sender::open(const sender_options &opts) {
     opts.apply(*this);
@@ -57,7 +61,7 @@ tracker sender::send(const message &message) {
     pn_link_advance(pn_object());
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
-    return dlv;
+    return make_wrapper<tracker>(dlv);
 }
 
 sender_iterator sender_iterator::operator++() {

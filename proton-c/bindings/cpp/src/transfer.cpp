@@ -29,10 +29,12 @@
 #include "proton/link.h"
 #include "proton/session.h"
 
+#include "proton_bits.hpp"
+
 namespace proton {
 
-session transfer::session() const { return pn_link_session(pn_delivery_link(pn_object())); }
-connection transfer::connection() const { return pn_session_connection(pn_link_session(pn_delivery_link(pn_object()))); }
+session transfer::session() const { return make_wrapper(pn_link_session(pn_delivery_link(pn_object()))); }
+connection transfer::connection() const { return make_wrapper(pn_session_connection(pn_link_session(pn_delivery_link(pn_object())))); }
 container& transfer::container() const { return connection().container(); }
 
 bool transfer::settled() const { return pn_delivery_settled(pn_object()); }

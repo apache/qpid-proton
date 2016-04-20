@@ -25,6 +25,7 @@
 
 #include "msg.hpp"
 #include "proton_handler.hpp"
+#include "types_internal.hpp"
 
 namespace proton {
 

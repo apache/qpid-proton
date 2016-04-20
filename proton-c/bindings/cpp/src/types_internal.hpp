@@ -1,5 +1,5 @@
-#ifndef CODEC_HPP
-#define CODEC_HPP
+#ifndef TYPES_INTERNAL_HPP
+#define TYPES_INTERNAL_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -69,5 +69,6 @@ struct ios_guard {
 // Convert a char (signed or unsigned) into an unsigned 1 byte integer that will ostream 
 // as a numeric byte value, not a character and will not get sign-extended.
 inline unsigned int printable_byte(uint8_t byte) { return byte; }
+
 }
-#endif // CODEC_HPP
+#endif // TYPES_INTERNAL_HPP

@@ -27,6 +27,7 @@
 
 #include "contexts.hpp"
 #include "container_impl.hpp"
+#include "proton_bits.hpp"
 
 #include <string>
 
@@ -46,7 +47,7 @@ container& session::container() const {
 }
 
 connection session::connection() const {
-    return pn_session_connection(pn_object());
+    return make_wrapper(pn_session_connection(pn_object()));
 }
 
 namespace {
@@ -58,7 +59,7 @@ std::string next_link_name(const connection& c) {
 sender session::open_sender(const std::string &addr, const sender_options &so) {
     pn_link_t *lnk = pn_sender(pn_object(), next_link_name(connection()).c_str());
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
-    sender snd(lnk);
+    sender snd(make_wrapper<sender>(lnk));
     snd.open(so);
     return snd;
 }
@@ -67,13 +68,13 @@ receiver session::open_receiver(const std::string &addr, const receiver_options 
 {
     pn_link_t *lnk = pn_receiver(pn_object(), next_link_name(connection()).c_str());
     pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
-    receiver rcv(lnk);
+    receiver rcv(make_wrapper<receiver>(lnk));
     rcv.open(ro);
     return rcv;
 }
 
 error_condition session::error() const {
-    return pn_session_remote_condition(pn_object());
+    return make_wrapper(pn_session_remote_condition(pn_object()));
 }
 
 sender_range session::senders() const {
@@ -83,7 +84,7 @@ sender_range session::senders() const {
             break;
         lnk = pn_link_next(lnk, 0);
     }
-    return sender_range(sender_iterator(lnk, pn_object()));
+    return sender_range(sender_iterator(make_wrapper<sender>(lnk), pn_object()));
 }
 
 receiver_range session::receivers() const {
@@ -93,7 +94,7 @@ receiver_range session::receivers() const {
             break;
         lnk = pn_link_next(lnk, 0);
     }
-    return receiver_range(receiver_iterator(lnk, pn_object()));
+    return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk), pn_object()));
 }
 
 

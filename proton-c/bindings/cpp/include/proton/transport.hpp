@@ -71,10 +71,10 @@ class transport : public internal::object<pn_transport_t> {
     /// @endcond
 
     /// @cond INTERNAL
+    friend class internal::factory<transport>;
     friend class connection;
     friend class connection_options;
     friend class connector;
-    friend class proton_event;
     friend class io::connection_engine;
     friend class messaging_adapter;
     /// @endcond

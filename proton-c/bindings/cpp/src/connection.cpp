@@ -29,9 +29,10 @@
 #include "proton/error.hpp"
 #include "connector.hpp"
 
-#include "msg.hpp"
-#include "contexts.hpp"
 #include "container_impl.hpp"
+#include "contexts.hpp"
+#include "msg.hpp"
+#include "proton_bits.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
@@ -105,7 +106,7 @@ receiver connection::open_receiver(const std::string &addr, const receiver_optio
 }
 
 error_condition connection::error() const {
-    return pn_connection_remote_condition(pn_object());
+    return make_wrapper(pn_connection_remote_condition(pn_object()));
 }
 
 void connection::user(const std::string &name) { pn_connection_set_user(pn_object(), name.c_str()); }

@@ -52,8 +52,7 @@ class acceptor : public internal::object<pn_acceptor_t> {
     PN_CPP_EXTERN class connection_options &connection_options();
 
     /// @cond INTERNAL
-    friend class reactor;
-    friend class container_impl;
+    friend class internal::factory<acceptor>;
     /// @endcond
 };
 

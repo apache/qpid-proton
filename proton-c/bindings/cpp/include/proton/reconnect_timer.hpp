@@ -58,8 +58,6 @@ class reconnect_timer
     int32_t retries_;
     duration next_delay_;
     timestamp timeout_deadline_;
-
-    friend class connector;
 };
 
 /// @endcond

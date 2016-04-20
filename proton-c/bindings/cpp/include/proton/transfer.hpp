@@ -34,7 +34,6 @@ namespace proton {
 /// proton::link.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
 class transfer : public internal::object<pn_delivery_t> {
-  protected:
     /// @cond INTERNAL
     transfer(pn_delivery_t* d) : internal::object<pn_delivery_t>(d) {}
     /// @endcond
@@ -87,6 +86,7 @@ class transfer : public internal::object<pn_delivery_t> {
     /// called.
     bool updated() const;
 
+  friend class internal::factory<transfer>;
   friend class messaging_adapter;
     /// @endcond
 };

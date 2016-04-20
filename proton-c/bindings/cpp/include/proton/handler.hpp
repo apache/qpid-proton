@@ -34,7 +34,6 @@ class event;
 class transport;
 class connection;
 class session;
-class link;
 class sender;
 class receiver;
 class tracker;

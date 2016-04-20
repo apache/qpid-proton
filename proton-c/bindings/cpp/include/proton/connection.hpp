@@ -42,10 +42,6 @@ namespace io {
 class connection_engine;
 }
 
-namespace internal {
-class link;
-}
-
 /// A connection to a remote AMQP peer.
 class
 PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, public endpoint {
@@ -123,19 +119,13 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     void password(const std::string &);
     void host(const std::string& h);
 
+    friend class internal::factory<connection>;
     friend class connection_context;
     friend class io::connection_engine;
     friend class connection_options;
     friend class connector;
     friend class container_impl;
     friend class transport;
-    friend class session;
-    friend class internal::link;
-    friend class transfer;
-    friend class reactor;
-    friend class proton_event;
-    friend class override_handler;
-    friend class messaging_adapter;
     /// @endcond
 };
 

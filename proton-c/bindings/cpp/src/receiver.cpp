@@ -21,13 +21,17 @@
 #include "proton/link.hpp"
 #include "proton/receiver.hpp"
 #include "proton/error.hpp"
+
 #include "msg.hpp"
+#include "proton_bits.hpp"
 
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/link.h"
 
 namespace proton {
+
+receiver::receiver(pn_link_t* r): link(make_wrapper(r)) {}
 
 void receiver::open(const receiver_options &opts) {
     opts.apply(*this);
@@ -55,6 +59,5 @@ receiver_iterator receiver_iterator::operator++() {
     }
     return *this;
 }
-
 
 }

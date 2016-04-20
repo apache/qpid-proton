@@ -25,14 +25,16 @@
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 
+#include "proton_bits.hpp"
+
 namespace proton {
 
 // Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
-source::source(pn_terminus_t *t) : terminus(t) {}
+source::source(pn_terminus_t *t) : terminus(make_wrapper(t)) {}
 
-source::source(const sender& snd) : terminus(pn_link_remote_source(snd.pn_object())) { parent_ = snd.pn_object(); }
+source::source(const sender& snd) : terminus(make_wrapper(pn_link_remote_source(snd.pn_object()))) { parent_ = snd.pn_object(); }
 
-source::source(const receiver& rcv) : terminus(pn_link_remote_source(rcv.pn_object())) {}
+source::source(const receiver& rcv) : terminus(make_wrapper(pn_link_remote_source(rcv.pn_object()))) {}
 
 std::string source::address() const {
     pn_terminus_t *authoritative = object_;

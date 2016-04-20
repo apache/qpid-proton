@@ -24,6 +24,8 @@
 
 #include "proton/export.hpp"
 #include "proton/config.hpp"
+#include "proton/object.hpp"
+
 #include "proton/sasl.h"
 #include <string>
 
@@ -73,8 +75,8 @@ class sasl {
 
     pn_sasl_t* const object_;
 
+    friend class internal::factory<sasl>;
     friend class connection_options;
-    friend class transport;
     /// @endcond
 };
 

@@ -25,13 +25,14 @@
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
 
-#include "msg.hpp"
-#include "container_impl.hpp"
-#include "contexts.hpp"
-
 #include "proton/connection.h"
 #include "proton/session.h"
 #include "proton/link.h"
+
+#include "container_impl.hpp"
+#include "contexts.hpp"
+#include "msg.hpp"
+#include "proton_bits.hpp"
 
 namespace proton {
 namespace internal {
@@ -63,7 +64,7 @@ container& link::container() const {
 }
 
 class connection link::connection() const {
-    return pn_session_connection(pn_link_session(pn_object()));
+    return make_wrapper(pn_session_connection(pn_link_session(pn_object())));
 }
 
 class session link::session() const {
@@ -82,7 +83,7 @@ void link::detach_handler() {
 }
 
 error_condition link::error() const {
-    return pn_link_remote_condition(pn_object());
+    return make_wrapper(pn_link_remote_condition(pn_object()));
 }
 
 ssize_t link::recv(char* buffer, size_t size) {

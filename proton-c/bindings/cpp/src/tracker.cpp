@@ -23,7 +23,10 @@
 
 #include "proton/sender.hpp"
 
+#include "proton_bits.hpp"
+
 namespace proton {
 
-sender tracker::sender() const { return pn_delivery_link(pn_object()); }
+tracker::tracker(pn_delivery_t *d): transfer(make_wrapper(d)) {}
+sender tracker::sender() const { return make_wrapper<class sender>(pn_delivery_link(pn_object())); }
 }

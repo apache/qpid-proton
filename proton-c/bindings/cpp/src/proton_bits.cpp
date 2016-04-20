@@ -19,6 +19,8 @@
 
 #include "proton_bits.hpp"
 
+#include "proton/error_condition.hpp"
+
 #include <string>
 #include <ostream>
 

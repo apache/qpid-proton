@@ -23,6 +23,7 @@
  */
 
 #include "proton/export.hpp"
+#include "proton/object.hpp"
 
 #include "proton/ssl.h"
 #include <string>
@@ -88,7 +89,7 @@ class ssl {
   private:
     pn_ssl_t* object_;
 
-    friend class transport;
+    friend class internal::factory<ssl>;
     /// @endcond
 };
 

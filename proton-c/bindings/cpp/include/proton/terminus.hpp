@@ -34,10 +34,7 @@ namespace proton {
 
 class source;
 class target;
-class receiver_options;
 class source_options;
-class target_options;
-
 
 namespace internal {
 
@@ -97,13 +94,12 @@ class terminus {
     value properties_, filter_;
     pn_link_t* parent_;
 
-    friend class link;
+
+    friend class factory<terminus>;
     friend class noderef;
     friend class proton::source;
     friend class proton::target;
-    friend class proton::receiver_options;
     friend class proton::source_options;
-    friend class proton::target_options;
     /// @endcond
 };
 

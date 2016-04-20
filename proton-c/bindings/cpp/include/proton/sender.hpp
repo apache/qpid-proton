@@ -39,11 +39,11 @@ class
 PN_CPP_CLASS_EXTERN sender : public internal::link
 {
     /// @cond INTERNAL
-    sender(pn_link_t* s) : internal::link(s) {}
+    sender(pn_link_t* s);
     /// @endcond
 
   public:
-    sender() : internal::link(0) {}
+    sender() {}
 
     /// Locally open the sender.  The operation is not complete till
     /// handler::on_sender_open.
@@ -59,10 +59,7 @@ PN_CPP_CLASS_EXTERN sender : public internal::link
     PN_CPP_EXTERN class target target() const;
 
   /// @cond INTERNAL
-  friend class internal::link;
-  friend class tracker;
-  friend class session;
-  friend class messaging_adapter;
+  friend class internal::factory<sender>;
   friend class sender_iterator;
   friend class source;
   friend class target;

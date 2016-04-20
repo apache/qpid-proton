@@ -29,24 +29,25 @@
 #include "proton/error.h"
 
 #include "msg.hpp"
+#include "proton_bits.hpp"
 
 
 namespace proton {
 
 connection transport::connection() const {
-    return pn_transport_connection(pn_object());
+    return make_wrapper(pn_transport_connection(pn_object()));
 }
 
 class ssl transport::ssl() const {
-    return proton::ssl(pn_ssl(pn_object()));
+    return make_wrapper(pn_ssl(pn_object()));
 }
 
 class sasl transport::sasl() const {
-    return pn_sasl(pn_object());
+    return make_wrapper(pn_sasl(pn_object()));
 }
 
 error_condition transport::error() const {
-    return proton::error_condition(pn_transport_condition(pn_object()));
+    return make_wrapper(pn_transport_condition(pn_object()));
 }
 
 void transport::unbind() {

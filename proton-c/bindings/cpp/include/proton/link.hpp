@@ -57,7 +57,6 @@ namespace internal {
 /// class for sender and receiver.
 class
 PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
-  private:
     /// @cond INTERNAL
     link(pn_link_t* l) : object<pn_link_t>(l) {}
     /// @endcond
@@ -116,11 +115,13 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-  private:
+    ///@cond INTERNAL
+  protected:
     /// Initiate the AMQP attach frame.  The operation is not complete till
     /// handler::on_link_open.
     void attach();
 
+  private:
     // Used by sender/receiver options
     void handler(proton_handler &);
     void detach_handler();
@@ -131,25 +132,18 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     bool advance();
     link_context &context();
 
-    ///@cond INTERNAL
     /// XXX local versus remote, mutability
     /// XXX - local_sender_settle_mode and local_receiver_settle_mode
-    PN_CPP_EXTERN sender_options::sender_settle_mode sender_settle_mode();
-    PN_CPP_EXTERN receiver_options::receiver_settle_mode receiver_settle_mode();
-    PN_CPP_EXTERN sender_options::sender_settle_mode remote_sender_settle_mode();
-    PN_CPP_EXTERN receiver_options::receiver_settle_mode remote_receiver_settle_mode();
-    ///@endcond
+    sender_options::sender_settle_mode sender_settle_mode();
+    receiver_options::receiver_settle_mode receiver_settle_mode();
+    sender_options::sender_settle_mode remote_sender_settle_mode();
+    receiver_options::receiver_settle_mode remote_receiver_settle_mode();
 
-  friend class proton::delivery;
-  friend class proton::sender;
-  friend class proton::receiver;
-  friend class proton::sender_options;
-  friend class proton::receiver_options;
-  friend class proton::sender_iterator;
-  friend class proton::receiver_iterator;
-  friend class proton::message;
-  friend class proton::proton_event;
-  friend class proton::messaging_adapter;
+    friend class factory<link>;
+    friend class proton::message;
+    friend class proton::receiver_options;
+    friend class proton::sender_options;
+    ///@endcond
 };
 
 }}

@@ -36,11 +36,11 @@ namespace proton {
 class
 PN_CPP_CLASS_EXTERN receiver : public internal::link {
     /// @cond INTERNAL
-    receiver(pn_link_t* r) : internal::link(r) {}
+    receiver(pn_link_t* r);
     /// @endcond
 
   public:
-    receiver() : internal::link(0) {}
+    receiver() {}
 
     /// Locally open the receiver.  The operation is not complete till
     /// handler::on_receiver_open.
@@ -51,15 +51,13 @@ PN_CPP_CLASS_EXTERN receiver : public internal::link {
 
     /// Get the target node.
     PN_CPP_EXTERN class target target() const;
-  /// @cond INTERNAL
-  friend class internal::link;
-  friend class delivery;
-  friend class session;
-  friend class messaging_adapter;
+
+    /// @cond INTERNAL
+  friend class internal::factory<receiver>;
   friend class receiver_iterator;
   friend class source;
   friend class target;
-  /// @endcond
+    /// @endcond
 };
 
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {

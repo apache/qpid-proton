@@ -38,6 +38,7 @@
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
+#include "proton_bits.hpp"
 #include "proton_event.hpp"
 
 #include "proton/connection.h"
@@ -100,7 +101,7 @@ class override_handler : public proton_handler
             }
             else if (!override && type == proton_event::CONNECTION_INIT) {
                 // Newly accepted connection from lister socket
-                connection c(conn);
+                connection c(make_wrapper(conn));
                 container_impl_.configure_server_connection(c);
             }
         }
@@ -193,7 +194,7 @@ acceptor container_impl::listen(const proton::url& url, const connection_options
     listener_context& lc(listener_context::get(acptr));
     lc.connection_options = opts;
     lc.ssl = url.scheme() == url::AMQPS;
-    return acceptor(acptr);
+    return make_wrapper(acptr);
 }
 
 task container_impl::schedule(int delay, proton_handler *h) {

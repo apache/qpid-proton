@@ -85,6 +85,9 @@ template <class T> class object : private comparable<object<T> > {
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
 };
 
+/// Factory class used internally to make wrappers
+template <class T> class factory;
+
 }}
 
 /// @endcond
