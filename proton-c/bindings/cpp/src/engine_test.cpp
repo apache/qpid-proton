@@ -192,8 +192,8 @@ void test_endpoint_close() {
     e.a.connection().open_sender("x");
     e.a.connection().open_receiver("y");
     while (ha.links.size() < 2 || hb.links.size() < 2) e.process();
-    link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
-    link bx = quick_pop(hb.links), by = quick_pop(hb.links);
+    proton::link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
+    proton::link bx = quick_pop(hb.links), by = quick_pop(hb.links);
 
     // Close a link
     ax.close(proton::error_condition("err", "foo bar"));
