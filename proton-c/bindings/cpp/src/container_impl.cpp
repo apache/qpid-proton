@@ -63,10 +63,10 @@ struct handler_context {
      * should be small and free of indirect malloc/free/new/delete.
      */
 
-    static void dispatch(pn_handler_t *c_handler, pn_event_t *c_event, pn_event_type_t type)
+    static void dispatch(pn_handler_t *c_handler, pn_event_t *c_event, pn_event_type_t)
     {
         handler_context& hc(handler_context::get(c_handler));
-        proton_event pevent(c_event, type, hc.container_);
+        proton_event pevent(c_event, hc.container_);
         pevent.dispatch(*hc.handler_);
         return;
     }

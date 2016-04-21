@@ -21,7 +21,6 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
 
 #include "proton/event.h"
 
@@ -29,8 +28,6 @@ namespace proton {
 
 class proton_handler;
 class container;
-class connection;
-class connection_engine;
 
 /** Event information for a proton::proton_handler */
 class proton_event
@@ -267,27 +264,21 @@ class proton_event
     };
     ///@}
 
-    proton_event(pn_event_t *, pn_event_type_t, class container*);
+    proton_event(pn_event_t *ce, class container *c) :
+      pn_event_(ce),
+      container_(c)
+    {}
 
-    std::string name() const;
+    pn_event_t* pn_event() const { return pn_event_; }
+    class container* container() const { return container_; }
+
+    /// Get type of event
+    event_type type() const { return event_type(pn_event_type(pn_event_)); }
 
     void dispatch(proton_handler& h);
 
-    class container* container() const;
-
-    class transport transport() const;
-    class connection connection() const;
-    class session session() const;
-    class link link() const;
-
-    /** Get type of event */
-    event_type type() const;
-
-    pn_event_t* pn_event() const;
-
   private:
-    mutable pn_event_t *pn_event_;
-    event_type type_;
+    pn_event_t *pn_event_;
     class container *container_;
 };
 

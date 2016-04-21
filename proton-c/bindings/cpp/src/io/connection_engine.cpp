@@ -108,7 +108,7 @@ bool connection_engine::dispatch() {
          e;
          e = pn_collector_peek(collector_.get()))
     {
-        proton_event(e, pn_event_type(e), 0).dispatch(h);
+        proton_event(e, 0).dispatch(h);
         pn_collector_pop(collector_.get());
     }
     return !(pn_transport_closed(transport_.pn_object()) ||
