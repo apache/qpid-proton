@@ -28,6 +28,7 @@
 #include "proton/config.hpp"
 
 #include <string>
+#include <iosfwd>
 
 struct pn_condition_t;
 
@@ -85,6 +86,10 @@ class error_condition {
     friend class link;
     /// @endcond
 };
+
+PN_CPP_EXTERN bool operator==(const error_condition& x, const error_condition& y);
+
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const error_condition& err);
 
 }
 

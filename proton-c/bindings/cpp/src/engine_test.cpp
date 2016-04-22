@@ -97,7 +97,7 @@ template <class S> typename S::value_type quick_pop(S& s) {
 struct record_handler : public handler {
     std::deque<proton::link> links;
     std::deque<proton::session> sessions;
-    std::deque<std::string> errors;
+    std::deque<std::string> errors, transport_errors, connection_errors;
 
     void on_receiver_open(receiver &l) override {
         links.push_back(l);
@@ -109,6 +109,14 @@ struct record_handler : public handler {
 
     void on_session_open(session &s) override {
         sessions.push_back(s);
+    }
+
+    void on_transport_error(transport& t) override {
+        transport_errors.push_back(t.error().what());
+    }
+
+    void on_connection_error(connection& c) override {
+        connection_errors.push_back(c.error().what());
     }
 
     void on_unhandled_error(const proton::error_condition& c) override {
@@ -213,6 +221,8 @@ void test_endpoint_close() {
     ca.close(proton::error_condition("conn", "bad connection"));
     while (!cb.closed()) e.process();
     ASSERT_EQUAL("conn: bad connection", cb.error().what());
+    ASSERT_EQUAL(1, hb.connection_errors.size());
+    ASSERT_EQUAL("conn: bad connection", hb.connection_errors.front());
 }
 
 void test_transport_close() {
@@ -222,14 +232,20 @@ void test_transport_close() {
     e.a.connection().open();
     while (!e.b.connection().active()) e.process();
 
-    e.a.close("oops", "engine failure");
+    e.a.close(proton::error_condition("oops", "engine failure"));
     // Closed but we still have output data to flush so a.dispatch() is true.
     ASSERT(e.a.dispatch());
-    while (!e.b.connection().closed()) e.process();
+    do { e.process(); } while (e.b.dispatch());
     ASSERT_EQUAL(1, hb.errors.size());
     ASSERT_EQUAL("oops: engine failure", hb.errors.front());
-    ASSERT_EQUAL("oops", e.b.connection().error().name());
-    ASSERT_EQUAL("engine failure", e.b.connection().error().description());
+    // Connection and transport share the same error.
+    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.b.connection().error());
+    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.b.transport().error());
+    // But connectoin was never protocol closed.
+    ASSERT(!e.b.connection().closed());
+    ASSERT_EQUAL(0, hb.connection_errors.size());
+    ASSERT_EQUAL(1, hb.transport_errors.size());
+    ASSERT_EQUAL("oops: engine failure", hb.transport_errors.front());
 }
 
 int main(int, char**) {

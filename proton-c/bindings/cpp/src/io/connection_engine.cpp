@@ -147,16 +147,18 @@ void connection_engine::write_close() {
     pn_transport_close_head(transport_.pn_object());
 }
 
-void connection_engine::close(const std::string& name, const std::string& description) {
-    pn_condition_t* c = pn_transport_condition(transport_.pn_object());
-    pn_condition_set_name(c, name.c_str());
-    pn_condition_set_description(c, description.c_str());
+void connection_engine::close(const proton::error_condition& err) {
+    set_error_condition(err, pn_transport_condition(transport_.pn_object()));
     read_close();
     write_close();
 }
 
 proton::connection connection_engine::connection() const {
     return connection_;
+}
+
+proton::transport connection_engine::transport() const {
+    return transport_;
 }
 
 }}

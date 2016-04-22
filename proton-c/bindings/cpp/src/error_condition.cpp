@@ -84,4 +84,13 @@ std::string error_condition::what() const {
     }
 }
 
+bool operator==(const error_condition& x, const error_condition& y) {
+    return x.name() == y.name() && x.description() == y.description()
+        && x.properties() == y.properties();
+}
+
+std::ostream& operator<<(std::ostream& o, const error_condition& err) {
+    return o << err.what();
+}
+
 }

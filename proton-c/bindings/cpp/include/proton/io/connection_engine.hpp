@@ -146,10 +146,10 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Indicate that the write side of the transport has closed and no more data will be written.
     PN_CPP_EXTERN void write_close();
 
-    /// Indicate that the transport has closed with an error condition.
-    /// This calls both read_close() and write_close().
-    /// The error condition will be passed to handler::on_transport_error()
-    PN_CPP_EXTERN void close(const std::string& name, const std::string& description);
+    /// Close the engine with an error that will be passed to handler::on_transport_error().
+    /// Calls read_close() and write_close().
+    /// Note: You still need to call dispatch() to process final close-down events.
+    PN_CPP_EXTERN void close(const error_condition&);
 
     /// Dispatch all available events and call the corresponding \ref handler methods.
     ///
@@ -167,6 +167,9 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
     /// Get the AMQP connection associated with this connection_engine.
     PN_CPP_EXTERN proton::connection connection() const;
+
+    /// Get the transport associated with this connection_engine.
+    PN_CPP_EXTERN proton::transport transport() const;
 
   private:
     connection_engine(const connection_engine&);

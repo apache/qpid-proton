@@ -1,5 +1,5 @@
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef PROTON_BITS_HPP
+#define PROTON_BITS_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -21,12 +21,17 @@
 
 #include <string>
 #include <iosfwd>
+#include <proton/error_condition.hpp>
 #include <proton/error.h>
 
 /**@file
  *
  * Assorted internal proton utilities.
  */
+
+namespace proton {
+
+class error_condition;
 
 std::string error_str(long code);
 
@@ -39,7 +44,8 @@ struct inspectable { void* value; inspectable(void* o) : value(o) {} };
 /** Stream a proton object via pn_inspect. */
 std::ostream& operator<<(std::ostream& o, const inspectable& object);
 
+void set_error_condition(const error_condition&, pn_condition_t*);
 
+}
 
-
-#endif // ERROR_H
+#endif // PROTON_BITS_HPP

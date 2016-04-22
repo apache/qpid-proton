@@ -19,6 +19,7 @@
 
 #include "msg.hpp"
 
+#include <proton/error_condition.hpp>
 #include <proton/io/socket.hpp>
 #include <proton/url.hpp>
 
@@ -92,7 +93,7 @@ void engine::read() {
         else if (n == 0)
             read_close();
         else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
-            close("io_error", error_str());
+            close(error_condition("io_error", error_str()));
     }
 }
 
@@ -103,7 +104,7 @@ void engine::write() {
         if (n > 0)
             write_done(n);
         else if (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-            close("io_error", error_str());
+            close(error_condition("io_error", error_str()));
         }
     }
 }
@@ -119,7 +120,7 @@ void engine::run() {
             FD_SET(socket_, &wr);
         int n = ::select(FD_SETSIZE, &rd, &wr, NULL, NULL);
         if (n < 0) {
-            close("select: ", error_str());
+            close(error_condition("select: ", error_str()));
             break;
         }
         if (FD_ISSET(socket_, &rd)) {
