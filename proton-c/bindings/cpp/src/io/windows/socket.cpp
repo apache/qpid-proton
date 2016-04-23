@@ -107,7 +107,7 @@ void engine::read() {
         else if (n == 0)
             read_close();
         else if (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
-            close("io_error", error_str());
+            close(error_condition("io_error", error_str()));
     }
 }
 
@@ -118,7 +118,7 @@ void engine::write() {
     if (n > 0)
         write_done(n);
     else if (n == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)
-        close("io_error", error_str());
+        close(error_condition("io_error", error_str()));
     }
 }
 
@@ -133,7 +133,7 @@ void engine::run() {
             FD_SET(socket_, &wr);
         int n = ::select(FD_SETSIZE, &rd, &wr, NULL, NULL);
         if (n < 0) {
-            close("io_error", error_str());
+            close(error_condition("select: ", error_str()));
             break;
         }
         if (FD_ISSET(socket_, &rd)) {
