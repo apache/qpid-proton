@@ -26,9 +26,9 @@
 #include <proton/export.hpp>
 #include <proton/message.hpp>
 #include <proton/terminus.hpp>
-
 #include <proton/object.hpp>
-#include <proton/link_options.hpp>
+#include <proton/sender_options.hpp>
+#include <proton/receiver_options.hpp>
 
 #include <proton/types.h>
 
@@ -40,17 +40,29 @@ class sender;
 class receiver;
 class error_condition;
 class link_context;
+class proton_event;
+class messaging_adapter;
+class proton_handler;
+class delivery;
+class connection;
+class container;
+class session;
+class sender_iterator;
+class receiver_iterator;
+
+namespace internal {
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
 class
-PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint {
+PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
+  private:
     /// @cond INTERNAL
-    link(pn_link_t* l) : internal::object<pn_link_t>(l) {}
+    link(pn_link_t* l) : object<pn_link_t>(l) {}
     /// @endcond
 
   public:
-    link() : internal::object<pn_link_t>(0) {}
+    link() : object<pn_link_t>(0) {}
 
     // Endpoint behaviours
     PN_CPP_EXTERN bool uninitialized() const;
@@ -58,10 +70,6 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     PN_CPP_EXTERN bool closed() const;
 
     PN_CPP_EXTERN class error_condition error() const;
-
-    /// Locally open the link.  The operation is not complete till
-    /// handler::on_link_open.
-    PN_CPP_EXTERN void open(const link_options &opts = link_options());
 
     /// Locally close the link.  The operation is not complete till
     /// handler::on_link_close.
@@ -131,57 +139,42 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-    ///@cond INTERNAL
-    /// XXX local versus remote, mutability
-    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
-    PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
-    PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
-    PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
-    PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
-    ///@endcond
-
   private:
-    // Used by link_options
+    /// Initiate the AMQP attach frame.  The operation is not complete till
+    /// handler::on_link_open.
+    void attach();
+
+    // Used by sender/receiver options
     void handler(proton_handler &);
     void detach_handler();
-    void sender_settle_mode(link_options::sender_settle_mode);
-    void receiver_settle_mode(link_options::receiver_settle_mode);
+    void sender_settle_mode(sender_options::sender_settle_mode);
+    void receiver_settle_mode(receiver_options::receiver_settle_mode);
     // Used by message to decode message from a delivery
     ssize_t recv(char* buffer, size_t size);
     bool advance();
     link_context &context();
 
-  friend class connection;
-  friend class transfer;
-  friend class receiver;
-  friend class sender;
-  friend class message;
-  friend class proton_event;
-  friend class link_iterator;
-  friend class link_options;
-  friend class messaging_adapter;
-};
-
-/// An iterator for links.
-class link_iterator : public internal::iter_base<link, link_iterator> {
-  public:
     ///@cond INTERNAL
-    explicit link_iterator(link l = 0, pn_session_t* s = 0) :
-        internal::iter_base<link, link_iterator>(l), session_(s) {}
+    /// XXX local versus remote, mutability
+    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
+    PN_CPP_EXTERN sender_options::sender_settle_mode sender_settle_mode();
+    PN_CPP_EXTERN receiver_options::receiver_settle_mode receiver_settle_mode();
+    PN_CPP_EXTERN sender_options::sender_settle_mode remote_sender_settle_mode();
+    PN_CPP_EXTERN receiver_options::receiver_settle_mode remote_receiver_settle_mode();
     ///@endcond
-    /// Advance
-    PN_CPP_EXTERN link_iterator operator++();
 
-  private:
-    pn_session_t* session_;
+  friend class proton::delivery;
+  friend class proton::sender;
+  friend class proton::receiver;
+  friend class proton::sender_options;
+  friend class proton::receiver_options;
+  friend class proton::sender_iterator;
+  friend class proton::receiver_iterator;
+  friend class proton::message;
+  friend class proton::proton_event;
+  friend class proton::messaging_adapter;
 };
 
-/// A range of links.
-typedef internal::iter_range<link_iterator> link_range;
-
-}
-
-#include <proton/sender.hpp>
-#include <proton/receiver.hpp>
+}}
 
 #endif // PROTON_CPP_LINK_H

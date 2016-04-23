@@ -24,7 +24,8 @@
 
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
-#include "proton/link.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 #include "proton/object.hpp"
 #include "proton/session.hpp"
 #include "proton/connection_options.hpp"
@@ -39,6 +40,10 @@ class handler;
 
 namespace io {
 class connection_engine;
+}
+
+namespace internal {
+class link;
 }
 
 /// A connection to a remote AMQP peer.
@@ -103,14 +108,11 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Open a sender for `addr` on default_session().
     PN_CPP_EXTERN sender open_sender(const std::string &addr,
-                                     const link_options &opts = link_options());
+                                     const sender_options &opts = sender_options());
 
     /// Open a receiver for `addr` on default_session().
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
-                                         const link_options &opts = link_options());
-
-    /// Return links on this connection matching the state mask.
-    PN_CPP_EXTERN link_range links() const;
+                                         const receiver_options &opts = receiver_options());
 
     /// Return sessions on this connection matching the state mask.
     PN_CPP_EXTERN session_range sessions() const;
@@ -128,7 +130,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     friend class container_impl;
     friend class transport;
     friend class session;
-    friend class link;
+    friend class internal::link;
     friend class transfer;
     friend class reactor;
     friend class proton_event;

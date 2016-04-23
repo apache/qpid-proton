@@ -24,7 +24,8 @@
 
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
-#include "proton/link.hpp"
+#include "proton/receiver.hpp"
+#include "proton/sender.hpp"
 
 #include "proton/types.h"
 #include "proton/link.h"
@@ -38,7 +39,7 @@ namespace proton {
 class container;
 class handler;
 
-/// A container of links.
+/// A container of senders and receivers.
 class
 PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint
 {
@@ -79,15 +80,19 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN class connection connection() const;
 
     /// Open a sender for `addr`.
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, const link_options &opts = link_options());
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &opts = sender_options());
 
     /// Open a receiver for `addr`.
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const link_options &opts = link_options());
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const receiver_options &opts = receiver_options());
 
-    /// Return the links on this session matching the state mask.
-    PN_CPP_EXTERN link_range links() const;
+    /// Return the senders on this session.
+    PN_CPP_EXTERN sender_range senders() const;
 
-  friend class link_iterator;
+    /// Return the receivers on this session.
+    PN_CPP_EXTERN receiver_range receivers() const;
+
+  friend class sender_iterator;
+  friend class receiver_iterator;
   friend class session_iterator;
 };
 

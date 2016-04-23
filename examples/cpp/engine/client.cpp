@@ -44,7 +44,8 @@ class client : public proton::handler {
 
     void on_connection_open(proton::connection &c) override {
         sender = c.open_sender(url.path());
-        receiver = c.open_receiver("", proton::link_options().dynamic_address(true));
+        // Note: the following signature is changing in Proton 0.13
+        receiver = c.open_receiver("", proton::receiver_options().dynamic_address(true));
     }
 
     void send_request() {

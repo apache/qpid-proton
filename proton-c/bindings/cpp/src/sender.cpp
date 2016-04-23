@@ -29,6 +29,11 @@
 
 namespace proton {
 
+void sender::open(const sender_options &opts) {
+    opts.apply(*this);
+    attach();
+}
+
 namespace {
 // TODO: revisit if thread safety required
 uint64_t tag_counter = 0;
@@ -45,6 +50,19 @@ tracker sender::send(const message &message) {
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
     return dlv;
+}
+
+sender_iterator sender_iterator::operator++() {
+    if (!!obj_) {
+        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
+        while (lnk) {
+            if (pn_link_is_sender(lnk) && pn_link_session(lnk) == session_)
+                break;
+            lnk = pn_link_next(lnk, 0);
+        }
+        obj_ = lnk;
+    }
+    return *this;
 }
 
 }

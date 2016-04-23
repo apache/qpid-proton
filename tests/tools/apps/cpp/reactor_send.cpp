@@ -27,7 +27,6 @@
 #include "proton/decoder.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
-#include "proton/link_options.hpp"
 #include "proton/tracker.hpp"
 #include "proton/value.hpp"
 
@@ -67,7 +66,7 @@ class reactor_send : public proton::handler {
     }
 
     void on_container_start(proton::container &c) override {
-        c.link_options(proton::link_options().credit_window(1024));
+        c.receiver_options(proton::receiver_options().credit_window(1024));
         c.open_sender(url_);
     }
 

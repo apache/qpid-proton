@@ -31,9 +31,9 @@
 #include "proton/link.h"
 
 namespace proton {
+namespace internal {
 
-void link::open(const link_options &lo) {
-    lo.apply(*this);
+void link::attach() {
     pn_link_open(pn_object());
 }
 
@@ -111,39 +111,32 @@ bool link::advance() {
     return pn_link_advance(pn_object());
 }
 
-link_options::sender_settle_mode link::sender_settle_mode() {
-    return (link_options::sender_settle_mode) pn_link_snd_settle_mode(pn_object());
+sender_options::sender_settle_mode link::sender_settle_mode() {
+    return (sender_options::sender_settle_mode) pn_link_snd_settle_mode(pn_object());
 }
 
-void link::sender_settle_mode(link_options::sender_settle_mode mode) {
+void link::sender_settle_mode(sender_options::sender_settle_mode mode) {
     pn_link_set_snd_settle_mode(pn_object(), (pn_snd_settle_mode_t) mode);
 }
 
-link_options::receiver_settle_mode link::receiver_settle_mode() {
-    return (link_options::receiver_settle_mode) pn_link_rcv_settle_mode(pn_object());
+receiver_options::receiver_settle_mode link::receiver_settle_mode() {
+    return (receiver_options::receiver_settle_mode) pn_link_rcv_settle_mode(pn_object());
 }
 
-void link::receiver_settle_mode(link_options::receiver_settle_mode mode) {
+void link::receiver_settle_mode(receiver_options::receiver_settle_mode mode) {
     pn_link_set_rcv_settle_mode(pn_object(), (pn_rcv_settle_mode_t) mode);
 }
 
-link_options::sender_settle_mode link::remote_sender_settle_mode() {
-    return (link_options::sender_settle_mode) pn_link_remote_snd_settle_mode(pn_object());
+sender_options::sender_settle_mode link::remote_sender_settle_mode() {
+    return (sender_options::sender_settle_mode) pn_link_remote_snd_settle_mode(pn_object());
 }
 
-link_options::receiver_settle_mode link::remote_receiver_settle_mode() {
-    return (link_options::receiver_settle_mode) pn_link_remote_rcv_settle_mode(pn_object());
-}
-
-link_iterator link_iterator::operator++() {
-    do {
-        obj_ = pn_link_next(obj_.pn_object(), 0);
-    } while (!!obj_ && obj_.session().pn_object() != session_);
-    return *this;
+receiver_options::receiver_settle_mode link::remote_receiver_settle_mode() {
+    return (receiver_options::receiver_settle_mode) pn_link_remote_rcv_settle_mode(pn_object());
 }
 
 link_context &link::context() {
     return link_context::get(pn_object());
 }
 
-}
+}}

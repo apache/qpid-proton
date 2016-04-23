@@ -27,7 +27,8 @@
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/url.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/link_options.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/receiver_options.hpp"
 
 #include <string>
 
@@ -36,22 +37,23 @@ namespace proton {
 class connection;
 class acceptor;
 class handler;
-class sender;
-class receiver;
-class link;
 class handler;
 class task;
 class container_impl;
 
-/// A top-level container of connections, sessions, and links.
+namespace internal {
+class link;
+}
+
+/// A top-level container of connections, sessions, senders and receivers.
 ///
 /// A container gives a unique identity to each communicating peer. It
 /// is often a process-level object.
 
-/// It serves as an entry point to the API, allowing connections and
-/// links to be established. It can be supplied with an event handler
+/// It serves as an entry point to the API, allowing connections, senders
+/// and receivers to be established. It can be supplied with an event handler
 /// in order to intercept important messaging events, such as newly
-/// received messages or newly issued link credit for sending
+/// received messages or newly issued credit for sending
 /// messages.
 class container {
   public:
@@ -85,17 +87,17 @@ class container {
     PN_CPP_EXTERN void run();
 
     /// Open a connection to `url` and open a sender for `url.path()`.
-    /// Any supplied link or connection options will override the
+    /// Any supplied sender or connection options will override the
     /// container's template options.
     PN_CPP_EXTERN sender open_sender(const proton::url &,
-                                     const proton::link_options &l = proton::link_options(),
+                                     const proton::sender_options &o = proton::sender_options(),
                                      const connection_options &c = connection_options());
 
     /// Open a connection to `url` and open a receiver for
-    /// `url.path()`.  Any supplied link or connection options will
+    /// `url.path()`.  Any supplied receiver or connection options will
     /// override the container's template options.
     PN_CPP_EXTERN receiver open_receiver(const url &,
-                                         const proton::link_options &l = proton::link_options(),
+                                         const proton::receiver_options &o = proton::receiver_options(),
                                          const connection_options &c = connection_options());
 
     /// A unique identifier for the container.
@@ -119,11 +121,17 @@ class container {
     /// first open event on the connection.
     PN_CPP_EXTERN void server_connection_options(const connection_options &);
 
-    /// Copy the link options to a template applied to new links
+    /// Copy the sender options to a template applied to new senders
     /// created and opened by this container.  They are applied before
-    /// the open event on the link and may be overriden by link
+    /// the open event on the sender and may be overriden by sender
     /// options in other methods.
-    PN_CPP_EXTERN void link_options(const link_options &);
+    PN_CPP_EXTERN void sender_options(const sender_options &);
+
+    /// Copy the receiver options to a template applied to new receivers
+    /// created and opened by this container.  They are applied before
+    /// the open event on the receiver and may be overriden by receiver
+    /// options in other methods.
+    PN_CPP_EXTERN void receiver_options(const receiver_options &);
 
     /// @cond INTERNAL
   private:
@@ -133,8 +141,8 @@ class container {
     internal::pn_unique_ptr<container_impl> impl_;
 
     friend class connector;
-    friend class link;
     friend class messaging_adapter;
+    friend class internal::link;
     /// @endcond
 };
 

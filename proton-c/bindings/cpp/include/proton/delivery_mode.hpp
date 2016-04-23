@@ -1,3 +1,6 @@
+#ifndef PROTON_CPP_DELIVERY_MODE_H
+#define PROTON_CPP_DELIVERY_MODE_H
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,35 +21,24 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
-#include "proton/receiver.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
-
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
 
 namespace proton {
 
-void receiver::open(const receiver_options &opts) {
-    opts.apply(*this);
-    attach();
-}
-
-
-receiver_iterator receiver_iterator::operator++() {
-    if (!!obj_) {
-        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
-        while (lnk) {
-            if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == session_)
-                break;
-            lnk = pn_link_next(lnk, 0);
-        }
-        obj_ = lnk;
-    }
-    return *this;
-}
-
+/// The message delivery policy to establish when opening a link.
+enum delivery_mode {
+    // No set policy.  The application must settle messages itself
+    // according to its own policy.
+    DELIVERY_MODE_NONE = 0,
+    // Outgoing messages are settled immediately by the link.
+    // There are no duplicates.
+    AT_MOST_ONCE,
+    // The receiver settles the delivery first with an
+    // accept/reject/release disposition.  The sender waits to
+    // settle until after the disposition notification is
+    // received.
+    AT_LEAST_ONCE
+};
 
 }
+
+#endif // PROTON_CPP_DELIVERY_MODE_H

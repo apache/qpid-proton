@@ -34,21 +34,43 @@ namespace proton {
 
 /// A link for receiving messages.
 class
-PN_CPP_CLASS_EXTERN receiver : public link {
+PN_CPP_CLASS_EXTERN receiver : public internal::link {
     /// @cond INTERNAL
-    receiver(pn_link_t* r) : link(r) {}
+    receiver(pn_link_t* r) : internal::link(r) {}
     /// @endcond
 
   public:
-    receiver() : link(0) {}
+    receiver() : internal::link(0) {}
+
+    /// Locally open the receiver.  The operation is not complete till
+    /// handler::on_receiver_open.
+    PN_CPP_EXTERN void open(const receiver_options &opts = receiver_options());
 
   /// @cond INTERNAL
-  friend class link;
+  friend class internal::link;
   friend class delivery;
   friend class session;
   friend class messaging_adapter;
+  friend class receiver_iterator;
   /// @endcond
 };
+
+class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
+  public:
+    ///@cond INTERNAL
+    explicit receiver_iterator(receiver r = 0, pn_session_t* s = 0) :
+        iter_base<receiver, receiver_iterator>(r), session_(s) {}
+    ///@endcond
+    /// Advance
+    PN_CPP_EXTERN receiver_iterator operator++();
+
+  private:
+    pn_session_t* session_;
+};
+
+/// A range of receivers.
+typedef internal::iter_range<receiver_iterator> receiver_range;
+
 
 }
 

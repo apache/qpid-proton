@@ -149,7 +149,8 @@ PN_CPP_CLASS_EXTERN handler
     friend class container;
     friend class io::connection_engine;
     friend class connection_options;
-    friend class link_options;
+    friend class receiver_options;
+    friend class sender_options;
     /// @endcond
 };
 

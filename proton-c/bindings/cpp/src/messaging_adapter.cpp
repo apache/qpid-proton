@@ -145,13 +145,13 @@ void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
     if (pn_link_is_receiver(lnk)) {
-        receiver r(lnk);
+        receiver r = internal::link(lnk).receiver();
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_receiver_error(r);
         }
         delegate_.on_receiver_close(r);
     } else {
-        sender s(lnk);
+        sender s = internal::link(lnk).sender();
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_sender_error(s);
         }
@@ -205,20 +205,24 @@ void messaging_adapter::on_link_local_open(proton_event &pe) {
 }
 
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
+    receiver r;
+    sender s;
     pn_link_t *lnk = pn_event_link(pe.pn_event());
     if (pn_link_is_receiver(lnk)) {
-      receiver r(lnk);
+      r = internal::link(lnk).receiver();
       delegate_.on_receiver_open(r);
     } else {
-      sender s(lnk);
+      s = internal::link(lnk).sender();
       delegate_.on_sender_open(s);
     }
     if (!is_local_open(pn_link_state(lnk)) && is_local_unititialised(pn_link_state(lnk))) {
-        link l(lnk);
         if (pe.container())
-            l.open(pe.container()->impl_->link_options_);
+            if (!!s)
+                s.open(pe.container()->impl_->sender_options_);
+            else
+                r.open(pe.container()->impl_->receiver_options_);
         else
-            l.open();    // No default for engine
+            pn_link_open(lnk);    // No default for engine
     }
     credit_topup(lnk);
 }

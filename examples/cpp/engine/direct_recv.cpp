@@ -24,7 +24,7 @@
 #include "proton/delivery.hpp"
 #include "proton/io/socket.hpp"
 #include "proton/handler.hpp"
-#include "proton/link.hpp"
+#include "proton/receiver.hpp"
 #include "proton/url.hpp"
 #include "proton/value.hpp"
 

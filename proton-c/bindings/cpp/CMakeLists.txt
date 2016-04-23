@@ -47,7 +47,6 @@ set(qpid-proton-cpp-source
   src/id_generator.cpp
   src/io/connection_engine.cpp
   src/link.cpp
-  src/link_options.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/object.cpp
@@ -56,10 +55,12 @@ set(qpid-proton-cpp-source
   src/proton_handler.cpp
   src/reactor.cpp
   src/receiver.cpp
+  src/receiver_options.cpp
   src/reconnect_timer.cpp
   src/sasl.cpp
   src/scalar_base.cpp
   src/sender.cpp
+  src/sender_options.cpp
   src/session.cpp
   src/ssl.cpp
   src/ssl_domain.cpp

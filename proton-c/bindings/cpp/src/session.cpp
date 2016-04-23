@@ -55,18 +55,18 @@ std::string next_link_name(const connection& c) {
 }
 }
 
-sender session::open_sender(const std::string &addr, const link_options &lo) {
+sender session::open_sender(const std::string &addr, const sender_options &so) {
     sender snd = pn_sender(pn_object(), next_link_name(connection()).c_str());
     snd.local_target().address(addr);
-    snd.open(lo);
+    snd.open(so);
     return snd;
 }
 
-receiver session::open_receiver(const std::string &addr, const link_options &lo)
+receiver session::open_receiver(const std::string &addr, const receiver_options &ro)
 {
     receiver rcv = pn_receiver(pn_object(), next_link_name(connection()).c_str());
     rcv.local_source().address(addr);
-    rcv.open(lo);
+    rcv.open(ro);
     return rcv;
 }
 
@@ -74,13 +74,25 @@ error_condition session::error() const {
     return pn_session_remote_condition(pn_object());
 }
 
-link_range session::links()  const {
-    link_range r(connection().links());
-    if (r.empty()) return r;
-    link_iterator i(*r.begin(), pn_object());
-    if (*this != (*i).session()) ++i;
-    return link_range(i);
+sender_range session::senders() const {
+    pn_link_t *lnk = pn_link_head(pn_session_connection(pn_object()), 0);
+    while (lnk) {
+        if (pn_link_is_sender(lnk) && pn_link_session(lnk) == pn_object())
+            break;
+        lnk = pn_link_next(lnk, 0);
+    }
+    return sender_range(sender_iterator(lnk));
 }
+
+receiver_range session::receivers() const {
+    pn_link_t *lnk = pn_link_head(pn_session_connection(pn_object()), 0);
+    while (lnk) {
+        if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == pn_object())
+            break;
+    }
+    return receiver_range(receiver_iterator(lnk));
+}
+
 
 session_iterator session_iterator::operator++() {
     obj_ = pn_session_next(obj_.pn_object(), 0);

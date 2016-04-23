@@ -75,10 +75,6 @@ container& connection::container() const {
     return container_context::get(r);
 }
 
-link_range connection::links() const {
-    return link_range(link_iterator(pn_link_head(pn_object(), 0)));
-}
-
 session_range connection::sessions() const {
     return session_range(session_iterator(pn_session_head(pn_object(), 0)));
 }
@@ -97,11 +93,11 @@ session connection::default_session() {
     return ctx.default_session;
 }
 
-sender connection::open_sender(const std::string &addr, const link_options &opts) {
+sender connection::open_sender(const std::string &addr, const sender_options &opts) {
     return default_session().open_sender(addr, opts);
 }
 
-receiver connection::open_receiver(const std::string &addr, const link_options &opts)
+receiver connection::open_receiver(const std::string &addr, const receiver_options &opts)
 {
     return default_session().open_receiver(addr, opts);
 }

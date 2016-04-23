@@ -21,7 +21,8 @@
 #include "proton/container.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/link_options.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/receiver_options.hpp"
 #include "proton/session.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
@@ -62,11 +63,11 @@ std::string container::id() const { return impl_->id_; }
 
 void container::run() { impl_->reactor_.run(); }
 
-sender container::open_sender(const proton::url &url, const proton::link_options &lo, const connection_options &co) {
+sender container::open_sender(const proton::url &url, const proton::sender_options &lo, const connection_options &co) {
     return impl_->open_sender(url, lo, co);
 }
 
-receiver container::open_receiver(const proton::url &url, const proton::link_options &lo, const connection_options &co) {
+receiver container::open_receiver(const proton::url &url, const proton::receiver_options &lo, const connection_options &co) {
     return impl_->open_receiver(url, lo, co);
 }
 
@@ -80,6 +81,8 @@ void container::client_connection_options(const connection_options &o) { impl_->
 
 void container::server_connection_options(const connection_options &o) { impl_->server_connection_options(o); }
 
-void container::link_options(const class link_options &o) { impl_->link_options(o); }
+void container::sender_options(const class sender_options &o) { impl_->sender_options(o); }
+
+void container::receiver_options(const class receiver_options &o) { impl_->receiver_options(o); }
 
 } // namespace proton

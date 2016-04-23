@@ -57,6 +57,8 @@ void session::close(const error_condition& condition) {
     close();
 }
 
+namespace internal {
+
 bool link::uninitialized() const { return ::uninitialized(pn_link_state(pn_object())); }
 bool link::active() const { return ::active(pn_link_state(pn_object())); }
 bool link::closed() const { return ::closed(pn_link_state(pn_object())); }
@@ -64,6 +66,8 @@ bool link::closed() const { return ::closed(pn_link_state(pn_object())); }
 void link::close(const error_condition& condition) {
     set_error_condition(condition, pn_link_condition(pn_object()));
     close();
+}
+
 }
 
 endpoint::~endpoint() {}

@@ -23,7 +23,7 @@
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
-#include "proton/link_options.hpp"
+#include "proton/receiver_options.hpp"
 
 #include <iostream>
 
@@ -38,7 +38,8 @@ class selected_recv : public proton::handler {
 
     void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);
-        conn.open_receiver(url.path(), proton::link_options().selector("colour = 'green'"));
+        // Note: the following signature is changing in Proton 0.13
+        conn.open_receiver(url.path(), proton::receiver_options().selector("colour = 'green'"));
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {

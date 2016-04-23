@@ -28,7 +28,8 @@
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/handler.hpp"
-#include "proton/link.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 #include "proton/reactor.h"
 #include "reactor.hpp"
 #include "proton_handler.hpp"
@@ -51,8 +52,8 @@ class container_impl
     container_impl(container&, messaging_adapter*, const std::string& id);
     ~container_impl();
     connection connect(const url&, const connection_options&);
-    sender open_sender(const url&, const proton::link_options &, const connection_options &);
-    receiver open_receiver(const url&, const proton::link_options &, const connection_options &);
+    sender open_sender(const url&, const proton::sender_options &, const connection_options &);
+    receiver open_receiver(const url&, const proton::receiver_options &, const connection_options &);
     class acceptor listen(const url&, const connection_options &);
     duration timeout();
     void timeout(duration timeout);
@@ -60,8 +61,10 @@ class container_impl
     const connection_options& client_connection_options() { return client_connection_options_; }
     void server_connection_options(const connection_options &);
     const connection_options& server_connection_options() { return server_connection_options_; }
-    void link_options(const proton::link_options&);
-    const proton::link_options& link_options() { return link_options_; }
+    void sender_options(const proton::sender_options&);
+    const proton::sender_options& sender_options() { return sender_options_; }
+    void receiver_options(const proton::receiver_options&);
+    const proton::receiver_options& receiver_options() { return receiver_options_; }
 
     void configure_server_connection(connection &c);
     task schedule(int delay, proton_handler *h);
@@ -80,7 +83,8 @@ class container_impl
     id_generator id_gen_;
     connection_options client_connection_options_;
     connection_options server_connection_options_;
-    proton::link_options link_options_;
+    proton::sender_options sender_options_;
+    proton::receiver_options receiver_options_;
 
   friend class container;
   friend class messaging_adapter;

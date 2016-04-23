@@ -34,6 +34,10 @@ struct pn_condition_t;
 
 namespace proton {
 
+namespace internal {
+class link;
+}
+
 /// Describes an endpoint error state.
 class error_condition {
     /// @cond INTERNAL
@@ -83,7 +87,7 @@ class error_condition {
     friend class transport;
     friend class connection;
     friend class session;
-    friend class link;
+    friend class internal::link;
     /// @endcond
 };
 

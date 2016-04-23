@@ -31,7 +31,9 @@
 
 namespace proton {
 
+namespace internal {
 class link;
+}
 
 /// One end of a link, either a source or a target.
 ///
@@ -120,19 +122,19 @@ class terminus {
     PN_CPP_EXTERN void dynamic(bool);
 
     /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also link_options::lifetime_policy.
+    /// terminus.  See also lifetime_policy.
     PN_CPP_EXTERN value& node_properties();
 
     /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also link_options::lifetime_policy.
+    /// terminus.  See also lifetime_policy.
     PN_CPP_EXTERN const value& node_properties() const;
 
     /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also link_options::selector.
+    /// See also selector.
     PN_CPP_EXTERN value& filter();
 
     /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also link_options::selector.
+    /// See also selector.
     PN_CPP_EXTERN const value& filter() const;
 
     /// @cond INTERNAL
@@ -140,7 +142,7 @@ class terminus {
     pn_terminus_t* object_;
     value properties_, filter_;
 
-    friend class link;
+    friend class internal::link;
     /// @endcond
 };
 

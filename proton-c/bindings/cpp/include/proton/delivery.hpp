@@ -34,7 +34,7 @@ namespace proton {
 class receiver;
 
 /// A message transfer.  Every delivery exists within the context of a
-/// proton::link.  A delivery attempt can fail. As a result, a
+/// proton::receiver.  A delivery attempt can fail. As a result, a
 /// particular message may correspond to multiple deliveries.
 class delivery : public transfer {
     /// @cond INTERNAL
@@ -68,7 +68,7 @@ class delivery : public transfer {
     /// Check if a delivery is readable.
     ///
     /// A delivery is considered readable if it is the current
-    /// delivery on an incoming link.
+    /// delivery on a receiver.
     bool readable() const;
 
   friend class message;

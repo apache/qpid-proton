@@ -158,8 +158,8 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     return conn;
 }
 
-sender container_impl::open_sender(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
-    proton::link_options lopts(link_options_);
+sender container_impl::open_sender(const proton::url &url, const proton::sender_options &o1, const connection_options &o2) {
+    proton::sender_options lopts(sender_options_);
     lopts.update(o1);
     connection_options copts(client_connection_options_);
     copts.update(o2);
@@ -168,8 +168,8 @@ sender container_impl::open_sender(const proton::url &url, const proton::link_op
     return conn.default_session().open_sender(path, lopts);
 }
 
-receiver container_impl::open_receiver(const proton::url &url, const proton::link_options &o1, const connection_options &o2) {
-    proton::link_options lopts(link_options_);
+receiver container_impl::open_receiver(const proton::url &url, const proton::receiver_options &o1, const connection_options &o2) {
+    proton::receiver_options lopts(receiver_options_);
     lopts.update(o1);
     connection_options copts(client_connection_options_);
     copts.update(o2);
@@ -211,8 +211,12 @@ void container_impl::server_connection_options(const connection_options &opts) {
     server_connection_options_ = opts;
 }
 
-void container_impl::link_options(const proton::link_options &opts) {
-    link_options_ = opts;
+void container_impl::sender_options(const proton::sender_options &opts) {
+    sender_options_ = opts;
+}
+
+void container_impl::receiver_options(const proton::receiver_options &opts) {
+    receiver_options_ = opts;
 }
 
 void container_impl::configure_server_connection(connection &c) {

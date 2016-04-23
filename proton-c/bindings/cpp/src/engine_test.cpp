@@ -95,7 +95,7 @@ template <class S> typename S::value_type quick_pop(S& s) {
 
 /// A handler that records incoming endpoints, errors etc.
 struct record_handler : public handler {
-    std::deque<proton::link> links;
+    std::deque<proton::internal::link> links;
     std::deque<proton::session> sessions;
     std::deque<std::string> errors, transport_errors, connection_errors;
 
@@ -200,8 +200,8 @@ void test_endpoint_close() {
     e.a.connection().open_sender("x");
     e.a.connection().open_receiver("y");
     while (ha.links.size() < 2 || hb.links.size() < 2) e.process();
-    proton::link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
-    proton::link bx = quick_pop(hb.links), by = quick_pop(hb.links);
+    proton::internal::link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
+    proton::internal::link bx = quick_pop(hb.links), by = quick_pop(hb.links);
 
     // Close a link
     ax.close(proton::error_condition("err", "foo bar"));

@@ -38,7 +38,6 @@ struct pn_message_t;
 
 namespace proton {
 
-class link;
 class delivery;
 class message_id;
 class annotation_key;
