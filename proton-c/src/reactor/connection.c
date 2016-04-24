@@ -33,7 +33,22 @@
 
 // XXX: overloaded for both directions
 PN_HANDLE(PN_TRANCTX)
-PN_HANDLE(PNI_CONN_URL)
+PN_HANDLE(PNI_CONN_PEER_ADDRESS)
+
+void pni_reactor_set_connection_peer_address(pn_connection_t *connection,
+                                             const char *host,
+                                             const char *port)
+{
+    pn_url_t *url = pn_url();
+    pn_url_set_host(url, host);
+    pn_url_set_port(url, port);
+    pn_record_t *record = pn_connection_attachments(connection);
+    if (!pn_record_has(record, PNI_CONN_PEER_ADDRESS)) {
+      pn_record_def(record, PNI_CONN_PEER_ADDRESS, PN_OBJECT);
+    }
+    pn_record_set(record, PNI_CONN_PEER_ADDRESS, url);
+    pn_decref(url);
+}
 
 static pn_transport_t *pni_transport(pn_selectable_t *sel) {
   pn_record_t *record = pn_selectable_attachments(sel);
@@ -112,11 +127,18 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
   assert(event);
 
   pn_connection_t *conn = pn_event_connection(event);
+  pn_transport_t *transport = pn_event_transport(event);
   pn_record_t *record = pn_connection_attachments(conn);
-  pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_URL);
+  pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_PEER_ADDRESS);
   const char *host = NULL;
   const char *port = "5672";
   pn_string_t *str = NULL;
+
+  if (pn_connection_acceptor(conn) != NULL) {
+      // this connection was created by the acceptor.  There is already a
+      // socket assigned to this connection.  Nothing needs to be done.
+      return;
+  }
 
   if (url) {
       host = pn_url_get_host(url);
@@ -154,24 +176,27 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
       }
   }
 
-  // host will be NULL if this connection was created via the acceptor, which
-  // creates its own transport/socket when created.
   if (!host) {
-      return;
-  }
-
-  pn_transport_t *transport = pn_event_transport(event);
-  pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
-  // invalid sockets are ignored by poll, so we need to do this manualy
-  if (sock == PN_INVALID_SOCKET) {
-    pn_condition_t *cond = pn_transport_condition(transport);
-    pn_condition_set_name(cond, "proton:io");
-    pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
-    pn_transport_close_tail(transport);
-    pn_transport_close_head(transport);
+      // error: no address configured
+      pn_condition_t *cond = pn_transport_condition(transport);
+      pn_condition_set_name(cond, "proton:io");
+      pn_condition_set_description(cond, "Connection failed: no address configured");
+      pn_transport_close_tail(transport);
+      pn_transport_close_head(transport);
+  } else {
+      pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
+      // invalid sockets are ignored by poll, so we need to do this manualy
+      if (sock == PN_INVALID_SOCKET) {
+          pn_condition_t *cond = pn_transport_condition(transport);
+          pn_condition_set_name(cond, "proton:io");
+          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+          pn_transport_close_tail(transport);
+          pn_transport_close_head(transport);
+      } else {
+          pn_reactor_selectable_transport(reactor, sock, transport);
+      }
   }
   pn_free(str);
-  pn_reactor_selectable_transport(reactor, sock, transport);
 }
 
 void pni_handle_final(pn_reactor_t *reactor, pn_event_t *event) {
@@ -319,15 +344,12 @@ void pn_reactor_set_connection_host(pn_reactor_t *reactor,
                                     const char *port)
 {
     (void)reactor;  // ignored
-    pn_url_t *url = pn_url();
-    pn_url_set_host(url, host);
-    pn_url_set_port(url, port);
-    pn_record_t *record = pn_connection_attachments(connection);
-    if (!pn_record_has(record, PNI_CONN_URL)) {
-        pn_record_def(record, PNI_CONN_URL, PN_OBJECT);
+    if (pn_connection_acceptor(connection) != NULL) {
+        // this is an inbound connection created by the acceptor. The peer
+        // address cannot be modified.
+        return;
     }
-    pn_record_set(record, PNI_CONN_URL, url);
-    pn_decref(url);
+    pni_reactor_set_connection_peer_address(connection, host, port);
 }
 
 
@@ -337,7 +359,9 @@ const char *pn_reactor_get_connection_address(pn_reactor_t *reactor,
     (void)reactor;  // ignored
     if (!connection) return NULL;
     pn_record_t *record = pn_connection_attachments(connection);
-    pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_URL);
-    if (!url) return NULL;
-    return pn_url_str(url);
+    pn_url_t *url = (pn_url_t *)pn_record_get(record, PNI_CONN_PEER_ADDRESS);
+    if (url) {
+        return pn_url_str(url);
+    }
+    return NULL;
 }

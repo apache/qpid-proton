@@ -37,13 +37,16 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.Reactor;
+import org.apache.qpid.proton.reactor.impl.ReactorImpl;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
+import org.apache.qpid.proton.messenger.impl.Address;
 
 public class AcceptorImpl implements Acceptor {
 
     private Record attachments = new RecordImpl();
     private final SelectableImpl sel;
+    protected static final String CONNECTION_ACCEPTOR_KEY = "pn_reactor_connection_acceptor";
 
     private class AcceptorReadable implements Callback {
         @Override
@@ -59,6 +62,15 @@ public class AcceptorImpl implements Acceptor {
                     handler = reactor.getHandler();
                 }
                 Connection conn = reactor.connection(handler);
+                Record conn_recs = conn.attachments();
+                conn_recs.set(CONNECTION_ACCEPTOR_KEY, Acceptor.class, AcceptorImpl.this);
+                InetSocketAddress peerAddr = (InetSocketAddress)socketChannel.getRemoteAddress();
+                if (peerAddr != null) {
+                    Address addr = new Address();
+                    addr.setHost(peerAddr.getHostString());
+                    addr.setPort(Integer.toString(peerAddr.getPort()));
+                    conn_recs.set(ReactorImpl.CONNECTION_PEER_ADDRESS_KEY, Address.class, addr);
+                }
                 Transport trans = Proton.transport();
                 Sasl sasl = trans.sasl();
                 sasl.server();

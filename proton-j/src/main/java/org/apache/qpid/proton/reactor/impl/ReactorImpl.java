@@ -44,6 +44,7 @@ import org.apache.qpid.proton.engine.impl.CollectorImpl;
 import org.apache.qpid.proton.engine.impl.ConnectionImpl;
 import org.apache.qpid.proton.engine.impl.RecordImpl;
 import org.apache.qpid.proton.reactor.Acceptor;
+import org.apache.qpid.proton.reactor.impl.AcceptorImpl;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.ReactorChild;
 import org.apache.qpid.proton.reactor.Selectable;
@@ -70,6 +71,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private Selector selector;
     private Record attachments;
     private final IO io;
+    protected static final String CONNECTION_PEER_ADDRESS_KEY = "pn_reactor_connection_peer_address";
 
     @Override
     public long mark() {
@@ -434,12 +436,10 @@ public class ReactorImpl implements Reactor, Extendable {
         return connection;
     }
 
-    static final String CONNECTION_ADDRESS_KEY = "pn_reactor_address";
-
     @Override
     public String getConnectionAddress(Connection connection) {
         Record r = connection.attachments();
-        Address addr = r.get(CONNECTION_ADDRESS_KEY, Address.class);
+        Address addr = r.get(CONNECTION_PEER_ADDRESS_KEY, Address.class);
         if (addr != null) {
             StringBuilder sb = new StringBuilder(addr.getHost());
             if (addr.getPort() != null)
@@ -453,13 +453,18 @@ public class ReactorImpl implements Reactor, Extendable {
     public void setConnectionHost(Connection connection,
                                   String host, int port) {
         Record r = connection.attachments();
-        Address addr = new Address();
-        addr.setHost(host);
-        if (port == 0) {
-            port = 5672;
+        // cannot set the address on an incoming connection
+        if (r.get(AcceptorImpl.CONNECTION_ACCEPTOR_KEY, Acceptor.class) == null) {
+            Address addr = new Address();
+            addr.setHost(host);
+            if (port == 0) {
+                port = 5672;
+            }
+            addr.setPort(Integer.toString(port));
+            r.set(CONNECTION_PEER_ADDRESS_KEY, Address.class, addr);
+        } else {
+            throw new IllegalStateException("Cannot set the host address on an incoming Connection");
         }
-        addr.setPort(Integer.toString(port));
-        r.set(CONNECTION_ADDRESS_KEY, Address.class, addr);
     }
 
     @Override

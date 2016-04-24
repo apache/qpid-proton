@@ -290,6 +290,100 @@ public class ReactorTest {
 
     }
 
+    private String checkVhost(String vhost) throws IOException {
+
+        class ServerVhostHandler extends ServerHandler {
+            public String peerVhost;
+
+            @Override
+            public void onConnectionRemoteOpen(Event event) {
+                super.onConnectionRemoteOpen(event);
+                peerVhost = event.getConnection().getRemoteHostname();
+            }
+        }
+
+        class ClientVhostHandler extends TestHandler {
+            private int port;
+            private String vhost;
+
+            ClientVhostHandler(String vhost, int port) {
+                this.port = port;
+                this.vhost = vhost;
+            }
+
+            @Override
+            public void onConnectionInit(Event event) {
+                super.onConnectionInit(event);
+                event.getReactor().setConnectionHost(event.getConnection(),
+                                                     "127.0.0.1", port);
+                if (vhost != null) {
+                    event.getConnection().setHostname(vhost);
+                }
+                event.getConnection().open();
+            }
+            @Override
+            public void onConnectionRemoteOpen(Event event) {
+                super.onConnectionRemoteOpen(event);
+                event.getConnection().close();
+            }
+            @Override
+            public void onConnectionRemoteClose(Event event) {
+                super.onConnectionRemoteClose(event);
+                event.getConnection().free();
+            }
+        }
+        ServerVhostHandler sh = new ServerVhostHandler();
+        Acceptor acceptor = reactor.acceptor("127.0.0.1",  0, sh);
+        final int listeningPort = ((AcceptorImpl)acceptor).getPortNumber();
+        sh.setAcceptor(acceptor);
+
+        ClientVhostHandler ch = new ClientVhostHandler(vhost, listeningPort);
+        Connection connection = reactor.connection(ch);
+
+        reactor.run();
+        reactor.free();
+        checkForLeaks();
+
+        return sh.peerVhost;
+    }
+
+    /**
+     * Tests the virtual host default configuration - should be set to host
+     * used for the connection.
+     * @throws IOException
+     **/
+    @Test
+    public void checkVhostDefault() throws IOException {
+        String vhost = checkVhost(null);
+        assertEquals("The default virtual host is not correct",
+                     "127.0.0.1", vhost);
+    }
+
+    /**
+     * Tests the virtual host override - should be set to connection's
+     * hostname.
+     * @throws IOException
+     **/
+    @Test
+    public void checkVhostOverride() throws IOException {
+        String vhost = checkVhost("my.vhost");
+        assertEquals("The virtual host is not correct",
+                     "my.vhost", vhost);
+    }
+
+    /**
+     * Tests eliminating the virtual host configuration - expects no vhost for
+     * the connection.
+     * @throws IOException
+     **/
+    @Test
+    public void checkNoVhost() throws IOException {
+        String vhost = checkVhost("");
+        assertEquals("The virtual host is present",
+                     null, vhost);
+    }
+
+
     private static class SinkHandler extends BaseHandler {
         protected int received = 0;
 

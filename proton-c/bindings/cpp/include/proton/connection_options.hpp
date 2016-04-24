@@ -142,6 +142,7 @@ class connection_options {
   private:
     void apply(connection&) const;
     proton_handler* handler() const;
+    bool is_virtual_host_set() const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

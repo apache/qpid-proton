@@ -78,6 +78,8 @@ class reactor : public internal::object<pn_reactor_t> {
 
     class connection connection(pn_handler_t*) const;
 
+    class connection connection_to_host(const std::string &host, const std::string &port, pn_handler_t*) const;
+
     pn_handler_t* pn_handler() const;
 
     void pn_handler(pn_handler_t* );

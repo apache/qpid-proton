@@ -213,6 +213,25 @@ static void test_reactor_connection(void) {
   pn_free(revents);
 }
 
+static void test_reactor_connection_factory(void)
+{
+  pn_reactor_t *reactor = pn_reactor();
+  pn_connection_t *conn;
+  const char *addr;
+  // use host as connection hostname default
+  conn = pn_reactor_connection_to_host(reactor, "a.test.com", "5678", NULL);
+  pn_connection_set_hostname(conn, "virt.host");
+  addr = pn_reactor_get_connection_address(reactor, conn);
+  assert(addr && strcmp(addr, "a.test.com:5678") == 0);
+  assert(strcmp(pn_connection_get_hostname(conn), "virt.host") == 0);
+  // verify the host address can be changed:
+  pn_reactor_set_connection_host(reactor, conn, "a.different.com", "9999");
+  addr = pn_reactor_get_connection_address(reactor, conn);
+  assert(addr && strcmp(addr, "a.different.com:9999") == 0);
+  assert(strcmp(pn_connection_get_hostname(conn), "virt.host") == 0);
+  pn_reactor_free(reactor);
+}
+
 static void test_reactor_acceptor(void) {
   pn_reactor_t *reactor = pn_reactor();
   assert(reactor);
@@ -521,6 +540,7 @@ int main(int argc, char **argv)
   test_reactor_handler_run();
   test_reactor_handler_run_free();
   test_reactor_connection();
+  test_reactor_connection_factory();
   test_reactor_acceptor();
   test_reactor_acceptor_run();
   test_reactor_connect();

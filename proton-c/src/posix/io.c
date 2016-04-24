@@ -204,6 +204,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 {
   struct sockaddr_storage addr;
   socklen_t addrlen = sizeof(addr);
+  *name = '\0';
   pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
   if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "accept");

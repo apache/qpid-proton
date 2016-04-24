@@ -112,10 +112,10 @@ PN_EXTERN pn_connection_t *pn_reactor_connection(pn_reactor_t *reactor,
                                                  pn_handler_t *handler);
 
 /**
- * Change the host address used by the connection.
+ * Change the host address used by an outgoing reactor connection.
  *
  * The address is used by the reactor's iohandler to create an outgoing socket
- * connection.  This must be set prior to opening the connection.
+ * connection.  This must be set prior to (re)opening the connection.
  *
  * @param[in] reactor the reactor that owns the connection.
  * @param[in] connection the connection created by the reactor.
@@ -127,19 +127,22 @@ PN_EXTERN void pn_reactor_set_connection_host(pn_reactor_t *reactor,
                                               const char *host,
                                               const char *port);
 /**
- * Retrieve the host address assigned to a reactor connection.
+ * Retrieve the peer host address for a reactor connection.
  *
  * This may be used to retrieve the host address used by the reactor to
- * establish the outgoing socket connection.
+ * establish the outgoing socket connection.  In the case of an accepted
+ * connection the returned value is the address of the remote.
+ *
+ * @note Note that the returned address may be in numeric IP format.
  *
  * The pointer returned by this operation is valid until either the address is
  * changed via ::pn_reactor_set_connection_host() or the connection object
  * is freed.
  *
  * @param[in] reactor the reactor that owns the connection.
- * @param[in] connection the connection created by ::pn_reactor_connection()
+ * @param[in] connection the reactor connection
  * @return a C string containing the address in URL format or NULL if no
- * address assigned.  ::pn_url_parse() may be used to create a Proton pn_url_t
+ * address available.  ::pn_url_parse() may be used to create a Proton pn_url_t
  * instance from the returned value.
  */
 PN_EXTERN const char *pn_reactor_get_connection_address(pn_reactor_t *reactor,

@@ -281,13 +281,13 @@ public interface Reactor {
     /**
      * Get the address used by the connection
      * <p>
-     * This method will retrieve the Connection's address as set by
-     * {@link #setConnectionHost(Connection, String, int)}.
+     * This may be used to retrieve the remote peer address.
      * @param c the Connection
      * @return a string containing the address in the following format:
      * <pre>
      *   host[:port]
      * </pre>
+     * @note Note that the returned address may be in numeric IP format.
      */
     String getConnectionAddress(Connection c);
 

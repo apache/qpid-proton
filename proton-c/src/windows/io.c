@@ -277,6 +277,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t listen_sock, char *name, size_t s
   iocpdesc_t *listend = pni_iocpdesc_map_get(io->iocp, listen_sock);
   pn_socket_t accept_sock;
 
+  *name = '\0';
   if (listend)
     accept_sock = pni_iocp_end_accept(listend, (struct sockaddr *) &addr, &addrlen, &io->wouldblock, io->error);
   else {

@@ -149,8 +149,7 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     proton_handler *h = opts.handler();
 
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
-    pn_connection_t* pnc = pn_reactor_connection_to_host(unwrap(reactor_), url.host().c_str(), url.port().c_str(), chandler.get());
-    connection conn(make_wrapper(pnc));
+    connection conn(reactor_.connection_to_host(url.host(), url.port(), chandler.get()));
     internal::pn_unique_ptr<connector> ctor(new connector(conn, url, opts));
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());

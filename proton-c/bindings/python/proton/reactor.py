@@ -205,11 +205,10 @@ class Reactor(Wrapper):
                                        unicode2utf8(str(port)))
 
     def get_connection_address(self, connection):
-        """This may be used to retrieve the host address used by the reactor to
-        establish the outgoing socket connection.
+        """This may be used to retrieve the remote peer address.
         @return: string containing the address in URL format or None if no
-        address assigned.  Use the proton.Url class to create a Url object from
-        the returned value.
+        address is available.  Use the proton.Url class to create a Url object
+        from the returned value.
         """
         _url = pn_reactor_get_connection_address(self._impl, connection._impl)
         return utf82unicode(_url)
@@ -533,11 +532,15 @@ class Connector(Handler):
         self.sasl_enabled = True
         self.user = None
         self.password = None
+        self.virtual_host = None
 
     def _connect(self, connection, reactor):
         assert(reactor is not None)
         url = self.address.next()
         reactor.set_connection_host(connection, url.host, str(url.port))
+        # if virtual-host not set, use host from address as default
+        if self.virtual_host is None:
+            connection.hostname = url.host
         logging.debug("connecting to %s..." % url)
 
         transport = Transport()
@@ -694,27 +697,33 @@ class Container(Reactor):
         called to process any events in the scope of this connection
         or its child links
 
-        @param kwargs: sasl_enabled, which determines whether a sasl
-        layer is used for the connection; allowed_mechs an optional
-        list of SASL mechanisms to allow if sasl is enabled;
-        allow_insecure_mechs a flag indicating whether insecure
-        mechanisms, such as PLAIN over a non-encrypted socket, are
-        allowed. These options can also be set at container scope.
+        @param kwargs: sasl_enabled, which determines whether a sasl layer is
+        used for the connection; allowed_mechs an optional list of SASL
+        mechanisms to allow if sasl is enabled; allow_insecure_mechs a flag
+        indicating whether insecure mechanisms, such as PLAIN over a
+        non-encrypted socket, are allowed; 'virtual_host' the hostname to set
+        in the Open performative used by peer to determine the correct
+        back-end service for the client. If 'virtual_host' is not supplied the
+        host field from the URL is used instead."
 
         """
         conn = self.connection(handler)
         conn.container = self.container_id or str(generate_uuid())
-        
         conn.offered_capabilities = kwargs.get('offered_capabilities')
         conn.desired_capabilities = kwargs.get('desired_capabilities')
         conn.properties = kwargs.get('properties')
-        
+
         connector = Connector(conn)
         connector.allow_insecure_mechs = kwargs.get('allow_insecure_mechs', self.allow_insecure_mechs)
         connector.allowed_mechs = kwargs.get('allowed_mechs', self.allowed_mechs)
         connector.sasl_enabled = kwargs.get('sasl_enabled', self.sasl_enabled)
         connector.user = kwargs.get('user', self.user)
         connector.password = kwargs.get('password', self.password)
+        connector.virtual_host = kwargs.get('virtual_host')
+        if connector.virtual_host:
+            # only set hostname if virtual-host is a non-empty string
+            conn.hostname = connector.virtual_host
+
         conn._overrides = connector
         if url: connector.address = Urls([url])
         elif urls: connector.address = Urls(urls)

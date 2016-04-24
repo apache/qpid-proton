@@ -67,6 +67,9 @@ void connector::connect() {
     pn_decref(pnt);
     // Apply options to the new transport.
     options_.apply(connection_);
+    // if virtual-host not set, use host from address as default
+    if (!options_.is_virtual_host_set())
+        pn_connection_set_hostname(unwrap(connection_), address_.host().c_str());
     transport_configured_ = true;
 }
 

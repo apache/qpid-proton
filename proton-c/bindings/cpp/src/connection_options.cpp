@@ -118,7 +118,7 @@ class connection_options::impl {
                 outbound->reconnect_timer(reconnect.value);
             if (container_id.set)
                 pn_connection_set_container(pnc, container_id.value.c_str());
-            if (virtual_host.set)
+            if (virtual_host.set && !virtual_host.value.empty())
                 pn_connection_set_hostname(pnc, virtual_host.value.c_str());
         }
     }
@@ -183,4 +183,5 @@ connection_options& connection_options::sasl_config_path(const std::string &p) {
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
 proton_handler* connection_options::handler() const { return impl_->handler.value; }
+bool connection_options::is_virtual_host_set() const { return impl_->virtual_host.set; }
 } // namespace proton
