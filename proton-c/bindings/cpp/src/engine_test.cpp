@@ -97,7 +97,7 @@ template <class S> typename S::value_type quick_pop(S& s) {
 struct record_handler : public handler {
     std::deque<proton::internal::link> links;
     std::deque<proton::session> sessions;
-    std::deque<std::string> errors, transport_errors, connection_errors;
+    std::deque<std::string> unhandled_errors, transport_errors, connection_errors;
 
     void on_receiver_open(receiver &l) override {
         links.push_back(l);
@@ -120,7 +120,7 @@ struct record_handler : public handler {
     }
 
     void on_unhandled_error(const proton::error_condition& c) override {
-        errors.push_back(c.what());
+        unhandled_errors.push_back(c.what());
     }
 };
 
@@ -226,26 +226,19 @@ void test_endpoint_close() {
 }
 
 void test_transport_close() {
-    // Make sure conditions are sent to the remote end.
+    // Make sure an engine close calls the local on_transport_error() and aborts the remote.
     record_handler ha, hb;
     engine_pair e(ha, hb);
     e.a.connection().open();
     while (!e.b.connection().active()) e.process();
-
     e.a.close(proton::error_condition("oops", "engine failure"));
-    // Closed but we still have output data to flush so a.dispatch() is true.
-    ASSERT(e.a.dispatch());
-    do { e.process(); } while (e.b.dispatch());
-    ASSERT_EQUAL(1, hb.errors.size());
-    ASSERT_EQUAL("oops: engine failure", hb.errors.front());
-    // Connection and transport share the same error.
-    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.b.connection().error());
-    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.b.transport().error());
+    ASSERT(!e.a.dispatch());    // Final dispatch on a.
+    ASSERT_EQUAL(1, ha.transport_errors.size());
+    ASSERT_EQUAL("oops: engine failure", ha.transport_errors.front());
+    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.a.transport().error());
     // But connectoin was never protocol closed.
-    ASSERT(!e.b.connection().closed());
-    ASSERT_EQUAL(0, hb.connection_errors.size());
-    ASSERT_EQUAL(1, hb.transport_errors.size());
-    ASSERT_EQUAL("oops: engine failure", hb.transport_errors.front());
+    ASSERT(!e.a.connection().closed());
+    ASSERT_EQUAL(0, ha.connection_errors.size());
 }
 
 int main(int, char**) {
@@ -253,5 +246,6 @@ int main(int, char**) {
     RUN_TEST(failed, test_engine_prefix());
     RUN_TEST(failed, test_container_prefix());
     RUN_TEST(failed, test_endpoint_close());
+    RUN_TEST(failed, test_transport_close());
     return failed;
 }
