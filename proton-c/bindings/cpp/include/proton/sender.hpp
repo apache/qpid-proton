@@ -71,16 +71,22 @@ PN_CPP_CLASS_EXTERN sender : public internal::link
 };
 
 class sender_iterator : public internal::iter_base<sender, sender_iterator> {
-  public:
     ///@cond INTERNAL
-    explicit sender_iterator(sender snd = 0, pn_session_t* s = 0) :
-        internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
+    sender_iterator(sender snd, pn_session_t* s = 0) :
+        iter_base<sender, sender_iterator>(snd), session_(s) {}
     ///@endcond
+
+  public:
+    sender_iterator() :
+        iter_base<sender, sender_iterator>(0), session_(0) {}
     /// Advance
     PN_CPP_EXTERN sender_iterator operator++();
 
   private:
     pn_session_t* session_;
+
+    friend class connection;
+    friend class session;
 };
 
 /// A range of senders.

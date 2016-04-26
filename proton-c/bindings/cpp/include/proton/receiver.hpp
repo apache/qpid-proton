@@ -63,16 +63,22 @@ PN_CPP_CLASS_EXTERN receiver : public internal::link {
 };
 
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
-  public:
     ///@cond INTERNAL
-    explicit receiver_iterator(receiver r = 0, pn_session_t* s = 0) :
-        internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
+    explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
+        iter_base<receiver, receiver_iterator>(r), session_(s) {}
     ///@endcond
+
+  public:
+    explicit receiver_iterator() :
+        iter_base<receiver, receiver_iterator>(0), session_(0) {}
     /// Advance
     PN_CPP_EXTERN receiver_iterator operator++();
 
   private:
     pn_session_t* session_;
+
+    friend class connection;
+    friend class session;
 };
 
 /// A range of receivers.

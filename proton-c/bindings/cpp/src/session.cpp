@@ -83,7 +83,7 @@ sender_range session::senders() const {
             break;
         lnk = pn_link_next(lnk, 0);
     }
-    return sender_range(sender_iterator(lnk));
+    return sender_range(sender_iterator(lnk, pn_object()));
 }
 
 receiver_range session::receivers() const {
@@ -91,8 +91,9 @@ receiver_range session::receivers() const {
     while (lnk) {
         if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == pn_object())
             break;
+        lnk = pn_link_next(lnk, 0);
     }
-    return receiver_range(receiver_iterator(lnk));
+    return receiver_range(receiver_iterator(lnk, pn_object()));
 }
 
 
