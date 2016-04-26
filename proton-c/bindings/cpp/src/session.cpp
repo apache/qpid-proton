@@ -56,16 +56,18 @@ std::string next_link_name(const connection& c) {
 }
 
 sender session::open_sender(const std::string &addr, const sender_options &so) {
-    sender snd = pn_sender(pn_object(), next_link_name(connection()).c_str());
-    snd.local_target().address(addr);
+    pn_link_t *lnk = pn_sender(pn_object(), next_link_name(connection()).c_str());
+    pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
+    sender snd(lnk);
     snd.open(so);
     return snd;
 }
 
 receiver session::open_receiver(const std::string &addr, const receiver_options &ro)
 {
-    receiver rcv = pn_receiver(pn_object(), next_link_name(connection()).c_str());
-    rcv.local_source().address(addr);
+    pn_link_t *lnk = pn_receiver(pn_object(), next_link_name(connection()).c_str());
+    pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
+    receiver rcv(lnk);
     rcv.open(ro);
     return rcv;
 }

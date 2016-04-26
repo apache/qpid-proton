@@ -49,6 +49,7 @@ set(qpid-proton-cpp-source
   src/link.cpp
   src/message.cpp
   src/messaging_adapter.cpp
+  src/node_options.cpp
   src/object.cpp
   src/proton_bits.cpp
   src/proton_event.cpp
@@ -62,8 +63,10 @@ set(qpid-proton-cpp-source
   src/sender.cpp
   src/sender_options.cpp
   src/session.cpp
+  src/source.cpp
   src/ssl.cpp
   src/ssl_domain.cpp
+  src/target.cpp
   src/task.cpp
   src/terminus.cpp
   src/timestamp.cpp

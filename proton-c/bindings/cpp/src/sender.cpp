@@ -34,6 +34,14 @@ void sender::open(const sender_options &opts) {
     attach();
 }
 
+class source sender::source() const {
+    return proton::source(*this);
+}
+
+class target sender::target() const {
+    return proton::target(*this);
+}
+
 namespace {
 // TODO: revisit if thread safety required
 uint64_t tag_counter = 0;

@@ -25,6 +25,7 @@
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
+#include "proton/source_options.hpp"
 #include "proton/tracker.hpp"
 #include "proton/url.hpp"
 
@@ -68,9 +69,10 @@ class server : public proton::handler {
     }
 
     void on_sender_open(proton::sender &sender) override {
-        if (sender.remote_source().dynamic()) {
-            sender.local_source().address(generate_address());
-            senders[sender.local_source().address()] = sender;
+        if (sender.source().dynamic()) {
+            std::string addr = generate_address();
+            sender.open(proton::sender_options().source(proton::source_options().address(addr)));
+            senders[addr] = sender;
         }
     }
 

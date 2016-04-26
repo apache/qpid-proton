@@ -36,6 +36,8 @@ namespace proton {
 
 class proton_handler;
 class receiver;
+class source_options;
+class target_options;
 
 /// Options for creating a receiver.
 ///
@@ -87,10 +89,6 @@ class receiver_options {
     PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);
 
     /// @cond INTERNAL
-    /// XXX dynamic_address, browsing, selector, all to be moved to a new options mechanism
-    /// Request a dynamically generated node at the peer.
-    PN_CPP_EXTERN receiver_options& dynamic_address(bool);
-    PN_CPP_EXTERN receiver_options& browsing(bool);
     /// XXX need to discuss spec issues, jms versus amqp filters
     ///
     /// Set a selector on the receiver to str.  This sets a single
@@ -105,6 +103,12 @@ class receiver_options {
 
     /// Automatically settle messages (default value: true).
     PN_CPP_EXTERN receiver_options& auto_settle(bool);
+
+    /// Options for the source node of the receiver.
+    PN_CPP_EXTERN receiver_options& source(source_options &);
+
+    /// Options for the target node of the receiver.
+    PN_CPP_EXTERN receiver_options& target(target_options &);
 
     /// @cond INTERNAL
     /// XXX moving to ???

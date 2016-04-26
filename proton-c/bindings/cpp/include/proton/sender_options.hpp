@@ -36,6 +36,8 @@ namespace proton {
 
 class proton_handler;
 class sender;
+class source_options;
+class target_options;
 
 /// Options for creating a sender.
 ///
@@ -87,6 +89,12 @@ class sender_options {
 
     /// Automatically settle messages (default value: true).
     PN_CPP_EXTERN sender_options& auto_settle(bool);
+
+    /// Options for the source node of the sender.
+    PN_CPP_EXTERN sender_options& source(source_options &);
+
+    /// Options for the receiver node of the receiver.
+    PN_CPP_EXTERN sender_options& target(target_options &);
 
 
     /// @cond INTERNAL

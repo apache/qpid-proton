@@ -50,8 +50,14 @@ PN_CPP_CLASS_EXTERN sender : public internal::link
     /// handler::on_sender_open.
     PN_CPP_EXTERN void open(const sender_options &opts = sender_options());
 
-    /// Send a message on the link.
+    /// Send a message on the sender.
     PN_CPP_EXTERN tracker send(const message &m);
+
+    /// Get the source node.
+    PN_CPP_EXTERN class source source() const;
+
+    /// Get the target node.
+    PN_CPP_EXTERN class target target() const;
 
   /// @cond INTERNAL
   friend class internal::link;
@@ -59,6 +65,8 @@ PN_CPP_CLASS_EXTERN sender : public internal::link
   friend class session;
   friend class messaging_adapter;
   friend class sender_iterator;
+  friend class source;
+  friend class target;
   /// @endcond
 };
 
@@ -66,7 +74,7 @@ class sender_iterator : public internal::iter_base<sender, sender_iterator> {
   public:
     ///@cond INTERNAL
     explicit sender_iterator(sender snd = 0, pn_session_t* s = 0) :
-        iter_base<sender, sender_iterator>(snd), session_(s) {}
+        internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
     ///@endcond
     /// Advance
     PN_CPP_EXTERN sender_iterator operator++();

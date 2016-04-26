@@ -22,21 +22,16 @@
 #include "proton/link.hpp"
 #include "proton/link.h"
 
+#include <limits>
+
 namespace proton {
+namespace internal {
 
 terminus::terminus(pn_terminus_t* t) :
-    object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t))
+    object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t)), parent_(0)
 {}
 
-enum terminus::type terminus::type() const {
-    return (enum type)pn_terminus_get_type(object_);
-}
-
-void terminus::type(enum type type0) {
-    pn_terminus_set_type(object_, pn_terminus_type_t(type0));
-}
-
-enum terminus::expiry_policy terminus::expiry_policy() const {
+enum expiry_policy terminus::expiry_policy() const {
     return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
 }
 
@@ -44,15 +39,27 @@ void terminus::expiry_policy(enum expiry_policy policy) {
     pn_terminus_set_expiry_policy(object_, pn_expiry_policy_t(policy));
 }
 
-uint32_t terminus::timeout() const {
-    return pn_terminus_get_timeout(object_);
+duration terminus::timeout() const {
+    return duration::SECOND * pn_terminus_get_timeout(object_);
 }
 
-void terminus::timeout(uint32_t seconds) {
+void terminus::timeout(duration d) {
+    uint32_t seconds = 0;
+    if (d == duration::FOREVER)
+        seconds = std::numeric_limits<uint32_t>::max();
+    else if (d != duration::IMMEDIATE) {
+        uint64_t x = d.milliseconds();
+        if ((std::numeric_limits<uint64_t>::max() - x) <= 500)
+            seconds = std::numeric_limits<uint32_t>::max();
+        else {
+            x = (x + 500) / 1000;
+            seconds = x < std::numeric_limits<uint32_t>::max() ? x : std::numeric_limits<uint32_t>::max();
+        }
+    }
     pn_terminus_set_timeout(object_, seconds);
 }
 
-enum terminus::distribution_mode terminus::distribution_mode() const {
+enum distribution_mode terminus::distribution_mode() const {
     return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
 }
 
@@ -60,11 +67,11 @@ void terminus::distribution_mode(enum distribution_mode mode) {
     pn_terminus_set_distribution_mode(object_, pn_distribution_mode_t(mode));
 }
 
-enum terminus::durability terminus::durability() {
-    return (enum durability) pn_terminus_get_durability(object_);
+enum durability_mode terminus::durability_mode() {
+    return (enum durability_mode) pn_terminus_get_durability(object_);
 }
 
-void terminus::durability(enum durability d) {
+void terminus::durability_mode(enum durability_mode d) {
     pn_terminus_set_durability(object_, (pn_durability_t) d);
 }
 
@@ -92,4 +99,5 @@ const value& terminus::filter() const { return filter_; }
 value& terminus::node_properties() { return properties_; }
 const value& terminus::node_properties() const { return properties_; }
 
-}
+
+}}

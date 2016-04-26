@@ -25,7 +25,8 @@
 #include <proton/endpoint.hpp>
 #include <proton/export.hpp>
 #include <proton/message.hpp>
-#include <proton/terminus.hpp>
+#include <proton/source.hpp>
+#include <proton/target.hpp>
 #include <proton/object.hpp>
 #include <proton/sender_options.hpp>
 #include <proton/receiver_options.hpp>
@@ -114,18 +115,6 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     /// XXX flush() ? drain, and drain_completed (sender and receiver ends)
     PN_CPP_EXTERN int drained();
     /// @endcond
-
-    /// Local source of the link.
-    PN_CPP_EXTERN terminus local_source() const;
-
-    /// Local target of the link.
-    PN_CPP_EXTERN terminus local_target() const;
-
-    /// Remote source of the link.
-    PN_CPP_EXTERN terminus remote_source() const;
-
-    /// Remote target of the link.
-    PN_CPP_EXTERN terminus remote_target() const;
 
     /// Get the link name.
     PN_CPP_EXTERN std::string name() const;

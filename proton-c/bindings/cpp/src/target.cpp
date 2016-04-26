@@ -18,43 +18,23 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
-#include "proton/receiver.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
+#include "proton/target.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
 
 namespace proton {
 
-void receiver::open(const receiver_options &opts) {
-    opts.apply(*this);
-    attach();
+// Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
+target::target(pn_terminus_t *t) : terminus(t) {}
+target::target(const sender& snd) : terminus(pn_link_remote_target(snd.pn_object())) {}
+target::target(const receiver& rcv) : terminus(pn_link_remote_target(rcv.pn_object())) { parent_ = rcv.pn_object(); }
+
+std::string target::address() const {
+    pn_terminus_t *authoritative = object_;
+    if (parent_ && pn_terminus_is_dynamic(object_))
+        authoritative = pn_link_target(parent_);
+    return std::string(pn_terminus_get_address(authoritative));
 }
-
-class source receiver::source() const {
-    return proton::source(*this);
-}
-
-class target receiver::target() const {
-    return proton::target(*this);
-}
-
-
-receiver_iterator receiver_iterator::operator++() {
-    if (!!obj_) {
-        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
-        while (lnk) {
-            if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == session_)
-                break;
-            lnk = pn_link_next(lnk, 0);
-        }
-        obj_ = lnk;
-    }
-    return *this;
-}
-
 
 }

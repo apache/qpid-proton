@@ -25,15 +25,21 @@
 #include "proton/export.hpp"
 #include "proton/object.hpp"
 #include "proton/value.hpp"
+#include "proton/settings.hpp"
 
 #include "proton/link.h"
 #include <string>
 
 namespace proton {
 
+class source;
+class target;
+class receiver_options;
+class source_options;
+class target_options;
+
+
 namespace internal {
-class link;
-}
 
 /// One end of a link, either a source or a target.
 ///
@@ -47,83 +53,26 @@ class terminus {
     /// @endcond
 
   public:
-    terminus() : object_(0) {}
+    terminus() : object_(0), parent_(0) {}
 
-    /// Type of terminus
-    enum type {
-        TYPE_UNSPECIFIED = PN_UNSPECIFIED,
-        SOURCE = PN_SOURCE,
-        TARGET = PN_TARGET,
-        COORDINATOR = PN_COORDINATOR ///< Transaction coordinator
-    };
-
-    /// Durability
-    enum durability {
-        NONDURABLE = PN_NONDURABLE,
-        CONFIGURATION = PN_CONFIGURATION,
-        DELIVERIES = PN_DELIVERIES
-    };
-
-    /// Expiry policy
-    enum expiry_policy {
-        EXPIRE_WITH_LINK = PN_EXPIRE_WITH_LINK,
-        EXPIRE_WITH_SESSION = PN_EXPIRE_WITH_SESSION,
-        EXPIRE_WITH_CONNECTION = PN_EXPIRE_WITH_CONNECTION,
-        EXPIRE_NEVER = PN_EXPIRE_NEVER
-    };
-
-    /// Distribution mode
-    enum distribution_mode {
-        MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
-        COPY = PN_DIST_MODE_COPY,
-        MOVE = PN_DIST_MODE_MOVE
-    };
-
-    /// Get the terminus type.
-    PN_CPP_EXTERN enum type type() const;
-
-    /// Set the terminus type.
-    PN_CPP_EXTERN void type(enum type);
-
-    /// Get the expiration policy.
+    /// Control when the clock for expiration begins.
     PN_CPP_EXTERN enum expiry_policy expiry_policy() const;
 
-    /// Set the expiration policy.
-    PN_CPP_EXTERN void expiry_policy(enum expiry_policy);
-
-    /// @cond INTERNAL
-    /// XXX use duration
-    PN_CPP_EXTERN uint32_t timeout() const;
-    PN_CPP_EXTERN void timeout(uint32_t seconds);
-    /// @endcond
+    /// The period after which the source is discarded on expiry. The
+    /// duration is rounded to the nearest second.
+    PN_CPP_EXTERN duration timeout() const;
 
     /// Get the distribution mode.
     PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
-    /// Set the distribution mode.
-    PN_CPP_EXTERN void distribution_mode(enum distribution_mode);
-
     /// Get the durability flag.
-    PN_CPP_EXTERN enum durability durability();
+    PN_CPP_EXTERN enum durability_mode durability_mode();
 
-    /// Set the durability flag.
-    PN_CPP_EXTERN void durability(enum durability);
-
-    /// Get the source or target address.
+    /// Get the source or target node's address.
     PN_CPP_EXTERN std::string address() const;
-
-    /// Set the source or target address.
-    PN_CPP_EXTERN void address(const std::string &);
 
     /// True if the remote node is created dynamically.
     PN_CPP_EXTERN bool dynamic() const;
-
-    /// Enable or disable dynamic creation of the remote node.
-    PN_CPP_EXTERN void dynamic(bool);
-
-    /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also lifetime_policy.
-    PN_CPP_EXTERN value& node_properties();
 
     /// Obtain a reference to the AMQP dynamic node properties for the
     /// terminus.  See also lifetime_policy.
@@ -131,21 +80,33 @@ class terminus {
 
     /// Obtain a reference to the AMQP filter set for the terminus.
     /// See also selector.
-    PN_CPP_EXTERN value& filter();
-
-    /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also selector.
     PN_CPP_EXTERN const value& filter() const;
 
     /// @cond INTERNAL
   private:
+    void address(const std::string &);
+    void expiry_policy(enum expiry_policy);
+    void timeout(duration);
+    void distribution_mode(enum distribution_mode);
+    void durability_mode(enum durability_mode);
+    void dynamic(bool);
+    value& node_properties();
+    value& filter();
+
     pn_terminus_t* object_;
     value properties_, filter_;
+    pn_link_t* parent_;
 
-    friend class internal::link;
+    friend class link;
+    friend class noderef;
+    friend class proton::source;
+    friend class proton::target;
+    friend class proton::receiver_options;
+    friend class proton::source_options;
+    friend class proton::target_options;
     /// @endcond
 };
 
-}
+}}
 
 #endif // PROTON_CPP_TERMINUS_H

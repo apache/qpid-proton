@@ -69,11 +69,6 @@ int link::queued() { return pn_link_queued(pn_object()); }
 int link::unsettled() { return pn_link_unsettled(pn_object()); }
 int link::drained() { return pn_link_drained(pn_object()); }
 
-terminus link::local_source() const { return pn_link_source(pn_object()); }
-terminus link::local_target() const { return pn_link_target(pn_object()); }
-terminus link::remote_source() const { return pn_link_remote_source(pn_object()); }
-terminus link::remote_target() const { return pn_link_remote_target(pn_object()); }
-
 std::string link::name() const { return std::string(pn_link_name(pn_object()));}
 
 container& link::container() const {

@@ -26,11 +26,15 @@
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/tracker.hpp"
+#include "proton/source_options.hpp"
 
 #include <iostream>
 #include <vector>
 
 #include "../fake_cpp11.hpp"
+
+using proton::receiver_options;
+using proton::source_options;
 
 class client : public proton::handler {
   private:
@@ -44,14 +48,16 @@ class client : public proton::handler {
 
     void on_connection_open(proton::connection &c) override {
         sender = c.open_sender(url.path());
-        // Note: the following signature is changing in Proton 0.13
-        receiver = c.open_receiver("", proton::receiver_options().dynamic_address(true));
+        // Create a receiver requesting a dynamically created queue
+        // for the message source.
+        receiver_options dynamic_addr = receiver_options().source(source_options().dynamic(true));
+        receiver = c.open_receiver("", dynamic_addr);
     }
 
     void send_request() {
         proton::message req;
         req.body(requests.front());
-        req.reply_to(receiver.remote_source().address());
+        req.reply_to(receiver.source().address());
         sender.send(req);
     }
 

@@ -23,11 +23,15 @@
 #include "proton/receiver.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/handler.hpp"
+#include "proton/settings.hpp"
+#include "proton/source_options.hpp"
+#include "proton/target_options.hpp"
 
 #include "msg.hpp"
 #include "messaging_adapter.hpp"
 #include "contexts.hpp"
 
+#include "proton/link.h"
 
 namespace proton {
 
@@ -48,7 +52,9 @@ class receiver_options::impl {
     option<bool> auto_settle;
     option<int> credit_window;
     option<bool> dynamic_address;
-    option<enum terminus::distribution_mode> distribution_mode;
+    option<source_options> source;
+    option<target_options> target;
+
 
     void apply(receiver& r) {
         if (r.uninitialized()) {
@@ -71,15 +77,20 @@ class receiver_options::impl {
                 else
                     r.detach_handler();
             }
-            if (dynamic_address.set) {
-                terminus t = r.local_source();
-                t.dynamic(dynamic_address.value);
-            }
 
             if (auto_settle.set) r.context().auto_settle = auto_settle.value;
             if (auto_accept.set) r.context().auto_accept = auto_accept.value;
             if (credit_window.set) r.context().credit_window = credit_window.value;
-            if (distribution_mode.set) r.local_source().distribution_mode(distribution_mode.value);
+
+            internal::terminus local_src = pn_link_source(r.pn_object());
+            if (source.set) {
+                proton::source local_s(pn_link_source(r.pn_object()));
+                source.value.apply(local_s);
+            }
+            if (target.set) {
+                proton::target local_t(pn_link_target(r.pn_object()));
+                target.value.apply(local_t);
+            }
         }
     }
 
@@ -90,7 +101,8 @@ class receiver_options::impl {
         auto_settle.update(x.auto_settle);
         credit_window.update(x.credit_window);
         dynamic_address.update(x.dynamic_address);
-        distribution_mode.update(x.distribution_mode);
+        source.update(x.source);
+        target.update(x.target);
     }
 
 };
@@ -113,8 +125,8 @@ receiver_options& receiver_options::delivery_mode(enum delivery_mode m) {impl_->
 receiver_options& receiver_options::auto_accept(bool b) {impl_->auto_accept = b; return *this; }
 receiver_options& receiver_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 receiver_options& receiver_options::credit_window(int w) {impl_->credit_window = w; return *this; }
-receiver_options& receiver_options::dynamic_address(bool b) {impl_->dynamic_address = b; return *this; }
-receiver_options& receiver_options::browsing(bool b) { impl_->distribution_mode = (b ? terminus::COPY : terminus::MOVE); return *this; }
+receiver_options& receiver_options::source(source_options &s) {impl_->source = s; return *this; }
+receiver_options& receiver_options::target(target_options &s) {impl_->target = s; return *this; }
 
 void receiver_options::apply(receiver& r) const { impl_->apply(r); }
 proton_handler* receiver_options::handler() const { return impl_->handler.value; }

@@ -25,10 +25,14 @@
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/receiver_options.hpp"
+#include "proton/source_options.hpp"
+#include "proton/settings.hpp"
 
 #include <iostream>
 
 #include "fake_cpp11.hpp"
+
+using proton::source_options;
 
 class browser : public proton::handler {
   private:
@@ -39,8 +43,8 @@ class browser : public proton::handler {
 
     void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);
-        // Note: the following signature is changing in Proton 0.13
-        conn.open_receiver(url.path(), proton::receiver_options().browsing(true));
+        source_options browsing = source_options().distribution_mode(proton::COPY);
+        conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {

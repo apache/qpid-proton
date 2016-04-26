@@ -46,12 +46,19 @@ PN_CPP_CLASS_EXTERN receiver : public internal::link {
     /// handler::on_receiver_open.
     PN_CPP_EXTERN void open(const receiver_options &opts = receiver_options());
 
+    /// Get the source node.
+    PN_CPP_EXTERN class source source() const;
+
+    /// Get the target node.
+    PN_CPP_EXTERN class target target() const;
   /// @cond INTERNAL
   friend class internal::link;
   friend class delivery;
   friend class session;
   friend class messaging_adapter;
   friend class receiver_iterator;
+  friend class source;
+  friend class target;
   /// @endcond
 };
 
@@ -59,7 +66,7 @@ class receiver_iterator : public internal::iter_base<receiver, receiver_iterator
   public:
     ///@cond INTERNAL
     explicit receiver_iterator(receiver r = 0, pn_session_t* s = 0) :
-        iter_base<receiver, receiver_iterator>(r), session_(s) {}
+        internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
     ///@endcond
     /// Advance
     PN_CPP_EXTERN receiver_iterator operator++();

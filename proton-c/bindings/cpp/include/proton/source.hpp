@@ -1,3 +1,6 @@
+#ifndef PROTON_CPP_SOURCE_H
+#define PROTON_CPP_SOURCE_H
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,43 +21,39 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
-#include "proton/receiver.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
+#include "proton/export.hpp"
+#include "proton/object.hpp"
+#include "proton/value.hpp"
+#include "proton/terminus.hpp"
+
+#include <string>
 
 namespace proton {
 
-void receiver::open(const receiver_options &opts) {
-    opts.apply(*this);
-    attach();
-}
+class sender;
+class receiver;
 
-class source receiver::source() const {
-    return proton::source(*this);
-}
-
-class target receiver::target() const {
-    return proton::target(*this);
-}
-
-
-receiver_iterator receiver_iterator::operator++() {
-    if (!!obj_) {
-        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
-        while (lnk) {
-            if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == session_)
-                break;
-            lnk = pn_link_next(lnk, 0);
-        }
-        obj_ = lnk;
-    }
-    return *this;
-}
-
+///
+/// The source node is where messages originate.
+///
+/// @see proton::sender proton::receiver proton::target
+class source : public internal::terminus {
+  public:
+    source() : internal::terminus() {}
+    PN_CPP_EXTERN std::string address() const;
+    /// @cond INTERNAL
+  private:
+    source(pn_terminus_t* t);
+    source(const sender&);
+    source(const receiver&);
+  friend class sender;
+  friend class receiver;
+  friend class sender_options;
+  friend class receiver_options;
+    /// @endcond
+};
 
 }
+
+#endif // PROTON_CPP_SOURCE_H

@@ -23,6 +23,8 @@
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/handler.hpp"
+#include "proton/source_options.hpp"
+#include "proton/target_options.hpp"
 
 #include "msg.hpp"
 #include "messaging_adapter.hpp"
@@ -45,6 +47,8 @@ class sender_options::impl {
     option<proton_handler*> handler;
     option<enum delivery_mode> delivery_mode;
     option<bool> auto_settle;
+    option<source_options> source;
+    option<target_options> target;
 
     void apply(sender& s) {
         if (s.uninitialized()) {
@@ -68,6 +72,14 @@ class sender_options::impl {
                     s.detach_handler();
             }
             if (auto_settle.set) s.context().auto_settle = auto_settle.value;
+            if (source.set) {
+                proton::source local_src(pn_link_source(s.pn_object()));
+                source.value.apply(local_src);
+            }
+            if (target.set) {
+                proton::target local_src(pn_link_target(s.pn_object()));
+                target.value.apply(local_src);
+            }
         }
     }
 
@@ -75,6 +87,8 @@ class sender_options::impl {
         handler.update(x.handler);
         delivery_mode.update(x.delivery_mode);
         auto_settle.update(x.auto_settle);
+        source.update(x.source);
+        target.update(x.target);
     }
 
 };
@@ -95,6 +109,8 @@ void sender_options::update(const sender_options& x) { impl_->update(*x.impl_); 
 sender_options& sender_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 sender_options& sender_options::delivery_mode(enum delivery_mode m) {impl_->delivery_mode = m; return *this; }
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
+sender_options& sender_options::source(source_options &s) {impl_->source = s; return *this; }
+sender_options& sender_options::target(target_options &s) {impl_->target = s; return *this; }
 
 void sender_options::apply(sender& s) const { impl_->apply(s); }
 proton_handler* sender_options::handler() const { return impl_->handler.value; }

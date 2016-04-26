@@ -35,6 +35,10 @@
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/source_options.hpp"
+#include "proton/target_options.hpp"
 
 #include <iostream>
 #include <deque>
@@ -157,25 +161,24 @@ class broker_handler : public proton::handler {
     broker_handler(queues& qs) : queues_(qs) {}
 
     void on_sender_open(proton::sender &sender) override {
-        proton::terminus remote_source(sender.remote_source());
-        queue &q = remote_source.dynamic() ?
-            queues_.dynamic() : queues_.get(remote_source.address());
-        sender.local_source().address(q.name());
-
+        proton::source src(sender.source());
+        queue &q = src.dynamic() ?
+            queues_.dynamic() : queues_.get(src.address());
+        sender.open(proton::sender_options().source(proton::source_options().address(q.name())));
         q.subscribe(sender);
         std::cout << "broker outgoing link from " << q.name() << std::endl;
     }
 
     void on_receiver_open(proton::receiver &receiver) override {
-        std::string address = receiver.remote_target().address();
+        std::string address = receiver.target().address();
         if (!address.empty()) {
-            receiver.local_target().address(address);
+            receiver.open(proton::receiver_options().target(proton::target_options().address(address)));
             std::cout << "broker incoming link to " << address << std::endl;
         }
     }
 
     void unsubscribe(proton::sender lnk) {
-        std::string address = lnk.local_source().address();
+        std::string address = lnk.source().address();
 
         if (queues_.get(address).unsubscribe(lnk)) {
             queues_.erase(address);
@@ -214,13 +217,13 @@ class broker_handler : public proton::handler {
     }
 
     void on_sendable(proton::sender &s) override {
-        std::string address = s.local_source().address();
+        std::string address = s.source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {
-        std::string address = d.receiver().local_target().address();
+        std::string address = d.receiver().target().address();
         queues_.get(address).publish(m, d.receiver());
     }
 

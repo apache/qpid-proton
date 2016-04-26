@@ -1,3 +1,6 @@
+#ifndef PROTON_CPP_SETTINGS_H
+#define PROTON_CPP_SETTINGS_H
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,43 +21,39 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
-#include "proton/receiver.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
 #include "proton/link.h"
 
 namespace proton {
 
-void receiver::open(const receiver_options &opts) {
-    opts.apply(*this);
-    attach();
+// Source/target settings
+
+/// Durability
+enum durability_mode {
+    NONE = PN_NONDURABLE,
+    CONFIGURATION = PN_CONFIGURATION,
+    UNSETTLED_STATE = PN_DELIVERIES
+};
+
+/// Expiry policy
+enum expiry_policy {
+    LINK_CLOSE = PN_EXPIRE_WITH_LINK,
+    SESSION_CLOSE = PN_EXPIRE_WITH_SESSION,
+    CONNECTION_CLOSE = PN_EXPIRE_WITH_CONNECTION,
+    NEVER = PN_EXPIRE_NEVER
+};
+
+
+// Source setting
+
+/// Distribution mode
+enum distribution_mode {
+    MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
+    COPY = PN_DIST_MODE_COPY,
+    MOVE = PN_DIST_MODE_MOVE
+};
+
+
 }
 
-class source receiver::source() const {
-    return proton::source(*this);
-}
-
-class target receiver::target() const {
-    return proton::target(*this);
-}
-
-
-receiver_iterator receiver_iterator::operator++() {
-    if (!!obj_) {
-        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
-        while (lnk) {
-            if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == session_)
-                break;
-            lnk = pn_link_next(lnk, 0);
-        }
-        obj_ = lnk;
-    }
-    return *this;
-}
-
-
-}
+#endif // PROTON_CPP_SETTINGS_H
