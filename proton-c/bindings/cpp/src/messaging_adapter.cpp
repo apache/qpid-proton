@@ -145,13 +145,13 @@ void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_link_t *lnk = pn_event_link(cevent);
     if (pn_link_is_receiver(lnk)) {
-        receiver r = internal::link(lnk).receiver();
+        receiver r(lnk);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_receiver_error(r);
         }
         delegate_.on_receiver_close(r);
     } else {
-        sender s = internal::link(lnk).sender();
+        sender s(lnk);
         if (pn_condition_is_set(pn_link_remote_condition(lnk))) {
             delegate_.on_sender_error(s);
         }
@@ -209,10 +209,10 @@ void messaging_adapter::on_link_remote_open(proton_event &pe) {
     sender s;
     pn_link_t *lnk = pn_event_link(pe.pn_event());
     if (pn_link_is_receiver(lnk)) {
-      r = internal::link(lnk).receiver();
+      r = lnk;
       delegate_.on_receiver_open(r);
     } else {
-      s = internal::link(lnk).sender();
+      s = lnk;
       delegate_.on_sender_open(s);
     }
     if (!is_local_open(pn_link_state(lnk)) && is_local_unititialised(pn_link_state(lnk))) {

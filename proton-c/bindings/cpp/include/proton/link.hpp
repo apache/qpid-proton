@@ -86,18 +86,6 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     /// without cancelling it.
     PN_CPP_EXTERN void detach();
 
-    /// Return sender if this link is a sender, 0 if not.
-    PN_CPP_EXTERN class sender sender();
-
-    /// Return sender if this link is a sender, 0 if not.
-    PN_CPP_EXTERN const class sender sender() const;
-
-    /// Return receiver if this link is a receiver, 0 if not.
-    PN_CPP_EXTERN class receiver receiver();
-
-    /// Return receiver if this link is a receiver, 0 if not.
-    PN_CPP_EXTERN const class receiver receiver() const;
-
     /// Credit available on the link.
     PN_CPP_EXTERN int credit() const;
 

@@ -45,22 +45,6 @@ void link::detach() {
     pn_link_detach(pn_object());
 }
 
-sender link::sender() {
-    return pn_link_is_sender(pn_object()) ? proton::sender(pn_object()) : proton::sender();
-}
-
-receiver link::receiver() {
-    return pn_link_is_receiver(pn_object()) ? proton::receiver(pn_object()) : proton::receiver();
-}
-
-const sender link::sender() const {
-    return pn_link_is_sender(pn_object()) ? proton::sender(pn_object()) : proton::sender();
-}
-
-const receiver link::receiver() const {
-    return pn_link_is_receiver(pn_object()) ? proton::receiver(pn_object()) : proton::receiver();
-}
-
 int link::credit() const {
     return pn_link_credit(pn_object());
 }
