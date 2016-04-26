@@ -95,16 +95,17 @@ template <class S> typename S::value_type quick_pop(S& s) {
 
 /// A handler that records incoming endpoints, errors etc.
 struct record_handler : public handler {
-    std::deque<proton::internal::link> links;
+    std::deque<proton::receiver> receivers;
+    std::deque<proton::sender> senders;
     std::deque<proton::session> sessions;
     std::deque<std::string> unhandled_errors, transport_errors, connection_errors;
 
     void on_receiver_open(receiver &l) override {
-        links.push_back(l);
+        receivers.push_back(l);
     }
 
     void on_sender_open(sender &l) override {
-        links.push_back(l);
+        senders.push_back(l);
     }
 
     void on_session_open(session &s) override {
@@ -136,19 +137,19 @@ void test_engine_prefix() {
     ASSERT_EQUAL("b", e.b.connection().container_id());
 
     e.a.connection().open_sender("x");
-    while (ha.links.empty() || hb.links.empty()) e.process();
-    ASSERT_EQUAL("x/1", quick_pop(ha.links).name());
-    ASSERT_EQUAL("x/1", quick_pop(hb.links).name());
+    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    ASSERT_EQUAL("x/1", quick_pop(ha.senders).name());
+    ASSERT_EQUAL("x/1", quick_pop(hb.receivers).name());
 
     e.a.connection().open_receiver("");
-    while (ha.links.empty() || hb.links.empty()) e.process();
-    ASSERT_EQUAL("x/2", quick_pop(ha.links).name());
-    ASSERT_EQUAL("x/2", quick_pop(hb.links).name());
+    while (ha.receivers.empty() || hb.senders.empty()) e.process();
+    ASSERT_EQUAL("x/2", quick_pop(ha.receivers).name());
+    ASSERT_EQUAL("x/2", quick_pop(hb.senders).name());
 
     e.b.connection().open_receiver("");
-    while (ha.links.empty() || hb.links.empty()) e.process();
-    ASSERT_EQUAL("y/1", quick_pop(ha.links).name());
-    ASSERT_EQUAL("y/1", quick_pop(hb.links).name());
+    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    ASSERT_EQUAL("y/1", quick_pop(ha.senders).name());
+    ASSERT_EQUAL("y/1", quick_pop(hb.receivers).name());
 }
 
 void test_container_prefix() {
@@ -164,15 +165,15 @@ void test_container_prefix() {
     sender s = e.a.connection().open_sender("x");
     ASSERT_EQUAL("1/1", s.name());
 
-    while (ha.links.empty() || hb.links.empty()) e.process();
+    while (ha.senders.empty() || hb.receivers.empty()) e.process();
 
-    ASSERT_EQUAL("1/1", quick_pop(ha.links).name());
-    ASSERT_EQUAL("1/1", quick_pop(hb.links).name());
+    ASSERT_EQUAL("1/1", quick_pop(ha.senders).name());
+    ASSERT_EQUAL("1/1", quick_pop(hb.receivers).name());
 
     e.a.connection().open_receiver("y");
-    while (ha.links.empty() || hb.links.empty()) e.process();
-    ASSERT_EQUAL("1/2", quick_pop(ha.links).name());
-    ASSERT_EQUAL("1/2", quick_pop(hb.links).name());
+    while (ha.receivers.empty() || hb.senders.empty()) e.process();
+    ASSERT_EQUAL("1/2", quick_pop(ha.receivers).name());
+    ASSERT_EQUAL("1/2", quick_pop(hb.senders).name());
 
     // Open a second connection in each container, make sure links have different IDs.
     record_handler ha2, hb2;
@@ -185,10 +186,10 @@ void test_container_prefix() {
     receiver r = e2.b.connection().open_receiver("z");
     ASSERT_EQUAL("2/1", r.name());
 
-    while (ha2.links.empty() || hb2.links.empty()) e2.process();
+    while (ha2.senders.empty() || hb2.receivers.empty()) e2.process();
 
-    ASSERT_EQUAL("2/1", quick_pop(ha2.links).name());
-    ASSERT_EQUAL("2/1", quick_pop(hb2.links).name());
+    ASSERT_EQUAL("2/1", quick_pop(ha2.senders).name());
+    ASSERT_EQUAL("2/1", quick_pop(hb2.receivers).name());
 };
 
 void test_endpoint_close() {
@@ -199,9 +200,10 @@ void test_endpoint_close() {
     e.a.connection().open();
     e.a.connection().open_sender("x");
     e.a.connection().open_receiver("y");
-    while (ha.links.size() < 2 || hb.links.size() < 2) e.process();
-    proton::internal::link ax = quick_pop(ha.links), ay = quick_pop(ha.links);
-    proton::internal::link bx = quick_pop(hb.links), by = quick_pop(hb.links);
+    while (ha.senders.size()+ha.receivers.size() < 2 ||
+           hb.senders.size()+hb.receivers.size() < 2) e.process();
+    proton::internal::link ax = quick_pop(ha.senders), ay = quick_pop(ha.receivers);
+    proton::internal::link bx = quick_pop(hb.receivers), by = quick_pop(hb.senders);
 
     // Close a link
     ax.close(proton::error_condition("err", "foo bar"));
