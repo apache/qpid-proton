@@ -94,7 +94,7 @@ class receiver_options {
     /// Set a selector on the receiver to str.  This sets a single
     /// registered filter on the link of type
     /// apache.org:selector-filter with value str.
-    PN_CPP_EXTERN receiver_options& selector(const std::string&){return *this;};
+    PN_CPP_EXTERN receiver_options& selector(const std::string&);
     /// @endcond
 
     /// Automatically accept inbound messages that aren't otherwise
