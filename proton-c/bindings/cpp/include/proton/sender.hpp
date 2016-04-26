@@ -36,7 +36,7 @@ namespace proton {
 
 /// A link for sending messages.
 class
-PN_CPP_CLASS_EXTERN sender : public internal::link
+PN_CPP_CLASS_EXTERN sender : public link
 {
     /// @cond INTERNAL
     sender(pn_link_t* s);

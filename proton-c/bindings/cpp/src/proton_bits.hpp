@@ -43,7 +43,6 @@ struct pn_terminus_t;
 namespace proton {
 
 namespace internal {
-class link;
 class terminus;
 }
 
@@ -52,6 +51,7 @@ class sasl;
 class ssl;
 class connection;
 class session;
+class link;
 class sender;
 class receiver;
 class transfer;

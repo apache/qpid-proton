@@ -139,7 +139,7 @@ class container {
 
     friend class connector;
     friend class messaging_adapter;
-    friend class internal::link;
+    friend class link;
     /// @endcond
 };
 

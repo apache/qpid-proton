@@ -35,7 +35,6 @@
 #include "proton_bits.hpp"
 
 namespace proton {
-namespace internal {
 
 void link::attach() {
     pn_link_open(pn_object());
@@ -122,4 +121,4 @@ link_context &link::context() {
     return link_context::get(pn_object());
 }
 
-}}
+}

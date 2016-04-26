@@ -34,7 +34,7 @@ namespace proton {
 
 /// A link for receiving messages.
 class
-PN_CPP_CLASS_EXTERN receiver : public internal::link {
+PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
     receiver(pn_link_t* r);
     /// @endcond

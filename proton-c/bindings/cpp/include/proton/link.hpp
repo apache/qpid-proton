@@ -51,18 +51,16 @@ class session;
 class sender_iterator;
 class receiver_iterator;
 
-namespace internal {
-
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
 class
-PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
+PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint {
     /// @cond INTERNAL
-    link(pn_link_t* l) : object<pn_link_t>(l) {}
+    link(pn_link_t* l) : internal::object<pn_link_t>(l) {}
     /// @endcond
 
   public:
-    link() : object<pn_link_t>(0) {}
+    link() : internal::object<pn_link_t>(0) {}
 
     // Endpoint behaviours
     PN_CPP_EXTERN bool uninitialized() const;
@@ -139,13 +137,13 @@ PN_CPP_CLASS_EXTERN link : public object<pn_link_t> , public endpoint {
     sender_options::sender_settle_mode remote_sender_settle_mode();
     receiver_options::receiver_settle_mode remote_receiver_settle_mode();
 
-    friend class factory<link>;
-    friend class proton::message;
-    friend class proton::receiver_options;
-    friend class proton::sender_options;
+    friend class internal::factory<link>;
+    friend class message;
+    friend class receiver_options;
+    friend class sender_options;
     ///@endcond
 };
 
-}}
+}
 
 #endif // PROTON_CPP_LINK_H
