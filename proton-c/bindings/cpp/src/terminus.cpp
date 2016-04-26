@@ -27,7 +27,6 @@
 #include <limits>
 
 namespace proton {
-namespace internal {
 
 terminus::terminus(pn_terminus_t* t) :
     object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t)), parent_(0)
@@ -101,4 +100,4 @@ value& terminus::node_properties() { return properties_; }
 const value& terminus::node_properties() const { return properties_; }
 
 
-}}
+}

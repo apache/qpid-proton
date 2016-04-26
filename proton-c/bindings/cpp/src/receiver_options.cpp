@@ -83,7 +83,7 @@ class receiver_options::impl {
             if (auto_accept.set) r.context().auto_accept = auto_accept.value;
             if (credit_window.set) r.context().credit_window = credit_window.value;
 
-            internal::terminus local_src(make_wrapper(pn_link_source(r.pn_object())));
+            terminus local_src(make_wrapper(pn_link_source(r.pn_object())));
             if (source.set) {
                 proton::source local_s(pn_link_source(r.pn_object()));
                 source.value.apply(local_s);

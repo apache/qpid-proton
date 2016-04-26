@@ -38,9 +38,9 @@ class receiver;
 /// The source node is where messages originate.
 ///
 /// @see proton::sender proton::receiver proton::target
-class source : public internal::terminus {
+class source : public terminus {
   public:
-    source() : internal::terminus() {}
+    source() : terminus() {}
     PN_CPP_EXTERN std::string address() const;
     /// @cond INTERNAL
   private:

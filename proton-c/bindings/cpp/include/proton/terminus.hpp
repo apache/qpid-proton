@@ -32,11 +32,9 @@
 
 namespace proton {
 
-class source;
-class target;
-class source_options;
-
 namespace internal {
+class noderef;
+}
 
 /// One end of a link, either a source or a target.
 ///
@@ -95,14 +93,14 @@ class terminus {
     pn_link_t* parent_;
 
 
-    friend class factory<terminus>;
-    friend class noderef;
-    friend class proton::source;
-    friend class proton::target;
-    friend class proton::source_options;
+    friend class internal::factory<terminus>;
+    friend class internal::noderef;
+    friend class source;
+    friend class target;
+    friend class source_options;
     /// @endcond
 };
 
-}}
+}
 
 #endif // PROTON_CPP_TERMINUS_H

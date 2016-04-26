@@ -38,9 +38,9 @@ class receiver;
 /// The target is the destination node of a sent or received message.
 ///
 /// @see proton::sender proton::receiver proton::target
-class target : public internal::terminus {
+class target : public terminus {
   public:
-    target() : internal::terminus() {}
+    target() : terminus() {}
     PN_CPP_EXTERN std::string address() const;
     /// @cond INTERNAL
   private:

@@ -53,7 +53,7 @@ namespace {
 
 using internal::noderef;
 
-void node_address(internal::terminus &t, option<std::string> &addr, option<bool> &dynamic) {
+void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic) {
     if (dynamic.set && dynamic.value) {
         noderef::dynamic(t, true);
         // Ignore any addr value for dynamic.
@@ -64,11 +64,11 @@ void node_address(internal::terminus &t, option<std::string> &addr, option<bool>
     }
 }
 
-void node_durability(internal::terminus &t, option<enum durability_mode> &mode) {
+void node_durability(terminus &t, option<enum durability_mode> &mode) {
     if (mode.set) noderef::durability_mode(t, mode.value);
 }
 
-void node_expiry(internal::terminus &t, option<enum expiry_policy> &policy, option<duration> &d) {
+void node_expiry(terminus &t, option<enum expiry_policy> &policy, option<duration> &d) {
     if (policy.set) noderef::expiry_policy(t, policy.value);
     if (d.set) noderef::timeout(t, d.value);
 }
