@@ -78,6 +78,9 @@
           }
       }
       break;
+
+    default:
+      break;
     }
 
   $result = obj;

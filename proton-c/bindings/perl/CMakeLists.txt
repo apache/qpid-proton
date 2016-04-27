@@ -17,6 +17,15 @@
 # under the License.
 #
 
+# Disable harmlesss warnings from the generted perlPERL_wrap.c
+include(CheckCCompilerFlag)
+foreach(flag -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable)
+  check_c_compiler_flag(${flag} allowed)
+  if (allowed)
+    add_compile_options(${flag})
+  endif()
+endforeach()
+
 include_directories("${PERL_INCLUDE_PATH}")
 
 # Always need to treat SWIG files as C

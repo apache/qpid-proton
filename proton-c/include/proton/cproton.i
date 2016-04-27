@@ -915,7 +915,7 @@ typedef unsigned long int uintptr_t;
 %contract pn_messenger(const char *name)
 {
  ensure:
-  pn_message != NULL;
+  name != NULL;
 }
 
 %contract pn_messenger_name(pn_messenger_t *messenger)
