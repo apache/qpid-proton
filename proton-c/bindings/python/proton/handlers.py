@@ -34,7 +34,9 @@ class OutgoingMessageHandler(Handler):
         self.delegate = delegate
 
     def on_link_flow(self, event):
-        if event.link.is_sender and event.link.credit:
+        if event.link.is_sender and event.link.credit \
+           and event.link.state & Endpoint.LOCAL_ACTIVE \
+           and event.link.state & Endpoint.REMOTE_ACTIVE :
             self.on_sendable(event)
 
     def on_delivery(self, event):
