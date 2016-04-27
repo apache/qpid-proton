@@ -21,7 +21,7 @@ find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
-add_compile_options(${CXX_WARNING_FLAGS})
+add_definitions(${CXX_WARNING_FLAGS})
 
 # Single-threaded examples.
 foreach(example

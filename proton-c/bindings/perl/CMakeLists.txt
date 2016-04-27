@@ -17,23 +17,23 @@
 # under the License.
 #
 
-# Disable harmlesss warnings from the generted perlPERL_wrap.c
-include(CheckCCompilerFlag)
-foreach(flag -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable)
-  check_c_compiler_flag(${flag} allowed)
-  if (allowed)
-    add_compile_options(${flag})
-  endif()
-endforeach()
-
-include_directories("${PERL_INCLUDE_PATH}")
-
 # Always need to treat SWIG files as C
 set_source_files_properties(cproton.i perl.i PROPERTIES CPLUSPLUS NO)
 
 # Need to pass in the same compiler flags used to build Perl itself
 execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
-                OUTPUT_VARIABLE PERLCFLAGS)
+  OUTPUT_VARIABLE PERLCFLAGS)
+
+# Disable harmlesss warnings from the generted perlPERL_wrap.c
+include(CheckCCompilerFlag)
+foreach(flag -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable)
+  check_c_compiler_flag(${flag} allowed)
+  if (allowed)
+    set(PERLCFLAGS "${PERLCFLAGS} ${flag}")
+  endif()
+endforeach()
+
+include_directories("${PERL_INCLUDE_PATH}")
 
 if (CHECK_SYSINSTALL_PERL)
   execute_process(COMMAND perl -V:installvendorarch
