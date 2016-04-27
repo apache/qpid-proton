@@ -912,12 +912,6 @@ typedef unsigned long int uintptr_t;
 
 %include "proton/sasl.h"
 
-%contract pn_messenger(const char *name)
-{
- ensure:
-  name != NULL;
-}
-
 %contract pn_messenger_name(pn_messenger_t *messenger)
 {
  require:
