@@ -31,6 +31,6 @@ const duration duration::IMMEDIATE(0);
 const duration duration::SECOND(1000);
 const duration duration::MINUTE(SECOND * 60);
 
-std::ostream& operator<<(std::ostream& o, duration d) { return o << d.ms(); }
+std::ostream& operator<<(std::ostream& o, duration d) { return o << d.milliseconds(); }
 
 }

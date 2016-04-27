@@ -84,10 +84,10 @@ duration reactor::timeout() {
 }
 
 void reactor::timeout(duration timeout) {
-    if (timeout == duration::FOREVER || timeout.ms() > PN_MILLIS_MAX)
+    if (timeout == duration::FOREVER || timeout.milliseconds() > PN_MILLIS_MAX)
         pn_reactor_set_timeout(pn_object(), PN_MILLIS_MAX);
     else
-        pn_reactor_set_timeout(pn_object(), timeout.ms());
+        pn_reactor_set_timeout(pn_object(), timeout.milliseconds());
 }
 
 }

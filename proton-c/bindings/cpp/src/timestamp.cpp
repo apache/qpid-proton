@@ -27,6 +27,6 @@ timestamp timestamp::now() {
     return timestamp(pn_timestamp_now());
 }
 
-std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.ms(); }
+std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.milliseconds(); }
 
 }

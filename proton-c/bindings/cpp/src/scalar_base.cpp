@@ -71,7 +71,7 @@ void scalar_base::put_(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG; }
 void scalar_base::put_(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; }
 void scalar_base::put_(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; }
 void scalar_base::put_(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; }
-void scalar_base::put_(timestamp x) { atom_.u.as_timestamp = x.ms(); atom_.type = PN_TIMESTAMP; }
+void scalar_base::put_(timestamp x) { atom_.u.as_timestamp = x.milliseconds(); atom_.type = PN_TIMESTAMP; }
 void scalar_base::put_(const decimal32& x) { byte_copy(atom_.u.as_decimal32, x); atom_.type = PN_DECIMAL32;; }
 void scalar_base::put_(const decimal64& x) { byte_copy(atom_.u.as_decimal64, x); atom_.type = PN_DECIMAL64; }
 void scalar_base::put_(const decimal128& x) { byte_copy(atom_.u.as_decimal128, x); atom_.type = PN_DECIMAL128; }

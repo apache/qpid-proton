@@ -111,7 +111,7 @@ class connection_options::impl {
             if (max_channels.set)
                 pn_transport_set_channel_max(pnt, max_channels.value);
             if (idle_timeout.set)
-                pn_transport_set_idle_timeout(pnt, idle_timeout.value.ms());
+                pn_transport_set_idle_timeout(pnt, idle_timeout.value.milliseconds());
         }
         // Only apply connection options if uninit.
         if (uninit) {

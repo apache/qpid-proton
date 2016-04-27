@@ -165,14 +165,14 @@ std::string message::content_encoding() const {
 }
 
 void message::expiry_time(timestamp t) {
-    pn_message_set_expiry_time(pn_msg(), t.ms());
+    pn_message_set_expiry_time(pn_msg(), t.milliseconds());
 }
 timestamp message::expiry_time() const {
     return timestamp(pn_message_get_expiry_time(pn_msg()));
 }
 
 void message::creation_time(timestamp t) {
-    pn_message_set_creation_time(pn_msg(), t.ms());
+    pn_message_set_creation_time(pn_msg(), t.milliseconds());
 }
 timestamp message::creation_time() const {
     return timestamp(pn_message_get_creation_time(pn_msg()));
@@ -304,7 +304,7 @@ bool message::durable() const { return pn_message_is_durable(pn_msg()); }
 void message::durable(bool b) { pn_message_set_durable(pn_msg(), b); }
 
 duration message::ttl() const { return duration(pn_message_get_ttl(pn_msg())); }
-void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.ms()); }
+void message::ttl(duration d) { pn_message_set_ttl(pn_msg(), d.milliseconds()); }
 
 uint8_t message::priority() const { return pn_message_get_priority(pn_msg()); }
 void message::priority(uint8_t d) { pn_message_set_priority(pn_msg(), d); }

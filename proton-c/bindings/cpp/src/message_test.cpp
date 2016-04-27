@@ -54,9 +54,9 @@ void test_message_properties() {
     CHECK_STR(group_id);
     CHECK_STR(reply_to_group_id);
     m.expiry_time(timestamp(42));
-    ASSERT_EQUAL(m.expiry_time().ms(), 42);
+    ASSERT_EQUAL(m.expiry_time().milliseconds(), 42);
     m.creation_time(timestamp(4242));
-    ASSERT_EQUAL(m.creation_time().ms(), 4242);
+    ASSERT_EQUAL(m.creation_time().milliseconds(), 4242);
 
     message m2(m);
     ASSERT_EQUAL("hello", get<std::string>(m2.body()));
@@ -70,8 +70,8 @@ void test_message_properties() {
     ASSERT_EQUAL("content_encoding", m2.content_encoding());
     ASSERT_EQUAL("group_id", m2.group_id());
     ASSERT_EQUAL("reply_to_group_id", m2.reply_to_group_id());
-    ASSERT_EQUAL(42, m2.expiry_time().ms());
-    ASSERT_EQUAL(4242, m.creation_time().ms());
+    ASSERT_EQUAL(42, m2.expiry_time().milliseconds());
+    ASSERT_EQUAL(4242, m.creation_time().milliseconds());
 
     m2 = m;
     ASSERT_EQUAL("hello", get<std::string>(m2.body()));
@@ -85,8 +85,8 @@ void test_message_properties() {
     ASSERT_EQUAL("content_encoding", m2.content_encoding());
     ASSERT_EQUAL("group_id", m2.group_id());
     ASSERT_EQUAL("reply_to_group_id", m2.reply_to_group_id());
-    ASSERT_EQUAL(42, m2.expiry_time().ms());
-    ASSERT_EQUAL(4242, m.creation_time().ms());
+    ASSERT_EQUAL(42, m2.expiry_time().milliseconds());
+    ASSERT_EQUAL(4242, m.creation_time().milliseconds());
 }
 
 void test_message_body() {

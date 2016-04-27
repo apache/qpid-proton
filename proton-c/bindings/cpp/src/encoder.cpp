@@ -130,7 +130,7 @@ encoder& encoder::operator<<(int32_t x) { return insert(x, pn_data_put_int); }
 encoder& encoder::operator<<(wchar_t x) { return insert(x, pn_data_put_char); }
 encoder& encoder::operator<<(uint64_t x) { return insert(x, pn_data_put_ulong); }
 encoder& encoder::operator<<(int64_t x) { return insert(x, pn_data_put_long); }
-encoder& encoder::operator<<(timestamp x) { return insert(x.ms(), pn_data_put_timestamp); }
+encoder& encoder::operator<<(timestamp x) { return insert(x.milliseconds(), pn_data_put_timestamp); }
 encoder& encoder::operator<<(float x) { return insert(x, pn_data_put_float); }
 encoder& encoder::operator<<(double x) { return insert(x, pn_data_put_double); }
 encoder& encoder::operator<<(decimal32 x) { return insert(x, pn_data_put_decimal32); }
