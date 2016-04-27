@@ -42,10 +42,6 @@ struct pn_terminus_t;
 
 namespace proton {
 
-namespace internal {
-class terminus;
-}
-
 class transport;
 class sasl;
 class ssl;
@@ -59,6 +55,9 @@ class tracker;
 class delivery;
 class error_condition;
 class acceptor;
+class terminus;
+class source;
+class target;
 
 std::string error_str(long code);
 
@@ -94,6 +93,8 @@ template <> struct wrapped<delivery> { typedef pn_delivery_t type; };
 template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
 template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; };
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
+template <> struct wrapped<source> { typedef pn_terminus_t type; };
+template <> struct wrapped<target> { typedef pn_terminus_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_transport_t> { typedef transport type; };
@@ -111,16 +112,20 @@ template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
 template <class T>
 class factory {
 public:
-    static T make(typename wrapped<T>::type* t) { return t; }
+    static T wrap(typename wrapped<T>::type* t) { return t; }
+    static typename wrapped<T>::type* unwrap(T t) { return t.pn_object(); }
 };
 
 }
 
 template <class T>
-typename internal::wrapper<T>::type make_wrapper(T* t) { return internal::factory<typename internal::wrapper<T>::type>::make(t); }
+typename internal::wrapper<T>::type make_wrapper(T* t) { return internal::factory<typename internal::wrapper<T>::type>::wrap(t); }
 
 template <class U>
-U make_wrapper(typename internal::wrapped<U>::type* t) { return internal::factory<U>::make(t); }
+U make_wrapper(typename internal::wrapped<U>::type* t) { return internal::factory<U>::wrap(t); }
+
+template <class T>
+typename internal::wrapped<T>::type* unwrap(T t) {return internal::factory<T>::unwrap(t); }
 
 }
 

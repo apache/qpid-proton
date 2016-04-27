@@ -24,8 +24,6 @@
 #include "proton/link.hpp"
 #include "proton/link.h"
 
-#include <limits>
-
 namespace proton {
 
 terminus::terminus(pn_terminus_t* t) :
@@ -36,67 +34,28 @@ enum expiry_policy terminus::expiry_policy() const {
     return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
 }
 
-void terminus::expiry_policy(enum expiry_policy policy) {
-    pn_terminus_set_expiry_policy(object_, pn_expiry_policy_t(policy));
-}
-
 duration terminus::timeout() const {
     return duration::SECOND * pn_terminus_get_timeout(object_);
-}
-
-void terminus::timeout(duration d) {
-    uint32_t seconds = 0;
-    if (d == duration::FOREVER)
-        seconds = std::numeric_limits<uint32_t>::max();
-    else if (d != duration::IMMEDIATE) {
-        uint64_t x = d.milliseconds();
-        if ((std::numeric_limits<uint64_t>::max() - x) <= 500)
-            seconds = std::numeric_limits<uint32_t>::max();
-        else {
-            x = (x + 500) / 1000;
-            seconds = x < std::numeric_limits<uint32_t>::max() ? x : std::numeric_limits<uint32_t>::max();
-        }
-    }
-    pn_terminus_set_timeout(object_, seconds);
 }
 
 enum distribution_mode terminus::distribution_mode() const {
     return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
 }
 
-void terminus::distribution_mode(enum distribution_mode mode) {
-    pn_terminus_set_distribution_mode(object_, pn_distribution_mode_t(mode));
-}
-
 enum durability_mode terminus::durability_mode() {
     return (enum durability_mode) pn_terminus_get_durability(object_);
-}
-
-void terminus::durability_mode(enum durability_mode d) {
-    pn_terminus_set_durability(object_, (pn_durability_t) d);
 }
 
 std::string terminus::address() const {
     return str(pn_terminus_get_address(object_));
 }
 
-void terminus::address(const std::string &addr) {
-    pn_terminus_set_address(object_, addr.c_str());
-}
-
 bool terminus::dynamic() const {
     return pn_terminus_is_dynamic(object_);
 }
 
-void terminus::dynamic(bool d) {
-    pn_terminus_set_dynamic(object_, d);
-}
-
-value& terminus::filter() { return filter_; }
 const value& terminus::filter() const { return filter_; }
 
-
-value& terminus::node_properties() { return properties_; }
 const value& terminus::node_properties() const { return properties_; }
 
 

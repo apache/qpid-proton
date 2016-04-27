@@ -120,12 +120,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     void host(const std::string& h);
 
     friend class internal::factory<connection>;
-    friend class connection_context;
-    friend class io::connection_engine;
-    friend class connection_options;
     friend class connector;
-    friend class container_impl;
-    friend class transport;
     /// @endcond
 };
 

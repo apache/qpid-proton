@@ -72,11 +72,6 @@ class transport : public internal::object<pn_transport_t> {
 
     /// @cond INTERNAL
     friend class internal::factory<transport>;
-    friend class connection;
-    friend class connection_options;
-    friend class connector;
-    friend class io::connection_engine;
-    friend class messaging_adapter;
     /// @endcond
 };
 

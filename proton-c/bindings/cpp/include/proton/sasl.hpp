@@ -67,16 +67,9 @@ class sasl {
 
     /// @cond INTERNAL
   private:
-    void allow_insecure_mechs(bool);
-    bool allow_insecure_mechs();
-    void allowed_mechs(const std::string &);
-    void config_name(const std::string&);
-    void config_path(const std::string&);
-
     pn_sasl_t* const object_;
 
     friend class internal::factory<sasl>;
-    friend class connection_options;
     /// @endcond
 };
 

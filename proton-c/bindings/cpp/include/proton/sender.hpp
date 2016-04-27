@@ -61,8 +61,6 @@ PN_CPP_CLASS_EXTERN sender : public link
   /// @cond INTERNAL
   friend class internal::factory<sender>;
   friend class sender_iterator;
-  friend class source;
-  friend class target;
   /// @endcond
 };
 

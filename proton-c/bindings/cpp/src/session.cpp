@@ -99,7 +99,7 @@ receiver_range session::receivers() const {
 
 
 session_iterator session_iterator::operator++() {
-    obj_ = pn_session_next(obj_.pn_object(), 0);
+    obj_ = pn_session_next(unwrap(obj_), 0);
     return *this;
 }
 

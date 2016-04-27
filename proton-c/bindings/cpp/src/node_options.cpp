@@ -24,6 +24,10 @@
 #include "proton/target_options.hpp"
 #include "proton/target.hpp"
 
+#include "proton_bits.hpp"
+
+#include <limits>
+
 namespace proton {
 
 template <class T> struct option {
@@ -35,42 +39,50 @@ template <class T> struct option {
     void update(const option<T>& x) { if (x.set) *this = x.value; }
 };
 
-namespace internal {
-class noderef {
-    // friend class to handle private access on terminus.  TODO: change to newer single friend mechanism.
-  public:
-    static void address(terminus &t, const std::string &s) { t.address(s); }
-    static void dynamic(terminus &t, bool b) { t.dynamic(b); }
-    static void durability_mode(terminus &t, enum durability_mode m) { t.durability_mode(m); }
-    static void expiry_policy(terminus &t, enum expiry_policy p) { t.expiry_policy(p); }
-    static void timeout(terminus &t, duration d) { t.timeout(d); }
-};
+namespace {
+    void address(terminus &t, const std::string &s) { pn_terminus_set_address(unwrap(t), s.c_str()); }
+    void set_dynamic(terminus &t, bool b) { pn_terminus_set_dynamic(unwrap(t), b); }
+    void durability_mode(terminus &t, enum durability_mode m) { pn_terminus_set_durability(unwrap(t), pn_durability_t(m)); }
+    void expiry_policy(terminus &t, enum expiry_policy p) { pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(p)); }
+    void timeout(terminus &t, duration d) {
+      uint32_t seconds = 0;
+      if (d == duration::FOREVER)
+        seconds = std::numeric_limits<uint32_t>::max();
+      else if (d != duration::IMMEDIATE) {
+        uint64_t x = d.milliseconds();
+        if ((std::numeric_limits<uint64_t>::max() - x) <= 500)
+          seconds = std::numeric_limits<uint32_t>::max();
+        else {
+          x = (x + 500) / 1000;
+          seconds = x < std::numeric_limits<uint32_t>::max() ? x : std::numeric_limits<uint32_t>::max();
+        }
+      }
+      pn_terminus_set_timeout(unwrap(t), seconds);
+    }
 }
 
 namespace {
 
 // Options common to sources and targets
 
-using internal::noderef;
-
 void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic) {
     if (dynamic.set && dynamic.value) {
-        noderef::dynamic(t, true);
+        set_dynamic(t, true);
         // Ignore any addr value for dynamic.
         return;
     }
     if (addr.set) {
-        noderef::address(t, addr.value);
+        address(t, addr.value);
     }
 }
 
 void node_durability(terminus &t, option<enum durability_mode> &mode) {
-    if (mode.set) noderef::durability_mode(t, mode.value);
+    if (mode.set) durability_mode(t, mode.value);
 }
 
 void node_expiry(terminus &t, option<enum expiry_policy> &policy, option<duration> &d) {
-    if (policy.set) noderef::expiry_policy(t, policy.value);
-    if (d.set) noderef::timeout(t, d.value);
+    if (policy.set) expiry_policy(t, policy.value);
+    if (d.set) timeout(t, d.value);
 }
 
 }
@@ -89,7 +101,8 @@ class source_options::impl {
         node_address(s, address, dynamic);
         node_durability(s, durability_mode);
         node_expiry(s, expiry_policy, timeout);
-        if (distribution_mode.set) s.distribution_mode(distribution_mode.value);
+        if (distribution_mode.set)
+          pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
     }
 
     void update(const impl& x) {

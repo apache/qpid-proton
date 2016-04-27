@@ -77,17 +77,7 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Get the remote state for a delivery.
     enum state state() const;
 
-  private:
-    /// Check if a delivery is updated.
-    ///
-    /// A delivery is considered updated whenever the peer
-    /// communicates a new disposition for the delivery. Once a
-    /// delivery becomes updated, it will remain so until clear() is
-    /// called.
-    bool updated() const;
-
   friend class internal::factory<transfer>;
-  friend class messaging_adapter;
     /// @endcond
 };
 

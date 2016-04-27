@@ -30,7 +30,4 @@ namespace proton {
 delivery::delivery(pn_delivery_t* d): transfer(make_wrapper(d)) {}
 receiver delivery::receiver() const { return make_wrapper<class receiver>(pn_delivery_link(pn_object())); }
 
-bool delivery::partial()  const { return pn_delivery_partial(pn_object()); }
-bool delivery::readable() const { return pn_delivery_readable(pn_object()); }
-size_t delivery::pending() const { return pn_delivery_pending(pn_object()); }
 }

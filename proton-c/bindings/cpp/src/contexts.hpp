@@ -40,8 +40,8 @@ struct pn_acceptor_t;
 namespace proton {
 
 class proton_handler;
+class reactor;
 class work_queue;
-
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -98,7 +98,7 @@ class connection_context : public context {
 
   protected:
     static context::id id(pn_connection_t*);
-    static context::id id(const connection& c) { return id(c.pn_object()); }
+    static context::id id(const connection& c);
 };
 
 void container_context(const reactor&, container&);

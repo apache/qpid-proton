@@ -43,7 +43,7 @@
 namespace proton {
 
 transport connection::transport() const {
-    return pn_connection_transport(pn_object());
+    return make_wrapper(pn_connection_transport(pn_object()));
 }
 
 void connection::open() {

@@ -148,9 +148,6 @@ class connection_options {
   private:
     void apply(connection&) const;
     proton_handler* handler() const;
-    static pn_connection_t *pn_connection(connection &);
-    class ssl_client_options &ssl_client_options();
-    class ssl_server_options &ssl_server_options();
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

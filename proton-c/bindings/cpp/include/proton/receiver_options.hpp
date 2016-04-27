@@ -81,6 +81,9 @@ class receiver_options {
     /// Copy options.
     PN_CPP_EXTERN receiver_options& operator=(const receiver_options&);
 
+    /// Merge with another option set
+    PN_CPP_EXTERN void update(const receiver_options& other);
+
     /// Set a handler for events scoped to the receiver.  If NULL,
     /// receiver-scoped events are discarded.
     PN_CPP_EXTERN receiver_options& handler(class handler *);
@@ -121,14 +124,11 @@ class receiver_options {
     /// @cond INTERNAL
   private:
     void apply(receiver &) const;
-    proton_handler* handler() const;
-    PN_CPP_EXTERN void update(const receiver_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     friend class receiver;
-    friend class container_impl;
     /// @endcond
 };
 

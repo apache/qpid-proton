@@ -22,6 +22,7 @@
 #include "contexts.hpp"
 #include "msg.hpp"
 #include "reactor.hpp"
+#include "proton_bits.hpp"
 
 #include "proton/error.hpp"
 
@@ -74,6 +75,10 @@ pn_class_t* context::pn_class() { return &cpp_context_class; }
 
 context::id connection_context::id(pn_connection_t* c) {
     return context::id(pn_connection_attachments(c), CONNECTION_CONTEXT);
+}
+
+context::id connection_context::id(const connection& c) {
+    return id(unwrap(c));
 }
 
 void container_context::set(const reactor& r, container& c) {

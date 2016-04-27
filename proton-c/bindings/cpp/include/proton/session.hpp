@@ -91,9 +91,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Return the receivers on this session.
     PN_CPP_EXTERN receiver_range receivers() const;
 
-  friend class sender_iterator;
-  friend class receiver_iterator;
-  friend class session_iterator;
+    friend class internal::factory<session>;
 };
 
 

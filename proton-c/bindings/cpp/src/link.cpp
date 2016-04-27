@@ -70,43 +70,16 @@ class session link::session() const {
     return pn_link_session(pn_object());
 }
 
-void link::handler(proton_handler &h) {
-    pn_record_t *record = pn_link_attachments(pn_object());
-    internal::pn_ptr<pn_handler_t> chandler = connection().container().impl_->cpp_handler(&h);
-    pn_record_set_handler(record, chandler.get());
-}
-
-void link::detach_handler() {
-    pn_record_t *record = pn_link_attachments(pn_object());
-    pn_record_set_handler(record, 0);
-}
-
 error_condition link::error() const {
     return make_wrapper(pn_link_remote_condition(pn_object()));
-}
-
-ssize_t link::recv(char* buffer, size_t size) {
-    return pn_link_recv(pn_object(), buffer, size);
-}
-
-bool link::advance() {
-    return pn_link_advance(pn_object());
 }
 
 sender_options::sender_settle_mode link::sender_settle_mode() {
     return (sender_options::sender_settle_mode) pn_link_snd_settle_mode(pn_object());
 }
 
-void link::sender_settle_mode(sender_options::sender_settle_mode mode) {
-    pn_link_set_snd_settle_mode(pn_object(), (pn_snd_settle_mode_t) mode);
-}
-
 receiver_options::receiver_settle_mode link::receiver_settle_mode() {
     return (receiver_options::receiver_settle_mode) pn_link_rcv_settle_mode(pn_object());
-}
-
-void link::receiver_settle_mode(receiver_options::receiver_settle_mode mode) {
-    pn_link_set_rcv_settle_mode(pn_object(), (pn_rcv_settle_mode_t) mode);
 }
 
 sender_options::sender_settle_mode link::remote_sender_settle_mode() {
@@ -115,10 +88,6 @@ sender_options::sender_settle_mode link::remote_sender_settle_mode() {
 
 receiver_options::receiver_settle_mode link::remote_receiver_settle_mode() {
     return (receiver_options::receiver_settle_mode) pn_link_remote_rcv_settle_mode(pn_object());
-}
-
-link_context &link::context() {
-    return link_context::get(pn_object());
 }
 
 }

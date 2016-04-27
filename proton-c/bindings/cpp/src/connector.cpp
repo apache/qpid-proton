@@ -30,6 +30,7 @@
 #include "proton/sasl.hpp"
 
 #include "container_impl.hpp"
+#include "proton_bits.hpp"
 #include "proton_event.hpp"
 
 #include "proton/connection.h"
@@ -62,7 +63,7 @@ void connector::reconnect_timer(const class reconnect_timer &rt) {
 void connector::connect() {
     connection_.host(address_.host_port());
     pn_transport_t *pnt = pn_transport();
-    transport t(pnt);
+    transport t(make_wrapper(pnt));
     if (!address_.username().empty())
         connection_.user(address_.username());
     if (!address_.password().empty())

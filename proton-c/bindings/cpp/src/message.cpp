@@ -291,13 +291,13 @@ void message::decode(const std::vector<char> &s) {
 
 void message::decode(proton::delivery delivery) {
     std::vector<char> buf;
-    buf.resize(delivery.pending());
+    buf.resize(pn_delivery_pending(unwrap(delivery)));
     proton::receiver link = delivery.receiver();
-    ssize_t n = link.recv(const_cast<char *>(&buf[0]), buf.size());
+    ssize_t n = pn_link_recv(unwrap(link), const_cast<char *>(&buf[0]), buf.size());
     if (n != ssize_t(buf.size())) throw error(MSG("receiver read failure"));
     clear();
     decode(buf);
-    link.advance();
+    pn_link_advance(unwrap(link));
 }
 
 bool message::durable() const { return pn_message_is_durable(pn_msg()); }

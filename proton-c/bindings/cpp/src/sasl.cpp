@@ -35,11 +35,4 @@ std::string sasl::mech() const {
     return m ? std::string(m) : std::string();
 }
 
-void sasl::allow_insecure_mechs(bool allowed) { pn_sasl_set_allow_insecure_mechs(object_, allowed); }
-bool sasl::allow_insecure_mechs() { return pn_sasl_get_allow_insecure_mechs(object_); }
-void sasl::allowed_mechs(const std::string &mechs) { pn_sasl_allowed_mechs(object_, mechs.c_str()); }
-void sasl::config_name(const std::string &name) { pn_sasl_config_name(object_, name.c_str()); }
-void sasl::config_path(const std::string &path) { pn_sasl_config_path(object_, path.c_str()); }
-
-
 } // namespace

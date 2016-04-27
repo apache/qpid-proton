@@ -56,7 +56,7 @@ void transport::unbind() {
 }
 
 void transport::bind(class connection &conn) {
-    if (pn_transport_bind(pn_object(), conn.pn_object()))
+    if (pn_transport_bind(pn_object(), unwrap(conn)))
         throw proton::error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
 }
 

@@ -55,8 +55,6 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
   friend class internal::factory<receiver>;
   friend class receiver_iterator;
-  friend class source;
-  friend class target;
     /// @endcond
 };
 

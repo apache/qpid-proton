@@ -29,6 +29,7 @@
 #include "connector.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
+#include "proton_bits.hpp"
 
 #include "proton/connection.h"
 #include "proton/transport.h"
@@ -63,7 +64,7 @@ class connection_options::impl {
     option<std::string> sasl_config_path;
 
     void apply(connection& c) {
-        pn_connection_t *pnc = connection_options::pn_connection(c);
+        pn_connection_t *pnc = unwrap(c);
         pn_transport_t *pnt = pn_connection_transport(pnc);
         connector *outbound = dynamic_cast<connector*>(
             connection_context::get(c).handler.get());
@@ -92,18 +93,17 @@ class connection_options::impl {
             }
 
             // SASL
-            transport t = c.transport();
             if (!sasl_enabled.set || sasl_enabled.value) {
                 if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
-                    t.sasl();          // Force a sasl instance.  Lazily create one otherwise.
+                    pn_sasl(pnt);          // Force a sasl instance.  Lazily create one otherwise.
                 if (sasl_allow_insecure_mechs.set)
-                    t.sasl().allow_insecure_mechs(sasl_allow_insecure_mechs.value);
+                    pn_sasl_set_allow_insecure_mechs(pn_sasl(pnt), sasl_allow_insecure_mechs.value);
                 if (sasl_allowed_mechs.set)
-                    t.sasl().allowed_mechs(sasl_allowed_mechs.value);
+                    pn_sasl_allowed_mechs(pn_sasl(pnt), sasl_allowed_mechs.value.c_str());
                 if (sasl_config_name.set)
-                    t.sasl().config_name(sasl_config_name.value);
+                    pn_sasl_config_name(pn_sasl(pnt), sasl_config_name.value.c_str());
                 if (sasl_config_path.set)
-                    t.sasl().config_path(sasl_config_path.value);
+                    pn_sasl_config_path(pn_sasl(pnt), sasl_config_path.value.c_str());
             }
 
             if (max_frame_size.set)
@@ -185,8 +185,5 @@ connection_options& connection_options::sasl_config_name(const std::string &n) {
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
-class ssl_client_options &connection_options::ssl_client_options() { return impl_->ssl_client_options.value; }
-class ssl_server_options &connection_options::ssl_server_options() { return impl_->ssl_server_options.value; }
 proton_handler* connection_options::handler() const { return impl_->handler.value; }
-pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }
 } // namespace proton

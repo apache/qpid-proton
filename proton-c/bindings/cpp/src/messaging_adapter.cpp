@@ -87,7 +87,7 @@ void messaging_adapter::on_delivery(proton_event &pe) {
 
     if (pn_link_is_receiver(lnk)) {
         delivery d(make_wrapper<delivery>(dlv));
-        if (!d.partial() && d.readable()) {
+        if (!pn_delivery_partial(dlv) && pn_delivery_readable(dlv)) {
             // generate on_message
             pn_connection_t *pnc = pn_session_connection(pn_link_session(lnk));
             connection_context& ctx = connection_context::get(pnc);
@@ -105,15 +105,15 @@ void messaging_adapter::on_delivery(proton_event &pe) {
                     d.accept();
             }
         }
-        else if (d.updated() && d.settled()) {
+        else if (pn_delivery_updated(dlv) && d.settled()) {
             delegate_.on_delivery_settle(d);
         }
         credit_topup(lnk);
     } else {
         tracker t(make_wrapper<tracker>(dlv));
         // sender
-        if (t.updated()) {
-            uint64_t rstate = t.state();
+        if (pn_delivery_updated(dlv)) {
+            uint64_t rstate = pn_delivery_remote_state(dlv);
             if (rstate == PN_ACCEPTED) {
                 delegate_.on_tracker_accept(t);
             }
@@ -239,7 +239,7 @@ void messaging_adapter::on_transport_tail_closed(proton_event &pe) {
     pn_connection_t *conn = pn_event_connection(pe.pn_event());
     if (conn && is_local_open(pn_connection_state(conn))) {
         pn_transport_t *tspt = pn_event_transport(pe.pn_event());
-        transport t(tspt);
+        transport t(make_wrapper(tspt));
         if (pn_condition_is_set(pn_transport_condition(tspt))) {
             delegate_.on_transport_error(t);
         }

@@ -80,6 +80,9 @@ class sender_options {
     /// Copy options.
     PN_CPP_EXTERN sender_options& operator=(const sender_options&);
 
+    /// Merge with another option set
+    PN_CPP_EXTERN void update(const sender_options& other);
+
     /// Set a handler for events scoped to the sender.  If NULL,
     /// sender-scoped events are discarded.
     PN_CPP_EXTERN sender_options& handler(class handler *);
@@ -100,14 +103,11 @@ class sender_options {
     /// @cond INTERNAL
   private:
     void apply(sender&) const;
-    proton_handler* handler() const;
-    PN_CPP_EXTERN void update(const sender_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     friend class sender;
-    friend class container_impl;
     /// @endcond
 };
 

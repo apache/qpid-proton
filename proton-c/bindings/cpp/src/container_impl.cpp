@@ -153,7 +153,7 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());
     cc.link_gen.prefix(id_gen_.next() + "/");
-    pn_connection_set_container(conn.pn_object(), id_.c_str());
+    pn_connection_set_container(unwrap(conn), id_.c_str());
 
     conn.open();
     return conn;
@@ -221,10 +221,10 @@ void container_impl::receiver_options(const proton::receiver_options &opts) {
 }
 
 void container_impl::configure_server_connection(connection &c) {
-    pn_acceptor_t *pnp = pn_connection_acceptor(connection_options::pn_connection(c));
+    pn_acceptor_t *pnp = pn_connection_acceptor(unwrap(c));
     listener_context &lc(listener_context::get(pnp));
     connection_context::get(c).link_gen.prefix(id_gen_.next() + "/");
-    pn_connection_set_container(c.pn_object(), id_.c_str());
+    pn_connection_set_container(unwrap(c), id_.c_str());
     lc.connection_options.apply(c);
 }
 

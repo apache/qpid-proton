@@ -44,19 +44,19 @@ namespace io {
 
 connection_engine::connection_engine(class handler &h, const connection_options& opts):
     handler_(h),
-    connection_(internal::take_ownership(pn_connection()).get()),
-    transport_(internal::take_ownership(pn_transport()).get()),
+    connection_(make_wrapper(internal::take_ownership(pn_connection()).get())),
+    transport_(make_wrapper(internal::take_ownership(pn_transport()).get())),
     collector_(internal::take_ownership(pn_collector()).get())
 {
     if (!connection_ || !transport_ || !collector_)
         throw proton::error("engine create");
     transport_.bind(connection_);
-    pn_connection_collect(connection_.pn_object(), collector_.get());
+    pn_connection_collect(unwrap(connection_), collector_.get());
     opts.apply(connection_);
 
     // Provide local random defaults for connection_id and link_prefix if not by opts.
     if (connection_.container_id().empty())
-        pn_connection_set_container(connection_.pn_object(), uuid::random().str().c_str());
+        pn_connection_set_container(unwrap(connection_), uuid::random().str().c_str());
     id_generator &link_gen = connection_context::get(connection_).link_gen;
     if (link_gen.prefix().empty())
         link_gen.prefix(uuid::random().str()+"/");
@@ -81,45 +81,45 @@ bool connection_engine::dispatch() {
         }
         pn_collector_pop(collector_.get());
     }
-    return !(pn_transport_closed(transport_.pn_object()));
+    return !(pn_transport_closed(unwrap(transport_)));
 }
 
 mutable_buffer connection_engine::read_buffer() {
-    ssize_t cap = pn_transport_capacity(transport_.pn_object());
+    ssize_t cap = pn_transport_capacity(unwrap(transport_));
     if (cap > 0)
-        return mutable_buffer(pn_transport_tail(transport_.pn_object()), cap);
+        return mutable_buffer(pn_transport_tail(unwrap(transport_)), cap);
     else
         return mutable_buffer(0, 0);
 }
 
 void connection_engine::read_done(size_t n) {
     if (n > 0)
-        pn_transport_process(transport_.pn_object(), n);
+        pn_transport_process(unwrap(transport_), n);
 }
 
 void connection_engine::read_close() {
-    pn_transport_close_tail(transport_.pn_object());
+    pn_transport_close_tail(unwrap(transport_));
 }
 
 const_buffer connection_engine::write_buffer() const {
-    ssize_t pending = pn_transport_pending(transport_.pn_object());
+    ssize_t pending = pn_transport_pending(unwrap(transport_));
     if (pending > 0)
-        return const_buffer(pn_transport_head(transport_.pn_object()), pending);
+        return const_buffer(pn_transport_head(unwrap(transport_)), pending);
     else
         return const_buffer(0, 0);
 }
 
 void connection_engine::write_done(size_t n) {
     if (n > 0)
-        pn_transport_pop(transport_.pn_object(), n);
+        pn_transport_pop(unwrap(transport_), n);
 }
 
 void connection_engine::write_close() {
-    pn_transport_close_head(transport_.pn_object());
+    pn_transport_close_head(unwrap(transport_));
 }
 
 void connection_engine::close(const proton::error_condition& err) {
-    set_error_condition(err, pn_transport_condition(transport_.pn_object()));
+    set_error_condition(err, pn_transport_condition(unwrap(transport_)));
     read_close();
     write_close();
 }

@@ -60,22 +60,7 @@ class delivery : public transfer {
     PN_CPP_EXTERN void modify() { settle(MODIFIED); }
 
     /// @cond INTERNAL
-  private:
-    /// Get the size of the current delivery.
-    size_t pending() const;
-
-    /// Check if a delivery is complete.
-    bool partial() const;
-
-    /// Check if a delivery is readable.
-    ///
-    /// A delivery is considered readable if it is the current
-    /// delivery on a receiver.
-    bool readable() const;
-
   friend class internal::factory<delivery>;
-  friend class message;
-  friend class messaging_adapter;
     /// @endcond
 };
 

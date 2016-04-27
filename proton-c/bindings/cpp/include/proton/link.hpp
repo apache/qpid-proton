@@ -120,16 +120,6 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     void attach();
 
   private:
-    // Used by sender/receiver options
-    void handler(proton_handler &);
-    void detach_handler();
-    void sender_settle_mode(sender_options::sender_settle_mode);
-    void receiver_settle_mode(receiver_options::receiver_settle_mode);
-    // Used by message to decode message from a delivery
-    ssize_t recv(char* buffer, size_t size);
-    bool advance();
-    link_context &context();
-
     /// XXX local versus remote, mutability
     /// XXX - local_sender_settle_mode and local_receiver_settle_mode
     sender_options::sender_settle_mode sender_settle_mode();
@@ -138,9 +128,6 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     receiver_options::receiver_settle_mode remote_receiver_settle_mode();
 
     friend class internal::factory<link>;
-    friend class message;
-    friend class receiver_options;
-    friend class sender_options;
     ///@endcond
 };
 

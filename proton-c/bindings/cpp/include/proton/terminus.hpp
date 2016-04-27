@@ -78,26 +78,17 @@ class terminus {
     PN_CPP_EXTERN const value& filter() const;
 
     /// @cond INTERNAL
+  protected:
+    pn_terminus_t *pn_object() { return object_; }
   private:
-    void address(const std::string &);
-    void expiry_policy(enum expiry_policy);
-    void timeout(duration);
-    void distribution_mode(enum distribution_mode);
-    void durability_mode(enum durability_mode);
-    void dynamic(bool);
-    value& node_properties();
-    value& filter();
-
     pn_terminus_t* object_;
     value properties_, filter_;
     pn_link_t* parent_;
 
 
     friend class internal::factory<terminus>;
-    friend class internal::noderef;
     friend class source;
     friend class target;
-    friend class source_options;
     /// @endcond
 };
 

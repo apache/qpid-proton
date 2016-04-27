@@ -19,17 +19,15 @@
  *
  */
 
-#include "proton/binary.hpp"
-#include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/handler.hpp"
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
 
-#include "msg.hpp"
-#include "messaging_adapter.hpp"
+#include "container_impl.hpp"
 #include "contexts.hpp"
-
+#include "messaging_adapter.hpp"
+#include "proton_bits.hpp"
 
 namespace proton {
 
@@ -43,6 +41,30 @@ template <class T> struct option {
 };
 
 class sender_options::impl {
+    static void set_handler(sender l, proton_handler &h) {
+        pn_record_t *record = pn_link_attachments(unwrap(l));
+        internal::pn_ptr<pn_handler_t> chandler = connection().container().impl_->cpp_handler(&h);
+        pn_record_set_handler(record, chandler.get());
+    }
+
+    static link_context& get_context(sender l) {
+        return link_context::get(unwrap(l));
+    }
+
+    static void set_delivery_mode(sender l, enum delivery_mode mode) {
+        switch (mode) {
+        case AT_MOST_ONCE:
+            pn_link_set_snd_settle_mode(unwrap(l), PN_SND_SETTLED);
+            break;
+        case AT_LEAST_ONCE:
+            pn_link_set_snd_settle_mode(unwrap(l), PN_SND_UNSETTLED);
+            pn_link_set_rcv_settle_mode(unwrap(l), PN_RCV_FIRST);
+            break;
+        default:
+            break;
+        }
+    }
+
   public:
     option<proton_handler*> handler;
     option<enum delivery_mode> delivery_mode;
@@ -52,33 +74,16 @@ class sender_options::impl {
 
     void apply(sender& s) {
         if (s.uninitialized()) {
-            if (delivery_mode.set) {
-                switch (delivery_mode.value) {
-                case AT_MOST_ONCE:
-                    s.sender_settle_mode(sender_options::SETTLED);
-                    break;
-                case AT_LEAST_ONCE:
-                        s.sender_settle_mode(sender_options::UNSETTLED);
-                        s.receiver_settle_mode(receiver_options::SETTLE_ALWAYS);
-                    break;
-                default:
-                    break;
-                }
-            }
-            if (handler.set) {
-                if (handler.value)
-                    s.handler(*handler.value);
-                else
-                    s.detach_handler();
-            }
-            if (auto_settle.set) s.context().auto_settle = auto_settle.value;
+            if (delivery_mode.set) set_delivery_mode(s, delivery_mode.value);
+            if (handler.set && handler.value) set_handler(s, *handler.value);
+            if (auto_settle.set) get_context(s).auto_settle = auto_settle.value;
             if (source.set) {
-                proton::source local_src(pn_link_source(s.pn_object()));
-                source.value.apply(local_src);
+                proton::source local_s(make_wrapper<proton::source>(pn_link_source(unwrap(s))));
+                source.value.apply(local_s);
             }
             if (target.set) {
-                proton::target local_src(pn_link_target(s.pn_object()));
-                target.value.apply(local_src);
+                proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(s))));
+                target.value.apply(local_t);
             }
         }
     }
@@ -113,6 +118,5 @@ sender_options& sender_options::source(source_options &s) {impl_->source = s; re
 sender_options& sender_options::target(target_options &s) {impl_->target = s; return *this; }
 
 void sender_options::apply(sender& s) const { impl_->apply(s); }
-proton_handler* sender_options::handler() const { return impl_->handler.value; }
 
 } // namespace proton

@@ -47,10 +47,9 @@ class target : public terminus {
     target(pn_terminus_t* t);
     target(const sender&);
     target(const receiver&);
+  friend class internal::factory<target>;
   friend class sender;
   friend class receiver;
-  friend class sender_options;
-  friend class receiver_options;
     /// @endcond
 
 };
