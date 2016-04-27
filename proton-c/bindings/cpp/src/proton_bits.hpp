@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& o, const inspectable& object);
 void set_error_condition(const error_condition&, pn_condition_t*);
 
 /// Convert a const char* to std::string, convert NULL to the empty string.
-inline std::string str(const char* s) { return s ? s : ""; }
+inline std::string str(const char* s) { return s ? s : std::string(); }
 
 }
 

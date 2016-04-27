@@ -20,17 +20,14 @@
  */
 #include "proton/error_condition.hpp"
 #include "proton/condition.h"
-namespace {
-inline std::string safe_convert(const char* s) {
-    return s ? s : std::string();
-}
-}
+
+#include "proton_bits.hpp"
 
 namespace proton {
 
 error_condition::error_condition(pn_condition_t* c) :
-    name_(safe_convert(pn_condition_get_name(c))),
-    description_(safe_convert(pn_condition_get_description(c))),
+    name_(str(pn_condition_get_name(c))),
+    description_(str(pn_condition_get_description(c))),
     properties_(pn_condition_info(c))
 {}
 
