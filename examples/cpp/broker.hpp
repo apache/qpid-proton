@@ -201,7 +201,7 @@ class broker_handler : public proton::handler {
         std::cout << "broker client disconnect: " << t.error().what() << std::endl;
     }
 
-    void on_unhandled_error(const proton::error_condition &c) override {
+    void on_error(const proton::error_condition &c) override {
         std::cerr << "broker error: " << c.what() << std::endl;
     }
 

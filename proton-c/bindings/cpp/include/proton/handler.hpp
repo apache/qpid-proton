@@ -150,7 +150,7 @@ PN_CPP_CLASS_EXTERN handler
     /// @endcond
 
     /// Fallback error handling.
-    PN_CPP_EXTERN virtual void on_unhandled_error(const error_condition &c);
+    PN_CPP_EXTERN virtual void on_error(const error_condition &c);
 
     /// @}
 

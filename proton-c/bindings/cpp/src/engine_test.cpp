@@ -118,7 +118,7 @@ struct record_handler : public handler {
         connection_errors.push_back(c.error().what());
     }
 
-    void on_unhandled_error(const proton::error_condition& c) override {
+    void on_error(const proton::error_condition& c) override {
         unhandled_errors.push_back(c.what());
     }
 };
