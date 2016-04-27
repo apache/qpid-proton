@@ -135,9 +135,6 @@ class container {
 
     /// @cond INTERNAL
   private:
-    /// The reactor associated with this container.
-    class reactor reactor() const;
-
     internal::pn_unique_ptr<container_impl> impl_;
 
     friend class connector;

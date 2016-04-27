@@ -57,8 +57,6 @@ connection container::connect(const url &host, const connection_options &opts) {
     return impl_->connect(host, opts);
 }
 
-reactor container::reactor() const { return impl_->reactor_; }
-
 std::string container::id() const { return impl_->id_; }
 
 void container::run() { impl_->reactor_.run(); }
