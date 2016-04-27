@@ -142,13 +142,6 @@ PN_CPP_CLASS_EXTERN handler
     /// The sending peer settled a transfer.
     PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
 
-    /// @cond INTERNAL
-    /// XXX settle API questions around task
-    /// XXX register functions instead of having these funny generic events
-    /// A timer fired.
-    PN_CPP_EXTERN virtual void on_timer(container &c);
-    /// @endcond
-
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition &c);
 

@@ -35,7 +35,6 @@ foreach(example
     client
     server
     server_direct
-    recurring_timer
     connection_options
     queue_browser
     selected_recv

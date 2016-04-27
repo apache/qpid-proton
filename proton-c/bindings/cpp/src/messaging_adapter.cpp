@@ -242,11 +242,4 @@ void messaging_adapter::on_transport_tail_closed(proton_event &pe) {
     }
 }
 
-void messaging_adapter::on_timer_task(proton_event& pe)
-{
-    if (pe.container()) {
-        delegate_.on_timer(*pe.container());
-    }
-}
-
 }

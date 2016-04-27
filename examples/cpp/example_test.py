@@ -285,15 +285,6 @@ map{string(k1):int(42), symbol(k2):boolean(false)}
         self.maxDiff = None
         self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
 
-    def test_recurring_timer(self):
-        expect="""Tick...
-Tick...
-Tock...
-"""
-        self.maxDiff = None
-        # Disable valgrind, this test is time-sensitive.
-        self.assertEqual(expect, self.proc(["recurring_timer", "-t", ".05", "-k", ".01"], skip_valgrind=True).wait_exit())
-
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
         pn_root = dirname(dirname(dirname(sys.argv[0])))
