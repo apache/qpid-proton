@@ -19,6 +19,8 @@
  *
  */
 
+#include "proton_bits.hpp"
+
 #include "proton/target.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
@@ -34,7 +36,7 @@ std::string target::address() const {
     pn_terminus_t *authoritative = object_;
     if (parent_ && pn_terminus_is_dynamic(object_))
         authoritative = pn_link_target(parent_);
-    return std::string(pn_terminus_get_address(authoritative));
+    return str(pn_terminus_get_address(authoritative));
 }
 
 }

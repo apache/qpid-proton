@@ -18,6 +18,9 @@
  * under the License.
  *
  */
+
+#include "proton_bits.hpp"
+
 #include "proton/link.hpp"
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
@@ -53,7 +56,7 @@ int link::queued() { return pn_link_queued(pn_object()); }
 int link::unsettled() { return pn_link_unsettled(pn_object()); }
 int link::drained() { return pn_link_drained(pn_object()); }
 
-std::string link::name() const { return std::string(pn_link_name(pn_object()));}
+std::string link::name() const { return str(pn_link_name(pn_object()));}
 
 container& link::container() const {
     return connection().container();

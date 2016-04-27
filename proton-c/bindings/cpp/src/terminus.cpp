@@ -19,6 +19,8 @@
  *
  */
 
+#include "proton_bits.hpp"
+
 #include "proton/link.hpp"
 #include "proton/link.h"
 
@@ -76,8 +78,7 @@ void terminus::durability_mode(enum durability_mode d) {
 }
 
 std::string terminus::address() const {
-    const char *addr = pn_terminus_get_address(object_);
-    return addr ? std::string(addr) : std::string();
+    return str(pn_terminus_get_address(object_));
 }
 
 void terminus::address(const std::string &addr) {

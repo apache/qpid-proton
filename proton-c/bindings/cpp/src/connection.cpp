@@ -18,6 +18,9 @@
  * under the License.
  *
  */
+
+#include "proton_bits.hpp"
+
 #include "proton/connection.hpp"
 
 #include "proton/container.hpp"
@@ -56,7 +59,7 @@ void connection::close() { pn_connection_close(pn_object()); }
 void connection::release() { pn_connection_release(pn_object()); }
 
 std::string connection::host() const {
-    return std::string(pn_connection_get_hostname(pn_object()));
+    return str(pn_connection_get_hostname(pn_object()));
 }
 
 void connection::host(const std::string& h) {
@@ -64,8 +67,7 @@ void connection::host(const std::string& h) {
 }
 
 std::string connection::container_id() const {
-    const char* id = pn_connection_get_container(pn_object());
-    return id ? std::string(id) : std::string();
+    return str(pn_connection_get_container(pn_object()));
 }
 
 container& connection::container() const {
