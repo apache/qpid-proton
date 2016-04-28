@@ -29,10 +29,12 @@ include_directories (${RUBY_INCLUDE_PATH})
 swig_add_module(cproton-ruby ruby ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 
-# set a compiler macro to relay the Ruby version to the extension
-STRING(REPLACE "." "" CFLAG_RUBY_VERSION "${RUBY_VERSION}")
-STRING(SUBSTRING "${CFLAG_RUBY_VERSION}" 0 2 CFLAG_RUBY_VERSION)
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DRUBY${CFLAG_RUBY_VERSION}")
+# set a compiler macro to relay the Ruby version to the extension.
+# Don't use the global CMAKE_C_FLAGS, -fvisibility=hidden causes an obscure
+# failure with release builds.
+string(REPLACE "." "" CFLAG_RUBY_VERSION "${RUBY_VERSION}")
+string(SUBSTRING "${CFLAG_RUBY_VERSION}" 0 2 CFLAG_RUBY_VERSION)
+set(CMAKE_C_FLAGS "-DRUBY${CFLAG_RUBY_VERSION}")
 
 set_target_properties(cproton-ruby
     PROPERTIES
