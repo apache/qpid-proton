@@ -54,9 +54,6 @@ class url {
     static const std::string AMQP;     ///< "amqp" prefix
     static const std::string AMQPS;    ///< "amqps" prefix
 
-    /// Create an empty URL
-    PN_CPP_EXTERN url();
-
     /// Parse `url_str` as an AMQP URL. If defaults is true, fill in
     /// defaults for missing values otherwise return an empty string
     /// for missing values.
@@ -66,56 +63,27 @@ class url {
     /// @throw url_error if URL is invalid.
     PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
 
-    /// Parse `url_str` as an AMQP URL. If defaults is true, fill in
-    /// defaults for missing values otherwise return an empty string
-    /// for missing values.
-    ///
-    /// @note Converts automatically from string.
-    ///
-    /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const char* url_str, bool defaults=true);
-
     /// Copy a URL.
     PN_CPP_EXTERN url(const url&);
     PN_CPP_EXTERN ~url();
     /// Copy a URL.
     PN_CPP_EXTERN url& operator=(const url&);
 
-    /// Parse a string as a URL.
-    ///
-    /// @throws url_error if URL is invalid.
-    PN_CPP_EXTERN void parse(const std::string&);
-
-    /// Parse a string as a URL.
-    ///
-    /// @throws url_error if URL is invalid.
-    PN_CPP_EXTERN void parse(const char*);
-
     /// True if the URL is empty.
     PN_CPP_EXTERN bool empty() const;
 
-    /// `str` returns the URL as a string
-    PN_CPP_EXTERN std::string str() const;
+    /// returns the URL as a string
+    PN_CPP_EXTERN operator std::string() const;
 
     /// @name URL fields
     ///
     /// @{
 
     PN_CPP_EXTERN std::string scheme() const;
-    PN_CPP_EXTERN void scheme(const std::string&);
-
-    /// @cond INTERNAL
-    PN_CPP_EXTERN std::string username() const;
-    PN_CPP_EXTERN void username(const std::string&);
-    /// @endcond
-
+    PN_CPP_EXTERN std::string user() const;
     PN_CPP_EXTERN std::string password() const;
-    PN_CPP_EXTERN void password(const std::string&);
-
     PN_CPP_EXTERN std::string host() const;
-    PN_CPP_EXTERN void host(const std::string&);
     /// `port` can be a number or a symbolic name such as "amqp".
-    PN_CPP_EXTERN void port(const std::string&);
     PN_CPP_EXTERN std::string port() const;
     /// `port_int` is the numeric value of the port.
     PN_CPP_EXTERN uint16_t port_int() const;
@@ -124,17 +92,9 @@ class url {
 
     /// `path` is everything after the final "/".
     PN_CPP_EXTERN std::string path() const;
-    PN_CPP_EXTERN void path(const std::string&);
 
     /// @}
 
-    /// @cond INTERNAL
-    /// XXX need to discuss
-    /// defaults fills in default values for missing parts of the URL.
-    PN_CPP_EXTERN void defaults();
-    /// @endcond
-
-    /// @cond INTERNAL
   private:
     pn_url_t* url_;
 

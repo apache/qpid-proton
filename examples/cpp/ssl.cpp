@@ -62,11 +62,11 @@ struct server_handler : public proton::handler {
 
 class hello_world_direct : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     server_handler s_handler;
 
   public:
-    hello_world_direct(const proton::url& u) : url(u) {}
+    hello_world_direct(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
         // Configure listener.  Details vary by platform.

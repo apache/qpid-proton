@@ -37,13 +37,13 @@ using proton::source_options;
 
 class client : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     std::vector<std::string> requests;
     proton::sender sender;
     proton::receiver receiver;
 
   public:
-    client(const proton::url &u, const std::vector<std::string>& r) : url(u), requests(r) {}
+    client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
     void on_container_start(proton::container &c) override {
         sender = c.open_sender(url);
@@ -79,7 +79,7 @@ class client : public proton::handler {
 };
 
 int main(int argc, char **argv) {
-    proton::url url("127.0.0.1:5672/examples");
+    std::string url("127.0.0.1:5672/examples");
     example::options opts(argc, argv);
 
     opts.add_value(url, 'a', "address", "connect and send to URL", "URL");

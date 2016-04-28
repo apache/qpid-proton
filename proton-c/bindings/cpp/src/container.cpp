@@ -26,10 +26,10 @@
 #include "proton/session.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
-#include "proton/url.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 #include "proton/task.hpp"
+#include "proton/url.hpp"
 
 #include "container_impl.hpp"
 #include "connector.hpp"
@@ -53,23 +53,23 @@ container::container(handler &mhandler, const std::string& id) {
 
 container::~container() {}
 
-connection container::connect(const url &host, const connection_options &opts) {
-    return impl_->connect(host, opts);
+connection container::connect(const std::string &url, const connection_options &opts) {
+    return impl_->connect(url, opts);
 }
 
 std::string container::id() const { return impl_->id_; }
 
 void container::run() { impl_->reactor_.run(); }
 
-sender container::open_sender(const proton::url &url, const proton::sender_options &lo, const connection_options &co) {
+sender container::open_sender(const std::string &url, const proton::sender_options &lo, const connection_options &co) {
     return impl_->open_sender(url, lo, co);
 }
 
-receiver container::open_receiver(const proton::url &url, const proton::receiver_options &lo, const connection_options &co) {
+receiver container::open_receiver(const std::string &url, const proton::receiver_options &lo, const connection_options &co) {
     return impl_->open_receiver(url, lo, co);
 }
 
-acceptor container::listen(const proton::url &url, const connection_options &opts) {
+acceptor container::listen(const std::string &url, const connection_options &opts) {
     return impl_->listen(url, opts);
 }
 

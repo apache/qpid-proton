@@ -18,8 +18,8 @@
  */
 
 #include <proton/controller.hpp>
-#include <proton/url.hpp>
 #include <proton/work_queue.hpp>
+#include <proton/url.hpp>
 
 #include <proton/io/connection_engine.hpp>
 #include <proton/io/default_controller.hpp>

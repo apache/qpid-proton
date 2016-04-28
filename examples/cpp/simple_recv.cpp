@@ -36,7 +36,7 @@
 
 class simple_recv : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     proton::receiver receiver;
     uint64_t expected;
     uint64_t received;

@@ -23,7 +23,6 @@
 #include <proton/controller.hpp>
 #include <proton/delivery.hpp>
 #include <proton/handler.hpp>
-#include <proton/url.hpp>
 #include <proton/work_queue.hpp>
 
 #include <atomic>

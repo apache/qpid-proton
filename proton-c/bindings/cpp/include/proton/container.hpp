@@ -25,7 +25,6 @@
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/url.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/receiver_options.hpp"
@@ -75,11 +74,11 @@ class container {
     PN_CPP_EXTERN ~container();
 
     /// Open a connection to `url`.
-    PN_CPP_EXTERN connection connect(const proton::url&,
+    PN_CPP_EXTERN connection connect(const std::string& url,
                                      const connection_options &opts = connection_options());
 
     /// Listen on `url` for incoming connections.
-    PN_CPP_EXTERN acceptor listen(const proton::url&,
+    PN_CPP_EXTERN acceptor listen(const std::string &url,
                                   const connection_options &opts = connection_options());
 
     /// Start processing events. It returns when all connections and
@@ -89,14 +88,14 @@ class container {
     /// Open a connection to `url` and open a sender for `url.path()`.
     /// Any supplied sender or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN sender open_sender(const proton::url &,
+    PN_CPP_EXTERN sender open_sender(const std::string &url,
                                      const proton::sender_options &o = proton::sender_options(),
                                      const connection_options &c = connection_options());
 
     /// Open a connection to `url` and open a receiver for
     /// `url.path()`.  Any supplied receiver or connection options will
     /// override the container's template options.
-    PN_CPP_EXTERN receiver open_receiver(const url &,
+    PN_CPP_EXTERN receiver open_receiver(const std::string&url,
                                          const proton::receiver_options &o = proton::receiver_options(),
                                          const connection_options &c = connection_options());
 

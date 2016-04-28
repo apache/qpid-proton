@@ -24,13 +24,13 @@
 #include "proton/session.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
-#include "proton/url.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 #include "proton/task.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 #include "proton/transport.hpp"
+#include "proton/url.hpp"
 #include "proton/uuid.hpp"
 
 #include "connector.hpp"
@@ -148,8 +148,7 @@ connection container_impl::connect(const proton::url &url, const connection_opti
 
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection(chandler.get()));
-    internal::pn_unique_ptr<connector> ctor(new connector(conn, opts));
-    ctor->address(url);  // TODO: url vector
+    internal::pn_unique_ptr<connector> ctor(new connector(conn, url, opts));
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());
     cc.link_gen.prefix(id_gen_.next() + "/");

@@ -34,7 +34,7 @@
 
 class simple_send : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     proton::sender sender;
     int sent;
     int confirmed;

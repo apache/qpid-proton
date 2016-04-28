@@ -24,10 +24,10 @@
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
 #include "proton/container.hpp"
-#include "proton/url.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/task.hpp"
 #include "proton/sasl.hpp"
+#include "proton/url.hpp"
 
 #include "container_impl.hpp"
 #include "proton_bits.hpp"
@@ -38,15 +38,11 @@
 
 namespace proton {
 
-connector::connector(connection&c, const connection_options &opts) :
-    connection_(c), options_(opts), reconnect_timer_(0), transport_configured_(false)
+connector::connector(connection&c, const url& a, const connection_options &opts) :
+    connection_(c), address_(a), options_(opts), reconnect_timer_(0), transport_configured_(false)
 {}
 
 connector::~connector() { delete reconnect_timer_; }
-
-void connector::address(const url &a) {
-    address_ = a;
-}
 
 void connector::apply_options() {
     if (!connection_) return;
@@ -64,8 +60,8 @@ void connector::connect() {
     connection_.host(address_.host_port());
     pn_transport_t *pnt = pn_transport();
     transport t(make_wrapper(pnt));
-    if (!address_.username().empty())
-        connection_.user(address_.username());
+    if (!address_.user().empty())
+        connection_.user(address_.user());
     if (!address_.password().empty())
         connection_.password(address_.password());
     t.bind(connection_);

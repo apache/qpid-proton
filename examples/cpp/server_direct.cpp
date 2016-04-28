@@ -27,7 +27,6 @@
 #include "proton/sender.hpp"
 #include "proton/source_options.hpp"
 #include "proton/tracker.hpp"
-#include "proton/url.hpp"
 
 #include <iostream>
 #include <map>
@@ -40,7 +39,7 @@
 class server : public proton::handler {
   private:
     typedef std::map<std::string, proton::sender> sender_map;
-    proton::url url;
+    std::string url;
     sender_map senders;
     int address_counter;
 

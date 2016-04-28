@@ -36,14 +36,14 @@
 
 class broker {
   public:
-    broker(const proton::url& url) : handler_(url, queues_) {}
+    broker(const std::string& url) : handler_(url, queues_) {}
 
     proton::handler& handler() { return handler_; }
 
   private:
     class my_handler : public broker_handler {
       public:
-        my_handler(const proton::url& u, queues& qs) : broker_handler(qs), url_(u) {}
+        my_handler(const std::string& u, queues& qs) : broker_handler(qs), url_(u) {}
 
         void on_container_start(proton::container &c) override {
             c.listen(url_);
@@ -51,7 +51,7 @@ class broker {
         }
 
       private:
-        const proton::url& url_;
+        const std::string& url_;
     };
 
   private:
@@ -60,7 +60,7 @@ class broker {
 };
 
 int main(int argc, char **argv) {
-    proton::url url("0.0.0.0");
+    std::string url("0.0.0.0");
     example::options opts(argc, argv);
 
     opts.add_value(url, 'a', "address", "listen on URL", "URL");

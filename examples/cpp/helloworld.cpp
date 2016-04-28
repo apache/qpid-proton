@@ -35,7 +35,7 @@ class hello_world : public proton::handler {
     proton::url url;
 
   public:
-    hello_world(const proton::url& u) : url(u) {}
+    hello_world(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);

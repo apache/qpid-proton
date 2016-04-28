@@ -27,7 +27,6 @@
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
-#include "proton/url.hpp"
 #include "proton/value.hpp"
 
 #include <iostream>
@@ -37,7 +36,7 @@
 
 class direct_recv : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     uint64_t expected;
     uint64_t received;
     proton::acceptor acceptor;

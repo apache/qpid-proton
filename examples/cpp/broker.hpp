@@ -34,7 +34,6 @@
 #include "proton/sender.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
-#include "proton/url.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/source_options.hpp"

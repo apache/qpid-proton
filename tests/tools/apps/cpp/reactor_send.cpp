@@ -42,7 +42,7 @@
 
 class reactor_send : public proton::handler {
   private:
-    proton::url url_;
+    std::string url_;
     proton::message message_;
     std::string reply_to_;
     int sent_;

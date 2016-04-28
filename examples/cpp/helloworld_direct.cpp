@@ -32,11 +32,11 @@
 
 class hello_world_direct : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     proton::acceptor acceptor;
 
   public:
-    hello_world_direct(const proton::url& u) : url(u) {}
+    hello_world_direct(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
         acceptor = c.listen(url);

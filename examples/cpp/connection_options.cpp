@@ -22,7 +22,6 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
-#include "proton/url.hpp"
 #include "proton/transport.hpp"
 
 #include <iostream>
@@ -42,11 +41,11 @@ class handler_2 : public proton::handler {
 
 class main_handler : public proton::handler {
   private:
-    proton::url url;
+    std::string url;
     handler_2 conn_handler;
 
   public:
-    main_handler(const proton::url& u) : url(u) {}
+    main_handler(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
         // Connection options for this connection.  Merged with and overriding the container's

@@ -22,9 +22,9 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
-#include "proton/url.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/source_options.hpp"
+#include "proton/url.hpp"
 
 #include <iostream>
 
@@ -58,7 +58,7 @@ class selected_recv : public proton::handler {
     proton::url url;
 
   public:
-    selected_recv(const proton::url& u) : url(u) {}
+    selected_recv(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
         proton::source_options opts;

@@ -203,7 +203,7 @@ And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
 
 def recv_expect(name, addr):
-    return "%s listening on amqp://%s\n%s" % (
+    return "%s listening on %s\n%s" % (
         name, addr, "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)]))
 
 class ContainerExampleTest(BrokerTestCase):
@@ -244,7 +244,7 @@ class ContainerExampleTest(BrokerTestCase):
                          self.proc(["simple_recv", "-a", addr]).wait_exit())
 
         self.assertEqual(
-            "direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+            "direct_send listening on %s\nall messages confirmed\n" % addr,
             send.wait_exit())
 
     def test_request_response(self):
@@ -344,7 +344,7 @@ class EngineTestCase(BrokerTestCase):
         send = self.proc(["direct_send", "-a", addr], "listening")
         self.assertEqual(recv_expect("simple_recv", addr),
                          self.proc(["simple_recv", "-a", addr]).wait_exit())
-        self.assertEqual("direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+        self.assertEqual("direct_send listening on %s\nall messages confirmed\n" % addr,
                          send.wait_exit())
 
     def test_request_response(self):
