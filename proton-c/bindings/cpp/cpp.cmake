@@ -32,6 +32,4 @@ if (CMAKE_CXX_COMPILER)
     add_definitions(-DPN_CPP_HAS_STD_PTR=1)
   endif()
   check_cxx_source_compiles("#if defined(__cplusplus) && __cplusplus >= 201100\nint main(int, char**) { return 0; }\n#endif" HAS_CPP11)
-
-  option(BUILD_CPP_MT "Build C++ multi-thread extensions, requires C++11" ${HAS_CPP11})
 endif()

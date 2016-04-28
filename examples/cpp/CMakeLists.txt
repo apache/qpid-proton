@@ -61,15 +61,18 @@ add_test(NAME cpp_container_example_test
   COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
 # TODO aconway 2016-04-26: need portable MT and IO examples.
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND BUILD_CPP_MT)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HAS_CPP11)
   set(controller_src mt/epoll_controller.cpp)
   foreach(example
       broker
       )
     add_executable(mt_${example} mt/${example}.cpp ${controller_src})
     target_link_libraries(mt_${example} pthread)
-    set_target_properties(mt_${example} PROPERTIES CXX_STANDARD 11)
   endforeach()
+
   add_test(NAME cpp_mt_example_test
     COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
 endif()
+
+
+

@@ -80,7 +80,8 @@ set(qpid-proton-cpp-source
   src/value.cpp
   )
 
-if (BUILD_CPP_MT)
+if (HAS_CPP11)
+  message("Enable C++11 extensions")
   list(APPEND qpid-proton-cpp-source src/controller.cpp)
 endif()
 
@@ -103,9 +104,6 @@ set_target_properties (
   SOVERSION "${PN_LIB_SOMAJOR}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
-if (BUILD_CPP_MT)
-  set_target_properties(qpid-proton-cpp PROPERTIES CXX_STANDARD 11)
-endif()
 
 ## Install
 
