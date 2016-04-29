@@ -61,10 +61,10 @@ class selected_recv : public proton::handler {
     selected_recv(const proton::url& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
-        proton::source_options custom_selector;
-        set_filter(custom_selector, "colour = 'green'");
+        proton::source_options opts;
+        set_filter(opts, "colour = 'green'");
         proton::connection conn = c.connect(url);
-        conn.open_receiver(url.path(), proton::receiver_options().source(custom_selector));
+        conn.open_receiver(url.path(), proton::receiver_options().source(opts));
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {
