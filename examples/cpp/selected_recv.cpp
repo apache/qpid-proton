@@ -24,10 +24,34 @@
 #include "proton/handler.hpp"
 #include "proton/url.hpp"
 #include "proton/receiver_options.hpp"
+#include "proton/source_options.hpp"
 
 #include <iostream>
 
 #include "fake_cpp11.hpp"
+
+namespace {
+
+    // Example custom function to configure an AMQP filter,
+    // specifically an APACHE.ORG:SELECTOR
+    // (http://www.amqp.org/specification/1.0/filters)
+
+    void set_filter(proton::source_options &opts, const std::string& selector_str) {
+        proton::source::filter_map map;
+        proton::symbol filter_key("selector");
+        proton::value filter_value;
+        // The value is a specific AMQP "described type": binary string with symbolic descriptor
+        proton::codec::encoder enc(filter_value);
+        enc << proton::codec::start::described()
+            << proton::symbol("apache.org:selector-filter:string")
+            << proton::binary(selector_str)
+            << proton::codec::finish();
+        // In our case, the map has this one element
+        map[filter_key] = filter_value;
+        opts.filters(map);
+    }
+}
+
 
 class selected_recv : public proton::handler {
   private:
@@ -37,9 +61,10 @@ class selected_recv : public proton::handler {
     selected_recv(const proton::url& u) : url(u) {}
 
     void on_container_start(proton::container &c) override {
+        proton::source_options custom_selector;
+        set_filter(custom_selector, "colour = 'green'");
         proton::connection conn = c.connect(url);
-        // Note: the following signature is changing in Proton 0.13
-        conn.open_receiver(url.path(), proton::receiver_options().selector("colour = 'green'"));
+        conn.open_receiver(url.path(), proton::receiver_options().source(custom_selector));
     }
 
     void on_message(proton::delivery &d, proton::message &m) override {

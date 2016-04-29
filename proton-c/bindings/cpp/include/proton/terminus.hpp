@@ -32,10 +32,6 @@
 
 namespace proton {
 
-namespace internal {
-class noderef;
-}
-
 /// One end of a link, either a source or a target.
 ///
 /// The source terminus is where messages originate; the target
@@ -63,32 +59,23 @@ class terminus {
     /// Get the durability flag.
     PN_CPP_EXTERN enum durability_mode durability_mode();
 
-    /// Get the source or target node's address.
-    PN_CPP_EXTERN std::string address() const;
-
     /// True if the remote node is created dynamically.
     PN_CPP_EXTERN bool dynamic() const;
 
     /// Obtain a reference to the AMQP dynamic node properties for the
     /// terminus.  See also lifetime_policy.
-    PN_CPP_EXTERN const value& node_properties() const;
-
-    /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also selector.
-    PN_CPP_EXTERN const value& filter() const;
+    PN_CPP_EXTERN value node_properties() const;
 
     /// @cond INTERNAL
   protected:
     pn_terminus_t *pn_object() { return object_; }
   private:
     pn_terminus_t* object_;
-    value properties_, filter_;
     pn_link_t* parent_;
 
-
-    friend class internal::factory<terminus>;
-    friend class source;
-    friend class target;
+  friend class internal::factory<terminus>;
+  friend class source;
+  friend class target;
     /// @endcond
 };
 

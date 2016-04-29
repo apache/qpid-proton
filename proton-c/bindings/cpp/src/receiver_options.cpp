@@ -130,7 +130,6 @@ receiver_options& receiver_options::auto_settle(bool b) {impl_->auto_settle = b;
 receiver_options& receiver_options::credit_window(int w) {impl_->credit_window = w; return *this; }
 receiver_options& receiver_options::source(source_options &s) {impl_->source = s; return *this; }
 receiver_options& receiver_options::target(target_options &s) {impl_->target = s; return *this; }
-receiver_options& receiver_options::selector(const std::string&) { return *this; }
 
 void receiver_options::apply(receiver& r) const { impl_->apply(r); }
 

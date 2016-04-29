@@ -43,4 +43,14 @@ std::string source::address() const {
     return str(pn_terminus_get_address(authoritative));
 }
 
+source::filter_map source::filters() const {
+    codec::decoder d(pn_terminus_filter(object_));
+    filter_map map;
+    if (!d.empty()) {
+        d.rewind();
+        d >> map;
+    }
+    return map;
+}
+
 }

@@ -96,6 +96,7 @@ class source_options::impl {
     option<duration> timeout;
     option<enum expiry_policy> expiry_policy;
     option<enum distribution_mode> distribution_mode;
+    option<source::filter_map> filters;
 
     void apply(source& s) {
         node_address(s, address, dynamic);
@@ -103,6 +104,11 @@ class source_options::impl {
         node_expiry(s, expiry_policy, timeout);
         if (distribution_mode.set)
           pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
+        if (filters.set && !filters.value.empty()) {
+            // Applied at most once via source_option.  No need to clear.
+            codec::encoder e(pn_terminus_filter(unwrap(s)));
+            e << filters.value;
+        }
     }
 
     void update(const impl& x) {
@@ -112,6 +118,7 @@ class source_options::impl {
         timeout.update(x.timeout);
         expiry_policy.update(x.expiry_policy);
         distribution_mode.update(x.distribution_mode);
+        filters.update(x.filters);
     }
 
 };
@@ -135,6 +142,7 @@ source_options& source_options::durability_mode(enum durability_mode m) { impl_-
 source_options& source_options::timeout(duration d) { impl_->timeout = d; return *this; }
 source_options& source_options::expiry_policy(enum expiry_policy m) { impl_->expiry_policy = m; return *this; }
 source_options& source_options::distribution_mode(enum distribution_mode m) { impl_->distribution_mode = m; return *this; }
+source_options& source_options::filters(const source::filter_map &map) { impl_->filters = map; return *this; }
 
 void source_options::apply(source& s) const { impl_->apply(s); }
 

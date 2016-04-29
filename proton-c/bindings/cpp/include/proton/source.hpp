@@ -26,6 +26,7 @@
 #include "proton/object.hpp"
 #include "proton/value.hpp"
 #include "proton/terminus.hpp"
+#include <proton/map.hpp>
 
 #include <string>
 
@@ -40,8 +41,16 @@ class receiver;
 /// @see proton::sender proton::receiver proton::target
 class source : public terminus {
   public:
+    /// A map of AMQP symbol keys and filter specifiers.
+    typedef std::map<symbol, value> filter_map;
+
     source() : terminus() {}
+
+    /// The address of the source.
     PN_CPP_EXTERN std::string address() const;
+
+    /// Obtain the set of message filters.
+    PN_CPP_EXTERN filter_map filters() const;
     /// @cond INTERNAL
   private:
     source(pn_terminus_t* t);

@@ -27,7 +27,7 @@
 namespace proton {
 
 terminus::terminus(pn_terminus_t* t) :
-    object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t)), parent_(0)
+    object_(t), parent_(0)
 {}
 
 enum expiry_policy terminus::expiry_policy() const {
@@ -46,17 +46,14 @@ enum durability_mode terminus::durability_mode() {
     return (enum durability_mode) pn_terminus_get_durability(object_);
 }
 
-std::string terminus::address() const {
-    return str(pn_terminus_get_address(object_));
-}
-
 bool terminus::dynamic() const {
     return pn_terminus_is_dynamic(object_);
 }
 
-const value& terminus::filter() const { return filter_; }
-
-const value& terminus::node_properties() const { return properties_; }
-
+value terminus::node_properties() const {
+    value x(pn_terminus_properties(object_));
+    pn_terminus_properties(object_); // ZZZ
+    return x;
+}
 
 }

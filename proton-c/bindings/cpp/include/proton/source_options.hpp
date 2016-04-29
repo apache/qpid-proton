@@ -27,7 +27,7 @@
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
-#include "proton/terminus.hpp"
+#include "proton/source.hpp"
 
 #include <vector>
 #include <string>
@@ -35,7 +35,7 @@
 namespace proton {
 
 class proton_handler;
-class source;
+
 
 /// Options for creating a source node for a sender or receiver.
 ///
@@ -75,6 +75,10 @@ class source_options {
 
     /// Control when the clock for expiration begins.
     PN_CPP_EXTERN source_options& expiry_policy(enum expiry_policy);
+
+    /// Specify a filter mechanism on the source that restricts
+    /// message flow to a subset of the available messages.
+    PN_CPP_EXTERN source_options& filters(const source::filter_map&);
 
     /// @cond INTERNAL
   private:

@@ -91,15 +91,6 @@ class receiver_options {
     /// Set the delivery mode on the receiver.
     PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);
 
-    /// @cond INTERNAL
-    /// XXX need to discuss spec issues, jms versus amqp filters
-    ///
-    /// Set a selector on the receiver to str.  This sets a single
-    /// registered filter on the link of type
-    /// apache.org:selector-filter with value str.
-    PN_CPP_EXTERN receiver_options& selector(const std::string&);
-    /// @endcond
-
     /// Automatically accept inbound messages that aren't otherwise
     /// released, rejected or modified (default value:true).
     PN_CPP_EXTERN receiver_options& auto_accept(bool);
