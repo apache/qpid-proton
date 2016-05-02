@@ -61,12 +61,12 @@ PN_CPP_CLASS_EXTERN receiver : public link {
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
     ///@cond INTERNAL
     explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
-        iter_base<receiver, receiver_iterator>(r), session_(s) {}
+        internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
     ///@endcond
 
   public:
     explicit receiver_iterator() :
-        iter_base<receiver, receiver_iterator>(0), session_(0) {}
+        internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
     /// Advance
     PN_CPP_EXTERN receiver_iterator operator++();
 

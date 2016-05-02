@@ -40,10 +40,7 @@ template <class T> struct option {
 };
 
 namespace {
-    void address(terminus &t, const std::string &s) { pn_terminus_set_address(unwrap(t), s.c_str()); }
-    void set_dynamic(terminus &t, bool b) { pn_terminus_set_dynamic(unwrap(t), b); }
-    void durability_mode(terminus &t, enum durability_mode m) { pn_terminus_set_durability(unwrap(t), pn_durability_t(m)); }
-    void expiry_policy(terminus &t, enum expiry_policy p) { pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(p)); }
+
     void timeout(terminus &t, duration d) {
       uint32_t seconds = 0;
       if (d == duration::FOREVER)
@@ -67,21 +64,21 @@ namespace {
 
 void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic) {
     if (dynamic.set && dynamic.value) {
-        set_dynamic(t, true);
+        pn_terminus_set_dynamic(unwrap(t), true);
         // Ignore any addr value for dynamic.
         return;
     }
     if (addr.set) {
-        address(t, addr.value);
+        pn_terminus_set_address(unwrap(t), addr.value.c_str());
     }
 }
 
 void node_durability(terminus &t, option<enum durability_mode> &mode) {
-    if (mode.set) durability_mode(t, mode.value);
+    if (mode.set) pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.value));
 }
 
 void node_expiry(terminus &t, option<enum expiry_policy> &policy, option<duration> &d) {
-    if (policy.set) expiry_policy(t, policy.value);
+    if (policy.set) pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(policy.value));
     if (d.set) timeout(t, d.value);
 }
 

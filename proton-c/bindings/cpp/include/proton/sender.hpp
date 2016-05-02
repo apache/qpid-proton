@@ -67,12 +67,12 @@ PN_CPP_CLASS_EXTERN sender : public link
 class sender_iterator : public internal::iter_base<sender, sender_iterator> {
     ///@cond INTERNAL
     sender_iterator(sender snd, pn_session_t* s = 0) :
-        iter_base<sender, sender_iterator>(snd), session_(s) {}
+        internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
     ///@endcond
 
   public:
     sender_iterator() :
-        iter_base<sender, sender_iterator>(0), session_(0) {}
+        internal::iter_base<sender, sender_iterator>(0), session_(0) {}
     /// Advance
     PN_CPP_EXTERN sender_iterator operator++();
 
