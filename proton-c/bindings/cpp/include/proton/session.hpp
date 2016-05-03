@@ -26,6 +26,7 @@
 #include "proton/endpoint.hpp"
 #include "proton/receiver.hpp"
 #include "proton/sender.hpp"
+#include "proton/session_options.hpp"
 
 #include "proton/types.h"
 #include "proton/link.h"
@@ -57,12 +58,9 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     PN_CPP_EXTERN class error_condition error() const;
 
-    /// @cond INTERNAL
-    /// XXX needs to take connection options
     /// Initiate local open.  The operation is not complete till
     /// handler::on_session_open().
-    PN_CPP_EXTERN void open();
-    /// @endcond
+    PN_CPP_EXTERN void open(const session_options &opts = session_options());
 
     /// Initiate local close.  The operation is not complete till
     /// handler::on_session_close().
@@ -84,6 +82,12 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     /// Open a receiver for `addr`.
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const receiver_options &opts = receiver_options());
+
+    /// The number of incoming bytes currently buffered.
+    PN_CPP_EXTERN size_t incoming_bytes() const;
+
+    /// The number of outgoing bytes currently buffered.
+    PN_CPP_EXTERN size_t outgoing_bytes() const;
 
     /// Return the senders on this session.
     PN_CPP_EXTERN sender_range senders() const;

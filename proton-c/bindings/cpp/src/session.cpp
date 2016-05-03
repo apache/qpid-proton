@@ -24,6 +24,7 @@
 #include "proton/session.h"
 #include "proton/session.hpp"
 #include "proton/connection.hpp"
+#include "proton/session_options.hpp"
 
 #include "contexts.hpp"
 #include "container_impl.hpp"
@@ -33,7 +34,8 @@
 
 namespace proton {
 
-void session::open() {
+void session::open(const session_options &opts) {
+    opts.apply(*this);
     pn_session_open(pn_object());
 }
 
@@ -75,6 +77,14 @@ receiver session::open_receiver(const std::string &addr, const receiver_options 
 
 error_condition session::error() const {
     return make_wrapper(pn_session_remote_condition(pn_object()));
+}
+
+size_t session::incoming_bytes() const {
+    return pn_session_incoming_bytes(pn_object());
+}
+
+size_t session::outgoing_bytes() const {
+    return pn_session_outgoing_bytes(pn_object());
 }
 
 sender_range session::senders() const {

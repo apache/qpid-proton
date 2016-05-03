@@ -74,12 +74,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Return the container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
-    /// @cond INTERNAL
-    /// XXX connection options
     /// Initiate local open.  The operation is not complete till
     /// handler::on_connection_open().
-    PN_CPP_EXTERN void open();
-    /// @endcond
+    PN_CPP_EXTERN void open(const connection_options &opts = connection_options());
 
     /// Initiate local close.  The operation is not complete till
     /// handler::on_connection_close().
@@ -96,7 +93,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @endcond
 
     /// Open a new session.
-    PN_CPP_EXTERN session open_session();
+    PN_CPP_EXTERN session open_session(const session_options &opts = session_options());
 
     /// Get the default session.  A default session is created on the
     /// first call and reused for the lifetime of the connection.

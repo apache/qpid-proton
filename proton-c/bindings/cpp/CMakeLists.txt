@@ -64,6 +64,7 @@ set(qpid-proton-cpp-source
   src/sender.cpp
   src/sender_options.cpp
   src/session.cpp
+  src/session_options.cpp
   src/source.cpp
   src/ssl.cpp
   src/ssl_domain.cpp

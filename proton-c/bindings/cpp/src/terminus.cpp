@@ -52,7 +52,6 @@ bool terminus::dynamic() const {
 
 value terminus::node_properties() const {
     value x(pn_terminus_properties(object_));
-    pn_terminus_properties(object_); // ZZZ
     return x;
 }
 

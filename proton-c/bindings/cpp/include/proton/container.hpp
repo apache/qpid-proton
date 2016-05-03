@@ -140,6 +140,7 @@ class container {
     friend class messaging_adapter;
     friend class receiver_options;
     friend class sender_options;
+    friend class session_options;
     /// @endcond
 };
 

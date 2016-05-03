@@ -110,12 +110,14 @@ class override_handler : public proton_handler
 };
 
 internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
-    pn_handler_t *handler = pn_handler_new(&handler_context::dispatch,
-                                           sizeof(struct handler_context),
-                                           &handler_context::cleanup);
-    handler_context &hc = handler_context::get(handler);
-    hc.container_ = &container_;
-    hc.handler_ = h;
+    pn_handler_t *handler = h ? pn_handler_new(&handler_context::dispatch,
+                                               sizeof(struct handler_context),
+                                               &handler_context::cleanup) : 0;
+    if (handler) {
+        handler_context &hc = handler_context::get(handler);
+        hc.container_ = &container_;
+        hc.handler_ = h;
+    }
     return internal::take_ownership(handler);
 }
 
@@ -154,7 +156,7 @@ connection container_impl::connect(const proton::url &url, const connection_opti
     cc.link_gen.prefix(id_gen_.next() + "/");
     pn_connection_set_container(unwrap(conn), id_.c_str());
 
-    conn.open();
+    conn.open(opts);
     return conn;
 }
 

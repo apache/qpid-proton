@@ -155,6 +155,7 @@ class connection_options {
     friend class container_impl;
     friend class connector;
     friend class io::connection_engine;
+    friend class connection;
 };
 
 }

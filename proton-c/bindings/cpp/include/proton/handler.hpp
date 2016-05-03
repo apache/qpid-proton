@@ -155,6 +155,7 @@ PN_CPP_CLASS_EXTERN handler
     friend class connection_options;
     friend class receiver_options;
     friend class sender_options;
+    friend class session_options;
     /// @endcond
 };
 

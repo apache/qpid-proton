@@ -46,12 +46,14 @@ transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));
 }
 
-void connection::open() {
+void connection::open(const connection_options &opts) {
     connector *connector = dynamic_cast<class connector*>(
         connection_context::get(pn_object()).handler.get());
     if (connector)
+        // connector has an internal copy of opts
         connector->apply_options();
-    // Inbound connections should already be configured.
+    else
+        opts.apply(*this);
     pn_connection_open(pn_object());
 }
 
@@ -82,7 +84,12 @@ session_range connection::sessions() const {
     return session_range(session_iterator(pn_session_head(pn_object(), 0)));
 }
 
-session connection::open_session() { return pn_session(pn_object()); }
+session connection::open_session(const session_options &opts) {
+    session s(make_wrapper<session>(pn_session(pn_object())));
+    // TODO: error check, too many sessions, no mem...
+    if (!!s) s.open(opts);
+    return s;
+}
 
 session connection::default_session() {
     connection_context& ctx = connection_context::get(pn_object());
