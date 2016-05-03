@@ -135,8 +135,6 @@
 
   <modules>
     <module>proton-j</module>
-    <module>contrib/proton-jms</module>
-    <module>contrib/proton-hawtdispatch</module>
     <module>tests</module>
     <module>examples/engine/java</module>
     <module>examples/java/messenger</module>
