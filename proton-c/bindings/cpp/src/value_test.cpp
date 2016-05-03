@@ -22,6 +22,7 @@
 #include <proton/types.hpp>
 #include <proton/error.hpp>
 
+namespace {
 
 using namespace std;
 using namespace proton;
@@ -126,10 +127,10 @@ void get_coerce_test() {
     ASSERT_EQUAL(2, coerce<uint16_t>(value(uint8_t(2))));
     ASSERT_EQUAL(-2, coerce<int16_t>(value(int8_t(-2))));
 
-    ASSERT_EQUAL(3, coerce<uint32_t>(value(uint16_t(3))));
+    ASSERT_EQUAL(3u, coerce<uint32_t>(value(uint16_t(3))));
     ASSERT_EQUAL(-3, coerce<int32_t>(value(int16_t(-3))));
 
-    ASSERT_EQUAL(4, coerce<uint64_t>(value(uint32_t(4))));
+    ASSERT_EQUAL(4u, coerce<uint64_t>(value(uint32_t(4))));
     ASSERT_EQUAL(-4, coerce<int64_t>(value(int32_t(-4))));
 
     ASSERT_EQUALISH(1.2, coerce<float>(value(double(1.2))), 0.001);
@@ -146,6 +147,7 @@ void get_coerce_test() {
     try { get<symbol>(value(std::string())); FAIL("string as symbol"); } catch (conversion_error) {}
 }
 
+}
 
 int main(int, char**) {
     int failed = 0;
@@ -183,7 +185,7 @@ int main(int, char**) {
     RUN_TEST(failed, simple_integral_test<unsigned short>());
     RUN_TEST(failed, simple_integral_test<unsigned int>());
     RUN_TEST(failed, simple_integral_test<unsigned long>());
-#if PN_HAS_LONG_LONG
+#if PN_CPP_HAS_LONG_LONG
     RUN_TEST(failed, simple_integral_test<long long>());
     RUN_TEST(failed, simple_integral_test<unsigned long long>());
 #endif
@@ -221,5 +223,6 @@ int main(int, char**) {
 #endif
 
     RUN_TEST(failed, get_coerce_test());
+    RUN_TEST(failed, null_test());
     return failed;
 }

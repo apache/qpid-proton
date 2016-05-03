@@ -141,9 +141,9 @@ class epoll_controller : public proton::controller {
     std::map<pollable*, std::unique_ptr<pollable_engine> > engines_;
 
     std::condition_variable stopped_;
-    std::atomic<size_t> threads_;
     bool stopping_;
     proton::error_condition stop_err_;
+    std::atomic<size_t> threads_;
 };
 
 // Base class for pollable file-descriptors. Manages epoll interaction,
@@ -154,13 +154,13 @@ class pollable {
     {
         int flags = check(::fcntl(fd, F_GETFL, 0), "non-blocking");
         check(::fcntl(fd, F_SETFL,  flags | O_NONBLOCK), "non-blocking");
-        ::epoll_event ev = {0};
+        ::epoll_event ev = {};
         ev.data.ptr = this;
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd_, &ev);
     }
 
     virtual ~pollable() {
-        ::epoll_event ev = {0};
+        ::epoll_event ev = {};
         ::epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd_, &ev); // Ignore errors.
     }
 
@@ -501,7 +501,7 @@ void epoll_controller::wait() {
 
 void epoll_controller::interrupt() {
     // Add an always-readable fd with 0 data and no ONESHOT to interrupt all threads.
-    epoll_event ev = {0};
+    epoll_event ev = {};
     ev.events = EPOLLIN;
     check(epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, interrupt_fd_, &ev), "interrupt");
 }

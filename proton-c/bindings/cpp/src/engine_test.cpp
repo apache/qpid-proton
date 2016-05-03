@@ -31,6 +31,8 @@
 #define override
 #endif
 
+namespace {
+
 using namespace proton::io;
 using namespace proton;
 using namespace test;
@@ -164,7 +166,7 @@ void test_endpoint_close() {
     ca.close(proton::error_condition("conn", "bad connection"));
     while (!cb.closed()) e.process();
     ASSERT_EQUAL("conn: bad connection", cb.error().what());
-    ASSERT_EQUAL(1, hb.connection_errors.size());
+    ASSERT_EQUAL(1u, hb.connection_errors.size());
     ASSERT_EQUAL("conn: bad connection", hb.connection_errors.front());
 }
 
@@ -176,12 +178,14 @@ void test_transport_close() {
     while (!e.b.connection().active()) e.process();
     e.a.close(proton::error_condition("oops", "engine failure"));
     ASSERT(!e.a.dispatch());    // Final dispatch on a.
-    ASSERT_EQUAL(1, ha.transport_errors.size());
+    ASSERT_EQUAL(1u, ha.transport_errors.size());
     ASSERT_EQUAL("oops: engine failure", ha.transport_errors.front());
     ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.a.transport().error());
     // But connectoin was never protocol closed.
     ASSERT(!e.a.connection().closed());
-    ASSERT_EQUAL(0, ha.connection_errors.size());
+    ASSERT_EQUAL(0u, ha.connection_errors.size());
+}
+
 }
 
 int main(int, char**) {

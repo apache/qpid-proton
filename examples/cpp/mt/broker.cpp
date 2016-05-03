@@ -247,7 +247,7 @@ class broker {
     }
 
     void run() {
-        for(int i = 0; i < std::thread::hardware_concurrency(); ++i)
+        for(size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
             std::thread(&proton::controller::run, controller_.get()).detach();
         controller_->wait();
     }

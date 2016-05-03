@@ -63,7 +63,7 @@ class queue {
         return (consumers_.size() == 0 && (dynamic_ || messages_.size() == 0));
     }
 
-    void publish(const proton::message &m, proton::receiver r) {
+    void publish(const proton::message &m) {
         messages_.push_back(m);
         dispatch(0);
     }
@@ -118,6 +118,7 @@ class queue {
 class queues {
   public:
     queues() : next_id_(0) {}
+    virtual ~queues() {}
 
     // Get or create a queue.
     virtual queue &get(const std::string &address = std::string()) {
@@ -225,7 +226,7 @@ class broker_handler : public proton::handler {
 
     void on_message(proton::delivery &d, proton::message &m) override {
         std::string address = d.receiver().target().address();
-        queues_.get(address).publish(m, d.receiver());
+        queues_.get(address).publish(m);
     }
 
   protected:

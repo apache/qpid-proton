@@ -28,6 +28,8 @@
 #include <streambuf>
 #include <iosfwd>
 
+namespace {
+
 using namespace std;
 using namespace proton;
 using namespace proton::codec;
@@ -65,9 +67,9 @@ void test_decoder_primitves_exact() {
     ASSERT_EQUAL(42, get< ::uint16_t>(d));
     try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(conversion_error){}
     ASSERT_EQUAL(-42, get< ::int16_t>(d));
-    ASSERT_EQUAL(12345, get< ::uint32_t>(d));
+    ASSERT_EQUAL(12345u, get< ::uint32_t>(d));
     ASSERT_EQUAL(-12345, get< ::int32_t>(d));
-    ASSERT_EQUAL(12345, get< ::uint64_t>(d));
+    ASSERT_EQUAL(12345u, get< ::uint64_t>(d));
     ASSERT_EQUAL(-12345, get< ::int64_t>(d));
     try { get<double>(d); FAIL("got float as double"); } catch(conversion_error){}
     ASSERT_EQUAL(0.125, get<float>(d));
@@ -91,7 +93,7 @@ void test_encoder_primitives() {
     ASSERT_EQUAL(read("primitives"), data);
 }
 
-// TODO aconway 2015-06-11: interop test is not complete.
+}
 
 int main(int argc, char** argv) {
     int failed = 0;

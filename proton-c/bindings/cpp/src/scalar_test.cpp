@@ -31,6 +31,8 @@
 
 #include <sstream>
 
+namespace {
+
 using namespace std;
 using namespace proton;
 using namespace test;
@@ -60,7 +62,7 @@ template <class T> void type_test(T x, type_id tid, T y) {
     try {                                                               \
         (void)(EXPR);                                                   \
         FAIL("expected conversion_error: " #EXPR);                      \
-    } catch (const conversion_error& e) {}
+    } catch (const conversion_error&) {}
 
 void coerce_test() {
     scalar a;
@@ -80,7 +82,7 @@ void coerce_test() {
     ASSERT_MISMATCH(a.get<timestamp>(), TIMESTAMP, SHORT);
     ASSERT_MISMATCH(a.as_string(), STRING, SHORT);
     ASSERT_EQUAL(a.as_int(), 42);
-    ASSERT_EQUAL(a.as_uint(), 42);
+    ASSERT_EQUAL(a.as_uint(), 42u);
     ASSERT_EQUAL(a.as_double(), 42);
 
     a = int16_t(-42);
@@ -101,7 +103,7 @@ void encode_decode_test() {
 
 void message_id_test() {
     ASSERT_EQUAL(23, message_id(23).as_int());
-    ASSERT_EQUAL(23, message_id(23).get<uint64_t>());
+    ASSERT_EQUAL(23u, message_id(23).get<uint64_t>());
     ASSERT(message_id("foo") != message_id(binary("foo")));
     ASSERT_EQUAL(scalar("foo"), message_id("foo"));
     ASSERT_EQUAL("foo", message_id("foo").as_string());
@@ -112,12 +114,14 @@ void message_id_test() {
 
 void annotation_key_test() {
     ASSERT_EQUAL(23, annotation_key(23).as_int());
-    ASSERT_EQUAL(23, annotation_key(23).get<uint64_t>());
+    ASSERT_EQUAL(23u, annotation_key(23).get<uint64_t>());
     ASSERT_EQUAL("foo", annotation_key("foo").as_string());
     ASSERT_EQUAL(scalar(symbol("foo")), annotation_key("foo"));
 }
 
 template <class T> T make(const char c) { T x; std::fill(x.begin(), x.end(), c); return x; }
+
+}
 
 int main(int, char**) {
     int failed = 0;

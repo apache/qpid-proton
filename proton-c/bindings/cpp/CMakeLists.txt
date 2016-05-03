@@ -24,6 +24,8 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+add_definitions(${CXX_WARNING_FLAGS})
+
 set(qpid-proton-cpp-source
   ${qpid-proton-mt-source}
   src/acceptor.cpp
@@ -90,7 +92,7 @@ endif()
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CXX_WARNING_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${LTO}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})

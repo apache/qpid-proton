@@ -1,5 +1,3 @@
-#ifndef CODEC_TEST_HPP
-#define CODEC_TEST_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -23,6 +21,9 @@
 
 #include <proton/types.hpp>
 #include <proton/data.hpp>
+#include <proton/config.hpp>
+
+namespace {
 
 using namespace test;
 using namespace proton;
@@ -45,6 +46,8 @@ template <class T> T make_fill(const char c) {
 
 template <class T> void  uncodable_type_test() {
     ASSERT(!codec::is_encodable<T>::value);
+}
+
 }
 
 int main(int, char**) {
@@ -88,7 +91,7 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(static_cast<unsigned int>(42)));
     RUN_TEST(failed, simple_type_test(static_cast<unsigned long>(42)));
 
-#if PN_HAS_LONG_LONG
+#if PN_CPP_HAS_LONG_LONG
     RUN_TEST(failed, simple_type_test(static_cast<long>(42)));
     RUN_TEST(failed, simple_type_test(static_cast<signed long>(42)));
     RUN_TEST(failed, simple_type_test(static_cast<unsigned long>(42)));
@@ -112,5 +115,3 @@ int main(int, char**) {
     return failed;
 }
 
-
-#endif // CODEC_TEST_HPP

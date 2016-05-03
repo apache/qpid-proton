@@ -67,7 +67,7 @@ class selected_recv : public proton::handler {
         conn.open_receiver(url.path(), proton::receiver_options().source(opts));
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };

@@ -47,8 +47,8 @@ class simple_send : public proton::handler {
         sender = c.open_sender(url);
     }
 
-    void on_sendable(proton::sender &sender) override {
-        while (sender.credit() && sent < total) {
+    void on_sendable(proton::sender &s) override {
+        while (s.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
             m["sequence"] = sent + 1;
@@ -56,7 +56,7 @@ class simple_send : public proton::handler {
             msg.id(sent + 1);
             msg.body(m);
 
-            sender.send(msg);
+            s.send(msg);
             sent++;
         }
     }

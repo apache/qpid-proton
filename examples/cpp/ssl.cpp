@@ -41,7 +41,7 @@ using proton::ssl_certificate;
 bool using_OpenSSL();
 std::string platform_CA(const std::string &base_name);
 ssl_certificate platform_certificate(const std::string &base_name, const std::string &passwd);
-std::string cert_directory;
+static std::string cert_directory;
 std::string find_CN(const std::string &);
 
 
@@ -54,7 +54,7 @@ struct server_handler : public proton::handler {
         acceptor.close();
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) override {
         std::cout << m.body() << std::endl;
     }
 };

@@ -25,10 +25,11 @@
 #include <streambuf>
 #include <iosfwd>
 
+namespace {
+
 using namespace std;
 using namespace proton;
 using namespace test;
-
 
 #define CHECK_STR(ATTR) \
     m.ATTR(#ATTR); \
@@ -118,7 +119,6 @@ void test_message_maps() {
     ASSERT_EQUAL(m.message_annotations()[23], scalar("23"));
 
     message m2(m);
-    message::annotation_map& amap = m2.delivery_annotations();
 
     ASSERT_EQUAL(m2.properties()["foo"], scalar(12));
     ASSERT_EQUAL(m2.delivery_annotations()["bar"], scalar("xyz"));
@@ -129,15 +129,17 @@ void test_message_maps() {
     m.message_annotations().erase(23);
 
     m2 = m;
-    ASSERT_EQUAL(1, m2.properties().size());
+    ASSERT_EQUAL(1u, m2.properties().size());
     ASSERT_EQUAL(m2.properties()["foo"], scalar("newfoo"));
-    ASSERT_EQUAL(2, m2.delivery_annotations().size());
+    ASSERT_EQUAL(2u, m2.delivery_annotations().size());
     ASSERT_EQUAL(m2.delivery_annotations()["bar"], scalar("xyz"));
     ASSERT_EQUAL(m2.delivery_annotations()[24], scalar(1000));
     ASSERT(m2.message_annotations().empty());
 }
 
-int main(int argc, char** argv) {
+}
+
+int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, test_message_properties());
     RUN_TEST(failed, test_message_body());

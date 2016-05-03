@@ -33,6 +33,8 @@
 
 #include "fake_cpp11.hpp"
 
+namespace {
+
 bool verbose = true;
 
 void verify(bool success, const std::string &msg) {
@@ -44,6 +46,7 @@ void verify(bool success, const std::string &msg) {
     }
 }
 
+}
 
 // flow_sender manages the incoming connection and acts as the message sender.
 class flow_sender : public proton::handler {

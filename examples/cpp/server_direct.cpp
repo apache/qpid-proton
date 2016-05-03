@@ -55,7 +55,8 @@ class server : public proton::handler {
         std::string uc(s);
         size_t l = uc.size();
 
-        for (size_t i=0; i<l; i++) uc[i] = std::toupper(uc[i]);
+        for (size_t i=0; i<l; i++)
+            uc[i] = static_cast<char>(std::toupper(uc[i]));
 
         return uc;
     }
@@ -75,7 +76,7 @@ class server : public proton::handler {
         }
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) override {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

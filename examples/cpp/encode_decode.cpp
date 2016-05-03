@@ -59,7 +59,7 @@ template<class K, class T> ostream& operator<<(ostream& o, const map<K, T>& m) {
 }
 
 // Insert/extract native C++ containers with uniform type values.
-void uniform_containers() {
+static void uniform_containers() {
     std::cout << std::endl << "== Array, list and map of uniform type." << std::endl;
     proton::value v;
 
@@ -111,7 +111,7 @@ void uniform_containers() {
 }
 
 // Containers with mixed types use value to represent arbitrary AMQP types.
-void mixed_containers() {
+static void mixed_containers() {
     std::cout << std::endl << "== List and map of mixed type values." << std::endl;
     proton::value v;
 
@@ -134,7 +134,7 @@ void mixed_containers() {
 }
 
 // Insert using stream operators (see print_next for example of extracting with stream ops.)
-void insert_stream_operators() {
+static void insert_stream_operators() {
     std::cout << std::endl << "== Insert with stream operators." << std::endl;
     proton::value v;
 
@@ -178,7 +178,7 @@ int main(int, char**) {
 // NOTE this is for example puroses only: There is a built in ostream operator<< for values.
 //
 //
-void print_next(proton::codec::decoder& d) {
+static void print_next(proton::codec::decoder& d) {
     proton::type_id type = d.next_type();
     proton::codec::start s;
     switch (type) {
