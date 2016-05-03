@@ -870,7 +870,6 @@ typedef unsigned long int uintptr_t;
 {
  require:
   msg != NULL;
-  size >= 0;
 }
 
 %contract pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)

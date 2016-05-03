@@ -175,6 +175,9 @@ Keep preprocessor directives and macro expansions in the normal header section.
     case PN_STRING:
       $result = rb_str_new($1.u.as_bytes.start, $1.u.as_bytes.size);
       break;
+
+    default:
+       break;
     }
 }
 
@@ -593,7 +596,7 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
   }
 
   VALUE pni_ruby_get_from_registry(VALUE key) {
-    rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
+     return rb_funcall(pni_ruby_get_proton_module(), rb_intern("get_from_registry"), 1, key);
   }
 
   void pni_ruby_delete_from_registry(VALUE stored_key) {
