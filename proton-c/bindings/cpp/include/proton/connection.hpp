@@ -69,7 +69,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN class transport transport() const;
 
     /// Return the AMQP host name for the connection.
-    PN_CPP_EXTERN std::string host() const;
+    PN_CPP_EXTERN std::string virtual_host() const;
 
     /// Return the container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
@@ -114,7 +114,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
   private:
     void user(const std::string &);
     void password(const std::string &);
-    void host(const std::string& h);
 
     friend class internal::factory<connection>;
     friend class connector;

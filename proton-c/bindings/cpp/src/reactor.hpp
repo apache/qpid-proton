@@ -94,6 +94,7 @@ class reactor : public internal::object<pn_reactor_t> {
 
   friend class container_impl;
   friend class container_context;
+  friend class internal::factory<reactor>;
 };
 
 }

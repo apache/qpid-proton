@@ -39,6 +39,7 @@ struct pn_delivery_t;
 struct pn_condition_t;
 struct pn_acceptor_t;
 struct pn_terminus_t;
+struct pn_reactor_t;
 
 namespace proton {
 
@@ -58,6 +59,7 @@ class acceptor;
 class terminus;
 class source;
 class target;
+class reactor;
 
 std::string error_str(long code);
 
@@ -95,6 +97,7 @@ template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; };
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };
+template <> struct wrapped<reactor> { typedef pn_reactor_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_transport_t> { typedef transport type; };
@@ -107,6 +110,7 @@ template <> struct wrapper<pn_delivery_t> { typedef transfer type; };
 template <> struct wrapper<pn_condition_t> { typedef error_condition type; };
 template <> struct wrapper<pn_acceptor_t> { typedef acceptor type; };
 template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
+template <> struct wrapper<pn_reactor_t> { typedef reactor type; };
 
   // Factory for wrapper types
 template <class T>

@@ -57,7 +57,6 @@ void connector::reconnect_timer(const class reconnect_timer &rt) {
 }
 
 void connector::connect() {
-    connection_.host(address_.host_port());
     pn_transport_t *pnt = pn_transport();
     transport t(make_wrapper(pnt));
     if (!address_.user().empty())

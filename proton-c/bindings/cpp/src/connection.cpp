@@ -61,12 +61,8 @@ void connection::close() { pn_connection_close(pn_object()); }
 
 void connection::release() { pn_connection_release(pn_object()); }
 
-std::string connection::host() const {
+std::string connection::virtual_host() const {
     return str(pn_connection_get_hostname(pn_object()));
-}
-
-void connection::host(const std::string& h) {
-    pn_connection_set_hostname(pn_object(), h.c_str());
 }
 
 std::string connection::container_id() const {

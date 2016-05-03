@@ -53,6 +53,7 @@ class connection_options::impl {
     option<duration> idle_timeout;
     option<duration> heartbeat;
     option<std::string> container_id;
+    option<std::string> virtual_host;
     option<std::string> link_prefix;
     option<reconnect_timer> reconnect;
     option<class ssl_client_options> ssl_client_options;
@@ -119,6 +120,8 @@ class connection_options::impl {
                 outbound->reconnect_timer(reconnect.value);
             if (container_id.set)
                 pn_connection_set_container(pnc, container_id.value.c_str());
+            if (virtual_host.set)
+                pn_connection_set_hostname(pnc, virtual_host.value.c_str());
             if (link_prefix.set)
                 connection_context::get(pnc).link_gen.prefix(link_prefix.value);
         }
@@ -131,6 +134,7 @@ class connection_options::impl {
         idle_timeout.update(x.idle_timeout);
         heartbeat.update(x.heartbeat);
         container_id.update(x.container_id);
+        virtual_host.update(x.virtual_host);
         link_prefix.update(x.link_prefix);
         reconnect.update(x.reconnect);
         ssl_client_options.update(x.ssl_client_options);
@@ -174,6 +178,7 @@ connection_options& connection_options::max_channels(uint16_t n) { impl_->max_fr
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
 connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
+connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
 connection_options& connection_options::link_prefix(const std::string &id) { impl_->link_prefix = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
