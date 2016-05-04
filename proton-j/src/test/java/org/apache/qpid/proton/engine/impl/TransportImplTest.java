@@ -606,6 +606,80 @@ public class TransportImplTest
     }
 
     /*
+     * Verify that no Attach frame is emitted by the Transport should a Receiver
+     * be closed after the session End frame was sent.
+     */
+    @Test
+    public void testReceiverCloseAfterEndSent()
+    {
+        doLinkDetachAfterEndSentTestImpl(true);
+    }
+
+    /*
+     * Verify that no Attach frame is emitted by the Transport should a Sender
+     * be closed after the session End frame was sent.
+     */
+    @Test
+    public void testSenderCloseAfterEndSent()
+    {
+        doLinkDetachAfterEndSentTestImpl(false);
+    }
+
+    void doLinkDetachAfterEndSentTestImpl(boolean receiverLink)
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        connection.open();
+
+        Session session = connection.session();
+        session.open();
+
+        Link link = null;
+        if(receiverLink)
+        {
+            link = session.receiver("myReceiver");
+        }
+        else
+        {
+            link = session.sender("mySender");
+        }
+        link.open();
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+        assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
+        assertTrue("Unexpected frame type", transport.writes.get(2) instanceof Attach);
+
+        // Send the necessary responses to open/begin
+        transport.handleFrame(new TransportFrame(0, new Open(), null));
+
+        Begin begin = new Begin();
+        begin.setRemoteChannel(UnsignedShort.valueOf((short) 0));
+        transport.handleFrame(new TransportFrame(0, begin, null));
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        // Cause an End frame to be sent
+        session.close();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(3) instanceof End);
+
+        // Close the link and verify the transport doesn't
+        // send any Detach frame, as an End frame was sent already.
+        link.close();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
+    }
+
+    /*
      * No frames should be written until the Connection object is
      * opened, at which point the Open and Begin frames should
      * be pipelined together.
