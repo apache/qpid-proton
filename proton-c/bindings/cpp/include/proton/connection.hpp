@@ -86,12 +86,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// The operation is not complete till handler::on_connection_close().
     PN_CPP_EXTERN void close(const error_condition&);
 
-    /// @cond INTERNAL
-    /// XXX undiscussed
-    /// Release link and session resources of this connection.
-    PN_CPP_EXTERN void release();
-    /// @endcond
-
     /// Open a new session.
     PN_CPP_EXTERN session open_session(const session_options &opts = session_options());
 

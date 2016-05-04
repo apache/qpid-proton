@@ -123,31 +123,16 @@ struct record_handler : public handler {
     }
 };
 
-void test_engine_prefix() {
+void test_engine_container_id() {
     // Set container ID and prefix explicitly
     record_handler ha, hb;
     engine_pair e(ha, hb,
-                  connection_options().container_id("a").link_prefix("x/"),
-                  connection_options().container_id("b").link_prefix("y/"));
+                  connection_options().container_id("a"),
+                  connection_options().container_id("b"));
     e.a.connection().open();
     ASSERT_EQUAL("a", e.a.connection().container_id());
     e.b.connection().open();
     ASSERT_EQUAL("b", e.b.connection().container_id());
-
-    e.a.connection().open_sender("x");
-    while (ha.senders.empty() || hb.receivers.empty()) e.process();
-    ASSERT_EQUAL("x/1", quick_pop(ha.senders).name());
-    ASSERT_EQUAL("x/1", quick_pop(hb.receivers).name());
-
-    e.a.connection().open_receiver("");
-    while (ha.receivers.empty() || hb.senders.empty()) e.process();
-    ASSERT_EQUAL("x/2", quick_pop(ha.receivers).name());
-    ASSERT_EQUAL("x/2", quick_pop(hb.senders).name());
-
-    e.b.connection().open_receiver("");
-    while (ha.senders.empty() || hb.receivers.empty()) e.process();
-    ASSERT_EQUAL("y/1", quick_pop(ha.senders).name());
-    ASSERT_EQUAL("y/1", quick_pop(hb.receivers).name());
 }
 
 void test_endpoint_close() {
@@ -201,7 +186,7 @@ void test_transport_close() {
 
 int main(int, char**) {
     int failed = 0;
-    RUN_TEST(failed, test_engine_prefix());
+    RUN_TEST(failed, test_engine_container_id());
     RUN_TEST(failed, test_endpoint_close());
     RUN_TEST(failed, test_transport_close());
     return failed;

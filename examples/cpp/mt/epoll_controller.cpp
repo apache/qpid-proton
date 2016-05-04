@@ -260,7 +260,7 @@ class pollable_engine : public pollable {
         proton::handler* h, proton::connection_options opts, epoll_controller& c,
         int fd, int epoll_fd
     ) : pollable(fd, epoll_fd),
-        engine_(*h, opts.link_prefix(std::to_string(fd)+":")),
+        engine_(*h, opts),
         queue_(new work_queue(*this, c))
     {
         engine_.work_queue(queue_.get());

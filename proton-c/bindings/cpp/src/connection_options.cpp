@@ -49,12 +49,10 @@ class connection_options::impl {
   public:
     option<proton_handler*> handler;
     option<uint32_t> max_frame_size;
-    option<uint16_t> max_channels;
+    option<uint16_t> max_sessions;
     option<duration> idle_timeout;
-    option<duration> heartbeat;
     option<std::string> container_id;
     option<std::string> virtual_host;
-    option<std::string> link_prefix;
     option<reconnect_timer> reconnect;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
@@ -109,8 +107,8 @@ class connection_options::impl {
 
             if (max_frame_size.set)
                 pn_transport_set_max_frame(pnt, max_frame_size.value);
-            if (max_channels.set)
-                pn_transport_set_channel_max(pnt, max_channels.value);
+            if (max_sessions.set)
+                pn_transport_set_channel_max(pnt, max_sessions.value);
             if (idle_timeout.set)
                 pn_transport_set_idle_timeout(pnt, idle_timeout.value.milliseconds());
         }
@@ -122,20 +120,16 @@ class connection_options::impl {
                 pn_connection_set_container(pnc, container_id.value.c_str());
             if (virtual_host.set)
                 pn_connection_set_hostname(pnc, virtual_host.value.c_str());
-            if (link_prefix.set)
-                connection_context::get(pnc).link_gen.prefix(link_prefix.value);
         }
     }
 
     void update(const impl& x) {
         handler.update(x.handler);
         max_frame_size.update(x.max_frame_size);
-        max_channels.update(x.max_channels);
+        max_sessions.update(x.max_sessions);
         idle_timeout.update(x.idle_timeout);
-        heartbeat.update(x.heartbeat);
         container_id.update(x.container_id);
         virtual_host.update(x.virtual_host);
-        link_prefix.update(x.link_prefix);
         reconnect.update(x.reconnect);
         ssl_client_options.update(x.ssl_client_options);
         ssl_server_options.update(x.ssl_server_options);
@@ -174,12 +168,10 @@ connection_options connection_options::update(const connection_options& x) const
 
 connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
-connection_options& connection_options::max_channels(uint16_t n) { impl_->max_frame_size = n; return *this; }
+connection_options& connection_options::max_sessions(uint16_t n) { impl_->max_sessions = n; return *this; }
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
-connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
 connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
-connection_options& connection_options::link_prefix(const std::string &id) { impl_->link_prefix = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }

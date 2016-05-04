@@ -59,8 +59,6 @@ void connection::open(const connection_options &opts) {
 
 void connection::close() { pn_connection_close(pn_object()); }
 
-void connection::release() { pn_connection_release(pn_object()); }
-
 std::string connection::virtual_host() const {
     return str(pn_connection_get_hostname(pn_object()));
 }

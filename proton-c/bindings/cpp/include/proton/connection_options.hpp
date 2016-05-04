@@ -86,17 +86,12 @@ class connection_options {
     /// Set the maximum frame size.
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
 
-    /// Set the maximum channels.
-    PN_CPP_EXTERN connection_options& max_channels(uint16_t max);
+    /// Set the maximum number of open sessions.
+    PN_CPP_EXTERN connection_options& max_sessions(uint16_t max);
 
     // XXX document relationship to heartbeat interval
     /// Set the idle timeout.
     PN_CPP_EXTERN connection_options& idle_timeout(duration);
-
-    /// @cond INTERNAL
-    /// XXX remove
-    PN_CPP_EXTERN connection_options& heartbeat(duration);
-    /// @endcond
 
     /// Set the container ID.
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
@@ -105,10 +100,6 @@ class connection_options {
     PN_CPP_EXTERN connection_options& virtual_host(const std::string &name);
 
     /// @cond INTERNAL
-
-    /// XXX more discussion - not clear we want to support this
-    /// capability
-    PN_CPP_EXTERN connection_options& link_prefix(const std::string &id);
 
     /// XXX settle questions about reconnect_timer - consider simply
     /// reconnect_options and making reconnect_timer internal

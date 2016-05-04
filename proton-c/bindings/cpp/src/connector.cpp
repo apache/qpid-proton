@@ -108,7 +108,7 @@ void connector::on_transport_closed(proton_event &) {
             }
         }
     }
-    connection_.release();
+    pn_connection_release(unwrap(connection_));
     connection_  = 0;
 }
 
