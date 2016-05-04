@@ -73,21 +73,4 @@ class session link::session() const {
 error_condition link::error() const {
     return make_wrapper(pn_link_remote_condition(pn_object()));
 }
-
-sender_options::sender_settle_mode link::sender_settle_mode() {
-    return (sender_options::sender_settle_mode) pn_link_snd_settle_mode(pn_object());
-}
-
-receiver_options::receiver_settle_mode link::receiver_settle_mode() {
-    return (receiver_options::receiver_settle_mode) pn_link_rcv_settle_mode(pn_object());
-}
-
-sender_options::sender_settle_mode link::remote_sender_settle_mode() {
-    return (sender_options::sender_settle_mode) pn_link_remote_snd_settle_mode(pn_object());
-}
-
-receiver_options::receiver_settle_mode link::remote_receiver_settle_mode() {
-    return (receiver_options::receiver_settle_mode) pn_link_remote_rcv_settle_mode(pn_object());
-}
-
 }

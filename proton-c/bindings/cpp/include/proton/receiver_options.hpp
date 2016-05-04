@@ -61,15 +61,6 @@ class target_options;
 /// the options.
 class receiver_options {
   public:
-    /// @cond INTERNAL
-    /// XXX discuss the names
-    /// Receiver settlement behaviour.
-    enum receiver_settle_mode {
-        SETTLE_ALWAYS = PN_RCV_FIRST,
-        SETTLE_SECOND = PN_RCV_SECOND
-    };
-    /// @endcond
-
     /// Create an empty set of options.
     PN_CPP_EXTERN receiver_options();
 

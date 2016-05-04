@@ -62,13 +62,6 @@ class target_options;
 /// the options.
 class sender_options {
   public:
-    /// Sender settlement behaviour.
-    enum sender_settle_mode {
-        UNSETTLED = PN_SND_UNSETTLED,
-        SETTLED = PN_SND_SETTLED,
-        MIXED = PN_SND_MIXED
-    };
-
     /// Create an empty set of options.
     PN_CPP_EXTERN sender_options();
 

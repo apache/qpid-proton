@@ -119,14 +119,6 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// handler::on_link_open.
     void attach();
 
-  private:
-    /// XXX local versus remote, mutability
-    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
-    sender_options::sender_settle_mode sender_settle_mode();
-    receiver_options::receiver_settle_mode receiver_settle_mode();
-    sender_options::sender_settle_mode remote_sender_settle_mode();
-    receiver_options::receiver_settle_mode remote_receiver_settle_mode();
-
     friend class internal::factory<link>;
     ///@endcond
 };
