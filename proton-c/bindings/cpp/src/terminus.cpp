@@ -19,6 +19,8 @@
  *
  */
 
+#include "proton/terminus.hpp"
+
 #include "proton_bits.hpp"
 
 #include "proton/link.hpp"
@@ -30,7 +32,7 @@ terminus::terminus(pn_terminus_t* t) :
     object_(t), parent_(0)
 {}
 
-enum expiry_policy terminus::expiry_policy() const {
+enum terminus::expiry_policy terminus::expiry_policy() const {
     return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
 }
 
@@ -38,11 +40,7 @@ duration terminus::timeout() const {
     return duration::SECOND * pn_terminus_get_timeout(object_);
 }
 
-enum distribution_mode terminus::distribution_mode() const {
-    return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
-}
-
-enum durability_mode terminus::durability_mode() {
+enum terminus::durability_mode terminus::durability_mode() {
     return (enum durability_mode) pn_terminus_get_durability(object_);
 }
 

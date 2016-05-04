@@ -25,7 +25,6 @@
 #include "proton/handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/source_options.hpp"
-#include "proton/settings.hpp"
 #include "proton/url.hpp"
 
 #include <iostream>
@@ -43,7 +42,7 @@ class browser : public proton::handler {
 
     void on_container_start(proton::container &c) override {
         proton::connection conn = c.connect(url);
-        source_options browsing = source_options().distribution_mode(proton::COPY);
+        source_options browsing = source_options().distribution_mode(proton::source::COPY);
         conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
     }
 

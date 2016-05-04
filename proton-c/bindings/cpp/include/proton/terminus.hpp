@@ -25,7 +25,6 @@
 #include "proton/export.hpp"
 #include "proton/object.hpp"
 #include "proton/value.hpp"
-#include "proton/settings.hpp"
 
 #include "proton/link.h"
 #include <string>
@@ -46,15 +45,25 @@ class terminus {
   public:
     terminus() : object_(0), parent_(0) {}
 
+    enum durability_mode {
+      NONDURABLE = PN_NONDURABLE,
+      CONFIGURATION = PN_CONFIGURATION,
+      UNSETTLED_STATE = PN_DELIVERIES
+    };
+
+    enum expiry_policy {
+      LINK_CLOSE = PN_EXPIRE_WITH_LINK,
+      SESSION_CLOSE = PN_EXPIRE_WITH_SESSION,
+      CONNECTION_CLOSE = PN_EXPIRE_WITH_CONNECTION,
+      NEVER = PN_EXPIRE_NEVER
+    };
+
     /// Control when the clock for expiration begins.
     PN_CPP_EXTERN enum expiry_policy expiry_policy() const;
 
     /// The period after which the source is discarded on expiry. The
     /// duration is rounded to the nearest second.
     PN_CPP_EXTERN duration timeout() const;
-
-    /// Get the distribution mode.
-    PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
     /// Get the durability flag.
     PN_CPP_EXTERN enum durability_mode durability_mode();

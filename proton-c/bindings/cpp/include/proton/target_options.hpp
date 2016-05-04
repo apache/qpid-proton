@@ -27,6 +27,7 @@
 #include "proton/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
+#include "proton/target.hpp"
 #include "proton/terminus.hpp"
 
 #include <vector>
@@ -65,13 +66,13 @@ class target_options {
     PN_CPP_EXTERN target_options& dynamic(bool);
 
     /// Control the persistence of target state.
-    PN_CPP_EXTERN target_options& durability_mode(enum durability_mode);
+    PN_CPP_EXTERN target_options& durability_mode(enum target::durability_mode);
 
     /// The expiry period after which the target is discarded.
     PN_CPP_EXTERN target_options& timeout(duration);
 
     /// Control when the clock for expiration begins.
-    PN_CPP_EXTERN target_options& expiry_policy(enum expiry_policy);
+    PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
 
     /// @cond INTERNAL

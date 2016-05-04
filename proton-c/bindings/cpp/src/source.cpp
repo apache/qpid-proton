@@ -43,6 +43,10 @@ std::string source::address() const {
     return str(pn_terminus_get_address(authoritative));
 }
 
+enum source::distribution_mode source::distribution_mode() const {
+  return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
+}
+
 source::filter_map source::filters() const {
     codec::decoder d(pn_terminus_filter(object_));
     filter_map map;

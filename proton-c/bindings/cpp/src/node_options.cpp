@@ -73,11 +73,11 @@ void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic)
     }
 }
 
-void node_durability(terminus &t, option<enum durability_mode> &mode) {
+void node_durability(terminus &t, option<enum terminus::durability_mode> &mode) {
     if (mode.set) pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.value));
 }
 
-void node_expiry(terminus &t, option<enum expiry_policy> &policy, option<duration> &d) {
+void node_expiry(terminus &t, option<enum terminus::expiry_policy> &policy, option<duration> &d) {
     if (policy.set) pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(policy.value));
     if (d.set) timeout(t, d.value);
 }
@@ -89,10 +89,10 @@ class source_options::impl {
   public:
     option<std::string> address;
     option<bool> dynamic;
-    option<enum durability_mode> durability_mode;
+    option<enum source::durability_mode> durability_mode;
     option<duration> timeout;
-    option<enum expiry_policy> expiry_policy;
-    option<enum distribution_mode> distribution_mode;
+    option<enum source::expiry_policy> expiry_policy;
+    option<enum source::distribution_mode> distribution_mode;
     option<source::filter_map> filters;
 
     void apply(source& s) {
@@ -135,10 +135,10 @@ void source_options::update(const source_options& x) { impl_->update(*x.impl_); 
 
 source_options& source_options::address(const std::string &addr) { impl_->address = addr; return *this; }
 source_options& source_options::dynamic(bool b) { impl_->dynamic = b; return *this; }
-source_options& source_options::durability_mode(enum durability_mode m) { impl_->durability_mode = m; return *this; }
+source_options& source_options::durability_mode(enum source::durability_mode m) { impl_->durability_mode = m; return *this; }
 source_options& source_options::timeout(duration d) { impl_->timeout = d; return *this; }
-source_options& source_options::expiry_policy(enum expiry_policy m) { impl_->expiry_policy = m; return *this; }
-source_options& source_options::distribution_mode(enum distribution_mode m) { impl_->distribution_mode = m; return *this; }
+source_options& source_options::expiry_policy(enum source::expiry_policy m) { impl_->expiry_policy = m; return *this; }
+source_options& source_options::distribution_mode(enum source::distribution_mode m) { impl_->distribution_mode = m; return *this; }
 source_options& source_options::filters(const source::filter_map &map) { impl_->filters = map; return *this; }
 
 void source_options::apply(source& s) const { impl_->apply(s); }
@@ -149,9 +149,9 @@ class target_options::impl {
   public:
     option<std::string> address;
     option<bool> dynamic;
-    option<enum durability_mode> durability_mode;
+    option<enum target::durability_mode> durability_mode;
     option<duration> timeout;
-    option<enum expiry_policy> expiry_policy;
+    option<enum target::expiry_policy> expiry_policy;
 
     void apply(target& t) {
         node_address(t, address, dynamic);
@@ -184,9 +184,9 @@ void target_options::update(const target_options& x) { impl_->update(*x.impl_); 
 
 target_options& target_options::address(const std::string &addr) { impl_->address = addr; return *this; }
 target_options& target_options::dynamic(bool b) { impl_->dynamic = b; return *this; }
-target_options& target_options::durability_mode(enum durability_mode m) { impl_->durability_mode = m; return *this; }
+target_options& target_options::durability_mode(enum target::durability_mode m) { impl_->durability_mode = m; return *this; }
 target_options& target_options::timeout(duration d) { impl_->timeout = d; return *this; }
-target_options& target_options::expiry_policy(enum expiry_policy m) { impl_->expiry_policy = m; return *this; }
+target_options& target_options::expiry_policy(enum target::expiry_policy m) { impl_->expiry_policy = m; return *this; }
 
 void target_options::apply(target& s) const { impl_->apply(s); }
 

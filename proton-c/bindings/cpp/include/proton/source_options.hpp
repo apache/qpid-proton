@@ -65,16 +65,16 @@ class source_options {
     PN_CPP_EXTERN source_options& dynamic(bool);
 
     /// Control whether messsages are browsed or consumed.
-    PN_CPP_EXTERN source_options& distribution_mode(enum distribution_mode);
+    PN_CPP_EXTERN source_options& distribution_mode(enum source::distribution_mode);
 
     /// Control the persistence of source state.
-    PN_CPP_EXTERN source_options& durability_mode(enum durability_mode);
+    PN_CPP_EXTERN source_options& durability_mode(enum source::durability_mode);
 
     /// The expiry period after which the source is discarded.
     PN_CPP_EXTERN source_options& timeout(duration);
 
     /// Control when the clock for expiration begins.
-    PN_CPP_EXTERN source_options& expiry_policy(enum expiry_policy);
+    PN_CPP_EXTERN source_options& expiry_policy(enum source::expiry_policy);
 
     /// Specify a filter mechanism on the source that restricts
     /// message flow to a subset of the available messages.

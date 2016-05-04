@@ -41,7 +41,12 @@ class receiver;
 class target : public terminus {
   public:
     target() : terminus() {}
+
+    using terminus::durability_mode;
+    using terminus::expiry_policy;
+
     PN_CPP_EXTERN std::string address() const;
+
     /// @cond INTERNAL
   private:
     target(pn_terminus_t* t);

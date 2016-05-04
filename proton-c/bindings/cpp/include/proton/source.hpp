@@ -46,8 +46,20 @@ class source : public terminus {
 
     source() : terminus() {}
 
+    enum distribution_mode {
+      UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
+      COPY = PN_DIST_MODE_COPY,
+      MOVE = PN_DIST_MODE_MOVE
+    };
+
+    using terminus::durability_mode;
+    using terminus::expiry_policy;
+
     /// The address of the source.
     PN_CPP_EXTERN std::string address() const;
+
+    /// Get the distribution mode.
+    PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
     /// Obtain the set of message filters.
     PN_CPP_EXTERN filter_map filters() const;

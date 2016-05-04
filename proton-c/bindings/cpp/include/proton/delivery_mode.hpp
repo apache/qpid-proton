@@ -28,7 +28,7 @@ namespace proton {
 enum delivery_mode {
     // No set policy.  The application must settle messages itself
     // according to its own policy.
-    DELIVERY_MODE_NONE = 0,
+    NONE = 0,
     // Outgoing messages are settled immediately by the link.
     // There are no duplicates.
     AT_MOST_ONCE,
