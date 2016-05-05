@@ -167,13 +167,11 @@ endif ()
 macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
   target_link_libraries (${test} qpid-proton qpid-proton-cpp)
+  add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} $<TARGET_FILE:${test}> ${ARGN})
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME cpp_${test}
-      COMMAND ${env_py}
-      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      $<TARGET_FILE:${test}> ${ARGN})
-  else ()
-    add_test (NAME cpp_${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
+    set_tests_properties(cpp_${test} PROPERTIES
+      ENVIRONMENT "PATH=$<TARGET_FILE_DIR:qpid-proton>"
+    )
   endif ()
 endmacro(add_cpp_test)
 

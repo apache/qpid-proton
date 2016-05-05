@@ -30,13 +30,12 @@ macro (pn_add_c_test test file)
   if (BUILD_WITH_CXX)
     set_source_files_properties (${file} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
+
+  add_test (NAME ${test} COMMAND ${memcheck-cmd} $<TARGET_FILE:${test}>)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME ${test}
-              COMMAND ${env_py}
-                "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-                $<TARGET_FILE:${test}>)
-  else ()
-    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test})
+    set_tests_properties(${test} PROPERTIES
+      ENVIRONMENT "PATH=$<TARGET_FILE_DIR:qpid-proton>"
+    )
   endif ()
 endmacro(pn_add_c_test)
 

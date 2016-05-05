@@ -57,8 +57,16 @@ endfunction()
 
 set_test_path("$<TARGET_FILE_DIR:broker>")
 
+set(test_env
+  "PATH=${test_path}"
+  ${VALGRIND_ENV}
+)
+
 add_test(NAME cpp_container_example_test
-  COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
+  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
+set_tests_properties(cpp_container_example_test PROPERTIES
+  ENVIRONMENT "${test_env}"
+)
 
 # TODO aconway 2016-04-26: need portable MT and IO examples.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HAS_CPP11)
@@ -71,7 +79,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HAS_CPP11)
   endforeach()
 
   add_test(NAME cpp_mt_example_test
-    COMMAND ${env_py} -- "PATH=${test_path}" ${VALGRIND_ENV} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
+  set_tests_properties(cpp_mt_example_test PROPERTIES
+    ENVIRONMENT "${test_env}"
+  )
 endif()
 
 
