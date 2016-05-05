@@ -506,19 +506,14 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
 
   to_native_path ("${py_path}" py_path)
-  add_test (NAME python-test COMMAND ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
-  set (env_vars
-    "PATH=${py_path}"
-    "PYTHONPATH=${py_pythonpath}"
-    "PKG_CONFIG_PATH=${pn_c_root}"
-    "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-    "SASLPASSWD=${SASLPASSWD_EXE}"
-    ${VALGRIND_ENV}
-  )
-  set_tests_properties(python-test PROPERTIES
-    PASS_REGULAR_EXPRESSION "Totals: .* 0 failed"
-    ENVIRONMENT "${env_vars}"
-  )
+  add_test (NAME python-test
+            COMMAND ${env_py}
+              "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+              "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+              "SASLPASSWD=${SASLPASSWD_EXE}"
+              ${VALGRIND_ENV}
+              ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+  set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
   # Eventually, we'll get rid of this check when other
   # platforms will be supported. Since `setup.py` will skip
@@ -526,26 +521,24 @@ if (BUILD_PYTHON)
   # to try to run them.
   option(TOX_TEST "Enable muti-version python testing with TOX" ON)
   if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
-    find_program(TOX_EXE "tox")
-    if (TOX_EXE)
-      configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
-        to_native_path ("${py_path}" py_path)
-        add_test (NAME python-tox-test COMMAND ${TOX_EXE})
-        set (tox_test_env_vars
-          "PATH=${py_path}"
-          "QPID_PROTON_SRC=${CMAKE_SOURCE_DIR}"
-          "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-          "SASLPASSWD=${SASLPASSWD_EXE}"
-          "SWIG=${SWIG_EXECUTABLE}"
-          ${VALGRIND_ENV}
-        )
-        set_tests_properties(python-tox-test PROPERTIES
-          PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-          FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed"
-          ENVIRONMENT "${tox_test_env_vars}"
-        )
+     find_program(TOX_EXE "tox")
+     if (TOX_EXE)
+       configure_file(
+         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+         to_native_path ("${py_path}" py_path)
+         add_test (NAME python-tox-test
+                   COMMAND ${env_py}
+		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
+                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                   "SASLPASSWD=${SASLPASSWD_EXE}"
+                   "SWIG=${SWIG_EXECUTABLE}"
+                   ${VALGRIND_ENV}
+                   ${TOX_EXE})
+         set_tests_properties(python-tox-test
+                              PROPERTIES
+                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
      else (TOX_EXE)
          message(STATUS "The tox tool is not available - skipping the python-tox-tests")
      endif (TOX_EXE)
@@ -577,34 +570,26 @@ if (RUBY_EXE AND BUILD_RUBY)
   to_native_path("${rb_path}" rb_path)
   to_native_path("${rb_rubylib}" rb_rubylib)
 
-  set(ruby_test_env "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}")
-
   # ruby example tests have no dependencies other than standard ruby.
   add_test(NAME ruby-example-test
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby
-    COMMAND ${RUBY_EXE} example_test.rb -v)
-  set_tests_properties(ruby-example-test PROPERTIES
-    ENVIRONMENT "${ruby_test_env}"
-  )
+    COMMAND ${env_py} -- "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+    ${RUBY_EXE} example_test.rb -v)
 
   # ruby unit tests:  tests/ruby/proton-test
   # only enable the tests if the Ruby gem dependencies were found
   if (DEFAULT_RUBY_TESTING)
     add_test (NAME ruby-unit-test
-              COMMAND "${rb_root}/proton-test")
-    set_tests_properties(ruby-unit-test PROPERTIES
-      ENVIRONMENT "${ruby_test_env}"
-    )
+              COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                      "${rb_root}/proton-test")
 
     # ruby spec tests
     find_program(RSPEC_EXE rspec)
     if (RSPEC_EXE)
       add_test (NAME ruby-spec-test
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-                COMMAND ${RSPEC_EXE})
-      set_tests_properties(ruby-spec-test PROPERTIES
-        ENVIRONMENT "${ruby_test_env}"
-      )
+                COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
+                        ${RSPEC_EXE})
 
     else(RSPEC_EXE)
       message (STATUS "Cannot find rspec, skipping rspec tests")
