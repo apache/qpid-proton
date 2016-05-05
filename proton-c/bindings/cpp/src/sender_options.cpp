@@ -51,12 +51,12 @@ class sender_options::impl {
         return link_context::get(unwrap(l));
     }
 
-    static void set_delivery_mode(sender l, enum delivery_mode mode) {
+    static void set_delivery_mode(sender l, proton::delivery_mode mode) {
         switch (mode) {
-        case AT_MOST_ONCE:
+        case delivery_mode::AT_MOST_ONCE:
             pn_link_set_snd_settle_mode(unwrap(l), PN_SND_SETTLED);
             break;
-        case AT_LEAST_ONCE:
+        case delivery_mode::AT_LEAST_ONCE:
             pn_link_set_snd_settle_mode(unwrap(l), PN_SND_UNSETTLED);
             pn_link_set_rcv_settle_mode(unwrap(l), PN_RCV_FIRST);
             break;
@@ -67,7 +67,7 @@ class sender_options::impl {
 
   public:
     option<proton_handler*> handler;
-    option<enum delivery_mode> delivery_mode;
+    option<proton::delivery_mode> delivery_mode;
     option<bool> auto_settle;
     option<source_options> source;
     option<target_options> target;
@@ -112,7 +112,7 @@ sender_options& sender_options::operator=(const sender_options& x) {
 void sender_options::update(const sender_options& x) { impl_->update(*x.impl_); }
 
 sender_options& sender_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
-sender_options& sender_options::delivery_mode(enum delivery_mode m) {impl_->delivery_mode = m; return *this; }
+sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 sender_options& sender_options::source(source_options &s) {impl_->source = s; return *this; }
 sender_options& sender_options::target(target_options &s) {impl_->target = s; return *this; }
