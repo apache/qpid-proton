@@ -82,7 +82,7 @@ set(qpid-proton-cpp-source
   )
 
 if (HAS_CPP11)
-  message("Enable C++11 extensions")
+  message(STATUS "Enable C++11 extensions")
   list(APPEND qpid-proton-cpp-source src/controller.cpp)
 endif()
 
