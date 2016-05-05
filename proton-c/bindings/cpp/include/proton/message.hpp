@@ -59,11 +59,13 @@ class message {
     /// Copy a message.
     PN_CPP_EXTERN message(const message&);
 
-#if PN_CPP_HAS_CPP11
+    /// Copy a message.
+    PN_CPP_EXTERN message& operator=(const message&);
+
+#if PN_CPP_HAS_RVALUE_REFERENCES
     /// Move a message.
     PN_CPP_EXTERN message(message&&);
-
-    // XXX move assignment operator? - do this in general for CPP11
+    PN_CPP_EXTERN message& operator=(message&&);
 #endif
 
     /// Create a message with its body set from any value that can be
@@ -71,9 +73,6 @@ class message {
     PN_CPP_EXTERN message(const value& x);
 
     PN_CPP_EXTERN ~message();
-
-    /// Copy a message.
-    PN_CPP_EXTERN message& operator=(const message&);
 
     /// @name Basic properties and methods
     /// @{

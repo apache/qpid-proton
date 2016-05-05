@@ -47,7 +47,7 @@ class value;
 
 struct null {
     null() {}
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_NULLPTR
     null(std::nullptr_t) {}
 #endif
 };

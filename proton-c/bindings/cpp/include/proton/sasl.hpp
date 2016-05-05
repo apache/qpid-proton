@@ -38,12 +38,14 @@ class sasl {
     /// @endcond
 
   public:
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_DELETED_FUNCTIONS
     sasl() = delete;
     sasl(const sasl&) = delete;
-    sasl(sasl&&) = default;
     sasl& operator=(const sasl&) = delete;
     sasl& operator=(sasl&&) = delete;
+#endif
+#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
+    sasl(sasl&&) = default;
 #endif
 
     /// The result of the SASL negotiation.

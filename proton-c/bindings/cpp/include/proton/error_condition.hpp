@@ -46,18 +46,21 @@ class error_condition {
     PN_CPP_EXTERN error_condition(std::string name, std::string description);
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
     error_condition(const error_condition&) = default;
     error_condition(error_condition&&) = default;
     error_condition& operator=(const error_condition&) = default;
     error_condition& operator=(error_condition&&) = default;
 #endif
 
+    /// If you are using a C++11 compiler you may use an error_condition
+    /// in boolean contexts and the expression will be true if the error_condition is set
+#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
+    PN_CPP_EXTERN explicit operator bool() const;
+#endif
+
     /// No condition set.
     PN_CPP_EXTERN bool operator!() const;
-
-    /// XXX add C++11 explicit bool conversion with a note about
-    /// C++11-only usage
 
     /// No condition has been set.
     PN_CPP_EXTERN bool empty() const;

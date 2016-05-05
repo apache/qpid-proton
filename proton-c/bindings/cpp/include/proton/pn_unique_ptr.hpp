@@ -38,7 +38,7 @@ namespace internal {
 template <class T> class pn_unique_ptr {
   public:
     pn_unique_ptr(T* p=0) : ptr_(p) {}
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_RVALUE_REFERENCES
     pn_unique_ptr(pn_unique_ptr&& x) : ptr_(0)  { std::swap(ptr_, x.ptr_); }
 #else
     pn_unique_ptr(const pn_unique_ptr& x) : ptr_() { std::swap(ptr_, const_cast<pn_unique_ptr&>(x).ptr_); }

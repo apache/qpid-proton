@@ -48,6 +48,12 @@ error_condition::error_condition(std::string name, std::string description, valu
     properties_(properties)
 {}
 
+#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
+error_condition::operator bool() const {
+  return !name_.empty();
+}
+#endif
+
 bool error_condition::operator!() const {
     return name_.empty();
 }

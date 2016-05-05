@@ -65,7 +65,7 @@ class value : public value_base, private comparable<value> {
     ///@{
     PN_CPP_EXTERN value(const value&);
     PN_CPP_EXTERN value& operator=(const value&);
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_RVALUE_REFERENCES
     PN_CPP_EXTERN value(value&&);
     PN_CPP_EXTERN value& operator=(value&&);
 #endif

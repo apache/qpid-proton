@@ -49,7 +49,7 @@ PN_CPP_CLASS_EXTERN endpoint {
     virtual void close() = 0;
     virtual void close(const error_condition&) = 0;
 
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
     // Make everything explicit for C++11 compilers
     endpoint() = default;
     endpoint& operator=(const endpoint&) = default;
