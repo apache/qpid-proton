@@ -17,14 +17,14 @@
  * under the License.
  */
 
-#include "id_generator.hpp"
+#include "link_namer.hpp"
 #include <sstream>
 
 namespace proton {
 
-id_generator::id_generator(const std::string& s) : prefix_(s), count_(0) {}
+link_namer::link_namer(const std::string& s) : prefix_(s), count_(0) {}
 
-std::string id_generator::next() {
+std::string link_namer::next() {
     // TODO aconway 2016-01-19: more efficient conversion, fixed buffer.
     std::ostringstream o;
     o << prefix_ << std::hex << ++count_;

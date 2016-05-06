@@ -268,7 +268,7 @@ implicitly a connection), we listen for incoming connections.
 \until }
 
 When we have received all the expected messages, we then stop listening for
-incoming connections by closing the acceptor object.
+incoming connections by calling `container::stop_listening()`
 
 \skip on_message
 \until }
@@ -292,8 +292,8 @@ link, we listen for incoming connections.
 \skip on_start
 \until }
 
-When we have received confirmation of all the messages we sent, we can
-close the acceptor in order to exit.
+When we have received confirmation of all the messages we sent, we call
+`container::stop_listening()` to exit.
 
 \skip on_delivery_accept
 \until }

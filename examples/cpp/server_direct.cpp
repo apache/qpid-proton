@@ -21,8 +21,7 @@
 
 #include "options.hpp"
 
-#include "proton/acceptor.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/source_options.hpp"
@@ -34,7 +33,7 @@
 #include <sstream>
 #include <cctype>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 class server : public proton::handler {
   private:
@@ -46,7 +45,7 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u), address_counter(0) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         c.listen(url);
         std::cout << "server listening on " << url << std::endl;
     }
@@ -68,7 +67,7 @@ class server : public proton::handler {
         return addr.str();
     }
 
-    void on_sender_open(proton::sender &sender) override {
+    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
         if (sender.source().dynamic()) {
             std::string addr = generate_address();
             sender.open(proton::sender_options().source(proton::source_options().address(addr)));
@@ -76,7 +75,7 @@ class server : public proton::handler {
         }
     }
 
-    void on_message(proton::delivery &, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();
@@ -107,7 +106,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         server srv(address);
-        proton::container(srv).run();
+        proton::default_container(srv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

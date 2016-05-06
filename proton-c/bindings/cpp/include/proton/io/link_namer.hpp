@@ -1,5 +1,6 @@
+#ifndef PROTON_IO_LINK_NAMER
+#define PROTON_IO_LINK_NAMER
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +17,21 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "acceptor.hpp"
+
+#include <string>
 
 namespace proton {
+namespace io {
 
-void acceptor::close() { pn_acceptor_close(pn_object()); }
+/// Generate default link names that are unique within a container.
+/// base_container provides a default implementation.
+class link_namer {
+  public:
+    virtual ~link_namer() {}
+    virtual std::string link_name() = 0;
+};
 
-}
+}}
+
+#endif // PROTON_IO_LINK_NAMER

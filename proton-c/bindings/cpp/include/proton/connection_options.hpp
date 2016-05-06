@@ -70,6 +70,9 @@ class connection_options {
     /// Create an empty set of options.
     PN_CPP_EXTERN connection_options();
 
+    /// Shorthand for connection_options().handler(h)
+    PN_CPP_EXTERN connection_options(class handler& h);
+
     /// Copy options.
     PN_CPP_EXTERN connection_options(const connection_options&);
 
@@ -80,8 +83,10 @@ class connection_options {
 
     // XXX add C++11 move operations
 
-    /// Set a handler for the connection.
-    PN_CPP_EXTERN connection_options& handler(class handler *);
+    /// Set a connection handler.
+    ///
+    /// The handler must not be deleted until handler::on_transport_close() is called.
+    PN_CPP_EXTERN connection_options& handler(class handler&);
 
     /// Set the maximum frame size.
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
@@ -135,9 +140,6 @@ class connection_options {
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
-
-    /// Copy and update option values from values set in other.
-    PN_CPP_EXTERN connection_options update(const connection_options& other) const;
 
   private:
     void apply(connection&) const;

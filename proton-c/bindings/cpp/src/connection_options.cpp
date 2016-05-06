@@ -25,6 +25,7 @@
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 
+#include "acceptor.hpp"
 #include "contexts.hpp"
 #include "connector.hpp"
 #include "messaging_adapter.hpp"
@@ -80,6 +81,7 @@ class connection_options::impl {
                 if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
                     throw error(MSG("client SSL/TLS initialization error"));
             } else if (!outbound) {
+                // TODO aconway 2016-05-13: reactor only
                 pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
                 if (pnp) {
                     listener_context &lc(listener_context::get(pnp));
@@ -144,6 +146,8 @@ class connection_options::impl {
 
 connection_options::connection_options() : impl_(new impl()) {}
 
+connection_options::connection_options(class handler& h) : impl_(new impl()) { handler(h); }
+
 connection_options::connection_options(const connection_options& x) : impl_(new impl()) {
     *this = x;
 }
@@ -160,13 +164,7 @@ connection_options& connection_options::update(const connection_options& x) {
     return *this;
 }
 
-connection_options connection_options::update(const connection_options& x) const {
-    connection_options copy(*this);
-    copy.update(x);
-    return copy;
-}
-
-connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
+connection_options& connection_options::handler(class handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::max_sessions(uint16_t n) { impl_->max_sessions = n; return *this; }
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }

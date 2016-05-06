@@ -63,11 +63,9 @@ add_test(NAME cpp_container_example_test
 
 # TODO aconway 2016-04-26: need portable MT and IO examples.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND HAS_CPP11)
-  set(controller_src mt/epoll_controller.cpp)
-  foreach(example
-      broker
-      )
-    add_executable(mt_${example} mt/${example}.cpp ${controller_src})
+  set(container_src mt/epoll_container.cpp)
+  foreach(example broker)       # More coming
+    add_executable(mt_${example} mt/${example}.cpp ${container_src})
     target_link_libraries(mt_${example} pthread)
   endforeach()
 

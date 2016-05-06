@@ -154,18 +154,18 @@ class queues {
     uint64_t next_id_; // Use to generate unique queue IDs.
 };
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 /** Common handler logic for brokers. */
 class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_transport_open(proton::transport &t) override {
+    void on_transport_open(proton::transport &t) PN_CPP_OVERRIDE {
         std::cout << "Connection from user: " << t.sasl().user() << " (mechanism: " << t.sasl().mech() << ")" << std::endl;
     }
 
-    void on_sender_open(proton::sender &sender) override {
+    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
         proton::source src(sender.source());
         queue &q = src.dynamic() ?
             queues_.dynamic() : queues_.get(src.address());
@@ -174,7 +174,7 @@ class broker_handler : public proton::handler {
         std::cout << "broker outgoing link from " << q.name() << std::endl;
     }
 
-    void on_receiver_open(proton::receiver &receiver) override {
+    void on_receiver_open(proton::receiver &receiver) PN_CPP_OVERRIDE {
         std::string address = receiver.target().address();
         if (!address.empty()) {
             receiver.open(proton::receiver_options().target(proton::target_options().address(address)));
@@ -190,23 +190,23 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_sender_close(proton::sender &sender) override {
+    void on_sender_close(proton::sender &sender) PN_CPP_OVERRIDE {
         unsubscribe(sender);
     }
 
-    void on_connection_close(proton::connection &c) override {
+    void on_connection_close(proton::connection &c) PN_CPP_OVERRIDE {
         remove_stale_consumers(c);
     }
 
-    void on_transport_close(proton::transport &t) override {
+    void on_transport_close(proton::transport &t) PN_CPP_OVERRIDE {
         remove_stale_consumers(t.connection());
     }
 
-    void on_transport_error(proton::transport &t) override {
+    void on_transport_error(proton::transport &t) PN_CPP_OVERRIDE {
         std::cout << "broker client disconnect: " << t.error().what() << std::endl;
     }
 
-    void on_error(const proton::error_condition &c) override {
+    void on_error(const proton::error_condition &c) PN_CPP_OVERRIDE {
         std::cerr << "broker error: " << c.what() << std::endl;
     }
 
@@ -218,13 +218,13 @@ class broker_handler : public proton::handler {
         }
     }
 
-    void on_sendable(proton::sender &s) override {
+    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
         std::string address = s.source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
         std::string address = d.receiver().target().address();
         queues_.get(address).publish(m);
     }

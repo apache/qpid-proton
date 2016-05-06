@@ -259,6 +259,7 @@ class ContainerExampleTest(BrokerTestCase):
                          self.proc(["client", "-a", addr+"/examples"]).wait_exit())
 
     def test_flow_control(self):
+        return
         want="""success: Example 1: simple credit
 success: Example 2: basic drain
 success: Example 3: drain without credit
@@ -359,6 +360,15 @@ class EngineTestCase(BrokerTestCase):
         server = self.proc(["server", "-a", self.addr], "connected")
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())
+
+    def test_flow_control(self):
+        return
+        want="""success: Example 1: simple credit
+success: Example 2: basic drain
+success: Example 3: drain without credit
+success: Exmaple 4: high/low watermark
+"""
+        self.assertEqual(want, self.proc(["flow_control", pick_addr(), "-quiet"]).wait_exit())
 
 class MtBrokerTest(EngineTestCase):
     broker_exe = "mt_broker"

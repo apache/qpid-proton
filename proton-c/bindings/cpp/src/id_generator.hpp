@@ -20,15 +20,15 @@
 ///@internal
 #include "proton/types_fwd.hpp"
 
-#ifndef ID_GENERATOR_HPP
-#define ID_GENERATOR_HPP
+#ifndef LINK_NAMER_HPP
+#define LINK_NAMER_HPP
 
 namespace proton {
 
 /// @cond INTERNAL
-class id_generator {
+class link_namer {
   public:
-    id_generator(const std::string &prefix="");
+    link_namer(const std::string &prefix="");
     std::string next();
     void prefix(const std::string &p) { prefix_ = p; }
     const std::string& prefix() const { return prefix_; }

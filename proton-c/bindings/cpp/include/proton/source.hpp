@@ -68,7 +68,7 @@ class source : public terminus {
     source(pn_terminus_t* t);
     source(const sender&);
     source(const receiver&);
-  friend class internal::factory<source>;
+  friend class proton::internal::factory<source>;
   friend class sender;
   friend class receiver;
     /// @endcond

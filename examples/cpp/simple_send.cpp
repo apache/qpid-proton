@@ -22,7 +22,7 @@
 #include "options.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/tracker.hpp"
 #include "proton/value.hpp"
@@ -30,7 +30,7 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 class simple_send : public proton::handler {
   private:
@@ -43,11 +43,11 @@ class simple_send : public proton::handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         sender = c.open_sender(url);
     }
 
-    void on_sendable(proton::sender &s) override {
+    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
         while (s.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -61,7 +61,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) override {
+    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
         confirmed++;
 
         if (confirmed == total) {
@@ -70,7 +70,7 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::transport &) override {
+    void on_transport_close(proton::transport &) PN_CPP_OVERRIDE {
         sent = confirmed;
     }
 };
@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         simple_send send(address, message_count);
-        proton::container(send).run();
+        proton::default_container(send).run();
 
         return 0;
     } catch (const example::bad_option& e) {

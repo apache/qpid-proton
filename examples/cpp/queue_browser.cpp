@@ -20,7 +20,7 @@
  */
 
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/receiver_options.hpp"
@@ -29,7 +29,7 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 using proton::source_options;
 
@@ -40,13 +40,13 @@ class browser : public proton::handler {
   public:
     browser(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         proton::connection conn = c.connect(url);
         source_options browsing = source_options().distribution_mode(proton::source::COPY);
         conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
     }
 
-    void on_message(proton::delivery &, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
 
         browser b(url);
-        proton::container(b).run();
+        proton::default_container(b).run();
 
         return 0;
     } catch (const std::exception& e) {

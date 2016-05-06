@@ -75,9 +75,9 @@ class receiver_options {
     /// Merge with another option set
     PN_CPP_EXTERN void update(const receiver_options& other);
 
-    /// Set a handler for events scoped to the receiver.  If NULL,
-    /// receiver-scoped events are discarded.
-    PN_CPP_EXTERN receiver_options& handler(class handler *);
+    /// Set a handler for receiver events only.
+    /// The handler is no longer in use when handler::on_receiver_close() is called.
+    PN_CPP_EXTERN receiver_options& handler(class handler&);
 
     /// Set the delivery mode on the receiver.
     PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);

@@ -18,12 +18,14 @@
  */
 
 #include "../options.hpp"
+#include "mt_container.hpp"
 
 #include <proton/connection.hpp>
-#include <proton/controller.hpp>
+#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/handler.hpp>
-#include <proton/work_queue.hpp>
+#include <proton/listen_handler.hpp>
+#include <proton/thread_safe.hpp>
 
 #include <atomic>
 #include <functional>
@@ -105,60 +107,58 @@ class queues {
 
 /// Broker connection handler. Things to note:
 ///
-/// Each handler manages a single connection. Proton AMQP callbacks and queue
-/// callbacks via proton::work_queue are serialized per-connection, so the
-/// handler does not need a lock. Handlers for different connections can be
-/// called concurrently.
+/// 1. Each handler manages a single connection.
 ///
-/// Senders (aka subscriptions) need some cross-thread notification:.
+/// 2. For a *single connection* calls to proton::handler functions and calls to
+/// function objects passed to proton::event_loop::inject() are serialized,
+/// i.e. never called concurrently. Handlers can have per-connection state
+/// without needing locks.
 ///
-/// - a sender that gets credit calls queue::pop() in `on_sendable()`
-///   - on success it sends the message immediatly.
-///   - on queue empty, the sender is added to the `blocked_` set and the queue stores a callback.
-/// - when a receiver thread pushes a message, the queue calls its callbacks.
-/// - the callback causes a serialized call to has_messages() which re-tries all `blocked_` senders.
+/// 3. Handler/injected functions for *different connections* can be called
+/// concurrently. Resources used by multiple connections (e.g. the queues in
+/// this example) must be thread-safe.
+///
+/// FIXME aconway 2016-05-10: doc - point out queue/sender interaction as
+/// example of communication via event_loop::inject()
 ///
 class broker_connection_handler : public proton::handler {
   public:
     broker_connection_handler(queues& qs) : queues_(qs) {}
 
-    void on_connection_open(proton::connection& c) override {
+    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
         // Create the has_messages callback for use with queue subscriptions.
         //
-        // Note the captured and bound arguments must be thread-safe to copy,
-        // shared_ptr<work_queue>, and plain pointers this and q are all safe.
-        //
-        // The proton::connection object c is not thread-safe to copy.
-        // However when the work_queue calls this->has_messages it will be safe
-        // to use any proton objects associated with c again.
-        auto work = proton::work_queue::get(c);
-        has_messages_callback_ = [this, work](queue* q) {
-            work->push(std::bind(&broker_connection_handler::has_messages, this, q));
+        // FIXME aconway 2016-05-09: doc lifecycle: handler tied to c.
+        // explain why this is safe & necessary
+        std::shared_ptr<proton::thread_safe<proton::connection> > ts_c = make_shared_thread_safe(c);
+        has_messages_callback_ = [this, ts_c](queue* q) mutable {
+            ts_c->event_loop()->inject(
+                std::bind(&broker_connection_handler::has_messages, this, q));
         };
-        c.open();               // Always accept
+        c.open();            // Always accept
     }
 
     // A sender sends messages from a queue to a subscriber.
-    void on_sender_open(proton::sender &sender) override {
+    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
         queue *q = sender.source().dynamic() ?
             queues_.dynamic() : queues_.get(sender.source().address());
         std::cout << "sending from " << q->name() << std::endl;
     }
 
     // We have credit to send a message.
-    void on_sendable(proton::sender &s) override {
+    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
         queue* q = sender_queue(s);
         if (!do_send(q, s))     // Queue is empty, save ourselves in the blocked set.
             blocked_.insert(std::make_pair(q, s));
     }
 
     // A receiver receives messages from a publisher to a queue.
-    void on_receiver_open(proton::receiver &receiver) override {
-        std::string qname = receiver.target().address();
+    void on_receiver_open(proton::receiver &r) PN_CPP_OVERRIDE {
+        std::string qname = r.target().address();
         if (qname == "shutdown") {
             std::cout << "broker shutting down" << std::endl;
             // Sending to the special "shutdown" queue stops the broker.
-            proton::controller::get(receiver.connection()).stop(
+            r.connection().container().stop(
                 proton::error_condition("shutdown", "stop broker"));
         } else {
             std::cout << "receiving to " << qname << std::endl;
@@ -166,12 +166,12 @@ class broker_connection_handler : public proton::handler {
     }
 
     // A message is received.
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
         std::string qname = d.receiver().target().address();
         queues_.get(qname)->push(m);
     }
 
-    void on_session_close(proton::session &session) override {
+    void on_session_close(proton::session &session) PN_CPP_OVERRIDE {
         // Erase all blocked senders that belong to session.
         auto predicate = [session](const proton::sender& s) {
             return s.session() == session;
@@ -179,15 +179,15 @@ class broker_connection_handler : public proton::handler {
         erase_sender_if(blocked_.begin(), blocked_.end(), predicate);
     }
 
-    void on_sender_close(proton::sender &sender) override {
+    void on_sender_close(proton::sender &sender) PN_CPP_OVERRIDE {
         // Erase sender from the blocked set.
         auto range = blocked_.equal_range(sender_queue(sender));
         auto predicate = [sender](const proton::sender& s) { return s == sender; };
         erase_sender_if(range.first, range.second, predicate);
     }
 
-    // The controller calls on_transport_close() last.
-    void on_transport_close(proton::transport&) override {
+    // The container calls on_transport_close() last.
+    void on_transport_close(proton::transport&) PN_CPP_OVERRIDE {
         delete this;            // All done.
     }
 
@@ -209,7 +209,9 @@ class broker_connection_handler : public proton::handler {
         return popped;
     }
 
-    // Called via @ref work_queue when q has messages. Try all the blocked senders.
+    // FIXME aconway 2016-05-09: doc
+    // Called via the connections event_loop when q has messages.
+    // Try all the blocked senders.
     void has_messages(queue* q) {
         auto range = blocked_.equal_range(q);
         for (auto i = range.first; i != range.second;) {
@@ -240,25 +242,40 @@ class broker_connection_handler : public proton::handler {
 
 class broker {
   public:
-    broker(const std::string addr) : controller_(proton::controller::create()) {
-        controller_->options(proton::connection_options().container_id("mt_broker"));
+    broker(const std::string addr) :
+        container_(make_mt_container("mt_broker")), listener_(queues_)
+    {
+        container_->listen(addr, listener_);
         std::cout << "broker listening on " << addr << std::endl;
-        controller_->listen(addr, std::bind(&broker::new_handler, this));
     }
 
     void run() {
-        for(size_t i = 0; i < std::thread::hardware_concurrency(); ++i)
-            std::thread(&proton::controller::run, controller_.get()).detach();
-        controller_->wait();
+        std::vector<std::thread> threads(std::thread::hardware_concurrency()-1);
+        for (auto& t : threads)
+            t = std::thread(&proton::container::run, container_.get());
+        container_->run();      // Use this thread too.
+        for (auto& t : threads)
+            t.join();
     }
 
   private:
-    proton::handler* new_handler() {
-        return new broker_connection_handler(queues_);
-    }
+    struct listener : public proton::listen_handler {
+        listener(queues& qs) : queues_(qs) {}
+
+        proton::connection_options on_accept() PN_CPP_OVERRIDE{
+            return proton::connection_options().handler(*(new broker_connection_handler(queues_)));
+        }
+
+        void on_error(const std::string& s) PN_CPP_OVERRIDE {
+            std::cerr << "listen error: " << s << std::endl;
+            throw std::runtime_error(s);
+        }
+        queues& queues_;
+    };
 
     queues queues_;
-    std::unique_ptr<proton::controller> controller_;
+    std::unique_ptr<proton::container> container_;
+    listener listener_;
 };
 
 int main(int argc, char **argv) {

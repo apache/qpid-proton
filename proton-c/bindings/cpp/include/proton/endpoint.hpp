@@ -21,10 +21,11 @@
  * under the License.
  *
  */
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/error_condition.hpp"
+
 #include "proton/comparable.hpp"
+#include "proton/config.hpp"
+#include "proton/error_condition.hpp"
+#include "proton/export.hpp"
 
 namespace proton {
 

@@ -19,10 +19,10 @@
  *
  */
 
-#include "proton/acceptor.hpp"
+#include "proton/listener.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/tracker.hpp"
@@ -31,7 +31,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 namespace {
 
@@ -57,7 +57,7 @@ class flow_sender : public proton::handler {
   public:
     flow_sender() : available(0), sequence(0) {}
 
-    void on_sendable(proton::sender &s) override {
+    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
         if (verbose)
             std::cout << "flow_sender in \"on_sendable\" with credit " << s.credit()
                       << " and " << available << " available messages" << std::endl;
@@ -70,7 +70,7 @@ class flow_sender : public proton::handler {
         }
     }
 
-    void on_sender_drain_start(proton::sender &s) override {
+    void on_sender_drain_start(proton::sender &s) PN_CPP_OVERRIDE {
         if (verbose)
             std::cout << "flow_sender in \"on_drain_start\" with credit " << s.credit()
                       << " making an internal call to \"on_sendble\"" << std::endl;
@@ -165,11 +165,11 @@ class flow_receiver : public proton::handler {
         stage++;
     }
 
-    void on_receiver_open(proton::receiver &r) override {
+    void on_receiver_open(proton::receiver &r) PN_CPP_OVERRIDE {
         run_stage(r, "on_receiver_open");
     }
 
-    void on_message(proton::delivery &d, proton::message &m) override {
+    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
         if (verbose)
             std::cout << "flow_receiver in \"on_message\" with " << m.body() << std::endl;
         proton::receiver r(d.receiver());
@@ -177,7 +177,7 @@ class flow_receiver : public proton::handler {
         run_stage(r, "on_message");
     }
 
-    void on_receiver_drain_finish(proton::receiver &r) override {
+    void on_receiver_drain_finish(proton::receiver &r) PN_CPP_OVERRIDE {
         if (verbose)
             std::cout << "flow_receiver in \"on_receiver_drain_finish\"" << std::endl;
         run_stage(r, "on_receiver_drain_finish");
@@ -188,27 +188,27 @@ class flow_receiver : public proton::handler {
 class flow_control : public proton::handler {
   private:
     std::string url;
-    proton::acceptor acceptor;
+    proton::listener listener;
     flow_sender send_handler;
     flow_receiver receive_handler;
 
   public:
     flow_control(const std::string& u) : url(u), receive_handler(send_handler) {}
 
-    void on_container_start(proton::container &c) override {
-        acceptor = c.listen(url, proton::connection_options().handler(&send_handler));
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        listener = c.listen(url, proton::connection_options().handler(send_handler));
         c.connect(url);
     }
 
-    void on_connection_open(proton::connection &c) override {
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         if (c.active()) {
             // outbound connection
-            c.open_receiver("flow_example", proton::receiver_options().handler(&receive_handler).credit_window(0));
+            c.open_receiver("flow_example", proton::receiver_options().handler(receive_handler).credit_window(0));
         }
     }
 
-    void on_connection_close(proton::connection &) override {
-        acceptor.close();
+    void on_connection_close(proton::connection &) PN_CPP_OVERRIDE {
+        listener.stop();
     }
 };
 
@@ -222,7 +222,7 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:8888/examples";
 
         flow_control fc(url);
-        proton::container(fc).run();
+        proton::default_container(fc).run();
 
         return 0;
     } catch (const std::exception& e) {

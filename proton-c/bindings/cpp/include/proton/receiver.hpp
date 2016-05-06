@@ -31,12 +31,13 @@
 struct pn_connection_t;
 
 namespace proton {
+template <class T> class thread_safe;
 
 /// A link for receiving messages.
 class
 PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
-    receiver(pn_link_t* r);
+    PN_CPP_EXTERN receiver(pn_link_t* r);
     /// @endcond
 
   public:
@@ -71,6 +72,7 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
   friend class internal::factory<receiver>;
   friend class receiver_iterator;
+  friend class thread_safe<receiver>;
     /// @endcond
 };
 

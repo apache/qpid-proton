@@ -33,13 +33,14 @@
 struct pn_connection_t;
 
 namespace proton {
+template <class T> class thread_safe;
 
 /// A link for sending messages.
 class
 PN_CPP_CLASS_EXTERN sender : public link
 {
     /// @cond INTERNAL
-    sender(pn_link_t* s);
+    PN_CPP_EXTERN sender(pn_link_t* s);
     /// @endcond
 
   public:
@@ -68,6 +69,7 @@ PN_CPP_CLASS_EXTERN sender : public link
   /// @cond INTERNAL
   friend class internal::factory<sender>;
   friend class sender_iterator;
+  friend class thread_safe<sender>;
   /// @endcond
 };
 

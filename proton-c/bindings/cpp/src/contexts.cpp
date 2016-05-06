@@ -92,6 +92,7 @@ container &container_context::get(pn_reactor_t *pn_reactor) {
 }
 
 listener_context& listener_context::get(pn_acceptor_t* a) {
+    // TODO aconway 2016-05-13: reactor only
     // A Proton C pn_acceptor_t is really just a selectable
     pn_selectable_t *sel = reinterpret_cast<pn_selectable_t*>(a);
 

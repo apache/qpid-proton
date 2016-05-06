@@ -96,7 +96,7 @@ template <> struct wrapped<transfer> { typedef pn_delivery_t type; };
 template <> struct wrapped<tracker> { typedef pn_delivery_t type; };
 template <> struct wrapped<delivery> { typedef pn_delivery_t type; };
 template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
-template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; };
+template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; }; // TODO aconway 2016-05-13: reactor only
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };

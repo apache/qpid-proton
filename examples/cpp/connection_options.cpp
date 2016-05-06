@@ -21,7 +21,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/transport.hpp"
 
@@ -29,10 +29,10 @@
 
 using proton::connection_options;
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 class handler_2 : public proton::handler {
-    void on_connection_open(proton::connection &c) override {
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         std::cout << "connection events going to handler_2" << std::endl;
         std::cout << "connection max_frame_size: " << c.max_frame_size() <<
             ", idle timeout: " << c.idle_timeout() << std::endl;
@@ -48,13 +48,13 @@ class main_handler : public proton::handler {
   public:
     main_handler(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         // Connection options for this connection.  Merged with and overriding the container's
         // client_connection_options() settings.
-        c.connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
+        c.connect(url, connection_options().handler(conn_handler).max_frame_size(2468));
     }
 
-    void on_connection_open(proton::connection &c) override {
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         std::cout << "unexpected connection event on main handler" << std::endl;
         c.close();
     }
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
         main_handler handler(url);
-        proton::container container(handler);
+        proton::default_container container(handler);
         // Global connection options for future connections on container.
         container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
         container.run();

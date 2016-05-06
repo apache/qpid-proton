@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "acceptor.hpp"
+
+#include "proton/listener.hpp"
+#include "proton/container.hpp"
 
 namespace proton {
 
-void acceptor::close() { pn_acceptor_close(pn_object()); }
+listener::listener() : container_(0) {}
+listener::listener(container& c, const std::string& u) : url_(u), container_(&c) {}
+void listener::stop() { if (container_) container_->stop_listening(url_); }
 
 }

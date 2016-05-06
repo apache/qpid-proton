@@ -20,7 +20,7 @@
  */
 
 #include "options.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/connection.hpp"
@@ -30,7 +30,7 @@
 #include <iostream>
 #include <vector>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 using proton::receiver_options;
 using proton::source_options;
@@ -45,7 +45,7 @@ class client : public proton::handler {
   public:
     client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         sender = c.open_sender(url);
         // Create a receiver requesting a dynamically created queue
         // for the message source.
@@ -60,11 +60,11 @@ class client : public proton::handler {
         sender.send(req);
     }
 
-    void on_receiver_open(proton::receiver &) override {
+    void on_receiver_open(proton::receiver &) PN_CPP_OVERRIDE {
         send_request();
     }
 
-    void on_message(proton::delivery &d, proton::message &response) override {
+    void on_message(proton::delivery &d, proton::message &response) PN_CPP_OVERRIDE {
         if (requests.empty()) return; // Spurious extra message!
 
         std::cout << requests.front() << " => " << response.body() << std::endl;
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
         requests.push_back("And the mome raths outgrabe.");
 
         client c(url, requests);
-        proton::container(c).run();
+        proton::default_container(c).run();
 
         return 0;
     } catch (const example::bad_option& e) {

@@ -60,9 +60,7 @@ messaging_adapter::messaging_adapter(handler &delegate) : delegate_(delegate) {}
 messaging_adapter::~messaging_adapter(){}
 
 void messaging_adapter::on_reactor_init(proton_event &pe) {
-    // Container specific event
-    if (pe.container())
-        delegate_.on_container_start(*pe.container());
+    delegate_.on_container_start(pe.container());
 }
 
 void messaging_adapter::on_link_flow(proton_event &pe) {
@@ -249,26 +247,18 @@ void messaging_adapter::on_link_local_open(proton_event &pe) {
 
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
     pn_link_t *lnk = pn_event_link(pe.pn_event());
-    container *c = pe.container();
+    container& c = pe.container();
     if (pn_link_is_receiver(lnk)) {
       receiver r(make_wrapper<receiver>(lnk));
       delegate_.on_receiver_open(r);
       if (is_local_unititialised(pn_link_state(lnk))) {
-        if (c) {
-          r.open(c->impl_->receiver_options_);
-        } else {
-          pn_link_open(lnk);    // No default for engine
-        }
+          r.open(c.receiver_options());
       }
     } else {
       sender s(make_wrapper<sender>(lnk));
       delegate_.on_sender_open(s);
       if (is_local_unititialised(pn_link_state(lnk))) {
-        if (c) {
-          s.open(c->impl_->sender_options_);
-        } else {
-          pn_link_open(lnk);    // No default for engine
-        }
+          s.open(c.sender_options());
       }
     }
     credit_topup(lnk);

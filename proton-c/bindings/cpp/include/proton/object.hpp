@@ -28,6 +28,9 @@
 #include <memory>
 
 namespace proton {
+
+template <class T> class thread_safe;
+
 namespace internal {
 
 class pn_ptr_base {
@@ -83,6 +86,7 @@ template <class T> class object : private comparable<object<T> > {
 #endif
 
   protected:
+    typedef T pn_type;
     object(pn_ptr<T> o) : object_(o) {}
     T* pn_object() const { return object_.get(); }
 
@@ -91,6 +95,7 @@ template <class T> class object : private comparable<object<T> > {
 
     friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
+  template <class U> friend class proton::thread_safe;
 };
 
 /// Factory class used internally to make wrappers and extract proton objects

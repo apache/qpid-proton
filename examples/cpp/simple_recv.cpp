@@ -22,7 +22,7 @@
 #include "options.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
@@ -32,7 +32,7 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 class simple_recv : public proton::handler {
   private:
@@ -44,12 +44,12 @@ class simple_recv : public proton::handler {
   public:
     simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         receiver = c.open_receiver(url);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) PN_CPP_OVERRIDE {
         if (msg.id().get<uint64_t>() < received) {
             return; // Ignore duplicate
         }
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         simple_recv recv(address, message_count);
-        proton::container(recv).run();
+        proton::default_container(recv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

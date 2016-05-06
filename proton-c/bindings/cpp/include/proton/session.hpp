@@ -39,13 +39,14 @@ namespace proton {
 
 class container;
 class handler;
+template <class T> class thread_safe;
 
 /// A container of senders and receivers.
 class
 PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint
 {
     /// @cond INTERNAL
-    session(pn_session_t* s) : internal::object<pn_session_t>(s) {}
+    PN_CPP_EXTERN session(pn_session_t* s) : internal::object<pn_session_t>(s) {}
     /// @endcond
 
   public:
@@ -102,6 +103,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     friend class internal::factory<session>;
     friend class session_iterator;
+    friend class thread_safe<session>;
 };
 
 

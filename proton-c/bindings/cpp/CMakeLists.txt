@@ -27,7 +27,6 @@ include_directories(
 add_definitions(${CXX_WARNING_FLAGS})
 
 set(qpid-proton-cpp-source
-  ${qpid-proton-mt-source}
   src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
@@ -46,10 +45,11 @@ set(qpid-proton-cpp-source
   src/endpoint.cpp
   src/error.cpp
   src/error_condition.cpp
+  src/event_loop.cpp
   src/handler.cpp
-  src/id_generator.cpp
   src/io/connection_engine.cpp
   src/link.cpp
+  src/listener.cpp
   src/message.cpp
   src/messaging_adapter.cpp
   src/node_options.cpp
@@ -75,19 +75,13 @@ set(qpid-proton-cpp-source
   src/terminus.cpp
   src/timestamp.cpp
   src/tracker.cpp
-  src/transport.cpp
   src/transfer.cpp
+  src/transport.cpp
   src/type_id.cpp
   src/url.cpp
   src/uuid.cpp
   src/value.cpp
   )
-
-if (HAS_CPP11)
-  message(STATUS "Enable C++11 extensions")
-  list(APPEND qpid-proton-cpp-source src/controller.cpp)
-endif()
-
 
 set_source_files_properties (
   ${qpid-proton-cpp-source}
@@ -181,6 +175,7 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(engine_test)
+add_cpp_test(thread_safe_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(scalar_test)

@@ -23,7 +23,7 @@
 
 #include "proton/binary.hpp"
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/decoder.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
@@ -35,10 +35,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-#if __cplusplus < 201103L
-#define override
-#endif
 
 class reactor_send : public proton::handler {
   private:
@@ -65,12 +61,12 @@ class reactor_send : public proton::handler {
         message_.body(content);
     }
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         c.receiver_options(proton::receiver_options().credit_window(1024));
         c.open_sender(url_);
     }
 
-    void on_sendable(proton::sender &sender) override {
+    void on_sendable(proton::sender &sender) PN_CPP_OVERRIDE {
         while (sender.credit() && sent_ < total_) {
             id_value_ = sent_ + 1;
             message_.correlation_id(id_value_);
@@ -80,7 +76,7 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) override {
+    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
         confirmed_++;
         t.settle();
         if (confirmed_ == total_) {
@@ -90,7 +86,7 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) PN_CPP_OVERRIDE {
         received_content_ = proton::get<proton::binary>(msg.body());
         received_bytes_ += received_content_.size();
         if (received_ < total_) {
@@ -103,7 +99,7 @@ class reactor_send : public proton::handler {
         }
     }
 
-    void on_transport_close(proton::transport &) override {
+    void on_transport_close(proton::transport &) PN_CPP_OVERRIDE {
         sent_ = confirmed_;
     }
 };
@@ -122,7 +118,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         reactor_send send(address, message_count, message_size, replying);
-        proton::container(send).run();
+        proton::default_container(send).run();
         return 0;
     } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

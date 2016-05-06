@@ -22,9 +22,13 @@
  *
  */
 
-#include "proton/duration.hpp"
-#include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+// FIXME aconway 2016-05-04: doc
+
+#include <proton/connection_options.hpp>
+#include <proton/error_condition.hpp>
+#include <proton/listener.hpp>
+#include <proton/pn_unique_ptr.hpp>
+#include <proton/thread_safe.hpp>
 
 #include <string>
 
@@ -32,131 +36,152 @@ namespace proton {
 
 class connection;
 class connection_options;
-class acceptor;
+class container_impl;
 class handler;
-class handler;
+class listen_handler;
 class receiver;
 class receiver_options;
 class sender;
 class sender_options;
 class task;
-class container_impl;
 
-namespace internal {
-class link;
-}
+class container;
 
 /// A top-level container of connections, sessions, senders and receivers.
 ///
 /// A container gives a unique identity to each communicating peer. It
 /// is often a process-level object.
-
+///
 /// It serves as an entry point to the API, allowing connections, senders
 /// and receivers to be established. It can be supplied with an event handler
 /// in order to intercept important messaging events, such as newly
 /// received messages or newly issued credit for sending
 /// messages.
-class container {
-  public:
-    /// Create a container.
+class PN_CPP_CLASS_EXTERN container {
+ public:
+    PN_CPP_EXTERN virtual ~container();
+
+    /// Connect to url, send an `open` request to the remote peer.
     ///
-    /// Container ID should be unique within your system. By default a
-    /// random ID is generated.
+    /// Options are applied to the connection as follows, values in later
+    /// options override earlier ones:
     ///
-    /// This container will not be very useful unless event handlers are supplied
-    /// as options when creating a connection/listener/sender or receiver.
-    PN_CPP_EXTERN container();
-    PN_CPP_EXTERN container(const std::string& id);
-
-    /// Create a container with an event handler.
+    ///  1. client_connection_options()
+    ///  2. options passed to connect()
     ///
-    /// Container ID should be unique within your system. By default a
-    /// random ID is generated.
-    PN_CPP_EXTERN container(handler& mhandler);
-    PN_CPP_EXTERN container(handler& mhandler, const std::string& id);
+    /// The handler in the composed options is used to call
+    /// proton::handler::on_connection_open() when the remote peer's open response
+    /// is received.
+    ///@{
+    virtual returned<connection> connect(const std::string& url, const connection_options &) = 0;
+    PN_CPP_EXTERN returned<connection> connect(const std::string& url);
+    ///@}
 
-    PN_CPP_EXTERN ~container();
+    ///@cond INTERNAL
+    /// Stop listening on url, must match the url string given to listen().
+    /// You can also use the proton::listener object returned by listen()
+    virtual void stop_listening(const std::string& url) = 0;
+    ///@endcond
 
-    /// Open a connection to `url`.
-    PN_CPP_EXTERN connection connect(const std::string& url);
-    PN_CPP_EXTERN connection connect(const std::string& url,
-                                     const connection_options &opts);
+    // FIXME aconway 2016-05-13: doc options
 
-    /// Listen on `url` for incoming connections.
-    PN_CPP_EXTERN acceptor listen(const std::string &url);
-    PN_CPP_EXTERN acceptor listen(const std::string &url,
-                                  const connection_options &opts);
+    /// Start listening on url.
+    ///
+    /// Calls to the @ref listen_handler are serialized for this listener,
+    /// but handlers attached to separate listeners may be called concurrently.
+    ///
+    /// @param url identifies a listening url.
+    /// @param lh handles listening events
+    /// @return listener lets you stop listening
+    virtual listener listen(const std::string& url, listen_handler& lh) = 0;
 
-    /// Start processing events. It returns when all connections and
-    /// acceptors are closed.
-    PN_CPP_EXTERN void run();
+    /// Listen with a fixed set of options for all accepted connections.
+    /// See listen(const std::string&, listen_handler&)
+    PN_CPP_EXTERN virtual listener listen(const std::string& url, const connection_options&);
+
+    /// Start listening on URL.
+    /// New connections will use the handler from server_connection_options()
+    PN_CPP_EXTERN virtual listener listen(const std::string& url);
+
+    /// Run the container in this thread.
+    /// Returns when the container stops: see auto_stop() and stop().
+    ///
+    /// With a multithreaded container, call run() in multiple threads to create a thread pool.
+    virtual void run() = 0;
+
+    /// If true, the container will stop (i.e. run() will return) when all
+    /// active connections and listeners are closed. If false the container
+    /// will keep running till stop() is called.
+    ///
+    /// auto_stop is set by default when a new container is created.
+    // FIXME aconway 2016-05-06: doc
+    virtual void auto_stop(bool) = 0;
+
+    ///@name Stop the container with an optional error_condition err.
+    /// - abort all open connections and listeners.
+    /// - process final handler events and injected functions
+    /// - if !err.empty(), handlers will receive on_transport_error(err)
+    /// - run() will return in all threads.
+    virtual void stop(const error_condition& err = error_condition()) = 0;
 
     /// Open a connection to `url` and open a sender for `url.path()`.
     /// Any supplied sender or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN sender open_sender(const std::string &url);
-    PN_CPP_EXTERN sender open_sender(const std::string &url,
-                                     const proton::sender_options &o);
-    PN_CPP_EXTERN sender open_sender(const std::string &url,
-                                     const proton::sender_options &o,
-                                     const connection_options &c);
+    /// @{
+    PN_CPP_EXTERN virtual returned<sender> open_sender(const std::string &url);
+    PN_CPP_EXTERN virtual returned<sender> open_sender(const std::string &url,
+                                                       const proton::sender_options &o);
+    virtual returned<sender> open_sender(const std::string &url,
+                                         const proton::sender_options &o,
+                                         const connection_options &c) = 0;
+    //@}
 
     /// Open a connection to `url` and open a receiver for
     /// `url.path()`.  Any supplied receiver or connection options will
     /// override the container's template options.
-    PN_CPP_EXTERN receiver open_receiver(const std::string&url);
-    PN_CPP_EXTERN receiver open_receiver(const std::string&url,
-                                         const proton::receiver_options &o);
-    PN_CPP_EXTERN receiver open_receiver(const std::string&url,
-                                         const proton::receiver_options &o,
-                                         const connection_options &c);
+    /// @{
+    PN_CPP_EXTERN virtual returned<receiver> open_receiver(const std::string&url);
+    PN_CPP_EXTERN virtual returned<receiver> open_receiver(const std::string&url,
+                                                           const proton::receiver_options &o);
+    virtual returned<receiver> open_receiver(const std::string&url,
+                                             const proton::receiver_options &o,
+                                             const connection_options &c) = 0;
+    ///@}
 
     /// A unique identifier for the container.
-    PN_CPP_EXTERN std::string id() const;
+    virtual std::string id() const = 0;
 
-    /// @cond INTERNAL
-    /// XXX settle some API questions
-    /// Schedule a timer task event in delay milliseconds.
-    PN_CPP_EXTERN task schedule(int delay);
-    PN_CPP_EXTERN task schedule(int delay, handler *h);
+    // FIXME aconway 2016-05-04: need timed injection to replace schedule()
 
-    /// @endcond
+    /// Connection options that will be to outgoing connections. These are
+    /// applied first and overriden by options provided in connect() and
+    /// handler::on_connection_open()
+    /// @{
+    virtual void client_connection_options(const connection_options &) = 0;
+    virtual connection_options client_connection_options() const = 0;
+    ///@}
 
-    /// Copy the connection options to a template which will be
-    /// applied to subsequent outgoing connections.  These are applied
-    /// first and overriden by additional connection options provided
-    /// in other methods.
-    PN_CPP_EXTERN void client_connection_options(const connection_options &);
+    /// Connection options that will be applied to incoming connections. These
+    /// are applied first and overridden by options provided in listen(),
+    /// listen_handler::on_accept() and handler::on_connection_open()
+    /// @{
+    virtual void server_connection_options(const connection_options &) = 0;
+    virtual connection_options server_connection_options() const = 0;
+    ///@}
 
-    /// Copy the connection options to a template which will be
-    /// applied to incoming connections.  These are applied before the
-    /// first open event on the connection.
-    PN_CPP_EXTERN void server_connection_options(const connection_options &);
+    /// Sender options applied to senders created by this container. They are
+    /// applied before handler::on_sender_open() and can be over-ridden.  @{
+    /// @{
+    virtual void sender_options(const sender_options &) = 0;
+    virtual class sender_options sender_options() const = 0;
+    ///@}
 
-    /// Copy the sender options to a template applied to new senders
-    /// created and opened by this container.  They are applied before
-    /// the open event on the sender and may be overriden by sender
-    /// options in other methods.
-    PN_CPP_EXTERN void sender_options(const sender_options &);
-
-    /// Copy the receiver options to a template applied to new receivers
-    /// created and opened by this container.  They are applied before
-    /// the open event on the receiver and may be overriden by receiver
-    /// options in other methods.
-    PN_CPP_EXTERN void receiver_options(const receiver_options &);
-
-    /// @cond INTERNAL
-  private:
-    internal::pn_unique_ptr<container_impl> impl_;
-
-    friend class connector;
-    friend class messaging_adapter;
-    friend class receiver_options;
-    friend class sender_options;
-    friend class session_options;
-    /// @endcond
+    /// Receiver options applied to receivers created by this container. They
+    /// are applied before handler::on_receiver_open() and can be over-ridden.
+    /// @{
+    virtual void receiver_options(const receiver_options &) = 0;
+    virtual class receiver_options receiver_options() const = 0;
+    /// @}
 };
-
 }
-
 #endif // PROTON_CPP_CONTAINER_H

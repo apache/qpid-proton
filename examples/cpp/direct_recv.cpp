@@ -21,9 +21,8 @@
 
 #include "options.hpp"
 
-#include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/link.hpp"
@@ -32,24 +31,24 @@
 #include <iostream>
 #include <map>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 class direct_recv : public proton::handler {
   private:
     std::string url;
+    proton::listener listener;
     uint64_t expected;
     uint64_t received;
-    proton::acceptor acceptor;
 
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_container_start(proton::container &c) override {
-        acceptor = c.listen(url);
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        listener = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) override {
+    void on_message(proton::delivery &d, proton::message &msg) PN_CPP_OVERRIDE {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }
@@ -62,8 +61,7 @@ class direct_recv : public proton::handler {
         if (received == expected) {
             d.receiver().close();
             d.connection().close();
-
-            if (!!acceptor) acceptor.close();
+            listener.stop();
         }
     }
 };
@@ -80,7 +78,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         direct_recv recv(address, message_count);
-        proton::container(recv).run();
+        proton::default_container(recv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

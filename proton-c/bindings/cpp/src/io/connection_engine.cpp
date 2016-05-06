@@ -18,12 +18,14 @@
  */
 
 #include "proton/io/connection_engine.hpp"
+#include "proton/io/link_namer.hpp"
+
+#include "proton/event_loop.hpp"
 #include "proton/error.hpp"
 #include "proton/handler.hpp"
 #include "proton/uuid.hpp"
 
 #include "contexts.hpp"
-#include "id_generator.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
@@ -42,45 +44,70 @@
 namespace proton {
 namespace io {
 
-connection_engine::connection_engine(class handler &h, const connection_options& opts):
-    handler_(h),
+connection_engine::connection_engine(class container& cont, link_namer& namer, event_loop* loop) :
+    handler_(0),
     connection_(make_wrapper(internal::take_ownership(pn_connection()).get())),
     transport_(make_wrapper(internal::take_ownership(pn_transport()).get())),
-    collector_(internal::take_ownership(pn_collector()).get())
+    collector_(internal::take_ownership(pn_collector()).get()),
+    container_(cont)
 {
     if (!connection_ || !transport_ || !collector_)
-        throw proton::error("engine create");
+        throw proton::error("connection_engine create failed");
     pn_transport_bind(unwrap(transport_), unwrap(connection_));
     pn_connection_collect(unwrap(connection_), collector_.get());
-    opts.apply(connection_);
+    connection_context& ctx = connection_context::get(connection_);
+    ctx.container = &container_;
+    ctx.link_gen = &namer;
+    ctx.event_loop.reset(loop);
+}
 
-    // Provide local random defaults for connection_id and link_prefix if not by opts.
-    if (connection_.container_id().empty())
-        pn_connection_set_container(unwrap(connection_), uuid::random().str().c_str());
-    id_generator &link_gen = connection_context::get(connection_).link_gen;
+void connection_engine::configure(const connection_options& opts) {
+    opts.apply(connection_);
+    handler_ = opts.handler();
+    if (handler_) {
+        collector_ = internal::take_ownership(pn_collector());
+        pn_connection_collect(unwrap(connection_), collector_.get());
+    }
     connection_context::get(connection_).collector = collector_.get();
-    if (link_gen.prefix().empty())
-        link_gen.prefix(uuid::random().str()+"/");
 }
 
 connection_engine::~connection_engine() {
     pn_transport_unbind(unwrap(transport_));
-    pn_collector_free(collector_.release()); // Break cycle with connection_
+    if (collector_.get())
+        pn_collector_free(collector_.release()); // Break cycle with connection_
+}
+
+void connection_engine::connect(const connection_options& opts) {
+    connection_options all;
+    all.container_id(container_.id());
+    all.update(container_.client_connection_options());
+    all.update(opts);
+    configure(all);
+    connection().open();
+}
+
+void connection_engine::accept(const connection_options& opts) {
+    connection_options all;
+    all.container_id(container_.id());
+    all.update(container_.server_connection_options());
+    all.update(opts);
+    configure(all);
 }
 
 bool connection_engine::dispatch() {
-    proton_handler& h = *handler_.messaging_adapter_;
-    for (pn_event_t *e = pn_collector_peek(collector_.get());
-         e;
-         e = pn_collector_peek(collector_.get()))
-    {
-        proton_event pe(e, 0);
-        try {
-            pe.dispatch(h);
-        } catch (const std::exception& e) {
-            close(error_condition("exception", e.what()));
+    if (collector_.get()) {
+        for (pn_event_t *e = pn_collector_peek(collector_.get());
+             e;
+             e = pn_collector_peek(collector_.get()))
+        {
+            proton_event pe(e, container_);
+            try {
+                pe.dispatch(*handler_);
+            } catch (const std::exception& e) {
+                disconnected(error_condition("exception", e.what()));
+            }
+            pn_collector_pop(collector_.get());
         }
-        pn_collector_pop(collector_.get());
     }
     return !(pn_transport_closed(unwrap(transport_)));
 }
@@ -119,7 +146,7 @@ void connection_engine::write_close() {
     pn_transport_close_head(unwrap(transport_));
 }
 
-void connection_engine::close(const proton::error_condition& err) {
+void connection_engine::disconnected(const proton::error_condition& err) {
     set_error_condition(err, pn_transport_condition(unwrap(transport_)));
     read_close();
     write_close();
@@ -133,8 +160,8 @@ proton::transport connection_engine::transport() const {
     return transport_;
 }
 
-void connection_engine::work_queue(class work_queue* wq) {
-    connection_context::get(connection()).work_queue = wq;
+proton::container& connection_engine::container() const {
+    return container_;
 }
 
 }}

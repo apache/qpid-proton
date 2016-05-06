@@ -58,7 +58,9 @@ connection session::connection() const {
 
 namespace {
 std::string next_link_name(const connection& c) {
-    return connection_context::get(c).link_gen.next();
+    io::link_namer* ln = connection_context::get(c).link_gen;
+
+    return ln ? ln->link_name() : uuid::random().str();
 }
 }
 
@@ -118,7 +120,6 @@ receiver_range session::receivers() const {
     }
     return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk), pn_object()));
 }
-
 
 session_iterator session_iterator::operator++() {
     obj_ = pn_session_next(unwrap(obj_), 0);

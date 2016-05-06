@@ -22,13 +22,16 @@
  *
  */
 
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/message.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/io/connection_engine.hpp"
+#include "proton/event_loop.hpp"
+#include "proton/listen_handler.hpp"
+#include "proton/message.hpp"
+#include "proton/pn_unique_ptr.hpp"
 
-#include "id_generator.hpp"
+#include "proton/io/link_namer.hpp"
+
 #include "proton_handler.hpp"
 
 struct pn_session_t;
@@ -41,7 +44,6 @@ namespace proton {
 
 class proton_handler;
 class reactor;
-class work_queue;
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -83,16 +85,16 @@ class context {
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : default_session(0), work_queue(0), collector(0) {}
+    connection_context() : container(0), default_session(0), link_gen(0), collector(0) {}
 
-    // Used by all connections
+    class container* container;
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
-    id_generator link_gen;      // Link name generator.
-    class work_queue* work_queue; // Work queue if this is proton::controller connection.
+    io::link_namer* link_gen;      // Link name generator.
     pn_collector_t* collector;
 
     internal::pn_unique_ptr<proton_handler> handler;
+    internal::pn_unique_ptr<class event_loop> event_loop;
 
     static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
     static connection_context& get(const connection& c) { return ref<connection_context>(id(c)); }
@@ -113,8 +115,9 @@ class container_context {
 class listener_context : public context {
   public:
     static listener_context& get(pn_acceptor_t* c);
-    listener_context() : ssl(false) {}
-    class connection_options connection_options;
+    listener_context() : listen_handler_(0), ssl(false) {}
+    connection_options  get_options() { return listen_handler_->on_accept(); }
+    class listen_handler* listen_handler_;
     bool ssl;
 };
 

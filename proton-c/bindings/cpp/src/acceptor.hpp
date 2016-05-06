@@ -26,7 +26,7 @@
 #include <proton/export.hpp>
 #include <proton/object.hpp>
 
-struct pn_connection_t;
+struct pn_acceptor_t;
 
 namespace proton {
 
@@ -52,7 +52,7 @@ class acceptor : public internal::object<pn_acceptor_t> {
     PN_CPP_EXTERN class connection_options &connection_options();
 
     /// @cond INTERNAL
-    friend class internal::factory<acceptor>;
+     friend class internal::factory<acceptor>;
     /// @endcond
 };
 

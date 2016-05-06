@@ -19,10 +19,9 @@
  *
  */
 
-#include "proton/acceptor.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/ssl.hpp"
 #include "proton/tracker.hpp"
@@ -30,7 +29,7 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 using proton::connection_options;
 using proton::ssl_client_options;
@@ -46,15 +45,15 @@ std::string find_CN(const std::string &);
 
 
 struct server_handler : public proton::handler {
-    proton::acceptor acceptor;
+    std::string url;
 
-    void on_connection_open(proton::connection &c) override {
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             c.transport().ssl().protocol() << std::endl;
-        acceptor.close();
+        c.container().stop_listening(url);
     }
 
-    void on_message(proton::delivery &, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
@@ -68,12 +67,12 @@ class hello_world_direct : public proton::handler {
   public:
     hello_world_direct(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
         connection_options server_opts;
-        server_opts.ssl_server_options(ssl_srv).handler(&s_handler);
+        server_opts.ssl_server_options(ssl_srv).handler(s_handler);
         c.server_connection_options(server_opts);
 
         // Configure client with a Certificate Authority database populated with the server's self signed certificate.
@@ -84,24 +83,25 @@ class hello_world_direct : public proton::handler {
         client_opts.ssl_client_options(ssl_cli);
         c.client_connection_options(client_opts);
 
-        s_handler.acceptor = c.listen(url);
+        s_handler.url = url;
+        c.listen(url);
         c.open_sender(url);
     }
 
-    void on_connection_open(proton::connection &c) override {
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         std::string subject = c.transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
     }
 
-    void on_sendable(proton::sender &s) override {
+    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
         proton::message m;
         m.body("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_tracker_accept(proton::tracker &t) override {
+    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
         // All done.
         t.connection().close();
     }
@@ -122,7 +122,7 @@ int main(int argc, char **argv) {
         else cert_directory = "ssl_certs/";
 
         hello_world_direct hwd(url);
-        proton::container(hwd).run();
+        proton::default_container(hwd).run();
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

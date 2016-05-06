@@ -71,6 +71,7 @@ void set_error_condition(const error_condition& e, pn_condition_t *c) {
     if (!e.description().empty()) {
         pn_condition_set_description(c, e.description().c_str());
     }
+    // FIXME aconway 2016-05-09: value ref/value factory fix.
     // TODO: This is wrong as it copies the value so doesn't change
     // The internals of c
     //proton::value v(pn_condition_info(c));

@@ -20,7 +20,7 @@
  */
 
 #include "proton/connection.hpp"
-#include "proton/container.hpp"
+#include "proton/default_container.hpp"
 #include "proton/handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/source_options.hpp"
@@ -28,7 +28,7 @@
 
 #include <iostream>
 
-#include "fake_cpp11.hpp"
+#include <proton/config.hpp>
 
 namespace {
 
@@ -60,14 +60,14 @@ class selected_recv : public proton::handler {
   public:
     selected_recv(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) override {
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         proton::source_options opts;
         set_filter(opts, "colour = 'green'");
         proton::connection conn = c.connect(url);
         conn.open_receiver(url.path(), proton::receiver_options().source(opts));
     }
 
-    void on_message(proton::delivery &, proton::message &m) override {
+    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
 
         selected_recv recv(url);
-        proton::container(recv).run();
+        proton::default_container(recv).run();
 
         return 0;
     } catch (const std::exception& e) {

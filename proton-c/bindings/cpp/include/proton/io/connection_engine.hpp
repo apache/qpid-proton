@@ -38,8 +38,10 @@ struct pn_collector_t;
 
 namespace proton {
 
-class handler;
-class work_queue;            // Only used for multi-threaded connection_engines.
+class event_loop;
+class proton_handler;
+
+// FIXME aconway 2016-05-04: doc
 
 /** @page integration
 
@@ -51,16 +53,14 @@ from any IO source into proton::handler event calls, and generates AMQP
 byte-encoded output that can be written to any IO destination.
 
 The integration needs to implement two user-visible interfaces:
- - proton::controller lets the user initiate or listen for connections.
- - proton::work_queue lets the user serialize their own work with a connection.
+ - proton::container lets the user initiate or listen for connections.
+ - proton::event_loop lets the user serialize their own work with a connection.
 
- @see epoll_controller.cpp for an example of an integration.
-
-[TODO controller doesn't belong in the mt namespace, a single-threaded
-integration would need a controller too.]
-
+ @see epoll_container.cpp for an example of an integration.
 */
 namespace io {
+
+class link_namer;
 
 /// Pointer to a mutable memory region with a size.
 struct mutable_buffer {
@@ -111,11 +111,28 @@ struct const_buffer {
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
-    /// Create a connection engine that dispatches to handler.
-    // TODO aconway 2016-04-06: no options, only via handler.
-    PN_CPP_EXTERN connection_engine(handler&, const connection_options& = connection_options());
+    /// Create a connection engine. opts must contain a handler.
+    /// Takes ownership of loop, will be deleted only when the proton::connection is.
+    PN_CPP_EXTERN connection_engine(proton::container&, link_namer&, event_loop* loop = 0);
 
     PN_CPP_EXTERN ~connection_engine();
+
+    /// Configure a connection by applying exactly the options in opts (including proton::handler)
+    /// Does not apply any default options, to apply container defaults use connect() or accept()
+    /// instead.
+    void configure(const connection_options& opts=connection_options());
+
+    /// Call configure() with client options and call connection::open()
+    /// Options applied: container::id(), container::client_connection_options(), opts.
+    PN_CPP_EXTERN void connect(const connection_options& opts);
+
+    /// Call configure() with server options.
+    /// Options applied: container::id(), container::server_connection_options(), opts.
+    ///
+    /// Note this does not call connection::open(). If there is a handler in the
+    /// composed options it will receive handler::on_connection_open() and can
+    /// respond with connection::open() or connection::close()
+    PN_CPP_EXTERN void accept(const connection_options& opts);
 
     /// The engine's read buffer. Read data into this buffer then call read_done() when complete.
     /// Returns mutable_buffer(0, 0) if the engine cannot currently read data.
@@ -144,10 +161,19 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Note that there may still be events to dispatch() or data to read.
     PN_CPP_EXTERN void write_close();
 
-    /// Close the engine with an error that will be passed to handler::on_transport_error().
-    /// Calls read_close() and write_close().
-    /// Note: You still need to call dispatch() to process final close-down events.
-    PN_CPP_EXTERN void close(const error_condition&);
+    /// Inform the engine that the transport been disconnected unexpectedly,
+    /// without completing the AMQP connection close sequence.
+    ///
+    /// This calls read_close(), write_close(), sets the transport().error() and
+    /// queues an `on_transport_error` event. You must call dispatch() one more
+    /// time to dispatch the handler::on_transport_error() call and other final
+    /// events.
+    ///
+    /// Note this does not close the connection() so that a proton::handler can
+    /// distinguish between a connection close error sent by the remote peer and
+    /// a transport failure.
+    ///
+    PN_CPP_EXTERN void disconnected(const error_condition& = error_condition());
 
     /// Dispatch all available events and call the corresponding \ref handler methods.
     ///
@@ -168,20 +194,19 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Get the transport associated with this connection_engine.
     PN_CPP_EXTERN proton::transport transport() const;
 
-    /// For controller connections, set the connection's work_queue. Set
-    /// via plain pointer, not std::shared_ptr so the connection_engine can be
-    /// compiled with C++03.  The work_queue must outlive the engine. The
-    /// std::shared_ptr<work_queue> will be available via work_queue::get(this->connection())
-    PN_CPP_EXTERN void work_queue(class work_queue*);
+    /// Get the container associated with this connection_engine.
+    PN_CPP_EXTERN proton::container& container() const;
 
-  private:
+ private:
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
-    proton::handler& handler_;
+    // FIXME aconway 2016-05-06: reduce binary compat footprint, move stuff to connection context.
+    proton::proton_handler* handler_;
     proton::connection connection_;
     proton::transport transport_;
     proton::internal::pn_ptr<pn_collector_t> collector_;
+    proton::container& container_;
 };
 
 }}

@@ -126,11 +126,11 @@ subscribe.
 
 */
 
-/** @example mt/epoll_controller.cpp
+/** @example mt/epoll_container.cpp
 
-An example implementation of the proton::mt::controller API that shows how to
-use the prton::io::connection_engine SPI to adapt the proton API to native
-IO. In this case using a multi-threaded Linux epoll poller as the implementation.
+An example implementation of the proton::container API that shows how to use the
+prton::io::connection_engine SPI to adapt the proton API to native IO. In this
+case using a multi-threaded Linux epoll poller as the implementation.
 
 __Requires C++11__
 
@@ -140,7 +140,7 @@ __Requires C++11__
 
 A multi-threaded broker, using the proton::mt extensions. This broker is
 portable over any implementation of the proton::mt API, see @ref
-mt/epoll_controller.cpp for an example.
+mt/epoll_container.cpp for an example.
 
 __Requires C++11__
 

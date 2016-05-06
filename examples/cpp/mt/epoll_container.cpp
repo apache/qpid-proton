@@ -17,12 +17,15 @@
  * under the License.
  */
 
-#include <proton/controller.hpp>
-#include <proton/work_queue.hpp>
+#include "mt_container.hpp"
+
+#include <proton/default_container.hpp>
+#include <proton/event_loop.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/url.hpp>
 
+#include <proton/io/container_impl_base.hpp>
 #include <proton/io/connection_engine.hpp>
-#include <proton/io/default_controller.hpp>
 
 #include <atomic>
 #include <memory>
@@ -41,9 +44,6 @@
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
-
-// This is the only public function, the implementation is private.
-std::unique_ptr<proton::controller> make_epoll_controller();
 
 // Private implementation
 namespace  {
@@ -97,40 +97,52 @@ class pollable;
 class pollable_engine;
 class pollable_listener;
 
-class epoll_controller : public proton::controller {
+class epoll_container : public proton::io::container_impl_base {
   public:
-    epoll_controller();
-    ~epoll_controller();
+    epoll_container(const std::string& id);
+    ~epoll_container();
 
-    // Implemenet the proton::controller interface
-    void connect(const std::string& addr,
-                 proton::handler& h,
-                 const proton::connection_options& opts) override;
+    // Implemenet the proton::mt_container interface
+    proton::returned<proton::connection> connect(
+        const std::string& addr, const proton::connection_options& opts) PN_CPP_OVERRIDE;
 
-    void listen(const std::string& addr,
-                std::function<proton::handler*(const std::string&)> factory,
-                const proton::connection_options& opts) override;
+    proton::listener listen(const std::string& addr, proton::listen_handler&) PN_CPP_OVERRIDE;
 
-    void stop_listening(const std::string& addr) override;
+    void stop_listening(const std::string& addr) PN_CPP_OVERRIDE;
 
-    void options(const proton::connection_options& opts) override;
-    proton::connection_options options() override;
+    void run() PN_CPP_OVERRIDE;
+    void auto_stop(bool) PN_CPP_OVERRIDE;
+    void stop(const proton::error_condition& err) PN_CPP_OVERRIDE;
 
-    void run() override;
-
-    void stop_on_idle() override;
-    void stop(const proton::error_condition& err) override;
-    void wait() override;
+    std::string id() const PN_CPP_OVERRIDE { return id_; }
 
     // Functions used internally.
-
-    void add_engine(proton::handler* h, proton::connection_options opts, int fd);
+    proton::connection add_engine(proton::connection_options opts, int fd, bool server);
     void erase(pollable*);
 
+    // Link names must be unique per container.
+    // Generate unique names with a simple atomic counter.
+    class atomic_link_namer : public proton::io::link_namer {
+      public:
+        std::string link_name() {
+            std::ostringstream o;
+            o << std::hex << ++count_;
+            return o.str();
+        }
+      private:
+        std::atomic<uint64_t> count_;
+    };
+
+    atomic_link_namer link_namer;
+
   private:
+    template <class T> void store(T& v, const T& x) const { lock_guard g(lock_); v = x; }
+
     void idle_check(const lock_guard&);
     void interrupt();
+    void wait();
 
+    const std::string id_;
     const unique_fd epoll_fd_;
     const unique_fd interrupt_fd_;
 
@@ -180,7 +192,7 @@ class pollable {
         return new_events;
     }
 
-    // Called by work_queue to notify that there are jobs.
+    // Called from any thread to wake up the connection handler.
     void notify() {
         lock_guard g(lock_);
         if (!notified_) {
@@ -214,14 +226,13 @@ class pollable {
     bool working_;
 };
 
-class work_queue : public proton::work_queue {
+class epoll_event_loop : public proton::event_loop {
   public:
     typedef std::vector<std::function<void()> > jobs;
 
-    work_queue(pollable& p, proton::controller& c) :
-        pollable_(p), closed_(false), controller_(c) {}
+    epoll_event_loop(pollable& p) : pollable_(p), closed_(false) {}
 
-    bool push(std::function<void()> f) override {
+    bool inject(std::function<void()> f) PN_CPP_OVERRIDE {
         // Note this is an unbounded work queue.
         // A resource-safe implementation should be bounded.
         lock_guard g(lock_);
@@ -230,6 +241,10 @@ class work_queue : public proton::work_queue {
         jobs_.push_back(f);
         pollable_.notify();
         return true;
+    }
+
+    bool inject(proton::inject_handler& h) PN_CPP_OVERRIDE {
+        return inject(std::bind(&proton::inject_handler::on_inject, &h));
     }
 
     jobs pop_all() {
@@ -242,35 +257,26 @@ class work_queue : public proton::work_queue {
         closed_ = true;
     }
 
-    proton::controller& controller() const override { return controller_; }
-
   private:
     std::mutex lock_;
     pollable& pollable_;
     jobs jobs_;
     bool closed_;
-    proton::controller& controller_;
 };
 
 // Handle epoll wakeups for a connection_engine.
 class pollable_engine : public pollable {
   public:
-
-    pollable_engine(
-        proton::handler* h, proton::connection_options opts, epoll_controller& c,
-        int fd, int epoll_fd
-    ) : pollable(fd, epoll_fd),
-        engine_(*h, opts),
-        queue_(new work_queue(*this, c))
-    {
-        engine_.work_queue(queue_.get());
-    }
+    pollable_engine(epoll_container& c, int fd, int epoll_fd) :
+        pollable(fd, epoll_fd),
+        loop_(new epoll_event_loop(*this)),
+        engine_(c, c.link_namer, loop_) {}
 
     ~pollable_engine() {
-        queue_->close();               // No calls to notify() after this.
+        loop_->close();                // No calls to notify() after this.
         engine_.dispatch();            // Run any final events.
         try { write(); } catch(...) {} // Write connection close if we can.
-        for (auto f : queue_->pop_all()) {// Run final queued work for side-effects.
+        for (auto f : loop_->pop_all()) {// Run final queued work for side-effects.
             try { f(); } catch(...) {}
         }
     }
@@ -281,21 +287,19 @@ class pollable_engine : public pollable {
             do {
                 can_write = can_write && write();
                 can_read = can_read && read();
-                for (auto f : queue_->pop_all()) // Run queued work
+                for (auto f : loop_->pop_all()) // Run queued work
                     f();
                 engine_.dispatch();
             } while (can_read || can_write);
             return (engine_.read_buffer().size ? EPOLLIN:0) |
                 (engine_.write_buffer().size ? EPOLLOUT:0);
         } catch (const std::exception& e) {
-            close(proton::error_condition("exception", e.what()));
+            engine_.disconnected(proton::error_condition("exception", e.what()));
         }
         return 0;               // Ending
     }
 
-    void close(const proton::error_condition& err) {
-        engine_.connection().close(err);
-    }
+    proton::io::connection_engine& engine() { return engine_; }
 
   private:
 
@@ -330,8 +334,11 @@ class pollable_engine : public pollable {
         return false;
     }
 
+    // Lifecycle note: loop_ belongs to the proton::connection, which can live
+    // longer than the engine if the application holds a reference to it, we
+    // disconnect ourselves with loop_->close() in ~connection_engine()
+    epoll_event_loop* loop_;
     proton::io::connection_engine engine_;
-    std::shared_ptr<work_queue> queue_;
 };
 
 // A pollable listener fd that creates pollable_engine for incoming connections.
@@ -339,31 +346,36 @@ class pollable_listener : public pollable {
   public:
     pollable_listener(
         const std::string& addr,
-        std::function<proton::handler*(const std::string&)> factory,
+        proton::listen_handler& l,
         int epoll_fd,
-        epoll_controller& c,
-        const proton::connection_options& opts
+        epoll_container& c
     ) :
-        pollable(listen(addr), epoll_fd),
+        pollable(socket_listen(addr), epoll_fd),
         addr_(addr),
-        factory_(factory),
-        controller_(c),
-        opts_(opts)
+        container_(c),
+        listener_(l)
     {}
 
     uint32_t work(uint32_t events) {
-        if (events & EPOLLRDHUP)
+        if (events & EPOLLRDHUP) {
+            try { listener_.on_close(); } catch (...) {}
             return 0;
-        int accepted = check(::accept(fd_, NULL, 0), "accept");
-        controller_.add_engine(factory_(addr_), opts_, accepted);
-        return EPOLLIN;
+        }
+        try {
+            int accepted = check(::accept(fd_, NULL, 0), "accept");
+            container_.add_engine(listener_.on_accept(), accepted, true);
+            return EPOLLIN;
+        } catch (const std::exception& e) {
+            listener_.on_error(e.what());
+            return 0;
+        }
     }
 
     std::string addr() { return addr_; }
 
   private:
 
-    int listen(const std::string& addr) {
+    static int socket_listen(const std::string& addr) {
         std::string msg = "listen on "+addr;
         unique_addrinfo ainfo(addr);
         unique_fd fd(check(::socket(ainfo->ai_family, SOCK_STREAM, 0), msg));
@@ -375,35 +387,43 @@ class pollable_listener : public pollable {
     }
 
     std::string addr_;
-    std::function<proton::handler*(const std::string&)> factory_;
-    epoll_controller& controller_;
+    std::function<proton::connection_options(const std::string&)> factory_;
+    epoll_container& container_;
     proton::connection_options opts_;
+    proton::listen_handler& listener_;
 };
 
 
-epoll_controller::epoll_controller()
-    : epoll_fd_(check(epoll_create(1), "epoll_create")),
+epoll_container::epoll_container(const std::string& id)
+    : id_(id),                       epoll_fd_(check(epoll_create(1), "epoll_create")),
       interrupt_fd_(check(eventfd(1, 0), "eventfd")),
       stopping_(false), threads_(0)
 {}
 
-epoll_controller::~epoll_controller() {
+epoll_container::~epoll_container() {
     try {
-        stop(proton::error_condition("exception", "controller shut-down"));
+        stop(proton::error_condition("exception", "container shut-down"));
         wait();
     } catch (...) {}
 }
 
-void epoll_controller::add_engine(proton::handler* h, proton::connection_options opts, int fd) {
+proton::connection epoll_container::add_engine(proton::connection_options opts, int fd, bool server)
+{
     lock_guard g(lock_);
     if (stopping_)
-        throw proton::error("controller is stopping");
-    std::unique_ptr<pollable_engine> e(new pollable_engine(h, opts, *this, fd, epoll_fd_));
-    e->notify();
-    engines_[e.get()] = std::move(e);
+        throw proton::error("container is stopping");
+    std::unique_ptr<pollable_engine> eng(new pollable_engine(*this, fd, epoll_fd_));
+    if (server)
+        eng->engine().accept(opts);
+    else
+        eng->engine().connect(opts);
+    proton::connection c = eng->engine().connection();
+    eng->notify();
+    engines_[eng.get()] = std::move(eng);
+    return c;
 }
 
-void epoll_controller::erase(pollable* e) {
+void epoll_container::erase(pollable* e) {
     lock_guard g(lock_);
     if (!engines_.erase(e)) {
         pollable_listener* l = dynamic_cast<pollable_listener*>(e);
@@ -413,53 +433,44 @@ void epoll_controller::erase(pollable* e) {
     idle_check(g);
 }
 
-void epoll_controller::idle_check(const lock_guard&) {
+void epoll_container::idle_check(const lock_guard&) {
     if (stopping_  && engines_.empty() && listeners_.empty())
         interrupt();
 }
 
-void epoll_controller::connect(const std::string& addr,
-                               proton::handler& h,
-                               const proton::connection_options& opts)
+proton::returned<proton::connection> epoll_container::connect(
+    const std::string& addr, const proton::connection_options& opts)
 {
     std::string msg = "connect to "+addr;
     unique_addrinfo ainfo(addr);
     unique_fd fd(check(::socket(ainfo->ai_family, SOCK_STREAM, 0), msg));
     check(::connect(fd, ainfo->ai_addr, ainfo->ai_addrlen), msg);
-    add_engine(&h, options().update(opts), fd.release());
+    return make_thread_safe(add_engine(opts, fd.release(), false));
 }
 
-void epoll_controller::listen(const std::string& addr,
-                              std::function<proton::handler*(const std::string&)> factory,
-                              const proton::connection_options& opts)
-{
+proton::listener epoll_container::listen(const std::string& addr, proton::listen_handler& lh) {
     lock_guard g(lock_);
-    if (!factory)
-        throw proton::error("null function to listen on "+addr);
     if (stopping_)
-        throw proton::error("controller is stopping");
+        throw proton::error("container is stopping");
     auto& l = listeners_[addr];
-    l.reset(new pollable_listener(addr, factory, epoll_fd_, *this, options_.update(opts)));
-    l->notify();
+    try {
+        l.reset(new pollable_listener(addr, lh, epoll_fd_, *this));
+        l->notify();
+        return proton::listener(*this, addr);
+    } catch (const std::exception& e) {
+        lh.on_error(e.what());
+        lh.on_close();
+        throw;
+    }
 }
 
-void epoll_controller::stop_listening(const std::string& addr) {
+void epoll_container::stop_listening(const std::string& addr) {
     lock_guard g(lock_);
     listeners_.erase(addr);
     idle_check(g);
 }
 
-void epoll_controller::options(const proton::connection_options& opts) {
-    lock_guard g(lock_);
-    options_ = opts;
-}
-
-proton::connection_options epoll_controller::options() {
-    lock_guard g(lock_);
-    return options_;
-}
-
-void epoll_controller::run() {
+void epoll_container::run() {
     ++threads_;
     try {
         epoll_event e;
@@ -478,40 +489,36 @@ void epoll_controller::run() {
         stopped_.notify_all();
 }
 
-void epoll_controller::stop_on_idle() {
+void epoll_container::auto_stop(bool set) {
     lock_guard g(lock_);
-    stopping_ = true;
-    idle_check(g);
+    stopping_ = set;
 }
 
-void epoll_controller::stop(const proton::error_condition& err) {
+void epoll_container::stop(const proton::error_condition& err) {
     lock_guard g(lock_);
     stop_err_ = err;
     interrupt();
 }
 
-void epoll_controller::wait() {
+void epoll_container::wait() {
     std::unique_lock<std::mutex> l(lock_);
     stopped_.wait(l, [this]() { return this->threads_ == 0; } );
     for (auto& eng : engines_)
-        eng.second->close(stop_err_);
+        eng.second->engine().disconnected(stop_err_);
     listeners_.clear();
     engines_.clear();
 }
 
-void epoll_controller::interrupt() {
+void epoll_container::interrupt() {
     // Add an always-readable fd with 0 data and no ONESHOT to interrupt all threads.
     epoll_event ev = {};
     ev.events = EPOLLIN;
     check(epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, interrupt_fd_, &ev), "interrupt");
 }
 
-// Register make_epoll_controller() as proton::controller::create().
-proton::io::default_controller instance(make_epoll_controller);
-
 }
 
 // This is the only public function.
-std::unique_ptr<proton::controller> make_epoll_controller() {
-    return std::unique_ptr<proton::controller>(new epoll_controller());
+std::unique_ptr<proton::container> make_mt_container(const std::string& id) {
+    return std::unique_ptr<proton::container>(new epoll_container(id));
 }

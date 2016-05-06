@@ -22,13 +22,13 @@
 #include "proton_bits.hpp"
 
 #include "proton/connection.hpp"
-
 #include "proton/container.hpp"
-#include "proton/transport.hpp"
-#include "proton/session.hpp"
 #include "proton/error.hpp"
-#include "connector.hpp"
+#include "proton/event_loop.hpp"
+#include "proton/session.hpp"
+#include "proton/transport.hpp"
 
+#include "connector.hpp"
 #include "container_impl.hpp"
 #include "contexts.hpp"
 #include "msg.hpp"
@@ -72,10 +72,15 @@ std::string connection::container_id() const {
 }
 
 container& connection::container() const {
-    pn_reactor_t *r = pn_object_reactor(pn_object());
-    if (!r)
+    class container* c = connection_context::get(pn_object()).container;
+    if (!c) {
+        pn_reactor_t *r = pn_object_reactor(pn_object());
+        if (r)
+            c = &container_context::get(r);
+    }
+    if (!c)
         throw proton::error("connection does not have a container");
-    return container_context::get(r);
+    return *c;
 }
 
 session_range connection::sessions() const {

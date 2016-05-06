@@ -1,5 +1,5 @@
-#ifndef PROTON_IO_DRIVER_HPP
-#define PROTON_IO_DRIVER_HPP
+#ifndef PROTON_LISTENER_HPP
+#define PROTON_LISTENER_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,28 +20,32 @@
  * under the License.
  */
 
-#include <functional>
-#include <memory>
+#include <proton/export.hpp>
+
+#include <string>
 
 namespace proton {
 
-class controller;
+class container;
 
-namespace io {
+/// Returned by container::listen to allow you to stop listening on that address.
+class PN_CPP_CLASS_EXTERN listener {
+  public:
+    PN_CPP_EXTERN listener();
+    ///@cond internal
+    PN_CPP_EXTERN listener(container&, const std::string&);
+    ///@endcond internal
 
-/// A proton::controller implementation can create a static instance of default_controller
-/// to register as the default implementation.
-/// If more than one implementation is linked, which one becomes the default
-/// is undefined.
-struct default_controller {
+    /// Stop listening on the address provided to the call to container::listen that
+    /// returned this listener.
+    PN_CPP_EXTERN void stop();
 
-    /// A controller make-function takes a string container-id and returns a unique_ptr<controller>
-    typedef std::function<std::unique_ptr<controller>()> make_fn;
-
-    /// Construct a static instance of default_controller to register your controller factory.
-    PN_CPP_EXTERN default_controller(make_fn);
+ private:
+    std::string url_;
+    container* container_;
 };
 
-}}
 
-#endif // PROTON_IO_CONTROLLER_HPP
+}
+
+#endif // PROTON_LISTENER_HPP

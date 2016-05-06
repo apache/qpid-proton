@@ -27,6 +27,7 @@
 #include "proton/object.hpp"
 #include "proton/session.hpp"
 #include "proton/types.h"
+
 #include <string>
 
 struct pn_connection_t;
@@ -39,16 +40,14 @@ class sender;
 class sender_options;
 class receiver;
 class receiver_options;
-
-namespace io {
-class connection_engine;
-}
+class container;
+template <class T> class thread_safe;
 
 /// A connection to a remote AMQP peer.
 class
 PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, public endpoint {
     /// @cond INTERNAL
-    connection(pn_connection_t* c) : internal::object<pn_connection_t>(c) {}
+    PN_CPP_EXTERN connection(pn_connection_t* c) : internal::object<pn_connection_t>(c) {}
     /// @endcond
 
   public:
@@ -119,13 +118,13 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN uint16_t max_sessions() const;
     PN_CPP_EXTERN uint32_t idle_timeout() const;
 
-    /// @cond INTERNAL
   private:
     void user(const std::string &);
     void password(const std::string &);
 
     friend class internal::factory<connection>;
     friend class connector;
+  friend class proton::thread_safe<connection>;
     /// @endcond
 };
 

@@ -43,7 +43,9 @@ template <class T> struct option {
 class sender_options::impl {
     static void set_handler(sender l, proton_handler &h) {
         pn_record_t *record = pn_link_attachments(unwrap(l));
-        internal::pn_ptr<pn_handler_t> chandler = l.connection().container().impl_->cpp_handler(&h);
+        // FIXME aconway 2016-05-04: container_impl specific, fix for engine.
+        internal::pn_ptr<pn_handler_t> chandler =
+            static_cast<container_impl&>(l.connection().container()).cpp_handler(&h);
         pn_record_set_handler(record, chandler.get());
     }
 
@@ -111,7 +113,7 @@ sender_options& sender_options::operator=(const sender_options& x) {
 
 void sender_options::update(const sender_options& x) { impl_->update(*x.impl_); }
 
-sender_options& sender_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
+sender_options& sender_options::handler(class handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
 sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 sender_options& sender_options::source(source_options &s) {impl_->source = s; return *this; }

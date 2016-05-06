@@ -1,5 +1,5 @@
-#ifndef FAKE_CPP11_HPP
-#define FAKE_CPP11_HPP
+#ifndef MT_MT_CONTROLLER_HPP
+#define MT_MT_CONTROLLER_HPP
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,17 +20,10 @@
  * under the License.
  */
 
-/// These definitions allow us to use some new C++11 features in previous compilers
-/// by defining the new keywords to macro replace with nothing.
-///
-/// This is a bit of a hack and works with this small controlled source base because
-/// we know we don't use any of the new context sensitive keywords anywhere.
-///
-/// It is not recommended to copy this - just use C++11/C++14 instead!
+#include <proton/default_container.hpp>
+#include <memory>
 
-#if __cplusplus < 201103L
-#define override
-#endif
+// Defined in whichever MT container implementation we are linked with.
+std::unique_ptr<proton::container> make_mt_container(const std::string& id);
 
-
-#endif // FAKE_CPP11_HPP
+#endif // MT_MT_DEFAULT_CONTAINER.HPP

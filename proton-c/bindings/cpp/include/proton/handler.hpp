@@ -75,7 +75,7 @@ PN_CPP_CLASS_EXTERN handler
     ///
     /// @{
 
-    /// The event loop is starting.
+    /// The container event loop is starting.
     PN_CPP_EXTERN virtual void on_container_start(container &c);
     /// A message is received.
     PN_CPP_EXTERN virtual void on_message(delivery &d, message &m);
@@ -151,6 +151,7 @@ PN_CPP_CLASS_EXTERN handler
     internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
     friend class container;
+    friend class container_impl;
     friend class io::connection_engine;
     friend class connection_options;
     friend class receiver_options;

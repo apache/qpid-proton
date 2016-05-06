@@ -106,27 +106,15 @@ can be re-used if you change your approach.
 
 ### %proton::container - easy single-threaded applications
 
-`proton::container` is an easy way to get started with single threaded
-applications. It manages the low-level socket connection and polling for you so
-you can write portable applications using just the @ref proton API. You an use
+`proton::container` is the top level object in a proton application.  Use
 proton::connection::connect() and proton::container::listen() to create
-connections. The container polls multiple connections and calls protocol eventsa
+connections. The container polls multiple connections and calls protocol events
 on your `proton::handler` sub-classes.
 
-The container has two limitations:
-- it is not thread-safe, all container work must happen in a single thread.
-- it provides portable IO handling for you but cannot be used for different types of IO.
+The default container implementation is created by `proton::new_default_container()`.
 
-### %proton::mt::controller - multi-threaded applications
-
-The proton::controller is similar to the proton::container but it can process
-connections in multiple threads concurrently. It uses the `proton::handler` like
-the container. If you follow the recommended model you can re-use statefull,
-per-connection, handlers with the controller. See @ref mt_page and the examples
-@ref mt/broker.cpp and @ref mt/epoll\_controller.cpp
-
-Default controller IO implementations are provided but you can also implement
-your own controller using the proton::io::connection_engine, read on...
+You can implement your own container to integrate proton with arbitrary your own
+container using the proton::io::connection_engine.
 
 ### %proton::io::connection_engine - integrating with foreign IO
 
@@ -146,5 +134,5 @@ framework or library, memory-based streams or any other source/sink for byte
 stream data.
 
 You can also use the engine to build a custom implementation of
-proton::mt::controller and proton::mt::work\_queue so portable proton
-applications using the controller can run without modification on your platform.
+proton::container and so portable proton applications can run without
+modification on your platform.

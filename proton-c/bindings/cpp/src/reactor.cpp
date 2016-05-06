@@ -18,8 +18,8 @@
  */
 
 #include "reactor.hpp"
+#include "acceptor.hpp"
 
-#include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/task.hpp"
 #include "proton/url.hpp"

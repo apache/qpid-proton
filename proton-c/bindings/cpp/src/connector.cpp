@@ -20,6 +20,7 @@
  */
 
 #include "connector.hpp"
+#include "container_impl.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/transport.hpp"
@@ -105,7 +106,7 @@ void connector::on_transport_closed(proton_event &) {
                 }
                 else {
                     // log "Disconnected, reconnecting in " <<  delay << " milliseconds"
-                    connection_.container().impl_.get()->schedule(delay, this);
+                    static_cast<container_impl&>(connection_.container()).schedule(delay, this);
                     return;
                 }
             }

@@ -19,17 +19,18 @@
 
 
 #include "test_bits.hpp"
+#include "test_dummy_container.hpp"
+#include "proton_bits.hpp"
+
+#include <proton/container.hpp>
 #include <proton/uuid.hpp>
 #include <proton/io/connection_engine.hpp>
+#include <proton/io/link_namer.hpp>
 #include <proton/handler.hpp>
 #include <proton/types_fwd.hpp>
 #include <proton/link.hpp>
 #include <deque>
 #include <algorithm>
-
-#if __cplusplus < 201103L
-#define override
-#endif
 
 namespace {
 
@@ -40,15 +41,22 @@ using namespace std;
 
 typedef std::deque<char> byte_stream;
 
+struct dummy_link_namer : link_namer {
+    char name;
+    std::string link_name() { return std::string(1, name++); }
+};
+
+static dummy_link_namer namer;
+
 /// In memory connection_engine that reads and writes from byte_streams
 struct in_memory_engine : public connection_engine {
 
     byte_stream& reads;
     byte_stream& writes;
 
-    in_memory_engine(byte_stream& rd, byte_stream& wr, handler &h,
-                     const connection_options &opts = connection_options()) :
-        connection_engine(h, opts), reads(rd), writes(wr) {}
+    // Cheat on link_namer.
+    in_memory_engine(byte_stream& rd, byte_stream& wr, class container& cont) :
+        connection_engine(cont, namer), reads(rd), writes(wr) {}
 
     void do_read() {
         mutable_buffer rbuf = read_buffer();
@@ -70,18 +78,29 @@ struct in_memory_engine : public connection_engine {
         }
     }
 
-    void process() { do_read(); do_write(); dispatch(); }
+    void process() {
+        if (!dispatch())
+            throw std::runtime_error("unexpected close: "+connection().error().what());
+        do_read();
+        do_write();
+        dispatch();
+    }
 };
 
-/// A pair of engines that talk to each other in-memory.
+/// A pair of engines that talk to each other in-memory, simulating a connection.
 struct engine_pair {
+    dummy_container conta, contb;
     byte_stream ab, ba;
     in_memory_engine a, b;
 
-    engine_pair(handler& ha, handler& hb,
-                const connection_options& ca = connection_options(),
-                const connection_options& cb = connection_options()) :
-        a(ba, ab, ha, ca), b(ab, ba, hb, cb) {}
+    engine_pair(const connection_options& oa, const connection_options& ob,
+                const std::string& name=""
+    ) :
+        conta(name+"a"), contb(name+"b"), a(ba, ab, conta), b(ab, ba, contb)
+    {
+        a.connect(oa);
+        b.accept(ob);
+    }
 
     void process() { a.process(); b.process(); }
 };
@@ -100,47 +119,64 @@ struct record_handler : public handler {
     std::deque<proton::session> sessions;
     std::deque<std::string> unhandled_errors, transport_errors, connection_errors;
 
-    void on_receiver_open(receiver &l) override {
+    void on_receiver_open(receiver &l) PN_CPP_OVERRIDE {
         receivers.push_back(l);
     }
 
-    void on_sender_open(sender &l) override {
+    void on_sender_open(sender &l) PN_CPP_OVERRIDE {
         senders.push_back(l);
     }
 
-    void on_session_open(session &s) override {
+    void on_session_open(session &s) PN_CPP_OVERRIDE {
         sessions.push_back(s);
     }
 
-    void on_transport_error(transport& t) override {
+    void on_transport_error(transport& t) PN_CPP_OVERRIDE {
         transport_errors.push_back(t.error().what());
     }
 
-    void on_connection_error(connection& c) override {
+    void on_connection_error(connection& c) PN_CPP_OVERRIDE {
         connection_errors.push_back(c.error().what());
     }
 
-    void on_error(const proton::error_condition& c) override {
+    void on_error(const proton::error_condition& c) PN_CPP_OVERRIDE {
         unhandled_errors.push_back(c.what());
     }
 };
 
-void test_engine_container_id() {
-    // Set container ID and prefix explicitly
+void test_engine_container_link_id() {
     record_handler ha, hb;
-    engine_pair e(ha, hb,
-                  connection_options().container_id("a"),
-                  connection_options().container_id("b"));
-    e.a.connection().open();
-    ASSERT_EQUAL("a", e.a.connection().container_id());
+    engine_pair e(ha, hb, "ids-");
+    e.a.connect(ha);
+    e.b.accept(hb);
+    ASSERT_EQUAL("ids-a", e.a.connection().container_id());
     e.b.connection().open();
-    ASSERT_EQUAL("b", e.b.connection().container_id());
+    ASSERT_EQUAL("ids-b", e.b.connection().container_id());
+
+    // Seed the global link namer
+    namer.name = 'x';
+
+    e.a.connection().open_sender("foo");
+    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    sender s = quick_pop(ha.senders);
+    ASSERT_EQUAL("x", s.name());
+
+    ASSERT_EQUAL("x", quick_pop(hb.receivers).name());
+
+    e.a.connection().open_receiver("bar");
+    while (ha.receivers.empty() || hb.senders.empty()) e.process();
+    ASSERT_EQUAL("y", quick_pop(ha.receivers).name());
+    ASSERT_EQUAL("y", quick_pop(hb.senders).name());
+
+    e.b.connection().open_receiver("");
+    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    ASSERT_EQUAL("z", quick_pop(ha.senders).name());
+    ASSERT_EQUAL("z", quick_pop(hb.receivers).name());
 }
 
 void test_endpoint_close() {
     record_handler ha, hb;
     engine_pair e(ha, hb);
-    e.a.connection().open();
     e.a.connection().open_sender("x");
     e.a.connection().open_receiver("y");
     while (ha.senders.size()+ha.receivers.size() < 2 ||
@@ -170,28 +206,44 @@ void test_endpoint_close() {
     ASSERT_EQUAL("conn: bad connection", hb.connection_errors.front());
 }
 
-void test_transport_close() {
-    // Make sure an engine close calls the local on_transport_error() and aborts the remote.
+void test_engine_disconnected() {
+    // engine.disconnected() aborts the connection and calls the local on_transport_error()
     record_handler ha, hb;
-    engine_pair e(ha, hb);
-    e.a.connection().open();
-    while (!e.b.connection().active()) e.process();
-    e.a.close(proton::error_condition("oops", "engine failure"));
-    ASSERT(!e.a.dispatch());    // Final dispatch on a.
+    engine_pair e(ha, hb, "disconnected");
+    e.a.connect(ha);
+    e.b.accept(hb);
+    while (!e.a.connection().active() || !e.b.connection().active())
+        e.process();
+
+    // Close a with an error condition. The AMQP connection is still open.
+    e.a.disconnected(proton::error_condition("oops", "engine failure"));
+    ASSERT(!e.a.dispatch());
+    ASSERT(!e.a.connection().closed());
+    ASSERT(e.a.connection().error().empty());
+    ASSERT_EQUAL(0u, ha.connection_errors.size());
+    ASSERT_EQUAL("oops: engine failure", e.a.transport().error().what());
     ASSERT_EQUAL(1u, ha.transport_errors.size());
     ASSERT_EQUAL("oops: engine failure", ha.transport_errors.front());
-    ASSERT_EQUAL(proton::error_condition("oops", "engine failure"),e.a.transport().error());
-    // But connectoin was never protocol closed.
-    ASSERT(!e.a.connection().closed());
-    ASSERT_EQUAL(0u, ha.connection_errors.size());
+
+    // In a real app the IO code would detect the abort and do this:
+    e.b.disconnected(proton::error_condition("broken", "it broke"));
+    ASSERT(!e.b.dispatch());
+    ASSERT(!e.b.connection().closed());
+    ASSERT(e.b.connection().error().empty());
+    ASSERT_EQUAL(0u, hb.connection_errors.size());
+    // Proton-C adds (connection aborted) if transport closes too early,
+    // and provides a default message if there is no user message.
+    ASSERT_EQUAL("broken: it broke (connection aborted)", e.b.transport().error().what());
+    ASSERT_EQUAL(1u, hb.transport_errors.size());
+    ASSERT_EQUAL("broken: it broke (connection aborted)", hb.transport_errors.front());
 }
 
 }
 
 int main(int, char**) {
     int failed = 0;
-    RUN_TEST(failed, test_engine_container_id());
+    RUN_TEST(failed, test_engine_container_link_id());
     RUN_TEST(failed, test_endpoint_close());
-    RUN_TEST(failed, test_transport_close());
+    RUN_TEST(failed, test_engine_disconnected());
     return failed;
 }

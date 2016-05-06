@@ -49,7 +49,9 @@ class session_options::impl {
         if (s.uninitialized()) {
             if (handler.set) {
                 pn_record_t *record = pn_session_attachments(unwrap(s));
-                internal::pn_ptr<pn_handler_t> chandler = s.connection().container().impl_->cpp_handler(handler.value);
+                // FIXME aconway 2016-05-04: container_impl specific
+                internal::pn_ptr<pn_handler_t> chandler =
+                    static_cast<container_impl&>(s.connection().container()).cpp_handler(handler.value);
                 pn_record_set_handler(record, chandler.get());
             }
         }

@@ -22,6 +22,8 @@
  *
  */
 
+#include "proton/error.hpp"
+
 #include "proton/event.h"
 
 namespace proton {
@@ -264,13 +266,13 @@ class proton_event
     };
     ///@}
 
-    proton_event(pn_event_t *ce, class container *c) :
+    proton_event(pn_event_t *ce, class container& cont) :
       pn_event_(ce),
-      container_(c)
+      container_(cont)
     {}
 
     pn_event_t* pn_event() const { return pn_event_; }
-    class container* container() const { return container_; }
+    class container& container() const { return container_; }
 
     /// Get type of event
     event_type type() const { return event_type(pn_event_type(pn_event_)); }
@@ -279,7 +281,7 @@ class proton_event
 
   private:
     pn_event_t *pn_event_;
-    class container *container_;
+    class container& container_;
 };
 
 }

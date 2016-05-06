@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,12 +15,27 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
-#include "acceptor.hpp"
+
+#include "contexts.hpp"
+
+#include <proton/session.h>
+#include <proton/link.h>
+
+#include <proton/event_loop.hpp>
 
 namespace proton {
 
-void acceptor::close() { pn_acceptor_close(pn_object()); }
+event_loop* event_loop::get(pn_connection_t* c) {
+    return connection_context::get(c).event_loop.get();
+}
+
+event_loop* event_loop::get(pn_session_t* s) {
+    return get(pn_session_connection(s));
+}
+
+event_loop* event_loop::get(pn_link_t* l) {
+    return get(pn_link_session(l));
+}
 
 }
