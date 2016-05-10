@@ -538,7 +538,7 @@ class Connector(Handler):
         assert(reactor is not None)
         url = self.address.next()
         reactor.set_connection_host(connection, url.host, str(url.port))
-        logging.info("connecting to %s..." % url)
+        logging.debug("connecting to %s..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
@@ -567,7 +567,7 @@ class Connector(Handler):
         self._connect(event.connection, event.reactor)
 
     def on_connection_remote_open(self, event):
-        logging.info("connected to %s" % event.connection.hostname)
+        logging.debug("connected to %s" % event.connection.hostname)
         if self.reconnect:
             self.reconnect.reset()
             self.transport = None
@@ -587,7 +587,7 @@ class Connector(Handler):
                     logging.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
             else:
-                logging.info("Disconnected")
+                logging.debug("Disconnected")
                 self.connection = None
 
     def on_timer_task(self, event):
