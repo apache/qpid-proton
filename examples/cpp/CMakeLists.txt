@@ -38,6 +38,7 @@ foreach(example
     connection_options
     queue_browser
     selected_recv
+    flow_control
     ssl
     ssl_client_cert
     encode_decode)

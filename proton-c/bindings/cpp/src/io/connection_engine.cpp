@@ -58,6 +58,7 @@ connection_engine::connection_engine(class handler &h, const connection_options&
     if (connection_.container_id().empty())
         pn_connection_set_container(unwrap(connection_), uuid::random().str().c_str());
     id_generator &link_gen = connection_context::get(connection_).link_gen;
+    connection_context::get(connection_).collector = collector_.get();
     if (link_gen.prefix().empty())
         link_gen.prefix(uuid::random().str()+"/");
 }

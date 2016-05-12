@@ -58,6 +58,12 @@ PN_CPP_CLASS_EXTERN sender : public link
     /// Get the target node.
     PN_CPP_EXTERN class target target() const;
 
+    /// Return all unused credit to the receiver in response to a
+    /// drain request.  Has no effect unless there has been a drain
+    /// request and there is remaining credit to use or return.
+    /// @see receiver::drain.
+    PN_CPP_EXTERN void return_credit();
+
   /// @cond INTERNAL
   friend class internal::factory<sender>;
   friend class sender_iterator;

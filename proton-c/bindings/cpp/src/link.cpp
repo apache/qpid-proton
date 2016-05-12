@@ -49,12 +49,21 @@ void link::detach() {
 }
 
 int link::credit() const {
-    return pn_link_credit(pn_object());
+    pn_link_t *lnk = pn_object();
+    if (pn_link_is_sender(lnk))
+        return pn_link_credit(lnk);
+    link_context& lctx = link_context::get(lnk);
+    return pn_link_credit(lnk) + lctx.pending_credit;
 }
 
-int link::queued() { return pn_link_queued(pn_object()); }
-int link::unsettled() { return pn_link_unsettled(pn_object()); }
-int link::drained() { return pn_link_drained(pn_object()); }
+bool link::draining() {
+    pn_link_t *lnk = pn_object();
+    link_context& lctx = link_context::get(lnk);
+    if (pn_link_is_sender(lnk))
+        return pn_link_credit(lnk) > 0 && lctx.draining;
+    else
+        return lctx.draining;
+}
 
 std::string link::name() const { return str(pn_link_name(pn_object()));}
 

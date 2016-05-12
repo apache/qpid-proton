@@ -58,6 +58,8 @@ void handler::on_tracker_reject(tracker &) {}
 void handler::on_tracker_release(tracker &) {}
 void handler::on_tracker_settle(tracker &) {}
 void handler::on_delivery_settle(delivery &) {}
+void handler::on_sender_drain_start(sender &) {}
+void handler::on_receiver_drain_finish(receiver &) {}
 
 void handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
 

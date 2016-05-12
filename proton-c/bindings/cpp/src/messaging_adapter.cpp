@@ -68,13 +68,35 @@ void messaging_adapter::on_reactor_init(proton_event &pe) {
 void messaging_adapter::on_link_flow(proton_event &pe) {
     pn_event_t *pne = pe.pn_event();
     pn_link_t *lnk = pn_event_link(pne);
-    sender s(make_wrapper<sender>(lnk));
+    // TODO: process session flow data, if no link-specific data, just return.
+    if (!lnk) return;
+    link_context& lctx = link_context::get(lnk);
     int state = pn_link_state(lnk);
-    if (lnk && pn_link_is_sender(lnk) && pn_link_credit(lnk) > 0 &&
-        (state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE))
-    {
-        // create on_message extended event
-        delegate_.on_sendable(s);
+    if ((state&PN_LOCAL_ACTIVE) && (state&PN_REMOTE_ACTIVE)) {
+        if (pn_link_is_sender(lnk)) {
+            if (pn_link_credit(lnk) > 0) {
+                sender s(make_wrapper<sender>(lnk));
+                if (pn_link_draining(lnk)) {
+                    if (!lctx.draining) {
+                        lctx.draining = true;
+                        delegate_.on_sender_drain_start(s);
+                    }
+                }
+                else {
+                    lctx.draining = false;
+                }
+                // create on_message extended event
+                delegate_.on_sendable(s);
+            }
+        }
+        else {
+            // receiver
+            if (!pn_link_credit(lnk) && lctx.draining) {
+                lctx.draining = false;
+                receiver r(make_wrapper<receiver>(lnk));
+                delegate_.on_receiver_drain_finish(r);
+            }
+        }
     }
     credit_topup(lnk);
 }
@@ -103,10 +125,25 @@ void messaging_adapter::on_delivery(proton_event &pe) {
                 delegate_.on_message(d, msg);
                 if (lctx.auto_accept && !d.settled())
                     d.accept();
+                if (lctx.draining && !pn_link_credit(lnk)) {
+                    lctx.draining = false;
+                    receiver r(make_wrapper<receiver>(lnk));
+                    delegate_.on_receiver_drain_finish(r);
+                }
             }
         }
         else if (pn_delivery_updated(dlv) && d.settled()) {
             delegate_.on_delivery_settle(d);
+        }
+        if (lctx.draining && pn_link_credit(lnk) == 0) {
+            lctx.draining = false;
+            pn_link_set_drain(lnk, false);
+            receiver r(make_wrapper<receiver>(lnk));
+            delegate_.on_receiver_drain_finish(r);
+            if (lctx.pending_credit) {
+                pn_link_flow(lnk, lctx.pending_credit);
+                lctx.pending_credit = 0;
+            }
         }
         credit_topup(lnk);
     } else {

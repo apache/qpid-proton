@@ -86,20 +86,11 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Credit available on the link.
     PN_CPP_EXTERN int credit() const;
 
-    /// The number of deliveries queued on the link.
-    PN_CPP_EXTERN int queued();
-
-    /// @cond INTERNAL
-    /// XXX ask about when this is used
-    /// The number of unsettled deliveries on the link.
-    PN_CPP_EXTERN int unsettled();
-    /// @endcond
-
-    /// @cond INTERNAL
-    /// XXX revisit mind-melting API inherited from C
-    /// XXX flush() ? drain, and drain_completed (sender and receiver ends)
-    PN_CPP_EXTERN int drained();
-    /// @endcond
+    /// True for a receiver if a drain cycle has been started and the
+    /// corresponding on_receiver_drain_finish event is still pending.
+    /// @see receiver::drain.  True for a sender if the receiver has
+    /// requested a drain of credit and the sender has unused credit.
+    PN_CPP_EXTERN bool draining();
 
     /// Get the link name.
     PN_CPP_EXTERN std::string name() const;

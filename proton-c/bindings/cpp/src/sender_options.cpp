@@ -43,7 +43,7 @@ template <class T> struct option {
 class sender_options::impl {
     static void set_handler(sender l, proton_handler &h) {
         pn_record_t *record = pn_link_attachments(unwrap(l));
-        internal::pn_ptr<pn_handler_t> chandler = connection().container().impl_->cpp_handler(&h);
+        internal::pn_ptr<pn_handler_t> chandler = l.connection().container().impl_->cpp_handler(&h);
         pn_record_set_handler(record, chandler.get());
     }
 

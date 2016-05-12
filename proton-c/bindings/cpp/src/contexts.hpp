@@ -83,13 +83,14 @@ class context {
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : default_session(0), work_queue(0) {}
+    connection_context() : default_session(0), work_queue(0), collector(0) {}
 
     // Used by all connections
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
     id_generator link_gen;      // Link name generator.
     class work_queue* work_queue; // Work queue if this is proton::controller connection.
+    pn_collector_t* collector;
 
     internal::pn_unique_ptr<proton_handler> handler;
 
@@ -120,10 +121,12 @@ class listener_context : public context {
 class link_context : public context {
   public:
     static link_context& get(pn_link_t* l);
-    link_context() : credit_window(10), auto_accept(true), auto_settle(true) {}
+    link_context() : credit_window(10), auto_accept(true), auto_settle(true), draining(false), pending_credit(0) {}
     int credit_window;
     bool auto_accept;
     bool auto_settle;
+    bool draining;
+    uint32_t pending_credit;
 };
 
 }

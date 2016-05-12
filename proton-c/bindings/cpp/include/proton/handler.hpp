@@ -141,6 +141,11 @@ PN_CPP_CLASS_EXTERN handler
     /// The sending peer settled a transfer.
     PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
 
+    /// The receiving peer has requested a drain of remaining credit.
+    PN_CPP_EXTERN virtual void on_sender_drain_start(sender &s);
+    /// The credit outstanding at the time of the call to receiver::drain has been consumed or returned.
+    PN_CPP_EXTERN virtual void on_receiver_drain_finish(receiver &r);
+
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition &c);
 

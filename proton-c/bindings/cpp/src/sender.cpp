@@ -28,6 +28,7 @@
 #include "proton/types.h"
 
 #include "proton_bits.hpp"
+#include "contexts.hpp"
 
 namespace proton {
 
@@ -61,7 +62,15 @@ tracker sender::send(const message &message) {
     pn_link_advance(pn_object());
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
+    if (!pn_link_credit(pn_object()))
+        link_context::get(pn_object()).draining = false;
     return make_wrapper<tracker>(dlv);
+}
+
+void sender::return_credit() {
+    link_context &lctx = link_context::get(pn_object());
+    lctx.draining = false;
+    pn_link_drained(pn_object());
 }
 
 sender_iterator sender_iterator::operator++() {

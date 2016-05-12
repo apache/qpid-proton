@@ -258,6 +258,14 @@ class ContainerExampleTest(BrokerTestCase):
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", addr+"/examples"]).wait_exit())
 
+    def test_flow_control(self):
+        want="""success: Example 1: simple credit
+success: Example 2: basic drain
+success: Example 3: drain without credit
+success: Exmaple 4: high/low watermark
+"""
+        self.assertEqual(want, self.proc(["flow_control", pick_addr(), "-quiet"]).wait_exit())
+
     def test_encode_decode(self):
         want="""
 == Array, list and map of uniform type.

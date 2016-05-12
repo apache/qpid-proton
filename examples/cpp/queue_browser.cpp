@@ -48,10 +48,6 @@ class browser : public proton::handler {
 
     void on_message(proton::delivery &d, proton::message &m) override {
         std::cout << m.body() << std::endl;
-
-        if (d.receiver().queued() == 0 && d.receiver().drained() > 0) {
-            d.connection().close();
-        }
     }
 };
 
