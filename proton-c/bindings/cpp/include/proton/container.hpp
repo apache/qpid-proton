@@ -25,18 +25,20 @@
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/pn_unique_ptr.hpp"
-#include "proton/connection_options.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/receiver_options.hpp"
 
 #include <string>
 
 namespace proton {
 
 class connection;
+class connection_options;
 class acceptor;
 class handler;
 class handler;
+class receiver;
+class receiver_options;
+class sender;
+class sender_options;
 class task;
 class container_impl;
 
@@ -63,23 +65,27 @@ class container {
     ///
     /// This container will not be very useful unless event handlers are supplied
     /// as options when creating a connection/listener/sender or receiver.
-    PN_CPP_EXTERN container(const std::string& id=std::string());
+    PN_CPP_EXTERN container();
+    PN_CPP_EXTERN container(const std::string& id);
 
     /// Create a container with an event handler.
     ///
     /// Container ID should be unique within your system. By default a
     /// random ID is generated.
-    PN_CPP_EXTERN container(handler& mhandler, const std::string& id=std::string());
+    PN_CPP_EXTERN container(handler& mhandler);
+    PN_CPP_EXTERN container(handler& mhandler, const std::string& id);
 
     PN_CPP_EXTERN ~container();
 
     /// Open a connection to `url`.
+    PN_CPP_EXTERN connection connect(const std::string& url);
     PN_CPP_EXTERN connection connect(const std::string& url,
-                                     const connection_options &opts = connection_options());
+                                     const connection_options &opts);
 
     /// Listen on `url` for incoming connections.
+    PN_CPP_EXTERN acceptor listen(const std::string &url);
     PN_CPP_EXTERN acceptor listen(const std::string &url,
-                                  const connection_options &opts = connection_options());
+                                  const connection_options &opts);
 
     /// Start processing events. It returns when all connections and
     /// acceptors are closed.
@@ -88,16 +94,22 @@ class container {
     /// Open a connection to `url` and open a sender for `url.path()`.
     /// Any supplied sender or connection options will override the
     /// container's template options.
+    PN_CPP_EXTERN sender open_sender(const std::string &url);
     PN_CPP_EXTERN sender open_sender(const std::string &url,
-                                     const proton::sender_options &o = proton::sender_options(),
-                                     const connection_options &c = connection_options());
+                                     const proton::sender_options &o);
+    PN_CPP_EXTERN sender open_sender(const std::string &url,
+                                     const proton::sender_options &o,
+                                     const connection_options &c);
 
     /// Open a connection to `url` and open a receiver for
     /// `url.path()`.  Any supplied receiver or connection options will
     /// override the container's template options.
+    PN_CPP_EXTERN receiver open_receiver(const std::string&url);
     PN_CPP_EXTERN receiver open_receiver(const std::string&url,
-                                         const proton::receiver_options &o = proton::receiver_options(),
-                                         const connection_options &c = connection_options());
+                                         const proton::receiver_options &o);
+    PN_CPP_EXTERN receiver open_receiver(const std::string&url,
+                                         const proton::receiver_options &o,
+                                         const connection_options &c);
 
     /// A unique identifier for the container.
     PN_CPP_EXTERN std::string id() const;
@@ -105,7 +117,8 @@ class container {
     /// @cond INTERNAL
     /// XXX settle some API questions
     /// Schedule a timer task event in delay milliseconds.
-    PN_CPP_EXTERN task schedule(int delay, handler *h = 0);
+    PN_CPP_EXTERN task schedule(int delay);
+    PN_CPP_EXTERN task schedule(int delay, handler *h);
 
     /// @endcond
 

@@ -21,6 +21,9 @@
 #include "proton/handler.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/session.hpp"
 #include "proton/transport.hpp"
 
 #include "proton_event.hpp"

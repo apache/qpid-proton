@@ -34,6 +34,10 @@
 
 namespace proton {
 
+void session::open() {
+    pn_session_open(pn_object());
+}
+
 void session::open(const session_options &opts) {
     opts.apply(*this);
     pn_session_open(pn_object());
@@ -58,12 +62,20 @@ std::string next_link_name(const connection& c) {
 }
 }
 
+sender session::open_sender(const std::string &addr) {
+    return open_sender(addr, sender_options());
+}
+
 sender session::open_sender(const std::string &addr, const sender_options &so) {
     pn_link_t *lnk = pn_sender(pn_object(), next_link_name(connection()).c_str());
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     sender snd(make_wrapper<sender>(lnk));
     snd.open(so);
     return snd;
+}
+
+receiver session::open_receiver(const std::string &addr) {
+    return open_receiver(addr, receiver_options());
 }
 
 receiver session::open_receiver(const std::string &addr, const receiver_options &ro)

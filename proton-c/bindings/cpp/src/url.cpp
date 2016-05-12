@@ -59,6 +59,8 @@ void defaults(pn_url_t* u) {
 
 } // namespace
 
+url::url(const std::string &s) : url_(parse_throw(s.c_str())) { defaults(url_); }
+
 url::url(const std::string &s, bool d) : url_(parse_throw(s.c_str())) { if (d) defaults(url_); }
 
 url::url(const url& u) : url_(parse_allow_empty(pn_url_str(u.url_))) {}

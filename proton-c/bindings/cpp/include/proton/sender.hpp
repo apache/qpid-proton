@@ -47,7 +47,8 @@ PN_CPP_CLASS_EXTERN sender : public link
 
     /// Locally open the sender.  The operation is not complete till
     /// handler::on_sender_open.
-    PN_CPP_EXTERN void open(const sender_options &opts = sender_options());
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void open(const sender_options &opts);
 
     /// Send a message on the sender.
     PN_CPP_EXTERN tracker send(const message &m);

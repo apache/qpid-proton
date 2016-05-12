@@ -96,7 +96,8 @@ class ssl {
 class ssl_certificate {
   public:
     /// Create an SSL certificate.
-    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra = std::string());
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main);
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra);
 
     /// Create an SSL certificate.
     ///

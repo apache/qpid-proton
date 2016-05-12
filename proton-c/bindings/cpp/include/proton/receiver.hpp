@@ -44,7 +44,8 @@ PN_CPP_CLASS_EXTERN receiver : public link {
 
     /// Locally open the receiver.  The operation is not complete till
     /// handler::on_receiver_open.
-    PN_CPP_EXTERN void open(const receiver_options &opts = receiver_options());
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void open(const receiver_options &opts);
 
     /// Get the source node.
     PN_CPP_EXTERN class source source() const;

@@ -46,6 +46,10 @@ transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));
 }
 
+void connection::open() {
+    open(connection_options());
+}
+
 void connection::open(const connection_options &opts) {
     connector *connector = dynamic_cast<class connector*>(
         connection_context::get(pn_object()).handler.get());
@@ -78,6 +82,10 @@ session_range connection::sessions() const {
     return session_range(session_iterator(pn_session_head(pn_object(), 0)));
 }
 
+session connection::open_session() {
+    return open_session(session_options());
+}
+
 session connection::open_session(const session_options &opts) {
     session s(make_wrapper<session>(pn_session(pn_object())));
     // TODO: error check, too many sessions, no mem...
@@ -97,8 +105,16 @@ session connection::default_session() {
     return ctx.default_session;
 }
 
+sender connection::open_sender(const std::string &addr) {
+    return open_sender(addr, sender_options());
+}
+
 sender connection::open_sender(const std::string &addr, const sender_options &opts) {
     return default_session().open_sender(addr, opts);
+}
+
+receiver connection::open_receiver(const std::string &addr) {
+    return open_receiver(addr, receiver_options());
 }
 
 receiver connection::open_receiver(const std::string &addr, const receiver_options &opts)

@@ -34,6 +34,10 @@ namespace proton {
 
 sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
 
+void sender::open() {
+    attach();
+}
+
 void sender::open(const sender_options &opts) {
     opts.apply(*this);
     attach();

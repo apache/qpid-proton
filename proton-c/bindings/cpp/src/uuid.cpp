@@ -53,6 +53,12 @@ struct seed {
 
 }
 
+uuid uuid::copy() {
+    uuid u;
+    std::fill(u.begin(), u.end(), 0);
+    return u;
+}
+
 uuid uuid::copy(const char* bytes) {
     uuid u;
     if (bytes)

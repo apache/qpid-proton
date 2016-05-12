@@ -127,6 +127,9 @@ ssl_client_options::ssl_client_options(ssl_certificate &cert, const std::string 
 
 ssl_client_options::ssl_client_options() : ssl_domain(false) {}
 
+ssl_certificate::ssl_certificate(const std::string &main)
+    : certdb_main_(main), pw_set_(false) {}
+
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}
 

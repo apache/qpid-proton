@@ -25,6 +25,7 @@
 #include "id_generator.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
 #include "proton/handler.hpp"

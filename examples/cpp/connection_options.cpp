@@ -20,6 +20,7 @@
  */
 
 #include "proton/connection.hpp"
+#include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/handler.hpp"
 #include "proton/transport.hpp"

@@ -61,7 +61,8 @@ class url {
     /// @note Converts automatically from string.
     ///
     /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
+    PN_CPP_EXTERN url(const std::string& url_str);
+    PN_CPP_EXTERN url(const std::string& url_str, bool defaults);
 
     /// Copy a URL.
     PN_CPP_EXTERN url(const url&);

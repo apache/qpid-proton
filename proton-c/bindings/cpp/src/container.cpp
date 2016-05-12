@@ -26,8 +26,10 @@
 #include "proton/session.hpp"
 #include "proton/acceptor.hpp"
 #include "proton/error.hpp"
-#include "proton/sender.hpp"
 #include "proton/receiver.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/sender.hpp"
+#include "proton/sender_options.hpp"
 #include "proton/task.hpp"
 #include "proton/url.hpp"
 
@@ -43,8 +45,16 @@ namespace proton {
 
 //// Public container class.
 
+container::container() {
+    impl_.reset(new container_impl(*this, 0, std::string()));
+}
+
 container::container(const std::string& id) {
     impl_.reset(new container_impl(*this, 0, id));
+}
+
+container::container(handler &mhandler) {
+    impl_.reset(new container_impl(*this, mhandler.messaging_adapter_.get(), std::string()));
 }
 
 container::container(handler &mhandler, const std::string& id) {
@@ -52,6 +62,10 @@ container::container(handler &mhandler, const std::string& id) {
 }
 
 container::~container() {}
+
+connection container::connect(const std::string &url) {
+    return impl_->connect(url, connection_options());
+}
 
 connection container::connect(const std::string &url, const connection_options &opts) {
     return impl_->connect(url, opts);
@@ -61,18 +75,39 @@ std::string container::id() const { return impl_->id_; }
 
 void container::run() { impl_->reactor_.run(); }
 
+sender container::open_sender(const std::string &url) {
+    return impl_->open_sender(url, proton::sender_options(), connection_options());
+}
+
+sender container::open_sender(const std::string &url, const proton::sender_options &lo) {
+    return impl_->open_sender(url, lo, connection_options());
+}
+
 sender container::open_sender(const std::string &url, const proton::sender_options &lo, const connection_options &co) {
     return impl_->open_sender(url, lo, co);
+}
+
+receiver container::open_receiver(const std::string &url) {
+    return impl_->open_receiver(url, proton::receiver_options(), connection_options());
+}
+
+receiver container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
+    return impl_->open_receiver(url, lo, connection_options());
 }
 
 receiver container::open_receiver(const std::string &url, const proton::receiver_options &lo, const connection_options &co) {
     return impl_->open_receiver(url, lo, co);
 }
 
+acceptor container::listen(const std::string &url) {
+    return impl_->listen(url, connection_options());
+}
+
 acceptor container::listen(const std::string &url, const connection_options &opts) {
     return impl_->listen(url, opts);
 }
 
+task container::schedule(int delay) { return impl_->schedule(delay, 0); }
 task container::schedule(int delay, handler *h) { return impl_->schedule(delay, h ? h->messaging_adapter_.get() : 0); }
 
 void container::client_connection_options(const connection_options &o) { impl_->client_connection_options(o); }

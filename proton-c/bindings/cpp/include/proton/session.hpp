@@ -60,7 +60,8 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
 
     /// Initiate local open.  The operation is not complete till
     /// handler::on_session_open().
-    PN_CPP_EXTERN void open(const session_options &opts = session_options());
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void open(const session_options &opts);
 
     /// Initiate local close.  The operation is not complete till
     /// handler::on_session_close().
@@ -78,10 +79,12 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN class connection connection() const;
 
     /// Open a sender for `addr`.
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &opts = sender_options());
+    PN_CPP_EXTERN sender open_sender(const std::string &addr);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &opts);
 
     /// Open a receiver for `addr`.
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const receiver_options &opts = receiver_options());
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr, const receiver_options &opts);
 
     /// The number of incoming bytes currently buffered.
     PN_CPP_EXTERN size_t incoming_bytes() const;

@@ -36,6 +36,10 @@ namespace proton {
 
 receiver::receiver(pn_link_t* r): link(make_wrapper(r)) {}
 
+void receiver::open() {
+    attach();
+}
+
 void receiver::open(const receiver_options &opts) {
     opts.apply(*this);
     attach();

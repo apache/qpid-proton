@@ -24,11 +24,8 @@
 
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
-#include "proton/sender.hpp"
-#include "proton/receiver.hpp"
 #include "proton/object.hpp"
 #include "proton/session.hpp"
-#include "proton/connection_options.hpp"
 #include "proton/types.h"
 #include <string>
 
@@ -37,6 +34,11 @@ struct pn_connection_t;
 namespace proton {
 
 class handler;
+class connection_options;
+class sender;
+class sender_options;
+class receiver;
+class receiver_options;
 
 namespace io {
 class connection_engine;
@@ -76,7 +78,8 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Initiate local open.  The operation is not complete till
     /// handler::on_connection_open().
-    PN_CPP_EXTERN void open(const connection_options &opts = connection_options());
+    PN_CPP_EXTERN void open();
+    PN_CPP_EXTERN void open(const connection_options &);
 
     /// Initiate local close.  The operation is not complete till
     /// handler::on_connection_close().
@@ -87,19 +90,21 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN void close(const error_condition&);
 
     /// Open a new session.
-    PN_CPP_EXTERN session open_session(const session_options &opts = session_options());
+    PN_CPP_EXTERN session open_session();
+    PN_CPP_EXTERN session open_session(const session_options &);
 
     /// Get the default session.  A default session is created on the
     /// first call and reused for the lifetime of the connection.
     PN_CPP_EXTERN session default_session();
 
     /// Open a sender for `addr` on default_session().
-    PN_CPP_EXTERN sender open_sender(const std::string &addr,
-                                     const sender_options &opts = sender_options());
+    PN_CPP_EXTERN sender open_sender(const std::string &addr);
+    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &);
 
     /// Open a receiver for `addr` on default_session().
+    PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
-                                         const receiver_options &opts = receiver_options());
+                                         const receiver_options &);
 
     /// Return sessions on this connection matching the state mask.
     PN_CPP_EXTERN session_range sessions() const;
