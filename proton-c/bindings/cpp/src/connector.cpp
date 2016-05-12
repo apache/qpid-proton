@@ -63,7 +63,7 @@ void connector::connect() {
         connection_.user(address_.user());
     if (!address_.password().empty())
         connection_.password(address_.password());
-    t.bind(connection_);
+    pn_transport_bind(pnt, unwrap(connection_));
     pn_decref(pnt);
     // Apply options to the new transport.
     options_.apply(connection_);
@@ -91,7 +91,7 @@ void connector::on_transport_closed(proton_event &) {
     if (!connection_) return;
     if (connection_.active()) {
         if (reconnect_timer_) {
-            connection_.transport().unbind();
+            pn_transport_unbind(unwrap(connection_.transport()));
             transport_configured_ = false;
             int delay = reconnect_timer_->next_delay(timestamp::now());
             if (delay >= 0) {

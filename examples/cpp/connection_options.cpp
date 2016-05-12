@@ -34,8 +34,8 @@ using proton::connection_options;
 class handler_2 : public proton::handler {
     void on_connection_open(proton::connection &c) override {
         std::cout << "connection events going to handler_2" << std::endl;
-        std::cout << "connection max_frame_size: " << c.transport().max_frame_size() <<
-            ", idle timeout: " << c.transport().idle_timeout() << std::endl;
+        std::cout << "connection max_frame_size: " << c.max_frame_size() <<
+            ", idle timeout: " << c.idle_timeout() << std::endl;
         c.close();
     }
 };

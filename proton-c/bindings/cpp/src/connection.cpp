@@ -126,6 +126,18 @@ error_condition connection::error() const {
     return make_wrapper(pn_connection_remote_condition(pn_object()));
 }
 
+uint32_t connection::max_frame_size() const {
+    return pn_transport_get_remote_max_frame(pn_connection_transport(pn_object()));
+}
+
+uint16_t connection::max_sessions() const {
+    return pn_transport_remote_channel_max(pn_connection_transport(pn_object()));
+}
+
+uint32_t connection::idle_timeout() const {
+    return pn_transport_get_remote_idle_timeout(pn_connection_transport(pn_object()));
+}
+
 void connection::user(const std::string &name) { pn_connection_set_user(pn_object(), name.c_str()); }
 
 void connection::password(const std::string &pass) { pn_connection_set_password(pn_object(), pass.c_str()); }

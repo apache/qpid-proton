@@ -50,7 +50,7 @@ connection_engine::connection_engine(class handler &h, const connection_options&
 {
     if (!connection_ || !transport_ || !collector_)
         throw proton::error("engine create");
-    transport_.bind(connection_);
+    pn_transport_bind(unwrap(transport_), unwrap(connection_));
     pn_connection_collect(unwrap(connection_), collector_.get());
     opts.apply(connection_);
 
@@ -64,7 +64,7 @@ connection_engine::connection_engine(class handler &h, const connection_options&
 }
 
 connection_engine::~connection_engine() {
-    transport_.unbind();
+    pn_transport_unbind(unwrap(transport_));
     pn_collector_free(collector_.release()); // Break cycle with connection_
 }
 

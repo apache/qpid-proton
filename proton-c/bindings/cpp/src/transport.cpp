@@ -50,38 +50,4 @@ error_condition transport::error() const {
     return make_wrapper(pn_transport_condition(pn_object()));
 }
 
-void transport::unbind() {
-    if (pn_transport_unbind(pn_object()))
-        throw proton::error(MSG("transport::unbind failed " << pn_error_text(pn_transport_error(pn_object()))));
-}
-
-void transport::bind(class connection &conn) {
-    if (pn_transport_bind(pn_object(), unwrap(conn)))
-        throw proton::error(MSG("transport::bind failed " << pn_error_text(pn_transport_error(pn_object()))));
-}
-
-uint32_t transport::max_frame_size() const {
-    return pn_transport_get_max_frame(pn_object());
-}
-
-uint32_t transport::remote_max_frame_size() const {
-    return pn_transport_get_remote_max_frame(pn_object());
-}
-
-uint16_t transport::max_channels() const {
-    return pn_transport_get_channel_max(pn_object());
-}
-
-uint16_t transport::remote_max_channels() const {
-    return pn_transport_remote_channel_max(pn_object());
-}
-
-uint32_t transport::idle_timeout() const {
-    return pn_transport_get_idle_timeout(pn_object());
-}
-
-uint32_t transport::remote_idle_timeout() const {
-    return pn_transport_get_remote_idle_timeout(pn_object());
-}
-
 }

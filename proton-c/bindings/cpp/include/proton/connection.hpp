@@ -108,6 +108,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Return sessions on this connection matching the state mask.
     PN_CPP_EXTERN session_range sessions() const;
+    
+    PN_CPP_EXTERN uint32_t max_frame_size() const;
+    PN_CPP_EXTERN uint16_t max_sessions() const;
+    PN_CPP_EXTERN uint32_t idle_timeout() const;
 
     /// @cond INTERNAL
   private:
