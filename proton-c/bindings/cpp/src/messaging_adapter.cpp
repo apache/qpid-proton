@@ -76,7 +76,7 @@ void messaging_adapter::on_link_flow(proton_event &pe) {
         if (pn_link_is_sender(lnk)) {
             if (pn_link_credit(lnk) > 0) {
                 sender s(make_wrapper<sender>(lnk));
-                if (pn_link_draining(lnk)) {
+                if (pn_link_get_drain(lnk)) {
                     if (!lctx.draining) {
                         lctx.draining = true;
                         delegate_.on_sender_drain_start(s);
