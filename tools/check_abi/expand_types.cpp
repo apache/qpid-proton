@@ -23,6 +23,7 @@
 #include <cxxabi.h>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <typeinfo>
 
 void print_type(const char* type, const char* mangled_type)
@@ -51,4 +52,5 @@ int main() {
   print_subst(int16_t);
   print_subst(int8_t);
   print_subst(std::string);
+  print_subst(std::vector<char>);
 }
