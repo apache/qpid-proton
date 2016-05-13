@@ -42,8 +42,12 @@ class error_condition {
 
   public:
     error_condition() {}
+    /// Construct an error condition with only a description - in this case a default
+    /// name will be used ("proton:io:error")
     PN_CPP_EXTERN error_condition(std::string description);
+    /// Construct an error_condition with a name and a description
     PN_CPP_EXTERN error_condition(std::string name, std::string description);
+    /// Construct an error_condition with name, description and some informational properties
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS
