@@ -76,7 +76,7 @@ class connection link::connection() const {
 }
 
 class session link::session() const {
-    return pn_link_session(pn_object());
+    return make_wrapper(pn_link_session(pn_object()));
 }
 
 error_condition link::error() const {

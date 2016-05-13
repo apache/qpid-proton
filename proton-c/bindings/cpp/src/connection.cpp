@@ -79,7 +79,7 @@ container& connection::container() const {
 }
 
 session_range connection::sessions() const {
-    return session_range(session_iterator(pn_session_head(pn_object(), 0)));
+    return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
 }
 
 session connection::open_session() {
@@ -102,7 +102,7 @@ session connection::default_session() {
         ctx.default_session = pn_session(pn_object());
         pn_session_open(ctx.default_session);
     }
-    return ctx.default_session;
+    return make_wrapper(ctx.default_session);
 }
 
 sender connection::open_sender(const std::string &addr) {

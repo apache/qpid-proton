@@ -44,10 +44,12 @@ class handler;
 class
 PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endpoint
 {
-  public:
     /// @cond INTERNAL
-    session(pn_session_t* s=0) : internal::object<pn_session_t>(s) {}
+    session(pn_session_t* s) : internal::object<pn_session_t>(s) {}
     /// @endcond
+
+  public:
+    session() : internal::object<pn_session_t>(0) {}
 
     // Endpoint behaviours
 
@@ -99,6 +101,7 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN receiver_range receivers() const;
 
     friend class internal::factory<session>;
+    friend class session_iterator;
 };
 
 

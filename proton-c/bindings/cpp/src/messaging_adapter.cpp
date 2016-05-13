@@ -204,7 +204,7 @@ void messaging_adapter::on_link_remote_close(proton_event &pe) {
 void messaging_adapter::on_session_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();
     pn_session_t *session = pn_event_session(cevent);
-    class session s(session);
+    class session s(make_wrapper(session));
     if (pn_condition_is_set(pn_session_remote_condition(session))) {
         delegate_.on_session_error(s);
     }
@@ -236,7 +236,7 @@ void messaging_adapter::on_connection_remote_open(proton_event &pe) {
 
 void messaging_adapter::on_session_remote_open(proton_event &pe) {
     pn_session_t *session = pn_event_session(pe.pn_event());
-    class session s(session);
+    class session s(make_wrapper(session));
     delegate_.on_session_open(s);
     if (!is_local_open(pn_session_state(session)) && is_local_unititialised(pn_session_state(session))) {
         pn_session_open(session);
