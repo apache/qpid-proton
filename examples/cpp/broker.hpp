@@ -31,6 +31,7 @@
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/message.hpp"
+#include "proton/sasl.hpp"
 #include "proton/sender.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
@@ -158,6 +159,10 @@ class queues {
 class broker_handler : public proton::handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
+
+    void on_transport_open(proton::transport &t) override {
+        std::cout << "Connection from user: " << t.sasl().user() << " (mechanism: " << t.sasl().mech() << ")" << std::endl;
+    }
 
     void on_sender_open(proton::sender &sender) override {
         proton::source src(sender.source());

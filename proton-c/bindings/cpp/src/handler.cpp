@@ -44,6 +44,7 @@ void handler::on_message(delivery &, message &) {}
 void handler::on_sendable(sender &) {}
 void handler::on_transport_close(transport &) {}
 void handler::on_transport_error(transport &t) { on_error(t.error()); }
+void handler::on_transport_open(transport &) {}
 void handler::on_connection_close(connection &) {}
 void handler::on_connection_error(connection &c) { on_error(c.error()); }
 void handler::on_connection_open(connection &) {}

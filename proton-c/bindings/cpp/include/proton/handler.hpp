@@ -82,25 +82,20 @@ PN_CPP_CLASS_EXTERN handler
     /// A message can be sent.
     PN_CPP_EXTERN virtual void on_sendable(sender &s);
 
-    /// transport_open is not present because currently there is no specific
-    /// low level event to hang it from - you should put any initialisation code
-    /// that needs a transport into the conection_open event.
-    /// XXX Actually this makes me wonder if we shouldn't just introduce this event
-    /// XXX and call its handler immediately before on_connection_open, just for the
-    /// XXX symmetry of the API.
-
-    /// The underlying network transport has closed.
-    PN_CPP_EXTERN virtual void on_transport_close(transport &t);
-    /// The underlying network transport has closed with an error
-    /// condition.
-    PN_CPP_EXTERN virtual void on_transport_error(transport &t);
-
     /// Note that every ..._open event is paired with a ..._close event which can clean
     /// up any resources created by the ..._open handler.
     /// In particular this is still true if an error is reported with an ..._error event.
     /// This makes resource management easier so that the error handling logic doesn't also
     /// have to manage the resource clean up, but can just assume that the close event will
     /// be along in a minute to handle the clean up.
+
+    /// The underlying network transport is open
+    PN_CPP_EXTERN virtual void on_transport_open(transport &t);
+    /// The underlying network transport has closed.
+    PN_CPP_EXTERN virtual void on_transport_close(transport &t);
+    /// The underlying network transport has closed with an error
+    /// condition.
+    PN_CPP_EXTERN virtual void on_transport_error(transport &t);
 
     /// The remote peer opened the connection.
     PN_CPP_EXTERN virtual void on_connection_open(connection &c);

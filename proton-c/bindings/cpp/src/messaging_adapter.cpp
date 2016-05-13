@@ -225,7 +225,9 @@ void messaging_adapter::on_connection_remote_close(proton_event &pe) {
 
 void messaging_adapter::on_connection_remote_open(proton_event &pe) {
     pn_connection_t *conn = pn_event_connection(pe.pn_event());
-    class connection c(make_wrapper(conn));
+    connection c(make_wrapper(conn));
+    transport t(make_wrapper(pn_event_transport(pe.pn_event())));
+    delegate_.on_transport_open(t);
     delegate_.on_connection_open(c);
     if (!is_local_open(pn_connection_state(conn)) && is_local_unititialised(pn_connection_state(conn))) {
         pn_connection_open(conn);
