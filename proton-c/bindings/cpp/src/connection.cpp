@@ -82,6 +82,26 @@ session_range connection::sessions() const {
     return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
 }
 
+receiver_range connection::receivers() const {
+  pn_link_t *lnk = pn_link_head(pn_object(), 0);
+  while (lnk) {
+    if (pn_link_is_receiver(lnk))
+      break;
+    lnk = pn_link_next(lnk, 0);
+  }
+  return receiver_range(receiver_iterator(make_wrapper<receiver>(lnk)));
+}
+
+sender_range connection::senders() const {
+  pn_link_t *lnk = pn_link_head(pn_object(), 0);
+  while (lnk) {
+    if (pn_link_is_sender(lnk))
+      break;
+    lnk = pn_link_next(lnk, 0);
+  }
+  return sender_range(sender_iterator(make_wrapper<sender>(lnk)));
+}
+
 session connection::open_session() {
     return open_session(session_options());
 }

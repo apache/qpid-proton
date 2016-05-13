@@ -210,13 +210,10 @@ class broker_handler : public proton::handler {
     }
 
     void remove_stale_consumers(proton::connection connection) {
-        proton::session_range r1 = connection.sessions();
-        for (proton::session_iterator i1 = r1.begin(); i1 != r1.end(); ++i1) {
-            proton::sender_range r2 = i1->senders();
-            for (proton::sender_iterator i2 = r2.begin(); i2 != r2.end(); ++i2) {
-                if (i2->active())
-                    unsubscribe(*i2);
-            }
+        proton::sender_range sr = connection.senders();
+        for (proton::sender_iterator i = sr.begin(); i != sr.end(); ++i) {
+            if (i->active())
+                unsubscribe(*i);
         }
     }
 

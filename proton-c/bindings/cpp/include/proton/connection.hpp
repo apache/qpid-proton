@@ -106,9 +106,15 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
                                          const receiver_options &);
 
-    /// Return sessions on this connection matching the state mask.
+    /// Return all sessions on this connection.
     PN_CPP_EXTERN session_range sessions() const;
-    
+
+    /// Return all receivers on this connection.
+    PN_CPP_EXTERN receiver_range receivers() const;
+
+    /// Return all senders on this connection.
+    PN_CPP_EXTERN sender_range senders() const;
+
     PN_CPP_EXTERN uint32_t max_frame_size() const;
     PN_CPP_EXTERN uint16_t max_sessions() const;
     PN_CPP_EXTERN uint32_t idle_timeout() const;
