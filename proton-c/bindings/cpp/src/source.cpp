@@ -48,7 +48,7 @@ enum source::distribution_mode source::distribution_mode() const {
 }
 
 source::filter_map source::filters() const {
-    codec::decoder d(pn_terminus_filter(object_));
+    codec::decoder d(make_wrapper(pn_terminus_filter(object_)));
     filter_map map;
     if (!d.empty()) {
         d.rewind();

@@ -83,7 +83,6 @@ class source_options {
     /// @cond INTERNAL
   private:
     void apply(source&) const;
-    PN_CPP_EXTERN void update(const source_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

@@ -78,7 +78,6 @@ class target_options {
     /// @cond INTERNAL
   private:
     void apply(target&) const;
-    PN_CPP_EXTERN void update(const target_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

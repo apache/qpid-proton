@@ -103,21 +103,10 @@ class source_options::impl {
           pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
         if (filters.set && !filters.value.empty()) {
             // Applied at most once via source_option.  No need to clear.
-            codec::encoder e(pn_terminus_filter(unwrap(s)));
+            codec::encoder e(make_wrapper(pn_terminus_filter(unwrap(s))));
             e << filters.value;
         }
     }
-
-    void update(const impl& x) {
-        address.update(x.address);
-        dynamic.update(x.dynamic);
-        durability_mode.update(x.durability_mode);
-        timeout.update(x.timeout);
-        expiry_policy.update(x.expiry_policy);
-        distribution_mode.update(x.distribution_mode);
-        filters.update(x.filters);
-    }
-
 };
 
 source_options::source_options() : impl_(new impl()) {}
@@ -130,8 +119,6 @@ source_options& source_options::operator=(const source_options& x) {
     *impl_ = *x.impl_;
     return *this;
 }
-
-void source_options::update(const source_options& x) { impl_->update(*x.impl_); }
 
 source_options& source_options::address(const std::string &addr) { impl_->address = addr; return *this; }
 source_options& source_options::dynamic(bool b) { impl_->dynamic = b; return *this; }
@@ -158,15 +145,6 @@ class target_options::impl {
         node_durability(t, durability_mode);
         node_expiry(t, expiry_policy, timeout);
     }
-
-    void update(const impl& x) {
-        address.update(x.address);
-        dynamic.update(x.dynamic);
-        durability_mode.update(x.durability_mode);
-        timeout.update(x.timeout);
-        expiry_policy.update(x.expiry_policy);
-    }
-
 };
 
 target_options::target_options() : impl_(new impl()) {}
@@ -179,8 +157,6 @@ target_options& target_options::operator=(const target_options& x) {
     *impl_ = *x.impl_;
     return *this;
 }
-
-void target_options::update(const target_options& x) { impl_->update(*x.impl_); }
 
 target_options& target_options::address(const std::string &addr) { impl_->address = addr; return *this; }
 target_options& target_options::dynamic(bool b) { impl_->dynamic = b; return *this; }

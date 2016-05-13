@@ -42,9 +42,11 @@ namespace codec {
 
 /// Wrapper for a proton data object.
 class data : public internal::object<pn_data_t> {
-  public:
     /// Wrap an existing proton-C data object.
-    data(pn_data_t* d=0) : internal::object<pn_data_t>(d) {}
+    data(pn_data_t* d) : internal::object<pn_data_t>(d) {}
+
+  public:
+    data() : internal::object<pn_data_t>(0) {}
 
     /// Create a new data object.
     PN_CPP_EXTERN static data create();
@@ -67,14 +69,15 @@ class data : public internal::object<pn_data_t> {
     /// Append up to limit items from data object.
     PN_CPP_EXTERN int appendn(data src, int limit);
 
-  protected:
+    PN_CPP_EXTERN bool next();
     PN_CPP_EXTERN void* point() const;
     PN_CPP_EXTERN void restore(void* h);
-    PN_CPP_EXTERN void narrow();
-    PN_CPP_EXTERN void widen();
-    PN_CPP_EXTERN bool next();
-    PN_CPP_EXTERN bool prev();
 
+  protected:
+    void narrow();
+    void widen();
+
+  friend class internal::factory<data>;
   friend struct state_guard;
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const data&);
 };
@@ -101,10 +104,10 @@ struct start {
     bool is_described;       ///< true if first value is a descriptor.
     size_t size;             ///< the element count excluding the descriptor (if any)
 
-    PN_CPP_EXTERN static start array(type_id element, bool described=false) { return start(ARRAY, element, described); }
-    PN_CPP_EXTERN static start list() { return start(LIST); }
-    PN_CPP_EXTERN static start map() { return start(MAP); }
-    PN_CPP_EXTERN static start described() { return start(DESCRIBED, NULL_TYPE, true); }
+    static start array(type_id element, bool described=false) { return start(ARRAY, element, described); }
+    static start list() { return start(LIST); }
+    static start map() { return start(MAP); }
+    static start described() { return start(DESCRIBED, NULL_TYPE, true); }
 };
 
 // Finish inserting or extracting a complex type.

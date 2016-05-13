@@ -61,7 +61,6 @@ class session_options {
     // Other useful session configuration TBD.
   private:
     void apply(session&) const;
-    PN_CPP_EXTERN void update(const session_options& other);
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

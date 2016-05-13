@@ -59,8 +59,6 @@ int data::appendn(data src, int limit) { return pn_data_appendn(pn_object(), src
 
 bool data::next() { return pn_data_next(pn_object()); }
 
-bool data::prev() { return pn_data_prev(pn_object()); }
-
 std::ostream& operator<<(std::ostream& o, const data& d) {
     state_guard sg(const_cast<data&>(d));
     const_cast<data&>(d).rewind();

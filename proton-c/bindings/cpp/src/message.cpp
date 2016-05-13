@@ -54,7 +54,7 @@ message& message::operator=(message&& m) {
 message::message(const value& x) : pn_msg_(0) { body() = x; }
 
 message::~message() {
-    body_.data_ = codec::data(0);      // Must release body before pn_message_free
+    body_.data_ = codec::data();      // Must release body before pn_message_free
     pn_message_free(pn_msg_);
 }
 
@@ -69,7 +69,7 @@ void swap(message& x, message& y) {
 
 pn_message_t *message::pn_msg() const {
     if (!pn_msg_) pn_msg_ = pn_message();
-    body_.data_ = pn_message_body(pn_msg_);
+    body_.data_ = make_wrapper(pn_message_body(pn_msg_));
     return pn_msg_;
 }
 
@@ -142,7 +142,7 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    codec::encoder e(pn_message_correlation_id(pn_msg()));
+    codec::encoder e(make_wrapper(pn_message_correlation_id(pn_msg())));
     e << id;
 }
 
@@ -216,7 +216,7 @@ value& message::body() { pn_msg(); return body_; }
 
 // Decode a map on demand
 template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    codec::decoder d(get(msg));
+    codec::decoder d(make_wrapper(get(msg)));
     if (map.empty() && !d.empty()) {
         d.rewind();
         d >> map;
@@ -227,7 +227,7 @@ template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 
 // Encode a map if necessary.
 template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
-    codec::encoder e(get(msg));
+    codec::encoder e(make_wrapper(get(msg)));
     if (e.empty() && !map.empty()) {
         e << map;
         map.clear();            // The encoded pn_data_t  is now the authority.

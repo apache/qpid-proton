@@ -55,10 +55,6 @@ class session_options::impl {
         }
     }
 
-    void update(const impl& x) {
-        handler.update(x.handler);
-    }
-
 };
 
 session_options::session_options() : impl_(new impl()) {}
@@ -71,8 +67,6 @@ session_options& session_options::operator=(const session_options& x) {
     *impl_ = *x.impl_;
     return *this;
 }
-
-void session_options::update(const session_options& x) { impl_->update(*x.impl_); }
 
 session_options& session_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 
