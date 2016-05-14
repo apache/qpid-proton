@@ -29,6 +29,7 @@
 #include <ctime>
 #include <string>
 #include <cstdio>
+#include <sstream>
 
 #if __cplusplus < 201103L
 #define override
@@ -37,10 +38,9 @@
 using namespace test;
 
 static std::string int2string(int n) {
-    char buf[64];
-
-    snprintf(buf, sizeof(buf), "%d", n);
-    return std::string(buf);
+    std::ostringstream strm;
+    strm << n;
+    return strm.str();
 }
 
 class test_handler : public proton::handler {
