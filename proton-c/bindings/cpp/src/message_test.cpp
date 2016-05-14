@@ -45,7 +45,7 @@ void test_message_properties() {
     ASSERT_EQUAL("hello", s);
 
     CHECK_MESSAGE_ID(id);
-    CHECK_STR(user_id);
+    CHECK_STR(user);
     CHECK_STR(to);
     CHECK_STR(subject);
     CHECK_STR(reply_to);
@@ -62,7 +62,7 @@ void test_message_properties() {
     message m2(m);
     ASSERT_EQUAL("hello", get<std::string>(m2.body()));
     ASSERT_EQUAL(message_id("id"), m2.id());
-    ASSERT_EQUAL("user_id", m2.user_id());
+    ASSERT_EQUAL("user", m2.user());
     ASSERT_EQUAL("to", m2.to());
     ASSERT_EQUAL("subject", m2.subject());
     ASSERT_EQUAL("reply_to", m2.reply_to());
@@ -77,7 +77,7 @@ void test_message_properties() {
     m2 = m;
     ASSERT_EQUAL("hello", get<std::string>(m2.body()));
     ASSERT_EQUAL(message_id("id"), m2.id());
-    ASSERT_EQUAL("user_id", m2.user_id());
+    ASSERT_EQUAL("user", m2.user());
     ASSERT_EQUAL("to", m2.to());
     ASSERT_EQUAL("subject", m2.subject());
     ASSERT_EQUAL("reply_to", m2.reply_to());

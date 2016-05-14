@@ -26,8 +26,11 @@
 
 namespace proton {
 
+namespace internal{
 class scalar_base;
 class value_base;
+}
+
 
 /// @ingroup codec
 namespace codec {
@@ -42,7 +45,7 @@ class encoder : public data {
     explicit encoder(const data& d) : data(d) {}
 
     /// Encoder into v. Clears any current value in v.
-    PN_CPP_EXTERN explicit encoder(value_base& v);
+    PN_CPP_EXTERN explicit encoder(internal::value_base& v);
 
     /**
      * Encode the current values into buffer and update size to reflect the
@@ -86,13 +89,13 @@ class encoder : public data {
     PN_CPP_EXTERN encoder& operator<<(const std::string&);
     PN_CPP_EXTERN encoder& operator<<(const symbol&);
     PN_CPP_EXTERN encoder& operator<<(const binary&);
-    PN_CPP_EXTERN encoder& operator<<(const scalar_base&);
+    PN_CPP_EXTERN encoder& operator<<(const internal::scalar_base&);
     PN_CPP_EXTERN encoder& operator<<(const null&);
     ///@}
 
     /// Insert a proton::value.
     /// @internal NOTE insert value_base, not value to avoid recursive implicit conversions.
-    PN_CPP_EXTERN encoder& operator<<(const value_base&);
+    PN_CPP_EXTERN encoder& operator<<(const internal::value_base&);
 
     /// Start a complex type
     PN_CPP_EXTERN encoder& operator<<(const start&);

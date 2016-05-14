@@ -97,11 +97,11 @@ message_id message::id() const {
     return pn_message_get_id(pn_msg());
 }
 
-void message::user_id(const std::string &id) {
+void message::user(const std::string &id) {
     check(pn_message_set_user_id(pn_msg(), pn_bytes(id)));
 }
 
-std::string message::user_id() const {
+std::string message::user() const {
     return str(pn_message_get_user_id(pn_msg()));
 }
 

@@ -43,7 +43,7 @@ namespace codec {
  * to be returned by the decoder.
  */
 
-decoder::decoder(const value_base& v, bool exact) : data(v.data()), exact_(exact) { rewind(); }
+decoder::decoder(const internal::value_base& v, bool exact) : data(v.data()), exact_(exact) { rewind(); }
 
 namespace {
 template <class T> T check(T result) {
@@ -138,7 +138,7 @@ decoder& decoder::operator>>(null&) {
     return *this;
 }
 
-decoder& decoder::operator>>(value_base& x) {
+decoder& decoder::operator>>(internal::value_base& x) {
     if (*this == x.data_)
         throw conversion_error("extract into self");
     data d = x.data();

@@ -31,7 +31,7 @@
 namespace proton {
 
 /// A span of time in milliseconds.
-class duration : private comparable<duration> {
+class duration : private internal::comparable<duration> {
   public:
     typedef int64_t numeric_type; ///< Numeric type used to store milliseconds
 

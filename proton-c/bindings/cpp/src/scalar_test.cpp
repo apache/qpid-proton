@@ -72,23 +72,23 @@ void coerce_test() {
 
     a = binary("foo");
     ASSERT_MISMATCH(a.get<int16_t>(), SHORT, BINARY);
-    ASSERT_MISMATCH(a.as_int(), LONG, BINARY);
-    ASSERT_MISMATCH(a.as_double(), DOUBLE, BINARY);
+    ASSERT_MISMATCH(coerce<int64_t>(a), LONG, BINARY);
+    ASSERT_MISMATCH(coerce<double>(a), DOUBLE, BINARY);
     ASSERT_MISMATCH(a.get<std::string>(), STRING, BINARY); // No strict conversion
-    ASSERT_EQUAL(a.as_string(), std::string("foo")); // OK string-like conversion
+    ASSERT_EQUAL(coerce<std::string>(a), std::string("foo")); // OK string-like conversion
 
     a = int16_t(42);
     ASSERT_MISMATCH(a.get<std::string>(), STRING, SHORT);
     ASSERT_MISMATCH(a.get<timestamp>(), TIMESTAMP, SHORT);
-    ASSERT_MISMATCH(a.as_string(), STRING, SHORT);
-    ASSERT_EQUAL(a.as_int(), 42);
-    ASSERT_EQUAL(a.as_uint(), 42u);
-    ASSERT_EQUAL(a.as_double(), 42);
+    ASSERT_MISMATCH(coerce<std::string>(a), STRING, SHORT);
+    ASSERT_EQUAL(coerce<int64_t>(a), 42);
+    ASSERT_EQUAL(coerce<uint64_t>(a), 42u);
+    ASSERT_EQUAL(coerce<double>(a), 42);
 
     a = int16_t(-42);
-    ASSERT_EQUAL(a.as_int(), -42);
-    ASSERT_EQUAL(a.as_uint(), uint64_t(-42));
-    ASSERT_EQUAL(a.as_double(), -42);
+    ASSERT_EQUAL(coerce<int64_t>(a), -42);
+    ASSERT_EQUAL(coerce<uint64_t>(a), uint64_t(-42));
+    ASSERT_EQUAL(coerce<double>(a), -42);
 }
 
 void encode_decode_test() {
@@ -102,20 +102,20 @@ void encode_decode_test() {
 }
 
 void message_id_test() {
-    ASSERT_EQUAL(23, message_id(23).as_int());
+    ASSERT_EQUAL(23, coerce<int64_t>(message_id(23)));
     ASSERT_EQUAL(23u, message_id(23).get<uint64_t>());
     ASSERT(message_id("foo") != message_id(binary("foo")));
     ASSERT_EQUAL(scalar("foo"), message_id("foo"));
-    ASSERT_EQUAL("foo", message_id("foo").as_string());
+    ASSERT_EQUAL("foo", coerce<std::string>(message_id("foo")));
     ASSERT(message_id("a") < message_id("z"));
     uuid r = uuid::random();
     ASSERT_EQUAL(r, message_id(r).get<uuid>());
 }
 
 void annotation_key_test() {
-    ASSERT_EQUAL(23, annotation_key(23).as_int());
+    ASSERT_EQUAL(23, coerce<int64_t>(annotation_key(23)));
     ASSERT_EQUAL(23u, annotation_key(23).get<uint64_t>());
-    ASSERT_EQUAL("foo", annotation_key("foo").as_string());
+    ASSERT_EQUAL("foo", coerce<std::string>(annotation_key("foo")));
     ASSERT_EQUAL(scalar(symbol("foo")), annotation_key("foo"));
 }
 

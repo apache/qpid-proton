@@ -83,13 +83,8 @@ class message {
     PN_CPP_EXTERN void id(const message_id& id);
     PN_CPP_EXTERN message_id id() const;
 
-    /// @cond INTERNAL
-    /// XXX consider just user, in order to be consistent with similar
-    /// fields elsewhere in the API
-    /// XXX ask gordon about use case - decision sort of: "user" instead of "user_id"
-    PN_CPP_EXTERN void user_id(const std::string &user);
-    PN_CPP_EXTERN std::string user_id() const;
-    /// @endcond
+    PN_CPP_EXTERN void user(const std::string &user);
+    PN_CPP_EXTERN std::string user() const;
 
     /// Encode entire message into a byte vector, growing it if
     /// necessary.

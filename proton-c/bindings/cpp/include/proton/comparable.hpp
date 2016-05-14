@@ -21,6 +21,7 @@
  */
 
 namespace proton {
+namespace internal {
 
 ///@cond INTERNAL
 
@@ -35,6 +36,6 @@ template <class T> class comparable {
 
 ///@endcond
 
-}
+}}
 
 #endif // COMPARABLE_HPP

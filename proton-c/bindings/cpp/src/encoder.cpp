@@ -45,7 +45,7 @@ void encoder::check(long result) {
 }
 
 
-encoder::encoder(value_base& v) : data(v.data()) {
+encoder::encoder(internal::value_base& v) : data(v.data()) {
     clear();
 }
 
@@ -142,9 +142,9 @@ encoder& encoder::operator<<(const symbol& x) { return insert(x, pn_data_put_amq
 encoder& encoder::operator<<(const binary& x) { return insert(x, pn_data_put_amqp_binary); }
 encoder& encoder::operator<<(const null&) { pn_data_put_null(pn_object()); return *this; }
 
-encoder& encoder::operator<<(const scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
+encoder& encoder::operator<<(const internal::scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
 
-encoder& encoder::operator<<(const value_base& x) {
+encoder& encoder::operator<<(const internal::value_base& x) {
     if (*this == x.data_)
         throw conversion_error("cannot insert into self");
     if (x.empty()) {

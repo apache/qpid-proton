@@ -37,7 +37,7 @@ namespace proton {
 ///  - proton::uuid
 ///  - proton::binary
 ///
-class message_id : public scalar_base {
+class message_id : public internal::scalar_base {
   public:
     /// An empty message_id has a uint64_t == 0 value.
     message_id() { put_(uint64_t(0)); }
@@ -57,7 +57,7 @@ class message_id : public scalar_base {
     /// @}
 
   private:
-    message_id(const pn_atom_t& a): scalar_base(a) {}
+    message_id(const pn_atom_t& a): internal::scalar_base(a) {}
 
     ///@cond INTERNAL
   friend class message;

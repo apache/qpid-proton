@@ -28,6 +28,12 @@
 #include <iosfwd>
 
 namespace proton {
+class message;
+
+namespace internal {
+
+class value_base;
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value_base& x);
 
 ///@internal - separate value data from implicit conversion constructors to avoid recursions.
 class value_base {
@@ -43,14 +49,17 @@ class value_base {
     codec::data& data() const;
     mutable class codec::data data_;
 
-  friend class message;
+  friend class proton::message;
   friend class codec::encoder;
   friend class codec::decoder;
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value_base&);
 };
 
+}
+
+
 /// A holder for any AMQP value, simple or complex, see @ref types.
-class value : public value_base, private comparable<value> {
+class value : public internal::value_base, private internal::comparable<value> {
   private:
     // Enabler for encodable types excluding proton::value.
     template<class T, class U=void> struct assignable :

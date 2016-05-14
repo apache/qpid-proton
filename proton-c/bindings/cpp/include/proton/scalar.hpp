@@ -31,7 +31,7 @@ class encoder;
 
 /// A holder for an instance of any scalar AMQP type, see \ref types.
 ///
-class scalar : public scalar_base {
+class scalar : public internal::scalar_base {
   public:
     /// Create an empty scalar.
     PN_CPP_EXTERN scalar() {}

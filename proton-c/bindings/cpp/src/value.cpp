@@ -52,6 +52,8 @@ void swap(value& x, value& y) { std::swap(x.data_, y.data_); }
 
 void value::clear() { if (!!data_) data_.clear(); }
 
+namespace internal {
+
 type_id value_base::type() const {
     return (!data_ || data_.empty()) ? NULL_TYPE : codec::decoder(*this).next_type();
 }
@@ -63,6 +65,8 @@ codec::data& value_base::data() const {
     if (!data_)
         data_ = codec::data::create();
     return data_;
+}
+
 }
 
 namespace {
@@ -167,10 +171,11 @@ bool operator<(const value& x, const value& y) {
     return compare(x, y) < 0;
 }
 
-std::ostream& operator<<(std::ostream& o, const value_base& x) {
+namespace internal {
+std::ostream& operator<<(std::ostream& o, const internal::value_base& x) {
     if (x.empty())
         return o << "<null>";
-    decoder d(x);
+    proton::decoder d(x);
     // Print std::string and proton::foo types using their own operator << consistent with C++.
     switch (d.next_type()) {
       case STRING: return o << get<std::string>(d);
@@ -184,6 +189,7 @@ std::ostream& operator<<(std::ostream& o, const value_base& x) {
         // Use pn_inspect for other types.
         return o << d;
     }
+}
 }
 
 }

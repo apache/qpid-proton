@@ -31,6 +31,7 @@
 #include <ostream>
 
 namespace proton {
+namespace internal {
 
 scalar_base::scalar_base() { atom_.type = PN_NULL; }
 scalar_base::scalar_base(const pn_atom_t& a) { set(a); }
@@ -108,14 +109,6 @@ void scalar_base::get_(symbol& x) const { ok(PN_SYMBOL); x = symbol(bytes_.begin
 void scalar_base::get_(binary& x) const { ok(PN_BINARY); x = bytes_; }
 void scalar_base::get_(null&) const { ok(PN_NULL); }
 
-int64_t scalar_base::as_int() const { return internal::coerce<int64_t>(*this); }
-
-uint64_t scalar_base::as_uint() const { return internal::coerce<uint64_t>(*this); }
-
-double scalar_base::as_double() const { return internal::coerce<double>(*this); }
-
-std::string scalar_base::as_string() const { return internal::coerce<std::string>(*this); }
-
 namespace {
 
 struct equal_op {
@@ -155,4 +148,4 @@ std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     return internal::visit<std::ostream&>(s, ostream_op(o));
 }
 
-} // namespace proton
+}} // namespaces

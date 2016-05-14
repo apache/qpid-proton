@@ -23,7 +23,7 @@
 
 namespace proton {
 /// 64 bit timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
-class timestamp : private comparable<timestamp> {
+class timestamp : private internal::comparable<timestamp> {
   public:
     typedef int64_t numeric_type; ///< Numeric type holding milliseconds value
     PN_CPP_EXTERN static timestamp now(); ///< Current wall-clock time

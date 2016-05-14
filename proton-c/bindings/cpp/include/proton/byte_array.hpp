@@ -33,7 +33,7 @@ PN_CPP_EXTERN void print_hex(std::ostream& o, const uint8_t* p, size_t n);
 
 /// Used to represent fixed-sized data types that don't have a natural C++ representation
 /// as an array of bytes.
-template <size_t N> class byte_array : private comparable<byte_array<N> > {
+template <size_t N> class byte_array : private internal::comparable<byte_array<N> > {
   public:
     ///@name Sequence container typedefs
     ///@{

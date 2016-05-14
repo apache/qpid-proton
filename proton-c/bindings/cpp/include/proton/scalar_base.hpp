@@ -36,12 +36,14 @@
 #include <string>
 
 namespace proton {
+class message;
 
 namespace codec {
 class decoder;
 class encoder;
 }
 
+namespace internal {
 
 /// Base class for scalar types.
 class scalar_base : private comparable<scalar_base> {
@@ -51,10 +53,6 @@ class scalar_base : private comparable<scalar_base> {
 
     /// @cond INTERNAL
     /// deprecated
-    PN_CPP_EXTERN int64_t as_int() const;
-    PN_CPP_EXTERN uint64_t as_uint() const;
-    PN_CPP_EXTERN double as_double() const;
-    PN_CPP_EXTERN std::string as_string() const;
     template <class T> void get(T& x) const { get_(x); }
     template <class T> T get() const { T x; get_(x); return x; }
     /// @endcond
@@ -125,12 +123,10 @@ class scalar_base : private comparable<scalar_base> {
     pn_atom_t atom_;
     binary bytes_;              // Hold binary data.
 
-  friend class message;
+  friend class proton::message;
   friend class codec::encoder;
   friend class codec::decoder;
 };
-
-namespace internal {
 
 template<class T> T get(const scalar_base& s) { T x; s.get(x); return x; }
 
