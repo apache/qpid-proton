@@ -282,12 +282,12 @@ public interface Reactor {
      * Get the address used by the connection
      * <p>
      * This may be used to retrieve the remote peer address.
+     * Note that the returned address may be in numeric IP format.
      * @param c the Connection
      * @return a string containing the address in the following format:
      * <pre>
      *   host[:port]
      * </pre>
-     * @note Note that the returned address may be in numeric IP format.
      */
     String getConnectionAddress(Connection c);
 
