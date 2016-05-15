@@ -542,15 +542,16 @@ class ContainerTest(Test):
         assert test_handler.verified
 
     class _ServerHandler(MessagingHandler):
-        def __init__(self):
+        def __init__(self, host):
             super(ContainerTest._ServerHandler, self).__init__()
+            self.host = host
             port = free_tcp_port()
             self.port = free_tcp_port()
             self.client_addr = None
             self.peer_hostname = None
 
         def on_start(self, event):
-            self.listener = event.container.listen("0.0.0.0:%s" % self.port)
+            self.listener = event.container.listen("%s:%s" % (self.host, self.port))
 
         def on_connection_opened(self, event):
             self.client_addr = event.reactor.get_connection_address(event.connection)
@@ -570,7 +571,7 @@ class ContainerTest(Test):
             event.connection.close()
 
     def test_numeric_hostname(self):
-        server_handler = ContainerTest._ServerHandler()
+        server_handler = ContainerTest._ServerHandler("127.0.0.1")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
         container.connect(url=Url(host="127.0.0.1",
@@ -583,7 +584,7 @@ class ContainerTest(Test):
         assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
 
     def test_non_numeric_hostname(self):
-        server_handler = ContainerTest._ServerHandler()
+        server_handler = ContainerTest._ServerHandler("localhost")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
         container.connect(url=Url(host="localhost",
@@ -596,7 +597,7 @@ class ContainerTest(Test):
         assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
 
     def test_virtual_host(self):
-        server_handler = ContainerTest._ServerHandler()
+        server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
         conn = container.connect(url=Url(host="localhost",
                                          port=server_handler.port),
@@ -613,7 +614,7 @@ class ContainerTest(Test):
             # host, so when proton-j sets up the connection the virtual host
             # seems to be unset and the URL's host is used (as expected).
             raise SkipTest("Does not apply for proton-j");
-        server_handler = ContainerTest._ServerHandler()
+        server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
         conn = container.connect(url=Url(host="localhost",
                                          port=server_handler.port),
