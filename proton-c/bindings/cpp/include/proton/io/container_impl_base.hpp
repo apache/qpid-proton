@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/io/link_namer.hpp"
-#include "proton/container.hpp"
+#include "./link_namer.hpp"
+#include "../container.hpp"
 
 #include <mutex>
 #include <sstream>

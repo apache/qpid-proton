@@ -42,10 +42,10 @@
 #include "proton_bits.hpp"
 #include "proton_event.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/handlers.h"
-#include "proton/reactor.h"
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/handlers.h>
+#include <proton/reactor.h>
 
 namespace proton {
 

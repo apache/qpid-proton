@@ -25,9 +25,9 @@
 #include "proton/error.hpp"
 #include "proton/connection.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/link.h>
 
 #include "container_impl.hpp"
 #include "contexts.hpp"

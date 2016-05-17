@@ -34,11 +34,11 @@
 #include "msg.hpp"
 #include "proton_bits.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/transport.h"
-#include "proton/reactor.h"
-#include "proton/object.h"
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/transport.h>
+#include <proton/reactor.h>
+#include <proton/object.h>
 
 namespace proton {
 

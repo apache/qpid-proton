@@ -1,5 +1,5 @@
-#ifndef PROTON_EXPORT_HPP
-#define PROTON_EXPORT_HPP
+#ifndef PROTON_INTERNAL_EXPORT_HPP
+#define PROTON_INTERNAL_EXPORT_HPP
 
 /*
  *
@@ -54,4 +54,4 @@
 
 /// @endcond
 
-#endif // PROTON_EXPORT_HPP
+#endif // PROTON_INTERNAL_EXPORT_HPP

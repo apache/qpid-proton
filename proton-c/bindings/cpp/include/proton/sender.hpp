@@ -22,12 +22,12 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/link.hpp"
-#include "proton/message.hpp"
-#include "proton/tracker.hpp"
+#include "./internal/export.hpp"
+#include "./link.hpp"
+#include "./message.hpp"
+#include "./tracker.hpp"
 
-#include "proton/types.h"
+#include <proton/types.h>
 
 #include <string>
 

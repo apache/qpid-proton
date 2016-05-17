@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/internal/scalar_base.hpp"
-#include "proton/symbol.hpp"
+#include "./internal/scalar_base.hpp"
+#include "./symbol.hpp"
 
 namespace proton {
 

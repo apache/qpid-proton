@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/codec/encoder.hpp"
-#include "proton/codec/decoder.hpp"
+#include "./encoder.hpp"
+#include "./decoder.hpp"
 
 #include <list>
 #include <utility>

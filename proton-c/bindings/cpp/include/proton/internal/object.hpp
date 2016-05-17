@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/internal/comparable.hpp"
+#include "./config.hpp"
+#include "export.hpp"
+#include "./comparable.hpp"
 
 #include <memory>
 

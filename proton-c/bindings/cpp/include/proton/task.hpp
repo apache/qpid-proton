@@ -25,10 +25,10 @@
 /// @cond INTERNAL
 /// XXX Needs more discussion
     
-#include "proton/export.hpp"
-#include "proton/internal/object.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
 
-#include "proton/reactor.h"
+#include <proton/reactor.h>
 
 namespace proton {
 

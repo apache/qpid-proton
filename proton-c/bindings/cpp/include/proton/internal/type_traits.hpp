@@ -29,9 +29,9 @@
 /// Also provides workarounds for missing type_traits classes on older
 /// C++ compilers.
 
-#include "proton/config.hpp"
-#include "proton/types_fwd.hpp"
-#include "proton/type_id.hpp"
+#include "./config.hpp"
+#include "../types_fwd.hpp"
+#include "../type_id.hpp"
 
 namespace proton {
 namespace internal {

@@ -22,15 +22,15 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/connection.hpp"
-#include "proton/connection_options.hpp"
-#include "proton/error.hpp"
-#include "proton/error_condition.hpp"
-#include "proton/export.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
-#include "proton/transport.hpp"
-#include "proton/types.hpp"
+#include "../internal/config.hpp"
+#include "../connection.hpp"
+#include "../connection_options.hpp"
+#include "../error.hpp"
+#include "../error_condition.hpp"
+#include "../internal/export.hpp"
+#include "../internal/pn_unique_ptr.hpp"
+#include "../transport.hpp"
+#include "../types.hpp"
 
 #include <cstddef>
 #include <utility>

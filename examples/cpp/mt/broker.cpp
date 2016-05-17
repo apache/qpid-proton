@@ -33,6 +33,8 @@
 #include <mutex>
 #include <thread>
 
+#include "../fake_cpp11.hpp"
+
 // Thread safe queue.
 // Stores messages, notifies subscribed connections when there is data.
 class queue {
@@ -125,7 +127,7 @@ class broker_connection_handler : public proton::messaging_handler {
   public:
     broker_connection_handler(queues& qs) : queues_(qs) {}
 
-    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection& c) OVERRIDE {
         // Create the has_messages callback for use with queue subscriptions.
         //
         // FIXME aconway 2016-05-09: doc lifecycle: handler tied to c.
@@ -139,21 +141,21 @@ class broker_connection_handler : public proton::messaging_handler {
     }
 
     // A sender sends messages from a queue to a subscriber.
-    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sender_open(proton::sender &sender) OVERRIDE {
         queue *q = sender.source().dynamic() ?
             queues_.dynamic() : queues_.get(sender.source().address());
         std::cout << "sending from " << q->name() << std::endl;
     }
 
     // We have credit to send a message.
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) OVERRIDE {
         queue* q = sender_queue(s);
         if (!do_send(q, s))     // Queue is empty, save ourselves in the blocked set.
             blocked_.insert(std::make_pair(q, s));
     }
 
     // A receiver receives messages from a publisher to a queue.
-    void on_receiver_open(proton::receiver &r) PN_CPP_OVERRIDE {
+    void on_receiver_open(proton::receiver &r) OVERRIDE {
         std::string qname = r.target().address();
         if (qname == "shutdown") {
             std::cout << "broker shutting down" << std::endl;
@@ -166,12 +168,12 @@ class broker_connection_handler : public proton::messaging_handler {
     }
 
     // A message is received.
-    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
         std::string qname = d.receiver().target().address();
         queues_.get(qname)->push(m);
     }
 
-    void on_session_close(proton::session &session) PN_CPP_OVERRIDE {
+    void on_session_close(proton::session &session) OVERRIDE {
         // Erase all blocked senders that belong to session.
         auto predicate = [session](const proton::sender& s) {
             return s.session() == session;
@@ -179,7 +181,7 @@ class broker_connection_handler : public proton::messaging_handler {
         erase_sender_if(blocked_.begin(), blocked_.end(), predicate);
     }
 
-    void on_sender_close(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sender_close(proton::sender &sender) OVERRIDE {
         // Erase sender from the blocked set.
         auto range = blocked_.equal_range(sender_queue(sender));
         auto predicate = [sender](const proton::sender& s) { return s == sender; };
@@ -187,7 +189,7 @@ class broker_connection_handler : public proton::messaging_handler {
     }
 
     // The container calls on_transport_close() last.
-    void on_transport_close(proton::transport&) PN_CPP_OVERRIDE {
+    void on_transport_close(proton::transport&) OVERRIDE {
         delete this;            // All done.
     }
 
@@ -262,11 +264,11 @@ class broker {
     struct listener : public proton::listen_handler {
         listener(queues& qs) : queues_(qs) {}
 
-        proton::connection_options on_accept() PN_CPP_OVERRIDE{
+        proton::connection_options on_accept() OVERRIDE{
             return proton::connection_options().handler(*(new broker_connection_handler(queues_)));
         }
 
-        void on_error(const std::string& s) PN_CPP_OVERRIDE {
+        void on_error(const std::string& s) OVERRIDE {
             std::cerr << "listen error: " << s << std::endl;
             throw std::runtime_error(s);
         }

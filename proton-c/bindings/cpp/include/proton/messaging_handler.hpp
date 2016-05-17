@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
+#include "./internal/export.hpp"
+#include "./internal/pn_unique_ptr.hpp"
 
 namespace proton {
 

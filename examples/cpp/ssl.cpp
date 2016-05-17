@@ -19,17 +19,17 @@
  *
  */
 
-#include "proton/connection_options.hpp"
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/ssl.hpp"
-#include "proton/tracker.hpp"
-#include "proton/transport.hpp"
+#include <proton/connection_options.hpp>
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/ssl.hpp>
+#include <proton/tracker.hpp>
+#include <proton/transport.hpp>
 
 #include <iostream>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 using proton::connection_options;
 using proton::ssl_client_options;
@@ -47,13 +47,13 @@ std::string find_CN(const std::string &);
 struct server_handler : public proton::messaging_handler {
     std::string url;
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             c.transport().ssl().protocol() << std::endl;
         c.container().stop_listening(url);
     }
 
-    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
@@ -67,7 +67,7 @@ class hello_world_direct : public proton::messaging_handler {
   public:
     hello_world_direct(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
         ssl_server_options ssl_srv(server_cert);
@@ -88,20 +88,20 @@ class hello_world_direct : public proton::messaging_handler {
         c.open_sender(url);
     }
 
-    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         std::string subject = c.transport().ssl().remote_subject();
         std::cout << "Outgoing client connection connected via SSL.  Server certificate identity " <<
             find_CN(subject) << std::endl;
     }
 
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) OVERRIDE {
         proton::message m;
         m.body("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) OVERRIDE {
         // All done.
         t.connection().close();
     }

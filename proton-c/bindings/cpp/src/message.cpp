@@ -28,7 +28,7 @@
 #include "proton/sender.hpp"
 #include "proton/timestamp.hpp"
 
-#include "proton/message.h"
+#include <proton/message.h>
 
 #include "msg.hpp"
 #include "proton_bits.hpp"

@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/internal/comparable.hpp"
-#include "proton/types_fwd.hpp"
+#include "./internal/export.hpp"
+#include "./internal/comparable.hpp"
+#include "./types_fwd.hpp"
 
 #include <iosfwd>
 

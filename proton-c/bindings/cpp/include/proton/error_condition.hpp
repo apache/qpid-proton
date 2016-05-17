@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/value.hpp"
-#include "proton/config.hpp"
+#include "./internal/export.hpp"
+#include "./value.hpp"
+#include "./internal/config.hpp"
 
 #include <string>
 #include <iosfwd>

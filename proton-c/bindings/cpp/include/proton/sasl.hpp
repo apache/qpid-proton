@@ -22,11 +22,11 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/config.hpp"
-#include "proton/internal/object.hpp"
+#include "./internal/export.hpp"
+#include "./internal/config.hpp"
+#include "./internal/object.hpp"
 
-#include "proton/sasl.h"
+#include <proton/sasl.h>
 
 #include <string>
 

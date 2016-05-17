@@ -19,9 +19,9 @@
  * under the License.
  */
 
-#include <proton/internal/type_traits.hpp>
-#include <proton/error.hpp>
-#include <proton/binary.hpp>
+#include "proton/internal/type_traits.hpp"
+#include "proton/error.hpp"
+#include "proton/binary.hpp"
 #include <sstream>
 
 ///@file

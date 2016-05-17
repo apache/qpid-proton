@@ -27,9 +27,9 @@
 /// Forward declarations for all the C++ types used by Proton to
 /// represent AMQP types.
 
-#include "proton/config.hpp"
+#include "./internal/config.hpp"
 
-#include "proton/type_compat.h"
+#include <proton/type_compat.h>
 
 #include <string>
 

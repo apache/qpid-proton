@@ -24,7 +24,7 @@
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
 
-#include "proton/session.h"
+#include <proton/session.h>
 
 #include "messaging_adapter.hpp"
 #include "container_impl.hpp"

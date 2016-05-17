@@ -20,17 +20,17 @@
  */
 
 #include "options.hpp"
-#include "proton/default_container.hpp"
-#include "proton/delivery.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/connection.hpp"
-#include "proton/tracker.hpp"
-#include "proton/source_options.hpp"
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/connection.hpp>
+#include <proton/tracker.hpp>
+#include <proton/source_options.hpp>
 
 #include <iostream>
 #include <vector>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 using proton::receiver_options;
 using proton::source_options;
@@ -45,7 +45,7 @@ class client : public proton::messaging_handler {
   public:
     client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         sender = c.open_sender(url);
         // Create a receiver requesting a dynamically created queue
         // for the message source.
@@ -60,11 +60,11 @@ class client : public proton::messaging_handler {
         sender.send(req);
     }
 
-    void on_receiver_open(proton::receiver &) PN_CPP_OVERRIDE {
+    void on_receiver_open(proton::receiver &) OVERRIDE {
         send_request();
     }
 
-    void on_message(proton::delivery &d, proton::message &response) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &response) OVERRIDE {
         if (requests.empty()) return; // Spurious extra message!
 
         std::cout << requests.front() << " => " << response.body() << std::endl;

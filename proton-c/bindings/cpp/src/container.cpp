@@ -39,8 +39,8 @@
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
+#include <proton/connection.h>
+#include <proton/session.h>
 
 namespace proton {
 

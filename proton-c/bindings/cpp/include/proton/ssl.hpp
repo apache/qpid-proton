@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/internal/object.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
 
-#include "proton/ssl.h"
+#include <proton/ssl.h>
 
 #include <string>
 

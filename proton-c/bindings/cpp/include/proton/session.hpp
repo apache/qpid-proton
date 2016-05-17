@@ -22,14 +22,14 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/receiver.hpp"
-#include "proton/sender.hpp"
-#include "proton/session_options.hpp"
+#include "./internal/export.hpp"
+#include "./endpoint.hpp"
+#include "./receiver.hpp"
+#include "./sender.hpp"
+#include "./session_options.hpp"
 
-#include "proton/types.h"
-#include "proton/link.h"
+#include <proton/types.h>
+#include <proton/link.h>
 
 #include <string>
 

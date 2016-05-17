@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include "proton/export.hpp"
+#include "./internal/export.hpp"
 
 #include <string>
 

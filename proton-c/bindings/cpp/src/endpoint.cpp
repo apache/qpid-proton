@@ -26,9 +26,9 @@
 #include "proton/link.hpp"
 #include "proton/session.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/link.h>
 
 namespace {
 
