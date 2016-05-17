@@ -39,7 +39,7 @@ struct pn_session_t;
 namespace proton {
 
 class container;
-class handler;
+class messaging_handler;
 template <class T> class thread_safe;
 
 /// A container of senders and receivers.

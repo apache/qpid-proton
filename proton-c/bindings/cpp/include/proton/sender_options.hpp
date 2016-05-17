@@ -77,11 +77,11 @@ class sender_options {
     /// Merge with another option set
     PN_CPP_EXTERN void update(const sender_options& other);
 
-    /// Set a handler for sender events only.
-    /// The handler is no longer in use when handler::on_sender_close() is called.
-    /// handler::on_sender_close() may not be called if a connection is aborted,
-    /// in that case it should be cleaned up in its connection's handler::on_transport_close()
-    PN_CPP_EXTERN sender_options& handler(class handler&);
+    /// Set a messaging_handler for sender events only.
+    /// The handler is no longer in use when messaging_handler::on_sender_close() is called.
+    /// messaging_handler::on_sender_close() may not be called if a connection is aborted,
+    /// in that case it should be cleaned up in its connection's messaging_handler::on_transport_close()
+    PN_CPP_EXTERN sender_options& handler(class messaging_handler&);
 
     /// Set the delivery mode on the sender.
     PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);

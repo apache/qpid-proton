@@ -22,7 +22,7 @@
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/tracker.hpp"
 #include "proton/url.hpp"
 
@@ -30,7 +30,7 @@
 
 #include <proton/config.hpp>
 
-class hello_world : public proton::handler {
+class hello_world : public proton::messaging_handler {
   private:
     proton::url url;
 

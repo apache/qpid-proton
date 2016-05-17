@@ -22,7 +22,7 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/transport.hpp"
 
 #include <iostream>
@@ -31,7 +31,7 @@ using proton::connection_options;
 
 #include <proton/config.hpp>
 
-class handler_2 : public proton::handler {
+class handler_2 : public proton::messaging_handler {
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         std::cout << "connection events going to handler_2" << std::endl;
         std::cout << "connection max_frame_size: " << c.max_frame_size() <<
@@ -40,7 +40,7 @@ class handler_2 : public proton::handler {
     }
 };
 
-class main_handler : public proton::handler {
+class main_handler : public proton::messaging_handler {
   private:
     std::string url;
     handler_2 conn_handler;

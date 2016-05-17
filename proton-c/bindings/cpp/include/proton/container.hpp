@@ -37,7 +37,7 @@ namespace proton {
 class connection;
 class connection_options;
 class container_impl;
-class handler;
+class messaging_handler;
 class listen_handler;
 class receiver;
 class receiver_options;
@@ -71,7 +71,7 @@ class PN_CPP_CLASS_EXTERN container {
     ///  2. options passed to connect()
     ///
     /// The handler in the composed options is used to call
-    /// proton::handler::on_connection_open() when the remote peer's
+    /// proton::messaging_handler::on_connection_open() when the remote peer's
     /// open response is received.
     virtual returned<connection> connect(const std::string& url, const connection_options &) = 0;
 
@@ -167,7 +167,7 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Connection options that will be to outgoing connections. These
     /// are applied first and overriden by options provided in
-    /// connect() and handler::on_connection_open().
+    /// connect() and messaging_handler::on_connection_open().
     virtual void client_connection_options(const connection_options &) = 0;
 
     /// @copydoc client_connection_options
@@ -176,14 +176,14 @@ class PN_CPP_CLASS_EXTERN container {
     /// Connection options that will be applied to incoming
     /// connections. These are applied first and overridden by options
     /// provided in listen(), listen_handler::on_accept() and
-    /// handler::on_connection_open().
+    /// messaging_handler::on_connection_open().
     virtual void server_connection_options(const connection_options &) = 0;
 
     /// @copydoc server_connection_options
     virtual connection_options server_connection_options() const = 0;
 
     /// Sender options applied to senders created by this
-    /// container. They are applied before handler::on_sender_open()
+    /// container. They are applied before messaging_handler::on_sender_open()
     /// and can be overridden.
     virtual void sender_options(const sender_options &) = 0;
 
@@ -191,7 +191,7 @@ class PN_CPP_CLASS_EXTERN container {
     virtual class sender_options sender_options() const = 0;
 
     /// Receiver options applied to receivers created by this
-    /// container. They are applied before handler::on_receiver_open()
+    /// container. They are applied before messaging_handler::on_receiver_open()
     /// and can be overridden.
     virtual void receiver_options(const receiver_options &) = 0;
 

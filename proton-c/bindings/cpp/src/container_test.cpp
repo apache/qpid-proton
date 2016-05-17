@@ -22,7 +22,7 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 
 #include <cstdlib>
@@ -42,7 +42,7 @@ static std::string int2string(int n) {
     return strm.str();
 }
 
-class test_handler : public proton::handler {
+class test_handler : public proton::messaging_handler {
   public:
     const std::string host;
     proton::connection_options opts;

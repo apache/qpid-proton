@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include "proton_handler.hpp"
 
@@ -33,11 +33,11 @@
 
 namespace proton {
 
-/// Convert the low level proton-c events to the higher level proton::handler calls
+/// Convert the low level proton-c events to the higher level proton::messaging_handler calls
 class messaging_adapter : public proton_handler
 {
   public:
-    messaging_adapter(handler &delegate);
+    messaging_adapter(messaging_handler &delegate);
     virtual ~messaging_adapter();
 
     void on_reactor_init(proton_event &e);
@@ -53,7 +53,7 @@ class messaging_adapter : public proton_handler
     void on_transport_tail_closed(proton_event &e);
 
   private:
-    handler &delegate_;  // The handler for generated messaging_event's
+    messaging_handler &delegate_;  // The handler for generated messaging_event's
 };
 
 }

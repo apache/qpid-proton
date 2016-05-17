@@ -70,7 +70,7 @@ session_options& session_options::operator=(const session_options& x) {
     return *this;
 }
 
-session_options& session_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
+session_options& session_options::handler(class messaging_handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
 
 void session_options::apply(session& s) const { impl_->apply(s); }
 

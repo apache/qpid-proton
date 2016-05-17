@@ -29,7 +29,7 @@
 
 namespace proton {
 
-class handler;
+class messaging_handler;
 class session;
 
 /// Options for creating a session.
@@ -52,8 +52,8 @@ class session_options {
     /// Copy options.
     PN_CPP_EXTERN session_options& operator=(const session_options&);
 
-    /// Set a handler for the session.
-    PN_CPP_EXTERN session_options& handler(class handler *);
+    /// Set a messaging_handler for the session.
+    PN_CPP_EXTERN session_options& handler(class messaging_handler *);
 
     /// @cond INTERNAL
     // Other useful session configuration TBD.

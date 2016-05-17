@@ -55,7 +55,7 @@ template <class T> class returned;
 /// **Experimental** - A thread-safe object wrapper.
 ///    
 /// Events for each proton::connection are processed sequentially in
-/// an event_loop. proton::handler functions for a single connection
+/// an event_loop. proton::messaging_handler functions for a single connection
 /// are never called concurrently. inject() lets you add user-defined
 /// function calls to be processed in the event loop sequence.
 ///

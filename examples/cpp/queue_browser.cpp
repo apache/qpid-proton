@@ -22,7 +22,7 @@
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/source_options.hpp"
 #include "proton/url.hpp"
@@ -33,7 +33,7 @@
 
 using proton::source_options;
 
-class browser : public proton::handler {
+class browser : public proton::messaging_handler {
   private:
     proton::url url;
 

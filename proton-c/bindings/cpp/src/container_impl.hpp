@@ -29,7 +29,7 @@
 #include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
 #include "proton/export.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
 #include "proton/reactor.h"
@@ -52,7 +52,7 @@ class listen_handler;
 
 class container_impl : public container {
   public:
-    container_impl(const std::string& id, handler* = 0);
+    container_impl(const std::string& id, messaging_handler* = 0);
     ~container_impl();
     std::string id() const PN_CPP_OVERRIDE { return id_; }
     returned<connection> connect(const std::string&, const connection_options&) PN_CPP_OVERRIDE;

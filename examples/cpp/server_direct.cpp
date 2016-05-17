@@ -22,7 +22,7 @@
 #include "options.hpp"
 
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/source_options.hpp"
 #include "proton/tracker.hpp"
@@ -35,7 +35,7 @@
 
 #include <proton/config.hpp>
 
-class server : public proton::handler {
+class server : public proton::messaging_handler {
   private:
     typedef std::map<std::string, proton::sender> sender_map;
     std::string url;

@@ -35,8 +35,8 @@ class listen_handler {
 
     /// Called for each accepted connection.
     ///
-    /// Returns connection_options to apply, including a proton::handler for
-    /// the connection.  handler::on_connection_open() will be called with
+    /// Returns connection_options to apply, including a proton::messaging_handler for
+    /// the connection.  messaging_handler::on_connection_open() will be called with
     /// the proton::connection, it can call connection::open() to accept or
     /// connection::close() to reject the connection.
     virtual connection_options on_accept()= 0;

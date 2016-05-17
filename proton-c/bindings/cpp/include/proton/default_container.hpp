@@ -33,13 +33,13 @@ namespace proton {
 /// A single-threaded container.    
 class PN_CPP_CLASS_EXTERN  default_container : public container {
   public:
-    /// Create a default, single-threaded container with a handler.
-    /// The handler will be called for all events on all connections in the container.
+    /// Create a default, single-threaded container with a messaging_handler.
+    /// The messaging_handler will be called for all events on all connections in the container.
     ///
     /// Container ID should be unique within your system. If empty a random UUID is generated.
-    PN_CPP_EXTERN explicit default_container(proton::handler& h, const std::string& id = "");
+    PN_CPP_EXTERN explicit default_container(proton::messaging_handler& h, const std::string& id = "");
 
-    /// Create a default, single-threaded container without a handler.
+    /// Create a default, single-threaded container without a messaging_handler.
     ///
     /// Connections get their handlesr via proton::connection_options.
     /// Container-wide defaults are set with client_connection_options() and

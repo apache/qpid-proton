@@ -26,7 +26,7 @@
 #include "proton/default_container.hpp"
 #include "proton/codec/decoder.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/tracker.hpp"
 #include "proton/value.hpp"
 
@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-class reactor_send : public proton::handler {
+class reactor_send : public proton::messaging_handler {
   private:
     std::string url_;
     proton::message message_;

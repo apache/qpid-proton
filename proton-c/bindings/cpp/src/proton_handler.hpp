@@ -23,7 +23,7 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 
 #include <vector>
 

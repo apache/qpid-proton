@@ -10,9 +10,10 @@ This is a brief tutorial that will walk you through the fundamentals of building
 messaging applications in incremental steps. There are further examples, in
 addition the ones mentioned in the tutorial.
 
-Proton provides an "event-driven" programming model, where you implement a
-subclass of `proton::handler` and override functions that react to various AMQP
-events (connections opening and closing, messages being delivered and so on.)
+Proton provides an "event-driven" programming model, where you
+implement a subclass of `proton::messaging_handler` and override
+functions that react to various AMQP events (connections opening and
+closing, messages being delivered and so on.)
 
 The examples below show how to implement handlers for clients and servers and
 how to run them using the `proton::container`, a portable, easy-to-use way to
@@ -50,24 +51,28 @@ to a broker and the receives the same message back to demonstrate sending and
 receiving. In a realistic system the sender and receiver would normally be in
 different processes. The complete example is @ref helloworld.cpp
 
-We will include the following classes: `proton::container` runs an event loop
-which dispatches events to a `proton::handler`. This allows a *reactive*
-style of programming which is well suited to messaging applications. `proton::url` is a simple parser for the URL format mentioned above.
+We will include the following classes: `proton::container` runs an
+event loop which dispatches events to a
+`proton::messaging_handler`. This allows a *reactive* style of
+programming which is well suited to messaging
+applications. `proton::url` is a simple parser for the URL format
+mentioned above.
 
 \skip   proton/container
 \until  proton/url
 
 We will define a class `hello_world` which is a subclass of
-`proton::handler` and over-rides functions to handle the events
-of interest in sending and receiving a message.
+`proton::messaging_handler` and over-rides functions to handle the
+events of interest in sending and receiving a message.
 
 \skip class hello_world
 \until {}
 
-`on_start()` is called when the event loop first starts. We handle that by
-establishing a connection and creating a sender and a receiver.
+`on_container_start()` is called when the event loop first starts. We
+handle that by establishing a connection and creating a sender and a
+receiver.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 `on_sendable()` is called when message can be transferred over the associated
@@ -88,11 +93,12 @@ the message and close the connection, as we only want one message
 The message body is a `proton::value`, see the documentation for more on how to
 extract the message body as type-safe C++ values.
 
-Our `main` function creates an instance of the `hello_world` handler and a
-proton::container using that handler. Calling `proton::container::run` sets
-things in motion and returns when we close the connection as there is nothing
-further to do. It may throw an exception, which will be a subclass of
-`proton::error`. That in turn is a subclass of `std::exception`.
+Our `main` function creates an instance of the `hello_world` handler
+and a `proton::container` using that handler. Calling
+`proton::container::run` sets things in motion and returns when we
+close the connection as there is nothing further to do. It may throw
+an exception, which will be a subclass of `proton::error`. That in
+turn is a subclass of `std::exception`.
 
 \skip main
 \until }
@@ -115,7 +121,7 @@ The first difference, is that rather than creating a receiver on the same
 connection as our sender, we listen for incoming connections by invoking the
 `proton::container::listen()` method on the container.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 As we only need then to initiate one link, the sender, we can do that by
@@ -178,10 +184,10 @@ send.
 \skip class simple_send
 \until total
 
-As before, we use the `on_start()` event to establish our sender link over which
+As before, we use the `on_container_start()` event to establish our sender link over which
 we will transfer messages.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 AMQP defines a credit-based flow control mechanism. Flow control allows
@@ -234,10 +240,10 @@ a `received` variable to count how many we have received so far.
 \skip class simple_recv
 \until received
 
-We handle `on_start()` by creating our receiver, much like we
-did for the sender.
+We handle `on_container_start()` by creating our receiver, much like
+we did for the sender.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 We also handle the `on_message()` event for received messages and print the
@@ -264,7 +270,7 @@ There are only two differences here. Instead of initiating a link (and
 implicitly a connection), we listen for incoming connections.
 
 
-\skip on_start
+\skip on_container_start
 \until }
 
 When we have received all the expected messages, we then stop listening for
@@ -289,7 +295,7 @@ in @ref direct_send.cpp. Again that just requires two modifications:
 As with the modified receiver, instead of initiating establishment of a
 link, we listen for incoming connections.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 When we have received confirmation of all the messages we sent, we call
@@ -336,12 +342,12 @@ Our client takes a list of strings to send as requests
 
 \skipline client(
 
-Since we will be sending and receiving, we create a sender and a receiver in
-`on_start`.  Our receiver has a blank address and sets the `dynamic` flag to
-true, which means we expect the remote end (broker or server) to assign a unique
-address for us.
+Since we will be sending and receiving, we create a sender and a
+receiver in `on_container_start`.  Our receiver has a blank address
+and sets the `dynamic` flag to true, which means we expect the remote
+end (broker or server) to assign a unique address for us.
 
-\skip on_start
+\skip on_container_start
 \until }
 
 Now a function to send the next request from our list of requests. We set the

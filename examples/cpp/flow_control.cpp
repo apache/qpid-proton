@@ -23,7 +23,7 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/tracker.hpp"
 #include "proton/delivery.hpp"
@@ -49,7 +49,7 @@ void verify(bool success, const std::string &msg) {
 }
 
 // flow_sender manages the incoming connection and acts as the message sender.
-class flow_sender : public proton::handler {
+class flow_sender : public proton::messaging_handler {
   private:
     int available;  // Number of messages the sender may send assuming sufficient credit.
     int sequence;
@@ -83,7 +83,7 @@ class flow_sender : public proton::handler {
     void set_available(int n) { available = n; }
 };
 
-class flow_receiver : public proton::handler {
+class flow_receiver : public proton::messaging_handler {
   public:
     int stage;
     int received;
@@ -185,7 +185,7 @@ class flow_receiver : public proton::handler {
 };
 
 
-class flow_control : public proton::handler {
+class flow_control : public proton::messaging_handler {
   private:
     std::string url;
     proton::listener listener;

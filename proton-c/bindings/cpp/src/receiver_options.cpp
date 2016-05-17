@@ -20,7 +20,7 @@
  */
 
 #include "proton/receiver_options.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
 
@@ -125,7 +125,7 @@ receiver_options& receiver_options::operator=(const receiver_options& x) {
 
 void receiver_options::update(const receiver_options& x) { impl_->update(*x.impl_); }
 
-receiver_options& receiver_options::handler(class handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
+receiver_options& receiver_options::handler(class messaging_handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
 receiver_options& receiver_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 receiver_options& receiver_options::auto_accept(bool b) {impl_->auto_accept = b; return *this; }
 receiver_options& receiver_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }

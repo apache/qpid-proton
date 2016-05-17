@@ -19,13 +19,13 @@
  *
  */
 
-#include <proton/config.hpp>
+#include "proton/config.hpp"
 #include "options.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/message.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
@@ -150,7 +150,7 @@ class queues {
 };
 
 // A handler to implement broker logic
-class broker_handler : public proton::handler {
+class broker_handler : public proton::messaging_handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
@@ -231,7 +231,7 @@ class broker {
   public:
     broker(const std::string& url) : handler_(url, queues_) {}
 
-    proton::handler& handler() { return handler_; }
+    proton::messaging_handler& handler() { return handler_; }
 
   private:
     class my_handler : public broker_handler {
@@ -251,7 +251,6 @@ class broker {
     queues queues_;
     my_handler handler_;
 };
-
 
 int main(int argc, char **argv) {
     std::string url("0.0.0.0");

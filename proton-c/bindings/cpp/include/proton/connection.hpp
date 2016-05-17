@@ -35,7 +35,7 @@ struct pn_connection_t;
 
 namespace proton {
 
-class handler;
+class messaging_handler;
 class connection_options;
 class sender;
 class sender_options;

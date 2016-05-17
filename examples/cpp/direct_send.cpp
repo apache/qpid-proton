@@ -23,7 +23,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/value.hpp"
 #include "proton/tracker.hpp"
 
@@ -32,7 +32,7 @@
 
 #include <proton/config.hpp>
 
-class simple_send : public proton::handler {
+class simple_send : public proton::messaging_handler {
   private:
     std::string url;
     proton::listener listener;

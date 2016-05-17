@@ -22,7 +22,7 @@
 #include "proton/connection_options.hpp"
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/ssl.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
@@ -44,7 +44,7 @@ static std::string cert_directory;
 std::string find_CN(const std::string &);
 
 
-struct server_handler : public proton::handler {
+struct server_handler : public proton::messaging_handler {
     std::string url;
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
@@ -59,7 +59,7 @@ struct server_handler : public proton::handler {
 };
 
 
-class hello_world_direct : public proton::handler {
+class hello_world_direct : public proton::messaging_handler {
   private:
     std::string url;
     server_handler s_handler;

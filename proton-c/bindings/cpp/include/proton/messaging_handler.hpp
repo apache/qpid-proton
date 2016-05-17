@@ -1,5 +1,5 @@
-#ifndef PROTON_HANDLER_HPP
-#define PROTON_HANDLER_HPP
+#ifndef PROTON_MESSAGING_HANDLER_HPP
+#define PROTON_MESSAGING_HANDLER_HPP
 
 /*
  *
@@ -73,10 +73,10 @@ class connection_engine;
 /// manage resource clean up.  It can assume that the close event will
 /// be along to handle it.
 class
-PN_CPP_CLASS_EXTERN handler {
+PN_CPP_CLASS_EXTERN messaging_handler {
   public:
-    PN_CPP_EXTERN handler();
-    PN_CPP_EXTERN virtual ~handler();
+    PN_CPP_EXTERN messaging_handler();
+    PN_CPP_EXTERN virtual ~messaging_handler();
 
     /// The container event loop is starting.
     PN_CPP_EXTERN virtual void on_container_start(container &c);
@@ -174,4 +174,4 @@ PN_CPP_CLASS_EXTERN handler {
 
 } // proton
 
-#endif // PROTON_HANDLER_HPP
+#endif // PROTON_MESSAGING_HANDLER_HPP

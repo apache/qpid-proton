@@ -19,7 +19,7 @@
  *
  */
 #include "proton/connection_options.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
@@ -146,7 +146,7 @@ class connection_options::impl {
 
 connection_options::connection_options() : impl_(new impl()) {}
 
-connection_options::connection_options(class handler& h) : impl_(new impl()) { handler(h); }
+connection_options::connection_options(class messaging_handler& h) : impl_(new impl()) { handler(h); }
 
 connection_options::connection_options(const connection_options& x) : impl_(new impl()) {
     *this = x;
@@ -164,7 +164,7 @@ connection_options& connection_options::update(const connection_options& x) {
     return *this;
 }
 
-connection_options& connection_options::handler(class handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
+connection_options& connection_options::handler(class messaging_handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::max_sessions(uint16_t n) { impl_->max_sessions = n; return *this; }
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }

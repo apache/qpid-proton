@@ -37,7 +37,7 @@ class connection;
 class container;
 class acceptor;
 class url;
-class handler;
+class messaging_handler;
 class task;
 
 class reactor : public internal::object<pn_reactor_t> {

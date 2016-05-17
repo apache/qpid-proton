@@ -55,7 +55,7 @@ void credit_topup(pn_link_t *link) {
 }
 }
 
-messaging_adapter::messaging_adapter(handler &delegate) : delegate_(delegate) {}
+messaging_adapter::messaging_adapter(messaging_handler &delegate) : delegate_(delegate) {}
 
 messaging_adapter::~messaging_adapter(){}
 

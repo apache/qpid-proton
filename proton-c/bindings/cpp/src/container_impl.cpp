@@ -119,7 +119,7 @@ internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
     return internal::take_ownership(handler);
 }
 
-container_impl::container_impl(const std::string& id, handler *h) :
+container_impl::container_impl(const std::string& id, messaging_handler *h) :
     reactor_(reactor::create()), handler_(h ? h->messaging_adapter_.get() : 0),
     id_(id.empty() ? uuid::random().str() : id), id_gen_(),
     auto_stop_(true)
@@ -269,7 +269,7 @@ void container_impl::auto_stop(bool set) {
 }
 
 
-default_container::default_container(handler& h, const std::string& id) : impl_(new container_impl(id, &h)) {}
+default_container::default_container(messaging_handler& h, const std::string& id) : impl_(new container_impl(id, &h)) {}
 default_container::default_container(const std::string& id) : impl_(new container_impl(id)) {}
 
 returned<connection>   default_container::connect(const std::string& url, const connection_options &o) { return impl_->connect(url, o); }

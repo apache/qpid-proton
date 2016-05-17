@@ -26,7 +26,7 @@
 #include <proton/uuid.hpp>
 #include <proton/io/connection_engine.hpp>
 #include <proton/io/link_namer.hpp>
-#include <proton/handler.hpp>
+#include <proton/messaging_handler.hpp>
 #include <proton/types_fwd.hpp>
 #include <proton/link.hpp>
 #include <deque>
@@ -113,7 +113,7 @@ template <class S> typename S::value_type quick_pop(S& s) {
 }
 
 /// A handler that records incoming endpoints, errors etc.
-struct record_handler : public handler {
+struct record_handler : public messaging_handler {
     std::deque<proton::receiver> receivers;
     std::deque<proton::sender> senders;
     std::deque<proton::session> sessions;

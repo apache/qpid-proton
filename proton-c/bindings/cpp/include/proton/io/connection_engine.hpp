@@ -74,7 +74,7 @@ struct const_buffer {
 /// any IO or concurrency framework.
 ///
 /// io::connection_engine manages a single proton::connection and dispatches
-/// events to a proton::handler. It does no IO of its own, but allows you to
+/// events to a proton::messaging_handler. It does no IO of its own, but allows you to
 /// integrate AMQP protocol handling into any IO or concurrency framework.
 ///
 /// The application is coded the same way as for the
@@ -86,7 +86,7 @@ struct const_buffer {
 ///
 /// You need to write the IO code to read AMQP data to the
 /// read_buffer(). The engine parses the AMQP frames. dispatch() calls
-/// the appropriate functions on the applications proton::handler. You
+/// the appropriate functions on the applications proton::messaging_handler. You
 /// write output data from the engine's write_buffer() to your IO.
 ///
 /// The engine is not safe for concurrent use, but you can process
@@ -102,13 +102,13 @@ struct const_buffer {
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
-    /// Create a connection engine. opts must contain a handler.
+    /// Create a connection engine. opts must contain a messaging_handler.
     /// Takes ownership of loop, will be deleted only when the proton::connection is.
     PN_CPP_EXTERN connection_engine(proton::container&, link_namer&, event_loop* loop = 0);
 
     PN_CPP_EXTERN ~connection_engine();
 
-    /// Configure a connection by applying exactly the options in opts (including proton::handler)
+    /// Configure a connection by applying exactly the options in opts (including proton::messaging_handler)
     /// Does not apply any default options, to apply container defaults use connect() or accept()
     /// instead.
     void configure(const connection_options& opts=connection_options());
@@ -120,8 +120,8 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Call configure() with server options.
     /// Options applied: container::id(), container::server_connection_options(), opts.
     ///
-    /// Note this does not call connection::open(). If there is a handler in the
-    /// composed options it will receive handler::on_connection_open() and can
+    /// Note this does not call connection::open(). If there is a messaging_handler in the
+    /// composed options it will receive messaging_handler::on_connection_open() and can
     /// respond with connection::open() or connection::close()
     PN_CPP_EXTERN void accept(const connection_options& opts);
 
@@ -157,16 +157,16 @@ PN_CPP_CLASS_EXTERN connection_engine {
     ///
     /// This calls read_close(), write_close(), sets the transport().error() and
     /// queues an `on_transport_error` event. You must call dispatch() one more
-    /// time to dispatch the handler::on_transport_error() call and other final
+    /// time to dispatch the messaging_handler::on_transport_error() call and other final
     /// events.
     ///
-    /// Note this does not close the connection() so that a proton::handler can
+    /// Note this does not close the connection() so that a proton::messaging_handler can
     /// distinguish between a connection close error sent by the remote peer and
     /// a transport failure.
     ///
     PN_CPP_EXTERN void disconnected(const error_condition& = error_condition());
 
-    /// Dispatch all available events and call the corresponding \ref handler methods.
+    /// Dispatch all available events and call the corresponding \ref messaging_handler methods.
     ///
     /// Returns true if the engine is still active, false if it is finished and
     /// can be destroyed. The engine is finished when all events are dispatched

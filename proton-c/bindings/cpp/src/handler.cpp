@@ -18,7 +18,7 @@
  * under the License.
  *
  */
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/receiver.hpp"
@@ -35,36 +35,36 @@
 
 namespace proton {
 
-handler::handler() : messaging_adapter_(new messaging_adapter(*this)) {}
+messaging_handler::messaging_handler() : messaging_adapter_(new messaging_adapter(*this)) {}
 
-handler::~handler(){}
+messaging_handler::~messaging_handler(){}
 
-void handler::on_container_start(container &) {}
-void handler::on_message(delivery &, message &) {}
-void handler::on_sendable(sender &) {}
-void handler::on_transport_close(transport &) {}
-void handler::on_transport_error(transport &t) { on_error(t.error()); }
-void handler::on_transport_open(transport &) {}
-void handler::on_connection_close(connection &) {}
-void handler::on_connection_error(connection &c) { on_error(c.error()); }
-void handler::on_connection_open(connection &) {}
-void handler::on_session_close(session &) {}
-void handler::on_session_error(session &s) { on_error(s.error()); }
-void handler::on_session_open(session &) {}
-void handler::on_receiver_close(receiver &) {}
-void handler::on_receiver_error(receiver &l) { on_error(l.error()); }
-void handler::on_receiver_open(receiver &) {}
-void handler::on_sender_close(sender &) {}
-void handler::on_sender_error(sender &l) { on_error(l.error()); }
-void handler::on_sender_open(sender &) {}
-void handler::on_tracker_accept(tracker &) {}
-void handler::on_tracker_reject(tracker &) {}
-void handler::on_tracker_release(tracker &) {}
-void handler::on_tracker_settle(tracker &) {}
-void handler::on_delivery_settle(delivery &) {}
-void handler::on_sender_drain_start(sender &) {}
-void handler::on_receiver_drain_finish(receiver &) {}
+void messaging_handler::on_container_start(container &) {}
+void messaging_handler::on_message(delivery &, message &) {}
+void messaging_handler::on_sendable(sender &) {}
+void messaging_handler::on_transport_close(transport &) {}
+void messaging_handler::on_transport_error(transport &t) { on_error(t.error()); }
+void messaging_handler::on_transport_open(transport &) {}
+void messaging_handler::on_connection_close(connection &) {}
+void messaging_handler::on_connection_error(connection &c) { on_error(c.error()); }
+void messaging_handler::on_connection_open(connection &) {}
+void messaging_handler::on_session_close(session &) {}
+void messaging_handler::on_session_error(session &s) { on_error(s.error()); }
+void messaging_handler::on_session_open(session &) {}
+void messaging_handler::on_receiver_close(receiver &) {}
+void messaging_handler::on_receiver_error(receiver &l) { on_error(l.error()); }
+void messaging_handler::on_receiver_open(receiver &) {}
+void messaging_handler::on_sender_close(sender &) {}
+void messaging_handler::on_sender_error(sender &l) { on_error(l.error()); }
+void messaging_handler::on_sender_open(sender &) {}
+void messaging_handler::on_tracker_accept(tracker &) {}
+void messaging_handler::on_tracker_reject(tracker &) {}
+void messaging_handler::on_tracker_release(tracker &) {}
+void messaging_handler::on_tracker_settle(tracker &) {}
+void messaging_handler::on_delivery_settle(delivery &) {}
+void messaging_handler::on_sender_drain_start(sender &) {}
+void messaging_handler::on_receiver_drain_finish(receiver &) {}
 
-void handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
+void messaging_handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
 
 }

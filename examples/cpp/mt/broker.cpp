@@ -23,7 +23,7 @@
 #include <proton/connection.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/handler.hpp>
+#include <proton/messaging_handler.hpp>
 #include <proton/listen_handler.hpp>
 #include <proton/thread_safe.hpp>
 
@@ -121,7 +121,7 @@ class queues {
 /// FIXME aconway 2016-05-10: doc - point out queue/sender interaction as
 /// example of communication via event_loop::inject()
 ///
-class broker_connection_handler : public proton::handler {
+class broker_connection_handler : public proton::messaging_handler {
   public:
     broker_connection_handler(queues& qs) : queues_(qs) {}
 

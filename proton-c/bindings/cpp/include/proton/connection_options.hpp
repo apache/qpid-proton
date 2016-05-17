@@ -70,7 +70,7 @@ class connection_options {
     PN_CPP_EXTERN connection_options();
 
     /// Shorthand for connection_options().handler(h)
-    PN_CPP_EXTERN connection_options(class handler& h);
+    PN_CPP_EXTERN connection_options(class messaging_handler& h);
 
     /// Copy options.
     PN_CPP_EXTERN connection_options(const connection_options&);
@@ -84,8 +84,8 @@ class connection_options {
 
     /// Set a connection handler.
     ///
-    /// The handler must not be deleted until handler::on_transport_close() is called.
-    PN_CPP_EXTERN connection_options& handler(class handler&);
+    /// The handler must not be deleted until messaging_handler::on_transport_close() is called.
+    PN_CPP_EXTERN connection_options& handler(class messaging_handler&);
 
     /// Set the maximum frame size.
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);

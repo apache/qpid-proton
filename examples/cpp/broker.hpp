@@ -29,7 +29,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/message.hpp"
 #include "proton/sasl.hpp"
 #include "proton/sender.hpp"
@@ -154,10 +154,10 @@ class queues {
     uint64_t next_id_; // Use to generate unique queue IDs.
 };
 
-#include <proton/config.hpp>
+#include "proton/config.hpp"
 
 /** Common handler logic for brokers. */
-class broker_handler : public proton::handler {
+class broker_handler : public proton::messaging_handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 

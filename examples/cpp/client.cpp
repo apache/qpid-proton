@@ -22,7 +22,7 @@
 #include "options.hpp"
 #include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/connection.hpp"
 #include "proton/tracker.hpp"
 #include "proton/source_options.hpp"
@@ -35,7 +35,7 @@
 using proton::receiver_options;
 using proton::source_options;
 
-class client : public proton::handler {
+class client : public proton::messaging_handler {
   private:
     std::string url;
     std::vector<std::string> requests;
