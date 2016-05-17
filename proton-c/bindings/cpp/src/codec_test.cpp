@@ -20,7 +20,7 @@
 #include "test_bits.hpp"
 
 #include <proton/types.hpp>
-#include <proton/data.hpp>
+#include <proton/codec/data.hpp>
 #include <proton/config.hpp>
 
 namespace {

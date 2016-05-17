@@ -28,7 +28,7 @@
 #include "proton/event_loop.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/message.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 
 #include "proton/io/link_namer.hpp"
 

@@ -24,11 +24,11 @@
 
 // FIXME aconway 2016-05-04: doc
 
-#include <proton/connection_options.hpp>
-#include <proton/error_condition.hpp>
-#include <proton/listener.hpp>
-#include <proton/internal/pn_unique_ptr.hpp>
-#include <proton/thread_safe.hpp>
+#include "proton/connection_options.hpp"
+#include "proton/error_condition.hpp"
+#include "proton/listener.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
+#include "proton/thread_safe.hpp"
 
 #include <string>
 

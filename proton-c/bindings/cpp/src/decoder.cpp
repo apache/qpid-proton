@@ -20,7 +20,7 @@
 #include <proton/annotation_key.hpp>
 #include <proton/binary.hpp>
 #include <proton/codec/encoder.hpp>
-#include <proton/data.hpp>
+#include <proton/codec/data.hpp>
 #include <proton/decimal.hpp>
 #include <proton/message_id.hpp>
 #include <proton/scalar.hpp>
