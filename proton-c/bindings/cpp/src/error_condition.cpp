@@ -19,7 +19,7 @@
  *
  */
 #include "proton/error_condition.hpp"
-#include "proton/condition.h"
+#include <proton/condition.h>
 
 #include "proton_bits.hpp"
 

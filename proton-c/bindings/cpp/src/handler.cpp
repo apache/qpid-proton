@@ -29,7 +29,7 @@
 #include "proton_event.hpp"
 #include "messaging_adapter.hpp"
 
-#include "proton/handlers.h"
+#include <proton/handlers.h>
 
 #include <algorithm>
 

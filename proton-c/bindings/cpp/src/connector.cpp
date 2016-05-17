@@ -34,8 +34,8 @@
 #include "proton_bits.hpp"
 #include "proton_event.hpp"
 
-#include "proton/connection.h"
-#include "proton/transport.h"
+#include <proton/connection.h>
+#include <proton/transport.h>
 
 namespace proton {
 

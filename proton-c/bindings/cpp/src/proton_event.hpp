@@ -24,7 +24,7 @@
 
 #include "proton/error.hpp"
 
-#include "proton/event.h"
+#include <proton/event.h>
 
 namespace proton {
 

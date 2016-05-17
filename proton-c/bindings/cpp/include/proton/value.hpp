@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/codec/encoder.hpp"
-#include "proton/codec/decoder.hpp"
-#include "proton/internal/type_traits.hpp"
-#include "proton/types_fwd.hpp"
+#include "./codec/encoder.hpp"
+#include "./codec/decoder.hpp"
+#include "./internal/type_traits.hpp"
+#include "./types_fwd.hpp"
 
 #include <iosfwd>
 

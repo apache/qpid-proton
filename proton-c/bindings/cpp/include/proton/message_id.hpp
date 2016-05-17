@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/binary.hpp"
-#include "proton/internal/scalar_base.hpp"
-#include "proton/uuid.hpp"
+#include "./binary.hpp"
+#include "./internal/scalar_base.hpp"
+#include "./uuid.hpp"
 
 #include <string>
 

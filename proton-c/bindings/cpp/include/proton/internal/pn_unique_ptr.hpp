@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/config.hpp"
+#include "./config.hpp"
 
 #include <memory>
 

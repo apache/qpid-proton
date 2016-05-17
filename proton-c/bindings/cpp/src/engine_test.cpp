@@ -22,13 +22,13 @@
 #include "test_dummy_container.hpp"
 #include "proton_bits.hpp"
 
-#include <proton/container.hpp>
-#include <proton/uuid.hpp>
-#include <proton/io/connection_engine.hpp>
-#include <proton/io/link_namer.hpp>
-#include <proton/messaging_handler.hpp>
-#include <proton/types_fwd.hpp>
-#include <proton/link.hpp>
+#include "proton/container.hpp"
+#include "proton/uuid.hpp"
+#include "proton/io/connection_engine.hpp"
+#include "proton/io/link_namer.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/types_fwd.hpp"
+#include "proton/link.hpp"
 #include <deque>
 #include <algorithm>
 

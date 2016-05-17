@@ -19,8 +19,8 @@
 
 #include "test_bits.hpp"
 
-#include <proton/types.hpp>
-#include <proton/error.hpp>
+#include "proton/types.hpp"
+#include "proton/error.hpp"
 
 namespace {
 

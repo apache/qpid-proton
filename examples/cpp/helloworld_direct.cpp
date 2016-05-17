@@ -19,15 +19,15 @@
  *
  */
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/sender.hpp"
-#include "proton/tracker.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/sender.hpp>
+#include <proton/tracker.hpp>
 
 #include <iostream>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 class hello_world_direct : public proton::messaging_handler {
   private:
@@ -37,26 +37,26 @@ class hello_world_direct : public proton::messaging_handler {
   public:
     hello_world_direct(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url);
         c.open_sender(url);
     }
 
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) OVERRIDE {
         proton::message m("Hello World!");
         s.send(m);
         s.close();
     }
 
-    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 
-    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) OVERRIDE {
         t.connection().close();
     }
 
-    void on_connection_close(proton::connection&) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection&) OVERRIDE {
         listener.stop();
     }
 };

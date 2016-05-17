@@ -26,11 +26,11 @@
 #include "proton_bits.hpp"
 #include "contexts.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
-#include "proton/event.h"
-#include "proton/reactor.h"
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/link.h>
+#include <proton/event.h>
+#include <proton/reactor.h>
 
 namespace proton {
 

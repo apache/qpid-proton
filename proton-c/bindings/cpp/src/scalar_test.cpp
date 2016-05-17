@@ -23,11 +23,11 @@
 #include "proton/error.hpp"
 #include "proton/internal/type_traits.hpp"
 
-#include <proton/scalar.hpp>
-#include <proton/value.hpp>
-#include <proton/message_id.hpp>
-#include <proton/annotation_key.hpp>
-#include <proton/decimal.hpp>
+#include "proton/scalar.hpp"
+#include "proton/value.hpp"
+#include "proton/message_id.hpp"
+#include "proton/annotation_key.hpp"
+#include "proton/decimal.hpp"
 
 #include <sstream>
 

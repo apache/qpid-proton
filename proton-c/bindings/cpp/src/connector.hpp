@@ -24,8 +24,8 @@
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
-#include "proton/event.h"
-#include "proton/reactor.h"
+#include <proton/event.h>
+#include <proton/reactor.h>
 #include "proton/url.hpp"
 
 #include "proton_handler.hpp"

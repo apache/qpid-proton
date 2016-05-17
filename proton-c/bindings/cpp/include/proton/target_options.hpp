@@ -22,13 +22,13 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
-#include "proton/types.hpp"
-#include "proton/delivery_mode.hpp"
-#include "proton/target.hpp"
-#include "proton/terminus.hpp"
+#include "./internal/config.hpp"
+#include "./internal/export.hpp"
+#include "./internal/pn_unique_ptr.hpp"
+#include "./types.hpp"
+#include "./delivery_mode.hpp"
+#include "./target.hpp"
+#include "./terminus.hpp"
 
 #include <vector>
 #include <string>

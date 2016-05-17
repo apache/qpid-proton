@@ -25,10 +25,10 @@
 /// @cond INTERNAL
 /// XXX Needs more discussion
 
-#include "proton/export.hpp"
-#include "proton/duration.hpp"
-#include "proton/timestamp.hpp"
-#include "proton/types.hpp"
+#include "./internal/export.hpp"
+#include "./duration.hpp"
+#include "./timestamp.hpp"
+#include "./types.hpp"
 
 #include <string>
 

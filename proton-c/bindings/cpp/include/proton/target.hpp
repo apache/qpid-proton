@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/internal/object.hpp"
-#include "proton/value.hpp"
-#include "proton/terminus.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
+#include "./value.hpp"
+#include "./terminus.hpp"
 
 #include <string>
 

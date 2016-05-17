@@ -19,27 +19,28 @@
  *
  */
 
-#include "proton/config.hpp"
 #include "options.hpp"
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/delivery.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/message.hpp"
-#include "proton/receiver_options.hpp"
-#include "proton/sender.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/source_options.hpp"
-#include "proton/target_options.hpp"
-#include "proton/transport.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/message.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/sender.hpp>
+#include <proton/sender_options.hpp>
+#include <proton/source_options.hpp>
+#include <proton/target_options.hpp>
+#include <proton/transport.hpp>
+#include <proton/url.hpp>
 
 #include <deque>
 #include <iostream>
 #include <list>
 #include <map>
 #include <string>
+
+#include "fake_cpp11.hpp"
 
 /// A simple implementation of a queue.
 class queue {
@@ -154,7 +155,7 @@ class broker_handler : public proton::messaging_handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sender_open(proton::sender &sender) OVERRIDE {
         proton::source src(sender.source());
         queue &q = src.dynamic() ?
             queues_.dynamic() : queues_.get(src.address());
@@ -163,7 +164,7 @@ class broker_handler : public proton::messaging_handler {
         std::cout << "broker outgoing link from " << q.name() << std::endl;
     }
 
-    void on_receiver_open(proton::receiver &receiver) PN_CPP_OVERRIDE {
+    void on_receiver_open(proton::receiver &receiver) OVERRIDE {
         std::string address = receiver.target().address();
         if (!address.empty()) {
             receiver.open(proton::receiver_options().target(proton::target_options().address(address)));
@@ -179,23 +180,23 @@ class broker_handler : public proton::messaging_handler {
         }
     }
 
-    void on_sender_close(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sender_close(proton::sender &sender) OVERRIDE {
         unsubscribe(sender);
     }
 
-    void on_connection_close(proton::connection &c) PN_CPP_OVERRIDE {
+    void on_connection_close(proton::connection &c) OVERRIDE {
         remove_stale_consumers(c);
     }
 
-    void on_transport_close(proton::transport &t) PN_CPP_OVERRIDE {
+    void on_transport_close(proton::transport &t) OVERRIDE {
         remove_stale_consumers(t.connection());
     }
 
-    void on_transport_error(proton::transport &t) PN_CPP_OVERRIDE {
+    void on_transport_error(proton::transport &t) OVERRIDE {
         std::cout << "broker client disconnect: " << t.error().what() << std::endl;
     }
 
-    void on_error(const proton::error_condition &c) PN_CPP_OVERRIDE {
+    void on_error(const proton::error_condition &c) OVERRIDE {
         std::cerr << "broker error: " << c.what() << std::endl;
     }
 
@@ -210,13 +211,13 @@ class broker_handler : public proton::messaging_handler {
         }
     }
 
-    void on_sendable(proton::sender &s) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &s) OVERRIDE {
         std::string address = s.source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::delivery &d, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
         std::string address = d.receiver().target().address();
         queues_.get(address).publish(m);
     }
@@ -238,7 +239,7 @@ class broker {
       public:
         my_handler(const std::string& u, queues& qs) : broker_handler(qs), url_(u) {}
 
-        void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        void on_container_start(proton::container &c) OVERRIDE {
             c.listen(url_);
             std::cout << "broker listening on " << url_ << std::endl;
         }

@@ -23,9 +23,9 @@
 #include "proton/sender.hpp"
 #include "proton/tracker.hpp"
 
-#include "proton/delivery.h"
-#include "proton/link.h"
-#include "proton/types.h"
+#include <proton/delivery.h>
+#include <proton/link.h>
+#include <proton/types.h>
 
 #include "proton_bits.hpp"
 #include "contexts.hpp"

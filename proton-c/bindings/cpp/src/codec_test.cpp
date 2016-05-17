@@ -19,9 +19,9 @@
 
 #include "test_bits.hpp"
 
-#include <proton/types.hpp>
-#include <proton/codec/data.hpp>
-#include <proton/config.hpp>
+#include "proton/codec/data.hpp"
+#include "proton/internal/config.hpp"
+#include "proton/types.hpp"
 
 namespace {
 

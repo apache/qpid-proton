@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/types_fwd.hpp"
+#include "./internal/export.hpp"
+#include "./types_fwd.hpp"
 
 #include <iosfwd>
 #include <vector>

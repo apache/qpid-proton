@@ -26,12 +26,12 @@
 
 #include "proton/error.hpp"
 
-#include "proton/connection.h"
-#include "proton/object.h"
-#include "proton/link.h"
-#include "proton/message.h"
-#include "proton/reactor.h"
-#include "proton/session.h"
+#include <proton/connection.h>
+#include <proton/object.h>
+#include <proton/link.h>
+#include <proton/message.h>
+#include <proton/reactor.h>
+#include <proton/session.h>
 
 #include <typeinfo>
 

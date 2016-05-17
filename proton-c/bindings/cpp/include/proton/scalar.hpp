@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include "proton/internal/scalar_base.hpp"
+#include "./internal/scalar_base.hpp"
 
 namespace proton {
 

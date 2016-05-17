@@ -22,12 +22,12 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/internal/object.hpp"
-#include "proton/transfer.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
+#include "./transfer.hpp"
 
-#include "proton/delivery.h"
-#include "proton/disposition.h"
+#include <proton/delivery.h>
+#include <proton/disposition.h>
 
 namespace proton {
 

@@ -22,11 +22,11 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/connection.hpp"
-#include "proton/event_loop.hpp"
-#include "proton/internal/object.hpp"
-#include "proton/internal/type_traits.hpp"
+#include "./internal/config.hpp"
+#include "./connection.hpp"
+#include "./event_loop.hpp"
+#include "./internal/object.hpp"
+#include "./internal/type_traits.hpp"
 
 #include <functional>
 

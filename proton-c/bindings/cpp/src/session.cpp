@@ -20,8 +20,8 @@
  */
 #include "proton/session.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
+#include <proton/connection.h>
+#include <proton/session.h>
 #include "proton/session.hpp"
 #include "proton/connection.hpp"
 #include "proton/session_options.hpp"

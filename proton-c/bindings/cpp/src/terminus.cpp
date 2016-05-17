@@ -24,7 +24,7 @@
 #include "proton_bits.hpp"
 
 #include "proton/link.hpp"
-#include "proton/link.h"
+#include <proton/link.h>
 
 namespace proton {
 

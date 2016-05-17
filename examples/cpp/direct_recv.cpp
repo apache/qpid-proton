@@ -21,17 +21,17 @@
 
 #include "options.hpp"
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/delivery.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/link.hpp"
-#include "proton/value.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/link.hpp>
+#include <proton/value.hpp>
 
 #include <iostream>
 #include <map>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 class direct_recv : public proton::messaging_handler {
   private:
@@ -43,12 +43,12 @@ class direct_recv : public proton::messaging_handler {
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::delivery &d, proton::message &msg) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }

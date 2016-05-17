@@ -20,7 +20,7 @@
  */
 
 #include "proton/task.hpp"
-#include "proton/reactor.h"
+#include <proton/reactor.h>
 
 namespace proton {
 

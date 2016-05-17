@@ -21,16 +21,16 @@
 
 #include "options.hpp"
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/value.hpp"
-#include "proton/tracker.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/value.hpp>
+#include <proton/tracker.hpp>
 
 #include <iostream>
 #include <map>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 class simple_send : public proton::messaging_handler {
   private:
@@ -43,12 +43,12 @@ class simple_send : public proton::messaging_handler {
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url);
         std::cout << "direct_send listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sendable(proton::sender &sender) OVERRIDE {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -62,7 +62,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_tracker_accept(proton::tracker &t) PN_CPP_OVERRIDE {
+    void on_tracker_accept(proton::tracker &t) OVERRIDE {
         confirmed++;
 
         if (confirmed == total) {
@@ -72,7 +72,7 @@ class simple_send : public proton::messaging_handler {
         }
     }
 
-    void on_transport_close(proton::transport &) PN_CPP_OVERRIDE {
+    void on_transport_close(proton::transport &) OVERRIDE {
         sent = confirmed;
     }
 };

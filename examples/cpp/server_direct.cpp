@@ -21,11 +21,11 @@
 
 #include "options.hpp"
 
-#include "proton/default_container.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/sender.hpp"
-#include "proton/source_options.hpp"
-#include "proton/tracker.hpp"
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/sender.hpp>
+#include <proton/source_options.hpp>
+#include <proton/tracker.hpp>
 
 #include <iostream>
 #include <map>
@@ -33,7 +33,7 @@
 #include <sstream>
 #include <cctype>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 class server : public proton::messaging_handler {
   private:
@@ -45,7 +45,7 @@ class server : public proton::messaging_handler {
   public:
     server(const std::string &u) : url(u), address_counter(0) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         c.listen(url);
         std::cout << "server listening on " << url << std::endl;
     }
@@ -67,7 +67,7 @@ class server : public proton::messaging_handler {
         return addr.str();
     }
 
-    void on_sender_open(proton::sender &sender) PN_CPP_OVERRIDE {
+    void on_sender_open(proton::sender &sender) OVERRIDE {
         if (sender.source().dynamic()) {
             std::string addr = generate_address();
             sender.open(proton::sender_options().source(proton::source_options().address(addr)));
@@ -75,7 +75,7 @@ class server : public proton::messaging_handler {
         }
     }
 
-    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

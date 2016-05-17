@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/config.hpp"
+#include "./internal/config.hpp"
 
 #include <functional>
 

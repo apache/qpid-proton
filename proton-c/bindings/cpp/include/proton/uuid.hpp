@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/byte_array.hpp"
-#include "proton/export.hpp"
+#include "./byte_array.hpp"
+#include "./internal/export.hpp"
 
 #include <string>
 #include <iosfwd>
