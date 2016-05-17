@@ -1,5 +1,6 @@
-#ifndef TIMESTAMP_HPP
-#define TIMESTAMP_HPP
+#ifndef PROTON_TIMESTAMP_HPP
+#define PROTON_TIMESTAMP_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -22,32 +23,44 @@
 #include "proton/duration.hpp"
 
 namespace proton {
-/// 64 bit timestamp in milliseconds since the epoch 00:00:00 (UTC), 1 January 1970.
+
+/// A 64-bit timestamp in milliseconds since the Unix epoch.
+///    
+/// The dawn of the Unix epoch was 00:00:00 (UTC), 1 January 1970.
 class timestamp : private internal::comparable<timestamp> {
   public:
-    typedef int64_t numeric_type; ///< Numeric type holding milliseconds value
-    PN_CPP_EXTERN static timestamp now(); ///< Current wall-clock time
+    /// A numeric type holding a milliseconds value.
+    typedef int64_t numeric_type;
 
-    explicit timestamp(numeric_type ms = 0) : ms_(ms) {} ///< Construct from milliseconds
-    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }  ///< Assign from milliseconds
-    numeric_type milliseconds() const { return ms_; } ///< Get milliseconds
+    /// The current wall-clock time.
+    PN_CPP_EXTERN static timestamp now();
+
+    /// Construct from milliseconds.
+    explicit timestamp(numeric_type ms = 0) : ms_(ms) {}
+
+    /// Assign from milliseconds.
+    timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }
+
+    /// Get milliseconds.
+    numeric_type milliseconds() const { return ms_; }
 
   private:
     numeric_type ms_;
 };
 
-///@name Comparison and arithmetic operators
-///@{
+/// @name Comparison and arithmetic operators
+/// @{
 inline bool operator==(timestamp x, timestamp y) { return x.milliseconds() == y.milliseconds(); }
 inline bool operator<(timestamp x, timestamp y) { return x.milliseconds() < y.milliseconds(); }
 
 inline timestamp operator+(timestamp ts, duration d) { return timestamp(ts.milliseconds() + d.milliseconds()); }
 inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.milliseconds() - t1.milliseconds()); }
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
-///@}
+/// @}
 
 /// Printable format.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, timestamp);
 
-}
-#endif // TIMESTAMP_HPP
+} // proton
+
+#endif // PROTON_TIMESTAMP_HPP

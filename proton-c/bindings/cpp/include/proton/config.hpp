@@ -1,7 +1,8 @@
-#ifndef CONFIG_HPP
-#define CONFIG_HPP
+#ifndef PROTON_CONFIG_HPP
+#define PROTON_CONFIG_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +19,7 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
 /// @cond INTERNAL
@@ -77,6 +79,6 @@
 #define PN_CPP_HAS_DELETED_FUNCTIONS PN_CPP_HAS_CPP11
 #endif
 
-#endif // CONFIG_HPP
+#endif // PROTON_CONFIG_HPP
 
 /// @endcond

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_CONNECTION_OPTIONS_H
-#define PROTON_CPP_CONNECTION_OPTIONS_H
+#ifndef PROTON_CONNECTION_OPTIONS_H
+#define PROTON_CONNECTION_OPTIONS_H
 
 /*
  *
@@ -22,13 +22,12 @@
  *
  */
 
-#include <proton/config.hpp>
-#include <proton/export.hpp>
-#include <proton/duration.hpp>
-#include <proton/pn_unique_ptr.hpp>
-#include <proton/reconnect_timer.hpp>
-#include <proton/types_fwd.hpp>
-
+#include "proton/config.hpp"
+#include "proton/export.hpp"
+#include "proton/duration.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
+#include "proton/reconnect_timer.hpp"
+#include "proton/types_fwd.hpp"
 
 #include <vector>
 #include <string>
@@ -81,7 +80,7 @@ class connection_options {
     /// Copy options.
     PN_CPP_EXTERN connection_options& operator=(const connection_options&);
 
-    // XXX add C++11 move operations
+    // XXX add C++11 move operations - Still relevant, and applies to all options
 
     /// Set a connection handler.
     ///
@@ -105,11 +104,10 @@ class connection_options {
     PN_CPP_EXTERN connection_options& virtual_host(const std::string &name);
 
     /// @cond INTERNAL
-
-    /// XXX settle questions about reconnect_timer - consider simply
-    /// reconnect_options and making reconnect_timer internal
+    // XXX settle questions about reconnect_timer - consider simply
+    // reconnect_options and making reconnect_timer internal
+    /// **Experimental**
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer &);
-
     /// @endcond
 
     /// Set SSL client options.
@@ -129,14 +127,11 @@ class connection_options {
     /// Specify the allowed mechanisms for use on the connection.
     PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string &);
 
-    /// Set the SASL configuration name.
+    /// **Experimental** - Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string &);
 
-    /// @cond INTERNAL
-    /// XXX not clear this should be exposed
-    /// Set the SASL configuration path.
+    /// **Experimental** - Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string &);
-    /// @endcond
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
@@ -149,12 +144,14 @@ class connection_options {
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
-    friend class container_impl;
-    friend class connector;
-    friend class io::connection_engine;
-    friend class connection;
+    /// @cond INTERNAL
+  friend class container_impl;
+  friend class connector;
+  friend class io::connection_engine;
+  friend class connection;
+    /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_CONNECTION_OPTIONS_H
+#endif // PROTON_CONNECTION_OPTIONS_H

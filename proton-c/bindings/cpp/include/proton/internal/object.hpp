@@ -1,7 +1,8 @@
-#ifndef OBJECT_HPP
-#define OBJECT_HPP
+#ifndef PROTON_INTERNAL_OBJECT_HPP
+#define PROTON_INTERNAL_OBJECT_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +19,13 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-
-/// @cond INTERNAL
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/comparable.hpp"
+#include "proton/internal/comparable.hpp"
+
 #include <memory>
 
 namespace proton {
@@ -101,8 +102,7 @@ template <class T> class object : private comparable<object<T> > {
 /// Factory class used internally to make wrappers and extract proton objects
 template <class T> class factory;
 
-}}
+} // internal
+} // proton
 
-/// @endcond
-
-#endif // OBJECT_HPP
+#endif // PROTON_INTERNAL_OBJECT_HPP

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SOURCE_OPTIONS_H
-#define PROTON_CPP_SOURCE_OPTIONS_H
+#ifndef PROTON_SOURCE_OPTIONS_HPP
+#define PROTON_SOURCE_OPTIONS_HPP
 
 /*
  *
@@ -24,7 +24,7 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
 #include "proton/source.hpp"
@@ -35,7 +35,6 @@
 namespace proton {
 
 class proton_handler;
-
 
 /// Options for creating a source node for a sender or receiver.
 ///
@@ -76,23 +75,24 @@ class source_options {
     /// Control when the clock for expiration begins.
     PN_CPP_EXTERN source_options& expiry_policy(enum source::expiry_policy);
 
-    /// Specify a filter mechanism on the source that restricts
-    /// message flow to a subset of the available messages.
+    /// **Experimental** - Specify a filter mechanism on the source
+    /// that restricts message flow to a subset of the available
+    /// messages.
     PN_CPP_EXTERN source_options& filters(const source::filter_map&);
 
-    /// @cond INTERNAL
   private:
     void apply(source&) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
-    friend class source;
-    friend class sender_options;
-    friend class receiver_options;
+    /// @cond INTERNAL
+  friend class source;
+  friend class sender_options;
+  friend class receiver_options;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SOURCE_OPTIONS_H
+#endif // PROTON_SOURCE_OPTIONS_HPP

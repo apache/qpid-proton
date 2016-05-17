@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include <proton/object.h>
 
 namespace proton {

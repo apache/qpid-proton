@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TARGET_H
-#define PROTON_CPP_TARGET_H
+#ifndef PROTON_TARGET_HPP
+#define PROTON_TARGET_HPP
 
 /*
  *
@@ -23,7 +23,7 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/value.hpp"
 #include "proton/terminus.hpp"
 
@@ -34,31 +34,32 @@ namespace proton {
 class sender;
 class receiver;
 
-///
 /// The target is the destination node of a sent or received message.
 ///
-/// @see proton::sender proton::receiver proton::target
+/// @see proton::sender, proton::receiver, proton::target
 class target : public terminus {
   public:
+    /// Create an empty target.
     target() : terminus() {}
 
     using terminus::durability_mode;
     using terminus::expiry_policy;
 
+    /// The address of the target.
     PN_CPP_EXTERN std::string address() const;
 
-    /// @cond INTERNAL
   private:
     target(pn_terminus_t* t);
     target(const sender&);
     target(const receiver&);
+
+    /// @cond INTERNAL
   friend class internal::factory<target>;
   friend class sender;
   friend class receiver;
     /// @endcond
-
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TARGET_H
+#endif // PROTON_TARGET_HPP

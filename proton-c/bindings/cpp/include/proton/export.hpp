@@ -1,5 +1,5 @@
-#ifndef PN_CPP_IMPORTEXPORT_H
-#define PN_CPP_IMPORTEXPORT_H
+#ifndef PROTON_EXPORT_HPP
+#define PROTON_EXPORT_HPP
 
 /*
  *
@@ -54,4 +54,4 @@
 
 /// @endcond
 
-#endif // PN_CPP_IMPORTEXPORT_H
+#endif // PROTON_EXPORT_HPP

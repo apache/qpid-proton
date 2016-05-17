@@ -2,6 +2,7 @@
 #define PROTON_THREAD_SAFE_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,22 +16,24 @@
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- pp * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/config.hpp>
-#include <proton/connection.hpp>
-#include <proton/event_loop.hpp>
-#include <proton/object.hpp>
-#include <proton/type_traits.hpp>
+#include "proton/config.hpp"
+#include "proton/connection.hpp"
+#include "proton/event_loop.hpp"
+#include "proton/internal/object.hpp"
+#include "proton/internal/type_traits.hpp"
 
 #include <functional>
 
 // FIXME aconway 2016-05-03: doc
 
 namespace proton {
+
 class connection;
 class session;
 class link;
@@ -49,21 +52,22 @@ template<> struct endpoint_traits<receiver> {};
 template <class T> class returned;
 
 // FIXME aconway 2016-05-09: doc
-/// Events for each proton::connection are processed sequentially in an
-/// event-loop. proton::handler functions for a single connection are never
-/// called concurrently. inject() lets you add user-defined function calls to
-/// be processed in the event loop sequence.
+/// **Experimental** - A thread-safe object wrapper.
+///    
+/// Events for each proton::connection are processed sequentially in
+/// an event_loop. proton::handler functions for a single connection
+/// are never called concurrently. inject() lets you add user-defined
+/// function calls to be processed in the event loop sequence.
 ///
-/// thread_safe is useful with multi-threaded programs, where different
-/// connection's event-loops can run concurrently. Proton objects associated
-/// with a connection (proton::connection, proton:sender etc.) are not thread
-/// safe, so they can only be used in the context of the connections thread_safe.
-/// inject() allows any thread (application threads or thread_safe threads for
+/// thread_safe is useful with multi-threaded programs, where
+/// different connection's event loops can run concurrently. Proton
+/// objects associated with a connection (proton::connection,
+/// proton::sender, etc.) are not thread safe, so they can only be
+/// used in the context of the connection's thread_safe.  inject()
+/// allows any thread (application threads or thread_safe threads for
 /// different connections) to communicate safely.
-///
 template <class T>
-class thread_safe : private internal::pn_ptr_base, private internal::endpoint_traits<T>
-{
+class thread_safe : private internal::pn_ptr_base, private internal::endpoint_traits<T> {
     typedef typename T::pn_type pn_type;
 
     struct inject_decref : public inject_handler {
@@ -73,7 +77,9 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     };
 
   public:
+    /// @cond INTERNAL
     static void operator delete(void*) {}
+    /// @endcond
 
     ~thread_safe() {
         if (ptr()) {
@@ -89,14 +95,20 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
         }
     }
 
+    /// Get the event loop for this object.
     class event_loop* event_loop() { return event_loop::get(ptr()); }
 
+    /// @cond INTERNAL
+    /// XXX Not sure what the status of these is
+    
     // FIXME aconway 2016-05-04: doc
     T unsafe() { return T(ptr()); }
 
     // Caller must delete
     static thread_safe* create(const T& obj) { return new (obj.pn_object()) thread_safe(); }
 
+    /// @endcond
+    
   private:
     static void* operator new(size_t, pn_type* p) { return p; }
     static void operator delete(void*, pn_type*) {}
@@ -107,7 +119,9 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     thread_safe(const thread_safe&);
     thread_safe& operator=(const thread_safe&);
 
+    /// @cond INTERNAL
   friend class returned<T>;
+    /// @endcond
 };
 
 // FIXME aconway 2016-05-04: doc.
@@ -148,12 +162,15 @@ class returned : private internal::endpoint_traits<T>
     mutable thread_safe<T>* ptr_;
 };
 
+// XXX Review this text
+/// Make a thread-safe wrapper for `obj`.
 template <class T> returned<T> make_thread_safe(const T& obj) {
     return returned<T>(thread_safe<T>::create(obj));
 }
 
+// XXX Review this text
+/// Get a thread-unsafe pointer for `p`.
 template <class T> T make_thread_unsafe(T* p) { return p->unsafe(); }
-
 
 #if PN_CPP_HAS_CPP11
 template <class T> std::shared_ptr<thread_safe<T> > make_shared_thread_safe(const T& obj) {
@@ -167,7 +184,6 @@ template <class T> T make_thread_unsafe(const std::shared_ptr<T>& p) { return p-
 template <class T> T make_thread_unsafe(const std::unique_ptr<T>& p) { return p->unsafe(); }
 #endif
 
-
-}
+} // proton
 
 #endif // PROTON_THREAD_SAFE_HPP

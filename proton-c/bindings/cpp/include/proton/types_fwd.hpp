@@ -1,6 +1,8 @@
 #ifndef PROTON_TYPES_FWD_HPP
 #define PROTON_TYPES_FWD_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,20 +19,20 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-
-///@file
+/// @file
 ///
-/// Forward declarations for all the C++ types used by proton to represent AMQP types.
+/// Forward declarations for all the C++ types used by Proton to
+/// represent AMQP types.
 
-#include <proton/config.hpp>
+#include "proton/config.hpp"
 
-#include <proton/type_compat.h>
+#include "proton/type_compat.h"
 
 #include <string>
 
-/// The proton namespace
 namespace proton {
 
 class binary;
@@ -51,6 +53,7 @@ struct null {
     null(std::nullptr_t) {}
 #endif
 };
-}
+
+} // proton
 
 #endif // PROTON_TYPES_FWD_HPP

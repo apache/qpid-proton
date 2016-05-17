@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DURATION_H
-#define PROTON_CPP_DURATION_H
+#ifndef PROTON_DURATION_HPP
+#define PROTON_DURATION_HPP
 
 /*
  *
@@ -22,9 +22,9 @@
  *
  */
 
-#include <proton/export.hpp>
-#include <proton/comparable.hpp>
-#include <proton/types_fwd.hpp>
+#include "proton/export.hpp"
+#include "proton/internal/comparable.hpp"
+#include "proton/types_fwd.hpp"
 
 #include <iosfwd>
 
@@ -33,14 +33,19 @@ namespace proton {
 /// A span of time in milliseconds.
 class duration : private internal::comparable<duration> {
   public:
-    typedef int64_t numeric_type; ///< Numeric type used to store milliseconds
+    /// Numeric type used to store milliseconds    
+    typedef int64_t numeric_type;
 
-    explicit duration(numeric_type ms = 0) : ms_(ms) {} ///< Construct from milliseconds
-    duration& operator=(numeric_type ms) { ms_ = ms; return *this; } ///< Assign
+    /// Construct from milliseconds
+    explicit duration(numeric_type ms = 0) : ms_(ms) {}
 
-    numeric_type milliseconds() const { return ms_; } ///< Return milliseconds
+    /// Assign
+    duration& operator=(numeric_type ms) { ms_ = ms; return *this; }
 
-    PN_CPP_EXTERN static const duration FOREVER;   ///< Wait for ever
+    /// Return milliseconds
+    numeric_type milliseconds() const { return ms_; }
+
+    PN_CPP_EXTERN static const duration FOREVER;   ///< Wait forever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
     PN_CPP_EXTERN static const duration SECOND;    ///< One second
     PN_CPP_EXTERN static const duration MINUTE;    ///< One minute
@@ -52,8 +57,8 @@ class duration : private internal::comparable<duration> {
 /// Print duration
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, duration);
 
-///@name Comparison and arithmetic operators
-///@{
+/// @name Comparison and arithmetic operators
+/// @{
 inline bool operator<(duration x, duration y) { return x.milliseconds() < y.milliseconds(); }
 inline bool operator==(duration x, duration y) { return x.milliseconds() == y.milliseconds(); }
 
@@ -61,7 +66,8 @@ inline duration operator+(duration x, duration y) { return duration(x.millisecon
 inline duration operator-(duration x, duration y) { return duration(x.milliseconds() - y.milliseconds()); }
 inline duration operator*(duration d, uint64_t n) { return duration(d.milliseconds()*n); }
 inline duration operator*(uint64_t n, duration d) { return d * n; }
-///@}
-}
+/// @}
 
-#endif // PROTON_CPP_DURATION_H
+} // proton
+
+#endif // PROTON_DURATION_HPP

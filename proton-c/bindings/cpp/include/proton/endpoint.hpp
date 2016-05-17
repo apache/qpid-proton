@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_ENDPOINT_H
-#define PROTON_CPP_ENDPOINT_H
+#ifndef PROTON_ENDPOINT_HPP
+#define PROTON_ENDPOINT_HPP
 
 /*
  *
@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/comparable.hpp"
 #include "proton/config.hpp"
 #include "proton/error_condition.hpp"
 #include "proton/export.hpp"
+#include "proton/internal/comparable.hpp"
 
 namespace proton {
 
@@ -35,23 +35,35 @@ PN_CPP_CLASS_EXTERN endpoint {
   public:
     PN_CPP_EXTERN virtual ~endpoint();
 
-    /// True if the local end is uninitialized
+    // XXX Add the container accessor here.
+    
+    /// True if the local end is uninitialized.
     virtual bool uninitialized() const = 0;
-    /// True if the local end is active
+    
+    /// True if the local end is active.
     virtual bool active() const = 0;
-    /// True if the connection is fully closed, i.e. local and remote
-    /// ends are closed.
+    
+    /// True if the local and remote ends are closed.
     virtual bool closed() const = 0;
 
     /// Get the error condition of the remote endpoint.
     virtual class error_condition error() const = 0;
 
-    /// Close endpoint
+    // XXX Add virtual open() and open(endpoint_options)
+    
+    /// Close the endpoint.
+    ///
+    /// @see endpoint_lifecycle
     virtual void close() = 0;
+
+    /// Close the endpoint with an error condition.
+    ///
+    /// @see endpoint_lifecycle
     virtual void close(const error_condition&) = 0;
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS
     // Make everything explicit for C++11 compilers
+    
     endpoint() = default;
     endpoint& operator=(const endpoint&) = default;
     endpoint& operator=(endpoint&&) = default;
@@ -61,7 +73,6 @@ PN_CPP_CLASS_EXTERN endpoint {
 #endif
 };
 
-///@cond INTERNAL
 namespace internal {
 
 template <class T, class D> class iter_base {
@@ -73,7 +84,7 @@ template <class T, class D> class iter_base {
     D operator++(int) { D x(*this); ++(*this); return x; }
     bool operator==(const iter_base<T, D>& x) const { return obj_ == x.obj_; }
     bool operator!=(const iter_base<T, D>& x) const { return obj_ != x.obj_; }
-    ///@}
+    
   protected:
     explicit iter_base(T p = 0) : obj_(p) {}
     T obj_;
@@ -87,13 +98,12 @@ template<class I> class iter_range {
     I begin() const { return begin_; }
     I end() const { return end_; }
     bool empty() const { return begin_ == end_; }
+    
   private:
     I begin_, end_;
 };
 
-} // namespace internal
-///@endcond
+} // internal
+} // proton
 
-} // namespace proton
-
-#endif // PROTON_CPP_H
+#endif // PROTON_ENDPOINT_HPP

@@ -23,7 +23,7 @@
 /// @cond INTERNAL
 /// XXX remove
 
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/duration.hpp"
 #include "proton/timestamp.hpp"
 

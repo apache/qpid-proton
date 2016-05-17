@@ -21,7 +21,7 @@
 
 #include "proton/binary.hpp"
 #include "proton/error.hpp"
-#include "proton/type_traits.hpp"
+#include "proton/internal/type_traits.hpp"
 
 #include <proton/scalar.hpp>
 #include <proton/value.hpp>

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TARGET_OPTIONS_H
-#define PROTON_CPP_TARGET_OPTIONS_H
+#ifndef PROTON_TARGET_OPTIONS_HPP
+#define PROTON_TARGET_OPTIONS_HPP
 
 /*
  *
@@ -24,7 +24,7 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
 #include "proton/target.hpp"
@@ -40,13 +40,12 @@ class target;
 
 /// Options for creating a target node for a sender or receiver.
 ///
-/// Options can be "chained" (@see proton::connection_options).
+/// Options can be "chained" (see proton::connection_options).
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
 class target_options {
   public:
-
     /// Create an empty set of options.
     PN_CPP_EXTERN target_options();
 
@@ -74,20 +73,19 @@ class target_options {
     /// Control when the clock for expiration begins.
     PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
-
-    /// @cond INTERNAL
   private:
     void apply(target&) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
-    friend class target;
-    friend class sender_options;
-    friend class receiver_options;
+    /// @cond INTERNAL
+  friend class target;
+  friend class sender_options;
+  friend class receiver_options;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TARGET_OPTIONS_H
+#endif // PROTON_TARGET_OPTIONS_HPP

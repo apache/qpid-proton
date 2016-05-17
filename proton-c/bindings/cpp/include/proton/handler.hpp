@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_MESSAGING_HANDLER_H
-#define PROTON_CPP_MESSAGING_HANDLER_H
+#ifndef PROTON_HANDLER_HPP
+#define PROTON_HANDLER_HPP
 
 /*
  *
@@ -23,8 +23,7 @@
  */
 
 #include "proton/export.hpp"
-
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 
 namespace proton {
 
@@ -45,121 +44,134 @@ namespace io {
 class connection_engine;
 }
 
-/// Callback functions for handling proton events.
+/// A handler for Proton messaging events.
 ///
-/// Subclass and override event-handling member functions.
+/// Subclass and override the event-handling member functions.
 ///
-/// Close and error handling: there are several objects that have on_X_close and on_X_error functions.
-/// They are called as follows:
+/// #### Close and error handling
 ///
-/// - If X is closed cleanly, with no error status then on_X_close() is called.
-/// - If X is closed with an error then on_X_error() is called followed by on_X_close()
-///   Note the error condition is also available in on_X_close from X::condition().
+/// There are several objects that have `on_X_close` and `on_X_error`
+/// functions.  They are called as follows:
 ///
-/// By default, if you do not implement on_X_error, it will call
-/// on_unhandled_error().  If you do not implement on_unhandled_error() it will
-/// throw a proton::error exception, which may not be what you want but does
-/// help to identify forgotten error handling quickly.
+/// - If `X` is closed cleanly, with no error status, then `on_X_close`
+///   is called.
+/// - If `X` is closed with an error, then `on_X_error` is called,
+///   followed by `on_X_close`. The error condition is also available
+///   in `on_X_close` from `X::condition()`.
 ///
-/// @see proton::event
+/// By default, if you do not implement `on_X_error`, it will call
+/// `on_error`.  If you do not implement `on_error` it will throw a
+/// @ref proton::error exception, which may not be what you want but
+/// does help to identify forgotten error handling quickly.
+///
+/// #### Resource cleanup
+///
+/// Every `on_X_open` event is paired with an `on_X_close` event which
+/// can clean up any resources created by the open handler.  In
+/// particular this is still true if an error is reported with an
+/// `on_X_error` event.  The error-handling logic doesn't have to
+/// manage resource clean up.  It can assume that the close event will
+/// be along to handle it.
 class
-PN_CPP_CLASS_EXTERN handler
-{
+PN_CPP_CLASS_EXTERN handler {
   public:
     PN_CPP_EXTERN handler();
     PN_CPP_EXTERN virtual ~handler();
 
-    /// @name Event callbacks
-    ///
-    /// Override these member functions to handle events.
-    ///
-    /// @{
-
     /// The container event loop is starting.
     PN_CPP_EXTERN virtual void on_container_start(container &c);
+
     /// A message is received.
     PN_CPP_EXTERN virtual void on_message(delivery &d, message &m);
+
     /// A message can be sent.
     PN_CPP_EXTERN virtual void on_sendable(sender &s);
 
-    /// Note that every ..._open event is paired with a ..._close event which can clean
-    /// up any resources created by the ..._open handler.
-    /// In particular this is still true if an error is reported with an ..._error event.
-    /// This makes resource management easier so that the error handling logic doesn't also
-    /// have to manage the resource clean up, but can just assume that the close event will
-    /// be along in a minute to handle the clean up.
-
     /// The underlying network transport is open
     PN_CPP_EXTERN virtual void on_transport_open(transport &t);
+    
     /// The underlying network transport has closed.
     PN_CPP_EXTERN virtual void on_transport_close(transport &t);
+
     /// The underlying network transport has closed with an error
     /// condition.
     PN_CPP_EXTERN virtual void on_transport_error(transport &t);
 
     /// The remote peer opened the connection.
     PN_CPP_EXTERN virtual void on_connection_open(connection &c);
+
     /// The remote peer closed the connection.
     PN_CPP_EXTERN virtual void on_connection_close(connection &c);
+
     /// The remote peer closed the connection with an error condition.
     PN_CPP_EXTERN virtual void on_connection_error(connection &c);
 
     /// The remote peer opened the session.
     PN_CPP_EXTERN virtual void on_session_open(session &s);
+
     /// The remote peer closed the session.
     PN_CPP_EXTERN virtual void on_session_close(session &s);
+
     /// The remote peer closed the session with an error condition.
     PN_CPP_EXTERN virtual void on_session_error(session &s);
 
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_receiver_open(receiver& l);
+
     /// The remote peer closed the link.
     PN_CPP_EXTERN virtual void on_receiver_close(receiver& l);
+
     /// The remote peer closed the link with an error condition.
     PN_CPP_EXTERN virtual void on_receiver_error(receiver& l);
 
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_sender_open(sender& l);
+
     /// The remote peer closed the link.
     PN_CPP_EXTERN virtual void on_sender_close(sender& l);
+
     /// The remote peer closed the link with an error condition.
     PN_CPP_EXTERN virtual void on_sender_error(sender& l);
 
     /// The receiving peer accepted a transfer.
     PN_CPP_EXTERN virtual void on_tracker_accept(tracker &d);
+
     /// The receiving peer rejected a transfer.
     PN_CPP_EXTERN virtual void on_tracker_reject(tracker &d);
+
     /// The receiving peer released a transfer.
     PN_CPP_EXTERN virtual void on_tracker_release(tracker &d);
+
     /// The receiving peer settled a transfer.
     PN_CPP_EXTERN virtual void on_tracker_settle(tracker &d);
+
     /// The sending peer settled a transfer.
     PN_CPP_EXTERN virtual void on_delivery_settle(delivery &d);
 
     /// The receiving peer has requested a drain of remaining credit.
     PN_CPP_EXTERN virtual void on_sender_drain_start(sender &s);
-    /// The credit outstanding at the time of the call to receiver::drain has been consumed or returned.
+    
+    /// The credit outstanding at the time of the call to
+    /// receiver::drain has been consumed or returned.
     PN_CPP_EXTERN virtual void on_receiver_drain_finish(receiver &r);
 
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition &c);
 
-    /// @}
-
-    /// @cond INTERNAL
   private:
     internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
 
-    friend class container;
-    friend class container_impl;
-    friend class io::connection_engine;
-    friend class connection_options;
-    friend class receiver_options;
-    friend class sender_options;
-    friend class session_options;
+    /// @cond INTERNAL
+  friend class container;
+  friend class container_impl;
+  friend class io::connection_engine;
+  friend class connection_options;
+  friend class receiver_options;
+  friend class sender_options;
+  friend class session_options;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_MESSAGING_HANDLER_H
+#endif // PROTON_HANDLER_HPP

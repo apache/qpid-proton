@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TRACKER_H
-#define PROTON_CPP_TRACKER_H
+#ifndef PROTON_TRACKER_HPP
+#define PROTON_TRACKER_HPP
 
 /*
  *
@@ -29,23 +29,28 @@ struct pn_delivery_t;
 
 namespace proton {
 
-/// A message transfer.  Every delivery exists within the context of a
-/// proton::link.  A delivery attempt can fail. As a result, a
-/// particular message may correspond to multiple deliveries.
+/// A tracker for a sent message. Every tracker exists within the
+/// context of a sender.
+///
+/// A delivery attempt can fail. As a result, a particular message may
+/// correspond to multiple trackers.
 class tracker : public transfer {
     /// @cond INTERNAL
     tracker(pn_delivery_t* d);
     /// @endcond
 
   public:
+    /// Create an empty tracker.
     tracker() {}
 
-    // Return the sender for this tracker
+    /// Get the sender for this tracker.
     PN_CPP_EXTERN class sender sender() const;
 
+    // @cond INTERNAL
   friend class internal::factory<tracker>;
+    // @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TRACKER_H
+#endif // PROTON_TRACKER_HPP

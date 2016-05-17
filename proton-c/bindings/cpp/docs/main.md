@@ -4,7 +4,7 @@ This is the C++ API for the Proton AMQP protocol engine. It allows you
 to write client and server applications that send and receive AMQP
 messages.
 
-The best way to start is with the @ref tutorial
+The best way to start is with the @ref tutorial.
 
 ## An overview of the AMQP model
 
@@ -89,10 +89,11 @@ from which the receiver can deduce which have already been settled.
 To send AMQP commands, call methods on classes like `proton::connection`,
 `proton::sender`, `proton::receiver`, or `proton::delivery`.
 
-To handle incoming commands, subclass the `proton::handler` interface. The
-handler member functions are called when AMQP protocol events occur on a
-connection. For example `proton::handler::on_message` is called when a message
-is received.
+To handle incoming commands, subclass the `proton::messaging_handler`
+interface. The handler member functions are called when AMQP protocol
+events occur on a connection. For example
+`proton::messaging_handler::on_message` is called when a message is
+received.
 
 Messages are represented by `proton::message`. AMQP defines a type
 encoding that you can use for interoperability, but you can also use
@@ -100,39 +101,46 @@ any encoding you wish and pass binary data as the
 `proton::message::body`. `proton::value` and `proton::scalar` provide
 conversion between AMQP and C++ data types.
 
-There are several ways to manage handlers and AMQP objects, for different types
-of application. All of them use the same `proton::handler` sub-classes so code
-can be re-used if you change your approach.
+There are several ways to manage handlers and AMQP objects, for
+different types of application. All of them use the same
+`proton::messaging_handler` sub-classes so code can be re-used if you
+change your approach.
 
-### %proton::container - easy single-threaded applications
+### %proton::container - Easy single-threaded applications
 
-`proton::container` is the top level object in a proton application.  Use
-proton::connection::connect() and proton::container::listen() to create
-connections. The container polls multiple connections and calls protocol events
-on your `proton::handler` sub-classes.
+`proton::container` is the top level object in a proton application.
+Use proton::connection::connect() and proton::container::listen() to
+create connections. The container polls multiple connections and calls
+protocol events on your `proton::messaging_handler` sub-classes.
 
-The default container implementation is created by `proton::new_default_container()`.
+<!-- XXX This is wrong?
+The default container implementation is created by
+`proton::new_default_container()`.
+-->
 
-You can implement your own container to integrate proton with arbitrary your own
-container using the proton::io::connection_engine.
+You can implement your own container to integrate proton with
+arbitrary your own container using the
+`proton::io::connection_engine`.
 
-### %proton::io::connection_engine - integrating with foreign IO
+### %proton::io::connection_engine - Integrating with foreign IO
 
-The `proton::io::connection_engine` is different from the other proton APIs. You
-might think of it as more like an SPI (Service Provided Interface).
+The `proton::io::connection_engine` is different from the other proton
+APIs. You might think of it as more like an SPI (service provider
+interface).
 
-The engine provides a very low-level way of driving a proton::handler: You feed
-raw byte-sequence fragments of an AMQP-encoded stream to the engine and it
-converts that into calls on a proton::handler. The engine provides you with
-outgoing protocol stream bytes in return.
+The engine provides a very low-level way of driving a
+`proton::messaging_handler`: You feed raw byte-sequence fragments of
+an AMQP-encoded stream to the engine and it converts that into calls
+on a proton::handler. The engine provides you with outgoing protocol
+stream bytes in return.
 
 The engine is deliberately very simple and low level. It does no IO, no
-thread-related locking, and is written in simple C++98 compatible code.
+thread-related locking, and is written in simple C++98-compatible code.
 
-You can use the engine directly to connect your application to any kind of IO
-framework or library, memory-based streams or any other source/sink for byte
-stream data.
+You can use the engine directly to connect your application to any
+kind of IO framework or library, memory-based streams, or any other
+source or sink for byte-stream data.
 
 You can also use the engine to build a custom implementation of
-proton::container and so portable proton applications can run without
+`proton::container` so portable proton applications can run without
 modification on your platform.

@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TRANSPORT_H
-#define PROTON_CPP_TRANSPORT_H
+#ifndef PROTON_TRANSPORT_HPP
+#define PROTON_TRANSPORT_HPP
 
 /*
  *
@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/types.hpp"
 #include "proton/export.hpp"
 
@@ -38,12 +38,14 @@ namespace io {
 class connection_engine;
 }
 
+/// A network channel supporting an AMQP connection.
 class transport : public internal::object<pn_transport_t> {
     /// @cond INTERNAL
     transport(pn_transport_t* t) : internal::object<pn_transport_t>(t) {}
     /// @endcond 
 
   public:
+    /// Create an empty transport.
     transport() : internal::object<pn_transport_t>(0) {}
 
     /// Get the connection associated with this transport.
@@ -63,6 +65,6 @@ class transport : public internal::object<pn_transport_t> {
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TRANSPORT_H
+#endif // PROTON_TRANSPORT_HPP

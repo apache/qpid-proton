@@ -1,7 +1,8 @@
-#ifndef PROTON_SCALAR_BASE_HPP
-#define PROTON_SCALAR_BASE_HPP
+#ifndef PROTON_INTERNAL_SCALAR_BASE_HPP
+#define PROTON_INTERNAL_SCALAR_BASE_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,19 +19,20 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/binary.hpp>
-#include <proton/comparable.hpp>
-#include <proton/decimal.hpp>
-#include <proton/error.hpp>
-#include <proton/export.hpp>
-#include <proton/symbol.hpp>
-#include <proton/timestamp.hpp>
-#include <proton/type_id.hpp>
-#include <proton/types_fwd.hpp>
-#include <proton/type_traits.hpp>
-#include <proton/uuid.hpp>
+#include "proton/binary.hpp"
+#include "proton/decimal.hpp"
+#include "proton/error.hpp"
+#include "proton/export.hpp"
+#include "proton/internal/comparable.hpp"
+#include "proton/internal/type_traits.hpp"
+#include "proton/symbol.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/type_id.hpp"
+#include "proton/types_fwd.hpp"
+#include "proton/uuid.hpp"
 
 #include <iosfwd>
 #include <string>
@@ -51,6 +53,8 @@ class scalar_base : private comparable<scalar_base> {
     /// AMQP type of data stored in the scalar
     PN_CPP_EXTERN type_id type() const;
 
+    // XXX I don't think many folks ever used this stuff.  Let's
+    // remove it. - Yes, try to remove them.
     /// @cond INTERNAL
     /// deprecated
     template <class T> void get(T& x) const { get_(x); }
@@ -61,7 +65,7 @@ class scalar_base : private comparable<scalar_base> {
   friend PN_CPP_EXTERN bool operator<(const scalar_base& x, const scalar_base& y);
     /// Compare
   friend PN_CPP_EXTERN bool operator==(const scalar_base& x, const scalar_base& y);
-    /// Print contained value
+    /// Print the contained value
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const scalar_base& x);
 
   protected:
@@ -121,11 +125,13 @@ class scalar_base : private comparable<scalar_base> {
     void set(const binary& x, pn_type_t t);
 
     pn_atom_t atom_;
-    binary bytes_;              // Hold binary data.
+    binary bytes_; // Hold binary data.
 
+    /// @cond INTERNAL
   friend class proton::message;
   friend class codec::encoder;
   friend class codec::decoder;
+    /// @endcond
 };
 
 template<class T> T get(const scalar_base& s) { T x; s.get(x); return x; }
@@ -170,8 +176,6 @@ template<class T> struct coerce_op {
 template <class T> T coerce(const scalar_base& s) { return visit<T>(s, coerce_op<T>()); }
 
 } // internal
-
-
 } // proton
 
-#endif  /*!PROTON_SCALAR_BASE_HPP*/
+#endif // PROTON_INTERNAL_SCALAR_BASE_HPP

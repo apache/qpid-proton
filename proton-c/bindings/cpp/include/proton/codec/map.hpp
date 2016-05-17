@@ -1,5 +1,5 @@
-#ifndef PROTON_SYMBOL_HPP
-#define PROTON_SYMBOL_HPP
+#ifndef PROTON_CODEC_MAP_HPP
+#define PROTON_CODEC_MAP_HPP
 
 /*
  *
@@ -22,23 +22,23 @@
  *
  */
 
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+
+#include <map>
+
 namespace proton {
+namespace codec {
 
-/// A std::string that represents the AMQP symbol type.
-///
-/// A symbol can only contain 7-bit ASCII characters.
-class symbol : public std::string {
-  public:
-    /// Construct from a std::string.
-    symbol(const std::string& s=std::string()) : std::string(s) {}
+/// Encode std::map<K, T> as amqp::MAP.
+template <class K, class T, class C, class A>
+encoder& operator<<(encoder& e, const std::map<K, T, C, A>& m) { return e << encoder::map(m); }
 
-    /// Construct from a C string.
-    symbol(const char* s) : std::string(s) {}
+/// Decode to std::map<K, T> from amqp::MAP.
+template <class K, class T, class C, class A>
+decoder& operator>>(decoder& d, std::map<K, T, C, A>& m) { return d >> decoder::associative(m); }
 
-    /// Construct from any sequence of char.
-    template<class Iter> symbol(Iter start, Iter finish) : std::string(start, finish) {}
-};
-
+} // codec
 } // proton
 
-#endif // PROTON_SYMBOL_HPP
+#endif // PROTON_CODEC_MAP_HPP

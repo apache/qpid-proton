@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_ERROR_CONDITION_H
-#define PROTON_CPP_ERROR_CONDITION_H
+#ifndef PROTON_ERROR_CONDITION_H
+#define PROTON_ERROR_CONDITION_H
 
 /*
  *
@@ -24,7 +24,6 @@
 
 #include "proton/export.hpp"
 #include "proton/value.hpp"
-
 #include "proton/config.hpp"
 
 #include <string>
@@ -41,13 +40,18 @@ class error_condition {
     /// @endcond
 
   public:
+    /// Create an empty error condition.
     error_condition() {}
-    /// Construct an error condition with only a description - in this case a default
-    /// name will be used ("proton:io:error")
+
+    /// Create an error condition with only a description. A default
+    /// name will be used ("proton:io:error").
     PN_CPP_EXTERN error_condition(std::string description);
-    /// Construct an error_condition with a name and a description
+
+    /// Create an error condition with a name and description.
     PN_CPP_EXTERN error_condition(std::string name, std::string description);
-    /// Construct an error_condition with name, description and some informational properties
+
+    /// **Experimental** - Create an error condition with name,
+    /// description, and informational properties.
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS
@@ -57,8 +61,9 @@ class error_condition {
     error_condition& operator=(error_condition&&) = default;
 #endif
 
-    /// If you are using a C++11 compiler you may use an error_condition
-    /// in boolean contexts and the expression will be true if the error_condition is set
+    /// If you are using a C++11 compiler, you may use an
+    /// error_condition in boolean contexts. The expression will be
+    /// true if the error_condition is set.
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     PN_CPP_EXTERN explicit operator bool() const;
 #endif
@@ -81,20 +86,22 @@ class error_condition {
     /// Simple printable string for condition.
     PN_CPP_EXTERN std::string what() const;
 
-    /// @cond INTERNAL
   private:
     std::string name_;
     std::string description_;
     proton::value properties_;
 
-    friend class internal::factory<error_condition>;
+    /// @cond INTERNAL
+  friend class internal::factory<error_condition>;
     /// @endcond
 };
 
+/// @cond INTERNAL
+// XXX Document these 
 PN_CPP_EXTERN bool operator==(const error_condition& x, const error_condition& y);
-
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const error_condition& err);
+/// @endcond
 
-}
+} // proton
 
-#endif // PROTON_CPP_ERROR_CONDITION_H
+#endif // PROTON_ERROR_CONDITION_H

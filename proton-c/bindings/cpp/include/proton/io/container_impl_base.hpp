@@ -2,6 +2,7 @@
 #define PROTON_IO_CONTAINER_IMPL_BASE_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +19,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/io/link_namer.hpp>
-#include <proton/container.hpp>
+#include "proton/io/link_namer.hpp"
+#include "proton/container.hpp"
 
 #include <mutex>
 #include <sstream>
@@ -29,52 +31,69 @@
 namespace proton {
 namespace io {
 
-/// Thread-safe partial implementation of proton::container interface to reduce
-/// boilerplate code in container implementations. Requires C++11.
+/// **Experimental** - A base container implementation.
 ///
-/// You can ignore this class if you want to implement the functions in a
-/// different way.
+/// This is a thread-safe partial implementation of the
+/// proton::container interface to reduce boilerplate code in
+/// container implementations. Requires C++11.
 ///
+/// You can ignore this class if you want to implement the functions
+/// in a different way.
 class container_impl_base : public container {
   public:
-
+    /// @copydoc container::client_connection_options
     void client_connection_options(const connection_options & opts) {
         store(client_copts_, opts);
     }
+    
+    /// @copydoc container::client_connection_options
     connection_options client_connection_options() const {
         return load(client_copts_);
     }
+    
+    /// @copydoc container::server_connection_options
     void server_connection_options(const connection_options & opts) {
         store(server_copts_, opts);
     }
+    
+    /// @copydoc container::server_connection_options
     connection_options server_connection_options() const {
         return load(server_copts_);
     }
+    
+    /// @copydoc container::sender_options
     void sender_options(const class sender_options & opts) {
         store(sender_opts_, opts);
     }
+    
+    /// @copydoc container::sender_options
     class sender_options sender_options() const {
         return load(sender_opts_);
     }
+    
+    /// @copydoc container::receiver_options
     void receiver_options(const class receiver_options & opts) {
         store(receiver_opts_, opts);
     }
+    
+    /// @copydoc container::receiver_options
     class receiver_options receiver_options() const {
         return load(receiver_opts_);
     }
 
+    /// @copydoc container::open_sender
     returned<sender> open_sender(
         const std::string &url, const class sender_options &opts, const connection_options &copts)
     {
         return open_link<sender, class sender_options>(url, opts, copts, &connection::open_sender);
     }
 
+    /// @copydoc container::open_receiver
     returned<receiver> open_receiver(
         const std::string &url, const class receiver_options &opts, const connection_options &copts)
     {
         return open_link<receiver>(url, opts, copts, &connection::open_receiver);
     }
-
 
   private:
     template<class T, class Opts>
@@ -115,6 +134,7 @@ class container_impl_base : public container {
     class sender_options sender_opts_;
 };
 
-}}
+} // io
+} // proton
 
 #endif // PROTON_IO_CONTAINER_IMPL_BASE_HPP

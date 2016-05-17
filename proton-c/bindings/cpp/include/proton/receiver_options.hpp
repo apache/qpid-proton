@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_RECEIVER_OPTIONS_H
-#define PROTON_CPP_RECEIVER_OPTIONS_H
+#ifndef PROTON_RECEIVER_OPTIONS_HPP
+#define PROTON_RECEIVER_OPTIONS_HPP
 
 /*
  *
@@ -24,7 +24,7 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
 #include "proton/terminus.hpp"
@@ -83,10 +83,10 @@ class receiver_options {
     PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);
 
     /// Automatically accept inbound messages that aren't otherwise
-    /// released, rejected or modified (default value:true).
+    /// released, rejected, or modified (default is true).
     PN_CPP_EXTERN receiver_options& auto_accept(bool);
 
-    /// Automatically settle messages (default value: true).
+    /// Automatically settle messages (default is true).
     PN_CPP_EXTERN receiver_options& auto_settle(bool);
 
     /// Options for the source node of the receiver.
@@ -95,13 +95,10 @@ class receiver_options {
     /// Options for the target node of the receiver.
     PN_CPP_EXTERN receiver_options& target(target_options &);
 
-    /// @cond INTERNAL
-    /// XXX moving to ???
     /// Set automated flow control to pre-fetch this many messages
-    /// (default value:10).  Set to zero to disable automatic credit
+    /// (default is 10).  Set to zero to disable automatic credit
     /// replenishing.
     PN_CPP_EXTERN receiver_options& credit_window(int);
-    /// @endcond
 
     /// @cond INTERNAL
   private:
@@ -114,6 +111,6 @@ class receiver_options {
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_RECEIVER_OPTIONS_H
+#endif // PROTON_RECEIVER_OPTIONS_HPP

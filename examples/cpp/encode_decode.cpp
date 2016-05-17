@@ -18,8 +18,8 @@
  */
 
 #include <proton/types.hpp>
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
+#include <proton/codec/encoder.hpp>
+#include <proton/codec/decoder.hpp>
 
 #include <algorithm>
 #include <iostream>

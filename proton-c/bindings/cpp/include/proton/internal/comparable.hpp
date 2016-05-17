@@ -1,6 +1,8 @@
-#ifndef PROTON_MAP_HPP
-#define PROTON_MAP_HPP
+#ifndef PROTON_INTERNAL_COMPARABLE_HPP
+#define PROTON_INTERNAL_COMPARABLE_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,24 +19,22 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <map>
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
-
 namespace proton {
-namespace codec {
+namespace internal {
 
-/// Encode std::map<K, T> as amqp::MAP.
-template <class K, class T, class C, class A>
-encoder& operator<<(encoder& e, const std::map<K, T, C, A>& m) { return e << encoder::map(m); }
-
-/// Decode to std::map<K, T> from amqp::MAP.
-template <class K, class T, class C, class A>
-decoder& operator>>(decoder& d, std::map<K, T, C, A>& m) { return d >> decoder::associative(m); }
+/// Base class for comparable types with operator< and
+/// operator==. Provides remaining operators.
+template <class T> class comparable {
+    friend bool operator>(const T &a, const T &b) { return b < a; }
+    friend bool operator<=(const T &a, const T &b) { return !(a > b); }
+    friend bool operator>=(const T &a, const T &b) { return !(a < b); }
+    friend bool operator!=(const T &a, const T &b) { return !(a == b); }
+};
 
 } // internal
 } // proton
 
-#endif // PROTON_MAP_HPP
+#endif // PROTON_INTERNAL_COMPARABLE_HPP

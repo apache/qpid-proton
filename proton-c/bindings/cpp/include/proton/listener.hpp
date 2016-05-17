@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include <proton/export.hpp>
+#include "proton/export.hpp"
 
 #include <string>
 
@@ -28,16 +28,18 @@ namespace proton {
 
 class container;
 
-/// Returned by container::listen to allow you to stop listening on that address.
+/// A listener for incoming connections.
 class PN_CPP_CLASS_EXTERN listener {
   public:
+    /// Create an empty listener.
     PN_CPP_EXTERN listener();
-    ///@cond internal
-    PN_CPP_EXTERN listener(container&, const std::string&);
-    ///@endcond internal
 
-    /// Stop listening on the address provided to the call to container::listen that
-    /// returned this listener.
+    /// @cond INTERNAL
+    PN_CPP_EXTERN listener(container&, const std::string&);
+    /// @endcond
+
+    /// Stop listening on the address provided to the call to
+    /// container::listen that returned this listener.
     PN_CPP_EXTERN void stop();
 
  private:
@@ -45,7 +47,6 @@ class PN_CPP_CLASS_EXTERN listener {
     container* container_;
 };
 
-
-}
+} // proton
 
 #endif // PROTON_LISTENER_HPP

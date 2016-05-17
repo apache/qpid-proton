@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DELIVERY_H
-#define PROTON_CPP_DELIVERY_H
+#ifndef PROTON_DELIVERY_HPP
+#define PROTON_DELIVERY_HPP
 
 /*
  *
@@ -23,7 +23,7 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/transfer.hpp"
 
 #include "proton/delivery.h"
@@ -33,9 +33,10 @@ namespace proton {
 
 class receiver;
 
-/// A message transfer.  Every delivery exists within the context of a
-/// proton::receiver.  A delivery attempt can fail. As a result, a
-/// particular message may correspond to multiple deliveries.
+/// A received message.
+/// 
+/// A delivery attempt can fail. As a result, a particular message may
+/// correspond to multiple deliveries.
 class delivery : public transfer {
     /// @cond INTERNAL
     delivery(pn_delivery_t* d);
@@ -44,19 +45,22 @@ class delivery : public transfer {
   public:
     delivery() {}
 
-    // Return the receiver for this delivery
+    /// Return the receiver for this delivery.
     PN_CPP_EXTERN class receiver receiver() const;
 
-    /// Settle with ACCEPTED state
+    // XXX ATM the following don't reflect the differing behaviors we
+    // get from the different delivery modes. - Deferred
+    
+    /// Settle with ACCEPTED state.
     PN_CPP_EXTERN void accept() { settle(ACCEPTED); }
 
-    /// Settle with REJECTED state
+    /// Settle with REJECTED state.
     PN_CPP_EXTERN void reject() { settle(REJECTED); }
 
-    /// Settle with RELEASED state
+    /// Settle with RELEASED state.
     PN_CPP_EXTERN void release() { settle(RELEASED); }
 
-    /// Settle with MODIFIED state
+    /// Settle with MODIFIED state.
     PN_CPP_EXTERN void modify() { settle(MODIFIED); }
 
     /// @cond INTERNAL
@@ -64,6 +68,6 @@ class delivery : public transfer {
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_DELIVERY_H
+#endif // PROTON_DELIVERY_HPP

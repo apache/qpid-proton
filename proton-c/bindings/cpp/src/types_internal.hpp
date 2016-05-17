@@ -19,7 +19,7 @@
  * under the License.
  */
 
-#include <proton/type_traits.hpp>
+#include <proton/internal/type_traits.hpp>
 #include <proton/error.hpp>
 #include <proton/binary.hpp>
 #include <sstream>

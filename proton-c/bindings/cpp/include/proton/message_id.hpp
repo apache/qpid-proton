@@ -1,7 +1,8 @@
-#ifndef MESSAGE_ID_HPP
-#define MESSAGE_ID_HPP
+#ifndef PROTON_MESSAGE_ID_HPP
+#define PROTON_MESSAGE_ID_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +19,12 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/binary.hpp>
-#include <proton/scalar_base.hpp>
-#include <proton/uuid.hpp>
+#include "proton/binary.hpp"
+#include "proton/internal/scalar_base.hpp"
+#include "proton/uuid.hpp"
 
 #include <string>
 
@@ -39,10 +41,10 @@ namespace proton {
 ///
 class message_id : public internal::scalar_base {
   public:
-    /// An empty message_id has a uint64_t == 0 value.
+    /// An empty message_id has a uint64_t value set to 0.
     message_id() { put_(uint64_t(0)); }
 
-    /// Construct from any type that can be assigned
+    /// Construct from any type that can be assigned.
     template <class T> message_id(const T& x) { *this = x; }
 
     /// @name Assignment operators
@@ -65,9 +67,10 @@ class message_id : public internal::scalar_base {
     ///@endcond
 };
 
-///@cond internal
+/// @cond INTERNAL
+// XXX Document this?
 template <class T> T get(const message_id& x);
-///@endcond
+/// @endcond
 
 /// Get the uint64_t value or throw conversion_error. @related message_id
 template<> inline uint64_t get<uint64_t>(const message_id& x) { return internal::get<uint64_t>(x); }
@@ -81,5 +84,7 @@ template<> inline std::string get<std::string>(const message_id& x) { return int
 /// @copydoc scalar::coerce
 /// @related message_id
 template<class T> T coerce(const message_id& x) { return internal::coerce<T>(x); }
-}
-#endif // MESSAGE_ID_HPP
+
+} // proton
+
+#endif // PROTON_MESSAGE_ID_HPP

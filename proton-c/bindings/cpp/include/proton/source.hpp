@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SOURCE_H
-#define PROTON_CPP_SOURCE_H
+#ifndef PROTON_SOURCE_HPP
+#define PROTON_SOURCE_HPP
 
 /*
  *
@@ -23,10 +23,10 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/value.hpp"
 #include "proton/terminus.hpp"
-#include <proton/map.hpp>
+#include "proton/codec/map.hpp"
 
 #include <string>
 
@@ -35,21 +35,28 @@ namespace proton {
 class sender;
 class receiver;
 
-///
 /// The source node is where messages originate.
 ///
-/// @see proton::sender proton::receiver proton::target
+/// @see proton::sender, proton::receiver, proton::target
 class source : public terminus {
   public:
-    /// A map of AMQP symbol keys and filter specifiers.
+    /// **Experimental** - A map of AMQP symbol keys and filter
+    /// specifiers.
     typedef std::map<symbol, value> filter_map;
 
+    /// Create an empty source.
     source() : terminus() {}
 
+    /// The policy for distributing messages.
     enum distribution_mode {
-      UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
-      COPY = PN_DIST_MODE_COPY,
-      MOVE = PN_DIST_MODE_MOVE
+        // XXX Why is unspecified needed?  The protocol doesn't have
+        // it.
+        /// Unspecified
+        UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
+        /// Once transferred, the message remains available to ther links
+        COPY = PN_DIST_MODE_COPY,
+        /// Once transferred, the message is unavailable to other links
+        MOVE = PN_DIST_MODE_MOVE                
     };
 
     using terminus::durability_mode;
@@ -61,19 +68,21 @@ class source : public terminus {
     /// Get the distribution mode.
     PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
-    /// Obtain the set of message filters.
+    /// **Experimental** - Obtain the set of message filters.
     PN_CPP_EXTERN filter_map filters() const;
-    /// @cond INTERNAL
+
   private:
     source(pn_terminus_t* t);
     source(const sender&);
     source(const receiver&);
+
+    /// @cond INTERNAL
   friend class proton::internal::factory<source>;
   friend class sender;
   friend class receiver;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SOURCE_H
+#endif // PROTON_SOURCE_HPP

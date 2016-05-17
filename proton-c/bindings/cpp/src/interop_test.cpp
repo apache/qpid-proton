@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include "proton/decoder.hpp"
-#include "proton/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+#include "proton/codec/encoder.hpp"
 #include "proton/error.hpp"
 #include "proton/value.hpp"
 #include "test_bits.hpp"

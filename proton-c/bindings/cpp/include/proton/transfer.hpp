@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TRANSFER_H
-#define PROTON_CPP_TRANSFER_H
+#ifndef PROTON_TRANSFER_HPP
+#define PROTON_TRANSFER_HPP
 
 /*
  *
@@ -23,31 +23,30 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 
 #include "proton/delivery.h"
 #include "proton/disposition.h"
 
 namespace proton {
 
-/// A message transfer.  Every delivery exists within the context of a
-/// proton::link.  A delivery attempt can fail. As a result, a
-/// particular message may correspond to multiple deliveries.
+/// The base class for delivery and tracker.
 class transfer : public internal::object<pn_delivery_t> {
     /// @cond INTERNAL
     transfer(pn_delivery_t* d) : internal::object<pn_delivery_t>(d) {}
     /// @endcond
 
   public:
+    /// Create an empty transfer.
     transfer() : internal::object<pn_delivery_t>(0) {}
 
-    /// Return the session for this transfer
+    /// Return the session for this transfer.
     PN_CPP_EXTERN class session session() const;
 
-    /// Return the connection for this transfer
+    /// Return the connection for this transfer.
     PN_CPP_EXTERN class connection connection() const;
 
-    /// Return the container for this transfer
+    /// Return the container for this transfer.
     PN_CPP_EXTERN class container &container() const;
 
     /// Settle the delivery; informs the remote end.
@@ -56,7 +55,6 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Return true if the transfer has been settled.
     PN_CPP_EXTERN bool settled() const;
 
-    /// @cond INTERNAL
   protected:
     /// Delivery state values.
     enum state {
@@ -77,10 +75,11 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Get the remote state for a delivery.
     enum state state() const;
 
+    /// @cond INTERNAL
   friend class internal::factory<transfer>;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TRANSFER_H
+#endif // PROTON_TRANSFER_HPP

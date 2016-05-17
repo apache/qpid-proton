@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TERMINUS_H
-#define PROTON_CPP_TERMINUS_H
+#ifndef PROTON_TERMINUS_HPP
+#define PROTON_TERMINUS_HPP
 
 /*
  *
@@ -23,7 +23,7 @@
  */
 
 #include "proton/export.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/value.hpp"
 
 #include "proton/link.h"
@@ -45,20 +45,31 @@ class terminus {
   public:
     terminus() : object_(0), parent_(0) {}
 
+    /// The persistence mode of the source or target.
     enum durability_mode {
-      NONDURABLE = PN_NONDURABLE,
-      CONFIGURATION = PN_CONFIGURATION,
-      UNSETTLED_STATE = PN_DELIVERIES
+        /// No persistence.
+        NONDURABLE = PN_NONDURABLE,
+        /// Only configuration is persisted.
+        CONFIGURATION = PN_CONFIGURATION,
+        /// Configuration and unsettled state are persisted.
+        UNSETTLED_STATE = PN_DELIVERIES
     };
 
+    /// When expiration of the source or target begins.
     enum expiry_policy {
-      LINK_CLOSE = PN_EXPIRE_WITH_LINK,
-      SESSION_CLOSE = PN_EXPIRE_WITH_SESSION,
-      CONNECTION_CLOSE = PN_EXPIRE_WITH_CONNECTION,
-      NEVER = PN_EXPIRE_NEVER
+        /// When the link is closed.
+        LINK_CLOSE = PN_EXPIRE_WITH_LINK,
+        /// When the containing session is closed.
+        SESSION_CLOSE = PN_EXPIRE_WITH_SESSION,
+        /// When the containing connection is closed.
+        CONNECTION_CLOSE = PN_EXPIRE_WITH_CONNECTION,
+        /// The terminus never expires.
+        NEVER = PN_EXPIRE_NEVER
     };
 
-    /// Control when the clock for expiration begins.
+    // XXX This should have address?
+
+    /// Get the policy for when expiration begins.
     PN_CPP_EXTERN enum expiry_policy expiry_policy() const;
 
     /// The period after which the source is discarded on expiry. The
@@ -75,19 +86,19 @@ class terminus {
     /// terminus.  See also lifetime_policy.
     PN_CPP_EXTERN value node_properties() const;
 
-    /// @cond INTERNAL
   protected:
     pn_terminus_t *pn_object() { return object_; }
   private:
     pn_terminus_t* object_;
     pn_link_t* parent_;
 
+    /// @cond INTERNAL
   friend class internal::factory<terminus>;
   friend class source;
   friend class target;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TERMINUS_H
+#endif // PROTON_TERMINUS_HPP

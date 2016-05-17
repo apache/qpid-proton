@@ -20,9 +20,9 @@
 #include "proton_bits.hpp"
 
 #include <proton/binary.hpp>
+#include <proton/codec/encoder.hpp>
 #include <proton/data.hpp>
 #include <proton/decimal.hpp>
-#include <proton/encoder.hpp>
 #include <proton/message_id.hpp>
 #include <proton/symbol.hpp>
 #include <proton/timestamp.hpp>

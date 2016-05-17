@@ -1,6 +1,8 @@
-#ifndef PROTON_DECODER_HPP
-#define PROTON_DECODER_HPP
+#ifndef PROTON_CODEC_DECODER_HPP
+#define PROTON_CODEC_DECODER_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +19,15 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/data.hpp>
-#include <proton/types_fwd.hpp>
-#include <proton/type_traits.hpp>
+#include "proton/data.hpp"
+#include "proton/internal/type_traits.hpp"
+#include "proton/types_fwd.hpp"
 
 #include <utility>
 
-// Proton namespace
 namespace proton {
 
 class annotation_key;
@@ -37,39 +39,48 @@ namespace internal {
 class value_base;
 }
 
-/// @ingroup codec
 namespace codec {
 
-/// Stream-like decoder from AMQP bytes to C++ values.
+/// **Experimental** - Stream-like decoder from AMQP bytes to C++
+/// values.
 ///
-/// Internal use only, see proton::value, proton::scalar and \ref types
-/// for the recommended ways to manage AMQP data.
+/// For internal use only.
+///
+/// @see @ref types_page for the recommended ways to manage AMQP data
 class decoder : public data {
   public:
-
-    /// Wrap Proton-C data object.
-    /// The exact flag if set means decode only when there is an exact match
-    /// between the AMQP and C++ type. If not set then perform automatic conversions.
+    /// Wrap a Proton C data object.  The exact flag if set means
+    /// decode only when there is an exact match between the AMQP and
+    /// C++ type. If not set then perform automatic conversions.
     explicit decoder(const data& d, bool exact=false) : data(d), exact_(exact) {}
 
-    /// Attach decoder to a proton::value. The decoder is rewound to the start of the data.
+    /// Attach decoder to a proton::value. The decoder is rewound to
+    /// the start of the data.
     PN_CPP_EXTERN explicit decoder(const internal::value_base&, bool exact=false);
 
-    /// Decode AMQP data from a buffer and add it to the end of the decoders stream. */
+    /// Decode AMQP data from a buffer and add it to the end of the
+    /// decoders stream.
     PN_CPP_EXTERN void decode(const char* buffer, size_t size);
 
-    /// Decode AMQP data from a std::string and add it to the end of the decoders stream. */
+    /// Decode AMQP data from a std::string and add it to the end of
+    /// the decoders stream.
     PN_CPP_EXTERN void decode(const std::string&);
 
     /// Return true if there are more value to extract at the current level.
     PN_CPP_EXTERN bool more();
 
-    /// Get the type of the next value that will be read by operator>>.
-    /// @throw conversion_error if no more values. @see decoder::more().
+    /// Get the type of the next value that will be read by
+    /// operator>>.
+    ///
+    /// @throw conversion_error if no more values. @see
+    /// decoder::more().
     PN_CPP_EXTERN type_id next_type();
 
     /// @name Extract built-in types
-    /// @throw conversion_error if the decoder is empty or has an incompatible type.
+    ///
+    /// @throw conversion_error if the decoder is empty or has an
+    /// incompatible type.
+    ///
     /// @{
     PN_CPP_EXTERN decoder& operator>>(bool&);
     PN_CPP_EXTERN decoder& operator>>(uint8_t&);
@@ -98,15 +109,17 @@ class decoder : public data {
     PN_CPP_EXTERN decoder& operator>>(null&);
     ///@}
 
-    /// Start decoding a container type, such as an ARRAY, LIST or MAP.
-    /// This "enters" the container, more() will return false at the end of the container.
-    /// Call finish() to "exit" the container and move on to the next value.
+    /// Start decoding a container type, such as an ARRAY, LIST or
+    /// MAP.  This "enters" the container, more() will return false at
+    /// the end of the container.  Call finish() to "exit" the
+    /// container and move on to the next value.
     PN_CPP_EXTERN decoder& operator>>(start&);
 
-    /// Finish decoding a container type, and move on to the next value in the stream.
+    /// Finish decoding a container type, and move on to the next
+    /// value in the stream.
     PN_CPP_EXTERN decoder& operator>>(const finish&);
 
-    ///@cond INTERNAL
+    /// @cond INTERNAL
     template <class T> struct sequence_ref { T& ref; sequence_ref(T& r) : ref(r) {} };
     template <class T> struct associative_ref { T& ref; associative_ref(T& r) : ref(r) {} };
     template <class T> struct pair_sequence_ref { T& ref;  pair_sequence_ref(T& r) : ref(r) {} };
@@ -114,12 +127,11 @@ class decoder : public data {
     template <class T> static sequence_ref<T> sequence(T& x) { return sequence_ref<T>(x); }
     template <class T> static associative_ref<T> associative(T& x) { return associative_ref<T>(x); }
     template <class T> static pair_sequence_ref<T> pair_sequence(T& x) { return pair_sequence_ref<T>(x); }
-    ///@endcond
+    /// @endcond
 
-    /** Extract any AMQP sequence (ARRAY, LIST or MAP) to a C++ sequence
-     * container of T if the elements types are convertible to T. A MAP is
-     * extracted as [key1, value1, key2, value2...]
-     */
+    /// Extract any AMQP sequence (ARRAY, LIST or MAP) to a C++
+    /// sequence container of T if the elements types are convertible
+    /// to T. A MAP is extracted as `[key1, value1, key2, value2...]`.
     template <class T> decoder& operator>>(sequence_ref<T> r)  {
         start s;
         *this >> s;
@@ -130,7 +142,7 @@ class decoder : public data {
         return *this;
     }
 
-    /** Extract an AMQP MAP to a C++ associative container */
+    /// Extract an AMQP MAP to a C++ associative container
     template <class T> decoder& operator>>(associative_ref<T> r)  {
         using namespace internal;
         start s;
@@ -172,14 +184,18 @@ class decoder : public data {
   friend class message;
 };
 
+/// @cond INTERNAL
+/// XXX Document this
 template<class T> T get(decoder& d) {
     assert_type_equal(internal::type_id_of<T>::value, d.next_type());
     T x;
     d >> x;
     return x;
 }
+/// @endcond
 
-// operator >> for integer types that are not covered by the standard overrides.
+/// operator>> for integer types that are not covered by the standard
+/// overrides.
 template <class T> typename internal::enable_if<internal::is_unknown_integer<T>::value, decoder&>::type
 operator>>(decoder& d, T& i)  {
     using namespace internal;
@@ -192,4 +208,4 @@ operator>>(decoder& d, T& i)  {
 } // codec
 } // proton
 
-#endif // PROTON_DECODER_HPP
+#endif // PROTON_CODEC_DECODER_HPP

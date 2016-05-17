@@ -49,8 +49,8 @@ class client : public proton::handler {
         sender = c.open_sender(url);
         // Create a receiver requesting a dynamically created queue
         // for the message source.
-        receiver_options dynamic_addr = receiver_options().source(source_options().dynamic(true));
-        receiver = sender.connection().open_receiver("", dynamic_addr);
+        receiver_options opts = receiver_options().source(source_options().dynamic(true));
+        receiver = sender.connection().open_receiver("", opts);
     }
 
     void send_request() {

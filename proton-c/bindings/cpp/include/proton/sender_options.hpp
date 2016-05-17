@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SENDER_OPTIONS_H
-#define PROTON_CPP_SENDER_OPTIONS_H
+#ifndef PROTON_SENDER_OPTIONS_HPP
+#define PROTON_SENDER_OPTIONS_HPP
 
 /*
  *
@@ -24,7 +24,7 @@
 
 #include "proton/config.hpp"
 #include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/types.hpp"
 #include "proton/delivery_mode.hpp"
 #include "proton/terminus.hpp"
@@ -60,6 +60,7 @@ class target_options;
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
+// XXX opts.browsing is not a good example here
 class sender_options {
   public:
     /// Create an empty set of options.
@@ -85,7 +86,7 @@ class sender_options {
     /// Set the delivery mode on the sender.
     PN_CPP_EXTERN sender_options& delivery_mode(delivery_mode);
 
-    /// Automatically settle messages (default value: true).
+    /// Automatically settle messages (default is true).
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 
     /// Options for the source node of the sender.
@@ -93,7 +94,6 @@ class sender_options {
 
     /// Options for the receiver node of the receiver.
     PN_CPP_EXTERN sender_options& target(target_options &);
-
 
     /// @cond INTERNAL
   private:
@@ -106,6 +106,6 @@ class sender_options {
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SENDER_OPTIONS_H
+#endif // PROTON_SENDER_OPTIONS_HPP

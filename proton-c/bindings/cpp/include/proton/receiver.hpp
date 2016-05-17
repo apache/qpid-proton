@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_RECEIVER_H
-#define PROTON_CPP_RECEIVER_H
+#ifndef PROTON_RECEIVER_HPP
+#define PROTON_RECEIVER_HPP
 
 /*
  *
@@ -26,6 +26,7 @@
 #include "proton/endpoint.hpp"
 #include "proton/link.hpp"
 #include "proton/types.h"
+
 #include <string>
 
 struct pn_connection_t;
@@ -33,7 +34,7 @@ struct pn_connection_t;
 namespace proton {
 template <class T> class thread_safe;
 
-/// A link for receiving messages.
+/// A channel for receiving messages.
 class
 PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
@@ -41,11 +42,15 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// @endcond
 
   public:
+    /// Create an empty receiver.
     receiver() {}
 
-    /// Locally open the receiver.  The operation is not complete till
-    /// handler::on_receiver_open.
+    /// Open the receiver.
+    ///
+    /// @see endpoint_lifecycle
     PN_CPP_EXTERN void open();
+
+    /// @copydoc open
     PN_CPP_EXTERN void open(const receiver_options &opts);
 
     /// Get the source node.
@@ -76,29 +81,33 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// @endcond
 };
 
+/// @cond INTERNAL
+    
+/// An iterator of receivers.
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
-    ///@cond INTERNAL
     explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
         internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
-    ///@endcond
 
   public:
+    /// Create an iterator of receivers.
     explicit receiver_iterator() :
         internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
-    /// Advance
+
+    /// Advance to the next receiver.
     PN_CPP_EXTERN receiver_iterator operator++();
 
   private:
     pn_session_t* session_;
 
-    friend class connection;
-    friend class session;
+  friend class connection;
+  friend class session;
 };
 
 /// A range of receivers.
 typedef internal::iter_range<receiver_iterator> receiver_range;
 
+/// @endcond
 
-}
+} // proton
 
-#endif // PROTON_CPP_RECEIVER_H
+#endif // PROTON_RECEIVER_HPP

@@ -1,6 +1,8 @@
-#ifndef UNIQUE_PTR_HPP
-#define UNIQUE_PTR_HPP
+#ifndef PROTON_INTERNAL_UNIQUE_PTR_HPP
+#define PROTON_INTERNAL_UNIQUE_PTR_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +19,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-/// @cond INTERNAL
-
 #include "proton/config.hpp"
+
 #include <memory>
 
 namespace proton {
@@ -60,8 +62,7 @@ template <class T> class pn_unique_ptr {
     T* ptr_;
 };
 
-}}
+} // internal
+} // proton
 
-/// @endcond
-
-#endif // UNIQUE_PTR_HPP
+#endif // PROTON_INTERNAL_UNIQUE_PTR_HPP

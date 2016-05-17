@@ -1,5 +1,6 @@
-#ifndef PROTON_DEQUE_HPP
-#define PROTON_DEQUE_HPP
+#ifndef PROTON_CODEC_DEQUE_HPP
+#define PROTON_CODEC_DEQUE_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,11 +20,11 @@
  * under the License.
  */
 
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+
 #include <deque>
 #include <utility>
-
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
 
 namespace proton {
 namespace codec {
@@ -34,15 +35,15 @@ encoder& operator<<(encoder& e, const std::deque<T, A>& x) {
     return e << encoder::array(x, internal::type_id_of<T>::value);
 }
 
-/// std::deque<value> encodes as amqp::LIST (mixed type elements)
+/// std::deque<value> encodes as codec::list_type (mixed type elements)
 template <class A>
 encoder& operator<<(encoder& e, const std::deque<value, A>& x) { return e << encoder::list(x); }
 
-/// std::deque<scalar> encodes as amqp::LIST (mixed type elements)
+/// std::deque<scalar> encodes as codec::list_type (mixed type elements)
 template <class A>
 encoder& operator<<(encoder& e, const std::deque<scalar, A>& x) { return e << encoder::list(x); }
 
-/// std::deque<std::pair<k,t> > encodes as amqp::MAP.
+/// std::deque<std::pair<k,t> > encodes as codec::map_type.
 /// Map entries are encoded in order they appear in the list.
 template <class A, class K, class T>
 encoder& operator<<(encoder& e, const std::deque<std::pair<K,T>, A>& x) { return e << encoder::map(x); }
@@ -53,6 +54,7 @@ template <class T, class A> decoder& operator>>(decoder& d, std::deque<T, A>& x)
 /// Decode to std::deque<std::pair<K, T> from an amqp::MAP.
 template <class A, class K, class T> decoder& operator>>(decoder& d, std::deque<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
 
-}
-}
-#endif // PROTON_DEQUE_HPP
+} // codec
+} // proton
+
+#endif // PROTON_CODEC_DEQUE_HPP

@@ -22,10 +22,10 @@
 
 #include "proton/binary.hpp"
 #include "proton/decimal.hpp"
-#include "proton/scalar_base.hpp"
+#include "proton/internal/scalar_base.hpp"
+#include "proton/internal/type_traits.hpp"
 #include "proton/symbol.hpp"
 #include "proton/timestamp.hpp"
-#include "proton/type_traits.hpp"
 #include "proton/uuid.hpp"
 
 #include <ostream>

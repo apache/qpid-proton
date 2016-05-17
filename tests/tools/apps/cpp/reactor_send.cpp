@@ -24,7 +24,7 @@
 #include "proton/binary.hpp"
 #include "proton/connection.hpp"
 #include "proton/default_container.hpp"
-#include "proton/decoder.hpp"
+#include "proton/codec/decoder.hpp"
 #include "proton/delivery.hpp"
 #include "proton/handler.hpp"
 #include "proton/tracker.hpp"

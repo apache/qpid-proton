@@ -1,7 +1,8 @@
-#ifndef PROTON_ENCODER_HPP
-#define PROTON_ENCODER_HPP
+#ifndef PROTON_CODEC_ENCODER_HPP
+#define PROTON_CODEC_ENCODER_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,11 +19,12 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/data.hpp>
-#include <proton/types_fwd.hpp>
-#include <proton/type_traits.hpp>
+#include "proton/data.hpp"
+#include "proton/internal/type_traits.hpp"
+#include "proton/types_fwd.hpp"
 
 namespace proton {
 
@@ -31,14 +33,14 @@ class scalar_base;
 class value_base;
 }
 
-
-/// @ingroup codec
 namespace codec {
 
-/// Stream-like encoder from AMQP bytes to C++ values.
+/// **Experimental** - Stream-like encoder from AMQP bytes to C++
+/// values.
 ///
-/// Internal use only, see proton::value, proton::scalar and \ref types
-/// for the recommended ways to manage AMQP data.
+/// For internal use only.
+///
+/// @see @ref types_page for the recommended ways to manage AMQP data
 class encoder : public data {
   public:
     /// Wrap Proton-C data object.
@@ -47,24 +49,22 @@ class encoder : public data {
     /// Encoder into v. Clears any current value in v.
     PN_CPP_EXTERN explicit encoder(internal::value_base& v);
 
-    /**
-     * Encode the current values into buffer and update size to reflect the
-     * number of bytes encoded.
-     *
-     * Clears the encoder.
-     *
-     *@return if buffer==0 or size is too small then return false and  size to the required size.
-     *Otherwise return true and set size to the number of bytes encoded.
-     */
+    /// Encode the current values into buffer and update size to reflect the
+    /// number of bytes encoded.
+    ///
+    /// Clears the encoder.
+    ///
+    /// @return if buffer == 0 or size is too small, then return false
+    /// and size to the required size.  Otherwise, return true and set
+    /// size to the number of bytes encoded.
     PN_CPP_EXTERN bool encode(char* buffer, size_t& size);
 
-    /** Encode the current values into a std::string, resize the string if necessary.
-     *
-     * Clears the encoder.
-     */
+    /// Encode the current values into a std::string and resize the
+    /// string if necessary. Clears the encoder.
     PN_CPP_EXTERN void encode(std::string&);
 
-    /** Encode the current values into a std::string. Clears the encoder. */
+    /// Encode the current values into a std::string. Clears the
+    /// encoder.
     PN_CPP_EXTERN std::string encode();
 
     /// @name Insert built-in types
@@ -91,18 +91,21 @@ class encoder : public data {
     PN_CPP_EXTERN encoder& operator<<(const binary&);
     PN_CPP_EXTERN encoder& operator<<(const internal::scalar_base&);
     PN_CPP_EXTERN encoder& operator<<(const null&);
-    ///@}
+    /// @}
 
     /// Insert a proton::value.
-    /// @internal NOTE insert value_base, not value to avoid recursive implicit conversions.
+    ///
+    /// @internal NOTE insert value_base, not value to avoid recursive
+    /// implicit conversions.
     PN_CPP_EXTERN encoder& operator<<(const internal::value_base&);
 
     /// Start a complex type
     PN_CPP_EXTERN encoder& operator<<(const start&);
+
     /// Finish a complex type
     PN_CPP_EXTERN encoder& operator<<(const finish&);
 
-    ///@cond INTERNAL
+    /// @cond INTERNAL
 
     // Undefined template to  prevent pointers being implicitly converted to bool.
     template <class T> void* operator<<(const T*);
@@ -148,13 +151,12 @@ class encoder : public data {
         *this << finish();
         return *this;
     }
-    ///@endcond
+    /// @endcond
 
   private:
     template<class T, class U> encoder& insert(const T& x, int (*put)(pn_data_t*, U));
     void check(long result);
 };
-
 
 /// Treat char* as string
 inline encoder& operator<<(encoder& e, const char* s) { return e << std::string(s); }
@@ -166,7 +168,8 @@ operator<<(encoder& e, T i)  {
     return e << static_cast<typename integer_type<sizeof(T), is_signed<T>::value>::type>(i);
 }
 
-///@cond INTERNAL
+/// @cond INTERNAL
+    
 namespace is_encodable_impl {   // Protected the world from wildcard operator<<
 
 using namespace internal;
@@ -180,15 +183,17 @@ template<typename T> struct is_encodable : public sfinae {
     static const T& t;
     static bool const value = sizeof(test(e << t)) == sizeof(yes);
 };
+
 // Avoid recursion
 template <> struct is_encodable<value> : public true_type {};
 
-} // namespace is_encodable_impl
+} // is_encodable_impl
 
 using is_encodable_impl::is_encodable;
-///@endcond
+
+/// @endcond
 
 } // codec
 } // proton
 
-#endif  /*!PROTON_ENCODER_HPP*/
+#endif /// PROTON_CODEC_ENCODER_HPP

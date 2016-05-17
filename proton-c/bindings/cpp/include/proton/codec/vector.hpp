@@ -1,6 +1,8 @@
-#ifndef PROTON_VECTOR_HPP
-#define PROTON_VECTOR_HPP
+#ifndef PROTON_CODEC_VECTOR_HPP
+#define PROTON_CODEC_VECTOR_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,13 +19,14 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
+
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
 
 #include <vector>
 #include <utility>
-
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
 
 namespace proton {
 namespace codec {
@@ -49,7 +52,7 @@ template <class T, class A> decoder& operator>>(decoder& d, std::vector<T, A>& x
 /// Decode to std::vector<std::pair<K, T> from an amqp::MAP.
 template <class A, class K, class T> decoder& operator>>(decoder& d, std::vector<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
 
-} // internal
+} // codec
 } // proton
 
-#endif // PROTON_VECTOR_HPP
+#endif // PROTON_CODEC_VECTOR_HPP

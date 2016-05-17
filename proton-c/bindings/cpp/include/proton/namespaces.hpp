@@ -1,5 +1,6 @@
-#ifndef PROTON_UNORDERED_MAP_HPP
-#define PROTON_UNORDERED_MAP_HPP
+#ifndef PROTON_NAMESPACES_HPP
+#define PROTON_NAMESPACES_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,22 +20,25 @@
  * under the License.
  */
 
-#include <unordered_map>
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
-
+/// The main Proton namespace.
 namespace proton {
+
+/// **Experimental** - AMQP data encoding and decoding.
+///
+/// You can use these classes on an experimental basis to create your
+/// own AMQP encodings for C++ types, but they may change in the
+/// future. For examples of use see the built-in encodings, for
+/// example in proton/vector.hpp or proton/map.hpp
 namespace codec {
+}
 
-/// Encode std::unordered_map<K, T> as amqp::UNORDERED_MAP.
-template <class K, class T, class C, class A>
-encoder& operator<<(encoder& e, const std::unordered_map<K, T, C, A>& m) { return e << encoder::map(m); }
+/// **Experimental** - An SPI for multithreaded network IO.
+namespace io {
+}
 
-/// Decode to std::unordered_map<K, T> from amqp::UNORDERED_MAP.
-template <class K, class T, class C, class A>
-decoder& operator>>(decoder& d, std::unordered_map<K, T, C, A>& m) { return d >> decoder::associative(m); }
+namespace internal {
+}
 
-} // internal
 } // proton
 
-#endif // PROTON_UNORDERED_MAP_HPP
+#endif // PROTON_NAMESPACES_HPP

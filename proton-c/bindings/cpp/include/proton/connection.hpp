@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_CONNECTION_H
-#define PROTON_CPP_CONNECTION_H
+#ifndef PROTON_CONNECTION_HPP
+#define PROTON_CONNECTION_HPP
 
 /*
  *
@@ -24,8 +24,9 @@
 
 #include "proton/export.hpp"
 #include "proton/endpoint.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 #include "proton/session.hpp"
+
 #include "proton/types.h"
 
 #include <string>
@@ -51,9 +52,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @endcond
 
   public:
+    /// Create an empty connection.
     connection() : internal::object<pn_connection_t>(0) {}
 
-    /// Get the state of this connection.
     PN_CPP_EXTERN bool uninitialized() const;
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;
@@ -69,27 +70,27 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Get the transport for the connection.
     PN_CPP_EXTERN class transport transport() const;
 
-    /// Return the AMQP host name for the connection.
+    /// Return the AMQP hostname attribute for the connection.
     PN_CPP_EXTERN std::string virtual_host() const;
 
     /// Return the container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
-    /// Initiate local open.  The operation is not complete till
-    /// handler::on_connection_open().
+    /// Open the connection.
+    ///
+    /// @see endpoint_lifecycle
     PN_CPP_EXTERN void open();
+
+    /// @copydoc open
     PN_CPP_EXTERN void open(const connection_options &);
 
-    /// Initiate local close.  The operation is not complete till
-    /// handler::on_connection_close().
     PN_CPP_EXTERN void close();
-
-    /// Initiate close with an error condition.
-    /// The operation is not complete till handler::on_connection_close().
     PN_CPP_EXTERN void close(const error_condition&);
 
     /// Open a new session.
     PN_CPP_EXTERN session open_session();
+
+    /// @copydoc open_session
     PN_CPP_EXTERN session open_session(const session_options &);
 
     /// Get the default session.  A default session is created on the
@@ -98,10 +99,14 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// Open a sender for `addr` on default_session().
     PN_CPP_EXTERN sender open_sender(const std::string &addr);
+
+    /// @copydoc open_sender
     PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &);
 
     /// Open a receiver for `addr` on default_session().
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
+
+    /// @copydoc open_receiver
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
                                          const receiver_options &);
 
@@ -114,20 +119,32 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Return all senders on this connection.
     PN_CPP_EXTERN sender_range senders() const;
 
+    /// Get the maximum frame size.
+    ///
+    /// @see @ref connection_options::max_frame_size
     PN_CPP_EXTERN uint32_t max_frame_size() const;
+
+    /// Get the maximum number of open sessions.
+    ///
+    /// @see @ref connection_options::max_sessions
     PN_CPP_EXTERN uint16_t max_sessions() const;
+
+    /// Get the idle timeout.
+    ///
+    /// @see @ref connection_options::idle_timeout
     PN_CPP_EXTERN uint32_t idle_timeout() const;
 
   private:
     void user(const std::string &);
     void password(const std::string &);
 
-    friend class internal::factory<connection>;
-    friend class connector;
+    /// @cond INTERNAL
+  friend class internal::factory<connection>;
+  friend class connector;
   friend class proton::thread_safe<connection>;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_CONNECTION_H
+#endif // PROTON_CONNECTION_HPP

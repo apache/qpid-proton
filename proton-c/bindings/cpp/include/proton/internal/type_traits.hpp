@@ -1,7 +1,8 @@
-#ifndef PROTON_TYPE_TRAITS_HPP
-#define PROTON_TYPE_TRAITS_HPP
+#ifndef PROTON_INTERNAL_TYPE_TRAITS_HPP
+#define PROTON_INTERNAL_TYPE_TRAITS_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +19,7 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
 /// @file
@@ -27,11 +29,10 @@
 /// Also provides workarounds for missing type_traits classes on older
 /// C++ compilers.
 
-#include <proton/config.hpp>
-#include <proton/types_fwd.hpp>
-#include <proton/type_id.hpp>
+#include "proton/config.hpp"
+#include "proton/types_fwd.hpp"
+#include "proton/type_id.hpp"
 
-///@cond INTERNAL
 namespace proton {
 namespace internal {
 
@@ -87,8 +88,8 @@ template <type_id ID, class T> struct type_id_constant {
     static const type_id value = ID;
 };
 
-///@name Metafunction returning AMQP type for scalar C++ types.
-///@{
+/// @name Metafunction returning AMQP type for scalar C++ types.
+/// @{
 template <class T> struct type_id_of;
 template<> struct type_id_of<bool> : public type_id_constant<BOOLEAN, bool> {};
 template<> struct type_id_of<uint8_t> : public type_id_constant<UBYTE, uint8_t> {};
@@ -110,7 +111,7 @@ template<> struct type_id_of<uuid> : public type_id_constant<UUID, uuid> {};
 template<> struct type_id_of<std::string> : public type_id_constant<STRING, std::string> {};
 template<> struct type_id_of<symbol> : public type_id_constant<SYMBOL, symbol> {};
 template<> struct type_id_of<binary> : public type_id_constant<BINARY, binary> {};
-///@}
+/// @}
 
 /// Metafunction to test if a class has a type_id.
 template <class T, class Enable=void> struct has_type_id : public false_type {};
@@ -148,6 +149,5 @@ template <class From, class To> struct is_convertible : public sfinae {
 
 } // internal
 } // proton
-//@endcond
 
-#endif // PROTON_TYPE_TRAITS_HPP
+#endif // PROTON_INTERNAL_TYPE_TRAITS_HPP

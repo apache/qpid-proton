@@ -1,7 +1,8 @@
-#ifndef COMPARABLE_HPP
-#define COMPARABLE_HPP
+#ifndef PROTON_CODEC_UNORDERED_MAP_HPP
+#define PROTON_CODEC_UNORDERED_MAP_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,24 +19,26 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+
+#include <unordered_map>
+
 namespace proton {
-namespace internal {
+namespace codec {
 
-///@cond INTERNAL
+/// Encode std::unordered_map<K, T> as amqp::UNORDERED_MAP.
+template <class K, class T, class C, class A>
+encoder& operator<<(encoder& e, const std::unordered_map<K, T, C, A>& m) { return e << encoder::map(m); }
 
-/// Base class for comparable types with operator< and
-/// operator==. Provides remaining operators.
-template <class T> class comparable {
-    friend bool operator>(const T &a, const T &b) { return b < a; }
-    friend bool operator<=(const T &a, const T &b) { return !(a > b); }
-    friend bool operator>=(const T &a, const T &b) { return !(a < b); }
-    friend bool operator!=(const T &a, const T &b) { return !(a == b); }
-};
+/// Decode to std::unordered_map<K, T> from amqp::UNORDERED_MAP.
+template <class K, class T, class C, class A>
+decoder& operator>>(decoder& d, std::unordered_map<K, T, C, A>& m) { return d >> decoder::associative(m); }
 
-///@endcond
+} // codec
+} // proton
 
-}}
-
-#endif // COMPARABLE_HPP
+#endif // PROTON_CODEC_UNORDERED_MAP_HPP

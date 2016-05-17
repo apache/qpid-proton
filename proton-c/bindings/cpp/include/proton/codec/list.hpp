@@ -1,6 +1,8 @@
-#ifndef PROTON_LIST_HPP
-#define PROTON_LIST_HPP
+#ifndef PROTON_CODEC_LIST_HPP
+#define PROTON_CODEC_LIST_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,16 +19,18 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
+
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
 
 #include <list>
 #include <utility>
 
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
-
 namespace proton {
 namespace codec {
+
 /// std::list<T> for most T is encoded as an AMQP array.
 template <class T, class A>
 encoder& operator<<(encoder& e, const std::list<T, A>& x) {
@@ -52,7 +56,7 @@ template <class T, class A> decoder& operator>>(decoder& d, std::list<T, A>& x) 
 /// Decode to std::list<std::pair<K, T> from an amqp::MAP.
 template <class A, class K, class T> decoder& operator>>(decoder& d, std::list<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
 
-}
-}
+} // codec
+} // proton
 
-#endif // PROTON_LIST_HPP
+#endif // PROTON_CODEC_LIST_HPP

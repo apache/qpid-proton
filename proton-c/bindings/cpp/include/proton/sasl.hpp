@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SASL_H
-#define PROTON_CPP_SASL_H
+#ifndef PROTON_SASL_HPP
+#define PROTON_SASL_HPP
 
 /*
  *
@@ -24,9 +24,10 @@
 
 #include "proton/export.hpp"
 #include "proton/config.hpp"
-#include "proton/object.hpp"
+#include "proton/internal/object.hpp"
 
 #include "proton/sasl.h"
+
 #include <string>
 
 namespace proton {
@@ -75,6 +76,6 @@ class sasl {
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SASL_H
+#endif // PROTON_SASL_HPP

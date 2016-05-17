@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_ACCEPTOR_H
-#define PROTON_CPP_ACCEPTOR_H
+#ifndef PROTON_ACCEPTOR_HPP
+#define PROTON_ACCEPTOR_HPP
 
 /*
  *
@@ -22,9 +22,10 @@
  *
  */
 
-#include <proton/reactor.h>
-#include <proton/export.hpp>
-#include <proton/object.hpp>
+#include "proton/export.hpp"
+#include "proton/internal/object.hpp"
+
+#include "proton/reactor.h"
 
 struct pn_acceptor_t;
 
@@ -52,10 +53,10 @@ class acceptor : public internal::object<pn_acceptor_t> {
     PN_CPP_EXTERN class connection_options &connection_options();
 
     /// @cond INTERNAL
-     friend class internal::factory<acceptor>;
+  friend class internal::factory<acceptor>;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_ACCEPTOR_H
+#endif // PROTON_ACCEPTOR_HPP

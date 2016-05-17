@@ -1,7 +1,8 @@
-#ifndef CONNECTION_ENGINE_HPP
-#define CONNECTION_ENGINE_HPP
+#ifndef PROTON_IO_CONNECTION_ENGINE_HPP
+#define PROTON_IO_CONNECTION_ENGINE_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,6 +19,7 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
 #include "proton/config.hpp"
@@ -26,7 +28,7 @@
 #include "proton/error.hpp"
 #include "proton/error_condition.hpp"
 #include "proton/export.hpp"
-#include "proton/pn_unique_ptr.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 #include "proton/transport.hpp"
 #include "proton/types.hpp"
 
@@ -43,26 +45,11 @@ class proton_handler;
 
 // FIXME aconway 2016-05-04: doc
 
-/** @page integration
-
-This namespace contains a low-level "Service Provider Interface" that can be
-used to implement the proton API over any native or 3rd party IO library.
-
-The io::connection_engine is the core engine that converts raw AMQP bytes read
-from any IO source into proton::handler event calls, and generates AMQP
-byte-encoded output that can be written to any IO destination.
-
-The integration needs to implement two user-visible interfaces:
- - proton::container lets the user initiate or listen for connections.
- - proton::event_loop lets the user serialize their own work with a connection.
-
- @see epoll_container.cpp for an example of an integration.
-*/
 namespace io {
 
 class link_namer;
 
-/// Pointer to a mutable memory region with a size.
+/// **Experimental** - Pointer to a mutable memory region with a size.
 struct mutable_buffer {
     char* data;                 ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.
@@ -71,7 +58,7 @@ struct mutable_buffer {
     mutable_buffer(char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// Pointer to a const memory region with a size.
+/// **Experimental** - Pointer to a const memory region with a size.
 struct const_buffer {
     const char* data;           ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.
@@ -80,34 +67,38 @@ struct const_buffer {
     const_buffer(const char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// A protocol engine to integrate AMQP into any IO or concurrency framework.
+/// **Experimental** - An AMQP protocol engine for a single
+/// connection.
+///
+/// A connection_engine is a protocol engine that integrates AMQP into
+/// any IO or concurrency framework.
 ///
 /// io::connection_engine manages a single proton::connection and dispatches
 /// events to a proton::handler. It does no IO of its own, but allows you to
 /// integrate AMQP protocol handling into any IO or concurrency framework.
 ///
-/// The application is coded the same way as for the proton::container. The
-/// application implements a proton::handler to respond to transport,
-/// connection, session, link and message events. With a little care, the same
-/// handler classes can be used for both container and connection_engine, the
-/// \ref broker.cpp example illustrates this.
+/// The application is coded the same way as for the
+/// proton::container. The application implements a
+/// proton::messaging_handler to respond to transport, connection,
+/// session, link, and message events. With a little care, the same
+/// handler classes can be used for both container and
+/// connection_engine. the @ref broker.cpp example illustrates this.
 ///
-/// You need to write the IO code to read AMQP data to the read_buffer(). The
-/// engine parses the AMQP frames. dispatch() calls the appropriate functions on
-/// the applications proton::handler. You write output data from the engines
-/// write_buffer() to your IO.
+/// You need to write the IO code to read AMQP data to the
+/// read_buffer(). The engine parses the AMQP frames. dispatch() calls
+/// the appropriate functions on the applications proton::handler. You
+/// write output data from the engine's write_buffer() to your IO.
 ///
-/// The engine is not safe for concurrent use, but you can process different
-/// engines concurrently. A common pattern for high-performance servers is to
-/// serialize read/write activity per-connection and dispatch in a fixed-size
-/// thread pool.
+/// The engine is not safe for concurrent use, but you can process
+/// different engines concurrently. A common pattern for
+/// high-performance servers is to serialize read/write activity
+/// per connection and dispatch in a fixed-size thread pool.
 ///
-/// The engine is designed to work with a classic reactor (e.g. select, poll,
-/// epoll) or an async-request driven proactor (e.g. windows completion ports,
-/// boost.asio, libuv etc.)
+/// The engine is designed to work with a classic reactor (e.g.,
+/// select, poll, epoll) or an async-request driven proactor (e.g.,
+/// windows completion ports, boost.asio, libuv).
 ///
 /// The engine never throws exceptions.
-///
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
@@ -209,6 +200,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     proton::container& container_;
 };
 
-}}
+} // io
+} // proton
 
-#endif // CONNECTION_ENGINE_HPP
+#endif // PROTON_IO_CONNECTION_ENGINE_HPP

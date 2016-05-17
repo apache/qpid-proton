@@ -2,6 +2,7 @@
 #define PROTON_LISTEN_HANDLER_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +19,16 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
-
 
 namespace proton {
 
-/// Implement this interface and pass to proton::container::listen() to be
-/// notified of new connections.
+// XXX Discuss more
+/// **Experimental** - A handler for incoming connections.
+///
+/// Implement this interface and pass to proton::container::listen()
+/// to be notified of new connections.
 class listen_handler {
   public:
     virtual ~listen_handler() {}
@@ -44,7 +48,7 @@ class listen_handler {
     /// Called when this listen_handler is no longer needed, and can be deleted.
     virtual void on_close() {}
 };
-}
 
+} // proton
 
 #endif // PROTON_LISTEN_HANDLER_HPP

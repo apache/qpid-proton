@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_DELIVERY_MODE_H
-#define PROTON_CPP_DELIVERY_MODE_H
+#ifndef PROTON_DELIVERY_MODE_H
+#define PROTON_DELIVERY_MODE_H
 
 /*
  *
@@ -28,28 +28,33 @@ namespace proton {
 /// This structure imitates the newer C++11 "enum class" so that
 /// The enumeration constants are in the delivery_mode namespace.
 struct delivery_mode {
-  enum modes {
-    // No set policy.  The application must settle messages itself
-    // according to its own policy.
-    NONE = 0,
-    // Outgoing messages are settled immediately by the link.
-    // There are no duplicates.
-    AT_MOST_ONCE,
-    // The receiver settles the delivery first with an
-    // accept/reject/release disposition.  The sender waits to
-    // settle until after the disposition notification is
-    // received.
-    AT_LEAST_ONCE
-  };
+    /// Delivery modes
+    enum modes {
+        /// No set policy.  The application must settle messages
+        /// itself according to its own policy.
+        NONE = 0,
+        /// Outgoing messages are settled immediately by the link.
+        /// There are no duplicates.
+        AT_MOST_ONCE,
+        /// The receiver settles the delivery first with an
+        /// accept/reject/release disposition.  The sender waits to
+        /// settle until after the disposition notification is
+        /// received.
+        AT_LEAST_ONCE
+    };
 
-  delivery_mode() : modes_(NONE) {}
-  delivery_mode(modes m) : modes_(m) {}
-  operator modes() { return modes_; }
+    /// @cond INTERNAL
+    
+    delivery_mode() : modes_(NONE) {}
+    delivery_mode(modes m) : modes_(m) {}
+    operator modes() { return modes_; }
 
-private:
-  modes modes_;
+    /// @endcond
+
+  private:
+    modes modes_;
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_DELIVERY_MODE_H
+#endif // PROTON_DELIVERY_MODE_H

@@ -1,5 +1,6 @@
-#ifndef PROTON_FORWARD_LIST_HPP
-#define PROTON_FORWARD_LIST_HPP
+#ifndef PROTON_CODEC_FORWARD_LIST_HPP
+#define PROTON_CODEC_FORWARD_LIST_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +20,15 @@
  * under the License.
  */
 
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+
 #include <forward_list>
 #include <utility>
 
-#include <proton/encoder.hpp>
-#include <proton/decoder.hpp>
-
 namespace proton {
 namespace codec {
+
 /// std::forward_list<T> for most T is encoded as an AMQP array.
 template <class T, class A>
 encoder& operator<<(encoder& e, const std::forward_list<T, A>& x) {
@@ -52,7 +54,7 @@ template <class T, class A> decoder& operator>>(decoder& d, std::forward_list<T,
 /// Decode to std::forward_list<std::pair<K, T> from an amqp::MAP.
 template <class A, class K, class T> decoder& operator>>(decoder& d, std::forward_list<std::pair<K, T> , A>& x) { return d >> decoder::pair_sequence(x); }
 
-}
-}
+} // codec
+} // proton
 
-#endif // PROTON_FORWARD_LIST_HPP
+#endif // PROTON_CODEC_FORWARD_LIST_HPP
