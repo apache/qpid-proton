@@ -26,8 +26,8 @@
 
 #include "proton_handler.hpp"
 
-#include "proton/event.h"
-#include "proton/reactor.h"
+#include <proton/event.h>
+#include <proton/reactor.h>
 
 ///@cond INTERNAL
 

@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/codec/data.hpp"
-#include "proton/internal/type_traits.hpp"
-#include "proton/types_fwd.hpp"
+#include "./data.hpp"
+#include "../internal/type_traits.hpp"
+#include "../types_fwd.hpp"
 
 #include <utility>
 

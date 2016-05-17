@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/value.hpp"
+#include "./internal/config.hpp"
+#include "./internal/export.hpp"
+#include "./value.hpp"
 
 #include <stdexcept>
 #include <string>

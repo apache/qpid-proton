@@ -22,12 +22,12 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/internal/object.hpp"
-#include "proton/session.hpp"
+#include "./internal/export.hpp"
+#include "./endpoint.hpp"
+#include "./internal/object.hpp"
+#include "./session.hpp"
 
-#include "proton/types.h"
+#include <proton/types.h>
 
 #include <string>
 

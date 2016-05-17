@@ -22,16 +22,16 @@
  *
  */
 
-#include "proton/endpoint.hpp"
-#include "proton/export.hpp"
-#include "proton/message.hpp"
-#include "proton/source.hpp"
-#include "proton/target.hpp"
-#include "proton/internal/object.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/receiver_options.hpp"
+#include "./endpoint.hpp"
+#include "./internal/export.hpp"
+#include "./message.hpp"
+#include "./source.hpp"
+#include "./target.hpp"
+#include "./internal/object.hpp"
+#include "./sender_options.hpp"
+#include "./receiver_options.hpp"
 
-#include "proton/types.h"
+#include <proton/types.h>
 
 #include <string>
 

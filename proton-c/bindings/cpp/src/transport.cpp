@@ -25,8 +25,8 @@
 #include "proton/connection.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
-#include "proton/transport.h"
-#include "proton/error.h"
+#include <proton/transport.h>
+#include <proton/error.h>
 
 #include "msg.hpp"
 #include "proton_bits.hpp"

@@ -24,7 +24,7 @@
 
 // FIXME aconway 2016-05-04: doc
 
-#include "proton/container.hpp"
+#include "./container.hpp"
 
 namespace proton {
 

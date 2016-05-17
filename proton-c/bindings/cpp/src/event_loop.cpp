@@ -22,7 +22,7 @@
 #include <proton/session.h>
 #include <proton/link.h>
 
-#include <proton/event_loop.hpp>
+#include "proton/event_loop.hpp"
 
 namespace proton {
 

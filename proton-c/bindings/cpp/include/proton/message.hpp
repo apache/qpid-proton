@@ -22,13 +22,13 @@
  *
  */
 
-#include "proton/annotation_key.hpp"
-#include "proton/codec/map.hpp"
-#include "proton/duration.hpp"
-#include "proton/export.hpp"
-#include "proton/message_id.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
-#include "proton/value.hpp"
+#include "./annotation_key.hpp"
+#include "./codec/map.hpp"
+#include "./duration.hpp"
+#include "./internal/export.hpp"
+#include "./message_id.hpp"
+#include "./internal/pn_unique_ptr.hpp"
+#include "./value.hpp"
 
 #include <string>
 #include <vector>

@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/transfer.hpp"
+#include "./internal/export.hpp"
+#include "./transfer.hpp"
 
 struct pn_delivery_t;
 

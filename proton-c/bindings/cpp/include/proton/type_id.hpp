@@ -26,9 +26,9 @@
 ///
 /// Type-identifiers for AMQP types.
 
-#include "proton/export.hpp"
+#include "./internal/export.hpp"
 
-#include "proton/codec.h"
+#include <proton/codec.h>
 
 #include <string>
 

@@ -22,8 +22,8 @@
  *
  */
 
-#include "proton/types_fwd.hpp"
-#include "proton/error.hpp"
+#include "./types_fwd.hpp"
+#include "./error.hpp"
 
 #include <iosfwd>
 

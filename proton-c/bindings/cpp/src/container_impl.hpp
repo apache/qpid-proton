@@ -28,11 +28,10 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
-#include "proton/export.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
-#include "proton/reactor.h"
+#include <proton/reactor.h>
 #include "reactor.hpp"
 #include "proton_handler.hpp"
 

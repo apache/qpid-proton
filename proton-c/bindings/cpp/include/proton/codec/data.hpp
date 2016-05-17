@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/internal/object.hpp"
-#include "proton/types_fwd.hpp"
-#include "proton/type_id.hpp"
+#include "../internal/object.hpp"
+#include "../types_fwd.hpp"
+#include "../type_id.hpp"
 
 struct pn_data_t;
 

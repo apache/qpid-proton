@@ -19,17 +19,17 @@
  *
  */
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/delivery.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/receiver_options.hpp"
-#include "proton/source_options.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/source_options.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 using proton::source_options;
 
@@ -40,13 +40,13 @@ class browser : public proton::messaging_handler {
   public:
     browser(const std::string& u) : url(u) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         proton::connection conn = c.connect(url);
         source_options browsing = source_options().distribution_mode(proton::source::COPY);
         conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
     }
 
-    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };

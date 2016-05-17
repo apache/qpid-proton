@@ -24,7 +24,7 @@
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
 
-#include "proton/link.h"
+#include <proton/link.h>
 
 #include "contexts.hpp"
 #include "container_impl.hpp"

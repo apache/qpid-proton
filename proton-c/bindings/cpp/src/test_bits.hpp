@@ -20,7 +20,7 @@
  */
 
 #include "msg.hpp"
-#include <proton/types.hpp>
+#include "proton/types.hpp"
 
 #include <stdexcept>
 #include <iostream>

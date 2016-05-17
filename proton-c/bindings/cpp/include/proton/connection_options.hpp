@@ -22,12 +22,12 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/export.hpp"
-#include "proton/duration.hpp"
-#include "proton/internal/pn_unique_ptr.hpp"
-#include "proton/reconnect_timer.hpp"
-#include "proton/types_fwd.hpp"
+#include "./internal/config.hpp"
+#include "./internal/export.hpp"
+#include "./duration.hpp"
+#include "./internal/pn_unique_ptr.hpp"
+#include "./reconnect_timer.hpp"
+#include "./types_fwd.hpp"
 
 #include <vector>
 #include <string>

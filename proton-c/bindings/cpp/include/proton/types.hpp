@@ -29,27 +29,27 @@
 
 // TODO aconway 2016-03-15: described types, described arrays.
 
-#include "proton/annotation_key.hpp"
-#include "proton/binary.hpp"
-#include "proton/codec/deque.hpp"
-#include "proton/codec/list.hpp"
-#include "proton/codec/map.hpp"
-#include "proton/codec/vector.hpp"
-#include "proton/config.hpp"
-#include "proton/decimal.hpp"
-#include "proton/duration.hpp"
-#include "proton/message_id.hpp"
-#include "proton/scalar.hpp"
-#include "proton/symbol.hpp"
-#include "proton/timestamp.hpp"
-#include "proton/types_fwd.hpp"
-#include "proton/uuid.hpp"
-#include "proton/value.hpp"
-#include "proton/config.hpp"
+#include "./annotation_key.hpp"
+#include "./binary.hpp"
+#include "./codec/deque.hpp"
+#include "./codec/list.hpp"
+#include "./codec/map.hpp"
+#include "./codec/vector.hpp"
+#include "./internal/config.hpp"
+#include "./decimal.hpp"
+#include "./duration.hpp"
+#include "./message_id.hpp"
+#include "./scalar.hpp"
+#include "./symbol.hpp"
+#include "./timestamp.hpp"
+#include "./types_fwd.hpp"
+#include "./uuid.hpp"
+#include "./value.hpp"
+#include "./internal/config.hpp"
 
 #if PN_CPP_HAS_CPP11
-#include "proton/forward_list.hpp"
-#include "proton/unordered_map.hpp"
+#include "./codec/forward_list.hpp"
+#include "./codec/unordered_map.hpp"
 #endif
 
 #endif // PROTON_TYPES_HPP

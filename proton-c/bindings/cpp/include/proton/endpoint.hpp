@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/config.hpp"
-#include "proton/error_condition.hpp"
-#include "proton/export.hpp"
-#include "proton/internal/comparable.hpp"
+#include "./internal/config.hpp"
+#include "./error_condition.hpp"
+#include "./internal/export.hpp"
+#include "./internal/comparable.hpp"
 
 namespace proton {
 

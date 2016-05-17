@@ -22,17 +22,17 @@
  *
  */
 
-#include "proton/binary.hpp"
-#include "proton/decimal.hpp"
-#include "proton/error.hpp"
-#include "proton/export.hpp"
-#include "proton/internal/comparable.hpp"
-#include "proton/internal/type_traits.hpp"
-#include "proton/symbol.hpp"
-#include "proton/timestamp.hpp"
-#include "proton/type_id.hpp"
-#include "proton/types_fwd.hpp"
-#include "proton/uuid.hpp"
+#include "../binary.hpp"
+#include "../decimal.hpp"
+#include "../error.hpp"
+#include "export.hpp"
+#include "./comparable.hpp"
+#include "./type_traits.hpp"
+#include "../symbol.hpp"
+#include "../timestamp.hpp"
+#include "../type_id.hpp"
+#include "../types_fwd.hpp"
+#include "../uuid.hpp"
 
 #include <iosfwd>
 #include <string>

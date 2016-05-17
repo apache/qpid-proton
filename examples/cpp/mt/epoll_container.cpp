@@ -45,6 +45,8 @@
 #include <sys/eventfd.h>
 #include <unistd.h>
 
+#include "../fake_cpp11.hpp"
+
 // Private implementation
 namespace  {
 
@@ -104,17 +106,17 @@ class epoll_container : public proton::io::container_impl_base {
 
     // Implemenet the proton::mt_container interface
     proton::returned<proton::connection> connect(
-        const std::string& addr, const proton::connection_options& opts) PN_CPP_OVERRIDE;
+        const std::string& addr, const proton::connection_options& opts) OVERRIDE;
 
-    proton::listener listen(const std::string& addr, proton::listen_handler&) PN_CPP_OVERRIDE;
+    proton::listener listen(const std::string& addr, proton::listen_handler&) OVERRIDE;
 
-    void stop_listening(const std::string& addr) PN_CPP_OVERRIDE;
+    void stop_listening(const std::string& addr) OVERRIDE;
 
-    void run() PN_CPP_OVERRIDE;
-    void auto_stop(bool) PN_CPP_OVERRIDE;
-    void stop(const proton::error_condition& err) PN_CPP_OVERRIDE;
+    void run() OVERRIDE;
+    void auto_stop(bool) OVERRIDE;
+    void stop(const proton::error_condition& err) OVERRIDE;
 
-    std::string id() const PN_CPP_OVERRIDE { return id_; }
+    std::string id() const OVERRIDE { return id_; }
 
     // Functions used internally.
     proton::connection add_engine(proton::connection_options opts, int fd, bool server);
@@ -232,7 +234,7 @@ class epoll_event_loop : public proton::event_loop {
 
     epoll_event_loop(pollable& p) : pollable_(p), closed_(false) {}
 
-    bool inject(std::function<void()> f) PN_CPP_OVERRIDE {
+    bool inject(std::function<void()> f) OVERRIDE {
         // Note this is an unbounded work queue.
         // A resource-safe implementation should be bounded.
         lock_guard g(lock_);
@@ -243,7 +245,7 @@ class epoll_event_loop : public proton::event_loop {
         return true;
     }
 
-    bool inject(proton::inject_handler& h) PN_CPP_OVERRIDE {
+    bool inject(proton::inject_handler& h) OVERRIDE {
         return inject(std::bind(&proton::inject_handler::on_inject, &h));
     }
 

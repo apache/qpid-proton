@@ -1,3 +1,6 @@
+#ifndef FAKE_CPP11_HPP
+#define FAKE_CPP11_HPP
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,16 +20,15 @@
  * under the License.
  */
 
-#include "proton/timestamp.hpp"
-#include <proton/types.h>
-#include <iostream>
+/// These definitions allow us to use some new C++11 features in previous compilers
+///
+/// It is strongly recommended not to copy this - just use C++11/C++14 instead!
 
-namespace proton {
+#if __cplusplus < 201103L
+#define OVERRIDE
+#else
+#define OVERRIDE override
+#endif
 
-timestamp timestamp::now() {
-    return timestamp(pn_timestamp_now());
-}
 
-std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.milliseconds(); }
-
-}
+#endif // FAKE_CPP11_HPP

@@ -22,9 +22,9 @@
  *
  */
 
-#include "proton/internal/object.hpp"
-#include "proton/types.hpp"
-#include "proton/export.hpp"
+#include "./internal/object.hpp"
+#include "./types.hpp"
+#include "./internal/export.hpp"
 
 struct pn_transport_t;
 

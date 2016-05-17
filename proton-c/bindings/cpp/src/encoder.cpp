@@ -21,16 +21,16 @@
 #include "types_internal.hpp"
 #include "msg.hpp"
 
-#include <proton/annotation_key.hpp>
-#include <proton/binary.hpp>
-#include <proton/codec/encoder.hpp>
-#include <proton/codec/data.hpp>
-#include <proton/decimal.hpp>
-#include <proton/message_id.hpp>
-#include <proton/internal/scalar_base.hpp>
-#include <proton/symbol.hpp>
-#include <proton/timestamp.hpp>
-#include <proton/value.hpp>
+#include "proton/annotation_key.hpp"
+#include "proton/binary.hpp"
+#include "proton/codec/encoder.hpp"
+#include "proton/codec/data.hpp"
+#include "proton/decimal.hpp"
+#include "proton/message_id.hpp"
+#include "proton/internal/scalar_base.hpp"
+#include "proton/symbol.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/value.hpp"
 
 #include <proton/codec.h>
 

@@ -22,7 +22,6 @@
  *
  */
 
-#include "proton/export.hpp"
 #include "proton/internal/object.hpp"
 
 #include <vector>

@@ -23,7 +23,7 @@
 
 #include "proton/error.hpp"
 
-#include "proton/url.h"
+#include <proton/url.h>
 
 #include "proton_bits.hpp"
 

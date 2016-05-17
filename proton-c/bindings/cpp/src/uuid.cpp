@@ -19,8 +19,8 @@
 
 #include "types_internal.hpp"
 
-#include <proton/uuid.hpp>
-#include <proton/types_fwd.hpp>
+#include "proton/uuid.hpp"
+#include "proton/types_fwd.hpp"
 
 #include <cstdlib>
 #include <ctime>

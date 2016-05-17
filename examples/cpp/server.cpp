@@ -21,18 +21,18 @@
 
 #include "options.hpp"
 
-#include "proton/connection.hpp"
-#include "proton/default_container.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/tracker.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/tracker.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 #include <map>
 #include <string>
 #include <cctype>
 
-#include <proton/config.hpp>
+#include "fake_cpp11.hpp"
 
 class server : public proton::messaging_handler {
   private:
@@ -44,7 +44,7 @@ class server : public proton::messaging_handler {
   public:
     server(const std::string &u) : url(u) {}
 
-    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+    void on_container_start(proton::container &c) OVERRIDE {
         connection = c.connect(url);
         connection.open_receiver(url.path());
 
@@ -59,7 +59,7 @@ class server : public proton::messaging_handler {
         return uc;
     }
 
-    void on_message(proton::delivery &, proton::message &m) PN_CPP_OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << "Received " << m.body() << std::endl;
 
         std::string reply_to = m.reply_to();

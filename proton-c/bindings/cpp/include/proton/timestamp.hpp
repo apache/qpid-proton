@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include "proton/duration.hpp"
+#include "./duration.hpp"
 
 namespace proton {
 

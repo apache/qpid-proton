@@ -19,7 +19,7 @@
 
 #include "types_internal.hpp"
 
-#include <proton/binary.hpp>
+#include "proton/binary.hpp"
 
 #include <ostream>
 #include <iomanip>

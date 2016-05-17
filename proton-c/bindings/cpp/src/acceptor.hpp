@@ -22,10 +22,10 @@
  *
  */
 
-#include "proton/export.hpp"
+#include "proton/internal/export.hpp"
 #include "proton/internal/object.hpp"
 
-#include "proton/reactor.h"
+#include <proton/reactor.h>
 
 struct pn_acceptor_t;
 

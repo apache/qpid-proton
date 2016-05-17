@@ -22,7 +22,7 @@
 #include "proton/error.hpp"
 #include "msg.hpp"
 
-#include "proton/ssl.h"
+#include <proton/ssl.h>
 
 namespace proton {
 

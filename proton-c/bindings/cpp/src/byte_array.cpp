@@ -20,7 +20,7 @@
 
 #include "types_internal.hpp"
 
-#include <proton/byte_array.hpp>
+#include "proton/byte_array.hpp"
 
 #include <ostream>
 #include <iomanip>
