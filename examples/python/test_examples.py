@@ -56,7 +56,7 @@ class ExamplesTest(unittest.TestCase):
         s.wait()
         r.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': %i}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_client_server(self, client=['client.py'], server=['server.py'], sleep=0):
@@ -135,7 +135,7 @@ class ExamplesTest(unittest.TestCase):
         s.wait()
         r.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': %i}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
         self.assertEqual(actual, expected)
 
     def test_direct_send_simple_recv(self):
@@ -147,5 +147,5 @@ class ExamplesTest(unittest.TestCase):
         r.wait()
         s.wait()
         actual = [l.strip() for l in r.stdout]
-        expected = ["{%s'sequence': %i}" % (_unicode_prefix, (i+1)) for i in range(100)]
+        expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
         self.assertEqual(actual, expected)
