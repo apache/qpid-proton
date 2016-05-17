@@ -22,7 +22,7 @@
 
 #include "proton/event_loop.hpp"
 #include "proton/error.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/uuid.hpp"
 
 #include "contexts.hpp"
