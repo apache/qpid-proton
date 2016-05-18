@@ -23,7 +23,7 @@
  */
 
 #include "./config.hpp"
-#include "export.hpp"
+#include "./export.hpp"
 #include "./comparable.hpp"
 
 #include <memory>
