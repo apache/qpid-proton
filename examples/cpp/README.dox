@@ -133,9 +133,7 @@ __Requires C++11__
 
 /** @example mt/broker.cpp
 
-A multithreaded broker, using the proton::mt extensions. This broker is
-portable over any implementation of the proton::mt API, see @ref
-mt/epoll_container.cpp for an example.
+A multithreaded broker, that will work on any multi-threaded container. See @ref mt/epoll_container.cpp for an example of a multi-threaded container.
 
 __Requires C++11__
 

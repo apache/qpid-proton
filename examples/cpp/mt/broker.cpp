@@ -120,24 +120,30 @@ class queues {
 /// concurrently. Resources used by multiple connections (e.g. the queues in
 /// this example) must be thread-safe.
 ///
-/// FIXME aconway 2016-05-10: doc - point out queue/sender interaction as
-/// example of communication via event_loop::inject()
+/// 4. You can 'inject' work to be done sequentially using a connection's
+/// proton::event_loop. In this example, we create a std::function callback
+/// that we pass to queues, so they can notify us when they have messages.
 ///
 class broker_connection_handler : public proton::messaging_handler {
   public:
     broker_connection_handler(queues& qs) : queues_(qs) {}
 
     void on_connection_open(proton::connection& c) OVERRIDE {
-        // Create the has_messages callback for use with queue subscriptions.
+        // Create the has_messages callback for queue subscriptions.
         //
-        // FIXME aconway 2016-05-09: doc lifecycle: handler tied to c.
-        // explain why this is safe & necessary
+        // Make a std::shared_ptr to a thread_safe handle for our proton::connection.
+        // The connection's proton::event_loop will remain valid as a shared_ptr exists.
         std::shared_ptr<proton::thread_safe<proton::connection> > ts_c = make_shared_thread_safe(c);
+
+        // Make a lambda function to inject a call to this->has_messages() via the proton::event_loop.
+        // The function is bound to a shared_ptr so this is safe. If the connection has already closed
+        // proton::event_loop::inject() will drop the callback.
         has_messages_callback_ = [this, ts_c](queue* q) mutable {
             ts_c->event_loop()->inject(
                 std::bind(&broker_connection_handler::has_messages, this, q));
         };
-        c.open();            // Always accept
+
+        c.open();            // Accept the connection
     }
 
     // A sender sends messages from a queue to a subscriber.
@@ -211,8 +217,7 @@ class broker_connection_handler : public proton::messaging_handler {
         return popped;
     }
 
-    // FIXME aconway 2016-05-09: doc
-    // Called via the connections event_loop when q has messages.
+    // Called via the connection's proton::event_loop when q has messages.
     // Try all the blocked senders.
     void has_messages(queue* q) {
         auto range = blocked_.equal_range(q);

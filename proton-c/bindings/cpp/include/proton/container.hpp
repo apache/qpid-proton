@@ -22,8 +22,6 @@
  *
  */
 
-// FIXME aconway 2016-05-04: doc
-
 #include "./connection_options.hpp"
 #include "./error_condition.hpp"
 #include "./listener.hpp"
@@ -84,8 +82,6 @@ class PN_CPP_CLASS_EXTERN container {
     virtual void stop_listening(const std::string& url) = 0;
     /// @endcond
 
-    // FIXME aconway 2016-05-13: doc options
-
     /// Start listening on url.
     ///
     /// Calls to the @ref listen_handler are serialized for this listener,
@@ -105,20 +101,20 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN virtual listener listen(const std::string& url);
 
     /// Run the container in this thread.
-    /// Returns when the container stops: see auto_stop() and stop().
+    /// Returns when the container stops.
+    /// @see auto_stop() and stop().
     ///
     /// With a multithreaded container, call run() in multiple threads to create a thread pool.
     virtual void run() = 0;
 
-    /// If true, the container will stop (i.e., run() will return)
-    /// when all active connections and listeners are closed. If false
-    /// the container will keep running till stop() is called.
+    /// If true, stop the container when all active connections and listeners are closed.
+    /// If false the container will keep running till stop() is called.
     ///
     /// auto_stop is set by default when a new container is created.
-    // FIXME aconway 2016-05-06: doc
     virtual void auto_stop(bool) = 0;
 
-    /// Stop the container with an optional error_condition err.
+    /// **Experimental** - Stop the container with an optional
+    /// error_condition err.
     ///
     ///  - Abort all open connections and listeners.
     ///  - Process final handler events and injected functions
@@ -152,7 +148,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// container's template options.
     PN_CPP_EXTERN virtual returned<receiver> open_receiver(const std::string&url,
                                                            const proton::receiver_options &o);
-    
+
     /// Open a connection to `url` and open a receiver for
     /// `url.path()`.  Any supplied receiver or connection options will
     /// override the container's template options.
@@ -162,8 +158,6 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// A unique identifier for the container.
     virtual std::string id() const = 0;
-
-    // FIXME aconway 2016-05-04: need timed injection to replace schedule()
 
     /// Connection options that will be to outgoing connections. These
     /// are applied first and overriden by options provided in
@@ -185,7 +179,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Sender options applied to senders created by this
     /// container. They are applied before messaging_handler::on_sender_open()
     /// and can be overridden.
-    virtual void sender_options(const sender_options &) = 0;
+    virtual void sender_options(const class sender_options &) = 0;
 
     /// @copydoc sender_options
     virtual class sender_options sender_options() const = 0;
@@ -193,7 +187,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// Receiver options applied to receivers created by this
     /// container. They are applied before messaging_handler::on_receiver_open()
     /// and can be overridden.
-    virtual void receiver_options(const receiver_options &) = 0;
+    virtual void receiver_options(const class receiver_options &) = 0;
 
     /// @copydoc receiver_options
     virtual class receiver_options receiver_options() const = 0;

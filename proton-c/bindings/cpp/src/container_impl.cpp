@@ -197,7 +197,6 @@ listener container_impl::listen(const std::string& url, listen_handler& lh) {
         throw error("already listening on " + url);
     connection_options opts = server_connection_options(); // Defaults
     proton_handler *h = opts.handler();
-    // FIXME aconway 2016-05-12: chandler and acceptor??
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     proton::url u(url);
     pn_acceptor_t *acptr = pn_reactor_acceptor(
