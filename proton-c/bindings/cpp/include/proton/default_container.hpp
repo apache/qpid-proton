@@ -67,17 +67,17 @@ class PN_CPP_CLASS_EXTERN  default_container : public container {
     PN_CPP_EXTERN void run() PN_CPP_OVERRIDE;
     PN_CPP_EXTERN void auto_stop(bool set) PN_CPP_OVERRIDE;
 
-    PN_CPP_EXTERN void stop(const error_condition& err = error_condition()) PN_CPP_OVERRIDE;
+    PN_CPP_EXTERN void stop(const error_condition& err) PN_CPP_OVERRIDE;
 
     PN_CPP_EXTERN returned<sender> open_sender(
         const std::string &url,
-        const proton::sender_options &o = proton::sender_options(),
-        const connection_options &c = connection_options()) PN_CPP_OVERRIDE;
+        const proton::sender_options &o,
+        const connection_options &c) PN_CPP_OVERRIDE;
 
     PN_CPP_EXTERN returned<receiver> open_receiver(
         const std::string&url,
-        const proton::receiver_options &o = proton::receiver_options(),
-        const connection_options &c = connection_options()) PN_CPP_OVERRIDE;
+        const proton::receiver_options &o,
+        const connection_options &c) PN_CPP_OVERRIDE;
 
     PN_CPP_EXTERN std::string id() const PN_CPP_OVERRIDE;
     PN_CPP_EXTERN void client_connection_options(const connection_options &o) PN_CPP_OVERRIDE;

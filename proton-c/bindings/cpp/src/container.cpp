@@ -87,4 +87,6 @@ listener container::listen(const std::string &url) {
     return listen(url, connection_options());
 }
 
+void container::stop() { stop(error_condition()); }
+
 } // namespace proton

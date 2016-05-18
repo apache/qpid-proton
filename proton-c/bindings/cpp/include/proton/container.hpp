@@ -118,13 +118,16 @@ class PN_CPP_CLASS_EXTERN container {
     // FIXME aconway 2016-05-06: doc
     virtual void auto_stop(bool) = 0;
 
-    /// Stop the container with an optional error_condition err.
+    /// Stop the container with an error_condition err.
     ///
     ///  - Abort all open connections and listeners.
     ///  - Process final handler events and injected functions
     ///  - If `!err.empty()`, handlers will receive on_transport_error
     ///  - run() will return in all threads.
-    virtual void stop(const error_condition& err = error_condition()) = 0;
+    virtual void stop(const error_condition& err) = 0;
+
+    /// Stop the container with an empty error condition. See stop(const error_condition&)
+    PN_CPP_EXTERN virtual void stop();
 
     /// Open a connection to `url` and open a sender for `url.path()`.
     PN_CPP_EXTERN virtual returned<sender> open_sender(const std::string &url);
