@@ -1,29 +1,41 @@
-# Multithreaded Proton {#mt_page}
+# Multithreaded Proton Applications {#mt_page}
 
 **Experimental**
 
-<!-- FIXME aconway 2016-05-04: doc -->
+For an example see @ref mt/broker.cpp
 
-Most classes in namespace @ref proton are not thread-safe. Objects
-associated with a single connection *must not* be used
-concurrently. However, objects associated with *different* connections
-*can* be used concurrently in separate threads.
+Most classes in namespace @ref proton are not thread-safe. Objects belonging
+to a single connection (`proton::connection`, `proton::sender`,
+`proton::receiver` and so on) *must not* be used concurrently. Objects associated with
+*different* connections *can* be used concurrently in separate threads.
 
-The recommended way to use proton multithreaded is to *serialize* the
-work for each connection but allow different connections to be
-processed concurrently.
+A multi-threaded container calls event-handling functions for each connection
+*sequentially* but can process *different* connections concurrently in different
+threads. If you use a *separate* `proton::messaging_handler` to for each
+connection, then event handling functions can can use their parameters and the
+handler's own data members without locks. The handler functions will never be
+called concurrently. You can set the handlers for each connection using
+`proton::container::connect()` and `proton::container::listen()`.
 
-proton::container allows you to manage connections in a multithreaded
-way. You supply a proton::messaging_handler for each
-connection. Proton will ensure that the
-`proton::messaging_handler::on_*()` functions are never called
-concurrently so per-connection handlers do not need a lock even if
-they have state.
+The example @ref mt/broker.cpp is a multi-threaded broker using this approach.
+It creates a new handler for each incoming connection to manage the state of
+that connection's `proton::sender` and `proton::receiver` links. The handler
+needs no lock because it only deals with state for one connection.
 
-proton::event_loop allows you to make calls to arbitrary functions or
-other code, serialized in the same way as
-`proton::messaging_handler::on_*()` calls. Typically this is used to
-call your own handler's member functions in the same way as
-proton::messaging_handler override functions.
+The `proton::event_loop` represents the sequence of events associated with a
+connection.  `proton::event_loop::inject()` allows another thread to "inject"
+work to be executed in sequence with the rest of the events so it can operate
+safely on data associated with the connection.
 
-For an example see @ref mt/broker.cpp.
+In the @ref mt/broker.cpp example, a queue can receive messages from one
+connection but have subscribers on another connection. Subscribers pass a
+function object to the queue which uses `proton::event_loop::inject()` to call a
+notification callback on the handler for that connection. The callback is
+executed in the connection's event-loop so it can use a `proton::sender` object
+to send the message safely.
+
+Note: It is possible to share a single handler between more than one connection.
+In that case it *can* be called concurrently on behalf of different connections, so
+you will need suitable locking.
+
+@see @ref io_page - implementing your own container.

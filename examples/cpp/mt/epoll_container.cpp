@@ -104,7 +104,6 @@ class epoll_container : public proton::io::container_impl_base {
     epoll_container(const std::string& id);
     ~epoll_container();
 
-    // Implemenet the proton::mt_container interface
     proton::returned<proton::connection> connect(
         const std::string& addr, const proton::connection_options& opts) OVERRIDE;
 

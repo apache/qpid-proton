@@ -30,8 +30,6 @@
 
 #include <functional>
 
-// FIXME aconway 2016-05-03: doc
-
 namespace proton {
 
 class connection;
@@ -51,21 +49,22 @@ template<> struct endpoint_traits<receiver> {};
 
 template <class T> class returned;
 
-// FIXME aconway 2016-05-09: doc
 /// **Experimental** - A thread-safe object wrapper.
-///    
-/// Events for each proton::connection are processed sequentially in
-/// an event_loop. proton::messaging_handler functions for a single connection
-/// are never called concurrently. inject() lets you add user-defined
-/// function calls to be processed in the event loop sequence.
 ///
-/// thread_safe is useful with multi-threaded programs, where
-/// different connection's event loops can run concurrently. Proton
-/// objects associated with a connection (proton::connection,
-/// proton::sender, etc.) are not thread safe, so they can only be
-/// used in the context of the connection's thread_safe.  inject()
-/// allows any thread (application threads or thread_safe threads for
-/// different connections) to communicate safely.
+/// The proton::object subclasses (proton::connection, proton::sender etc.) are
+/// reference-counted wrappers for C structs. They are not safe for concurrent use,
+/// not even to copy or assign.
+///
+/// A pointer to thread_safe<> can be used from any thread to get the
+/// proton::event_loop for the object's connection. The object will not be
+/// destroyed until the thread_safe<> is deleted. You can use std::shared_ptr,
+/// std::unique_ptr or any other memory management technique to manage the
+/// thread_safe<>.
+///
+/// Use make_thread_safe(), make_shared_thread_safe(), make_unique_thread_safe() to
+/// create a thread_safe<>
+///
+/// @see @ref mt_page
 template <class T>
 class thread_safe : private internal::pn_ptr_base, private internal::endpoint_traits<T> {
     typedef typename T::pn_type pn_type;
@@ -73,7 +72,7 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     struct inject_decref : public inject_handler {
         pn_type* ptr_;
         inject_decref(pn_type* p) : ptr_(p) {}
-        void on_inject() { decref(ptr_); delete this; }
+        void on_inject() PN_CPP_OVERRIDE { decref(ptr_); delete this; }
     };
 
   public:
@@ -98,22 +97,16 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     /// Get the event loop for this object.
     class event_loop* event_loop() { return event_loop::get(ptr()); }
 
-    /// @cond INTERNAL
-    /// XXX Not sure what the status of these is
-    
-    // FIXME aconway 2016-05-04: doc
+    /// Get the thread-unsafe proton object wrapped by this thread_safe<T>
     T unsafe() { return T(ptr()); }
 
-    // Caller must delete
-    static thread_safe* create(const T& obj) { return new (obj.pn_object()) thread_safe(); }
-
-    /// @endcond
-    
   private:
+    static thread_safe* create(const T& obj) { return new (obj.pn_object()) thread_safe(); }
     static void* operator new(size_t, pn_type* p) { return p; }
     static void operator delete(void*, pn_type*) {}
     thread_safe() { incref(ptr()); }
     pn_type* ptr() { return reinterpret_cast<pn_type*>(this); }
+
 
     // Non-copyable.
     thread_safe(const thread_safe&);
@@ -124,15 +117,18 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     /// @endcond
 };
 
-// FIXME aconway 2016-05-04: doc.
-// Temporary return value only, not a real smart_ptr.
-// Release or convert to some other pointer type immediately.
+// return value for functions returning a thread_safe<> object.
+//
+// Temporary return value only, you should release() to get a plain pointer or
+// assign to a smart pointer type.
 template <class T>
 class returned : private internal::endpoint_traits<T>
 {
   public:
     /// Take ownership
     explicit returned(thread_safe<T>* p) : ptr_(p) {}
+    /// Create an owned thread_safe<T>
+    explicit returned(const T& obj) : ptr_(thread_safe<T>::create(obj)) {}
     /// Transfer ownership.
     /// Use the same "cheat" as std::auto_ptr, calls x.release() even though x is const.
     returned(const returned& x) : ptr_(const_cast<returned&>(x).release()) {}
@@ -162,26 +158,16 @@ class returned : private internal::endpoint_traits<T>
     mutable thread_safe<T>* ptr_;
 };
 
-// XXX Review this text
 /// Make a thread-safe wrapper for `obj`.
-template <class T> returned<T> make_thread_safe(const T& obj) {
-    return returned<T>(thread_safe<T>::create(obj));
-}
-
-// XXX Review this text
-/// Get a thread-unsafe pointer for `p`.
-template <class T> T make_thread_unsafe(T* p) { return p->unsafe(); }
+template <class T> returned<T> make_thread_safe(const T& obj) { return returned<T>(obj); }
 
 #if PN_CPP_HAS_CPP11
 template <class T> std::shared_ptr<thread_safe<T> > make_shared_thread_safe(const T& obj) {
-    return std::shared_ptr<thread_safe<T> >(thread_safe<T>::create(obj));
+    return make_thread_safe(obj);
 }
 template <class T> std::unique_ptr<thread_safe<T> > make_unique_thread_safe(const T& obj) {
-    return std::unique_ptr<thread_safe<T> >(thread_safe<T>::create(obj));
+    return make_thread_safe(obj);
 }
-
-template <class T> T make_thread_unsafe(const std::shared_ptr<T>& p) { return p->unsafe(); }
-template <class T> T make_thread_unsafe(const std::unique_ptr<T>& p) { return p->unsafe(); }
 #endif
 
 } // proton

@@ -20,7 +20,7 @@ how to run them using the `proton::container`, a portable, easy-to-use way to
 build single-threaded clients or servers.
 
 @note Proton can also be embedded or integrated into arbitrary IO frameworks and used
-to build multi-threaded applications. See namespace proton::mt for more.
+to build multi-threaded applications. See @ref mt_page for more.
 
 Some of the examples require an AMQP *broker* that can receive, store and send
 messages. @ref broker.hpp and @ref broker.cpp define a simple example

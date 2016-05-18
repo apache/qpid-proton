@@ -37,32 +37,36 @@ struct pn_link_t;
 
 namespace proton {
 
-// FIXME aconway 2016-05-04: doc
-
 /// **Experimental** - A handler for injected code.
 class inject_handler {
   public:
     virtual ~inject_handler() {}
 
-    // XXX I feel like the name of this isn't quite right.  The event
-    // isn't injection, it's execution.
-    /// The code is executed.
+    // XXX bad name, should be operator()() to be idiomatic and consistent with C++11.
+    /// Called when the injected code is executed.
     virtual void on_inject() = 0;
 };
 
 /// **Experimental** - A serial execution context.
+///
+/// Event handler functions associated with a single proton::connection are called in sequence.
+/// The connection's @ref event_loop allows you to "inject" extra work from any thread,
+/// and have it executed in the same sequence.
+///
 class PN_CPP_CLASS_EXTERN event_loop {
   public:
     virtual ~event_loop() {}
 
-    // FIXME aconway 2016-05-05: doc, note bool return not throw because no
-    // atomic way to determine closd status and throw during shutdown is bad.
-    /// Send code to the event loop for execution.
-    virtual bool inject(inject_handler&) = 0;
+    /// Arrange to have f() called in the event_loop's sequence: possibly
+    /// deferred, possibly in another thread.
+    ///
+    /// @return true if f() has or will be called, false if the event_loop is ended
+    /// and f() cannot be injected.
+    virtual bool inject(inject_handler& f) = 0;
 
 #if PN_CPP_HAS_CPP11
-    /// Send code to the event loop for execution.
-    virtual bool inject(std::function<void()>) = 0;
+    /// @copydoc inject(inject_handler&)
+    virtual bool inject(std::function<void()> f) = 0;
 #endif
 
   protected:

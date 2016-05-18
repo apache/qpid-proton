@@ -43,8 +43,6 @@ namespace proton {
 class event_loop;
 class proton_handler;
 
-// FIXME aconway 2016-05-04: doc
-
 namespace io {
 
 class link_namer;
@@ -192,7 +190,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
-    // FIXME aconway 2016-05-06: reduce binary compat footprint, move stuff to connection context.
+    // TODO aconway 2016-05-06: reduce binary compat footprint, move stuff to connection context.
     proton::proton_handler* handler_;
     proton::connection connection_;
     proton::transport transport_;
