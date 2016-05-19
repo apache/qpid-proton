@@ -118,9 +118,7 @@ if (MSVC)
     OPTIONAL)
 endif (MSVC)
 
-# Install header files
-file(GLOB headers "include/proton/*.hpp")
-install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
+install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
 
 add_subdirectory(docs)
 add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)
