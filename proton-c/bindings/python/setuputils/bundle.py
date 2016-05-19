@@ -35,7 +35,7 @@ from . import log
 min_qpid_proton = (0, 11, 0)
 min_qpid_proton_str = "%i.%i.%i" % min_qpid_proton
 
-bundled_version = (0, 11, 1)
+bundled_version = (0, 11, 2)
 bundled_version_str = "%i.%i.%i" % bundled_version
 libqpid_proton = "qpid-proton-%s.tar.gz" % bundled_version_str
 libqpid_proton_url = ("http://www.apache.org/dist/qpid/proton/%s/%s" %

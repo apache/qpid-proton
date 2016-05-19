@@ -366,7 +366,7 @@ cmdclass = {'configure': Configure,
             'sdist': CheckSDist}
 
 setup(name='python-qpid-proton',
-      version=bundle.bundled_version_str + ".post1",
+      version=bundle.bundled_version_str,
       description='An AMQP based messaging library.',
       author='Apache Qpid',
       author_email='proton@qpid.apache.org',
