@@ -47,7 +47,7 @@ namespace {
             << proton::binary(selector_str)
             << proton::codec::finish();
         // In our case, the map has this one element
-        map[filter_key] = filter_value;
+        map.put(filter_key, filter_value);
         opts.filters(map);
     }
 }
