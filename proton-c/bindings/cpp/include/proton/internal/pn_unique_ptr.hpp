@@ -51,8 +51,10 @@ template <class T> class pn_unique_ptr {
     T* get() const { return ptr_; }
     void reset(T* p = 0) { pn_unique_ptr<T> tmp(p); std::swap(ptr_, tmp.ptr_); }
     T* release() { T *p = ptr_; ptr_ = 0; return p; }
-    operator bool() const { return get(); }
-    bool operator !() const { return get(); }
+#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
+    explicit operator bool() const { return get(); }
+#endif
+    bool operator !() const { return !get(); }
 
 #if PN_CPP_HAS_STD_PTR
     operator std::unique_ptr<T>() { T *p = ptr_; ptr_ = 0; return std::unique_ptr<T>(p); }
