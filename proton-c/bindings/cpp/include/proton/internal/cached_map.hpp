@@ -22,72 +22,66 @@
  *
  */
 
-#include "../value.hpp"
-#include "../codec/decoder.hpp"
-#include "../codec/encoder.hpp"
-
 #include "./config.hpp"
+#include "./export.hpp"
 #include "./pn_unique_ptr.hpp"
 
-#include <map>
+#include <cstddef>
 
 namespace proton {
+
+namespace codec {
+class decoder;
+class encoder;
+}
+
 namespace internal {
+
+template <class key_type, class value_type>
+class map_type_impl;
 
 /// A convenience class to view and manage AMQP map data contained in
 /// a proton::value.  An internal cache of the map data is created as
-/// needed.  If desired, a std::map can be extracted from or inserted
-/// into the cached_map value directly.
+/// needed.
+template <class K, class V>
+class cached_map;
+
+template <class K, class V>
+PN_CPP_EXTERN proton::codec::decoder& operator>>(proton::codec::decoder& d, cached_map<K,V>& m);
+template <class K, class V>
+PN_CPP_EXTERN proton::codec::encoder& operator<<(proton::codec::encoder& e, const cached_map<K,V>& m);
+
 template <class key_type, class value_type>
-class cached_map {
-    typedef std::map<key_type, value_type> map_type;
+class PN_CPP_CLASS_EXTERN cached_map {
+    typedef map_type_impl<key_type, value_type> map_type;
+
   public:
-
-#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
-    cached_map() = default;
-    cached_map(const cached_map&) = default;
-    cached_map& operator=(const cached_map&) = default;
-    cached_map(cached_map&&) = default;
-    cached_map& operator=(cached_map&&) = default;
-    ~cached_map() = default;
+    PN_CPP_EXTERN cached_map();
+    PN_CPP_EXTERN cached_map(const cached_map& cm);
+    PN_CPP_EXTERN cached_map& operator=(const cached_map& cm);
+#if PN_CPP_HAS_RVALUE_REFERENCES
+    PN_CPP_EXTERN cached_map(cached_map&&);
+    PN_CPP_EXTERN cached_map& operator=(cached_map&&);
 #endif
+    PN_CPP_EXTERN ~cached_map();
 
-    value_type get(const key_type& k) const {
-      typename map_type::const_iterator i = map_.find(k);
-      if ( i==map_.end() ) return value_type();
-      return i->second;
-    }
-    void put(const key_type& k, const value_type& v) {
-      map_[k] = v;
-    }
-    size_t erase(const key_type& k) {
-      return map_.erase(k);
-    }
-    bool exists(const key_type& k) const {
-      return map_.count(k) > 0;
-    }
+    PN_CPP_EXTERN value_type get(const key_type& k) const;
+    PN_CPP_EXTERN void put(const key_type& k, const value_type& v);
+    PN_CPP_EXTERN size_t erase(const key_type& k);
+    PN_CPP_EXTERN bool exists(const key_type& k) const;
+    PN_CPP_EXTERN size_t size();
+    PN_CPP_EXTERN void clear();
+    PN_CPP_EXTERN bool empty();
 
-    size_t size() {
-      return map_.size();
-    }
-    void clear() {
-      map_.clear();
-    }
-    bool empty() {
-      return map_.empty();
-    }
-
-    /// @cond INTERNAL
+  /// @cond INTERNAL
   private:
-    map_type map_;
-    /// @endcond
+    pn_unique_ptr<map_type> map_;
 
-    friend proton::codec::decoder& operator>>(proton::codec::decoder& d, cached_map& m) {
-      return d >> m.map_;
-    }
-    friend proton::codec::encoder& operator<<(proton::codec::encoder& e, const cached_map& m) {
-      return e << m.map_;
-    }
+    void make_cached_map();
+
+  friend PN_CPP_EXTERN proton::codec::decoder& operator>> <>(proton::codec::decoder& d, cached_map<key_type, value_type>& m);
+  friend PN_CPP_EXTERN proton::codec::encoder& operator<< <>(proton::codec::encoder& e, const cached_map<key_type, value_type>& m);
+  /// @endcond
 };
 
 
