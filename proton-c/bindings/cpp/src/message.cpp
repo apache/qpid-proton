@@ -142,8 +142,9 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    codec::encoder e(make_wrapper(pn_message_correlation_id(pn_msg())));
-    e << id;
+    value v;
+    v.data_ = make_wrapper(pn_message_correlation_id(pn_msg()));
+    v = id;
 }
 
 message_id message::correlation_id() const {
