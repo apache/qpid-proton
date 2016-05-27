@@ -54,7 +54,7 @@ message& message::operator=(message&& m) {
 message::message(const value& x) : pn_msg_(0) { body() = x; }
 
 message::~message() {
-    body_.data_ = codec::data();      // Must release body before pn_message_free
+    body_.data_ = internal::data();      // Must release body before pn_message_free
     pn_message_free(pn_msg_);
 }
 

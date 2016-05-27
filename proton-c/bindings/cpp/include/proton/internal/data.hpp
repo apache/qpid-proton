@@ -1,5 +1,5 @@
-#ifndef PROTON_CODEC_DATA_HPP
-#define PROTON_CODEC_DATA_HPP
+#ifndef PROTON_INTERNAL_DATA_HPP
+#define PROTON_INTERNAL_DATA_HPP
 
 /*
  *
@@ -24,7 +24,6 @@
 
 #include "../internal/object.hpp"
 #include "../types_fwd.hpp"
-#include "../type_id.hpp"
 
 struct pn_data_t;
 
@@ -32,12 +31,11 @@ namespace proton {
 
 class value;
 
-// XXX -> internal namespace
-namespace codec {
+namespace internal {
 
 /// @cond INTERNAL
 /// Wrapper for a proton data object.
-class data : public internal::object<pn_data_t> {
+class data : public object<pn_data_t> {
     /// Wrap an existing proton-C data object.
     data(pn_data_t* d) : internal::object<pn_data_t>(d) {}
 
@@ -94,40 +92,14 @@ struct state_guard {
     /// @cond INTERNAL
     state_guard(data& d) : data_(d), point_(data_.point()), cancel_(false) {}
     /// @endcond
-    
+
     ~state_guard() { if (!cancel_) data_.restore(point_); }
 
     /// Discard the saved state.
     void cancel() { cancel_ = true; }
 };
 
-/// **Experimental** - Start encoding a complex type.
-struct start {
-    /// @cond INTERNAL
-    /// XXX Document
-    start(type_id type_=NULL_TYPE, type_id element_=NULL_TYPE,
-          bool described_=false, size_t size_=0) :
-        type(type_), element(element_), is_described(described_), size(size_) {}
-
-    type_id type;            ///< The container type: ARRAY, LIST, MAP or DESCRIBED.
-    type_id element;         ///< the element type for array only.
-    bool is_described;       ///< true if first value is a descriptor.
-    size_t size;             ///< the element count excluding the descriptor (if any)
-    /// @endcond
-
-    /// @cond INTERNAL
-    /// XXX Document
-    static start array(type_id element, bool described=false) { return start(ARRAY, element, described); }
-    static start list() { return start(LIST); }
-    static start map() { return start(MAP); }
-    static start described() { return start(DESCRIBED, NULL_TYPE, true); }
-    /// @endcond
-};
-
-/// **Experimental** - Finish inserting or extracting a complex type.
-struct finish {};
-
-} // codec
+} // internal
 } // proton
 
-#endif // PROTON_CODEC_DATA_HPP
+#endif // PROTON_INTERNAL_DATA_HPP

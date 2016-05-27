@@ -44,7 +44,7 @@ struct pn_reactor_t;
 
 namespace proton {
 
-namespace codec { class data; }
+namespace internal { class data; }
 class transport;
 class sasl;
 class ssl;
@@ -83,7 +83,7 @@ namespace internal {
 
 // These traits relate the wrapped and wrapper classes for the templated factories below
 template <class T> struct wrapped {};
-template <> struct wrapped<codec::data> { typedef pn_data_t type; };
+template <> struct wrapped<internal::data> { typedef pn_data_t type; };
 template <> struct wrapped<transport> { typedef pn_transport_t type; };
 template <> struct wrapped<sasl> { typedef pn_sasl_t type; };
 template <> struct wrapped<ssl> { typedef pn_ssl_t type; };
@@ -103,7 +103,7 @@ template <> struct wrapped<target> { typedef pn_terminus_t type; };
 template <> struct wrapped<reactor> { typedef pn_reactor_t type; };
 
 template <class T> struct wrapper {};
-template <> struct wrapper<pn_data_t> { typedef codec::data type; };
+template <> struct wrapper<pn_data_t> { typedef internal::data type; };
 template <> struct wrapper<pn_transport_t> { typedef transport type; };
 template <> struct wrapper<pn_sasl_t> { typedef sasl type; };
 template <> struct wrapper<pn_ssl_t> { typedef ssl type; };

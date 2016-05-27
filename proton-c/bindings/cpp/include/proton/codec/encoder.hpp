@@ -22,9 +22,10 @@
  *
  */
 
-#include "./data.hpp"
+#include "../internal/data.hpp"
 #include "../internal/type_traits.hpp"
 #include "../types_fwd.hpp"
+#include "./common.hpp"
 
 namespace proton {
 
@@ -41,7 +42,7 @@ namespace codec {
 /// For internal use only.
 ///
 /// @see @ref types_page for the recommended ways to manage AMQP data
-class encoder : public data {
+class encoder : public internal::data {
   public:
     /// Wrap Proton-C data object.
     explicit encoder(const data& d) : data(d) {}
@@ -126,7 +127,7 @@ class encoder : public data {
     }
 
     template <class T> encoder& operator<<(const map_cref<T>& x) {
-        state_guard sg(*this);
+        internal::state_guard sg(*this);
         *this << start::map();
         for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
             *this << i->first << i->second;
@@ -135,7 +136,7 @@ class encoder : public data {
     }
 
     template <class T> encoder& operator<<(const list_cref<T>& x) {
-        state_guard sg(*this);
+        internal::state_guard sg(*this);
         *this << start::list();
         for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
             *this << *i;
@@ -144,7 +145,7 @@ class encoder : public data {
     }
 
     template <class T> encoder& operator<<(const array_cref<T>& x) {
-        state_guard sg(*this);
+        internal::state_guard sg(*this);
         *this << x.array_start;
         for (typename T::const_iterator i = x.ref.begin(); i != x.ref.end(); ++i)
             *this << *i;

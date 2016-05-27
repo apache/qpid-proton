@@ -18,7 +18,7 @@
  */
 
 #include "proton_bits.hpp"
-#include "proton/codec/data.hpp"
+#include "proton/internal/data.hpp"
 #include "proton/value.hpp"
 #include "proton/types.hpp"
 #include "proton/scalar.hpp"
@@ -28,11 +28,13 @@
 
 namespace proton {
 
-using namespace codec;
+using codec::decoder;
+using codec::encoder;
+using codec::start;
 
 value::value() {}
 value::value(const value& x) { *this = x; }
-value::value(const codec::data& x) { if (!x.empty()) data().copy(x); }
+value::value(const internal::data& x) { if (!x.empty()) data().copy(x); }
 #if PN_CPP_HAS_RVALUE_REFERENCES
 value::value(value&& x) { swap(*this, x); }
 value& value::operator=(value&& x) { swap(*this, x); return *this; }
@@ -61,9 +63,9 @@ type_id value_base::type() const {
 bool value_base::empty() const { return type() == NULL_TYPE; }
 
 // On demand
-codec::data& value_base::data() const {
+internal::data& value_base::data() const {
     if (!data_)
-        data_ = codec::data::create();
+        data_ = internal::data::create();
     return data_;
 }
 
@@ -145,7 +147,7 @@ int compare_next(decoder& a, decoder& b) {
 
 int compare(const value& x, const value& y) {
     decoder a(x), b(y);
-    state_guard s1(a), s2(b);
+    internal::state_guard s1(a), s2(b);
     a.rewind();
     b.rewind();
     while (a.more() && b.more()) {

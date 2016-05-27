@@ -32,9 +32,11 @@
 
 namespace {
 
-using namespace proton;
-using namespace test;
 using namespace std;
+using namespace proton;
+
+using test::dummy_container;
+using test::dummy_event_loop;
 
 dummy_container cont;
 

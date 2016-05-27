@@ -23,7 +23,8 @@ namespace {
 
 using namespace std;
 using namespace proton;
-using namespace test;
+
+using test::scalar_test_group;
 
 // NOTE: proton::coerce<> and bad proton::get() are tested in value_test to avoid redundant test code.
 

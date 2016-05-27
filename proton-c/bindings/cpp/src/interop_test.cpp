@@ -32,8 +32,13 @@ namespace {
 
 using namespace std;
 using namespace proton;
-using namespace proton::codec;
-using namespace test;
+
+using proton::codec::encoder;
+using proton::codec::decoder;
+
+using proton::internal::data;
+
+using test::str;
 
 std::string tests_dir;
 

@@ -50,8 +50,8 @@ class value_base {
     PN_CPP_EXTERN bool empty() const;
 
   protected:
-    codec::data& data() const;
-    mutable class codec::data data_;
+    internal::data& data() const;
+    mutable class internal::data data_;
 
     /// @cond INTERNAL    
   friend class proton::message;
@@ -119,7 +119,7 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// @}
 
     /// @cond INTERNAL
-    PN_CPP_EXTERN explicit value(const codec::data&);
+    PN_CPP_EXTERN explicit value(const internal::data&);
     /// @endcond
 };
 

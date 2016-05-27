@@ -23,7 +23,9 @@ namespace {
 
 using namespace std;
 using namespace proton;
-using namespace test;
+
+using test::many;
+using test::scalar_test_group;
 
 // Inserting and extracting arrays from a container T of type U
 template <class T> void sequence_test(type_id tid, const many<typename T::value_type>& values) {

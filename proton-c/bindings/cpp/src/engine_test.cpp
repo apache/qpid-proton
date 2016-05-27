@@ -34,10 +34,15 @@
 
 namespace {
 
-using namespace proton::io;
-using namespace proton;
-using namespace test;
 using namespace std;
+using namespace proton;
+
+using proton::io::connection_engine;
+using proton::io::link_namer;
+using proton::io::const_buffer;
+using proton::io::mutable_buffer;
+
+using test::dummy_container;
 
 typedef std::deque<char> byte_stream;
 

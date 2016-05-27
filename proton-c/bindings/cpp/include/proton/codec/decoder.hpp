@@ -22,9 +22,10 @@
  *
  */
 
-#include "./data.hpp"
+#include "../internal/data.hpp"
 #include "../internal/type_traits.hpp"
 #include "../types_fwd.hpp"
+#include "./common.hpp"
 
 #include <utility>
 
@@ -47,7 +48,7 @@ namespace codec {
 /// For internal use only.
 ///
 /// @see @ref types_page for the recommended ways to manage AMQP data
-class decoder : public data {
+class decoder : public internal::data {
   public:
     /// Wrap a Proton C data object.  The exact flag if set means
     /// decode only when there is an exact match between the AMQP and

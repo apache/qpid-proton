@@ -47,19 +47,19 @@ inline void assert_equalish(double want, double got, double delta, const std::st
 }
 
 #define FAIL_MSG(WHAT) (MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT).str())
-#define FAIL(WHAT) throw fail(FAIL_MSG(WHAT))
+#define FAIL(WHAT) throw test::fail(FAIL_MSG(WHAT))
 #define ASSERT(TEST) do { if (!(TEST)) FAIL("failed ASSERT(" #TEST ")"); } while(false)
 #define ASSERT_EQUAL(WANT, GOT) \
-    assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
+    test::assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
 #define ASSERT_EQUALISH(WANT, GOT, DELTA) \
-    assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
+    test::assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \
         try {                                                           \
             TEST;                                                       \
             break;                                                      \
-        } catch(const fail& e) {                                        \
+        } catch(const test::fail& e) {                                        \
             std::cout << "FAIL " << #TEST << std::endl << e.what() << std::endl; \
         } catch(const std::exception& e) {                              \
             std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": " << e.what() << std::endl; \

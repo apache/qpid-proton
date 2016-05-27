@@ -19,13 +19,12 @@
 
 #include "test_bits.hpp"
 
-#include "proton/codec/data.hpp"
+#include "proton/internal/data.hpp"
 #include "proton/internal/config.hpp"
 #include "proton/types.hpp"
 
 namespace {
 
-using namespace test;
 using namespace proton;
 
 template <class T> void  simple_type_test(const T& x) {
@@ -108,7 +107,7 @@ int main(int, char**) {
     RUN_TEST(failed, (uncodable_type_test<std::pair<int, float> >()));
     RUN_TEST(failed, (uncodable_type_test<std::pair<scalar, value> >()));
     RUN_TEST(failed, (uncodable_type_test<std::basic_string<wchar_t> >()));
-    RUN_TEST(failed, (uncodable_type_test<codec::data>()));
+    RUN_TEST(failed, (uncodable_type_test<internal::data>()));
     RUN_TEST(failed, (uncodable_type_test<pn_data_t*>()));
 
     return failed;

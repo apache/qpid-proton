@@ -34,9 +34,6 @@
 
 namespace {
 
-using namespace test;
-
-
 static std::string int2string(int n) {
     std::ostringstream strm;
     strm << n;

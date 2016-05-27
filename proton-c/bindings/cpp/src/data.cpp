@@ -17,11 +17,10 @@
  * under the License.
  */
 
-#include "proton_bits.hpp"
+#include "proton/internal/data.hpp"
 
 #include "proton/binary.hpp"
 #include "proton/codec/encoder.hpp"
-#include "proton/codec/data.hpp"
 #include "proton/decimal.hpp"
 #include "proton/message_id.hpp"
 #include "proton/symbol.hpp"
@@ -32,8 +31,10 @@
 
 #include <ostream>
 
+#include "proton_bits.hpp"
+
 namespace proton {
-namespace codec {
+namespace internal {
 
 data data::create() { return internal::take_ownership(pn_data(0)).get(); }
 
@@ -65,5 +66,5 @@ std::ostream& operator<<(std::ostream& o, const data& d) {
     return o << inspectable(d.pn_object());
 }
 
-} // codec
+} // internal
 } // proton
