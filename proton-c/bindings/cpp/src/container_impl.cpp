@@ -276,30 +276,29 @@ void container_impl::auto_stop(bool set) {
     auto_stop_ = set;
 }
 
+#if PN_CPP_HAS_UNIQUE_PTR
+std::unique_ptr<container> make_default_container(messaging_handler& h, const std::string& id) {
+    return std::unique_ptr<container>(new container_impl(id, &h));
+}
+std::unique_ptr<container> make_default_container(const std::string& id) {
+  return std::unique_ptr<container>(new container_impl(id));
+}
+#endif
 
-default_container::default_container(messaging_handler& h, const std::string& id) : impl_(new container_impl(id, &h)) {}
-default_container::default_container(const std::string& id) : impl_(new container_impl(id)) {}
+// Avoid deprecated diagnostics from auto_ptr
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 
-returned<connection>   default_container::connect(const std::string& url, const connection_options &o) { return impl_->connect(url, o); }
-listener               default_container::listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
-void                   default_container::stop_listening(const std::string& url) { impl_->stop_listening(url); }
+std::auto_ptr<container> make_auto_default_container(messaging_handler& h, const std::string& id) {
+  return std::auto_ptr<container>(new container_impl(id, &h));
+}
+std::auto_ptr<container> make_auto_default_container(const std::string& id) {
+  return std::auto_ptr<container>(new container_impl(id));
+}
 
-void                   default_container::run() { impl_->run(); }
-void                   default_container::auto_stop(bool set) { impl_->auto_stop(set); }
-void                   default_container::stop(const error_condition& err) { impl_->stop(err); }
-
-returned<sender>       default_container::open_sender(const std::string &u, const proton::sender_options &o, const connection_options &c) { return impl_->open_sender(u, o, c); }
-returned<receiver>     default_container::open_receiver(const std::string &u, const proton::receiver_options &o, const connection_options &c) { return impl_->open_receiver(u, o, c); }
-
-std::string            default_container::id() const { return impl_->id(); }
-void                   default_container::client_connection_options(const connection_options &o) { impl_->client_connection_options(o); }
-connection_options     default_container::client_connection_options() const { return impl_->client_connection_options(); }
-void                   default_container::server_connection_options(const connection_options &o) { impl_->server_connection_options(o); }
-connection_options     default_container::server_connection_options() const { return impl_->server_connection_options(); }
-void                   default_container::sender_options(const class sender_options &o) { impl_->sender_options(o); }
-class sender_options   default_container::sender_options() const { return impl_->sender_options(); }
-void                   default_container::receiver_options(const class receiver_options & o) { impl_->receiver_options(o); }
-class receiver_options default_container::receiver_options() const { return impl_->receiver_options(); }
-
-
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 }

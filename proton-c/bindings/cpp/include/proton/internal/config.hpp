@@ -41,8 +41,12 @@
 #endif
 #endif
 
-#ifndef PN_CPP_HAS_STD_PTR
-#define PN_CPP_HAS_STD_PTR PN_CPP_HAS_CPP11
+#ifndef PN_CPP_HAS_SHARED_PTR
+#define PN_CPP_HAS_SHARED_PTR PN_CPP_HAS_CPP11
+#endif
+
+#ifndef PN_CPP_HAS_UNIQUE_PTR
+#define PN_CPP_HAS_UNIQUE_PTR PN_CPP_HAS_CPP11
 #endif
 
 #ifndef PN_CPP_HAS_LONG_LONG
