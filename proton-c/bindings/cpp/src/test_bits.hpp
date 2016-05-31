@@ -67,7 +67,9 @@ inline void assert_equalish(double want, double got, double delta, const std::st
             ++BAD_COUNT;                                                \
     } while(0)
 
-template<class T> std::string str(const T& x) { std::ostringstream s; s << x; return s.str(); }
+template<class T> std::string str(const T& x) {
+    std::ostringstream s; s << std::boolalpha << x; return s.str();
+}
 
 // A way to easily create literal collections that can be compared to std:: collections
 // and to print std collections

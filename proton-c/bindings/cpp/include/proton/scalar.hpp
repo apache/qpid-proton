@@ -41,7 +41,7 @@ class scalar : public internal::scalar_base {
     template <class T> scalar(const T& x) { *this = x; }
 
     /// Assign from any scalar type.
-    template <class T> scalar& operator=(const T& x) { put_(x); return *this; }
+    template <class T> scalar& operator=(const T& x) { put(x); return *this; }
 
     /// True if type() == NULL_TYPE.
     bool empty() const { return type() == NULL_TYPE; }
@@ -71,6 +71,7 @@ template<class T> T get(const scalar& s) { return internal::get<T>(s); }
 /// according to `std::is_convertible`
 /// @related scalar
 template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
+template<class T> T coerce(scalar& x) { return internal::coerce<T>(x); }
 
 } // proton
 

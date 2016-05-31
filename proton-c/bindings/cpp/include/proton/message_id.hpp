@@ -68,7 +68,7 @@ class message_id : public internal::scalar_base {
 };
 
 /// @cond INTERNAL
-// XXX Document this?
+/// Base template for get(message_id), specialized for legal message_id types.
 template <class T> T get(const message_id& x);
 /// @endcond
 

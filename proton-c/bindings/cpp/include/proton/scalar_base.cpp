@@ -30,11 +30,6 @@
 
 #include <ostream>
 
-#if PN_CPP_HAS_CPP11
-#include <cxxabi.h>
-#include <memory>
-#endif
-
 namespace proton {
 namespace internal {
 
@@ -119,13 +114,13 @@ namespace {
 struct equal_op {
     const scalar_base& x;
     equal_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (get<T>(x) == y); }
+    template<class T> bool operator()(const T& y) { return (x.get<T>() == y); }
 };
 
 struct less_op {
     const scalar_base& x;
     less_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (y < get<T>(x)); }
+    template<class T> bool operator()(const T& y) { return (y < x.get<T>()); }
 };
 
 struct ostream_op {
@@ -149,25 +144,8 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 }
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
-    switch (s.type()) {
-      case NULL_TYPE: return o << "<null>";
-        // Print byte types as integer, not char.
-      case BYTE: return o << static_cast<int>(get<int8_t>(s));
-      case UBYTE: return o << static_cast<unsigned int>(get<uint8_t>(s));
-        // Other types printed using normal C++ operator <<
-      default: return internal::visit<std::ostream&>(s, ostream_op(o));
-    }
-}
-
-conversion_error make_coercion_error(const char* cpp_mangled, type_id amqp) {
-#if PN_CPP_HAS_CPP11
-    std::unique_ptr<char, decltype(&::free)> demangled(
-        abi::__cxa_demangle(cpp_mangled, NULL, NULL, NULL), ::free);
-    std::string cpp_name = demangled ? demangled.get() : cpp_mangled;
-#else
-    std::string cpp_name = cpp_mangled;
-#endif
-    return conversion_error("invalid proton::coerce<" + cpp_name + ">(" + type_name(amqp) + ")");
+    if (s.type() == NULL_TYPE) return o << "<null>";
+    return internal::visit<std::ostream&>(s, ostream_op(o));
 }
 
 }} // namespaces

@@ -243,6 +243,7 @@ static void print_next(proton::codec::decoder& d) {
 void print(proton::value& v) {
     proton::codec::decoder d(v);
     d.rewind();
+    std::cout << std::boolalpha; // Print boolean as true/false.
     while (d.more()) {
         print_next(d);
         if (d.more()) std::cout << ", ";

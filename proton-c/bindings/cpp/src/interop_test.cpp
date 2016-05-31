@@ -46,10 +46,10 @@ string read(string filename) {
 
 // Test data ostream operator
 void test_data_ostream() {
-    value dv;
-    decoder d(dv);
+    data dt(data::create());
+    decoder d(dt);
     d.decode(read("primitives"));
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dv));
+    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dt));
 }
 
 // Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
