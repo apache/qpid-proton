@@ -102,26 +102,33 @@ static void event_handler(pn_handler_t *handler,
         pn_delivery_t *dlv = pn_event_delivery(event);
         if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
             // A full message has arrived
-            if (!quiet && pn_delivery_pending(dlv) < MAX_SIZE) {
-                // try to decode the message body
+            if (!quiet) {
+                static char buffer[MAX_SIZE];
+                size_t len;
                 pn_bytes_t bytes;
                 bool found = false;
-                static char buffer[MAX_SIZE];
-                size_t len = pn_link_recv(pn_delivery_link(dlv), buffer, MAX_SIZE);
-                pn_message_clear(data->message);
-                // decode the raw data into the message instance
-                if (pn_message_decode(data->message, buffer, len) == PN_OK) {
-                    // Assuming the message came from the sender example, try
-                    // to parse out a single string from the payload
-                    //
-                    int rc = pn_data_scan(pn_message_body(data->message)
-                                          , "?S", &found, &bytes);
-                    if (!rc && found) {
-                        fprintf(stdout, "Message: [%.*s]\n",
-                                (int)bytes.size, bytes.start);
-                    } else {
-                        fprintf(stdout, "Message received!\n");
+
+                // try to decode the message body
+                if (pn_delivery_pending(dlv) < MAX_SIZE) {
+                    // read in the raw data
+                    len = pn_link_recv(pn_delivery_link(dlv), buffer, MAX_SIZE);
+                    if (len > 0) {
+                        // decode it into a proton message
+                        pn_message_clear(data->message);
+                        if (PN_OK == pn_message_decode(data->message, buffer,
+                                                       len)) {
+                            // Assuming the message came from the sender
+                            // example, try to parse out a single string from
+                            // the payload
+                            //
+                            pn_data_scan(pn_message_body(data->message), "?S",
+                                         &found, &bytes);
+                        }
                     }
+                }
+                if (found) {
+                    fprintf(stdout, "Message: [%.*s]\n", (int)bytes.size,
+                            bytes.start);
                 } else {
                     fprintf(stdout, "Message received!\n");
                 }
@@ -216,7 +223,9 @@ int main(int argc, char** argv)
     /* Attach the pn_handshaker() handler.  This handler deals with endpoint
      * events from the peer so we don't have to.
      */
-    pn_handler_add(handler, pn_handshaker());
+    pn_handler_t *handshaker = pn_handshaker();
+    pn_handler_add(handler, handshaker);
+    pn_decref(handshaker);
 
     /* command line options */
     opterr = 0;
@@ -249,6 +258,7 @@ int main(int argc, char** argv)
                                          pn_url_get_port(url),
                                          handler);
     pn_decref(url);
+    pn_decref(handler);
 
     // the container name should be unique for each client
     pn_connection_set_container(conn, container);
@@ -268,6 +278,7 @@ int main(int argc, char** argv)
          * pn_reactor_process() will return false.
          */
     }
+    pn_decref(reactor);
 
     return 0;
 }
