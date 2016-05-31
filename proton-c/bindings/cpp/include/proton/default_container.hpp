@@ -58,6 +58,7 @@ class PN_CPP_CLASS_EXTERN  default_container : public container {
 
     PN_CPP_EXTERN returned<connection> connect(const std::string& url, const connection_options &) PN_CPP_OVERRIDE;
     PN_CPP_EXTERN listener listen(const std::string& url, listen_handler& l) PN_CPP_OVERRIDE;
+    using container::listen;
 
     /// @cond INTERNAL
     /// XXX Make private

@@ -24,6 +24,7 @@
 #include "proton/default_container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
+#include "proton/listen_handler.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -116,6 +117,35 @@ int test_container_no_vhost() {
     return 0;
 }
 
+struct test_listener : public proton::listen_handler {
+    bool on_accept_, on_close_;
+    std::string on_error_;
+    test_listener() : on_accept_(false), on_close_(false) {}
+    proton::connection_options on_accept() PN_CPP_OVERRIDE {
+        on_accept_ = true;
+        return proton::connection_options();
+    }
+    void on_close() PN_CPP_OVERRIDE { on_close_ = true; }
+    void on_error(const std::string& e) PN_CPP_OVERRIDE { on_error_ = e; }
+};
+
+int test_container_bad_address() {
+    // Listen on a bad address, check for leaks
+    // Regression test for https://issues.apache.org/jira/browse/PROTON-1217
+
+    proton::default_container c;
+    // Default fixed-option listener. Valgrind for leaks.
+    try { c.listen("999.666.999.666:0"); } catch (const proton::error&) {}
+    // Dummy listener.
+    test_listener l;
+    test_handler h2(std::string("999.999.999.666"), proton::connection_options());
+    try { c.listen("999.666.999.666:0", l); } catch (const proton::error&) {}
+    ASSERT(!l.on_accept_);
+    ASSERT(l.on_close_);
+    ASSERT(!l.on_error_.empty());
+    return 0;
+}
+
 }
 
 int main(int, char**) {
@@ -123,6 +153,7 @@ int main(int, char**) {
     RUN_TEST(failed, test_container_vhost());
     RUN_TEST(failed, test_container_default_vhost());
     RUN_TEST(failed, test_container_no_vhost());
+    RUN_TEST(failed, test_container_bad_address());
     return failed;
 }
 
