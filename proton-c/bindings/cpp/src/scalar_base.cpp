@@ -30,11 +30,6 @@
 
 #include <ostream>
 
-#if PN_CPP_HAS_CPP11
-#include <cxxabi.h>
-#include <memory>
-#endif
-
 namespace proton {
 namespace internal {
 
@@ -159,15 +154,8 @@ std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     }
 }
 
-conversion_error make_coercion_error(const char* cpp_mangled, type_id amqp) {
-#if PN_CPP_HAS_CPP11
-    std::unique_ptr<char, decltype(&::free)> demangled(
-        abi::__cxa_demangle(cpp_mangled, NULL, NULL, NULL), ::free);
-    std::string cpp_name = demangled ? demangled.get() : cpp_mangled;
-#else
-    std::string cpp_name = cpp_mangled;
-#endif
-    return conversion_error("invalid proton::coerce<" + cpp_name + ">(" + type_name(amqp) + ")");
+conversion_error make_coercion_error(const char* cpp, type_id amqp) {
+    return conversion_error(std::string("invalid proton::coerce<") + cpp + ">(" + type_name(amqp) + ")");
 }
 
 }} // namespaces
