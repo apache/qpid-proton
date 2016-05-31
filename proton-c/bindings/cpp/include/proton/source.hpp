@@ -22,11 +22,13 @@
  *
  */
 
-#include "./internal/export.hpp"
-#include "./internal/object.hpp"
 #include "./value.hpp"
 #include "./terminus.hpp"
 #include "./codec/map.hpp"
+
+#include "./internal/cached_map.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
 
 #include <string>
 
@@ -42,7 +44,7 @@ class source : public terminus {
   public:
     /// **Experimental** - A map of AMQP symbol keys and filter
     /// specifiers.
-    typedef std::map<symbol, value> filter_map;
+    class filter_map : public internal::cached_map<symbol, value> {};
 
     /// Create an empty source.
     source() : terminus() {}
@@ -53,10 +55,10 @@ class source : public terminus {
         // it.
         /// Unspecified
         UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
-        /// Once transferred, the message remains available to ther links
+        /// Once transferred, the message remains available to other links
         COPY = PN_DIST_MODE_COPY,
         /// Once transferred, the message is unavailable to other links
-        MOVE = PN_DIST_MODE_MOVE                
+        MOVE = PN_DIST_MODE_MOVE
     };
 
     using terminus::durability_mode;

@@ -30,6 +30,7 @@ set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
+  src/cached_map.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp
