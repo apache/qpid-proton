@@ -176,8 +176,9 @@ std::ostream& operator<<(std::ostream& o, const internal::value_base& x) {
     if (x.empty())
         return o << "<null>";
     proton::decoder d(x);
-    // Print std::string and proton::foo types using their own operator << consistent with C++.
+    // Print the following types with operator<<() consistent with C++.
     switch (d.next_type()) {
+      case BOOLEAN: return o << get<bool>(d); // Respect std::boolalpha settings.
       case STRING: return o << get<std::string>(d);
       case SYMBOL: return o << get<symbol>(d);
       case DECIMAL32: return o << get<decimal32>(d);
@@ -185,6 +186,7 @@ std::ostream& operator<<(std::ostream& o, const internal::value_base& x) {
       case DECIMAL128: return o << get<decimal128>(d);
       case UUID: return o << get<uuid>(d);
       case TIMESTAMP: return o << get<timestamp>(d);
+      case CHAR: return o << get<wchar_t>(d);
       default:
         // Use pn_inspect for other types.
         return o << d;

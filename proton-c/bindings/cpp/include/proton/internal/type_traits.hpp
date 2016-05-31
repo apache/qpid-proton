@@ -117,7 +117,20 @@ template<> struct type_id_of<binary> : public type_id_constant<BINARY, binary> {
 template <class T, class Enable=void> struct has_type_id : public false_type {};
 template <class T> struct has_type_id<T, typename type_id_of<T>::type>  : public true_type {};
 
-// Map arbitrary integral types to known AMQP integral types.
+// The known/unknown integer type magic is required because the C++ standard is
+// vague a about the equivalence of integral types for overloading. E.g. char is
+// sometimes equivalent to signed char, sometimes unsigned char, sometimes
+// neither. int8_t or uint8_t may or may not be equivalent to a char type.
+// int64_t may or may not be equivalent to long long etc. C++ compilers are also
+// allowed to add their own non-standard integer types like __int64, which may
+// or may not be equivalent to any of the standard integer types.
+//
+// The solution is to use a fixed, standard set of integer types that are
+// guaranteed to be distinct for overloading (see type_id_of) and to use template
+// specialization to convert other integer types to a known integer type with the
+// same sizeof and is_signed.
+
+// Map arbitrary integral types to known integral types.
 template<size_t SIZE, bool IS_SIGNED> struct integer_type;
 template<> struct integer_type<1, true> { typedef int8_t type; };
 template<> struct integer_type<2, true> { typedef int16_t type; };
@@ -133,7 +146,11 @@ template <class T> struct is_unknown_integer {
     static const bool value = !has_type_id<T>::value && is_integral<T>::value;
 };
 
-// Helper base for SFINAE test templates.
+template<class T, class = typename enable_if<is_unknown_integer<T>::value>::type>
+struct known_integer : public integer_type<sizeof(T), is_signed<T>::value> {};
+
+
+// Helper base for SFINAE templates.
 struct sfinae {
     typedef char yes;
     typedef double no;
@@ -144,7 +161,17 @@ template <class From, class To> struct is_convertible : public sfinae {
     static yes test(const To&);
     static no test(...);
     static const From& from;
+    // Windows compilers warn about data-loss caused by legal conversions.  We
+    // can't use static_cast because that will cause a hard error instead of
+    // letting SFINAE overload resolution select the test(...) overload.
+#ifdef _WIN32
+#pragma warning( push )
+#pragma warning( disable : 4244 )
+#endif
     static bool const value = sizeof(test(from)) == sizeof(yes);
+#ifdef _WIN32
+#pragma warning( pop )
+#endif
 };
 
 } // internal

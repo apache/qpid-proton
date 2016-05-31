@@ -36,6 +36,7 @@
 
 #include <iosfwd>
 #include <string>
+#include <typeinfo>
 
 namespace proton {
 class message;
@@ -46,6 +47,9 @@ class encoder;
 }
 
 namespace internal {
+
+class scalar_base;
+template<class T> T get(const scalar_base& s);
 
 /// Base class for scalar types.
 class scalar_base : private comparable<scalar_base> {
@@ -97,6 +101,9 @@ class scalar_base : private comparable<scalar_base> {
     PN_CPP_EXTERN void put_(const char* s); ///< Treated as an AMQP string
     PN_CPP_EXTERN void put_(const null&);
 
+    template<class T> void put(const T& x) { putter<T>::put(*this, x); }
+
+  private:
     PN_CPP_EXTERN void get_(bool&) const;
     PN_CPP_EXTERN void get_(uint8_t&) const;
     PN_CPP_EXTERN void get_(int8_t&) const;
@@ -119,7 +126,20 @@ class scalar_base : private comparable<scalar_base> {
     PN_CPP_EXTERN void get_(binary&) const;
     PN_CPP_EXTERN void get_(null&) const;
 
-  private:
+    // use template structs, functions cannot be  partially specialized.
+    template <class T, class Enable=void> struct putter {
+        static void put(scalar_base& s, const T& x) { s.put_(x); }
+    };
+    template <class T> struct putter<T, typename enable_if<is_unknown_integer<T>::value>::type> {
+        static void put(scalar_base& s, const T& x) { s.put_(static_cast<typename known_integer<T>::type>(x)); }
+    };
+    template <class T, class Enable=void> struct getter {
+        static T get(const scalar_base& s) { T x; s.get_(x); return x; }
+    };
+    template <class T> struct getter<T, typename enable_if<is_unknown_integer<T>::value>::type> {
+        static T get(const scalar_base& s) { typename known_integer<T>::type x; s.get_(x); return x; }
+    };
+
     void ok(pn_type_t) const;
     void set(const pn_atom_t&);
     void set(const binary& x, pn_type_t t);
@@ -131,10 +151,9 @@ class scalar_base : private comparable<scalar_base> {
   friend class proton::message;
   friend class codec::encoder;
   friend class codec::decoder;
+  template<class T> friend T get(const scalar_base& s) { return scalar_base::getter<T>::get(s); }
     /// @endcond
 };
-
-template<class T> T get(const scalar_base& s) { T x; s.get(x); return x; }
 
 template <class R, class F> R visit(const scalar_base& s, F f) {
     switch(s.type()) {
@@ -162,6 +181,8 @@ template <class R, class F> R visit(const scalar_base& s, F f) {
     }
 }
 
+PN_CPP_EXTERN conversion_error make_coercion_error(const char* cpp_type, type_id amqp_type);
+
 template<class T> struct coerce_op {
     template <class U>
     typename enable_if<is_convertible<U, T>::value, T>::type operator()(const U& x) {
@@ -169,7 +190,7 @@ template<class T> struct coerce_op {
     }
     template <class U>
     typename enable_if<!is_convertible<U, T>::value, T>::type operator()(const U&) {
-        throw conversion_error("cannot coerce from " + type_name(type_id_of<U>::value));
+        throw make_coercion_error(typeid(T).name(), type_id_of<U>::value);
     }
 };
 

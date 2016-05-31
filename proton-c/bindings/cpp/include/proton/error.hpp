@@ -24,14 +24,11 @@
 
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
-#include "./value.hpp"
 
 #include <stdexcept>
 #include <string>
 
 namespace proton {
-
-class value;
 
 /// The base Proton error.
 ///

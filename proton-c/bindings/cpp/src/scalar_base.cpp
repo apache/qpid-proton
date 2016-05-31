@@ -114,13 +114,13 @@ namespace {
 struct equal_op {
     const scalar_base& x;
     equal_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (x.get<T>() == y); }
+    template<class T> bool operator()(const T& y) { return (get<T>(x) == y); }
 };
 
 struct less_op {
     const scalar_base& x;
     less_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (y < x.get<T>()); }
+    template<class T> bool operator()(const T& y) { return (y < get<T>(x)); }
 };
 
 struct ostream_op {
@@ -144,8 +144,18 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 }
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
-    if (s.type() == NULL_TYPE) return o << "<null>";
-    return internal::visit<std::ostream&>(s, ostream_op(o));
+    switch (s.type()) {
+      case NULL_TYPE: return o << "<null>";
+        // Print byte types as integer, not char.
+      case BYTE: return o << static_cast<int>(get<int8_t>(s));
+      case UBYTE: return o << static_cast<unsigned int>(get<uint8_t>(s));
+        // Other types printed using normal C++ operator <<
+      default: return internal::visit<std::ostream&>(s, ostream_op(o));
+    }
+}
+
+conversion_error make_coercion_error(const char* cpp, type_id amqp) {
+    return conversion_error(std::string("invalid proton::coerce<") + cpp + ">(" + type_name(amqp) + ")");
 }
 
 }} // namespaces

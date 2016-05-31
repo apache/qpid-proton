@@ -25,6 +25,7 @@
 #include "./codec/encoder.hpp"
 #include "./codec/decoder.hpp"
 #include "./internal/type_traits.hpp"
+#include "./scalar.hpp"
 #include "./types_fwd.hpp"
 
 #include <iosfwd>
@@ -129,7 +130,7 @@ template<class T> T get(const value& v) { T x; get(v, x); return x; }
 /// Like get(const value&) but assigns the value to a reference
 /// instead of returning it.  May be more efficient for complex values
 /// (arrays, maps, etc.)
-///    
+///
 /// @related proton::value
 template<class T> void get(const value& v, T& x) { codec::decoder d(v, true); d >> x; }
 
@@ -142,10 +143,21 @@ template<class T> T coerce(const value& v) { T x; coerce(v, x); return x; }
 /// (arrays, maps, etc.)
 ///
 /// @related proton::value
-template<class T> void coerce(const value& v, T& x) { codec::decoder d(v, false); d >> x; }
+template<class T> void coerce(const value& v, T& x) {
+    codec::decoder d(v, false);
+    if (type_id_is_scalar(v.type())) {
+        scalar s;
+        d >> s;
+        x = internal::coerce<T>(s);
+    } else {
+        d >> x;
+    }
+}
+
+/// Special case for get<null>(), just checks that value contains NULL.
+template<> inline void get<null>(const value& v, null&) { assert_type_equal(NULL_TYPE, v.type()); }
 
 /// @cond INTERNAL
-template<> inline void get<null>(const value& v, null&) { assert_type_equal(NULL_TYPE, v.type()); }
 template<class T> void value::get(T &x) const { x = proton::get<T>(*this); }
 template<class T> T value::get() const { return proton::get<T>(*this); }
 inline int64_t value::as_int() const { return proton::coerce<int64_t>(*this); }

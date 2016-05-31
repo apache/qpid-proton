@@ -17,19 +17,7 @@
  * under the License.
  */
 
-#include "test_bits.hpp"
-
-#include "proton/binary.hpp"
-#include "proton/error.hpp"
-#include "proton/internal/type_traits.hpp"
-
-#include "proton/scalar.hpp"
-#include "proton/value.hpp"
-#include "proton/message_id.hpp"
-#include "proton/annotation_key.hpp"
-#include "proton/decimal.hpp"
-
-#include <sstream>
+#include "scalar_test.hpp"
 
 namespace {
 
@@ -37,59 +25,7 @@ using namespace std;
 using namespace proton;
 using namespace test;
 
-// Inserting and extracting simple C++ values.
-template <class T> void type_test(T x, type_id tid, T y) {
-    scalar s(x);
-    ASSERT_EQUAL(tid, s.type());
-    ASSERT(!s.empty());
-    ASSERT_EQUAL(x, s.get<T>());
-
-    scalar v2;
-    ASSERT(v2.type() == NULL_TYPE);
-    v2 = x;
-    ASSERT_EQUAL(tid, v2.type());
-    ASSERT_EQUAL(x, v2.get<T>());
-    ASSERT_EQUAL(s, v2);
-    ASSERT_EQUAL(str(x), str(s));
-
-    v2 = y;
-    ASSERT(s != v2);
-    ASSERT(s < v2);
-    ASSERT(v2 > s);
-}
-
-#define ASSERT_MISMATCH(EXPR, WANT, GOT)                                \
-    try {                                                               \
-        (void)(EXPR);                                                   \
-        FAIL("expected conversion_error: " #EXPR);                      \
-    } catch (const conversion_error&) {}
-
-void coerce_test() {
-    scalar a;
-    ASSERT_EQUAL(NULL_TYPE, a.type());
-    ASSERT(a.empty());
-    ASSERT_MISMATCH(a.get<float>(), FLOAT, NULL_TYPE);
-
-    a = binary("foo");
-    ASSERT_MISMATCH(a.get<int16_t>(), SHORT, BINARY);
-    ASSERT_MISMATCH(coerce<int64_t>(a), LONG, BINARY);
-    ASSERT_MISMATCH(coerce<double>(a), DOUBLE, BINARY);
-    ASSERT_MISMATCH(a.get<std::string>(), STRING, BINARY); // No strict conversion
-    ASSERT_EQUAL(coerce<std::string>(a), std::string("foo")); // OK string-like conversion
-
-    a = int16_t(42);
-    ASSERT_MISMATCH(a.get<std::string>(), STRING, SHORT);
-    ASSERT_MISMATCH(a.get<timestamp>(), TIMESTAMP, SHORT);
-    ASSERT_MISMATCH(coerce<std::string>(a), STRING, SHORT);
-    ASSERT_EQUAL(coerce<int64_t>(a), 42);
-    ASSERT_EQUAL(coerce<uint64_t>(a), 42u);
-    ASSERT_EQUAL(coerce<double>(a), 42);
-
-    a = int16_t(-42);
-    ASSERT_EQUAL(coerce<int64_t>(a), -42);
-    ASSERT_EQUAL(coerce<uint64_t>(a), uint64_t(-42));
-    ASSERT_EQUAL(coerce<double>(a), -42);
-}
+// NOTE: proton::coerce<> and bad proton::get() are tested in value_test to avoid redundant test code.
 
 void encode_decode_test() {
     value v;
@@ -98,23 +34,23 @@ void encode_decode_test() {
     ASSERT_EQUAL(v, a);
     ASSERT_EQUAL(std::string("foo"), get<std::string>(v));
     scalar a2 = get<scalar>(v);
-    ASSERT_EQUAL(std::string("foo"), a2.get<std::string>());
+    ASSERT_EQUAL(std::string("foo"), get<std::string>(a2));
 }
 
 void message_id_test() {
     ASSERT_EQUAL(23, coerce<int64_t>(message_id(23)));
-    ASSERT_EQUAL(23u, message_id(23).get<uint64_t>());
+    ASSERT_EQUAL(23u, get<uint64_t>(message_id(23)));
     ASSERT(message_id("foo") != message_id(binary("foo")));
     ASSERT_EQUAL(scalar("foo"), message_id("foo"));
     ASSERT_EQUAL("foo", coerce<std::string>(message_id("foo")));
     ASSERT(message_id("a") < message_id("z"));
     uuid r = uuid::random();
-    ASSERT_EQUAL(r, message_id(r).get<uuid>());
+    ASSERT_EQUAL(r, get<uuid>(message_id(r)));
 }
 
 void annotation_key_test() {
     ASSERT_EQUAL(23, coerce<int64_t>(annotation_key(23)));
-    ASSERT_EQUAL(23u, annotation_key(23).get<uint64_t>());
+    ASSERT_EQUAL(23u, get<uint64_t>(annotation_key(23)));
     ASSERT_EQUAL("foo", coerce<std::string>(annotation_key("foo")));
     ASSERT_EQUAL(scalar(symbol("foo")), annotation_key("foo"));
 }
@@ -125,30 +61,10 @@ template <class T> T make(const char c) { T x; std::fill(x.begin(), x.end(), c);
 
 int main(int, char**) {
     int failed = 0;
-    RUN_TEST(failed, type_test(false, BOOLEAN, true));
-    RUN_TEST(failed, type_test(uint8_t(42), UBYTE, uint8_t(50)));
-    RUN_TEST(failed, type_test(int8_t('x'), BYTE, int8_t('y')));
-    RUN_TEST(failed, type_test(uint16_t(4242), USHORT, uint16_t(5252)));
-    RUN_TEST(failed, type_test(int16_t(-4242), SHORT, int16_t(3)));
-    RUN_TEST(failed, type_test(uint32_t(4242), UINT, uint32_t(5252)));
-    RUN_TEST(failed, type_test(int32_t(-4242), INT, int32_t(3)));
-    RUN_TEST(failed, type_test(uint64_t(4242), ULONG, uint64_t(5252)));
-    RUN_TEST(failed, type_test(int64_t(-4242), LONG, int64_t(3)));
-    RUN_TEST(failed, type_test(wchar_t(23), CHAR, wchar_t(24)));
-    RUN_TEST(failed, type_test(float(1.234), FLOAT, float(2.345)));
-    RUN_TEST(failed, type_test(double(11.2233), DOUBLE, double(12)));
-    RUN_TEST(failed, type_test(timestamp(0), TIMESTAMP, timestamp(1)));
-    RUN_TEST(failed, type_test(make<decimal32>(0), DECIMAL32, make<decimal32>(1)));
-    RUN_TEST(failed, type_test(make<decimal64>(0), DECIMAL64, make<decimal64>(1)));
-    RUN_TEST(failed, type_test(make<decimal128>(0), DECIMAL128, make<decimal128>(1)));
-    RUN_TEST(failed, type_test(uuid::copy("a"), UUID, uuid::copy("x")));
-    RUN_TEST(failed, type_test(std::string("aaa"), STRING, std::string("aaaa")));
-    RUN_TEST(failed, type_test(symbol("aaa"), SYMBOL, symbol("aaaa")));
-    RUN_TEST(failed, type_test(binary("aaa"), BINARY, binary("aaaa")));
-    RUN_TEST(failed, type_test(std::string("xxx"), STRING, std::string("yyy")));
+    scalar_test_group<scalar>(failed);
+
     RUN_TEST(failed, encode_decode_test());
     RUN_TEST(failed, message_id_test());
     RUN_TEST(failed, annotation_key_test());
-    RUN_TEST(failed, coerce_test());
     return failed;
 }
