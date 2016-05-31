@@ -87,9 +87,12 @@ public class IOHandler extends BaseHandler {
         if (vhost == null) {
             // setHostname never called, use the host from the connection's
             // socket address as the default virtual host:
-            Address addr = new Address(reactor.getConnectionAddress(connection));
-            connection.setHostname(addr.getHost());
-        } else if (vhost == "") {
+            String conAddr = reactor.getConnectionAddress(connection);
+            if (conAddr != null) {
+                Address addr = new Address(conAddr);
+                connection.setHostname(addr.getHost());
+            }
+        } else if (vhost.isEmpty()) {
             // setHostname called explictly with a null string. This allows
             // the application to completely avoid sending a virtual host
             // name
