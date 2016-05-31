@@ -80,7 +80,10 @@ namespace{
 }
 
 listener container::listen(const std::string& url, const connection_options& opts) {
-    return listen(url, *new listen_opts(opts));
+    // Note: listen_opts::on_close() calls delete(this) so this is not a leak.
+    // The container will always call on_closed() even if there are errors or exceptions. 
+    listen_opts* lh = new listen_opts(opts);
+    return listen(url, *lh);
 }
 
 listener container::listen(const std::string &url) {

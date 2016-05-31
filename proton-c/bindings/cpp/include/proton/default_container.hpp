@@ -54,6 +54,7 @@ class PN_CPP_CLASS_EXTERN  default_container : public container {
 
     PN_CPP_EXTERN returned<connection> connect(const std::string& url, const connection_options &) PN_CPP_OVERRIDE;
     PN_CPP_EXTERN listener listen(const std::string& url, listen_handler& l) PN_CPP_OVERRIDE;
+    using container::listen;
 
     /// @cond INTERNAL
     /// XXX Make private
@@ -69,11 +70,13 @@ class PN_CPP_CLASS_EXTERN  default_container : public container {
         const std::string &url,
         const proton::sender_options &o,
         const connection_options &c) PN_CPP_OVERRIDE;
+    using container::open_sender;
 
     PN_CPP_EXTERN returned<receiver> open_receiver(
         const std::string&url,
         const proton::receiver_options &o,
         const connection_options &c) PN_CPP_OVERRIDE;
+    using container::open_receiver;
 
     PN_CPP_EXTERN std::string id() const PN_CPP_OVERRIDE;
 
