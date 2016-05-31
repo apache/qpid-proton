@@ -230,7 +230,9 @@ int main(int argc, char** argv)
     /* Attach the pn_handshaker() handler.  This handler deals with endpoint
      * events from the peer so we don't have to.
      */
-    pn_handler_add(handler, pn_handshaker());
+    pn_handler_t *handshaker = pn_handshaker();
+    pn_handler_add(handler, handshaker);
+    pn_decref(handshaker);
 
     /* command line options */
     opterr = 0;
@@ -300,6 +302,7 @@ int main(int argc, char** argv)
                                          pn_url_get_port(url),
                                          handler);
     pn_decref(url);
+    pn_decref(handler);
 
     // the container name should be unique for each client
     pn_connection_set_container(conn, container);
@@ -319,6 +322,7 @@ int main(int argc, char** argv)
          * pn_reactor_process() will return false.
          */
     }
+    pn_decref(reactor);
 
     return 0;
 }
