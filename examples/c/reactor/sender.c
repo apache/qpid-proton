@@ -43,11 +43,11 @@ static int quiet = 0;
 // holds configuration and state information.
 //
 typedef struct {
-    int count;          // # messages to send
-    int anon;           // use anonymous link if true
-    char *target;       // name of destination target
-    char *msg_data;     // pre-encoded outbound message
-    int msg_len;        // bytes in msg_data
+    int count;           // # messages to send
+    int anon;            // use anonymous link if true
+    const char *target;  // name of destination target
+    char *msg_data;      // pre-encoded outbound message
+    size_t msg_len;      // bytes in msg_data
 } app_data_t;
 
 // helper to pull pointer to app_data_t instance out of the pn_handler_t
@@ -201,10 +201,9 @@ static void usage(void)
 
 int main(int argc, char** argv)
 {
-    char *address = "localhost";
-    char *msgtext = "Hello World!";
-    char *container = "SendExample";
-    int anon = 0;
+    const char *address = "localhost";
+    const char *msgtext = "Hello World!";
+    const char *container = "SendExample";
     int c;
     pn_message_t *message = NULL;
     pn_data_t *body = NULL;
@@ -230,9 +229,11 @@ int main(int argc, char** argv)
     /* Attach the pn_handshaker() handler.  This handler deals with endpoint
      * events from the peer so we don't have to.
      */
-    pn_handler_t *handshaker = pn_handshaker();
-    pn_handler_add(handler, handshaker);
-    pn_decref(handshaker);
+    {
+        pn_handler_t *handshaker = pn_handshaker();
+        pn_handler_add(handler, handshaker);
+        pn_decref(handshaker);
+    }
 
     /* command line options */
     opterr = 0;
