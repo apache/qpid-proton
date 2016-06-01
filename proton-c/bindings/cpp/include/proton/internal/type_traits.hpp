@@ -161,7 +161,17 @@ template <class From, class To> struct is_convertible : public sfinae {
     static yes test(const To&);
     static no test(...);
     static const From& from;
+    // Windows compilers warn about data-loss caused by legal conversions.  We
+    // can't use static_cast because that will cause a hard error instead of
+    // letting SFINAE overload resolution select the test(...) overload.
+#ifdef _WIN32
+#pragma warning( push )
+#pragma warning( disable : 4244 )
+#endif
     static bool const value = sizeof(test(from)) == sizeof(yes);
+#ifdef _WIN32
+#pragma warning( pop )
+#endif
 };
 
 } // internal
