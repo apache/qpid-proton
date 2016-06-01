@@ -47,8 +47,8 @@ static const int CAPACITY = 100;
 //
 typedef struct {
     int count;          // # of messages to receive before exiting
-    char *source;       // name of the source node to receive from
-    pn_message_t *message;      // holds the received message
+    const char *source;     // name of the source node to receive from
+    pn_message_t *message;  // holds the received message
 } app_data_t;
 
 // helper to pull pointer to app_data_t instance out of the pn_handler_t
@@ -104,7 +104,7 @@ static void event_handler(pn_handler_t *handler,
             // A full message has arrived
             if (!quiet) {
                 static char buffer[MAX_SIZE];
-                size_t len;
+                ssize_t len;
                 pn_bytes_t bytes;
                 bool found = false;
 
@@ -197,8 +197,8 @@ static void usage(void)
 
 int main(int argc, char** argv)
 {
-    char *address = "localhost";
-    char *container = "ReceiveExample";
+    const char *address = "localhost";
+    const char *container = "ReceiveExample";
     int c;
     pn_reactor_t *reactor = NULL;
     pn_url_t *url = NULL;
@@ -223,9 +223,11 @@ int main(int argc, char** argv)
     /* Attach the pn_handshaker() handler.  This handler deals with endpoint
      * events from the peer so we don't have to.
      */
-    pn_handler_t *handshaker = pn_handshaker();
-    pn_handler_add(handler, handshaker);
-    pn_decref(handshaker);
+    {
+        pn_handler_t *handshaker = pn_handshaker();
+        pn_handler_add(handler, handshaker);
+        pn_decref(handshaker);
+    }
 
     /* command line options */
     opterr = 0;
