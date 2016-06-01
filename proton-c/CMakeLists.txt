@@ -253,8 +253,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set (CXX_WARNING_FLAGS "${WERROR} -pedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 endif()
 
-# Make CXX_WARNING_FLAGS visible to examples.
+# Make flags visible to examples.
 set(CXX_WARNING_FLAGS "${CXX_WARNING_FLAGS}" PARENT_SCOPE)
+set(COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS}" PARENT_SCOPE)
+set(COMPILE_LANGUAGE_FLAGS "${COMPILE_LANGUAGE_FLAGS}" PARENT_SCOPE)
+set(LINK_TIME_OPTIMIZATION "${LTO}" PARENT_SCOPE)
 
 
 if (MSVC)

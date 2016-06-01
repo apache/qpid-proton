@@ -19,6 +19,19 @@
 
 find_package(Proton REQUIRED)
 
+set (messenger-examples
+  recv.c
+  send.c
+  recv-async.c
+  send-async.c
+  )
+
+set_source_files_properties (
+  ${messenger-examples}
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LINK_TIME_OPTIMIZATION}"
+  )
+
 add_executable(recv recv.c)
 add_executable(send send.c)
 add_executable(recv-async recv-async.c)

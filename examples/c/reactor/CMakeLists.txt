@@ -19,6 +19,17 @@
 
 find_package(Proton REQUIRED)
 
+set (reactor-examples
+  sender.c
+  receiver.c
+  )
+
+set_source_files_properties (
+  ${reactor-examples}
+  PROPERTIES
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LINK_TIME_OPTIMIZATION}"
+  )
+
 include_directories(${Proton_INCLUDE_DIRS})
 add_executable(sender sender.c)
 add_executable(receiver receiver.c)
