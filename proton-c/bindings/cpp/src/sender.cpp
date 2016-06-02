@@ -30,6 +30,8 @@
 #include "proton_bits.hpp"
 #include "contexts.hpp"
 
+#include <assert.h>
+
 namespace proton {
 
 sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
@@ -62,6 +64,7 @@ tracker sender::send(const message &message) {
         pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
     std::vector<char> buf;
     message.encode(buf);
+    assert(!buf.empty());
     pn_link_send(pn_object(), &buf[0], buf.size());
     pn_link_advance(pn_object());
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)

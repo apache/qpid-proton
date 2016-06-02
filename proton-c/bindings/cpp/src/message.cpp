@@ -269,6 +269,7 @@ void message::encode(std::vector<char> &s) const {
     size_t sz = std::max(s.capacity(), size_t(512));
     while (true) {
         s.resize(sz);
+        assert(!s.empty());
         int err = pn_message_encode(pn_msg(), const_cast<char*>(&s[0]), &sz);
         if (err) {
             if (err != PN_OVERFLOW)
@@ -288,16 +289,22 @@ std::vector<char> message::encode() const {
 }
 
 void message::decode(const std::vector<char> &s) {
+    if (s.empty())
+        throw error("message decode: no data");
     application_properties_.clear();
     message_annotations_.clear();
     delivery_annotations_.clear();
+    assert(!s.empty());
     check(pn_message_decode(pn_msg(), &s[0], s.size()));
 }
 
 void message::decode(proton::delivery delivery) {
     std::vector<char> buf;
     buf.resize(pn_delivery_pending(unwrap(delivery)));
+    if (buf.empty())
+        throw error("message decode: no delivery pending on link");
     proton::receiver link = delivery.receiver();
+    assert(!buf.empty());
     ssize_t n = pn_link_recv(unwrap(link), const_cast<char *>(&buf[0]), buf.size());
     if (n != ssize_t(buf.size())) throw error(MSG("receiver read failure"));
     clear();
