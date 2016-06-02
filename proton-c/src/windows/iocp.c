@@ -47,6 +47,13 @@
  * since Windows accumulates inbound traffic without stalling and
  * managing read buffers would not avoid a memory copy at the pn_read
  * boundary.
+ *
+ * A socket must not get a Windows closesocket() unless the
+ * application has called pn_close on the socket or a global
+ * pn_io_finalize().  On error, the internal accounting for
+ * write_closed or read_closed may be updated along with the external
+ * event notification.  A socket may be closed if it is never added to
+ * the iocpdesc_map or is on its way out of the map.
  */
 
 // Max number of overlapped accepts per listener
@@ -92,8 +99,6 @@ static void iocpdesc_fail(iocpdesc_t *iocpd, HRESULT status, const char* text)
   if (iocpd->iocp->iocp_trace) {
     iocp_log("connection terminated: %s\n", pn_error_text(iocpd->error));
   }
-  if (!is_listener(iocpd) && !iocpd->write_closed && !pni_write_pipeline_size(iocpd->pipeline))
-    iocp_shutdown(iocpd);
   iocpd->write_closed = true;
   iocpd->read_closed = true;
   iocpd->poll_error = true;
@@ -405,8 +410,6 @@ pn_socket_t pni_iocp_begin_connect(iocp_t *iocp, pn_socket_t sock, struct addrin
     pn_free(result);
     iocpd->write_closed = true;
     iocpd->read_closed = true;
-    pni_iocp_begin_close(iocpd);
-    sock = INVALID_SOCKET;
     if (iocp->iocp_trace)
       iocp_log("%s\n", pn_error_text(error));
   } else {
@@ -426,10 +429,12 @@ static void complete_connect(connect_result_t *result, HRESULT status)
 
   if (status) {
     iocpdesc_fail(iocpd, status, "Connect failure");
+    // Posix sets selectable events as follows:
+    pni_events_update(iocpd, PN_READABLE | PN_EXPIRED);
   } else {
     release_sys_sendbuf(iocpd->socket);
     if (setsockopt(iocpd->socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT,  NULL, 0)) {
-      iocpdesc_fail(iocpd, WSAGetLastError(), "Connect failure (update context)");
+      iocpdesc_fail(iocpd, WSAGetLastError(), "Internal connect failure (update context)");
     } else {
       pni_events_update(iocpd, PN_WRITABLE);
       start_reading(iocpd);
@@ -528,6 +533,11 @@ ssize_t pni_iocp_begin_write(iocpdesc_t *iocpd, const void *buf, size_t len, boo
   return written;
 }
 
+/*
+ * Note: iocp write completion is not "bytes on the wire", it is "peer
+ * acked the sent bytes".  Completion can be seconds on a slow
+ * consuming peer.
+ */
 static void complete_write(write_result_t *result, DWORD xfer_count, HRESULT status)
 {
   iocpdesc_t *iocpd = result->base.iocpd;
@@ -634,8 +644,6 @@ static void drain_until_closed(iocpdesc_t *iocpd) {
     else
       iocp_log("graceful close on reader abandoned: %d\n", WSAGetLastError());
   iocpd->read_closed = true;
-  closesocket(iocpd->socket);
-  iocpd->socket = INVALID_SOCKET;
 }
 
 
@@ -681,19 +689,21 @@ ssize_t pni_iocp_recv(iocpdesc_t *iocpd, void *buf, size_t size, bool *would_blo
     return SOCKET_ERROR;
   }
 
-  size_t count = recv(iocpd->socket, (char *) buf, size, 0);
+  int count = recv(iocpd->socket, (char *) buf, size, 0);
   if (count > 0) {
     pni_events_update(iocpd, iocpd->events & ~PN_READABLE);
     begin_zero_byte_read(iocpd);
-    return count;
+    return (ssize_t) count;
   } else if (count == 0) {
     iocpd->read_closed = true;
     return 0;
   }
   if (WSAGetLastError() == WSAEWOULDBLOCK)
     *would_block = true;
-  else
+  else {
     set_iocp_error_status(error, PN_ERR, WSAGetLastError());
+    iocpd->read_closed = true;
+  }
   return SOCKET_ERROR;
 }
 
@@ -1078,19 +1088,15 @@ static void zombie_list_hard_close_all(iocp_t *iocp)
 
 static void iocp_shutdown(iocpdesc_t *iocpd)
 {
-  bool disconnected = false;
+  if (iocpd->socket == PN_INVALID_SOCKET)
+    return;    // Hard close in progress
   if (shutdown(iocpd->socket, SD_SEND)) {
     int err = WSAGetLastError();
-    if (err == WSAECONNABORTED || err == WSAECONNRESET || err == WSAENOTCONN)
-      disconnected = true;
-    else if (iocpd->iocp->iocp_trace)
-      iocp_log("socket shutdown failed %d\n", err);
+    if (err != WSAECONNABORTED && err != WSAECONNRESET && err != WSAENOTCONN)
+      if (iocpd->iocp->iocp_trace)
+        iocp_log("socket shutdown failed %d\n", err);
   }
   iocpd->write_closed = true;
-  if (iocpd->read_closed || disconnected) {
-    closesocket(iocpd->socket);
-    iocpd->socket = INVALID_SOCKET;
-  }
 }
 
 void pni_iocp_begin_close(iocpdesc_t *iocpd)

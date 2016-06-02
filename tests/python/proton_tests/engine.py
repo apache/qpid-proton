@@ -2086,7 +2086,11 @@ class ServerTest(Test):
         assert self.conn.transport.frames_output > self.old_count, "No idle frames sent"
 
         # now wait to explicitly cause the other side to expire:
-        sleep(3 * idle_timeout)
+        suspend_time = 3 * idle_timeout
+        if os.name=="nt":
+          # On windows, the full delay gets too close to the graceful/hard close tipping point
+          suspend_time = 2.5 * idle_timeout
+        sleep(suspend_time)
 
     p = Program()
     Reactor(p).run()
