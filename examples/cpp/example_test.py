@@ -288,8 +288,8 @@ map{int(4):string(four), string(five):int(5)}
 
 == Insert with stream operators.
 array<int>[int(1), int(2), int(3)]
-list[int(42), boolean(false), symbol(x)]
-map{string(k1):int(42), symbol(k2):boolean(false)}
+list[int(42), boolean(0), symbol(x)]
+map{string(k1):int(42), symbol(k2):boolean(0)}
 """
         self.maxDiff = None
         self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())

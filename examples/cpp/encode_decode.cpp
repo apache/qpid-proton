@@ -145,7 +145,7 @@ static void insert_stream_operators() {
       << proton::codec::finish();
     print(v);
 
-    // Create a mixed-type list of the values [42, false, "x"].
+    // Create a mixed-type list of the values [42, 0, "x"].
     proton::codec::encoder e2(v);
     e2 << proton::codec::start::list()
        << int32_t(42) << false << proton::symbol("x")
@@ -243,7 +243,6 @@ static void print_next(proton::codec::decoder& d) {
 void print(proton::value& v) {
     proton::codec::decoder d(v);
     d.rewind();
-    std::cout << std::boolalpha; // Print boolean as true/false.
     while (d.more()) {
         print_next(d);
         if (d.more()) std::cout << ", ";
