@@ -46,12 +46,12 @@ make_conversion_error(type_id want, type_id got, const std::string& msg=std::str
 
 /// Convert std::string to pn_bytes_t
 inline pn_bytes_t pn_bytes(const std::string& s) {
-    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
+    pn_bytes_t b = { s.size(), s.empty() ? 0 : const_cast<char*>(&s[0]) };
     return b;
 }
 
 inline pn_bytes_t pn_bytes(const binary& s) {
-    pn_bytes_t b = { s.size(), reinterpret_cast<const char*>(&s[0]) };
+    pn_bytes_t b = { s.size(), s.empty() ? 0 : reinterpret_cast<const char*>(&s[0]) };
     return b;
 }
 
