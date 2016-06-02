@@ -331,6 +331,7 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
     if ((node->described && node->children == 1) || (!node->described && node->children == 0)) {
       pn_encoder_writef8(encoder, pn_type2code(encoder, node->type));
     }
+  // Fallthrough
   case PN_LIST:
   case PN_MAP:
     pos = encoder->position;

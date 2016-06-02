@@ -160,7 +160,7 @@ static void test_finalize(void)
 {
   static pn_class_t clazz = PN_CLASS(finalizer);
 
-  int **obj = (int **) pn_class_new(&clazz, sizeof(int **));
+  int **obj = (int **) pn_class_new(&clazz, sizeof(int *));
   assert(obj);
 
   int called = 0;

@@ -99,8 +99,7 @@ int main(int, char**) {
 
     // value and scalar types, more tests in value_test and scalar_test.
     RUN_TEST(failed, simple_type_test(value("foo")));
-    value v(23);                // Make sure we can take a non-const ref also
-    RUN_TEST(failed, simple_type_test(v));
+    RUN_TEST(failed, value v(23); simple_type_test(v));
     RUN_TEST(failed, simple_type_test(scalar(23)));
     RUN_TEST(failed, simple_type_test(annotation_key(42)));
     RUN_TEST(failed, simple_type_test(message_id(42)));

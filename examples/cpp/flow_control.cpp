@@ -89,7 +89,7 @@ class flow_receiver : public proton::messaging_handler {
     int received;
     flow_sender &sender;
 
-    flow_receiver(flow_sender &s) : stage(0), sender(s) {}
+    flow_receiver(flow_sender &s) : stage(0), received(0), sender(s) {}
 
     void example_setup(int n) {
         received = 0;

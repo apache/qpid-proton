@@ -284,7 +284,7 @@ class pollable_engine : public pollable {
 
     uint32_t work(uint32_t events) {
         try {
-            bool can_read = events & EPOLLIN, can_write = events && EPOLLOUT;
+            bool can_read = events & EPOLLIN, can_write = events & EPOLLOUT;
             do {
                 can_write = can_write && write();
                 can_read = can_read && read();
