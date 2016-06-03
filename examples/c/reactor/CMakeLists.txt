@@ -30,6 +30,13 @@ set_source_files_properties (
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LINK_TIME_OPTIMIZATION}"
   )
 
+if (BUILD_WITH_CXX)
+  set_source_files_properties (
+    ${reactor-examples}
+    PROPERTIES LANGUAGE CXX
+    )
+endif (BUILD_WITH_CXX)
+
 include_directories(${Proton_INCLUDE_DIRS})
 add_executable(sender sender.c)
 add_executable(receiver receiver.c)
