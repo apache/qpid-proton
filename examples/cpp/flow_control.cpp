@@ -19,6 +19,8 @@
  *
  */
 
+#include "options.hpp"
+
 #include <proton/listener.hpp>
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
@@ -57,10 +59,7 @@ class flow_sender : public proton::messaging_handler {
   public:
     flow_sender() : available(0), sequence(0) {}
 
-    void on_sendable(proton::sender &s) OVERRIDE {
-        if (verbose)
-            std::cout << "flow_sender in \"on_sendable\" with credit " << s.credit()
-                      << " and " << available << " available messages" << std::endl;
+    void send_available_messages(proton::sender &s) {
         for (int i = sequence; available && s.credit() > 0; i++) {
             std::ostringstream mbody;
             mbody << "flow_sender message " << sequence++;
@@ -70,11 +69,18 @@ class flow_sender : public proton::messaging_handler {
         }
     }
 
+    void on_sendable(proton::sender &s) OVERRIDE {
+        if (verbose)
+            std::cout << "flow_sender in \"on_sendable\" with credit " << s.credit()
+                      << " and " << available << " available messages" << std::endl;
+        send_available_messages(s);
+    }
+
     void on_sender_drain_start(proton::sender &s) OVERRIDE {
         if (verbose)
             std::cout << "flow_sender in \"on_drain_start\" with credit " << s.credit()
-                      << " making an internal call to \"on_sendble\"" << std::endl;
-        on_sendable(s); // send as many as we can
+                      << " and " << available << " available messages" << std::endl;
+        send_available_messages(s);
         if (s.credit()) {
             s.return_credit(); // return the rest
         }
@@ -213,15 +219,21 @@ class flow_control : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
-    std::string quiet_arg("-quiet");
-    if (argc > 2 && quiet_arg == argv[2])
-        verbose = false;
-    try {
-        // Pick an "unusual" port since we are going to be talking to
-        // ourselves, not a broker.
-        std::string url = argc > 1 ? argv[1] : "127.0.0.1:8888/examples";
+    // Pick an "unusual" port since we are going to be talking to
+    // ourselves, not a broker.
+    std::string address("127.0.0.1:8888");
+    bool quiet = false;
 
-        flow_control fc(url);
+    example::options opts(argc, argv);
+    opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
+    opts.add_flag(quiet, 'q', "quiet", "suppress additional commentary of credit allocation and consumption");
+
+    try {
+        opts.parse();
+        if (quiet)
+            verbose = false;
+
+        flow_control fc(address);
         proton::default_container(fc).run();
 
         return 0;
