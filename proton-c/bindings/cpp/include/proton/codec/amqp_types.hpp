@@ -22,6 +22,9 @@
  *
  */
 
+/// @cond INTERNAL
+/// XXX Remove this entirely
+    
 namespace proton {
 namespace codec {
 
@@ -102,5 +105,7 @@ typedef proton::decimal128 decimal128_type;
 
 } // codec
 } // proton
+
+/// @endcond
 
 #endif // PROTON_CODEC_AMQP_TYPES_HPP

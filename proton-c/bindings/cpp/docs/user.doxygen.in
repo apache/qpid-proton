@@ -43,7 +43,7 @@ ALPHABETICAL_INDEX      = NO
 ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
-PREDEFINED = protected=private PN_CPP_EXTERN=
+PREDEFINED = protected=private PN_CPP_EXTERN= PN_CPP_OVERRIDE=
 EXCLUDE_SYMBOLS = internal internal::*
 
 # Configuration options related to warning and progress messages

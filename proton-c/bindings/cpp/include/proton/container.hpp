@@ -125,36 +125,39 @@ class PN_CPP_CLASS_EXTERN container {
     /// @see stop(const error_condition&)
     PN_CPP_EXTERN virtual void stop();
 
-    /// Open a connection to `url` and open a sender for `url.path()`.
+    /// Open a connection and sender for `url`.
     PN_CPP_EXTERN virtual returned<sender> open_sender(const std::string &url);
 
-    /// Open a connection to `url` and open a sender for `url.path()`.
+    /// Open a connection and sender for `url`.
+    ///
     /// Any supplied sender options will override the container's
     /// template options.
     PN_CPP_EXTERN virtual returned<sender> open_sender(const std::string &url,
                                                        const proton::sender_options &o);
 
-    /// Open a connection to `url` and open a sender for `url.path()`.
+    /// Open a connection and sender for `url`.
+    ///
     /// Any supplied sender or connection options will override the
     /// container's template options.
     virtual returned<sender> open_sender(const std::string &url,
                                          const proton::sender_options &o,
                                          const connection_options &c) = 0;
 
-    /// Open a connection to `url` and open a receiver for
-    /// `url.path()`.
+    /// Open a connection and receiver for `url`.
     PN_CPP_EXTERN virtual returned<receiver> open_receiver(const std::string&url);
 
 
-    /// Open a connection to `url` and open a receiver for
-    /// `url.path()`.  Any supplied receiver options will override the
-    /// container's template options.
+    /// Open a connection and receiver for `url`.
+    ///
+    /// Any supplied receiver options will override the container's
+    /// template options.
     PN_CPP_EXTERN virtual returned<receiver> open_receiver(const std::string&url,
                                                            const proton::receiver_options &o);
 
-    /// Open a connection to `url` and open a receiver for
-    /// `url.path()`.  Any supplied receiver or connection options will
-    /// override the container's template options.
+    /// Open a connection and receiver for `url`.
+    ///
+    /// Any supplied receiver or connection options will override the
+    /// container's template options.
     virtual returned<receiver> open_receiver(const std::string&url,
                                              const proton::receiver_options &o,
                                              const connection_options &c) = 0;

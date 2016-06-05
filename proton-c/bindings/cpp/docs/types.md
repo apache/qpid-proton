@@ -29,11 +29,11 @@ proton::decimal32   | proton::DECIMAL32    | 32-bit decimal floating point
 proton::decimal64   | proton::DECIMAL64    | 64-bit decimal floating point
 proton::decimal128  | proton::DECIMAL128   | 128-bit decimal floating point
 proton::uuid        | proton::UUID         | 128-bit universally-unique identifier
-std::string         | proton::STRING       | UTF-8 encoded unicode string
+std::string         | proton::STRING       | UTF-8 encoded Unicode string
 proton::symbol      | proton::SYMBOL       | 7-bit ASCII encoded string
 proton::binary      | proton::BINARY       | Variable-length binary data
 
-proton::scalar is a holder that can hold a scalar value of any type.
+proton::scalar is a holder that can accept a scalar value of any type.
 
 ## Compound types
 
@@ -43,7 +43,7 @@ See below           | proton::ARRAY        | Sequence of values of the same type
 See below           | proton::LIST         | Sequence of values of mixed types
 See below           | proton::MAP          | Map of key-value pairs
 
-proton::value is a holder that can hold any AMQP value, scalar, or
+proton::value is a holder that can accept any AMQP value, scalar or
 compound.
 
 proton::ARRAY converts to and from C++ sequences: std::vector,
@@ -69,8 +69,9 @@ You can decode any AMQP LIST or ARRAY into:
 
 ## Include files
 
-You can simply include proton/types.hpp to include all the type definitions and
-conversions. Alternatively, you can selectively include only what you need:
+You can simply include proton/types.hpp to get all the type
+definitions and conversions. Alternatively, you can selectively
+include only what you need:
 
  - Include proton/types_fwd.hpp: forward declarations for all types.
  - Include individual `.hpp` files as per the table above.
