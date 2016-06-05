@@ -34,7 +34,7 @@ namespace proton {
 class sender;
 class receiver;
 
-/// The target is the destination node of a sent or received message.
+/// A destination for messages.
 ///
 /// @see proton::sender, proton::receiver, proton::target
 class target : public terminus {

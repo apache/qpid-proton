@@ -22,13 +22,16 @@ Sessions are created over a `proton::connection`, which represents the
 network connection. You can create links directly on a connection
 using its default session if you don't need multiple sessions.
 
-`proton::message` represents the message: the body (content), properties,
-headers and annotations. A `proton::delivery` represents the act of transferring
-a message over a link. The receiver acknowledges the delivery by accepting or
-rejecting it. The delivery is *settled* when both ends are done with it.
-Different settlement methods give different levels of reliability:
-*at-most-once*, *at-least-once*, and *exactly-once*. See "Delivery Guarantees"
-below for details.
+`proton::message` represents the message: the body (content),
+properties, headers, and annotations. A `proton::delivery` represents
+a message being received over a link. The receiver acknowledges the
+delivery by accepting or rejecting it.  The corresponding message
+sender uses a `proton::tracker` to follow the state of the delivery.
+
+The delivery is *settled* when both ends are done with it.  Different
+settlement methods give different levels of reliability:
+*at-most-once*, *at-least-once*, and *exactly-once*. See "Delivery
+Guarantees" below for details.
 
 ## Sources and targets
 
@@ -63,6 +66,9 @@ implement a queueless request-response server.
 
 ## Delivery guarantees
 
+Proton offers three levels of message delivery guarantee:
+*at-most-once*, *at-least-once*, and *exactly-once*.
+
 For *at-most-once*, the sender settles the message as soon as it sends
 it. If the connection is lost before the message is received by the
 receiver, the message will not be delivered.
@@ -72,7 +78,7 @@ receipt. If the connection is lost before the sender is informed of
 the settlement, then the delivery is considered in-doubt and should be
 retried. This will ensure it eventually gets delivered (provided of
 course the connection and link can be reestablished). It may mean that
-it is delivered multiple times though.
+it is delivered multiple times, however.
 
 Finally, for *exactly-once*, the receiver accepts the message but
 doesn't settle it. The sender settles once it is aware that the
@@ -103,44 +109,20 @@ conversion between AMQP and C++ data types.
 
 There are several ways to manage handlers and AMQP objects, for
 different types of application. All of them use the same
-`proton::messaging_handler` sub-classes so code can be re-used if you
+`proton::messaging_handler` subclasses so code can be re-used if you
 change your approach.
 
-### %proton::container - Easy single-threaded applications
+### %proton::default_container - Easy single-threaded applications
 
-`proton::container` is the top level object in a proton application.
-Use proton::connection::connect() and proton::container::listen() to
+`proton::container` is the top-level object in a proton application.
+Use proton::container::connect() and proton::container::listen() to
 create connections. The container polls multiple connections and calls
-protocol events on your `proton::messaging_handler` sub-classes.
+protocol events on your `proton::messaging_handler` subclasses.
 
-<!-- XXX This is wrong?
-The default container implementation is created by
-`proton::new_default_container()`.
--->
+The default container implementation is created using
+`proton::default_container`.
 
-You can implement your own container to integrate proton with
-arbitrary your own container using the
-`proton::io::connection_engine`.
+You can implement your own container to integrate proton with any IO
+provider using the `proton::io::connection_engine`.
 
-### %proton::io::connection_engine - Integrating with foreign IO
-
-The `proton::io::connection_engine` is different from the other proton
-APIs. You might think of it as more like an SPI (service provider
-interface).
-
-The engine provides a very low-level way of driving a
-`proton::messaging_handler`: You feed raw byte-sequence fragments of
-an AMQP-encoded stream to the engine and it converts that into calls
-on a proton::handler. The engine provides you with outgoing protocol
-stream bytes in return.
-
-The engine is deliberately very simple and low level. It does no IO, no
-thread-related locking, and is written in simple C++98-compatible code.
-
-You can use the engine directly to connect your application to any
-kind of IO framework or library, memory-based streams, or any other
-source or sink for byte-stream data.
-
-You can also use the engine to build a custom implementation of
-`proton::container` so portable proton applications can run without
-modification on your platform.
+@see @ref io_page

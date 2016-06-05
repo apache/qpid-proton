@@ -35,7 +35,7 @@ namespace proton {
 class sender;
 class receiver;
 
-/// The source node is where messages originate.
+/// A point of origin for messages.
 ///
 /// @see proton::sender, proton::receiver, proton::target
 class source : public terminus {

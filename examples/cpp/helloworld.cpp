@@ -23,7 +23,6 @@
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/tracker.hpp>
 #include <proton/url.hpp>
 
 #include <iostream>
@@ -64,6 +63,7 @@ int main(int argc, char **argv) {
 
         hello_world hw(url);
         proton::default_container(hw).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

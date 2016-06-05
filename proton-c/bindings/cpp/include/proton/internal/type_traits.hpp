@@ -22,9 +22,7 @@
  *
  */
 
-/// @file
-///
-/// Internal: Type traits for mapping between AMQP and C++ types.
+/// Type traits for mapping between AMQP and C++ types.
 ///
 /// Also provides workarounds for missing type_traits classes on older
 /// C++ compilers.

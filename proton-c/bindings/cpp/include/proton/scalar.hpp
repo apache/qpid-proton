@@ -71,6 +71,18 @@ template<class T> T get(const scalar& s) { return internal::get<T>(s); }
 /// according to `std::is_convertible`
 /// @related scalar
 template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
+
+
+/// Coerce the contained value to type T. For example:
+///
+///      uint64_t i = get<uint64_t>(x)
+///
+/// This will succeed if x contains any numeric value, but may lose
+/// precision if it contains a float or double value.
+///
+/// @throw conversion_error if the value cannot be converted to T
+/// according to `std::is_convertible`
+/// @related scalar
 template<class T> T coerce(scalar& x) { return internal::coerce<T>(x); }
 
 } // proton

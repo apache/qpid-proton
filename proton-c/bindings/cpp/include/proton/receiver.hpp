@@ -65,14 +65,14 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// the drain completes.
     PN_CPP_EXTERN void add_credit(uint32_t);
 
-    /// Commence a drain cycle.  If there is positive credit, a
-    /// request is sent to the sender to immediately use up all of the
-    /// existing credit balance by sending messages that are
-    /// immediately available and releasing any unused credit (see
-    /// sender::return_credit).  Throws proton::error if a drain cycle
-    /// is already in progress.  An on_receiver_drain_finish event
-    /// will be generated when the outstanding drained credit reaches
-    /// zero.
+    /// **Experimental** - Commence a drain cycle.  If there is
+    /// positive credit, a request is sent to the sender to
+    /// immediately use up all of the existing credit balance by
+    /// sending messages that are immediately available and releasing
+    /// any unused credit (see sender::return_credit).  Throws
+    /// proton::error if a drain cycle is already in progress.  An
+    /// on_receiver_drain_finish event will be generated when the
+    /// outstanding drained credit reaches zero.
     PN_CPP_EXTERN void drain();
 
     /// @cond INTERNAL
