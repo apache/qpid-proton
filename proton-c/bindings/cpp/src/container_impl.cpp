@@ -253,6 +253,13 @@ void container_impl::configure_server_connection(connection &c) {
     connection_options opts = server_connection_options_;
     opts.update(lc.get_options());
     opts.apply(c);
+    // Handler applied separately
+    proton_handler *h = opts.handler();
+    if (h) {
+        internal::pn_ptr<pn_handler_t> chandler = cpp_handler(h);
+        pn_record_t *record = pn_connection_attachments(unwrap(c));
+        pn_record_set_handler(record, chandler.get());
+    }
 }
 
 void container_impl::run() {
