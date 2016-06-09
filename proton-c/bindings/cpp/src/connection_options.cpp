@@ -63,6 +63,13 @@ class connection_options::impl {
     option<std::string> sasl_config_name;
     option<std::string> sasl_config_path;
 
+    /*
+     * There are three types of connection options: the handler
+     * (required at creation, so too late to apply here), open frame
+     * options (that never change after the original open), and
+     * transport options (set once per transport over the life of the
+     * connection).
+     */
     void apply(connection& c) {
         pn_connection_t *pnc = unwrap(c);
         pn_transport_t *pnt = pn_connection_transport(pnc);
@@ -70,13 +77,31 @@ class connection_options::impl {
             connection_context::get(c).handler.get());
         bool uninit = c.uninitialized();
 
-        // pnt is NULL between reconnect attempts.
-        // Only apply transport options if uninit or outbound with
-        // transport not yet configured.
+        // Only apply connection options if uninit.
+        if (uninit) {
+            std::string vhost;
+            if (virtual_host.set)
+                vhost = virtual_host.value;
+            else if (outbound)
+                vhost = outbound->address().host();
+
+            if (reconnect.set && outbound)
+                outbound->reconnect_timer(reconnect.value);
+            if (container_id.set)
+                pn_connection_set_container(pnc, container_id.value.c_str());
+            if (!vhost.empty())
+                pn_connection_set_hostname(pnc, vhost.c_str());
+        }
+
+        // Transport options.  pnt is NULL between reconnect attempts
+        // and if there is a pipelined open frame.
         if (pnt && (uninit || (outbound && !outbound->transport_configured())))
         {
             // SSL
             if (outbound && outbound->address().scheme() == url::AMQPS) {
+                // A side effect of pn_ssl() is to set the ssl peer
+                // hostname to the connection hostname, which has
+                // already been adjusted for the virtual_host option.
                 pn_ssl_t *ssl = pn_ssl(pnt);
                 if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
                     throw error(MSG("client SSL/TLS initialization error"));
@@ -113,15 +138,6 @@ class connection_options::impl {
                 pn_transport_set_channel_max(pnt, max_sessions.value);
             if (idle_timeout.set)
                 pn_transport_set_idle_timeout(pnt, idle_timeout.value.milliseconds());
-        }
-        // Only apply connection options if uninit.
-        if (uninit) {
-            if (reconnect.set && outbound)
-                outbound->reconnect_timer(reconnect.value);
-            if (container_id.set)
-                pn_connection_set_container(pnc, container_id.value.c_str());
-            if (virtual_host.set && !virtual_host.value.empty())
-                pn_connection_set_hostname(pnc, virtual_host.value.c_str());
         }
     }
 

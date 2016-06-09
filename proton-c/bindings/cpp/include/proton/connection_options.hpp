@@ -100,7 +100,12 @@ class connection_options {
     /// Set the container ID.
     PN_CPP_EXTERN connection_options& container_id(const std::string &id);
 
-    /// Set the virtual host name.
+    /// Set the virtual host name for the connection. If making a
+    /// client connection by SSL/TLS, this name is also used for
+    /// certificate verification and Server Name Indication.  For
+    /// client connections, it defaults to the host name used to set
+    /// up the connection.  It is not set by default for server
+    /// connections.
     PN_CPP_EXTERN connection_options& virtual_host(const std::string &name);
 
     /// @cond INTERNAL

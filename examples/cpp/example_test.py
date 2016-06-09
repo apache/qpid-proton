@@ -299,14 +299,31 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         return os.path.join(pn_root, "examples/cpp/ssl_certs")
 
     def test_ssl(self):
-        # SSL without SASL
+        # SSL without SASL, VERIFY_PEER_NAME
         addr = "amqps://" + pick_addr() + "/examples"
         # Disable valgrind when using OpenSSL
-        out = self.proc(["ssl", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
 
+    def test_ssl_no_name(self):
+        # VERIFY_PEER
+        addr = "amqps://" + pick_addr() + "/examples"
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "noname"], skip_valgrind=True).wait_exit()
+        expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
+
+    def test_ssl_bad_name(self):
+        # VERIFY_PEER
+        addr = "amqps://" + pick_addr() + "/examples"
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "fail"], skip_valgrind=True).wait_exit()
+        expect = "Expected failure of connection with wrong peer name"
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
 
     def test_ssl_client_cert(self):
         # SSL with SASL EXTERNAL

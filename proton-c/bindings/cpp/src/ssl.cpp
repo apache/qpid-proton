@@ -48,24 +48,6 @@ enum ssl::resume_status ssl::resume_status() const {
     return (enum ssl::resume_status)pn_ssl_resume_status(object_);
 }
 
-void ssl::peer_hostname(const std::string &hostname) {
-    if (pn_ssl_set_peer_hostname(object_, hostname.c_str()))
-        throw error(MSG("SSL set peer hostname failure for " << hostname));
-}
-
-std::string ssl::peer_hostname() const {
-    std::string hostname;
-    size_t len = 0;
-    if (pn_ssl_get_peer_hostname(object_, NULL, &len) || len == 0)
-        return hostname;
-    hostname.reserve(len);
-    if (!pn_ssl_get_peer_hostname(object_, const_cast<char*>(hostname.c_str()), &len))
-        hostname.resize(len - 1);
-    else
-        hostname.resize(0);
-    return hostname;
-}
-
 std::string ssl::remote_subject() const {
     const char *s = pn_ssl_get_remote_subject(object_);
     return s ? std::string(s) : std::string();

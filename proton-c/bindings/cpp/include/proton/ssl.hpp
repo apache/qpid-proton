@@ -73,10 +73,6 @@ class ssl {
     /// Get the security strength factor.
     PN_CPP_EXTERN int ssf() const;
 
-    /// XXX remove
-    PN_CPP_EXTERN void peer_hostname(const std::string &);
-    PN_CPP_EXTERN std::string peer_hostname() const;
-
     /// XXX discuss, what's the meaning of "remote" here?
     PN_CPP_EXTERN std::string remote_subject() const;
 
@@ -102,7 +98,7 @@ class ssl_certificate {
     PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main);
 
     // XXX Document the following constructors
-    
+
     /// @copydoc ssl_certificate
     PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra);
 
