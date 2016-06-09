@@ -261,7 +261,8 @@ class BlockingConnection(Handler):
             self.container.stop()
             self.conn.handler = None # break cyclical reference
         if self.disconnected and not self._is_closed():
-            raise ConnectionException("Connection %s disconnected" % self.url)
+            raise ConnectionException(
+                "Connection %s disconnected: %s" % (self.url, self.disconnected))
 
     def on_link_remote_close(self, event):
         if event.link.state & Endpoint.LOCAL_ACTIVE:
@@ -280,7 +281,7 @@ class BlockingConnection(Handler):
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
-        self.disconnected = True
+        self.disconnected = event.transport.condition or "unknown"
 
 class AtomicCount(object):
     def __init__(self, start=0, step=1):
