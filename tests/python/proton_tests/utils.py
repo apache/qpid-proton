@@ -134,22 +134,15 @@ class SyncRequestResponseTest(Test):
         if "java" in sys.platform:
             raise Skipped("")
         port = free_tcp_port()
-        # We have constructed ConnPropertiesServer with host="127.0.0.1", so it is ok to hardcode the hostname in the error message string.
-        error_message = 'Connection amqp://127.0.0.1:' + str(port) + ' disconnected'
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=port), timeout=self.timeout)
         server.start()
         server.wait()
-        exception_occurred = False
         try:
             # This will cause an exception because we are specifying allowed_mechs as EXTERNAL. The SASL handshake will fail because the server is not setup to handle EXTERNAL
             connection = BlockingConnection(server.url, timeout=self.timeout, properties=CONNECTION_PROPERTIES, offered_capabilities=OFFERED_CAPABILITIES, desired_capabilities=DESIRED_CAPABILITIES, allowed_mechs=EXTERNAL)
+            self.fail("Expected ConnectionException")
         except ConnectionException as e:
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-            self.assertEquals(error_message, str(exc_value))
-            exception_occurred = True
-
-        self.assertEquals(True, exception_occurred)
-
+            self.assertTrue('amqp:unauthorized-access' in str(e), "expected unauthorized-access")
         server.join(timeout=self.timeout)
 
     def test_allowed_mechs_anonymous(self):
@@ -165,6 +158,4 @@ class SyncRequestResponseTest(Test):
         self.assertEquals(server.properties_received, True)
         self.assertEquals(server.offered_capabilities_received, True)
         self.assertEquals(server.desired_capabilities_received, True)
-        
-        
 
