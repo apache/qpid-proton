@@ -170,9 +170,9 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
           char *colon = strrchr(h, ':');
           if (colon) {
               *colon = '\0';
-              host = h;
               port = colon + 1;
           }
+          host = h;
       }
   }
 
