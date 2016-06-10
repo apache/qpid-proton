@@ -2217,6 +2217,11 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
       error = SEC_E_WRONG_PRINCIPAL;
       break;
     }
+    else if (ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME && !server_name) {
+      ssl_log_error("Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
+      error = SEC_E_WRONG_PRINCIPAL;
+      break;
+    }
   } while (0);
 
   if (tracing && !error)
