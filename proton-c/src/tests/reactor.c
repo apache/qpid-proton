@@ -372,6 +372,27 @@ static void test_reactor_connect(void) {
   pn_reactor_free(reactor);
 }
 
+static void test_reactor_bad_domain(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  assert(reactor);
+  pn_handler_t *ch = pn_handler_new(client_dispatch, sizeof(client_t), NULL);
+  client_t *cli = cmem(ch);
+  cli->events = pn_list(PN_VOID, 0);
+  pn_connection_t *connection = pn_reactor_connection_to_host(reactor, "somebogusdomain", "5672", ch);
+  assert(connection);
+  pn_reactor_run(reactor);
+
+  expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
+         PN_CONNECTION_BOUND, PN_TRANSPORT_TAIL_CLOSED,
+         PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
+         PN_TRANSPORT_CLOSED, PN_CONNECTION_UNBOUND,
+         END);
+
+  pn_free(cli->events);
+  pn_decref(ch);
+  pn_reactor_free(reactor);
+}
+
 typedef struct {
   int received;
 } sink_t;
@@ -541,6 +562,7 @@ int main(int argc, char **argv)
   test_reactor_handler_run_free();
   test_reactor_connection();
   test_reactor_connection_factory();
+  test_reactor_bad_domain();
   test_reactor_acceptor();
   test_reactor_acceptor_run();
   test_reactor_connect();
