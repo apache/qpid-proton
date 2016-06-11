@@ -134,6 +134,9 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
   const char *port = "5672";
   pn_string_t *str = NULL;
 
+  // link the new transport to its reactor:
+  pni_record_init_reactor(pn_transport_attachments(transport), reactor);
+
   if (pn_connection_acceptor(conn) != NULL) {
       // this connection was created by the acceptor.  There is already a
       // socket assigned to this connection.  Nothing needs to be done.
@@ -310,7 +313,6 @@ pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socke
   pn_record_t *tr = pn_transport_attachments(transport);
   pn_record_def(tr, PN_TRANCTX, PN_WEAKREF);
   pn_record_set(tr, PN_TRANCTX, sel);
-  pni_record_init_reactor(tr, reactor);
   pni_connection_update(sel);
   pn_reactor_update(reactor, sel);
   return sel;
