@@ -23,13 +23,14 @@ include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
 add_definitions(${CXX_WARNING_FLAGS})
 
-# Single-threaded examples.
+# Single-threaded examples that work on C++03
 foreach(example
     broker
     helloworld
     helloworld_direct
     simple_recv
     simple_send
+    scheduled_send_03
     direct_recv
     direct_send
     client
@@ -44,6 +45,14 @@ foreach(example
     encode_decode)
   add_executable(${example} ${example}.cpp)
 endforeach()
+
+# Single-threaded examples that require C++11
+if(HAS_CPP11)
+  foreach(example
+      scheduled_send)
+    add_executable(${example} ${example}.cpp)
+  endforeach()
+endif()
 
 # Python test runner
 set(env_py ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py)

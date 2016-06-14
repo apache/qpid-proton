@@ -52,6 +52,10 @@ class dummy_container : public container {
     class sender_options sender_options() const { return sopts_; }
     void receiver_options(const class receiver_options &o) { ropts_ = o; }
     class receiver_options receiver_options() const { return ropts_; }
+#if PN_CPP_HAS_STD_FUNCTION
+    void schedule(duration, std::function<void()>) { throw fail; }
+#endif
+    void schedule(duration, void_function0&) { throw fail; }
 
   private:
     std::string id_;
@@ -65,7 +69,7 @@ class dummy_event_loop : public event_loop {
 #if PN_CPP_HAS_CPP11
     bool inject(std::function<void()> f) PN_CPP_OVERRIDE { f(); return true; }
 #endif
-    bool inject(proton::inject_handler& h) PN_CPP_OVERRIDE { h.on_inject(); return true; }
+    bool inject(proton::void_function0& h) PN_CPP_OVERRIDE { h(); return true; }
 };
 
 }

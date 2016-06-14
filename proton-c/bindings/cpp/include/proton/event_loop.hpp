@@ -23,6 +23,7 @@
  */
 
 #include "./internal/config.hpp"
+#include "./function.hpp"
 
 #include <functional>
 
@@ -38,13 +39,13 @@ struct pn_link_t;
 namespace proton {
 
 /// **Experimental** - A handler for injected code.
-class inject_handler {
+///
+/// @deprecated use void_function0.
+class inject_handler : public void_function0 {
   public:
     virtual ~inject_handler() {}
-
-    // XXX bad name, should be operator()() to be idiomatic and consistent with C++11.
-    /// Called when the injected code is executed.
     virtual void on_inject() = 0;
+    void operator()() { on_inject(); }
 };
 
 /// **Experimental** - A serial execution context.
@@ -62,10 +63,10 @@ class PN_CPP_CLASS_EXTERN event_loop {
     ///
     /// @return true if f() has or will be called, false if the event_loop is ended
     /// and f() cannot be injected.
-    virtual bool inject(inject_handler& f) = 0;
+    virtual bool inject(void_function0& f) = 0;
 
-#if PN_CPP_HAS_CPP11
-    /// @copydoc inject(inject_handler&)
+#if PN_CPP_HAS_STD_FUNCTION
+    /// @copydoc inject(void_function0&)
     virtual bool inject(std::function<void()> f) = 0;
 #endif
 

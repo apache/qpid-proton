@@ -337,6 +337,20 @@ Hello World!
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
 
+    def test_scheduled_send_03(self):
+        # Output should be a bunch of "send" lines but can't guarantee exactly how many.
+        out = self.proc(["scheduled_send_03", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+        self.assertGreater(len(out), 0);
+        self.assertEqual(["send"]*len(out), out)
+
+    def test_scheduled_send(self):
+        try:
+            out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+            self.assertGreater(len(out), 0);
+            self.assertEqual(["send"]*len(out), out)
+        except ProcError:       # File not found, not a C++11 build.
+            pass
+
 
 class EngineTestCase(BrokerTestCase):
     """Run selected clients to test a connction_engine broker."""
@@ -377,14 +391,6 @@ class EngineTestCase(BrokerTestCase):
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())
 
-    def test_flow_control(self):
-        return
-        want="""success: Example 1: simple credit
-success: Example 2: basic drain
-success: Example 3: drain without credit
-success: Exmaple 4: high/low watermark
-"""
-        self.assertEqual(want, self.proc(["flow_control", pick_addr(), "-quiet"]).wait_exit())
 
 class MtBrokerTest(EngineTestCase):
     broker_exe = "mt_broker"

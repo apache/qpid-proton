@@ -134,6 +134,9 @@ class epoll_container : public proton::io::container_impl_base {
         std::atomic<uint64_t> count_;
     };
 
+     // FIXME aconway 2016-06-07: Unfinished
+    void schedule(proton::duration, std::function<void()>) OVERRIDE { throw std::logic_error("FIXME"); }
+    void schedule(proton::duration, proton::void_function0&) OVERRIDE { throw std::logic_error("FIXME"); }
     atomic_link_namer link_namer;
 
   private:
@@ -244,8 +247,8 @@ class epoll_event_loop : public proton::event_loop {
         return true;
     }
 
-    bool inject(proton::inject_handler& h) OVERRIDE {
-        return inject(std::bind(&proton::inject_handler::on_inject, &h));
+    bool inject(proton::void_function0& f) OVERRIDE {
+        return inject([&f]() { f(); });
     }
 
     jobs pop_all() {
