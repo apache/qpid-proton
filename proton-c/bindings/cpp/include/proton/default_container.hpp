@@ -34,7 +34,7 @@ namespace proton {
 class messaging_handler;
 
 // Avoid deprecated diagnostics from auto_ptr
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -57,12 +57,12 @@ public:
 #else
 class default_container : public container_ref<std::auto_ptr<container> > {
 public:
-  default_container(messaging_handler& h, const std::string& id="") : container_ref(make_auto_default_container(h, id)) {}
-  default_container(const std::string& id="") : container_ref(make_auto_default_container(id)) {}
+  default_container(messaging_handler& h, const std::string& id="") : container_ref<std::auto_ptr<container> >(make_auto_default_container(h, id)) {}
+  default_container(const std::string& id="") : container_ref<std::auto_ptr<container> >(make_auto_default_container(id)) {}
 };
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 
