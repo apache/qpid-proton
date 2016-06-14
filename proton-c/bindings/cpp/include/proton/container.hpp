@@ -23,6 +23,7 @@
  */
 
 #include "./connection_options.hpp"
+#include "./function.hpp"
 #include "./listener.hpp"
 #include "./thread_safe.hpp"
 
@@ -198,6 +199,13 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydoc receiver_options
     virtual class receiver_options receiver_options() const = 0;
 
+#if PN_CPP_HAS_STD_FUNCTION
+    /// Schedule a function to be called after the duration
+    virtual void schedule(duration, std::function<void()>) = 0;
+#endif
+    /// Schedule a function to be called after the duration.
+    /// C++03 compatible, for C++11 use the schedule(duration, std::function<void()>)
+    virtual void schedule(duration, void_function0&) = 0;
 };
 
 /// This is an header only class that can be used to help using containers more natural
@@ -240,6 +248,11 @@ class container_ref : public container {
         const connection_options &c) { return impl_->open_receiver(url, o, c); }
 
     std::string id() const { return impl_->id(); }
+
+#if PN_CPP_HAS_STD_FUNCTION
+    PN_CPP_EXTERN void schedule(duration d, std::function<void()> f) { return impl_->schedule(d, f); }
+#endif
+    PN_CPP_EXTERN void schedule(duration d, void_function0& f) { return impl_->schedule(d, f); }
 
     void client_connection_options(const connection_options& c) { impl_->client_connection_options(c); }
     connection_options client_connection_options() const { return impl_->client_connection_options(); }

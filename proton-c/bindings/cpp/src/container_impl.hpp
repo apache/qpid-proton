@@ -72,6 +72,10 @@ class container_impl : public container {
     void run() PN_CPP_OVERRIDE;
     void stop(const error_condition& err) PN_CPP_OVERRIDE;
     void auto_stop(bool set) PN_CPP_OVERRIDE;
+#if PN_CPP_HAS_STD_FUNCTION
+    void schedule(duration, std::function<void()>) PN_CPP_OVERRIDE;
+#endif
+    void schedule(duration, void_function0&) PN_CPP_OVERRIDE;
 
     // non-interface functions
     void configure_server_connection(connection &c);
