@@ -345,7 +345,7 @@ std::unique_ptr<container> make_default_container(const std::string& id) {
 #endif
 
 // Avoid deprecated diagnostics from auto_ptr
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -357,7 +357,7 @@ std::auto_ptr<container> make_auto_default_container(const std::string& id) {
   return std::auto_ptr<container>(new container_impl(id));
 }
 
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
 }
