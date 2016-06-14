@@ -29,14 +29,20 @@ namespace test {
 using namespace proton;
 
 
-class dummy_container : public container {
+class dummy_container : public standard_container {
   public:
     dummy_container(const std::string cid="") :
         id_(cid), fail("not implemented for dummy_container") {}
 
+    // Pull in base class functions here so that name search finds all the overloads
+    using standard_container::stop;
+    using standard_container::connect;
+    using standard_container::listen;
+    using standard_container::open_receiver;
+    using standard_container::open_sender;
+
     returned<connection> connect(const std::string&, const connection_options&) { throw fail; }
     listener listen(const std::string& , listen_handler& ) { throw fail; }
-    listener listen(const std::string&, const connection_options&) { throw fail; }
     void stop_listening(const std::string&) { throw fail; }
     void run() { throw fail; }
     void auto_stop(bool) { throw fail; }

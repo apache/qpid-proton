@@ -25,6 +25,8 @@
 #include "./connection_options.hpp"
 #include "./function.hpp"
 #include "./listener.hpp"
+#include "./receiver_options.hpp"
+#include "./sender_options.hpp"
 #include "./thread_safe.hpp"
 
 #include "./internal/config.hpp"
@@ -75,7 +77,7 @@ class PN_CPP_CLASS_EXTERN container {
     virtual returned<connection> connect(const std::string& url, const connection_options &) = 0;
 
     /// Connect to `url` and send an open request to the remote peer.
-    PN_CPP_EXTERN returned<connection> connect(const std::string& url);
+    virtual returned<connection> connect(const std::string& url) = 0;
 
     /// @cond INTERNAL
     /// Stop listening on url, must match the url string given to listen().
@@ -95,11 +97,11 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Listen with a fixed set of options for all accepted connections.
     /// See listen(const std::string&, listen_handler&)
-    PN_CPP_EXTERN listener listen(const std::string& url, const connection_options&);
+    virtual listener listen(const std::string& url, const connection_options&) = 0;
 
     /// Start listening on URL.
     /// New connections will use the handler from server_connection_options()
-    PN_CPP_EXTERN listener listen(const std::string& url);
+    virtual listener listen(const std::string& url) = 0;
 
     /// Run the container in this thread.
     /// Returns when the container stops.
@@ -124,17 +126,17 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Stop the container with an empty error condition.
     /// @see stop(const error_condition&)
-    PN_CPP_EXTERN void stop();
+    virtual void stop() = 0;
 
     /// Open a connection and sender for `url`.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url);
+    virtual returned<sender> open_sender(const std::string &url) = 0;
 
     /// Open a connection and sender for `url`.
     ///
     /// Any supplied sender options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                               const proton::sender_options &o);
+    virtual returned<sender> open_sender(const std::string &url,
+                                         const proton::sender_options &o) = 0;
 
     /// Open a connection and sender for `url`.
     ///
@@ -145,15 +147,15 @@ class PN_CPP_CLASS_EXTERN container {
                                          const connection_options &c) = 0;
 
     /// Open a connection and receiver for `url`.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url);
+    virtual returned<receiver> open_receiver(const std::string&url) = 0;
 
 
     /// Open a connection and receiver for `url`.
     ///
     /// Any supplied receiver options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                                   const proton::receiver_options &o);
+    virtual returned<receiver> open_receiver(const std::string&url,
+                                             const proton::receiver_options &o) = 0;
 
     /// Open a connection and receiver for `url`.
     ///
@@ -208,6 +210,36 @@ class PN_CPP_CLASS_EXTERN container {
     virtual void schedule(duration, void_function0&) = 0;
 };
 
+/// @cond INTERNAL
+/// This class is intended for container implementers, it simplifies implementing container
+/// by performing all the default actions for shortened method signatures
+///
+/// Note: This class will only be useful if you want all the ususal defaulted behaviours
+/// in your class as it makes them all non virtual, so you can't use just some of them.
+///
+/// It means that in the usual case the container interface is smaller and a little simpler.
+class PN_CPP_CLASS_EXTERN standard_container : public container {
+  public:
+    // Pull in base class functions here so we don't need to define them again
+    using container::stop;
+    using container::connect;
+    using container::listen;
+    using container::open_receiver;
+    using container::open_sender;
+
+    PN_CPP_EXTERN returned<connection> connect(const std::string& url);
+    PN_CPP_EXTERN listener listen(const std::string& url, const connection_options&);
+    PN_CPP_EXTERN listener listen(const std::string& url);
+    PN_CPP_EXTERN void stop();
+    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url);
+    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
+                                               const proton::sender_options &o);
+    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url);
+    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
+                                                           const proton::receiver_options &o);
+};
+/// @endcond
+
 /// This is an header only class that can be used to help using containers more natural
 /// by allowing them to be treated as value types.
 template <class Ptr>
@@ -221,31 +253,38 @@ class container_ref : public container {
     container_ref(Ptr p) : impl_(p) {}
 #endif
 
-    // Pull in base class functions here so we don't need to define them again
-    using container::stop;
-    using container::connect;
-    using container::listen;
-    using container::open_receiver;
-    using container::open_sender;
-
     returned<connection> connect(const std::string& url, const connection_options& opts) { return impl_->connect(url, opts); }
+    returned<connection> connect(const std::string& url) { return impl_->connect(url); }
     listener listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
+    listener listen(const std::string& url, const connection_options& opts) { return impl_->listen(url, opts); }
+    listener listen(const std::string& url) { return impl_->listen(url); }
 
     void stop_listening(const std::string& url) { impl_->stop_listening(url); }
     void run() { impl_->run(); }
     void auto_stop(bool set) { impl_->auto_stop(set); }
 
     void stop(const error_condition& err) { impl_->stop(err); }
+    void stop() { impl_->stop(); }
 
     returned<sender> open_sender(
         const std::string &url,
         const class sender_options &o,
         const connection_options &c) { return impl_->open_sender(url, o, c); }
+    returned<sender> open_sender(
+        const std::string &url,
+        const class sender_options &o) { return impl_->open_sender(url, o); }
+    returned<sender> open_sender(
+        const std::string &url) { return impl_->open_sender(url); }
 
     returned<receiver> open_receiver(
         const std::string&url,
         const class receiver_options &o,
         const connection_options &c) { return impl_->open_receiver(url, o, c); }
+    returned<receiver> open_receiver(
+        const std::string&url,
+        const class receiver_options &o) { return impl_->open_receiver(url, o); }
+    returned<receiver> open_receiver(
+        const std::string&url) { return impl_->open_receiver(url); }
 
     std::string id() const { return impl_->id(); }
 

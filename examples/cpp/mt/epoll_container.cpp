@@ -104,6 +104,11 @@ class epoll_container : public proton::io::container_impl_base {
     epoll_container(const std::string& id);
     ~epoll_container();
 
+    // Pull in base class functions here so that name search finds all the overloads
+    using standard_container::stop;
+    using standard_container::connect;
+    using standard_container::listen;
+
     proton::returned<proton::connection> connect(
         const std::string& addr, const proton::connection_options& opts) OVERRIDE;
 

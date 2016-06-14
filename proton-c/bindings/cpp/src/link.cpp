@@ -29,7 +29,6 @@
 #include <proton/session.h>
 #include <proton/link.h>
 
-#include "container_impl.hpp"
 #include "contexts.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
