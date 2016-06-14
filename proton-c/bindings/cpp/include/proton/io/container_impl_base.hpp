@@ -39,8 +39,12 @@ namespace io {
 ///
 /// You can ignore this class if you want to implement the functions
 /// in a different way.
-class container_impl_base : public container {
+class container_impl_base : public standard_container {
   public:
+    // Pull in base class functions here so that name search finds all the overloads
+    using standard_container::open_receiver;
+    using standard_container::open_sender;
+
     /// @copydoc container::client_connection_options
     void client_connection_options(const connection_options & opts) {
         store(client_copts_, opts);

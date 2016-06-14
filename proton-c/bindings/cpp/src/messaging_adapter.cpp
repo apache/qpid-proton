@@ -27,7 +27,6 @@
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 
-#include "container_impl.hpp"
 #include "contexts.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"

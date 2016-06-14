@@ -19,54 +19,35 @@
  *
  */
 
-#include "container_impl.hpp"
-
 #include "proton/container.hpp"
-#include "proton/connection.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/receiver_options.hpp"
-#include "proton/session.hpp"
-#include "proton/error.hpp"
-#include "proton/receiver.hpp"
-#include "proton/receiver_options.hpp"
-#include "proton/sender.hpp"
-#include "proton/sender_options.hpp"
-#include "proton/task.hpp"
-#include "proton/url.hpp"
 
-#include "container_impl.hpp"
-#include "connector.hpp"
-#include "contexts.hpp"
-#include "messaging_adapter.hpp"
-
-#include <proton/connection.h>
-#include <proton/session.h>
+#include "proton/listen_handler.hpp"
 
 namespace proton {
 
 container::~container() {}
 
-/// Functions defined here are convenience overrides that can be triviall
+/// Functions defined here are convenience overrides that can be trivially
 /// defined in terms of other pure virtual functions on container. Don't make
 /// container implementers wade thru all this boiler-plate.
 
-returned<connection> container::connect(const std::string &url) {
+returned<connection> standard_container::connect(const std::string &url) {
     return connect(url, connection_options());
 }
 
-returned<sender> container::open_sender(const std::string &url) {
+returned<sender> standard_container::open_sender(const std::string &url) {
     return open_sender(url, proton::sender_options(), connection_options());
 }
 
-returned<sender> container::open_sender(const std::string &url, const proton::sender_options &lo) {
+returned<sender> standard_container::open_sender(const std::string &url, const proton::sender_options &lo) {
     return open_sender(url, lo, connection_options());
 }
 
-returned<receiver> container::open_receiver(const std::string &url) {
+returned<receiver> standard_container::open_receiver(const std::string &url) {
     return open_receiver(url, proton::receiver_options(), connection_options());
 }
 
-returned<receiver> container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
+returned<receiver> standard_container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
     return open_receiver(url, lo, connection_options());
 }
 
@@ -79,17 +60,17 @@ namespace{
     };
 }
 
-listener container::listen(const std::string& url, const connection_options& opts) {
+listener standard_container::listen(const std::string& url, const connection_options& opts) {
     // Note: listen_opts::on_close() calls delete(this) so this is not a leak.
     // The container will always call on_closed() even if there are errors or exceptions. 
     listen_opts* lh = new listen_opts(opts);
     return listen(url, *lh);
 }
 
-listener container::listen(const std::string &url) {
+listener standard_container::listen(const std::string &url) {
     return listen(url, connection_options());
 }
 
-void container::stop() { stop(error_condition()); }
+void standard_container::stop() { stop(error_condition()); }
 
 } // namespace proton

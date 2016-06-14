@@ -27,7 +27,6 @@
 #include "proton/session_options.hpp"
 
 #include "contexts.hpp"
-#include "container_impl.hpp"
 #include "proton_bits.hpp"
 
 #include <string>
