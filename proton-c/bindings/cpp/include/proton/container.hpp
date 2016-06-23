@@ -116,7 +116,8 @@ class PN_CPP_CLASS_EXTERN container {
     /// auto_stop is set by default when a new container is created.
     virtual void auto_stop(bool) = 0;
 
-    /// Stop the container with an error_condition err.
+    /// **Experimental** - Stop the container with an error_condition
+    /// err.
     ///
     ///  - Abort all open connections and listeners.
     ///  - Process final handler events and injected functions
@@ -124,7 +125,9 @@ class PN_CPP_CLASS_EXTERN container {
     ///  - run() will return in all threads.
     virtual void stop(const error_condition& err) = 0;
 
-    /// Stop the container with an empty error condition.
+    /// **Experimental** - Stop the container with an empty error
+    /// condition.
+    ///
     /// @see stop(const error_condition&)
     virtual void stop() = 0;
 
