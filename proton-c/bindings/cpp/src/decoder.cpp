@@ -42,8 +42,11 @@ namespace codec {
  * Note the pn_data_t "current" node is always pointing *before* the next value
  * to be returned by the decoder.
  */
-
-decoder::decoder(const internal::value_base& v, bool exact) : data(v.data()), exact_(exact) { rewind(); }
+decoder::decoder(const internal::value_base& v, bool exact)
+    : data(const_cast<internal::value_base&>(v).data()), exact_(exact)
+{
+    rewind();
+}
 
 namespace {
 template <class T> T check(T result) {

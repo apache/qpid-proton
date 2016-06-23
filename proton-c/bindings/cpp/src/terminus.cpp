@@ -49,8 +49,7 @@ bool terminus::dynamic() const {
 }
 
 value terminus::node_properties() const {
-    value x(make_wrapper(pn_terminus_properties(object_)));
-    return x;
+    return internal::value_ref(pn_terminus_properties(object_));
 }
 
 }

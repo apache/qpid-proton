@@ -148,12 +148,11 @@ encoder& encoder::operator<<(const null&) { pn_data_put_null(pn_object()); retur
 encoder& encoder::operator<<(const internal::scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
 
 encoder& encoder::operator<<(const internal::value_base& x) {
-    if (*this == x.data_)
+    data d = x.data_;
+    if (*this == d)
         throw conversion_error("cannot insert into self");
-    if (x.empty()) {
+    if (!d || d.empty())
         return *this << null();
-    }
-    data d = x.data();
     d.rewind();
     check(append(d));
     return *this;

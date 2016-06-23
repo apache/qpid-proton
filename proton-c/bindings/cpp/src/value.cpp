@@ -34,7 +34,6 @@ using codec::start;
 
 value::value() {}
 value::value(const value& x) { *this = x; }
-value::value(const internal::data& x) { if (!x.empty()) data().copy(x); }
 #if PN_CPP_HAS_RVALUE_REFERENCES
 value::value(value&& x) { swap(*this, x); }
 value& value::operator=(value&& x) { swap(*this, x); return *this; }
@@ -45,7 +44,7 @@ value& value::operator=(const value& x) {
         if (x.empty())
             clear();
         else
-            data().copy(x.data());
+            data().copy(x.data_);
     }
     return *this;
 }
@@ -63,7 +62,7 @@ type_id value_base::type() const {
 bool value_base::empty() const { return type() == NULL_TYPE; }
 
 // On demand
-internal::data& value_base::data() const {
+internal::data& value_base::data() {
     if (!data_)
         data_ = internal::data::create();
     return data_;
@@ -194,6 +193,14 @@ std::ostream& operator<<(std::ostream& o, const internal::value_base& x) {
         return o << d;
     }
 }
-}
 
-}
+value_ref::value_ref(pn_data_t* p) { refer(p); }
+value_ref::value_ref(const internal::data& d) { refer(d); }
+value_ref::value_ref(const value_base& v) { refer(v); }
+
+void value_ref::refer(pn_data_t* p) { data_ = make_wrapper(p); }
+void value_ref::refer(const internal::data& d) { data_ = d; }
+void value_ref::refer(const value_base& v) { data_ = v.data_; }
+
+void value_ref::reset() { refer(0); }
+}}

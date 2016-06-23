@@ -32,15 +32,9 @@
 
 namespace proton {
 
-class message;
-
 namespace internal {
 
-class value_base;
-PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const value_base& x);
-
-/// Separate value data from implicit conversion constructors to avoid
-/// recursions.
+/// Separate value data from implicit conversion constructors to avoid template recursion.
 class value_base {
   public:
     /// Get the type ID for the current value.
@@ -50,15 +44,13 @@ class value_base {
     PN_CPP_EXTERN bool empty() const;
 
   protected:
-    internal::data& data() const;
-    mutable class internal::data data_;
+    internal::data& data();
+    internal::data data_;
 
-    /// @cond INTERNAL    
-  friend class proton::message;
+  friend class value_ref;
   friend class codec::encoder;
   friend class codec::decoder;
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value_base&);
-    /// @endcond
 };
 
 } // internal
@@ -116,12 +108,40 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// @{
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
-    /// @}
-
-    /// @cond INTERNAL
-    PN_CPP_EXTERN explicit value(const internal::data&);
-    /// @endcond
 };
+
+namespace internal {
+
+// value_ref is a `pn_data_t* p` that can be returned as a value& and used to modify
+// the underlying value in-place.
+//
+// Classes with a value_ref member can return it as a value& in accessor functions.
+// It can also be used to copy a pn_data_t* p to a proton::value via: value(value_ref(p));
+// None of the constructors make copies, they just refer to the same value.
+//
+class value_ref : public value {
+  public:
+    value_ref(pn_data_t* = 0);
+    value_ref(const internal::data&);
+    value_ref(const value_base&);
+
+    // Use refer() not operator= to avoid confusion with value op=
+    void refer(pn_data_t*);
+    void refer(const internal::data&);
+    void refer(const value_base&);
+
+    // Reset to refer to nothing, release existing references. Equivalent to refer(0).
+    void reset();
+
+    // Assignments to value_ref means assigning to the value.
+    template <class T> value_ref& operator=(const T& x) {
+        static_cast<value&>(*this) = x;
+        return *this;
+    }
+};
+
+}
+
 
 /// @copydoc scalar::get
 /// @related proton::value

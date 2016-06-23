@@ -323,7 +323,7 @@ class message {
     pn_message_t *pn_msg() const;
 
     mutable pn_message_t *pn_msg_;
-    mutable value body_;
+    mutable internal::value_ref body_;
     mutable property_map application_properties_;
     mutable annotation_map message_annotations_;
     mutable annotation_map delivery_annotations_;
