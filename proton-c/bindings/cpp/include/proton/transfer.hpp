@@ -40,6 +40,19 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Create an empty transfer.
     transfer() : internal::object<pn_delivery_t>(0) {}
 
+    /// Delivery state values.
+    enum state {
+        NONE = 0,               ///< Unknown state
+        RECEIVED = PN_RECEIVED, ///< Received but not yet settled
+        ACCEPTED = PN_ACCEPTED, ///< Settled as accepted
+        REJECTED = PN_REJECTED, ///< Settled as rejected
+        RELEASED = PN_RELEASED, ///< Settled as released
+        MODIFIED = PN_MODIFIED  ///< Settled as modified
+    }; // AMQP spec 3.4 delivery State
+
+    /// Get the remote state for a delivery.
+    PN_CPP_EXTERN enum state state() const;
+
     /// Return the session for this transfer.
     PN_CPP_EXTERN class session session() const;
 
@@ -54,26 +67,6 @@ class transfer : public internal::object<pn_delivery_t> {
 
     /// Return true if the transfer has been settled.
     PN_CPP_EXTERN bool settled() const;
-
-  protected:
-    /// Delivery state values.
-    enum state {
-        NONE = 0,               ///< Unknown state
-        RECEIVED = PN_RECEIVED, ///< Received but not yet settled
-        ACCEPTED = PN_ACCEPTED, ///< Settled as accepted
-        REJECTED = PN_REJECTED, ///< Settled as rejected
-        RELEASED = PN_RELEASED, ///< Settled as released
-        MODIFIED = PN_MODIFIED  ///< Settled as modified
-    }; // AMQP spec 3.4 delivery State
-
-    /// Set the local state of the delivery.
-    void update(enum state state);
-
-    /// Update and settle a delivery with the given delivery::state
-    void settle(enum state s);
-
-    /// Get the remote state for a delivery.
-    enum state state() const;
 
     /// @cond INTERNAL
   friend class internal::factory<transfer>;

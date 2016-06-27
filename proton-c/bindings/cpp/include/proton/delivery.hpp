@@ -52,16 +52,16 @@ class delivery : public transfer {
     // get from the different delivery modes. - Deferred
     
     /// Settle with ACCEPTED state.
-    PN_CPP_EXTERN void accept() { settle(ACCEPTED); }
+    PN_CPP_EXTERN void accept();
 
     /// Settle with REJECTED state.
-    PN_CPP_EXTERN void reject() { settle(REJECTED); }
+    PN_CPP_EXTERN void reject();
 
     /// Settle with RELEASED state.
-    PN_CPP_EXTERN void release() { settle(RELEASED); }
+    PN_CPP_EXTERN void release();
 
     /// Settle with MODIFIED state.
-    PN_CPP_EXTERN void modify() { settle(MODIFIED); }
+    PN_CPP_EXTERN void modify();
 
     /// @cond INTERNAL
   friend class internal::factory<delivery>;
