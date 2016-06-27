@@ -40,7 +40,8 @@ void assert_equal(const T& want, const U& got, const std::string& what) {
         throw fail(MSG(what << " " << want << " != " << got));
 }
 
-inline void assert_equalish(double want, double got, double delta, const std::string& what)
+template <class T>
+inline void assert_equalish(T want, T got, T delta, const std::string& what)
 {
     if (!(fabs(want-got) <= delta))
         throw fail(MSG(what << " " << want << " !=~ " << got));

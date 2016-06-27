@@ -77,7 +77,7 @@ void test_decoder_primitves_exact() {
     ASSERT_EQUAL(12345u, get< ::uint64_t>(d));
     ASSERT_EQUAL(-12345, get< ::int64_t>(d));
     try { get<double>(d); FAIL("got float as double"); } catch(conversion_error){}
-    ASSERT_EQUAL(0.125, get<float>(d));
+    ASSERT_EQUAL(0.125f, get<float>(d));
     try { get<float>(d); FAIL("got double as float"); } catch(conversion_error){}
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());

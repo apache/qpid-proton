@@ -298,7 +298,7 @@ decoder& decoder::operator>>(double &x) {
     type_id tid = pre_get();
     if (exact_) assert_type_equal(DOUBLE, tid);
     switch (tid) {
-      case FLOAT: x = pn_data_get_float(pn_object()); break;
+      case FLOAT: x = static_cast<double>(pn_data_get_float(pn_object())); break;
       case DOUBLE: x = pn_data_get_double(pn_object()); break;
       default: assert_type_equal(DOUBLE, tid);
     }

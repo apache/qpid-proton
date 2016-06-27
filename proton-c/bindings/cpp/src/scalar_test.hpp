@@ -113,7 +113,7 @@ template<class V> void coerce_test() {
     ASSERT_EQUAL(0xFFFF, coerce<uint16_t>(V(int8_t(-1)))); // Sign extend.
     ASSERT_EQUAL(-1, coerce<int32_t>(V(uint64_t(0xFFFFFFFFul)))); // 2s complement
 
-    ASSERT_EQUALISH(1.2, coerce<float>(V(double(1.2))), 0.001);
+    ASSERT_EQUALISH(1.2f, coerce<float>(V(double(1.2))), 0.001f);
     ASSERT_EQUALISH(3.4, coerce<double>(V(float(3.4))), 0.001);
     ASSERT_EQUALISH(23.0, coerce<double>(V(uint64_t(23))), 0.001); // int to double.
     ASSERT_EQUAL(-1945, coerce<int>(V(float(-1945.123))));    // round to int.
