@@ -25,9 +25,22 @@
 
 #include "proton_bits.hpp"
 
+namespace {
+
+void settle_delivery(pn_delivery_t* o, uint64_t state) {
+    pn_delivery_update(o, state);
+    pn_delivery_settle(o);
+}
+
+}
+
 namespace proton {
 
 delivery::delivery(pn_delivery_t* d): transfer(make_wrapper(d)) {}
 receiver delivery::receiver() const { return make_wrapper<class receiver>(pn_delivery_link(pn_object())); }
+void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
+void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
+void delivery::release() { settle_delivery(pn_object(), RELEASED); }
+void delivery::modify() { settle_delivery(pn_object(), MODIFIED); }
 
 }

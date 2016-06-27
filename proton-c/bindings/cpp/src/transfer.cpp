@@ -41,12 +41,5 @@ bool transfer::settled() const { return pn_delivery_settled(pn_object()); }
 
 void transfer::settle() { pn_delivery_settle(pn_object()); }
 
-void transfer::update(enum state state) { pn_delivery_update(pn_object(), state); }
-
-void transfer::settle(enum state state) {
-    update(state);
-    settle();
-}
-
 enum transfer::state transfer::state() const { return static_cast<enum state>(pn_delivery_remote_state(pn_object())); }
 }
