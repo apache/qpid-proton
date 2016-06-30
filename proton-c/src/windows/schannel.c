@@ -767,6 +767,13 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
   transport->ssl = ssl;
 
+  // Set up hostname from any bound connection
+  if (transport->connection) {
+    if (pn_string_size(transport->connection->hostname)) {
+      pn_ssl_set_peer_hostname((pn_ssl_t *) transport, pn_string_get(transport->connection->hostname));
+    }
+  }
+
   SecInvalidateHandle(&ssl->cred_handle);
   SecInvalidateHandle(&ssl->ctxt_handle);
   ssl->state = CREATED;
@@ -2207,6 +2214,11 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
 
     if (server_name && ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME &&
         !server_name_matches(server_name, leaf_alt_names, leaf_cert)) {
+      error = SEC_E_WRONG_PRINCIPAL;
+      break;
+    }
+    else if (ssl->verify_mode == PN_SSL_VERIFY_PEER_NAME && !server_name) {
+      ssl_log_error("Error: configuration error: PN_SSL_VERIFY_PEER_NAME configured, but no peer hostname set!");
       error = SEC_E_WRONG_PRINCIPAL;
       break;
     }
