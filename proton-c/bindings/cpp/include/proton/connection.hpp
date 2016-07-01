@@ -76,6 +76,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Return the container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
+    /// Return authenticated user for the connection
+    /// Note: The value returned is not stable until the on_transport_open event is received
+    PN_CPP_EXTERN std::string user() const;
+
     /// Open the connection.
     ///
     /// @see endpoint_lifecycle

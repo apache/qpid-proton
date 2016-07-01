@@ -587,9 +587,21 @@ void pn_transport_set_server(pn_transport_t *transport)
 const char *pn_transport_get_user(pn_transport_t *transport)
 {
   assert(transport);
-  if (!transport->sasl) return "anonymous";
+  // Client - just return whatever we gave to sasl
+  if (!transport->server) {
+    if (transport->sasl) return pn_sasl_get_user((pn_sasl_t *)transport);
+    return "anonymous";
+  }
 
-  return pn_sasl_get_user((pn_sasl_t *)transport);
+  // Server
+  // Not finished authentication yet
+  if (!(transport->present_layers & LAYER_AMQP1)) return 0;
+  // We have SASL so it takes precedence
+  if (transport->present_layers & LAYER_AMQPSASL) return pn_sasl_get_user((pn_sasl_t *)transport);
+  // No SASL but we may have a SSL remote_subject
+  if (transport->present_layers & (LAYER_AMQPSSL | LAYER_SSL)) return pn_ssl_get_remote_subject((pn_ssl_t *)transport);
+  // otherwise it's just an unauthenticated anonymous connection
+  return "anonymous";
 }
 
 void pn_transport_require_auth(pn_transport_t *transport, bool required)

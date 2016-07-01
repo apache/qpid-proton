@@ -70,6 +70,10 @@ std::string connection::container_id() const {
     return str(pn_connection_get_container(pn_object()));
 }
 
+std::string connection::user() const {
+    return str(pn_transport_get_user(pn_connection_transport(pn_object())));
+}
+
 container& connection::container() const {
     class container* c = connection_context::get(pn_object()).container;
     if (!c) {
