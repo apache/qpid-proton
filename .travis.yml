@@ -23,8 +23,9 @@ addons:
 install:
 - pip install --upgrade pip
 - pip install tox
-- gem install rspec simplecov
-- gem install minitest --version 4.7.0
+- gem install rspec
+- gem install simplecov || true
+- gem install minitest
 before_script:
 - export PATH=${HOME}/.local/bin:${PATH}
 - mkdir Build
