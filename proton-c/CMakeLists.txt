@@ -322,6 +322,7 @@ set (qpid-proton-core
   src/codec/encoder.c
 
   src/dispatcher/dispatcher.c
+  src/engine/connection_engine.c
   src/engine/engine.c
   src/events/event.c
   src/transport/autodetect.c

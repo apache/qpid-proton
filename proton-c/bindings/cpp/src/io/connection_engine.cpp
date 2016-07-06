@@ -18,7 +18,6 @@
  */
 
 #include "proton/io/connection_engine.hpp"
-#include "proton/io/link_namer.hpp"
 
 #include "proton/event_loop.hpp"
 #include "proton/error.hpp"
@@ -44,43 +43,44 @@
 namespace proton {
 namespace io {
 
-connection_engine::connection_engine(class container& cont, link_namer& namer, event_loop* loop) :
+connection_engine::connection_engine() :
     handler_(0),
-    connection_(make_wrapper(internal::take_ownership(pn_connection()).get())),
-    transport_(make_wrapper(internal::take_ownership(pn_transport()).get())),
-    collector_(internal::take_ownership(pn_collector()).get()),
-    container_(cont)
+    container_(0)
 {
-    if (!connection_ || !transport_ || !collector_)
-        throw proton::error("connection_engine create failed");
-    pn_transport_bind(unwrap(transport_), unwrap(connection_));
-    pn_connection_collect(unwrap(connection_), collector_.get());
-    connection_context& ctx = connection_context::get(connection_);
-    ctx.container = &container_;
-    ctx.link_gen = &namer;
+    int err;
+    if ((err = pn_connection_engine_init(&c_engine_)))
+        throw proton::error(std::string("connection_engine init failed: ")+pn_code(err));
+}
+
+connection_engine::connection_engine(class container& cont, event_loop* loop) :
+    handler_(0),
+    container_(&cont)
+{
+    int err;
+    if ((err = pn_connection_engine_init(&c_engine_)))
+        throw proton::error(std::string("connection_engine init failed: ")+pn_code(err));
+    connection_context& ctx = connection_context::get(connection());
+    ctx.container = container_;
     ctx.event_loop.reset(loop);
 }
 
 void connection_engine::configure(const connection_options& opts) {
-    opts.apply(connection_);
+    proton::connection c = connection();
+    opts.apply(c);
     handler_ = opts.handler();
-    if (handler_) {
-        collector_ = internal::take_ownership(pn_collector());
-        pn_connection_collect(unwrap(connection_), collector_.get());
-    }
-    connection_context::get(connection_).collector = collector_.get();
+    connection_context::get(connection()).collector = c_engine_.collector;
 }
 
 connection_engine::~connection_engine() {
-    pn_transport_unbind(unwrap(transport_));
-    if (collector_.get())
-        pn_collector_free(collector_.release()); // Break cycle with connection_
+    pn_connection_engine_final(&c_engine_);
 }
 
 void connection_engine::connect(const connection_options& opts) {
     connection_options all;
-    all.container_id(container_.id());
-    all.update(container_.client_connection_options());
+    if (container_) {
+        all.container_id(container_->id());
+        all.update(container_->client_connection_options());
+    }
     all.update(opts);
     configure(all);
     connection().open();
@@ -88,79 +88,69 @@ void connection_engine::connect(const connection_options& opts) {
 
 void connection_engine::accept(const connection_options& opts) {
     connection_options all;
-    all.container_id(container_.id());
-    all.update(container_.server_connection_options());
+    if (container_) {
+        all.container_id(container_->id());
+        all.update(container_->server_connection_options());
+    }
     all.update(opts);
     configure(all);
 }
 
 bool connection_engine::dispatch() {
-    if (collector_.get()) {
-        for (pn_event_t *e = pn_collector_peek(collector_.get());
-             e;
-             e = pn_collector_peek(collector_.get()))
-        {
-            proton_event pe(e, container_);
-            try {
-                pe.dispatch(*handler_);
-            } catch (const std::exception& e) {
-                disconnected(error_condition("exception", e.what()));
-            }
-            pn_collector_pop(collector_.get());
+    pn_event_t* c_event;
+    while ((c_event = pn_connection_engine_dispatch(&c_engine_)) != NULL) {
+        proton_event cpp_event(c_event, container_);
+        try {
+            cpp_event.dispatch(*handler_);
+        } catch (const std::exception& e) {
+            disconnected(error_condition("exception", e.what()));
         }
     }
-    return !(pn_transport_closed(unwrap(transport_)));
+    return !pn_connection_engine_finished(&c_engine_);
 }
 
 mutable_buffer connection_engine::read_buffer() {
-    ssize_t cap = pn_transport_capacity(unwrap(transport_));
-    if (cap > 0)
-        return mutable_buffer(pn_transport_tail(unwrap(transport_)), cap);
-    else
-        return mutable_buffer(0, 0);
+    pn_buf_t buffer = pn_connection_engine_read_buffer(&c_engine_);
+    return mutable_buffer(buffer.data, buffer.size);
 }
 
 void connection_engine::read_done(size_t n) {
-    if (n > 0)
-        pn_transport_process(unwrap(transport_), n);
+    return pn_connection_engine_read_done(&c_engine_, n);
 }
 
 void connection_engine::read_close() {
-    pn_transport_close_tail(unwrap(transport_));
+    pn_connection_engine_read_close(&c_engine_);
 }
 
-const_buffer connection_engine::write_buffer() const {
-    ssize_t pending = pn_transport_pending(unwrap(transport_));
-    if (pending > 0)
-        return const_buffer(pn_transport_head(unwrap(transport_)), pending);
-    else
-        return const_buffer(0, 0);
+const_buffer connection_engine::write_buffer() {
+    pn_cbuf_t buffer = pn_connection_engine_write_buffer(&c_engine_);
+    return const_buffer(buffer.data, buffer.size);
 }
 
 void connection_engine::write_done(size_t n) {
-    if (n > 0)
-        pn_transport_pop(unwrap(transport_), n);
+    return pn_connection_engine_write_done(&c_engine_, n);
 }
 
 void connection_engine::write_close() {
-    pn_transport_close_head(unwrap(transport_));
+    pn_connection_engine_write_close(&c_engine_);
 }
 
 void connection_engine::disconnected(const proton::error_condition& err) {
-    set_error_condition(err, pn_transport_condition(unwrap(transport_)));
-    read_close();
-    write_close();
+    pn_condition_t* condition = pn_connection_engine_condition(&c_engine_);
+    if (!pn_condition_is_set(condition))     // Don't overwrite existing condition
+        set_error_condition(err, condition);
+    pn_connection_engine_disconnected(&c_engine_);
 }
 
 proton::connection connection_engine::connection() const {
-    return connection_;
+    return make_wrapper(c_engine_.connection);
 }
 
 proton::transport connection_engine::transport() const {
-    return transport_;
+    return make_wrapper(c_engine_.transport);
 }
 
-proton::container& connection_engine::container() const {
+proton::container* connection_engine::container() const {
     return container_;
 }
 

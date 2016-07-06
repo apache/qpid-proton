@@ -138,6 +138,9 @@ class returned : private internal::endpoint_traits<T>
     /// Release ownership.
     thread_safe<T>* release() const { thread_safe<T>* p = ptr_; ptr_ = 0; return p; }
 
+    /// Get the raw pointer, caller must not delete.
+    thread_safe<T>* get() const { return ptr_; }
+
     /// Implicit conversion to target, usable only in a safe context.
     operator T() { return ptr_->unsafe(); }
 

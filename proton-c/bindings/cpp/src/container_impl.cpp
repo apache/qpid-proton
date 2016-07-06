@@ -68,7 +68,7 @@ class handler_context {
     static void dispatch(pn_handler_t *c_handler, pn_event_t *c_event, pn_event_type_t)
     {
         handler_context& hc(handler_context::get(c_handler));
-        proton_event pevent(c_event, *hc.container_);
+        proton_event pevent(c_event, hc.container_);
         pevent.dispatch(*hc.handler_);
         return;
     }
@@ -122,7 +122,7 @@ internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
 
 container_impl::container_impl(const std::string& id, messaging_handler *h) :
     reactor_(reactor::create()), handler_(h ? h->messaging_adapter_.get() : 0),
-    id_(id.empty() ? uuid::random().str() : id), id_gen_(),
+    id_(id.empty() ? uuid::random().str() : id),
     auto_stop_(true)
 {
     container_context::set(reactor_, *this);

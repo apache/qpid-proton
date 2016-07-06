@@ -21,12 +21,10 @@
 ///
 
 #include "test_bits.hpp"
-#include "test_dummy_container.hpp"
 #include "proton_bits.hpp"
 
 #include "proton/thread_safe.hpp"
 #include "proton/io/connection_engine.hpp"
-#include "proton/io/link_namer.hpp"
 
 #include <proton/connection.h>
 
@@ -35,22 +33,11 @@ namespace {
 using namespace std;
 using namespace proton;
 
-using test::dummy_container;
-using test::dummy_event_loop;
-
-dummy_container cont;
-
-namespace {
-struct linknames : io::link_namer {
-    std::string link_name() { return "X"; }
-} dummy_link_namer;
-}
-
 void test_new() {
     pn_connection_t* c = 0;
     thread_safe<connection>* p = 0;
     {
-        io::connection_engine e(cont, dummy_link_namer, new dummy_event_loop);
+        io::connection_engine e;
         c = unwrap(e.connection());
         int r = pn_refcount(c);
         ASSERT(r >= 1); // engine may have internal refs (transport, collector).
@@ -67,7 +54,7 @@ void test_new() {
     {
         std::shared_ptr<thread_safe<connection> > sp;
         {
-            io::connection_engine e(cont, dummy_link_namer, new dummy_event_loop);
+            io::connection_engine e;
             c = unwrap(e.connection());
             sp = make_shared_thread_safe(e.connection());
         }
@@ -76,7 +63,7 @@ void test_new() {
     {
         std::unique_ptr<thread_safe<connection> > up;
         {
-            io::connection_engine e(cont, dummy_link_namer, new dummy_event_loop);
+            io::connection_engine e;
             c = unwrap(e.connection());
             up = make_unique_thread_safe(e.connection());
         }
@@ -91,7 +78,7 @@ void test_convert() {
     connection c;
     pn_connection_t* pc = 0;
     {
-        io::connection_engine eng(cont, dummy_link_namer, new dummy_event_loop);
+        io::connection_engine eng;
         c = eng.connection();
         pc = unwrap(c);         // Unwrap in separate scope to avoid confusion from temp values.
     }

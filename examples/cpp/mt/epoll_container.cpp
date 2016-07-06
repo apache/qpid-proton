@@ -26,6 +26,7 @@
 
 #include <proton/io/container_impl_base.hpp>
 #include <proton/io/connection_engine.hpp>
+#include <proton/io/link_namer.hpp>
 
 #include <atomic>
 #include <memory>
@@ -279,7 +280,11 @@ class pollable_engine : public pollable {
     pollable_engine(epoll_container& c, int fd, int epoll_fd) :
         pollable(fd, epoll_fd),
         loop_(new epoll_event_loop(*this)),
-        engine_(c, c.link_namer, loop_) {}
+        engine_(c, loop_)
+    {
+        proton::connection conn = engine_.connection();
+        proton::io::set_link_namer(conn, c.link_namer);
+    }
 
     ~pollable_engine() {
         loop_->close();                // No calls to notify() after this.

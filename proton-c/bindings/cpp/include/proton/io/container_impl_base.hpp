@@ -22,7 +22,6 @@
  *
  */
 
-#include "./link_namer.hpp"
 #include "../container.hpp"
 
 #include <mutex>

@@ -93,23 +93,11 @@ class container_impl : public standard_container {
   private:
     typedef std::map<std::string, acceptor> acceptors;
 
-    struct count_link_namer : public io::link_namer {
-        count_link_namer() : count_(0) {}
-        std::string link_name() {
-            // TODO aconway 2016-01-19: more efficient conversion, fixed buffer.
-            std::ostringstream o;
-            o << "PN" << std::hex << ++count_;
-            return o.str();
-        }
-        uint64_t count_;
-    };
-
     reactor reactor_;
     proton_handler *handler_;
     internal::pn_unique_ptr<proton_handler> override_handler_;
     internal::pn_unique_ptr<proton_handler> flow_controller_;
     std::string id_;
-    count_link_namer id_gen_;
     connection_options client_connection_options_;
     connection_options server_connection_options_;
     proton::sender_options sender_options_;

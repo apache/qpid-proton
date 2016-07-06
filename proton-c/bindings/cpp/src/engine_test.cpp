@@ -38,7 +38,6 @@ using namespace std;
 using namespace proton;
 
 using proton::io::connection_engine;
-using proton::io::link_namer;
 using proton::io::const_buffer;
 using proton::io::mutable_buffer;
 
@@ -46,22 +45,14 @@ using test::dummy_container;
 
 typedef std::deque<char> byte_stream;
 
-struct dummy_link_namer : link_namer {
-    char name;
-    std::string link_name() { return std::string(1, name++); }
-};
-
-static dummy_link_namer namer;
-
 /// In memory connection_engine that reads and writes from byte_streams
 struct in_memory_engine : public connection_engine {
 
     byte_stream& reads;
     byte_stream& writes;
 
-    // Cheat on link_namer.
     in_memory_engine(byte_stream& rd, byte_stream& wr, class container& cont) :
-        connection_engine(cont, namer), reads(rd), writes(wr) {}
+        connection_engine(cont), reads(rd), writes(wr) {}
 
     void do_read() {
         mutable_buffer rbuf = read_buffer();
@@ -149,17 +140,28 @@ struct record_handler : public messaging_handler {
     }
 };
 
+struct namer : public io::link_namer {
+    char name;
+    namer(char c) : name(c) {}
+    std::string link_name() { return std::string(1, name++); }
+};
+
 void test_engine_container_link_id() {
     record_handler ha, hb;
     engine_pair e(ha, hb, "ids-");
     e.a.connect(ha);
     e.b.accept(hb);
+
+    namer na('x');
+    namer nb('b');
+    connection ca = e.a.connection();
+    connection cb = e.b.connection();
+    set_link_namer(ca, na);
+    set_link_namer(cb, nb);
+
     ASSERT_EQUAL("ids-a", e.a.connection().container_id());
     e.b.connection().open();
     ASSERT_EQUAL("ids-b", e.b.connection().container_id());
-
-    // Seed the global link namer
-    namer.name = 'x';
 
     e.a.connection().open_sender("foo");
     while (ha.senders.empty() || hb.receivers.empty()) e.process();
@@ -175,8 +177,8 @@ void test_engine_container_link_id() {
 
     e.b.connection().open_receiver("");
     while (ha.senders.empty() || hb.receivers.empty()) e.process();
-    ASSERT_EQUAL("z", quick_pop(ha.senders).name());
-    ASSERT_EQUAL("z", quick_pop(hb.receivers).name());
+    ASSERT_EQUAL("b", quick_pop(ha.senders).name());
+    ASSERT_EQUAL("b", quick_pop(hb.receivers).name());
 }
 
 void test_endpoint_close() {
@@ -243,6 +245,17 @@ void test_engine_disconnected() {
     ASSERT_EQUAL("broken: it broke (connection aborted)", hb.transport_errors.front());
 }
 
+void test_no_container() {
+    // An engine with no container should throw, not crash.
+    connection_engine e;
+    try {
+        e.connection().container();
+        FAIL("expected error");
+    } catch (proton::error) {}
+    make_thread_safe<connection>(e.connection()).get();
+    ASSERT(!make_thread_safe<connection>(e.connection()).get()->event_loop());
+}
+
 }
 
 int main(int, char**) {
@@ -250,5 +263,6 @@ int main(int, char**) {
     RUN_TEST(failed, test_engine_container_link_id());
     RUN_TEST(failed, test_endpoint_close());
     RUN_TEST(failed, test_engine_disconnected());
+    RUN_TEST(failed, test_no_container());
     return failed;
 }

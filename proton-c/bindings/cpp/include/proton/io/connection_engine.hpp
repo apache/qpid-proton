@@ -32,11 +32,11 @@
 #include "../transport.hpp"
 #include "../types.hpp"
 
+#include <proton/connection_engine.h>
+
 #include <cstddef>
 #include <utility>
 #include <string>
-
-struct pn_collector_t;
 
 namespace proton {
 
@@ -44,8 +44,6 @@ class event_loop;
 class proton_handler;
 
 namespace io {
-
-class link_namer;
 
 /// **Experimental** - Pointer to a mutable memory region with a size.
 struct mutable_buffer {
@@ -100,9 +98,24 @@ struct const_buffer {
 class
 PN_CPP_CLASS_EXTERN connection_engine {
   public:
-    /// Create a connection engine. opts must contain a messaging_handler.
-    /// Takes ownership of loop, will be deleted only when the proton::connection is.
-    PN_CPP_EXTERN connection_engine(proton::container&, link_namer&, event_loop* loop = 0);
+    /// An engine that is not associated with a proton::container or
+    /// proton::event_loop.
+    ///
+    /// Accessing the container or event_loop for this connection in
+    /// a proton::messaging_handler will throw a proton::error exception.
+    ///
+    PN_CPP_EXTERN connection_engine();
+
+    /// Create a connection engine associated with a proton::container and
+    /// optional event_loop. If the event_loop is not provided attempts to use
+    /// it will throw proton::error.
+    ///
+    /// Takes ownership of the event_loop. Note the proton::connection created
+    /// by this connection_engine can outlive the connection_engine itself if
+    /// the user pins it in memory using the proton::thread_safe<> template.
+    /// The event_loop is deleted when, and only when, the proton::connection is.
+    ///
+    PN_CPP_EXTERN connection_engine(proton::container&, event_loop* loop = 0);
 
     PN_CPP_EXTERN ~connection_engine();
 
@@ -139,11 +152,10 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// The engine's write buffer. Write data from this buffer then call write_done()
     /// Returns const_buffer(0, 0) if the engine has nothing to write.
     /// Calling dispatch() may generate more data in the write buffer.
-    PN_CPP_EXTERN const_buffer write_buffer() const;
+    PN_CPP_EXTERN const_buffer write_buffer();
 
     /// Indicate that the first n bytes of write_buffer() have been written successfully.
     /// This changes the buffer, call write_buffer() to get the updated buffer.
-
     PN_CPP_EXTERN void write_done(size_t n);
 
     /// Indicate that the write side of the transport has closed and no more data can be written.
@@ -178,24 +190,22 @@ PN_CPP_CLASS_EXTERN connection_engine {
     PN_CPP_EXTERN bool dispatch();
 
     /// Get the AMQP connection associated with this connection_engine.
+    /// The event_loop is availabe via proton::thread_safe<connection>(connection())
     PN_CPP_EXTERN proton::connection connection() const;
 
     /// Get the transport associated with this connection_engine.
     PN_CPP_EXTERN proton::transport transport() const;
 
-    /// Get the container associated with this connection_engine.
-    PN_CPP_EXTERN proton::container& container() const;
+    /// Get the container associated with this connection_engine, if there is one.
+    PN_CPP_EXTERN proton::container* container() const;
 
  private:
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
-    // TODO aconway 2016-05-06: reduce binary compat footprint, move stuff to connection context.
     proton::proton_handler* handler_;
-    proton::connection connection_;
-    proton::transport transport_;
-    proton::internal::pn_ptr<pn_collector_t> collector_;
-    proton::container& container_;
+    proton::container* container_;
+    pn_connection_engine_t c_engine_;
 };
 
 } // io

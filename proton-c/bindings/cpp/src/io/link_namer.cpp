@@ -17,29 +17,14 @@
  * under the License.
  */
 
-///@internal
-#include "proton/types_fwd.hpp"
-
-#ifndef LINK_NAMER_HPP
-#define LINK_NAMER_HPP
+#include "proton/io/link_namer.hpp"
+#include "contexts.hpp"
 
 namespace proton {
+namespace io {
 
-/// @cond INTERNAL
-class link_namer {
-  public:
-    link_namer(const std::string &prefix="");
-    std::string next();
-    void prefix(const std::string &p) { prefix_ = p; }
-    const std::string& prefix() const { return prefix_; }
-
-  private:
-    std::string prefix_;
-    uint64_t count_;
-};
-
+void set_link_namer(connection& c, link_namer& l) {
+    connection_context::get(c).link_gen = &l;
 }
 
-/// @endcond
-
-#endif
+}}
