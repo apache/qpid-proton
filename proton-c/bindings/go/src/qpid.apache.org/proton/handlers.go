@@ -31,6 +31,8 @@ type EventHandler interface {
 	HandleEvent(e Event)
 }
 
+// FIXME aconway 2016-06-21: get rid of C handlers?
+
 // cHandler wraps a C pn_handler_t
 type cHandler struct {
 	pn *C.pn_handler_t

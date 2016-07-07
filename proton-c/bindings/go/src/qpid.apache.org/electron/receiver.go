@@ -121,14 +121,13 @@ func (r *receiver) flowTopUp() {
 	}
 }
 
-// Not claled
 func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 	return r.ReceiveTimeout(Forever)
 }
 
 func (r *receiver) ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error) {
 	assert(r.buffer != nil, "Receiver is not open: %s", r)
-	select { // Check for immediate availability
+	select { // Check for immediate availability, avoid caller() inject.
 	case rm := <-r.buffer:
 		r.flowTopUp()
 		return rm, nil
@@ -174,10 +173,11 @@ func (r *receiver) message(delivery proton.Delivery) {
 }
 
 func (r *receiver) closed(err error) error {
+	e := r.link.closed(err)
 	if r.buffer != nil {
 		close(r.buffer)
 	}
-	return r.link.closed(err)
+	return e
 }
 
 // ReceivedMessage contains an amqp.Message and allows the message to be acknowledged.
