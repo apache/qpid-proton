@@ -30,7 +30,8 @@ macro(add_cpp_test name)
   else(WIN32)
     set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
   endif(WIN32)
-  add_test(NAME ${name} COMMAND ${CMAKE_COMMAND} -E env "PATH=${test_path}" ${VALGRIND_ENV} ${ARGN})
+  set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py)
+  add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} -- ${ARGN})
 endmacro()
 
 # Single-threaded examples that work on C++03
