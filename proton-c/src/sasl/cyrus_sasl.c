@@ -40,12 +40,15 @@ static const char *amqp_service = "amqp";
 
 static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logger)
 {
-    if (r!=SASL_OK) {
-        if (logger->trace & PN_TRACE_DRV)
-          pn_transport_logf(logger, "sasl error: %s", conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL));
-        return false;
-    }
-    return true;
+    if (r==SASL_OK) return true;
+
+    const char* err = conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL);
+    if (logger->trace & PN_TRACE_DRV)
+        pn_transport_logf(logger, "sasl error: %s", err);
+    pn_condition_t* c = pn_transport_condition(logger);
+    pn_condition_set_name(c, "proton:io:sasl_error");
+    pn_condition_set_description(c, err);
+    return false;
 }
 
 // Cyrus wrappers
@@ -485,12 +488,10 @@ ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
   unsigned int outlen;
   int r = sasl_encode(cyrus_conn, in.start, in.size, &output, &outlen);
   if (outlen==0) return 0;
-  if ( r==SASL_OK ) {
+  if ( pni_check_sasl_result(cyrus_conn, r, transport) ) {
     *out = pn_bytes(outlen, output);
     return outlen;
   }
-  if (transport->trace & PN_TRACE_DRV)
-    pn_transport_logf(transport, "SASL encode error: %s", sasl_errdetail(cyrus_conn));
   return PN_ERR;
 }
 
@@ -502,12 +503,10 @@ ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
   unsigned int outlen;
   int r = sasl_decode(cyrus_conn, in.start, in.size, &output, &outlen);
   if (outlen==0) return 0;
-  if ( r==SASL_OK ) {
+  if ( pni_check_sasl_result(cyrus_conn, r, transport) ) {
     *out = pn_bytes(outlen, output);
     return outlen;
   }
-  if (transport->trace & PN_TRACE_DRV)
-    pn_transport_logf(transport, "SASL decode error: %s", sasl_errdetail(cyrus_conn));
   return PN_ERR;
 }
 
