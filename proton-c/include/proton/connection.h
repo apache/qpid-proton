@@ -326,10 +326,17 @@ PN_EXTERN const char *pn_connection_get_user(pn_connection_t *connection);
 PN_EXTERN const char *pn_connection_get_hostname(pn_connection_t *connection);
 
 /**
- * Set the value of the AMQP Hostname used by a connection object.
+ * Set the name of the virtual host (either fully qualified or relative) to
+ * which this connection is connecting to.  This information may be used by the
+ * remote peer to determine the correct back-end service to connect the client
+ * to. This value will be sent in the Open performative, and will be used by
+ * SSL and SASL layers to identify the peer.
  *
+ * @note Note: the virtual host string is passed verbatim, it is not parsed as
+ * a URL or modified in any way. It should not contain numeric IP addresses or
+ * port numbers unless that is what you intend to send as the virtual host name
  * @param[in] connection the connection object
- * @param[in] hostname the hostname
+ * @param[in] hostname the virtual host name
  */
 PN_EXTERN void pn_connection_set_hostname(pn_connection_t *connection, const char *hostname);
 

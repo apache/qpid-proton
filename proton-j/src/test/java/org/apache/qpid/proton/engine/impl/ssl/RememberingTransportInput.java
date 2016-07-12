@@ -30,7 +30,10 @@ class RememberingTransportInput implements TransportInput
     private StringBuilder _receivedInput = new StringBuilder();
     private String _nextError;
     private int _inputBufferSize = 1024;
-    private ByteBuffer _buffer = ByteBuffer.allocate(_inputBufferSize);
+    private ByteBuffer _buffer;
+    private int _processCount = 0;
+    private Integer _zeroCapacityAtCount = null;
+    private int _capacityCount = 0;
 
     String getAcceptedInput()
     {
@@ -46,24 +49,37 @@ class RememberingTransportInput implements TransportInput
     @Override
     public int capacity()
     {
+        initIntermediateBuffer();
+
+        _capacityCount++;
+        if(_zeroCapacityAtCount != null && _capacityCount >= _zeroCapacityAtCount) {
+            return 0;
+        }
+
         return _buffer.remaining();
     }
 
     @Override
     public int position()
     {
+        initIntermediateBuffer();
         return _buffer.position();
     }
 
     @Override
     public ByteBuffer tail()
     {
+        initIntermediateBuffer();
         return _buffer;
     }
 
     @Override
     public void process() throws TransportException
     {
+        _processCount++;
+
+        initIntermediateBuffer();
+
         if(_nextError != null)
         {
             throw new TransportException(_nextError);
@@ -87,8 +103,51 @@ class RememberingTransportInput implements TransportInput
         _nextError = nextError;
     }
 
-    public void setInputBufferSize(int inputBufferSize)
+    /**
+     * If called before the object is otherwise used, the intermediate input buffer will be
+     * initiated to the given size. If called after use, an ISE will be thrown.
+     *
+     * @param inputBufferSize size of the intermediate input buffer
+     * @throws IllegalStateException if the buffer was already initialised
+     */
+    public void setInputBufferSize(int inputBufferSize) throws IllegalStateException
     {
+        if (_buffer != null)
+        {
+            throw new IllegalStateException("Intermediate input buffer already initialised");
+        }
+
         _inputBufferSize = inputBufferSize;
+    }
+
+    private void initIntermediateBuffer()
+    {
+        if (_buffer == null)
+        {
+            _buffer = ByteBuffer.allocate(_inputBufferSize);
+        }
+    }
+
+    int getProcessCount()
+    {
+        return _processCount;
+    }
+
+    int getCapacityCount()
+    {
+        return _capacityCount;
+    }
+
+    /**
+     * Sets a point at which calls to capacity will return 0 regardless of the actual buffer state.
+     *
+     * @param zeroCapacityAtCount number of calls to capacity at which zero starts being returned.
+     */
+    void setZeroCapacityAtCount(Integer zeroCapacityAtCount)
+    {
+        if(zeroCapacityAtCount != null && zeroCapacityAtCount < 1) {
+            throw new IllegalArgumentException("Value must be null, or at least 1");
+        }
+        _zeroCapacityAtCount = zeroCapacityAtCount;
     }
 }

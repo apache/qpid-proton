@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SASL_H
-#define PROTON_CPP_SASL_H
+#ifndef PROTON_SASL_HPP
+#define PROTON_SASL_HPP
 
 /*
  *
@@ -22,8 +22,12 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/sasl.h"
+#include "./internal/export.hpp"
+#include "./internal/config.hpp"
+#include "./internal/object.hpp"
+
+#include <proton/sasl.h>
+
 #include <string>
 
 namespace proton {
@@ -35,7 +39,15 @@ class sasl {
     /// @endcond
 
   public:
-    sasl() : object_(0) {}
+#if PN_CPP_HAS_DELETED_FUNCTIONS
+    sasl() = delete;
+    sasl(const sasl&) = delete;
+    sasl& operator=(const sasl&) = delete;
+    sasl& operator=(sasl&&) = delete;
+#endif
+#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
+    sasl(sasl&&) = default;
+#endif
 
     /// The result of the SASL negotiation.
     enum outcome {
@@ -47,12 +59,6 @@ class sasl {
         TEMP = PN_SASL_TEMP    ///< Failed due to transient error
     };
 
-    /// @cond INTERNAL
-    /// XXX need to discuss
-    PN_CPP_EXTERN static bool extended();
-    PN_CPP_EXTERN void done(enum outcome);
-    /// @endcond
-
     /// Get the outcome.
     PN_CPP_EXTERN enum outcome outcome() const;
 
@@ -63,27 +69,13 @@ class sasl {
     PN_CPP_EXTERN std::string mech() const;
 
     /// @cond INTERNAL
-    PN_CPP_EXTERN void allow_insecure_mechs(bool);
-    /// @endcond
-
-    /// True if insecure mechanisms are permitted.
-    PN_CPP_EXTERN bool allow_insecure_mechs();
-
-    /// @cond INTERNAL
-    /// XXX setters? versus connection options
-    PN_CPP_EXTERN void allowed_mechs(const std::string &);
-    PN_CPP_EXTERN void config_name(const std::string&);
-    PN_CPP_EXTERN void config_path(const std::string&);
-    /// @endcond
-
-    /// @cond INTERNAL
   private:
-    pn_sasl_t* object_;
+    pn_sasl_t* const object_;
 
-    friend class transport;
+    friend class internal::factory<sasl>;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SASL_H
+#endif // PROTON_SASL_HPP

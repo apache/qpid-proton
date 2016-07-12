@@ -80,6 +80,15 @@ def _testSaslMech(self, mech, clientUser='user@proton', authUser='user@proton', 
 class Test(common.Test):
   pass
 
+def consumeAllOuput(t):
+  stops = 0
+  while stops<1:
+    out = t.peek(1024)
+    l = len(out)
+    t.pop(l)
+    if l <= 0:
+      stops += 1
+
 class SaslTest(Test):
 
   def setUp(self):
@@ -92,104 +101,67 @@ class SaslTest(Test):
   def pump(self):
     pump(self.t1, self.t2, 1024)
 
-  # Note that due to server protocol autodetect, there can be no "pipelining"
-  # of protocol frames from the server end only from the client end.
-  #
-  # This is because the server cannot know which protocol layers are active
-  # and therefore which headers need to be sent,
-  # until it sees the respective protocol headers from the client.
+  # We have to generate the client frames manually because proton does not
+  # generate pipelined SASL and AMQP frames together
   def testPipelinedClient(self):
+    # TODO: When PROTON-1136 is fixed then remove this test
     if "java" in sys.platform:
-      raise Skipped("Proton-J does not support client pipelining")
+      raise Skipped("Proton-J does not support pipelined client input")
 
-    # Client
-    self.s1.allowed_mechs('ANONYMOUS')
     # Server
     self.s2.allowed_mechs('ANONYMOUS')
 
-    assert self.s1.outcome is None
-    assert self.s2.outcome is None
-
-    # Push client bytes into server
-    out1 = self.t1.peek(1024)
-    self.t1.pop(len(out1))
-    self.t2.push(out1)
-
-    out2 = self.t2.peek(1024)
-    self.t2.pop(len(out2))
-
-    assert self.s1.outcome is None
-
-    self.t1.push(out2)
-
-    assert self.s1.outcome == SASL.OK
-    assert self.s2.outcome == SASL.OK
-
-  def testPipelinedClientFail(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support client pipelining")
-
-    # Client
-    self.s1.allowed_mechs('ANONYMOUS')
-    # Server
-    self.s2.allowed_mechs('PLAIN DIGEST-MD5 SCRAM-SHA-1')
-
-    assert self.s1.outcome is None
-    assert self.s2.outcome is None
-
-    # Push client bytes into server
-    out1 = self.t1.peek(1024)
-    self.t1.pop(len(out1))
-    self.t2.push(out1)
-
-    out2 = self.t2.peek(1024)
-    self.t2.pop(len(out2))
-
-    assert self.s1.outcome is None
-
-    self.t1.push(out2)
-
-    assert self.s1.outcome == SASL.AUTH
-    assert self.s2.outcome == SASL.AUTH
-
-  def testSaslAndAmqpInSingleChunk(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support client pipelining")
-
-    self.s1.allowed_mechs('ANONYMOUS')
-    self.s2.allowed_mechs('ANONYMOUS')
-
-    # do some work to generate AMQP data
-    c1 = Connection()
     c2 = Connection()
-    self.t1.bind(c1)
-    c1._transport = self.t1
     self.t2.bind(c2)
-    c2._transport = self.t2
 
-    c1.open()
+    assert self.s2.outcome is None
 
-    # get all t1's output in one buffer then pass it all to t2
-    out1_sasl_and_amqp = str2bin("")
-    t1_still_producing = True
-    while t1_still_producing:
-      out1 = self.t1.peek(1024)
-      self.t1.pop(len(out1))
-      out1_sasl_and_amqp += out1
-      t1_still_producing = out1
+    # Push client bytes into server
+    self.t2.push(str2bin(
+        # SASL
+        'AMQP\x03\x01\x00\x00'
+        # @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@fuschia"]
+        '\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
+        # AMQP
+        'AMQP\x00\x01\x00\x00'
+        # @open(16) [container-id="", channel-max=1234]
+        '\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
+        ))
 
-    t2_still_consuming = True
-    while t2_still_consuming:
-      num = min(self.t2.capacity(), len(out1_sasl_and_amqp))
-      self.t2.push(out1_sasl_and_amqp[:num])
-      out1_sasl_and_amqp = out1_sasl_and_amqp[num:]
-      t2_still_consuming = num > 0 and len(out1_sasl_and_amqp) > 0
+    consumeAllOuput(self.t2)
 
-    assert len(out1_sasl_and_amqp) == 0, (len(out1_sasl_and_amqp), out1_sasl_and_amqp)
-
-    # check that t2 processed both the SASL data and the AMQP data
     assert self.s2.outcome == SASL.OK
     assert c2.state & Endpoint.REMOTE_ACTIVE
+
+  def testPipelinedServer(self):
+    # Client
+    self.s1.allowed_mechs('ANONYMOUS')
+
+    c1 = Connection()
+    self.t1.bind(c1)
+
+    assert self.s1.outcome is None
+
+    # Push server bytes into client
+    # Commented out lines in this test are where the client input processing doesn't
+    # run after output processing even though there is input waiting
+    self.t1.push(str2bin(
+        # SASL
+        'AMQP\x03\x01\x00\x00'
+        # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
+        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        # @sasl-outcome(68) [code=0]
+        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        # AMQP
+        'AMQP\x00\x01\x00\x00'
+        # @open(16) [container-id="", channel-max=1234]
+        '\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
+        ))
+
+    consumeAllOuput(self.t1)
+
+    assert self.s1.outcome == SASL.OK
+    assert c1.state & Endpoint.REMOTE_ACTIVE
 
   def testPipelined2(self):
     if "java" in sys.platform:

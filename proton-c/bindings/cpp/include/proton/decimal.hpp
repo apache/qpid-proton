@@ -1,6 +1,8 @@
-#ifndef DECIMAL_HPP
-#define DECIMAL_HPP
+#ifndef PROTON_DECIMAL_HPP
+#define PROTON_DECIMAL_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,11 +19,12 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include "proton/byte_array.hpp"
-#include "proton/comparable.hpp"
-#include "proton/export.hpp"
+#include "./byte_array.hpp"
+#include "./internal/export.hpp"
+#include "./internal/comparable.hpp"
 
 #include <proton/types.h>
 
@@ -29,7 +32,7 @@
 
 namespace proton {
 
-///@name AMQP decimal types.
+/// @name AMQP decimal types.
 ///
 /// AMQP uses the standard IEEE 754-2008 encoding for decimal types.
 ///
@@ -49,16 +52,15 @@ class decimal64 : public byte_array<8> {};
 
 /// 128-bit decimal floating point.
 class decimal128 : public byte_array<16> {};
-///@}
+/// @}
 
 /// Print decimal values
-///@{
+/// @{
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal32&);
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal64&);
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal128&);
-///@}
+/// @}
 
+} // proton
 
-}
-
-#endif // DECIMAL_HPP
+#endif // PROTON_DECIMAL_HPP

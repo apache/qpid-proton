@@ -19,42 +19,44 @@
  *
  */
 
-#include "proton/container.hpp"
-#include "proton/handler.hpp"
-#include "proton/event.hpp"
-#include "proton/url.hpp"
-#include "proton/transport.hpp"
+#include <proton/connection.hpp>
+#include <proton/connection_options.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/transport.hpp>
 
 #include <iostream>
 
 using proton::connection_options;
 
-class handler_2 : public proton::handler {
-    void on_connection_open(proton::event &e) {
+#include "fake_cpp11.hpp"
+
+class handler_2 : public proton::messaging_handler {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         std::cout << "connection events going to handler_2" << std::endl;
-        std::cout << "connection max_frame_size: " << e.connection().transport().max_frame_size() <<
-            ", idle timeout: " << e.connection().transport().idle_timeout() << std::endl;
-        e.connection().close();
+        std::cout << "connection max_frame_size: " << c.max_frame_size() <<
+            ", idle timeout: " << c.idle_timeout() << std::endl;
+        c.close();
     }
 };
 
-class main_handler : public proton::handler {
+class main_handler : public proton::messaging_handler {
   private:
-    proton::url url;
+    std::string url;
     handler_2 conn_handler;
 
   public:
-    main_handler(const proton::url& u) : url(u) {}
+    main_handler(const std::string& u) : url(u) {}
 
-    void on_start(proton::event &e) {
+    void on_container_start(proton::container &c) OVERRIDE {
         // Connection options for this connection.  Merged with and overriding the container's
         // client_connection_options() settings.
-        e.container().connect(url, connection_options().handler(&conn_handler).max_frame_size(2468));
+        c.connect(url, connection_options().handler(conn_handler).max_frame_size(2468));
     }
 
-    void on_connection_open(proton::event &e) {
+    void on_connection_open(proton::connection &c) OVERRIDE {
         std::cout << "unexpected connection event on main handler" << std::endl;
-        e.connection().close();
+        c.close();
     }
 };
 
@@ -62,7 +64,7 @@ int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
         main_handler handler(url);
-        proton::container container(handler);
+        proton::default_container container(handler);
         // Global connection options for future connections on container.
         container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
         container.run();

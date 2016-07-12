@@ -1,6 +1,8 @@
-#ifndef SYMBOL_HPP
-#define SYMBOL_HPP
+#ifndef PROTON_SYMBOL_HPP
+#define PROTON_SYMBOL_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,23 +19,26 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
 namespace proton {
 
-/// symbol is a std::string that represents the AMQP symbol type.
-/// A symbol can only contain 7-bit ASCII characters.
+/// A std::string that represents the AMQP symbol type.
 ///
+/// A symbol can only contain 7-bit ASCII characters.
 class symbol : public std::string {
   public:
-    /// Construct from a std::string
+    /// Construct from a std::string.
     symbol(const std::string& s=std::string()) : std::string(s) {}
-    /// Construct from a C-string
+
+    /// Construct from a C string.
     symbol(const char* s) : std::string(s) {}
-    /// Construct from any sequence of char
+
+    /// Construct from any sequence of char.
     template<class Iter> symbol(Iter start, Iter finish) : std::string(start, finish) {}
 };
 
-}
+} // proton
 
-#endif // SYMBOL_HPP
+#endif // PROTON_SYMBOL_HPP

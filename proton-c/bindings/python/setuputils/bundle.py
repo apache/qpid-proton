@@ -32,10 +32,10 @@ from . import log
 #-----------------------------------------------------------------------------
 # Constants
 #-----------------------------------------------------------------------------
-min_qpid_proton = (0, 13, 0)
+min_qpid_proton = (0, 14, 0)
 min_qpid_proton_str = "%i.%i.%i" % min_qpid_proton
 
-bundled_version = (0, 13, 0)
+bundled_version = (0, 14, 0)
 bundled_version_str = "%i.%i.%i" % bundled_version
 libqpid_proton = "qpid-proton-%s.tar.gz" % bundled_version_str
 libqpid_proton_url = ("http://www.apache.org/dist/qpid/proton/%s/%s" %
@@ -69,6 +69,14 @@ def fetch_archive(savedir, url, fname):
 
 def fetch_libqpid_proton(savedir):
     """Download qpid-proton to `savedir`."""
+    def _c_only(members):
+        # just extract the files necessary to build the shared library
+        for tarinfo in members:
+            npath = os.path.normpath(tarinfo.name)
+            if ("proton-c/src" in npath or
+                "proton-c/include" in npath or
+                "proton-c/mllib" in npath):
+                yield tarinfo
     dest = os.path.join(savedir, 'qpid-proton')
     if os.path.exists(dest):
         log.info("already have %s" % dest)
@@ -79,6 +87,6 @@ def fetch_libqpid_proton(savedir):
     if member == '.':
         member = tf.getmembers()[1].path
     with_version = os.path.join(savedir, member)
-    tf.extractall(savedir)
+    tf.extractall(savedir, members=_c_only(tf))
     tf.close()
     shutil.move(with_version, dest)

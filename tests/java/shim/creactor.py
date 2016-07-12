@@ -56,6 +56,13 @@ def pn_reactor_selectable(r):
     return r.selectable()
 def pn_reactor_connection(r, h):
     return wrap(r.connection(h), pn_connection_wrapper)
+def pn_reactor_connection_to_host(r, host, port, h):
+    return wrap(r.connectionToHost(host, int(port), h),
+                pn_connection_wrapper)
+def pn_reactor_get_connection_address(r, c):
+    return r.getConnectionAddress(c.impl)
+def pn_reactor_set_connection_host(r, c, h, p):
+    r.setConnectionHost(c.impl, h, int(p))
 def pn_reactor_acceptor(r, host, port, handler):
     return r.acceptor(host, int(port), handler)
 def pn_reactor_mark(r):

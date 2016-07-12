@@ -1,15 +1,22 @@
-// Examples overview.
+// C++ examples list (doxygen format)
 //
-// For a better overview, see the tutorial in the generated documentation.
-//
-// In your build directory do:
+// For a tutorial-style description of the examples see tutorial.dox.
+// To build the full HTML tutorial and documentation, in your build directory do:
 //
 //     make docs-cpp
 //
 // then open proton-c/bindings/cpp/docs/html/tutorial.html in your browser.
 
-// DEVELOPER NOTE: if you are adding or modifying examples you should keep this
-// file and ../proton-c/bindings/cpp/docs/tutorial.hpp up to date.
+// DEVELOPER NOTE: if you add or modify examples, please add/update a short
+// description below and (if appropriate) extend/update tutorial.dox.
+
+/** example sub directory
+
+The example sub-directory has utilities classes to make the example simpler,
+these classes are not directly related to the use of proton so are in a separate
+`example` directory and namespace.
+
+*/
 
 /** @example helloworld.cpp
 
@@ -46,7 +53,7 @@ on 127.0.0.1:5672. Simply prints out the body of received messages.
 /** @example direct_send.cpp
 
 Accepts an incoming connection and then sends like `simple_send`.  You can
-connect directly to `direct_send` *without* a broker using \ref simple_recv.cpp.
+connect directly to `direct_send` *without* a broker using @ref simple_recv.cpp.
 Make sure to stop the broker first or use a different port for `direct_send`.
 
 */
@@ -54,7 +61,7 @@ Make sure to stop the broker first or use a different port for `direct_send`.
 /** @example direct_recv.cpp
 
 Accepts an incoming connection and then receives like `simple_recv`.  You can
-connect directly to `direct_recv` *without* a broker using \ref simple_send.cpp.
+connect directly to `direct_recv` *without* a broker using @ref simple_send.cpp.
 Make sure to stop the broker first or use a different port for `direct_recv`.
 
 */
@@ -95,21 +102,12 @@ alternatives.
 
 */
 
-/** @example recurring_timer.cpp
-
-Shows how to implement recurring time-based events using the scheduler. 
-
-*/
-
 /** @example broker.hpp
 
 Common logic for a simple "mini broker" that creates creates queues
 automatically when a client tries to send or subscribe. This file contains
 the `queue` class that queues messages and the `broker_handler` class
 that manages queues and links and transfers messages to/from clients.
-
-Examples \ref broker.cpp and \ref engine/broker.cpp use this same
-broker logic but show different ways to run it in a server application.
 
 */
 
@@ -120,79 +118,39 @@ to run other examples that reqiure an intermediary, or you can use any AMQP 1.0
 broker. This broker creates queues automatically when a client tries to send or
 subscribe.
 
-Uses the broker logic from \ref broker.hpp, the same logic as the
-`proton::connection_engine` broker example \ref engine/broker.cpp.
+*/
+
+/** @example mt/epoll_container.cpp
+
+An example implementation of the proton::container API that shows how
+to use the proton::io::connection_engine SPI to adapt the proton API
+to native IO, in this case using a multithreaded Linux epoll poller as
+the implementation.
+
+__Requires C++11__
 
 */
 
-//////////////// connection_engine examples.
+/** @example mt/broker.cpp
 
-/** \example engine/helloworld.cpp
+A multithreaded broker, that will work on any multi-threaded container. See @ref mt/epoll_container.cpp for an example of a multi-threaded container.
 
-`proton::connection_engine` example to send a "Hello World" message to
-itself. Compare with the corresponding `proton::container` example \ref
-helloworld.cpp.
+__Requires C++11__
 
 */
 
-/** \example engine/simple_send.cpp
+/** @example schedule_send.cpp
 
-`proton::connection_engine` example of sending a fixed number of messages and
-tracking their (asynchronous) acknowledgement. Messages are sent through the
-'examples' node on an intermediary accessible on 127.0.0.1:5672.
-
-*/
-
-/** \example engine/simple_recv.cpp
-
-`proton::connection_engine` example that subscribes to the 'examples' node and prints
- the body of received messages.
+Shows how to use proton::container::schedule to schedule a timed callback.
+This version uses std::function and so requires C++11 or better. For a C++03 compatible
+approach see @ref schedule_send_03.cpp.
 
 */
 
-/** \example engine/direct_send.cpp
+/** @example schedule_send_03.cpp
 
-`proton::connection_engine` example accepts an incoming connection and then
-sends like `simple_send`.  You can connect directly to `direct_send` *without* a
-broker using \ref simple_recv.cpp.  Make sure to stop the broker first or use a
-different port for `direct_send`.
-
-*/
-
-/** \example engine/direct_recv.cpp
-
-`proton::connection_engine` example accepts an incoming connection and then
-receives like `simple_recv`.  You can connect directly to `direct_recv`
-*without* a broker using \ref simple_send.cpp.  Make sure to stop the broker
-first or use a different port for `direct_recv`.
-
-*/
-
-/** \example engine/client.cpp
-
-`proton::connection_engine` client for request-response example. Sends requests and
-prints out responses. Requires an intermediary that supports the AMQP 1.0
-dynamic nodes on which the responses are received. The requests are sent through
-the 'examples' node.
-
-*/
-
-/** \example engine/server.cpp
-
-`proton::connection_engine` server for request-response example, that receives
-requests via the examples node, converts the body to uppercase and sends the
-result back to the indicated reply address.
-
-*/
-
-/** \example engine/broker.cpp
-
-A simple, single-threaded broker using the `proton::container`. You can use this
-to run other examples that reqiure an intermediary, or you can use any AMQP 1.0
-broker. This broker creates queues automatically when a client tries to send or
-subscribe.
-
-Uses the broker logic from \ref broker.hpp, the same logic as the
-proton::container` broker example \ref broker.cpp.
+Shows how to use proton::container::schedule to schedule a timed callback in a
+C++03 compatible way. See @ref schedule_send.cpp for a more convenient approach
+using std::function if you have C++11.
 
 */

@@ -21,18 +21,20 @@
 
 #include "options.hpp"
 
-#include "proton/connection.hpp"
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/tracker.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 #include <map>
 #include <string>
 #include <cctype>
 
-class server : public proton::handler {
+#include "fake_cpp11.hpp"
+
+class server : public proton::messaging_handler {
   private:
     typedef std::map<std::string, proton::sender> sender_map;
     proton::url url;
@@ -42,8 +44,8 @@ class server : public proton::handler {
   public:
     server(const std::string &u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        connection = e.container().connect(url);
+    void on_container_start(proton::container &c) OVERRIDE {
+        connection = c.connect(url);
         connection.open_receiver(url.path());
 
         std::cout << "server connected to " << url << std::endl;
@@ -52,21 +54,20 @@ class server : public proton::handler {
     std::string to_upper(const std::string &s) {
         std::string uc(s);
         size_t l = uc.size();
-
-        for (size_t i=0; i<l; i++) uc[i] = std::toupper(uc[i]);
-
+        for (size_t i=0; i<l; i++)
+            uc[i] = static_cast<char>(std::toupper(uc[i]));
         return uc;
     }
 
-    void on_message(proton::event &e) {
-        std::cout << "Received " << e.message().body() << std::endl;
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+        std::cout << "Received " << m.body() << std::endl;
 
-        std::string reply_to = e.message().reply_to();
+        std::string reply_to = m.reply_to();
         proton::message reply;
 
-        reply.address(reply_to);
-        reply.body(to_upper(proton::get<std::string>(e.message().body())));
-        reply.correlation_id(e.message().correlation_id());
+        reply.to(reply_to);
+        reply.body(to_upper(proton::get<std::string>(m.body())));
+        reply.correlation_id(m.correlation_id());
 
         if (!senders[reply_to]) {
             senders[reply_to] = connection.open_sender(reply_to);
@@ -78,7 +79,7 @@ class server : public proton::handler {
 
 int main(int argc, char **argv) {
     std::string address("amqp://0.0.0.0:5672/examples");
-    options opts(argc, argv);
+    example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "listen on URL", "URL");
 
@@ -86,10 +87,10 @@ int main(int argc, char **argv) {
         opts.parse();
 
         server srv(address);
-        proton::container(srv).run();
+        proton::default_container(srv).run();
 
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

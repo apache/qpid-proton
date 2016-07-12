@@ -17,23 +17,24 @@
  * under the License.
  */
 
-#include "proton_bits.hpp"
+#include "proton/internal/data.hpp"
 
-#include <proton/binary.hpp>
-#include <proton/data.hpp>
-#include <proton/decimal.hpp>
-#include <proton/encoder.hpp>
-#include <proton/message_id.hpp>
-#include <proton/symbol.hpp>
-#include <proton/timestamp.hpp>
-#include <proton/value.hpp>
+#include "proton/binary.hpp"
+#include "proton/codec/encoder.hpp"
+#include "proton/decimal.hpp"
+#include "proton/message_id.hpp"
+#include "proton/symbol.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/value.hpp"
 
 #include <proton/codec.h>
 
 #include <ostream>
 
+#include "proton_bits.hpp"
+
 namespace proton {
-namespace codec {
+namespace internal {
 
 data data::create() { return internal::take_ownership(pn_data(0)).get(); }
 
@@ -59,13 +60,11 @@ int data::appendn(data src, int limit) { return pn_data_appendn(pn_object(), src
 
 bool data::next() { return pn_data_next(pn_object()); }
 
-bool data::prev() { return pn_data_prev(pn_object()); }
-
 std::ostream& operator<<(std::ostream& o, const data& d) {
     state_guard sg(const_cast<data&>(d));
     const_cast<data&>(d).rewind();
     return o << inspectable(d.pn_object());
 }
 
-} // codec
+} // internal
 } // proton

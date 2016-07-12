@@ -159,7 +159,9 @@ install (FILES LICENSE README.md TODO
          DESTINATION ${PROTON_SHARE})
 
 install (DIRECTORY examples
-         DESTINATION ${PROTON_SHARE})
+         DESTINATION ${PROTON_SHARE}
+         REGEX "/examples/CMakeLists.txt$" EXCLUDE
+         PATTERN "*Config.cmake" EXCLUDE)
 
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")

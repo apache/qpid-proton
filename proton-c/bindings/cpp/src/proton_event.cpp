@@ -21,85 +21,17 @@
 
 #include "proton_event.hpp"
 
-#include "proton/container.hpp"
-#include "proton/delivery.hpp"
 #include "proton/error.hpp"
-#include "proton/receiver.hpp"
-#include "proton/sender.hpp"
-#include "proton/transport.hpp"
 
 #include "msg.hpp"
-#include "contexts.hpp"
 #include "proton_handler.hpp"
-
-#include "proton/reactor.h"
-#include "proton/link.h"
+#include "types_internal.hpp"
 
 namespace proton {
 
-proton_event::proton_event(pn_event_t *ce, pn_event_type_t t, class container *c) :
-    pn_event_(ce),
-    type_(event_type(t)),
-    container_(c)
-{}
-
-proton_event::event_type proton_event::type() const { return type_; }
-
-std::string proton_event::name() const { return pn_event_type_name(pn_event_type_t(type_)); }
-
-pn_event_t *proton_event::pn_event() const { return pn_event_; }
-
-container& proton_event::container() const {
-    if (!container_)
-        throw error(MSG("No container context for this event"));
-    return *container_;
-}
-
-transport proton_event::transport() const {
-    pn_transport_t *t = pn_event_transport(pn_event());
-    if (!t)
-        throw error(MSG("No transport context for this event"));
-    return t;
-}
-
-connection proton_event::connection() const {
-    pn_connection_t *conn = pn_event_connection(pn_event());
-    if (!conn)
-        throw error(MSG("No connection context for this event"));
-    return conn;
-}
-
-session proton_event::session() const {
-    pn_session_t *sess = pn_event_session(pn_event());
-    if (!sess)
-        throw error(MSG("No session context for this event"));
-    return sess;
-}
-
-link proton_event::link() const {
-    class link lnk = pn_event_link(pn_event());
-    if (!lnk) throw error(MSG("No link context for this event"));
-    return lnk;
-}
-
-sender proton_event::sender() const {
-    if (!link().sender()) throw error(MSG("No sender context for this event"));
-    return link().sender();
-}
-
-receiver proton_event::receiver() const {
-    if (!link().receiver()) throw error(MSG("No receiver context for this event"));
-    return link().receiver();
-}
-
-delivery proton_event::delivery() const {
-    pn_delivery_t* dlv = pn_event_delivery(pn_event());
-    if (!dlv) throw error(MSG("No delivery context for this event"));
-    return dlv;
-}
-
 void proton_event::dispatch(proton_handler &handler) {
-    switch(type_) {
+    pn_event_type_t type = pn_event_type(pn_event_);
+    switch(type) {
 
       case PN_REACTOR_INIT: handler.on_reactor_init(*this); break;
       case PN_REACTOR_QUIESCED: handler.on_reactor_quiesced(*this); break;
@@ -149,12 +81,7 @@ void proton_event::dispatch(proton_handler &handler) {
       case PN_SELECTABLE_ERROR: handler.on_selectable_error(*this); break;
       case PN_SELECTABLE_FINAL: handler.on_selectable_final(*this); break;
       default:
-        throw error(MSG("Invalid Proton event type " << type_));
-    }
-
-    // recurse through children
-    for (proton_handler::iterator child = handler.children_.begin(); child != handler.children_.end(); ++child) {
-        dispatch(**child);
+        throw error(MSG("Invalid Proton event type " << type));
     }
 }
 

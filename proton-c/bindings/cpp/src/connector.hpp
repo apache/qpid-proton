@@ -24,9 +24,9 @@
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
+#include <proton/event.h>
+#include <proton/reactor.h>
 #include "proton/url.hpp"
-#include "proton/event.h"
-#include "proton/reactor.h"
 
 #include "proton_handler.hpp"
 
@@ -40,9 +40,8 @@ class reconnect_timer;
 class connector : public proton_handler
 {
   public:
-    connector(connection &c, const connection_options &opts);
+    connector(connection &c, const url&, const connection_options &opts);
     ~connector();
-    void address(const url&);
     const url &address() const { return address_; }
     void connect();
     void apply_options();

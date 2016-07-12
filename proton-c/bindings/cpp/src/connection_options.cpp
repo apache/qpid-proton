@@ -19,19 +19,21 @@
  *
  */
 #include "proton/connection_options.hpp"
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 
+#include "acceptor.hpp"
 #include "contexts.hpp"
 #include "connector.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
+#include "proton_bits.hpp"
 
-#include "proton/connection.h"
-#include "proton/transport.h"
+#include <proton/connection.h>
+#include <proton/transport.h>
 
 namespace proton {
 
@@ -41,18 +43,17 @@ template <class T> struct option {
 
     option() : value(), set(false) {}
     option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void override(const option<T>& x) { if (x.set) *this = x.value; }
+    void update(const option<T>& x) { if (x.set) *this = x.value; }
 };
 
 class connection_options::impl {
   public:
     option<proton_handler*> handler;
     option<uint32_t> max_frame_size;
-    option<uint16_t> max_channels;
+    option<uint16_t> max_sessions;
     option<duration> idle_timeout;
-    option<duration> heartbeat;
     option<std::string> container_id;
-    option<std::string> link_prefix;
+    option<std::string> virtual_host;
     option<reconnect_timer> reconnect;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
@@ -62,24 +63,50 @@ class connection_options::impl {
     option<std::string> sasl_config_name;
     option<std::string> sasl_config_path;
 
+    /*
+     * There are three types of connection options: the handler
+     * (required at creation, so too late to apply here), open frame
+     * options (that never change after the original open), and
+     * transport options (set once per transport over the life of the
+     * connection).
+     */
     void apply(connection& c) {
-        pn_connection_t *pnc = connection_options::pn_connection(c);
+        pn_connection_t *pnc = unwrap(c);
         pn_transport_t *pnt = pn_connection_transport(pnc);
         connector *outbound = dynamic_cast<connector*>(
             connection_context::get(c).handler.get());
-        bool uninit = (c.state() & endpoint::LOCAL_UNINIT);
+        bool uninit = c.uninitialized();
 
-        // pnt is NULL between reconnect attempts.
-        // Only apply transport options if uninit or outbound with
-        // transport not yet configured.
+        // Only apply connection options if uninit.
+        if (uninit) {
+            std::string vhost;
+            if (virtual_host.set)
+                vhost = virtual_host.value;
+            else if (outbound)
+                vhost = outbound->address().host();
+
+            if (reconnect.set && outbound)
+                outbound->reconnect_timer(reconnect.value);
+            if (container_id.set)
+                pn_connection_set_container(pnc, container_id.value.c_str());
+            if (!vhost.empty())
+                pn_connection_set_hostname(pnc, vhost.c_str());
+        }
+
+        // Transport options.  pnt is NULL between reconnect attempts
+        // and if there is a pipelined open frame.
         if (pnt && (uninit || (outbound && !outbound->transport_configured())))
         {
             // SSL
             if (outbound && outbound->address().scheme() == url::AMQPS) {
+                // A side effect of pn_ssl() is to set the ssl peer
+                // hostname to the connection hostname, which has
+                // already been adjusted for the virtual_host option.
                 pn_ssl_t *ssl = pn_ssl(pnt);
                 if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
                     throw error(MSG("client SSL/TLS initialization error"));
             } else if (!outbound) {
+                // TODO aconway 2016-05-13: reactor only
                 pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
                 if (pnp) {
                     listener_context &lc(listener_context::get(pnp));
@@ -92,62 +119,55 @@ class connection_options::impl {
             }
 
             // SASL
-            transport t = c.transport();
             if (!sasl_enabled.set || sasl_enabled.value) {
                 if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
-                    t.sasl();          // Force a sasl instance.  Lazily create one otherwise.
+                    pn_sasl(pnt);          // Force a sasl instance.  Lazily create one otherwise.
                 if (sasl_allow_insecure_mechs.set)
-                    t.sasl().allow_insecure_mechs(sasl_allow_insecure_mechs.value);
+                    pn_sasl_set_allow_insecure_mechs(pn_sasl(pnt), sasl_allow_insecure_mechs.value);
                 if (sasl_allowed_mechs.set)
-                    t.sasl().allowed_mechs(sasl_allowed_mechs.value);
+                    pn_sasl_allowed_mechs(pn_sasl(pnt), sasl_allowed_mechs.value.c_str());
                 if (sasl_config_name.set)
-                    t.sasl().config_name(sasl_config_name.value);
+                    pn_sasl_config_name(pn_sasl(pnt), sasl_config_name.value.c_str());
                 if (sasl_config_path.set)
-                    t.sasl().config_path(sasl_config_path.value);
+                    pn_sasl_config_path(pn_sasl(pnt), sasl_config_path.value.c_str());
             }
 
             if (max_frame_size.set)
                 pn_transport_set_max_frame(pnt, max_frame_size.value);
-            if (max_channels.set)
-                pn_transport_set_channel_max(pnt, max_channels.value);
+            if (max_sessions.set)
+                pn_transport_set_channel_max(pnt, max_sessions.value);
             if (idle_timeout.set)
-                pn_transport_set_idle_timeout(pnt, idle_timeout.value.ms());
-        }
-        // Only apply connection options if uninit.
-        if (uninit) {
-            if (reconnect.set && outbound)
-                outbound->reconnect_timer(reconnect.value);
-            if (container_id.set)
-                pn_connection_set_container(pnc, container_id.value.c_str());
-            if (link_prefix.set)
-                connection_context::get(pnc).link_gen.prefix(link_prefix.value);
+                pn_transport_set_idle_timeout(pnt, idle_timeout.value.milliseconds());
         }
     }
 
-    void override(const impl& x) {
-        handler.override(x.handler);
-        max_frame_size.override(x.max_frame_size);
-        max_channels.override(x.max_channels);
-        idle_timeout.override(x.idle_timeout);
-        heartbeat.override(x.heartbeat);
-        container_id.override(x.container_id);
-        link_prefix.override(x.link_prefix);
-        reconnect.override(x.reconnect);
-        ssl_client_options.override(x.ssl_client_options);
-        ssl_server_options.override(x.ssl_server_options);
-        sasl_enabled.override(x.sasl_enabled);
-        sasl_allow_insecure_mechs.override(x.sasl_allow_insecure_mechs);
-        sasl_allowed_mechs.override(x.sasl_allowed_mechs);
-        sasl_config_name.override(x.sasl_config_name);
-        sasl_config_path.override(x.sasl_config_path);
+    void update(const impl& x) {
+        handler.update(x.handler);
+        max_frame_size.update(x.max_frame_size);
+        max_sessions.update(x.max_sessions);
+        idle_timeout.update(x.idle_timeout);
+        container_id.update(x.container_id);
+        virtual_host.update(x.virtual_host);
+        reconnect.update(x.reconnect);
+        ssl_client_options.update(x.ssl_client_options);
+        ssl_server_options.update(x.ssl_server_options);
+        sasl_enabled.update(x.sasl_enabled);
+        sasl_allow_insecure_mechs.update(x.sasl_allow_insecure_mechs);
+        sasl_allowed_mechs.update(x.sasl_allowed_mechs);
+        sasl_config_name.update(x.sasl_config_name);
+        sasl_config_path.update(x.sasl_config_path);
     }
 
 };
 
 connection_options::connection_options() : impl_(new impl()) {}
+
+connection_options::connection_options(class messaging_handler& h) : impl_(new impl()) { handler(h); }
+
 connection_options::connection_options(const connection_options& x) : impl_(new impl()) {
     *this = x;
 }
+
 connection_options::~connection_options() {}
 
 connection_options& connection_options::operator=(const connection_options& x) {
@@ -155,15 +175,17 @@ connection_options& connection_options::operator=(const connection_options& x) {
     return *this;
 }
 
-void connection_options::override(const connection_options& x) { impl_->override(*x.impl_); }
+connection_options& connection_options::update(const connection_options& x) {
+    impl_->update(*x.impl_);
+    return *this;
+}
 
-connection_options& connection_options::handler(class handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
+connection_options& connection_options::handler(class messaging_handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
-connection_options& connection_options::max_channels(uint16_t n) { impl_->max_frame_size = n; return *this; }
+connection_options& connection_options::max_sessions(uint16_t n) { impl_->max_sessions = n; return *this; }
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
-connection_options& connection_options::heartbeat(duration t) { impl_->heartbeat = t; return *this; }
 connection_options& connection_options::container_id(const std::string &id) { impl_->container_id = id; return *this; }
-connection_options& connection_options::link_prefix(const std::string &id) { impl_->link_prefix = id; return *this; }
+connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
 connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
@@ -174,8 +196,6 @@ connection_options& connection_options::sasl_config_name(const std::string &n) {
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
 void connection_options::apply(connection& c) const { impl_->apply(c); }
-class ssl_client_options &connection_options::ssl_client_options() { return impl_->ssl_client_options.value; }
-class ssl_server_options &connection_options::ssl_server_options() { return impl_->ssl_server_options.value; }
 proton_handler* connection_options::handler() const { return impl_->handler.value; }
-pn_connection_t* connection_options::pn_connection(connection &c) { return c.pn_object(); }
+bool connection_options::is_virtual_host_set() const { return impl_->virtual_host.set; }
 } // namespace proton

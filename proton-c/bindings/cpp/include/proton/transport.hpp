@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TRANSPORT_H
-#define PROTON_CPP_TRANSPORT_H
+#ifndef PROTON_TRANSPORT_HPP
+#define PROTON_TRANSPORT_HPP
 
 /*
  *
@@ -22,24 +22,30 @@
  *
  */
 
-#include "proton/object.hpp"
-#include "proton/types.hpp"
-#include "proton/export.hpp"
+#include "./internal/object.hpp"
+#include "./types.hpp"
+#include "./internal/export.hpp"
 
 struct pn_transport_t;
 
 namespace proton {
 
 class connection;
-class condition;
+class error_condition;
 class sasl;
 
+namespace io {
+class connection_engine;
+}
+
+/// A network channel supporting an AMQP connection.
 class transport : public internal::object<pn_transport_t> {
     /// @cond INTERNAL
     transport(pn_transport_t* t) : internal::object<pn_transport_t>(t) {}
     /// @endcond 
 
   public:
+    /// Create an empty transport.
     transport() : internal::object<pn_transport_t>(0) {}
 
     /// Get the connection associated with this transport.
@@ -52,28 +58,13 @@ class transport : public internal::object<pn_transport_t> {
     PN_CPP_EXTERN class sasl sasl() const;
 
     /// Get the error condition.
-    PN_CPP_EXTERN class condition condition() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
     /// @cond INTERNAL
-    /// XXX need to discuss, local versus remote
-    PN_CPP_EXTERN void unbind();
-    PN_CPP_EXTERN void bind(class connection &);
-    PN_CPP_EXTERN uint32_t max_frame_size() const;
-    PN_CPP_EXTERN uint32_t remote_max_frame_size() const;
-    PN_CPP_EXTERN uint16_t max_channels() const;
-    PN_CPP_EXTERN uint16_t remote_max_channels() const;
-    PN_CPP_EXTERN uint32_t idle_timeout() const;
-    PN_CPP_EXTERN uint32_t remote_idle_timeout() const;
-    /// @endcond
-
-    /// @cond INTERNAL
-    friend class connection;
-    friend class connection_options;
-    friend class connector;
-    friend class proton_event;
+    friend class internal::factory<transport>;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TRANSPORT_H
+#endif // PROTON_TRANSPORT_HPP

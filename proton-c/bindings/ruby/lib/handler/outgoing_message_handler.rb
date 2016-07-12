@@ -30,7 +30,9 @@ module Qpid::Proton::Handler
     end
 
     def on_link_flow(event)
-      self.on_sendable(event) if event.link.sender? && event.link.credit > 0
+      self.on_sendable(event) if event.link.sender? && event.link.credit > 0 &&
+                                 (event.link.state & Qpid::Proton::Endpoint::LOCAL_ACTIVE) &&
+                                 (event.link.state & Qpid::Proton::Endpoint::REMOTE_ACTIVE)
     end
 
     def on_delivery(event)

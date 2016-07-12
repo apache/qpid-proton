@@ -19,10 +19,11 @@ from __future__ import absolute_import
 #
 
 import time
+import sys
 from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
 from proton.handlers import CHandshaker, MessagingHandler
-from proton import Handler
+from proton import Handler, Url
 
 class Barf(Exception):
     pass
@@ -539,3 +540,85 @@ class ContainerTest(Test):
         container.connect(test_handler.url, user="user@proton", password="password", reconnect=False)
         container.run()
         assert test_handler.verified
+
+    class _ServerHandler(MessagingHandler):
+        def __init__(self, host):
+            super(ContainerTest._ServerHandler, self).__init__()
+            self.host = host
+            port = free_tcp_port()
+            self.port = free_tcp_port()
+            self.client_addr = None
+            self.peer_hostname = None
+
+        def on_start(self, event):
+            self.listener = event.container.listen("%s:%s" % (self.host, self.port))
+
+        def on_connection_opened(self, event):
+            self.client_addr = event.reactor.get_connection_address(event.connection)
+            self.peer_hostname = event.connection.remote_hostname
+
+        def on_connection_closing(self, event):
+            event.connection.close()
+            self.listener.close()
+
+    class _ClientHandler(MessagingHandler):
+        def __init__(self):
+            super(ContainerTest._ClientHandler, self).__init__()
+            self.server_addr = None
+
+        def on_connection_opened(self, event):
+            self.server_addr = event.reactor.get_connection_address(event.connection)
+            event.connection.close()
+
+    def test_numeric_hostname(self):
+        server_handler = ContainerTest._ServerHandler("127.0.0.1")
+        client_handler = ContainerTest._ClientHandler()
+        container = Container(server_handler)
+        container.connect(url=Url(host="127.0.0.1",
+                                  port=server_handler.port),
+                          handler=client_handler)
+        container.run()
+        assert server_handler.client_addr
+        assert client_handler.server_addr
+        assert server_handler.peer_hostname == "127.0.0.1", server_handler.peer_hostname
+        assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
+
+    def test_non_numeric_hostname(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        client_handler = ContainerTest._ClientHandler()
+        container = Container(server_handler)
+        container.connect(url=Url(host="localhost",
+                                  port=server_handler.port),
+                          handler=client_handler)
+        container.run()
+        assert server_handler.client_addr
+        assert client_handler.server_addr
+        assert server_handler.peer_hostname == "localhost", server_handler.peer_hostname
+        assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
+
+    def test_virtual_host(self):
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler)
+        conn = container.connect(url=Url(host="localhost",
+                                         port=server_handler.port),
+                                 handler=ContainerTest._ClientHandler(),
+                                 virtual_host="a.b.c.org")
+        container.run()
+        assert server_handler.peer_hostname == "a.b.c.org", server_handler.peer_hostname
+
+    def test_no_virtual_host(self):
+        # explicitly setting an empty virtual host should prevent the hostname
+        # field from being sent in the Open performative
+        if "java" in sys.platform:
+            # This causes Python Container to *not* set the connection virtual
+            # host, so when proton-j sets up the connection the virtual host
+            # seems to be unset and the URL's host is used (as expected).
+            raise SkipTest("Does not apply for proton-j");
+        server_handler = ContainerTest._ServerHandler("localhost")
+        container = Container(server_handler)
+        conn = container.connect(url=Url(host="localhost",
+                                         port=server_handler.port),
+                                 handler=ContainerTest._ClientHandler(),
+                                 virtual_host="")
+        container.run()
+        assert server_handler.peer_hostname is None, server_handler.peer_hostname

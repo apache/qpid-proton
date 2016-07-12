@@ -17,11 +17,18 @@
  * under the License.
  */
 
+#include "proton_bits.hpp"
+
+#include "proton/error_condition.hpp"
+
 #include <string>
 #include <ostream>
+
+#include <proton/condition.h>
 #include <proton/error.h>
 #include <proton/object.h>
-#include "proton_bits.hpp"
+
+namespace proton {
 
 std::string error_str(long code) {
   switch (code)
@@ -53,4 +60,18 @@ std::ostream& operator<<(std::ostream& o, const inspectable& object) {
     o << pn_string_get(str);
     pn_free(str);
     return o;
+}
+
+void set_error_condition(const error_condition& e, pn_condition_t *c) {
+    pn_condition_clear(c);
+
+    if (!e.name().empty()) {
+        pn_condition_set_name(c, e.name().c_str());
+    }
+    if (!e.description().empty()) {
+        pn_condition_set_description(c, e.description().c_str());
+    }
+    internal::value_ref(pn_condition_info(c)) = e.properties();
+}
+
 }

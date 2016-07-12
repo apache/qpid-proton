@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_TERMINUS_H
-#define PROTON_CPP_TERMINUS_H
+#ifndef PROTON_TERMINUS_HPP
+#define PROTON_TERMINUS_HPP
 
 /*
  *
@@ -22,16 +22,14 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/object.hpp"
-#include "proton/value.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
+#include "./value.hpp"
 
-#include "proton/link.h"
+#include <proton/link.h>
 #include <string>
 
 namespace proton {
-
-class link;
 
 /// One end of a link, either a source or a target.
 ///
@@ -45,105 +43,62 @@ class terminus {
     /// @endcond
 
   public:
-    terminus() : object_(0) {}
+    terminus() : object_(0), parent_(0) {}
 
-    /// Type of terminus
-    enum type {
-        TYPE_UNSPECIFIED = PN_UNSPECIFIED,
-        SOURCE = PN_SOURCE,
-        TARGET = PN_TARGET,
-        COORDINATOR = PN_COORDINATOR ///< Transaction coordinator
-    };
-
-    /// Durability
-    enum durability {
+    /// The persistence mode of the source or target.
+    enum durability_mode {
+        /// No persistence.
         NONDURABLE = PN_NONDURABLE,
+        /// Only configuration is persisted.
         CONFIGURATION = PN_CONFIGURATION,
-        DELIVERIES = PN_DELIVERIES
+        /// Configuration and unsettled state are persisted.
+        UNSETTLED_STATE = PN_DELIVERIES
     };
 
-    /// Expiry policy
+    /// When expiration of the source or target begins.
     enum expiry_policy {
-        EXPIRE_WITH_LINK = PN_EXPIRE_WITH_LINK,
-        EXPIRE_WITH_SESSION = PN_EXPIRE_WITH_SESSION,
-        EXPIRE_WITH_CONNECTION = PN_EXPIRE_WITH_CONNECTION,
-        EXPIRE_NEVER = PN_EXPIRE_NEVER
+        /// When the link is closed.
+        LINK_CLOSE = PN_EXPIRE_WITH_LINK,
+        /// When the containing session is closed.
+        SESSION_CLOSE = PN_EXPIRE_WITH_SESSION,
+        /// When the containing connection is closed.
+        CONNECTION_CLOSE = PN_EXPIRE_WITH_CONNECTION,
+        /// The terminus never expires.
+        NEVER = PN_EXPIRE_NEVER
     };
 
-    /// Distribution mode
-    enum distribution_mode {
-        MODE_UNSPECIFIED = PN_DIST_MODE_UNSPECIFIED,
-        COPY = PN_DIST_MODE_COPY,
-        MOVE = PN_DIST_MODE_MOVE
-    };
+    // XXX This should have address?
 
-    /// Get the terminus type.
-    PN_CPP_EXTERN enum type type() const;
-
-    /// Set the terminus type.
-    PN_CPP_EXTERN void type(enum type);
-
-    /// Get the expiration policy.
+    /// Get the policy for when expiration begins.
     PN_CPP_EXTERN enum expiry_policy expiry_policy() const;
 
-    /// Set the expiration policy.
-    PN_CPP_EXTERN void expiry_policy(enum expiry_policy);
-
-    /// @cond INTERNAL
-    /// XXX use duration
-    PN_CPP_EXTERN uint32_t timeout() const;
-    PN_CPP_EXTERN void timeout(uint32_t seconds);
-    /// @endcond
-
-    /// Get the distribution mode.
-    PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
-
-    /// Set the distribution mode.
-    PN_CPP_EXTERN void distribution_mode(enum distribution_mode);
+    /// The period after which the source is discarded on expiry. The
+    /// duration is rounded to the nearest second.
+    PN_CPP_EXTERN duration timeout() const;
 
     /// Get the durability flag.
-    PN_CPP_EXTERN enum durability durability();
-
-    /// Set the durability flag.
-    PN_CPP_EXTERN void durability(enum durability);
-
-    /// Get the source or target address.
-    PN_CPP_EXTERN std::string address() const;
-
-    /// Set the source or target address.
-    PN_CPP_EXTERN void address(const std::string &);
+    PN_CPP_EXTERN enum durability_mode durability_mode();
 
     /// True if the remote node is created dynamically.
     PN_CPP_EXTERN bool dynamic() const;
 
-    /// Enable or disable dynamic creation of the remote node.
-    PN_CPP_EXTERN void dynamic(bool);
-
     /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also link_options::lifetime_policy.
-    PN_CPP_EXTERN value& node_properties();
+    /// terminus.  See also lifetime_policy.
+    PN_CPP_EXTERN value node_properties() const;
 
-    /// Obtain a reference to the AMQP dynamic node properties for the
-    /// terminus.  See also link_options::lifetime_policy.
-    PN_CPP_EXTERN const value& node_properties() const;
-
-    /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also link_options::selector.
-    PN_CPP_EXTERN value& filter();
-
-    /// Obtain a reference to the AMQP filter set for the terminus.
-    /// See also link_options::selector.
-    PN_CPP_EXTERN const value& filter() const;
-
-    /// @cond INTERNAL
+  protected:
+    pn_terminus_t *pn_object() { return object_; }
   private:
     pn_terminus_t* object_;
-    value properties_, filter_;
+    pn_link_t* parent_;
 
-    friend class link;
+    /// @cond INTERNAL
+  friend class internal::factory<terminus>;
+  friend class source;
+  friend class target;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_TERMINUS_H
+#endif // PROTON_TERMINUS_HPP

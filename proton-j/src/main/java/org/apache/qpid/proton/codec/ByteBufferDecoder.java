@@ -25,4 +25,6 @@ import java.nio.ByteBuffer;
 public interface ByteBufferDecoder extends Decoder
 {
     public void setByteBuffer(ByteBuffer buffer);
+
+    public int getByteBufferRemaining();
 }

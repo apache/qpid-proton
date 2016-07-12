@@ -34,7 +34,9 @@ class OutgoingMessageHandler(Handler):
         self.delegate = delegate
 
     def on_link_flow(self, event):
-        if event.link.is_sender and event.link.credit:
+        if event.link.is_sender and event.link.credit \
+           and event.link.state & Endpoint.LOCAL_ACTIVE \
+           and event.link.state & Endpoint.REMOTE_ACTIVE :
             self.on_sendable(event)
 
     def on_delivery(self, event):
@@ -229,7 +231,7 @@ class EndpointStateHandler(Handler):
     @classmethod
     def print_error(cls, endpoint, endpoint_type):
         if endpoint.remote_condition:
-            logging.error(endpoint.remote_condition.description)
+            logging.error(endpoint.remote_condition.description or endpoint.remote_condition.name)
         elif cls.is_local_open(endpoint) and cls.is_remote_closed(endpoint):
             logging.error("%s closed by peer" % endpoint_type)
 

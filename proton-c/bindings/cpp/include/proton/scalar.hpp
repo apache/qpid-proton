@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include <proton/scalar_base.hpp>
+#include "./internal/scalar_base.hpp"
 
 namespace proton {
 
@@ -29,32 +29,32 @@ class decoder;
 class encoder;
 }
 
-/// A holder for an instance of any scalar AMQP type, see \ref types.
+/// A holder for an instance of any scalar AMQP type.
 ///
-class scalar : public scalar_base {
+/// @see @ref types_page
+class scalar : public internal::scalar_base {
   public:
     /// Create an empty scalar.
     PN_CPP_EXTERN scalar() {}
 
-    /// Construct from any scalar type, see \ref types.
+    /// Construct from any scalar type.
     template <class T> scalar(const T& x) { *this = x; }
 
-    /// Assign from any scalar type, see \ref types.
-    template <class T> scalar& operator=(const T& x) { put_(x); return *this; }
+    /// Assign from any scalar type.
+    template <class T> scalar& operator=(const T& x) { put(x); return *this; }
 
-    /// No contents, type() == NULL_TYPE
+    /// True if type() == NULL_TYPE.
     bool empty() const { return type() == NULL_TYPE; }
 
-    /// Clear the scalar, make it empty()
+    /// Clear the scalar, making it empty().
     void clear() { *this = null(); }
-
 };
 
 /// Get a contained value of type T. For example:
 ///
 ///      uint64_t i = get<uint64_t>(x)
 ///
-/// Will succeed if and only if x contains a uint64_t value.
+/// This will succeed if and only if x contains a uint64_t value.
 ///
 /// @throw conversion_error if contained value is not of type T.
 /// @related scalar
@@ -64,13 +64,27 @@ template<class T> T get(const scalar& s) { return internal::get<T>(s); }
 ///
 ///      uint64_t i = get<uint64_t>(x)
 ///
-/// Will succeed if x contains any numeric value, but may lose precision if it
-/// contains a float or double value.
+/// This will succeed if x contains any numeric value, but may lose
+/// precision if it contains a float or double value.
 ///
-/// @throw conversion_error if the value cannot be converted to T according to `std::is_convertible`
+/// @throw conversion_error if the value cannot be converted to T
+/// according to `std::is_convertible`
 /// @related scalar
 template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
 
-}
 
-#endif  /*!PROTON_SCALAR_HPP*/
+/// Coerce the contained value to type T. For example:
+///
+///      uint64_t i = get<uint64_t>(x)
+///
+/// This will succeed if x contains any numeric value, but may lose
+/// precision if it contains a float or double value.
+///
+/// @throw conversion_error if the value cannot be converted to T
+/// according to `std::is_convertible`
+/// @related scalar
+template<class T> T coerce(scalar& x) { return internal::coerce<T>(x); }
+
+} // proton
+
+#endif // PROTON_SCALAR_HPP

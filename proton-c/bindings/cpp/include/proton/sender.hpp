@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SENDER_H
-#define PROTON_CPP_SENDER_H
+#ifndef PROTON_SENDER_HPP
+#define PROTON_SENDER_HPP
 
 /*
  *
@@ -22,51 +22,89 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/delivery.hpp"
-#include "proton/link.hpp"
-#include "proton/message.hpp"
+#include "./internal/export.hpp"
+#include "./link.hpp"
+#include "./message.hpp"
+#include "./tracker.hpp"
 
-#include "proton/types.h"
+#include <proton/types.h>
+
 #include <string>
 
 struct pn_connection_t;
 
 namespace proton {
+template <class T> class thread_safe;
 
-/// A link for sending messages.
+/// A channel for sending messages.
 class
-PN_CPP_CLASS_EXTERN sender : public link
-{
+PN_CPP_CLASS_EXTERN sender : public link {
     /// @cond INTERNAL
-    sender(pn_link_t* s) : link(s) {}
+    PN_CPP_EXTERN sender(pn_link_t* s);
     /// @endcond
 
   public:
-    sender() : link(0) {}
+    /// Create an empty sender.
+    sender() {}
 
-    /// Send a message on the link.
-    PN_CPP_EXTERN delivery send(const message &m);
+    /// Open the sender.
+    ///
+    /// @see endpoint_lifecycle
+    PN_CPP_EXTERN void open();
+
+    /// @copydoc open
+    PN_CPP_EXTERN void open(const sender_options &opts);
+
+    /// Send a message on the sender.
+    PN_CPP_EXTERN tracker send(const message &m);
+
+    /// Get the source node.
+    PN_CPP_EXTERN class source source() const;
+
+    /// Get the target node.
+    PN_CPP_EXTERN class target target() const;
+
+    /// **Experimental** - Return all unused credit to the receiver in
+    /// response to a drain request.  Has no effect unless there has
+    /// been a drain request and there is remaining credit to use or
+    /// return.
+    ///
+    /// @see receiver::drain
+    PN_CPP_EXTERN void return_credit();
 
     /// @cond INTERNAL
-    /// XXX undiscussed
-
-    /// The number of deliveries that might be able to be sent if
-    /// sufficient credit were issued on the link.  See
-    /// sender::offered().  Maintained by the application.
-    PN_CPP_EXTERN int available();
-
-    /// Set the availability of deliveries for a sender.
-    PN_CPP_EXTERN void offered(int c);
-
+  friend class internal::factory<sender>;
+  friend class sender_iterator;
+  friend class thread_safe<sender>;
     /// @endcond
-
-  /// @cond INTERNAL
-  friend class link;
-  friend class session;
-  /// @endcond
 };
+
+/// @cond INTERNAL
+
+/// An iterator of senders.
+class sender_iterator : public internal::iter_base<sender, sender_iterator> {
+    sender_iterator(sender snd, pn_session_t* s = 0) :
+        internal::iter_base<sender, sender_iterator>(snd), session_(s) {}
+
+  public:
+    /// Create an iterator of senders.
+    sender_iterator() :
+        internal::iter_base<sender, sender_iterator>(0), session_(0) {}
+    /// Advance to the next sender.
+    PN_CPP_EXTERN sender_iterator operator++();
+
+  private:
+    pn_session_t* session_;
+
+  friend class connection;
+  friend class session;
+};
+
+/// A range of senders.
+typedef internal::iter_range<sender_iterator> sender_range;
+
+/// @endcond
 
 }
 
-#endif // PROTON_CPP_SENDER_H
+#endif // PROTON_SENDER_HPP

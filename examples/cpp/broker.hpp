@@ -27,12 +27,18 @@
 /// The examples add functionality as needed, this helps to make it
 /// easier to see the important differences between the examples.
 
-#include "proton/event.hpp"
-#include "proton/message.hpp"
-#include "proton/handler.hpp"
-#include "proton/sender.hpp"
-#include "proton/transport.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/message.hpp>
+#include <proton/sasl.hpp>
+#include <proton/sender.hpp>
+#include <proton/tracker.hpp>
+#include <proton/transport.hpp>
+#include <proton/sender_options.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/source_options.hpp>
+#include <proton/target_options.hpp>
 
 #include <iostream>
 #include <deque>
@@ -57,7 +63,7 @@ class queue {
         return (consumers_.size() == 0 && (dynamic_ || messages_.size() == 0));
     }
 
-    void publish(const proton::message &m, proton::receiver r) {
+    void publish(const proton::message &m) {
         messages_.push_back(m);
         dispatch(0);
     }
@@ -112,6 +118,7 @@ class queue {
 class queues {
   public:
     queues() : next_id_(0) {}
+    virtual ~queues() {}
 
     // Get or create a queue.
     virtual queue &get(const std::string &address = std::string()) {
@@ -147,84 +154,79 @@ class queues {
     uint64_t next_id_; // Use to generate unique queue IDs.
 };
 
+#include <proton/config.hpp>
 
 /** Common handler logic for brokers. */
-class broker_handler : public proton::handler {
+class broker_handler : public proton::messaging_handler {
   public:
     broker_handler(queues& qs) : queues_(qs) {}
 
-    void on_link_open(proton::event &e) {
-        proton::link lnk = e.link();
+    void on_transport_open(proton::transport &t) OVERRIDE {
+        std::cout << "Connection from user: " << t.sasl().user() << " (mechanism: " << t.sasl().mech() << ")" << std::endl;
+    }
 
-        if (!!lnk.sender()) {
-            proton::terminus remote_source(lnk.remote_source());
-            queue &q = remote_source.dynamic() ?
-                queues_.dynamic() : queues_.get(remote_source.address());
-            lnk.local_source().address(q.name());
+    void on_sender_open(proton::sender &sender) OVERRIDE {
+        proton::source src(sender.source());
+        queue &q = src.dynamic() ?
+            queues_.dynamic() : queues_.get(src.address());
+        sender.open(proton::sender_options().source(proton::source_options().address(q.name())));
+        q.subscribe(sender);
+        std::cout << "broker outgoing link from " << q.name() << std::endl;
+    }
 
-            q.subscribe(lnk.sender());
-            std::cout << "broker outgoing link from " << q.name() << std::endl;
-        } else {
-            // Receiver
-            std::string address = lnk.remote_target().address();
-            if (!address.empty()) {
-                lnk.local_target().address(address);
-                std::cout << "broker incoming link to " << address << std::endl;
-            }
+    void on_receiver_open(proton::receiver &receiver) OVERRIDE {
+        std::string address = receiver.target().address();
+        if (!address.empty()) {
+            receiver.open(proton::receiver_options().target(proton::target_options().address(address)));
+            std::cout << "broker incoming link to " << address << std::endl;
         }
     }
 
     void unsubscribe(proton::sender lnk) {
-        std::string address = lnk.local_source().address();
+        std::string address = lnk.source().address();
 
         if (queues_.get(address).unsubscribe(lnk)) {
             queues_.erase(address);
         }
     }
 
-    void on_link_close(proton::event &e) {
-        proton::link lnk = e.link();
-
-        if (!!lnk.sender()) {
-            unsubscribe(lnk.sender());
-        }
+    void on_sender_close(proton::sender &sender) OVERRIDE {
+        unsubscribe(sender);
     }
 
-    void on_connection_close(proton::event &e) {
-        remove_stale_consumers(e.connection());
+    void on_connection_close(proton::connection &c) OVERRIDE {
+        remove_stale_consumers(c);
     }
 
-    void on_transport_close(proton::event &e) {
-        remove_stale_consumers(e.connection());
+    void on_transport_close(proton::transport &t) OVERRIDE {
+        remove_stale_consumers(t.connection());
     }
 
-    void on_transport_error(proton::event &e) {
-        std::cout << "broker client disconnect: " << e.transport().condition().what() << std::endl;
+    void on_transport_error(proton::transport &t) OVERRIDE {
+        std::cout << "broker client disconnect: " << t.error().what() << std::endl;
     }
 
-    void on_unhandled_error(proton::event &e, const proton::condition &c) {
-        std::cerr << "broker error: " << e.name() << ":" << c.what() << std::endl;
+    void on_error(const proton::error_condition &c) OVERRIDE {
+        std::cerr << "broker error: " << c.what() << std::endl;
     }
 
     void remove_stale_consumers(proton::connection connection) {
-        proton::link_range r = connection.links();
-        for (proton::link_iterator l = r.begin(); l != r.end(); ++l) {
-            if ((l->state() & proton::endpoint::REMOTE_ACTIVE) && !!l->sender())
-                unsubscribe(l->sender());
+        proton::sender_range sr = connection.senders();
+        for (proton::sender_iterator i = sr.begin(); i != sr.end(); ++i) {
+            if (i->active())
+                unsubscribe(*i);
         }
     }
 
-    void on_sendable(proton::event &e) {
-        proton::link lnk = e.link();
-        std::string address = lnk.local_source().address();
-        proton::sender s = lnk.sender();
+    void on_sendable(proton::sender &s) OVERRIDE {
+        std::string address = s.source().address();
 
         queues_.get(address).dispatch(&s);
     }
 
-    void on_message(proton::event &e) {
-        std::string address = e.link().local_target().address();
-        queues_.get(address).publish(e.message(), e.link().receiver());
+    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
+        std::string address = d.receiver().target().address();
+        queues_.get(address).publish(m);
     }
 
   protected:

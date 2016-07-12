@@ -21,7 +21,17 @@
 #include <iostream>
 
 namespace proton {
-std::ostream& operator<<(std::ostream& o, const decimal32& ) { return o << "<decimal32>"; }
-std::ostream& operator<<(std::ostream& o, const decimal64& ) { return o << "<decimal64>"; }
-std::ostream& operator<<(std::ostream& o, const decimal128& ) { return o << "<decimal128>"; }
+
+std::ostream& operator<<(std::ostream& o, const decimal32& d) {
+    return o << "decimal32(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
+}
+
+std::ostream& operator<<(std::ostream& o, const decimal64& d) {
+    return o << "decimal64(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
+}
+
+std::ostream& operator<<(std::ostream& o, const decimal128& d) {
+    return o << "decimal128(" <<static_cast<byte_array<sizeof(d)> >(d)<< ")";
+}
+
 }

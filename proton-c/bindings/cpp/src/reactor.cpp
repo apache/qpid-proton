@@ -18,13 +18,14 @@
  */
 
 #include "reactor.hpp"
+#include "acceptor.hpp"
 
-#include "proton/acceptor.hpp"
 #include "proton/connection.hpp"
 #include "proton/task.hpp"
 #include "proton/url.hpp"
 
 #include "contexts.hpp"
+#include "proton_bits.hpp"
 
 #include <proton/reactor.h>
 
@@ -45,7 +46,7 @@ timestamp reactor::mark() { return timestamp(pn_reactor_mark(pn_object())); }
 timestamp reactor::now() { return timestamp(pn_reactor_now(pn_object())); }
 
 acceptor reactor::listen(const url& url){
-    return pn_reactor_acceptor(pn_object(), url.host().c_str(), url.port().c_str(), 0);
+    return make_wrapper(pn_reactor_acceptor(pn_object(), url.host().c_str(), url.port().c_str(), 0));
 }
 
 task reactor::schedule(int delay, pn_handler_t* handler) {
@@ -53,7 +54,11 @@ task reactor::schedule(int delay, pn_handler_t* handler) {
 }
 
 connection reactor::connection(pn_handler_t* h) const {
-    return pn_reactor_connection(pn_object(), h);
+    return make_wrapper(pn_reactor_connection(pn_object(), h));
+}
+
+connection reactor::connection_to_host(const std::string &host, const std::string &port, pn_handler_t* h) const {
+    return make_wrapper(pn_reactor_connection_to_host(pn_object(), host.c_str(), port.c_str(), h));
 }
 
 pn_io_t* reactor::pn_io() const {
@@ -84,10 +89,10 @@ duration reactor::timeout() {
 }
 
 void reactor::timeout(duration timeout) {
-    if (timeout == duration::FOREVER || timeout.ms() > PN_MILLIS_MAX)
+    if (timeout == duration::FOREVER || timeout.milliseconds() > PN_MILLIS_MAX)
         pn_reactor_set_timeout(pn_object(), PN_MILLIS_MAX);
     else
-        pn_reactor_set_timeout(pn_object(), timeout.ms());
+        pn_reactor_set_timeout(pn_object(), timeout.milliseconds());
 }
 
 }

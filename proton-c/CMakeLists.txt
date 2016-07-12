@@ -66,7 +66,7 @@ if (CYRUSSASL_FOUND)
 else ()
   set (sasl_impl none)
 endif ()
-set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SSL/TLS support. Valid values: ${sasl_providers}")
+set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SASL support. Valid values: ${sasl_providers}")
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
@@ -105,7 +105,7 @@ endif(PN_WINAPI)
 if (SASL_IMPL STREQUAL cyrus)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
   include_directories (${CYRUS_SASL_INCLUDE_DIR})
-  set(SASL_LIB ${CYRUS_SASL_LIBRARY})
+  set(SASL_LIB ${CYRUS_SASL_LIBRARY} -lpthread)
 elseif (SASL_IMPL STREQUAL none)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
 endif ()
@@ -253,6 +253,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set (CXX_WARNING_FLAGS "${WERROR} -pedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 endif()
 
+# Make flags visible to examples.
+set(CXX_WARNING_FLAGS "${CXX_WARNING_FLAGS}" PARENT_SCOPE)
+set(COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS}" PARENT_SCOPE)
+set(COMPILE_LANGUAGE_FLAGS "${COMPILE_LANGUAGE_FLAGS}" PARENT_SCOPE)
+set(LINK_TIME_OPTIMIZATION "${LTO}" PARENT_SCOPE)
+
+
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
     add_definitions(
@@ -315,6 +322,7 @@ set (qpid-proton-core
   src/codec/encoder.c
 
   src/dispatcher/dispatcher.c
+  src/engine/connection_engine.c
   src/engine/engine.c
   src/events/event.c
   src/transport/autodetect.c

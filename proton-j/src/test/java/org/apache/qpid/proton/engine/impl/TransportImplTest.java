@@ -44,6 +44,7 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.transport.Attach;
 import org.apache.qpid.proton.amqp.transport.Begin;
 import org.apache.qpid.proton.amqp.transport.Close;
+import org.apache.qpid.proton.amqp.transport.End;
 import org.apache.qpid.proton.amqp.transport.Flow;
 import org.apache.qpid.proton.amqp.transport.FrameBody;
 import org.apache.qpid.proton.amqp.transport.Open;
@@ -468,6 +469,214 @@ public class TransportImplTest
         assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
         assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
         assertTrue("Unexpected frame type", transport.writes.get(2) instanceof Attach);
+    }
+
+    /*
+     * No attach frame should be written before the Session begin is sent.
+     */
+    @Test
+    public void testOpenReceiverBeforeOpenSession()
+    {
+        doOpenLinkBeforeOpenSessionTestImpl(true);
+    }
+
+    /*
+     * No attach frame should be written before the Session begin is sent.
+     */
+    @Test
+    public void testOpenSenderBeforeOpenSession()
+    {
+        doOpenLinkBeforeOpenSessionTestImpl(false);
+    }
+
+    void doOpenLinkBeforeOpenSessionTestImpl(boolean receiverLink)
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        // Open the connection
+        connection.open();
+
+        // Create but don't open the session
+        Session session = connection.session();
+
+        // Open the link
+        Link link = null;
+        if(receiverLink)
+        {
+            link = session.receiver("myReceiver");
+        }
+        else
+        {
+            link = session.sender("mySender");
+        }
+        link.open();
+
+        pumpMockTransport(transport);
+
+        // Expect only an Open frame, no attach should be sent as the session isn't open
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 1, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+
+        // Now open the session, expect the Begin
+        session.open();
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 2, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+        assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
+        // Note: an Attach wasn't sent because link is no longer 'modified' after earlier pump. It
+        // could easily be argued it should, given how the engine generally handles things. Seems
+        // unlikely to be of much real world concern.
+        //assertTrue("Unexpected frame type", transport.writes.get(2) instanceof Attach);
+    }
+
+    /*
+     * Verify that no Attach frame is emitted by the Transport should a Receiver
+     * be opened after the session End frame was sent.
+     */
+    @Test
+    public void testReceiverAttachAfterEndSent()
+    {
+        doLinkAttachAfterEndSentTestImpl(true);
+    }
+
+    /*
+     * Verify that no Attach frame is emitted by the Transport should a Sender
+     * be opened after the session End frame was sent.
+     */
+    @Test
+    public void testSenderAttachAfterEndSent()
+    {
+        doLinkAttachAfterEndSentTestImpl(false);
+    }
+
+    void doLinkAttachAfterEndSentTestImpl(boolean receiverLink)
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        connection.open();
+
+        Session session = connection.session();
+        session.open();
+
+        Link link = null;
+        if(receiverLink)
+        {
+            link = session.receiver("myReceiver");
+        }
+        else
+        {
+            link = session.sender("mySender");
+        }
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 2, transport.writes.size());
+
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+        assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
+
+        // Send the necessary responses to open/begin
+        transport.handleFrame(new TransportFrame(0, new Open(), null));
+
+        Begin begin = new Begin();
+        begin.setRemoteChannel(UnsignedShort.valueOf((short) 0));
+        transport.handleFrame(new TransportFrame(0, begin, null));
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 2, transport.writes.size());
+
+        // Cause a End frame to be sent
+        session.close();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(2) instanceof End);
+
+        // Open the link and verify the transport doesn't
+        // send any Attach frame, as an End frame was sent already.
+        link.open();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+    }
+
+    /*
+     * Verify that no Attach frame is emitted by the Transport should a Receiver
+     * be closed after the session End frame was sent.
+     */
+    @Test
+    public void testReceiverCloseAfterEndSent()
+    {
+        doLinkDetachAfterEndSentTestImpl(true);
+    }
+
+    /*
+     * Verify that no Attach frame is emitted by the Transport should a Sender
+     * be closed after the session End frame was sent.
+     */
+    @Test
+    public void testSenderCloseAfterEndSent()
+    {
+        doLinkDetachAfterEndSentTestImpl(false);
+    }
+
+    void doLinkDetachAfterEndSentTestImpl(boolean receiverLink)
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        Connection connection = Proton.connection();
+        transport.bind(connection);
+
+        connection.open();
+
+        Session session = connection.session();
+        session.open();
+
+        Link link = null;
+        if(receiverLink)
+        {
+            link = session.receiver("myReceiver");
+        }
+        else
+        {
+            link = session.sender("mySender");
+        }
+        link.open();
+
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        assertTrue("Unexpected frame type", transport.writes.get(0) instanceof Open);
+        assertTrue("Unexpected frame type", transport.writes.get(1) instanceof Begin);
+        assertTrue("Unexpected frame type", transport.writes.get(2) instanceof Attach);
+
+        // Send the necessary responses to open/begin
+        transport.handleFrame(new TransportFrame(0, new Open(), null));
+
+        Begin begin = new Begin();
+        begin.setRemoteChannel(UnsignedShort.valueOf((short) 0));
+        transport.handleFrame(new TransportFrame(0, begin, null));
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 3, transport.writes.size());
+
+        // Cause an End frame to be sent
+        session.close();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
+        assertTrue("Unexpected frame type", transport.writes.get(3) instanceof End);
+
+        // Close the link and verify the transport doesn't
+        // send any Detach frame, as an End frame was sent already.
+        link.close();
+        pumpMockTransport(transport);
+
+        assertEquals("Unexpected frames written: " + getFrameTypesWritten(transport), 4, transport.writes.size());
     }
 
     /*

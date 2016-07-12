@@ -19,35 +19,41 @@
  *
  */
 
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
-#include "proton/url.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 
-class hello_world : public proton::handler {
+#include "fake_cpp11.hpp"
+
+class hello_world : public proton::messaging_handler {
   private:
     proton::url url;
 
   public:
-    hello_world(const proton::url& u) : url(u) {}
+    hello_world(const std::string& u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
-        conn.open_receiver(url.path());
-        conn.open_sender(url.path());
+    void on_container_start(proton::container& c) OVERRIDE {
+        c.connect(url);
     }
 
-    void on_sendable(proton::event &e) {
+    void on_connection_open(proton::connection& c) OVERRIDE {
+        c.open_receiver(url.path());
+        c.open_sender(url.path());
+    }
+
+    void on_sendable(proton::sender &s) OVERRIDE {
         proton::message m("Hello World!");
-        e.sender().send(m);
-        e.sender().close();
+        s.send(m);
+        s.close();
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
-        e.connection().close();
+    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
+        std::cout << m.body() << std::endl;
+        d.connection().close();
     }
 };
 
@@ -56,7 +62,8 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
 
         hello_world hw(url);
-        proton::container(hw).run();
+        proton::default_container(hw).run();
+
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

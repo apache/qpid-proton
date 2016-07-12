@@ -21,35 +21,34 @@
 
 #include "options.hpp"
 
-#include "proton/container.hpp"
-#include "proton/acceptor.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
-#include "proton/link.hpp"
-#include "proton/url.hpp"
-#include "proton/value.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/link.hpp>
+#include <proton/value.hpp>
 
 #include <iostream>
 #include <map>
 
-class direct_recv : public proton::handler {
+#include "fake_cpp11.hpp"
+
+class direct_recv : public proton::messaging_handler {
   private:
-    proton::url url;
+    std::string url;
+    proton::listener listener;
     uint64_t expected;
     uint64_t received;
-    proton::acceptor acceptor;
 
   public:
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
-    void on_start(proton::event &e) {
-        acceptor = e.container().listen(url);
+    void on_container_start(proton::container &c) OVERRIDE {
+        listener = c.listen(url);
         std::cout << "direct_recv listening on " << url << std::endl;
     }
 
-    void on_message(proton::event &e) {
-        proton::message& msg = e.message();
-
+    void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
         if (proton::coerce<uint64_t>(msg.id()) < received) {
             return; // Ignore duplicate
         }
@@ -60,10 +59,9 @@ class direct_recv : public proton::handler {
         }
 
         if (received == expected) {
-            e.receiver().close();
-            e.connection().close();
-
-            if (!!acceptor) acceptor.close();
+            d.receiver().close();
+            d.connection().close();
+            listener.stop();
         }
     }
 };
@@ -71,7 +69,7 @@ class direct_recv : public proton::handler {
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
     int message_count = 100;
-    options opts(argc, argv);
+    example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "listen and receive on URL", "URL");
     opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
@@ -80,10 +78,10 @@ int main(int argc, char **argv) {
         opts.parse();
 
         direct_recv recv(address, message_count);
-        proton::container(recv).run();
+        proton::default_container(recv).run();
 
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

@@ -19,77 +19,37 @@
  *
  */
 
+#include "proton/terminus.hpp"
+
+#include "proton_bits.hpp"
+
 #include "proton/link.hpp"
-#include "proton/link.h"
+#include <proton/link.h>
 
 namespace proton {
 
 terminus::terminus(pn_terminus_t* t) :
-    object_(t), properties_(pn_terminus_properties(t)), filter_(pn_terminus_filter(t))
+    object_(t), parent_(0)
 {}
-
-enum terminus::type terminus::type() const {
-    return (enum type)pn_terminus_get_type(object_);
-}
-
-void terminus::type(enum type type0) {
-    pn_terminus_set_type(object_, pn_terminus_type_t(type0));
-}
 
 enum terminus::expiry_policy terminus::expiry_policy() const {
     return (enum expiry_policy)pn_terminus_get_expiry_policy(object_);
 }
 
-void terminus::expiry_policy(enum expiry_policy policy) {
-    pn_terminus_set_expiry_policy(object_, pn_expiry_policy_t(policy));
+duration terminus::timeout() const {
+    return duration::SECOND * pn_terminus_get_timeout(object_);
 }
 
-uint32_t terminus::timeout() const {
-    return pn_terminus_get_timeout(object_);
-}
-
-void terminus::timeout(uint32_t seconds) {
-    pn_terminus_set_timeout(object_, seconds);
-}
-
-enum terminus::distribution_mode terminus::distribution_mode() const {
-    return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
-}
-
-void terminus::distribution_mode(enum distribution_mode mode) {
-    pn_terminus_set_distribution_mode(object_, pn_distribution_mode_t(mode));
-}
-
-enum terminus::durability terminus::durability() {
-    return (enum durability) pn_terminus_get_durability(object_);
-}
-
-void terminus::durability(enum durability d) {
-    pn_terminus_set_durability(object_, (pn_durability_t) d);
-}
-
-std::string terminus::address() const {
-    const char *addr = pn_terminus_get_address(object_);
-    return addr ? std::string(addr) : std::string();
-}
-
-void terminus::address(const std::string &addr) {
-    pn_terminus_set_address(object_, addr.c_str());
+enum terminus::durability_mode terminus::durability_mode() {
+    return (enum durability_mode) pn_terminus_get_durability(object_);
 }
 
 bool terminus::dynamic() const {
     return pn_terminus_is_dynamic(object_);
 }
 
-void terminus::dynamic(bool d) {
-    pn_terminus_set_dynamic(object_, d);
+value terminus::node_properties() const {
+    return internal::value_ref(pn_terminus_properties(object_));
 }
-
-value& terminus::filter() { return filter_; }
-const value& terminus::filter() const { return filter_; }
-
-
-value& terminus::node_properties() { return properties_; }
-const value& terminus::node_properties() const { return properties_; }
 
 }

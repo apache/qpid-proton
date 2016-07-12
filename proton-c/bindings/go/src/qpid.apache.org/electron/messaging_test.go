@@ -421,7 +421,7 @@ func TestConnectionCloseInterrupt1(t *testing.T) {
 	pairs.server.Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
-			t.Logf("want %v got %v", want, r)
+			t.Errorf("want %v got %v", want, r)
 		}
 	}
 }
@@ -447,8 +447,7 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	pairs.client.Connection().Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
-			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil.
-			t.Logf("want %v got %v", want, r.err)
+			t.Errorf("want %v got %v", want, r.err)
 		}
 	}
 }

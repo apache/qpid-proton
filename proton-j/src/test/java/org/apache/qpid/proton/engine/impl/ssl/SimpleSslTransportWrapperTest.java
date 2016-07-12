@@ -29,6 +29,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 
 import javax.net.ssl.SSLException;
 
@@ -46,12 +47,10 @@ import org.junit.rules.ExpectedException;
  */
 public class SimpleSslTransportWrapperTest
 {
-    private RememberingTransportInput _underlyingInput = new RememberingTransportInput();
-    private CannedTransportOutput _underlyingOutput = new CannedTransportOutput();
-
+    private RememberingTransportInput _underlyingInput;
+    private CannedTransportOutput _underlyingOutput;
     private SimpleSslTransportWrapper _sslWrapper;
-
-    private CapitalisingDummySslEngine _dummySslEngine = new CapitalisingDummySslEngine();
+    private CapitalisingDummySslEngine _dummySslEngine;
 
     @Rule
     public ExpectedException _expectedException = ExpectedException.none();
@@ -59,6 +58,9 @@ public class SimpleSslTransportWrapperTest
     @Before
     public void setUp()
     {
+        _underlyingInput = new RememberingTransportInput();
+        _underlyingOutput = new CannedTransportOutput();
+        _dummySslEngine = new CapitalisingDummySslEngine();
         _sslWrapper = new SimpleSslTransportWrapper(_dummySslEngine, _underlyingInput, _underlyingOutput);
     }
 
@@ -70,8 +72,16 @@ public class SimpleSslTransportWrapperTest
         putBytesIntoTransport(encodedBytes);
 
         assertEquals("a_", _underlyingInput.getAcceptedInput());
+        assertEquals(CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE, _sslWrapper.capacity());
+        assertEquals(2, _dummySslEngine.getUnwrapCount());// 1 packet, 1 underflow
+        assertEquals(1, _underlyingInput.getProcessCount());
     }
 
+    /**
+     * Note that this only feeds 1 encoded packet in at a time due to default settings of the dummy engine,
+     * See {@link #testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInputRequiringMultipleUnwraps}
+     * for a related test that passes multiple encoded packets into the ssl wrapper at once.
+     */
     @Test
     public void testInputWithMultiplePackets()
     {
@@ -80,6 +90,9 @@ public class SimpleSslTransportWrapperTest
         putBytesIntoTransport(encodedBytes);
 
         assertEquals("a_b_c_z_", _underlyingInput.getAcceptedInput());
+        assertEquals(CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE, _sslWrapper.capacity());
+        assertEquals(8, _dummySslEngine.getUnwrapCount()); // (1 decode + 1 underflow) * 4 packets
+        assertEquals(4, _underlyingInput.getProcessCount()); // 1 process per decoded packet
     }
 
     @Test
@@ -90,9 +103,15 @@ public class SimpleSslTransportWrapperTest
 
         putBytesIntoTransport(incompleteEncodedBytes);
         assertEquals("a_b_", _underlyingInput.getAcceptedInput());
+        assertEquals(5, _dummySslEngine.getUnwrapCount()); // 2 * (1 decode + 1 underflow) + 1 underflow
+        assertEquals(2, _underlyingInput.getProcessCount()); // 1 process per decoded packet
 
         putBytesIntoTransport(remainingEncodedBytes);
         assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
+        assertEquals(4, _underlyingInput.getProcessCount()); // earlier + 2
+        assertEquals(9, _dummySslEngine.getUnwrapCount()); // Earlier + 2 * (1 decode + 1 underflow)
+                                                           // due to way the bytes are fed in across
+                                                           // boundary of encoded packets
     }
 
     /**
@@ -108,22 +127,221 @@ public class SimpleSslTransportWrapperTest
 
         putBytesIntoTransport(firstEncodedBytes);
         assertEquals("a_b_", _underlyingInput.getAcceptedInput());
+        assertEquals(5, _dummySslEngine.getUnwrapCount()); // 2 * (1 decode + 1 underflow) + 1 underflow
+        assertEquals(2, _underlyingInput.getProcessCount()); // 1 process per decoded packet
 
         putBytesIntoTransport(secondEncodedBytes);
         assertEquals("a_b_", _underlyingInput.getAcceptedInput());
+        assertEquals(6, _dummySslEngine.getUnwrapCount()); // earlier + 1 underflow
+        assertEquals(2, _underlyingInput.getProcessCount()); // as earlier
 
         putBytesIntoTransport(thirdEncodedBytes);
         assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
+        assertEquals(4, _underlyingInput.getProcessCount()); // 1 process per decoded packet
+        assertEquals(10, _dummySslEngine.getUnwrapCount()); // Earlier + (decode + underflow) * 2
+                                                           // due to way the bytes are fed in across
+                                                           // boundary of encoded packets
     }
 
+    /**
+     * Tests that when a small underlying input buffer (1 byte here) is used, all of the encoded
+     * data packet (5 bytes each here) can be processed despite multiple attempts being required to
+     * pass the decoded bytes (2 bytes here) to the underlying input layer for processing.
+     */
     @Test
-    public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInput() throws Exception
+    public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInputRequiringMultipleUnderlyingProcesses()
     {
-        _underlyingInput.setInputBufferSize(1);
+        int underlyingInputBufferSize = 1;
+        int encodedPacketSize = 5;
 
-        putBytesIntoTransport("<-A->");
+        _underlyingInput.setInputBufferSize(underlyingInputBufferSize);
+        assertEquals("Unexpected underlying input capacity", underlyingInputBufferSize, _underlyingInput.capacity());
 
-        assertEquals("a_", _underlyingInput.getAcceptedInput());
+        assertEquals("Unexpected max encoded chunk size", encodedPacketSize, CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE);
+
+        byte[] bytes = "<-A-><-B->".getBytes(StandardCharsets.UTF_8);
+        ByteBuffer encodedByteSource = ByteBuffer.wrap(bytes);
+
+        assertEquals("Unexpected initial capacity", encodedPacketSize, _sslWrapper.capacity());
+
+        // Process the first 'encoded packet' (<-A->)
+        int numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", encodedPacketSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize * 1, encodedByteSource.position());
+        assertEquals("Unexpected capacity", 0, _sslWrapper.capacity());
+        _sslWrapper.process();
+        assertEquals("Unexpected capacity", encodedPacketSize, _sslWrapper.capacity());
+
+        assertEquals("unexpected underlying output after first wrapper process", "a_", _underlyingInput.getAcceptedInput());
+        assertEquals("unexpected underlying process count after first wrapper process", 2 , _underlyingInput.getProcessCount());
+
+        // Process the second 'encoded packet' (<-B->)
+        numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", encodedPacketSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize * 2, encodedByteSource.position());
+        assertEquals("Unexpected capacity", 0, _sslWrapper.capacity());
+        _sslWrapper.process();
+        assertEquals("Unexpected capacity", encodedPacketSize, _sslWrapper.capacity());
+
+        assertEquals("unexpected underlying output after second wrapper process", "a_b_", _underlyingInput.getAcceptedInput());
+        assertEquals("unexpected underlying process count after second wrapper process", 4 , _underlyingInput.getProcessCount());
+    }
+
+    /**
+     * Tests that when a small underlying input buffer (1 byte here) is used, all of the encoded
+     * data packets (20 bytes total here) can be processed despite multiple unwraps being required
+     * to process a given set of input (3 packets, 15 bytes here) and then as a result also multiple
+     * attempts to pass the decoded packet (2 bytes here) to the underlying input layer for processing.
+     */
+    @Test
+    public void testUnderlyingInputUsingSmallBuffer_receivesAllDecodedInputRequiringMultipleUnwraps()
+    {
+        int underlyingInputBufferSize = 1;
+        int encodedPacketSize = 5;
+        int sslEngineBufferSize = 15;
+
+        assertEquals("Unexpected max encoded chunk size", encodedPacketSize, CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE);
+
+        _underlyingOutput = new CannedTransportOutput();
+        _underlyingInput = new RememberingTransportInput();
+        _underlyingInput.setInputBufferSize(underlyingInputBufferSize);
+        assertEquals("Unexpected underlying input capacity", underlyingInputBufferSize, _underlyingInput.capacity());
+
+        // Create a dummy ssl engine that has buffers that holds multiple encoded/decoded
+        // packets, but still can't fit all of the input
+        _dummySslEngine = new CapitalisingDummySslEngine();
+        _dummySslEngine.setApplicationBufferSize(sslEngineBufferSize);
+        _dummySslEngine.setPacketBufferSize(sslEngineBufferSize);
+
+        _sslWrapper = new SimpleSslTransportWrapper(_dummySslEngine, _underlyingInput, _underlyingOutput);
+
+        byte[] bytes = "<-A-><-B-><-C-><-D->".getBytes(StandardCharsets.UTF_8);
+        ByteBuffer encodedByteSource = ByteBuffer.wrap(bytes);
+
+        assertEquals("Unexpected initial capacity", sslEngineBufferSize, _sslWrapper.capacity());
+
+        // Process the first three 'encoded packets' (<-A-><-B-><-C->). This will require 3 'proper' unwraps, and
+        // as each decoded packet is 2 bytes, each of those will require 2 underlying input processes.
+        int numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", sslEngineBufferSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize * 3, encodedByteSource.position());
+        assertEquals("Unexpected capacity", 0, _sslWrapper.capacity());
+
+        _sslWrapper.process();
+
+        assertEquals("a_b_c_", _underlyingInput.getAcceptedInput());
+        assertEquals("Unexpected capacity", sslEngineBufferSize, _sslWrapper.capacity());
+        assertEquals("unexpected underlying process count after wrapper process", 6 , _underlyingInput.getProcessCount());
+        assertEquals(4, _dummySslEngine.getUnwrapCount()); // 3 decodes + 1 underflow
+
+        // Process the fourth 'encoded packet' (<-D->)
+        numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", encodedPacketSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize * 4, encodedByteSource.position());
+        assertEquals("Unexpected capacity", sslEngineBufferSize - encodedPacketSize, _sslWrapper.capacity());
+
+        _sslWrapper.process();
+
+        assertEquals("a_b_c_d_", _underlyingInput.getAcceptedInput());
+        assertEquals("Unexpected capacity", sslEngineBufferSize, _sslWrapper.capacity());
+        assertEquals("unexpected underlying process count after second wrapper process", 8 , _underlyingInput.getProcessCount());
+        assertEquals(6, _dummySslEngine.getUnwrapCount()); // earlier + 1 decode + 1 underflow
+    }
+
+    /**
+     * Tests that an exception is thrown when the underlying input has zero capacity when the call
+     * with newly decoded input is initially made.
+     */
+    @Test (timeout = 5000)
+    public void testUnderlyingInputHasZeroCapacityInitially()
+    {
+        int underlyingInputBufferSize = 1;
+        int encodedPacketSize = 5;
+
+        assertEquals("Unexpected max encoded chunk size", encodedPacketSize, CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE);
+
+        // Set the input to have a small buffer, but then return 0 from the 2nd capacity call onward.
+        _underlyingInput.setInputBufferSize(underlyingInputBufferSize);
+        _underlyingInput.setZeroCapacityAtCount(2);
+        assertEquals("Unexpected initial underlying input capacity", underlyingInputBufferSize, _underlyingInput.capacity());
+        assertEquals("Unexpected underlying input capacity", 0, _underlyingInput.capacity());
+
+        // Now try decoding the input, should fail
+        byte[] bytes = "<-A->".getBytes(StandardCharsets.UTF_8);
+        ByteBuffer encodedByteSource = ByteBuffer.wrap(bytes);
+
+        assertEquals("Unexpected initial wrapper capacity", encodedPacketSize, _sslWrapper.capacity());
+
+        int numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", encodedPacketSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize, encodedByteSource.position());
+        assertEquals("Unexpected wrapper capacity", 0, _sslWrapper.capacity());
+
+        try
+        {
+            _sslWrapper.process();
+            fail("Expected an exception");
+        }
+        catch (TransportException te)
+        {
+            // expected.
+        }
+
+        //Check we got no chars of decoded output.
+        assertEquals("", _underlyingInput.getAcceptedInput());
+        assertEquals("Unexpected wrapper capacity", -1, _sslWrapper.capacity());
+        assertEquals("unexpected underlying process count after wrapper process", 0 , _underlyingInput.getProcessCount());
+        assertEquals("unexpected underlying capacity count after wrapper process", 3, _underlyingInput.getCapacityCount());
+        assertEquals("unexpected underlying capacity after wrapper process", 0 , _underlyingInput.capacity());
+        assertEquals(1, _dummySslEngine.getUnwrapCount()); // 1 decode (then exception)
+    }
+
+    /**
+     * Tests that an exception is thrown when the underlying input has no capacity (but isn't closed)
+     * during the process of incrementally passing the decoded bytes to its smaller input buffer
+     * for processing.
+     */
+    @Test (timeout = 5000)
+    public void testUnderlyingInputHasZeroCapacityMidProcessing()
+    {
+        int underlyingInputBufferSize = 1;
+        int encodedPacketSize = 5;
+
+        assertEquals("Unexpected max encoded chunk size", encodedPacketSize, CapitalisingDummySslEngine.MAX_ENCODED_CHUNK_SIZE);
+
+        // Set the input to have a small buffer, but then return 0 from the 3rd capacity call onward.
+        _underlyingInput.setInputBufferSize(underlyingInputBufferSize);
+        _underlyingInput.setZeroCapacityAtCount(3);
+        assertEquals("Unexpected initial underlying input capacity", underlyingInputBufferSize, _underlyingInput.capacity());
+
+        // Now try decoding the input, should fail
+        byte[] bytes = "<-A->".getBytes(StandardCharsets.UTF_8);
+        ByteBuffer encodedByteSource = ByteBuffer.wrap(bytes);
+
+        assertEquals("Unexpected initial wrapper capacity", encodedPacketSize, _sslWrapper.capacity());
+
+        int numberPoured = pour(encodedByteSource, _sslWrapper.tail());
+        assertEquals("Unexpected number of bytes poured into the wrapper input buffer", encodedPacketSize, numberPoured);
+        assertEquals("Unexpected position in encoded source byte buffer", encodedPacketSize, encodedByteSource.position());
+        assertEquals("Unexpected wrapper capacity", 0, _sslWrapper.capacity());
+
+        try
+        {
+            _sslWrapper.process();
+            fail("Expected an exception");
+        }
+        catch (TransportException te)
+        {
+            // expected.
+        }
+
+        //Check we got the first char (a) of decoded output, but not the second (_).
+        assertEquals("a", _underlyingInput.getAcceptedInput());
+        assertEquals("Unexpected wrapper capacity", -1, _sslWrapper.capacity());
+        assertEquals("unexpected underlying process count after wrapper process", 1 , _underlyingInput.getProcessCount());
+        assertEquals("unexpected underlying capacity count after wrapper process", 3, _underlyingInput.getCapacityCount());
+        assertEquals("unexpected underlying capacity after wrapper process", 0 , _underlyingInput.capacity());
+        assertEquals(1, _dummySslEngine.getUnwrapCount()); // 1 decode (then exception)
     }
 
     @Test
@@ -132,7 +350,7 @@ public class SimpleSslTransportWrapperTest
         SSLException sslException = new SSLException("unwrap exception");
         _dummySslEngine.rejectNextEncodedPacket(sslException);
 
-        _sslWrapper.tail().put("<-A->".getBytes());
+        _sslWrapper.tail().put("<-A->".getBytes(StandardCharsets.UTF_8));
         _sslWrapper.process();
         assertEquals(_sslWrapper.capacity(), Transport.END_OF_STREAM);
     }
@@ -143,7 +361,7 @@ public class SimpleSslTransportWrapperTest
         String underlyingErrorDescription = "dummy underlying error";
         _underlyingInput.rejectNextInput(underlyingErrorDescription);
 
-        _sslWrapper.tail().put("<-A->".getBytes());
+        _sslWrapper.tail().put("<-A->".getBytes(StandardCharsets.UTF_8));
 
         try {
             _sslWrapper.process();
@@ -167,7 +385,7 @@ public class SimpleSslTransportWrapperTest
 
         ByteBuffer outputBuffer = _sslWrapper.head();
 
-        assertByteBufferContentEquals("<-A->".getBytes(), outputBuffer);
+        assertByteBufferContentEquals("<-A->".getBytes(StandardCharsets.UTF_8), outputBuffer);
     }
 
     @Test
@@ -218,7 +436,7 @@ public class SimpleSslTransportWrapperTest
 
     private void putBytesIntoTransport(String encodedBytes)
     {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(encodedBytes.getBytes());
+        ByteBuffer byteBuffer = ByteBuffer.wrap(encodedBytes.getBytes(StandardCharsets.UTF_8));
         while(byteBuffer.hasRemaining())
         {
             int numberPoured = pour(byteBuffer, _sslWrapper.tail());

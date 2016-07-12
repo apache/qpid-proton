@@ -20,7 +20,7 @@
  */
 
 #include "msg.hpp"
-#include <proton/types.hpp>
+#include "proton/types.hpp"
 
 #include <stdexcept>
 #include <iostream>
@@ -30,25 +30,37 @@
 
 namespace test {
 
-struct fail : public std::logic_error { fail(const std::string& what) : logic_error(what) {} };
+struct fail : public std::logic_error {
+    fail(const std::string& what) : logic_error(what) {}
+};
 
-bool close(double want, double got, double delta) {
-    return fabs(want-got) <= delta;
+template <class T, class U>
+void assert_equal(const T& want, const U& got, const std::string& what) {
+    if (!(want == got))
+        throw fail(MSG(what << " " << want << " != " << got));
 }
 
-#define FAIL(WHAT) throw fail(MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT))
-#define ASSERT(TEST) do { if (!(TEST)) FAIL("assert failed: " << #TEST); } while(false)
-#define ASSERT_EQUAL(WANT, GOT) if (!((WANT) == (GOT))) \
-        FAIL(#WANT << " !=  " << #GOT << ": " << (WANT) << " != " << (GOT))
-#define ASSERT_CLOSE(WANT, GOT, DELTA) if (!close((WANT), (GOT), (DELTA))) \
-        FAIL(#WANT << " != " << #GOT << ": " << (WANT) << " != " << (GOT))
+template <class T>
+inline void assert_equalish(T want, T got, T delta, const std::string& what)
+{
+    if (!(fabs(want-got) <= delta))
+        throw fail(MSG(what << " " << want << " !=~ " << got));
+}
+
+#define FAIL_MSG(WHAT) (MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT).str())
+#define FAIL(WHAT) throw test::fail(FAIL_MSG(WHAT))
+#define ASSERT(TEST) do { if (!(TEST)) FAIL("failed ASSERT(" #TEST ")"); } while(false)
+#define ASSERT_EQUAL(WANT, GOT) \
+    test::assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
+#define ASSERT_EQUALISH(WANT, GOT, DELTA) \
+    test::assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \
         try {                                                           \
             TEST;                                                       \
             break;                                                      \
-        } catch(const fail& e) {                                        \
+        } catch(const test::fail& e) {                                        \
             std::cout << "FAIL " << #TEST << std::endl << e.what() << std::endl; \
         } catch(const std::exception& e) {                              \
             std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": " << e.what() << std::endl; \
@@ -56,7 +68,9 @@ bool close(double want, double got, double delta) {
             ++BAD_COUNT;                                                \
     } while(0)
 
-template<class T> std::string str(const T& x) { std::ostringstream s; s << x; return s.str(); }
+template<class T> std::string str(const T& x) {
+    std::ostringstream s; s << std::boolalpha << x; return s.str();
+}
 
 // A way to easily create literal collections that can be compared to std:: collections
 // and to print std collections

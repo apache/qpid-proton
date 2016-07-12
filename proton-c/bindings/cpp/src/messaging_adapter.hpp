@@ -22,25 +22,22 @@
  *
  */
 
-#include "proton/handler.hpp"
+#include "proton/messaging_handler.hpp"
 
 #include "proton_handler.hpp"
 
-#include "proton/event.h"
-#include "proton/reactor.h"
+#include <proton/event.h>
+#include <proton/reactor.h>
 
 ///@cond INTERNAL
 
 namespace proton {
 
-// Combine's Python's: endpoint_state_handler, incoming_message_handler, outgoing_message_handler
-
+/// Convert the low level proton-c events to the higher level proton::messaging_handler calls
 class messaging_adapter : public proton_handler
 {
   public:
-    messaging_adapter(handler &delegate,
-                                    int prefetch, bool auto_accept, bool auto_settle,
-                                    bool peer_close_is_error);
+    messaging_adapter(messaging_handler &delegate);
     virtual ~messaging_adapter();
 
     void on_reactor_init(proton_event &e);
@@ -50,19 +47,13 @@ class messaging_adapter : public proton_handler
     void on_connection_remote_close(proton_event &e);
     void on_session_remote_open(proton_event &e);
     void on_session_remote_close(proton_event &e);
+    void on_link_local_open(proton_event &e);
     void on_link_remote_open(proton_event &e);
     void on_link_remote_close(proton_event &e);
     void on_transport_tail_closed(proton_event &e);
-    void on_timer_task(proton_event &e);
 
   private:
-    handler &delegate_;  // The handler for generated messaging_event's
-    int prefetch_;
-    bool auto_accept_;
-    bool auto_settle_;
-    bool peer_close_iserror_;
-    internal::pn_unique_ptr<proton_handler> flow_controller_;
-    void create_helpers();
+    messaging_handler &delegate_;  // The handler for generated messaging_event's
 };
 
 }

@@ -23,8 +23,6 @@
 
 namespace proton {
 
-bool sasl::extended() { return pn_sasl_extended(); }
-void sasl::done(enum outcome outcome0) { pn_sasl_done(object_, static_cast<pn_sasl_outcome_t>(outcome0)); }
 enum sasl::outcome sasl::outcome() const { return static_cast<enum outcome>(pn_sasl_outcome(object_)); }
 
 std::string sasl::user() const {
@@ -36,12 +34,5 @@ std::string sasl::mech() const {
     const char *m = pn_sasl_get_mech(object_);
     return m ? std::string(m) : std::string();
 }
-
-void sasl::allow_insecure_mechs(bool allowed) { pn_sasl_set_allow_insecure_mechs(object_, allowed); }
-bool sasl::allow_insecure_mechs() { return pn_sasl_get_allow_insecure_mechs(object_); }
-void sasl::allowed_mechs(const std::string &mechs) { pn_sasl_allowed_mechs(object_, mechs.c_str()); }
-void sasl::config_name(const std::string &name) { pn_sasl_config_name(object_, name.c_str()); }
-void sasl::config_path(const std::string &path) { pn_sasl_config_path(object_, path.c_str()); }
-
 
 } // namespace

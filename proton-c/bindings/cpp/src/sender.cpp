@@ -18,44 +18,79 @@
  * under the License.
  *
  */
+
 #include "proton/link.hpp"
 #include "proton/sender.hpp"
-#include "proton/error.hpp"
-#include "msg.hpp"
+#include "proton/tracker.hpp"
+
+#include <proton/delivery.h>
+#include <proton/link.h>
+#include <proton/types.h>
+
+#include "proton_bits.hpp"
 #include "contexts.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
-#include "proton/types.h"
-#include "proton/codec.h"
-#include "proton/message.h"
-#include "proton/delivery.h"
-#include <stdlib.h>
-#include <string.h>
+#include <assert.h>
 
 namespace proton {
+
+sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
+
+void sender::open() {
+    attach();
+}
+
+void sender::open(const sender_options &opts) {
+    opts.apply(*this);
+    attach();
+}
+
+class source sender::source() const {
+    return proton::source(*this);
+}
+
+class target sender::target() const {
+    return proton::target(*this);
+}
 
 namespace {
 // TODO: revisit if thread safety required
 uint64_t tag_counter = 0;
 }
 
-delivery sender::send(const message &message) {
+tracker sender::send(const message &message) {
     uint64_t id = ++tag_counter;
     pn_delivery_t *dlv =
         pn_delivery(pn_object(), pn_dtag(reinterpret_cast<const char*>(&id), sizeof(id)));
     std::vector<char> buf;
     message.encode(buf);
+    assert(!buf.empty());
     pn_link_send(pn_object(), &buf[0], buf.size());
     pn_link_advance(pn_object());
     if (pn_link_snd_settle_mode(pn_object()) == PN_SND_SETTLED)
         pn_delivery_settle(dlv);
-    return dlv;
+    if (!pn_link_credit(pn_object()))
+        link_context::get(pn_object()).draining = false;
+    return make_wrapper<tracker>(dlv);
 }
 
-int sender::available() { return pn_link_available(pn_object()); }
-void sender::offered(int c) { pn_link_offered(pn_object(), c); }
+void sender::return_credit() {
+    link_context &lctx = link_context::get(pn_object());
+    lctx.draining = false;
+    pn_link_drained(pn_object());
+}
 
+sender_iterator sender_iterator::operator++() {
+    if (!!obj_) {
+        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
+        while (lnk) {
+            if (pn_link_is_sender(lnk) && pn_link_session(lnk) == session_)
+                break;
+            lnk = pn_link_next(lnk, 0);
+        }
+        obj_ = lnk;
+    }
+    return *this;
+}
 
 }

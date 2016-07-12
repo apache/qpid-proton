@@ -108,7 +108,6 @@ static bool pni_sasl_is_client_state(enum pni_sasl_state state)
   return state==SASL_NONE
       || state==SASL_POSTED_INIT
       || state==SASL_POSTED_RESPONSE
-      || state==SASL_PRETEND_OUTCOME
       || state==SASL_RECVED_OUTCOME_SUCCEED
       || state==SASL_RECVED_OUTCOME_FAIL
       || state==SASL_ERROR;
@@ -116,20 +115,17 @@ static bool pni_sasl_is_client_state(enum pni_sasl_state state)
 
 static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
 {
-  enum pni_sasl_state last_state = sasl->last_state;
   enum pni_sasl_state desired_state = sasl->desired_state;
-  return last_state==SASL_RECVED_OUTCOME_SUCCEED
-      || last_state==SASL_RECVED_OUTCOME_FAIL
-      || last_state==SASL_ERROR
-      || desired_state==SASL_POSTED_OUTCOME
-      || ( desired_state==SASL_RECVED_OUTCOME_SUCCEED && last_state>=SASL_POSTED_INIT);
+  return desired_state==SASL_RECVED_OUTCOME_SUCCEED
+      || desired_state==SASL_RECVED_OUTCOME_FAIL
+      || desired_state==SASL_ERROR
+      || desired_state==SASL_POSTED_OUTCOME;
 }
 
 static bool pni_sasl_is_final_output_state(pni_sasl_t *sasl)
 {
   enum pni_sasl_state last_state = sasl->last_state;
-  return last_state==SASL_PRETEND_OUTCOME
-      || last_state==SASL_RECVED_OUTCOME_SUCCEED
+  return last_state==SASL_RECVED_OUTCOME_SUCCEED
       || last_state==SASL_RECVED_OUTCOME_FAIL
       || last_state==SASL_ERROR
       || last_state==SASL_POSTED_OUTCOME;
@@ -164,11 +160,6 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
     if (sasl->last_state==desired_state && desired_state==SASL_POSTED_CHALLENGE) {
       sasl->last_state = SASL_POSTED_MECHANISMS;
     }
-    // If we already pretended to receive outcome and we actually received outcome
-    // we must set last_state here as we've already stoped outputting from this layer
-    if (sasl->last_state==SASL_PRETEND_OUTCOME && (desired_state==SASL_RECVED_OUTCOME_SUCCEED || desired_state==SASL_RECVED_OUTCOME_FAIL) ) {
-        sasl->last_state = desired_state;
-    }
     sasl->desired_state = desired_state;
     // Don't emit transport event on error as there will be a TRANSPORT_ERROR event
     if (desired_state != SASL_ERROR) pni_emit(transport);
@@ -187,12 +178,6 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[sz]", SASL_INIT, sasl->selected_mechanism,
                     out.size, out.start);
       pni_emit(transport);
-      break;
-    case SASL_PRETEND_OUTCOME:
-      if (sasl->last_state < SASL_POSTED_INIT) {
-        desired_state = SASL_POSTED_INIT;
-        continue;
-      }
       break;
     case SASL_POSTED_MECHANISMS: {
       // TODO: Hardcoded limit of 16 mechanisms
@@ -317,15 +302,17 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
     return pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
   }
 
+  if (!pni_sasl_is_final_output_state(sasl)) {
+    return pni_passthru_layer.process_input(transport, layer, bytes, available);
+  }
+
   if (pni_sasl_impl_can_encrypt(transport)) {
     sasl->max_encrypt_size = pni_sasl_impl_max_encrypt_size(transport);
     if (transport->trace & PN_TRACE_DRV)
       pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
-  } else if (sasl->client) {
-    transport->io_layers[layer] = &pni_passthru_layer;
   } else {
-    return pni_passthru_layer.process_input(transport, layer, bytes, available);
+    transport->io_layers[layer] = &pni_passthru_layer;
   }
   return transport->io_layers[layer]->process_input(transport, layer, bytes, available);
 }
@@ -386,8 +373,12 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
     return pn_dispatcher_output(transport, bytes, available);
   }
 
-  // We only get here if there is nothing to output and we're a final output state
-  if (sasl->outcome != PN_SASL_OK && pni_sasl_is_final_input_state(sasl)) {
+  if (!pni_sasl_is_final_input_state(sasl)) {
+    return pni_passthru_layer.process_output(transport, layer, bytes, available );
+  }
+
+  // We only get here if there is nothing to output and we're in a final state
+  if (sasl->outcome != PN_SASL_OK) {
     return PN_EOS;
   }
 
@@ -397,8 +388,6 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
     if (transport->trace & PN_TRACE_DRV)
       pn_transport_logf(transport, "SASL Encryption enabled: buffer=%d", sasl->max_encrypt_size);
     transport->io_layers[layer] = &sasl_encrypt_layer;
-  } else if (sasl->client) {
-    return pni_passthru_layer.process_output(transport, layer, bytes, available );
   } else {
     transport->io_layers[layer] = &pni_passthru_layer;
   }
@@ -541,26 +530,6 @@ void pn_sasl_free(pn_transport_t *transport)
   }
 }
 
-// This is a hack to tell us that
-// no actual negotiation is going to happen and we can go
-// straight to the AMQP layer; it can only work on the client side
-// As the server doesn't know if SASL is even active until it sees
-// the SASL header from the client first.
-static void pni_sasl_force_anonymous(pn_transport_t *transport)
-{
-  pni_sasl_t *sasl = transport->sasl;
-  if (sasl->client) {
-    // Pretend we got sasl mechanisms frame with just ANONYMOUS
-    if (pni_init_client(transport) &&
-        pni_process_mechanisms(transport, "ANONYMOUS")) {
-      pni_sasl_set_desired_state(transport, SASL_PRETEND_OUTCOME);
-    } else {
-      sasl->outcome = PN_SASL_PERM;
-      pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
-    }
-  }
-}
-
 void pni_sasl_set_remote_hostname(pn_transport_t * transport, const char * fqdn)
 {
   pni_sasl_t *sasl = transport->sasl;
@@ -600,10 +569,6 @@ void pn_sasl_allowed_mechs(pn_sasl_t *sasl0, const char *mechs)
     pni_sasl_t *sasl = get_sasl_internal(sasl0);
     free(sasl->included_mechanisms);
     sasl->included_mechanisms = mechs ? pn_strdup(mechs) : NULL;
-    if (mechs && strcmp(mechs, "ANONYMOUS")==0 ) {
-      pn_transport_t *transport = get_transport_internal(sasl0);
-      pni_sasl_force_anonymous(transport);
-    }
 }
 
 void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl0, bool insecure)
@@ -665,9 +630,6 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
-
-  // If we already pretended we got the ANONYMOUS mech then ignore
-  if (sasl->last_state==SASL_PRETEND_OUTCOME) return 0;
 
   // This scanning relies on pn_data_scan leaving the pn_data_t cursors
   // where they are after finishing the scan

@@ -39,7 +39,7 @@ public abstract class Terminus
     Terminus()
     {
     }
-    
+
     protected Terminus(Terminus other) {
         _address = other._address;
         _durable = other._durable;
@@ -48,10 +48,10 @@ public abstract class Terminus
         _dynamic = other._dynamic;
         if (other._dynamicNodeProperties != null) {
             // TODO: Do we need to copy or can we make a simple reference?
-            _dynamicNodeProperties = new HashMap(other._dynamicNodeProperties); // yFIXME
+            _dynamicNodeProperties = new HashMap(other._dynamicNodeProperties);
         }
         if (other._capabilities != null) {
-            _capabilities = other._capabilities.clone(); // FIXME?
+            _capabilities = other._capabilities.clone();
         }
     }
 

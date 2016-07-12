@@ -870,7 +870,6 @@ typedef unsigned long int uintptr_t;
 {
  require:
   msg != NULL;
-  size >= 0;
 }
 
 %contract pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
@@ -911,12 +910,6 @@ typedef unsigned long int uintptr_t;
 }
 
 %include "proton/sasl.h"
-
-%contract pn_messenger(const char *name)
-{
- ensure:
-  pn_message != NULL;
-}
 
 %contract pn_messenger_name(pn_messenger_t *messenger)
 {

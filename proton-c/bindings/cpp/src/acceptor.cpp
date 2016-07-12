@@ -18,20 +18,10 @@
  * under the License.
  *
  */
-
-#include "proton/acceptor.hpp"
-#include "proton/error.hpp"
-#include "proton/connection_options.hpp"
-#include "msg.hpp"
-#include "contexts.hpp"
+#include "acceptor.hpp"
 
 namespace proton {
 
 void acceptor::close() { pn_acceptor_close(pn_object()); }
-
-class connection_options& acceptor::connection_options() {
-    listener_context& lc(listener_context::get(pn_object()));
-    return lc.connection_options;
-}
 
 }

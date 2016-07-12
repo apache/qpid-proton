@@ -41,7 +41,8 @@ func checkEqual(want interface{}, got interface{}) error {
 }
 
 func getReader(name string) (r io.Reader) {
-	r, err := os.Open("interop/" + name + ".amqp")
+	dir := os.Getenv("PN_INTEROP_DIR")
+	r, err := os.Open(dir + "/" + name + ".amqp")
 	if err != nil {
 		panic(fmt.Errorf("Can't open %#v: %v", name, err))
 	}

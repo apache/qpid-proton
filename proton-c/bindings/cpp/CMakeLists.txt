@@ -24,11 +24,13 @@ include_directories(
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+add_definitions(${CXX_WARNING_FLAGS})
+
 set(qpid-proton-cpp-source
   src/acceptor.cpp
   src/binary.cpp
-  src/scalar_base.cpp
-  src/condition.cpp
+  src/byte_array.cpp
+  src/cached_map.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp
@@ -36,36 +38,46 @@ set(qpid-proton-cpp-source
   src/container_impl.cpp
   src/contexts.cpp
   src/data.cpp
-  src/decoder.cpp
   src/decimal.cpp
+  src/decoder.cpp
   src/delivery.cpp
   src/duration.cpp
   src/encoder.cpp
   src/endpoint.cpp
-  src/connection_engine.cpp
   src/error.cpp
-  src/id_generator.cpp
+  src/error_condition.cpp
+  src/event_loop.cpp
+  src/handler.cpp
+  src/io/connection_engine.cpp
+  src/io/link_namer.cpp
   src/link.cpp
-  src/link_options.cpp
+  src/listener.cpp
   src/message.cpp
   src/messaging_adapter.cpp
-  src/messaging_event.cpp
-  src/handler.cpp
+  src/node_options.cpp
   src/object.cpp
   src/proton_bits.cpp
   src/proton_event.cpp
   src/proton_handler.cpp
   src/reactor.cpp
   src/receiver.cpp
+  src/receiver_options.cpp
   src/reconnect_timer.cpp
   src/sasl.cpp
+  src/scalar_base.cpp
   src/sender.cpp
+  src/sender_options.cpp
   src/session.cpp
+  src/session_options.cpp
+  src/source.cpp
   src/ssl.cpp
   src/ssl_domain.cpp
+  src/target.cpp
   src/task.cpp
   src/terminus.cpp
   src/timestamp.cpp
+  src/tracker.cpp
+  src/transfer.cpp
   src/transport.cpp
   src/type_id.cpp
   src/url.cpp
@@ -73,16 +85,10 @@ set(qpid-proton-cpp-source
   src/value.cpp
   )
 
-if(MSVC)
-  list(APPEND qpid-proton-cpp-source src/windows/io.cpp)
-else(MSVC)
-  list(APPEND qpid-proton-cpp-source src/posix/io.cpp)
-endif(MSVC)
-
 set_source_files_properties (
   ${qpid-proton-cpp-source}
   PROPERTIES
-  COMPILE_FLAGS "${CXX_WARNING_FLAGS} ${LTO}"
+  COMPILE_FLAGS "${LTO}"
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
@@ -114,9 +120,7 @@ if (MSVC)
     OPTIONAL)
 endif (MSVC)
 
-# Install header files
-file(GLOB headers "include/proton/*.hpp")
-install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
+install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
 
 add_subdirectory(docs)
 add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)
@@ -171,7 +175,9 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(engine_test)
+add_cpp_test(thread_safe_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(scalar_test)
 add_cpp_test(value_test)
+add_cpp_test(container_test)

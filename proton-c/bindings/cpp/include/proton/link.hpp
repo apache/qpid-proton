@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_LINK_H
-#define PROTON_CPP_LINK_H
+#ifndef PROTON_LINK_HPP
+#define PROTON_LINK_HPP
 
 /*
  *
@@ -22,13 +22,14 @@
  *
  */
 
-#include <proton/endpoint.hpp>
-#include <proton/export.hpp>
-#include <proton/message.hpp>
-#include <proton/terminus.hpp>
-
-#include <proton/object.hpp>
-#include <proton/link_options.hpp>
+#include "./endpoint.hpp"
+#include "./internal/export.hpp"
+#include "./message.hpp"
+#include "./source.hpp"
+#include "./target.hpp"
+#include "./internal/object.hpp"
+#include "./sender_options.hpp"
+#include "./receiver_options.hpp"
 
 #include <proton/types.h>
 
@@ -38,7 +39,17 @@ namespace proton {
 
 class sender;
 class receiver;
-class condition;
+class error_condition;
+class link_context;
+class proton_event;
+class messaging_adapter;
+class proton_handler;
+class delivery;
+class connection;
+class container;
+class session;
+class sender_iterator;
+class receiver_iterator;
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.
@@ -49,130 +60,59 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// @endcond
 
   public:
+    /// Create an empty link.
     link() : internal::object<pn_link_t>(0) {}
 
-    // Endpoint behaviours
+    PN_CPP_EXTERN bool uninitialized() const;
+    PN_CPP_EXTERN bool active() const;
+    PN_CPP_EXTERN bool closed() const;
 
-    /// Get the state of this link.
-    PN_CPP_EXTERN endpoint::state state() const;
+    PN_CPP_EXTERN class error_condition error() const;
 
-    PN_CPP_EXTERN condition local_condition() const;
-    PN_CPP_EXTERN condition remote_condition() const;
-
-    /// Locally open the link.  The operation is not complete till
-    /// handler::on_link_open.
-    PN_CPP_EXTERN void open(const link_options &opts = link_options());
-
-    /// Locally close the link.  The operation is not complete till
-    /// handler::on_link_close.
     PN_CPP_EXTERN void close();
+    PN_CPP_EXTERN void close(const error_condition&);
 
     /// Suspend the link without closing it.  A suspended link may be
-    /// reopened with the same or different link options if supported by
-    /// the peer. A suspended durable subscriptions becomes inactive
+    /// reopened with the same or different link options if supported
+    /// by the peer. A suspended durable subscription becomes inactive
     /// without cancelling it.
+    // XXX Should take error condition
     PN_CPP_EXTERN void detach();
-
-    /// Return sender if this link is a sender, 0 if not.
-    PN_CPP_EXTERN class sender sender();
-
-    /// Return sender if this link is a sender, 0 if not.
-    PN_CPP_EXTERN const class sender sender() const;
-
-    /// Return receiver if this link is a receiver, 0 if not.
-    PN_CPP_EXTERN class receiver receiver();
-
-    /// Return receiver if this link is a receiver, 0 if not.
-    PN_CPP_EXTERN const class receiver receiver() const;
 
     /// Credit available on the link.
     PN_CPP_EXTERN int credit() const;
 
-    /// The number of deliveries queued on the link.
-    PN_CPP_EXTERN int queued();
-
-    /// @cond INTERNAL
-    /// XXX ask about when this is used
-    /// The number of unsettled deliveries on the link.
-    PN_CPP_EXTERN int unsettled();
-    /// @endcond
-
-    /// @cond INTERNAL
-    /// XXX revisit mind-melting API inherited from C
-    /// XXX flush() ? drain, and drain_completed (sender and receiver ends)
-    PN_CPP_EXTERN int drained();
-    /// @endcond
-
-    /// Local source of the link.
-    PN_CPP_EXTERN terminus local_source() const;
-
-    /// Local target of the link.
-    PN_CPP_EXTERN terminus local_target() const;
-
-    /// Remote source of the link.
-    PN_CPP_EXTERN terminus remote_source() const;
-
-    /// Remote target of the link.
-    PN_CPP_EXTERN terminus remote_target() const;
+    /// **Experimental** - True for a receiver if a drain cycle has
+    /// been started and the corresponding `on_receiver_drain_finish`
+    /// event is still pending.  True for a sender if the receiver has
+    /// requested a drain of credit and the sender has unused credit.
+    ///
+    /// @see @ref receiver::drain. 
+    PN_CPP_EXTERN bool draining();
 
     /// Get the link name.
     PN_CPP_EXTERN std::string name() const;
 
-    /// Connection that owns this link.
+    /// The container for this link.
+    PN_CPP_EXTERN class container &container() const;
+
+    /// The connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
 
-    /// Session that owns this link.
+    /// The session that owns this link.
     PN_CPP_EXTERN class session session() const;
 
-    ///@cond INTERNAL
-    /// XXX local versus remote, mutability
-    /// XXX - local_sender_settle_mode and local_receiver_settle_mode
-    PN_CPP_EXTERN link_options::sender_settle_mode sender_settle_mode();
-    PN_CPP_EXTERN link_options::receiver_settle_mode receiver_settle_mode();
-    PN_CPP_EXTERN link_options::sender_settle_mode remote_sender_settle_mode();
-    PN_CPP_EXTERN link_options::receiver_settle_mode remote_receiver_settle_mode();
-    ///@endcond
+  protected:
+    /// @cond INTERNAL
+    
+    // Initiate the AMQP attach frame.
+    void attach();
 
-  private:
-    // Used by link_options
-    void handler(proton_handler &);
-    void detach_handler();
-    void sender_settle_mode(link_options::sender_settle_mode);
-    void receiver_settle_mode(link_options::receiver_settle_mode);
-    // Used by message to decode message from a delivery
-    ssize_t recv(char* buffer, size_t size);
-    bool advance();
+  friend class internal::factory<link>;
 
-  friend class connection;
-  friend class delivery;
-  friend class receiver;
-  friend class sender;
-  friend class message;
-  friend class proton_event;
-  friend class link_iterator;
-  friend class link_options;
+    /// @endcond
 };
-
-/// An iterator for links.
-class link_iterator : public internal::iter_base<link, link_iterator> {
-  public:
-    ///@cond INTERNAL
-    explicit link_iterator(link l = 0, pn_session_t* s = 0) :
-        internal::iter_base<link, link_iterator>(l), session_(s) {}
-    ///@endcond
-    /// Advance
-    PN_CPP_EXTERN link_iterator operator++();
-
-  private:
-    pn_session_t* session_;
-};
-
-/// A range of links.
-typedef internal::iter_range<link_iterator> link_range;
 
 }
 
-#include <proton/sender.hpp>
-#include <proton/receiver.hpp>
-
-#endif // PROTON_CPP_LINK_H
+#endif // PROTON_LINK_HPP

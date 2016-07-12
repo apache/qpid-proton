@@ -1,6 +1,8 @@
-#ifndef UUID_HPP
-#define UUID_HPP
+#ifndef PROTON_UUID_HPP
+#define PROTON_UUID_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +19,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/byte_array.hpp>
-#include <proton/export.hpp>
+#include "./byte_array.hpp"
+#include "./internal/export.hpp"
 
 #include <string>
 #include <iosfwd>
@@ -30,23 +33,30 @@ namespace proton {
 /// A 16-byte universally unique identifier.
 class uuid : public byte_array<16> {
   public:
-    /// Return a uuid copied from bytes, bytes must point to at least 16 bytes.
-    /// If bytes==0 the UUID is zero initialized.
-    PN_CPP_EXTERN static uuid copy(const char* bytes=0);
+    /// Make a copy.
+    PN_CPP_EXTERN static uuid copy();
 
-    /// Return a simple randomly-generated UUID. Used by the proton library to
-    /// generate default UUIDs.  For specific security, performance or
-    /// uniqueness requirements you may want to use a better UUID generator or
+    /// Return a uuid copied from bytes.  Bytes must point to at least
+    /// 16 bytes.  If `bytes == 0` the UUID is zero-initialized.
+    PN_CPP_EXTERN static uuid copy(const char* bytes);
+
+    /// Return a simple randomly-generated UUID.  This is used by the
+    /// Proton library to generate default UUIDs.
+    ///
+    /// For specific security, performance, or uniqueness
+    /// requirements, you may want to use a better UUID generator or
     /// some other form of identifier entirely.
     PN_CPP_EXTERN static uuid random();
 
-    /// UUID standard string format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
+    /// UUID standard string format: 8-4-4-4-12 (36 chars, 32
+    /// alphanumeric chars and 4 hypens).
     PN_CPP_EXTERN std::string str()  const;
 };
 
-/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
+/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric chars
+/// and 4 hypens).
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
 
-}
+} // proton
 
-#endif // UUID_HPP
+#endif // PROTON_UUID_HPP

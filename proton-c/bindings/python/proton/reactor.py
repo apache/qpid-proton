@@ -178,10 +178,40 @@ class Reactor(Wrapper):
             raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
 
     def connection(self, handler=None):
+        """Deprecated: use connection_to_host() instead
+        """
         impl = _chandler(handler, self.on_error)
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
-        pn_decref(impl)
+        if impl: pn_decref(impl)
         return result
+
+    def connection_to_host(self, host, port, handler=None):
+        """Create an outgoing Connection that will be managed by the reactor.
+        The reator's pn_iohandler will create a socket connection to the host
+        once the connection is opened.
+        """
+        conn = self.connection(handler)
+        self.set_connection_host(conn, host, port)
+        return conn
+
+    def set_connection_host(self, connection, host, port):
+        """Change the address used by the connection.  The address is
+        used by the reactor's iohandler to create an outgoing socket
+        connection.  This must be set prior to opening the connection.
+        """
+        pn_reactor_set_connection_host(self._impl,
+                                       connection._impl,
+                                       unicode2utf8(str(host)),
+                                       unicode2utf8(str(port)))
+
+    def get_connection_address(self, connection):
+        """This may be used to retrieve the remote peer address.
+        @return: string containing the address in URL format or None if no
+        address is available.  Use the proton.Url class to create a Url object
+        from the returned value.
+        """
+        _url = pn_reactor_get_connection_address(self._impl, connection._impl)
+        return utf82unicode(_url)
 
     def selectable(self, handler=None):
         impl = _chandler(handler, self.on_error)
@@ -502,12 +532,16 @@ class Connector(Handler):
         self.sasl_enabled = True
         self.user = None
         self.password = None
+        self.virtual_host = None
 
-    def _connect(self, connection):
+    def _connect(self, connection, reactor):
+        assert(reactor is not None)
         url = self.address.next()
-        # IoHandler uses the hostname to determine where to try to connect to
-        connection.hostname = "%s:%s" % (url.host, url.port)
-        logging.info("connecting to %s..." % connection.hostname)
+        reactor.set_connection_host(connection, url.host, str(url.port))
+        # if virtual-host not set, use host from address as default
+        if self.virtual_host is None:
+            connection.hostname = url.host
+        logging.debug("connecting to %s..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
@@ -533,10 +567,10 @@ class Connector(Handler):
             self.ssl.peer_hostname = url.host
 
     def on_connection_local_open(self, event):
-        self._connect(event.connection)
+        self._connect(event.connection, event.reactor)
 
     def on_connection_remote_open(self, event):
-        logging.info("connected to %s" % event.connection.hostname)
+        logging.debug("connected to %s" % event.connection.hostname)
         if self.reconnect:
             self.reconnect.reset()
             self.transport = None
@@ -551,16 +585,16 @@ class Connector(Handler):
                 delay = self.reconnect.next()
                 if delay == 0:
                     logging.info("Disconnected, reconnecting...")
-                    self._connect(self.connection)
+                    self._connect(self.connection, event.reactor)
                 else:
                     logging.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
             else:
-                logging.info("Disconnected")
+                logging.debug("Disconnected")
                 self.connection = None
 
     def on_timer_task(self, event):
-        self._connect(self.connection)
+        self._connect(self.connection, event.reactor)
 
     def on_connection_remote_close(self, event):
         self.connection = None
@@ -663,27 +697,33 @@ class Container(Reactor):
         called to process any events in the scope of this connection
         or its child links
 
-        @param kwargs: sasl_enabled, which determines whether a sasl
-        layer is used for the connection; allowed_mechs an optional
-        list of SASL mechanisms to allow if sasl is enabled;
-        allow_insecure_mechs a flag indicating whether insecure
-        mechanisms, such as PLAIN over a non-encrypted socket, are
-        allowed. These options can also be set at container scope.
+        @param kwargs: sasl_enabled, which determines whether a sasl layer is
+        used for the connection; allowed_mechs an optional list of SASL
+        mechanisms to allow if sasl is enabled; allow_insecure_mechs a flag
+        indicating whether insecure mechanisms, such as PLAIN over a
+        non-encrypted socket, are allowed; 'virtual_host' the hostname to set
+        in the Open performative used by peer to determine the correct
+        back-end service for the client. If 'virtual_host' is not supplied the
+        host field from the URL is used instead."
 
         """
         conn = self.connection(handler)
         conn.container = self.container_id or str(generate_uuid())
-        
         conn.offered_capabilities = kwargs.get('offered_capabilities')
         conn.desired_capabilities = kwargs.get('desired_capabilities')
         conn.properties = kwargs.get('properties')
-        
+
         connector = Connector(conn)
         connector.allow_insecure_mechs = kwargs.get('allow_insecure_mechs', self.allow_insecure_mechs)
         connector.allowed_mechs = kwargs.get('allowed_mechs', self.allowed_mechs)
         connector.sasl_enabled = kwargs.get('sasl_enabled', self.sasl_enabled)
         connector.user = kwargs.get('user', self.user)
         connector.password = kwargs.get('password', self.password)
+        connector.virtual_host = kwargs.get('virtual_host')
+        if connector.virtual_host:
+            # only set hostname if virtual-host is a non-empty string
+            conn.hostname = connector.virtual_host
+
         conn._overrides = connector
         if url: connector.address = Urls([url])
         elif urls: connector.address = Urls(urls)

@@ -71,9 +71,4 @@ void proton_handler::on_selectable_final(proton_event &e) { on_unhandled(e); }
 
 void proton_handler::on_unhandled(proton_event &) {}
 
-void proton_handler::add_child_handler(proton_handler &e) {
-  children_.push_back(&e);
-}
-
-
 }

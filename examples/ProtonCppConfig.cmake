@@ -17,6 +17,16 @@
 # under the License.
 #
 
+# Note that this file is used *only* when building the examples within
+# the proton source tree not when the examples are installed separately
+# from it (for example in an OS distribution package).
+#
+# So if you find this file installed on your system something went wrong
+# with the packaging and/or package installation.
+#
+# For a packaged installation the equivalent file is created by the source
+# tree build and installed in the appropriate place for cmake on that system.
+
 set (ProtonCpp_VERSION       ${PN_VERSION})
 set (ProtonCpp_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include ${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include)
 set (ProtonCpp_LIBRARIES     qpid-proton-cpp)

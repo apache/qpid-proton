@@ -22,8 +22,8 @@
 #include "proton/reconnect_timer.hpp"
 #include "proton/error.hpp"
 #include "msg.hpp"
-#include "proton/types.h"
-#include "proton/reactor.h"
+#include <proton/types.h>
+#include <proton/reactor.h>
 
 namespace proton {
 
@@ -59,7 +59,7 @@ int reconnect_timer::next_delay(timestamp now) {
         next_delay_ = max_delay_;
     if (timeout_deadline_ != timestamp(0) && (now + next_delay_ > timeout_deadline_))
         next_delay_ = timeout_deadline_ - now;
-    return next_delay_.ms();
+    return next_delay_.milliseconds();
 }
 
 }

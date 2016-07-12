@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_RECEIVER_H
-#define PROTON_CPP_RECEIVER_H
+#ifndef PROTON_RECEIVER_HPP
+#define PROTON_RECEIVER_HPP
 
 /*
  *
@@ -22,35 +22,93 @@
  *
  */
 
-#include "proton/export.hpp"
-#include "proton/endpoint.hpp"
-#include "proton/link.hpp"
-#include "proton/types.h"
+#include "./internal/export.hpp"
+#include "./endpoint.hpp"
+#include "./link.hpp"
+
+#include <proton/types.h>
+
 #include <string>
 
 struct pn_connection_t;
 
 namespace proton {
+template <class T> class thread_safe;
 
-/// A link for receiving messages.
+/// A channel for receiving messages.
 class
 PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
-    receiver(pn_link_t* r) : link(r) {}
+    PN_CPP_EXTERN receiver(pn_link_t* r);
     /// @endcond
 
   public:
-    receiver() : link(0) {}
+    /// Create an empty receiver.
+    receiver() {}
 
-    /// Add credit to the link
-    PN_CPP_EXTERN void flow(int count);
+    /// Open the receiver.
+    ///
+    /// @see endpoint_lifecycle
+    PN_CPP_EXTERN void open();
 
-  /// @cond INTERNAL
-  friend class link;
-  friend class session;
-  /// @endcond
+    /// @copydoc open
+    PN_CPP_EXTERN void open(const receiver_options &opts);
+
+    /// Get the source node.
+    PN_CPP_EXTERN class source source() const;
+
+    /// Get the target node.
+    PN_CPP_EXTERN class target target() const;
+
+    /// Increment the credit available to the sender.  Credit granted
+    /// during a drain cycle is not communicated to the receiver until
+    /// the drain completes.
+    PN_CPP_EXTERN void add_credit(uint32_t);
+
+    /// **Experimental** - Commence a drain cycle.  If there is
+    /// positive credit, a request is sent to the sender to
+    /// immediately use up all of the existing credit balance by
+    /// sending messages that are immediately available and releasing
+    /// any unused credit (see sender::return_credit).  Throws
+    /// proton::error if a drain cycle is already in progress.  An
+    /// on_receiver_drain_finish event will be generated when the
+    /// outstanding drained credit reaches zero.
+    PN_CPP_EXTERN void drain();
+
+    /// @cond INTERNAL
+  friend class internal::factory<receiver>;
+  friend class receiver_iterator;
+  friend class thread_safe<receiver>;
+    /// @endcond
 };
 
-}
+/// @cond INTERNAL
+    
+/// An iterator of receivers.
+class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
+    explicit receiver_iterator(receiver r, pn_session_t* s = 0) :
+        internal::iter_base<receiver, receiver_iterator>(r), session_(s) {}
 
-#endif // PROTON_CPP_RECEIVER_H
+  public:
+    /// Create an iterator of receivers.
+    explicit receiver_iterator() :
+        internal::iter_base<receiver, receiver_iterator>(0), session_(0) {}
+
+    /// Advance to the next receiver.
+    PN_CPP_EXTERN receiver_iterator operator++();
+
+  private:
+    pn_session_t* session_;
+
+  friend class connection;
+  friend class session;
+};
+
+/// A range of receivers.
+typedef internal::iter_range<receiver_iterator> receiver_range;
+
+/// @endcond
+
+} // proton
+
+#endif // PROTON_RECEIVER_HPP

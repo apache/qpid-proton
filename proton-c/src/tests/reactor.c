@@ -26,7 +26,9 @@
 #include <proton/session.h>
 #include <proton/link.h>
 #include <proton/delivery.h>
+#include <proton/url.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define assert(E) ((E) ? 0 : (abort(), 0))
 
@@ -193,6 +195,11 @@ static void test_reactor_connection(void) {
   pn_handler_t *tch = test_handler(reactor, cevents);
   pn_connection_t *connection = pn_reactor_connection(reactor, tch);
   assert(connection);
+  pn_reactor_set_connection_host(reactor, connection, "127.0.0.1", "5672");
+  pn_url_t *url = pn_url_parse(pn_reactor_get_connection_address(reactor, connection));
+  assert(strcmp(pn_url_get_host(url), "127.0.0.1") == 0);
+  assert(strcmp(pn_url_get_port(url), "5672") == 0);
+  pn_decref(url);
   pn_handler_t *root = pn_reactor_get_handler(reactor);
   pn_list_t *revents = pn_list(PN_VOID, 0);
   pn_handler_add(root, test_handler(reactor, revents));
@@ -204,6 +211,25 @@ static void test_reactor_connection(void) {
   pn_handler_free(tch);
   pn_free(cevents);
   pn_free(revents);
+}
+
+static void test_reactor_connection_factory(void)
+{
+  pn_reactor_t *reactor = pn_reactor();
+  pn_connection_t *conn;
+  const char *addr;
+  // use host as connection hostname default
+  conn = pn_reactor_connection_to_host(reactor, "a.test.com", "5678", NULL);
+  pn_connection_set_hostname(conn, "virt.host");
+  addr = pn_reactor_get_connection_address(reactor, conn);
+  assert(addr && strcmp(addr, "a.test.com:5678") == 0);
+  assert(strcmp(pn_connection_get_hostname(conn), "virt.host") == 0);
+  // verify the host address can be changed:
+  pn_reactor_set_connection_host(reactor, conn, "a.different.com", "9999");
+  addr = pn_reactor_get_connection_address(reactor, conn);
+  assert(addr && strcmp(addr, "a.different.com:9999") == 0);
+  assert(strcmp(pn_connection_get_hostname(conn), "virt.host") == 0);
+  pn_reactor_free(reactor);
 }
 
 static void test_reactor_acceptor(void) {
@@ -290,7 +316,7 @@ static void client_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_t
   pn_connection_t *conn = pn_event_connection(event);
   switch (pn_event_type(event)) {
   case PN_CONNECTION_INIT:
-    pn_connection_set_hostname(conn, "127.0.0.1:5678");
+    pn_connection_set_hostname(conn, "some.org");
     pn_connection_open(conn);
     break;
   case PN_CONNECTION_REMOTE_OPEN:
@@ -315,7 +341,15 @@ static void test_reactor_connect(void) {
   pn_handler_t *ch = pn_handler_new(client_dispatch, sizeof(client_t), NULL);
   client_t *cli = cmem(ch);
   cli->events = pn_list(PN_VOID, 0);
-  pn_reactor_connection(reactor, ch);
+  pn_connection_t *conn = pn_reactor_connection_to_host(reactor,
+                                                        "127.0.0.1",
+                                                        "5678",
+                                                        ch);
+  assert(conn);
+  pn_url_t *url = pn_url_parse(pn_reactor_get_connection_address(reactor, conn));
+  assert(strcmp(pn_url_get_host(url), "127.0.0.1") == 0);
+  assert(strcmp(pn_url_get_port(url), "5678") == 0);
+  pn_decref(url);
   pn_reactor_run(reactor);
   expect(srv->events, PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
          PN_CONNECTION_REMOTE_OPEN,
@@ -333,6 +367,27 @@ static void test_reactor_connect(void) {
          PN_CONNECTION_REMOTE_CLOSE, PN_TRANSPORT_TAIL_CLOSED,
          PN_TRANSPORT_CLOSED, PN_CONNECTION_UNBOUND,
          PN_CONNECTION_FINAL, END);
+  pn_free(cli->events);
+  pn_decref(ch);
+  pn_reactor_free(reactor);
+}
+
+static void test_reactor_bad_domain(void) {
+  pn_reactor_t *reactor = pn_reactor();
+  assert(reactor);
+  pn_handler_t *ch = pn_handler_new(client_dispatch, sizeof(client_t), NULL);
+  client_t *cli = cmem(ch);
+  cli->events = pn_list(PN_VOID, 0);
+  pn_connection_t *connection = pn_reactor_connection_to_host(reactor, "somebogusdomain", "5672", ch);
+  assert(connection);
+  pn_reactor_run(reactor);
+
+  expect(cli->events, PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
+         PN_CONNECTION_BOUND, PN_TRANSPORT_TAIL_CLOSED,
+         PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
+         PN_TRANSPORT_CLOSED, PN_CONNECTION_UNBOUND,
+         END);
+
   pn_free(cli->events);
   pn_decref(ch);
   pn_reactor_free(reactor);
@@ -376,7 +431,6 @@ void source_dispatch(pn_handler_t *handler, pn_event_t *event, pn_event_type_t t
   switch (type) {
   case PN_CONNECTION_INIT:
     {
-      pn_connection_set_hostname(conn, "127.0.0.1:5678");
       pn_session_t *ssn = pn_session(conn);
       pn_link_t *snd = pn_sender(ssn, "sender");
       pn_connection_open(conn);
@@ -427,7 +481,18 @@ static void test_reactor_transfer(int count, int window) {
   pn_handler_t *ch = pn_handler_new(source_dispatch, sizeof(source_t), NULL);
   source_t *src = source(ch);
   src->remaining = count;
-  pn_reactor_connection(reactor, ch);
+  pn_connection_t *conn = NULL;
+  // Using the connection's hostname to set the connection address is
+  // deprecated. Once support is dropped the conditional code can be removed:
+  #if 0
+  conn = pn_reactor_connection(reactor, ch);
+  assert(conn);
+  pn_reactor_connection_set_address(reactor, conn, "127.0.0.1", "5678");
+  #else
+  // This is deprecated:
+  conn = pn_reactor_connection(reactor, ch);
+  pn_connection_set_hostname(conn, "127.0.0.1:5678");
+  #endif
 
   pn_reactor_run(reactor);
 
@@ -496,6 +561,8 @@ int main(int argc, char **argv)
   test_reactor_handler_run();
   test_reactor_handler_run_free();
   test_reactor_connection();
+  test_reactor_connection_factory();
+  test_reactor_bad_domain();
   test_reactor_acceptor();
   test_reactor_acceptor_run();
   test_reactor_connect();

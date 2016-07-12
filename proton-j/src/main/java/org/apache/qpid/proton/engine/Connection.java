@@ -92,6 +92,17 @@ public interface Connection extends Endpoint, ReactorChild
 
     public String getContainer();
 
+    /**
+     * Set the name of the host (either fully qualified or relative) to which
+     * this connection is connecting to.  This information may be used by the
+     * remote peer to determine the correct back-end service to connect the
+     * client to.  This value will be sent in the Open performative.
+     *
+     * <b>Note that it is illegal to set the hostname to a numeric IP
+     * address or include a port number.</b>
+     *
+     * @param hostname the RFC1035 compliant host name.
+     */
     public void setHostname(String hostname);
 
     public String getHostname();

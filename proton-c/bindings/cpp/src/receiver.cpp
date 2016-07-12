@@ -21,16 +21,79 @@
 #include "proton/link.hpp"
 #include "proton/receiver.hpp"
 #include "proton/error.hpp"
-#include "msg.hpp"
 
-#include "proton/connection.h"
-#include "proton/session.h"
-#include "proton/link.h"
+#include "msg.hpp"
+#include "proton_bits.hpp"
+#include "contexts.hpp"
+
+#include <proton/connection.h>
+#include <proton/session.h>
+#include <proton/link.h>
+#include <proton/event.h>
+#include <proton/reactor.h>
 
 namespace proton {
 
-void receiver::flow(int count) {
-    pn_link_flow(pn_object(), count);
+receiver::receiver(pn_link_t* r): link(make_wrapper(r)) {}
+
+void receiver::open() {
+    attach();
+}
+
+void receiver::open(const receiver_options &opts) {
+    opts.apply(*this);
+    attach();
+}
+
+class source receiver::source() const {
+    return proton::source(*this);
+}
+
+class target receiver::target() const {
+    return proton::target(*this);
+}
+
+void receiver::add_credit(uint32_t credit) {
+    link_context &ctx = link_context::get(pn_object());
+    if (ctx.draining)
+        ctx.pending_credit += credit;
+    else
+        pn_link_flow(pn_object(), credit);
+}
+
+void receiver::drain() {
+    link_context &ctx = link_context::get(pn_object());
+    if (ctx.draining)
+        throw proton::error("drain already in progress");
+    else {
+        ctx.draining = true;
+        if (credit() > 0)
+            pn_link_set_drain(pn_object(), true);
+        else {
+            // Drain is already complete.  No state to communicate over the wire.
+            // Create dummy flow event where "drain finish" can be detected.
+            pn_connection_t *pnc = pn_session_connection(pn_link_session(pn_object()));
+            connection_context& cctx = connection_context::get(pnc);
+            // connection_engine collector is per connection.  Reactor collector is global.
+            pn_collector_t *coll = cctx.collector;
+            if (!coll)
+                coll = pn_reactor_collector(pn_object_reactor(pnc));
+            pn_collector_put(coll, PN_OBJECT, pn_object(), PN_LINK_FLOW);
+        }
+    }
+}
+
+receiver_iterator receiver_iterator::operator++() {
+    if (!!obj_) {
+        pn_link_t *lnk = pn_link_next(obj_.pn_object(), 0);
+        while (lnk) {
+            if (pn_link_is_receiver(lnk) && pn_link_session(lnk) == session_)
+                break;
+            lnk = pn_link_next(lnk, 0);
+        }
+        obj_ = lnk;
+    }
+    return *this;
 }
 
 }

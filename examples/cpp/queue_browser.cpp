@@ -19,32 +19,35 @@
  *
  */
 
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
-#include "proton/url.hpp"
-#include "proton/link_options.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/delivery.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/source_options.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 
-class browser : public proton::handler {
+#include "fake_cpp11.hpp"
+
+using proton::source_options;
+
+class browser : public proton::messaging_handler {
   private:
     proton::url url;
 
   public:
-    browser(const proton::url& u) : url(u) {}
+    browser(const std::string& u) : url(u) {}
 
-    void on_start(proton::event &e) {
-        proton::connection conn = e.container().connect(url);
-        conn.open_receiver(url.path(), proton::link_options().browsing(true));
+    void on_container_start(proton::container &c) OVERRIDE {
+        proton::connection conn = c.connect(url);
+        source_options browsing = source_options().distribution_mode(proton::source::COPY);
+        conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
     }
 
-    void on_message(proton::event &e) {
-        std::cout << e.message().body() << std::endl;
-
-        if (e.receiver().queued() == 0 && e.receiver().drained() > 0) {
-            e.connection().close();
-        }
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+        std::cout << m.body() << std::endl;
     }
 };
 
@@ -53,7 +56,7 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
 
         browser b(url);
-        proton::container(b).run();
+        proton::default_container(b).run();
 
         return 0;
     } catch (const std::exception& e) {

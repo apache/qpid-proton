@@ -21,35 +21,34 @@
 
 #include "options.hpp"
 
-#include "proton/acceptor.hpp"
-#include "proton/connection.hpp"
-#include "proton/container.hpp"
-#include "proton/event.hpp"
-#include "proton/handler.hpp"
-#include "proton/value.hpp"
+#include <proton/connection.hpp>
+#include <proton/default_container.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/value.hpp>
+#include <proton/tracker.hpp>
 
 #include <iostream>
 #include <map>
 
-class simple_send : public proton::handler {
+#include "fake_cpp11.hpp"
+
+class simple_send : public proton::messaging_handler {
   private:
-    proton::url url;
+    std::string url;
+    proton::listener listener;
     int sent;
     int confirmed;
     int total;
-    proton::acceptor acceptor;
 
   public:
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
-    void on_start(proton::event &e) {
-        acceptor = e.container().listen(url);
+    void on_container_start(proton::container &c) OVERRIDE {
+        listener = c.listen(url);
         std::cout << "direct_send listening on " << url << std::endl;
     }
 
-    void on_sendable(proton::event &e) {
-        proton::sender sender = e.sender();
-
+    void on_sendable(proton::sender &sender) OVERRIDE {
         while (sender.credit() && sent < total) {
             proton::message msg;
             std::map<std::string, int> m;
@@ -63,18 +62,17 @@ class simple_send : public proton::handler {
         }
     }
 
-    void on_delivery_accept(proton::event &e) {
+    void on_tracker_accept(proton::tracker &t) OVERRIDE {
         confirmed++;
 
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
-
-            e.connection().close();
-            acceptor.close();
+            t.connection().close();
+            listener.stop();
         }
     }
 
-    void on_transport_close(proton::event &e) {
+    void on_transport_close(proton::transport &) OVERRIDE {
         sent = confirmed;
     }
 };
@@ -82,8 +80,8 @@ class simple_send : public proton::handler {
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
     int message_count = 100;
-    options opts(argc, argv);
-    
+    example::options opts(argc, argv);
+
     opts.add_value(address, 'a', "address", "listen and send on URL", "URL");
     opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
 
@@ -91,10 +89,9 @@ int main(int argc, char **argv) {
         opts.parse();
 
         simple_send send(address, message_count);
-        proton::container(send).run();
-
+        proton::default_container(send).run();
         return 0;
-    } catch (const bad_option& e) {
+    } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

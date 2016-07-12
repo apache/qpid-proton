@@ -1,5 +1,5 @@
-#ifndef CODEC_HPP
-#define CODEC_HPP
+#ifndef TYPES_INTERNAL_HPP
+#define TYPES_INTERNAL_HPP
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,13 +19,13 @@
  * under the License.
  */
 
-#include <proton/type_traits.hpp>
-#include <proton/error.hpp>
-#include <proton/binary.hpp>
+#include "proton/internal/type_traits.hpp"
+#include "proton/error.hpp"
+#include "proton/binary.hpp"
 #include <sstream>
 
 ///@file
-/// Internal helpers for encode/decode/type conversion.
+/// Inline helpers for encode/decode/type conversion/ostream operators.
 
 namespace proton {
 
@@ -46,18 +46,29 @@ make_conversion_error(type_id want, type_id got, const std::string& msg=std::str
 
 /// Convert std::string to pn_bytes_t
 inline pn_bytes_t pn_bytes(const std::string& s) {
-    pn_bytes_t b = { s.size(), const_cast<char*>(&s[0]) };
+    pn_bytes_t b = { s.size(), s.empty() ? 0 : const_cast<char*>(&s[0]) };
     return b;
 }
 
 inline pn_bytes_t pn_bytes(const binary& s) {
-    pn_bytes_t b = { s.size(), reinterpret_cast<const char*>(&s[0]) };
+    pn_bytes_t b = { s.size(), s.empty() ? 0 : reinterpret_cast<const char*>(&s[0]) };
     return b;
 }
 
 inline std::string str(const pn_bytes_t& b) { return std::string(b.start, b.size); }
 inline binary bin(const pn_bytes_t& b) { return binary(b.start, b.start+b.size); }
 
-}
+// Save all stream format state, restore in destructor.
+struct ios_guard {
+    std::ios &guarded;
+    std::ios old;
+    ios_guard(std::ios& x) : guarded(x), old(0) { old.copyfmt(guarded); }
+    ~ios_guard() { guarded.copyfmt(old); }
+};
 
-#endif // CODEC_HPP
+// Convert a char (signed or unsigned) into an unsigned 1 byte integer that will ostream 
+// as a numeric byte value, not a character and will not get sign-extended.
+inline unsigned int printable_byte(uint8_t byte) { return byte; }
+
+}
+#endif // TYPES_INTERNAL_HPP

@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -126,7 +127,8 @@ static inline int pn_create_socket(int af, int protocol);
 pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 {
   struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
+  struct addrinfo hints = {0, AF_UNSPEC, SOCK_STREAM};
+  int code = getaddrinfo(host, port, &hints, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s\n", host, port, gai_strerror(code));
     return PN_INVALID_SOCKET;
@@ -168,7 +170,8 @@ pn_socket_t pn_listen(pn_io_t *io, const char *host, const char *port)
 pn_socket_t pn_connect(pn_io_t *io, const char *host, const char *port)
 {
   struct addrinfo *addr;
-  int code = getaddrinfo(host, port, NULL, &addr);
+  struct addrinfo hints = {0, AF_UNSPEC, SOCK_STREAM};
+  int code = getaddrinfo(host, port, &hints, &addr);
   if (code) {
     pn_error_format(io->error, PN_ERR, "getaddrinfo(%s, %s): %s", host, port, gai_strerror(code));
     return PN_INVALID_SOCKET;
@@ -201,6 +204,7 @@ pn_socket_t pn_accept(pn_io_t *io, pn_socket_t socket, char *name, size_t size)
 {
   struct sockaddr_storage addr;
   socklen_t addrlen = sizeof(addr);
+  *name = '\0';
   pn_socket_t sock = accept(socket, (struct sockaddr *) &addr, &addrlen);
   if (sock == PN_INVALID_SOCKET) {
     pn_i_error_from_errno(io->error, "accept");

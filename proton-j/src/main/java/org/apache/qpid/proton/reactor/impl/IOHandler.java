@@ -39,10 +39,14 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.impl.TransportImpl;
 import org.apache.qpid.proton.engine.WebSocket;
+import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.reactor.Reactor;
 import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.apache.qpid.proton.reactor.Selector;
+import org.apache.qpid.proton.reactor.Acceptor;
+import org.apache.qpid.proton.reactor.impl.AcceptorImpl;
+import org.apache.qpid.proton.messenger.impl.Address;
 
 public class IOHandler extends BaseHandler {
 
@@ -73,10 +77,29 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_handle_open(...) from connection.c
-    private void handleOpen(Event event) {
+    private void handleOpen(Reactor reactor, Event event) {
         Connection connection = event.getConnection();
         if (connection.getRemoteState() != EndpointState.UNINITIALIZED) {
             return;
+        }
+        // Outgoing Reactor connections set the virtual host automatically using the
+        // following rules:
+        String vhost = connection.getHostname();
+        if (vhost == null) {
+            // setHostname never called, use the host from the connection's
+            // socket address as the default virtual host:
+            String conAddr = reactor.getConnectionAddress(connection);
+            if (conAddr != null) {
+                Address addr = new Address(conAddr);
+                connection.setHostname(addr.getHost());
+            }
+        } else if (vhost.isEmpty()) {
+            // setHostname called explictly with a null string. This allows
+            // the application to completely avoid sending a virtual host
+            // name
+            connection.setHostname(null);
+        } else {
+            // setHostname set by application - use it.
         }
         Transport transport = Proton.transport();
         Sasl sasl = transport.sasl();
@@ -87,22 +110,43 @@ public class IOHandler extends BaseHandler {
     }
 
     // pni_handle_bound(...) from connection.c
+    // If this connection is an outgoing connection - not an incoming
+    // connection created by the Acceptor - create a socket connection to
+    // the peer address.
     private void handleBound(Reactor reactor, Event event) {
         Connection connection = event.getConnection();
-        String hostname = connection.getHostname();
-        if (hostname == null || hostname.equals("")) {
+        Record conn_recs = connection.attachments();
+        if (conn_recs.get(AcceptorImpl.CONNECTION_ACCEPTOR_KEY, Acceptor.class) != null) {
+            // Connection was created via the Acceptor, so the socket already
+            // exists
             return;
         }
-
-        int colonIndex = hostname.indexOf(':');
+        String url = reactor.getConnectionAddress(connection);
+        String hostname = connection.getHostname();
         int port = 5672;
-        if (colonIndex >= 0) {
+
+        if (url != null) {
+            Address address = new Address(url);
+            hostname = address.getHost();
             try {
-                port = Integer.parseInt(hostname.substring(colonIndex+1));
+                port = Integer.parseInt(address.getImpliedPort());
             } catch(NumberFormatException nfe) {
-                throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+                throw new IllegalArgumentException("Not a valid host: " + url, nfe);
             }
-            hostname = hostname.substring(0, colonIndex);
+        } else if (hostname != null && !hostname.equals("")) {
+            // Backward compatibility with old code that illegally overloaded
+            // the connection's hostname
+            int colonIndex = hostname.indexOf(':');
+            if (colonIndex >= 0) {
+                try {
+                    port = Integer.parseInt(hostname.substring(colonIndex+1));
+                } catch(NumberFormatException nfe) {
+                    throw new IllegalArgumentException("Not a valid host: " + hostname, nfe);
+                }
+                hostname = hostname.substring(0, colonIndex);
+            }
+        } else {
+            throw new IllegalStateException("No address provided for Connection");
         }
 
         Transport transport = event.getConnection().getTransport();
@@ -324,7 +368,7 @@ public class IOHandler extends BaseHandler {
                 selectable.release();
                 break;
             case CONNECTION_LOCAL_OPEN:
-                handleOpen(event);
+                handleOpen(reactor, event);
                 break;
             case CONNECTION_BOUND:
                 handleBound(reactor, event);

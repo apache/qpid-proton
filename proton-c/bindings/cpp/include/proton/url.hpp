@@ -1,7 +1,8 @@
-#ifndef URL_HPP
-#define URL_HPP
+#ifndef PROTON_URL_HPP
+#define PROTON_URL_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,10 +19,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/types_fwd.hpp>
-#include <proton/error.hpp>
+#include "./types_fwd.hpp"
+#include "./error.hpp"
 
 #include <iosfwd>
 
@@ -29,15 +31,16 @@ struct pn_url_t;
 
 namespace proton {
 
-/// Raised if URL parsing fails.
+/// An error encountered during URL parsing.
 struct
 PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
-    PN_CPP_EXTERN explicit url_error(const std::string&); ///< Construct with message
+    /// Construct a URL error with a message.
+    PN_CPP_EXTERN explicit url_error(const std::string&);
     /// @endcond
 };
 
-/// A proton URL.
+/// A Proton URL.
 ///
 ///  Proton URLs take the form
 /// `<scheme>://<username>:<password>@<host>:<port>/<path>`.
@@ -54,102 +57,86 @@ class url {
     static const std::string AMQP;     ///< "amqp" prefix
     static const std::string AMQPS;    ///< "amqps" prefix
 
-    /// Create an empty URL
-    PN_CPP_EXTERN url();
-
-    /// Parse `url_str` as an AMQP URL. If defaults is true, fill in
-    /// defaults for missing values otherwise return an empty string
-    /// for missing values.
+    // XXX No constructor for an empty URL?
+    // XXX What is the default 'defaults' behavior?
+    
+    /// Parse `url_str` as an AMQP URL.
     ///
     /// @note Converts automatically from string.
-    ///
     /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const std::string& url_str, bool defaults=true);
+    PN_CPP_EXTERN url(const std::string& url_str);
 
-    /// Parse `url_str` as an AMQP URL. If defaults is true, fill in
-    /// defaults for missing values otherwise return an empty string
-    /// for missing values.
+    /// @cond INTERNAL
+    /// XXX I want to understand why this is important to keep.
+    ///
+    /// **Experimental** - Parse `url_str` as an AMQP URL. If
+    /// `defaults` is true, fill in defaults for missing values.
+    /// Otherwise, return an empty string for missing values.
     ///
     /// @note Converts automatically from string.
-    ///
     /// @throw url_error if URL is invalid.
-    PN_CPP_EXTERN url(const char* url_str, bool defaults=true);
+    PN_CPP_EXTERN url(const std::string& url_str, bool defaults);
+    /// @endcond
 
     /// Copy a URL.
     PN_CPP_EXTERN url(const url&);
+
     PN_CPP_EXTERN ~url();
+
     /// Copy a URL.
     PN_CPP_EXTERN url& operator=(const url&);
-
-    /// Parse a string as a URL.
-    ///
-    /// @throws url_error if URL is invalid.
-    PN_CPP_EXTERN void parse(const std::string&);
-
-    /// Parse a string as a URL.
-    ///
-    /// @throws url_error if URL is invalid.
-    PN_CPP_EXTERN void parse(const char*);
 
     /// True if the URL is empty.
     PN_CPP_EXTERN bool empty() const;
 
-    /// `str` returns the URL as a string
-    PN_CPP_EXTERN std::string str() const;
+    /// Returns the URL as a string
+    PN_CPP_EXTERN operator std::string() const;
 
     /// @name URL fields
     ///
     /// @{
 
+    /// `amqp` or `amqps`.
     PN_CPP_EXTERN std::string scheme() const;
-    PN_CPP_EXTERN void scheme(const std::string&);
-
-    /// @cond INTERNAL
-    PN_CPP_EXTERN std::string username() const;
-    PN_CPP_EXTERN void username(const std::string&);
-    /// @endcond
-
+    /// The user name for authentication.
+    PN_CPP_EXTERN std::string user() const;
+    // XXX Passwords in URLs are dumb.
+    /// The password.
     PN_CPP_EXTERN std::string password() const;
-    PN_CPP_EXTERN void password(const std::string&);
-
+    /// The host name or IP address.
     PN_CPP_EXTERN std::string host() const;
-    PN_CPP_EXTERN void host(const std::string&);
     /// `port` can be a number or a symbolic name such as "amqp".
-    PN_CPP_EXTERN void port(const std::string&);
     PN_CPP_EXTERN std::string port() const;
     /// `port_int` is the numeric value of the port.
     PN_CPP_EXTERN uint16_t port_int() const;
     /// host_port returns just the `host:port` part of the URL
     PN_CPP_EXTERN std::string host_port() const;
 
+    // XXX is this not confusing (or incorrect)?  The path starts with
+    // the first / after //.
     /// `path` is everything after the final "/".
     PN_CPP_EXTERN std::string path() const;
-    PN_CPP_EXTERN void path(const std::string&);
 
     /// @}
 
-    /// @cond INTERNAL
-    /// XXX need to discuss
-    /// defaults fills in default values for missing parts of the URL.
-    PN_CPP_EXTERN void defaults();
-    /// @endcond
-
-    /// @cond INTERNAL
   private:
     pn_url_t* url_;
 
-    friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
+    /// @cond INTERNAL
 
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const url&);
+
+    // XXX Why is it important to have this?
     /// Parse `url` from istream.  This automatically fills in
     /// defaults for missing values.
     ///
     /// @note An invalid url is indicated by setting
     /// std::stream::fail(), NOT by throwing url_error.
-    friend PN_CPP_EXTERN std::istream& operator>>(std::istream&, url&);
+  friend PN_CPP_EXTERN std::istream& operator>>(std::istream&, url&);
 
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // URL_HPP
+#endif // PROTON_URL_HPP

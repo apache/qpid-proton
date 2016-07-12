@@ -22,13 +22,16 @@
  *
  */
 
-#include "proton/pn_unique_ptr.hpp"
-#include "proton/message.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/connection_engine.hpp"
+#include "proton/io/connection_engine.hpp"
+#include "proton/event_loop.hpp"
+#include "proton/listen_handler.hpp"
+#include "proton/message.hpp"
+#include "proton/internal/pn_unique_ptr.hpp"
 
-#include "id_generator.hpp"
+#include "proton/io/link_namer.hpp"
+
 #include "proton_handler.hpp"
 
 struct pn_session_t;
@@ -40,6 +43,7 @@ struct pn_acceptor_t;
 namespace proton {
 
 class proton_handler;
+class reactor;
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -81,34 +85,23 @@ class context {
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : default_session(0) {}
+    connection_context() : container(0), default_session(0), link_gen(0), collector(0) {}
 
-    // Used by all connections
+    class container* container;
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
-    id_generator link_gen;      // Link name generator.
+    io::link_namer* link_gen;      // Link name generator.
+    pn_collector_t* collector;
 
     internal::pn_unique_ptr<proton_handler> handler;
+    internal::pn_unique_ptr<class event_loop> event_loop;
 
     static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
     static connection_context& get(const connection& c) { return ref<connection_context>(id(c)); }
 
   protected:
     static context::id id(pn_connection_t*);
-    static context::id id(const connection& c) { return id(c.pn_object()); }
-};
-
-// Connection context with information used by the connection_engine.
-class connection_engine_context : public connection_context {
-  public:
-    connection_engine_context() :  engine_handler(0), transport(0), collector(0) {}
-
-    class handler *engine_handler;
-    pn_transport_t  *transport;
-    pn_collector_t  *collector;
-    static connection_engine_context& get(const connection &c) {
-        return ref<connection_engine_context>(id(c));
-    }
+    static context::id id(const connection& c);
 };
 
 void container_context(const reactor&, container&);
@@ -122,9 +115,21 @@ class container_context {
 class listener_context : public context {
   public:
     static listener_context& get(pn_acceptor_t* c);
-    listener_context() : ssl(false) {}
-    class connection_options connection_options;
+    listener_context() : listen_handler_(0), ssl(false) {}
+    connection_options  get_options() { return listen_handler_->on_accept(); }
+    class listen_handler* listen_handler_;
     bool ssl;
+};
+
+class link_context : public context {
+  public:
+    static link_context& get(pn_link_t* l);
+    link_context() : credit_window(10), auto_accept(true), auto_settle(true), draining(false), pending_credit(0) {}
+    int credit_window;
+    bool auto_accept;
+    bool auto_settle;
+    bool draining;
+    uint32_t pending_credit;
 };
 
 }

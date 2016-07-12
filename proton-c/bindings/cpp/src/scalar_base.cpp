@@ -22,15 +22,16 @@
 
 #include "proton/binary.hpp"
 #include "proton/decimal.hpp"
-#include "proton/scalar_base.hpp"
+#include "proton/internal/scalar_base.hpp"
+#include "proton/internal/type_traits.hpp"
 #include "proton/symbol.hpp"
 #include "proton/timestamp.hpp"
-#include "proton/type_traits.hpp"
 #include "proton/uuid.hpp"
 
 #include <ostream>
 
 namespace proton {
+namespace internal {
 
 scalar_base::scalar_base() { atom_.type = PN_NULL; }
 scalar_base::scalar_base(const pn_atom_t& a) { set(a); }
@@ -71,7 +72,7 @@ void scalar_base::put_(int64_t x) { atom_.u.as_long = x; atom_.type = PN_LONG; }
 void scalar_base::put_(wchar_t x) { atom_.u.as_char = x; atom_.type = PN_CHAR; }
 void scalar_base::put_(float x) { atom_.u.as_float = x; atom_.type = PN_FLOAT; }
 void scalar_base::put_(double x) { atom_.u.as_double = x; atom_.type = PN_DOUBLE; }
-void scalar_base::put_(timestamp x) { atom_.u.as_timestamp = x.ms(); atom_.type = PN_TIMESTAMP; }
+void scalar_base::put_(timestamp x) { atom_.u.as_timestamp = x.milliseconds(); atom_.type = PN_TIMESTAMP; }
 void scalar_base::put_(const decimal32& x) { byte_copy(atom_.u.as_decimal32, x); atom_.type = PN_DECIMAL32;; }
 void scalar_base::put_(const decimal64& x) { byte_copy(atom_.u.as_decimal64, x); atom_.type = PN_DECIMAL64; }
 void scalar_base::put_(const decimal128& x) { byte_copy(atom_.u.as_decimal128, x); atom_.type = PN_DECIMAL128; }
@@ -108,26 +109,18 @@ void scalar_base::get_(symbol& x) const { ok(PN_SYMBOL); x = symbol(bytes_.begin
 void scalar_base::get_(binary& x) const { ok(PN_BINARY); x = bytes_; }
 void scalar_base::get_(null&) const { ok(PN_NULL); }
 
-int64_t scalar_base::as_int() const { return internal::coerce<int64_t>(*this); }
-
-uint64_t scalar_base::as_uint() const { return internal::coerce<uint64_t>(*this); }
-
-double scalar_base::as_double() const { return internal::coerce<double>(*this); }
-
-std::string scalar_base::as_string() const { return internal::coerce<std::string>(*this); }
-
 namespace {
 
 struct equal_op {
     const scalar_base& x;
     equal_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (x.get<T>() == y); }
+    template<class T> bool operator()(const T& y) { return (get<T>(x) == y); }
 };
 
 struct less_op {
     const scalar_base& x;
     less_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (y < x.get<T>()); }
+    template<class T> bool operator()(const T& y) { return (y < get<T>(x)); }
 };
 
 struct ostream_op {
@@ -151,8 +144,18 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 }
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
-    if (s.type() == NULL_TYPE) return o << "<null>";
-    return internal::visit<std::ostream&>(s, ostream_op(o));
+    switch (s.type()) {
+      case NULL_TYPE: return o << "<null>";
+        // Print byte types as integer, not char.
+      case BYTE: return o << static_cast<int>(get<int8_t>(s));
+      case UBYTE: return o << static_cast<unsigned int>(get<uint8_t>(s));
+        // Other types printed using normal C++ operator <<
+      default: return internal::visit<std::ostream&>(s, ostream_op(o));
+    }
 }
 
-} // namespace proton
+conversion_error make_coercion_error(const char* cpp, type_id amqp) {
+    return conversion_error(std::string("invalid proton::coerce<") + cpp + ">(" + type_name(amqp) + ")");
+}
+
+}} // namespaces

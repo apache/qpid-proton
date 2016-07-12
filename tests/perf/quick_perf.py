@@ -25,7 +25,7 @@
 
 
 import os, sys, socket, time
-from example_test import background, verify, wait_addr, execute, pick_addr, cmdline
+from example_test import Proc, pick_addr
 from subprocess import Popen, PIPE, STDOUT
 
 
@@ -61,16 +61,16 @@ except:
 
 
 # Use Proton-C reactor-recv as a relatively fast loopback "broker" for these tests
-server = cmdline("reactor-recv", "-a", linkaddr, "-c", str(mcount), "-R")
+server = Proc(["reactor-recv", "-X", "listening", "-a", linkaddr, "-c", str(mcount), "-R"], ready="listening", 
+              skip_valgrind=True, timeout=300)
 try:
-    recv = Popen(server, stdout=NULL, stderr=sys.stderr)
-    wait_addr(connaddr)
     start = time.time()
-    execute(*perf_target)
+    client = Proc(perf_target, skip_valgrind=True, timeout=300)
+    print client.wait_exit()
+    server.wait_exit()
     end = time.time()
-    verify(recv)
 except Exception as e:
-    if recv: recv.kill()
+    if server: server.safe_kill()
     raise Exception("Error running %s: %s", server, e)
 
 

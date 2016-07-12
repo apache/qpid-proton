@@ -22,18 +22,21 @@
  *
  */
 
-#include "id_generator.hpp"
+#include "proton/io/link_namer.hpp"
 
+#include "proton/container.hpp"
 #include "proton/connection.hpp"
+#include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
-#include "proton/export.hpp"
-#include "proton/handler.hpp"
-#include "proton/link.hpp"
-#include "proton/reactor.h"
+#include "proton/messaging_handler.hpp"
+#include "proton/sender.hpp"
+#include "proton/receiver.hpp"
+#include <proton/reactor.h>
 #include "reactor.hpp"
 #include "proton_handler.hpp"
 
 #include <string>
+#include <sstream>
 
 namespace proton {
 
@@ -44,45 +47,65 @@ class acceptor;
 class container;
 class url;
 class task;
+class listen_handler;
 
-class container_impl
-{
+class container_impl : public standard_container {
   public:
-    container_impl(container&, messaging_adapter*, const std::string& id);
-    ~container_impl();
-    connection connect(const url&, const connection_options&);
-    sender open_sender(const url&, const proton::link_options &, const connection_options &);
-    receiver open_receiver(const url&, const proton::link_options &, const connection_options &);
-    class acceptor listen(const url&, const connection_options &);
-    duration timeout();
-    void timeout(duration timeout);
-    void client_connection_options(const connection_options &);
-    const connection_options& client_connection_options() { return client_connection_options_; }
-    void server_connection_options(const connection_options &);
-    const connection_options& server_connection_options() { return server_connection_options_; }
-    void link_options(const proton::link_options&);
-    const proton::link_options& link_options() { return link_options_; }
+    // Pull in base class functions here so that name search finds all the overloads
+    using standard_container::stop;
+    using standard_container::connect;
+    using standard_container::listen;
+    using standard_container::open_receiver;
+    using standard_container::open_sender;
 
+    container_impl(const std::string& id, messaging_handler* = 0);
+    ~container_impl();
+    std::string id() const PN_CPP_OVERRIDE { return id_; }
+    returned<connection> connect(const std::string&, const connection_options&) PN_CPP_OVERRIDE;
+    returned<sender> open_sender(
+        const std::string&, const proton::sender_options &, const connection_options &) PN_CPP_OVERRIDE;
+    returned<receiver> open_receiver(
+        const std::string&, const proton::receiver_options &, const connection_options &) PN_CPP_OVERRIDE;
+    listener listen(const std::string&, listen_handler& lh) PN_CPP_OVERRIDE;
+    void stop_listening(const std::string&) PN_CPP_OVERRIDE;
+    void client_connection_options(const connection_options &) PN_CPP_OVERRIDE;
+    connection_options client_connection_options() const PN_CPP_OVERRIDE { return client_connection_options_; }
+    void server_connection_options(const connection_options &) PN_CPP_OVERRIDE;
+    connection_options server_connection_options() const PN_CPP_OVERRIDE { return server_connection_options_; }
+    void sender_options(const proton::sender_options&) PN_CPP_OVERRIDE;
+    class sender_options sender_options() const PN_CPP_OVERRIDE { return sender_options_; }
+    void receiver_options(const proton::receiver_options&) PN_CPP_OVERRIDE;
+    class receiver_options receiver_options() const PN_CPP_OVERRIDE { return receiver_options_; }
+    void run() PN_CPP_OVERRIDE;
+    void stop(const error_condition& err) PN_CPP_OVERRIDE;
+    void auto_stop(bool set) PN_CPP_OVERRIDE;
+#if PN_CPP_HAS_STD_FUNCTION
+    void schedule(duration, std::function<void()>) PN_CPP_OVERRIDE;
+#endif
+    void schedule(duration, void_function0&) PN_CPP_OVERRIDE;
+
+    // non-interface functions
     void configure_server_connection(connection &c);
     task schedule(int delay, proton_handler *h);
     internal::pn_ptr<pn_handler_t> cpp_handler(proton_handler *h);
-
     std::string next_link_name();
 
   private:
+    typedef std::map<std::string, acceptor> acceptors;
 
-    container& container_;
     reactor reactor_;
     proton_handler *handler_;
     internal::pn_unique_ptr<proton_handler> override_handler_;
     internal::pn_unique_ptr<proton_handler> flow_controller_;
     std::string id_;
-    id_generator id_gen_;
     connection_options client_connection_options_;
     connection_options server_connection_options_;
-    proton::link_options link_options_;
+    proton::sender_options sender_options_;
+    proton::receiver_options receiver_options_;
+    bool auto_stop_;
+    acceptors acceptors_;
 
-  friend class container;
+  friend class messaging_adapter;
 };
 
 }

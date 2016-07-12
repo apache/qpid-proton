@@ -20,7 +20,7 @@ under the License.
 package main
 
 import (
-	"./util"
+	"../util"
 	"flag"
 	"fmt"
 	"log"

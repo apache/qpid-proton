@@ -23,15 +23,19 @@ if (DOXYGEN_FOUND)
   configure_file (
     ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
     ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
+
+  file(GLOB_RECURSE headers ../include/proton/*.hpp)
   add_custom_target (docs-cpp
     COMMAND ${CMAKE_COMMAND} -E remove_directory html # get rid of old files
-    COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+    COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen
+    DEPENDS ${headers}
+    )
   add_dependencies (docs docs-cpp)
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
-           DESTINATION "${PROTON_SHARE}/docs/api-cpp"
-           COMPONENT documentation
-           OPTIONAL)
+    DESTINATION "${PROTON_SHARE}/docs/api-cpp"
+    COMPONENT documentation
+    OPTIONAL)
 endif (DOXYGEN_FOUND)
 
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES html)

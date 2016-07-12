@@ -22,20 +22,21 @@
 #include "proton/error.hpp"
 #include "msg.hpp"
 
-#include "proton/ssl.h"
+#include <proton/ssl.h>
 
 namespace proton {
 
+/// TODO: This whole class isn't really needed as pn_ssl_domain_t is already refcounted, with shared ownership for all pn_ssl_t objects
+/// that hold one
 class ssl_domain_impl {
   public:
-    ssl_domain_impl(bool is_server) : refcount_(1) {
-            pn_domain_ = pn_ssl_domain(is_server ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
+    ssl_domain_impl(bool is_server) : refcount_(1), pn_domain_(pn_ssl_domain(is_server ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT)) {
             if (!pn_domain_) throw error(MSG("SSL/TLS unavailable"));
     }
+    ~ssl_domain_impl() { pn_ssl_domain_free(pn_domain_); }
     void incref() { refcount_++; }
     void decref() {
         if (--refcount_ == 0) {
-            pn_ssl_domain_free(pn_domain_);
             delete this;
         }
     }
@@ -50,14 +51,14 @@ class ssl_domain_impl {
 namespace internal {
 ssl_domain::ssl_domain(bool is_server) : impl_(0), server_type_(is_server) {}
 
-ssl_domain::ssl_domain(const ssl_domain &x) {
-    impl_ = x.impl_;
+ssl_domain::ssl_domain(const ssl_domain &x) : impl_(x.impl_), server_type_(x.server_type_) {
     if (impl_) impl_->incref();
 }
 
 ssl_domain& internal::ssl_domain::operator=(const ssl_domain&x) {
     if (impl_) impl_->decref();
     impl_ = x.impl_;
+    server_type_ = x.server_type_;
     if (impl_) impl_->incref();
     return *this;
 }
@@ -126,6 +127,9 @@ ssl_client_options::ssl_client_options(ssl_certificate &cert, const std::string 
 }
 
 ssl_client_options::ssl_client_options() : ssl_domain(false) {}
+
+ssl_certificate::ssl_certificate(const std::string &main)
+    : certdb_main_(main), pw_set_(false) {}
 
 ssl_certificate::ssl_certificate(const std::string &main, const std::string &extra)
     : certdb_main_(main), certdb_extra_(extra), pw_set_(false) {}

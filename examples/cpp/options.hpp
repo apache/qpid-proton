@@ -25,6 +25,7 @@
 #include <vector>
 #include <stdexcept>
 
+namespace example {
 /** bad_option is thrown for option parsing errors */
 struct bad_option : public std::runtime_error {
     bad_option(const std::string& s) : std::runtime_error(s) {}
@@ -90,7 +91,7 @@ class options {
         virtual ~option() {}
 
         virtual bool parse(int argc, char const * const * argv, int &i) = 0;
-        virtual void print_default(std::ostream&) const {};
+        virtual void print_default(std::ostream&) const {}
 
       friend std::ostream& operator<<(std::ostream& os, const option& op) {
           os << "  " << op.short_;
@@ -169,5 +170,6 @@ class options {
     opts opts_;
     bool help_;
 };
+}
 
 #endif // OPTIONS_HPP

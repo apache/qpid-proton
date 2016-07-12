@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_SSL_H
-#define PROTON_CPP_SSL_H
+#ifndef PROTON_SSL_HPP
+#define PROTON_SSL_HPP
 
 /*
  *
@@ -22,9 +22,11 @@
  *
  */
 
-#include "proton/export.hpp"
+#include "./internal/export.hpp"
+#include "./internal/object.hpp"
 
-#include "proton/ssl.h"
+#include <proton/ssl.h>
+
 #include <string>
 
 namespace proton {
@@ -38,6 +40,7 @@ class ssl {
     /// @endcond
 
   public:
+    /// Create an empty ssl object.
     ssl() : object_(0) {}
 
     /// Determines the level of peer validation.
@@ -70,10 +73,6 @@ class ssl {
     /// Get the security strength factor.
     PN_CPP_EXTERN int ssf() const;
 
-    /// XXX remove
-    PN_CPP_EXTERN void peer_hostname(const std::string &);
-    PN_CPP_EXTERN std::string peer_hostname() const;
-
     /// XXX discuss, what's the meaning of "remote" here?
     PN_CPP_EXTERN std::string remote_subject() const;
 
@@ -84,24 +83,28 @@ class ssl {
 
     /// @endcond
 
-    /// @cond INTERNAL
   private:
     pn_ssl_t* object_;
 
-    friend class transport;
+    /// @cond INTERNAL
+  friend class internal::factory<ssl>;
     /// @endcond
 };
 
+/// **Experimental** - An SSL certificate.
 class ssl_certificate {
   public:
     /// Create an SSL certificate.
-    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra = std::string());
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main);
 
-    /// Create an SSL certificate.
-    ///
-    /// @internal
-    /// XXX what is the difference between these?
+    // XXX Document the following constructors
+
+    /// @copydoc ssl_certificate
+    PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra);
+
+    /// @copydoc ssl_certificate
     PN_CPP_EXTERN ssl_certificate(const std::string &certdb_main, const std::string &certdb_extra, const std::string &passwd);
+    /// @endcond
 
   private:
     std::string certdb_main_;
@@ -110,8 +113,8 @@ class ssl_certificate {
     bool pw_set_;
 
     /// @cond INTERNAL
-    friend class ssl_client_options;
-    friend class ssl_server_options;
+  friend class ssl_client_options;
+  friend class ssl_server_options;
     /// @endcond
 };
 
@@ -137,7 +140,7 @@ class ssl_domain {
 
 }
 
-/// SSL configuration for inbound connections.
+/// **Experimental** - SSL configuration for inbound connections.
 class ssl_server_options : private internal::ssl_domain {
   public:
     /// Server SSL options based on the supplied X.509 certificate
@@ -160,11 +163,11 @@ class ssl_server_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-    friend class connection_options;
+  friend class connection_options;
     /// @endcond
 };
 
-/// SSL configuration for outbound connections.
+/// **Experimental** - SSL configuration for outbound connections.
 class ssl_client_options : private internal::ssl_domain {
   public:
     /// Create SSL client options (no client certificate).
@@ -185,10 +188,10 @@ class ssl_client_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-    friend class connection_options;
+  friend class connection_options;
     /// @endcond
 };
 
-}
+} // proton
 
-#endif // PROTON_CPP_SSL_H
+#endif // PROTON_SSL_HPP

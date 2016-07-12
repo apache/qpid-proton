@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#include "proton/decoder.hpp"
-#include "proton/encoder.hpp"
+#include "proton/codec/decoder.hpp"
+#include "proton/codec/encoder.hpp"
 #include "proton/error.hpp"
 #include "proton/value.hpp"
 #include "test_bits.hpp"
@@ -28,10 +28,17 @@
 #include <streambuf>
 #include <iosfwd>
 
+namespace {
+
 using namespace std;
 using namespace proton;
-using namespace proton::codec;
-using namespace test;
+
+using proton::codec::encoder;
+using proton::codec::decoder;
+
+using proton::internal::data;
+
+using test::str;
 
 std::string tests_dir;
 
@@ -44,10 +51,10 @@ string read(string filename) {
 
 // Test data ostream operator
 void test_data_ostream() {
-    value dv;
-    decoder d(dv);
+    data dt(data::create());
+    decoder d(dt);
     d.decode(read("primitives"));
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dv));
+    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dt));
 }
 
 // Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
@@ -65,12 +72,12 @@ void test_decoder_primitves_exact() {
     ASSERT_EQUAL(42, get< ::uint16_t>(d));
     try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(conversion_error){}
     ASSERT_EQUAL(-42, get< ::int16_t>(d));
-    ASSERT_EQUAL(12345, get< ::uint32_t>(d));
+    ASSERT_EQUAL(12345u, get< ::uint32_t>(d));
     ASSERT_EQUAL(-12345, get< ::int32_t>(d));
-    ASSERT_EQUAL(12345, get< ::uint64_t>(d));
+    ASSERT_EQUAL(12345u, get< ::uint64_t>(d));
     ASSERT_EQUAL(-12345, get< ::int64_t>(d));
     try { get<double>(d); FAIL("got float as double"); } catch(conversion_error){}
-    ASSERT_EQUAL(0.125, get<float>(d));
+    ASSERT_EQUAL(0.125f, get<float>(d));
     try { get<float>(d); FAIL("got double as float"); } catch(conversion_error){}
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());
@@ -91,7 +98,7 @@ void test_encoder_primitives() {
     ASSERT_EQUAL(read("primitives"), data);
 }
 
-// TODO aconway 2015-06-11: interop test is not complete.
+}
 
 int main(int argc, char** argv) {
     int failed = 0;

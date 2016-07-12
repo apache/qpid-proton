@@ -189,7 +189,7 @@ There are only two differences here. On line 13, instead of initiating
 a link (and implicitly a connection), we listen for incoming
 connections. On line 25, when we have received all the expected
 messages, we then stop listening for incoming connections by closing
-the acceptor object.
+the listener object.
 
 You can use the original send example now to send to this receiver
 directly. (Note: you will need to stop any broker that is listening on
@@ -207,7 +207,7 @@ receiver to connect to it. Again that just requires two modifications:
 As with the modified receiver, instead of initiating establishment of
 a link, we listen for incoming connections on line 15 and then on line
 28, when we have received confirmation of all the messages we sent, we
-can close the acceptor in order to exit. The symmetry in the
+can close the listener in order to exit. The symmetry in the
 underlying AMQP that enables this is quite unique and elegant, and in
 reflecting this the proton API provides a flexible toolkit for
 implementing all sorts of interesting intermediaries (the broker.py

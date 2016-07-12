@@ -17,16 +17,16 @@
  * under the License.
  */
 
-#include <proton/annotation_key.hpp>
-#include <proton/binary.hpp>
-#include <proton/data.hpp>
-#include <proton/decimal.hpp>
-#include <proton/encoder.hpp>
-#include <proton/message_id.hpp>
-#include <proton/scalar.hpp>
-#include <proton/symbol.hpp>
-#include <proton/timestamp.hpp>
-#include <proton/value.hpp>
+#include "proton/codec/decoder.hpp"
+
+#include "proton/annotation_key.hpp"
+#include "proton/binary.hpp"
+#include "proton/decimal.hpp"
+#include "proton/message_id.hpp"
+#include "proton/scalar.hpp"
+#include "proton/symbol.hpp"
+#include "proton/timestamp.hpp"
+#include "proton/value.hpp"
 
 #include "proton_bits.hpp"
 #include "types_internal.hpp"
@@ -42,8 +42,11 @@ namespace codec {
  * Note the pn_data_t "current" node is always pointing *before* the next value
  * to be returned by the decoder.
  */
-
-decoder::decoder(const value_base& v, bool exact) : data(v.data()), exact_(exact) { rewind(); }
+decoder::decoder(const internal::value_base& v, bool exact)
+    : data(const_cast<internal::value_base&>(v).data()), exact_(exact)
+{
+    rewind();
+}
 
 namespace {
 template <class T> T check(T result) {
@@ -54,7 +57,7 @@ template <class T> T check(T result) {
 }
 
 void decoder::decode(const char* i, size_t size) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     const char* end = i + size;
     while (i < end)
         i += check(pn_data_decode(pn_object(), i, size_t(end - i)));
@@ -63,7 +66,7 @@ void decoder::decode(const char* i, size_t size) {
 void decoder::decode(const std::string& s) { decode(s.data(), s.size()); }
 
 bool decoder::more() {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     return next();
 }
 
@@ -89,7 +92,7 @@ void assign(binary& x, const pn_bytes_t y) { x = bin(y); }
 
 // Simple extract with no type conversion.
 template <class T, class U> decoder& decoder::extract(T& x, U (*get)(pn_data_t*)) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     assert_type_equal(internal::type_id_of<T>::value, pre_get());
     assign(x, get(pn_object()));
     sg.cancel();                // No error, cancel the reset.
@@ -97,12 +100,12 @@ template <class T, class U> decoder& decoder::extract(T& x, U (*get)(pn_data_t*)
 }
 
 type_id decoder::next_type() {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     return pre_get();
 }
 
 decoder& decoder::operator>>(start& s) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     s.type = pre_get();
     switch (s.type) {
       case ARRAY:
@@ -133,12 +136,12 @@ decoder& decoder::operator>>(const finish&) {
 }
 
 decoder& decoder::operator>>(null&) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     assert_type_equal(NULL_TYPE, pre_get());
     return *this;
 }
 
-decoder& decoder::operator>>(value_base& x) {
+decoder& decoder::operator>>(internal::value_base& x) {
     if (*this == x.data_)
         throw conversion_error("extract into self");
     data d = x.data();
@@ -156,7 +159,7 @@ decoder& decoder::operator>>(value_base& x) {
 }
 
 decoder& decoder::operator>>(message_id& x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id got = pre_get();
     if (got != ULONG && got != UUID && got != BINARY && got != STRING)
         throw conversion_error(
@@ -167,7 +170,7 @@ decoder& decoder::operator>>(message_id& x) {
 }
 
 decoder& decoder::operator>>(annotation_key& x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id got = pre_get();
     if (got != ULONG && got != SYMBOL)
         throw conversion_error(msg() << "expected one of ulong or symbol but found " << got);
@@ -177,7 +180,7 @@ decoder& decoder::operator>>(annotation_key& x) {
 }
 
 decoder& decoder::operator>>(scalar& x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id got = pre_get();
     if (!type_id_is_scalar(got))
         throw conversion_error("expected scalar, found "+type_name(got));
@@ -193,7 +196,7 @@ decoder& decoder::operator>>(uint8_t &x)  { return extract(x, pn_data_get_ubyte)
 decoder& decoder::operator>>(int8_t &x) { return extract(x, pn_data_get_byte); }
 
 decoder& decoder::operator>>(uint16_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(USHORT, tid);
     switch (tid) {
@@ -206,7 +209,7 @@ decoder& decoder::operator>>(uint16_t &x) {
 }
 
 decoder& decoder::operator>>(int16_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(SHORT, tid);
     switch (tid) {
@@ -219,7 +222,7 @@ decoder& decoder::operator>>(int16_t &x) {
 }
 
 decoder& decoder::operator>>(uint32_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(UINT, tid);
     switch (tid) {
@@ -233,7 +236,7 @@ decoder& decoder::operator>>(uint32_t &x) {
 }
 
 decoder& decoder::operator>>(int32_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(INT, tid);
     switch (tid) {
@@ -247,7 +250,7 @@ decoder& decoder::operator>>(int32_t &x) {
 }
 
 decoder& decoder::operator>>(uint64_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(ULONG, tid);
     switch (tid) {
@@ -262,7 +265,7 @@ decoder& decoder::operator>>(uint64_t &x) {
 }
 
 decoder& decoder::operator>>(int64_t &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(LONG, tid);
     switch (tid) {
@@ -281,7 +284,7 @@ decoder& decoder::operator>>(wchar_t &x) { return extract(x, pn_data_get_char); 
 decoder& decoder::operator>>(timestamp &x) { return extract(x, pn_data_get_timestamp); }
 
 decoder& decoder::operator>>(float &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(FLOAT, tid);
     switch (tid) {
@@ -294,11 +297,11 @@ decoder& decoder::operator>>(float &x) {
 }
 
 decoder& decoder::operator>>(double &x) {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(DOUBLE, tid);
     switch (tid) {
-      case FLOAT: x = pn_data_get_float(pn_object()); break;
+      case FLOAT: x = static_cast<double>(pn_data_get_float(pn_object())); break;
       case DOUBLE: x = pn_data_get_double(pn_object()); break;
       default: assert_type_equal(DOUBLE, tid);
     }
@@ -315,7 +318,7 @@ decoder& decoder::operator>>(binary &x)  { return extract(x, pn_data_get_binary)
 decoder& decoder::operator>>(symbol &x)  { return extract(x, pn_data_get_symbol); }
 
 decoder& decoder::operator>>(std::string &x)  {
-    state_guard sg(*this);
+    internal::state_guard sg(*this);
     type_id tid = pre_get();
     if (exact_) assert_type_equal(STRING, tid);
     switch (tid) {

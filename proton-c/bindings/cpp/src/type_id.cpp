@@ -19,7 +19,7 @@
 
 #include "types_internal.hpp"
 
-#include <proton/type_id.hpp>
+#include "proton/type_id.hpp"
 
 #include <ostream>
 

@@ -1,6 +1,8 @@
-#ifndef BINARY_HPP
-#define BINARY_HPP
+#ifndef PROTON_BINARY_HPP
+#define PROTON_BINARY_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,10 +19,11 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/export.hpp>
-#include <proton/types_fwd.hpp>
+#include "./internal/export.hpp"
+#include "./types_fwd.hpp"
 
 #include <iosfwd>
 #include <vector>
@@ -30,13 +33,14 @@ namespace proton {
 /// Arbitrary binary data.
 class binary : public std::vector<uint8_t> {
   public:
-    ///@name Constructors @{
+    /// @name Constructors
+    /// @{
     explicit binary() : std::vector<value_type>() {}
     explicit binary(size_t n) : std::vector<value_type>(n) {}
     explicit binary(size_t n, value_type x) : std::vector<value_type>(n, x) {}
     explicit binary(const std::string& s) : std::vector<value_type>(s.begin(), s.end()) {}
     template <class Iter> binary(Iter first, Iter last) : std::vector<value_type>(first, last) {}
-    ///@}
+    /// @}
 
     /// Convert to std::string
     operator std::string() const { return std::string(begin(), end()); }
@@ -45,9 +49,9 @@ class binary : public std::vector<uint8_t> {
     binary& operator=(const std::string& x) { assign(x.begin(), x.end()); return *this; }
 };
 
-/// Print binary value
+/// Print a binary value
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const binary&);
 
-}
+} // proton
 
-#endif // BINARY_HPP
+#endif // PROTON_BINARY_HPP

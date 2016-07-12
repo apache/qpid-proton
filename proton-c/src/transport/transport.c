@@ -1197,10 +1197,17 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
 
   pn_session_t *ssn;
   if (reply) {
-    // XXX: what if session is NULL?
     ssn = (pn_session_t *) pn_hash_get(transport->local_channels, remote_channel);
   } else {
     ssn = pn_session(transport->connection);
+  }
+  if (ssn == 0) {
+    pn_do_error(transport,
+                "amqp:connection:framing-error",
+                "remote channel is above negotiated channel_max %d.",
+                transport->channel_max
+               );
+    return PN_TRANSPORT_ERROR;
   }
   ssn->state.incoming_transfer_count = next;
   pni_map_remote_channel(ssn, channel);

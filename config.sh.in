@@ -73,7 +73,7 @@ export LD_LIBRARY_PATH="$(merge_paths $PROTON_BUILD/proton-c $LD_LIBRARY_PATH)"
 export PATH="$(merge_paths $PATH $PROTON_BUILD/tests/tools/apps/c $PROTON_HOME/tests/tools/apps/python $PROTON_HOME/tests/python)"
 
 # can the test harness use valgrind?
-if [[ -x "$(type -p valgrind)" ]] ; then
+if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND" == "ON" ]] ; then
     export VALGRIND=$(type -p valgrind)
 fi
 

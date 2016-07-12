@@ -90,7 +90,7 @@ class Proc(Popen):
                         self.ready_set = True
                         self.ready.set()
             if self.wait() != 0:
-                self.error = ProcError(self)
+                raise ProcError(self)
         except Exception, e:
             self.error = sys.exc_info()
         finally:
@@ -131,60 +131,40 @@ class Proc(Popen):
             raise ProcError(self, "timeout waiting for exit")
 
 
-def count_tests(cls):
-    methods = inspect.getmembers(cls, predicate=inspect.ismethod)
-    tests = [ i for i,j in methods if i.startswith('test_') ]
-    return len(tests)
+if hasattr(unittest.TestCase, 'setUpClass') and  hasattr(unittest.TestCase, 'tearDownClass'):
+    TestCase = unittest.TestCase
+else:
+    class TestCase(unittest.TestCase):
+        """
+        Roughly provides setUpClass and tearDownClass functionality for older python
+        versions in our test scenarios. If subclasses override setUp or tearDown
+        they *must* call the superclass.
+        """
+        def setUp(self):
+            if not hasattr(type(self), '_setup_class_count'):
+                type(self)._setup_class_count = len(
+                    inspect.getmembers(
+                        type(self),
+                        predicate=lambda(m): inspect.ismethod(m) and m.__name__.startswith('test_')))
+                type(self).setUpClass()
 
-class CompatSetupClass(object):
-    # Roughly provides setUpClass and tearDownClass functionality for older python versions
-    # in our test scenarios
-    def __init__(self, target):
-        self.completed = False
-        self.test_count = count_tests(target)
-        self.target = target
-        self.global_setup = False
+        def tearDown(self):
+            self.assertTrue(self._setup_class_count > 0)
+            self._setup_class_count -=  1
+            if self._setup_class_count == 0:
+                type(self).tearDownClass()
 
-    def note_setup(self):
-        if not self.global_setup:
-            self.global_setup = True
-            self.target.setup_class()
 
-    def note_teardown(self):
-        self.test_count -=  1
-        if self.test_count == 0:
-            self.completed = True
-            self.target.teardown_class()
-        
-
-class ExampleTestCase(unittest.TestCase):
-
-    @classmethod
-    def setup_class(cls):
-        pass
-
-    @classmethod
-    def teardown_class(cls):
-        pass
-
-    def completed(self):
-        cls = self.__class__
-        return cls.compat_ and cls.compat_.completed
-
+class ExampleTestCase(TestCase):
+    """TestCase that manages started processes"""
     def setUp(self):
-        cls = self.__class__
-        if not hasattr(cls, "compat_"):
-            cls.compat_ = CompatSetupClass(cls)
-        if cls.compat_.completed:
-            # Last test for this class already seen.
-            raise Exception("Test sequencing error")
-        cls.compat_.note_setup()
+        super(ExampleTestCase, self).setUp()
         self.procs = []
 
     def tearDown(self):
         for p in self.procs:
             p.safe_kill()
-        self.__class__.compat_.note_teardown()
+        super(ExampleTestCase, self).tearDown()
 
     def proc(self, *args, **kwargs):
         p = Proc(*args, **kwargs)
@@ -194,27 +174,26 @@ class ExampleTestCase(unittest.TestCase):
 class BrokerTestCase(ExampleTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
+    Subclasses must set `broker_exe` class variable with the name of the broker executable.
     """
 
-    # setUpClass not available until 2.7
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         cls.addr = pick_addr() + "/examples"
-        cls.broker = Proc(["broker", "-a", cls.addr], ready="listening")
+        cls.broker = None       # In case Proc throws, create the attribute.
+        cls.broker = Proc([cls.broker_exe, "-a", cls.addr], ready="listening")
         cls.broker.wait_ready()
 
-    # tearDownClass not available until 2.7
     @classmethod
-    def teardown_class(cls):
-        cls.broker.safe_kill()
+    def tearDownClass(cls):
+        if cls.broker: cls.broker.safe_kill()
 
     def tearDown(self):
+        b = type(self).broker
+        if b and b.poll() !=  None: # Broker crashed
+            type(self).setUpClass() # Start another for the next test.
+            raise ProcError(b, "broker crash")
         super(BrokerTestCase, self).tearDown()
-        if not self.completed():
-            b = type(self).broker
-            if b.poll() !=  None: # Broker crashed
-                type(self).setUpClass() # Start another for the next test.
-                raise ProcError(b, "broker crash")
 
 
 CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
@@ -224,11 +203,13 @@ And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
 
 def recv_expect(name, addr):
-    return "%s listening on amqp://%s\n%s" % (
+    return "%s listening on %s\n%s" % (
         name, addr, "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)]))
 
 class ContainerExampleTest(BrokerTestCase):
     """Run the container examples, verify they behave as expected."""
+
+    broker_exe = "broker"
 
     def test_helloworld(self):
         self.assertEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
@@ -263,7 +244,7 @@ class ContainerExampleTest(BrokerTestCase):
                          self.proc(["simple_recv", "-a", addr]).wait_exit())
 
         self.assertEqual(
-            "direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+            "direct_send listening on %s\nall messages confirmed\n" % addr,
             send.wait_exit())
 
     def test_request_response(self):
@@ -276,6 +257,14 @@ class ContainerExampleTest(BrokerTestCase):
         server = self.proc(["server_direct", "-a", addr+"/examples"], "listening")
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", addr+"/examples"]).wait_exit())
+
+    def test_flow_control(self):
+        want="""success: Example 1: simple credit
+success: Example 2: basic drain
+success: Example 3: drain without credit
+success: Exmaple 4: high/low watermark
+"""
+        self.assertEqual(want, self.proc(["flow_control", "--address", pick_addr(), "--quiet"]).wait_exit())
 
     def test_encode_decode(self):
         want="""
@@ -298,20 +287,11 @@ map{int(4):string(four), string(five):int(5)}
 
 == Insert with stream operators.
 array<int>[int(1), int(2), int(3)]
-list[int(42), boolean(false), symbol(x)]
-map{string(k1):int(42), symbol(k2):boolean(false)}
+list[int(42), boolean(0), symbol(x)]
+map{string(k1):int(42), symbol(k2):boolean(0)}
 """
         self.maxDiff = None
         self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
-
-    def test_recurring_timer(self):
-        expect="""Tick...
-Tick...
-Tock...
-"""
-        self.maxDiff = None
-        # Disable valgrind, this test is time-sensitive.
-        self.assertEqual(expect, self.proc(["recurring_timer", "-t", ".05", "-k", ".01"], skip_valgrind=True).wait_exit())
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
@@ -319,14 +299,31 @@ Tock...
         return os.path.join(pn_root, "examples/cpp/ssl_certs")
 
     def test_ssl(self):
-        # SSL without SASL
+        # SSL without SASL, VERIFY_PEER_NAME
         addr = "amqps://" + pick_addr() + "/examples"
         # Disable valgrind when using OpenSSL
-        out = self.proc(["ssl", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
         expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
 
+    def test_ssl_no_name(self):
+        # VERIFY_PEER
+        addr = "amqps://" + pick_addr() + "/examples"
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "noname"], skip_valgrind=True).wait_exit()
+        expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
+
+    def test_ssl_bad_name(self):
+        # VERIFY_PEER
+        addr = "amqps://" + pick_addr() + "/examples"
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "fail"], skip_valgrind=True).wait_exit()
+        expect = "Expected failure of connection with wrong peer name"
+        expect_found = (out.find(expect) >= 0)
+        self.assertEqual(expect_found, True)
 
     def test_ssl_client_cert(self):
         # SSL with SASL EXTERNAL
@@ -340,9 +337,23 @@ Hello World!
         expect_found = (out.find(expect) >= 0)
         self.assertEqual(expect_found, True)
 
+    def test_scheduled_send_03(self):
+        # Output should be a bunch of "send" lines but can't guarantee exactly how many.
+        out = self.proc(["scheduled_send_03", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+        self.assertGreater(len(out), 0);
+        self.assertEqual(["send"]*len(out), out)
 
-class ConnectionEngineExampleTest(BrokerTestCase):
-    """Run the connction_engine examples, verify they behave as expected."""
+    def test_scheduled_send(self):
+        try:
+            out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+            self.assertGreater(len(out), 0);
+            self.assertEqual(["send"]*len(out), out)
+        except ProcError:       # File not found, not a C++11 build.
+            pass
+
+
+class EngineTestCase(BrokerTestCase):
+    """Run selected clients to test a connction_engine broker."""
 
     def test_helloworld(self):
         self.assertEqual('Hello World!\n',
@@ -372,13 +383,17 @@ class ConnectionEngineExampleTest(BrokerTestCase):
         send = self.proc(["direct_send", "-a", addr], "listening")
         self.assertEqual(recv_expect("simple_recv", addr),
                          self.proc(["simple_recv", "-a", addr]).wait_exit())
-        self.assertEqual("direct_send listening on amqp://%s\nall messages confirmed\n" % addr,
+        self.assertEqual("direct_send listening on %s\nall messages confirmed\n" % addr,
                          send.wait_exit())
 
     def test_request_response(self):
         server = self.proc(["server", "-a", self.addr], "connected")
         self.assertEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())
+
+
+class MtBrokerTest(EngineTestCase):
+    broker_exe = "mt_broker"
 
 if __name__ == "__main__":
     unittest.main()

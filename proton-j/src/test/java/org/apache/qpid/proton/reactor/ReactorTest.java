@@ -165,6 +165,9 @@ public class ReactorTest {
         Connection connection = reactor.connection(connectionHandler);
         assertNotNull(connection);
         assertTrue("connection should be one of the reactor's children", reactor.children().contains(connection));
+        reactor.setConnectionHost(connection, "127.0.0.1", 5672);
+        assertEquals("connection address configuration failed",
+                     reactor.getConnectionAddress(connection), "127.0.0.1:5672");
         TestHandler reactorHandler = new TestHandler();
         reactor.getHandler().add(reactorHandler);
         reactor.run();
@@ -240,7 +243,9 @@ public class ReactorTest {
             @Override
             public void onConnectionInit(Event event) {
                 super.onConnectionInit(event);
-                event.getConnection().setHostname("127.0.0.1:" + listeningPort);
+                event.getReactor().setConnectionHost(event.getConnection(),
+                                                     "127.0.0.1",
+                                                     listeningPort);
                 event.getConnection().open();
             }
             @Override
@@ -285,6 +290,100 @@ public class ReactorTest {
 
     }
 
+    private String checkVhost(String vhost) throws IOException {
+
+        class ServerVhostHandler extends ServerHandler {
+            public String peerVhost;
+
+            @Override
+            public void onConnectionRemoteOpen(Event event) {
+                super.onConnectionRemoteOpen(event);
+                peerVhost = event.getConnection().getRemoteHostname();
+            }
+        }
+
+        class ClientVhostHandler extends TestHandler {
+            private int port;
+            private String vhost;
+
+            ClientVhostHandler(String vhost, int port) {
+                this.port = port;
+                this.vhost = vhost;
+            }
+
+            @Override
+            public void onConnectionInit(Event event) {
+                super.onConnectionInit(event);
+                event.getReactor().setConnectionHost(event.getConnection(),
+                                                     "127.0.0.1", port);
+                if (vhost != null) {
+                    event.getConnection().setHostname(vhost);
+                }
+                event.getConnection().open();
+            }
+            @Override
+            public void onConnectionRemoteOpen(Event event) {
+                super.onConnectionRemoteOpen(event);
+                event.getConnection().close();
+            }
+            @Override
+            public void onConnectionRemoteClose(Event event) {
+                super.onConnectionRemoteClose(event);
+                event.getConnection().free();
+            }
+        }
+        ServerVhostHandler sh = new ServerVhostHandler();
+        Acceptor acceptor = reactor.acceptor("127.0.0.1",  0, sh);
+        final int listeningPort = ((AcceptorImpl)acceptor).getPortNumber();
+        sh.setAcceptor(acceptor);
+
+        ClientVhostHandler ch = new ClientVhostHandler(vhost, listeningPort);
+        Connection connection = reactor.connection(ch);
+
+        reactor.run();
+        reactor.free();
+        checkForLeaks();
+
+        return sh.peerVhost;
+    }
+
+    /**
+     * Tests the virtual host default configuration - should be set to host
+     * used for the connection.
+     * @throws IOException
+     **/
+    @Test
+    public void checkVhostDefault() throws IOException {
+        String vhost = checkVhost(null);
+        assertEquals("The default virtual host is not correct",
+                     "127.0.0.1", vhost);
+    }
+
+    /**
+     * Tests the virtual host override - should be set to connection's
+     * hostname.
+     * @throws IOException
+     **/
+    @Test
+    public void checkVhostOverride() throws IOException {
+        String vhost = checkVhost("my.vhost");
+        assertEquals("The virtual host is not correct",
+                     "my.vhost", vhost);
+    }
+
+    /**
+     * Tests eliminating the virtual host configuration - expects no vhost for
+     * the connection.
+     * @throws IOException
+     **/
+    @Test
+    public void checkNoVhost() throws IOException {
+        String vhost = checkVhost("");
+        assertEquals("The virtual host is present",
+                     null, vhost);
+    }
+
+
     private static class SinkHandler extends BaseHandler {
         protected int received = 0;
 
@@ -300,17 +399,14 @@ public class ReactorTest {
 
     private static class SourceHandler extends BaseHandler {
         private int remaining;
-        private final int port;
 
-        protected SourceHandler(int count, int port) {
+        protected SourceHandler(int count) {
             remaining = count;
-            this.port = port;
         }
 
         @Override
         public void onConnectionInit(Event event) {
             Connection conn = event.getConnection();
-            conn.setHostname("127.0.0.1:" + port);
             Session ssn = conn.session();
             Sender snd = ssn.sender("sender");
             conn.open();
@@ -352,9 +448,9 @@ public class ReactorTest {
         SinkHandler snk = new SinkHandler();
         sh.add(snk);
 
-        SourceHandler src = new SourceHandler(count, ((AcceptorImpl)acceptor).getPortNumber());
-        reactor.connection(src);
-
+        SourceHandler src = new SourceHandler(count);
+        reactor.connectionToHost("127.0.0.1", ((AcceptorImpl)acceptor).getPortNumber(),
+                                 src);
         reactor.run();
         reactor.free();
         assertEquals("Did not receive the expected number of messages", count, snk.received);
@@ -575,7 +671,6 @@ public class ReactorTest {
             public void onConnectionInit(Event event) {
                 super.onConnectionInit(event);
                 Connection connection = event.getConnection();
-                connection.setHostname("127.0.0.1:" + serverSocket.getLocalPort());
                 connection.open();
                 try {
                     serverSocket.close();
@@ -587,7 +682,7 @@ public class ReactorTest {
             }
         }
         TestHandler connectionHandler = new ConnectionHandler();
-        reactor.connection(connectionHandler);
+        reactor.connectionToHost("127.0.0.1", serverSocket.getLocalPort(), connectionHandler);
         reactor.run();
         reactor.free();
         serverSocket.close();

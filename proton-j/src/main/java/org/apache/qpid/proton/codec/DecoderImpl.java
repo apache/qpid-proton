@@ -992,4 +992,8 @@ public class DecoderImpl implements ByteBufferDecoder
         }
 
     }
+
+    public int getByteBufferRemaining() {
+        return _buffer.remaining();
+    }
 }

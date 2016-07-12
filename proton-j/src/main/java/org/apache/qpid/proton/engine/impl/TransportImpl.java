@@ -701,7 +701,7 @@ public class TransportImpl extends EndpointImpl
                     TransportLink<?> transportLink = getTransportState(receiver);
                     TransportSession transportSession = getTransportState(receiver.getSession());
 
-                    if(receiver.getLocalState() == EndpointState.ACTIVE)
+                    if(receiver.getLocalState() == EndpointState.ACTIVE && transportSession.isLocalChannelSet())
                     {
                         int credits = receiver.clearUnsentCredits();
                         if(credits != 0 || receiver.getDrain() ||
@@ -723,7 +723,7 @@ public class TransportImpl extends EndpointImpl
                     SessionImpl session = (SessionImpl) endpoint;
                     TransportSession transportSession = getTransportState(session);
 
-                    if(session.getLocalState() == EndpointState.ACTIVE)
+                    if(session.getLocalState() == EndpointState.ACTIVE && transportSession.isLocalChannelSet())
                     {
                         if(transportSession.getIncomingWindowSize().equals(UnsignedInteger.ZERO))
                         {
@@ -749,15 +749,15 @@ public class TransportImpl extends EndpointImpl
 
                     LinkImpl link = (LinkImpl) endpoint;
                     TransportLink<?> transportLink = getTransportState(link);
-                    if(link.getLocalState() != EndpointState.UNINITIALIZED && !transportLink.attachSent())
+                    SessionImpl session = link.getSession();
+                    TransportSession transportSession = getTransportState(session);
+                    if(link.getLocalState() != EndpointState.UNINITIALIZED && !transportLink.attachSent() && transportSession.isLocalChannelSet())
                     {
 
                         if( (link.getRemoteState() == EndpointState.ACTIVE
                             && !transportLink.isLocalHandleSet()) || link.getRemoteState() == EndpointState.UNINITIALIZED)
                         {
 
-                            SessionImpl session = link.getSession();
-                            TransportSession transportSession = getTransportState(session);
                             UnsignedInteger localHandle = transportSession.allocateLocalHandle(transportLink);
 
                             if(link.getRemoteState() == EndpointState.UNINITIALIZED)

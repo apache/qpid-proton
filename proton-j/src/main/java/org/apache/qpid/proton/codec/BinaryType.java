@@ -105,9 +105,14 @@ public class BinaryType extends AbstractPrimitiveType<Binary>
 
         public Binary readValue()
         {
-            int size = getDecoder().readRawInt();
+            final DecoderImpl decoder = getDecoder();
+            int size = decoder.readRawInt();
+            if (size > decoder.getByteBufferRemaining()) {
+                throw new IllegalArgumentException("Binary data size "+size+" is specified to be greater than the amount of data available ("+
+                                                   decoder.getByteBufferRemaining()+")");
+            }
             byte[] data = new byte[size];
-            getDecoder().readRaw(data, 0, size);
+            decoder.readRaw(data, 0, size);
             return new Binary(data);
         }
     }

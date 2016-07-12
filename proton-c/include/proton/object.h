@@ -266,6 +266,23 @@ PN_EXTERN void *pn_iterator_next(pn_iterator_t *iterator);
 
 #define PN_LEGCTX ((pn_handle_t) 0)
 
+/**
+   PN_HANDLE is a trick to define a unique identifier by using the address of a static variable.
+   You MUST NOT use it in a .h file, since it must be defined uniquely in one compilation unit.
+   Your .h file can provide access to the handle (if needed) via a function. For example:
+
+       /// my_thing.h
+       pn_handle_t get_my_thing(void);
+
+       /// my_thing.c
+       PN_HANDLE(MY_THING);
+       pn_handle_t get_my_thing(void) { return MY_THING; }
+
+   Note that the name "MY_THING" is not exported and is not required to be
+   unique except in the .c file. The linker will guarantee that the *address* of
+   MY_THING, as returned by get_my_thing() *is* unique across the entire linked
+   executable.
+ */
 #define PN_HANDLE(name) \
   static const char _PN_HANDLE_ ## name = 0; \
   static const pn_handle_t name = ((pn_handle_t) &_PN_HANDLE_ ## name);
