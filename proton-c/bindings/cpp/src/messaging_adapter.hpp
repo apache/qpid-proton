@@ -50,7 +50,7 @@ class messaging_adapter : public proton_handler
     void on_link_local_open(proton_event &e);
     void on_link_remote_open(proton_event &e);
     void on_link_remote_close(proton_event &e);
-    void on_transport_tail_closed(proton_event &e);
+    void on_transport_closed(proton_event &e);
 
   private:
     messaging_handler &delegate_;  // The handler for generated messaging_event's
