@@ -221,10 +221,12 @@ void messaging_adapter::on_connection_remote_close(proton_event &pe) {
 }
 
 void messaging_adapter::on_connection_remote_open(proton_event &pe) {
-    pn_connection_t *conn = pn_event_connection(pe.pn_event());
-    connection c(make_wrapper(conn));
+    // Generate on_transport_open event here until we find a better place
     transport t(make_wrapper(pn_event_transport(pe.pn_event())));
     delegate_.on_transport_open(t);
+
+    pn_connection_t *conn = pn_event_connection(pe.pn_event());
+    connection c(make_wrapper(conn));
     delegate_.on_connection_open(c);
     if (!is_local_open(pn_connection_state(conn)) && is_local_unititialised(pn_connection_state(conn))) {
         pn_connection_open(conn);
@@ -264,15 +266,20 @@ void messaging_adapter::on_link_remote_open(proton_event &pe) {
 }
 
 void messaging_adapter::on_transport_tail_closed(proton_event &pe) {
+    pn_transport_t *tspt = pn_event_transport(pe.pn_event());
+    transport t(make_wrapper(tspt));
+
+    // If the connection isn't open generate on_transport_open event
+    // because we didn't generate it yet and the events won't match.
     pn_connection_t *conn = pn_event_connection(pe.pn_event());
-    if (conn && is_local_open(pn_connection_state(conn))) {
-        pn_transport_t *tspt = pn_event_transport(pe.pn_event());
-        transport t(make_wrapper(tspt));
-        if (pn_condition_is_set(pn_transport_condition(tspt))) {
-            delegate_.on_transport_error(t);
-        }
-        delegate_.on_transport_close(t);
+    if (!conn || is_local_unititialised(pn_connection_state(conn))) {
+        delegate_.on_transport_open(t);
     }
+
+    if (pn_condition_is_set(pn_transport_condition(tspt))) {
+        delegate_.on_transport_error(t);
+    }
+    delegate_.on_transport_close(t);
 }
 
 }
