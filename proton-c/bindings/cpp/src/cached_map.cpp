@@ -41,9 +41,18 @@ class map_type_impl : public std::map<K, V> {};
 template <class K, class V>
 cached_map<K,V>::cached_map() {}
 template <class K, class V>
-cached_map<K,V>::cached_map(const cached_map& cm) { if ( !cm.map_ ) return; map_type nm(*cm.map_); map_.reset(&nm); }
+cached_map<K,V>::cached_map(const cached_map& cm) { if ( !cm.map_ ) return;  map_.reset(new map_type(*cm.map_)); }
 template <class K, class V>
-cached_map<K,V>& cached_map<K,V>::operator=(const cached_map& cm) { if (!!cm.map_ ) { map_type nm(*cm.map_); map_.reset(&nm); } return *this; }
+cached_map<K,V>& cached_map<K,V>::operator=(const cached_map& cm) {
+    if (&cm != this) {
+        cached_map<K,V> t;
+        map_type *m = !cm.map_ ? 0 : new map_type(*cm.map_);
+        t.map_.reset(map_.release());
+        map_.reset(m);
+    }
+    return *this;
+}
+
 template <class K, class V>
 #if PN_CPP_HAS_RVALUE_REFERENCES
 cached_map<K,V>::cached_map(cached_map&& cm) : map_(std::move(cm.map_)) {}
