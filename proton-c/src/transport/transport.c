@@ -273,6 +273,12 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
       pn_transport_logf(transport, "%s detected", pni_protocol_name(protocol));
   switch (protocol) {
   case PNI_PROTOCOL_SSL:
+    if (!(transport->allowed_layers & LAYER_SSL)) {
+      error = "SSL protocol header not allowed (maybe detected twice)";
+      break;
+    }
+    transport->present_layers |= LAYER_SSL;
+    transport->allowed_layers &= LAYER_AMQP1 | LAYER_AMQPSASL;
     if (!transport->ssl) {
       pn_ssl(transport);
     }
@@ -280,6 +286,12 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     transport->io_layers[layer+1] = &pni_autodetect_layer;
     return ssl_layer.process_input(transport, layer, bytes, available);
   case PNI_PROTOCOL_AMQP_SSL:
+    if (!(transport->allowed_layers & LAYER_AMQPSSL)) {
+      error = "AMQP SSL protocol header not allowed (maybe detected twice)";
+      break;
+    }
+    transport->present_layers |= LAYER_AMQPSSL;
+    transport->allowed_layers &= LAYER_AMQP1 | LAYER_AMQPSASL;
     if (!transport->ssl) {
       pn_ssl(transport);
     }
@@ -287,6 +299,12 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     transport->io_layers[layer+1] = &pni_autodetect_layer;
     return 8;
   case PNI_PROTOCOL_AMQP_SASL:
+    if (!(transport->allowed_layers & LAYER_AMQPSASL)) {
+      error = "AMQP SASL protocol header not allowed (maybe detected twice)";
+      break;
+    }
+    transport->present_layers |= LAYER_AMQPSASL;
+    transport->allowed_layers &= LAYER_AMQP1 | LAYER_AMQPSSL;
     if (!transport->sasl) {
       pn_sasl(transport);
     }
@@ -297,6 +315,12 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     pni_sasl_set_external_security(transport, pn_ssl_get_ssf((pn_ssl_t*)transport), pn_ssl_get_remote_subject((pn_ssl_t*)transport));
     return 8;
   case PNI_PROTOCOL_AMQP1:
+    if (!(transport->allowed_layers & LAYER_AMQP1)) {
+      error = "AMQP1.0 protocol header not allowed (maybe detected twice)";
+      break;
+    }
+    transport->present_layers |= LAYER_AMQP1;
+    transport->allowed_layers = LAYER_NONE;
     if (transport->auth_required && !pn_transport_is_authenticated(transport)) {
       pn_do_error(transport, "amqp:connection:policy-error",
                   "Client skipped authentication - forbidden");
@@ -393,6 +417,9 @@ static void pn_transport_initialize(void *object)
   for (int layer=0; layer<PN_IO_LAYER_CT; ++layer) {
     transport->io_layers[layer] = NULL;
   }
+
+  transport->allowed_layers = LAYER_AMQP1 | LAYER_AMQPSASL | LAYER_AMQPSSL | LAYER_SSL;
+  transport->present_layers = LAYER_NONE;
 
   // Defer setting up the layers until the first data arrives or is sent
   transport->io_layers[0] = &pni_setup_layer;

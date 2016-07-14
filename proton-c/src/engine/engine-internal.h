@@ -110,6 +110,14 @@ extern const pn_io_layer_t ssl_layer;
 extern const pn_io_layer_t sasl_header_layer;
 extern const pn_io_layer_t sasl_write_header_layer;
 
+// Bit flag defines for the protocol layers
+typedef uint8_t pn_io_layer_flags_t;
+#define LAYER_NONE     0
+#define LAYER_AMQP1    1
+#define LAYER_AMQPSASL 2
+#define LAYER_AMQPSSL  4
+#define LAYER_SSL      8
+
 typedef struct pni_sasl_t pni_sasl_t;
 typedef struct pni_ssl_t pni_ssl_t;
 
@@ -192,6 +200,9 @@ struct pn_transport_t {
   uint16_t local_channel_max;
   uint16_t remote_channel_max;
   uint16_t channel_max;
+
+  pn_io_layer_flags_t allowed_layers;
+  pn_io_layer_flags_t present_layers;
 
   bool freed;
   bool open_sent;
