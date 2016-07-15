@@ -38,8 +38,6 @@
 
 #include <iosfwd>
 
-#include <assert.h>
-
 namespace proton {
 namespace io {
 
