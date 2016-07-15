@@ -25,13 +25,7 @@ execute_process(COMMAND perl -MConfig -e "print \$Config{ccflags}"
   OUTPUT_VARIABLE PERLCFLAGS)
 
 # Disable harmlesss warnings from the generted perlPERL_wrap.c
-include(CheckCCompilerFlag)
-foreach(flag -Wno-unused-but-set-variable -Wno-unused-function -Wno-unused-variable)
-  check_c_compiler_flag(${flag} allowed)
-  if (allowed)
-    set(PERLCFLAGS "${PERLCFLAGS} ${flag}")
-  endif()
-endforeach()
+set(PERLCFLAGS "${PERLCFLAGS} -w")
 
 include_directories("${PERL_INCLUDE_PATH}")
 

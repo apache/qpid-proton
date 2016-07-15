@@ -26,6 +26,9 @@ include_directories (${PYTHON_INCLUDE_PATH})
 
 set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
+# Suppress warnings in swig generated code.
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
