@@ -23,8 +23,9 @@
 #include <proton/connection.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/messaging_handler.hpp>
+#include <proton/error_condition.hpp>
 #include <proton/listen_handler.hpp>
+#include <proton/messaging_handler.hpp>
 #include <proton/thread_safe.hpp>
 
 #include <atomic>
@@ -194,6 +195,9 @@ class broker_connection_handler : public proton::messaging_handler {
         erase_sender_if(range.first, range.second, predicate);
     }
 
+    void on_error(const proton::error_condition& e) OVERRIDE {
+        std::cerr << "error: " << e.what() << std::endl;
+    }
     // The container calls on_transport_close() last.
     void on_transport_close(proton::transport&) OVERRIDE {
         delete this;            // All done.
