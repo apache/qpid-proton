@@ -31,7 +31,8 @@ if(BUILD_GO)
     # Otherwise it's too hard to get the dependencies right.
     add_custom_target(${target} ALL
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${output} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      DEPENDS qpid-proton)
     list(APPEND example_targets ${target})
   endforeach()
 
