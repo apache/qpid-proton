@@ -76,7 +76,7 @@ class PN_CPP_CLASS_EXTERN cached_map {
   /// @cond INTERNAL
   private:
     pn_unique_ptr<map_type> map_;
-
+ 
     void make_cached_map();
 
   friend PN_CPP_EXTERN proton::codec::decoder& operator>> <>(proton::codec::decoder& d, cached_map<key_type, value_type>& m);

@@ -316,33 +316,36 @@ class pollable_engine : public pollable {
     proton::io::connection_engine& engine() { return engine_; }
 
   private:
+    static bool try_again(int e) {
+        // These errno values from read or write mean "try again"
+        return (e == EAGAIN || e == EWOULDBLOCK || e == EINTR);
+    }
 
     bool write() {
-        if (engine_.write_buffer().size) {
-            ssize_t n = ::write(fd_, engine_.write_buffer().data, engine_.write_buffer().size);
-            while (n == EINTR)
-                n = ::write(fd_, engine_.write_buffer().data, engine_.write_buffer().size);
+        proton::io::const_buffer wbuf(engine_.write_buffer());
+        if (wbuf.size) {
+            ssize_t n = ::write(fd_, wbuf.data, wbuf.size);
             if (n > 0) {
                 engine_.write_done(n);
                 return true;
-            } else if (errno != EAGAIN && errno != EWOULDBLOCK)
+            } else if (n < 0 && !try_again(errno)) {
                 check(n, "write");
+            }
         }
         return false;
     }
 
     bool read() {
-        if (engine_.read_buffer().size) {
-            ssize_t n = ::read(fd_, engine_.read_buffer().data, engine_.read_buffer().size);
-            while (n == EINTR)
-                n = ::read(fd_, engine_.read_buffer().data, engine_.read_buffer().size);
+        proton::io::mutable_buffer rbuf(engine_.read_buffer());
+        if (rbuf.size) {
+            ssize_t n = ::read(fd_, rbuf.data, rbuf.size);
             if (n > 0) {
                 engine_.read_done(n);
                 return true;
             }
             else if (n == 0)
                 engine_.read_close();
-            else if (errno != EAGAIN && errno != EWOULDBLOCK)
+            else if (!try_again(errno))
                 check(n, "read");
         }
         return false;
