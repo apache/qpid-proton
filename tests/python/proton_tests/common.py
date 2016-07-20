@@ -272,7 +272,7 @@ class MessengerApp(object):
         """Find filename in the searchpath
             return absolute path to the file or None
         """
-        paths = string.split(searchpath, os.pathsep)
+        paths = searchpath.split(os.pathsep)
         for path in paths:
             if os.path.exists(os.path.join(path, filename)):
                 return os.path.abspath(os.path.join(path, filename))
@@ -286,19 +286,18 @@ class MessengerApp(object):
             print("COMMAND='%s'" % str(cmd))
         #print("ENV='%s'" % str(os.environ.copy()))
         try:
-            if os.name=="nt":
-                # Windows handles python launch by replacing script 'filename' with
-                # 'python abspath-to-filename' in cmdline arg list.
-                if cmd[0].endswith('.py'):
-                    foundfile = self.findfile(cmd[0], os.environ['PATH'])
-                    if foundfile is None:
-                        foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
-                        msg = "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
-                        raise Skipped("Skipping test - %s" % msg)
+            # Handle python launch by replacing script 'filename' with
+            # 'python abspath-to-filename' in cmdline arg list.
+            if cmd[0].endswith('.py'):
+                foundfile = self.findfile(cmd[0], os.environ['PATH'])
+                if foundfile is None:
+                    foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
+                    msg = "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                    raise Skipped("Skipping test - %s" % msg)
 
-                    del cmd[0:1]
-                    cmd.insert(0, foundfile)
-                    cmd.insert(0, sys.executable)
+                del cmd[0:1]
+                cmd.insert(0, foundfile)
+                cmd.insert(0, sys.executable)
             self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT,
                                   bufsize=4096, universal_newlines=True)
         except OSError:

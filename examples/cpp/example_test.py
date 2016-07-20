@@ -64,8 +64,9 @@ class Proc(Popen):
         if not skip_valgrind:
             args = self.env_args + args
         try:
-            Popen.__init__(self, args, stdout=PIPE, stderr=STDOUT, **kwargs)
-        except Exception, e:
+            Popen.__init__(self, args, stdout=PIPE, stderr=STDOUT,
+                           universal_newlines=True,  **kwargs)
+        except Exception as e:
             raise ProcError(self, str(e))
         # Start reader thread.
         self.pattern = ready
@@ -84,16 +85,17 @@ class Proc(Popen):
             while True:
                 l = self.stdout.readline()
                 if not l: break
-                self.out += l.translate(None, "\r")
+                self.out += l
                 if self.pattern is not None:
                     if re.search(self.pattern, l):
                         self.ready_set = True
                         self.ready.set()
             if self.wait() != 0:
                 raise ProcError(self)
-        except Exception, e:
-            self.error = sys.exc_info()
+        except Exception as e:
+            self.error = e
         finally:
+            self.stdout.close()
             self.ready_set = True
             self.ready.set()
 
@@ -107,9 +109,7 @@ class Proc(Popen):
 
     def check_(self):
         if self.error:
-            if isinstance(self.error, Exception):
-                raise self.error
-            raise self.error[0], self.error[1], self.error[2] # with traceback
+            raise self.error
 
     def wait_ready(self):
         """Wait for ready to appear in output"""
@@ -145,7 +145,7 @@ else:
                 type(self)._setup_class_count = len(
                     inspect.getmembers(
                         type(self),
-                        predicate=lambda(m): inspect.ismethod(m) and m.__name__.startswith('test_')))
+                        predicate=lambda m: inspect.ismethod(m) and m.__name__.startswith('test_')))
                 type(self).setUpClass()
 
         def tearDown(self):
