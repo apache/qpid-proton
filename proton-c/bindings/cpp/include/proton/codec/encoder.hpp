@@ -180,9 +180,9 @@ sfinae::no operator<<(sfinae::wildcard, sfinae::wildcard); // Fallback
 template<typename T> struct is_encodable : public sfinae {
     static yes test(encoder);
     static no test(...);         // Failed test, no match.
-    static encoder &e;
-    static const T& t;
-    static bool const value = sizeof(test(e << t)) == sizeof(yes);
+    static encoder* e;
+    static const T* t;
+    static bool const value = sizeof(test(*e << *t)) == sizeof(yes);
 };
 
 // Avoid recursion

@@ -93,7 +93,7 @@ void test_encoder_primitives() {
     e << ::uint32_t(12345) << ::int32_t(-12345);
     e << ::uint64_t(12345) << ::int64_t(-12345);
     e << float(0.125) << double(0.125);
-    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(str(e)));
+    ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(e));
     std::string data = e.encode();
     ASSERT_EQUAL(read("primitives"), data);
 }

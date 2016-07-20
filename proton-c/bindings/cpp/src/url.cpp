@@ -100,7 +100,13 @@ uint16_t url::port_int() const {
     return result;
 }
 
-std::ostream& operator<<(std::ostream& o, const url& u) { return o << pn_url_str(u.url_); }
+std::ostream& operator<<(std::ostream& o, const url& u) {
+    return o << pn_url_str(u.url_);
+}
+
+std::string to_string(const url& u) {
+    return std::string(pn_url_str(u.url_));
+}
 
 std::istream& operator>>(std::istream& i, url& u) {
     std::string s;

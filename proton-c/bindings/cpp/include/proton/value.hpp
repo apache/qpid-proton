@@ -50,7 +50,6 @@ class value_base {
   friend class value_ref;
   friend class codec::encoder;
   friend class codec::decoder;
-  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value_base&);
 };
 
 } // internal
@@ -108,6 +107,9 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// @{
   friend PN_CPP_EXTERN bool operator==(const value& x, const value& y);
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
+    ///@}
+
+  friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value&);
 };
 
 namespace internal {
@@ -175,7 +177,12 @@ template<class T> void coerce(const value& v, T& x) {
 }
 
 /// Special case for get<null>(), just checks that value contains NULL.
-template<> inline void get<null>(const value& v, null&) { assert_type_equal(NULL_TYPE, v.type()); }
+template<> inline void get<null>(const value& v, null&) {
+    assert_type_equal(NULL_TYPE, v.type());
+}
+
+/// Return a readable string representation of x for display purposes.
+PN_CPP_EXTERN std::string to_string(const value& x);
 
 /// @cond INTERNAL
 template<class T> void value::get(T &x) const { x = proton::get<T>(*this); }

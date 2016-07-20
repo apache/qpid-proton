@@ -70,7 +70,7 @@ template <class V, class T> void simple_type_test(T x, type_id tid, const std::s
     ASSERT_EQUAL(x, get<T>(v4));
     ASSERT_EQUAL(x, coerce<T>(v4));
 
-    ASSERT_EQUAL(s, str(vx));   // Stringify
+    ASSERT_EQUAL(s, to_string(vx));   // Stringify
     V vy(y);
     ASSERT(vx != vy);           // Compare
     ASSERT(vx < vy);

@@ -25,6 +25,7 @@
 #include "proton/error.hpp"
 
 #include <ostream>
+#include <sstream>
 
 namespace proton {
 
@@ -172,28 +173,15 @@ bool operator<(const value& x, const value& y) {
     return compare(x, y) < 0;
 }
 
-namespace internal {
-std::ostream& operator<<(std::ostream& o, const internal::value_base& x) {
-    if (x.empty())
-        return o << "<null>";
+std::ostream& operator<<(std::ostream& o, const value& x) {
+    if (type_id_is_scalar(x.type()) || x.empty())
+        return o << proton::get<scalar>(x); // Print as a scalar
+    // Use pn_inspect for complex types.
     proton::decoder d(x);
-    // Print the following types with operator<<() consistent with C++.
-    switch (d.next_type()) {
-      case BOOLEAN: return o << get<bool>(d); // Respect std::boolalpha settings.
-      case STRING: return o << get<std::string>(d);
-      case SYMBOL: return o << get<symbol>(d);
-      case DECIMAL32: return o << get<decimal32>(d);
-      case DECIMAL64: return o << get<decimal64>(d);
-      case DECIMAL128: return o << get<decimal128>(d);
-      case UUID: return o << get<uuid>(d);
-      case TIMESTAMP: return o << get<timestamp>(d);
-      case CHAR: return o << get<wchar_t>(d);
-      default:
-        // Use pn_inspect for other types.
-        return o << d;
-    }
+    return o << d;
 }
 
+namespace internal {
 value_ref::value_ref(pn_data_t* p) { refer(p); }
 value_ref::value_ref(const internal::data& d) { refer(d); }
 value_ref::value_ref(const value_base& v) { refer(v); }
@@ -203,4 +191,12 @@ void value_ref::refer(const internal::data& d) { data_ = d; }
 void value_ref::refer(const value_base& v) { data_ = v.data_; }
 
 void value_ref::reset() { refer(0); }
-}}
+} // namespace internal
+
+std::string to_string(const value& x) {
+    std::ostringstream os;
+    os << std::boolalpha << x;
+    return os.str();
+}
+
+} // namespace proton

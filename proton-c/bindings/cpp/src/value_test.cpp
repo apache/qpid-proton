@@ -28,7 +28,9 @@ using test::many;
 using test::scalar_test_group;
 
 // Inserting and extracting arrays from a container T of type U
-template <class T> void sequence_test(type_id tid, const many<typename T::value_type>& values) {
+template <class T> void sequence_test(
+    type_id tid, const many<typename T::value_type>& values, const string& s)
+{
     T x(values.begin(), values.end());
 
     value vx(x);                // construct
@@ -58,15 +60,19 @@ template <class T> void sequence_test(type_id tid, const many<typename T::value_
     ASSERT(vx != vy);
     ASSERT(vx < vy);
     ASSERT(vy > vx);
+
+    ASSERT_EQUAL(s, to_string(vx));
 }
 
-template <class T, class U> void map_test(const U& values) {
+template <class T, class U> void map_test(const U& values, const string& s) {
     T m(values.begin(), values.end());
     value v(m);
     ASSERT_EQUAL(MAP, v.type());
     T m2(get<T>(v));
     ASSERT_EQUAL(m.size(), m2.size());
     ASSERT_EQUAL(m, m2);
+    if (!s.empty())
+        ASSERT_EQUAL(s, to_string(v));
 }
 
 }
@@ -76,35 +82,47 @@ int main(int, char**) {
     scalar_test_group<value>(failed);
 
     // Sequence tests
-    RUN_TEST(failed, sequence_test<std::list<bool> >(ARRAY, many<bool>() + false + true));
-    RUN_TEST(failed, sequence_test<std::vector<int> >(ARRAY, many<int>() + -1 + 2));
-    RUN_TEST(failed, sequence_test<std::deque<std::string> >(ARRAY, many<std::string>() + "a" + "b"));
-    RUN_TEST(failed, sequence_test<std::deque<symbol> >(ARRAY, many<symbol>() + "a" + "b"));
-    RUN_TEST(failed, sequence_test<std::vector<value> >(LIST, many<value>() + value(0) + value("a")));
-    RUN_TEST(failed, sequence_test<std::vector<scalar> >(LIST, many<scalar>() + scalar(0) + scalar("a")));
+    RUN_TEST(failed, sequence_test<list<bool> >(
+                 ARRAY, many<bool>() + false + true, "@PN_BOOL[false, true]"));
+    RUN_TEST(failed, sequence_test<vector<int> >(
+                 ARRAY, many<int>() + -1 + 2, "@PN_INT[-1, 2]"));
+    RUN_TEST(failed, sequence_test<deque<string> >(
+                 ARRAY, many<string>() + "a" + "b", "@PN_STRING[\"a\", \"b\"]"));
+    RUN_TEST(failed, sequence_test<deque<symbol> >(
+                 ARRAY, many<symbol>() + "a" + "b", "@PN_SYMBOL[:a, :b]"));
+    RUN_TEST(failed, sequence_test<vector<value> >(
+                 LIST, many<value>() + value(0) + value("a"), "[0, \"a\"]"));
+    RUN_TEST(failed, sequence_test<vector<scalar> >(
+                 LIST, many<scalar>() + scalar(0) + scalar("a"), "[0, \"a\"]"));
 
     // // Map tests
-    typedef std::pair<std::string, uint64_t> pair;
-    many<pair> pairs;
-    pairs << pair("a", 0) << pair("b", 1) << pair("c", 2);
+    typedef pair<string, uint64_t> si_pair;
+    many<si_pair> si_pairs;
+    si_pairs << si_pair("a", 0) << si_pair("b", 1) << si_pair("c", 2);
 
-    RUN_TEST(failed, (map_test<std::map<std::string, uint64_t> >(pairs)));
-    RUN_TEST(failed, (map_test<std::vector<pair> >(pairs)));
+    RUN_TEST(failed, (map_test<map<string, uint64_t> >(
+                          si_pairs, "{\"a\"=0, \"b\"=1, \"c\"=2}")));
+    RUN_TEST(failed, (map_test<vector<si_pair> >(
+                          si_pairs, "{\"a\"=0, \"b\"=1, \"c\"=2}")));
 
-    many<std::pair<value,value> > value_pairs(pairs);
-    RUN_TEST(failed, (map_test<std::map<value, value> >(value_pairs)));
+    many<std::pair<value,value> > value_pairs(si_pairs);
+    RUN_TEST(failed, (map_test<map<value, value> >(
+                          value_pairs, "{\"a\"=0, \"b\"=1, \"c\"=2}")));
 
-    many<std::pair<scalar,scalar> > scalar_pairs(pairs);
-    RUN_TEST(failed, (map_test<std::map<scalar, scalar> >(scalar_pairs)));
+    many<pair<scalar,scalar> > scalar_pairs(si_pairs);
+    RUN_TEST(failed, (map_test<map<scalar, scalar> >(
+                          scalar_pairs, "{\"a\"=0, \"b\"=1, \"c\"=2}")));
 
-    annotation_key ak(pairs[0].first);
-    std::pair<annotation_key, message_id> p(pairs[0]);
-    many<std::pair<annotation_key, message_id> > restricted_pairs(pairs);
-    RUN_TEST(failed, (map_test<std::map<annotation_key, message_id> >(restricted_pairs)));
+    annotation_key ak(si_pairs[0].first);
+    pair<annotation_key, message_id> p(si_pairs[0]);
+    many<pair<annotation_key, message_id> > restricted_pairs(si_pairs);
+    RUN_TEST(failed, (map_test<map<annotation_key, message_id> >(
+                          restricted_pairs, "{:a=0, :b=1, :c=2}")));
 
 #if PN_CPP_HAS_CPP11
-    RUN_TEST(failed, sequence_test<std::forward_list<binary> >(ARRAY, many<binary>() + binary("xx") + binary("yy")));
-    RUN_TEST(failed, (map_test<std::unordered_map<std::string, uint64_t> >(pairs)));
+    RUN_TEST(failed, sequence_test<forward_list<binary> >(
+                 ARRAY, many<binary>() + binary("xx") + binary("yy"), "@PN_BINARY[b\"xx\", b\"yy\"]"));
+    RUN_TEST(failed, (map_test<unordered_map<string, uint64_t> >(si_pairs, "")));
 #endif
     return failed;
 }

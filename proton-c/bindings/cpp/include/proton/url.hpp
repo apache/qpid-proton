@@ -59,7 +59,7 @@ class url {
 
     // XXX No constructor for an empty URL?
     // XXX What is the default 'defaults' behavior?
-    
+
     /// Parse `url_str` as an AMQP URL.
     ///
     /// @note Converts automatically from string.
@@ -118,6 +118,9 @@ class url {
     PN_CPP_EXTERN std::string path() const;
 
     /// @}
+
+    /// Return URL as a string.
+    friend PN_CPP_EXTERN std::string to_string(const url&);
 
   private:
     pn_url_t* url_;

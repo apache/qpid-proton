@@ -197,6 +197,10 @@ template<class T> struct coerce_op {
 template <class T> T coerce(const scalar_base& s) { return visit<T>(s, coerce_op<T>()); }
 
 } // internal
+
+/// Return a readable string representation of x for display purposes.
+PN_CPP_EXTERN std::string to_string(const internal::scalar_base& x);
+
 } // proton
 
 #endif // PROTON_INTERNAL_SCALAR_BASE_HPP

@@ -29,6 +29,7 @@
 #include "proton/uuid.hpp"
 
 #include <ostream>
+#include <sstream>
 
 namespace proton {
 namespace internal {
@@ -145,7 +146,7 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     switch (s.type()) {
-      case NULL_TYPE: return o << "<null>";
+      case NULL_TYPE: return o; // NULL is empty, doesn't print (like empty string)
         // Print byte types as integer, not char.
       case BYTE: return o << static_cast<int>(get<int8_t>(s));
       case UBYTE: return o << static_cast<unsigned int>(get<uint8_t>(s));
@@ -158,4 +159,12 @@ conversion_error make_coercion_error(const char* cpp, type_id amqp) {
     return conversion_error(std::string("invalid proton::coerce<") + cpp + ">(" + type_name(amqp) + ")");
 }
 
-}} // namespaces
+} // internal
+
+std::string to_string(const internal::scalar_base& x) {
+    std::ostringstream os;
+    os << std::boolalpha << x;
+    return os.str();
+}
+
+} // proton
