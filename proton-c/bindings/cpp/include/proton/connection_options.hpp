@@ -108,6 +108,17 @@ class connection_options {
     /// connections.
     PN_CPP_EXTERN connection_options& virtual_host(const std::string &name);
 
+    /// Set the user name used to authenticate the connection.
+    ///
+    /// This will override any user name that is specified in the url
+    /// used for container::connect.
+    /// It will be ignored if the connection is created by container::listen as
+    /// a listening connection has no user name.
+    PN_CPP_EXTERN connection_options& user(const std::string& user);
+
+    /// Set the password used to authenticate the connection
+    PN_CPP_EXTERN connection_options& password(const std::string& pass);
+
     /// @cond INTERNAL
     // XXX settle questions about reconnect_timer - consider simply
     // reconnect_options and making reconnect_timer internal
@@ -142,9 +153,9 @@ class connection_options {
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
 
   private:
-    void apply(connection&) const;
+    void apply_unbound(connection&) const;
+    void apply_bound(connection&) const;
     proton_handler* handler() const;
-    bool is_virtual_host_set() const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

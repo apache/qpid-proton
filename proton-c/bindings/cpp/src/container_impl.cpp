@@ -44,9 +44,9 @@
 #include "proton_event.hpp"
 
 #include <proton/connection.h>
-#include <proton/session.h>
 #include <proton/handlers.h>
 #include <proton/reactor.h>
+#include <proton/session.h>
 
 namespace proton {
 
@@ -184,11 +184,18 @@ returned<connection> container_impl::connect(const std::string &urlstr, const co
     proton::url  url(urlstr);
     internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection_to_host(url.host(), url.port(), chandler.get()));
-    internal::pn_unique_ptr<connector> ctor(new connector(conn, url, opts));
+    internal::pn_unique_ptr<connector> ctor(new connector(conn, opts, url));
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());
     cc.event_loop.reset(new immediate_event_loop);
-    pn_connection_set_container(unwrap(conn), id_.c_str());
+
+    pn_connection_t *pnc = unwrap(conn);
+    pn_connection_set_container(pnc, id_.c_str());
+    pn_connection_set_hostname(pnc, url.host().c_str());
+    if (!url.user().empty())
+        pn_connection_set_user(pnc, url.user().c_str());
+    if (!url.password().empty())
+        pn_connection_set_password(pnc, url.password().c_str());
 
     conn.open(opts);
     return make_thread_safe(conn);
@@ -310,7 +317,8 @@ void container_impl::configure_server_connection(connection &c) {
     pn_connection_set_container(unwrap(c), id_.c_str());
     connection_options opts = server_connection_options_;
     opts.update(lc.get_options());
-    opts.apply(c);
+    // Unbound options don't apply to server connection
+    opts.apply_bound(c);
     // Handler applied separately
     proton_handler *h = opts.handler();
     if (h) {

@@ -37,15 +37,21 @@
 class simple_recv : public proton::messaging_handler {
   private:
     std::string url;
+    std::string user;
+    std::string password;
     proton::receiver receiver;
     uint64_t expected;
     uint64_t received;
 
   public:
-    simple_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
+    simple_recv(const std::string &s, const std::string &u, const std::string &p, int c) :
+        url(s), user(u), password(p), expected(c), received(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        receiver = c.open_receiver(url);
+        proton::connection_options co;
+        if (!user.empty()) co.user(user);
+        if (!password.empty()) co.password(password);
+        receiver = c.open_receiver(url, proton::receiver_options(), co);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 
@@ -68,17 +74,21 @@ class simple_recv : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
-
+    std::string user;
+    std::string password;
     int message_count = 100;
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect to and receive from URL", "URL");
     opts.add_value(message_count, 'm', "messages", "receive COUNT messages", "COUNT");
+    opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
+    opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
+
 
     try {
         opts.parse();
 
-        simple_recv recv(address, message_count);
+        simple_recv recv(address, user, password, message_count);
         proton::default_container(recv).run();
 
         return 0;

@@ -64,7 +64,8 @@ connection_engine::connection_engine(class container& cont, event_loop* loop) :
 
 void connection_engine::configure(const connection_options& opts) {
     proton::connection c = connection();
-    opts.apply(c);
+    opts.apply_unbound(c);
+    opts.apply_bound(c);
     handler_ = opts.handler();
     connection_context::get(connection()).collector = c_engine_.collector;
 }

@@ -138,10 +138,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @see @ref connection_options::idle_timeout
     PN_CPP_EXTERN uint32_t idle_timeout() const;
 
-  private:
-    void user(const std::string &);
-    void password(const std::string &);
-
     /// @cond INTERNAL
   friend class internal::factory<connection>;
   friend class connector;

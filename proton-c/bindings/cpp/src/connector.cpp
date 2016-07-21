@@ -38,18 +38,11 @@
 
 namespace proton {
 
-connector::connector(connection&c, const url& a, const connection_options &opts) :
-    connection_(c), address_(a), options_(opts), reconnect_timer_(0), transport_configured_(false)
+connector::connector(connection&c, const connection_options& options, const url& a) :
+    connection_(c), options_(options), address_(a), reconnect_timer_(0)
 {}
 
 connector::~connector() { delete reconnect_timer_; }
-
-void connector::apply_options() {
-    if (!connection_) return;
-    options_.apply(connection_);
-}
-
-bool connector::transport_configured() { return transport_configured_; }
 
 void connector::reconnect_timer(const class reconnect_timer &rt) {
     delete reconnect_timer_;
@@ -59,18 +52,10 @@ void connector::reconnect_timer(const class reconnect_timer &rt) {
 void connector::connect() {
     pn_transport_t *pnt = pn_transport();
     transport t(make_wrapper(pnt));
-    if (!address_.user().empty())
-        connection_.user(address_.user());
-    if (!address_.password().empty())
-        connection_.password(address_.password());
     pn_transport_bind(pnt, unwrap(connection_));
     pn_decref(pnt);
     // Apply options to the new transport.
-    options_.apply(connection_);
-    // if virtual-host not set, use host from address as default
-    if (!options_.is_virtual_host_set())
-        pn_connection_set_hostname(unwrap(connection_), address_.host().c_str());
-    transport_configured_ = true;
+    options_.apply_bound(connection_);
 }
 
 void connector::on_connection_local_open(proton_event &) {
@@ -95,7 +80,6 @@ void connector::on_transport_closed(proton_event &) {
     if (connection_.active()) {
         if (reconnect_timer_) {
             pn_transport_unbind(unwrap(connection_.transport()));
-            transport_configured_ = false;
             int delay = reconnect_timer_->next_delay(timestamp::now());
             if (delay >= 0) {
                 if (delay == 0) {

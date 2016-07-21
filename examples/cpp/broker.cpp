@@ -117,7 +117,7 @@ class queues {
     virtual ~queues() {}
 
     // Get or create a queue.
-    virtual queue &get(const std::string &address = std::string()) {
+    virtual queue &get(const std::string &address) {
         if (address.empty()) {
             throw std::runtime_error("empty queue name");
         }
@@ -157,11 +157,18 @@ class broker_handler : public proton::messaging_handler {
 
     void on_sender_open(proton::sender &sender) OVERRIDE {
         proton::source src(sender.source());
-        queue &q = src.dynamic() ?
-            queues_.dynamic() : queues_.get(src.address());
-        sender.open(proton::sender_options().source(proton::source_options().address(q.name())));
-        q.subscribe(sender);
-        std::cout << "broker outgoing link from " << q.name() << std::endl;
+        queue *q;
+        if (src.dynamic()) {
+            q = &queues_.dynamic();
+        } else if (!src.address().empty()) {
+            q = &queues_.get(src.address());
+        } else {
+            sender.close(proton::error_condition("No queue address supplied"));
+            return;
+        }
+        sender.open(proton::sender_options().source(proton::source_options().address(q->name())));
+        q->subscribe(sender);
+        std::cout << "broker outgoing link from " << q->name() << std::endl;
     }
 
     void on_receiver_open(proton::receiver &receiver) OVERRIDE {
@@ -169,6 +176,8 @@ class broker_handler : public proton::messaging_handler {
         if (!address.empty()) {
             receiver.open(proton::receiver_options().target(proton::target_options().address(address)));
             std::cout << "broker incoming link to " << address << std::endl;
+        } else {
+            receiver.close(proton::error_condition("No queue address supplied"));
         }
     }
 
@@ -201,13 +210,10 @@ class broker_handler : public proton::messaging_handler {
     }
 
     void remove_stale_consumers(proton::connection connection) {
-        proton::session_range r1 = connection.sessions();
-        for (proton::session_iterator i1 = r1.begin(); i1 != r1.end(); ++i1) {
-            proton::sender_range r2 = i1->senders();
-            for (proton::sender_iterator i2 = r2.begin(); i2 != r2.end(); ++i2) {
-                if (i2->active())
-                    unsubscribe(*i2);
-            }
+        proton::sender_range r = connection.senders();
+        for (proton::sender_iterator i = r.begin(); i != r.end(); ++i) {
+            if (i->active())
+                unsubscribe(*i);
         }
     }
 

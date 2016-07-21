@@ -35,16 +35,22 @@
 class simple_send : public proton::messaging_handler {
   private:
     std::string url;
+    std::string user;
+    std::string password;
     proton::sender sender;
     int sent;
     int confirmed;
     int total;
 
   public:
-    simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
+    simple_send(const std::string &s, const std::string &u, const std::string &p, int c) :
+        url(s), user(u), password(p), sent(0), confirmed(0), total(c) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        sender = c.open_sender(url);
+        proton::connection_options co;
+        if (!user.empty()) co.user(user);
+        if (!password.empty()) co.password(password);
+        sender = c.open_sender(url, proton::sender_options(), co);
     }
 
     void on_sendable(proton::sender &s) OVERRIDE {
@@ -77,16 +83,20 @@ class simple_send : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
+    std::string user;
+    std::string password;
     int message_count = 100;
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_value(message_count, 'm', "messages", "send COUNT messages", "COUNT");
+    opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
+    opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
 
     try {
         opts.parse();
 
-        simple_send send(address, message_count);
+        simple_send send(address, user, password, message_count);
         proton::default_container(send).run();
 
         return 0;

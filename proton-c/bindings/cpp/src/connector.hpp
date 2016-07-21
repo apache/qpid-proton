@@ -40,13 +40,11 @@ class reconnect_timer;
 class connector : public proton_handler
 {
   public:
-    connector(connection &c, const url&, const connection_options &opts);
+    connector(connection &c, const connection_options &options, const url&);
     ~connector();
     const url &address() const { return address_; }
     void connect();
-    void apply_options();
     void reconnect_timer(const class reconnect_timer &);
-    bool transport_configured();
     virtual void on_connection_local_open(proton_event &e);
     virtual void on_connection_remote_open(proton_event &e);
     virtual void on_connection_init(proton_event &e);
@@ -56,10 +54,9 @@ class connector : public proton_handler
 
   private:
     connection connection_;
-    url address_;
-    connection_options options_;
+    const connection_options options_;
+    const url address_;
     class reconnect_timer *reconnect_timer_;
-    bool transport_configured_;
 };
 
 

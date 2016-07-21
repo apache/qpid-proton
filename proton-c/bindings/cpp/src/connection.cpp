@@ -50,13 +50,7 @@ void connection::open() {
 }
 
 void connection::open(const connection_options &opts) {
-    connector *connector = dynamic_cast<class connector*>(
-        connection_context::get(pn_object()).handler.get());
-    if (connector)
-        // connector has an internal copy of opts
-        connector->apply_options();
-    else
-        opts.apply(*this);
+    opts.apply_unbound(*this);
     pn_connection_open(pn_object());
 }
 
@@ -165,9 +159,5 @@ uint16_t connection::max_sessions() const {
 uint32_t connection::idle_timeout() const {
     return pn_transport_get_remote_idle_timeout(pn_connection_transport(pn_object()));
 }
-
-void connection::user(const std::string &name) { pn_connection_set_user(pn_object(), name.c_str()); }
-
-void connection::password(const std::string &pass) { pn_connection_set_password(pn_object(), pass.c_str()); }
 
 }
