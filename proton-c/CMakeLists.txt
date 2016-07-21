@@ -502,7 +502,6 @@ endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
-  set (pn_c_root "${CMAKE_BINARY_DIR}/proton")
   set (py_root "${pn_test_root}/python")
   set (py_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/python")
   set (py_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/python")
@@ -512,11 +511,11 @@ if (BUILD_PYTHON)
   set (py_path ${py_bld} ${app_path} $ENV{PATH})
   set (py_pythonpath ${py_root} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
   to_native_path ("${py_pythonpath}" py_pythonpath)
-
   to_native_path ("${py_path}" py_path)
+
   add_test (NAME python-test
             COMMAND ${env_py}
-              "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}" "PKG_CONFIG_PATH=${pn_c_root}"
+              "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
               "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
               "SASLPASSWD=${SASLPASSWD_EXE}"
               ${VALGRIND_ENV}
@@ -529,27 +528,26 @@ if (BUILD_PYTHON)
   # to try to run them.
   option(TOX_TEST "Enable muti-version python testing with TOX" ON)
   if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
-     find_program(TOX_EXE "tox")
-     if (TOX_EXE)
-       configure_file(
-         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
-         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
-         to_native_path ("${py_path}" py_path)
-         add_test (NAME python-tox-test
-                   COMMAND ${env_py}
-		   "PATH=${py_path}" "QPID_PROTON_SRC=${CMAKE_CURRENT_SOURCE_DIR}/../"
-                   "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
-                   "SASLPASSWD=${SASLPASSWD_EXE}"
-                   "SWIG=${SWIG_EXECUTABLE}"
-                   ${VALGRIND_ENV}
-                   ${TOX_EXE})
-         set_tests_properties(python-tox-test
-                              PROPERTIES
-                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
-     else (TOX_EXE)
-         message(STATUS "The tox tool is not available - skipping the python-tox-tests")
-     endif (TOX_EXE)
+    find_program(TOX_EXE "tox")
+    if (TOX_EXE)
+      configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+      add_test (NAME python-tox-test
+                COMMAND ${env_py}
+                  "PATH=${py_path}"
+                  "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
+                  "SASLPASSWD=${SASLPASSWD_EXE}"
+                  "SWIG=${SWIG_EXECUTABLE}"
+                  ${VALGRIND_ENV}
+                  ${TOX_EXE})
+      set_tests_properties(python-tox-test
+                           PROPERTIES
+                             PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                             FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+    else (TOX_EXE)
+      message(STATUS "The tox tool is not available - skipping the python-tox-tests")
+    endif (TOX_EXE)
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
   set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
