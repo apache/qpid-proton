@@ -114,6 +114,16 @@ def pump(transport1, transport2, buffer_size=1024):
          pump_uni(transport2, transport1, buffer_size)):
     pass
 
+def findfileinpath(filename, searchpath):
+    """Find filename in the searchpath
+        return absolute path to the file or None
+    """
+    paths = searchpath.split(os.pathsep)
+    for path in paths:
+        if os.path.exists(os.path.join(path, filename)):
+            return os.path.abspath(os.path.join(path, filename))
+    return None
+
 def isSSLPresent():
     return SSL.present()
 
@@ -125,6 +135,8 @@ def _cyrusSetup(conf_dir):
   saslpasswd = ""
   if 'SASLPASSWD' in os.environ:
     saslpasswd = os.environ['SASLPASSWD']
+  else:
+    saslpasswd = findfileinpath('saslpasswd2', os.getenv('PATH')) or ""
   if os.path.exists(saslpasswd):
     t = Template("""sasldb_path: ${db}
 mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
@@ -268,16 +280,6 @@ class MessengerApp(object):
         self.password = None
         self._output = None
 
-    def findfile(self, filename, searchpath):
-        """Find filename in the searchpath
-            return absolute path to the file or None
-        """
-        paths = searchpath.split(os.pathsep)
-        for path in paths:
-            if os.path.exists(os.path.join(path, filename)):
-                return os.path.abspath(os.path.join(path, filename))
-        return None
-
     def start(self, verbose=False):
         """ Begin executing the test """
         cmd = self.cmdline()
@@ -289,10 +291,9 @@ class MessengerApp(object):
             # Handle python launch by replacing script 'filename' with
             # 'python abspath-to-filename' in cmdline arg list.
             if cmd[0].endswith('.py'):
-                foundfile = self.findfile(cmd[0], os.environ['PATH'])
+                foundfile = findfileinpath(cmd[0], os.getenv('PATH'))
                 if foundfile is None:
-                    foundfile = self.findfile(cmd[0], os.environ['PYTHONPATH'])
-                    msg = "Unable to locate file '%s' in PATH or PYTHONPATH" % cmd[0]
+                    msg = "Unable to locate file '%s' in PATH" % cmd[0]
                     raise Skipped("Skipping test - %s" % msg)
 
                 del cmd[0:1]

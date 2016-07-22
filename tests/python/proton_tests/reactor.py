@@ -571,6 +571,7 @@ class ContainerTest(Test):
             event.connection.close()
 
     def test_numeric_hostname(self):
+        ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("127.0.0.1")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
@@ -584,6 +585,7 @@ class ContainerTest(Test):
         assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
 
     def test_non_numeric_hostname(self):
+        ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("localhost")
         client_handler = ContainerTest._ClientHandler()
         container = Container(server_handler)
@@ -597,6 +599,7 @@ class ContainerTest(Test):
         assert client_handler.server_addr.rsplit(':', 1)[1] == str(server_handler.port)
 
     def test_virtual_host(self):
+        ensureCanTestExtendedSASL()
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
         conn = container.connect(url=Url(host="localhost",

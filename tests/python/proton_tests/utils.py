@@ -26,7 +26,7 @@ from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
-from .common import Skipped
+from .common import Skipped, ensureCanTestExtendedSASL
 CONNECTION_PROPERTIES={u'connection': u'properties'}
 OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
 DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
@@ -98,6 +98,7 @@ class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
 
     def test_request_response(self):
+        ensureCanTestExtendedSASL()
         def test(name, address="x"):
             for i in range(5):
                 body="%s%s" % (name, i)
@@ -118,6 +119,7 @@ class SyncRequestResponseTest(Test):
 
 
     def test_connection_properties(self):
+        ensureCanTestExtendedSASL()
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=free_tcp_port()), timeout=self.timeout)
         server.start()
         server.wait()
