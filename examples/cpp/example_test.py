@@ -22,11 +22,63 @@
 import unittest
 import os, sys, socket, time, re, inspect
 from  random import randrange
-from subprocess import Popen, PIPE, STDOUT
+from subprocess import Popen, PIPE, STDOUT, call
 from copy import copy
 import platform
 from os.path import dirname as dirname
 from threading import Thread, Event
+from string import Template
+
+createdSASLDb = False
+
+def findfileinpath(filename, searchpath):
+    """Find filename in the searchpath
+        return absolute path to the file or None
+    """
+    paths = searchpath.split(os.pathsep)
+    for path in paths:
+        if os.path.exists(os.path.join(path, filename)):
+            return os.path.abspath(os.path.join(path, filename))
+    return None
+
+def _cyrusSetup(conf_dir):
+  """Write out simple SASL config.
+  """
+  saslpasswd = ""
+  if 'SASLPASSWD' in os.environ:
+    saslpasswd = os.environ['SASLPASSWD']
+  else:
+    saslpasswd = findfileinpath('saslpasswd2', os.getenv('PATH')) or ""
+  if os.path.exists(saslpasswd):
+    t = Template("""sasldb_path: ${db}
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
+""")
+    abs_conf_dir = os.path.abspath(conf_dir)
+    call(args=['rm','-rf',abs_conf_dir])
+    os.mkdir(abs_conf_dir)
+    db = os.path.join(abs_conf_dir,'proton.sasldb')
+    conf = os.path.join(abs_conf_dir,'proton-server.conf')
+    f = open(conf, 'w')
+    f.write(t.substitute(db=db))
+    f.close()
+
+    cmd_template = Template("echo password | ${saslpasswd} -c -p -f ${db} -u proton user")
+    cmd = cmd_template.substitute(db=db, saslpasswd=saslpasswd)
+    call(args=cmd, shell=True)
+
+    os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
+    global createdSASLDb
+    createdSASLDb = True
+
+# Globally initialize Cyrus SASL configuration
+#if SASL.extended():
+_cyrusSetup('sasl_conf')
+
+def ensureCanTestExtendedSASL():
+#  if not SASL.extended():
+#    raise Skipped('Extended SASL not supported')
+  if not createdSASLDb:
+    raise Skipped("Can't Test Extended SASL: Couldn't create auth db")
 
 def pick_addr():
     """Pick a new host:port address."""
