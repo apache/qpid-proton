@@ -154,3 +154,10 @@ C++03 compatible way. See @ref schedule_send.cpp for a more convenient approach
 using std::function if you have C++11.
 
 */
+
+/** @example service_bus.cpp
+
+A working example for accessing Service Bus session-enabled queues.
+Also provides some general notes on Service Bus usage.
+
+*/

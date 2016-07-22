@@ -53,6 +53,7 @@ foreach(example
     flow_control
     ssl
     ssl_client_cert
+    service_bus
     encode_decode)
   add_executable(${example} ${example}.cpp)
 endforeach()
