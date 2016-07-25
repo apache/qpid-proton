@@ -104,11 +104,12 @@ using proton::receiver_options;
 
 void do_next_sequence();
 
+namespace {
 void check_arg(const std::string &value, const std::string &name) {
     if (value.empty())
         throw std::runtime_error("missing argument for \"" + name + "\"");
 }
-
+}
 
 /// Connect to Service Bus queue and retrieve messages in a particular session.
 class session_receiver : public proton::messaging_handler {
@@ -177,7 +178,7 @@ class session_receiver : public proton::messaging_handler {
         last_read = proton::timestamp::now();
     }
 
-    void on_message(proton::delivery &d, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         message_count++;
         std::cout << "   received message: " << m.body() << std::endl;
         last_read = proton::timestamp::now();
@@ -245,7 +246,7 @@ class session_sender : public proton::messaging_handler {
         send_remaining_messages(s);
     }
 
-    void on_tracker_accept(proton::tracker &t) {
+    void on_tracker_accept(proton::tracker &t) OVERRIDE {
         accepts++;
         if (accepts == total) {
             // upload complete
@@ -260,7 +261,6 @@ class session_sender : public proton::messaging_handler {
 /// Orchestrate the sequential actions of sending and receiving session-based messages.
 class sequence : public proton::messaging_handler {
   private:
-    const std::string &connection_url, &entity;
     proton::container *container;
     int sequence_no;
     session_sender snd;
@@ -269,7 +269,7 @@ class sequence : public proton::messaging_handler {
   public:
     static sequence *the_sequence;
 
-    sequence (const std::string &c, const std::string &e) : connection_url(c), entity(e), sequence_no(0),
+    sequence (const std::string &c, const std::string &e) : sequence_no(0),
         snd(c, e), rcv_red(c, e, "red"), rcv_green(c, e, "green"), rcv_null(c, e, NULL) {
         the_sequence = this;
     }
