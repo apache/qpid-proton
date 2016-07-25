@@ -51,7 +51,7 @@ class simple_recv : public proton::messaging_handler {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
-        receiver = c.open_receiver(url, proton::receiver_options(), co);
+        receiver = c.open_receiver(url, co);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 

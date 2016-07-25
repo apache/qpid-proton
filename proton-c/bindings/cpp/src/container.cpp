@@ -43,12 +43,20 @@ returned<sender> standard_container::open_sender(const std::string &url, const p
     return open_sender(url, lo, connection_options());
 }
 
+returned<sender> standard_container::open_sender(const std::string &url, const proton::connection_options &co) {
+    return open_sender(url, sender_options(), co);
+}
+
 returned<receiver> standard_container::open_receiver(const std::string &url) {
     return open_receiver(url, proton::receiver_options(), connection_options());
 }
 
 returned<receiver> standard_container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
     return open_receiver(url, lo, connection_options());
+}
+
+returned<receiver> standard_container::open_receiver(const std::string &url, const proton::connection_options &co) {
+    return open_receiver(url, receiver_options(), co);
 }
 
 namespace{

@@ -50,7 +50,7 @@ class simple_send : public proton::messaging_handler {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
-        sender = c.open_sender(url, proton::sender_options(), co);
+        sender = c.open_sender(url, co);
     }
 
     void on_sendable(proton::sender &s) OVERRIDE {

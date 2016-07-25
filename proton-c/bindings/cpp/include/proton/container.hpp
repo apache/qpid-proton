@@ -136,14 +136,21 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Open a connection and sender for `url`.
     ///
-    /// Any supplied sender options will override the container's
+    /// Supplied sender options will override the container's
     /// template options.
     virtual returned<sender> open_sender(const std::string &url,
                                          const proton::sender_options &o) = 0;
 
     /// Open a connection and sender for `url`.
     ///
-    /// Any supplied sender or connection options will override the
+    /// Supplied connection options will override the
+    /// container's template options.
+    virtual returned<sender> open_sender(const std::string &url,
+                                         const connection_options &c) = 0;
+
+    /// Open a connection and sender for `url`.
+    ///
+    /// Supplied sender or connection options will override the
     /// container's template options.
     virtual returned<sender> open_sender(const std::string &url,
                                          const proton::sender_options &o,
@@ -155,14 +162,21 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Open a connection and receiver for `url`.
     ///
-    /// Any supplied receiver options will override the container's
+    /// Supplied receiver options will override the container's
     /// template options.
     virtual returned<receiver> open_receiver(const std::string&url,
                                              const proton::receiver_options &o) = 0;
 
     /// Open a connection and receiver for `url`.
     ///
-    /// Any supplied receiver or connection options will override the
+    /// Supplied receiver or connection options will override the
+    /// container's template options.
+    virtual returned<receiver> open_receiver(const std::string&url,
+                                             const connection_options &c) = 0;
+
+    /// Open a connection and receiver for `url`.
+    ///
+    /// Supplied receiver or connection options will override the
     /// container's template options.
     virtual returned<receiver> open_receiver(const std::string&url,
                                              const proton::receiver_options &o,
@@ -237,9 +251,13 @@ class PN_CPP_CLASS_EXTERN standard_container : public container {
     PN_CPP_EXTERN returned<sender> open_sender(const std::string &url);
     PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
                                                const proton::sender_options &o);
+    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
+                                               const proton::connection_options &o);
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url);
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                                           const proton::receiver_options &o);
+                                                   const proton::receiver_options &o);
+    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
+                                                   const proton::connection_options &o);
 };
 /// @endcond
 
@@ -275,6 +293,9 @@ class container_ref : public container {
         const connection_options &c) { return impl_->open_sender(url, o, c); }
     returned<sender> open_sender(
         const std::string &url,
+        const class connection_options &o) { return impl_->open_sender(url, o); }
+    returned<sender> open_sender(
+        const std::string &url,
         const class sender_options &o) { return impl_->open_sender(url, o); }
     returned<sender> open_sender(
         const std::string &url) { return impl_->open_sender(url); }
@@ -286,6 +307,9 @@ class container_ref : public container {
     returned<receiver> open_receiver(
         const std::string&url,
         const class receiver_options &o) { return impl_->open_receiver(url, o); }
+    returned<receiver> open_receiver(
+        const std::string&url,
+        const class connection_options &o) { return impl_->open_receiver(url, o); }
     returned<receiver> open_receiver(
         const std::string&url) { return impl_->open_receiver(url); }
 
