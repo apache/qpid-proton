@@ -52,6 +52,7 @@ extern "C" {
  * - ::PN_TRACE_RAW
  * - ::PN_TRACE_FRM
  * - ::PN_TRACE_DRV
+ * - ::PN_TRACE_EVT
  *
  */
 typedef int pn_trace_t;
@@ -80,6 +81,11 @@ typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
  * Log driver related events, e.g. initialization, end of stream, etc.
  */
 #define PN_TRACE_DRV (4)
+
+/**
+ * Log events
+ */
+#define PN_TRACE_EVT (8)
 
 /**
  * Factory for creating a transport.

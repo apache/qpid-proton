@@ -16,8 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-#include "util.h"
+#include "engine-internal.h"
 
 #include <proton/connection.h>
 #include <proton/connection_engine.h>
@@ -105,25 +104,12 @@ void pn_connection_engine_disconnected(pn_connection_engine_t* e) {
     pn_connection_engine_write_close(e);
 }
 
-enum { LOG_DISABLED, LOG_ENABLED, LOG_UNKNOWN };
-
 static void log_event(pn_connection_engine_t *engine, pn_event_t* event) {
-    if (!event)
-        return;
-    static int enabled = LOG_UNKNOWN;
-    // Switch so this can be evaluated as a single branch.
-    switch (enabled) {
-      case LOG_DISABLED:
-        return;
-      case LOG_ENABLED:
-        pn_transport_log(engine->transport, pn_event_type_name(pn_event_type(event)));
-        return;
-      case LOG_UNKNOWN:
-        enabled = pn_env_bool("PN_TRACE_EVENT") ? LOG_ENABLED : LOG_DISABLED;
-        if (enabled == LOG_ENABLED) {
-            pn_transport_log(engine->transport, pn_event_type_name(pn_event_type(event)));
-        }
-        return;
+    if (event && engine->transport->trace & PN_TRACE_EVT) {
+        pn_string_t *str = pn_string(NULL);
+        pn_inspect(event, str);
+        pn_transport_log(engine->transport, pn_string_get(str));
+        pn_free(str);
     }
 }
 
