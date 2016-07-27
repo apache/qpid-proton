@@ -27,6 +27,7 @@
 #include "./comparable.hpp"
 
 #include <memory>
+#include <string>
 
 namespace proton {
 
@@ -38,6 +39,7 @@ class pn_ptr_base {
   protected:
     PN_CPP_EXTERN static void incref(void* p);
     PN_CPP_EXTERN static void decref(void* p);
+    PN_CPP_EXTERN static std::string inspect(void* p);
 };
 
 template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr<T> > {
@@ -62,6 +64,8 @@ template <class T> class pn_ptr : private pn_ptr_base, private comparable<pn_ptr
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     explicit operator bool() const { return !!ptr_; }
 #endif
+
+    std::string inspect() const { return pn_ptr_base::inspect(ptr_); }
 
     static pn_ptr take_ownership(T* p) { return pn_ptr<T>(p, true); }
 
@@ -96,6 +100,7 @@ template <class T> class object : private comparable<object<T> > {
 
     friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
+    friend std::ostream& operator<<(std::ostream& o, const object& a) { o << a.object_.inspect(); return o; }
   template <class U> friend class proton::thread_safe;
 };
 
