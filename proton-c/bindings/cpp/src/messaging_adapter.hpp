@@ -41,6 +41,7 @@ class messaging_adapter : public proton_handler
     virtual ~messaging_adapter();
 
     void on_reactor_init(proton_event &e);
+    void on_reactor_final(proton_event & e);
     void on_link_flow(proton_event &e);
     void on_delivery(proton_event &e);
     void on_connection_remote_open(proton_event &e);
@@ -49,6 +50,7 @@ class messaging_adapter : public proton_handler
     void on_session_remote_close(proton_event &e);
     void on_link_local_open(proton_event &e);
     void on_link_remote_open(proton_event &e);
+    void on_link_remote_detach(proton_event & e);
     void on_link_remote_close(proton_event &e);
     void on_transport_closed(proton_event &e);
 

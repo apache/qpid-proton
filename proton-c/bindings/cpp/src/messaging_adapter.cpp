@@ -62,6 +62,10 @@ void messaging_adapter::on_reactor_init(proton_event &pe) {
     delegate_.on_container_start(pe.container());
 }
 
+void messaging_adapter::on_reactor_final(proton_event &pe) {
+    delegate_.on_container_stop(pe.container());
+}
+
 void messaging_adapter::on_link_flow(proton_event &pe) {
     pn_event_t *pne = pe.pn_event();
     pn_link_t *lnk = pn_event_link(pne);
@@ -182,6 +186,19 @@ bool is_remote_unititialised(pn_state_t state) {
 }
 
 } // namespace
+
+void messaging_adapter::on_link_remote_detach(proton_event & pe) {
+    pn_event_t *cevent = pe.pn_event();
+    pn_link_t *lnk = pn_event_link(cevent);
+    if (pn_link_is_receiver(lnk)) {
+        receiver r(make_wrapper<receiver>(lnk));
+        delegate_.on_receiver_detach(r);
+    } else {
+        sender s(make_wrapper<sender>(lnk));
+        delegate_.on_sender_detach(s);
+    }
+    pn_link_detach(lnk);
+}
 
 void messaging_adapter::on_link_remote_close(proton_event &pe) {
     pn_event_t *cevent = pe.pn_event();

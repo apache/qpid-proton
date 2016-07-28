@@ -79,7 +79,12 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     PN_CPP_EXTERN virtual ~messaging_handler();
 
     /// The container event loop is starting.
+    /// This is the first event received after calling container::run
     PN_CPP_EXTERN virtual void on_container_start(container &c);
+
+    /// The container event loop is stopping.
+    /// This is the last event received before the container event loop stops.
+    PN_CPP_EXTERN virtual void on_container_stop(container &c);
 
     /// A message is received.
     PN_CPP_EXTERN virtual void on_message(delivery &d, message &m);
@@ -118,6 +123,9 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_receiver_open(receiver& l);
 
+    /// The remote peer detached the link.
+    PN_CPP_EXTERN virtual void on_receiver_detach(receiver& l);
+
     /// The remote peer closed the link.
     PN_CPP_EXTERN virtual void on_receiver_close(receiver& l);
 
@@ -126,6 +134,9 @@ PN_CPP_CLASS_EXTERN messaging_handler {
 
     /// The remote peer opened the link.
     PN_CPP_EXTERN virtual void on_sender_open(sender& l);
+
+    /// The remote peer detached the link.
+    PN_CPP_EXTERN virtual void on_sender_detach(sender& l);
 
     /// The remote peer closed the link.
     PN_CPP_EXTERN virtual void on_sender_close(sender& l);

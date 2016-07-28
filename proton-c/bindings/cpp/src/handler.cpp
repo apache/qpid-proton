@@ -40,6 +40,7 @@ messaging_handler::messaging_handler() : messaging_adapter_(new messaging_adapte
 messaging_handler::~messaging_handler(){}
 
 void messaging_handler::on_container_start(container &) {}
+void messaging_handler::on_container_stop(container &) {}
 void messaging_handler::on_message(delivery &, message &) {}
 void messaging_handler::on_sendable(sender &) {}
 void messaging_handler::on_transport_close(transport &) {}
@@ -54,9 +55,11 @@ void messaging_handler::on_session_open(session &) {}
 void messaging_handler::on_receiver_close(receiver &) {}
 void messaging_handler::on_receiver_error(receiver &l) { on_error(l.error()); }
 void messaging_handler::on_receiver_open(receiver &) {}
+void messaging_handler::on_receiver_detach(receiver &) {}
 void messaging_handler::on_sender_close(sender &) {}
 void messaging_handler::on_sender_error(sender &l) { on_error(l.error()); }
 void messaging_handler::on_sender_open(sender &) {}
+void messaging_handler::on_sender_detach(sender &) {}
 void messaging_handler::on_tracker_accept(tracker &) {}
 void messaging_handler::on_tracker_reject(tracker &) {}
 void messaging_handler::on_tracker_release(tracker &) {}

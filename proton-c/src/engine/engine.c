@@ -315,6 +315,8 @@ void pn_link_close(pn_link_t *link)
 void pn_link_detach(pn_link_t *link)
 {
   assert(link);
+  if (link->detached) return;
+
   link->detached = true;
   pn_collector_put(link->session->connection->collector, PN_OBJECT, link, PN_LINK_LOCAL_DETACH);
   pn_modified(link->session->connection, &link->endpoint, true);
