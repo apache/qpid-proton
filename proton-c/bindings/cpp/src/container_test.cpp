@@ -40,6 +40,22 @@ static std::string int2string(int n) {
     return strm.str();
 }
 
+int listen_on_random_port(proton::container& c, proton::listener& l) {
+    int port;
+    // I'm going to hell for this:
+    srand((unsigned int)time(0));
+    while (true) {
+        port = 20000 + (rand() % 30000);
+        try {
+            l = c.listen("0.0.0.0:" + int2string(port));
+            break;
+        } catch (...) {
+            // keep trying
+        }
+    }
+    return port;
+}
+
 class test_handler : public proton::messaging_handler {
   public:
     const std::string host;
@@ -55,19 +71,7 @@ class test_handler : public proton::messaging_handler {
     {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
-        int port;
-
-        // I'm going to hell for this:
-        srand((unsigned int)time(0));
-        while (true) {
-            port = 20000 + (rand() % 30000);
-            try {
-                listener = c.listen("0.0.0.0:" + int2string(port));
-                break;
-            } catch (...) {
-                // keep trying
-            }
-        }
+        int port = listen_on_random_port(c, listener);
         proton::connection conn = c.connect(host + ":" + int2string(port), opts);
     }
 
@@ -143,6 +147,47 @@ int test_container_bad_address() {
     return 0;
 }
 
+class stop_tester : public proton::messaging_handler {
+    proton::listener listener;
+
+    // Set up a listener which would block forever
+    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+        ASSERT(state==0);
+        int port = listen_on_random_port(c, listener);
+        c.connect("127.0.0.1:" + int2string(port));
+        c.auto_stop(false);
+        state = 1;
+    }
+
+    // Get here twice - once for listener, once for connector
+    void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+        c.close();
+        state++;
+    }
+
+    void on_connection_close(proton::connection &c) PN_CPP_OVERRIDE {
+        ASSERT(state==3);
+        c.container().stop();
+        state = 4;
+    }
+    void on_container_stop(proton::container & ) PN_CPP_OVERRIDE {
+        ASSERT(state==4);
+        state = 5;
+    }
+
+public:
+    stop_tester(): state(0) {}
+
+    int state;
+};
+
+int test_container_stop() {
+    stop_tester t;
+    proton::default_container(t).run();
+    ASSERT(t.state==5);
+    return 0;
+}
+
 }
 
 int main(int, char**) {
@@ -151,6 +196,7 @@ int main(int, char**) {
     RUN_TEST(failed, test_container_default_vhost());
     RUN_TEST(failed, test_container_no_vhost());
     RUN_TEST(failed, test_container_bad_address());
+    RUN_TEST(failed, test_container_stop());
     return failed;
 }
 
