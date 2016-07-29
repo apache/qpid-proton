@@ -120,8 +120,8 @@ internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
     return internal::take_ownership(handler);
 }
 
-container_impl::container_impl(const std::string& id, messaging_handler *h) :
-    reactor_(reactor::create()), handler_(h ? h->messaging_adapter_.get() : 0),
+container_impl::container_impl(const std::string& id, messaging_handler *mh) :
+    reactor_(reactor::create()),
     id_(id.empty() ? uuid::random().str() : id),
     auto_stop_(true)
 {
@@ -129,11 +129,13 @@ container_impl::container_impl(const std::string& id, messaging_handler *h) :
 
     // Set our own global handler that "subclasses" the existing one
     pn_handler_t *global_handler = reactor_.pn_global_handler();
-    override_handler_.reset(new override_handler(global_handler, *this));
-    internal::pn_ptr<pn_handler_t> cpp_global_handler(cpp_handler(override_handler_.get()));
-    reactor_.pn_global_handler(cpp_global_handler.get());
-    if (handler_) {
-        reactor_.pn_handler(cpp_handler(handler_).get());
+    proton_handler* oh = new override_handler(global_handler, *this);
+    handlers_.push_back(oh);
+    reactor_.pn_global_handler(cpp_handler(oh).get());
+    if (mh) {
+        proton_handler* h = new messaging_adapter(*mh);
+        handlers_.push_back(h);
+        reactor_.pn_handler(cpp_handler(h).get());
     }
 
     // Note: we have just set up the following handlers that see
@@ -179,10 +181,15 @@ struct immediate_event_loop : public event_loop {
 returned<connection> container_impl::connect(const std::string &urlstr, const connection_options &user_opts) {
     connection_options opts = client_connection_options(); // Defaults
     opts.update(user_opts);
-    proton_handler *h = opts.handler();
+    messaging_handler* mh = opts.handler();
+    internal::pn_ptr<pn_handler_t> chandler;
+    if (mh) {
+        proton_handler* h = new messaging_adapter(*mh);
+        handlers_.push_back(h);
+        chandler = cpp_handler(h);
+    }
 
     proton::url  url(urlstr);
-    internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
     connection conn(reactor_.connection_to_host(url.host(), url.port(), chandler.get()));
     internal::pn_unique_ptr<connector> ctor(new connector(conn, opts, url));
     connection_context& cc(connection_context::get(conn));
@@ -224,8 +231,15 @@ listener container_impl::listen(const std::string& url, listen_handler& lh) {
     if (acceptors_.find(url) != acceptors_.end())
         throw error("already listening on " + url);
     connection_options opts = server_connection_options(); // Defaults
-    proton_handler *h = opts.handler();
-    internal::pn_ptr<pn_handler_t> chandler = h ? cpp_handler(h) : internal::pn_ptr<pn_handler_t>();
+
+    messaging_handler* mh = opts.handler();
+    internal::pn_ptr<pn_handler_t> chandler;
+    if (mh) {
+        proton_handler* h = new messaging_adapter(*mh);
+        handlers_.push_back(h);
+        chandler = cpp_handler(h);
+    }
+
     proton::url u(url);
     pn_acceptor_t *acptr = pn_reactor_acceptor(
         reactor_.pn_object(), u.host().c_str(), u.port().c_str(), chandler.get());
@@ -251,11 +265,12 @@ void container_impl::stop_listening(const std::string& url) {
         close_acceptor(i->second);
 }
 
-task container_impl::schedule(int delay, proton_handler *h) {
+task container_impl::schedule(container& c, int delay, proton_handler *h) {
+    container_impl& ci = static_cast<container_impl&>(c);
     internal::pn_ptr<pn_handler_t> task_handler;
     if (h)
-        task_handler = cpp_handler(h);
-    return reactor_.schedule(delay, task_handler.get());
+        task_handler = ci.cpp_handler(h);
+    return ci.reactor_.schedule(delay, task_handler.get());
 }
 
 namespace {
@@ -278,7 +293,7 @@ struct timer_handler_03 : public timer_handler {
 }
 
 void container_impl::schedule(duration delay, void_function0& f) {
-    schedule(delay.milliseconds(), new timer_handler_03(f));
+    schedule(*this, delay.milliseconds(), new timer_handler_03(f));
 }
 
 #if PN_CPP_HAS_STD_FUNCTION
@@ -291,7 +306,7 @@ struct timer_handler_std : public timer_handler {
 }
 
 void container_impl::schedule(duration delay, std::function<void()> f) {
-    schedule(delay.milliseconds(), new timer_handler_std(f));
+    schedule(*this, delay.milliseconds(), new timer_handler_std(f));
 }
 #endif
 
@@ -320,8 +335,10 @@ void container_impl::configure_server_connection(connection &c) {
     // Unbound options don't apply to server connection
     opts.apply_bound(c);
     // Handler applied separately
-    proton_handler *h = opts.handler();
-    if (h) {
+    messaging_handler* mh = opts.handler();
+    if (mh) {
+        proton_handler* h = new messaging_adapter(*mh);
+        handlers_.push_back(h);
         internal::pn_ptr<pn_handler_t> chandler = cpp_handler(h);
         pn_record_t *record = pn_connection_attachments(unwrap(c));
         pn_record_set_handler(record, chandler.get());

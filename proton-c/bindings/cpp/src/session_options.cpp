@@ -43,17 +43,11 @@ template <class T> struct option {
 
 class session_options::impl {
   public:
-    option<proton_handler *> handler;
+    option<messaging_handler *> handler;
 
     void apply(session& s) {
         if (s.uninitialized()) {
-            if (handler.set) {
-                pn_record_t *record = pn_session_attachments(unwrap(s));
-                // FIXME aconway 2016-05-04: container_impl specific
-                internal::pn_ptr<pn_handler_t> chandler =
-                    static_cast<container_impl&>(s.connection().container()).cpp_handler(handler.value);
-                pn_record_set_handler(record, chandler.get());
-            }
+            if (handler.set && handler.value) container_impl::set_handler(s, handler.value);
         }
     }
 
@@ -70,7 +64,7 @@ session_options& session_options::operator=(const session_options& x) {
     return *this;
 }
 
-session_options& session_options::handler(class messaging_handler *h) { impl_->handler = h->messaging_adapter_.get(); return *this; }
+session_options& session_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
 
 void session_options::apply(session& s) const { impl_->apply(s); }
 

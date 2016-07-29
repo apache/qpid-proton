@@ -155,7 +155,7 @@ class connection_options {
   private:
     void apply_unbound(connection&) const;
     void apply_bound(connection&) const;
-    proton_handler* handler() const;
+    messaging_handler* handler() const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

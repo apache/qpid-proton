@@ -35,7 +35,7 @@
 
 namespace proton {
 
-messaging_handler::messaging_handler() : messaging_adapter_(new messaging_adapter(*this)) {}
+messaging_handler::messaging_handler(){}
 
 messaging_handler::~messaging_handler(){}
 

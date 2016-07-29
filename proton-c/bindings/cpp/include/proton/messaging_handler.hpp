@@ -23,7 +23,6 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/pn_unique_ptr.hpp"
 
 namespace proton {
 
@@ -169,19 +168,6 @@ PN_CPP_CLASS_EXTERN messaging_handler {
 
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition &c);
-
-  private:
-    internal::pn_unique_ptr<messaging_adapter> messaging_adapter_;
-
-    /// @cond INTERNAL
-  friend class container;
-  friend class container_impl;
-  friend class io::connection_engine;
-  friend class connection_options;
-  friend class receiver_options;
-  friend class sender_options;
-  friend class session_options;
-    /// @endcond
 };
 
 } // proton

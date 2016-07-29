@@ -89,7 +89,7 @@ void connector::on_transport_closed(proton_event &) {
                 }
                 else {
                     // log "Disconnected, reconnecting in " <<  delay << " milliseconds"
-                    static_cast<container_impl&>(connection_.container()).schedule(delay, this);
+                    container_impl::schedule(connection_.container(), delay, this);
                     return;
                 }
             }

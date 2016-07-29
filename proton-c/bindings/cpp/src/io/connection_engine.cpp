@@ -42,7 +42,6 @@ namespace proton {
 namespace io {
 
 connection_engine::connection_engine() :
-    handler_(0),
     container_(0)
 {
     int err;
@@ -51,7 +50,6 @@ connection_engine::connection_engine() :
 }
 
 connection_engine::connection_engine(class container& cont, event_loop* loop) :
-    handler_(0),
     container_(&cont)
 {
     int err;
@@ -66,7 +64,7 @@ void connection_engine::configure(const connection_options& opts) {
     proton::connection c = connection();
     opts.apply_unbound(c);
     opts.apply_bound(c);
-    handler_ = opts.handler();
+    handler_.reset(new messaging_adapter(*opts.handler()));
     connection_context::get(connection()).collector = c_engine_.collector;
 }
 
@@ -100,7 +98,7 @@ bool connection_engine::dispatch() {
     while ((c_event = pn_connection_engine_dispatch(&c_engine_)) != NULL) {
         proton_event cpp_event(c_event, container_);
         try {
-            cpp_event.dispatch(*handler_);
+            if (!!handler_) cpp_event.dispatch(*handler_);
         } catch (const std::exception& e) {
             disconnected(error_condition("exception", e.what()));
         }

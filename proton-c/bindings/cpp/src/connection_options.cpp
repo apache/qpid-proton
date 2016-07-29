@@ -48,7 +48,7 @@ template <class T> struct option {
 
 class connection_options::impl {
   public:
-    option<proton_handler*> handler;
+    option<messaging_handler*> handler;
     option<uint32_t> max_frame_size;
     option<uint16_t> max_sessions;
     option<duration> idle_timeout;
@@ -187,7 +187,7 @@ connection_options& connection_options::update(const connection_options& x) {
     return *this;
 }
 
-connection_options& connection_options::handler(class messaging_handler &h) { impl_->handler = h.messaging_adapter_.get(); return *this; }
+connection_options& connection_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
 connection_options& connection_options::max_frame_size(uint32_t n) { impl_->max_frame_size = n; return *this; }
 connection_options& connection_options::max_sessions(uint16_t n) { impl_->max_sessions = n; return *this; }
 connection_options& connection_options::idle_timeout(duration t) { impl_->idle_timeout = t; return *this; }
@@ -206,5 +206,5 @@ connection_options& connection_options::sasl_config_path(const std::string &p) {
 
 void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c); }
 void connection_options::apply_bound(connection& c) const { impl_->apply_bound(c); }
-proton_handler* connection_options::handler() const { return impl_->handler.value; }
+messaging_handler* connection_options::handler() const { return impl_->handler.value; }
 } // namespace proton

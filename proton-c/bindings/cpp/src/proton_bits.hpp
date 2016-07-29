@@ -18,6 +18,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <proton/link.h>
+#include <proton/session.h>
 
 #include <string>
 #include <iosfwd>
@@ -41,6 +43,7 @@ struct pn_condition_t;
 struct pn_acceptor_t;
 struct pn_terminus_t;
 struct pn_reactor_t;
+struct pn_record_t;
 
 namespace proton {
 
@@ -116,7 +119,7 @@ template <> struct wrapper<pn_acceptor_t> { typedef acceptor type; };
 template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
 template <> struct wrapper<pn_reactor_t> { typedef reactor type; };
 
-  // Factory for wrapper types
+// Factory for wrapper types
 template <class T>
 class factory {
 public:
@@ -124,6 +127,12 @@ public:
     static typename wrapped<T>::type* unwrap(T t) { return t.pn_object(); }
 };
 
+// Get attachments for various proton-c types
+template <class T>
+inline pn_record_t* get_attachments(T*);
+
+template <> inline pn_record_t* get_attachments(pn_session_t* s) { return pn_session_attachments(s); }
+template <> inline pn_record_t* get_attachments(pn_link_t* l) { return pn_link_attachments(l); }
 }
 
 template <class T>

@@ -203,7 +203,7 @@ PN_CPP_CLASS_EXTERN connection_engine {
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
-    proton::proton_handler* handler_;
+    internal::pn_unique_ptr<proton_handler> handler_;
     proton::container* container_;
     pn_connection_engine_t c_engine_;
 };
