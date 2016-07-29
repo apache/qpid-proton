@@ -64,6 +64,7 @@ public class ReactorImpl implements Reactor, Extendable {
     private Set<ReactorChild> children;
     private int selectables;
     private boolean yield;
+    private boolean stop;
     private Selectable selectable;
     private EventType previous;
     private Timer timer;
@@ -283,7 +284,7 @@ public class ReactorImpl implements Reactor, Extendable {
                 collector.pop();
 
             } else {
-                if (more()) {
+                if (!stop && more()) {
                     if (previous != Type.REACTOR_QUIESCED && this.previous != Type.REACTOR_FINAL) {
                         collector.put(Type.REACTOR_QUIESCED, this);
                     } else {
@@ -295,6 +296,7 @@ public class ReactorImpl implements Reactor, Extendable {
                         update(selectable);
                         selectable = null;
                     } else {
+                        collector.put(Type.REACTOR_FINAL, this);
                         return false;
                     }
                 }
@@ -326,10 +328,7 @@ public class ReactorImpl implements Reactor, Extendable {
 
     @Override
     public void stop() throws HandlerException {
-        collector.put(Type.REACTOR_FINAL, this);
-        // (Comment from C code) XXX: should consider removing this from stop to avoid reentrance
-        process();
-        collector = null;
+        stop = true;
     }
 
     private boolean more() {
@@ -342,6 +341,8 @@ public class ReactorImpl implements Reactor, Extendable {
         start();
         while(process()) {}
         stop();
+        process();
+        collector = null;
     }
 
     // pn_reactor_schedule from reactor.c

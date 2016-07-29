@@ -354,6 +354,7 @@ void container_impl::run() {
 
 void container_impl::stop(const error_condition&) {
     reactor_.stop();
+    auto_stop_ = true;
 }
 
 void container_impl::auto_stop(bool set) {

@@ -132,6 +132,9 @@ class Reactor(Wrapper):
         self.start()
         while self.process(): pass
         self.stop()
+        self.process()
+        self.global_handler = None
+        self.handler = None
 
     def wakeup(self):
         n = pn_reactor_wakeup(self._impl)
@@ -159,8 +162,6 @@ class Reactor(Wrapper):
     def stop(self):
         pn_reactor_stop(self._impl)
         self._check_errors()
-        self.global_handler = None
-        self.handler = None
 
     def schedule(self, delay, task):
         impl = _chandler(task, self.on_error)
