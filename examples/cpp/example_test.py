@@ -392,13 +392,13 @@ Hello World!
     def test_scheduled_send_03(self):
         # Output should be a bunch of "send" lines but can't guarantee exactly how many.
         out = self.proc(["scheduled_send_03", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
-        self.assertGreater(len(out), 0);
+        self.assertTrue(len(out) > 0);
         self.assertEqual(["send"]*len(out), out)
 
     def test_scheduled_send(self):
         try:
             out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
-            self.assertGreater(len(out), 0);
+            self.assertTrue(len(out) > 0);
             self.assertEqual(["send"]*len(out), out)
         except ProcError:       # File not found, not a C++11 build.
             pass
