@@ -34,7 +34,8 @@ class Test(common.Test):
     self.server = Messenger("server")
     self.server.timeout = self.timeout
     self.server.start()
-    self.server.subscribe("amqp://~127.0.0.1:12345")
+    self.port = common.free_tcp_port()
+    self.server.subscribe("amqp://~127.0.0.1:%d" % self.port)
     self.server_thread = Thread(name="server-thread", target=self.run_server)
     self.server_thread.daemon = True
     self.server_is_running_event = Event()
@@ -130,9 +131,9 @@ class MessengerTest(Test):
     self.start()
     msg = Message()
     if address_size:
-      msg.address="amqp://127.0.0.1:12345/%s" % ("x"*address_size)
+      msg.address="amqp://127.0.0.1:%d/%s" % (self.port, "x"*address_size)
     else:
-      msg.address="amqp://127.0.0.1:12345"
+      msg.address="amqp://127.0.0.1:%d" % self.port
     msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
@@ -191,7 +192,7 @@ class MessengerTest(Test):
     self.server.incoming_window = 10
     self.start()
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345"
+    msg.address="amqp://127.0.0.1:%d" % self.port
     msg.subject="Hello World!"
 
     trackers = []
@@ -234,7 +235,7 @@ class MessengerTest(Test):
     self.server.incoming_window = 10
     self.start()
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345"
+    msg.address="amqp://127.0.0.1:%d" % self.port
     msg.subject="Hello World!"
 
     self.client.outgoing_window = 10
@@ -277,7 +278,7 @@ class MessengerTest(Test):
     self.server.outgoing_window = 10
     self.start()
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345"
+    msg.address="amqp://127.0.0.1:%d" % self.port
     msg.reply_to = "~"
     msg.subject="Hello World!"
 
@@ -311,7 +312,7 @@ class MessengerTest(Test):
     self.start()
 
     msg = Message()
-    msg.address = "amqp://127.0.0.1:12345"
+    msg.address = "amqp://127.0.0.1:%d" % self.port
     msg.reply_to = "~"
     msg.subject = "Hello World!"
 
@@ -350,7 +351,7 @@ class MessengerTest(Test):
     count = 100
     for i in range(count):
       msg = Message()
-      msg.address="amqp://127.0.0.1:12345"
+      msg.address="amqp://127.0.0.1:%d" % self.port
       msg.subject="Hello World!"
       msg.body = "First the world, then the galaxy!"
       t = self.client.put(msg)
@@ -371,7 +372,7 @@ class MessengerTest(Test):
   def test_proton222(self):
     self.start()
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345"
+    msg.address="amqp://127.0.0.1:%d" % self.port
     msg.subject="Hello World!"
     msg.body = "First the world, then the galaxy!"
     assert self.server_received == 0
@@ -392,7 +393,7 @@ class MessengerTest(Test):
     self.start()
 
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345/XXX"
+    msg.address="amqp://127.0.0.1:%d/XXX" % self.port
     msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
@@ -410,7 +411,7 @@ class MessengerTest(Test):
     assert rbod == body, (rbod, body)
 
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345/YYY"
+    msg.address="amqp://127.0.0.1:%d/YYY" % self.port
     msg.reply_to = "~"
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
@@ -434,7 +435,7 @@ class MessengerTest(Test):
     self.start()
 
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345"
+    msg.address="amqp://127.0.0.1:%d" % self.port
     msg.body = "X" * 1024
 
     for x in range( 100 ):
@@ -455,10 +456,11 @@ class MessengerTest(Test):
         domain = "amqp"
     else:
         domain = "amqps"
-    self.server.subscribe(domain + "://~0.0.0.0:12346")
+    port = common.free_tcp_port()
+    self.server.subscribe(domain + "://~0.0.0.0:%d" % port)
     self.start()
-    self.client.route("route1", "amqp://127.0.0.1:12345")
-    self.client.route("route2", domain + "://127.0.0.1:12346")
+    self.client.route("route1", "amqp://127.0.0.1:%d" % self.port)
+    self.client.route("route2", domain + "://127.0.0.1:%d" % port)
 
     msg = Message()
     msg.address = "route1"
@@ -482,7 +484,7 @@ class MessengerTest(Test):
 
   def testDefaultRoute(self):
     self.start()
-    self.client.route("*", "amqp://127.0.0.1:12345")
+    self.client.route("*", "amqp://127.0.0.1:%d" % self.port)
 
     msg = Message()
     msg.address = "asdf"
@@ -498,7 +500,7 @@ class MessengerTest(Test):
 
   def testDefaultRouteSubstitution(self):
     self.start()
-    self.client.route("*", "amqp://127.0.0.1:12345/$1")
+    self.client.route("*", "amqp://127.0.0.1:%d/$1" % self.port)
 
     msg = Message()
     msg.address = "asdf"
@@ -514,12 +516,13 @@ class MessengerTest(Test):
 
   def testIncomingRoute(self):
     self.start()
-    self.client.route("in", "amqp://~0.0.0.0:12346")
+    port = common.free_tcp_port()
+    self.client.route("in", "amqp://~0.0.0.0:%d" % port)
     self.client.subscribe("in")
 
     msg = Message()
-    msg.address = "amqp://127.0.0.1:12345"
-    msg.reply_to = "amqp://127.0.0.1:12346"
+    msg.address = "amqp://127.0.0.1:%d" %self.port
+    msg.reply_to = "amqp://127.0.0.1:%d" % port
     msg.body = "test"
 
     self.client.put(msg)
@@ -537,7 +540,7 @@ class MessengerTest(Test):
   def _testRewrite(self, original, rewritten):
     self.start()
     self.process_incoming = self.echo_address
-    self.client.route("*", "amqp://127.0.0.1:12345")
+    self.client.route("*", "amqp://127.0.0.1:%d" % self.port)
 
     msg = Message()
     msg.address = original
@@ -657,7 +660,7 @@ class MessengerTest(Test):
     # put one message out on "Link1" - since there are no other links, it
     # should get all the credit (10 after sending)
     msg = Message()
-    msg.address="amqp://127.0.0.1:12345/Link1"
+    msg.address="amqp://127.0.0.1:%d/Link1" % self.port
     msg.subject="Hello World!"
     body = "First the world, then the galaxy!"
     msg.body = body
@@ -669,7 +672,7 @@ class MessengerTest(Test):
 
     # Now attempt to exhaust credit using a different link
     for i in range(10):
-      msg.address="amqp://127.0.0.1:12345/Link2"
+      msg.address="amqp://127.0.0.1:%d/Link2" % self.port
       self.client.put(msg)
     self.client.send()
 
@@ -685,7 +688,7 @@ class MessengerTest(Test):
     # now attempt to send one more.  There isn't enough credit, so it should
     # not be sent
     self.client.timeout = 1
-    msg.address="amqp://127.0.0.1:12345/Link2"
+    msg.address="amqp://127.0.0.1:%d/Link2" % self.port
     self.client.put(msg)
     try:
       self.client.send()
@@ -708,8 +711,9 @@ class NBMessengerTest(common.Test):
     self.server.start()
     self.client.start()
     self.client2.start()
-    self.address = "amqp://127.0.0.1:12345"
-    self.server.subscribe("amqp://~0.0.0.0:12345")
+    port = common.free_tcp_port()
+    self.address = "amqp://127.0.0.1:%d" % port
+    self.server.subscribe("amqp://~0.0.0.0:%d" % port)
 
   def _pump(self, timeout, work_triggers_exit):
     for msgr in self.messengers:
@@ -995,12 +999,13 @@ class SelectableMessengerTest(common.Test):
 
     mrcv = Messenger()
     mrcv.passive = True
-    mrcv.subscribe("amqp://~0.0.0.0:1234")
+    port = common.free_tcp_port()
+    mrcv.subscribe("amqp://~0.0.0.0:%d" % port)
 
     msnd = Messenger()
     msnd.passive = True
     m = Message()
-    m.address = "amqp://127.0.0.1:1234"
+    m.address = "amqp://127.0.0.1:%d" % port
 
     for i in range(count):
       m.body = u"Hello World! %s" % i
