@@ -141,8 +141,16 @@ int compare_next(decoder& a, decoder& b) {
       case STRING: return compare_simple<std::string>(a, b);
       case SYMBOL: return compare_simple<symbol>(a, b);
     }
+// Avoid unreached diagnostic from clang
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif    
     // Invalid but equal type_id, treat as equal.
     return 0;
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif    
 }
 
 int compare(const value& x, const value& y) {
