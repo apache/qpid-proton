@@ -3890,7 +3890,10 @@ class Event(Wrapper, EventBase):
 
     event = Event(impl, number)
 
-    if isinstance(event.context, EventBase):
+    # check for an application defined ApplicationEvent and return that.  This
+    # avoids an expensive wrap operation invoked by event.context
+    if pn_event_class(impl) == PN_PYREF and \
+       isinstance(event.context, EventBase):
       return event.context
     else:
       return event
