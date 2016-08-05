@@ -53,7 +53,15 @@ std::string type_name(type_id t) {
       case LIST: return "list";
       case  MAP: return "map";
     }
-    return "unknown";
+// Avoid unreached diagnostic from clang
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunreachable-code"
+#endif
+     return "unknown";
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 }
 
 std::ostream& operator<<(std::ostream& o, type_id t) { return o << type_name(t); }
