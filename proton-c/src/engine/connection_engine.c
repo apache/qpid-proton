@@ -23,16 +23,6 @@
 #include <proton/transport.h>
 #include <string.h>
 
-pn_buf_t pn_buf(char* data, size_t size) {
-    pn_buf_t b = { data, size };
-    return b;
-}
-
-pn_cbuf_t pn_cbuf(const char* data, size_t size) {
-    pn_cbuf_t b = { data, size };
-    return b;
-}
-
 int pn_connection_engine_init(pn_connection_engine_t* e) {
     memset(e, 0, sizeof(*e));
     e->connection = pn_connection();
@@ -65,12 +55,12 @@ void pn_connection_engine_final(pn_connection_engine_t* e) {
     memset(e, 0, sizeof(*e));
 }
 
-pn_buf_t pn_connection_engine_read_buffer(pn_connection_engine_t* e) {
+pn_rwbytes_t pn_connection_engine_read_buffer(pn_connection_engine_t* e) {
     ssize_t cap = pn_transport_capacity(e->transport);
     if (cap > 0)
-        return pn_buf(pn_transport_tail(e->transport), cap);
+        return pn_rwbytes(cap, pn_transport_tail(e->transport));
     else
-        return pn_buf(0, 0);
+        return pn_rwbytes(0, 0);
 }
 
 void pn_connection_engine_read_done(pn_connection_engine_t* e, size_t n) {
@@ -82,12 +72,12 @@ void pn_connection_engine_read_close(pn_connection_engine_t* e) {
     pn_transport_close_tail(e->transport);
 }
 
-pn_cbuf_t pn_connection_engine_write_buffer(pn_connection_engine_t* e) {
+pn_bytes_t pn_connection_engine_write_buffer(pn_connection_engine_t* e) {
     ssize_t pending = pn_transport_pending(e->transport);
     if (pending > 0)
-        return pn_cbuf(pn_transport_head(e->transport), pending);
+        return pn_bytes(pending, pn_transport_head(e->transport));
     else
-        return pn_cbuf(0, 0);
+        return pn_bytes(0, 0);
 }
 
 void pn_connection_engine_write_done(pn_connection_engine_t* e, size_t n) {

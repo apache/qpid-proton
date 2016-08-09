@@ -133,7 +133,7 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	return eng, nil
 }
 
-// Create a byte slice backed by the memory of a pn_buf_t, no copy.
+// Create a byte slice backed by the memory of a pn_rwbytes_t, no copy.
 // Empty buffer {0,0} returns a nil byte slice.
 func byteSlice(data unsafe.Pointer, size C.size_t) []byte {
 	if data == nil || size == 0 {
@@ -146,7 +146,7 @@ func byteSlice(data unsafe.Pointer, size C.size_t) []byte {
 func (eng *Engine) buffers() ([]byte, []byte) {
 	r := C.pn_connection_engine_read_buffer(&eng.engine)
 	w := C.pn_connection_engine_write_buffer(&eng.engine)
-	return byteSlice(unsafe.Pointer(r.data), r.size), byteSlice(unsafe.Pointer(w.data), w.size)
+	return byteSlice(unsafe.Pointer(r.start), r.size), byteSlice(unsafe.Pointer(w.start), w.size)
 }
 
 func (eng *Engine) Connection() Connection {

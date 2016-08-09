@@ -288,14 +288,14 @@ pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf)
   }
 }
 
-pn_buffer_memory_t pn_buffer_memory(pn_buffer_t *buf)
+pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf)
 {
   if (buf) {
     pn_buffer_defrag(buf);
-    pn_buffer_memory_t r = {buf->size, buf->bytes};
+    pn_rwbytes_t r = {buf->size, buf->bytes};
     return r;
   } else {
-    pn_buffer_memory_t r = {0, NULL};
+    pn_rwbytes_t r = {0, NULL};
     return r;
   }
 }

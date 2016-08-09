@@ -29,11 +29,6 @@
 extern "C" {
 #endif
 
-typedef struct {
-    size_t size;
-    char *start;
-} pn_buffer_memory_t;
-
 typedef struct pn_buffer_t pn_buffer_t;
 
 pn_buffer_t *pn_buffer(size_t capacity);
@@ -49,7 +44,7 @@ int pn_buffer_trim(pn_buffer_t *buf, size_t left, size_t right);
 void pn_buffer_clear(pn_buffer_t *buf);
 int pn_buffer_defrag(pn_buffer_t *buf);
 pn_bytes_t pn_buffer_bytes(pn_buffer_t *buf);
-pn_buffer_memory_t pn_buffer_memory(pn_buffer_t *buf);
+pn_rwbytes_t pn_buffer_memory(pn_buffer_t *buf);
 int pn_buffer_print(pn_buffer_t *buf);
 
 #ifdef __cplusplus

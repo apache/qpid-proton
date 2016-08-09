@@ -472,7 +472,7 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   node->data = true;
   node->data_offset = offset;
   node->data_size = bytes->size;
-  pn_buffer_memory_t buf = pn_buffer_memory(data->buf);
+  pn_rwbytes_t buf = pn_buffer_memory(data->buf);
   bytes->start = buf.start + offset;
 
   if (pn_buffer_capacity(data->buf) != oldcap) {

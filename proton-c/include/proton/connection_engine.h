@@ -67,24 +67,6 @@
 extern "C" {
 #endif
 
-/// A modifiable memory buffer.
-typedef struct pn_buf_t {
-    char* data;                 ///< Beginning of the buffered data.
-    size_t size;                ///< Number of bytes in the buffer.
-} pn_buf_t;
-
-/// Create a pn_buf
-PN_EXTERN pn_buf_t pn_buf(char* data, size_t size);
-
-/// A read-only memory buffer.
-typedef struct pn_cbuf_t {
-    const char* data;           ///< Beginning of the buffered data.
-    size_t size;                ///< Number of bytes in the buffer.
-} pn_cbuf_t;
-
-/// Create a pn_cbuf
-PN_EXTERN pn_cbuf_t pn_cbuf(const char* data, size_t size);
-
 /// A connection engine is a trio of pn_connection_t, pn_transport_t and pn_collector_t.
 /// Use the pn_connection_engine_*() functions to operate on it.
 /// It is a plain struct, not a proton object. Use pn_connection_engine_init to set up
@@ -105,13 +87,13 @@ PN_EXTERN int pn_connection_engine_init(pn_connection_engine_t* engine);
 /// to NULL. Only call on an engine that was initialized with pn_connection_engine_init
 PN_EXTERN void pn_connection_engine_final(pn_connection_engine_t* engine);
 
-/// The engine's read buffer. Read data from your IO source into buf.data, up to
+/// The engine's read buffer. Read data from your IO source to buf.start, up to
 /// a max of buf.size. Then call pn_connection_engine_read_done().
 ///
 /// buf.size==0 means the engine cannot read presently, calling
 /// pn_connection_engine_dispatch() may create more buffer space.
 ///
-PN_EXTERN pn_buf_t  pn_connection_engine_read_buffer(pn_connection_engine_t*);
+PN_EXTERN pn_rwbytes_t pn_connection_engine_read_buffer(pn_connection_engine_t*);
 
 /// Consume the first n bytes of data in pn_connection_engine_read_buffer() and
 /// update the buffer.
@@ -122,12 +104,12 @@ PN_EXTERN void pn_connection_engine_read_done(pn_connection_engine_t*, size_t n)
 /// in pn_connection_engine_write_buffer()
 PN_EXTERN void pn_connection_engine_read_close(pn_connection_engine_t*);
 
-/// The engine's write buffer. Write data from buf.data to your IO destination,
+/// The engine's write buffer. Write data from buf.start to your IO destination,
 /// up to a max of buf.size. Then call pn_connection_engine_write_done().
 ///
 /// buf.size==0 means the engine has nothing to write presently.  Calling
 /// pn_connection_engine_dispatch() may generate more data.
-PN_EXTERN pn_cbuf_t pn_connection_engine_write_buffer(pn_connection_engine_t*);
+PN_EXTERN pn_bytes_t pn_connection_engine_write_buffer(pn_connection_engine_t*);
 
 /// Call when the first n bytes of pn_connection_engine_write_buffer() have been
 /// written to IO and can be re-used for new data.  Updates the buffer.

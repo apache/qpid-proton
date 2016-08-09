@@ -920,7 +920,7 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
 
  encode_performatives:
   pn_buffer_clear( frame_buf );
-  pn_buffer_memory_t buf = pn_buffer_memory( frame_buf );
+  pn_rwbytes_t buf = pn_buffer_memory( frame_buf );
   buf.size = pn_buffer_available( frame_buf );
 
   ssize_t wr = pn_data_encode( transport->output_args, buf.start, buf.size );
@@ -992,7 +992,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
   encode_performatives:
     pn_buffer_clear( frame );
-    pn_buffer_memory_t buf = pn_buffer_memory( frame );
+    pn_rwbytes_t buf = pn_buffer_memory( frame );
     buf.size = pn_buffer_available( frame );
 
     ssize_t wr = pn_data_encode(transport->output_args, buf.start, buf.size);

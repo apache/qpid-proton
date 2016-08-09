@@ -109,8 +109,8 @@ bool connection_engine::dispatch() {
 }
 
 mutable_buffer connection_engine::read_buffer() {
-    pn_buf_t buffer = pn_connection_engine_read_buffer(&c_engine_);
-    return mutable_buffer(buffer.data, buffer.size);
+    pn_rwbytes_t buffer = pn_connection_engine_read_buffer(&c_engine_);
+    return mutable_buffer(buffer.start, buffer.size);
 }
 
 void connection_engine::read_done(size_t n) {
@@ -122,8 +122,8 @@ void connection_engine::read_close() {
 }
 
 const_buffer connection_engine::write_buffer() {
-    pn_cbuf_t buffer = pn_connection_engine_write_buffer(&c_engine_);
-    return const_buffer(buffer.data, buffer.size);
+    pn_bytes_t buffer = pn_connection_engine_write_buffer(&c_engine_);
+    return const_buffer(buffer.start, buffer.size);
 }
 
 void connection_engine::write_done(size_t n) {

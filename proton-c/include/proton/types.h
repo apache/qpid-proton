@@ -64,12 +64,21 @@ typedef struct {
   char bytes[16];
 } pn_uuid_t;
 
-typedef struct {
+/** A const byte buffer. */
+typedef struct pn_bytes_t {
   size_t size;
   const char *start;
 } pn_bytes_t;
 
 PN_EXTERN pn_bytes_t pn_bytes(size_t size, const char *start);
+
+/** A non-const byte buffer. */
+typedef struct pn_rwbytes_t {
+  size_t size;
+  char *start;
+} pn_rwbytes_t;
+
+PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
 
 /** @}
  */

@@ -30,6 +30,12 @@ pn_bytes_t pn_bytes(size_t size, const char *start)
   return bytes;
 }
 
+pn_rwbytes_t pn_rwbytes(size_t size, char *start)
+{
+  pn_rwbytes_t bytes = {size, start};
+  return bytes;
+}
+
 pn_timestamp_t pn_timestamp_now() {
   return pn_i_now();
 }
