@@ -970,7 +970,7 @@ class Pump:
         if sel.writing:
           writing.append(sel)
 
-    readable, writable, _ = select(reading, writing, [], 0)
+    readable, writable, _ = select(reading, writing, [], 0.1)
 
     count = 0
     for s in readable:
@@ -983,7 +983,6 @@ class Pump:
 
   def pump(self):
     while self.pump_once(): pass
-
 
 class SelectableMessengerTest(common.Test):
 
