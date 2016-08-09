@@ -36,7 +36,6 @@
 
 #include <algorithm>
 
-#include <iosfwd>
 
 namespace proton {
 namespace io {

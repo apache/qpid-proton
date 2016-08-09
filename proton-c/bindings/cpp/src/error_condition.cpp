@@ -19,9 +19,12 @@
  *
  */
 #include "proton/error_condition.hpp"
+
 #include <proton/condition.h>
 
 #include "proton_bits.hpp"
+
+#include <ostream>
 
 namespace proton {
 
