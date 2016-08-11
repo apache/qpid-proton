@@ -178,6 +178,13 @@ public interface Transport extends Endpoint
     void outputConsumed();
 
     /**
+    * Add a {@link TransportLayer} to the current transport. {@code obj} must already be initialized.
+    * 
+    * This allows a user to implement an additional transport layer not currently supported by the library.
+    */
+    void wrapTransport(TransportLayer obj);
+
+    /**
      * Signal the transport to expect SASL frames used to establish a SASL layer prior to
      * performing the AMQP protocol version negotiation. This must first be performed before
      * the transport is used for processing. Subsequent invocations will return the same

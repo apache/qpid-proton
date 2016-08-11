@@ -45,3 +45,5 @@ testresults
 /proton-c/bindings/python/MANIFEST
 /proton-c/bindings/python/build
 
+# VS Code
+.vscode/

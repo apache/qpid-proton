@@ -21,7 +21,9 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuff
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.qpid.proton.amqp.Binary;
@@ -45,17 +47,7 @@ import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AMQPDefinedTypes;
 import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.EncoderImpl;
-import org.apache.qpid.proton.engine.Connection;
-import org.apache.qpid.proton.engine.EndpointState;
-import org.apache.qpid.proton.engine.Event;
-import org.apache.qpid.proton.engine.ProtonJTransport;
-import org.apache.qpid.proton.engine.Sasl;
-import org.apache.qpid.proton.engine.Ssl;
-import org.apache.qpid.proton.engine.SslDomain;
-import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.engine.TransportException;
-import org.apache.qpid.proton.engine.TransportResult;
-import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.*;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.reactor.Reactor;
@@ -138,6 +130,8 @@ public class TransportImpl extends EndpointImpl
     private Selectable _selectable;
     private Reactor _reactor;
 
+    private List<TransportLayer> _userObjects;
+
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
      * Client code outside this module should use {@link org.apache.qpid.proton.engine.Transport.Factory#create()} instead
@@ -161,6 +155,7 @@ public class TransportImpl extends EndpointImpl
                                        FrameWriter.AMQP_FRAME_TYPE,
                                        _protocolTracer,
                                        this);
+        _userObjects = new ArrayList<>();
     }
 
     private void init()
@@ -335,6 +330,24 @@ public class TransportImpl extends EndpointImpl
         _frameWriter.readBytes(outputBuffer);
 
         return _isCloseSent || _head_closed;
+    }
+
+    @Override
+    public void wrapTransport(TransportLayer obj)
+    {
+        if(!_userObjects.contains(obj))
+        {
+            if(_processingStarted)
+            {
+                throw new IllegalStateException("Cannot initiate after transport has started processing");
+            }
+
+            init();
+            TransportWrapper transportWrapper = obj.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
+            _userObjects.add(obj);
+        }
     }
 
     @Override
