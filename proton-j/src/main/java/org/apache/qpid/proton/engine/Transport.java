@@ -182,7 +182,7 @@ public interface Transport extends Endpoint
     * 
     * This allows a user to implement an additional transport layer not currently supported by the library.
     */
-    void wrapTransport(TransportLayer obj);
+    void addTransportLayer(TransportLayer obj);
 
     /**
      * Signal the transport to expect SASL frames used to establish a SASL layer prior to

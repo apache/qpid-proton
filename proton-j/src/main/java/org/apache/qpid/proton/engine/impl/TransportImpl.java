@@ -130,7 +130,7 @@ public class TransportImpl extends EndpointImpl
     private Selectable _selectable;
     private Reactor _reactor;
 
-    private List<TransportLayer> _userObjects;
+    private List<TransportLayer> _userTransportLayers;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -155,7 +155,7 @@ public class TransportImpl extends EndpointImpl
                                        FrameWriter.AMQP_FRAME_TYPE,
                                        _protocolTracer,
                                        this);
-        _userObjects = new ArrayList<>();
+        _userTransportLayers = new ArrayList<>();
     }
 
     private void init()
@@ -333,9 +333,9 @@ public class TransportImpl extends EndpointImpl
     }
 
     @Override
-    public void wrapTransport(TransportLayer obj)
+    public void addTransportLayer(TransportLayer obj)
     {
-        if(!_userObjects.contains(obj))
+        if(!_userTransportLayers.contains(obj))
         {
             if(_processingStarted)
             {
@@ -346,7 +346,7 @@ public class TransportImpl extends EndpointImpl
             TransportWrapper transportWrapper = obj.wrap(_inputProcessor, _outputProcessor);
             _inputProcessor = transportWrapper;
             _outputProcessor = transportWrapper;
-            _userObjects.add(obj);
+            _userTransportLayers.add(obj);
         }
     }
 
