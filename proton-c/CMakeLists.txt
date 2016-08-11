@@ -17,6 +17,7 @@
 # under the License.
 #
 
+include(CheckLibraryExists)
 include(CheckSymbolExists)
 
 include(soversion.cmake)
