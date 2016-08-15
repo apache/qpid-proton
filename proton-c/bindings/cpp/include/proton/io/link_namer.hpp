@@ -42,6 +42,7 @@ class link_namer {
     virtual std::string link_name() = 0;
 };
 
+/// *Experimental* - Set the link_namer to use on a connection.
 PN_CPP_EXTERN void set_link_namer(connection&, link_namer&);
 
 } // io

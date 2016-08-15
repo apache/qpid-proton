@@ -109,6 +109,10 @@ class value : public internal::value_base, private internal::comparable<value> {
   friend PN_CPP_EXTERN bool operator<(const value& x, const value& y);
     ///@}
 
+    /// If contained value is a scalar type T, print using operator<<(T)
+    ///
+    /// Complex types are printed in a non-standard human-readable format but
+    /// that may change in future so should not be parsed.
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value&);
 };
 

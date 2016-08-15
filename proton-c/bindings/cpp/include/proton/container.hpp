@@ -267,10 +267,11 @@ template <class Ptr>
 class container_ref : public container {
   public:
 #if PN_CPP_HAS_RVALUE_REFERENCES
+    /// Move constructor.
     container_ref(Ptr&& p) : impl_(std::move(p)) {}
 #else
-    // This class will only work correctly if ownership is transferred here
-    // so using std::auto_ptr for Ptr is necessary for pre C++11
+    /// This class will only work correctly if ownership is transferred here
+    /// so using std::auto_ptr for Ptr is necessary for pre C++11
     container_ref(Ptr p) : impl_(p) {}
 #endif
 
@@ -280,36 +281,49 @@ class container_ref : public container {
     listener listen(const std::string& url, const connection_options& opts) { return impl_->listen(url, opts); }
     listener listen(const std::string& url) { return impl_->listen(url); }
 
+
+    ///@cond INTERNAL
     void stop_listening(const std::string& url) { impl_->stop_listening(url); }
+    ///@endcond
     void run() { impl_->run(); }
     void auto_stop(bool set) { impl_->auto_stop(set); }
 
+    ///@copydoc container::stop
     void stop(const error_condition& err) { impl_->stop(err); }
+    ///@copydoc container::stop
     void stop() { impl_->stop(); }
 
+    ///@copydoc container::open_sender
     returned<sender> open_sender(
         const std::string &url,
         const class sender_options &o,
         const connection_options &c) { return impl_->open_sender(url, o, c); }
+    ///@copydoc container::open_sender
     returned<sender> open_sender(
         const std::string &url,
         const class connection_options &o) { return impl_->open_sender(url, o); }
+    ///@copydoc container::open_sender
     returned<sender> open_sender(
         const std::string &url,
         const class sender_options &o) { return impl_->open_sender(url, o); }
+    ///@copydoc container::open_sender
     returned<sender> open_sender(
         const std::string &url) { return impl_->open_sender(url); }
 
+    ///@copydoc container::open_receiver
     returned<receiver> open_receiver(
         const std::string&url,
         const class receiver_options &o,
         const connection_options &c) { return impl_->open_receiver(url, o, c); }
+    ///@copydoc container::open_receiver
     returned<receiver> open_receiver(
         const std::string&url,
         const class receiver_options &o) { return impl_->open_receiver(url, o); }
+    ///@copydoc container::open_receiver
     returned<receiver> open_receiver(
         const std::string&url,
         const class connection_options &o) { return impl_->open_receiver(url, o); }
+    ///@copydoc container::open_receiver
     returned<receiver> open_receiver(
         const std::string&url) { return impl_->open_receiver(url); }
 

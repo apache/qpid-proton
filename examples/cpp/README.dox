@@ -139,18 +139,18 @@ __Requires C++11__
 
 */
 
-/** @example schedule_send.cpp
+/** @example scheduled_send.cpp
 
 Shows how to use proton::container::schedule to schedule a timed callback.
 This version uses std::function and so requires C++11 or better. For a C++03 compatible
-approach see @ref schedule_send_03.cpp.
+approach see @ref scheduled_send_03.cpp.
 
 */
 
-/** @example schedule_send_03.cpp
+/** @example scheduled_send_03.cpp
 
 Shows how to use proton::container::schedule to schedule a timed callback in a
-C++03 compatible way. See @ref schedule_send.cpp for a more convenient approach
+C++03 compatible way. See @ref scheduled_send.cpp for a more convenient approach
 using std::function if you have C++11.
 
 */

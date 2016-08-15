@@ -55,7 +55,6 @@
 /// report it to the handler as a  PN_TRANSPORT_ERROR event and return false.
 ///
 /// @defgroup connection_engine The Connection Engine
-/// @ingroup connection_engine
 /// @{
 ///
 

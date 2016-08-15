@@ -40,11 +40,13 @@ class messaging_handler;
 #endif
 /// Default container factory for C++03, not recommended unless you only have C++03
 PN_CPP_EXTERN std::auto_ptr<container> make_auto_default_container(messaging_handler&, const std::string& id="");
+/// Default container factory for C++03, not recommended unless you only have C++03
 PN_CPP_EXTERN std::auto_ptr<container> make_auto_default_container(const std::string& id="");
 
 #if PN_CPP_HAS_UNIQUE_PTR
 /// Default container factory
 PN_CPP_EXTERN std::unique_ptr<container> make_default_container(messaging_handler&, const std::string& id="");
+/// Default container factory
 PN_CPP_EXTERN std::unique_ptr<container> make_default_container(const std::string& id="");
 #endif
 

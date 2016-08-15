@@ -109,7 +109,7 @@ class flow_receiver : public proton::messaging_handler {
             if (verbose) std::cout << "Example 1.  Simple use of credit." << std::endl;
             // TODO: add timeout callbacks, show no messages until credit.
             example_setup(2);
-            r.add_credit(2);
+            r.add_credit(1);
             break;
         case 1:
             if (r.credit() > 0) return;

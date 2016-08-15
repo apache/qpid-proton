@@ -38,16 +38,6 @@ struct pn_link_t;
 
 namespace proton {
 
-/// **Experimental** - A handler for injected code.
-///
-/// @deprecated use void_function0.
-class inject_handler : public void_function0 {
-  public:
-    virtual ~inject_handler() {}
-    virtual void on_inject() = 0;
-    void operator()() { on_inject(); }
-};
-
 /// **Experimental** - A serial execution context.
 ///
 /// Event handler functions associated with a single proton::connection are called in sequence.
