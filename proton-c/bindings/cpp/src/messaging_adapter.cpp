@@ -54,10 +54,6 @@ void credit_topup(pn_link_t *link) {
 }
 }
 
-messaging_adapter::messaging_adapter(messaging_handler &delegate) : delegate_(delegate) {}
-
-messaging_adapter::~messaging_adapter(){}
-
 void messaging_adapter::on_reactor_init(proton_event &pe) {
     delegate_.on_container_start(pe.container());
 }

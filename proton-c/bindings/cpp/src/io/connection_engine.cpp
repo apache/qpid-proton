@@ -63,7 +63,7 @@ void connection_engine::configure(const connection_options& opts) {
     proton::connection c = connection();
     opts.apply_unbound(c);
     opts.apply_bound(c);
-    handler_.reset(new messaging_adapter(*opts.handler()));
+    handler_ =  opts.handler();
     connection_context::get(connection()).collector = c_engine_.collector;
 }
 
@@ -97,7 +97,10 @@ bool connection_engine::dispatch() {
     while ((c_event = pn_connection_engine_dispatch(&c_engine_)) != NULL) {
         proton_event cpp_event(c_event, container_);
         try {
-            if (!!handler_) cpp_event.dispatch(*handler_);
+            if (handler_ != 0) {
+                messaging_adapter adapter(*handler_);
+                cpp_event.dispatch(adapter);
+            }
         } catch (const std::exception& e) {
             disconnected(error_condition("exception", e.what()));
         }
