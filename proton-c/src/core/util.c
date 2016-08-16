@@ -19,15 +19,19 @@
  *
  */
 
+#include "util.h"
+
+#include "buffer.h"
+
+#include <proton/error.h>
+#include <proton/types.h>
+#include <proton/type_compat.h>
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <proton/type_compat.h>
 #include <ctype.h>
 #include <string.h>
-#include <proton/error.h>
-#include <proton/types.h>
-#include "util.h"
 
 ssize_t pn_quote_data(char *dst, size_t capacity, const char *src, size_t size)
 {

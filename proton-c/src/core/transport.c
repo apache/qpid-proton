@@ -578,10 +578,8 @@ pn_transport_t *pn_transport(void)
     return NULL;
   }
 
-  transport->capacity = 4*1024;
-  transport->available = 0;
-  transport->output = (char *) malloc(transport->capacity);
-  if (!transport->output) {
+  transport->output_buffer = pn_buffer(4*1024);
+  if (!transport->output_buffer) {
     pn_transport_free(transport);
     return NULL;
   }
@@ -682,7 +680,7 @@ static void pn_transport_finalize(void *object)
   pn_data_free(transport->output_args);
   pn_buffer_free(transport->frame);
   pn_free(transport->context);
-  free(transport->output);
+  pn_buffer_free(transport->output_buffer);
 }
 
 static void pni_post_remote_open_events(pn_transport_t *transport, pn_connection_t *connection) {
@@ -943,25 +941,20 @@ int pn_post_frame(pn_transport_t *transport, uint8_t type, uint16_t ch, const ch
     return PN_ERR;
   }
 
-  pn_frame_t frame = {0,};
+  pn_frame_t frame = {AMQP_FRAME_TYPE};
   frame.type = type;
   frame.channel = ch;
   frame.payload = buf.start;
   frame.size = wr;
-  size_t n;
-  while (!(n = pn_write_frame(transport->output + transport->available,
-                              transport->capacity - transport->available, frame))) {
-    transport->capacity *= 2;
-    transport->output = (char *) realloc(transport->output, transport->capacity);
-  }
+  pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
+  pn_write_frame(transport->output_buffer, frame);
   transport->output_frames_ct += 1;
   if (transport->trace & PN_TRACE_RAW) {
     pn_string_set(transport->scratch, "RAW: \"");
-    pn_quote(transport->scratch, transport->output + transport->available, n);
+    pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
     pn_string_addf(transport->scratch, "\"");
     pn_transport_log(transport, pn_string_get(transport->scratch));
   }
-  transport->available += n;
 
   return 0;
 }
@@ -1053,21 +1046,16 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
     frame.payload = buf.start;
     frame.size = buf.size;
 
-    size_t n;
-    while (!(n = pn_write_frame(transport->output + transport->available,
-                                transport->capacity - transport->available, frame))) {
-      transport->capacity *= 2;
-      transport->output = (char *) realloc(transport->output, transport->capacity);
-    }
+    pn_buffer_ensure(transport->output_buffer, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
+    pn_write_frame(transport->output_buffer, frame);
     transport->output_frames_ct += 1;
     framecount++;
     if (transport->trace & PN_TRACE_RAW) {
       pn_string_set(transport->scratch, "RAW: \"");
-      pn_quote(transport->scratch, transport->output + transport->available, n);
+      pn_buffer_quote(transport->output_buffer, transport->scratch, AMQP_HEADER_SIZE+frame.ex_size+frame.size);
       pn_string_addf(transport->scratch, "\"");
       pn_transport_log(transport, pn_string_get(transport->scratch));
     }
-    transport->available += n;
   } while (payload->size > 0 && framecount < frame_limit);
 
   return framecount;
@@ -2608,10 +2596,10 @@ static pn_timestamp_t pn_tick_amqp(pn_transport_t* transport, unsigned int layer
       transport->last_bytes_output = transport->bytes_output;
     } else if (transport->keepalive_deadline <= now) {
       transport->keepalive_deadline = now + (pn_timestamp_t)(transport->remote_idle_timeout/2.0);
-      if (transport->available == 0) {    // no outbound data pending
+      if (pn_buffer_size(transport->output_buffer) == 0) {    // no outbound data pending
         // so send empty frame (and account for it!)
         pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "");
-        transport->last_bytes_output += transport->available;
+        transport->last_bytes_output += pn_buffer_size(transport->output_buffer);
       }
     }
     timeout = pn_timestamp_min( timeout, transport->keepalive_deadline );
@@ -2653,7 +2641,7 @@ static ssize_t pn_output_write_amqp(pn_transport_t* transport, unsigned int laye
   // write out any buffered data _before_ returning PN_EOS, else we
   // could truncate an outgoing Close frame containing a useful error
   // status
-  if (!transport->available && transport->close_sent) {
+  if (!pn_buffer_size(transport->output_buffer) && transport->close_sent) {
     return PN_EOS;
   }
 

@@ -83,20 +83,24 @@ ssize_t pn_read_frame(pn_frame_t *frame, const char *bytes, size_t available, ui
   return size;
 }
 
-size_t pn_write_frame(char *bytes, size_t available, pn_frame_t frame)
+size_t pn_write_frame(pn_buffer_t* buffer, pn_frame_t frame)
 {
   size_t size = AMQP_HEADER_SIZE + frame.ex_size + frame.size;
-  if (size <= available)
+  if (size <= pn_buffer_available(buffer))
   {
+    // Prepare header
+    char bytes[8];
     pn_i_write32(&bytes[0], size);
     int doff = (frame.ex_size + AMQP_HEADER_SIZE - 1)/4 + 1;
     bytes[4] = doff;
     bytes[5] = frame.type;
     pn_i_write16(&bytes[6], frame.channel);
 
+    // Write header then rest of frame
+    pn_buffer_append(buffer, bytes, 8);
     if (frame.extended)
-      memmove(bytes + AMQP_HEADER_SIZE, frame.extended, frame.ex_size);
-    memmove(bytes + 4*doff, frame.payload, frame.size);
+        pn_buffer_append(buffer, frame.extended, frame.ex_size);
+    pn_buffer_append(buffer, frame.payload, frame.size);
     return size;
   } else {
     return 0;

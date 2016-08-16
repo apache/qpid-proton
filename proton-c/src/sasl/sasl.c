@@ -637,7 +637,7 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   pni_post_sasl_frame(transport);
 
-  if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
+  if (pn_buffer_size(transport->output_buffer) != 0 || !pni_sasl_is_final_output_state(sasl)) {
     return pn_dispatcher_output(transport, bytes, available);
   }
 
