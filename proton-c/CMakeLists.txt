@@ -528,7 +528,9 @@ if (BUILD_PYTHON)
   option(TOX_TEST "Enable muti-version python testing with TOX" ON)
   if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
     find_program(TOX_EXE "tox")
-    if (TOX_EXE)
+    if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+      message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
+    elseif (TOX_EXE)
       configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
@@ -545,8 +547,8 @@ if (BUILD_PYTHON)
                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
                              FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
     else (TOX_EXE)
-      message(STATUS "The tox tool is not available - skipping the python-tox-tests")
-    endif (TOX_EXE)
+      message(STATUS "The tox tool is not available; skipping the python-tox-tests")
+    endif ()
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 
   set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")

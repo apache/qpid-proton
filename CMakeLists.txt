@@ -23,6 +23,13 @@ project (Proton C)
 # Enable C++ now for examples and bindings subdirectories, but make it optional.
 enable_language(CXX OPTIONAL)
 
+# Enable testing
+enable_testing()
+include (CTest)
+
+# Pull in local cmake modules
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
+
 if (MSVC)
   # No C99 capability, use C++
   set(DEFAULT_BUILD_WITH_CXX ON)
@@ -37,14 +44,35 @@ else (CMAKE_CONFIGURATION_TYPES)
   # If the build type is not set then set the default
   if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
-       "Build type: Debug, Release, RelWithDebInfo or MinSizeRel (default RelWithDebInfo)" FORCE)
+       "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
   endif ()
+
+  # Set up extra coverage analysis options for gcc and clang
+  if (CMAKE_COMPILER_IS_GNUCC)
+    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
+    set (CMAKE_CXX_FLAGS_COVERAGE "-g -O0 --coverage")
+    set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
+    set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
+    set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
+    mark_as_advanced(
+      CMAKE_C_FLAGS_COVERAGE CMAKE_CXX_FLAGS_COVERAGE
+      CMAKE_EXE_LINKER_FLAGS_COVERAGE CMAKE_MODULE_LINKER_FLAGS_COVERAGE
+      CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+  endif()
 
   if (CMAKE_BUILD_TYPE MATCHES "Deb")
     set (has_debug_symbols " (has debug symbols)")
   endif (CMAKE_BUILD_TYPE MATCHES "Deb")
   message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 endif (CMAKE_CONFIGURATION_TYPES)
+
+# Add coverage target if we're building for test coverage
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+  make_directory(coverage_results)
+  add_custom_target(coverage
+    WORKING_DIRECTORY ./coverage_results
+    COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # Default to universal binary on Mac OS X unless user has overriden
@@ -75,8 +103,6 @@ endif()
 
 message(STATUS "PN_VERSION: ${PN_VERSION} (${PN_VERSION_QUALIFIER})")
 
-enable_testing()
-include (CTest)
 set (pn_test_root "${CMAKE_CURRENT_SOURCE_DIR}/tests")
 set (pn_test_bin "${CMAKE_CURRENT_BINARY_DIR}/tests")
 
@@ -129,9 +155,6 @@ endforeach()
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-# Pull in local cmake modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
-
 find_package(Java)
 option (BUILD_JAVA "Build proton-j." ${JAVA_FOUND})
 
@@ -141,16 +164,18 @@ endif()
 
 # Check for valgrind here so tests under proton-c/ and examples/ can use it.
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
+mark_as_advanced (VALGRIND_EXE)
+
 option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
 if (ENABLE_VALGRIND)
   if (NOT VALGRIND_EXE)
     message(STATUS "Can't locate the valgrind command; no run-time error detection")
+  elseif (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    message(STATUS "Building for coverage analysis; no run-time error detection")
   else ()
     set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
   endif ()
 endif (ENABLE_VALGRIND)
-
-mark_as_advanced (VALGRIND_EXE)
 
 add_subdirectory(proton-c)
 add_subdirectory(examples)
@@ -166,11 +191,13 @@ install (DIRECTORY examples
 # add relevant CTest support
 find_program (MAVEN_EXE mvn DOC "Location of the maven program")
 mark_as_advanced (MAVEN_EXE)
-if (JAVA_FOUND AND MAVEN_EXE)
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+  message (STATUS "Building for coverage analysis: testing disabled for Proton-J")
+elseif (JAVA_FOUND AND MAVEN_EXE)
   add_test (proton-java ${MAVEN_EXE} clean test --file ${Proton_SOURCE_DIR}/pom.xml)
-else (JAVA_FOUND AND MAVEN_EXE)
+else ()
   message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
-endif (JAVA_FOUND AND MAVEN_EXE)
+endif ()
 
 # Generate test environment settings
 configure_file(${CMAKE_SOURCE_DIR}/config.sh.in
