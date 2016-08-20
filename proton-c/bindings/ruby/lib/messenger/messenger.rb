@@ -191,11 +191,11 @@ module Qpid::Proton::Messenger
       end
     end
 
-    # Currently a no-op placeholder.
     # For future compatibility, do not send or recv messages
     # before starting the +Messenger+.
     #
     def start
+      at_exit { stop }
       Cproton.pn_messenger_start(@impl)
     end
 
