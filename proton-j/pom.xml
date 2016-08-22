@@ -31,6 +31,15 @@
     <url>http://svn.apache.org/viewvc/qpid/proton/</url>
   </scm>
 
+  <dependencies>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <version>1.53</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
   <build>
     <plugins>
       <plugin>
