@@ -161,7 +161,7 @@ public class IOHandler extends BaseHandler {
             transport.setCondition(condition);
             transport.close_tail();
             transport.close_head();
-            transport.pop(transport.pending());   // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
+            transport.pop(Math.max(0, transport.pending())); // Force generation of TRANSPORT_HEAD_CLOSE (not in C code)
         }
         selectableTransport(reactor, socket, transport);
     }
