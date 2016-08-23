@@ -22,8 +22,8 @@
 
 #include "proton/binary.hpp"
 #include "proton/decimal.hpp"
-#include "proton/internal/scalar_base.hpp"
 #include "proton/internal/type_traits.hpp"
+#include "proton/scalar_base.hpp"
 #include "proton/symbol.hpp"
 #include "proton/timestamp.hpp"
 #include "proton/uuid.hpp"
@@ -32,7 +32,6 @@
 #include <sstream>
 
 namespace proton {
-namespace internal {
 
 scalar_base::scalar_base() { atom_.type = PN_NULL; }
 scalar_base::scalar_base(const pn_atom_t& a) { set(a); }
@@ -45,6 +44,8 @@ scalar_base& scalar_base::operator=(const scalar_base& x) {
 }
 
 type_id scalar_base::type() const { return type_id(atom_.type); }
+
+bool scalar_base::empty() const { return type() == NULL_TYPE; }
 
 void scalar_base::set(const binary& x, pn_type_t t) {
     atom_.type = t;
@@ -115,13 +116,13 @@ namespace {
 struct equal_op {
     const scalar_base& x;
     equal_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (get<T>(x) == y); }
+    template<class T> bool operator()(const T& y) { return (internal::get<T>(x) == y); }
 };
 
 struct less_op {
     const scalar_base& x;
     less_op(const scalar_base& s) : x(s) {}
-    template<class T> bool operator()(const T& y) { return (y < get<T>(x)); }
+    template<class T> bool operator()(const T& y) { return (y < internal::get<T>(x)); }
 };
 
 struct ostream_op {
@@ -148,12 +149,14 @@ std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     switch (s.type()) {
       case NULL_TYPE: return o; // NULL is empty, doesn't print (like empty string)
         // Print byte types as integer, not char.
-      case BYTE: return o << static_cast<int>(get<int8_t>(s));
-      case UBYTE: return o << static_cast<unsigned int>(get<uint8_t>(s));
+      case BYTE: return o << static_cast<int>(internal::get<int8_t>(s));
+      case UBYTE: return o << static_cast<unsigned int>(internal::get<uint8_t>(s));
         // Other types printed using normal C++ operator <<
       default: return internal::visit<std::ostream&>(s, ostream_op(o));
     }
 }
+
+namespace internal {
 
 conversion_error make_coercion_error(const char* cpp, type_id amqp) {
     return conversion_error(std::string("invalid proton::coerce<") + cpp + ">(" + type_name(amqp) + ")");
@@ -161,7 +164,7 @@ conversion_error make_coercion_error(const char* cpp, type_id amqp) {
 
 } // internal
 
-std::string to_string(const internal::scalar_base& x) {
+std::string to_string(const scalar_base& x) {
     std::ostringstream os;
     os << std::boolalpha << x;
     return os.str();

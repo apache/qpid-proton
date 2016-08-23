@@ -56,12 +56,6 @@ void value::clear() { if (!!data_) data_.clear(); }
 
 namespace internal {
 
-type_id value_base::type() const {
-    return (!data_ || data_.empty()) ? NULL_TYPE : codec::decoder(*this).next_type();
-}
-
-bool value_base::empty() const { return type() == NULL_TYPE; }
-
 // On demand
 internal::data& value_base::data() {
     if (!data_)
@@ -70,6 +64,12 @@ internal::data& value_base::data() {
 }
 
 }
+
+type_id value::type() const {
+    return (!data_ || data_.empty()) ? NULL_TYPE : codec::decoder(*this).next_type();
+}
+
+bool value::empty() const { return type() == NULL_TYPE; }
 
 namespace {
 

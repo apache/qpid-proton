@@ -329,4 +329,6 @@ void message::delivery_count(uint32_t d) { pn_message_set_delivery_count(pn_msg(
 int32_t message::group_sequence() const { return pn_message_get_group_sequence(pn_msg()); }
 void message::group_sequence(int32_t d) { pn_message_set_group_sequence(pn_msg(), d); }
 
+const uint8_t message::default_priority = PN_DEFAULT_PRIORITY;
+
 }

@@ -38,6 +38,30 @@ using namespace proton;
     m.ATTR(#ATTR); \
     ASSERT_EQUAL(scalar(#ATTR), m.ATTR())
 
+void test_message_defaults() {
+    message m;
+    ASSERT(m.body().empty());
+    ASSERT(m.id().empty());
+    ASSERT(m.user().empty());
+    ASSERT(m.to().empty());
+    ASSERT(m.subject().empty());
+    ASSERT(m.reply_to().empty());
+    ASSERT(m.correlation_id().empty());
+    ASSERT(m.content_type().empty());
+    ASSERT(m.content_encoding().empty());
+    ASSERT(m.group_id().empty());
+    ASSERT(m.reply_to_group_id().empty());
+    ASSERT_EQUAL(0, m.expiry_time().milliseconds());
+    ASSERT_EQUAL(0, m.creation_time().milliseconds());
+
+    ASSERT_EQUAL(false, m.inferred());
+    ASSERT_EQUAL(false, m.durable());
+    ASSERT_EQUAL(0, m.ttl().milliseconds());
+    ASSERT_EQUAL(message::default_priority, m.priority());
+    ASSERT_EQUAL(false, m.first_acquirer());
+    ASSERT_EQUAL(0u, m.delivery_count());
+}
+
 void test_message_properties() {
     message m("hello");
     std::string s = get<std::string>(m.body());
@@ -57,6 +81,10 @@ void test_message_properties() {
     ASSERT_EQUAL(m.expiry_time().milliseconds(), 42);
     m.creation_time(timestamp(4242));
     ASSERT_EQUAL(m.creation_time().milliseconds(), 4242);
+    m.ttl(duration(30));
+    ASSERT_EQUAL(m.ttl().milliseconds(), 30);
+    m.priority(3);
+    ASSERT_EQUAL(m.priority(), 3);
 
     message m2(m);
     ASSERT_EQUAL("hello", get<std::string>(m2.body()));
@@ -141,6 +169,7 @@ void test_message_maps() {
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, test_message_properties());
+    RUN_TEST(failed, test_message_defaults());
     RUN_TEST(failed, test_message_body());
     RUN_TEST(failed, test_message_maps());
     return failed;

@@ -134,7 +134,7 @@ class message {
 
     /// Get the address for replies.
     PN_CPP_EXTERN std::string reply_to() const;
-    
+
     /// Set the ID for matching related messages.
     PN_CPP_EXTERN void correlation_id(const message_id&);
 
@@ -230,6 +230,8 @@ class message {
     /// The priority of a message impacts ordering guarantees. Within
     /// a given ordered context, higher priority messages may jump
     /// ahead of lower priority messages.
+    ///
+    /// The default value set on newly constructed messages is message::default_priority.
     PN_CPP_EXTERN uint8_t priority() const;
 
     /// Set the priority.
@@ -317,6 +319,9 @@ class message {
     PN_CPP_EXTERN const annotation_map& delivery_annotations() const;
 
     /// @}
+
+    /// Default priority assigned to new messages.
+    PN_CPP_EXTERN static const uint8_t default_priority;
 
     /// @cond INTERNAL
   private:

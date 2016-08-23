@@ -28,9 +28,9 @@
 #include "./common.hpp"
 
 namespace proton {
+class scalar_base;
 
 namespace internal{
-class scalar_base;
 class value_base;
 }
 
@@ -90,7 +90,7 @@ class encoder : public internal::data {
     PN_CPP_EXTERN encoder& operator<<(const std::string&);
     PN_CPP_EXTERN encoder& operator<<(const symbol&);
     PN_CPP_EXTERN encoder& operator<<(const binary&);
-    PN_CPP_EXTERN encoder& operator<<(const internal::scalar_base&);
+    PN_CPP_EXTERN encoder& operator<<(const scalar_base&);
     PN_CPP_EXTERN encoder& operator<<(const null&);
     /// @}
 

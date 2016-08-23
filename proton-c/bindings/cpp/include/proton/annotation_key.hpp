@@ -22,7 +22,7 @@
  *
  */
 
-#include "./internal/scalar_base.hpp"
+#include "./scalar_base.hpp"
 #include "./symbol.hpp"
 
 namespace proton {
@@ -30,12 +30,10 @@ namespace proton {
 /// A key for use with AMQP annotation maps.
 ///
 /// An annotation_key can contain either a uint64_t or a proton::symbol.
-class annotation_key : public internal::scalar_base {
+class annotation_key : public scalar_base {
   public:
-    using internal::scalar_base::type;
-
-    /// An empty annotation key has a uint64_t == 0 value.
-    annotation_key() { put_(uint64_t(0)); }
+    /// An empty annotation key.
+    annotation_key() {}
 
     /// Construct from any type that can be assigned.
     template <class T> annotation_key(const T& x) { *this = x; }

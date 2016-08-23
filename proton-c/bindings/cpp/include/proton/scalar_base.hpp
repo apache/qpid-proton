@@ -1,5 +1,5 @@
-#ifndef PROTON_INTERNAL_SCALAR_BASE_HPP
-#define PROTON_INTERNAL_SCALAR_BASE_HPP
+#ifndef PROTON_SCALAR_BASE_HPP
+#define PROTON_SCALAR_BASE_HPP
 
 /*
  *
@@ -22,17 +22,17 @@
  *
  */
 
-#include "../binary.hpp"
-#include "../decimal.hpp"
-#include "../error.hpp"
-#include "./export.hpp"
-#include "./comparable.hpp"
-#include "./type_traits.hpp"
-#include "../symbol.hpp"
-#include "../timestamp.hpp"
-#include "../type_id.hpp"
-#include "../types_fwd.hpp"
-#include "../uuid.hpp"
+#include "./binary.hpp"
+#include "./decimal.hpp"
+#include "./error.hpp"
+#include "./internal/comparable.hpp"
+#include "./internal/export.hpp"
+#include "./internal/type_traits.hpp"
+#include "./symbol.hpp"
+#include "./timestamp.hpp"
+#include "./type_id.hpp"
+#include "./types_fwd.hpp"
+#include "./uuid.hpp"
 
 #include <iosfwd>
 #include <string>
@@ -40,6 +40,7 @@
 
 namespace proton {
 class message;
+class scalar_base;
 
 namespace codec {
 class decoder;
@@ -47,23 +48,17 @@ class encoder;
 }
 
 namespace internal {
-
-class scalar_base;
 template<class T> T get(const scalar_base& s);
+}
 
 /// Base class for scalar types.
-class scalar_base : private comparable<scalar_base> {
+class scalar_base : private internal::comparable<scalar_base> {
   public:
     /// AMQP type of data stored in the scalar
     PN_CPP_EXTERN type_id type() const;
 
-    // XXX I don't think many folks ever used this stuff.  Let's
-    // remove it. - Yes, try to remove them.
-    /// @cond INTERNAL
-    /// deprecated
-    template <class T> void get(T& x) const { get_(x); }
-    template <class T> T get() const { T x; get_(x); return x; }
-    /// @endcond
+    /// True if there is no value, i.e. type() == NULL_TYPE.
+    PN_CPP_EXTERN bool empty() const;
 
     /// Compare
   friend PN_CPP_EXTERN bool operator<(const scalar_base& x, const scalar_base& y);
@@ -130,14 +125,21 @@ class scalar_base : private comparable<scalar_base> {
     template <class T, class Enable=void> struct putter {
         static void put(scalar_base& s, const T& x) { s.put_(x); }
     };
-    template <class T> struct putter<T, typename enable_if<is_unknown_integer<T>::value>::type> {
-        static void put(scalar_base& s, const T& x) { s.put_(static_cast<typename known_integer<T>::type>(x)); }
+    template <class T>
+    struct putter<T, typename internal::enable_if<internal::is_unknown_integer<T>::value>::type> {
+        static void put(scalar_base& s, const T& x) {
+            s.put_(static_cast<typename internal::known_integer<T>::type>(x));
+        }
     };
-    template <class T, class Enable=void> struct getter {
+    template <class T, class Enable=void>
+    struct getter {
         static T get(const scalar_base& s) { T x; s.get_(x); return x; }
     };
-    template <class T> struct getter<T, typename enable_if<is_unknown_integer<T>::value>::type> {
-        static T get(const scalar_base& s) { typename known_integer<T>::type x; s.get_(x); return x; }
+    template <class T>
+    struct getter<T, typename internal::enable_if<internal::is_unknown_integer<T>::value>::type> {
+        static T get(const scalar_base& s) {
+            typename internal::known_integer<T>::type x; s.get_(x); return x;
+        }
     };
 
     void ok(pn_type_t) const;
@@ -151,32 +153,38 @@ class scalar_base : private comparable<scalar_base> {
   friend class proton::message;
   friend class codec::encoder;
   friend class codec::decoder;
-  template<class T> friend T get(const scalar_base& s) { return scalar_base::getter<T>::get(s); }
+  template<class T> friend T internal::get(const scalar_base& s);
     /// @endcond
 };
 
+namespace internal {
+
+template<class T> T get(const scalar_base& s) {
+      return scalar_base::getter<T>::get(s);
+}
+
 template <class R, class F> R visit(const scalar_base& s, F f) {
     switch(s.type()) {
-      case BOOLEAN: return f(s.get<bool>());
-      case UBYTE: return f(s.get<uint8_t>());
-      case BYTE: return f(s.get<int8_t>());
-      case USHORT: return f(s.get<uint16_t>());
-      case SHORT: return f(s.get<int16_t>());
-      case UINT: return f(s.get<uint32_t>());
-      case INT: return f(s.get<int32_t>());
-      case CHAR: return f(s.get<wchar_t>());
-      case ULONG: return f(s.get<uint64_t>());
-      case LONG: return f(s.get<int64_t>());
-      case TIMESTAMP: return f(s.get<timestamp>());
-      case FLOAT: return f(s.get<float>());
-      case DOUBLE: return f(s.get<double>());
-      case DECIMAL32: return f(s.get<decimal32>());
-      case DECIMAL64: return f(s.get<decimal64>());
-      case DECIMAL128: return f(s.get<decimal128>());
-      case UUID: return f(s.get<uuid>());
-      case BINARY: return f(s.get<binary>());
-      case STRING: return f(s.get<std::string>());
-      case SYMBOL: return f(s.get<symbol>());
+      case BOOLEAN: return f(internal::get<bool>(s));
+      case UBYTE: return f(internal::get<uint8_t>(s));
+      case BYTE: return f(internal::get<int8_t>(s));
+      case USHORT: return f(internal::get<uint16_t>(s));
+      case SHORT: return f(internal::get<int16_t>(s));
+      case UINT: return f(internal::get<uint32_t>(s));
+      case INT: return f(internal::get<int32_t>(s));
+      case CHAR: return f(internal::get<wchar_t>(s));
+      case ULONG: return f(internal::get<uint64_t>(s));
+      case LONG: return f(internal::get<int64_t>(s));
+      case TIMESTAMP: return f(internal::get<timestamp>(s));
+      case FLOAT: return f(internal::get<float>(s));
+      case DOUBLE: return f(internal::get<double>(s));
+      case DECIMAL32: return f(internal::get<decimal32>(s));
+      case DECIMAL64: return f(internal::get<decimal64>(s));
+      case DECIMAL128: return f(internal::get<decimal128>(s));
+      case UUID: return f(internal::get<uuid>(s));
+      case BINARY: return f(internal::get<binary>(s));
+      case STRING: return f(internal::get<std::string>(s));
+      case SYMBOL: return f(internal::get<symbol>(s));
       default: throw conversion_error("invalid scalar type "+type_name(s.type()));
     }
 }
@@ -195,12 +203,11 @@ template<class T> struct coerce_op {
 };
 
 template <class T> T coerce(const scalar_base& s) { return visit<T>(s, coerce_op<T>()); }
-
-} // internal
+} // namespace internal
 
 /// Return a readable string representation of x for display purposes.
-PN_CPP_EXTERN std::string to_string(const internal::scalar_base& x);
+PN_CPP_EXTERN std::string to_string(const scalar_base& x);
 
 } // proton
 
-#endif // PROTON_INTERNAL_SCALAR_BASE_HPP
+#endif // PROTON_SCALAR_BASE_HPP

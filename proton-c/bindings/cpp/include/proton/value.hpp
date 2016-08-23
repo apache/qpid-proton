@@ -34,15 +34,8 @@ namespace proton {
 
 namespace internal {
 
-/// Separate value data from implicit conversion constructors to avoid template recursion.
+// Separate value data from implicit conversion constructors to avoid template recursion.
 class value_base {
-  public:
-    /// Get the type ID for the current value.
-    PN_CPP_EXTERN type_id type() const;
-
-    /// True if the value is null
-    PN_CPP_EXTERN bool empty() const;
-
   protected:
     internal::data& data();
     internal::data data_;
@@ -88,7 +81,14 @@ class value : public internal::value_base, private internal::comparable<value> {
         return *this;
     }
 
-    /// Reset the value to null
+    /// Get the type ID for the current value.
+    PN_CPP_EXTERN type_id type() const;
+
+    /// True if the value is null
+    PN_CPP_EXTERN bool empty() const;
+
+
+    /// Reset the value to null/empty
     PN_CPP_EXTERN void clear();
 
     /// @cond INTERNAL (deprecated)

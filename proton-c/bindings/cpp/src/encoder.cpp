@@ -27,7 +27,7 @@
 #include "proton/binary.hpp"
 #include "proton/decimal.hpp"
 #include "proton/message_id.hpp"
-#include "proton/internal/scalar_base.hpp"
+#include "proton/scalar_base.hpp"
 #include "proton/symbol.hpp"
 #include "proton/timestamp.hpp"
 #include "proton/value.hpp"
@@ -145,7 +145,7 @@ encoder& encoder::operator<<(const symbol& x) { return insert(x, pn_data_put_amq
 encoder& encoder::operator<<(const binary& x) { return insert(x, pn_data_put_amqp_binary); }
 encoder& encoder::operator<<(const null&) { pn_data_put_null(pn_object()); return *this; }
 
-encoder& encoder::operator<<(const internal::scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
+encoder& encoder::operator<<(const scalar_base& x) { return insert(x.atom_, pn_data_put_atom); }
 
 encoder& encoder::operator<<(const internal::value_base& x) {
     data d = x.data_;

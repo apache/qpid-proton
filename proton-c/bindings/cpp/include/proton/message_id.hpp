@@ -23,7 +23,7 @@
  */
 
 #include "./binary.hpp"
-#include "./internal/scalar_base.hpp"
+#include "./scalar_base.hpp"
 #include "./uuid.hpp"
 
 #include <string>
@@ -39,10 +39,10 @@ namespace proton {
 ///  - proton::uuid
 ///  - proton::binary
 ///
-class message_id : public internal::scalar_base {
+class message_id : public scalar_base {
   public:
-    /// An empty message_id has a uint64_t value set to 0.
-    message_id() { put_(uint64_t(0)); }
+    /// An empty message_id.
+    message_id() {}
 
     /// Construct from any type that can be assigned.
     template <class T> message_id(const T& x) { *this = x; }
@@ -59,7 +59,7 @@ class message_id : public internal::scalar_base {
     /// @}
 
   private:
-    message_id(const pn_atom_t& a): internal::scalar_base(a) {}
+    message_id(const pn_atom_t& a): scalar_base(a) {}
 
     ///@cond INTERNAL
   friend class message;
