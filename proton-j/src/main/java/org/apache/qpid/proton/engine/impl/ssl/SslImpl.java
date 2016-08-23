@@ -30,10 +30,11 @@ import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.impl.PlainTransportWrapper;
 import org.apache.qpid.proton.engine.impl.TransportInput;
+import org.apache.qpid.proton.engine.impl.TransportLayer;
 import org.apache.qpid.proton.engine.impl.TransportOutput;
 import org.apache.qpid.proton.engine.impl.TransportWrapper;
 
-public class SslImpl implements Ssl
+public class SslImpl implements Ssl, TransportLayer
 {
     private SslTransportWrapper _unsecureClientAwareTransportWrapper;
 

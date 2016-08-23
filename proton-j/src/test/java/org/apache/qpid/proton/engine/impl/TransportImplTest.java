@@ -66,6 +66,7 @@ import org.apache.qpid.proton.message.Message;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.mockito.Mockito;
 
 public class TransportImplTest
 {
@@ -1452,5 +1453,50 @@ public class TransportImplTest
         assertTrue("receiver has not advanced", receiverAdvanced);
 
         return delivery;
+    }
+
+    /**
+     * Verify that the {@link TransportInternal#addTransportLayer(TransportLayer)} has the desired
+     * effect by observing the wrapping effect on related transport input and output methods.
+     */
+    @Test
+    public void testAddAdditionalTransportLayer()
+    {
+        Integer capacityOverride = 1957;
+        Integer pendingOverride = 2846;
+
+        MockTransportImpl transport = new MockTransportImpl();
+
+        TransportWrapper mockWrapper = Mockito.mock(TransportWrapper.class);
+
+        Mockito.when(mockWrapper.capacity()).thenReturn(capacityOverride);
+        Mockito.when(mockWrapper.pending()).thenReturn(pendingOverride);
+
+        TransportLayer mockLayer = Mockito.mock(TransportLayer.class);
+        Mockito.when(mockLayer.wrap(Mockito.any(TransportInput.class), Mockito.any(TransportOutput.class))).thenReturn(mockWrapper);
+
+        transport.addTransportLayer(mockLayer);
+
+        assertEquals("Unexepcted value, layer override not effective", capacityOverride.intValue(), transport.capacity());
+        assertEquals("Unexepcted value, layer override not effective", pendingOverride.intValue(), transport.pending());
+    }
+
+    @Test
+    public void testAddAdditionalTransportLayerThrowsISEIfProcessingStarted()
+    {
+        MockTransportImpl transport = new MockTransportImpl();
+        TransportLayer mockLayer = Mockito.mock(TransportLayer.class);
+
+        transport.process();
+
+        try
+        {
+            transport.addTransportLayer(mockLayer);
+            fail("Expected exception to be thrown due to processing having started");
+        }
+        catch (IllegalStateException ise)
+        {
+            // expected
+        }
     }
 }

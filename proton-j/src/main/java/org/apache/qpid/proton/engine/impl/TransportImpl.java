@@ -21,7 +21,9 @@ import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourArrayToBuff
 import static org.apache.qpid.proton.engine.impl.ByteBufferUtils.pourBufferToArray;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.qpid.proton.amqp.Binary;
@@ -63,7 +65,7 @@ import org.apache.qpid.proton.reactor.Selectable;
 
 public class TransportImpl extends EndpointImpl
     implements ProtonJTransport, FrameBody.FrameBodyHandler<Integer>,
-        FrameHandler, TransportOutputWriter
+        FrameHandler, TransportOutputWriter, TransportInternal
 {
     static final int BUFFER_RELEASE_THRESHOLD = Integer.getInteger("proton.transport_buffer_release_threshold", 2 * 1024 * 1024);
     private static final int CHANNEL_MAX_LIMIT = 65535;
@@ -137,6 +139,8 @@ public class TransportImpl extends EndpointImpl
 
     private Selectable _selectable;
     private Reactor _reactor;
+
+    private List<TransportLayer> _additionalTransportLayers;
 
     /**
      * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
@@ -1669,5 +1673,29 @@ public class TransportImpl extends EndpointImpl
     public boolean isEmitFlowEventOnSend()
     {
         return _emitFlowEventOnSend;
+    }
+
+    // From TransportInternal
+    @Override
+    public void addTransportLayer(TransportLayer layer)
+    {
+        if (_processingStarted)
+        {
+            throw new IllegalStateException("Additional layer can't be added after transport has started processing");
+        }
+
+        if (_additionalTransportLayers == null)
+        {
+            _additionalTransportLayers = new ArrayList<TransportLayer>();
+        }
+
+        if (!_additionalTransportLayers.contains(layer))
+        {
+            init();
+            TransportWrapper transportWrapper = layer.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
+            _additionalTransportLayers.add(layer);
+        }
     }
 }
