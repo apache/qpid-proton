@@ -689,7 +689,7 @@ public class TransportImpl extends EndpointImpl
                     TransportLink<?> transportLink = getTransportState(receiver);
                     TransportSession transportSession = getTransportState(receiver.getSession());
 
-                    if(receiver.getLocalState() == EndpointState.ACTIVE && transportSession.isLocalChannelSet())
+                    if(receiver.getLocalState() == EndpointState.ACTIVE && transportSession.isLocalChannelSet() && !receiver.detached())
                     {
                         int credits = receiver.clearUnsentCredits();
                         if(credits != 0 || receiver.getDrain() ||
