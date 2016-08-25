@@ -61,47 +61,57 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
     abstract void localClose();
 
+    @Override
     public void open()
     {
-        switch(_localState)
+        if (getLocalState() != EndpointState.ACTIVE)
         {
-            case ACTIVE:
-                // TODO
-            case CLOSED:
-                // TODO
-            case UNINITIALIZED:
-                _localState = EndpointState.ACTIVE;
-                localOpen();
+            switch(_localState)
+            {
+                case ACTIVE:
+                    // TODO
+                case CLOSED:
+                    // TODO
+                case UNINITIALIZED:
+                    _localState = EndpointState.ACTIVE;
+                    localOpen();
+            }
+            modified();
         }
-        modified();
     }
 
+    @Override
     public void close()
     {
-
-        switch(_localState)
+        if (getLocalState() != EndpointState.CLOSED)
         {
-            case UNINITIALIZED:
-                // TODO
-            case CLOSED:
-                // TODO
-            case ACTIVE:
-                _localState = EndpointState.CLOSED;
-                localClose();
+            switch(_localState)
+            {
+                case UNINITIALIZED:
+                    // TODO
+                case CLOSED:
+                    // TODO
+                case ACTIVE:
+                    _localState = EndpointState.CLOSED;
+                    localClose();
+            }
+            modified();
         }
-        modified();
     }
 
+    @Override
     public EndpointState getLocalState()
     {
         return _localState;
     }
 
+    @Override
     public EndpointState getRemoteState()
     {
         return _remoteState;
     }
 
+    @Override
     public ErrorCondition getCondition()
     {
         return _localError;
@@ -120,6 +130,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         }
     }
 
+    @Override
     public ErrorCondition getRemoteCondition()
     {
         return _remoteError;
@@ -186,6 +197,7 @@ public abstract class EndpointImpl implements ProtonJEndpoint
 
     abstract void doFree();
 
+    @Override
     final public void free()
     {
         if (freed) return;
@@ -205,16 +217,19 @@ public abstract class EndpointImpl implements ProtonJEndpoint
         _transportPrev = transportPrevious;
     }
 
+    @Override
     public Object getContext()
     {
         return _context;
     }
 
+    @Override
     public void setContext(Object context)
     {
         _context = context;
     }
 
+    @Override
     public Record attachments()
     {
         return _attachments;
