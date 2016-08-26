@@ -66,16 +66,8 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     {
         if (getLocalState() != EndpointState.ACTIVE)
         {
-            switch(_localState)
-            {
-                case ACTIVE:
-                    // TODO
-                case CLOSED:
-                    // TODO
-                case UNINITIALIZED:
-                    _localState = EndpointState.ACTIVE;
-                    localOpen();
-            }
+            _localState = EndpointState.ACTIVE;
+            localOpen();
             modified();
         }
     }
@@ -85,16 +77,8 @@ public abstract class EndpointImpl implements ProtonJEndpoint
     {
         if (getLocalState() != EndpointState.CLOSED)
         {
-            switch(_localState)
-            {
-                case UNINITIALIZED:
-                    // TODO
-                case CLOSED:
-                    // TODO
-                case ACTIVE:
-                    _localState = EndpointState.CLOSED;
-                    localClose();
-            }
+            _localState = EndpointState.CLOSED;
+            localClose();
             modified();
         }
     }
