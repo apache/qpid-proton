@@ -48,7 +48,7 @@ class TornadoLoopHandler:
 
     def _schedule(self, sel):
         if sel.deadline:
-            self.loop.add_timeout(sel.deadline, lambda: self.expired(sel))
+            self.loop.add_timeout(sel.deadline, lambda: self._expired(sel))
 
     def _expired(self, sel):
         sel.expired()
