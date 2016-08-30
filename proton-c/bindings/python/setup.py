@@ -194,8 +194,7 @@ class Configure(build_ext):
         # Generate `encodings.h` by calling the python
         # script found in the source dir.
         with open(os.path.join(build_include, 'encodings.h'), 'wb') as header:
-            subprocess.Popen([sys.executable,
-                              os.path.join(proton_src, 'codec', 'encodings.h.py')],
+            subprocess.Popen([sys.executable, os.path.join(proton_src, 'encodings.h.py')],
                               env=proton_envs, stdout=header)
 
         # Create a custom, temporary, version.h file mapping the
@@ -219,10 +218,9 @@ class Configure(build_ext):
         # we don't need.
 
         sources = []
-        for subdir in ['object', 'framing', 'codec', 'dispatcher',
-                       'engine', 'events', 'transport',
-                       'message', 'reactor', 'messenger',
-                       'handlers', 'posix']:
+        for subdir in ['core', 'core/object', 'compiler',
+                       'extra', 'message', 'reactor', 'messenger', 'handlers',
+                       'platform', 'reactor/io/posix']:
 
             sources.extend(glob.glob(os.path.join(proton_src, subdir, '*.c')))
 

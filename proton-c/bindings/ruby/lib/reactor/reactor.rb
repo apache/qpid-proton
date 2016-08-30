@@ -128,8 +128,7 @@ module Qpid::Proton::Reactor
     def wakeup
       n = Cproton.pn_reactor_wakeup(@impl)
       unless n.zero?
-        io = Cproton.pn_reactor_io(@impl)
-        raise IOError.new(Cproton.pn_io_error(io))
+        raise IOError.new(Cproton.pn_reactor_error(@impl))
       end
     end
 
@@ -159,8 +158,7 @@ module Qpid::Proton::Reactor
       if !aimpl.nil?
         return Acceptor.new(aimpl)
       else
-        io = Cproton.pn_reactor_io(@impl)
-        io_error = Cproton.pn_io_error(io)
+        io_error = Cproton.pn_reactor_error(@impl)
         error_text = Cproton.pn_error_text(io_error)
         text = "(#{Cproton.pn_error_text(io_error)} (#{host}:#{port}))"
         raise IOError.new(text)

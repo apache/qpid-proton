@@ -43,9 +43,9 @@ typedef pn_handler_t pn_handshaker_t;
 typedef pn_handler_t pn_iohandler_t;
 typedef pn_handler_t pn_flowcontroller_t;
 
-PN_EXTERN pn_handshaker_t *pn_handshaker(void);
-PN_EXTERN pn_iohandler_t *pn_iohandler(void);
-PN_EXTERN pn_flowcontroller_t *pn_flowcontroller(int window);
+PNX_EXTERN pn_handshaker_t *pn_handshaker(void);
+PNX_EXTERN pn_iohandler_t *pn_iohandler(void);
+PNX_EXTERN pn_flowcontroller_t *pn_flowcontroller(int window);
 
 /** @}
  */

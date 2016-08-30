@@ -22,11 +22,12 @@
 #ifndef PROTON_SASL_INTERNAL_H
 #define PROTON_SASL_INTERNAL_H 1
 
-#include "buffer.h"
+#include "core/buffer.h"
+#include "core/engine-internal.h"
+
 #include "proton/types.h"
 #include "proton/sasl.h"
 
-#include "engine/engine-internal.h"
 
 // SASL APIs used by transport code
 void pn_sasl_free(pn_transport_t *transport);

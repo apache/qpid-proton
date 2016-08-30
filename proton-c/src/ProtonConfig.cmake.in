@@ -27,4 +27,7 @@ set (Proton_VERSION       @PN_VERSION@)
 set (Proton_INCLUDE_DIRS  @INCLUDEDIR@)
 set (Proton_LIBRARIES     optimized @LIBDIR@/@PROTONLIB@ debug @LIBDIR@/@PROTONLIBDEBUG@)
 
+set (ProtonCore_INCLUDE_DIRS  @INCLUDEDIR@)
+set (ProtonCore_LIBRARIES     optimized @LIBDIR@/@PROTONCORELIB@ debug @LIBDIR@/@PROTONCORELIBDEBUG@)
+
 set (Proton_FOUND True)

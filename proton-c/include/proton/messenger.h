@@ -195,7 +195,7 @@ typedef enum {
  *
  * @return pointer to a new ::pn_messenger_t
  */
-PN_EXTERN pn_messenger_t *pn_messenger(const char *name);
+PNX_EXTERN pn_messenger_t *pn_messenger(const char *name);
 
 /**
  * Get the name of a messenger.
@@ -203,7 +203,7 @@ PN_EXTERN pn_messenger_t *pn_messenger(const char *name);
  * @param[in] messenger a messenger object
  * @return the name of the messenger
  */
-PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
+PNX_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
 
 /**
  * Sets the path that will be used to get the certificate that will be
@@ -214,7 +214,7 @@ PN_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
  * @param[in] certificate a path to a certificate file
  * @return an error code of zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
+PNX_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
 
 /**
  * Get the certificate path. This value may be set by
@@ -223,7 +223,7 @@ PN_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char
  * @param[in] messenger the messenger
  * @return the certificate file path
  */
-PN_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
+PNX_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
 
 /**
  * Set path to the private key that was used to sign the certificate.
@@ -233,7 +233,7 @@ PN_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
  * @param[in] private_key a path to a private key file
  * @return an error code of zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
+PNX_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
 
 /**
  * Gets the private key file for a messenger.
@@ -241,7 +241,7 @@ PN_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char
  * @param[in] messenger a messenger object
  * @return the messenger's private key file path
  */
-PN_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
+PNX_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
 
 /**
  * Sets the private key password for a messenger.
@@ -251,7 +251,7 @@ PN_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
+PNX_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
 
 /**
  * Gets the private key file password for a messenger.
@@ -259,7 +259,7 @@ PN_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *p
  * @param[in] messenger a messenger object
  * @return password for the private key file
  */
-PN_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
+PNX_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
 
 /**
  * Sets the trusted certificates database for a messenger.
@@ -272,7 +272,7 @@ PN_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
+PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
 
 /**
  * Gets the trusted certificates database for a messenger.
@@ -280,7 +280,7 @@ PN_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, c
  * @param[in] messenger a messenger object
  * @return path to the trusted certificates database
  */
-PN_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
+PNX_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
 
 /**
  * Set the default timeout for a messenger.
@@ -294,7 +294,7 @@ PN_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *mess
  * @param[in] timeout a new timeout for the messenger, in milliseconds
  * @return an error code or zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
+PNX_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
 
 /**
  * Gets the timeout for a messenger object.
@@ -304,7 +304,7 @@ PN_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
  * @param[in] messenger a messenger object
  * @return the timeout for the messenger, in milliseconds
  */
-PN_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 
 /**
  * Check if a messenger is in blocking mode.
@@ -312,7 +312,7 @@ PN_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return true if blocking has been enabled, false otherwise
  */
-PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
+PNX_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
 
 /**
  * Enable or disable blocking behavior for a messenger during calls to
@@ -322,7 +322,7 @@ PN_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
  * @param[in] blocking the value of the blocking flag
  * @return an error code or zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
+PNX_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
 
 /**
  * Check if a messenger is in passive mode.
@@ -336,7 +336,7 @@ PN_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking
  * @param[in] messenger a messenger object
  * @return true if the messenger is in passive mode, false otherwise
  */
-PN_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
+PNX_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
 
 /**
  * Set the passive mode for a messenger.
@@ -348,14 +348,14 @@ PN_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
  * passive mode
  * @return an error code or zero on success
  */
-PN_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive);
+PNX_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive);
 
 /** Frees a Messenger.
  *
  * @param[in] messenger the messenger to free (or NULL), no longer
  *                      valid on return
  */
-PN_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
+PNX_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
 
 /**
  * Get the code for a messenger's most recent error.
@@ -370,7 +370,7 @@ PN_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
  * @return an error code or zero if there is no error
  * @see error.h
  */
-PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
 
 /**
  * Get a messenger's error object.
@@ -383,7 +383,7 @@ PN_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
  * @return a pointer to the messenger's error descriptor
  * @see error.h
  */
-PN_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
+PNX_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
 
 /**
  * Get the size of a messenger's outgoing window.
@@ -400,7 +400,7 @@ PN_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the outgoing window for the messenger
  */
-PN_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
 
 /**
  * Set the size of a messenger's outgoing window.
@@ -412,7 +412,7 @@ PN_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
+PNX_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
 
 /**
  * Get the size of a messenger's incoming window.
@@ -432,7 +432,7 @@ PN_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int wi
  * @param[in] messenger a messenger object
  * @return the incoming window for the messenger
  */
-PN_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
 
 /**
  * Set the size of a messenger's incoming window.
@@ -444,7 +444,7 @@ PN_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
+PNX_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
                                                int window);
 
 /**
@@ -455,7 +455,7 @@ PN_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
 
 /**
  * Stops a messenger.
@@ -471,7 +471,7 @@ PN_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
 
 /**
  * Returns true if a messenger is in the stopped state. This function
@@ -480,7 +480,7 @@ PN_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
  * @param[in] messenger the messenger to stop
  *
  */
-PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
+PNX_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 
 /**
  * Subscribes a messenger to messages from the specified source.
@@ -489,7 +489,7 @@ PN_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
  * @param[in] source
  * @return a subscription
  */
-PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
+PNX_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
 /**
  * Subscribes a messenger to messages from the specified source with the given
@@ -501,7 +501,7 @@ PN_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, c
  *            link is closed.
  * @return a subscription
  */
-PN_EXTERN pn_subscription_t *
+PNX_EXTERN pn_subscription_t *
 pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
                            pn_seconds_t timeout);
 
@@ -514,7 +514,7 @@ pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
  *            receiver
  * @return a link, or NULL if no link matches the address / sender parameters
  */
-PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
+PNX_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
                                            const char *address, bool sender);
 
 /**
@@ -525,7 +525,7 @@ PN_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
  * @param[in] sub a subscription object
  * @return the subscription's application context
  */
-PN_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
+PNX_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
 
 /**
  * Set an application context for a subscription.
@@ -533,7 +533,7 @@ PN_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
  * @param[in] sub a subscription object
  * @param[in] context the application context for the subscription
  */
-PN_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
+PNX_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
 /**
  * Get the source address of a subscription.
@@ -541,7 +541,7 @@ PN_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context
  * @param[in] sub a subscription object
  * @return the subscription's source address
  */
-PN_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
+PNX_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
 
 /**
  * Puts a message onto the messenger's outgoing queue. The message may
@@ -553,7 +553,7 @@ PN_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
+PNX_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
 
 /**
  * Track the status of a delivery.
@@ -566,7 +566,7 @@ PN_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  * @param[in] tracker the tracker identifying the delivery
  * @return a status code for the delivery
  */
-PN_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
+PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
 
 /**
  * Get delivery information about a delivery.
@@ -579,7 +579,7 @@ PN_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_
  * @param[in] tracker the tracker identifying the delivery
  * @return a pn_delivery_t representing the delivery.
  */
-PN_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
+PNX_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
                                                pn_tracker_t tracker);
 
 /**
@@ -594,7 +594,7 @@ PN_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
  *
  * @return true if the delivery is still buffered
  */
-PN_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker);
+PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker);
 
 /**
  * Frees a Messenger from tracking the status associated with a given
@@ -608,7 +608,7 @@ PN_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tra
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
  * Get a tracker for the outgoing message most recently given to
@@ -623,7 +623,7 @@ PN_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracke
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
-PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
+PNX_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
 
 /**
  * Sends or receives any outstanding messages queued for a messenger.
@@ -635,7 +635,7 @@ PN_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
  *
  * @return 0 if no work to do, < 0 if error, or 1 if work was done.
  */
-PN_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
+PNX_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
 
 /**
  * Interrupt a messenger object that may be blocking in another
@@ -648,7 +648,7 @@ PN_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
  *
  * @param[in] messenger the Messenger to interrupt
  */
-PN_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
 
 /**
  * Send messages from a messenger's outgoing queue.
@@ -682,7 +682,7 @@ PN_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
+PNX_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
 
 /**
  * Retrieve messages into a messenger's incoming queue.
@@ -708,7 +708,7 @@ PN_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
+PNX_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
 
 /**
  * Get the capacity of the incoming message queue of a messenger.
@@ -720,7 +720,7 @@ PN_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
  *
  * @param[in] messenger the messenger
  */
-PN_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
 
 /**
  * Get the next message from the head of a messenger's incoming queue.
@@ -736,7 +736,7 @@ PN_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message);
+PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message);
 
 /**
  * Get a tracker for the message most recently retrieved by
@@ -751,7 +751,7 @@ PN_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message)
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
-PN_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
+PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
 
 /**
  * Get the subscription of the message most recently retrieved by ::pn_messenger_get().
@@ -762,7 +762,7 @@ PN_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return a pn_subscription_t or NULL
  */
-PN_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
+PNX_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 /**
  * Indicates that an accept or reject should operate cumulatively.
@@ -790,7 +790,7 @@ PN_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
  * Signal unsuccessful processing of message(s).
@@ -813,7 +813,7 @@ PN_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracke
  * @return an error code or zero on success
  * @see error.h
  */
-PN_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
+PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
  * Get  link for the message referenced by the given tracker.
@@ -822,7 +822,7 @@ PN_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracke
  * @param[in] tracker a tracker object
  * @return a pn_link_t or NULL if the link could not be determined.
  */
-PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
+PNX_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
                                                pn_tracker_t tracker);
 
 /**
@@ -832,7 +832,7 @@ PN_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
  * @param[in] messenger a messenger object
  * @return the outgoing queue depth
  */
-PN_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
 
 /**
  * Get the number of messages in the incoming message queue of a messenger.
@@ -840,7 +840,7 @@ PN_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the incoming queue depth
  */
-PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 
 //! Adds a routing rule to a Messenger's internal routing table.
 //!
@@ -904,7 +904,7 @@ PN_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 //!
 //! @return an error code or zero on success
 //! @see error.h
-PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
+PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
                                  const char *address);
 
 /**
@@ -929,7 +929,7 @@ PN_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
  * @param[in] address an address indicating outgoing address rewrite
  * @return an error code or zero on success
  */
-PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
+PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
                                    const char *address);
 
 /**
@@ -960,7 +960,7 @@ PN_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *patter
  * @param[in] messenger a messenger object
  * @return the next selectable, or NULL if there are none left
  */
-PN_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
+PNX_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 
 /**
  * Get the nearest deadline for selectables associated with a messenger.
@@ -968,7 +968,7 @@ PN_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the nearest deadline
  */
-PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
+PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 
 /**
  * @}
@@ -991,7 +991,7 @@ PN_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
-PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
+PNX_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
                                      const int flags);
 
 /** Gets the flags for a Messenger.
@@ -999,7 +999,7 @@ PN_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
  * @param[in] messenger the messenger
  * @return The flags set for the messenger
  */
-PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
+PNX_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
 
 /**
  * Set the local sender settle mode for the underlying link.
@@ -1007,7 +1007,7 @@ PN_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
  * @param[in] messenger the messenger
  * @param[in] mode the sender settle mode
  */
-PN_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
+PNX_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
                                                const pn_snd_settle_mode_t mode);
 
 /**
@@ -1016,7 +1016,7 @@ PN_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
  * @param[in] messenger the messenger
  * @param[in] mode the receiver settle mode
  */
-PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
+PNX_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
                                                const pn_rcv_settle_mode_t mode);
 
 /**
@@ -1025,7 +1025,7 @@ PN_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
  * @param[in] messenger a messenger object
  * @param[in] tracer the tracer callback
  */
-PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
+PNX_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
                                        pn_tracer_t tracer);
 
 /**
@@ -1035,7 +1035,7 @@ PN_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
  * @param[in] address of remote service whose idle timeout is required
  * @return the timeout in milliseconds or -1 if an error occurs
  */
-PN_EXTERN pn_millis_t
+PNX_EXTERN pn_millis_t
     pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
                                          const char *address);
 
@@ -1048,7 +1048,7 @@ PN_EXTERN pn_millis_t
  *             enum for valid values)
  * @return 0 if successful or -1 if an error occurs
  */
-PN_EXTERN int
+PNX_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
 

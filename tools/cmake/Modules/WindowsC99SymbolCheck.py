@@ -53,7 +53,7 @@ def symcheck(objfile):
         m = re.search(r'UNDEF.*\b([a-zA-Z_]*snprintf)\b', line)
         if m :
             sym = m.group(1)
-            if re.match(r'_*pn_i_v?snprintf', sym) is None :
+            if re.match(r'_*pni_v?snprintf', sym) is None :
                 raise Exception('Unsafe use of C99 violating function in  ' + objfile + ' : ' + sym)
 
 def main():

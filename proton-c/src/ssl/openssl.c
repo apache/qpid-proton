@@ -19,11 +19,12 @@
  *
  */
 
+#include "platform/platform.h"
+#include "core/util.h"
+#include "core/engine-internal.h"
+
 #include <proton/ssl.h>
 #include <proton/engine.h>
-#include "engine/engine-internal.h"
-#include "platform.h"
-#include "util.h"
 
 // openssl on windows expects the user to have already included
 // winsock.h
@@ -749,7 +750,7 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_name(c);
     if (v) {
-      snprintf( buffer, size, "%s", v );
+      pni_snprintf( buffer, size, "%s", v );
       return true;
     }
   }
@@ -765,7 +766,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_version(c);
     if (v) {
-      snprintf( buffer, size, "%s", v );
+      pni_snprintf( buffer, size, "%s", v );
       return true;
     }
   }
@@ -1345,7 +1346,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
         char *cursor = fingerprint;
 
         for (size_t i=0; i<len ; i++) {
-            cursor +=  snprintf((char *)cursor, fingerprint_length, "%02x", bytes[i]);
+            cursor +=  pni_snprintf((char *)cursor, fingerprint_length, "%02x", bytes[i]);
             fingerprint_length = fingerprint_length - 2;
         }
 

@@ -138,7 +138,7 @@ class Reactor(Wrapper):
 
     def wakeup(self):
         n = pn_reactor_wakeup(self._impl)
-        if n: raise IOError(pn_error_text(pn_io_error(pn_reactor_io(self._impl))))
+        if n: raise IOError(pn_error_text(pn_reactor_error(self._impl)))
 
     def start(self):
         pn_reactor_start(self._impl)
@@ -176,7 +176,7 @@ class Reactor(Wrapper):
         if aimpl:
             return Acceptor(aimpl)
         else:
-            raise IOError("%s (%s:%s)" % (pn_error_text(pn_io_error(pn_reactor_io(self._impl))), host, port))
+            raise IOError("%s (%s:%s)" % pn_error_text(pn_reactor_error(self._impl)), host, port)
 
     def connection(self, handler=None):
         """Deprecated: use connection_to_host() instead
