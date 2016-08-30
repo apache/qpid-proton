@@ -54,7 +54,6 @@ struct pn_message_t {
   pn_data_t *properties;
   pn_data_t *body;
 
-  pn_parser_t *parser;
   pn_error_t *error;
 
   pn_sequence_t group_sequence;
@@ -86,7 +85,6 @@ void pn_message_finalize(void *obj)
   pn_data_free(msg->annotations);
   pn_data_free(msg->properties);
   pn_data_free(msg->body);
-  pn_parser_free(msg->parser);
   pn_error_free(msg->error);
 }
 
@@ -334,7 +332,6 @@ pn_message_t *pn_message()
   msg->properties = pn_data(16);
   msg->body = pn_data(16);
 
-  msg->parser = NULL;
   msg->error = pn_error();
   return msg;
 }
@@ -395,15 +392,6 @@ int pn_message_set_inferred(pn_message_t *msg, bool inferred)
   assert(msg);
   msg->inferred = inferred;
   return 0;
-}
-
-pn_parser_t *pn_message_parser(pn_message_t *msg)
-{
-  assert(msg);
-  if (!msg->parser) {
-    msg->parser = pn_parser();
-  }
-  return msg->parser;
 }
 
 bool pn_message_is_durable(pn_message_t *msg)
