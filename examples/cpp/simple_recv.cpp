@@ -40,8 +40,8 @@ class simple_recv : public proton::messaging_handler {
     std::string user;
     std::string password;
     proton::receiver receiver;
-    uint64_t expected;
-    uint64_t received;
+    int expected;
+    int received;
 
   public:
     simple_recv(const std::string &s, const std::string &u, const std::string &p, int c) :
@@ -56,7 +56,7 @@ class simple_recv : public proton::messaging_handler {
     }
 
     void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
-        if (proton::get<uint64_t>(msg.id()) < received) {
+        if (proton::coerce<int>(msg.id()) < received) {
             return; // Ignore duplicate
         }
 

@@ -105,7 +105,7 @@ class queues {
 
     std::mutex lock_;
     queue_map queues_;
-    std::atomic<uint64_t> next_id_; // Use to generate unique queue IDs.
+    std::atomic<int> next_id_; // Use to generate unique queue IDs.
 };
 
 /// Broker connection handler. Things to note:

@@ -137,7 +137,7 @@ class epoll_container : public proton::io::container_impl_base {
             return o.str();
         }
       private:
-        std::atomic<uint64_t> count_;
+        std::atomic<int> count_;
     };
 
      // FIXME aconway 2016-06-07: Unfinished

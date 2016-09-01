@@ -147,7 +147,7 @@ class queues {
   protected:
     typedef std::map<std::string, queue *> queue_map;
     queue_map queues_;
-    uint64_t next_id_; // Use to generate unique queue IDs.
+    int next_id_; // Use to generate unique queue IDs.
 };
 
 // A handler to implement broker logic
