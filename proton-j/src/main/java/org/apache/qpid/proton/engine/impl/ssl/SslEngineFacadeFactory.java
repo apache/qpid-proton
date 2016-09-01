@@ -20,14 +20,16 @@
  */
 package org.apache.qpid.proton.engine.impl.ssl;
 
+import java.io.Closeable;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.security.KeyManagementException;
 import java.security.KeyPair;
 import java.security.KeyStore;
@@ -39,6 +41,7 @@ import java.security.Security;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,7 +58,6 @@ import javax.net.ssl.X509TrustManager;
 
 import org.apache.qpid.proton.engine.SslDomain;
 import org.apache.qpid.proton.engine.SslPeerDetails;
-import org.apache.qpid.proton.ProtonUnsupportedOperationException;
 import org.apache.qpid.proton.engine.TransportException;
 
 public class SslEngineFacadeFactory
@@ -70,65 +72,86 @@ public class SslEngineFacadeFactory
      */
     private static final String TLS_PROTOCOL = "TLS";
 
-    private static final Class pemReaderClass = getClass("org.bouncycastle.openssl.PEMReader");
-    private static final Class passwordClass = getClass("org.bouncycastle.openssl.PasswordFinder");
-    private static final Class passwordProxy = makePasswordProxy();
-    private static final Constructor pemReaderCons = getConstructor(pemReaderClass, Reader.class, passwordClass);
-    private static final Method readObjectMeth = getMethod(pemReaderClass, "readObject");
+    // BouncyCastle Reflection Helpers
+    private static final Constructor<?> pemParserCons;
+    private static final Method         pemReadMethod;
 
-    private static Class getClass(String klass) {
-        try {
-            return Class.forName(klass);
-        } catch (ClassNotFoundException e) {
-            _logger.warning("unable to load " + klass);
-        }
+    private static final Constructor<?> JcaPEMKeyConverterCons;
+    private static final Class<?>       PEMKeyPairClass;
+    private static final Method         getKeyPairMethod;
+    private static final Method         getPrivateKeyMethod;
 
-        return null;
-    }
+    private static final Class<?>       PEMEncryptedKeyPairClass;
+    private static final Method         decryptKeyPairMethod;
 
-    private static Constructor getConstructor(Class klass, Class<?> ... params) {
-        if (klass == null) {
-            return null;
-        }
+    private static final Constructor<?> JcePEMDecryptorProviderBuilderCons;
+    private static final Method         builderMethod;
 
-        try {
-            return klass.getConstructor(params);
-        } catch (NoSuchMethodException e) {
-            throw new TransportException(e);
-        }
-    }
-
-    private static Method getMethod(Class klass, String name, Class<?> ... params) {
-        if (klass == null) {
-            return null;
-        }
-
-        try {
-            return klass.getMethod(name, params);
-        } catch (NoSuchMethodException e) {
-            throw new TransportException(e);
-        }
-    }
-
-    private static Class makePasswordProxy() {
-        if (passwordClass != null) {
-            return Proxy.getProxyClass(passwordClass.getClassLoader(), new Class[] {passwordClass});
-        } else {
-            return null;
-        }
-    }
+    private static final Class<?>       PrivateKeyInfoClass;
+    private static final Exception      bouncyCastleSetupException;
 
     static
     {
-        try {
-            Class klass = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
-            Security.addProvider((Provider) klass.newInstance());
-        } catch (ClassNotFoundException e) {
-            _logger.warning("unable to load bouncycastle provider");
-        } catch (InstantiationException e) {
-            _logger.warning("unable to instantiate bouncycastle provider");
-        } catch (IllegalAccessException e) {
-            _logger.warning("unable to access bouncycastle provider");
+        // Setup BouncyCastle Reflection artifacts
+        Constructor<?> pemParserConsResult = null;
+        Method         pemReadMethodResult = null;
+        Constructor<?> JcaPEMKeyConverterConsResult = null;
+        Class<?>       PEMKeyPairClassResult = null;
+        Method         getKeyPairMethodResult = null;
+        Method         getPrivateKeyMethodResult = null;
+        Class<?>       PEMEncryptedKeyPairClassResult = null;
+        Method         decryptKeyPairMethodResult = null;
+        Constructor<?> JcePEMDecryptorProviderBuilderConsResult = null;
+        Method         builderMethodResult = null;
+        Class<?>       PrivateKeyInfoClassResult = null;
+        Exception      bouncyCastleSetupExceptionResult = null;
+
+        try
+        {
+            final Class<?> pemParserClass = Class.forName("org.bouncycastle.openssl.PEMParser");
+            pemParserConsResult = pemParserClass.getConstructor(Reader.class);
+            pemReadMethodResult = pemParserClass.getMethod("readObject");
+
+            final Class<?> jcaPEMKeyConverterClass = Class.forName("org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter");
+            JcaPEMKeyConverterConsResult = jcaPEMKeyConverterClass.getConstructor();
+            PEMKeyPairClassResult = Class.forName("org.bouncycastle.openssl.PEMKeyPair");
+            getKeyPairMethodResult = jcaPEMKeyConverterClass.getMethod("getKeyPair", PEMKeyPairClassResult);
+
+            final Class<?> PEMDecrypterProvider = Class.forName("org.bouncycastle.openssl.PEMDecryptorProvider");
+
+            PEMEncryptedKeyPairClassResult = Class.forName("org.bouncycastle.openssl.PEMEncryptedKeyPair");
+            decryptKeyPairMethodResult = PEMEncryptedKeyPairClassResult.getMethod("decryptKeyPair", PEMDecrypterProvider);
+
+            final Class<?> jcePEMDecryptorProviderBuilderClass = Class.forName(
+                    "org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder");
+            JcePEMDecryptorProviderBuilderConsResult = jcePEMDecryptorProviderBuilderClass.getConstructor();
+            builderMethodResult = jcePEMDecryptorProviderBuilderClass.getMethod("build", char[].class);
+
+            PrivateKeyInfoClassResult = Class.forName("org.bouncycastle.asn1.pkcs.PrivateKeyInfo");
+            getPrivateKeyMethodResult = jcaPEMKeyConverterClass.getMethod("getPrivateKey", PrivateKeyInfoClassResult);
+
+            // Try loading BC as a provider
+            Class<?> klass = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+            Provider provider = (Provider) klass.getConstructor().newInstance();
+            Security.addProvider(provider);
+        }
+        catch (Exception e)
+        {
+            bouncyCastleSetupExceptionResult = e;
+        }
+        finally {
+            pemParserCons = pemParserConsResult;
+            pemReadMethod = pemReadMethodResult;
+            JcaPEMKeyConverterCons = JcaPEMKeyConverterConsResult;
+            PEMKeyPairClass = PEMKeyPairClassResult;
+            getKeyPairMethod = getKeyPairMethodResult;
+            getPrivateKeyMethod = getPrivateKeyMethodResult;
+            PEMEncryptedKeyPairClass = PEMEncryptedKeyPairClassResult;
+            decryptKeyPairMethod = decryptKeyPairMethodResult;
+            JcePEMDecryptorProviderBuilderCons = JcePEMDecryptorProviderBuilderConsResult;
+            builderMethod = builderMethodResult;
+            PrivateKeyInfoClass = PrivateKeyInfoClassResult;
+            bouncyCastleSetupException = bouncyCastleSetupExceptionResult;
         }
     }
 
@@ -309,7 +332,7 @@ public class SslEngineFacadeFactory
                 {
                     _logger.log(Level.FINE, "_sslParams.getTrustedCaDb() : " + sslDomain.getTrustedCaDb());
                 }
-                Certificate trustedCaCert = (Certificate) readPemObject(sslDomain.getTrustedCaDb(), null, Certificate.class);
+                Certificate trustedCaCert = readCertificate(sslDomain.getTrustedCaDb());
                 keystore.setCertificateEntry(caCertAlias, trustedCaCert);
             }
 
@@ -317,29 +340,14 @@ public class SslEngineFacadeFactory
                     && sslDomain.getPrivateKeyFile() != null)
             {
                 String clientPrivateKeyAlias = "clientPrivateKey";
-                Certificate clientCertificate = (Certificate) readPemObject(sslDomain.getCertificateFile(), null, Certificate.class);
-                Object keyOrKeyPair = readPemObject(
-                        sslDomain.getPrivateKeyFile(),
-                        sslDomain.getPrivateKeyPassword(), PrivateKey.class, KeyPair.class);
 
-                final PrivateKey clientPrivateKey;
-                if (keyOrKeyPair instanceof PrivateKey)
-                {
-                    clientPrivateKey = (PrivateKey)keyOrKeyPair;
-                }
-                else if (keyOrKeyPair instanceof KeyPair)
-                {
-                    clientPrivateKey = ((KeyPair)keyOrKeyPair).getPrivate();
-                }
-                else
-                {
-                    // Should not happen - readPemObject will have already verified key type
-                    throw new TransportException("Unexpected key type " + keyOrKeyPair);
-                }
+                Certificate clientCertificate = (Certificate) readCertificate(sslDomain.getCertificateFile());
+                PrivateKey clientPrivateKey = readPrivateKey(sslDomain.getPrivateKeyFile(), sslDomain.getPrivateKeyPassword());
 
                 keystore.setKeyEntry(clientPrivateKeyAlias, clientPrivateKey,
                         dummyPassword, new Certificate[] { clientCertificate });
             }
+
             return keystore;
         }
         catch (KeyStoreException e)
@@ -414,126 +422,134 @@ public class SslEngineFacadeFactory
             .append(" ]").toString();
     }
 
-    private Object readPemObject(String pemFile, String keyPassword, @SuppressWarnings("rawtypes") Class... expectedInterfaces)
+    Certificate readCertificate(String pemFile)
     {
-        final Object passwordFinder;
-        if (keyPassword != null)
+        InputStream is = null;
+
+        try
         {
-            passwordFinder = getPasswordFinderFor(keyPassword);
+            CertificateFactory cFactory = CertificateFactory.getInstance("X.509");
+            is = new FileInputStream(pemFile);
+            return cFactory.generateCertificate(is);
         }
-        else
+        catch (CertificateException ce)
         {
-            passwordFinder = null;
+            String msg = "Failed to load certificate [" + pemFile + "]";
+            _logger.log(Level.SEVERE, msg, ce);
+            throw new TransportException(msg, ce);
+        }
+        catch (FileNotFoundException e)
+        {
+            String msg = "Certificate file not found [" + pemFile + "]";
+            _logger.log(Level.SEVERE, msg);
+            throw new TransportException(msg, e);
+        }
+        finally
+        {
+            closeSafely(is);
+        }
+    }
+
+    PrivateKey readPrivateKey(String pemFile, String password)
+    {
+        if (bouncyCastleSetupException != null)
+        {
+            throw new TransportException("BouncyCastle failed to load", bouncyCastleSetupException);
         }
 
+        final Object pemObject = readPemObject(pemFile);
+        PrivateKey privateKey = null;
+
+        try
+        {
+            Object keyConverter = JcaPEMKeyConverterCons.newInstance();
+            setProvider(keyConverter, "BC");
+
+            if (PEMEncryptedKeyPairClass.isInstance(pemObject))
+            {
+                Object decryptorBuilder = JcePEMDecryptorProviderBuilderCons.newInstance();
+
+                // Build a PEMDecryptProvider
+                Object decryptProvider = builderMethod.invoke(decryptorBuilder, password.toCharArray());
+
+                Object decryptedKeyPair = decryptKeyPairMethod.invoke(pemObject, decryptProvider);
+                KeyPair keyPair = (KeyPair) getKeyPairMethod.invoke(keyConverter, decryptedKeyPair);
+
+                privateKey = keyPair.getPrivate();
+            }
+            else if (PEMKeyPairClass.isInstance(pemObject))
+            {
+                // It's a KeyPair but not encrypted.
+                KeyPair keyPair = (KeyPair) getKeyPairMethod.invoke(keyConverter, pemObject);
+                privateKey = keyPair.getPrivate();
+            }
+            else if (PrivateKeyInfoClass.isInstance(pemObject))
+            {
+                // It's an unencrypted private key
+                privateKey = (PrivateKey) getPrivateKeyMethod.invoke(pemObject);
+            }
+            else
+            {
+                final String msg = "Unable to load PrivateKey, Unpexected Object [" + pemObject.getClass().getName()
+                        + "]";
+                _logger.log(Level.SEVERE, msg);
+                throw new TransportException(msg);
+            }
+        }
+        catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+                | InvocationTargetException | NoSuchMethodException | SecurityException e)
+        {
+            final String msg = "Failed to process key file [" + pemFile + "] - " + e.getMessage();
+            throw new TransportException(msg, e);
+        }
+
+        return privateKey;
+    }
+
+    private Object readPemObject(String pemFile)
+    {
         Reader reader = null;
-        Reader pemReader = null;
-
-        if (pemReaderCons == null || readObjectMeth == null) {
-            throw new ProtonUnsupportedOperationException();
-        }
+        Object pemParser = null;
+        Object pemObject = null;
 
         try
         {
             reader = new FileReader(pemFile);
-            pemReader = (Reader) pemReaderCons.newInstance(new Object[] {reader, passwordFinder});
-            Object pemObject = readObjectMeth.invoke(pemReader);
-            if (!checkPemObjectIsOfAllowedTypes(pemObject, expectedInterfaces))
-            {
-                throw new TransportException
-                    ("File " + pemFile + " does not provide a object of the required type."
-                     + " Read an object of class " + pemObject.getClass().getName()
-                     + " whilst expecting an implementation of one of the following  : "
-                     + Arrays.asList(expectedInterfaces));
-            }
-            return pemObject;
+            pemParser = pemParserCons.newInstance(reader); // = new PEMParser(reader);
+            pemObject = pemReadMethod.invoke(pemParser); // = pemParser.readObject();
         }
-        catch(InstantiationException e)
+        catch (IOException | IllegalAccessException | IllegalArgumentException | InvocationTargetException | InstantiationException e)
         {
             _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new TransportException("Unable to read PEM object from file " + pemFile, e);
-        }
-        catch(InvocationTargetException e)
-        {
-            _logger.log(Level.SEVERE, "Unable to read PEM object. Perhaps you need the unlimited strength libraries in <java-home>/jre/lib/security/ ?", e);
-            throw new TransportException("Unable to read PEM object from file " + pemFile, e);
-        }
-        catch (IllegalAccessException e)
-        {
-            throw new TransportException(e);
-        }
-        catch (IOException e)
-        {
             throw new TransportException("Unable to read PEM object from file " + pemFile, e);
         }
         finally
         {
-            if(pemReader != null)
-            {
-                try
-                {
-                    pemReader.close();
-                }
-                catch(IOException e)
-                {
-                    _logger.log(Level.SEVERE, "Couldn't close PEM reader", e);
-                }
-            }
-            if (reader != null)
-            {
-                try
-                {
-                    reader.close();
-                }
-                catch (IOException e)
-                {
-                    _logger.log(Level.SEVERE, "Couldn't close PEM file reader", e);
-                }
-            }
+            closeSafely(reader);
         }
+
+        return pemObject;
     }
 
-    @SuppressWarnings("rawtypes")
-    private boolean checkPemObjectIsOfAllowedTypes(Object pemObject,  Class... expectedInterfaces)
+    private void setProvider(Object obj, String provider) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException
     {
-        if (expectedInterfaces.length == 0)
-        {
-            throw new IllegalArgumentException("Must be at least one expectedKeyTypes");
-        }
-
-        for (Class keyInterface : expectedInterfaces)
-        {
-            if (keyInterface.isInstance(pemObject))
-            {
-                return true;
-            }
-        }
-        return false;
+        final Class<?> aClz = obj.getClass();
+        final Method setProvider = aClz.getMethod("setProvider", String.class);
+        setProvider.invoke(obj, provider);
     }
 
-    private Object getPasswordFinderFor(final String keyPassword)
+    private void closeSafely(Closeable c)
     {
-        if (passwordProxy == null) {
-            throw new ProtonUnsupportedOperationException();
-        }
-
-        try {
-            Constructor con = passwordProxy.getConstructor(new Class[] {InvocationHandler.class});
-            Object finder = con.newInstance(new InvocationHandler() {
-                public Object invoke(Object obj, Method meth, Object[] args) {
-                return keyPassword.toCharArray();
-                }
-            });
-
-            return finder;
-        } catch (NoSuchMethodException e) {
-            throw new TransportException(e);
-        } catch (InstantiationException e) {
-            throw new TransportException(e);
-        } catch (IllegalAccessException e) {
-            throw new TransportException(e);
-        } catch (InvocationTargetException e) {
-            throw new TransportException(e);
+        if (c != null)
+        {
+            try
+            {
+                c.close();
+            }
+            catch (IOException e)
+            {
+               // Swallow
+            }
         }
     }
 
