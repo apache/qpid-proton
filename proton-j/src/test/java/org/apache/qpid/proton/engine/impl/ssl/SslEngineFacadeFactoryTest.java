@@ -49,7 +49,15 @@ public class SslEngineFacadeFactoryTest {
         String keyFile = resolveFilename("private-key-clear.pem.txt");
         SslEngineFacadeFactory factory = new SslEngineFacadeFactory();
 
-        assertNotNull("Key was NULL", factory.readPrivateKey(keyFile, PASSWORD));
+        assertNotNull("Key was NULL", factory.readPrivateKey(keyFile, null));
+    }
+
+    @Test
+    public void testLoadUnencryptedPKCS8PrivateKey(){
+        String keyFile = resolveFilename("private-key-clear-pkcs8.pem.txt");
+        SslEngineFacadeFactory factory = new SslEngineFacadeFactory();
+
+        assertNotNull("Key was NULL", factory.readPrivateKey(keyFile, null));
     }
 
     private String resolveFilename(String testFilename) {

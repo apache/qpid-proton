@@ -486,7 +486,7 @@ public class SslEngineFacadeFactory
             else if (PrivateKeyInfoClass.isInstance(pemObject))
             {
                 // It's an unencrypted private key
-                privateKey = (PrivateKey) getPrivateKeyMethod.invoke(pemObject);
+                privateKey = (PrivateKey) getPrivateKeyMethod.invoke(keyConverter, pemObject);
             }
             else
             {

@@ -35,4 +35,12 @@ openssl rsa -in key.pem.txt -out private-key-clear.pem.txt -outform PEM
 
 echo
 
+# 3. The following command produces an unprotected PKCS#8 private key
 
+echo
+echo when prompted, use 'unittest' as the passphrase
+echo
+
+openssl pkcs8 -topk8 -nocrypt -in key.pem.txt -out private-key-clear-pkcs8.pem.txt
+
+echo
