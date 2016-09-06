@@ -206,11 +206,11 @@ func (d endpointDelegator) HandleEvent(e Event) {
 		}
 
 	case d.remoteOpen:
+		d.delegator.mhandler.HandleMessagingEvent(d.opening, e)
 		switch {
 		case state.LocalActive():
 			d.delegator.mhandler.HandleMessagingEvent(d.opened, e)
 		case state.LocalUninit():
-			d.delegator.mhandler.HandleMessagingEvent(d.opening, e)
 			if d.delegator.AutoOpen {
 				endpoint.Open()
 			}

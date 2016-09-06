@@ -127,9 +127,6 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 	if pnErr := C.pn_connection_engine_init(&eng.engine); pnErr != 0 {
 		return nil, fmt.Errorf("cannot setup engine: %s", PnErrorCode(pnErr))
 	}
-	// Unique container-id by default.
-	eng.Connection().SetContainer(UUID4().String()) // FIXME aconway 2016-06-21:
-	eng.Connection().Open()
 	return eng, nil
 }
 
@@ -143,12 +140,6 @@ func byteSlice(data unsafe.Pointer, size C.size_t) []byte {
 	}
 }
 
-func (eng *Engine) buffers() ([]byte, []byte) {
-	r := C.pn_connection_engine_read_buffer(&eng.engine)
-	w := C.pn_connection_engine_write_buffer(&eng.engine)
-	return byteSlice(unsafe.Pointer(r.start), r.size), byteSlice(unsafe.Pointer(w.start), w.size)
-}
-
 func (eng *Engine) Connection() Connection {
 	return Connection{C.pn_connection_engine_connection(&eng.engine)}
 }
@@ -158,11 +149,12 @@ func (eng *Engine) Transport() Transport {
 }
 
 func (eng *Engine) String() string {
-	return fmt.Sprintf("%s-%s", eng.conn.LocalAddr(), eng.conn.RemoteAddr())
+	return fmt.Sprintf("[%s]%s-%s", eng.Id(), eng.conn.LocalAddr(), eng.conn.RemoteAddr())
 }
 
 func (eng *Engine) Id() string {
-	return fmt.Sprintf("%p", eng)
+	// Use transport address to match default PN_TRACE_FRM=1 output.
+	return fmt.Sprintf("%p", eng.Transport().CPtr())
 }
 
 func (eng *Engine) Error() error {
@@ -213,8 +205,7 @@ func (eng *Engine) InjectWait(f func() error) error {
 //
 func (eng *Engine) Server() { eng.Transport().SetServer() }
 
-// FIXME aconway 2016-06-21: rename
-func (eng *Engine) disconnect() { // FIXME aconway 2016-06-21: disconnected
+func (eng *Engine) disconnect() {
 	eng.conn.Close()
 	C.pn_connection_engine_disconnected(&eng.engine)
 }
@@ -244,12 +235,35 @@ func (eng *Engine) Disconnect(err error) {
 	<-eng.running
 }
 
+func (eng *Engine) dispatch() bool {
+	for {
+		if cevent := C.pn_connection_engine_dispatch(&eng.engine); cevent != nil {
+			event := makeEvent(cevent, eng)
+			for _, h := range eng.handlers {
+				h.HandleEvent(event)
+			}
+		} else {
+			break
+		}
+	}
+	return !bool(C.pn_connection_engine_finished(&eng.engine))
+}
+
+func (eng *Engine) writeBuffer() []byte {
+	w := C.pn_connection_engine_write_buffer(&eng.engine)
+	return byteSlice(unsafe.Pointer(w.start), w.size)
+}
+
+func (eng *Engine) readBuffer() []byte {
+	r := C.pn_connection_engine_read_buffer(&eng.engine)
+	return byteSlice(unsafe.Pointer(r.start), r.size)
+}
+
 // Run the engine. Engine.Run() will exit when the engine is closed or
 // disconnected.  You can check for errors after exit with Engine.Error().
 //
 func (eng *Engine) Run() error {
 	C.pn_connection_engine_start(&eng.engine)
-
 	// Channels for read and write buffers going in and out of the read/write goroutines.
 	// The channels are unbuffered: we want to exchange buffers in seuquence.
 	readsIn, writesIn := make(chan []byte), make(chan []byte)
@@ -298,9 +312,18 @@ func (eng *Engine) Run() error {
 		}
 	}()
 
-	for !C.pn_connection_engine_finished(&eng.engine) {
-		// Enable readIn/writeIn channles only if we have a buffer.
-		readBuf, writeBuf := eng.buffers()
+	for eng.dispatch() {
+		readBuf := eng.readBuffer()
+		writeBuf := eng.writeBuffer()
+		// Note that getting the buffers can generate events (eg. SASL events) that
+		// might close the transport. Check if we are already finished before
+		// blocking for IO.
+		if !eng.dispatch() {
+			break
+		}
+
+		// sendReads/sendWrites are nil (not sendable in select) unless we have a
+		// buffer to read/write
 		var sendReads, sendWrites chan []byte
 		if readBuf != nil {
 			sendReads = readsIn
@@ -311,6 +334,7 @@ func (eng *Engine) Run() error {
 
 		// Send buffers to the read/write goroutines if we have them.
 		// Get buffers from the read/write goroutines and process them
+		// Check for injected functions
 		select {
 
 		case sendReads <- readBuf:
@@ -318,36 +342,18 @@ func (eng *Engine) Run() error {
 		case sendWrites <- writeBuf:
 
 		case buf := <-readsOut:
-			if len(buf) > 0 {
-				C.pn_connection_engine_read_done(&eng.engine, C.size_t(len(buf)))
-			} else {
-				panic(fmt.Sprintf("read buf %v", buf))
-			}
+			C.pn_connection_engine_read_done(&eng.engine, C.size_t(len(buf)))
 
 		case buf := <-writesOut:
-			if len(buf) > 0 {
-				C.pn_connection_engine_write_done(&eng.engine, C.size_t(len(buf)))
-			} else {
-				panic(fmt.Sprintf("write buf %v", buf))
-			}
+			C.pn_connection_engine_write_done(&eng.engine, C.size_t(len(buf)))
 
 		case f, ok := <-eng.inject: // Function injected from another goroutine
 			if ok {
 				f()
 			}
 		}
-
-		for {
-			cevent := C.pn_connection_engine_dispatch(&eng.engine)
-			if cevent == nil {
-				break
-			}
-			event := makeEvent(cevent, eng)
-			for _, h := range eng.handlers {
-				h.HandleEvent(event)
-			}
-		}
 	}
+
 	eng.err.Set(EndpointError(eng.Connection()))
 	eng.err.Set(eng.Transport().Condition().Error())
 	close(readsIn)
@@ -365,6 +371,5 @@ func (eng *Engine) Run() error {
 			C.pn_handler_free(h.pn)
 		}
 	}
-	// FIXME aconway 2016-06-21: consistent error handling
 	return eng.err.Get()
 }

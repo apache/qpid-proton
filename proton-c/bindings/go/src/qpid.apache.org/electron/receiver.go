@@ -213,7 +213,15 @@ func (rm *ReceivedMessage) Release() error { return rm.acknowledge(proton.Releas
 // IncomingReceiver is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a receiver link.
 type IncomingReceiver struct {
-	incomingLink
+	incoming
+	linkSettings
+}
+
+func newIncomingReceiver(sn *session, pLink proton.Link) *IncomingReceiver {
+	return &IncomingReceiver{
+		incoming:     makeIncoming(pLink),
+		linkSettings: makeIncomingLinkSettings(pLink, sn),
+	}
 }
 
 // SetCapacity sets the capacity of the incoming receiver, call before Accept()

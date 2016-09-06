@@ -29,6 +29,7 @@ package proton
 //#include <proton/link.h>
 //#include <proton/link.h>
 //#include <proton/object.h>
+//#include <proton/sasl.h>
 //#include <proton/session.h>
 //#include <proton/transport.h>
 //#include <stdlib.h>
@@ -292,7 +293,8 @@ func (s Session) Receiver(name string) Link {
 
 // Unique (per process) string identifier for a connection, useful for debugging.
 func (c Connection) String() string {
-	return fmt.Sprintf("%x", c.pn)
+	// Use the transport address to match the default transport logs from PN_TRACE.
+	return fmt.Sprintf("%p", c.Transport().CPtr())
 }
 
 func (c Connection) Type() string {
@@ -321,6 +323,18 @@ func (c Connection) Sessions(state State) (sessions []Session) {
 		sessions = append(sessions, s)
 	}
 	return
+}
+
+// SetPassword takes []byte not string because it is impossible to erase a string
+// from memory reliably. Proton will not keep the password in memory longer than
+// needed, the caller should overwrite their copy on return.
+//
+// The password must not contain embedded nul characters, a trailing nul is ignored.
+func (c Connection) SetPassword(password []byte) {
+	if len(password) == 0 || password[len(password)-1] != 0 {
+		password = append(password, 0) // Proton requires a terminating null.
+	}
+	C.pn_connection_set_password(c.pn, (*C.char)(unsafe.Pointer(&password[0])))
 }
 
 func (s Session) String() string {
@@ -383,4 +397,9 @@ func (t Transport) Head() unsafe.Pointer {
 // Special treatment for Transport.Push, takes []byte instead of char*, size
 func (t Transport) Push(bytes []byte) int {
 	return int(C.pn_transport_push(t.pn, (*C.char)(unsafe.Pointer(&bytes[0])), C.size_t(len(bytes))))
+}
+
+// Get the SASL object for the transport.
+func (t Transport) SASL() SASL {
+	return SASL{C.pn_sasl(t.pn)}
 }

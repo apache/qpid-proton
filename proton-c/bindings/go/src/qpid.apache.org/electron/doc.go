@@ -21,21 +21,20 @@ under the License.
 Package electron is a procedural, concurrent-safe Go library for AMQP messaging.
 You can write clients and servers using this library.
 
-Start by creating a Container with NewContainer. A Container represents a client
-or server application that can contain many incoming or outgoing connections.
+Start by creating a Container with NewContainer. An AMQP Container represents a
+single AMQP "application" and can contain client and server connections.
 
-Create connections with the standard Go 'net' package using net.Dial or
-net.Listen. Create an AMQP connection over a net.Conn with
-Container.Connection() and open it with Connection.Open().
+You can enable AMQP over any connection that implements the standard net.Conn
+interface. Typically you can connect with net.Dial() or listen for server
+connections with net.Listen.  Enable AMQP by passing the net.Conn to
+Container.Connection().
 
-AMQP sends messages over "links". Each link has a Sender end and a Receiver
-end. Connection.Sender() and Connection.Receiver() allow you to create links to
-Send() and Receive() messages.
-
-You can create an AMQP server connection by calling Connection.Server() and
-Connection.Listen() before calling Connection.Open(). A server connection can
-negotiate protocol security details and can accept incoming links opened from
-the remote end of the connection.
+AMQP allows bi-direction peer-to-peer message exchange as well as
+client-to-broker. Messages are sent over "links". Each link is one-way and has a
+Sender and Receiver end. Connection.Sender() and Connection.Receiver() open
+links to Send() and Receive() messages. Connection.Incoming() lets you accept
+incoming links opened by the remote peer. You can open and accept multiple links
+in both directions on a single Connection.
 
 */
 package electron
@@ -54,10 +53,10 @@ only accessed in the event-loop goroutine, so no locks are required there.
 The handler sets up channels as needed to get or send data from user goroutines
 using electron types like Sender or Receiver.
 
-We also use Engine.Inject to inject actions into the event loop from user
-goroutines. It is important to check at the start of an injected function that
-required objects are still valid, for example a link may be remotely closed
-between the time a Sender function calls Inject and the time the injected
-function is execute by the handler goroutine. See comments in endpoint.go for more.
+Engine.Inject injects actions into the event loop from user goroutines. It is
+important to check at the start of an injected function that required objects
+are still valid, for example a link may be remotely closed between the time a
+Sender function calls Inject and the time the injected function is execute by
+the handler goroutine.
 
 */

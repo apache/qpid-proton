@@ -259,7 +259,15 @@ type sentMessage struct {
 // IncomingSender is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a sender link.
 type IncomingSender struct {
-	incomingLink
+	incoming
+	linkSettings
+}
+
+func newIncomingSender(sn *session, pLink proton.Link) *IncomingSender {
+	return &IncomingSender{
+		incoming:     makeIncoming(pLink),
+		linkSettings: makeIncomingLinkSettings(pLink, sn),
+	}
 }
 
 // Accept accepts an incoming sender endpoint

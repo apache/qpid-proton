@@ -594,6 +594,10 @@ void pn_connection_set_user(pn_connection_t *connection, const char *user)
 void pn_connection_set_password(pn_connection_t *connection, const char *password)
 {
     assert(connection);
+    // Make sure the previous password is erased, if there was one.
+    size_t n = pn_string_size(connection->auth_password);
+    const char* s = pn_string_get(connection->auth_password);
+    if (n > 0 && s) memset((void*)s, 0, n);
     pn_string_set(connection->auth_password, password);
 }
 

@@ -23,16 +23,34 @@ package electron
 import "C"
 
 import (
-	"fmt"
 	"net"
 	"qpid.apache.org/proton"
 	"sync"
 	"time"
 )
 
+// Settings associated with a Connection.
+type ConnectionSettings interface {
+	// Authenticated user name associated with the connection.
+	User() string
+
+	// The AMQP virtual host name for the connection.
+	//
+	// Optional, useful when the server has multiple names and provides different
+	// service based on the name the client uses to connect.
+	//
+	// By default it is set to the DNS host name that the client uses to connect,
+	// but it can be set to something different at the client side with the
+	// VirtualHost() option.
+	//
+	// Returns error if the connection fails to authenticate.
+	VirtualHost() string
+}
+
 // Connection is an AMQP connection, created by a Container.
 type Connection interface {
 	Endpoint
+	ConnectionSettings
 
 	// Sender opens a new sender on the DefaultSession.
 	Sender(...LinkOption) (Sender, error)
@@ -59,48 +77,79 @@ type Connection interface {
 	// WaitTimeout is like Wait but returns Timeout if the timeout expires.
 	WaitTimeout(time.Duration) error
 
-	// Incoming returns a channel for incoming endpoints opened by the remote end.
+	// Incoming returns a channel for incoming endpoints opened by the remote peer.
+	// See the Incoming interface for more.
 	//
-	// To enable, pass AllowIncoming() when creating the Connection. Otherwise all
-	// incoming endpoint requests are automatically rejected and Incoming()
-	// returns nil.
-	//
-	// An Incoming value can be an *IncomingSession, *IncomingSender or
-	// *IncomingReceiver.  You must call Accept() to open the endpoint or Reject()
-	// to close it with an error. The specific Incoming types have additional
-	// methods to configure the endpoint.
-	//
-	// Not receiving from Incoming() or not calling Accept/Reject will block the
-	// electron event loop. Normally you would have a dedicated goroutine receive
-	// from Incoming() and start new goroutines to serve each incoming endpoint.
-	// The channel is closed when the Connection closes.
-	//
+	// Not receiving from Incoming() and calling Accept/Reject will block the
+	// electron event loop. You should run a loop to handle the types that
+	// interest you in a switch{} and and Accept() all others.
 	Incoming() <-chan Incoming
 }
+
+type connectionSettings struct {
+	user, virtualHost string
+}
+
+func (c connectionSettings) User() string        { return c.user }
+func (c connectionSettings) VirtualHost() string { return c.virtualHost }
 
 // ConnectionOption can be passed when creating a connection to configure various options
 type ConnectionOption func(*connection)
 
-// Server returns a ConnectionOption to put the connection in server mode.
+// User returns a ConnectionOption sets the user name for a connection
+func User(user string) ConnectionOption {
+	return func(c *connection) {
+		c.user = user
+		c.pConnection.SetUser(user)
+	}
+}
+
+// VirtualHost returns a ConnectionOption to set the AMQP virtual host for the connection.
+// Only applies to outbound client connection.
+func VirtualHost(virtualHost string) ConnectionOption {
+	return func(c *connection) {
+		c.virtualHost = virtualHost
+		c.pConnection.SetHostname(virtualHost)
+	}
+}
+
+// Password returns a ConnectionOption to set the password used to establish a
+// connection.  Only applies to outbound client connection.
+//
+// The connection will erase its copy of the password from memory as soon as it
+// has been used to authenticate. If you are concerned about paswords staying in
+// memory you should never store them as strings, and should overwrite your
+// copy as soon as you are done with it.
+//
+func Password(password []byte) ConnectionOption {
+	return func(c *connection) { c.pConnection.SetPassword(password) }
+}
+
+// Server returns a ConnectionOption to put the connection in server mode for incoming connections.
 //
 // A server connection will do protocol negotiation to accept a incoming AMQP
 // connection. Normally you would call this for a connection created by
 // net.Listener.Accept()
 //
-func Server() ConnectionOption { return func(c *connection) { c.engine.Server() } }
+func Server() ConnectionOption {
+	return func(c *connection) { c.engine.Server(); c.server = true; AllowIncoming()(c) }
+}
 
-// AllowIncoming returns a ConnectionOption to enable incoming endpoint open requests.
-// See Connection.Incoming()
+// AllowIncoming returns a ConnectionOption to enable incoming endpoints, see
+// Connection.Incoming() This is automatically set for Server() connections.
 func AllowIncoming() ConnectionOption {
 	return func(c *connection) { c.incoming = make(chan Incoming) }
 }
 
 type connection struct {
 	endpoint
+	connectionSettings
+
 	defaultSessionOnce, closeOnce sync.Once
 
 	container   *container
 	conn        net.Conn
+	server      bool
 	incoming    chan Incoming
 	handler     *handler
 	engine      *proton.Engine
@@ -110,23 +159,32 @@ type connection struct {
 }
 
 func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
-	c := &connection{container: cont, conn: conn}
+	c := &connection{
+		container: cont,
+		conn:      conn,
+	}
 	c.handler = newHandler(c)
 	var err error
 	c.engine, err = proton.NewEngine(c.conn, c.handler.delegator)
 	if err != nil {
 		return nil, err
 	}
+	c.pConnection = c.engine.Connection()
+	c.pConnection.SetContainer(cont.Id())
 	for _, set := range setting {
 		set(c)
 	}
+	globalSASLInit(c.engine)
+
 	c.endpoint.init(c.engine.String())
-	c.pConnection = c.engine.Connection()
 	go c.run()
 	return c, nil
 }
 
 func (c *connection) run() {
+	if !c.server {
+		c.pConnection.Open()
+	}
 	c.engine.Run()
 	if c.incoming != nil {
 		close(c.incoming)
@@ -201,46 +259,95 @@ func (c *connection) WaitTimeout(timeout time.Duration) error {
 	return c.Error()
 }
 
-func (c *connection) Incoming() <-chan Incoming { return c.incoming }
-
-// Incoming is the interface for incoming requests to open an endpoint.
-// Implementing types are IncomingSession, IncomingSender and IncomingReceiver.
-type Incoming interface {
-	// Accept and open the endpoint.
-	Accept() Endpoint
-
-	// Reject the endpoint with an error
-	Reject(error)
-
-	// wait for and call the accept function, call in proton goroutine.
-	wait() error
-	pEndpoint() proton.Endpoint
+func (c *connection) Incoming() <-chan Incoming {
+	assert(c.incoming != nil, "electron.Connection.Incoming() disabled for %s", c)
+	return c.incoming
 }
 
-type incoming struct {
-	pep      proton.Endpoint
-	acceptCh chan func() error
+type IncomingConnection struct {
+	incoming
+	connectionSettings
+	c *connection
 }
 
-func makeIncoming(e proton.Endpoint) incoming {
-	return incoming{pep: e, acceptCh: make(chan func() error)}
+func newIncomingConnection(c *connection) *IncomingConnection {
+	c.user = c.pConnection.Transport().User()
+	c.virtualHost = c.pConnection.RemoteHostname()
+	return &IncomingConnection{
+		incoming:           makeIncoming(c.pConnection),
+		connectionSettings: c.connectionSettings,
+		c:                  c}
 }
 
-func (in *incoming) String() string   { return fmt.Sprintf("%s: %s", in.pep.Type(), in.pep) }
-func (in *incoming) Reject(err error) { in.acceptCh <- func() error { return err } }
+func (in *IncomingConnection) Accept() Endpoint {
+	return in.accept(func() Endpoint {
+		in.c.pConnection.Open()
+		return in.c
+	})
+}
 
-// Call in proton goroutine, wait for and call the accept function fr
-func (in *incoming) wait() error { return (<-in.acceptCh)() }
+func sasl(c *connection) proton.SASL { return c.engine.Transport().SASL() }
 
-func (in *incoming) pEndpoint() proton.Endpoint { return in.pep }
+// SASLEnable returns a ConnectionOption that enables SASL authentication.
+// Only required if you don't set any other SASL options.
+func SASLEnable() ConnectionOption { return func(c *connection) { sasl(c) } }
 
-// Called in app goroutine to send an accept function to proton and return the resulting endpoint.
-func (in *incoming) accept(f func() Endpoint) Endpoint {
-	done := make(chan Endpoint)
-	in.acceptCh <- func() error {
-		ep := f()
-		done <- ep
-		return nil
+// SASLAllowedMechs returns a ConnectionOption to set the list of allowed SASL
+// mechanisms.
+//
+// Can be used on the client or the server to restrict the SASL for a connection.
+// mechs is a space-separated list of mechanism names.
+//
+func SASLAllowedMechs(mechs string) ConnectionOption {
+	return func(c *connection) { sasl(c).AllowedMechs(mechs) }
+}
+
+// SASLAllowInsecure returns a ConnectionOption that allows or disallows clear
+// text SASL authentication mechanisms
+//
+// By default the SASL layer is configured not to allow mechanisms that disclose
+// the clear text of the password over an unencrypted AMQP connection. This specifically
+// will disallow the use of the PLAIN mechanism without using SSL encryption.
+//
+// This default is to avoid disclosing password information accidentally over an
+// insecure network.
+//
+func SASLAllowInsecure(b bool) ConnectionOption {
+	return func(c *connection) { sasl(c).SetAllowInsecureMechs(b) }
+}
+
+// GlobalSASLConfigDir sets the SASL configuration directory for every
+// Connection created in this process. If not called, the default is determined
+// by your SASL installation.
+//
+// You can set SASLAllowInsecure and SASLAllowedMechs on individual connections.
+//
+func GlobalSASLConfigDir(dir string) { globalSASLConfigDir = dir }
+
+// GlobalSASLConfigName sets the SASL configuration name for every Connection
+// created in this process. If not called the default is "proton-server".
+//
+// The complete configuration file name is
+//     <sasl-config-dir>/<sasl-config-name>.conf
+//
+// You can set SASLAllowInsecure and SASLAllowedMechs on individual connections.
+//
+func GlobalSASLConfigName(dir string) { globalSASLConfigName = dir }
+
+var (
+	globalSASLConfigName string
+	globalSASLConfigDir  string
+)
+
+// TODO aconway 2016-09-15: Current pn_sasl C impl config is broken, so all we
+// can realistically offer is global configuration. Later if/when the pn_sasl C
+// impl is fixed we can offer per connection over-rides.
+func globalSASLInit(eng *proton.Engine) {
+	sasl := eng.Transport().SASL()
+	if globalSASLConfigName != "" {
+		sasl.ConfigName(globalSASLConfigName)
 	}
-	return <-done
+	if globalSASLConfigDir != "" {
+		sasl.ConfigPath(globalSASLConfigDir)
+	}
 }

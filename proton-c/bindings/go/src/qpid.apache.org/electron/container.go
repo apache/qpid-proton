@@ -35,12 +35,17 @@ type Container interface {
 	// Id is a unique identifier for the container in your distributed application.
 	Id() string
 
-	// Create a new AMQP Connection over the supplied net.Conn connection.
+	// Enable AMQP over the supplied net.Conn. Returns a Connection endpoint.
 	//
-	// You must call Connection.Open() on the returned Connection, after
-	// setting any Connection properties you need to set. Note the net.Conn
-	// can be an outgoing connection (e.g. made with net.Dial) or an incoming
-	// connection (e.g. made with net.Listener.Accept())
+	// For client connections (e.g. established with net.Dial()), you can start
+	// using the connection immediately. Connection.Incoming() is disabled by
+	// default for clients, pass an AllowIncoming() option to enable incoming
+	// sessions and links.
+	//
+	// For server connection (e.g. established with net.Listener.Accept()) you
+	// must pass the Server() option and receive from the Connection.Incoming()
+	// channel. The first Incoming value will be an *IncomingConnection that lets
+	// you examine the connection properties before Accept() or Reject()
 	Connection(net.Conn, ...ConnectionOption) (Connection, error)
 }
 

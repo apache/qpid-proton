@@ -19,7 +19,9 @@ under the License.
 
 // Code generator to generate a thin Go wrapper API around the C proton API.
 //
-
+// Not run automatically, generated sources are checked in. To update the
+// generated sources run `go run genwrap.go` in this directory.
+//
 package main
 
 import (
@@ -44,7 +46,7 @@ func main() {
 	panicIf(err)
 	defer out.Close()
 
-	apis := []string{"session", "link", "delivery", "disposition", "condition", "terminus", "connection", "transport"}
+	apis := []string{"session", "link", "delivery", "disposition", "condition", "terminus", "connection", "transport", "sasl"}
 	fmt.Fprintln(out, copyright)
 	fmt.Fprint(out, `
 package proton
@@ -89,12 +91,18 @@ import (
 	}
 }
 
+// Identify acronyms that should be uppercase not Mixedcase
+var acronym = regexp.MustCompile("(?i)SASL|AMQP")
+
 func mixedCase(s string) string {
 	result := ""
 	for _, w := range strings.Split(s, "_") {
-		if w != "" {
-			result = result + strings.ToUpper(w[0:1]) + strings.ToLower(w[1:])
+		if acronym.MatchString(w) {
+			w = strings.ToUpper(w)
+		} else {
+			w = strings.ToUpper(w[0:1]) + strings.ToLower(w[1:])
 		}
+		result = result + w
 	}
 	return result
 }
@@ -122,7 +130,13 @@ func findEnums(header string) (enums []enumType) {
 	return enums
 }
 
+// Types that are integral, not wrappers. Enums are added automatically.
+var simpleType = map[string]bool{
+	"State": true, // integral typedef
+}
+
 func genEnum(out io.Writer, name string, values []string) {
+	simpleType[mixedCase(name)] = true
 	doTemplate(out, []interface{}{name, values}, `
 {{$enumName := index . 0}}{{$values := index . 1}}
 type {{mixedCase $enumName}} C.pn_{{$enumName}}_t
@@ -139,10 +153,6 @@ func (e {{mixedCase $enumName}}) String() string {
 }
 `)
 }
-
-var (
-	reSpace = regexp.MustCompile("\\s+")
-)
 
 func panicIf(err error) {
 	if err != nil {
@@ -202,7 +212,7 @@ var (
 	enumDefRe   = regexp.MustCompile("typedef enum {([^}]*)} pn_([a-z_]+)_t;")
 	enumValRe   = regexp.MustCompile("PN_[A-Z_]+")
 	skipEventRe = regexp.MustCompile("EVENT_NONE|REACTOR|SELECTABLE|TIMER")
-	skipFnRe    = regexp.MustCompile("attach|context|class|collect|link_recv|link_send|transport_.*logf$|transport_.*trace|transport_head|transport_push")
+	skipFnRe    = regexp.MustCompile("attach|context|class|collect|link_recv|link_send|transport_.*logf$|transport_.*trace|transport_head|transport_push|connection_set_password")
 )
 
 // Generate event wrappers.
@@ -268,20 +278,10 @@ func (g genType) goConvert(value string) string {
 	}
 }
 
-var notStruct = map[string]bool{
-	"EventType":        true,
-	"SndSettleMode":    true,
-	"RcvSettleMode":    true,
-	"TerminusType":     true,
-	"State":            true,
-	"Durability":       true,
-	"ExpiryPolicy":     true,
-	"DistributionMode": true,
-}
-
 func mapType(ctype string) (g genType) {
 	g.Ctype = "C." + strings.Trim(ctype, " \n")
 
+	// Special-case mappings for C types, default: is the general wrapper type case.
 	switch g.Ctype {
 	case "C.void":
 		g.Gotype = ""
@@ -331,7 +331,7 @@ func mapType(ctype string) (g genType) {
 			panic(fmt.Errorf("unknown C type %#v", g.Ctype))
 		}
 		g.Gotype = mixedCase(match[1])
-		if !notStruct[g.Gotype] {
+		if !simpleType[g.Gotype] {
 			g.ToGo = g.goLiteral
 			g.ToC = func(v string) string { return v + ".pn" }
 		}

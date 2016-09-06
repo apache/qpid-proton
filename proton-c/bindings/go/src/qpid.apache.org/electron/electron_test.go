@@ -24,6 +24,7 @@ import (
 	"net"
 	"path"
 	"qpid.apache.org/amqp"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -39,15 +40,32 @@ func fatalIf(t *testing.T, err error) {
 	}
 }
 
+func errorIf(t *testing.T, err error) {
+	if err != nil {
+		_, file, line, ok := runtime.Caller(1) // annotate with location of caller.
+		if ok {
+			_, file = path.Split(file)
+		}
+		t.Errorf("(from %s:%d) %v", file, line, err)
+	}
+}
+
+func checkEqual(want interface{}, got interface{}) error {
+	if !reflect.DeepEqual(want, got) {
+		return fmt.Errorf("%#v != %#v", want, got)
+	}
+	return nil
+}
+
 // Start a server, return listening addr and channel for incoming Connections.
-func newServer(t *testing.T, cont Container) (net.Addr, <-chan Connection) {
+func newServer(t *testing.T, cont Container, opts ...ConnectionOption) (net.Addr, <-chan Connection) {
 	listener, err := net.Listen("tcp", "")
 	fatalIf(t, err)
 	addr := listener.Addr()
 	ch := make(chan Connection)
 	go func() {
 		conn, err := listener.Accept()
-		c, err := cont.Connection(conn, Server(), AllowIncoming())
+		c, err := cont.Connection(conn, append([]ConnectionOption{Server()}, opts...)...)
 		fatalIf(t, err)
 		ch <- c
 	}()
@@ -55,10 +73,10 @@ func newServer(t *testing.T, cont Container) (net.Addr, <-chan Connection) {
 }
 
 // Open a client connection and session, return the session.
-func newClient(t *testing.T, cont Container, addr net.Addr) Session {
+func newClient(t *testing.T, cont Container, addr net.Addr, opts ...ConnectionOption) Session {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	fatalIf(t, err)
-	c, err := cont.Connection(conn)
+	c, err := cont.Connection(conn, opts...)
 	fatalIf(t, err)
 	sn, err := c.Session()
 	fatalIf(t, err)
@@ -66,10 +84,15 @@ func newClient(t *testing.T, cont Container, addr net.Addr) Session {
 }
 
 // Return client and server ends of the same connection.
-func newClientServer(t *testing.T) (client Session, server Connection) {
-	addr, ch := newServer(t, NewContainer("test-server"))
-	client = newClient(t, NewContainer("test-client"), addr)
+func newClientServerOpts(t *testing.T, copts []ConnectionOption, sopts []ConnectionOption) (client Session, server Connection) {
+	addr, ch := newServer(t, NewContainer("test-server"), sopts...)
+	client = newClient(t, NewContainer("test-client"), addr, copts...)
 	return client, <-ch
+}
+
+// Return client and server ends of the same connection.
+func newClientServer(t *testing.T) (client Session, server Connection) {
+	return newClientServerOpts(t, nil, nil)
 }
 
 // Close client and server
