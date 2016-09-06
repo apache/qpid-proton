@@ -30,17 +30,18 @@ int pn_connection_engine_init(pn_connection_engine_t* e) {
     e->collector = pn_collector();
     if (!e->connection || !e->transport || !e->collector) {
         pn_connection_engine_final(e);
-        return PN_ERR;
-    }
-    int err;
-    // Bind before collect: don't expose the connection until it has a transport.
-    err = pn_transport_bind(e->transport, e->connection);
-    if (err) {
-        pn_connection_engine_final(e);
-        return err;
+        return PN_OUT_OF_MEMORY;
     }
     pn_connection_collect(e->connection, e->collector);
     return PN_OK;
+}
+
+void pn_connection_engine_start(pn_connection_engine_t* e) {
+    /*
+      Ignore bind errors. PN_STATE_ERR means we are already bound, any
+      other error will be delivered as an event.
+    */
+    pn_transport_bind(e->transport, e->connection);
 }
 
 void pn_connection_engine_final(pn_connection_engine_t* e) {

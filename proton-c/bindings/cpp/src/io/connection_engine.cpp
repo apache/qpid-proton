@@ -65,6 +65,7 @@ void connection_engine::configure(const connection_options& opts) {
     opts.apply_bound(c);
     handler_ =  opts.handler();
     connection_context::get(connection()).collector = c_engine_.collector;
+    pn_connection_engine_start(&c_engine_);
 }
 
 connection_engine::~connection_engine() {

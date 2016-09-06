@@ -43,16 +43,21 @@
 /// Summary of use:
 ///
 /// - while !pn_connection_engine_finished()
+///   - Call pn_connection_engine_dispatch() to dispatch events until it returns NULL.
 ///   - Read data from your source into pn_connection_engine_read_buffer()
 ///   - Call pn_connection_engine_read_done() when complete.
 ///   - Write data from pn_connection_engine_write_buffer() to your destination.
 ///   - Call pn_connection_engine_write_done() to indicate how much was written.
-///   - Call pn_connection_engine_dispatch() to dispatch events until it returns NULL.
 ///
-/// Note on error handling: most of the pn_connection_engine_*() functions do
-/// not return an error code. If a fatal error occurs, the transport error
-/// condition will be set and the next call to pn_connection_engine_dispatch()
-/// report it to the handler as a  PN_TRANSPORT_ERROR event and return false.
+/// Note on blocking: the _read/write_buffer and _read/write_done functions can
+/// all generate events that may cause the engine to finish. Before you wait for
+/// IO, always drain pn_connection_engine_dispatch() till it returns NULL and
+/// check pn_connection_engine_finished() in case there is nothing more to do..
+///
+/// Note on error handling: the pn_connection_engine_*() functions do not return
+/// an error code. If an error occurs it will be reported as a
+/// PN_TRANSPORT_ERROR event and pn_connection_engine_finished() will return
+/// true once all final events have been processed.
 ///
 /// @defgroup connection_engine The Connection Engine
 /// @{
@@ -79,16 +84,27 @@ typedef struct pn_connection_engine_t {
     pn_event_t* event;
 } pn_connection_engine_t;
 
-/// Initialize a pn_connection_engine_t struct with a new connection, transport
-/// and collector. Return 0 on success, a proton error code on failure.
+/// Initialize a pn_connection_engine_t struct with a new connection and
+/// transport.
+///
+/// Configure connection properties and call connection_engine_start() before
+/// using the engine.
+///
+/// Call pn_connection_engine_final to free resources when you are done.
+///
+///@return 0 on success, a proton error code on failure (@see error.h)
+///
 PN_EXTERN int pn_connection_engine_init(pn_connection_engine_t* engine);
 
-/// Release the connection, transport and collector associated with engine, set all the pointers
-/// to NULL. Only call on an engine that was initialized with pn_connection_engine_init
+/// Start the engine, call after setting security and host properties.
+PN_EXTERN void pn_connection_engine_start(pn_connection_engine_t* engine);
+
+/// Free resources used by the engine, set the connection and transport pointers
+/// to NULL.
 PN_EXTERN void pn_connection_engine_final(pn_connection_engine_t* engine);
 
-/// The engine's read buffer. Read data from your IO source to buf.start, up to
-/// a max of buf.size. Then call pn_connection_engine_read_done().
+/// Get the engine's read buffer. Read data from your IO source to buf.start, up
+/// to a max of buf.size. Then call pn_connection_engine_read_done().
 ///
 /// buf.size==0 means the engine cannot read presently, calling
 /// pn_connection_engine_dispatch() may create more buffer space.
@@ -104,7 +120,7 @@ PN_EXTERN void pn_connection_engine_read_done(pn_connection_engine_t*, size_t n)
 /// in pn_connection_engine_write_buffer()
 PN_EXTERN void pn_connection_engine_read_close(pn_connection_engine_t*);
 
-/// The engine's write buffer. Write data from buf.start to your IO destination,
+/// Get the engine's write buffer. Write data from buf.start to your IO destination,
 /// up to a max of buf.size. Then call pn_connection_engine_write_done().
 ///
 /// buf.size==0 means the engine has nothing to write presently.  Calling
