@@ -2090,6 +2090,31 @@ int pn_condition_set_description(pn_condition_t *condition, const char *descript
   return pn_string_set(condition->description, description);
 }
 
+int pn_condition_vformat(pn_condition_t *condition, const char *name, const char *fmt, va_list ap)
+{
+  assert(condition);
+  int err = pn_condition_set_name(condition, name);
+  if (err)
+      return err;
+
+  char text[1024];
+  size_t n = vsnprintf(text, 1024, fmt, ap);
+  if (n >= sizeof(text))
+      text[sizeof(text)-1] = '\0';
+  err = pn_condition_set_description(condition, text);
+  return err;
+}
+
+int pn_condition_format(pn_condition_t *condition, const char *name, const char *fmt, ...)
+{
+  assert(condition);
+  va_list ap;
+  va_start(ap, fmt);
+  int err = pn_condition_vformat(condition, name, fmt, ap);
+  va_end(ap);
+  return err;
+}
+
 pn_data_t *pn_condition_info(pn_condition_t *condition)
 {
   assert(condition);

@@ -64,7 +64,8 @@ typedef unsigned long int uintptr_t;
 
 %ignore pn_error_format;
 %ignore pn_error_vformat;
-
+%ignore pn_condition_format;
+%ignore pn_condition_vformat;
 
 /* checks that ensure only allowed values are supplied or returned */
 %aggregate_check(int, check_error,
