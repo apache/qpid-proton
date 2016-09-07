@@ -81,3 +81,6 @@ fi
 if [[ -x "$(type -p saslpasswd2)" ]] ; then
     export SASLPASSWD=$(type -p saslpasswd2)
 fi
+
+# Location of interop test files.
+export PN_INTEROP_DIR=$PROTON_HOME/tests/interop
