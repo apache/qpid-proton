@@ -324,22 +324,23 @@ func (p *pairs) receiverSender() (Receiver, Sender) {
 type result struct {
 	label string
 	err   error
+	value interface{}
 }
 
 func (r result) String() string { return fmt.Sprintf("%v(%v)", r.err, r.label) }
 
 func doSend(snd Sender, results chan result) {
 	err := snd.SendSync(amqp.NewMessage()).Error
-	results <- result{"send", err}
+	results <- result{"send", err, nil}
 }
 
 func doReceive(rcv Receiver, results chan result) {
-	_, err := rcv.Receive()
-	results <- result{"receive", err}
+	msg, err := rcv.Receive()
+	results <- result{"receive", err, msg}
 }
 
 func doDisposition(ack <-chan Outcome, results chan result) {
-	results <- result{"disposition", (<-ack).Error}
+	results <- result{"disposition", (<-ack).Error, nil}
 }
 
 // Senders get credit immediately if receivers have prefetch set

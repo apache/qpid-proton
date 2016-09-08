@@ -125,28 +125,31 @@ func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 	return r.ReceiveTimeout(Forever)
 }
 
-func (r *receiver) ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error) {
+func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
 	assert(r.buffer != nil, "Receiver is not open: %s", r)
-	select { // Check for immediate availability, avoid caller() inject.
-	case rm := <-r.buffer:
-		r.flowTopUp()
-		return rm, nil
-	default:
-	}
 	if !r.prefetch { // Per-caller flow control
-		r.caller(+1)
-		defer r.caller(-1)
+		select { // Check for immediate availability, avoid caller() inject
+		case rm2, ok := <-r.buffer:
+			if ok {
+				rm = rm2
+			} else {
+				err = r.Error()
+			}
+			return
+		default: // Not immediately available, inject caller() counts
+			r.caller(+1)
+			defer r.caller(-1)
+		}
 	}
 	rmi, err := timedReceive(r.buffer, timeout)
 	switch err {
 	case nil:
 		r.flowTopUp()
-		return rmi.(ReceivedMessage), err
+		rm = rmi.(ReceivedMessage)
 	case Closed:
-		return ReceivedMessage{}, r.Error()
-	default:
-		return ReceivedMessage{}, err
+		err = r.Error()
 	}
+	return
 }
 
 // Called in proton goroutine on MMessage event.
