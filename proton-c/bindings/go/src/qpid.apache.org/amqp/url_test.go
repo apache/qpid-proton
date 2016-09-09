@@ -28,10 +28,13 @@ func ExampleParseURL() {
 		"amqp://username:password@host:1234/path",
 		"host:1234",
 		"host",
-		":1234",
 		"host/path",
 		"amqps://host",
+		"/path",
+		"[::1]",
 		"",
+		":1234",
+		"[::1",
 	} {
 		u, err := ParseURL(s)
 		if err != nil {
@@ -44,8 +47,11 @@ func ExampleParseURL() {
 	// amqp://username:password@host:1234/path
 	// amqp://host:1234
 	// amqp://host:amqp
-	// amqp://:1234
 	// amqp://host:amqp/path
 	// amqps://host:amqps
-	// bad URL ""
+	// amqp://localhost:amqp/path
+	// amqp://[::1]:amqp
+	// amqp://localhost:amqp
+	// parse :1234: missing protocol scheme
+	// parse amqp://[::1: missing ']' in host
 }
