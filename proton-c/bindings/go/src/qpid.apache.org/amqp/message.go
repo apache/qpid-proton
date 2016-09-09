@@ -344,3 +344,5 @@ func (m *message) Encode(buffer []byte) ([]byte, error) {
 }
 
 // TODO aconway 2015-09-14: Multi-section messages.
+
+// TODO aconway 2016-09-09: Message.String() use inspect.

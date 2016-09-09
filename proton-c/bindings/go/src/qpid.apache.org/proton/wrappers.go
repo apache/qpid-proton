@@ -294,7 +294,7 @@ func (s Session) Receiver(name string) Link {
 // Unique (per process) string identifier for a connection, useful for debugging.
 func (c Connection) String() string {
 	// Use the transport address to match the default transport logs from PN_TRACE.
-	return fmt.Sprintf("%p", c.Transport().CPtr())
+	return fmt.Sprintf("(Connection)(%p)", c.Transport().CPtr())
 }
 
 func (c Connection) Type() string {
@@ -338,7 +338,7 @@ func (c Connection) SetPassword(password []byte) {
 }
 
 func (s Session) String() string {
-	return fmt.Sprintf("%s/%p", s.Connection(), s.pn)
+	return fmt.Sprintf("(Session)(%p)", s.pn) // TODO aconway 2016-09-12: should print channel number.
 }
 
 func (s Session) Type() string { return "session" }

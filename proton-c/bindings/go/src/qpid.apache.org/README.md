@@ -16,9 +16,10 @@ with goroutines and channels to build concurrent AMQP clients and servers.
 
 [qpid.apache.org/proton](http://godoc.org/qpid.apache.org/proton) is an
 event-driven, concurrent-unsafe package that closely follows the proton C
-API. Most Go programmers will find the electron package easier to use.
+API. Most Go programmers will find the
+[electron](http://godoc.org/qpid.apache.org/electron) package easier to use.
 
-There are [examples](https://github.com/apache/qpid-proton/blob/master/examples/go/README.md)
+See the [examples](https://github.com/apache/qpid-proton/blob/master/examples/go/README.md)
 to help you get started.
 
 Feedback is encouraged at:

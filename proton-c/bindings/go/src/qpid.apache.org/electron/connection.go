@@ -141,6 +141,12 @@ func AllowIncoming() ConnectionOption {
 	return func(c *connection) { c.incoming = make(chan Incoming) }
 }
 
+// Parent returns a ConnectionOption that associates the Connection with it's Container
+// If not set a connection will create its own default container.
+func Parent(cont Container) ConnectionOption {
+	return func(c *connection) { c.container = cont.(*container) }
+}
+
 type connection struct {
 	endpoint
 	connectionSettings
@@ -158,10 +164,10 @@ type connection struct {
 	defaultSession Session
 }
 
-func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) (*connection, error) {
+// NewConnection creates a connection with the given options.
+func NewConnection(conn net.Conn, setting ...ConnectionOption) (*connection, error) {
 	c := &connection{
-		container: cont,
-		conn:      conn,
+		conn: conn,
 	}
 	c.handler = newHandler(c)
 	var err error
@@ -170,10 +176,13 @@ func newConnection(conn net.Conn, cont *container, setting ...ConnectionOption) 
 		return nil, err
 	}
 	c.pConnection = c.engine.Connection()
-	c.pConnection.SetContainer(cont.Id())
 	for _, set := range setting {
 		set(c)
 	}
+	if c.container == nil {
+		c.container = NewContainer("").(*container)
+	}
+	c.pConnection.SetContainer(c.container.Id())
 	globalSASLInit(c.engine)
 
 	c.endpoint.init(c.engine.String())
@@ -350,4 +359,22 @@ func globalSASLInit(eng *proton.Engine) {
 	if globalSASLConfigDir != "" {
 		sasl.ConfigPath(globalSASLConfigDir)
 	}
+}
+
+// Dial is shorthand for using net.Dial() then NewConnection()
+func Dial(network, addr string, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := net.Dial(network, addr)
+	if err == nil {
+		c, err = NewConnection(conn, opts...)
+	}
+	return
+}
+
+// DialWithDialer is shorthand for using dialer.Dial() then NewConnection()
+func DialWithDialer(dialer *net.Dialer, network, addr string, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := dialer.Dial(network, addr)
+	if err == nil {
+		c, err = NewConnection(conn, opts...)
+	}
+	return
 }

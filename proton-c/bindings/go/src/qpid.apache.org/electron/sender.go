@@ -34,7 +34,7 @@ import (
 // The result of sending a message is provided by an Outcome value.
 //
 // A sender can buffer messages up to the credit limit provided by the remote receiver.
-// Send* methods will block if the buffer is full until there is space.
+// All the Send* methods will block if the buffer is full until there is space.
 // Send*Timeout methods will give up after the timeout and set Timeout as Outcome.Error.
 //
 type Sender interface {
@@ -47,10 +47,14 @@ type Sender interface {
 
 	// SendWaitable puts a message in the send buffer and returns a channel that
 	// you can use to wait for the Outcome of just that message. The channel is
-	// buffered so you can receive from it whenever you want without blocking anything.
+	// buffered so you can receive from it whenever you want without blocking.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendWaitable(m amqp.Message) <-chan Outcome
 
 	// SendForget buffers a message for sending and returns, with no notification of the outcome.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendForget(m amqp.Message)
 
 	// SendAsync puts a message in the send buffer and returns immediately.  An
@@ -63,6 +67,8 @@ type Sender interface {
 	// goroutines to avoid blocking the connection.
 	//
 	// If ack == nil no Outcome is sent.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendAsync(m amqp.Message, ack chan<- Outcome, value interface{})
 
 	SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, value interface{}, timeout time.Duration)

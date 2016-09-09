@@ -24,9 +24,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"os"
-	"path"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/electron"
 	"sync"
@@ -58,8 +56,7 @@ func main() {
 	var wait sync.WaitGroup
 	wait.Add(len(urls)) // Wait for one goroutine per URL.
 
-	_, prog := path.Split(os.Args[0])
-	container := electron.NewContainer(fmt.Sprintf("%v:%v", prog, os.Getpid()))
+	container := electron.NewContainer(fmt.Sprintf("send[%s]", os.Getpid()))
 	connections := make(chan electron.Connection, len(urls)) // Connctions to close on exit
 
 	// Start a goroutine for each URL to send messages.
@@ -72,9 +69,7 @@ func main() {
 			util.ExitIf(err)
 
 			// Open a new connection
-			conn, err := net.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
-			util.ExitIf(err)
-			c, err := container.Connection(conn)
+			c, err := container.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
 			util.ExitIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
 

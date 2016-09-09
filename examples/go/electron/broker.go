@@ -55,7 +55,7 @@ func main() {
 	flag.Parse()
 	b := &broker{
 		queues:    util.MakeQueues(*qsize),
-		container: electron.NewContainer(""),
+		container: electron.NewContainer(fmt.Sprintf("broker[%s]", os.Getpid())),
 		acks:      make(chan electron.Outcome),
 		sent:      make(chan sentMessage),
 	}
@@ -92,14 +92,9 @@ func (b *broker) run() error {
 
 	// Start a goroutine for each new connections
 	for {
-		conn, err := listener.Accept()
+		c, err := b.container.Accept(listener)
 		if err != nil {
 			util.Debugf("Accept error: %v", err)
-			continue
-		}
-		c, err := b.container.Connection(conn, electron.Server(), electron.AllowIncoming())
-		if err != nil {
-			util.Debugf("Connection error: %v", err)
 			continue
 		}
 		cc := &connection{b, c}

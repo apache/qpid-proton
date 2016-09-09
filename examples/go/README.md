@@ -1,36 +1,34 @@
-# Go examples for proton
+# Go examples
 
-There are 3 Go packages for proton:
+## Electron examples
 
-- qpid.apache.org/electron: Concurrent, procedural API for messaging clients and servers.
-- qpid.apache.org/proton: Direct access to the event-driven, concurrent-unsafe proton library.
-- qpid.apache.org/amqp: Convert AMQP messages and data to and from Go data types.
+[qpid.apache.org/electron](http://godoc.org/qpid.apache.org/electron) is a
+simple API for writing concurrent AMQP clients and servers.
 
-`proton` and `electron` are alternative APIs for sending messages. `proton` is a
-direct wrapping of the concurrent-unsafe, event-driven C proton API. `electron`
-is a procedural, concurrent-safe interface that may be more convenient and
-familiar for Go programmers. The examples `proton/broker.go` and
-`electron/broker.go` give an illustration of how the APIs differ.
-
-## Example programs
-
-electron
 - [receive.go](electron/receive.go) receive from many connections concurrently.
 - [send.go](electron/send.go) send to many connections concurrently.
 - [broker.go](electron/broker.go) a simple broker using the electron API
+n
+## Proton examples
 
-proton
+[qpid.apache.org/proton](http://godoc.org/qpid.apache.org/proton) is an
+event-driven, concurrent-unsafe Go wrapper for the proton-C library. The
+[electron](http://godoc.org/qpid.apache.org/electron) package provides a more
+Go-friendly concurrent API built on top of proton.
+
 - [broker.go](proton/broker.go) a simple broker using the proton API
+
+See [A Tale of Two Brokers](#a-tale-of-two-brokers) for a comparison of the two APIs.
 
 ## Using the Go packages
 
-If you have the proton C library and headers installed you can get the latest go
+If you have the proton-C library and headers installed you can get the latest go
 packages with
 
     go get qpid.apache.org/electron
 
-If proton is installed in a non-standard place (other than /usr or /usr/local) you
-can set these environment variables before `go get`, for example:
+If Proton-C is installed in a non-standard place (other than /usr or /usr/local)
+you should set these environment variables before `go get`:
 
     export CGO_LDFLAGS="-L/<my-proton>/lib[64]"
     export CGO_CFLAGS="-I/<my-proton>/include"
@@ -77,43 +75,57 @@ Receive messages concurrently from "foo" and "bar". Note -count 20 for 10 messag
 The broker and clients use the standard AMQP port (5672) on the local host by
 default, to use a different address use the `-addr host:port` flag.
 
-If you have the full proton repository checked out you can try try using the
-python broker with Go clients:
+If you have other Proton examples available you can try communicating between
+programs in in different languages. For example use the python broker with Go
+clients:
 
     python ../python/broker.py
+    go run send.go -count 10 localhost:/foo localhost:/bar
 
 Or use the Go broker and the python clients:
 
+    go run broker.go -debug
     python ../python/simple_send.py
     python ../python/simple_recv.py
 
 
 ## A tale of two brokers.
 
-The `proton` and `electron` packages provide two alternate APIs for AMQP applications.
-See [the proton Go README](https://github.com/apache/qpid-proton/blob/master/proton-c/bindings/go/src/qpid.apache.org/README.md) for a discussion
-of why there are two APIs.
+The [proton](http://godoc.org/qpid.apache.org/proton) and
+[electron](http://godoc.org/qpid.apache.org/electron) packages provide two
+different APIs for building AMQP applications. For most applications,
+[electron](http://godoc.org/qpid.apache.org/electron) is easier to use.
+[The proton Go README](https://github.com/apache/qpid-proton/blob/master/proton-c/bindings/go/src/qpid.apache.org/README.md)
+has some discussion about why there are two APIs.
 
-The examples `proton/broker.go` and `electron/broker.go` both implement the same
-simple broker-like functionality using each of the two APIs. They both handle
-multiple connections concurrently and store messages on bounded queues
-implemented by Go channels.
+The examples [proton/broker.go](proton/broker.go) and
+[electron/broker.go](electron/broker.go) implement the same simple broker
+functionality using each of the two APIs. They both handle multiple connections
+concurrently and store messages on bounded queues implemented by Go channels.
 
-However the `electron/broker` is less than half as long as the `proton/broker`
-illustrating why it is better suited for most Go applications.
+However the [electron/broker.go](electron/broker.go) is less than half as long as the
+[proton/broker.go](proton/broker.go) illustrating why it is better suited for most Go
+applications.
 
-`proton/broker` must explicitly handle proton events, which are processed in a
-single goroutine per connection since proton is not concurrent safe. Each
-connection uses channels to exchange messages between the event-handling
-goroutine and the shared queues that are accessible to all connections. Sending
-messages is particularly tricky since we must monitor the queue for available
-messages and the sending link for available credit in order to send messages.
+[proton/broker.go](proton/broker.go) implements an event-driven loop per connection that reacts
+to events like 'incoming link', 'incoming message' and 'sender has credit'.  It
+uses channels to exchange data between the event-loop goroutine for each
+connection and shared queues that are accessible to all connections. Sending
+messages is particularly tricky, the broker must monitor the queue for available
+messages and the sender link for available credit.
 
 
-`electron/broker` takes advantage of the `electron` package, which hides all the
-event handling and passing of messages between goroutines beind behind
-straightforward interfaces for sending and receiving messages. The electron
-broker can implement links as simple goroutines that loop popping messages from
-a queue and sending them or receiving messages and pushing them to a queue.
+[electron/broker.go](electron/broker.go) does not need any "upside-down"
+event-driven code, it is implemented as straightforward loops. The broker is a
+loop listening for connections. Each connection is a loop accepting for incoming
+sender or recdiver links. Each receiving link is a loop that receives a message
+and pushes it to a queue.  Each sending link is a loop that pops a message from
+a queue and sends it.
 
+Queue bounds and credit manage themselves: popping from a queue blocks till
+there is a message, sending blocks until there is credit, receiving blocks till
+something is received and pushing onto a queue blocks until there is
+space. There's no need for code that monitors the state of multiple queues and
+links. Each loop has one simple job to do, and the Go run-time schedules them
+efficiently.
 
