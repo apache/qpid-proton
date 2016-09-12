@@ -351,7 +351,7 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 	}
 }
 
-func (d *MessagingAdapter) incoming(e Event) (err error) {
+func (d *MessagingAdapter) incoming(e Event) {
 	delivery := e.Delivery()
 	if delivery.HasMessage() {
 		d.mhandler.HandleMessagingEvent(MMessage, e)
@@ -367,7 +367,7 @@ func (d *MessagingAdapter) incoming(e Event) (err error) {
 	return
 }
 
-func (d *MessagingAdapter) outgoing(e Event) (err error) {
+func (d *MessagingAdapter) outgoing(e Event) {
 	delivery := e.Delivery()
 	if delivery.Updated() {
 		switch delivery.Remote().Type() {
@@ -378,11 +378,11 @@ func (d *MessagingAdapter) outgoing(e Event) (err error) {
 		case Released, Modified:
 			d.mhandler.HandleMessagingEvent(MReleased, e)
 		}
-		if err == nil && delivery.Settled() {
+		if delivery.Settled() {
 			// The delivery was settled remotely, inform the local end.
 			d.mhandler.HandleMessagingEvent(MSettled, e)
 		}
-		if err == nil && d.AutoSettle {
+		if d.AutoSettle {
 			delivery.Settle() // Local settle, don't mhandler MSettled till the remote end settles.
 		}
 	}

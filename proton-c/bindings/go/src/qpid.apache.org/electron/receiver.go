@@ -103,7 +103,7 @@ func (r *receiver) flow(credit int) {
 // Inject flow check per-caller call when prefetch is off.
 // Called with inc=1 at start of call, inc = -1 at end
 func (r *receiver) caller(inc int) {
-	r.engine().Inject(func() {
+	_ = r.engine().Inject(func() {
 		r.callers += inc
 		need := r.callers - (len(r.buffer) + r.pLink.Credit())
 		max := r.maxFlow()
@@ -117,7 +117,7 @@ func (r *receiver) caller(inc int) {
 // Inject flow top-up if prefetch is enabled
 func (r *receiver) flowTopUp() {
 	if r.prefetch {
-		r.engine().Inject(func() { r.flow(r.maxFlow()) })
+		_ = r.engine().Inject(func() { r.flow(r.maxFlow()) })
 	}
 }
 

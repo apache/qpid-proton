@@ -239,7 +239,7 @@ func NewEncoder(w io.Writer) *Encoder {
 func (e *Encoder) Encode(v interface{}) (err error) {
 	e.buffer, err = Marshal(v, e.buffer)
 	if err == nil {
-		e.writer.Write(e.buffer)
+		_, err = e.writer.Write(e.buffer)
 	}
 	return err
 }

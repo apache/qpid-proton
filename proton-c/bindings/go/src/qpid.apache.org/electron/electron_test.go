@@ -286,7 +286,9 @@ func TestTimeouts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rm.Accept()
+	if err := rm.Accept(); err != nil {
+		t.Fatal(err)
+	}
 	// Sender get ack
 	if a := <-ack; a.Status != Accepted || a.Error != nil {
 		t.Errorf("want (accepted, nil) got %#v", a)
@@ -433,13 +435,17 @@ func TestConnectionCloseInterrupt1(t *testing.T) {
 	snd, rcv := pairs.senderReceiver()
 	go doSend(snd, results)
 
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)
 
 	snd, rcv = pairs.senderReceiver()
 	ack := snd.SendWaitable(amqp.NewMessage())
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 	go doDisposition(ack, results)
 
 	pairs.server.Close(want)
@@ -459,7 +465,9 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
 	go doSend(snd, results)
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)

@@ -155,7 +155,7 @@ func (h *handler) addLink(pl proton.Link, el Endpoint) {
 
 func (h *handler) linkClosed(l proton.Link, err error) {
 	if link, ok := h.links[l]; ok {
-		link.closed(err)
+		_ = link.closed(err)
 		delete(h.links, l)
 	}
 }
@@ -187,11 +187,11 @@ func (h *handler) shutdown(err error) {
 	}
 	h.sentMessages = nil
 	for _, l := range h.links {
-		l.closed(err)
+		_ = l.closed(err)
 	}
 	h.links = nil
 	for _, s := range h.sessions {
-		s.closed(err)
+		_ = s.closed(err)
 	}
 	h.sessions = nil
 }

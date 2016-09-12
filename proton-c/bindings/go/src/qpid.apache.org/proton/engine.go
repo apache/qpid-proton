@@ -205,8 +205,10 @@ func (eng *Engine) InjectWait(f func() error) error {
 //
 func (eng *Engine) Server() { eng.Transport().SetServer() }
 
-func (eng *Engine) disconnect() {
-	eng.conn.Close()
+func (eng *Engine) disconnect(err error) {
+	cond := eng.Transport().Condition()
+	cond.SetError(err)              // Set the provided error.
+	cond.SetError(eng.conn.Close()) // Use connection error if cond is not already set.
 	C.pn_connection_engine_disconnected(&eng.engine)
 }
 
@@ -214,13 +216,13 @@ func (eng *Engine) disconnect() {
 // If err != nil pass it to the remote end as the close condition.
 // Returns when the remote end closes or disconnects.
 func (eng *Engine) Close(err error) {
-	eng.Inject(func() { CloseError(eng.Connection(), err) })
+	_ = eng.Inject(func() { CloseError(eng.Connection(), err) })
 	<-eng.running
 }
 
 // CloseTimeout like Close but disconnect if the remote end doesn't close within timeout.
 func (eng *Engine) CloseTimeout(err error, timeout time.Duration) {
-	eng.Inject(func() { CloseError(eng.Connection(), err) })
+	_ = eng.Inject(func() { CloseError(eng.Connection(), err) })
 	select {
 	case <-eng.running:
 	case <-time.After(timeout):
@@ -231,7 +233,7 @@ func (eng *Engine) CloseTimeout(err error, timeout time.Duration) {
 // Disconnect the engine's connection immediately without an AMQP close.
 // Process any termination events before returning.
 func (eng *Engine) Disconnect(err error) {
-	eng.Inject(func() { eng.Transport().Condition().SetError(err); eng.disconnect() })
+	_ = eng.Inject(func() { eng.disconnect(err) })
 	<-eng.running
 }
 
@@ -358,8 +360,8 @@ func (eng *Engine) Run() error {
 	eng.err.Set(eng.Transport().Condition().Error())
 	close(readsIn)
 	close(writesIn)
-	eng.conn.Close() // Make sure connection is closed
-	wait.Wait()      // Wait for goroutines
+	_ = eng.conn.Close() // Make sure connection is closed
+	wait.Wait()          // Wait for goroutines
 
 	close(eng.running) // Signal goroutines have exited and Error is set.
 

@@ -185,11 +185,11 @@ func (c *connection) run() {
 	if !c.server {
 		c.pConnection.Open()
 	}
-	c.engine.Run()
+	_ = c.engine.Run()
 	if c.incoming != nil {
 		close(c.incoming)
 	}
-	c.closed(Closed)
+	_ = c.closed(Closed)
 }
 
 func (c *connection) Close(err error) {

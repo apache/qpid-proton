@@ -213,7 +213,7 @@ func (l *link) Credit() (credit int, err error) {
 func (l *link) Capacity() int { return l.capacity }
 
 func (l *link) Close(err error) {
-	l.engine().Inject(func() {
+	_ = l.engine().Inject(func() {
 		if l.Error() == nil {
 			localClose(l.pLink, err)
 		}

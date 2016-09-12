@@ -69,7 +69,7 @@ func (s *session) pEndpoint() proton.Endpoint { return s.pSession }
 func (s *session) engine() *proton.Engine     { return s.connection.engine }
 
 func (s *session) Close(err error) {
-	s.engine().Inject(func() {
+	_ = s.engine().Inject(func() {
 		if s.Error() == nil {
 			localClose(s.pSession, err)
 		}
