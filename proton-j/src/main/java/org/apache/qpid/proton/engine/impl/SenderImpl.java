@@ -117,4 +117,12 @@ public class SenderImpl  extends LinkImpl implements Sender
             advance();
         }*/
     }
+
+    @Override
+    public int getRemoteCredit()
+    {
+        // Credit is decremented as soon as advance is called on a send,
+        // so we need only consider the credit count, not the queued count.
+        return getCredit();
+    }
 }

@@ -431,12 +431,6 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     }
 
     @Override
-    public int getRemoteCredit()
-    {
-        return _credit - _queued;
-    }
-
-    @Override
     public DeliveryImpl head()
     {
         return _head;

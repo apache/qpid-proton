@@ -132,8 +132,30 @@ public interface Link extends Endpoint
 
     public Link next(EnumSet<EndpointState> local, EnumSet<EndpointState> remote);
 
+    /**
+     * Gets the credit balance for a link.
+     *
+     * Note that a sending link may still be used to send deliveries even if
+     * link credit is/reaches zero, however those deliveries will end up being
+     * {@link #getQueued() queued} by the link until enough credit is obtained
+     * from the receiver to send them over the wire. In this case the balance
+     * reported will go negative.
+     *
+     * @return the credit balance for the link
+     */
     public int getCredit();
+
+    /**
+     * Gets the number of queued messages for a link.
+     *
+     * Links may queue deliveries for a number of reasons, for example there may be insufficient
+     * {@link #getCredit() credit} to send them to the receiver, they may not have yet had a chance
+     * to be written to the wire, or the receiving application has simply not yet processed them.
+     *
+     * @return the queued message count for the link
+     */
     public int getQueued();
+
     public int getUnsettled();
 
     public Session getSession();
@@ -207,7 +229,15 @@ public interface Link extends Endpoint
 
     public int drained();
 
+    /**
+     * Returns a [locally generated] view of credit at the remote peer by considering the
+     * current link {@link #getCredit() credit} count as well as the effect of
+     * any locally {@link #getQueued() queued} messages.
+     *
+     * @return view of effective remote credit
+     */
     public int getRemoteCredit();
+
     public boolean getDrain();
 
     public void detach();

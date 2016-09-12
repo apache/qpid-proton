@@ -136,4 +136,12 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         modified();
         _drainFlagMode = true;
     }
+
+    @Override
+    public int getRemoteCredit()
+    {
+        // Credit is only decremented once advance is called on a received message,
+        // so we also need to consider the queued count.
+        return getCredit() - getQueued();
+    }
 }
