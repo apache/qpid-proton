@@ -244,7 +244,7 @@ listener container_impl::listen(const std::string& url, listen_handler& lh) {
     pn_acceptor_t *acptr = pn_reactor_acceptor(
         reactor_.pn_object(), u.host().c_str(), u.port().c_str(), chandler.get());
     if (!acptr) {
-        std::string err(pn_error_text(pn_io_error(reactor_.pn_io())));
+        std::string err(pn_error_text(pn_reactor_error(reactor_.pn_object())));
         lh.on_error(err);
         lh.on_close();
         throw error(err);

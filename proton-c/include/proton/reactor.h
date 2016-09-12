@@ -74,7 +74,7 @@ PN_EXTERN pn_selectable_t *pn_reactor_selectable(pn_reactor_t *reactor);
 PN_EXTERN void pn_reactor_update(pn_reactor_t *reactor, pn_selectable_t *selectable);
 PN_EXTERN pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port,
                                              pn_handler_t *handler);
-
+PN_EXTERN pn_error_t *pn_reactor_error(pn_reactor_t *reactor);
 
 /**
  * Create an outgoing connection that will be managed by the reactor.

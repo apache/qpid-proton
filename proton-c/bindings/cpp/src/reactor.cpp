@@ -61,10 +61,6 @@ connection reactor::connection_to_host(const std::string &host, const std::strin
     return make_wrapper(pn_reactor_connection_to_host(pn_object(), host.c_str(), port.c_str(), h));
 }
 
-pn_io_t* reactor::pn_io() const {
-    return pn_reactor_io(pn_object());
-}
-
 void reactor::pn_handler(pn_handler_t* h) {
     pn_reactor_set_handler(pn_object(), h);
 }

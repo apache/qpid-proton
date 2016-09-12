@@ -169,6 +169,11 @@ pn_io_t *pn_reactor_io(pn_reactor_t *reactor) {
   return reactor->io;
 }
 
+pn_error_t *pn_reactor_error(pn_reactor_t *reactor) {
+  assert(reactor);
+  return pn_io_error(reactor->io);
+}
+
 pn_collector_t *pn_reactor_collector(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->collector;
