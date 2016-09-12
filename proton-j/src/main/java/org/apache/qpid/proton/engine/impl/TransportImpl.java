@@ -477,9 +477,8 @@ public class TransportImpl extends EndpointImpl
                         TransportSender transportLink = sender.getTransportLink();
                         TransportSession transportSession = sender.getSession().getTransportSession();
                         UnsignedInteger credits = transportLink.getLinkCredit();
-                        transportLink.setLinkCredit(UnsignedInteger.valueOf(0));
-                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(credits));
                         transportLink.setLinkCredit(UnsignedInteger.ZERO);
+                        transportLink.setDeliveryCount(transportLink.getDeliveryCount().add(credits));
                         sender.setDrained(0);
 
                         writeFlow(transportSession, transportLink);
