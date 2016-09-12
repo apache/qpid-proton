@@ -20,9 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
-import java.util.Iterator;
 import org.apache.qpid.proton.amqp.UnsignedInteger;
-import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Receiver;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
