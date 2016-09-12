@@ -59,6 +59,7 @@
 
 static int ssl_initialized;
 static int ssl_ex_data_index;
+static int ssl_session_ex_data_index;
 
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
@@ -70,10 +71,6 @@ struct pn_ssl_domain_t {
 
   // settings used for all connections
   char *trusted_CAs;
-
-  // session cache
-  pn_ssl_session_t *ssn_cache_head;
-  pn_ssl_session_t *ssn_cache_tail;
 
   int   ref_count;
   pn_ssl_mode_t mode;
@@ -128,14 +125,6 @@ static inline pni_ssl_t *get_ssl_internal(pn_ssl_t *ssl)
     return ssl ? ((pn_transport_t *)ssl)->ssl : NULL;
 }
 
-struct pn_ssl_session_t {
-  const char       *id;
-  SSL_SESSION      *session;
-  pn_ssl_session_t *ssn_cache_next;
-  pn_ssl_session_t *ssn_cache_prev;
-};
-
-
 // define two sets of allowable ciphers: those that require authentication, and those
 // that do not require authentication (anonymous).  See ciphers(1).
 #define CIPHERS_AUTHENTICATE    "ALL:!aNULL:!eNULL:@STRENGTH"
@@ -150,8 +139,6 @@ static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer,
 static ssize_t process_output_done(pn_transport_t *transport, unsigned int layer, char *input_data, size_t len);
 static int init_ssl_socket(pn_transport_t *, pni_ssl_t *);
 static void release_ssl_socket( pni_ssl_t * );
-static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *, const char * );
-static void ssl_session_free( pn_ssl_session_t *);
 static size_t buffered_output( pn_transport_t *transport );
 static X509 *get_peer_certificate(pni_ssl_t *ssl);
 
@@ -410,39 +397,42 @@ static DH *get_dh2048(void)
   return(dh);
 }
 
-static pn_ssl_session_t *ssn_cache_find( pn_ssl_domain_t *domain, const char *id )
-{
-  pn_timestamp_t now_msec = pn_i_now();
-  long now_sec = (long)(now_msec / 1000);
-  pn_ssl_session_t *ssn = LL_HEAD( domain, ssn_cache );
-  while (ssn) {
-    long expire = SSL_SESSION_get_time( ssn->session )
-      + SSL_SESSION_get_timeout( ssn->session );
-    if (expire < now_sec) {
-      pn_ssl_session_t *next = ssn->ssn_cache_next;
-      LL_REMOVE( domain, ssn_cache, ssn );
-      ssl_session_free( ssn );
-      ssn = next;
-      continue;
-    }
+typedef struct {
+  const char *id;
+  SSL_SESSION *session;
+} ssl_cache_visit_data;
 
-    if (!strcmp(ssn->id, id)) {
-      break;
-    }
-    ssn = ssn->ssn_cache_next;
-  }
-  return ssn;
-}
-
-static void ssl_session_free( pn_ssl_session_t *ssn)
+static void SSL_SESSION_cache_visitor(SSL_SESSION *session, ssl_cache_visit_data *data)
 {
-  if (ssn) {
-    if (ssn->id) free( (void *)ssn->id );
-    if (ssn->session) SSL_SESSION_free( ssn->session );
-    free( ssn );
+  const char *cached_id = (const char*)SSL_SESSION_get_ex_data(session, ssl_session_ex_data_index);
+  if (!cached_id) return;
+  
+  if ( strcmp(cached_id, data->id)==0 ) {
+    data->session = session;
   }
 }
 
+static void SSL_SESSION_visit_caster(void *s, void * d) {
+    SSL_SESSION_cache_visitor((SSL_SESSION*) s, (ssl_cache_visit_data*) d);
+}
+
+static SSL_SESSION *ssn_cache_find( pn_ssl_domain_t *domain, const char *id )
+{
+  if (!id) return NULL;
+
+  ssl_cache_visit_data visitor = {id, NULL};
+  lh_SSL_SESSION_doall_arg(SSL_CTX_sessions(domain->ctx), &SSL_SESSION_visit_caster, ssl_cache_visit_data, &visitor);
+  return visitor.session;
+}
+
+// Set up/tear down ssl session ex data
+int ssl_session_ex_data_init(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
+  return CRYPTO_set_ex_data(ad, idx, NULL);
+}
+
+void ssl_session_ex_data_fini(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
+  free(CRYPTO_get_ex_data(ad, idx));
+}
 
 /** Public API - visible to application code */
 
@@ -460,6 +450,8 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     OpenSSL_add_all_algorithms();
     ssl_ex_data_index = SSL_get_ex_new_index( 0, (void *) "org.apache.qpid.proton.ssl",
                                               NULL, NULL, NULL);
+    ssl_session_ex_data_index = SSL_SESSION_get_ex_new_index(0, (void *)"ssl session data",
+                                                             &ssl_session_ex_data_init, NULL, &ssl_session_ex_data_fini);
   }
 
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
@@ -474,6 +466,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   switch(mode) {
   case PN_SSL_MODE_CLIENT:
     domain->ctx = SSL_CTX_new(SSLv23_client_method()); // and TLSv1+
+    SSL_CTX_set_session_cache_mode(domain->ctx, SSL_SESS_CACHE_CLIENT);
     if (!domain->ctx) {
       ssl_log_error("Unable to initialize OpenSSL context.");
       free(domain);
@@ -528,14 +521,6 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
   if (--domain->ref_count == 0) {
-
-    pn_ssl_session_t *ssn = LL_HEAD( domain, ssn_cache );
-    while (ssn) {
-      pn_ssl_session_t *next = ssn->ssn_cache_next;
-      LL_REMOVE( domain, ssn_cache, ssn );
-      ssl_session_free( ssn );
-      ssn = next;
-    }
 
     if (domain->ctx) SSL_CTX_free(domain->ctx);
     if (domain->keyfile_pw) free(domain->keyfile_pw);
@@ -855,17 +840,13 @@ static int start_ssl_shutdown(pn_transport_t *transport)
   if (!ssl->ssl_shutdown) {
     ssl_log(transport, "Shutting down SSL connection...");
     if (ssl->session_id) {
-      // save the negotiated credentials before we close the connection
-      pn_ssl_session_t *ssn = (pn_ssl_session_t *)calloc( 1, sizeof(pn_ssl_session_t));
-      if (ssn) {
-        ssn->id = pn_strdup( ssl->session_id );
-        ssn->session = SSL_get1_session( ssl->ssl );
-        if (ssn->session) {
-          ssl_log(transport, "Saving SSL session as %s", ssl->session_id );
-          LL_ADD( ssl->domain, ssn_cache, ssn );
-        } else {
-          ssl_session_free( ssn );
-        }
+      // Attach the session id to the session before we close the connection
+      // So that if we find it in the cache later we can figure out the session id
+      char *id = pn_strdup( ssl->session_id ); 
+      SSL_SESSION *session = SSL_get_session( ssl->ssl );
+      if (session) {
+        ssl_log(transport, "Saving SSL session as %s", ssl->session_id );
+        SSL_SESSION_set_ex_data(session, ssl_session_ex_data_index, id);
       }
     }
     ssl->ssl_shutdown = true;
@@ -1169,15 +1150,13 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
 
   // restore session, if available
   if (ssl->session_id) {
-    pn_ssl_session_t *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
+    SSL_SESSION *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
     if (ssn) {
-      ssl_log( transport, "Restoring previous session id=%s", ssn->id );
-      int rc = SSL_set_session( ssl->ssl, ssn->session );
+      ssl_log( transport, "Restoring previous session id=%s", ssl->session_id );
+      int rc = SSL_set_session( ssl->ssl, ssn );
       if (rc != 1) {
-        ssl_log( transport, "Session restore failed, id=%s", ssn->id );
+        ssl_log( transport, "Session restore failed, id=%s", ssl->session_id );
       }
-      LL_REMOVE( ssl->domain, ssn_cache, ssn );
-      ssl_session_free( ssn );
     }
   }
 
