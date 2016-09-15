@@ -40,7 +40,7 @@ func splitHostPort(hostport string) (string, string, error) {
 	}
 	if hostport[0] == '[' {
 		// There must be a matching ']' as already validated
-		if l := strings.LastIndexByte(hostport, ']'); len(hostport) == l+1 {
+		if l := strings.LastIndex(hostport, "]"); len(hostport) == l+1 {
 			// trim off '[' and ']'
 			return hostport[1:l], "", nil
 		}
