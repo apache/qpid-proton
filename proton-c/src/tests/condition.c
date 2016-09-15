@@ -51,6 +51,6 @@ int main(int argc, char **argv) {
     TEST_ASSERT(!pn_condition_get_name(cond));
     TEST_ASSERT(!pn_condition_get_description(cond));
 
-    pn_connection_release(c);
+    pn_connection_free(c);
     return fail;
 }
