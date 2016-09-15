@@ -26,6 +26,8 @@
 
 #if PN_CPP_HAS_CHRONO
 #include <chrono>
+#else
+#include <time.h>
 #endif
 
 namespace proton {
@@ -34,6 +36,11 @@ namespace proton {
 timestamp timestamp::now() {
     using namespace std::chrono;
     return timestamp( duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count() );
+}
+#else
+// Fallback with low (seconds) precision
+timestamp timestamp::now() {
+    return timestamp( time(0)*1000 );
 }
 #endif
 
