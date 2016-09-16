@@ -31,10 +31,14 @@ func ExampleParseURL() {
 		"host/path",
 		"amqps://host",
 		"/path",
-		"[::1]",
 		"",
 		":1234",
-		"[::1",
+                // Taken out becasue the go 1.4 URL parser isn't the same as later
+		//"[::1]",
+		//"[::1",
+		// Output would be:
+		// amqp://[::1]:amqp
+		// parse amqp://[::1: missing ']' in host
 	} {
 		u, err := ParseURL(s)
 		if err != nil {
@@ -50,8 +54,6 @@ func ExampleParseURL() {
 	// amqp://host:amqp/path
 	// amqps://host:amqps
 	// amqp://localhost:amqp/path
-	// amqp://[::1]:amqp
 	// amqp://localhost:amqp
 	// parse :1234: missing protocol scheme
-	// parse amqp://[::1: missing ']' in host
 }
