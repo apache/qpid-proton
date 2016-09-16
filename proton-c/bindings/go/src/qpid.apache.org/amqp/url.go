@@ -19,30 +19,74 @@ under the License.
 
 package amqp
 
-/*
-#include <stdlib.h>
-#include <string.h>
-#include <proton/url.h>
-
-// Helper function for setting URL fields.
-typedef void (*setter_fn)(pn_url_t* url, const char* value);
-inline void	set(pn_url_t *url, setter_fn s, const char* value) {
-  s(url, value);
-}
-*/
-import "C"
-
 import (
-	"fmt"
+	"errors"
 	"net"
 	"net/url"
-	"unsafe"
+	"strings"
 )
 
 const (
 	amqp  string = "amqp"
 	amqps        = "amqps"
+	defaulthost  = "localhost"
 )
+
+// The way this is used it can only get a hostport already validated by
+// the URL parser, so this means we can skip some error checks
+func splitHostPort(hostport string) (string, string, error) {
+	if hostport == "" {
+		return "", "", nil
+	}
+	if hostport[0] == '[' {
+		// There must be a matching ']' as already validated
+		if l := strings.LastIndex(hostport, "]"); len(hostport) == l+1 {
+			// trim off '[' and ']'
+			return hostport[1:l], "", nil
+		}
+	} else if strings.IndexByte(hostport, ':') < 0 {
+		return hostport, "", nil
+	}
+	return net.SplitHostPort(hostport)
+}
+
+func UpdateURL(in *url.URL) (err error) {
+	// Detect form without "amqp://" and stick it on front
+	// to make it match the usual proton defaults
+	u := new (url.URL)
+	*u = *in
+	if (u.Scheme != "" && u.Opaque != "") ||
+	   (u.Scheme == "" && u.Host == "") {
+		input := u.String()
+		input = "amqp://" + input
+		u, err = url.Parse(input)
+		if err != nil {
+			return
+		}
+	}
+	// If Scheme is still "" then default to amqp
+	if u.Scheme == "" {
+		u.Scheme = amqp
+	}
+	// Error if the scheme is not an amqp scheme
+	if u.Scheme != amqp && u.Scheme != amqps {
+		return errors.New("invalid amqp scheme")
+	}
+	// Decompose Host into host and port
+	host, port, err := splitHostPort(u.Host)
+	if err != nil {
+		return
+	}
+	if host == "" {
+		host = defaulthost
+	}
+	if port == "" {
+		port = u.Scheme
+	}
+	u.Host = net.JoinHostPort(host, port)
+	*in = *u
+	return nil
+}
 
 // ParseUrl parses an AMQP URL string and returns a net/url.Url.
 //
@@ -50,47 +94,11 @@ const (
 // URL to be missing, assuming AMQP defaults.
 //
 func ParseURL(s string) (u *url.URL, err error) {
-	cstr := C.CString(s)
-	defer C.free(unsafe.Pointer(cstr))
-	pnUrl := C.pn_url_parse(cstr)
-	if pnUrl == nil {
-		return nil, fmt.Errorf("bad URL %#v", s)
+	if u, err = url.Parse(s); err != nil {
+		return
 	}
-	defer C.pn_url_free(pnUrl)
-
-	scheme := C.GoString(C.pn_url_get_scheme(pnUrl))
-	username := C.GoString(C.pn_url_get_username(pnUrl))
-	password := C.GoString(C.pn_url_get_password(pnUrl))
-	host := C.GoString(C.pn_url_get_host(pnUrl))
-	port := C.GoString(C.pn_url_get_port(pnUrl))
-	path := C.GoString(C.pn_url_get_path(pnUrl))
-
-	if err != nil {
-		return nil, fmt.Errorf("bad URL %#v: %s", s, err)
+	if err = UpdateURL(u); err != nil {
+		u = nil
 	}
-	if scheme == "" {
-		scheme = amqp
-	}
-	if port == "" {
-		if scheme == amqps {
-			port = amqps
-		} else {
-			port = amqp
-		}
-	}
-	var user *url.Userinfo
-	if password != "" {
-		user = url.UserPassword(username, password)
-	} else if username != "" {
-		user = url.User(username)
-	}
-
-	u = &url.URL{
-		Scheme: scheme,
-		User:   user,
-		Host:   net.JoinHostPort(host, port),
-		Path:   path,
-	}
-
-	return u, nil
+	return u, err
 }
