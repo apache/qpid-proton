@@ -73,11 +73,11 @@ if(HAS_CPP11)
       add_executable(mt_${example} mt/${example}.cpp ${container_src})
       target_link_libraries(mt_${example} pthread)
     endforeach()
-    add_cpp_test(cpp_mt_example_test ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
+    add_cpp_test(cpp-example-mt ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
   endif()
 endif()
 
-add_cpp_test(cpp_container_example_test ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
+add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
 
 
