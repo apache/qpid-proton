@@ -261,7 +261,7 @@ func dataString(data *C.pn_data_t) string {
 	return C.GoString(C.pn_string_get(str))
 }
 
-func (m *message) SetInferred(b bool)  { C.pn_message_set_inferred(m.pn, C.bool(m.Inferred())) }
+func (m *message) SetInferred(b bool)  { C.pn_message_set_inferred(m.pn, C.bool(b)) }
 func (m *message) SetDurable(b bool)   { C.pn_message_set_durable(m.pn, C.bool(b)) }
 func (m *message) SetPriority(b uint8) { C.pn_message_set_priority(m.pn, C.uint8_t(b)) }
 func (m *message) SetTTL(d time.Duration) {
