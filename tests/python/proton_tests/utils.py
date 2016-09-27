@@ -70,6 +70,9 @@ class EchoServer(MessagingHandler, Thread):
     def on_connection_closing(self, event):
         self.acceptor.close()
 
+    def on_transport_error(self, event):
+        self.acceptor.close()
+
     def run(self):
         Container(self).run()
 
