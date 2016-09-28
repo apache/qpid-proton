@@ -79,6 +79,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 
 	case proton.MConnectionOpening:
+		h.connection.heartbeat = e.Transport().RemoteIdleTimeout()
 		if e.Connection().State().LocalUninit() { // Remotely opened
 			h.incoming(newIncomingConnection(h.connection))
 		}
@@ -137,6 +138,7 @@ func (h *handler) incoming(in Incoming) {
 	var err error
 	if h.connection.incoming != nil {
 		h.connection.incoming <- in
+		// Must block until accept/reject, subsequent events may use the incoming endpoint.
 		err = in.wait()
 	} else {
 		err = amqp.Errorf(amqp.NotAllowed, "rejected incoming %s %s",

@@ -812,7 +812,7 @@ func (t Transport) IdleTimeout() time.Duration {
 	return (time.Duration(C.pn_transport_get_idle_timeout(t.pn)) * time.Millisecond)
 }
 func (t Transport) SetIdleTimeout(timeout time.Duration) {
-	C.pn_transport_set_idle_timeout(t.pn, C.pn_millis_t(timeout))
+	C.pn_transport_set_idle_timeout(t.pn, C.pn_millis_t(timeout/time.Millisecond))
 }
 func (t Transport) RemoteIdleTimeout() time.Duration {
 	return (time.Duration(C.pn_transport_get_remote_idle_timeout(t.pn)) * time.Millisecond)

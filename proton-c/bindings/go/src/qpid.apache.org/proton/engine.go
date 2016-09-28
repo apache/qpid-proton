@@ -107,6 +107,7 @@ type Engine struct {
 	handlers  []EventHandler // Handlers for proton events.
 	running   chan struct{}  // This channel will be closed when the goroutines are done.
 	closeOnce sync.Once
+	timer     *time.Timer
 }
 
 const bufferSize = 4096
@@ -123,6 +124,7 @@ func NewEngine(conn net.Conn, handlers ...EventHandler) (*Engine, error) {
 		conn:     conn,
 		handlers: handlers,
 		running:  make(chan struct{}),
+		timer:    time.NewTimer(0),
 	}
 	if pnErr := C.pn_connection_engine_init(&eng.engine); pnErr != 0 {
 		return nil, fmt.Errorf("cannot setup engine: %s", PnErrorCode(pnErr))
@@ -237,16 +239,33 @@ func (eng *Engine) Disconnect(err error) {
 	<-eng.running
 }
 
+// Let proton run timed activity and set up the next tick
+func (eng *Engine) tick() {
+	now := time.Now()
+	next := eng.Transport().Tick(now)
+	if !next.IsZero() {
+		eng.timer.Reset(next.Sub(now))
+	}
+}
+
 func (eng *Engine) dispatch() bool {
+	var needTick bool // Set if we need to tick the transport.
 	for {
 		if cevent := C.pn_connection_engine_dispatch(&eng.engine); cevent != nil {
 			event := makeEvent(cevent, eng)
 			for _, h := range eng.handlers {
+				switch event.Type() {
+				case ETransport:
+					needTick = true
+				}
 				h.HandleEvent(event)
 			}
 		} else {
 			break
 		}
+	}
+	if needTick {
+		eng.tick()
 	}
 	return !bool(C.pn_connection_engine_finished(&eng.engine))
 }
@@ -285,10 +304,10 @@ func (eng *Engine) Run() error {
 			if n > 0 {
 				readsOut <- rbuf[:n]
 			} else if err != nil {
-				eng.inject <- func() {
+				_ = eng.Inject(func() {
 					eng.Transport().Condition().SetError(err)
 					C.pn_connection_engine_read_close(&eng.engine)
-				}
+				})
 				return
 			}
 		}
@@ -305,10 +324,10 @@ func (eng *Engine) Run() error {
 			if n > 0 {
 				writesOut <- wbuf[:n]
 			} else if err != nil {
-				eng.inject <- func() {
+				_ = eng.Inject(func() {
 					eng.Transport().Condition().SetError(err)
 					C.pn_connection_engine_write_close(&eng.engine)
-				}
+				})
 				return
 			}
 		}
@@ -353,6 +372,9 @@ func (eng *Engine) Run() error {
 			if ok {
 				f()
 			}
+
+		case <-eng.timer.C:
+			eng.tick()
 		}
 	}
 
@@ -360,12 +382,9 @@ func (eng *Engine) Run() error {
 	eng.err.Set(eng.Transport().Condition().Error())
 	close(readsIn)
 	close(writesIn)
-	_ = eng.conn.Close() // Make sure connection is closed
+	close(eng.running)   // Signal goroutines have exited and Error is set, disable Inject()
+	_ = eng.conn.Close() // Close conn, force read/write goroutines to exit (they will Inject)
 	wait.Wait()          // Wait for goroutines
-
-	close(eng.running) // Signal goroutines have exited and Error is set.
-
-	C.pn_connection_engine_final(&eng.engine)
 
 	for _, h := range eng.handlers {
 		switch h := h.(type) {
@@ -373,5 +392,6 @@ func (eng *Engine) Run() error {
 			C.pn_handler_free(h.pn)
 		}
 	}
+	C.pn_connection_engine_final(&eng.engine)
 	return eng.err.Get()
 }

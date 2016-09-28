@@ -45,6 +45,11 @@ type ConnectionSettings interface {
 	//
 	// Returns error if the connection fails to authenticate.
 	VirtualHost() string
+
+	// Heartbeat is the maximum delay between sending frames that the remote peer
+	// has requested of us. If the interval expires an empty "heartbeat" frame
+	// will be sent automatically to keep the connection open.
+	Heartbeat() time.Duration
 }
 
 // Connection is an AMQP connection, created by a Container.
@@ -88,10 +93,12 @@ type Connection interface {
 
 type connectionSettings struct {
 	user, virtualHost string
+	heartbeat         time.Duration
 }
 
-func (c connectionSettings) User() string        { return c.user }
-func (c connectionSettings) VirtualHost() string { return c.virtualHost }
+func (c connectionSettings) User() string             { return c.user }
+func (c connectionSettings) VirtualHost() string      { return c.virtualHost }
+func (c connectionSettings) Heartbeat() time.Duration { return c.heartbeat }
 
 // ConnectionOption can be passed when creating a connection to configure various options
 type ConnectionOption func(*connection)
@@ -165,7 +172,7 @@ type connection struct {
 }
 
 // NewConnection creates a connection with the given options.
-func NewConnection(conn net.Conn, setting ...ConnectionOption) (*connection, error) {
+func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error) {
 	c := &connection{
 		conn: conn,
 	}
@@ -176,7 +183,7 @@ func NewConnection(conn net.Conn, setting ...ConnectionOption) (*connection, err
 		return nil, err
 	}
 	c.pConnection = c.engine.Connection()
-	for _, set := range setting {
+	for _, set := range opts {
 		set(c)
 	}
 	if c.container == nil {
@@ -211,7 +218,7 @@ func (c *connection) Disconnect(err error) {
 	c.engine.Disconnect(err)
 }
 
-func (c *connection) Session(setting ...SessionOption) (Session, error) {
+func (c *connection) Session(opts ...SessionOption) (Session, error) {
 	var s Session
 	err := c.engine.InjectWait(func() error {
 		if c.Error() != nil {
@@ -221,7 +228,7 @@ func (c *connection) Session(setting ...SessionOption) (Session, error) {
 		if err == nil {
 			pSession.Open()
 			if err == nil {
-				s = newSession(c, pSession, setting...)
+				s = newSession(c, pSession, opts...)
 			}
 		}
 		return err
@@ -241,17 +248,17 @@ func (c *connection) DefaultSession() (s Session, err error) {
 	return c.defaultSession, err
 }
 
-func (c *connection) Sender(setting ...LinkOption) (Sender, error) {
+func (c *connection) Sender(opts ...LinkOption) (Sender, error) {
 	if s, err := c.DefaultSession(); err == nil {
-		return s.Sender(setting...)
+		return s.Sender(opts...)
 	} else {
 		return nil, err
 	}
 }
 
-func (c *connection) Receiver(setting ...LinkOption) (Receiver, error) {
+func (c *connection) Receiver(opts ...LinkOption) (Receiver, error) {
 	if s, err := c.DefaultSession(); err == nil {
-		return s.Receiver(setting...)
+		return s.Receiver(opts...)
 	} else {
 		return nil, err
 	}
@@ -288,11 +295,20 @@ func newIncomingConnection(c *connection) *IncomingConnection {
 		c:                  c}
 }
 
-func (in *IncomingConnection) Accept() Endpoint {
+// AcceptConnection is like Accept() but takes ConnectionOption s
+// For example you can set the Heartbeat() for the accepted connection.
+func (in *IncomingConnection) AcceptConnection(opts ...ConnectionOption) Connection {
 	return in.accept(func() Endpoint {
+		for _, opt := range opts {
+			opt(in.c)
+		}
 		in.c.pConnection.Open()
 		return in.c
-	})
+	}).(Connection)
+}
+
+func (in *IncomingConnection) Accept() Endpoint {
+	return in.AcceptConnection()
 }
 
 func sasl(c *connection) proton.SASL { return c.engine.Transport().SASL() }
@@ -323,6 +339,15 @@ func SASLAllowedMechs(mechs string) ConnectionOption {
 //
 func SASLAllowInsecure(b bool) ConnectionOption {
 	return func(c *connection) { sasl(c).SetAllowInsecureMechs(b) }
+}
+
+// Heartbeat returns a ConnectionOption that requests the maximum delay
+// between sending frames for the remote peer. If we don't receive any frames
+// within 2*delay we will close the connection.
+//
+func Heartbeat(delay time.Duration) ConnectionOption {
+	// Proton-C divides the idle-timeout by 2 before sending, so compensate.
+	return func(c *connection) { c.engine.Transport().SetIdleTimeout(2 * delay) }
 }
 
 // GlobalSASLConfigDir sets the SASL configuration directory for every

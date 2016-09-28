@@ -483,3 +483,64 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 		}
 	}
 }
+
+func heartbeat(c Connection) time.Duration {
+	return c.(*connection).engine.Transport().RemoteIdleTimeout()
+}
+
+func TestHeartbeat(t *testing.T) {
+	client, server := newClientServerOpts(t,
+		[]ConnectionOption{Heartbeat(102 * time.Millisecond)},
+		nil)
+	defer closeClientServer(client, server)
+
+	var serverHeartbeat time.Duration
+
+	go func() {
+		for in := range server.Incoming() {
+			switch in := in.(type) {
+			case *IncomingConnection:
+				serverHeartbeat = in.Heartbeat()
+				in.AcceptConnection(Heartbeat(101 * time.Millisecond))
+			default:
+				in.Accept()
+			}
+		}
+	}()
+
+	// Freeze the server to stop it sending heartbeats.
+	unfreeze := make(chan bool)
+	defer close(unfreeze)
+	freeze := func() error { return server.(*connection).engine.Inject(func() { <-unfreeze }) }
+
+	fatalIf(t, client.Sync())
+	errorIf(t, checkEqual(101*time.Millisecond, heartbeat(client.Connection())))
+	errorIf(t, checkEqual(102*time.Millisecond, serverHeartbeat))
+	errorIf(t, client.Connection().Error())
+
+	// Freeze the server for less than a heartbeat
+	fatalIf(t, freeze())
+	time.Sleep(50 * time.Millisecond)
+	unfreeze <- true
+	// Make sure server is still responding.
+	s, err := client.Sender()
+	errorIf(t, err)
+	errorIf(t, s.Sync())
+
+	// Freeze the server till the client times out the connection
+	fatalIf(t, freeze())
+	select {
+	case <-client.Done():
+		if amqp.ResourceLimitExceeded != client.Error().(amqp.Error).Name {
+			t.Error("bad timeout error:", client.Error())
+		}
+	case <-time.After(400 * time.Millisecond):
+		t.Error("connection failed to time out")
+	}
+
+	unfreeze <- true // Unfreeze the server
+	<-server.Done()
+	if amqp.ResourceLimitExceeded != server.Error().(amqp.Error).Name {
+		t.Error("bad timeout error:", server.Error())
+	}
+}

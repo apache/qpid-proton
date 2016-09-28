@@ -317,6 +317,7 @@ func mapType(ctype string) (g genType) {
 	case "C.pn_millis_t":
 		g.Gotype = "time.Duration"
 		g.ToGo = func(v string) string { return fmt.Sprintf("(time.Duration(%s) * time.Millisecond)", v) }
+		g.ToC = func(v string) string { return fmt.Sprintf("C.pn_millis_t(%s/time.Millisecond)", v) }
 	case "C.pn_timestamp_t":
 		g.Gotype = "time.Time"
 		g.ToC = func(v string) string { return fmt.Sprintf("pnTime(%s)", v) }

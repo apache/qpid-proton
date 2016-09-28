@@ -291,6 +291,10 @@ func (s Session) Receiver(name string) Link {
 	return Link{C.pn_receiver(s.pn, cname)}
 }
 
+func (t Transport) String() string {
+	return fmt.Sprintf("(Transport)(%p)", t.CPtr())
+}
+
 // Unique (per process) string identifier for a connection, useful for debugging.
 func (c Connection) String() string {
 	// Use the transport address to match the default transport logs from PN_TRACE.
@@ -374,19 +378,31 @@ func (c Connection) Session() (Session, error) {
 }
 
 // pnTime converts Go time.Time to Proton millisecond Unix time.
-func pnTime(t time.Time) C.pn_timestamp_t {
-	secs := t.Unix()
-	// Note: sub-second accuracy is not guaraunteed if the Unix time in
-	// nanoseconds cannot be represented by an int64 (sometime around year 2260)
-	msecs := (t.UnixNano() % int64(time.Second)) / int64(time.Millisecond)
-	return C.pn_timestamp_t(secs*1000 + msecs)
+//
+// Note: t.isZero() is converted to C.pn_timestamp_t(0) and vice-versa. These
+// are used as "not set" sentinel values by the Go and Proton APIs, so it is
+// better to conserve the "zeroness" even though they don't represent the same
+// time instant.
+//
+func pnTime(t time.Time) (pnt C.pn_timestamp_t) {
+	if !t.IsZero() {
+		pnt = C.pn_timestamp_t(t.Unix()*1000 + int64(t.Nanosecond())/int64(time.Millisecond))
+	}
+	return
 }
 
 // goTime converts a pn_timestamp_t to a Go time.Time.
-func goTime(t C.pn_timestamp_t) time.Time {
-	secs := int64(t) / 1000
-	nsecs := (int64(t) % 1000) * int64(time.Millisecond)
-	return time.Unix(secs, nsecs)
+//
+// Note: C.pn_timestamp_t(0) is converted to a zero time.Time and
+// vice-versa. These are used as "not set" sentinel values by the Go and Proton
+// APIs, so it is better to conserve the "zeroness" even though they don't
+// represent the same time instant.
+//
+func goTime(pnt C.pn_timestamp_t) (t time.Time) {
+	if pnt != 0 {
+		t = time.Unix(int64(pnt/1000), int64(pnt%1000)*int64(time.Millisecond))
+	}
+	return
 }
 
 // Special treatment for Transport.Head, return value is unsafe.Pointer not string

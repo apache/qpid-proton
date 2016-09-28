@@ -53,7 +53,7 @@ func TestAuthAnonymous(t *testing.T) {
 		[]ConnectionOption{User("fred"), VirtualHost("vhost"), SASLAllowInsecure(true)},
 		[]ConnectionOption{SASLAllowedMechs("ANONYMOUS"), SASLAllowInsecure(true)})
 	fatalIf(t, err)
-	errorIf(t, checkEqual(connectionSettings{"anonymous", "vhost"}, got))
+	errorIf(t, checkEqual(connectionSettings{user: "anonymous", virtualHost: "vhost"}, got))
 }
 
 func TestAuthPlain(t *testing.T) {
@@ -62,7 +62,7 @@ func TestAuthPlain(t *testing.T) {
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("xxx"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
 	fatalIf(t, err)
-	errorIf(t, checkEqual(connectionSettings{"fred@proton", ""}, got))
+	errorIf(t, checkEqual(connectionSettings{user: "fred@proton"}, got))
 }
 
 func TestAuthBadPass(t *testing.T) {
@@ -118,7 +118,7 @@ func configureSASL() error {
 func TestMain(m *testing.M) {
 	status := m.Run()
 	if confDir != "" {
-		os.RemoveAll(confDir)
+		_ = os.RemoveAll(confDir)
 	}
 	os.Exit(status)
 }
