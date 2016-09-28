@@ -30,7 +30,7 @@ import (
 // Error is an AMQP error condition. It has a name and a description.
 // It implements the Go error interface so can be returned as an error value.
 //
-// You can pass amqp.Error to methods that pass an error to a remote endpoint,
+// You can pass amqp.Error to methods that send an error to a remote endpoint,
 // this gives you full control over what the remote endpoint will see.
 //
 // You can also pass any Go error to such functions, the remote peer
@@ -53,19 +53,19 @@ func MakeError(err error) Error {
 }
 
 var (
-	InternalError      = "amqp:internal-error"
-	NotFound           = "amqp:not-found"
-	UnauthorizedAccess = "amqp:unauthorized-access"
-	DecodeError        = "amqp:decode-error"
-	ResourceLimit      = "amqp:resource-limit"
-	NotAllowed         = "amqp:not-allowed"
-	InvalidField       = "amqp:invalid-field"
-	NotImplemented     = "amqp:not-implemented"
-	ResourceLocked     = "amqp:resource-locked"
-	PreerrorFailed     = "amqp:preerror-failed"
-	ResourceDeleted    = "amqp:resource-deleted"
-	IllegalState       = "amqp:illegal-state"
-	FrameSizeTooSmall  = "amqp:frame-size-too-small"
+	InternalError         = "amqp:internal-error"
+	NotFound              = "amqp:not-found"
+	UnauthorizedAccess    = "amqp:unauthorized-access"
+	DecodeError           = "amqp:decode-error"
+	ResourceLimitExceeded = "amqp:resource-limit-exceeded"
+	NotAllowed            = "amqp:not-allowed"
+	InvalidField          = "amqp:invalid-field"
+	NotImplemented        = "amqp:not-implemented"
+	ResourceLocked        = "amqp:resource-locked"
+	PreconditionFailed    = "amqp:precondition-failed"
+	ResourceDeleted       = "amqp:resource-deleted"
+	IllegalState          = "amqp:illegal-state"
+	FrameSizeTooSmall     = "amqp:frame-size-too-small"
 )
 
 type PnErrorCode int
