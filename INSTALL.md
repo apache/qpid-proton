@@ -23,7 +23,11 @@ package for that language:
     $ yum install cyrus-sasl-devel
 
     # dependencies needed for bindings
-    $ yum install swig python-devel ruby-devel php-devel perl-devel
+    $ yum install swig          # Required for all bindings
+    $ yum install python-devel                               # Python
+    $ yum install ruby-devel rubygem-rspec rubygem-simplecov # Ruby
+    $ yum install pphp-devel                                 # PHP
+    $ yum install perl-devel                                 # Perl
 
     # dependencies needed for java (note that any non-ancient jvm will
     # work, 1.8.0 is just what is current for fedora 23)
