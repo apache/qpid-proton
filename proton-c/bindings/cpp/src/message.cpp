@@ -215,7 +215,7 @@ value& message::body() { pn_msg(); return body_; }
 // empty, the non-empty one is the authority.
 
 // Decode a map on demand
-template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
+template<class M, class F> M& get_map(pn_message_t* msg, F get, M& map) {
     codec::decoder d(make_wrapper(get(msg)));
     if (map.empty() && !d.empty()) {
         d.rewind();
@@ -226,7 +226,7 @@ template<class M> M& get_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*)
 }
 
 // Encode a map if necessary.
-template<class M> M& put_map(pn_message_t* msg, pn_data_t* (*get)(pn_message_t*), M& map) {
+template<class M, class F> M& put_map(pn_message_t* msg, F get, M& map) {
     codec::encoder e(make_wrapper(get(msg)));
     if (e.empty() && !map.empty()) {
         e << map;
