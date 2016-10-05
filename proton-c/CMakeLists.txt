@@ -109,6 +109,15 @@ elseif (SASL_IMPL STREQUAL none)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
 endif ()
 
+# Set Compiler extra flags for Solaris when using SunStudio
+IF( ${CMAKE_CXX_COMPILER_ID} STREQUAL "SunPro" )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
+ENDIF()
+
+IF( ${CMAKE_C_COMPILER_ID} STREQUAL "SunPro" )
+    SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt" )
+ENDIF()
+
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_ssl_impl src/ssl/openssl.c)
