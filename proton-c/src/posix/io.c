@@ -257,7 +257,53 @@ static inline int pn_create_socket(int af, int protocol) {
   return sock;
 }
 #else
-#error "Don't know how to turn off SIGPIPE on this platform"
+
+#include <signal.h>
+
+static inline int pn_create_socket(int af, int protocol) {
+  return socket(af, SOCK_STREAM, protocol);
+}
+
+static ssize_t nosigpipe_send(int fd, const void *buffer, size_t size) {
+  sigset_t pendingSignals, oldSignals, newSignals;
+  ssize_t count;
+  int sendErrno, sigmaskErr;
+
+  sigpending(&pendingSignals);
+  int sigpipeIsPending = sigismember(&pendingSignals, SIGPIPE);
+  if (!sigpipeIsPending) {
+    sigemptyset(&newSignals);
+    sigaddset(&newSignals, SIGPIPE);
+    if (sigmaskErr = pthread_sigmask(SIG_BLOCK, (const sigset_t *)&newSignals, (sigset_t *)&oldSignals))
+    {
+      errno = sigmaskErr;
+      return -1;
+    }
+  }
+
+  count = send(fd, buffer, size, 0);
+  if (!sigpipeIsPending) {
+    sendErrno = errno;
+    if (count == -1 && errno == EPIPE) {
+      while (-1 == sigtimedwait(&newSignals, NULL, &(struct timespec){ 0, 0 }) && errno == EINTR)
+        ; //do nothing
+    }
+    if (sigmaskErr = pthread_sigmask(SIG_SETMASK, (const sigset_t *)&oldSignals, (sigset_t *)NULL))
+    {
+      errno = sigmaskErr;
+      return -1;
+    }
+    errno = sendErrno;
+  }
+  return count;
+}
+
+ssize_t pn_send(pn_io_t *io, pn_socket_t socket, const void *buf, size_t size) {
+  ssize_t count = nosigpipe_send(socket, buf, size);
+  io->wouldblock = (errno == EAGAIN || errno == EWOULDBLOCK);
+  if (count < 0) { pn_i_error_from_errno(io->error, "send"); }
+  return count;
+}
 #endif
 
 ssize_t pn_recv(pn_io_t *io, pn_socket_t socket, void *buf, size_t size)
