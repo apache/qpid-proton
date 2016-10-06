@@ -251,17 +251,16 @@ func (eng *Engine) tick() {
 func (eng *Engine) dispatch() bool {
 	var needTick bool // Set if we need to tick the transport.
 	for {
-		if cevent := C.pn_connection_engine_dispatch(&eng.engine); cevent != nil {
-			event := makeEvent(cevent, eng)
-			for _, h := range eng.handlers {
-				switch event.Type() {
-				case ETransport:
-					needTick = true
-				}
-				h.HandleEvent(event)
-			}
-		} else {
+		cevent := C.pn_connection_engine_dispatch(&eng.engine)
+		if cevent == nil {
 			break
+		}
+		event := makeEvent(cevent, eng)
+		if event.Type() == ETransport {
+			needTick = true
+		}
+		for _, h := range eng.handlers {
+			h.HandleEvent(event)
 		}
 	}
 	if needTick {
