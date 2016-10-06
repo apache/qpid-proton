@@ -26,6 +26,7 @@
 #include "./types_fwd.hpp"
 
 #include <iosfwd>
+#include <string>
 #include <vector>
 
 namespace proton {

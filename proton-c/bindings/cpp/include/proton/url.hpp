@@ -26,6 +26,7 @@
 #include "./error.hpp"
 
 #include <iosfwd>
+#include <string>
 
 struct pn_url_t;
 

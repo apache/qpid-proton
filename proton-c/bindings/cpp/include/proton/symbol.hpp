@@ -22,6 +22,8 @@
  *
  */
 
+#include <string>
+
 namespace proton {
 
 /// A std::string that represents the AMQP symbol type.
