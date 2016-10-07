@@ -160,6 +160,9 @@ template<class T> T get(const value& v) { T x; get(v, x); return x; }
 /// @related proton::value
 template<class T> void get(const value& v, T& x) { codec::decoder d(v, true); d >> x; }
 
+/// @related proton::value
+template<class T, class U> inline void get(const U& u, T& x) { const value v(u); get(v, x); }
+
 /// @copydoc scalar::coerce
 /// @related proton::value
 template<class T> T coerce(const value& v) { T x; coerce(v, x); return x; }
