@@ -22,7 +22,7 @@ include(cpp.cmake) # Compiler checks
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src")
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
 
 add_definitions(${CXX_WARNING_FLAGS})
 

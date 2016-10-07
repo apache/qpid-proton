@@ -66,7 +66,7 @@ struct ios_guard {
     ~ios_guard() { guarded.copyfmt(old); }
 };
 
-// Convert a char (signed or unsigned) into an unsigned 1 byte integer that will ostream 
+// Convert a char (signed or unsigned) into an unsigned 1 byte integer that will ostream
 // as a numeric byte value, not a character and will not get sign-extended.
 inline unsigned int printable_byte(uint8_t byte) { return byte; }
 
