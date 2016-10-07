@@ -33,6 +33,11 @@
 #  define PN_CPP_IMPORT __declspec(dllimport)
 #  define PN_CPP_CLASS_EXPORT
 #  define PN_CPP_CLASS_IMPORT
+#elif defined(__SUNPRO_C) || defined(__SUNPRO_CC)
+#  define PN_CPP_EXPORT __global
+#  define PN_CPP_IMPORT
+#  define PN_CPP_CLASS_EXPORT __global
+#  define PN_CPP_CLASS_IMPORT
 #else
   //
   // Non-Windows (Linux, etc.) definitions:
