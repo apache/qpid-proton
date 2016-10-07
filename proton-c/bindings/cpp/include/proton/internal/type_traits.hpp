@@ -152,7 +152,9 @@ struct known_integer : public integer_type<sizeof(T), is_signed<T>::value> {};
 struct sfinae {
     typedef char yes;
     typedef double no;
-    struct wildcard { wildcard(...); };
+    struct any_t {
+        template < typename T > any_t(T const&);
+    };
 };
 
 template <class From, class To> struct is_convertible : public sfinae {

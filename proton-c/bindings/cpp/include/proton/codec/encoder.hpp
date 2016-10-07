@@ -170,15 +170,15 @@ operator<<(encoder& e, T i)  {
 }
 
 /// @cond INTERNAL
-    
-namespace is_encodable_impl {   // Protected the world from wildcard operator<<
+
+namespace is_encodable_impl {   // Protect the world from fallback operator<<
 
 using namespace internal;
 
-sfinae::no operator<<(sfinae::wildcard, sfinae::wildcard); // Fallback
+sfinae::no operator<<(encoder const&, const sfinae::any_t &); // Fallback
 
 template<typename T> struct is_encodable : public sfinae {
-    static yes test(encoder);
+    static yes test(encoder&);
     static no test(...);         // Failed test, no match.
     static encoder* e;
     static const T* t;
