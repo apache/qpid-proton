@@ -55,7 +55,8 @@ template <class T> void sequence_test(
     ASSERT_EQUAL(vx, v2);
 
     T y(x);
-    *y.begin() = *(++y.begin()); // Second element is bigger so y is lexicographically bigger than x
+    typename T::iterator it = y.begin();
+    *y.begin() = *(++it); // Second element is bigger so y is lexicographically bigger than x
     value vy(y);
     ASSERT(vx != vy);
     ASSERT(vx < vy);
