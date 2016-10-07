@@ -43,9 +43,9 @@ static std::string int2string(int n) {
 int listen_on_random_port(proton::container& c, proton::listener& l) {
     int port;
     // I'm going to hell for this:
-    srand((unsigned int)time(0));
+    std::srand((unsigned int)time(0));
     while (true) {
-        port = 20000 + (rand() % 30000);
+        port = 20000 + (std::rand() % 30000);
         try {
             l = c.listen("0.0.0.0:" + int2string(port));
             break;
