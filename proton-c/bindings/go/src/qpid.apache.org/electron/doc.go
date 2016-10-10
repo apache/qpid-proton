@@ -48,7 +48,7 @@ More realistic examples: https://github.com/apache/qpid-proton/blob/master/examp
 */
 package electron
 
-//#cgo LDFLAGS: -lqpid-proton
+//#cgo LDFLAGS: -lqpid-proton-core
 import "C"
 
 // Just for package comment
