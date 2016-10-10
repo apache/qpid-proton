@@ -385,12 +385,6 @@ func (eng *Engine) Run() error {
 	_ = eng.conn.Close() // Close conn, force read/write goroutines to exit (they will Inject)
 	wait.Wait()          // Wait for goroutines
 
-	for _, h := range eng.handlers {
-		switch h := h.(type) {
-		case cHandler:
-			C.pn_handler_free(h.pn)
-		}
-	}
 	C.pn_connection_engine_final(&eng.engine)
 	return eng.err.Get()
 }
