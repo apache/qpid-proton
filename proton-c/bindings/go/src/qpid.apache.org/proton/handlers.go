@@ -19,8 +19,6 @@ under the License.
 
 package proton
 
-// #include <proton/handlers.h>
-import "C"
 import "fmt"
 
 // EventHandler handles core proton events.
@@ -29,17 +27,6 @@ type EventHandler interface {
 	// Typically HandleEvent() is implemented as a switch on e.Type()
 	// Returning an error will stop the Engine.
 	HandleEvent(e Event)
-}
-
-// FIXME aconway 2016-06-21: get rid of C handlers?
-
-// cHandler wraps a C pn_handler_t
-type cHandler struct {
-	pn *C.pn_handler_t
-}
-
-func (h cHandler) HandleEvent(e Event) {
-	C.pn_handler_dispatch(h.pn, e.pn, C.pn_event_type(e.pn))
 }
 
 // MessagingHandler provides an alternative interface to EventHandler.
@@ -239,6 +226,24 @@ func (d endpointDelegator) HandleEvent(e Event) {
 	}
 }
 
+type flowcontroller struct {
+	window, drained int
+}
+
+func (d flowcontroller) HandleEvent(e Event) {
+	link := e.Link();
+
+	switch e.Type() {
+	case ELinkLocalOpen, ELinkRemoteOpen, ELinkFlow, EDelivery:
+		if link.IsReceiver() {
+			d.drained += link.Drained()
+			if d.drained != 0 {
+				link.Flow(d.window-link.Credit())
+			}
+		}
+	}
+}
+
 // MessagingAdapter implments a EventHandler and delegates to a MessagingHandler.
 // You can modify the exported fields before you pass the MessagingAdapter to
 // a Engine.
@@ -308,7 +313,7 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 			d,
 		}
 		if d.Prefetch > 0 {
-			d.flowcontroller = cHandler{C.pn_flowcontroller(C.int(d.Prefetch))}
+			d.flowcontroller = flowcontroller{ window:d.Prefetch, drained:0 }
 		}
 		d.mhandler.HandleMessagingEvent(MStart, e)
 
