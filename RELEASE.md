@@ -3,8 +3,9 @@
 1. Grab a clean checkout for safety.
 2. Run: "git checkout ${BRANCH}" to switch to a branch of the intended release point.
 3. Update the versions:
-  - Run: "bin/version.sh ${VERSION}", e.g. bin/release.sh 0.12.2.
-  - Update the version if needed in file: proton-c/bindings/python/setuputils/bundle.py
+  - Run: "bin/version.sh ${VERSION}", e.g. bin/version.sh 0.15.0.
+  - Update the version(s) if needed in file: proton-c/bindings/python/docs/conf.py
+  - Update the version(s) if needed in file: proton-c/bindings/python/setuputils/bundle.py
 4. Commit the changes, tag them.
   - Run: "git add ."
   - Run: 'git commit -m "update versions for ${TAG}"'
