@@ -23,7 +23,7 @@ Demonstrates the client side of the synchronous request-response pattern
 (also known as RPC or Remote Procecure Call) using proton.
 
 """
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 
 import optparse
 from proton import Message, Url, ConnectionException, Timeout
