@@ -1840,7 +1840,7 @@ class Data:
     @type b: binary
     @param b: a binary value
     """
-    self._check(pn_data_put_binary(self._data, b))
+    self._check(pn_data_put_binary(self._data, bytes(b)))
 
   def put_string(self, s):
     """
@@ -2229,6 +2229,7 @@ class Data:
     list: put_sequence,
     tuple: put_sequence,
     dict: put_dict,
+    buffer: put_binary,
     Described: put_py_described,
     Array: put_py_array
     }

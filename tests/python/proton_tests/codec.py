@@ -357,6 +357,15 @@ class DataTest(Test):
     copy = data.get_object()
     assert copy == obj, (copy, obj)
 
+  def testBuffer(self):
+    self.data.put_object(buffer("foo"))
+    data = Data()
+    data.decode(self.data.encode())
+    data.rewind()
+    assert data.next()
+    assert data.type() == Data.BINARY
+    assert data.get_object() == "foo"
+
   def testLookup(self):
     obj = {symbol("key"): str2unicode("value"),
            symbol("pi"): 3.14159,
