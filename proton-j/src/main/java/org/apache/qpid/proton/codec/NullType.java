@@ -55,9 +55,9 @@ public final class NullType extends AbstractPrimitiveType<Void>
         return Collections.singleton(_nullEncoding);
     }
 
-    public void write()
+    public void write(WritableBuffer buffer)
     {
-        _nullEncoding.write();
+        _nullEncoding.write(buffer);
     }
 
     private class NullEncoding extends FixedSizePrimitiveTypeEncoding<Void>
@@ -85,11 +85,11 @@ public final class NullType extends AbstractPrimitiveType<Void>
             return NullType.this;
         }
 
-        public void writeValue(final Void val)
+        public void writeValue(WritableBuffer buffer, final Void val)
         {
         }
 
-        public void writeValue()
+        public void writeValue(WritableBuffer buffer)
         {
         }
 
@@ -98,14 +98,14 @@ public final class NullType extends AbstractPrimitiveType<Void>
             return encoding == this;
         }
 
-        public Void readValue()
+        public Void readValue(ReadableBuffer buffer)
         {
             return null;
         }
 
-        public void write()
+        public void write(WritableBuffer buffer)
         {
-            writeConstructor();
+            writeConstructor(buffer);
         }
     }
 }

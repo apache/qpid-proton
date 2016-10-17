@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DataType extends AbstractDescribedType<Data,Binary> implements DescribedTypeConstructor<Data>
@@ -59,9 +61,10 @@ public class DataType extends AbstractDescribedType<Data,Binary> implements Desc
         return val.getValue();
     }
 
-    public Data newInstance(Object described)
+
+    public Data newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        return new Data( (Binary) described );
+        return new Data( (Binary) constructor.readValue(buffer) );
     }
 
     public Class<Data> getTypeClass()

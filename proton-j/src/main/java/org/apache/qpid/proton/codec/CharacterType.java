@@ -55,9 +55,9 @@ public class CharacterType extends AbstractPrimitiveType<Character>
         return Collections.singleton(_characterEncoding);
     }
 
-    public void write(char c)
+    public void write(WritableBuffer buffer, char c)
     {
-        _characterEncoding.write(c);
+        _characterEncoding.write(buffer, c);
     }
 
     public class CharacterEncoding extends FixedSizePrimitiveTypeEncoding<Character>
@@ -85,20 +85,20 @@ public class CharacterType extends AbstractPrimitiveType<Character>
             return CharacterType.this;
         }
 
-        public void writeValue(final Character val)
+        public void writeValue(WritableBuffer buffer, final Character val)
         {
-            getEncoder().writeRaw((int)val.charValue() & 0xffff);
+            getEncoder().writeRaw(buffer, (int)val.charValue() & 0xffff);
         }
 
-        public void writeValue(final char val)
+        public void writeValue(WritableBuffer buffer, final char val)
         {
-            getEncoder().writeRaw((int)val & 0xffff);
+            getEncoder().writeRaw(buffer, (int)val & 0xffff);
         }
 
-        public void write(final char c)
+        public void write(WritableBuffer buffer, final char c)
         {
-            writeConstructor();
-            getEncoder().writeRaw((int)c & 0xffff);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, (int)c & 0xffff);
 
         }
 
@@ -107,14 +107,14 @@ public class CharacterType extends AbstractPrimitiveType<Character>
             return (getType() == encoding.getType());
         }
 
-        public Character readValue()
+        public Character readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public char readPrimitiveValue()
+        public char readPrimitiveValue(ReadableBuffer buffer)
         {
-            return (char) (getDecoder().readRawInt() & 0xffff);
+            return (char) (getDecoder().readRawInt(buffer) & 0xffff);
         }
 
 

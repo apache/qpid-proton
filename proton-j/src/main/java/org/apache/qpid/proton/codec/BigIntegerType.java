@@ -26,11 +26,11 @@ import java.util.Collection;
 
 public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
 
-    public static interface BigIntegerEncoding extends PrimitiveTypeEncoding<BigInteger>
+    public interface BigIntegerEncoding extends PrimitiveTypeEncoding<BigInteger>
     {
-        void write(BigInteger l);
-        void writeValue(BigInteger l);
-        public BigInteger readPrimitiveValue();
+        void write(WritableBuffer buffer, BigInteger l);
+        void writeValue(WritableBuffer buffer, BigInteger l);
+        BigInteger readPrimitiveValue(ReadableBuffer buffer);
     }
 
     private static final BigInteger BIG_BYTE_MIN = BigInteger.valueOf(Byte.MIN_VALUE);
@@ -101,15 +101,15 @@ public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
             return BigIntegerType.this;
         }
 
-        public void writeValue(final BigInteger val)
+        public void writeValue(WritableBuffer buffer, final BigInteger val)
         {
-            getEncoder().writeRaw(longValueExact(val));
+            getEncoder().writeRaw(buffer, longValueExact(val));
         }
         
-        public void write(final BigInteger l)
+        public void write(WritableBuffer buffer, final BigInteger l)
         {
-            writeConstructor();
-            getEncoder().writeRaw(longValueExact(l));
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, longValueExact(l));
             
         }
 
@@ -118,14 +118,14 @@ public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
             return (getType() == encoding.getType());
         }
 
-        public BigInteger readValue()
+        public BigInteger readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public BigInteger readPrimitiveValue()
+        public BigInteger readPrimitiveValue(ReadableBuffer buffer)
         {
-            return BigInteger.valueOf(getDecoder().readLong());
+            return BigInteger.valueOf(getDecoder().readLong(buffer));
         }
 
 
@@ -155,15 +155,15 @@ public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
             return 1;
         }
 
-        public void write(final BigInteger l)
+        public void write(WritableBuffer buffer, final BigInteger l)
         {
-            writeConstructor();
-            getEncoder().writeRaw(l.byteValue());
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, l.byteValue());
         }
 
-        public BigInteger readPrimitiveValue()
+        public BigInteger readPrimitiveValue(ReadableBuffer buffer)
         {
-            return BigInteger.valueOf(getDecoder().readRawByte());
+            return BigInteger.valueOf(getDecoder().readRawByte(buffer));
         }
 
         public BigIntegerType getType()
@@ -171,9 +171,9 @@ public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
             return BigIntegerType.this;
         }
 
-        public void writeValue(final BigInteger val)
+        public void writeValue(WritableBuffer buffer, final BigInteger val)
         {
-            getEncoder().writeRaw(val.byteValue());
+            getEncoder().writeRaw(buffer, val.byteValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<BigInteger> encoder)
@@ -181,9 +181,9 @@ public class BigIntegerType extends AbstractPrimitiveType<BigInteger> {
             return encoder == this;
         }
 
-        public BigInteger readValue()
+        public BigInteger readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
 

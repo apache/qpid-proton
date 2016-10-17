@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class RejectedType  extends AbstractDescribedType<Rejected,List> implements DescribedTypeConstructor<Rejected>
@@ -92,9 +94,9 @@ public class RejectedType  extends AbstractDescribedType<Rejected,List> implemen
         }
     }
 
-    public Rejected newInstance(Object described)
+    public Rejected newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Rejected o = new Rejected();
 

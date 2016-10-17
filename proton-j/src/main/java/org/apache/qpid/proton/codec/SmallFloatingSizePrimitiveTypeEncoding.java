@@ -35,8 +35,8 @@ abstract class SmallFloatingSizePrimitiveTypeEncoding<T> extends FloatingSizePri
     }
 
     @Override
-    protected void writeSize(final T val)
+    protected void writeSize(WritableBuffer buffer, final T val)
     {
-        getEncoder().writeRaw((byte)getEncodedValueSize(val));
+        getEncoder().writeRaw(buffer, (byte)getEncodedValueSize(val));
     }
 }

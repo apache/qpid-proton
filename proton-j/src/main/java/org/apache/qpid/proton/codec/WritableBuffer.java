@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 public interface WritableBuffer
 {
-    public void put(byte b);
+    void put(byte b);
 
     void putFloat(float f);
 

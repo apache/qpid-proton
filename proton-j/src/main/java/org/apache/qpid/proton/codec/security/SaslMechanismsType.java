@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class SaslMechanismsType extends AbstractDescribedType<SaslMechanisms,List> implements DescribedTypeConstructor<SaslMechanisms>
@@ -60,9 +62,9 @@ public class SaslMechanismsType extends AbstractDescribedType<SaslMechanisms,Lis
         return Collections.singletonList(val.getSaslServerMechanisms());
     }
 
-    public SaslMechanisms newInstance(Object described)
+     public SaslMechanisms newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         SaslMechanisms o = new SaslMechanisms();
 

@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class MessageAnnotationsType extends AbstractDescribedType<MessageAnnotations,Map> implements DescribedTypeConstructor<MessageAnnotations>
@@ -60,10 +62,9 @@ public class MessageAnnotationsType extends AbstractDescribedType<MessageAnnotat
         return val.getValue();
     }
 
-
-    public MessageAnnotations newInstance(Object described)
+    public MessageAnnotations newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        return new MessageAnnotations( (Map) described );
+        return new MessageAnnotations( (Map) constructor.readValue(buffer) );
     }
 
     public Class<MessageAnnotations> getTypeClass()

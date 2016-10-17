@@ -60,7 +60,6 @@ class FrameWriter
         _encoder = encoder;
         _bbuf = ByteBuffer.allocate(1024);
         _buffer = new WritableBuffer.ByteBufferWrapper(_bbuf);
-        _encoder.setByteBuffer(_buffer);
         _maxFrameSize = maxFrameSize;
         _frameType = frameType;
         _protocolTracer = protocolTracer;
@@ -79,7 +78,6 @@ class FrameWriter
         _buffer = new WritableBuffer.ByteBufferWrapper(_bbuf);
         old.flip();
         _bbuf.put(old);
-        _encoder.setByteBuffer(_buffer);
     }
 
     void writeHeader(byte[] header)
@@ -103,7 +101,7 @@ class FrameWriter
             try
             {
                 _buffer.position(_frameStart + 8);
-                if (frameBody != null) _encoder.writeObject(frameBody);
+                if (frameBody != null) _encoder.writeObject(_buffer, frameBody);
                 break;
             }
             catch (BufferOverflowException e)

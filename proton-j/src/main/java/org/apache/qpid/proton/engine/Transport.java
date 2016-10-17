@@ -23,6 +23,8 @@ package org.apache.qpid.proton.engine;
 import java.nio.ByteBuffer;
 
 import org.apache.qpid.proton.amqp.transport.ErrorCondition;
+import org.apache.qpid.proton.codec.DecoderImpl;
+import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.engine.impl.TransportImpl;
 
 
@@ -71,6 +73,16 @@ public interface Transport extends Endpoint
     {
         public static Transport create() {
             return new TransportImpl();
+        }
+
+        /** This constructor may serve you if you intend to customize the encoder and decoder with special types.
+         *  if your intent is to use with just regular types use {@link #create()}.
+         * @param encoder a custom encoder for your transport.
+         * @param decoder a custom decoder for your transport.
+         * @return
+         *  */
+        public static Transport create(EncoderImpl encoder, DecoderImpl decoder) {
+            return new TransportImpl(TransportImpl.DEFAULT_MAX_FRAME_SIZE, encoder, decoder);
         }
     }
 

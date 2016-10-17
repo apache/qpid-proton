@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class ModifiedType  extends AbstractDescribedType<Modified,List> implements DescribedTypeConstructor<Modified>
@@ -101,9 +103,9 @@ public class ModifiedType  extends AbstractDescribedType<Modified,List> implemen
 
     }
 
-    public Modified newInstance(Object described)
+    public Modified newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Modified o = new Modified();
 

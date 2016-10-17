@@ -98,9 +98,9 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return UnsignedLongType.this;
         }
 
-        public void writeValue(final UnsignedLong val)
+        public void writeValue(WritableBuffer buffer, final UnsignedLong val)
         {
-            getEncoder().writeRaw(val.longValue());
+            getEncoder().writeRaw(buffer, val.longValue());
         }
 
 
@@ -109,9 +109,9 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return (getType() == encoding.getType());
         }
 
-        public UnsignedLong readValue()
+        public UnsignedLong readValue(ReadableBuffer buffer)
         {
-            return UnsignedLong.valueOf(getDecoder().readRawLong());
+            return UnsignedLong.valueOf(getDecoder().readRawLong(buffer));
         }
     }
 
@@ -142,9 +142,9 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return UnsignedLongType.this;
         }
 
-        public void writeValue(final UnsignedLong val)
+        public void writeValue(WritableBuffer buffer, final UnsignedLong val)
         {
-            getEncoder().writeRaw((byte)val.longValue());
+            getEncoder().writeRaw(buffer, (byte)val.longValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<UnsignedLong> encoder)
@@ -152,9 +152,9 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return encoder == this  || encoder instanceof ZeroUnsignedLongEncoding;
         }
 
-        public UnsignedLong readValue()
+        public UnsignedLong readValue(ReadableBuffer buffer)
         {
-            return UnsignedLong.valueOf(((long)getDecoder().readRawByte())&0xffl);
+            return UnsignedLong.valueOf(((long)getDecoder().readRawByte(buffer))&0xffl);
         }
     }
     
@@ -186,7 +186,7 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return UnsignedLongType.this;
         }
 
-        public void writeValue(final UnsignedLong val)
+        public void writeValue(WritableBuffer buffer, final UnsignedLong val)
         {
         }
 
@@ -195,7 +195,7 @@ public class UnsignedLongType extends AbstractPrimitiveType<UnsignedLong>
             return encoder == this;
         }
 
-        public UnsignedLong readValue()
+        public UnsignedLong readValue(ReadableBuffer buffer)
         {
             return UnsignedLong.ZERO;
         }

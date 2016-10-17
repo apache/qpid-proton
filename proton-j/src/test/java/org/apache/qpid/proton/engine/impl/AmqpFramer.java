@@ -80,14 +80,14 @@ public class AmqpFramer
         ByteBuffer buffer = ByteBuffer.allocate(1024);
 
         buffer.position(8); // leave hole for frame header
-        _encoder.setByteBuffer(new WritableBuffer.ByteBufferWrapper(buffer));
+        WritableBuffer writableBuffer = new WritableBuffer.ByteBufferWrapper(buffer);
 
         // write extended header - maybe empty
         buffer.put(extendedHeader);
         // write frame body
         if (frameBody != null)
         {
-            _encoder.writeObject(frameBody);
+            _encoder.writeObject(writableBuffer, frameBody);
         }
 
         int frameSize = buffer.position();

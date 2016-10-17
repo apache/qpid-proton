@@ -24,14 +24,14 @@ import org.apache.qpid.proton.amqp.DescribedType;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DynamicDescribedType implements AMQPType<DescribedType>
 {
 
     private final EncoderImpl _encoder;
-    private final Map<TypeEncoding, TypeEncoding> _encodings = new HashMap<TypeEncoding, TypeEncoding>();
+    private final Map<TypeEncoding, TypeEncoding> _encodings = new ConcurrentHashMap<TypeEncoding, TypeEncoding>();
     private final Object _descriptor;
 
     public DynamicDescribedType(EncoderImpl encoder, final Object descriptor)
@@ -71,11 +71,11 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
         return (Collection<TypeEncoding<DescribedType>>) unmodifiable;
     }
 
-    public void write(final DescribedType val)
+    public void write(WritableBuffer buffer, final DescribedType val)
     {
         TypeEncoding<DescribedType> encoding = getEncoding(val);
-        encoding.writeConstructor();
-        encoding.writeValue(val);
+        encoding.writeConstructor(buffer);
+        encoding.writeValue(buffer, val);
     }
 
     private class DynamicDescribedTypeEncoding implements TypeEncoding
@@ -99,12 +99,12 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
             return DynamicDescribedType.this;
         }
 
-        public void writeConstructor()
+        public void writeConstructor(WritableBuffer buffer)
         {
-            _encoder.writeRaw(EncodingCodes.DESCRIBED_TYPE_INDICATOR);
-            _descriptorType.writeConstructor();
-            _descriptorType.writeValue(_descriptor);
-            _underlyingEncoding.writeConstructor();
+            _encoder.writeRaw(buffer, EncodingCodes.DESCRIBED_TYPE_INDICATOR);
+            _descriptorType.writeConstructor(buffer);
+            _descriptorType.writeValue(buffer, _descriptor);
+            _underlyingEncoding.writeConstructor(buffer);
         }
 
         public int getConstructorSize()
@@ -112,9 +112,9 @@ public class DynamicDescribedType implements AMQPType<DescribedType>
             return _constructorSize;
         }
 
-        public void writeValue(final Object val)
+        public void writeValue(WritableBuffer buffer, final Object val)
         {
-            _underlyingEncoding.writeValue(((DescribedType)val).getDescribed());
+            _underlyingEncoding.writeValue(buffer, ((DescribedType)val).getDescribed());
         }
 
         public int getValueSize(final Object val)

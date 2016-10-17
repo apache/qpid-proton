@@ -32,5 +32,5 @@ public interface AMQPType<V>
 
     Collection<? extends TypeEncoding<V>> getAllEncodings();
 
-    void write(V val);
+    void write(WritableBuffer buffer, V val);
 }

@@ -28,9 +28,9 @@ public class LongType extends AbstractPrimitiveType<Long>
 
     public static interface LongEncoding extends PrimitiveTypeEncoding<Long>
     {
-        void write(long l);
-        void writeValue(long l);
-        public long readPrimitiveValue();
+        void write(WritableBuffer buffer, long l);
+        void writeValue(WritableBuffer buffer, long l);
+        public long readPrimitiveValue(ReadableBuffer buffer);
     }
     
     private LongEncoding _longEncoding;
@@ -70,15 +70,15 @@ public class LongType extends AbstractPrimitiveType<Long>
         return Arrays.asList(_smallLongEncoding, _longEncoding);
     }
 
-    public void write(long l)
+    public void write(WritableBuffer buffer, long l)
     {
         if(l >= -128l && l <= 127l)
         {
-            _smallLongEncoding.write(l);
+            _smallLongEncoding.write(buffer, l);
         }
         else
         {
-            _longEncoding.write(l);
+            _longEncoding.write(buffer, l);
         }
     }
     
@@ -107,21 +107,21 @@ public class LongType extends AbstractPrimitiveType<Long>
             return LongType.this;
         }
 
-        public void writeValue(final Long val)
+        public void writeValue(WritableBuffer buffer, final Long val)
         {
-            getEncoder().writeRaw(val.longValue());
+            getEncoder().writeRaw(buffer, val.longValue());
         }
         
-        public void write(final long l)
+        public void write(WritableBuffer buffer, final long l)
         {
-            writeConstructor();
-            getEncoder().writeRaw(l);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, l);
             
         }
 
-        public void writeValue(final long l)
+        public void writeValue(WritableBuffer buffer, final long l)
         {
-            getEncoder().writeRaw(l);
+            getEncoder().writeRaw(buffer, l);
         }
 
         public boolean encodesSuperset(final TypeEncoding<Long> encoding)
@@ -129,14 +129,14 @@ public class LongType extends AbstractPrimitiveType<Long>
             return (getType() == encoding.getType());
         }
 
-        public Long readValue()
+        public Long readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public long readPrimitiveValue()
+        public long readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawLong();
+            return getDecoder().readRawLong(buffer);
         }
 
 
@@ -166,20 +166,20 @@ public class LongType extends AbstractPrimitiveType<Long>
             return 1;
         }
 
-        public void write(final long l)
+        public void write(WritableBuffer buffer, final long l)
         {
-            writeConstructor();
-            getEncoder().writeRaw((byte)l);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, (byte)l);
         }
 
-        public void writeValue(final long l)
+        public void writeValue(WritableBuffer buffer, final long l)
         {
-            getEncoder().writeRaw((byte)l);
+            getEncoder().writeRaw(buffer, (byte)l);
         }
 
-        public long readPrimitiveValue()
+        public long readPrimitiveValue(ReadableBuffer buffer)
         {
-            return (long) getDecoder().readRawByte();
+            return (long) getDecoder().readRawByte(buffer);
         }
 
         public LongType getType()
@@ -187,9 +187,9 @@ public class LongType extends AbstractPrimitiveType<Long>
             return LongType.this;
         }
 
-        public void writeValue(final Long val)
+        public void writeValue(WritableBuffer buffer, final Long val)
         {
-            getEncoder().writeRaw((byte)val.longValue());
+            getEncoder().writeRaw(buffer, (byte)val.longValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<Long> encoder)
@@ -197,9 +197,9 @@ public class LongType extends AbstractPrimitiveType<Long>
             return encoder == this;
         }
 
-        public Long readValue()
+        public Long readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
 

@@ -35,15 +35,15 @@ abstract class FloatingSizePrimitiveTypeEncoding<T> extends AbstractPrimitiveTyp
 
     abstract int getSizeBytes();
 
-    public void writeValue(final T val)
+    public void writeValue(WritableBuffer buffer, final T val)
     {
-        writeSize(val);
-        writeEncodedValue(val);
+        writeSize(buffer, val);
+        writeEncodedValue(buffer, val);
     }
 
-    protected abstract void writeEncodedValue(final T val);
+    protected abstract void writeEncodedValue(WritableBuffer buffer, final T val);
 
-    protected abstract void writeSize(final T val);
+    protected abstract void writeSize(WritableBuffer buffer, final T val);
 
     public int getValueSize(final T val)
     {

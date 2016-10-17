@@ -34,6 +34,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DeclaredType extends AbstractDescribedType<Declared,List> implements DescribedTypeConstructor<Declared>
@@ -61,9 +63,9 @@ public class DeclaredType extends AbstractDescribedType<Declared,List> implement
         return Collections.singletonList(val.getTxnId());
     }
 
-    public Declared newInstance(Object described)
+    public Declared newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Declared o = new Declared();
 

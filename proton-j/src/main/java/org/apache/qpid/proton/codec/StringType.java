@@ -30,24 +30,13 @@ import java.util.Collection;
 
 public class StringType extends AbstractPrimitiveType<String>
 {
-    private static final Charset Charset_UTF8 = Charset.forName("UTF-8");
     private static final DecoderImpl.TypeDecoder<String> _stringCreator =
             new DecoderImpl.TypeDecoder<String>()
             {
 
-                public String decode(final ByteBuffer buf)
+                public String decode(final ReadableBuffer buf)
                 {
-                    CharsetDecoder charsetDecoder = Charset_UTF8.newDecoder();
-                    try
-                    {
-                        CharBuffer charBuf = charsetDecoder.decode(buf);
-                        return charBuf.toString();
-                    }
-                    catch (CharacterCodingException e)
-                    {
-                        throw new IllegalArgumentException("Cannot parse String");
-                    }
-
+                    return buf.readUTF8();
                 }
             };
 
@@ -118,30 +107,31 @@ public class StringType extends AbstractPrimitiveType<String>
         return Arrays.asList(_shortStringEncoding, _stringEncoding);
     }
 
+
+    /**
+     * On this case it is better to store the value and length after we calculated the size as it's a quite costly operation.
+     * better than avoid the stateless object
+     */
     private class AllStringEncoding
             extends LargeFloatingSizePrimitiveTypeEncoding<String>
             implements StringEncoding
     {
-
-        private String _value;
-        private int _length;
-
-
-        public AllStringEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
+        public AllStringEncoding( final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
         }
 
         @Override
-        protected void writeEncodedValue(final String val)
+        protected void writeEncodedValue(WritableBuffer buffer, final String val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
         @Override
         protected int getEncodedValueSize(final String val)
         {
-            return (val == _value) ? _length : calculateUTF8Length(val);
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            return (val == cachedCalculation.getVal()) ? cachedCalculation.getSize() : calculateUTF8Length(val);
         }
 
 
@@ -161,18 +151,17 @@ public class StringType extends AbstractPrimitiveType<String>
             return (getType() == encoding.getType());
         }
 
-        public String readValue()
+        public String readValue(ReadableBuffer buffer)
         {
 
             DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
-            return decoder.readRaw(_stringCreator, size);
+            int size = decoder.readRawInt(buffer);
+            return decoder.readRaw(buffer, _stringCreator, size);
         }
 
         public void setValue(final String val, final int length)
         {
-            _value = val;
-            _length = length;
+            CachedCalculation.setCachedValue(val, length);
         }
 
     }
@@ -181,10 +170,6 @@ public class StringType extends AbstractPrimitiveType<String>
             extends SmallFloatingSizePrimitiveTypeEncoding<String>
             implements StringEncoding
     {
-
-        private String _value;
-        private int _length;
-
         public ShortStringEncoding(final EncoderImpl encoder, final DecoderImpl decoder)
         {
             super(encoder, decoder);
@@ -192,15 +177,16 @@ public class StringType extends AbstractPrimitiveType<String>
 
 
         @Override
-        protected void writeEncodedValue(final String val)
+        protected void writeEncodedValue(WritableBuffer buffer, final String val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
         @Override
         protected int getEncodedValueSize(final String val)
         {
-            return (val == _value) ? _length : calculateUTF8Length(val);
+            CachedCalculation cachedCalculation = CachedCalculation.getCache();
+            return (val == cachedCalculation.getVal()) ? cachedCalculation.getSize() : calculateUTF8Length(val);
         }
 
 
@@ -220,18 +206,17 @@ public class StringType extends AbstractPrimitiveType<String>
             return encoder == this;
         }
 
-        public String readValue()
+        public String readValue(ReadableBuffer buffer)
         {
 
             DecoderImpl decoder = getDecoder();
-            int size = ((int)decoder.readRawByte()) & 0xff;
-            return decoder.readRaw(_stringCreator, size);
+            int size = ((int)decoder.readRawByte(buffer)) & 0xff;
+            return decoder.readRaw(buffer,_stringCreator, size);
         }
 
         public void setValue(final String val, final int length)
         {
-            _value = val;
-            _length = length;
+            CachedCalculation.setCachedValue(val, length);
         }
     }
 

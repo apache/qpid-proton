@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public final class ReceivedType extends AbstractDescribedType<Received,List> implements DescribedTypeConstructor<Received>
@@ -96,9 +98,11 @@ public final class ReceivedType extends AbstractDescribedType<Received,List> imp
         }
     }
 
-    public Received newInstance(Object described)
+
+
+    public Received newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Received o = new Received();
 

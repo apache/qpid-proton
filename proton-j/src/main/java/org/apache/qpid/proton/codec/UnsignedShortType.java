@@ -82,9 +82,9 @@ public class UnsignedShortType extends AbstractPrimitiveType<UnsignedShort>
             return UnsignedShortType.this;
         }
 
-        public void writeValue(final UnsignedShort val)
+        public void writeValue(WritableBuffer buffer, final UnsignedShort val)
         {
-            getEncoder().writeRaw(val.shortValue());
+            getEncoder().writeRaw(buffer, val.shortValue());
         }
 
         public boolean encodesSuperset(final TypeEncoding<UnsignedShort> encoding)
@@ -92,9 +92,9 @@ public class UnsignedShortType extends AbstractPrimitiveType<UnsignedShort>
             return (getType() == encoding.getType());
         }
 
-        public UnsignedShort readValue()
+        public UnsignedShort readValue(ReadableBuffer buffer)
         {
-            return UnsignedShort.valueOf(getDecoder().readRawShort());
+            return UnsignedShort.valueOf(getDecoder().readRawShort(buffer));
         }
     }
 }

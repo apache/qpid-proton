@@ -33,6 +33,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public final class CloseType extends AbstractDescribedType<Close,List> implements DescribedTypeConstructor<Close>
@@ -61,9 +63,9 @@ public final class CloseType extends AbstractDescribedType<Close,List> implement
         return error == null ? Collections.EMPTY_LIST : Collections.singletonList(error);
     }
 
-    public Close newInstance(Object described)
+    public Close newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Close o = new Close();
 

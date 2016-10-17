@@ -1,4 +1,3 @@
-
 /*
 *
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -35,23 +34,29 @@ import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.Transfer;
 import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.codec.Decoder;
+import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ListType;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
-public final class TransferType extends AbstractDescribedType<Transfer,List> implements DescribedTypeConstructor<Transfer>
+public final class TransferType extends AbstractDescribedType<Transfer, List> implements DescribedTypeConstructor<Transfer>
 {
     private static final Object[] DESCRIPTORS =
-    {
-        UnsignedLong.valueOf(0x0000000000000014L), Symbol.valueOf("amqp:transfer:list"),
-    };
+        {
+            UnsignedLong.valueOf(0x0000000000000014L), Symbol.valueOf("amqp:transfer:list"),
+        };
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000014L);
 
-    private TransferType(EncoderImpl encoder)
+    private final DecoderImpl _decoder;
+
+    public TransferType(DecoderImpl decoder, EncoderImpl encoder)
     {
         super(encoder);
+        this._decoder = decoder;
     }
 
 
@@ -80,7 +85,7 @@ public final class TransferType extends AbstractDescribedType<Transfer,List> imp
         public Object get(final int index)
         {
 
-            switch(index)
+            switch (index)
             {
                 case 0:
                     return _transfer.getHandle();
@@ -113,90 +118,106 @@ public final class TransferType extends AbstractDescribedType<Transfer,List> imp
         public int size()
         {
             return _transfer.getBatchable()
-                      ? 11
-                      : _transfer.getAborted()
-                      ? 10
-                      : _transfer.getResume()
-                      ? 9
-                      : _transfer.getState() != null
-                      ? 8
-                      : _transfer.getRcvSettleMode() != null
-                      ? 7
-                      : _transfer.getMore()
-                      ? 6
-                      : _transfer.getSettled() != null
-                      ? 5
-                      : _transfer.getMessageFormat() != null
-                      ? 4
-                      : _transfer.getDeliveryTag() != null
-                      ? 3
-                      : _transfer.getDeliveryId() != null
-                      ? 2
-                      : 1;
+                ? 11
+                : _transfer.getAborted()
+                ? 10
+                : _transfer.getResume()
+                ? 9
+                : _transfer.getState() != null
+                ? 8
+                : _transfer.getRcvSettleMode() != null
+                ? 7
+                : _transfer.getMore()
+                ? 6
+                : _transfer.getSettled() != null
+                ? 5
+                : _transfer.getMessageFormat() != null
+                ? 4
+                : _transfer.getDeliveryTag() != null
+                ? 3
+                : _transfer.getDeliveryId() != null
+                ? 2
+                : 1;
 
         }
 
     }
+    public Transfer newInstance(ReadableBuffer buffer, TypeConstructor constructor)
+    {
+        ListType.ListEncoding listEncoding = (ListType.ListEncoding)constructor;
 
-        public Transfer newInstance(Object described)
+        // This is for the prototype only, we should use the ListType directly here
+        int size = listEncoding.readCount(buffer, _decoder);
+
+        Transfer o = new Transfer();
+
+        if (size == 0)
         {
-            List l = (List) described;
+            throw new DecodeException("The handle field cannot be omitted");
+        }
 
-            Transfer o = new Transfer();
-
-            if(l.isEmpty())
-            {
-                throw new DecodeException("The handle field cannot be omitted");
-            }
-
-            switch(11 - l.size())
+        for (int i = 0; i < size; i++)
+        {
+            Object elementValue = listEncoding.readElement(buffer,  _decoder);
+            switch (i)
             {
 
                 case 0:
-                    Boolean batchable = (Boolean) l.get(10);
-                    o.setBatchable(batchable == null ? false : batchable);
+                    o.setHandle((UnsignedInteger) elementValue);
+                    break;
+
                 case 1:
-                    Boolean aborted = (Boolean) l.get(9);
-                    o.setAborted(aborted == null ? false : aborted);
+                    o.setDeliveryId((UnsignedInteger) elementValue);
+                    break;
+
                 case 2:
-                    Boolean resume = (Boolean) l.get(8);
-                    o.setResume(resume == null ? false : resume);
+                    o.setDeliveryTag((Binary) elementValue);
+                    break;
                 case 3:
-                    o.setState( (DeliveryState) l.get( 7 ) );
+                    o.setMessageFormat((UnsignedInteger) elementValue);
+                    break;
                 case 4:
-                    UnsignedByte receiverSettleMode = (UnsignedByte) l.get(6);
-                    o.setRcvSettleMode(receiverSettleMode == null ? null : ReceiverSettleMode.values()[receiverSettleMode.intValue()]);
+                    o.setSettled((Boolean) elementValue);
+                    break;
                 case 5:
-                    Boolean more = (Boolean) l.get(5);
-                    o.setMore(more == null ? false : more );
+                    Boolean more = (Boolean) elementValue;
+                    o.setMore(more == null ? false : more);
+                    break;
                 case 6:
-                    o.setSettled( (Boolean) l.get( 4 ) );
+                    UnsignedByte receiverSettleMode = (UnsignedByte) elementValue;
+                    o.setRcvSettleMode(receiverSettleMode == null ? null : ReceiverSettleMode.values()[receiverSettleMode.intValue()]);
+                    break;
                 case 7:
-                    o.setMessageFormat( (UnsignedInteger) l.get( 3 ) );
+                    o.setState((DeliveryState) elementValue);
+                    break;
                 case 8:
-                    o.setDeliveryTag( (Binary) l.get( 2 ) );
+                    Boolean resume = (Boolean) elementValue;
+                    o.setResume(resume == null ? false : resume);
+                    break;
                 case 9:
-                    o.setDeliveryId( (UnsignedInteger) l.get( 1 ) );
+                    Boolean aborted = (Boolean) elementValue;
+                    o.setAborted(aborted == null ? false : aborted);
+                    break;
                 case 10:
-                    o.setHandle( (UnsignedInteger) l.get( 0 ) );
+                    Boolean batchable = (Boolean) elementValue;
+                    o.setBatchable(batchable == null ? false : batchable);
+                    break;
             }
 
-
-            return o;
         }
+        return o;
+    }
 
-        public Class<Transfer> getTypeClass()
-        {
-            return Transfer.class;
-        }
-
-
-
-
-    public static void register(Decoder decoder, EncoderImpl encoder)
+    public Class<Transfer> getTypeClass()
     {
-        TransferType type = new TransferType(encoder);
-        for(Object descriptor : DESCRIPTORS)
+        return Transfer.class;
+    }
+
+
+    public static void register(DecoderImpl decoder, EncoderImpl encoder)
+    {
+        TransferType type = new TransferType(decoder, encoder);
+        for (Object descriptor : DESCRIPTORS)
         {
             decoder.register(descriptor, type);
         }
@@ -204,4 +225,3 @@ public final class TransferType extends AbstractDescribedType<Transfer,List> imp
     }
 
 }
-  

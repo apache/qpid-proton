@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
+
 abstract class AbstractPrimitiveTypeEncoding<T> implements PrimitiveTypeEncoding<T>
 {
     private final EncoderImpl _encoder;
@@ -31,9 +32,9 @@ abstract class AbstractPrimitiveTypeEncoding<T> implements PrimitiveTypeEncoding
         _decoder = decoder;
     }
 
-    public final void writeConstructor()
+    public final void writeConstructor(WritableBuffer buffer)
     {
-        _encoder.writeRaw(getEncodingCode());
+        _encoder.writeRaw(buffer, getEncodingCode());
     }
 
     public int getConstructorSize()
@@ -53,13 +54,19 @@ abstract class AbstractPrimitiveTypeEncoding<T> implements PrimitiveTypeEncoding
         return getType().getTypeClass();
     }
 
-    protected DecoderImpl getDecoder()
+    // TODO make it back to protected
+    public DecoderImpl getDecoder()
     {
         return _decoder;
     }
 
 
     public boolean encodesJavaPrimitive()
+    {
+        return false;
+    }
+
+    public boolean isArray()
     {
         return false;
     }

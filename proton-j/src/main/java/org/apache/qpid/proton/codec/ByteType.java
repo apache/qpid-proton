@@ -55,9 +55,9 @@ public class ByteType extends AbstractPrimitiveType<Byte>
         return Collections.singleton(_byteEncoding);
     }
 
-    public void writeType(byte b)
+    public void writeType(WritableBuffer buffer, byte b)
     {
-        _byteEncoding.write(b);
+        _byteEncoding.write(buffer, b);
     }
 
 
@@ -86,21 +86,21 @@ public class ByteType extends AbstractPrimitiveType<Byte>
             return ByteType.this;
         }
 
-        public void writeValue(final Byte val)
+        public void writeValue(WritableBuffer buffer, final Byte val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
 
-        public void write(final byte val)
+        public void write(WritableBuffer buffer, final byte val)
         {
-            writeConstructor();
-            getEncoder().writeRaw(val);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, val);
         }
 
-        public void writeValue(final byte val)
+        public void writeValue(WritableBuffer buffer, final byte val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
         public boolean encodesSuperset(final TypeEncoding<Byte> encoding)
@@ -108,14 +108,14 @@ public class ByteType extends AbstractPrimitiveType<Byte>
             return (getType() == encoding.getType());
         }
 
-        public Byte readValue()
+        public Byte readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public byte readPrimitiveValue()
+        public byte readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawByte();
+            return getDecoder().readRawByte(buffer);
         }
 
 

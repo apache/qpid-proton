@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class CoordinatorType extends AbstractDescribedType<Coordinator,List> implements DescribedTypeConstructor<Coordinator>
@@ -62,10 +64,9 @@ public class CoordinatorType extends AbstractDescribedType<Coordinator,List> imp
                 : Collections.singletonList(capabilities);
     }
 
-
-    public Coordinator newInstance(Object described)
+    public Coordinator newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Coordinator o = new Coordinator();
 

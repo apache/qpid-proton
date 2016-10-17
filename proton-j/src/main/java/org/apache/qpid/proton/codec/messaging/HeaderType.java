@@ -34,6 +34,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class HeaderType extends AbstractDescribedType<Header,List> implements DescribedTypeConstructor<Header>
@@ -114,9 +116,9 @@ public class HeaderType extends AbstractDescribedType<Header,List> implements De
 
     }
 
-    public Header newInstance(Object described)
+    public Header newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         Header o = new Header();
 

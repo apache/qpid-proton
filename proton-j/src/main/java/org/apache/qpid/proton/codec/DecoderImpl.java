@@ -32,44 +32,53 @@ import org.apache.qpid.proton.amqp.UnsignedLong;
 import org.apache.qpid.proton.amqp.UnsignedShort;
 
 import java.lang.reflect.Array;
-import java.nio.ByteBuffer;
 import java.util.*;
 
 public class DecoderImpl implements ByteBufferDecoder
 {
 
-    private ByteBuffer _buffer;
     private PrimitiveTypeEncoding[] _constructors = new PrimitiveTypeEncoding[256];
     private Map<Object, DescribedTypeConstructor> _dynamicTypeConstructors =
             new HashMap<Object, DescribedTypeConstructor>();
-
+    private DescribedTypeConstructor cacheDTC[] = new DescribedTypeConstructor[150];
 
     public DecoderImpl()
     {
     }
 
-
-    DecoderImpl(final ByteBuffer buffer)
+    public TypeConstructor readConstructor(ReadableBuffer buffer)
     {
-        _buffer = buffer;
-    }
-
-    TypeConstructor readConstructor()
-    {
-        int code = ((int)readRawByte()) & 0xff;
+        final int code = ((int)readRawByte(buffer)) & 0xff;
         if(code == EncodingCodes.DESCRIBED_TYPE_INDICATOR)
         {
-            final Object descriptor = readObject();
-            TypeConstructor nestedEncoding = readConstructor();
-            DescribedTypeConstructor dtc = _dynamicTypeConstructors.get(descriptor);
+            final Object descriptor = readObject(buffer);
+            DescribedTypeConstructor dtc = null;
+
+            if (descriptor instanceof UnsignedLong)
+            {
+                long value = ((UnsignedLong)descriptor).intValue();
+
+                if (value < cacheDTC.length)
+                {
+                    dtc = cacheDTC[(int)value];
+                }
+            }
+
+            if (dtc == null)
+            {
+                dtc = _dynamicTypeConstructors.get(descriptor);
+            }
+
+            TypeConstructor nestedEncoding = readConstructor(buffer);
+
             if(dtc == null)
             {
                 dtc = new DescribedTypeConstructor()
                 {
 
-                    public DescribedType newInstance(final Object described)
+                    public DescribedType newInstance(ReadableBuffer buffer, final TypeConstructor constructor)
                     {
-                        return new UnknownDescribedType(descriptor, described);
+                        return new UnknownDescribedType(descriptor, constructor.readValue(buffer));
                     }
 
                     public Class getTypeClass()
@@ -79,6 +88,7 @@ public class DecoderImpl implements ByteBufferDecoder
                 };
                 register(descriptor, dtc);
             }
+
             return new DynamicTypeConstructor(dtc, nestedEncoding);
         }
         else
@@ -90,6 +100,16 @@ public class DecoderImpl implements ByteBufferDecoder
     public void register(final Object descriptor, final DescribedTypeConstructor dtc)
     {
         _dynamicTypeConstructors.put(descriptor, dtc);
+
+        // Caching most entities with an array. this is faster than hashmap
+        if (descriptor instanceof  UnsignedLong)
+        {
+            long value = ((UnsignedLong) descriptor).longValue();
+            if (value < cacheDTC.length)
+            {
+                cacheDTC[(int)value] = dtc;
+            }
+        }
     }
 
     private ClassCastException unexpectedType(final Object val, Class clazz)
@@ -101,15 +121,15 @@ public class DecoderImpl implements ByteBufferDecoder
     }
 
 
-    public Boolean readBoolean()
+    public Boolean readBoolean(final ReadableBuffer buffer)
     {
-        return readBoolean(null);
+        return readBoolean(buffer, null);
     }
 
-    public Boolean readBoolean(final Boolean defaultVal)
+    public Boolean readBoolean(final ReadableBuffer buffer, final Boolean defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -121,16 +141,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Boolean.class);
     }
 
-    public boolean readBoolean(final boolean defaultVal)
+    public boolean readBoolean(ReadableBuffer buffer, final boolean defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof BooleanType.BooleanEncoding)
         {
-            return ((BooleanType.BooleanEncoding)constructor).readPrimitiveValue();
+            return ((BooleanType.BooleanEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -142,15 +162,15 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Byte readByte()
+    public Byte readByte(ReadableBuffer buffer)
     {
-        return readByte(null);
+        return readByte(buffer, null);
     }
 
-    public Byte readByte(final Byte defaultVal)
+    public Byte readByte(ReadableBuffer buffer, final Byte defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -162,16 +182,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Byte.class);
     }
 
-    public byte readByte(final byte defaultVal)
+    public byte readByte(ReadableBuffer buffer, final byte defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof ByteType.ByteEncoding)
         {
-            return ((ByteType.ByteEncoding)constructor).readPrimitiveValue();
+            return ((ByteType.ByteEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -183,15 +203,15 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Short readShort()
+    public Short readShort(ReadableBuffer buffer)
     {
-        return readShort(null);
+        return readShort(buffer, null);
     }
 
-    public Short readShort(final Short defaultVal)
+    public Short readShort(ReadableBuffer buffer, final Short defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -204,17 +224,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public short readShort(final short defaultVal)
+    public short readShort(ReadableBuffer buffer, final short defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof ShortType.ShortEncoding)
         {
-            return ((ShortType.ShortEncoding)constructor).readPrimitiveValue();
+            return ((ShortType.ShortEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -226,15 +246,15 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Integer readInteger()
+    public Integer readInteger(ReadableBuffer buffer)
     {
-        return readInteger(null);
+        return readInteger(buffer, null);
     }
 
-    public Integer readInteger(final Integer defaultVal)
+    public Integer readInteger(ReadableBuffer buffer, final Integer defaultVal)
     {
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -247,17 +267,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public int readInteger(final int defaultVal)
+    public int readInteger(ReadableBuffer buffer, final int defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof IntegerType.IntegerEncoding)
         {
-            return ((IntegerType.IntegerEncoding)constructor).readPrimitiveValue();
+            return ((IntegerType.IntegerEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -269,16 +289,16 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Long readLong()
+    public Long readLong(ReadableBuffer buffer)
     {
-        return readLong(null);
+        return readLong(buffer, null);
     }
 
-    public Long readLong(final Long defaultVal)
+    public Long readLong(ReadableBuffer buffer, final Long defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -291,17 +311,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public long readLong(final long defaultVal)
+    public long readLong(ReadableBuffer buffer, final long defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof LongType.LongEncoding)
         {
-            return ((LongType.LongEncoding)constructor).readPrimitiveValue();
+            return ((LongType.LongEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -313,16 +333,16 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public UnsignedByte readUnsignedByte()
+    public UnsignedByte readUnsignedByte(ReadableBuffer buffer)
     {
-        return readUnsignedByte(null);
+        return readUnsignedByte(buffer, null);
     }
 
-    public UnsignedByte readUnsignedByte(final UnsignedByte defaultVal)
+    public UnsignedByte readUnsignedByte(ReadableBuffer buffer, final UnsignedByte defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -335,16 +355,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public UnsignedShort readUnsignedShort()
+    public UnsignedShort readUnsignedShort(ReadableBuffer buffer)
     {
-        return readUnsignedShort(null);
+        return readUnsignedShort(buffer, null);
     }
 
-    public UnsignedShort readUnsignedShort(final UnsignedShort defaultVal)
+    public UnsignedShort readUnsignedShort(ReadableBuffer buffer, final UnsignedShort defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -357,16 +377,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public UnsignedInteger readUnsignedInteger()
+    public UnsignedInteger readUnsignedInteger(ReadableBuffer buffer)
     {
-        return readUnsignedInteger(null);
+        return readUnsignedInteger(buffer, null);
     }
 
-    public UnsignedInteger readUnsignedInteger(final UnsignedInteger defaultVal)
+    public UnsignedInteger readUnsignedInteger(ReadableBuffer buffer, final UnsignedInteger defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -379,16 +399,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public UnsignedLong readUnsignedLong()
+    public UnsignedLong readUnsignedLong(ReadableBuffer buffer)
     {
-        return readUnsignedLong(null);
+        return readUnsignedLong(buffer, null);
     }
 
-    public UnsignedLong readUnsignedLong(final UnsignedLong defaultVal)
+    public UnsignedLong readUnsignedLong(ReadableBuffer buffer, final UnsignedLong defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -401,16 +421,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public Character readCharacter()
+    public Character readCharacter(ReadableBuffer buffer)
     {
-        return readCharacter(null);
+        return readCharacter(buffer, null);
     }
 
-    public Character readCharacter(final Character defaultVal)
+    public Character readCharacter(ReadableBuffer buffer, final Character defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -423,17 +443,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public char readCharacter(final char defaultVal)
+    public char readCharacter(ReadableBuffer buffer, final char defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof CharacterType.CharacterEncoding)
         {
-            return ((CharacterType.CharacterEncoding)constructor).readPrimitiveValue();
+            return ((CharacterType.CharacterEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -445,16 +465,16 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Float readFloat()
+    public Float readFloat(ReadableBuffer buffer)
     {
-        return readFloat(null);
+        return readFloat(buffer, null);
     }
 
-    public Float readFloat(final Float defaultVal)
+    public Float readFloat(ReadableBuffer buffer, final Float defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -467,17 +487,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public float readFloat(final float defaultVal)
+    public float readFloat(ReadableBuffer buffer, final float defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof FloatType.FloatEncoding)
         {
-            return ((FloatType.FloatEncoding)constructor).readPrimitiveValue();
+            return ((FloatType.FloatEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -489,16 +509,16 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Double readDouble()
+    public Double readDouble(ReadableBuffer buffer)
     {
-        return readDouble(null);
+        return readDouble(buffer, null);
     }
 
-    public Double readDouble(final Double defaultVal)
+    public Double readDouble(ReadableBuffer buffer, final Double defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -511,17 +531,17 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public double readDouble(final double defaultVal)
+    public double readDouble(ReadableBuffer buffer, final double defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor instanceof DoubleType.DoubleEncoding)
         {
-            return ((DoubleType.DoubleEncoding)constructor).readPrimitiveValue();
+            return ((DoubleType.DoubleEncoding)constructor).readPrimitiveValue(buffer);
         }
         else
         {
-            Object val = constructor.readValue();
+            Object val = constructor.readValue(buffer);
             if(val == null)
             {
                 return defaultVal;
@@ -533,16 +553,16 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public UUID readUUID()
+    public UUID readUUID(ReadableBuffer buffer)
     {
-        return readUUID(null);
+        return readUUID(buffer, null);
     }
 
-    public UUID readUUID(final UUID defaultVal)
+    public UUID readUUID(ReadableBuffer buffer, final UUID defaultVal)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultVal;
@@ -555,16 +575,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public Decimal32 readDecimal32()
+    public Decimal32 readDecimal32(ReadableBuffer buffer)
     {
-        return readDecimal32(null);
+        return readDecimal32(buffer, null);
     }
 
-    public Decimal32 readDecimal32(final Decimal32 defaultValue)
+    public Decimal32 readDecimal32(ReadableBuffer buffer, final Decimal32 defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -577,16 +597,16 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public Decimal64 readDecimal64()
+    public Decimal64 readDecimal64(ReadableBuffer buffer)
     {
-        return readDecimal64(null);
+        return readDecimal64(buffer, null);
     }
 
-    public Decimal64 readDecimal64(final Decimal64 defaultValue)
+    public Decimal64 readDecimal64(ReadableBuffer buffer, final Decimal64 defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -598,16 +618,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Decimal64.class);
     }
 
-    public Decimal128 readDecimal128()
+    public Decimal128 readDecimal128(ReadableBuffer buffer)
     {
-        return readDecimal128(null);
+        return readDecimal128(buffer, null);
     }
 
-    public Decimal128 readDecimal128(final Decimal128 defaultValue)
+    public Decimal128 readDecimal128(ReadableBuffer buffer, final Decimal128 defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -619,16 +639,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Decimal128.class);
     }
 
-    public Date readTimestamp()
+    public Date readTimestamp(ReadableBuffer buffer)
     {
-        return readTimestamp(null);
+        return readTimestamp(buffer, null);
     }
 
-    public Date readTimestamp(final Date defaultValue)
+    public Date readTimestamp(ReadableBuffer buffer, final Date defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -640,16 +660,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Date.class);
     }
 
-    public Binary readBinary()
+    public Binary readBinary(ReadableBuffer buffer)
     {
-        return readBinary(null);
+        return readBinary(buffer, null);
     }
 
-    public Binary readBinary(final Binary defaultValue)
+    public Binary readBinary(ReadableBuffer buffer, final Binary defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -661,16 +681,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Binary.class);
     }
 
-    public Symbol readSymbol()
+    public Symbol readSymbol(ReadableBuffer buffer)
     {
-        return readSymbol(null);
+        return readSymbol(buffer, null);
     }
 
-    public Symbol readSymbol(final Symbol defaultValue)
+    public Symbol readSymbol(ReadableBuffer buffer, final Symbol defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -682,16 +702,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Symbol.class);
     }
 
-    public String readString()
+    public String readString(ReadableBuffer buffer)
     {
-        return readString(null);
+        return readString(buffer, null);
     }
 
-    public String readString(final String defaultValue)
+    public String readString(ReadableBuffer buffer, final String defaultValue)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return defaultValue;
@@ -703,11 +723,11 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, String.class);
     }
 
-    public List readList()
+    public List readList(ReadableBuffer buffer)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return null;
@@ -719,16 +739,16 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, List.class);
     }
 
-    public <T> void readList(final ListProcessor<T> processor)
+    public <T> void readList(ReadableBuffer buffer, final ListProcessor<T> processor)
     {
         //TODO.
     }
 
-    public Map readMap()
+    public Map readMap(ReadableBuffer buffer)
     {
 
-        TypeConstructor constructor = readConstructor();
-        Object val = constructor.readValue();
+        TypeConstructor constructor = readConstructor(buffer);
+        Object val = constructor.readValue(buffer);
         if(val == null)
         {
             return null;
@@ -740,60 +760,60 @@ public class DecoderImpl implements ByteBufferDecoder
         throw unexpectedType(val, Map.class);
     }
 
-    public <T> T[] readArray(final Class<T> clazz)
+    public <T> T[] readArray(ReadableBuffer buffer, final Class<T> clazz)
     {
         return null;  //TODO.
     }
 
-    public Object[] readArray()
+    public Object[] readArray(ReadableBuffer buffer)
     {
-        return (Object[]) readConstructor().readValue();
+        return (Object[]) readConstructor(buffer).readValue(buffer);
 
     }
 
-    public boolean[] readBooleanArray()
+    public boolean[] readBooleanArray(ReadableBuffer buffer)
     {
-        return (boolean[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (boolean[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public byte[] readByteArray()
+    public byte[] readByteArray(ReadableBuffer buffer)
     {
-        return (byte[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (byte[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public short[] readShortArray()
+    public short[] readShortArray(ReadableBuffer buffer)
     {
-        return (short[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (short[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public int[] readIntegerArray()
+    public int[] readIntegerArray(ReadableBuffer buffer)
     {
-        return (int[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (int[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public long[] readLongArray()
+    public long[] readLongArray(ReadableBuffer buffer)
     {
-        return (long[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (long[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public float[] readFloatArray()
+    public float[] readFloatArray(ReadableBuffer buffer)
     {
-        return (float[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (float[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public double[] readDoubleArray()
+    public double[] readDoubleArray(ReadableBuffer buffer)
     {
-        return (double[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (double[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public char[] readCharacterArray()
+    public char[] readCharacterArray(ReadableBuffer buffer)
     {
-        return (char[]) ((ArrayType.ArrayEncoding)readConstructor()).readValueArray();
+        return (char[]) ((ArrayType.ArrayEncoding)readConstructor(buffer)).readValueArray(buffer);
     }
 
-    public <T> T[] readMultiple(final Class<T> clazz)
+    public <T> T[] readMultiple(ReadableBuffer buffer, final Class<T> clazz)
     {
-        Object val = readObject();
+        Object val = readObject(buffer);
         if(val == null)
         {
             return null;
@@ -821,9 +841,9 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public Object[] readMultiple()
+    public Object[] readMultiple(ReadableBuffer buffer)
     {
-        Object val = readObject();
+        Object val = readObject(buffer);
         if(val == null)
         {
             return null;
@@ -840,56 +860,78 @@ public class DecoderImpl implements ByteBufferDecoder
         }
     }
 
-    public byte[] readByteMultiple()
+    public byte[] readByteMultiple(ReadableBuffer buffer)
     {
         return new byte[0];  //TODO.
     }
 
-    public short[] readShortMultiple()
+    public short[] readShortMultiple(ReadableBuffer buffer)
     {
         return new short[0];  //TODO.
     }
 
-    public int[] readIntegerMultiple()
+    public int[] readIntegerMultiple(ReadableBuffer buffer)
     {
         return new int[0];  //TODO.
     }
 
-    public long[] readLongMultiple()
+    public long[] readLongMultiple(ReadableBuffer buffer)
     {
         return new long[0];  //TODO.
     }
 
-    public float[] readFloatMultiple()
+    public float[] readFloatMultiple(ReadableBuffer buffer)
     {
         return new float[0];  //TODO.
     }
 
-    public double[] readDoubleMultiple()
+    public double[] readDoubleMultiple(ReadableBuffer buffer)
     {
         return new double[0];  //TODO.
     }
 
-    public char[] readCharacterMultiple()
+    public char[] readCharacterMultiple(ReadableBuffer buffer)
     {
         return new char[0];  //TODO.
     }
 
-    public Object readObject()
+    public Object readObject(ReadableBuffer buffer)
     {
-        TypeConstructor constructor = readConstructor();
+        TypeConstructor constructor = readConstructor(buffer);
         if(constructor== null)
         {
             throw new DecodeException("Unknown constructor");
         }
-        return constructor instanceof ArrayType.ArrayEncoding
-               ? ((ArrayType.ArrayEncoding)constructor).readValueArray()
-               : constructor.readValue();
+        try
+        {
+            // TODO: if we called constructor.readValue(buffer) directly here, we would have the code running a lot faster
+            //       Why?
+
+            // Optimization: instanceof here would taken the double of the time
+            if (constructor.isArray())
+            {
+                return ((ArrayType.ArrayEncoding)constructor).readValueArray(buffer);
+            }
+            else
+            {
+                return constructor.readValue(buffer);
+            }
+
+        }
+        catch (NullPointerException npe)
+        {
+            throw new DecodeException("Unexpected null value - mandatory field not set? ("+npe.getMessage()+")", npe);
+        }
+        catch (ClassCastException cce)
+        {
+            throw new DecodeException("Incorrect type used", cce);
+        }
+
     }
 
-    public Object readObject(final Object defaultValue)
+    public Object readObject(ReadableBuffer buffer, final Object defaultValue)
     {
-        Object val = readObject();
+        Object val = readObject(buffer);
         return val == null ? defaultValue : val;
     }
 
@@ -904,57 +946,53 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    byte readRawByte()
+    byte readRawByte(ReadableBuffer buffer)
     {
-        return _buffer.get();
+        return buffer.get();
     }
 
-    int readRawInt()
+    int readRawInt(ReadableBuffer buffer)
     {
-        return _buffer.getInt();
+        return buffer.getInt();
     }
 
-    long readRawLong()
+    long readRawLong(ReadableBuffer buffer)
     {
-        return _buffer.getLong();
+        return buffer.getLong();
     }
 
-    short readRawShort()
+    short readRawShort(ReadableBuffer buffer)
     {
-        return _buffer.getShort();
+        return buffer.getShort();
     }
 
-    float readRawFloat()
+    float readRawFloat(ReadableBuffer buffer)
     {
-        return _buffer.getFloat();
+        return buffer.getFloat();
     }
 
-    double readRawDouble()
+    double readRawDouble(ReadableBuffer buffer)
     {
-        return _buffer.getDouble();
+        return buffer.getDouble();
     }
 
-    void readRaw(final byte[] data, final int offset, final int length)
+    void readRaw(ReadableBuffer buffer, final byte[] data, final int offset, final int length)
     {
-        _buffer.get(data, offset, length);
+        buffer.get(data, offset, length);
     }
 
 
-    <V> V readRaw(TypeDecoder<V> decoder, int size)
+    <V> V readRaw(ReadableBuffer buffer, TypeDecoder<V> decoder, int size)
     {
-        V decode = decoder.decode((ByteBuffer) _buffer.slice().limit(size));
-        _buffer.position(_buffer.position()+size);
+        V decode = decoder.decode(buffer.slice().limit(size));
+        buffer.position(buffer.position()+size);
         return decode;
     }
 
-    public void setByteBuffer(final ByteBuffer buffer)
-    {
-        _buffer = buffer;
-    }
 
     interface TypeDecoder<V>
     {
-        V decode(ByteBuffer buf);
+        V decode(ReadableBuffer buf);
     }
 
     private static class UnknownDescribedType implements DescribedType
@@ -993,7 +1031,7 @@ public class DecoderImpl implements ByteBufferDecoder
 
     }
 
-    public int getByteBufferRemaining() {
-        return _buffer.remaining();
+    public int getByteBufferRemaining(ReadableBuffer buffer) {
+        return buffer.remaining();
     }
 }

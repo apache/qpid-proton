@@ -20,12 +20,11 @@
  */
 package org.apache.qpid.proton.codec;
 
-import java.nio.ByteBuffer;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.Decimal128;
@@ -43,11 +42,9 @@ public final class EncoderImpl implements ByteBufferEncoder
     private static final byte DESCRIBED_TYPE_OP = (byte)0;
 
 
-    private WritableBuffer _buffer;
-
-    private final Map<Class, AMQPType> _typeRegistry = new HashMap<Class, AMQPType>();
-    private Map<Object, AMQPType> _describedDescriptorRegistry = new HashMap<Object, AMQPType>();
-    private Map<Class, AMQPType>  _describedTypesClassRegistry = new HashMap<Class, AMQPType>();
+    private final Map<Class, AMQPType> _typeRegistry = new ConcurrentHashMap<>();
+    private Map<Object, AMQPType> _describedDescriptorRegistry = new ConcurrentHashMap<>();
+    private Map<Class, AMQPType>  _describedTypesClassRegistry = new ConcurrentHashMap<>();
 
     private final NullType              _nullType;
     private final BooleanType           _booleanType;
@@ -79,12 +76,6 @@ public final class EncoderImpl implements ByteBufferEncoder
     private final MapType               _mapType;
 
     private final ArrayType             _arrayType;
-
-    EncoderImpl(ByteBuffer buffer, DecoderImpl decoder)
-    {
-        this(decoder);
-        setByteBuffer(buffer);
-    }
 
     public EncoderImpl(DecoderImpl decoder)
     {
@@ -132,17 +123,6 @@ public final class EncoderImpl implements ByteBufferEncoder
 
 
     }
-
-    public void setByteBuffer(final ByteBuffer buf)
-    {
-        _buffer = new WritableBuffer.ByteBufferWrapper(buf);
-    }
-
-    public void setByteBuffer(final WritableBuffer buf)
-    {
-        _buffer = buf;
-    }
-
 
     @Override
     public AMQPType getType(final Object element)
@@ -219,448 +199,448 @@ public final class EncoderImpl implements ByteBufferEncoder
         _describedTypesClassRegistry.put(clazz, type);
     }
 
-    public void writeNull()
+    public void writeNull(WritableBuffer buffer)
     {
-        _nullType.write();
+        _nullType.write(buffer);
     }
 
-    public void writeBoolean(final boolean bool)
+    public void writeBoolean(WritableBuffer buffer, final boolean bool)
     {
-        _booleanType.writeValue(bool);
+        _booleanType.writeValue(buffer, bool);
     }
 
-    public void writeBoolean(final Boolean bool)
+    public void writeBoolean(WritableBuffer buffer, final Boolean bool)
     {
         if(bool == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _booleanType.write(bool);
+            _booleanType.write(buffer, bool);
         }
     }
 
-    public void writeUnsignedByte(final UnsignedByte ubyte)
+    public void writeUnsignedByte(WritableBuffer buffer, final UnsignedByte ubyte)
     {
         if(ubyte == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _unsignedByteType.write(ubyte);
+            _unsignedByteType.write(buffer, ubyte);
         }
     }
 
-    public void writeUnsignedShort(final UnsignedShort ushort)
+    public void writeUnsignedShort(WritableBuffer buffer, final UnsignedShort ushort)
     {
         if(ushort == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _unsignedShortType.write(ushort);
+            _unsignedShortType.write(buffer, ushort);
         }
     }
 
-    public void writeUnsignedInteger(final UnsignedInteger uint)
+    public void writeUnsignedInteger(WritableBuffer buffer, final UnsignedInteger uint)
     {
         if(uint == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _unsignedIntegerType.write(uint);
+            _unsignedIntegerType.write(buffer, uint);
         }
     }
 
-    public void writeUnsignedLong(final UnsignedLong ulong)
+    public void writeUnsignedLong(WritableBuffer buffer, final UnsignedLong ulong)
     {
         if(ulong == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _unsignedLongType.write(ulong);
+            _unsignedLongType.write(buffer, ulong);
         }
     }
 
-    public void writeByte(final byte b)
+    public void writeByte(WritableBuffer buffer, final byte b)
     {
-        _byteType.write(b);
+        _byteType.write(buffer, b);
     }
 
-    public void writeByte(final Byte b)
+    public void writeByte(WritableBuffer buffer, final Byte b)
     {
         if(b == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeByte(b.byteValue());
+            writeByte(buffer, b.byteValue());
         }
     }
 
-    public void writeShort(final short s)
+    public void writeShort(WritableBuffer buffer, final short s)
     {
-        _shortType.write(s);
+        _shortType.write(buffer, s);
     }
 
-    public void writeShort(final Short s)
+    public void writeShort(WritableBuffer buffer, final Short s)
     {
         if(s == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeShort(s.shortValue());
+            writeShort(buffer, s.shortValue());
         }
     }
 
-    public void writeInteger(final int i)
+    public void writeInteger(WritableBuffer buffer, final int i)
     {
-        _integerType.write(i);
+        _integerType.write(buffer, i);
     }
 
-    public void writeInteger(final Integer i)
+    public void writeInteger(WritableBuffer buffer, final Integer i)
     {
         if(i == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeInteger(i.intValue());
+            writeInteger(buffer, i.intValue());
         }
     }
 
-    public void writeLong(final long l)
+    public void writeLong(WritableBuffer buffer, final long l)
     {
-        _longType.write(l);
+        _longType.write(buffer, l);
     }
 
-    public void writeLong(final Long l)
+    public void writeLong(WritableBuffer buffer, final Long l)
     {
 
         if(l == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeLong(l.longValue());
+            writeLong(buffer, l.longValue());
         }
     }
 
-    public void writeFloat(final float f)
+    public void writeFloat(WritableBuffer buffer, final float f)
     {
-        _floatType.write(f);
+        _floatType.write(buffer, f);
     }
 
-    public void writeFloat(final Float f)
+    public void writeFloat(WritableBuffer buffer, final Float f)
     {
         if(f == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeFloat(f.floatValue());
+            writeFloat(buffer, f.floatValue());
         }
     }
 
-    public void writeDouble(final double d)
+    public void writeDouble(WritableBuffer buffer, final double d)
     {
-        _doubleType.write(d);
+        _doubleType.write(buffer, d);
     }
 
-    public void writeDouble(final Double d)
-    {
-        if(d == null)
-        {
-            writeNull();
-        }
-        else
-        {
-            writeDouble(d.doubleValue());
-        }
-    }
-
-    public void writeDecimal32(final Decimal32 d)
+    public void writeDouble(WritableBuffer buffer, final Double d)
     {
         if(d == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _decimal32Type.write(d);
+            writeDouble(buffer, d.doubleValue());
         }
     }
 
-    public void writeDecimal64(final Decimal64 d)
+    public void writeDecimal32(WritableBuffer buffer, final Decimal32 d)
     {
         if(d == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _decimal64Type.write(d);
+            _decimal32Type.write(buffer, d);
         }
     }
 
-    public void writeDecimal128(final Decimal128 d)
+    public void writeDecimal64(WritableBuffer buffer, final Decimal64 d)
     {
         if(d == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _decimal128Type.write(d);
+            _decimal64Type.write(buffer, d);
         }
     }
 
-    public void writeCharacter(final char c)
+    public void writeDecimal128(WritableBuffer buffer, final Decimal128 d)
+    {
+        if(d == null)
+        {
+            writeNull(buffer);
+        }
+        else
+        {
+            _decimal128Type.write(buffer, d);
+        }
+    }
+
+    public void writeCharacter(WritableBuffer buffer, final char c)
     {
         // TODO - java character may be half of a pair, should probably throw exception then
-        _characterType.write(c);
+        _characterType.write(buffer, c);
     }
 
-    public void writeCharacter(final Character c)
+    public void writeCharacter(WritableBuffer buffer, final Character c)
     {
         if(c == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeCharacter(c.charValue());
+            writeCharacter(buffer, c.charValue());
         }
     }
 
-    public void writeTimestamp(final long d)
+    public void writeTimestamp(WritableBuffer buffer, final long d)
     {
-        _timestampType.write(d);
+        _timestampType.write(buffer, d);
     }
 
-    public void writeTimestamp(final Date d)
+    public void writeTimestamp(WritableBuffer buffer, final Date d)
     {
         if(d == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            writeTimestamp(d.getTime());
+            writeTimestamp(buffer, d.getTime());
         }
     }
 
-    public void writeUUID(final UUID uuid)
+    public void writeUUID(WritableBuffer buffer, final UUID uuid)
     {
         if(uuid == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _uuidType.write(uuid);
+            _uuidType.write(buffer, uuid);
         }
 
     }
 
-    public void writeBinary(final Binary b)
+    public void writeBinary(WritableBuffer buffer, final Binary b)
     {
         if(b == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _binaryType.write(b);
+            _binaryType.write(buffer, b);
         }
     }
 
-    public void writeString(final String s)
+    public void writeString(WritableBuffer buffer, final String s)
     {
         if(s == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _stringType.write(s);
+            _stringType.write(buffer, s);
         }
     }
 
-    public void writeSymbol(final Symbol s)
+    public void writeSymbol(WritableBuffer buffer, final Symbol s)
     {
         if(s == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _symbolType.write(s);
+            _symbolType.write(buffer, s);
         }
 
     }
 
-    public void writeList(final List l)
+    public void writeList(WritableBuffer buffer, final List l)
     {
         if(l == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _listType.write(l);
+            _listType.write(buffer, l);
         }
     }
 
-    public void writeMap(final Map m)
+    public void writeMap(WritableBuffer buffer, final Map m)
     {
 
         if(m == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _mapType.write(m);
+            _mapType.write(buffer, m);
         }
     }
 
-    public void writeDescribedType(final DescribedType d)
+    public void writeDescribedType(WritableBuffer buffer, final DescribedType d)
     {
         if(d == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _buffer.put(DESCRIBED_TYPE_OP);
-            writeObject(d.getDescriptor());
-            writeObject(d.getDescribed());
+            buffer.put(DESCRIBED_TYPE_OP);
+            writeObject(buffer, d.getDescriptor());
+            writeObject(buffer, d.getDescribed());
         }
     }
 
-    public void writeArray(final boolean[] a)
+    public void writeArray(WritableBuffer buffer, final boolean[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final byte[] a)
+    public void writeArray(WritableBuffer buffer, final byte[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final short[] a)
+    public void writeArray(WritableBuffer buffer, final short[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final int[] a)
+    public void writeArray(WritableBuffer buffer, final int[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final long[] a)
+    public void writeArray(WritableBuffer buffer, final long[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final float[] a)
+    public void writeArray(WritableBuffer buffer, final float[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final double[] a)
+    public void writeArray(WritableBuffer buffer, final double[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final char[] a)
+    public void writeArray(WritableBuffer buffer, final char[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeArray(final Object[] a)
+    public void writeArray(WritableBuffer buffer, final Object[] a)
     {
         if(a == null)
         {
-            writeNull();
+            writeNull(buffer);
         }
         else
         {
-            _arrayType.write(a);
+            _arrayType.write(buffer, a);
         }
     }
 
-    public void writeObject(final Object o)
+    public void writeObject(WritableBuffer buffer, final Object o)
     {
         AMQPType type = _typeRegistry.get(o == null ? Void.class : o.getClass());
 
@@ -673,35 +653,35 @@ public final class EncoderImpl implements ByteBufferEncoder
                 {
                     if(componentType == Boolean.TYPE)
                     {
-                        writeArray((boolean[])o);
+                        writeArray(buffer, (boolean[])o);
                     }
                     else if(componentType == Byte.TYPE)
                     {
-                        writeArray((byte[])o);
+                        writeArray(buffer, (byte[])o);
                     }
                     else if(componentType == Short.TYPE)
                     {
-                        writeArray((short[])o);
+                        writeArray(buffer, (short[])o);
                     }
                     else if(componentType == Integer.TYPE)
                     {
-                        writeArray((int[])o);
+                        writeArray(buffer, (int[])o);
                     }
                     else if(componentType == Long.TYPE)
                     {
-                        writeArray((long[])o);
+                        writeArray(buffer, (long[])o);
                     }
                     else if(componentType == Float.TYPE)
                     {
-                        writeArray((float[])o);
+                        writeArray(buffer, (float[])o);
                     }
                     else if(componentType == Double.TYPE)
                     {
-                        writeArray((double[])o);
+                        writeArray(buffer, (double[])o);
                     }
                     else if(componentType == Character.TYPE)
                     {
-                        writeArray((char[])o);
+                        writeArray(buffer, (char[])o);
                     }
                     else
                     {
@@ -710,20 +690,20 @@ public final class EncoderImpl implements ByteBufferEncoder
                 }
                 else
                 {
-                    writeArray((Object[]) o);
+                    writeArray(buffer, (Object[]) o);
                 }
             }
             else if(o instanceof List)
             {
-                writeList((List)o);
+                writeList(buffer, (List)o);
             }
             else if(o instanceof Map)
             {
-                writeMap((Map)o);
+                writeMap(buffer, (Map)o);
             }
             else if(o instanceof DescribedType)
             {
-                writeDescribedType((DescribedType)o);
+                writeDescribedType(buffer, (DescribedType)o);
             }
             else
             {
@@ -734,46 +714,46 @@ public final class EncoderImpl implements ByteBufferEncoder
         }
         else
         {
-            type.write(o);
+            type.write(buffer, o);
         }
     }
 
-    public void writeRaw(final byte b)
+    public void writeRaw(WritableBuffer buffer, final byte b)
     {
-        _buffer.put(b);
+        buffer.put(b);
     }
 
-    void writeRaw(final short s)
+    void writeRaw(WritableBuffer buffer, final short s)
     {
-        _buffer.putShort(s);
+        buffer.putShort(s);
     }
 
-    void writeRaw(final int i)
+    void writeRaw(WritableBuffer buffer, final int i)
     {
-        _buffer.putInt(i);
+        buffer.putInt(i);
     }
 
-    void writeRaw(final long l)
+    void writeRaw(WritableBuffer buffer, final long l)
     {
-        _buffer.putLong(l);
+        buffer.putLong(l);
     }
 
-    void writeRaw(final float f)
+    void writeRaw(WritableBuffer buffer, final float f)
     {
-        _buffer.putFloat(f);
+        buffer.putFloat(f);
     }
 
-    void writeRaw(final double d)
+    void writeRaw(WritableBuffer buffer, final double d)
     {
-        _buffer.putDouble(d);
+        buffer.putDouble(d);
     }
 
-    void writeRaw(byte[] src, int offset, int length)
+    void writeRaw(WritableBuffer buffer, byte[] src, int offset, int length)
     {
-        _buffer.put(src, offset, length);
+        buffer.put(src, offset, length);
     }
 
-    void writeRaw(String string)
+    void writeRaw(WritableBuffer _buffer, String string)
     {
         final int length = string.length();
         int c;

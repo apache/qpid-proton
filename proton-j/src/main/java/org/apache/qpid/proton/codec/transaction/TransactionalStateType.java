@@ -35,6 +35,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 public class TransactionalStateType extends AbstractDescribedType<TransactionalState,List> implements DescribedTypeConstructor<TransactionalState>
 {
@@ -97,9 +99,9 @@ public class TransactionalStateType extends AbstractDescribedType<TransactionalS
 
     }
 
-    public TransactionalState newInstance(Object described)
+    public TransactionalState newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         TransactionalState o = new TransactionalState();
 

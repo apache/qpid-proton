@@ -75,9 +75,9 @@ public class BinaryType extends AbstractPrimitiveType<Binary>
         }
 
         @Override
-        protected void writeEncodedValue(final Binary val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Binary val)
         {
-            getEncoder().writeRaw(val.getArray(), val.getArrayOffset(), val.getLength());
+            getEncoder().writeRaw(buffer, val.getArray(), val.getArrayOffset(), val.getLength());
         }
 
         @Override
@@ -103,16 +103,11 @@ public class BinaryType extends AbstractPrimitiveType<Binary>
             return (getType() == encoding.getType());
         }
 
-        public Binary readValue()
+        public Binary readValue(ReadableBuffer buffer)
         {
-            final DecoderImpl decoder = getDecoder();
-            int size = decoder.readRawInt();
-            if (size > decoder.getByteBufferRemaining()) {
-                throw new IllegalArgumentException("Binary data size "+size+" is specified to be greater than the amount of data available ("+
-                                                   decoder.getByteBufferRemaining()+")");
-            }
+            int size = getDecoder().readRawInt(buffer);
             byte[] data = new byte[size];
-            decoder.readRaw(data, 0, size);
+            getDecoder().readRaw(buffer, data, 0, size);
             return new Binary(data);
         }
     }
@@ -128,9 +123,9 @@ public class BinaryType extends AbstractPrimitiveType<Binary>
         }
 
         @Override
-        protected void writeEncodedValue(final Binary val)
+        protected void writeEncodedValue(WritableBuffer buffer, final Binary val)
         {
-            getEncoder().writeRaw(val.getArray(), val.getArrayOffset(), val.getLength());
+            getEncoder().writeRaw(buffer, val.getArray(), val.getArrayOffset(), val.getLength());
         }
 
         @Override
@@ -156,11 +151,11 @@ public class BinaryType extends AbstractPrimitiveType<Binary>
             return encoder == this;
         }
 
-        public Binary readValue()
+        public Binary readValue(ReadableBuffer buffer)
         {
-            int size = ((int)getDecoder().readRawByte()) & 0xff;
+            int size = ((int)getDecoder().readRawByte(buffer)) & 0xff;
             byte[] data = new byte[size];
-            getDecoder().readRaw(data, 0, size);
+            getDecoder().readRaw(buffer, data, 0, size);
             return new Binary(data);
         }
     }

@@ -31,6 +31,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class DeliveryAnnotationsType extends AbstractDescribedType<DeliveryAnnotations,Map> implements DescribedTypeConstructor<DeliveryAnnotations>
@@ -59,9 +61,9 @@ public class DeliveryAnnotationsType extends AbstractDescribedType<DeliveryAnnot
     }
 
 
-    public DeliveryAnnotations newInstance(Object described)
+    public DeliveryAnnotations newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        return new DeliveryAnnotations( (Map) described );
+        return new DeliveryAnnotations( (Map) constructor.readValue(buffer) );
     }
 
     public Class<DeliveryAnnotations> getTypeClass()

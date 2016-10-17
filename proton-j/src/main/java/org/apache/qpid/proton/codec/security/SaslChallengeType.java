@@ -34,6 +34,8 @@ import org.apache.qpid.proton.codec.DecodeException;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
 public class SaslChallengeType extends AbstractDescribedType<SaslChallenge,List> implements DescribedTypeConstructor<SaslChallenge>
@@ -63,9 +65,9 @@ public class SaslChallengeType extends AbstractDescribedType<SaslChallenge,List>
 
 
 
-    public SaslChallenge newInstance(Object described)
+    public SaslChallenge newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        List l = (List) described;
+        List l = (List) constructor.readValue(buffer);
 
         SaslChallenge o = new SaslChallenge();
 

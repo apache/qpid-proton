@@ -20,9 +20,7 @@
  */
 package org.apache.qpid.proton.codec;
 
-import java.nio.ByteBuffer;
 
-public interface ByteBufferEncoder extends Encoder
+public interface ByteBufferEncoder extends Encoder<WritableBuffer>
 {
-    public void setByteBuffer(ByteBuffer buf);
 }

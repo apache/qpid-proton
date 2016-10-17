@@ -39,7 +39,7 @@ import org.apache.qpid.proton.codec.transport.*;
 
 public class AMQPDefinedTypes
 {
-    public static void registerAllTypes(Decoder decoder, EncoderImpl encoder)
+    public static void registerAllTypes(DecoderImpl decoder, EncoderImpl encoder)
     {
         registerTransportTypes(decoder, encoder);
         registerMessagingTypes(decoder, encoder);
@@ -48,7 +48,7 @@ public class AMQPDefinedTypes
     }
 
 
-    public static void registerTransportTypes(Decoder decoder, EncoderImpl encoder)
+    public static void registerTransportTypes(DecoderImpl decoder, EncoderImpl encoder)
     {
         OpenType.register(decoder, encoder);
         BeginType.register(decoder, encoder);
@@ -62,7 +62,7 @@ public class AMQPDefinedTypes
         ErrorConditionType.register(decoder, encoder);
     }
 
-    public static void registerMessagingTypes(Decoder decoder, EncoderImpl encoder)
+    public static void registerMessagingTypes(DecoderImpl decoder, EncoderImpl encoder)
     {
         HeaderType.register(decoder, encoder);
         DeliveryAnnotationsType.register(decoder, encoder);
@@ -86,7 +86,7 @@ public class AMQPDefinedTypes
         DeleteOnNoLinksOrMessagesType.register(decoder, encoder);
     }
 
-    public static void registerTransactionTypes(Decoder decoder, EncoderImpl encoder)
+    public static void registerTransactionTypes(DecoderImpl decoder, EncoderImpl encoder)
     {
         CoordinatorType.register(decoder, encoder);
         DeclareType.register(decoder, encoder);
@@ -95,7 +95,7 @@ public class AMQPDefinedTypes
         TransactionalStateType.register(decoder, encoder);
     }
 
-    public static void registerSecurityTypes(Decoder decoder, EncoderImpl encoder)
+    public static void registerSecurityTypes(DecoderImpl decoder, EncoderImpl encoder)
     {
         SaslMechanismsType.register(decoder, encoder);
         SaslInitType.register(decoder, encoder);

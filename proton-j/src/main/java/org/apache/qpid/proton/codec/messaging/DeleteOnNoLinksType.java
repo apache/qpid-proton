@@ -32,6 +32,8 @@ import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.Decoder;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 public class DeleteOnNoLinksType extends AbstractDescribedType<DeleteOnNoLinks,List> implements DescribedTypeConstructor<DeleteOnNoLinks>
 {
@@ -59,8 +61,10 @@ public class DeleteOnNoLinksType extends AbstractDescribedType<DeleteOnNoLinks,L
     }
 
     @Override
-    public DeleteOnNoLinks newInstance(Object described)
+    public DeleteOnNoLinks newInstance(ReadableBuffer buffer,  TypeConstructor constructor)
     {
+        // it's not used but we have to read it to make sure it won't damage the sequence
+        constructor.readValue(buffer);
         return DeleteOnNoLinks.getInstance();
     }
 

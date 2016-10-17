@@ -55,9 +55,9 @@ public class FloatType extends AbstractPrimitiveType<Float>
         return Collections.singleton(_floatEncoding);
     }
 
-    public void write(float f)
+    public void write(WritableBuffer buffer, float f)
     {
-        _floatEncoding.write(f);
+        _floatEncoding.write(buffer, f);
     }
     
     public class FloatEncoding extends FixedSizePrimitiveTypeEncoding<Float>
@@ -85,21 +85,21 @@ public class FloatType extends AbstractPrimitiveType<Float>
             return FloatType.this;
         }
 
-        public void writeValue(final Float val)
+        public void writeValue(WritableBuffer buffer, final Float val)
         {
-            getEncoder().writeRaw(val.floatValue());
+            getEncoder().writeRaw(buffer, val.floatValue());
         }
 
-        public void writeValue(final float val)
+        public void writeValue(WritableBuffer buffer, final float val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
 
-        public void write(final float f)
+        public void write(WritableBuffer buffer, final float f)
         {
-            writeConstructor();
-            getEncoder().writeRaw(f);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, f);
             
         }
 
@@ -108,14 +108,14 @@ public class FloatType extends AbstractPrimitiveType<Float>
             return (getType() == encoding.getType());
         }
 
-        public Float readValue()
+        public Float readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public float readPrimitiveValue()
+        public float readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawFloat();
+            return getDecoder().readRawFloat(buffer);
         }
 
 

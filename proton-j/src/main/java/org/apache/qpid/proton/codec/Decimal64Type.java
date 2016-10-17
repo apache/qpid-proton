@@ -82,9 +82,9 @@ public class Decimal64Type extends AbstractPrimitiveType<Decimal64>
             return Decimal64Type.this;
         }
 
-        public void writeValue(final Decimal64 val)
+        public void writeValue(WritableBuffer buffer, final Decimal64 val)
         {
-            getEncoder().writeRaw(val.getBits());
+            getEncoder().writeRaw(buffer, val.getBits());
         }
 
         public boolean encodesSuperset(final TypeEncoding<Decimal64> encoding)
@@ -92,9 +92,9 @@ public class Decimal64Type extends AbstractPrimitiveType<Decimal64>
             return (getType() == encoding.getType());
         }
 
-        public Decimal64 readValue()
+        public Decimal64 readValue(ReadableBuffer buffer)
         {
-            return new Decimal64(getDecoder().readRawLong());
+            return new Decimal64(getDecoder().readRawLong(buffer));
         }
     }
 }

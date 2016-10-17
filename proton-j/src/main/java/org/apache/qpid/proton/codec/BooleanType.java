@@ -35,10 +35,10 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
 
     public static interface BooleanEncoding extends PrimitiveTypeEncoding<Boolean>
     {
-        void write(boolean b);
-        void writeValue(boolean b);
+        void write(WritableBuffer buffer, boolean b);
+        void writeValue(WritableBuffer buffer, boolean b);
 
-        boolean readPrimitiveValue();
+        boolean readPrimitiveValue(ReadableBuffer buffer);
     }
 
     BooleanType(final EncoderImpl encoder, final DecoderImpl decoder)
@@ -66,9 +66,9 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
         return val ? _trueEncoder : _falseEncoder;
     }
 
-    public void writeValue(final boolean val)
+    public void writeValue(WritableBuffer buffer, final boolean val)
     {
-        getEncoding(val).write(val);
+        getEncoding(val).write(buffer, val);
     }
 
 
@@ -109,16 +109,16 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return BooleanType.this;
         }
 
-        public void writeValue(final Boolean val)
+        public void writeValue(WritableBuffer buffer, final Boolean val)
         {
         }
 
-        public void write(final boolean b)
+        public void write(WritableBuffer buffer, final boolean b)
         {
-            writeConstructor();
+            writeConstructor(buffer);
         }
 
-        public void writeValue(final boolean b)
+        public void writeValue(WritableBuffer buffer, final boolean b)
         {
         }
 
@@ -127,12 +127,12 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return encoding == this;
         }
 
-        public Boolean readValue()
+        public Boolean readValue(ReadableBuffer buffer)
         {
             return Boolean.TRUE;
         }
 
-        public boolean readPrimitiveValue()
+        public boolean readPrimitiveValue(ReadableBuffer buffers)
         {
             return true;
         }
@@ -170,20 +170,20 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return BooleanType.this;
         }
 
-        public void writeValue(final Boolean val)
+        public void writeValue(WritableBuffer buffer, final Boolean val)
         {
         }
 
-        public void write(final boolean b)
+        public void write(WritableBuffer buffer, final boolean b)
         {
-            writeConstructor();
+            writeConstructor(buffer);
         }
 
-        public void writeValue(final boolean b)
+        public void writeValue(WritableBuffer buffer, final boolean b)
         {
         }
 
-        public boolean readPrimitiveValue()
+        public boolean readPrimitiveValue(ReadableBuffer buffer)
         {
             return false;
         }
@@ -193,7 +193,7 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return encoding == this;
         }
 
-        public Boolean readValue()
+        public Boolean readValue(ReadableBuffer buffer)
         {
             return Boolean.FALSE;
         }
@@ -231,26 +231,26 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return EncodingCodes.BOOLEAN;
         }
 
-        public void writeValue(final Boolean val)
+        public void writeValue(WritableBuffer buffer, final Boolean val)
         {
-            getEncoder().writeRaw(val ? BYTE_1 : BYTE_0);
+            getEncoder().writeRaw(buffer, val ? BYTE_1 : BYTE_0);
         }
 
-        public void write(final boolean val)
+        public void write(WritableBuffer buffer, final boolean val)
         {
-            writeConstructor();
-            getEncoder().writeRaw(val ? BYTE_1 : BYTE_0);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, val ? BYTE_1 : BYTE_0);
         }
 
-        public void writeValue(final boolean b)
+        public void writeValue(WritableBuffer buffer, final boolean b)
         {
-            getEncoder().writeRaw(b ? BYTE_1 : BYTE_0);
+            getEncoder().writeRaw(buffer, b ? BYTE_1 : BYTE_0);
         }
 
-        public boolean readPrimitiveValue()
+        public boolean readPrimitiveValue(ReadableBuffer buffer)
         {
 
-            return getDecoder().readRawByte() != BYTE_0;
+            return getDecoder().readRawByte(buffer) != BYTE_0;
         }
 
         public boolean encodesSuperset(final TypeEncoding<Boolean> encoding)
@@ -258,9 +258,9 @@ public final class BooleanType extends AbstractPrimitiveType<Boolean>
             return (getType() == encoding.getType());
         }
 
-        public Boolean readValue()
+        public Boolean readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue() ? Boolean.TRUE : Boolean.FALSE;
+            return readPrimitiveValue(buffer) ? Boolean.TRUE : Boolean.FALSE;
         }
 
 

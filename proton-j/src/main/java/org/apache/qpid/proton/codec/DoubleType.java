@@ -55,9 +55,9 @@ public class DoubleType extends AbstractPrimitiveType<Double>
         return Collections.singleton(_doubleEncoding);
     }
 
-    public void write(double d)
+    public void write(WritableBuffer buffer, double d)
     {
-        _doubleEncoding.write(d);
+        _doubleEncoding.write(buffer, d);
     }
     
     public class DoubleEncoding extends FixedSizePrimitiveTypeEncoding<Double>
@@ -85,20 +85,20 @@ public class DoubleType extends AbstractPrimitiveType<Double>
             return DoubleType.this;
         }
 
-        public void writeValue(final Double val)
+        public void writeValue(WritableBuffer buffer, final Double val)
         {
-            getEncoder().writeRaw(val.doubleValue());
+            getEncoder().writeRaw(buffer, val.doubleValue());
         }
 
-        public void writeValue(final double val)
+        public void writeValue(WritableBuffer buffer, final double val)
         {
-            getEncoder().writeRaw(val);
+            getEncoder().writeRaw(buffer, val);
         }
 
-        public void write(final double d)
+        public void write(WritableBuffer buffer, final double d)
         {
-            writeConstructor();
-            getEncoder().writeRaw(d);
+            writeConstructor(buffer);
+            getEncoder().writeRaw(buffer, d);
             
         }
 
@@ -107,14 +107,14 @@ public class DoubleType extends AbstractPrimitiveType<Double>
             return (getType() == encoding.getType());
         }
 
-        public Double readValue()
+        public Double readValue(ReadableBuffer buffer)
         {
-            return readPrimitiveValue();
+            return readPrimitiveValue(buffer);
         }
 
-        public double readPrimitiveValue()
+        public double readPrimitiveValue(ReadableBuffer buffer)
         {
-            return getDecoder().readRawDouble();
+            return getDecoder().readRawDouble(buffer);
         }
 
 

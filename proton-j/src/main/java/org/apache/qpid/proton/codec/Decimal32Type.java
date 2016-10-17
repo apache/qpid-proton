@@ -82,9 +82,9 @@ public class Decimal32Type extends AbstractPrimitiveType<Decimal32>
             return Decimal32Type.this;
         }
 
-        public void writeValue(final Decimal32 val)
+        public void writeValue(WritableBuffer buffer, final Decimal32 val)
         {
-            getEncoder().writeRaw(val.getBits());
+            getEncoder().writeRaw(buffer, val.getBits());
         }
 
         public boolean encodesSuperset(final TypeEncoding<Decimal32> encoding)
@@ -92,9 +92,9 @@ public class Decimal32Type extends AbstractPrimitiveType<Decimal32>
             return (getType() == encoding.getType());
         }
 
-        public Decimal32 readValue()
+        public Decimal32 readValue(ReadableBuffer buffer)
         {
-            return new Decimal32(getDecoder().readRawInt());
+            return new Decimal32(getDecoder().readRawInt(buffer));
         }
     }
 }

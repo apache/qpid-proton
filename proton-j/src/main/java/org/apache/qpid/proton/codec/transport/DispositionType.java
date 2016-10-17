@@ -1,4 +1,3 @@
-
 /*
 *
 * Licensed to the Apache Software Foundation (ASF) under one
@@ -33,12 +32,15 @@ import org.apache.qpid.proton.amqp.transport.Disposition;
 import org.apache.qpid.proton.amqp.transport.Role;
 import org.apache.qpid.proton.codec.AbstractDescribedType;
 import org.apache.qpid.proton.codec.DecodeException;
-import org.apache.qpid.proton.codec.Decoder;
+import org.apache.qpid.proton.codec.DecoderImpl;
 import org.apache.qpid.proton.codec.DescribedTypeConstructor;
 import org.apache.qpid.proton.codec.EncoderImpl;
+import org.apache.qpid.proton.codec.ListType;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.TypeConstructor;
 
 
-public final class DispositionType extends AbstractDescribedType<Disposition,List> implements DescribedTypeConstructor<Disposition>
+public final class DispositionType extends AbstractDescribedType<Disposition, List> implements DescribedTypeConstructor<Disposition>
 {
     private static final Object[] DESCRIPTORS =
     {
@@ -47,9 +49,12 @@ public final class DispositionType extends AbstractDescribedType<Disposition,Lis
 
     private static final UnsignedLong DESCRIPTOR = UnsignedLong.valueOf(0x0000000000000015L);
 
-    private DispositionType(EncoderImpl encoder)
+    private final DecoderImpl _decoder;
+
+    private DispositionType(DecoderImpl decoder, EncoderImpl encoder)
     {
         super(encoder);
+        this._decoder = decoder;
     }
 
     public UnsignedLong getDescriptor()
@@ -100,63 +105,75 @@ public final class DispositionType extends AbstractDescribedType<Disposition,Lis
         public int size()
         {
             return _disposition.getBatchable()
-                      ? 6
-                      : _disposition.getState() != null
-                      ? 5
-                      : _disposition.getSettled()
-                      ? 4
-                      : _disposition.getLast() != null
-                      ? 3
-                      : 2;
+                ? 6
+                : _disposition.getState() != null
+                ? 5
+                : _disposition.getSettled()
+                ? 4
+                : _disposition.getLast() != null
+                ? 3
+                : 2;
 
         }
     }
 
-        public Disposition newInstance(Object described)
-        {
-            List l = (List) described;
-
-            Disposition o = new Disposition();
-
-            if(l.isEmpty())
-            {
-                throw new DecodeException("The first field cannot be omitted");
-            }
-
-            switch(6 - l.size())
-            {
-
-                case 0:
-                    Boolean batchable = (Boolean) l.get(5);
-                    o.setBatchable(batchable == null ? false : batchable);
-                case 1:
-                    o.setState( (DeliveryState) l.get( 4 ) );
-                case 2:
-                    Boolean settled = (Boolean) l.get(3);
-                    o.setSettled(settled == null ? false : settled);
-                case 3:
-                    o.setLast( (UnsignedInteger) l.get( 2 ) );
-                case 4:
-                    o.setFirst( (UnsignedInteger) l.get( 1 ) );
-                case 5:
-                    o.setRole( Boolean.TRUE.equals(l.get( 0 )) ? Role.RECEIVER : Role.SENDER );
-            }
-
-
-            return o;
-        }
-
-        public Class<Disposition> getTypeClass()
-        {
-            return Disposition.class;
-        }
-
-
-
-
-    public static void register(Decoder decoder, EncoderImpl encoder)
+    @Override
+    public Disposition newInstance(ReadableBuffer buffer, TypeConstructor constructor)
     {
-        DispositionType type = new DispositionType(encoder);
+
+        ListType.ListEncoding listEncoding = (ListType.ListEncoding)constructor;
+
+        // This is for the prototype only, we should use the ListType directly here
+        int size = listEncoding.readCount(buffer, _decoder);
+
+        if (size == 0)
+        {
+            throw new DecodeException("The first field cannot be omitted");
+        }
+
+        Disposition o = new Disposition();
+
+        for (int i = 0 ; i < size; i++)
+        {
+            Object elementValue = listEncoding.readElement(buffer, _decoder);
+            switch (i)
+            {
+                case 0:
+                    o.setRole(Boolean.TRUE.equals(elementValue) ? Role.RECEIVER : Role.SENDER);
+                    break;
+                case 1:
+                    o.setFirst((UnsignedInteger) elementValue);
+                    break;
+                case 2:
+                    o.setLast((UnsignedInteger) elementValue);
+                    break;
+                case 3:
+                    Boolean settled = (Boolean) elementValue;
+                    o.setSettled(settled == null ? false : settled);
+                    break;
+                case 4:
+                    o.setState((DeliveryState) elementValue);
+                    break;
+                case 5:
+                    Boolean batchable = (Boolean) elementValue;
+                    o.setBatchable(batchable == null ? false : batchable);
+                    break;
+            }
+
+        }
+
+        return o;
+    }
+
+    public Class<Disposition> getTypeClass()
+    {
+        return Disposition.class;
+    }
+
+
+    public static void register(DecoderImpl decoder, EncoderImpl encoder)
+    {
+        DispositionType type = new DispositionType(decoder, encoder);
         for(Object descriptor : DESCRIPTORS)
         {
             decoder.register(descriptor, type);

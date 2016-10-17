@@ -27,6 +27,7 @@ import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.security.SaslFrameBody;
 import org.apache.qpid.proton.codec.ByteBufferDecoder;
 import org.apache.qpid.proton.codec.DecodeException;
+import org.apache.qpid.proton.codec.ReadableBuffer;
 import org.apache.qpid.proton.engine.TransportException;
 
 class SaslFrameParser
@@ -203,8 +204,7 @@ class SaslFrameParser
 
                     try
                     {
-                        _decoder.setByteBuffer(input);
-                        Object val = _decoder.readObject();
+                        Object val = _decoder.readObject(new ReadableBuffer.ByteBufferReader(input));
 
                         Binary payload;
 
