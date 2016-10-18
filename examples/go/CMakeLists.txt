@@ -32,7 +32,7 @@ if(BUILD_GO)
     add_custom_target(${target} ALL
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${output} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPENDS qpid-proton)
+      DEPENDS go-build)
     list(APPEND example_targets ${target})
   endforeach()
 
