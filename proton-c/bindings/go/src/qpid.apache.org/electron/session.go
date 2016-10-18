@@ -36,17 +36,24 @@ type Session interface {
 
 type session struct {
 	endpoint
-	pSession   proton.Session
-	connection *connection
-	capacity   uint
+	pSession                         proton.Session
+	connection                       *connection
+	incomingCapacity, outgoingWindow uint
 }
 
 // SessionOption can be passed when creating a Session
 type SessionOption func(*session)
 
 // IncomingCapacity returns a Session Option that sets the size (in bytes) of
-// the sessions incoming data buffer..
-func IncomingCapacity(cap uint) SessionOption { return func(s *session) { s.capacity = cap } }
+// the session's incoming data buffer.
+func IncomingCapacity(bytes uint) SessionOption {
+	return func(s *session) { s.incomingCapacity = bytes }
+}
+
+// OutgoingWindow returns a Session Option that sets the outgoing window size (in frames).
+func OutgoingWindow(frames uint) SessionOption {
+	return func(s *session) { s.outgoingWindow = frames }
+}
 
 // in proton goroutine
 func newSession(c *connection, es proton.Session, setting ...SessionOption) *session {
@@ -59,7 +66,8 @@ func newSession(c *connection, es proton.Session, setting ...SessionOption) *ses
 		set(s)
 	}
 	c.handler.sessions[s.pSession] = s
-	s.pSession.SetIncomingCapacity(s.capacity)
+	s.pSession.SetIncomingCapacity(s.incomingCapacity)
+	s.pSession.SetOutgoingWindow(s.outgoingWindow)
 	s.pSession.Open()
 	return s
 }
@@ -108,21 +116,24 @@ func (s *session) Receiver(setting ...LinkOption) (rcv Receiver, err error) {
 // incoming request to open a session.
 type IncomingSession struct {
 	incoming
-	h        *handler
-	pSession proton.Session
-	capacity uint
+	h                                *handler
+	pSession                         proton.Session
+	incomingCapacity, outgoingWindow uint
 }
 
 func newIncomingSession(h *handler, ps proton.Session) *IncomingSession {
 	return &IncomingSession{incoming: makeIncoming(ps), h: h, pSession: ps}
 }
 
-// SetCapacity sets the session buffer capacity of an incoming session in bytes.
-func (in *IncomingSession) SetCapacity(bytes uint) { in.capacity = bytes }
+// SetIncomingCapacity sets the session buffer capacity of an incoming session in bytes.
+func (in *IncomingSession) SetIncomingCapacity(bytes uint) { in.incomingCapacity = bytes }
+
+// SetOutgoingWindow sets the session outgoing window of an incoming session in frames.
+func (in *IncomingSession) SetOutgoingWindow(frames uint) { in.outgoingWindow = frames }
 
 // Accept an incoming session endpoint.
 func (in *IncomingSession) Accept() Endpoint {
 	return in.accept(func() Endpoint {
-		return newSession(in.h.connection, in.pSession, IncomingCapacity(in.capacity))
+		return newSession(in.h.connection, in.pSession, IncomingCapacity(in.incomingCapacity), OutgoingWindow(in.outgoingWindow))
 	})
 }
