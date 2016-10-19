@@ -2229,14 +2229,18 @@ class Data:
     list: put_sequence,
     tuple: put_sequence,
     dict: put_dict,
-    buffer: put_binary,
     Described: put_py_described,
     Array: put_py_array
     }
   # for python 3.x, long is merely an alias for int, but for python 2.x
   # we need to add an explicit int since it is a different type
   if int not in put_mappings:
-      put_mappings[int] = put_int
+    put_mappings[int] = put_int
+  # For python 3.x use 'memoryview', for <=2.5 use 'buffer'. Python >=2.6 has both.
+  if getattr(__builtins__, 'memoryview', None):
+    put_mappings[memoryview] = put_binary
+  if getattr(__builtins__, 'buffer', None):
+    put_mappings[buffer] = put_binary
 
   get_mappings = {
     NULL: lambda s: None,
