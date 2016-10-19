@@ -28,7 +28,7 @@ mark_as_advanced (JAVA_INSTALL_DIR)
 install_jar(proton-j ${JAVA_INSTALL_DIR})
 
 # add relevant CTest support
-find_program (MAVEN_EXE mvn DOC "Location of the maven program")
+find_program (MAVEN_EXE NAMES mvn.cmd mvn DOC "Location of the maven program")
 mark_as_advanced (MAVEN_EXE)
 if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   message (STATUS "Building for coverage analysis: testing disabled for Proton-J")
