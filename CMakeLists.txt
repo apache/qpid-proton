@@ -188,17 +188,6 @@ install (DIRECTORY examples
          REGEX "/examples/CMakeLists.txt$" EXCLUDE
          PATTERN "*Config.cmake" EXCLUDE)
 
-# add relevant CTest support
-find_program (MAVEN_EXE mvn DOC "Location of the maven program")
-mark_as_advanced (MAVEN_EXE)
-if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-  message (STATUS "Building for coverage analysis: testing disabled for Proton-J")
-elseif (JAVA_FOUND AND MAVEN_EXE)
-  add_test (proton-java ${MAVEN_EXE} clean test --file ${Proton_SOURCE_DIR}/pom.xml)
-else ()
-  message (STATUS "Cannot find both Java and Maven: testing disabled for Proton-J")
-endif ()
-
 # Generate test environment settings
 configure_file(${CMAKE_SOURCE_DIR}/config.sh.in
                ${CMAKE_BINARY_DIR}/config.sh @ONLY)
