@@ -18,17 +18,21 @@
  */
 package org.apache.qpid.proton;
 
-import org.apache.qpid.proton.TestDecoder;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.DescribedType;
 import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
+import org.apache.qpid.proton.codec.AMQPDefinedTypes;
+import org.apache.qpid.proton.codec.Decoder;
+import org.apache.qpid.proton.codec.DecoderImpl;
+import org.apache.qpid.proton.codec.EncoderImpl;
 import org.apache.qpid.proton.message.Message;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertArrayEquals;
 import org.junit.Test;
 import java.lang.System;
+import java.nio.ByteBuffer;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -72,10 +76,16 @@ public class InteropTest
         return m;
     }
 
-    TestDecoder createDecoder(byte[] data)
+    Decoder createDecoder(byte[] data)
     {
-        TestDecoder td = new TestDecoder(data);
-        return td;
+        DecoderImpl decoder = new DecoderImpl();
+        AMQPDefinedTypes.registerAllTypes(decoder, new EncoderImpl(decoder));
+        ByteBuffer buffer = ByteBuffer.allocate(data.length);
+        buffer.put(data);
+        buffer.rewind();
+        decoder.setByteBuffer(buffer);
+
+        return decoder;
     }
 
     @Test
@@ -90,7 +100,7 @@ public class InteropTest
     @Test
     public void testPrimitives() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("primitives"));
+        Decoder d = createDecoder(getBytes("primitives"));
         assertEquals(true, d.readBoolean());
         assertEquals(false, d.readBoolean());
         assertEquals(d.readUnsignedByte().intValue(), 42);
@@ -107,7 +117,7 @@ public class InteropTest
     @Test
     public void testStrings() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("strings"));
+        Decoder d = createDecoder(getBytes("strings"));
         assertEquals(new Binary("abc\0defg".getBytes("UTF-8")), d.readBinary());
         assertEquals("abcdefg", d.readString());
         assertEquals(Symbol.valueOf("abcdefg"), d.readSymbol());
@@ -119,7 +129,7 @@ public class InteropTest
     @Test
     public void testDescribed() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("described"));
+        Decoder d = createDecoder(getBytes("described"));
         DescribedType dt = (DescribedType) (d.readObject());
         assertEquals(Symbol.valueOf("foo-descriptor"), dt.getDescriptor());
         assertEquals("foo-value", dt.getDescribed());
@@ -132,7 +142,7 @@ public class InteropTest
     @Test
     public void testDescribedArray() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("described_array"));
+        Decoder d = createDecoder(getBytes("described_array"));
         DescribedType a[] = (DescribedType[]) (d.readArray());
         for (int i = 0; i < 10; ++i)
         {
@@ -144,7 +154,7 @@ public class InteropTest
     @Test
     public void testArrays() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("arrays"));
+        Decoder d = createDecoder(getBytes("arrays"));
 
         // int array
         Vector<Integer> ints = new Vector<Integer>();
@@ -164,7 +174,7 @@ public class InteropTest
     @Test
     public void testLists() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("lists"));
+        Decoder d = createDecoder(getBytes("lists"));
         List<Object> l = new ArrayList<Object>()
         {
             {
@@ -182,7 +192,7 @@ public class InteropTest
     @Test
     public void testMaps() throws IOException
     {
-        TestDecoder d = createDecoder(getBytes("maps"));
+        Decoder d = createDecoder(getBytes("maps"));
         Map map = new HashMap()
         {
             {
