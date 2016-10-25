@@ -110,13 +110,13 @@ elseif (SASL_IMPL STREQUAL none)
 endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
-IF( ${CMAKE_CXX_COMPILER_ID} STREQUAL "SunPro" )
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
-ENDIF()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro" )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
+endif()
 
-IF( ${CMAKE_C_COMPILER_ID} STREQUAL "SunPro" )
-    SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt" )
-ENDIF()
+if(CMAKE_C_COMPILER_ID STREQUAL "SunPro" )
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt")
+endif()
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
@@ -250,7 +250,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
   endif (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
-elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "SunPro")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
   if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -xldscope=hidden")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -xldscope=hidden")
