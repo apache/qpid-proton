@@ -162,10 +162,19 @@ PREFIX ## _t *PREFIX ## _new(void) {                                      \
 PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
 PN_EXTERN void *pn_class_new(const pn_class_t *clazz, size_t size);
+
+/* pn_incref, pn_decref and pn_refcount are for internal use by the proton
+   library, the should not be called by application code. Application code
+   should use the appropriate pn_*_free function (pn_link_free, pn_session_free
+   etc.) when it is finished with a proton value. Proton values should only be
+   used when handling a pn_event_t that refers to them.
+*/
 PN_EXTERN void *pn_class_incref(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_refcount(const pn_class_t *clazz, void *object);
 PN_EXTERN int pn_class_decref(const pn_class_t *clazz, void *object);
+
 PN_EXTERN void pn_class_free(const pn_class_t *clazz, void *object);
+
 PN_EXTERN const pn_class_t *pn_class_reify(const pn_class_t *clazz, void *object);
 PN_EXTERN uintptr_t pn_class_hashcode(const pn_class_t *clazz, void *object);
 PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
