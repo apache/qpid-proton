@@ -36,14 +36,6 @@ int pn_connection_engine_init(pn_connection_engine_t* e) {
     return PN_OK;
 }
 
-void pn_connection_engine_start(pn_connection_engine_t* e) {
-    /*
-      Ignore bind errors. PN_STATE_ERR means we are already bound, any
-      other error will be delivered as an event.
-    */
-    pn_transport_bind(e->transport, e->connection);
-}
-
 void pn_connection_engine_final(pn_connection_engine_t* e) {
     if (e->transport && e->connection) {
         pn_transport_unbind(e->transport);
@@ -105,8 +97,11 @@ static void log_event(pn_connection_engine_t *engine, pn_event_t* event) {
 }
 
 pn_event_t* pn_connection_engine_dispatch(pn_connection_engine_t* e) {
-    if (e->event)
+    if (e->event) {             /* Already returned */
+        if (pn_event_type(e->event) == PN_CONNECTION_INIT)
+            pn_transport_bind(e->transport, e->connection);
         pn_collector_pop(e->collector);
+    }
     e->event = pn_collector_peek(e->collector);
     log_event(e, e->event);
     return e->event;

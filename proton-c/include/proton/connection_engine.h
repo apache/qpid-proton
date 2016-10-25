@@ -87,17 +87,11 @@ typedef struct pn_connection_engine_t {
 /// Initialize a pn_connection_engine_t struct with a new connection and
 /// transport.
 ///
-/// Configure connection properties and call connection_engine_start() before
-/// using the engine.
-///
 /// Call pn_connection_engine_final to free resources when you are done.
 ///
 ///@return 0 on success, a proton error code on failure (@see error.h)
 ///
 PN_EXTERN int pn_connection_engine_init(pn_connection_engine_t* engine);
-
-/// Start the engine, call after setting security and host properties.
-PN_EXTERN void pn_connection_engine_start(pn_connection_engine_t* engine);
 
 /// Free resources used by the engine, set the connection and transport pointers
 /// to NULL.

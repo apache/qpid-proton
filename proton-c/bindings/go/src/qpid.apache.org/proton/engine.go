@@ -283,7 +283,6 @@ func (eng *Engine) readBuffer() []byte {
 // disconnected.  You can check for errors after exit with Engine.Error().
 //
 func (eng *Engine) Run() error {
-	C.pn_connection_engine_start(&eng.engine)
 	// Channels for read and write buffers going in and out of the read/write goroutines.
 	// The channels are unbuffered: we want to exchange buffers in seuquence.
 	readsIn, writesIn := make(chan []byte), make(chan []byte)
