@@ -88,14 +88,16 @@ func (cont *container) Connection(conn net.Conn, opts ...ConnectionOption) (Conn
 }
 
 func (cont *container) Dial(network, address string, opts ...ConnectionOption) (c Connection, err error) {
-	if conn, err := net.Dial(network, address); err == nil {
+	conn, err := net.Dial(network, address)
+	if err == nil {
 		c, err = cont.Connection(conn, opts...)
 	}
 	return
 }
 
 func (cont *container) Accept(l net.Listener, opts ...ConnectionOption) (c Connection, err error) {
-	if conn, err := l.Accept(); err == nil {
+	conn, err := l.Accept()
+	if err == nil {
 		c, err = cont.Connection(conn, append(opts, Server())...)
 	}
 	return
