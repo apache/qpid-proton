@@ -159,6 +159,7 @@ func (h *handler) linkClosed(l proton.Link, err error) {
 	if link, ok := h.links[l]; ok {
 		_ = link.closed(err)
 		delete(h.links, l)
+		l.Free()
 	}
 }
 
@@ -171,6 +172,7 @@ func (h *handler) sessionClosed(ps proton.Session, err error) {
 				h.linkClosed(l, err)
 			}
 		}
+		ps.Free()
 	}
 }
 
