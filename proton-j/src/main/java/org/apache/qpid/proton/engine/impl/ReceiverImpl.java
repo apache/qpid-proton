@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.engine.impl;
 
 import org.apache.qpid.proton.amqp.UnsignedInteger;
+import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Receiver;
 
 public class ReceiverImpl extends LinkImpl implements Receiver
@@ -58,6 +59,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         super(session, name);
     }
 
+    @Override
     public void flow(final int credits)
     {
         addCredit(credits);
@@ -77,7 +79,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return credits;
     }
 
-
+    @Override
     public int recv(final byte[] bytes, int offset, int size)
     {
         if (_current == null) {
@@ -85,6 +87,23 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         }
 
         int consumed = _current.recv(bytes, offset, size);
+        if (consumed > 0) {
+            getSession().incrementIncomingBytes(-consumed);
+            if (getSession().getTransportSession().getIncomingWindowSize().equals(UnsignedInteger.ZERO)) {
+                modified();
+            }
+        }
+        return consumed;
+    }
+
+    @Override
+    public int recv(final WritableBuffer buffer)
+    {
+        if (_current == null) {
+            throw new IllegalStateException("no current delivery");
+        }
+
+        int consumed = _current.recv(buffer);
         if (consumed > 0) {
             getSession().incrementIncomingBytes(-consumed);
             if (getSession().getTransportSession().getIncomingWindowSize().equals(UnsignedInteger.ZERO)) {
@@ -117,6 +136,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         return _transportReceiver;
     }
 
+    @Override
     public void drain(int credit)
     {
         setDrain(true);
@@ -124,6 +144,7 @@ public class ReceiverImpl extends LinkImpl implements Receiver
         _drainFlagMode = false;
     }
 
+    @Override
     public boolean draining()
     {
         return getDrain() && (getCredit() > getQueued());

@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 public interface WritableBuffer
 {
-    public void put(byte b);
+    void put(byte b);
 
     void putFloat(float f);
 
@@ -60,66 +60,79 @@ public interface WritableBuffer
             _buf = buf;
         }
 
+        @Override
         public void put(byte b)
         {
             _buf.put(b);
         }
 
+        @Override
         public void putFloat(float f)
         {
             _buf.putFloat(f);
         }
 
+        @Override
         public void putDouble(double d)
         {
             _buf.putDouble(d);
         }
 
+        @Override
         public void put(byte[] src, int offset, int length)
         {
             _buf.put(src, offset, length);
         }
 
+        @Override
         public void putShort(short s)
         {
             _buf.putShort(s);
         }
 
+        @Override
         public void putInt(int i)
         {
             _buf.putInt(i);
         }
 
+        @Override
         public void putLong(long l)
         {
             _buf.putLong(l);
         }
 
+        @Override
         public boolean hasRemaining()
         {
             return _buf.hasRemaining();
         }
 
+        @Override
         public int remaining()
         {
             return _buf.remaining();
         }
 
+        @Override
         public int position()
         {
             return _buf.position();
         }
 
+        @Override
         public void position(int position)
         {
             _buf.position(position);
         }
 
+        @Override
         public void put(ByteBuffer src)
         {
             _buf.put(src);
         }
 
+        @Override
         public int limit()
         {
             return _buf.limit();
@@ -129,6 +142,12 @@ public interface WritableBuffer
         public String toString()
         {
             return String.format("[pos: %d, limit: %d, remaining:%d]", _buf.position(), _buf.limit(), _buf.remaining());
+        }
+
+        public static ByteBufferWrapper allocate(int size)
+        {
+            ByteBuffer allocated = ByteBuffer.allocate(size);
+            return new ByteBufferWrapper(allocated);
         }
     }
 }

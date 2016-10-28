@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine.impl;
 
+import org.apache.qpid.proton.codec.ReadableBuffer;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Sender;
 
@@ -33,19 +34,21 @@ public class SenderImpl  extends LinkImpl implements Sender
         super(session, name);
     }
 
+    @Override
     public void offer(final int credits)
     {
         _offered = credits;
     }
 
+    @Override
     public int send(final byte[] bytes, int offset, int length)
     {
-        if( getLocalState() == EndpointState.CLOSED ) 
+        if (getLocalState() == EndpointState.CLOSED)
         {
             throw new IllegalStateException("send not allowed after the sender is closed.");
         }
         DeliveryImpl current = current();
-        if(current == null || current.getLink() != this)
+        if (current == null || current.getLink() != this)
         {
             throw new IllegalArgumentException();//TODO.
         }
@@ -56,6 +59,26 @@ public class SenderImpl  extends LinkImpl implements Sender
         return sent;
     }
 
+    @Override
+    public int send(final ReadableBuffer buffer)
+    {
+        if (getLocalState() == EndpointState.CLOSED)
+        {
+            throw new IllegalStateException("send not allowed after the sender is closed.");
+        }
+        DeliveryImpl current = current();
+        if (current == null || current.getLink() != this)
+        {
+            throw new IllegalArgumentException();
+        }
+        int sent = current.send(buffer);
+        if (sent > 0) {
+            getSession().incrementOutgoingBytes(sent);
+        }
+        return sent;
+    }
+
+    @Override
     public void abort()
     {
         //TODO.

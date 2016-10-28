@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.codec.ReadableBuffer;
 
 /**
  * Sender
@@ -40,6 +41,10 @@ public interface Sender extends Link
      * Sends some data for the current delivery.  The application may call this method multiple
      * times for the same delivery.
      *
+     * @param bytes the byte array containing the data to be sent.
+     * @param offset the offset into the given array to start reading.
+     * @param length the number of bytes to read from the given byte array.
+     *
      * @return the number of bytes accepted
      *
      * TODO Proton-j current copies all the bytes it has been given so the return value will always be
@@ -47,6 +52,16 @@ public interface Sender extends Link
      * the number of bytes accepted is smaller than length.
      */
     public int send(byte[] bytes, int offset, int length);
+
+    /**
+     * Sends some data for the current delivery. The application may call this method multiple
+     * times for the same delivery.
+     *
+     * @param buffer the buffer to read the data from.
+     *
+     * @return the number of bytes read from the provided buffer.
+     */
+    public int send(ReadableBuffer buffer);
 
     /**
      * Abort the current delivery.

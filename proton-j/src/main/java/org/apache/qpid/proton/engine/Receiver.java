@@ -20,6 +20,7 @@
  */
 package org.apache.qpid.proton.engine;
 
+import org.apache.qpid.proton.codec.WritableBuffer;
 
 /**
  * Receiver
@@ -58,6 +59,15 @@ public interface Receiver extends Link
      * @see #current()
      */
     public int recv(byte[] bytes, int offset, int size);
+
+    /**
+     * Receive message data for the current delivery.
+     *
+     * @param buffer the buffer to write the message data.
+     *
+     * @return number of bytes written. -1 if there are no more bytes for the current delivery.
+     */
+    public int recv(WritableBuffer buffer);
 
     public void drain(int credit);
 

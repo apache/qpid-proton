@@ -22,10 +22,12 @@ package org.apache.qpid.proton.engine.impl;
 
 import java.util.Arrays;
 
+import org.apache.qpid.proton.amqp.transport.DeliveryState;
+import org.apache.qpid.proton.codec.ReadableBuffer;
+import org.apache.qpid.proton.codec.WritableBuffer;
 import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.engine.Record;
 import org.apache.qpid.proton.engine.Transport;
-import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
 public class DeliveryImpl implements Delivery
 {
@@ -80,26 +82,31 @@ public class DeliveryImpl implements Delivery
         }
     }
 
+    @Override
     public byte[] getTag()
     {
         return _tag;
     }
 
+    @Override
     public LinkImpl getLink()
     {
         return _link;
     }
 
+    @Override
     public DeliveryState getLocalState()
     {
         return _deliveryState;
     }
 
+    @Override
     public DeliveryState getRemoteState()
     {
         return _remoteDeliveryState;
     }
 
+    @Override
     public boolean remotelySettled()
     {
         return _remoteSettled;
@@ -117,6 +124,7 @@ public class DeliveryImpl implements Delivery
         return _messageFormat;
     }
 
+    @Override
     public void disposition(final DeliveryState state)
     {
         _deliveryState = state;
@@ -126,6 +134,7 @@ public class DeliveryImpl implements Delivery
         }
     }
 
+    @Override
     public void settle()
     {
         if (_settled) {
@@ -164,11 +173,13 @@ public class DeliveryImpl implements Delivery
         return _linkNext;
     }
 
+    @Override
     public DeliveryImpl next()
     {
         return getLinkNext();
     }
 
+    @Override
     public void free()
     {
         settle();
@@ -179,6 +190,7 @@ public class DeliveryImpl implements Delivery
         return _linkPrevious;
     }
 
+    @Override
     public DeliveryImpl getWorkNext()
     {
         if (_workNext != null)
@@ -205,11 +217,10 @@ public class DeliveryImpl implements Delivery
         _workPrev = workPrev;
     }
 
-    int recv(byte[] bytes, int offset, int size)
+    int recv(final byte[] bytes, int offset, int size)
     {
-
         final int consumed;
-        if(_data != null)
+        if (_data != null)
         {
             //TODO - should only be if no bytes left
             consumed = Math.min(size, _dataSize);
@@ -220,9 +231,28 @@ public class DeliveryImpl implements Delivery
         }
         else
         {
-            _dataSize =  consumed = 0;
+            _dataSize = consumed = 0;
         }
+
         return (_complete && consumed == 0) ? Transport.END_OF_STREAM : consumed;  //TODO - Implement
+    }
+
+    int recv(final WritableBuffer buffer) {
+        final int consumed;
+        if (_data != null)
+        {
+            consumed = Math.min(buffer.remaining(), _dataSize);
+
+            buffer.put(_data, _offset, consumed);
+            _offset += consumed;
+            _dataSize -= consumed;
+        }
+        else
+        {
+            _dataSize = consumed = 0;
+        }
+
+        return (_complete && consumed == 0) ? Transport.END_OF_STREAM : consumed;
     }
 
     void updateWork()
@@ -274,6 +304,7 @@ public class DeliveryImpl implements Delivery
         _transportDelivery = transportDelivery;
     }
 
+    @Override
     public boolean isSettled()
     {
         return _settled;
@@ -289,13 +320,34 @@ public class DeliveryImpl implements Delivery
         {
             byte[] oldData = _data;
             _data = new byte[oldData.length + _dataSize];
-            System.arraycopy(oldData,_offset,_data,0,_dataSize);
+            System.arraycopy(oldData, _offset, _data, 0, _dataSize);
             _offset = 0;
         }
-        System.arraycopy(bytes,offset,_data,_dataSize+_offset,length);
-        _dataSize+=length;
+        System.arraycopy(bytes, offset, _data, _dataSize + _offset, length);
+        _dataSize += length;
         addToTransportWorkList();
         return length;  //TODO - Implement.
+    }
+
+    int send(final ReadableBuffer buffer)
+    {
+        int length = buffer.remaining();
+
+        if(_data == null)
+        {
+            _data = new byte[length];
+        }
+        else if(_data.length - _dataSize < length)
+        {
+            byte[] oldData = _data;
+            _data = new byte[oldData.length + _dataSize];
+            System.arraycopy(oldData, _offset, _data, 0, _dataSize);
+            _offset = 0;
+        }
+        buffer.get(_data, _offset, length);
+        _dataSize+=length;
+        addToTransportWorkList();
+        return length;
     }
 
     byte[] getData()
@@ -328,6 +380,7 @@ public class DeliveryImpl implements Delivery
         _offset = arrayOffset;
     }
 
+    @Override
     public boolean isWritable()
     {
         return getLink() instanceof SenderImpl
@@ -335,6 +388,7 @@ public class DeliveryImpl implements Delivery
                 && ((SenderImpl) getLink()).hasCredit();
     }
 
+    @Override
     public boolean isReadable()
     {
         return getLink() instanceof ReceiverImpl
@@ -346,6 +400,7 @@ public class DeliveryImpl implements Delivery
         _complete = true;
     }
 
+    @Override
     public boolean isPartial()
     {
         return !_complete;
@@ -357,11 +412,13 @@ public class DeliveryImpl implements Delivery
         _updated = true;
     }
 
+    @Override
     public boolean isUpdated()
     {
         return _updated;
     }
 
+    @Override
     public void clear()
     {
         _updated = false;
@@ -385,6 +442,7 @@ public class DeliveryImpl implements Delivery
         _updated = true;
     }
 
+    @Override
     public boolean isBuffered()
     {
         if (_remoteSettled) return false;
@@ -399,16 +457,19 @@ public class DeliveryImpl implements Delivery
         }
     }
 
+    @Override
     public Object getContext()
     {
         return _context;
     }
 
+    @Override
     public void setContext(Object context)
     {
         _context = context;
     }
 
+    @Override
     public Record attachments()
     {
         if(_attachments == null)
@@ -440,6 +501,7 @@ public class DeliveryImpl implements Delivery
         return builder.toString();
     }
 
+    @Override
     public int pending()
     {
         return _dataSize;
