@@ -25,8 +25,6 @@
 #include <proton/import_export.h>
 #include <proton/message.h>
 #include <proton/selectable.h>
-#include <proton/condition.h>
-#include <proton/terminus.h>
 #include <proton/link.h>
 #include <proton/transport.h>
 #include <proton/ssl.h>
