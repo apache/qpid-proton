@@ -122,3 +122,52 @@ install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
         COMPONENT Python)
 
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
+
+#
+# Set up the directory 'dist' for building the python native package
+# for Pypi/pip
+#
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dist)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${CMAKE_CURRENT_BINARY_DIR}/dist/setup.py
+)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
+               ${CMAKE_CURRENT_BINARY_DIR}/dist/README.rst
+)
+
+set(py_dist_files
+    ${CMAKE_CURRENT_SOURCE_DIR}/setuputils
+    ${CMAKE_CURRENT_SOURCE_DIR}/proton
+    ${CMAKE_CURRENT_SOURCE_DIR}/cproton.i
+    ${CMAKE_CURRENT_SOURCE_DIR}/MANIFEST.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/docs
+)
+set(py_dist_proton_c_files
+    ${CMAKE_SOURCE_DIR}/proton-c/include
+    ${CMAKE_SOURCE_DIR}/proton-c/src
+)
+
+file(COPY ${py_dist_files}
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/dist
+)
+file(COPY ${py_dist_proton_c_files}
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c
+)
+
+configure_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/include/proton/version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/include/proton/version.h
+)
+
+# generate the protocol and codec headers
+execute_process(
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/proton-c ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/src/codec/encodings.h.py
+  OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/src/codec/encodings.h
+)
+execute_process(
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/proton-c ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/src/protocol.h.py
+  OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c/src/protocol.h
+)
