@@ -1,0 +1,28 @@
+This document describes how to build a native Python source package
+for distribution via Pypi.
+
+First configure the project using 'cmake'. You do not need to build or
+install the project. See the INSTALL.md file at the project's top
+directory for details.
+
+Once you have configured (via cmake) the project, go to the Python
+bindings directory in the build directory.  For example, assuming the
+build directory is named 'build':
+
+$ cd build/proton-c/bindings/python
+
+In that directory there will be a 'dist' subdirectory - move to that
+directory.
+
+You can now run the setup.py script from within the dist directory to
+build your source distribution package.
+
+To build a Python source distribution:
+
+$ python ./setup.py sdist
+
+To build and install:
+
+$ python ./setup.py build install
+
+
