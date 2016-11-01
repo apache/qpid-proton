@@ -64,6 +64,13 @@ set (pysrc
     proton/wrapper.py
     proton/_compat.py
     )
+# extra files included in the source distribution
+set(py_dist_files
+    cproton.i
+    MANIFEST.in
+    setuputils
+    docs
+    )
 
 macro (py_compile directory files artifacts)
   foreach (src_file ${files})
@@ -122,3 +129,55 @@ install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
         COMPONENT Python)
 
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
+
+#
+# Set up the directory 'dist' for building the python native package
+# source distribution for Pypi/pip
+#
+
+set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${py_dist_dir}/setup.py
+)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
+               ${py_dist_dir}/README.rst
+)
+
+file(COPY ${py_dist_files} DESTINATION ${py_dist_dir})
+
+file(MAKE_DIRECTORY ${py_dist_dir}/proton)
+file(COPY ${pysrc} DESTINATION ${py_dist_dir}/proton)
+
+#file(COPY ${py_dist_proton_c_files}
+#     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/dist/proton-c
+#)
+
+add_custom_target(py_src_dist ALL)
+add_dependencies(py_src_dist generated_c_files)
+file(MAKE_DIRECTORY ${py_dist_dir}/proton-c)
+
+# copy generated source files from the binary dir to the dist
+foreach(sfile ${qpid-proton-include-generated})
+  string(REPLACE ${CMAKE_BINARY_DIR} ${py_dist_dir} dfile ${sfile})
+  add_custom_command(TARGET py_src_dist
+                     COMMAND ${CMAKE_COMMAND} -E
+                         copy ${sfile} ${dfile})
+endforeach()
+
+# copy the proton C sources to the dist
+set (all_src
+  ${qpid-proton-core}
+  ${qpid-proton-extra}
+  ${qpid-proton-include}
+  ${qpid-proton-include-extra}
+  ${qpid-proton-layers-all}
+  ${qpid-proton-platform-all}
+  ${qpid-proton-private-includes}
+  include/proton/cproton.i
+)
+foreach(sfile ${all_src})
+  add_custom_command(TARGET py_src_dist
+                     COMMAND ${CMAKE_COMMAND} -E
+                         copy ${CMAKE_SOURCE_DIR}/proton-c/${sfile} ${py_dist_dir}/proton-c/${sfile})
+endforeach()
