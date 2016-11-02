@@ -18,11 +18,8 @@ under the License.
 */
 
 /*
-Package proton is a wrapper for the Proton-C library
-(http://qpid.apache.org/proton) which lets you write AMQP 1.0 messaging clients
-and servers. It is event-driven and concurrent-unsafe.
-
-For a more "Go-like" procedural, concurrent-safe toolkit see package 'electron'.
+Package proton wraps Proton-C, an event-driven, concurrent-unsafe AMQP 1.0
+C library (package 'electron' is more "Go-like" and concurrent-safe)
 
 Consult the C API documentation at http://qpid.apache.org/proton for more
 information about the types here. There is a 1-1 correspondence between C type
