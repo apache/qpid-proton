@@ -26,8 +26,11 @@ import (
 	"sync/atomic"
 )
 
-// Container is an AMQP container, it represents a single AMQP "application".It
-// provides functions to create new Connections to remote containers.
+// Container is an AMQP container, it represents a single AMQP "application"
+// which can have multiple client or server connections.
+//
+// Each Container in a distributed AMQP application must have a unique
+// container-id which is applied to its connections.
 //
 // Create with NewContainer()
 //
@@ -35,13 +38,19 @@ type Container interface {
 	// Id is a unique identifier for the container in your distributed application.
 	Id() string
 
-	// Create a new AMQP Connection over the supplied net.Conn connection.
-	//
-	// You must call Connection.Open() on the returned Connection, after
-	// setting any Connection properties you need to set. Note the net.Conn
-	// can be an outgoing connection (e.g. made with net.Dial) or an incoming
-	// connection (e.g. made with net.Listener.Accept())
-	Connection(net.Conn, ...ConnectionOption) (Connection, error)
+	// Connection creates a connection associated with this container.
+	Connection(conn net.Conn, opts ...ConnectionOption) (Connection, error)
+
+	// Dial is shorthand for
+	//     conn, err := net.Dial(); c, err := Connection(conn, opts...)
+	Dial(network string, addr string, opts ...ConnectionOption) (Connection, error)
+
+	// Accept is shorthand for:
+	//     conn, err := l.Accept(); c, err := Connection(conn, append(opts, Server()...)
+	Accept(l net.Listener, opts ...ConnectionOption) (Connection, error)
+
+	// String returns Id()
+	String() string
 }
 
 type container struct {
@@ -68,10 +77,28 @@ func NewContainer(id string) Container {
 
 func (cont *container) Id() string { return cont.id }
 
+func (cont *container) String() string { return cont.Id() }
+
 func (cont *container) nextLinkName() string {
 	return cont.id + "@" + cont.nextTag()
 }
 
-func (cont *container) Connection(conn net.Conn, setting ...ConnectionOption) (Connection, error) {
-	return newConnection(conn, cont, setting...)
+func (cont *container) Connection(conn net.Conn, opts ...ConnectionOption) (Connection, error) {
+	return NewConnection(conn, append(opts, Parent(cont))...)
+}
+
+func (cont *container) Dial(network, address string, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := net.Dial(network, address)
+	if err == nil {
+		c, err = cont.Connection(conn, opts...)
+	}
+	return
+}
+
+func (cont *container) Accept(l net.Listener, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := l.Accept()
+	if err == nil {
+		c, err = cont.Connection(conn, append(opts, Server())...)
+	}
+	return
 }

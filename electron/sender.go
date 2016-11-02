@@ -34,7 +34,7 @@ import (
 // The result of sending a message is provided by an Outcome value.
 //
 // A sender can buffer messages up to the credit limit provided by the remote receiver.
-// Send* methods will block if the buffer is full until there is space.
+// All the Send* methods will block if the buffer is full until there is space.
 // Send*Timeout methods will give up after the timeout and set Timeout as Outcome.Error.
 //
 type Sender interface {
@@ -47,10 +47,14 @@ type Sender interface {
 
 	// SendWaitable puts a message in the send buffer and returns a channel that
 	// you can use to wait for the Outcome of just that message. The channel is
-	// buffered so you can receive from it whenever you want without blocking anything.
+	// buffered so you can receive from it whenever you want without blocking.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendWaitable(m amqp.Message) <-chan Outcome
 
 	// SendForget buffers a message for sending and returns, with no notification of the outcome.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendForget(m amqp.Message)
 
 	// SendAsync puts a message in the send buffer and returns immediately.  An
@@ -63,6 +67,8 @@ type Sender interface {
 	// goroutines to avoid blocking the connection.
 	//
 	// If ack == nil no Outcome is sent.
+	//
+	// Note: can block if there is no space to buffer the message.
 	SendAsync(m amqp.Message, ack chan<- Outcome, value interface{})
 
 	SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, value interface{}, timeout time.Duration)
@@ -164,7 +170,7 @@ func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interfac
 			return
 		}
 
-		delivery, err2 := s.eLink.Send(m)
+		delivery, err2 := s.pLink.Send(m)
 		switch {
 		case err2 != nil:
 			Outcome{Unsent, err2, v}.send(ack)
@@ -176,7 +182,7 @@ func (s *sender) SendAsyncTimeout(m amqp.Message, ack chan<- Outcome, v interfac
 		default:
 			s.handler().sentMessages[delivery] = sentMessage{ack, v} // Register with handler
 		}
-		if s.eLink.Credit() > 0 { // Signal there is still credit
+		if s.pLink.Credit() > 0 { // Signal there is still credit
 			s.sendable()
 		}
 	})
@@ -244,9 +250,9 @@ func (s *sender) closed(err error) error {
 
 func newSender(ls linkSettings) *sender {
 	s := &sender{link: link{linkSettings: ls}, credit: make(chan struct{}, 1)}
-	s.endpoint.init(s.link.eLink.String())
-	s.handler().addLink(s.eLink, s)
-	s.link.eLink.Open()
+	s.endpoint.init(s.link.pLink.String())
+	s.handler().addLink(s.pLink, s)
+	s.link.pLink.Open()
 	return s
 }
 
@@ -259,7 +265,15 @@ type sentMessage struct {
 // IncomingSender is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a sender link.
 type IncomingSender struct {
-	incomingLink
+	incoming
+	linkSettings
+}
+
+func newIncomingSender(sn *session, pLink proton.Link) *IncomingSender {
+	return &IncomingSender{
+		incoming:     makeIncoming(pLink),
+		linkSettings: makeIncomingLinkSettings(pLink, sn),
+	}
 }
 
 // Accept accepts an incoming sender endpoint
@@ -269,6 +283,6 @@ func (in *IncomingSender) Accept() Endpoint {
 
 // Call in injected functions to check if the sender is valid.
 func (s *sender) valid() bool {
-	s2, ok := s.handler().links[s.eLink].(*sender)
+	s2, ok := s.handler().links[s.pLink].(*sender)
 	return ok && s2 == s
 }

@@ -78,13 +78,13 @@ func (r *receiver) Prefetch() bool { return r.prefetch }
 // Call in proton goroutine
 func newReceiver(ls linkSettings) *receiver {
 	r := &receiver{link: link{linkSettings: ls}}
-	r.endpoint.init(r.link.eLink.String())
+	r.endpoint.init(r.link.pLink.String())
 	if r.capacity < 1 {
 		r.capacity = 1
 	}
 	r.buffer = make(chan ReceivedMessage, r.capacity)
-	r.handler().addLink(r.eLink, r)
-	r.link.eLink.Open()
+	r.handler().addLink(r.pLink, r)
+	r.link.pLink.Open()
 	if r.prefetch {
 		r.flow(r.maxFlow())
 	}
@@ -92,20 +92,20 @@ func newReceiver(ls linkSettings) *receiver {
 }
 
 // Call in proton gorotine. Max additional credit we can request.
-func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.eLink.Credit() }
+func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.pLink.Credit() }
 
 func (r *receiver) flow(credit int) {
 	if credit > 0 {
-		r.eLink.Flow(credit)
+		r.pLink.Flow(credit)
 	}
 }
 
 // Inject flow check per-caller call when prefetch is off.
 // Called with inc=1 at start of call, inc = -1 at end
 func (r *receiver) caller(inc int) {
-	r.engine().Inject(func() {
+	_ = r.engine().Inject(func() {
 		r.callers += inc
-		need := r.callers - (len(r.buffer) + r.eLink.Credit())
+		need := r.callers - (len(r.buffer) + r.pLink.Credit())
 		max := r.maxFlow()
 		if need > max {
 			need = max
@@ -117,55 +117,57 @@ func (r *receiver) caller(inc int) {
 // Inject flow top-up if prefetch is enabled
 func (r *receiver) flowTopUp() {
 	if r.prefetch {
-		r.engine().Inject(func() { r.flow(r.maxFlow()) })
+		_ = r.engine().Inject(func() { r.flow(r.maxFlow()) })
 	}
 }
 
-// Not claled
 func (r *receiver) Receive() (rm ReceivedMessage, err error) {
 	return r.ReceiveTimeout(Forever)
 }
 
-func (r *receiver) ReceiveTimeout(timeout time.Duration) (ReceivedMessage, error) {
+func (r *receiver) ReceiveTimeout(timeout time.Duration) (rm ReceivedMessage, err error) {
 	assert(r.buffer != nil, "Receiver is not open: %s", r)
-	select { // Check for immediate availability
-	case rm := <-r.buffer:
-		r.flowTopUp()
-		return rm, nil
-	default:
-	}
 	if !r.prefetch { // Per-caller flow control
-		r.caller(+1)
-		defer r.caller(-1)
+		select { // Check for immediate availability, avoid caller() inject
+		case rm2, ok := <-r.buffer:
+			if ok {
+				rm = rm2
+			} else {
+				err = r.Error()
+			}
+			return
+		default: // Not immediately available, inject caller() counts
+			r.caller(+1)
+			defer r.caller(-1)
+		}
 	}
 	rmi, err := timedReceive(r.buffer, timeout)
 	switch err {
 	case nil:
 		r.flowTopUp()
-		return rmi.(ReceivedMessage), err
+		rm = rmi.(ReceivedMessage)
 	case Closed:
-		return ReceivedMessage{}, r.Error()
-	default:
-		return ReceivedMessage{}, err
+		err = r.Error()
 	}
+	return
 }
 
 // Called in proton goroutine on MMessage event.
 func (r *receiver) message(delivery proton.Delivery) {
-	if r.eLink.State().RemoteClosed() {
-		localClose(r.eLink, r.eLink.RemoteCondition().Error())
+	if r.pLink.State().RemoteClosed() {
+		localClose(r.pLink, r.pLink.RemoteCondition().Error())
 		return
 	}
 	if delivery.HasMessage() {
 		m, err := delivery.Message()
 		if err != nil {
-			localClose(r.eLink, err)
+			localClose(r.pLink, err)
 			return
 		}
 		assert(m != nil)
-		r.eLink.Advance()
-		if r.eLink.Credit() < 0 {
-			localClose(r.eLink, fmt.Errorf("received message in excess of credit limit"))
+		r.pLink.Advance()
+		if r.pLink.Credit() < 0 {
+			localClose(r.pLink, fmt.Errorf("received message in excess of credit limit"))
 		} else {
 			// We never issue more credit than cap(buffer) so this will not block.
 			r.buffer <- ReceivedMessage{m, delivery, r}
@@ -174,10 +176,11 @@ func (r *receiver) message(delivery proton.Delivery) {
 }
 
 func (r *receiver) closed(err error) error {
+	e := r.link.closed(err)
 	if r.buffer != nil {
 		close(r.buffer)
 	}
-	return r.link.closed(err)
+	return e
 }
 
 // ReceivedMessage contains an amqp.Message and allows the message to be acknowledged.
@@ -185,7 +188,7 @@ type ReceivedMessage struct {
 	// Message is the received message.
 	Message amqp.Message
 
-	eDelivery proton.Delivery
+	pDelivery proton.Delivery
 	receiver  Receiver
 }
 
@@ -193,7 +196,7 @@ type ReceivedMessage struct {
 func (rm *ReceivedMessage) acknowledge(status uint64) error {
 	return rm.receiver.(*receiver).engine().Inject(func() {
 		// Deliveries are valid as long as the connection is, unless settled.
-		rm.eDelivery.SettleAs(uint64(status))
+		rm.pDelivery.SettleAs(uint64(status))
 	})
 }
 
@@ -210,7 +213,15 @@ func (rm *ReceivedMessage) Release() error { return rm.acknowledge(proton.Releas
 // IncomingReceiver is sent on the Connection.Incoming() channel when there is
 // an incoming request to open a receiver link.
 type IncomingReceiver struct {
-	incomingLink
+	incoming
+	linkSettings
+}
+
+func newIncomingReceiver(sn *session, pLink proton.Link) *IncomingReceiver {
+	return &IncomingReceiver{
+		incoming:     makeIncoming(pLink),
+		linkSettings: makeIncomingLinkSettings(pLink, sn),
+	}
 }
 
 // SetCapacity sets the capacity of the incoming receiver, call before Accept()

@@ -19,8 +19,6 @@ under the License.
 
 package proton
 
-// #include <proton/handlers.h>
-import "C"
 import "fmt"
 
 // EventHandler handles core proton events.
@@ -29,15 +27,6 @@ type EventHandler interface {
 	// Typically HandleEvent() is implemented as a switch on e.Type()
 	// Returning an error will stop the Engine.
 	HandleEvent(e Event)
-}
-
-// cHandler wraps a C pn_handler_t
-type cHandler struct {
-	pn *C.pn_handler_t
-}
-
-func (h cHandler) HandleEvent(e Event) {
-	C.pn_handler_dispatch(h.pn, e.pn, C.pn_event_type(e.pn))
 }
 
 // MessagingHandler provides an alternative interface to EventHandler.
@@ -204,11 +193,11 @@ func (d endpointDelegator) HandleEvent(e Event) {
 		}
 
 	case d.remoteOpen:
+		d.delegator.mhandler.HandleMessagingEvent(d.opening, e)
 		switch {
 		case state.LocalActive():
 			d.delegator.mhandler.HandleMessagingEvent(d.opened, e)
 		case state.LocalUninit():
-			d.delegator.mhandler.HandleMessagingEvent(d.opening, e)
 			if d.delegator.AutoOpen {
 				endpoint.Open()
 			}
@@ -234,6 +223,24 @@ func (d endpointDelegator) HandleEvent(e Event) {
 	default:
 		// We shouldn't be called with any other event type.
 		panic(fmt.Errorf("internal error, not an open/close event: %s", e))
+	}
+}
+
+type flowcontroller struct {
+	window, drained int
+}
+
+func (d flowcontroller) HandleEvent(e Event) {
+	link := e.Link()
+
+	switch e.Type() {
+	case ELinkLocalOpen, ELinkRemoteOpen, ELinkFlow, EDelivery:
+		if link.IsReceiver() {
+			d.drained += link.Drained()
+			if d.drained != 0 {
+				link.Flow(d.window - link.Credit())
+			}
+		}
 	}
 }
 
@@ -306,7 +313,7 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 			d,
 		}
 		if d.Prefetch > 0 {
-			d.flowcontroller = cHandler{C.pn_flowcontroller(C.int(d.Prefetch))}
+			d.flowcontroller = flowcontroller{window: d.Prefetch, drained: 0}
 		}
 		d.mhandler.HandleMessagingEvent(MStart, e)
 
@@ -349,7 +356,7 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 	}
 }
 
-func (d *MessagingAdapter) incoming(e Event) (err error) {
+func (d *MessagingAdapter) incoming(e Event) {
 	delivery := e.Delivery()
 	if delivery.HasMessage() {
 		d.mhandler.HandleMessagingEvent(MMessage, e)
@@ -365,7 +372,7 @@ func (d *MessagingAdapter) incoming(e Event) (err error) {
 	return
 }
 
-func (d *MessagingAdapter) outgoing(e Event) (err error) {
+func (d *MessagingAdapter) outgoing(e Event) {
 	delivery := e.Delivery()
 	if delivery.Updated() {
 		switch delivery.Remote().Type() {
@@ -376,11 +383,11 @@ func (d *MessagingAdapter) outgoing(e Event) (err error) {
 		case Released, Modified:
 			d.mhandler.HandleMessagingEvent(MReleased, e)
 		}
-		if err == nil && delivery.Settled() {
+		if delivery.Settled() {
 			// The delivery was settled remotely, inform the local end.
 			d.mhandler.HandleMessagingEvent(MSettled, e)
 		}
-		if err == nil && d.AutoSettle {
+		if d.AutoSettle {
 			delivery.Settle() // Local settle, don't mhandler MSettled till the remote end settles.
 		}
 	}

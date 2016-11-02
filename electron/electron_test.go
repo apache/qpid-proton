@@ -24,6 +24,7 @@ import (
 	"net"
 	"path"
 	"qpid.apache.org/amqp"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
@@ -39,15 +40,32 @@ func fatalIf(t *testing.T, err error) {
 	}
 }
 
+func errorIf(t *testing.T, err error) {
+	if err != nil {
+		_, file, line, ok := runtime.Caller(1) // annotate with location of caller.
+		if ok {
+			_, file = path.Split(file)
+		}
+		t.Errorf("(from %s:%d) %v", file, line, err)
+	}
+}
+
+func checkEqual(want interface{}, got interface{}) error {
+	if !reflect.DeepEqual(want, got) {
+		return fmt.Errorf("%#v != %#v", want, got)
+	}
+	return nil
+}
+
 // Start a server, return listening addr and channel for incoming Connections.
-func newServer(t *testing.T, cont Container) (net.Addr, <-chan Connection) {
+func newServer(t *testing.T, cont Container, opts ...ConnectionOption) (net.Addr, <-chan Connection) {
 	listener, err := net.Listen("tcp", "")
 	fatalIf(t, err)
 	addr := listener.Addr()
 	ch := make(chan Connection)
 	go func() {
 		conn, err := listener.Accept()
-		c, err := cont.Connection(conn, Server(), AllowIncoming())
+		c, err := cont.Connection(conn, append([]ConnectionOption{Server()}, opts...)...)
 		fatalIf(t, err)
 		ch <- c
 	}()
@@ -55,10 +73,10 @@ func newServer(t *testing.T, cont Container) (net.Addr, <-chan Connection) {
 }
 
 // Open a client connection and session, return the session.
-func newClient(t *testing.T, cont Container, addr net.Addr) Session {
+func newClient(t *testing.T, cont Container, addr net.Addr, opts ...ConnectionOption) Session {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	fatalIf(t, err)
-	c, err := cont.Connection(conn)
+	c, err := cont.Connection(conn, opts...)
 	fatalIf(t, err)
 	sn, err := c.Session()
 	fatalIf(t, err)
@@ -66,10 +84,15 @@ func newClient(t *testing.T, cont Container, addr net.Addr) Session {
 }
 
 // Return client and server ends of the same connection.
-func newClientServer(t *testing.T) (client Session, server Connection) {
-	addr, ch := newServer(t, NewContainer("test-server"))
-	client = newClient(t, NewContainer("test-client"), addr)
+func newClientServerOpts(t *testing.T, copts []ConnectionOption, sopts []ConnectionOption) (client Session, server Connection) {
+	addr, ch := newServer(t, NewContainer("test-server"), sopts...)
+	client = newClient(t, NewContainer("test-client"), addr, copts...)
 	return client, <-ch
+}
+
+// Return client and server ends of the same connection.
+func newClientServer(t *testing.T) (client Session, server Connection) {
+	return newClientServerOpts(t, nil, nil)
 }
 
 // Close client and server
@@ -263,7 +286,9 @@ func TestTimeouts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rm.Accept()
+	if err := rm.Accept(); err != nil {
+		t.Fatal(err)
+	}
 	// Sender get ack
 	if a := <-ack; a.Status != Accepted || a.Error != nil {
 		t.Errorf("want (accepted, nil) got %#v", a)
@@ -324,22 +349,23 @@ func (p *pairs) receiverSender() (Receiver, Sender) {
 type result struct {
 	label string
 	err   error
+	value interface{}
 }
 
 func (r result) String() string { return fmt.Sprintf("%v(%v)", r.err, r.label) }
 
 func doSend(snd Sender, results chan result) {
 	err := snd.SendSync(amqp.NewMessage()).Error
-	results <- result{"send", err}
+	results <- result{"send", err, nil}
 }
 
 func doReceive(rcv Receiver, results chan result) {
-	_, err := rcv.Receive()
-	results <- result{"receive", err}
+	msg, err := rcv.Receive()
+	results <- result{"receive", err, msg}
 }
 
 func doDisposition(ack <-chan Outcome, results chan result) {
-	results <- result{"disposition", (<-ack).Error}
+	results <- result{"disposition", (<-ack).Error, nil}
 }
 
 // Senders get credit immediately if receivers have prefetch set
@@ -409,19 +435,23 @@ func TestConnectionCloseInterrupt1(t *testing.T) {
 	snd, rcv := pairs.senderReceiver()
 	go doSend(snd, results)
 
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)
 
 	snd, rcv = pairs.senderReceiver()
 	ack := snd.SendWaitable(amqp.NewMessage())
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 	go doDisposition(ack, results)
 
 	pairs.server.Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
-			t.Logf("want %v got %v", want, r)
+			t.Errorf("want %v got %v", want, r)
 		}
 	}
 }
@@ -435,7 +465,9 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	// Connection.Close() interrupts Send, Receive, Disposition.
 	snd, rcv := pairs.senderReceiver()
 	go doSend(snd, results)
-	rcv.Receive()
+	if _, err := rcv.Receive(); err != nil {
+		t.Error("receive", err)
+	}
 
 	rcv, snd = pairs.receiverSender()
 	go doReceive(rcv, results)
@@ -447,8 +479,68 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 	pairs.client.Connection().Close(want)
 	for i := 0; i < 3; i++ {
 		if r := <-results; want != r.err {
-			// TODO aconway 2015-10-06: Not propagating the correct error, seeing nil.
-			t.Logf("want %v got %v", want, r.err)
+			t.Errorf("want %v got %v", want, r.err)
 		}
+	}
+}
+
+func heartbeat(c Connection) time.Duration {
+	return c.(*connection).engine.Transport().RemoteIdleTimeout()
+}
+
+func TestHeartbeat(t *testing.T) {
+	client, server := newClientServerOpts(t,
+		[]ConnectionOption{Heartbeat(102 * time.Millisecond)},
+		nil)
+	defer closeClientServer(client, server)
+
+	var serverHeartbeat time.Duration
+
+	go func() {
+		for in := range server.Incoming() {
+			switch in := in.(type) {
+			case *IncomingConnection:
+				serverHeartbeat = in.Heartbeat()
+				in.AcceptConnection(Heartbeat(101 * time.Millisecond))
+			default:
+				in.Accept()
+			}
+		}
+	}()
+
+	// Freeze the server to stop it sending heartbeats.
+	unfreeze := make(chan bool)
+	defer close(unfreeze)
+	freeze := func() error { return server.(*connection).engine.Inject(func() { <-unfreeze }) }
+
+	fatalIf(t, client.Sync())
+	errorIf(t, checkEqual(101*time.Millisecond, heartbeat(client.Connection())))
+	errorIf(t, checkEqual(102*time.Millisecond, serverHeartbeat))
+	errorIf(t, client.Connection().Error())
+
+	// Freeze the server for less than a heartbeat
+	fatalIf(t, freeze())
+	time.Sleep(50 * time.Millisecond)
+	unfreeze <- true
+	// Make sure server is still responding.
+	s, err := client.Sender()
+	errorIf(t, err)
+	errorIf(t, s.Sync())
+
+	// Freeze the server till the client times out the connection
+	fatalIf(t, freeze())
+	select {
+	case <-client.Done():
+		if amqp.ResourceLimitExceeded != client.Error().(amqp.Error).Name {
+			t.Error("bad timeout error:", client.Error())
+		}
+	case <-time.After(400 * time.Millisecond):
+		t.Error("connection failed to time out")
+	}
+
+	unfreeze <- true // Unfreeze the server
+	<-server.Done()
+	if amqp.ResourceLimitExceeded != server.Error().(amqp.Error).Name {
+		t.Error("bad timeout error:", server.Error())
 	}
 }

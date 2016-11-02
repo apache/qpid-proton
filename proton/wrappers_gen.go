@@ -42,6 +42,7 @@ import (
 // #include <proton/terminus.h>
 // #include <proton/connection.h>
 // #include <proton/transport.h>
+// #include <proton/sasl.h>
 import "C"
 
 type EventType int
@@ -308,9 +309,6 @@ func (l Link) Queued() int {
 }
 func (l Link) RemoteCredit() int {
 	return int(C.pn_link_remote_credit(l.pn))
-}
-func (l Link) IsDrain() bool {
-	return bool(C.pn_link_get_drain(l.pn))
 }
 func (l Link) Drained() int {
 	return int(C.pn_link_drained(l.pn))
@@ -704,12 +702,6 @@ func (c Connection) SetUser(user string) {
 
 	C.pn_connection_set_user(c.pn, userC)
 }
-func (c Connection) SetPassword(password string) {
-	passwordC := C.CString(password)
-	defer C.free(unsafe.Pointer(passwordC))
-
-	C.pn_connection_set_password(c.pn, passwordC)
-}
 func (c Connection) User() string {
 	return C.GoString(C.pn_connection_get_user(c.pn))
 }
@@ -817,7 +809,7 @@ func (t Transport) IdleTimeout() time.Duration {
 	return (time.Duration(C.pn_transport_get_idle_timeout(t.pn)) * time.Millisecond)
 }
 func (t Transport) SetIdleTimeout(timeout time.Duration) {
-	C.pn_transport_set_idle_timeout(t.pn, C.pn_millis_t(timeout))
+	C.pn_transport_set_idle_timeout(t.pn, C.pn_millis_t(timeout/time.Millisecond))
 }
 func (t Transport) RemoteIdleTimeout() time.Duration {
 	return (time.Duration(C.pn_transport_get_remote_idle_timeout(t.pn)) * time.Millisecond)
@@ -836,9 +828,6 @@ func (t Transport) Output(bytes string, size uint) int {
 }
 func (t Transport) Capacity() int {
 	return int(C.pn_transport_capacity(t.pn))
-}
-func (t Transport) Tail() string {
-	return C.GoString(C.pn_transport_tail(t.pn))
 }
 func (t Transport) Process(size uint) int {
 	return int(C.pn_transport_process(t.pn, C.size_t(size)))
@@ -872,4 +861,77 @@ func (t Transport) Tick(now time.Time) time.Time {
 }
 func (t Transport) Connection() Connection {
 	return Connection{C.pn_transport_connection(t.pn)}
+}
+
+// Wrappers for declarations in sasl.h
+
+type SASLOutcome C.pn_sasl_outcome_t
+
+const (
+	SASLNone SASLOutcome = C.PN_SASL_NONE
+	SASLOk   SASLOutcome = C.PN_SASL_OK
+	SASLAuth SASLOutcome = C.PN_SASL_AUTH
+	SASLSys  SASLOutcome = C.PN_SASL_SYS
+	SASLPerm SASLOutcome = C.PN_SASL_PERM
+	SASLTemp SASLOutcome = C.PN_SASL_TEMP
+)
+
+func (e SASLOutcome) String() string {
+	switch e {
+
+	case C.PN_SASL_NONE:
+		return "SASLNone"
+	case C.PN_SASL_OK:
+		return "SASLOk"
+	case C.PN_SASL_AUTH:
+		return "SASLAuth"
+	case C.PN_SASL_SYS:
+		return "SASLSys"
+	case C.PN_SASL_PERM:
+		return "SASLPerm"
+	case C.PN_SASL_TEMP:
+		return "SASLTemp"
+	}
+	return "unknown"
+}
+
+type SASL struct{ pn *C.pn_sasl_t }
+
+func (s SASL) IsNil() bool          { return s.pn == nil }
+func (s SASL) CPtr() unsafe.Pointer { return unsafe.Pointer(s.pn) }
+func (s SASL) Done(outcome SASLOutcome) {
+	C.pn_sasl_done(s.pn, C.pn_sasl_outcome_t(outcome))
+}
+func (s SASL) Outcome() SASLOutcome {
+	return SASLOutcome(C.pn_sasl_outcome(s.pn))
+}
+func (s SASL) User() string {
+	return C.GoString(C.pn_sasl_get_user(s.pn))
+}
+func (s SASL) Mech() string {
+	return C.GoString(C.pn_sasl_get_mech(s.pn))
+}
+func (s SASL) AllowedMechs(mechs string) {
+	mechsC := C.CString(mechs)
+	defer C.free(unsafe.Pointer(mechsC))
+
+	C.pn_sasl_allowed_mechs(s.pn, mechsC)
+}
+func (s SASL) SetAllowInsecureMechs(insecure bool) {
+	C.pn_sasl_set_allow_insecure_mechs(s.pn, C.bool(insecure))
+}
+func (s SASL) AllowInsecureMechs() bool {
+	return bool(C.pn_sasl_get_allow_insecure_mechs(s.pn))
+}
+func (s SASL) ConfigName(name string) {
+	nameC := C.CString(name)
+	defer C.free(unsafe.Pointer(nameC))
+
+	C.pn_sasl_config_name(s.pn, nameC)
+}
+func (s SASL) ConfigPath(path string) {
+	pathC := C.CString(path)
+	defer C.free(unsafe.Pointer(pathC))
+
+	C.pn_sasl_config_path(s.pn, pathC)
 }

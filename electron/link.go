@@ -131,7 +131,7 @@ type linkSettings struct {
 	capacity  int
 	prefetch  bool
 	session   *session
-	eLink     proton.Link
+	pLink     proton.Link
 }
 
 type link struct {
@@ -167,46 +167,34 @@ func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSetti
 		l.linkName = l.session.connection.container.nextLinkName()
 	}
 	if l.IsSender() {
-		l.eLink = l.session.eSession.Sender(l.linkName)
+		l.pLink = l.session.pSession.Sender(l.linkName)
 	} else {
-		l.eLink = l.session.eSession.Receiver(l.linkName)
+		l.pLink = l.session.pSession.Receiver(l.linkName)
 	}
-	if l.eLink.IsNil() {
-		return l, fmt.Errorf("cannot create link %s", l.eLink)
+	if l.pLink.IsNil() {
+		return l, fmt.Errorf("cannot create link %s", l.pLink)
 	}
-	l.eLink.Source().SetAddress(l.source)
-	l.eLink.Target().SetAddress(l.target)
-	l.eLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
-	l.eLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))
-	l.eLink.Open()
+	l.pLink.Source().SetAddress(l.source)
+	l.pLink.Target().SetAddress(l.target)
+	l.pLink.SetSndSettleMode(proton.SndSettleMode(l.sndSettle))
+	l.pLink.SetRcvSettleMode(proton.RcvSettleMode(l.rcvSettle))
+	l.pLink.Open()
 	return l, nil
 }
 
-type incomingLink struct {
-	incoming
-	linkSettings
-	eLink proton.Link
-	sn    *session
-}
-
-// Set up a link from an incoming proton.Link.
-func makeIncomingLink(sn *session, eLink proton.Link) incomingLink {
-	l := incomingLink{
-		incoming: makeIncoming(eLink),
-		linkSettings: linkSettings{
-			isSender:  eLink.IsSender(),
-			source:    eLink.RemoteSource().Address(),
-			target:    eLink.RemoteTarget().Address(),
-			linkName:  eLink.Name(),
-			sndSettle: SndSettleMode(eLink.RemoteSndSettleMode()),
-			rcvSettle: RcvSettleMode(eLink.RemoteRcvSettleMode()),
-			capacity:  1,
-			prefetch:  false,
-			eLink:     eLink,
-			session:   sn,
-		},
+func makeIncomingLinkSettings(pLink proton.Link, sn *session) linkSettings {
+	return linkSettings{
+		isSender:  pLink.IsSender(),
+		source:    pLink.RemoteSource().Address(),
+		target:    pLink.RemoteTarget().Address(),
+		linkName:  pLink.Name(),
+		sndSettle: SndSettleMode(pLink.RemoteSndSettleMode()),
+		rcvSettle: RcvSettleMode(pLink.RemoteRcvSettleMode()),
+		capacity:  1,
+		prefetch:  false,
+		pLink:     pLink,
+		session:   sn,
 	}
-	return l
 }
 
 // Not part of Link interface but use by Sender and Receiver.
@@ -215,7 +203,7 @@ func (l *link) Credit() (credit int, err error) {
 		if l.Error() != nil {
 			return l.Error()
 		}
-		credit = l.eLink.Credit()
+		credit = l.pLink.Credit()
 		return nil
 	})
 	return
@@ -225,9 +213,9 @@ func (l *link) Credit() (credit int, err error) {
 func (l *link) Capacity() int { return l.capacity }
 
 func (l *link) Close(err error) {
-	l.engine().Inject(func() {
+	_ = l.engine().Inject(func() {
 		if l.Error() == nil {
-			localClose(l.eLink, err)
+			localClose(l.pLink, err)
 		}
 	})
 }

@@ -40,10 +40,14 @@ func checkEqual(want interface{}, got interface{}) error {
 	return nil
 }
 
-func getReader(name string) (r io.Reader) {
-	r, err := os.Open("interop/" + name + ".amqp")
+func getReader(t *testing.T, name string) (r io.Reader) {
+	dir := os.Getenv("PN_INTEROP_DIR")
+	if dir == "" {
+		t.Skip("no PN_INTEROP_DIR in environment")
+	}
+	r, err := os.Open(dir + "/" + name + ".amqp")
 	if err != nil {
-		panic(fmt.Errorf("Can't open %#v: %v", name, err))
+		t.Fatalf("can't open %#v: %v", name, err)
 	}
 	return
 }
@@ -90,7 +94,7 @@ func checkDecode(d *Decoder, want interface{}, gotPtr interface{}, t *testing.T)
 }
 
 func TestUnmarshal(t *testing.T) {
-	bytes, err := ioutil.ReadAll(getReader("strings"))
+	bytes, err := ioutil.ReadAll(getReader(t, "strings"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -108,7 +112,7 @@ func TestUnmarshal(t *testing.T) {
 }
 
 func TestPrimitivesExact(t *testing.T) {
-	d := NewDecoder(getReader("primitives"))
+	d := NewDecoder(getReader(t, "primitives"))
 	// Decoding into exact types
 	var b bool
 	checkDecode(d, true, &b, t)
@@ -134,7 +138,7 @@ func TestPrimitivesExact(t *testing.T) {
 }
 
 func TestPrimitivesCompatible(t *testing.T) {
-	d := NewDecoder(getReader("primitives"))
+	d := NewDecoder(getReader(t, "primitives"))
 	// Decoding into compatible types
 	var b bool
 	var i int
@@ -187,7 +191,7 @@ func checkDecodeInterface(d *Decoder, want interface{}, t *testing.T) {
 }
 
 func TestPrimitivesInterface(t *testing.T) {
-	d := NewDecoder(getReader("primitives"))
+	d := NewDecoder(getReader(t, "primitives"))
 	checkDecodeInterface(d, true, t)
 	checkDecodeInterface(d, false, t)
 	checkDecodeInterface(d, uint8(42), t)
@@ -202,7 +206,7 @@ func TestPrimitivesInterface(t *testing.T) {
 }
 
 func TestStrings(t *testing.T) {
-	d := NewDecoder(getReader("strings"))
+	d := NewDecoder(getReader(t, "strings"))
 	// Test decoding as plain Go strings
 	for _, want := range []string{"abc\000defg", "abcdefg", "abcdefg", "", "", ""} {
 		var got string
@@ -214,7 +218,7 @@ func TestStrings(t *testing.T) {
 	}
 
 	// Test decoding as specific string types
-	d = NewDecoder(getReader("strings"))
+	d = NewDecoder(getReader(t, "strings"))
 	var bytes []byte
 	var str, sym string
 	checkDecode(d, []byte("abc\000defg"), &bytes, t)
@@ -229,7 +233,7 @@ func TestStrings(t *testing.T) {
 	}
 
 	// Test some error handling
-	d = NewDecoder(getReader("strings"))
+	d = NewDecoder(getReader(t, "strings"))
 	var s string
 	err := d.Decode(s)
 	if err == nil {
@@ -313,7 +317,7 @@ func TestEncodeDecode(t *testing.T) {
 }
 
 func TestMap(t *testing.T) {
-	d := NewDecoder(getReader("maps"))
+	d := NewDecoder(getReader(t, "maps"))
 
 	// Generic map
 	var m Map
@@ -323,7 +327,7 @@ func TestMap(t *testing.T) {
 	var i interface{}
 	checkDecode(d, Map{int32(1): "one", int32(2): "two", int32(3): "three"}, &i, t)
 
-	d = NewDecoder(getReader("maps"))
+	d = NewDecoder(getReader(t, "maps"))
 	// Specific typed map
 	var m2 map[string]int
 	checkDecode(d, map[string]int{"one": 1, "two": 2, "three": 3}, &m2, t)
@@ -344,7 +348,7 @@ func TestMap(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	d := NewDecoder(getReader("lists"))
+	d := NewDecoder(getReader(t, "lists"))
 	var l List
 	checkDecode(d, List{int32(32), "foo", true}, &l, t)
 	checkDecode(d, List{}, &l, t)
@@ -353,7 +357,7 @@ func TestList(t *testing.T) {
 // TODO aconway 2015-09-08: the message.amqp file seems to be incorrectly coded as
 // as an AMQP string *inside* an AMQP binary?? Skip the test for now.
 func TODO_TestMessage(t *testing.T) {
-	bytes, err := ioutil.ReadAll(getReader("message"))
+	bytes, err := ioutil.ReadAll(getReader(t, "message"))
 	if err != nil {
 		t.Fatal(err)
 	}

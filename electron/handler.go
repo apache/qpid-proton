@@ -78,28 +78,39 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 			h.linkError(e.Link(), "no sender")
 		}
 
+	case proton.MConnectionOpening:
+		h.connection.heartbeat = e.Transport().RemoteIdleTimeout()
+		if e.Connection().State().LocalUninit() { // Remotely opened
+			h.incoming(newIncomingConnection(h.connection))
+		}
+		h.connection.wakeSync()
+
 	case proton.MSessionOpening:
 		if e.Session().State().LocalUninit() { // Remotely opened
 			h.incoming(newIncomingSession(h, e.Session()))
 		}
+		h.sessions[e.Session()].wakeSync()
 
 	case proton.MSessionClosed:
 		h.sessionClosed(e.Session(), proton.EndpointError(e.Session()))
 
 	case proton.MLinkOpening:
 		l := e.Link()
-		if l.State().LocalActive() { // Already opened locally.
-			break
-		}
-		ss := h.sessions[l.Session()]
-		if ss == nil {
-			h.linkError(e.Link(), "no session")
-			break
-		}
-		if l.IsReceiver() {
-			h.incoming(&IncomingReceiver{makeIncomingLink(ss, l)})
+		if ss := h.sessions[l.Session()]; ss != nil {
+			if l.State().LocalUninit() { // Remotely opened.
+				if l.IsReceiver() {
+					h.incoming(newIncomingReceiver(ss, l))
+				} else {
+					h.incoming(newIncomingSender(ss, l))
+				}
+			}
+			if ep, ok := h.links[l]; ok {
+				ep.wakeSync()
+			} else {
+				h.linkError(l, "no link")
+			}
 		} else {
-			h.incoming(&IncomingSender{makeIncomingLink(ss, l)})
+			h.linkError(l, "no session")
 		}
 
 	case proton.MLinkClosing:
@@ -112,27 +123,14 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		h.connection.err.Set(e.Connection().RemoteCondition().Error())
 
 	case proton.MConnectionClosed:
-		h.connectionClosed(proton.EndpointError(e.Connection()))
+		h.shutdown(proton.EndpointError(e.Connection()))
 
 	case proton.MDisconnected:
-		h.connection.err.Set(e.Transport().Condition().Error())
-		// If err not set at this point (e.g. to Closed) then this is unexpected.
-		h.connection.err.Set(amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection))
-
-		err := h.connection.Error()
-
-		for l, _ := range h.links {
-			h.linkClosed(l, err)
+		err := e.Transport().Condition().Error()
+		if err == nil {
+			err = amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection)
 		}
-		h.links = nil
-		for _, s := range h.sessions {
-			s.closed(err)
-		}
-		h.sessions = nil
-		for _, sm := range h.sentMessages {
-			sm.ack <- Outcome{Unacknowledged, err, sm.value}
-		}
-		h.sentMessages = nil
+		h.shutdown(err)
 	}
 }
 
@@ -140,6 +138,7 @@ func (h *handler) incoming(in Incoming) {
 	var err error
 	if h.connection.incoming != nil {
 		h.connection.incoming <- in
+		// Must block until accept/reject, subsequent events may use the incoming endpoint.
 		err = in.wait()
 	} else {
 		err = amqp.Errorf(amqp.NotAllowed, "rejected incoming %s %s",
@@ -158,8 +157,9 @@ func (h *handler) addLink(pl proton.Link, el Endpoint) {
 
 func (h *handler) linkClosed(l proton.Link, err error) {
 	if link, ok := h.links[l]; ok {
-		link.closed(err)
+		_ = link.closed(err)
 		delete(h.links, l)
+		l.Free()
 	}
 }
 
@@ -172,16 +172,30 @@ func (h *handler) sessionClosed(ps proton.Session, err error) {
 				h.linkClosed(l, err)
 			}
 		}
+		ps.Free()
 	}
 }
 
-func (h *handler) connectionClosed(err error) {
+func (h *handler) shutdown(err error) {
 	err = h.connection.closed(err)
-	// Close links first to avoid repeated scans of the link list by sessions.
-	for l, _ := range h.links {
-		h.linkClosed(l, err)
+	for _, sm := range h.sentMessages {
+		// Don't block but ensure outcome is sent eventually.
+		if sm.ack != nil {
+			o := Outcome{Unacknowledged, err, sm.value}
+			select {
+			case sm.ack <- o:
+			default:
+				go func(ack chan<- Outcome) { ack <- o }(sm.ack) // Deliver it eventually
+			}
+		}
 	}
-	for s, _ := range h.sessions {
-		h.sessionClosed(s, err)
+	h.sentMessages = nil
+	for _, l := range h.links {
+		_ = l.closed(err)
 	}
+	h.links = nil
+	for _, s := range h.sessions {
+		_ = s.closed(err)
+	}
+	h.sessions = nil
 }
