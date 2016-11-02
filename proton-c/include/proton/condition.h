@@ -165,6 +165,10 @@ PN_EXTERN const char *pn_condition_redirect_host(pn_condition_t *condition);
  */
 PN_EXTERN int pn_condition_redirect_port(pn_condition_t *condition);
 
+PN_EXTERN int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src);
+PN_EXTERN pn_condition_t *pn_condition(void);
+PN_EXTERN void pn_condition_free(pn_condition_t *);
+
 /** @}
  */
 

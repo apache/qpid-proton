@@ -159,6 +159,29 @@ PREFIX ## _t *PREFIX ## _new(void) {                                      \
     PREFIX ## _inspect                          \
 }
 
+/* Class to identify a plain C struct in a pn_event_t. No refcounting or memory management. */
+#define PN_STRUCT_CLASSDEF(PREFIX, CID)                                 \
+  const pn_class_t *PREFIX ## __class(void);                            \
+  static const pn_class_t *PREFIX ## _reify(void *p) { return PREFIX ## __class(); } \
+  const pn_class_t *PREFIX  ##  __class(void) {                         \
+  static const pn_class_t clazz = {                                     \
+    #PREFIX,                                                            \
+    CID,                                                                \
+    NULL, /*_new*/                                                      \
+    NULL, /*_initialize*/                                               \
+    pn_void_incref,                                                     \
+    pn_void_decref,                                                     \
+    pn_void_refcount,                                                   \
+    NULL, /* _finalize */                                               \
+    NULL, /* _free */                                                   \
+    PREFIX ## _reify,                                                   \
+    pn_void_hashcode,                                                   \
+    pn_void_compare,                                                    \
+    pn_void_inspect                                                     \
+    };                                                                  \
+  return &clazz;                                                        \
+  }
+
 PN_EXTERN pn_cid_t pn_class_id(const pn_class_t *clazz);
 PN_EXTERN const char *pn_class_name(const pn_class_t *clazz);
 PN_EXTERN void *pn_class_new(const pn_class_t *clazz, size_t size);
@@ -181,6 +204,10 @@ PN_EXTERN intptr_t pn_class_compare(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN bool pn_class_equals(const pn_class_t *clazz, void *a, void *b);
 PN_EXTERN int pn_class_inspect(const pn_class_t *clazz, void *object, pn_string_t *dst);
 
+PN_EXTERN void *pn_void_new(const pn_class_t *clazz, size_t size);
+PN_EXTERN void pn_void_incref(void *object);
+PN_EXTERN void pn_void_decref(void *object);
+PN_EXTERN int pn_void_refcount(void *object);
 PN_EXTERN uintptr_t pn_void_hashcode(void *object);
 PN_EXTERN intptr_t pn_void_compare(void *a, void *b);
 PN_EXTERN int pn_void_inspect(void *object, pn_string_t *dst);

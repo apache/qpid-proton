@@ -56,7 +56,10 @@ typedef enum {
   CID_pn_selector,
   CID_pn_selectable,
 
-  CID_pn_url
+  CID_pn_url,
+
+  CID_pn_listener,
+  CID_pn_proactor
 } pn_cid_t;
 
 #endif /* cid.h */

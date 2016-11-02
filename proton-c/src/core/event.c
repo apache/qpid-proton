@@ -371,7 +371,18 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_SELECTABLE_EXPIRED";
   case PN_SELECTABLE_FINAL:
     return "PN_SELECTABLE_FINAL";
+   case PN_CONNECTION_WAKE:
+    return "PN_CONNECTION_WAKE";
+   case PN_LISTENER_CLOSE:
+    return "PN_LISTENER_CLOSE";
+   case PN_PROACTOR_INTERRUPT:
+    return "PN_PROACTOR_INTERRUPT";
+   case PN_PROACTOR_TIMEOUT:
+    return "PN_PROACTOR_TIMEOUT";
+   case PN_PROACTOR_INACTIVE:
+    return "PN_PROACTOR_INACTIVE";
+   default:
+    return "PN_UNKNOWN";
   }
-
   return NULL;
 }

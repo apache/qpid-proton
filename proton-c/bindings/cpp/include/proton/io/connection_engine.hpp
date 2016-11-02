@@ -121,8 +121,8 @@ PN_CPP_CLASS_EXTERN connection_engine {
 
     /// Configure a connection by applying exactly the options in opts (including proton::messaging_handler)
     /// Does not apply any default options, to apply container defaults use connect() or accept()
-    /// instead.
-    void configure(const connection_options& opts=connection_options());
+    /// instead. If server==true, configure a server connection.
+    void configure(const connection_options& opts=connection_options(), bool server=false);
 
     /// Call configure() with client options and call connection::open()
     /// Options applied: container::id(), container::client_connection_options(), opts.
@@ -200,12 +200,13 @@ PN_CPP_CLASS_EXTERN connection_engine {
     PN_CPP_EXTERN proton::container* container() const;
 
  private:
+    void init();
     connection_engine(const connection_engine&);
     connection_engine& operator=(const connection_engine&);
 
     messaging_handler* handler_;
     proton::container* container_;
-    pn_connection_engine_t c_engine_;
+    pn_connection_engine_t engine_;
 };
 
 } // io

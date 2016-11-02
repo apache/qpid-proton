@@ -32,6 +32,8 @@
 #include "platform/platform_fmt.h"
 #include "transport.h"
 
+#include <proton/extra.h>
+
 
 static void pni_session_bound(pn_session_t *ssn);
 static void pni_link_bound(pn_link_t *link);
@@ -208,11 +210,25 @@ void pn_condition_init(pn_condition_t *condition)
   condition->info = pn_data(0);
 }
 
+pn_condition_t *pn_condition() {
+  pn_condition_t *c = (pn_condition_t*)malloc(sizeof(pn_condition_t));
+  pn_condition_init(c);
+  return c;
+}
+
 void pn_condition_tini(pn_condition_t *condition)
 {
   pn_data_free(condition->info);
   pn_free(condition->description);
   pn_free(condition->name);
+}
+
+void pn_condition_free(pn_condition_t *c) {
+  if (c) {
+    pn_condition_clear(c);
+    pn_condition_tini(c);
+    free(c);
+  }
 }
 
 static void pni_add_session(pn_connection_t *conn, pn_session_t *ssn)
@@ -495,10 +511,15 @@ static void pn_connection_finalize(void *object)
 #define pn_connection_compare NULL
 #define pn_connection_inspect NULL
 
-pn_connection_t *pn_connection(void)
+PN_EXTRA_DECLARE(pn_connection_t);
+
+pn_rwbytes_t pn_connection_get_extra(pn_connection_t *c) { return PN_EXTRA_GET(pn_connection_t, c); }
+
+pn_connection_t *pn_connection_with_extra(size_t extra)
 {
   static const pn_class_t clazz = PN_CLASS(pn_connection);
-  pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));
+  size_t size = PN_EXTRA_SIZEOF(pn_connection_t, extra);
+  pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, size);
   if (!conn) return NULL;
 
   conn->endpoint_head = NULL;
@@ -527,6 +548,10 @@ pn_connection_t *pn_connection(void)
   return conn;
 }
 
+pn_connection_t *pn_connection(void) {
+  return pn_connection_with_extra(0);
+}
+
 static const pn_event_type_t endpoint_init_event_map[] = {
   PN_CONNECTION_INIT,  /* CONNECTION */
   PN_SESSION_INIT,     /* SESSION */
@@ -543,6 +568,10 @@ void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collecto
     pn_collector_put(connection->collector, PN_OBJECT, endpoint, endpoint_init_event_map[endpoint->type]);
     endpoint = endpoint->endpoint_next;
   }
+}
+
+pn_collector_t* pn_connection_collector(pn_connection_t *connection) {
+  return connection->collector;
 }
 
 pn_state_t pn_connection_state(pn_connection_t *connection)
@@ -2228,4 +2257,16 @@ pn_transport_t *pn_event_transport(pn_event_t *event)
       return NULL;
     }
   }
+}
+
+int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src) {
+  assert(dest);
+  assert(src);
+  int err = 0;
+  if (src != dest) {
+    int err = pn_string_copy(dest->name, src->name);
+    if (!err) err = pn_string_copy(dest->description, src->description);
+    if (!err) err = pn_data_copy(dest->info, src->info);
+  }
+  return err;
 }

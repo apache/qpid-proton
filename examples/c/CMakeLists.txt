@@ -17,6 +17,11 @@
 # under the License.
 #
 
+find_package(Proton REQUIRED)
+include(CheckCCompilerFlag)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_subdirectory(proactor)
 add_subdirectory(messenger)
 add_subdirectory(reactor)

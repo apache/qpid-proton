@@ -90,10 +90,10 @@ class sender_options {
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 
     /// Options for the source node of the sender.
-    PN_CPP_EXTERN sender_options& source(source_options &);
+    PN_CPP_EXTERN sender_options& source(const source_options &);
 
     /// Options for the receiver node of the receiver.
-    PN_CPP_EXTERN sender_options& target(target_options &);
+    PN_CPP_EXTERN sender_options& target(const target_options &);
 
     /// @cond INTERNAL
   private:

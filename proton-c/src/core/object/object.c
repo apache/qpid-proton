@@ -32,10 +32,10 @@ intptr_t pn_object_compare(void *a, void *b) { return (intptr_t) a - (intptr_t) 
 const pn_class_t PN_OBJECT[] = {PN_CLASS(pn_object)};
 
 #define pn_void_initialize NULL
-static void *pn_void_new(const pn_class_t *clazz, size_t size) { return malloc(size); }
-static void pn_void_incref(void *object) {}
-static void pn_void_decref(void *object) {}
-static int pn_void_refcount(void *object) { return -1; }
+void *pn_void_new(const pn_class_t *clazz, size_t size) { return malloc(size); }
+void pn_void_incref(void* p) {}
+void pn_void_decref(void* p) {}
+int pn_void_refcount(void *object) { return -1; }
 #define pn_void_finalize NULL
 static void pn_void_free(void *object) { free(object); }
 static const pn_class_t *pn_void_reify(void *object) { return PN_VOID; }
@@ -199,7 +199,7 @@ typedef struct {
 void *pn_object_new(const pn_class_t *clazz, size_t size)
 {
   void *object = NULL;
-  pni_head_t *head = (pni_head_t *) malloc(sizeof(pni_head_t) + size);
+  pni_head_t *head = (pni_head_t *) calloc(1, sizeof(pni_head_t) + size);
   if (head != NULL) {
     object = head + 1;
     head->clazz = clazz;

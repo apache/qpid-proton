@@ -82,6 +82,7 @@ extern "C" {
  */
 #define PN_REMOTE_MASK (PN_REMOTE_UNINIT | PN_REMOTE_ACTIVE | PN_REMOTE_CLOSED)
 
+PN_EXTERN pn_connection_t *pn_connection(void);
 /**
  * Factory to construct a new Connection.
  *
@@ -146,6 +147,13 @@ PN_EXTERN pn_error_t *pn_connection_error(pn_connection_t *connection);
  * @param[in] collector the event collector
  */
 PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t *collector);
+
+/**
+ * Get the collector set with pn_connection_collect()
+ * @return NULL if pn_connection_collect() has not been called.
+*/
+PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
+
 
 /**
  * @deprecated
@@ -476,6 +484,16 @@ PN_EXTERN pn_data_t *pn_connection_remote_properties(pn_connection_t *connection
  * connection is unbound
  */
 PN_EXTERN pn_transport_t *pn_connection_transport(pn_connection_t *connection);
+
+/**
+ * Create a connection with `size` bytes of extra aligned storage in the same heap block.
+ */
+PN_EXTERN pn_connection_t* pn_connection_with_extra(size_t size);
+
+/**
+ * Get the start and size of extra storage allocated by pn_connection_extra()
+ */
+PN_EXTERN pn_rwbytes_t pn_connection_get_extra(pn_connection_t *connection);
 
 /** @}
  */

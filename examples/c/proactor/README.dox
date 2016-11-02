@@ -1,0 +1,20 @@
+
+/** @example send.c
+
+Send a fixed number of messages to the "example" node.
+
+*/
+
+/** @example simple_recv.cpp
+
+Subscribes to the 'example' node and prints the message bodies received.
+
+*/
+
+/** @example broker.c
+
+A simple multi-threaded broker that works with the send and receive examples.
+
+__Requires C++11__
+
+*/

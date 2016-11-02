@@ -277,11 +277,17 @@ typedef enum {
   PN_TRANSPORT_ERROR,
 
   /**
-   * Indicates that the head of the transport has been closed. This
+   * Indicates that the "head" or writing end of the transport has been closed. This
    * means the transport will never produce more bytes for output to
    * the network. Events of this type point to the relevant transport.
    */
   PN_TRANSPORT_HEAD_CLOSED,
+
+  /**
+   * The write side of the transport is closed, it will no longer produce bytes
+   * to write to external IO. Synonynm for PN_TRANSPORT_HEAD_CLOSED
+   */
+  PN_TRANSPORT_WRITE_CLOSED = PN_TRANSPORT_HEAD_CLOSED,
 
   /**
    * Indicates that the tail of the transport has been closed. This
@@ -289,6 +295,12 @@ typedef enum {
    * the network. Events of this type point to the relevant transport.
    */
   PN_TRANSPORT_TAIL_CLOSED,
+
+  /**
+   * The read side of the transport is closed, it will no longer read bytes
+   * from external IO. Synonynm for PN_TRANSPORT_TAIL_CLOSED
+   */
+  PN_TRANSPORT_READ_CLOSED = PN_TRANSPORT_TAIL_CLOSED,
 
   /**
    * Indicates that the both the head and tail of the transport are
@@ -302,7 +314,39 @@ typedef enum {
   PN_SELECTABLE_WRITABLE,
   PN_SELECTABLE_ERROR,
   PN_SELECTABLE_EXPIRED,
-  PN_SELECTABLE_FINAL
+  PN_SELECTABLE_FINAL,
+
+  /**
+   * pn_connection_wake() was called.
+   * Events of this type point to the @ref pn_connection_t.
+   */
+  PN_CONNECTION_WAKE,
+
+  /**
+   * pn_listener_close() was called or an error occurred, see pn_listener_condition()
+   * Events of this type point to the @ref pn_listener_t.
+   */
+  PN_LISTENER_CLOSE,
+
+  /**
+   * pn_proactor_interrupt() was called to interrupt a proactor thread
+   * Events of this type point to the @ref pn_proactor_t.
+   */
+  PN_PROACTOR_INTERRUPT,
+
+  /**
+   * pn_proactor_set_timeout() time limit expired.
+   * Events of this type point to the @ref pn_proactor_t.
+   */
+  PN_PROACTOR_TIMEOUT,
+
+  /**
+   * The proactor becaome inactive: all listeners and connections are closed and
+   * their events processed, the timeout is expired.
+   *
+   * Events of this type point to the @ref pn_proactor_t.
+   */
+  PN_PROACTOR_INACTIVE
 
 } pn_event_type_t;
 

@@ -108,8 +108,8 @@ void sender_options::update(const sender_options& x) { impl_->update(*x.impl_); 
 sender_options& sender_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
 sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
-sender_options& sender_options::source(source_options &s) {impl_->source = s; return *this; }
-sender_options& sender_options::target(target_options &s) {impl_->target = s; return *this; }
+sender_options& sender_options::source(const source_options &s) {impl_->source = s; return *this; }
+sender_options& sender_options::target(const target_options &s) {impl_->target = s; return *this; }
 
 void sender_options::apply(sender& s) const { impl_->apply(s); }
 
