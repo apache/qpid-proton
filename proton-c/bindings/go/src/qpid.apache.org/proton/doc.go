@@ -18,14 +18,11 @@ under the License.
 */
 
 /*
-Package proton is an event-driven, concurrent-unsafe Go library for AMQP messaging.
-You can write clients and servers using this library.
+Package proton is a wrapper for the Proton-C library
+(http://qpid.apache.org/proton) which lets you write AMQP 1.0 messaging clients
+and servers. It is event-driven and concurrent-unsafe.
 
-This package is a port of the Proton C API into Go (see
-http://qpid.apache.org/proton) Go programmers may find the 'electron' package
-more convenient. qpid.apache.org/electron provides a concurrent-safe API that
-allows you to run procedural loops in arbitrary goroutines rather than
-implementing event handlers that must run in a single goroutine.
+For a more "Go-like" procedural, concurrent-safe toolkit see package 'electron'.
 
 Consult the C API documentation at http://qpid.apache.org/proton for more
 information about the types here. There is a 1-1 correspondence between C type

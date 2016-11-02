@@ -18,8 +18,7 @@ under the License.
 */
 
 /*
-Package electron is a procedural, concurrent-safe Go library for AMQP messaging.
-You can write clients and servers using this library.
+Package electron lets you write concurrent AMQP 1.0 messaging clients and servers.
 
 Start by creating a Container with NewContainer. An AMQP Container represents a
 single AMQP "application" and can contain client and server connections.
