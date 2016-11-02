@@ -231,14 +231,14 @@ type flowcontroller struct {
 }
 
 func (d flowcontroller) HandleEvent(e Event) {
-	link := e.Link();
+	link := e.Link()
 
 	switch e.Type() {
 	case ELinkLocalOpen, ELinkRemoteOpen, ELinkFlow, EDelivery:
 		if link.IsReceiver() {
 			d.drained += link.Drained()
 			if d.drained != 0 {
-				link.Flow(d.window-link.Credit())
+				link.Flow(d.window - link.Credit())
 			}
 		}
 	}
@@ -313,7 +313,7 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 			d,
 		}
 		if d.Prefetch > 0 {
-			d.flowcontroller = flowcontroller{ window:d.Prefetch, drained:0 }
+			d.flowcontroller = flowcontroller{window: d.Prefetch, drained: 0}
 		}
 		d.mhandler.HandleMessagingEvent(MStart, e)
 

@@ -212,7 +212,7 @@ var (
 	enumDefRe   = regexp.MustCompile("typedef enum {([^}]*)} pn_([a-z_]+)_t;")
 	enumValRe   = regexp.MustCompile("PN_[A-Z_]+")
 	skipEventRe = regexp.MustCompile("EVENT_NONE|REACTOR|SELECTABLE|TIMER")
-	skipFnRe    = regexp.MustCompile("attach|context|class|collect|link_recv|link_send|transport_.*logf$|transport_.*trace|transport_head|transport_push|connection_set_password")
+	skipFnRe    = regexp.MustCompile("attach|context|class|collect|link_recv|link_send|transport_.*logf$|transport_.*trace|transport_head|transport_tail|transport_push|connection_set_password|link_get_drain")
 )
 
 // Generate event wrappers.
@@ -410,12 +410,7 @@ func goFnName(api, fname string) string {
 	if skipFnRe.FindStringSubmatch(api+"_"+fname) != nil {
 		return ""
 	}
-	switch api + "." + fname {
-	case "link.get_drain":
-		return "IsDrain"
-	default:
-		return mixedCaseTrim(fname, "get_")
-	}
+	return mixedCaseTrim(fname, "get_")
 }
 
 func apiWrapFns(api, header string, out io.Writer) {

@@ -310,9 +310,6 @@ func (l Link) Queued() int {
 func (l Link) RemoteCredit() int {
 	return int(C.pn_link_remote_credit(l.pn))
 }
-func (l Link) IsDrain() bool {
-	return bool(C.pn_link_get_drain(l.pn))
-}
 func (l Link) Drained() int {
 	return int(C.pn_link_drained(l.pn))
 }
@@ -831,9 +828,6 @@ func (t Transport) Output(bytes string, size uint) int {
 }
 func (t Transport) Capacity() int {
 	return int(C.pn_transport_capacity(t.pn))
-}
-func (t Transport) Tail() string {
-	return C.GoString(C.pn_transport_tail(t.pn))
 }
 func (t Transport) Process(size uint) int {
 	return int(C.pn_transport_process(t.pn, C.size_t(size)))

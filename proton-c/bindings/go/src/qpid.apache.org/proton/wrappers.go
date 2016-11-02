@@ -268,6 +268,11 @@ func (l Link) Type() string {
 	}
 }
 
+// IsDrain calls pn_link_get_drain(), it conflicts with pn_link_drain() under the normal mapping.
+func (l Link) IsDrain() bool {
+	return bool(C.pn_link_get_drain(l.pn))
+}
+
 func cPtr(b []byte) *C.char {
 	if len(b) == 0 {
 		return nil
@@ -408,6 +413,11 @@ func goTime(pnt C.pn_timestamp_t) (t time.Time) {
 // Special treatment for Transport.Head, return value is unsafe.Pointer not string
 func (t Transport) Head() unsafe.Pointer {
 	return unsafe.Pointer(C.pn_transport_head(t.pn))
+}
+
+// Special treatment for Transport.Tail, return value is unsafe.Pointer not string
+func (t Transport) Tail() unsafe.Pointer {
+	return unsafe.Pointer(C.pn_transport_tail(t.pn))
 }
 
 // Special treatment for Transport.Push, takes []byte instead of char*, size
