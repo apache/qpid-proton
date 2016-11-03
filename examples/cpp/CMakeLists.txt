@@ -58,6 +58,24 @@ foreach(example
   add_executable(${example} ${example}.cpp)
 endforeach()
 
+INCLUDE(CheckCXXSourceCompiles)
+
+# Sometimes linking against libatomic is required for atomic ops, if
+# the platform doesn't support lock-free atomics.
+function(check_cxx_atomics varname)
+  set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
+  check_cxx_source_compiles("
+#include <cstdint>
+#include <atomic>
+std::atomic<uintptr_t> x;
+std::atomic<uintmax_t> y;
+int main() {
+  return x + y;
+}
+" ${varname})
+  set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
+endfunction(check_cxx_atomics)
+
 if(HAS_CPP11)
   # Single-threaded examples that require C++11
   foreach(example
@@ -72,6 +90,20 @@ if(HAS_CPP11)
         broker)
       add_executable(mt_${example} mt/${example}.cpp ${container_src})
       target_link_libraries(mt_${example} pthread)
+      check_cxx_atomics(HAVE_CXX_ATOMICS_WITHOUT_LIB)
+      if(NOT HAVE_CXX_ATOMICS_WITHOUT_LIB)
+        check_library_exists(atomic __atomic_fetch_add_8 "" HAS_LIBATOMIC)
+        if(HAS_LIBATOMIC)
+          target_link_libraries(mt_${example} atomic)
+          list(APPEND CMAKE_REQUIRED_LIBRARIES "atomic")
+          check_cxx_atomics(HAVE_CXX_ATOMICS_WITH_LIB)
+          if(NOT HAVE_CXX_ATOMICS_WITH_LIB)
+            message(FATAL_ERROR "Host compiler must support std::atomic!")
+          endif()
+        else()
+          message(FATAL_ERROR "Host compiler appears to require libatomic, but cannot find it.")
+        endif()
+      endif()
     endforeach()
     add_cpp_test(cpp-example-mt ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v MtBrokerTest)
   endif()
