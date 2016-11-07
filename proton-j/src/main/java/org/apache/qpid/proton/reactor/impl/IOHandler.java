@@ -154,7 +154,7 @@ public class IOHandler extends BaseHandler {
             socketChannel.configureBlocking(false);
             socketChannel.connect(new InetSocketAddress(hostname, port));
             socket = socketChannel.socket();
-        } catch(IOException ioException) {
+        } catch(Exception ioException) {
             ErrorCondition condition = new ErrorCondition();
             condition.setCondition(Symbol.getSymbol("proton:io"));
             condition.setDescription(ioException.getMessage());
