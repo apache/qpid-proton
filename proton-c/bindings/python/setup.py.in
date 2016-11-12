@@ -26,34 +26,18 @@ under the 'MODIFIED BSD LICENSE'.
 Although inspired by the work in PyZMQ, this script and the modules it depends
 on were largely simplified to meet the requirements of the library.
 
-The default behavior of this script is to build the registered `_cproton`
-extension using the system qpid-proton library. However, before doing that, the
-script will try to discover the available qpid-proton's version and whether it's
-suitable for the version of this library. This allows us to have a tight release
-between the versions of the bindings and qpid-proton's version.
+The behavior of this script is to build the registered `_cproton` extension
+using the installed Qpid Proton C library and header files. If the library and
+headers are not installed, or the installed version does not match the version
+of these python bindings, then the script will attempt to build the extension
+using the Proton C sources included in the python source distribution package.
 
-The versions used to verify this are in `setuputils.bundle` and they should be
-increased on every release. Note that `bundled_version` matches the current
-released version. The motivation behind this is that we don't know how many
-new releases will be made in the `0.9` series, therefore we need to target the
-latest possible.
-
-If qpid-proton is found in the system and the available versions are match the
-required ones, then the install process will continue normally.
-
-If the available versions are not good for the bindings or the library is
-missing, then the following will happen:
-
-The setup script will attempt to download the C source for qpid-proton - see
-`setuputils.bundle.fetch_libqpid_proton` - and it will include the proton C
-code into the extension itself.
-
-While the above removes the need of *always* having qpid-proton installed, it
-does not solve the need of having `swig` and the libraries qpid-proton requires
-installed to make this setup work.
+While the above removes the need of *always* having Qpid Proton C development
+files installed, it does not solve the need of having `swig` and the libraries
+qpid-proton requires installed to make this setup work.
 
 From the Python side, this scripts overrides 1 command - build_ext - and it adds a
-new one. The later - Configure - is called from the former to setup/discover what's
+new one. The latter - Configure - is called from the former to setup/discover what's
 in the system. The rest of the comands and steps are done normally without any kind
 of monkey patching.
 """
@@ -72,9 +56,14 @@ from distutils.command.build_ext import build_ext
 from distutils.command.sdist import sdist
 from distutils import errors
 
-from setuputils import bundle
 from setuputils import log
 from setuputils import misc
+
+
+_PROTON_VERSION=(@PN_VERSION_MAJOR@,
+                 @PN_VERSION_MINOR@,
+                 @PN_VERSION_POINT@)
+_PROTON_VERSION_STR = "%d.%d.%d" % _PROTON_VERSION
 
 
 class CheckSDist(sdist):
@@ -132,85 +121,20 @@ class Configure(build_ext):
         ext.sources = ext.sources[1:]
         ext.swig_opts = []
 
-    def bundle_libqpid_proton_extension(self):
-        """The proper version of libqpid-proton is not present on the system,
-        so attempt to retrieve the proper libqpid-proton sources and
-        include them in the extension.
+    def use_bundled_proton(self):
+        """The proper version of libqpid-proton is not installed on the system,
+        so use the included proton-c sources to build the extension
         """
+        log.info("Building the bundled proton-c sources into the extension")
+
         setup_path = os.path.dirname(os.path.realpath(__file__))
         base = self.get_finalized_command('build').build_base
         build_include = os.path.join(base, 'include')
-
-        log.info("Bundling qpid-proton into the extension")
-
-        # QPID_PROTON_SRC - (optional) pathname to the Proton C sources.  Can
-        # be used to override where this setup gets the Proton C sources from
-        # (see bundle.fetch_libqpid_proton())
-        if 'QPID_PROTON_SRC' not in os.environ:
-            if not os.path.exists(os.path.join(setup_path, 'CMakeLists.txt')):
-                bundledir = os.path.join(base, "bundled")
-                if not os.path.exists(bundledir):
-                    os.makedirs(bundledir)
-                bundle.fetch_libqpid_proton(bundledir)
-                libqpid_proton_dir = os.path.abspath(os.path.join(bundledir, 'qpid-proton'))
-            else:
-                # setup.py is being invoked from within the proton source tree
-                # (CMakeLists.txt is not present in the python source dist).
-                # In this case build using the local sources.  This use case is
-                # specifically for developers working on the proton source
-                # code.
-                proton_c = os.path.join(setup_path, '..', '..', '..')
-                libqpid_proton_dir = os.path.abspath(proton_c)
-        else:
-            libqpid_proton_dir = os.path.abspath(os.environ['QPID_PROTON_SRC'])
-
-        log.debug("Using libqpid-proton src: %s" % libqpid_proton_dir)
-
-        proton_base = os.path.join(libqpid_proton_dir, 'proton-c')
+        proton_base = os.path.abspath(os.path.join(setup_path, 'proton-c'))
         proton_src = os.path.join(proton_base, 'src')
         proton_include = os.path.join(proton_base, 'include')
 
-        #
-        # Create any generated header files, and put them in build_include:
-        #
-        if not os.path.exists(build_include):
-            os.makedirs(build_include)
-            os.mkdir(os.path.join(build_include, 'proton'))
-
-        # Create copy of environment variables and modify PYTHONPATH to preserve
-        # all others environment variables defined by user. When `env` is specified
-        # Popen will not inherit environment variables of the current process.
-        proton_envs = os.environ.copy()
-        default_path = proton_envs.get('PYTHONPATH')
-        proton_envs['PYTHONPATH'] = proton_base if not default_path else '{0}{1}{2}'.format(
-            proton_base, os.pathsep, default_path)
-
-        # Generate `protocol.h` by calling the python
-        # script found in the source dir.
-        with open(os.path.join(build_include, 'protocol.h'), 'wb') as header:
-            subprocess.Popen([sys.executable, os.path.join(proton_src, 'protocol.h.py')],
-                              env=proton_envs, stdout=header)
-
-        # Generate `encodings.h` by calling the python
-        # script found in the source dir.
-        with open(os.path.join(build_include, 'encodings.h'), 'wb') as header:
-            subprocess.Popen([sys.executable,
-                              os.path.join(proton_src, 'codec', 'encodings.h.py')],
-                              env=proton_envs, stdout=header)
-
-        # Create a custom, temporary, version.h file mapping the
-        # major and minor versions from the downloaded tarball. This version should
-        # match the ones in the bundle module
-        with open(os.path.join(build_include, 'proton', 'version.h'), "wb") as ver:
-            version_text = """
-#ifndef _PROTON_VERSION_H
-#define _PROTON_VERSION_H 1
-#define PN_VERSION_MAJOR %i
-#define PN_VERSION_MINOR %i
-#define PN_VERSION_POINT %i
-#endif /* version.h */
-""" % bundle.bundled_version
-            ver.write(version_text.encode('utf-8'))
+        log.debug("Using Proton C sources: %s" % proton_base)
 
         # Collect all the Proton C files that need to be built.
         # we could've used `glob(.., '*', '*.c')` but I preferred going
@@ -241,11 +165,12 @@ class Configure(build_ext):
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
         # return True and we'll use it. Otherwise, we'll use the stub.
-        if misc.pkg_config_version(atleast='0', module='openssl'):
+        if misc.pkg_config_version_installed('openssl', atleast='0'):
             libraries += ['ssl', 'crypto']
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
+            log.warn("OpenSSL not installed - disabling SSL support!")
 
         # create a temp compiler to check for optional compile-time features
         cc = new_compiler(compiler=self.compiler_type)
@@ -270,7 +195,8 @@ class Configure(build_ext):
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
         else:
             sources.append(os.path.join(proton_src, 'sasl', 'none_sasl.c'))
-
+            log.warn("Cyrus SASL not installed - only the ANONYMOUS and"
+                     " PLAIN mechanisms will be supported!")
         sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
 
         # compile all the proton sources.  We'll add the resulting list of
@@ -292,8 +218,8 @@ class Configure(build_ext):
                              output_dir=self.build_temp)
 
         #
-        # Now update the _cproton extension instance to include the objects and
-        # libraries
+        # Now update the _cproton extension instance passed to setup to include
+        # the objects and libraries
         #
         _cproton = self.distribution.ext_modules[-1]
         _cproton.extra_objects = objects
@@ -308,39 +234,34 @@ class Configure(build_ext):
         # by the Proton objects:
         _cproton.libraries=libraries
 
-    def check_qpid_proton_version(self):
-        """check the qpid_proton version"""
-
-        target_version = bundle.bundled_version_str
-        return (misc.pkg_config_version(max_version=target_version) and
-                misc.pkg_config_version(atleast=bundle.min_qpid_proton_str))
-
-    @property
-    def bundle_proton(self):
-        """Need to bundle proton if the conditions below are met."""
-        return ('QPID_PROTON_SRC' in os.environ) or \
-            (not self.check_qpid_proton_version())
+    def libqpid_proton_installed(self, version):
+        """Check to see if the proper version of the Proton development library
+        and headers are already installed
+        """
+        return misc.pkg_config_version_installed('libqpid-proton', version)
 
     def use_installed_proton(self):
         """The Proton development headers and library are installed, update the
         _cproton extension to tell it where to find the library and headers.
         """
+        # update the Extension instance passed to setup() to use the installed
+        # headers and link library
         _cproton = self.distribution.ext_modules[-1]
-        incs = misc.pkg_config_get_var('includedir')
+        incs = misc.pkg_config_get_var('libqpid-proton', 'includedir')
         for i in incs.split():
             _cproton.swig_opts.append('-I%s' % i)
             _cproton.include_dirs.append(i)
-        ldirs = misc.pkg_config_get_var('libdir')
+        ldirs = misc.pkg_config_get_var('libqpid-proton', 'libdir')
         _cproton.library_dirs.extend(ldirs.split())
 
     def run(self):
         # check if the Proton library and headers are installed and are
         # compatible with this version of the binding.
-        if self.bundle_proton:
-            # Proton not installed or compatible
-            self.bundle_libqpid_proton_extension()
-        else:
+        if self.libqpid_proton_installed(_PROTON_VERSION_STR):
             self.use_installed_proton()
+        else:
+            # Proton not installed or compatible, use bundled proton-c sources
+            self.use_bundled_proton()
         self.prepare_swig_wrap()
 
 
@@ -374,7 +295,7 @@ cmdclass = {'configure': Configure,
             'sdist': CheckSDist}
 
 setup(name='python-qpid-proton',
-      version=bundle.bundled_version_str,
+      version=_PROTON_VERSION_STR + os.environ.get('PROTON_VERSION_SUFFIX', ''),
       description='An AMQP based messaging library.',
       author='Apache Qpid',
       author_email='proton@qpid.apache.org',

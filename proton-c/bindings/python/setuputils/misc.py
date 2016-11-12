@@ -40,39 +40,43 @@ def _call_pkg_config(args):
 
 
 
-def pkg_config_version(atleast=None, max_version=None, module='libqpid-proton'):
-    """Check the qpid_proton version using pkg-config
+def pkg_config_version_installed(package, version=None, atleast=None):
+    """Check if version of a package is is installed
 
     This function returns True/False depending on whether
-    the library is found and atleast/max_version are met.
+    the package is found and is the correct version.
 
-    :param atleast: The minimum required version
-    :param max_version: The maximum supported version. This
-        basically represents the target version.
+    :param version: The exact version of the package required
+    :param atleast: True if installed package is at least this version
     """
 
-    if atleast and max_version:
-        log.fatal('Specify either atleast or max_version')
+    if version is None and atleast is None:
+        log.fatal('package version string required')
+    elif version and atleast:
+        log.fatal('Specify either version or atleast, not both')
 
-    p = _call_pkg_config(['--%s-version=%s' % (atleast and 'atleast' or 'max',
-                                               atleast or max_version),
-                          module])
+    check = 'exact' if version else 'atleast'
+    p = _call_pkg_config(['--%s-version=%s' % (check,
+                                               version or atleast),
+                          package])
     if p:
         out,err = p.communicate()
         if p.returncode:
-            log.info("Did not find %s via pkg-config: %s" % (module, err))
+            log.info("Did not find %s via pkg-config: %s" % (package, err))
             return False
-        log.info("Using %s (found via pkg-config)." % module)
+        log.info("Using %s version %s (found via pkg-config)" %
+                 (package,
+                  _call_pkg_config(['--modversion', package]).communicate()[0]))
         return True
     return False
 
 
-def pkg_config_get_var(name, module='libqpid-proton'):
-    """Retrieve the value of the named module variable as a string
+def pkg_config_get_var(package, name):
+    """Retrieve the value of the named package variable as a string
     """
-    p = _call_pkg_config(['--variable=%s' % name, module])
+    p = _call_pkg_config(['--variable=%s' % name, package])
     if not p:
-        log.warn("pkg-config: var %s get failed, package %s", name, module)
+        log.warn("pkg-config: var %s get failed, package %s", name, package)
         return ""
     out,err = p.communicate()
     if p.returncode:
