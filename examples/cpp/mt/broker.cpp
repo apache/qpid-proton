@@ -26,6 +26,8 @@
 #include <proton/error_condition.hpp>
 #include <proton/listen_handler.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/sender_options.hpp>
+#include <proton/source_options.hpp>
 #include <proton/thread_safe.hpp>
 
 #include <atomic>
@@ -151,6 +153,7 @@ class broker_connection_handler : public proton::messaging_handler {
     void on_sender_open(proton::sender &sender) OVERRIDE {
         queue *q = sender.source().dynamic() ?
             queues_.dynamic() : queues_.get(sender.source().address());
+        sender.open(proton::sender_options().source((proton::source_options().address(q->name()))));
         std::cout << "sending from " << q->name() << std::endl;
     }
 
