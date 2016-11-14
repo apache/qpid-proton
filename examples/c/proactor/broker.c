@@ -446,9 +446,11 @@ int main(int argc, char **argv) {
 
   /* Parse the URL or use default values */
   pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  const char *host = url ? pn_url_get_host(url) : "localhost";
-  const char *port = url ? pn_url_get_port(url) : NULL;
-  if (!port) port = "amqp";
+  /* Listen on IPv6 wildcard. On systems that do not set IPV6ONLY by default,
+     this will also listen for mapped IPv4 on the same port.
+  */
+  const char *host = url ? pn_url_get_host(url) : "::";
+  const char *port = url ? pn_url_get_port(url) : "amqp";
 
   /* Initial broker_data value copied to each accepted connection */
   broker_data_t bd = { false };

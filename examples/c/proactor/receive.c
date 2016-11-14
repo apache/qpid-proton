@@ -185,8 +185,7 @@ int main(int argc, char **argv) {
     /* Parse the URL or use default values */
     pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
     const char *host = url ? pn_url_get_host(url) : NULL;
-    const char *port = url ? pn_url_get_port(url) : NULL;
-    if (!port) port = "amqp";
+    const char *port = url ? pn_url_get_port(url) : "amqp";
     strncpy(app.address, (url && pn_url_get_path(url)) ? pn_url_get_path(url) : "example", sizeof(app.address));
 
     /* Create the proactor and connect */

@@ -425,11 +425,12 @@ static void on_accept(uv_stream_t* server, int err) {
   }
 }
 
-static int leader_resolve(psocket_t *ps, uv_getaddrinfo_t *info) {
+static int leader_resolve(psocket_t *ps, uv_getaddrinfo_t *info, bool server) {
   int err = leader_init(ps);
+  struct addrinfo hints = { 0 };
+  if (server) hints.ai_flags = AI_PASSIVE;
   if (!err) {
-    err = uv_getaddrinfo(&ps->proactor->loop, info, NULL,
-                         fixstr(ps->host), fixstr(ps->port), NULL);
+    err = uv_getaddrinfo(&ps->proactor->loop, info, NULL, fixstr(ps->host), fixstr(ps->port), &hints);
   }
   return err;
 }
@@ -437,7 +438,7 @@ static int leader_resolve(psocket_t *ps, uv_getaddrinfo_t *info) {
 static void leader_connect(psocket_t *ps) {
   pconn *pc = as_pconn(ps);
   uv_getaddrinfo_t info;
-  int err = leader_resolve(ps, &info);
+  int err = leader_resolve(ps, &info, false);
   if (!err) {
     err = uv_tcp_connect(&pc->connect, &pc->psocket.tcp, info.addrinfo->ai_addr, on_connect);
     uv_freeaddrinfo(info.addrinfo);
@@ -450,7 +451,7 @@ static void leader_connect(psocket_t *ps) {
 static void leader_listen(psocket_t *ps) {
   pn_listener_t *l = as_listener(ps);
   uv_getaddrinfo_t info;
-  int err = leader_resolve(ps, &info);
+  int err = leader_resolve(ps, &info, true);
   if (!err) {
     err = uv_tcp_bind(&l->psocket.tcp, info.addrinfo->ai_addr, 0);
     uv_freeaddrinfo(info.addrinfo);
