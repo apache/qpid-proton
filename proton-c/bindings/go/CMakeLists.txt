@@ -58,7 +58,7 @@ set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACH
 # done.
 add_custom_target(go-build ALL
   COMMAND ${GO_INSTALL} qpid.apache.org/...
-  DEPENDS qpid-proton
+  DEPENDS qpid-proton-core
   WORKING_DIRECTORY $ENV{PWD})
 
 add_test(
