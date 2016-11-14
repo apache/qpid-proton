@@ -22,7 +22,7 @@
 #include <proton/ssl.h>
 #include <proton/error.h>
 #include <proton/transport.h>
-#include "engine/engine-internal.h"
+#include "core/engine-internal.h"
 
 
 /** @file

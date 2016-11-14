@@ -25,7 +25,6 @@
 #include <proton/import_export.h>
 #include <proton/object.h>
 #include <proton/event.h>
-#include <proton/io.h>
 #include <proton/type_compat.h>
 
 #ifdef __cplusplus
@@ -46,6 +45,34 @@ extern "C" {
  * An iterator for selectables.
  */
 typedef pn_iterator_t pn_selectables_t;
+
+/**
+ * A ::pn_socket_t provides an abstract handle to an IO stream.  The
+ * pipe version is uni-directional.  The network socket version is
+ * bi-directional.  Both are non-blocking.
+ *
+ * pn_socket_t handles from ::pn_pipe() may only be used with
+ * ::pn_read(), ::pn_write(), ::pn_close() and pn_selector_select().
+ *
+ * pn_socket_t handles from ::pn_listen(), ::pn_accept() and
+ * ::pn_connect() must perform further IO using Proton functions.
+ * Mixing Proton io.h functions with native IO functions on the same
+ * handles will result in undefined behavior.
+ *
+ * pn_socket_t handles may only be used with a single pn_io_t during
+ * their lifetime.
+ */
+#if defined(_WIN32) && ! defined(__CYGWIN__)
+#ifdef _WIN64
+typedef unsigned __int64 pn_socket_t;
+#else
+typedef unsigned int pn_socket_t;
+#endif
+#define PN_INVALID_SOCKET (pn_socket_t)(~0)
+#else
+typedef int pn_socket_t;
+#define PN_INVALID_SOCKET (-1)
+#endif
 
 /**
  * A selectable object provides an interface that can be used to
@@ -72,7 +99,7 @@ typedef struct pn_selectable_t pn_selectable_t;
  *
  * @return a pointer to a new selectables iterator
  */
-PN_EXTERN pn_selectables_t *pn_selectables(void);
+PNX_EXTERN pn_selectables_t *pn_selectables(void);
 
 /**
  * Get the next selectable from an iterator.
@@ -80,25 +107,25 @@ PN_EXTERN pn_selectables_t *pn_selectables(void);
  * @param[in] selectables a selectable iterator
  * @return the next selectable from the iterator
  */
-PN_EXTERN pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables);
+PNX_EXTERN pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables);
 
 /**
  * Free a selectables iterator.
  *
  * @param[in] selectables a selectables iterator (or NULL)
  */
-PN_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
+PNX_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
 
-PN_EXTERN pn_selectable_t *pn_selectable(void);
+PNX_EXTERN pn_selectable_t *pn_selectable(void);
 
-PN_EXTERN void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_on_error(pn_selectable_t *sel, void (*error)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_on_release(pn_selectable_t *sel, void (*release)(pn_selectable_t *));
-PN_EXTERN void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_readable(pn_selectable_t *sel, void (*readable)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_writable(pn_selectable_t *sel, void (*writable)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_expired(pn_selectable_t *sel, void (*expired)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_error(pn_selectable_t *sel, void (*error)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_release(pn_selectable_t *sel, void (*release)(pn_selectable_t *));
+PNX_EXTERN void pn_selectable_on_finalize(pn_selectable_t *sel, void (*finalize)(pn_selectable_t *));
 
-PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
+PNX_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
 
 /**
  * Get the file descriptor associated with a selectable.
@@ -106,7 +133,7 @@ PN_EXTERN pn_record_t *pn_selectable_attachments(pn_selectable_t *sel);
  * @param[in] selectable a selectable object
  * @return the file descriptor associated with the selectable
  */
-PN_EXTERN pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable);
+PNX_EXTERN pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable);
 
 /**
  * Set the file descriptor associated with a selectable.
@@ -114,7 +141,7 @@ PN_EXTERN pn_socket_t pn_selectable_get_fd(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  * @param[in] fd the file descriptor
  */
-PN_EXTERN void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd);
+PNX_EXTERN void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd);
 
 /**
  * Check if a selectable is interested in readable events.
@@ -122,9 +149,9 @@ PN_EXTERN void pn_selectable_set_fd(pn_selectable_t *selectable, pn_socket_t fd)
  * @param[in] selectable a selectable object
  * @return true iff the selectable is interested in read events
  */
-PN_EXTERN bool pn_selectable_is_reading(pn_selectable_t *selectable);
+PNX_EXTERN bool pn_selectable_is_reading(pn_selectable_t *selectable);
 
-PN_EXTERN void pn_selectable_set_reading(pn_selectable_t *sel, bool reading);
+PNX_EXTERN void pn_selectable_set_reading(pn_selectable_t *sel, bool reading);
 
 /**
  * Check if a selectable is interested in writable events.
@@ -132,9 +159,9 @@ PN_EXTERN void pn_selectable_set_reading(pn_selectable_t *sel, bool reading);
  * @param[in] selectable a selectable object
  * @return true iff the selectable is interested in writable events
  */
-PN_EXTERN bool pn_selectable_is_writing(pn_selectable_t *selectable);
+PNX_EXTERN bool pn_selectable_is_writing(pn_selectable_t *selectable);
 
-  PN_EXTERN void pn_selectable_set_writing(pn_selectable_t *sel, bool writing);
+  PNX_EXTERN void pn_selectable_set_writing(pn_selectable_t *sel, bool writing);
 
 /**
  * Get the next deadline for a selectable.
@@ -146,37 +173,37 @@ PN_EXTERN bool pn_selectable_is_writing(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  * @return the next deadline or zero
  */
-PN_EXTERN pn_timestamp_t pn_selectable_get_deadline(pn_selectable_t *selectable);
+PNX_EXTERN pn_timestamp_t pn_selectable_get_deadline(pn_selectable_t *selectable);
 
-PN_EXTERN void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t deadline);
+PNX_EXTERN void pn_selectable_set_deadline(pn_selectable_t *sel, pn_timestamp_t deadline);
 
 /**
  * Notify a selectable that the file descriptor is readable.
  *
  * @param[in] selectable a selectable object
  */
-PN_EXTERN void pn_selectable_readable(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_readable(pn_selectable_t *selectable);
 
 /**
  * Notify a selectable that the file descriptor is writable.
  *
  * @param[in] selectable a selectable object
  */
-PN_EXTERN void pn_selectable_writable(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_writable(pn_selectable_t *selectable);
 
 /**
  * Notify a selectable that there is an error on the file descriptor.
  *
  * @param[in] selectable a selectable object
  */
-PN_EXTERN void pn_selectable_error(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_error(pn_selectable_t *selectable);
 
 /**
  * Notify a selectable that its deadline has expired.
  *
  * @param[in] selectable a selectable object
  */
-PN_EXTERN void pn_selectable_expired(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_expired(pn_selectable_t *selectable);
 
 /**
  * Check if a selectable is registered.
@@ -188,7 +215,7 @@ PN_EXTERN void pn_selectable_expired(pn_selectable_t *selectable);
  * @param[in] selectable
  * @return true if the selectable is registered
  */
-PN_EXTERN bool pn_selectable_is_registered(pn_selectable_t *selectable);
+PNX_EXTERN bool pn_selectable_is_registered(pn_selectable_t *selectable);
 
 /**
  * Set the registered flag for a selectable.
@@ -198,7 +225,7 @@ PN_EXTERN bool pn_selectable_is_registered(pn_selectable_t *selectable);
  * @param[in] selectable a selectable object
  * @param[in] registered the registered flag
  */
-PN_EXTERN void pn_selectable_set_registered(pn_selectable_t *selectable, bool registered);
+PNX_EXTERN void pn_selectable_set_registered(pn_selectable_t *selectable, bool registered);
 
 /**
  * Check if a selectable is in the terminal state.
@@ -212,23 +239,23 @@ PN_EXTERN void pn_selectable_set_registered(pn_selectable_t *selectable, bool re
  * @param[in] selectable a selectable object
  * @return true if the selectable is in the terminal state, false otherwise
  */
-PN_EXTERN bool pn_selectable_is_terminal(pn_selectable_t *selectable);
+PNX_EXTERN bool pn_selectable_is_terminal(pn_selectable_t *selectable);
 
 /**
  * Terminate a selectable.
  *
  * @param[in] selectable a selectable object
  */
-PN_EXTERN void pn_selectable_terminate(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_terminate(pn_selectable_t *selectable);
 
-PN_EXTERN void pn_selectable_release(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_release(pn_selectable_t *selectable);
 
 /**
  * Free a selectable object.
  *
  * @param[in] selectable a selectable object (or NULL)
  */
-PN_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
+PNX_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
 
 /**
  * Configure a selectable with a set of callbacks that emit readable,
@@ -237,7 +264,7 @@ PN_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
  * @param[in] selectable a selectable objet
  * @param[in] collector a collector object
  */
-PN_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
+PNX_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
 
 /**
  * @}

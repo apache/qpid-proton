@@ -19,8 +19,11 @@
  *
  */
 
+#include "reactor/io.h"
+#include "reactor/reactor.h"
+#include "reactor/selector.h"
+
 #include <proton/handlers.h>
-#include <proton/selector.h>
 #include <proton/transport.h>
 #include <assert.h>
 
@@ -62,7 +65,7 @@ static void pn_iodispatch(pn_iohandler_t *handler, pn_event_t *event, pn_event_t
   pn_record_t *record = pn_reactor_attachments(reactor);
   pn_selector_t *selector = (pn_selector_t *) pn_record_get(record, PN_SELECTOR);
   if (!selector) {
-    selector = pn_io_selector(pn_reactor_io(reactor));
+    selector = pn_io_selector(pni_reactor_io(reactor));
     pn_record_def(record, PN_SELECTOR, PN_OBJECT);
     pn_record_set(record, PN_SELECTOR, selector);
     pn_decref(selector);

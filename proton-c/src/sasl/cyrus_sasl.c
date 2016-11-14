@@ -19,10 +19,10 @@
  *
  */
 
-#include "config.h"
+#include "core/config.h"
+#include "core/engine-internal.h"
 #include "sasl-internal.h"
 
-#include "engine/engine-internal.h"
 
 #include <sasl/sasl.h>
 #include <pthread.h>

@@ -19,22 +19,23 @@
  *
  */
 
+#include "io.h"
+#include "reactor.h"
+#include "selectable.h"
+#include "platform/platform.h" // pn_i_now
+
 #include <proton/object.h>
 #include <proton/handlers.h>
-#include <proton/io.h>
 #include <proton/event.h>
 #include <proton/transport.h>
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/link.h>
 #include <proton/delivery.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-
-#include "reactor.h"
-#include "selectable.h"
-#include "platform.h"
 
 struct pn_reactor_t {
   pn_record_t *attachments;
@@ -164,7 +165,7 @@ void pn_reactor_set_handler(pn_reactor_t *reactor, pn_handler_t *handler) {
   pn_incref(reactor->handler);
 }
 
-pn_io_t *pn_reactor_io(pn_reactor_t *reactor) {
+pn_io_t *pni_reactor_io(pn_reactor_t *reactor) {
   assert(reactor);
   return reactor->io;
 }
@@ -387,6 +388,16 @@ bool pn_reactor_quiesced(pn_reactor_t *reactor) {
   if (pn_collector_more(reactor->collector)) { return false; }
   // if we have just one event then we are quiesced if the quiesced event
   return pn_event_type(event) == PN_REACTOR_QUIESCED;
+}
+
+pn_handler_t *pn_event_root(pn_event_t *event)
+{
+  pn_handler_t *h = pn_record_get_handler(pn_event_attachments(event));
+  return h;
+}
+
+static void pni_event_set_root(pn_event_t *event, pn_handler_t *handler) {
+  pn_record_set_handler(pn_event_attachments(event), handler);
 }
 
 bool pn_reactor_process(pn_reactor_t *reactor) {

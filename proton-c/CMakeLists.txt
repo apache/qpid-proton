@@ -81,8 +81,8 @@ set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py)
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/codec/encodings.h.py
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
   )
 
 add_custom_command (
@@ -93,11 +93,11 @@ add_custom_command (
 
 # Select IO impl
 if(PN_WINAPI)
-  set (pn_io_impl src/windows/io.c src/windows/iocp.c src/windows/write_pipeline.c)
-  set (pn_selector_impl src/windows/selector.c)
+  set (pn_io_impl src/reactor/io/windows/io.c src/reactor/io/windows/iocp.c src/reactor/io/windows/write_pipeline.c)
+  set (pn_selector_impl src/reactor/io/windows/selector.c)
 else(PN_WINAPI)
-  set (pn_io_impl src/posix/io.c)
-  set (pn_selector_impl src/posix/selector.c)
+  set (pn_io_impl src/reactor/io/posix/io.c)
+  set (pn_selector_impl src/reactor/io/posix/selector.c)
 endif(PN_WINAPI)
 
 # Link in SASL if present
@@ -124,7 +124,7 @@ if (SSL_IMPL STREQUAL openssl)
   include_directories (${OPENSSL_INCLUDE_DIR})
   set (SSL_LIB ${OPENSSL_LIBRARIES})
 elseif (SSL_IMPL STREQUAL schannel)
-  set (pn_ssl_impl src/windows/schannel.c)
+  set (pn_ssl_impl src/ssl/schannel.c)
   set (SSL_LIB Crypt32.lib Secur32.lib)
 else ()
   set (pn_ssl_impl src/ssl/ssl_stub.c)
@@ -281,6 +281,7 @@ if (MSVC)
         /wd4800
         /wd4996
     )
+    set (qpid-proton-platform src/compiler/msvc/snprintf.c)
 endif (MSVC)
 
 macro (pn_absolute_install_dir NAME VALUE PREFIX)
@@ -303,49 +304,61 @@ add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
-set (qpid-proton-platform
+set (qpid-proton-platform-io
+  src/platform/platform.c
   ${pn_io_impl}
   ${pn_selector_impl}
-  src/platform.c
+  )
+
+set (qpid-proton-layers
   ${pn_sasl_impl}
   ${pn_ssl_impl}
   )
 
 set (qpid-proton-core
-  src/object/object.c
-  src/object/list.c
-  src/object/map.c
-  src/object/string.c
-  src/object/iterator.c
-  src/object/record.c
+  src/core/object/object.c
+  src/core/object/list.c
+  src/core/object/map.c
+  src/core/object/string.c
+  src/core/object/iterator.c
+  src/core/object/record.c
 
-  src/log.c
-  src/util.c
-  src/url.c
-  src/error.c
-  src/buffer.c
-  src/parser.c
-  src/scanner.c
-  src/types.c
+  src/core/log.c
+  src/core/util.c
+  src/core/error.c
+  src/core/buffer.c
+  src/core/types.c
 
-  src/framing/framing.c
+  src/core/framing.c
 
-  src/codec/codec.c
-  src/codec/decoder.c
-  src/codec/encoder.c
+  src/core/codec.c
+  src/core/decoder.c
+  src/core/encoder.c
 
-  src/dispatcher/dispatcher.c
-  src/engine/connection_engine.c
-  src/engine/engine.c
-  src/events/event.c
-  src/transport/autodetect.c
-  src/transport/transport.c
-  src/message/message.c
+  src/core/dispatcher.c
+  src/core/connection_engine.c
+  src/core/engine.c
+  src/core/event.c
+  src/core/autodetect.c
+  src/core/transport.c
+  src/core/message.c
+  )
+
+set (qpid-proton-include-generated
+  ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  )
+
+set (qpid-proton-extra
+  src/extra/parser.c
+  src/extra/scanner.c
+  src/extra/url.c
 
   src/reactor/reactor.c
   src/reactor/handler.c
   src/reactor/connection.c
   src/reactor/acceptor.c
+  src/reactor/selectable.c
   src/reactor/timer.c
 
   src/handlers/handshaker.c
@@ -356,12 +369,6 @@ set (qpid-proton-core
   src/messenger/subscription.c
   src/messenger/store.c
   src/messenger/transform.c
-  src/selectable.c
-  )
-
-set (qpid-proton-extra-deps
-  ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
   )
 
 set (qpid-proton-include
@@ -374,39 +381,42 @@ set (qpid-proton-include
   include/proton/engine.h
   include/proton/error.h
   include/proton/event.h
-  include/proton/handlers.h
   include/proton/import_export.h
-  include/proton/io.h
   include/proton/link.h
   include/proton/log.h
   include/proton/message.h
-  include/proton/messenger.h
   include/proton/object.h
-  include/proton/parser.h
-  include/proton/reactor.h
   include/proton/sasl.h
-  include/proton/scanner.h
-  include/proton/selectable.h
-  include/proton/selector.h
   include/proton/session.h
   include/proton/ssl.h
   include/proton/terminus.h
   include/proton/transport.h
   include/proton/type_compat.h
   include/proton/types.h
+)
+
+set (qpid-proton-include-extra
+  include/proton/handlers.h
+  include/proton/messenger.h
+  include/proton/parser.h
+  include/proton/reactor.h
+  include/proton/selectable.h
   include/proton/url.h
 )
 
-source_group("API Header Files" FILES ${qpid-proton-include})
+source_group("API Header Files" FILES ${qpid-proton-include} ${qpid-proton-include-extra})
 
 set_source_files_properties (
   ${qpid-proton-core}
+  ${qpid-proton-layers}
+  ${qpid-proton-extra}
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
   )
 
 set_source_files_properties (
   ${qpid-proton-platform}
+  ${qpid-proton-platform-io}
   PROPERTIES
   COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
@@ -414,18 +424,47 @@ set_source_files_properties (
 
 if (BUILD_WITH_CXX)
   set_source_files_properties (
-    ${qpid-proton-core} ${qpid-proton-platform}
+    ${qpid-proton-core}
+    ${qpid-proton-layers}
+    ${qpid-proton-extra}
+    ${qpid-proton-platform}
+    ${qpid-proton-platform-io}
     PROPERTIES LANGUAGE CXX
     )
 endif (BUILD_WITH_CXX)
 
 add_library (
-  qpid-proton SHARED
-
+  qpid-proton-core SHARED
   ${qpid-proton-core}
+  ${qpid-proton-layers}
   ${qpid-proton-platform}
   ${qpid-proton-include}
-  ${qpid-proton-extra-deps}
+  ${qpid-proton-include-generated}
+  )
+
+target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+
+set_target_properties (
+  qpid-proton-core
+  PROPERTIES
+  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
+  SOVERSION "${PN_LIB_SOMAJOR}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
+  )
+
+add_library(
+  qpid-proton SHARED
+  # Proton Core
+  ${qpid-proton-core}
+  ${qpid-proton-layers}
+  ${qpid-proton-platform}
+  ${qpid-proton-include}
+  ${qpid-proton-include-generated}
+
+  # Proton Reactor/Messenger
+  ${qpid-proton-extra}
+  ${qpid-proton-platform-io}
+  ${qpid-proton-include-extra}
   )
 
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
@@ -471,13 +510,24 @@ configure_file(
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton-core.pc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-core.pc @ONLY)
+install (FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-core.pc
+  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+
 
 if (DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
 set(PROTONLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton${CMAKE_IMPORT_LIBRARY_SUFFIX})
 set(PROTONLIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+set(PROTONCORELIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-core${CMAKE_IMPORT_LIBRARY_SUFFIX})
+set(PROTONCORELIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-core${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
 else ()
 set(PROTONLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_SHARED_LIBRARY_SUFFIX})
 set(PROTONLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(PROTONCORELIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-core${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(PROTONCORELIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-core${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif ()
 
 include(WriteBasicConfigVersionFile)

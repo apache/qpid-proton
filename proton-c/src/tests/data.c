@@ -22,7 +22,7 @@
 #undef NDEBUG                   /* Make sure that assert() is enabled even in a release build. */
 
 #include <proton/codec.h>
-#include "../codec/data.h"
+#include "core/data.h"
 #include <assert.h>
 #include <stdio.h>
 

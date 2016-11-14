@@ -21,7 +21,7 @@
 
 #include "sasl-internal.h"
 
-#include "engine/engine-internal.h"
+#include "core/engine-internal.h"
 
 static const char ANONYMOUS[] = "ANONYMOUS";
 static const char EXTERNAL[] = "EXTERNAL";

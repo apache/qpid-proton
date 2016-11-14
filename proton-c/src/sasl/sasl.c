@@ -21,13 +21,14 @@
 
 #include "sasl-internal.h"
 
-#include "dispatch_actions.h"
-#include "engine/engine-internal.h"
+#include "core/autodetect.h"
+#include "core/dispatch_actions.h"
+#include "core/engine-internal.h"
+#include "core/util.h"
 #include "protocol.h"
+
 #include "proton/ssl.h"
 #include "proton/types.h"
-#include "util.h"
-#include "transport/autodetect.h"
 
 #include <assert.h>
 

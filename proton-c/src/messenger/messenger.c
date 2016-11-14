@@ -27,7 +27,6 @@
 #include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
-#include <proton/selector.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -35,14 +34,17 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "util.h"
-#include "platform.h"
-#include "platform_fmt.h"
+#include "core/log_private.h"
+#include "core/util.h"
+#include "platform/platform.h" // pn_i_getpid, pn_i_now, pni_snprintf
+#include "platform/platform_fmt.h"
 #include "store.h"
-#include "transform.h"
 #include "subscription.h"
-#include "selectable.h"
-#include "log_private.h"
+#include "transform.h"
+
+#include "reactor/io.h"
+#include "reactor/selectable.h"
+#include "reactor/selector.h"
 
 typedef struct pn_link_ctx_t pn_link_ctx_t;
 
@@ -980,7 +982,7 @@ static void pn_condition_report(const char *pfx, pn_condition_t *condition)
             pn_condition_redirect_port(condition));
   } else if (pn_condition_is_set(condition)) {
     char error[1024];
-    snprintf(error, 1024, "(%s) %s",
+    pni_snprintf(error, 1024, "(%s) %s",
              pn_condition_get_name(condition),
              pn_condition_get_description(condition));
     pn_error_report(pfx, error);

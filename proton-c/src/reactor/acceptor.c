@@ -19,13 +19,14 @@
  *
  */
 
-#include <proton/io.h>
 #include <proton/sasl.h>
-#include <proton/selector.h>
 #include <proton/transport.h>
 #include <proton/connection.h>
+
+#include "io.h"
 #include "reactor.h"
 #include "selectable.h"
+#include "selector.h"
 
 #include <string.h>
 
@@ -38,7 +39,7 @@ PN_HANDLE(PNI_ACCEPTOR_CONNECTION)
 void pni_acceptor_readable(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
   char name[1024];
-  pn_socket_t sock = pn_accept(pn_reactor_io(reactor), pn_selectable_get_fd(sel), name, 1024);
+  pn_socket_t sock = pn_accept(pni_reactor_io(reactor), pn_selectable_get_fd(sel), name, 1024);
   pn_handler_t *handler = (pn_handler_t *) pn_record_get(pn_selectable_attachments(sel), PNI_ACCEPTOR_HANDLER);
   if (!handler) { handler = pn_reactor_get_handler(reactor); }
   pn_record_t *record = pn_selectable_attachments(sel);
@@ -67,12 +68,12 @@ void pni_acceptor_readable(pn_selectable_t *sel) {
 void pni_acceptor_finalize(pn_selectable_t *sel) {
   pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
   if (pn_selectable_get_fd(sel) != PN_INVALID_SOCKET) {
-    pn_close(pn_reactor_io(reactor), pn_selectable_get_fd(sel));
+    pn_close(pni_reactor_io(reactor), pn_selectable_get_fd(sel));
   }
 }
 
 pn_acceptor_t *pn_reactor_acceptor(pn_reactor_t *reactor, const char *host, const char *port, pn_handler_t *handler) {
-  pn_socket_t socket = pn_listen(pn_reactor_io(reactor), host, port);
+  pn_socket_t socket = pn_listen(pni_reactor_io(reactor), host, port);
   if (socket == PN_INVALID_SOCKET) {
     return NULL;
   }
@@ -94,7 +95,7 @@ void pn_acceptor_close(pn_acceptor_t *acceptor) {
   if (!pn_selectable_is_terminal(sel)) {
     pn_reactor_t *reactor = (pn_reactor_t *) pni_selectable_get_context(sel);
     pn_socket_t socket = pn_selectable_get_fd(sel);
-    pn_close(pn_reactor_io(reactor), socket);
+    pn_close(pni_reactor_io(reactor), socket);
     pn_selectable_set_fd(sel, PN_INVALID_SOCKET);
     pn_selectable_terminate(sel);
     pn_reactor_update(reactor, sel);

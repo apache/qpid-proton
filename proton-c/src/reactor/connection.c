@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include "io.h"
 #include "selectable.h"
 #include "reactor.h"
 
@@ -187,12 +188,12 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
       pn_transport_close_tail(transport);
       pn_transport_close_head(transport);
   } else {
-      pn_socket_t sock = pn_connect(pn_reactor_io(reactor), host, port);
+      pn_socket_t sock = pn_connect(pni_reactor_io(reactor), host, port);
       // invalid sockets are ignored by poll, so we need to do this manualy
       if (sock == PN_INVALID_SOCKET) {
           pn_condition_t *cond = pn_transport_condition(transport);
           pn_condition_set_name(cond, "proton:io");
-          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+          pn_condition_set_description(cond, pn_error_text(pn_reactor_error(reactor)));
           pn_transport_close_tail(transport);
           pn_transport_close_head(transport);
       } else {
@@ -215,14 +216,14 @@ static void pni_connection_readable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t capacity = pn_transport_capacity(transport);
   if (capacity > 0) {
-    ssize_t n = pn_recv(pn_reactor_io(reactor), pn_selectable_get_fd(sel),
+    ssize_t n = pn_recv(pni_reactor_io(reactor), pn_selectable_get_fd(sel),
                         pn_transport_tail(transport), capacity);
     if (n <= 0) {
-      if (n == 0 || !pn_wouldblock(pn_reactor_io(reactor))) {
+      if (n == 0 || !pn_wouldblock(pni_reactor_io(reactor))) {
         if (n < 0) {
           pn_condition_t *cond = pn_transport_condition(transport);
           pn_condition_set_name(cond, "proton:io");
-          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+          pn_condition_set_description(cond, pn_error_text(pn_reactor_error(reactor)));
         }
         pn_transport_close_tail(transport);
       }
@@ -246,14 +247,14 @@ static void pni_connection_writable(pn_selectable_t *sel)
   pn_transport_t *transport = pni_transport(sel);
   ssize_t pending = pn_transport_pending(transport);
   if (pending > 0) {
-    ssize_t n = pn_send(pn_reactor_io(reactor), pn_selectable_get_fd(sel),
+    ssize_t n = pn_send(pni_reactor_io(reactor), pn_selectable_get_fd(sel),
                         pn_transport_head(transport), pending);
     if (n < 0) {
-      if (!pn_wouldblock(pn_reactor_io(reactor))) {
+      if (!pn_wouldblock(pni_reactor_io(reactor))) {
         pn_condition_t *cond = pn_transport_condition(transport);
         if (!pn_condition_is_set(cond)) {
           pn_condition_set_name(cond, "proton:io");
-          pn_condition_set_description(cond, pn_error_text(pn_io_error(pn_reactor_io(reactor))));
+          pn_condition_set_description(cond, pn_error_text(pn_reactor_error(reactor)));
         }
         pn_transport_close_head(transport);
       }
@@ -296,7 +297,7 @@ static void pni_connection_finalize(pn_selectable_t *sel) {
   pn_record_t *record = pn_transport_attachments(transport);
   pn_record_set(record, PN_TRANCTX, NULL);
   pn_socket_t fd = pn_selectable_get_fd(sel);
-  pn_close(pn_reactor_io(reactor), fd);
+  pn_close(pni_reactor_io(reactor), fd);
 }
 
 pn_selectable_t *pn_reactor_selectable_transport(pn_reactor_t *reactor, pn_socket_t sock, pn_transport_t *transport) {

@@ -26,9 +26,9 @@
 #include <proton/url.h>
 
 void pni_record_init_reactor(pn_record_t *record, pn_reactor_t *reactor);
-void pni_event_set_root(pn_event_t *event, pn_handler_t *handler);
 void pni_reactor_set_connection_peer_address(pn_connection_t *connection,
                                              const char *host,
                                              const char *port);
+pn_io_t *pni_reactor_io(pn_reactor_t *reactor);
 
 #endif /* src/reactor.h */
