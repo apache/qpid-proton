@@ -22,11 +22,45 @@
 
 namespace {
 
-void parse_to_string_test() {
-    std::string s("amqp://foo:xyz/path");
+void check_url(const std::string& s,
+               const std::string& scheme,
+               const std::string& user,
+               const std::string& pwd,
+               const std::string& host,
+               const std::string& port,
+               const std::string& path
+              )
+{
     proton::url u(s);
-    ASSERT_EQUAL(to_string(u), s);
+    ASSERT_EQUAL(scheme, u.scheme());
+    ASSERT_EQUAL(user, u.user());
+    ASSERT_EQUAL(pwd, u.password());
+    ASSERT_EQUAL(host, u.host());
+    ASSERT_EQUAL(port, u.port());
+    ASSERT_EQUAL(path, u.path());
 }
+
+void parse_to_string_test() {
+    check_url("amqp://foo:xyz/path",
+              "amqp", "", "", "foo", "xyz", "path");
+    check_url("amqp://username:password@host:1234/path",
+              "amqp", "username", "password", "host", "1234", "path");
+    check_url("host:1234",
+              "amqp", "", "", "host", "1234", "");
+    check_url("host",
+              "amqp", "", "", "host", "amqp", "");
+    check_url("host/path",
+              "amqp", "", "", "host", "amqp", "path");
+    check_url("amqps://host",
+              "amqps", "", "", "host", "amqps", "");
+    check_url("/path",
+              "amqp", "", "", "localhost", "amqp", "path");
+    check_url("",
+              "amqp", "", "", "localhost", "amqp", "");
+    check_url(":1234",
+              "amqp", "", "", "localhost", "1234", "");
+}
+
 }
 
 int main(int, char**) {

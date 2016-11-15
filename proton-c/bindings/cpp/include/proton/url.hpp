@@ -22,13 +22,12 @@
  *
  */
 
+#include "./internal/pn_unique_ptr.hpp"
 #include "./types_fwd.hpp"
 #include "./error.hpp"
 
 #include <iosfwd>
 #include <string>
-
-struct pn_url_t;
 
 namespace proton {
 
@@ -124,7 +123,8 @@ class url {
     friend PN_CPP_EXTERN std::string to_string(const url&);
 
   private:
-    pn_url_t* url_;
+    struct impl;
+    internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
 

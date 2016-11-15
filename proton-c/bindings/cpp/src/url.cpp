@@ -23,73 +23,239 @@
 
 #include "proton/error.hpp"
 
-#include <proton/url.h>
-
 #include "proton_bits.hpp"
 
+#include <cstdlib>
+#include <cstring>
+#include <iomanip>
 #include <sstream>
-
-namespace proton {
-
-url_error::url_error(const std::string& s) : error(s) {}
 
 namespace {
 
-pn_url_t* parse_throw(const char* s) {
-    pn_url_t* u = pn_url_parse(s);
-    if (!u) throw url_error("invalid URL: " + std::string(s));
-    return u;
+/** URL-encode src and append to dst. */
+static std::string pni_urlencode(const std::string &src) {
+    static const char *bad = "@:/";
+
+    std::ostringstream dst;
+    dst << std::hex << std::uppercase << std::setfill('0');
+
+    std::size_t i = 0;
+    std::size_t j = src.find_first_of(bad);
+    while (j!=std::string::npos) {
+        dst << src.substr(i, j-i);
+        dst << "%" << std::setw(2) << src[j];
+        i = j + 1;
+        j = src.find_first_of(bad);
+    }
+    dst << src.substr(i);
+    return dst.str();
 }
 
-pn_url_t* parse_allow_empty(const char* s) {
-    return s && *s ? parse_throw(s) : pn_url();
+// Low level url parser
+static void pni_urldecode(const char *src, char *dst)
+{
+  const char *in = src;
+  char *out = dst;
+  while (*in != '\0')
+  {
+    if ('%' == *in)
+    {
+      if ((in[1] != '\0') && (in[2] != '\0'))
+      {
+        char esc[3];
+        esc[0] = in[1];
+        esc[1] = in[2];
+        esc[2] = '\0';
+        unsigned long d = std::strtoul(esc, NULL, 16);
+        *out = (char)d;
+        in += 3;
+        out++;
+      }
+      else
+      {
+        *out = *in;
+        in++;
+        out++;
+      }
+    }
+    else
+    {
+      *out = *in;
+      in++;
+      out++;
+    }
+  }
+  *out = '\0';
 }
 
-void replace(pn_url_t*& var, pn_url_t* val) {
-    if (var) pn_url_free(var);
-    var = val;
-}
+void parse_url(char *url, const char **scheme, const char **user, const char **pass, const char **host, const char **port, const char **path)
+{
+  if (!url) return;
 
-void defaults(pn_url_t* u) {
-  const char* scheme = pn_url_get_scheme(u);
-  const char* port = pn_url_get_port(u);
-  if (!scheme || *scheme=='\0' ) pn_url_set_scheme(u, url::AMQP.c_str());
-  if (!port || *port=='\0' ) pn_url_set_port(u, pn_url_get_scheme(u));
+  char *slash = std::strchr(url, '/');
+
+  if (slash && slash>url) {
+    char *scheme_end = std::strstr(slash-1, "://");
+
+    if (scheme_end && scheme_end<slash) {
+      *scheme_end = '\0';
+      *scheme = url;
+      url = scheme_end + 3;
+      slash = std::strchr(url, '/');
+    }
+  }
+
+  if (slash) {
+    *slash = '\0';
+    *path = slash + 1;
+  }
+
+  char *at = std::strchr(url, '@');
+  if (at) {
+    *at = '\0';
+    char *up = url;
+    url = at + 1;
+    char *colon = std::strchr(up, ':');
+    if (colon) {
+      *colon = '\0';
+      char *p = colon + 1;
+      pni_urldecode(p, p);
+      *pass = p;
+    }
+    pni_urldecode(up, up);
+    *user = up;
+  }
+
+  *host = url;
+  char *open = (*url == '[') ? url : 0;
+  if (open) {
+    char *close = std::strchr(open, ']');
+    if (close) {
+        *host = open + 1;
+        *close = '\0';
+        url = close + 1;
+    }
+  }
+
+  char *colon = std::strchr(url, ':');
+  if (colon) {
+    *colon = '\0';
+    *port = colon + 1;
+  }
 }
 
 } // namespace
 
-url::url(const std::string &s) : url_(parse_throw(s.c_str())) { defaults(url_); }
+namespace proton {
 
-url::url(const std::string &s, bool d) : url_(parse_throw(s.c_str())) { if (d) defaults(url_); }
+struct url::impl {
+    static const char* const default_host;
+    const char* scheme;
+    const char* username;
+    const char* password;
+    const char* host;
+    const char* port;
+    const char* path;
+    char* cstr;
+    mutable std::string str;
 
-url::url(const url& u) : url_(parse_allow_empty(pn_url_str(u.url_))) {}
+    impl(const std::string& s) :
+      scheme(0), username(0), password(0), host(0), port(0), path(0),
+      cstr(new char[s.size()+1])
+    {
+        std::strncpy(cstr, s.c_str(), s.size());
+        cstr[s.size()] = 0;
+        parse_url(cstr, &scheme, &username, &password, &host, &port, &path);
+    }
 
-url::~url() { pn_url_free(url_); }
+    ~impl() {
+        delete [] cstr;
+    }
+
+    void defaults() {
+        if (!scheme || *scheme=='\0' ) scheme = proton::url::AMQP.c_str();
+        if (!host || *host=='\0' ) host = default_host;
+        if (!port || *port=='\0' ) port = scheme;
+    }
+
+    operator std::string() const {
+        if ( str.empty() ) {
+            if (scheme) {
+                str += scheme;
+                str += "://";
+            }
+            if (username) {
+                str += pni_urlencode(username);
+            }
+            if (password) {
+                str += ":";
+                str += pni_urlencode(password);
+            }
+            if (username || password) {
+                str += "@";
+            }
+            if (host) {
+                if (std::strchr(host, ':')) {
+                    str += '[';
+                    str += host;
+                    str += ']';
+                } else {
+                    str += host;
+                }
+            }
+            if (port) {
+                str += ':';
+                str += port;
+            }
+            if (path) {
+                str += '/';
+                str += path;
+            }
+        }
+        return str;
+    }
+
+};
+
+const char* const url::impl::default_host = "localhost";
+
+
+url_error::url_error(const std::string& s) : error(s) {}
+
+url::url(const std::string &s) : impl_(new impl(s)) { impl_->defaults(); }
+
+url::url(const std::string &s, bool d) : impl_(new impl(s)) { if (d) impl_->defaults(); }
+
+url::url(const url& u) : impl_(new impl(u)) {}
+
+url::~url() {}
 
 url& url::operator=(const url& u) {
-    if (this != &u) replace(url_, parse_allow_empty(pn_url_str(u.url_)));
+    if (this != &u) {
+        impl_.reset(new impl(*u.impl_));
+    }
     return *this;
 }
 
-url::operator std::string() const { return str(pn_url_str(url_)); }
+url::operator std::string() const { return *impl_; }
 
-std::string url::scheme() const { return str(pn_url_get_scheme(url_)); }
-std::string url::user() const { return str(pn_url_get_username(url_)); }
-std::string url::password() const { return str(pn_url_get_password(url_)); }
-std::string url::host() const { return str(pn_url_get_host(url_)); }
-std::string url::port() const { return str(pn_url_get_port(url_)); }
-std::string url::path() const { return str(pn_url_get_path(url_)); }
+std::string url::scheme() const { return str(impl_->scheme); }
+std::string url::user() const { return str(impl_->username); }
+std::string url::password() const { return str(impl_->password); }
+std::string url::host() const { return str(impl_->host); }
+std::string url::port() const { return str(impl_->port); }
+std::string url::path() const { return str(impl_->path); }
 
 std::string url::host_port() const { return host() + ":" + port(); }
 
-bool url::empty() const { return *pn_url_str(url_) == '\0'; }
+bool url::empty() const { return impl_->str.empty(); }
 
 const std::string url::AMQP("amqp");
 const std::string url::AMQPS("amqps");
 
 uint16_t url::port_int() const {
     // TODO aconway 2015-10-27: full service name lookup
+    // astitcher 2016-11-17: It is hard to make the full service name lookup platform independent
     if (port() == AMQP) return 5672;
     if (port() == AMQPS) return 5671;
     std::istringstream is(port());
@@ -101,21 +267,21 @@ uint16_t url::port_int() const {
 }
 
 std::ostream& operator<<(std::ostream& o, const url& u) {
-    return o << pn_url_str(u.url_);
+    return o << std::string(u);
 }
 
 std::string to_string(const url& u) {
-    return std::string(pn_url_str(u.url_));
+    return u;
 }
 
 std::istream& operator>>(std::istream& i, url& u) {
     std::string s;
     i >> s;
     if (!i.fail() && !i.bad()) {
-        pn_url_t* p = pn_url_parse(s.c_str());
-        if (p) {
-            replace(u.url_, p);
-            defaults(u.url_);
+        if (!s.empty()) {
+            url::impl* p = new url::impl(s);
+            p->defaults();
+            u.impl_.reset(p);
         } else {
             i.clear(std::ios::failbit);
         }
