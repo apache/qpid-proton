@@ -91,6 +91,11 @@ add_custom_command (
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
   )
 
+add_custom_target(
+  generated_c_files
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  )
+
 # Select IO impl
 if(PN_WINAPI)
   set (pn_io_impl src/reactor/io/windows/io.c src/reactor/io/windows/iocp.c src/reactor/io/windows/write_pipeline.c)
@@ -300,16 +305,38 @@ pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
 pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
 pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
 
-add_subdirectory(bindings)
 add_subdirectory(docs/api)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
+# for full source distribution:
+set (qpid-proton-platform-all
+  src/platform/platform.c
+  src/reactor/io/windows/io.c
+  src/reactor/io/windows/iocp.c
+  src/reactor/io/windows/write_pipeline.c
+  src/reactor/io/windows/selector.c
+  src/reactor/io/posix/io.c
+  src/reactor/io/posix/selector.c
+  )
+
+# platform specific library build:
 set (qpid-proton-platform-io
   src/platform/platform.c
   ${pn_io_impl}
   ${pn_selector_impl}
   )
 
+# for full source distribution:
+set (qpid-proton-layers-all
+  src/sasl/sasl.c
+  src/sasl/cyrus_sasl.c
+  src/sasl/none_sasl.c
+  src/ssl/openssl.c
+  src/ssl/schannel.c
+  src/ssl/ssl_stub.c
+  )
+
+# for current build system's environment:
 set (qpid-proton-layers
   ${pn_sasl_impl}
   ${pn_ssl_impl}
@@ -347,6 +374,37 @@ set (qpid-proton-core
 set (qpid-proton-include-generated
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
   ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
+  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
+  )
+
+set (qpid-proton-private-includes
+  src/extra/scanner.h
+  src/messenger/store.h
+  src/messenger/subscription.h
+  src/messenger/messenger.h
+  src/messenger/transform.h
+  src/ssl/ssl-internal.h
+  src/sasl/sasl-internal.h
+  src/core/autodetect.h
+  src/core/log_private.h
+  src/core/config.h
+  src/core/encoder.h
+  src/core/dispatch_actions.h
+  src/core/engine-internal.h
+  src/core/transport.h
+  src/core/framing.h
+  src/core/buffer.h
+  src/core/util.h
+  src/core/dispatcher.h
+  src/core/data.h
+  src/core/decoder.h
+  src/reactor/io/windows/iocp.h
+  src/reactor/selector.h
+  src/reactor/io.h
+  src/reactor/reactor.h
+  src/reactor/selectable.h
+  src/platform/platform.h
+  src/platform/platform_fmt.h
   )
 
 set (qpid-proton-extra
@@ -376,6 +434,7 @@ set (qpid-proton-include
   include/proton/codec.h
   include/proton/condition.h
   include/proton/connection.h
+  include/proton/connection_engine.h
   include/proton/delivery.h
   include/proton/disposition.h
   include/proton/engine.h
@@ -403,6 +462,10 @@ set (qpid-proton-include-extra
   include/proton/selectable.h
   include/proton/url.h
 )
+
+# note: process bindings after the source lists have been defined so
+# the bindings can reference them
+add_subdirectory(bindings)
 
 source_group("API Header Files" FILES ${qpid-proton-include} ${qpid-proton-include-extra})
 
@@ -441,6 +504,7 @@ add_library (
   ${qpid-proton-include}
   ${qpid-proton-include-generated}
   )
+add_dependencies(qpid-proton-core generated_c_files)
 
 target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
@@ -466,6 +530,7 @@ add_library(
   ${qpid-proton-platform-io}
   ${qpid-proton-include-extra}
   )
+add_dependencies(qpid-proton generated_c_files)
 
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
