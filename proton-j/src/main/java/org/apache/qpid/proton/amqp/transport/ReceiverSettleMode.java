@@ -27,11 +27,28 @@ import org.apache.qpid.proton.amqp.UnsignedByte;
 
 public enum ReceiverSettleMode
 {
-    FIRST, SECOND;
+    FIRST(0),
+    SECOND(1);
 
-    public UnsignedByte getValue()
-    {
-        return UnsignedByte.valueOf((byte)ordinal());
+    private UnsignedByte value;
+
+    private ReceiverSettleMode(int value) {
+        this.value = UnsignedByte.valueOf((byte)value);
     }
 
+    public static ReceiverSettleMode valueOf(UnsignedByte value) {
+
+        switch (value.intValue()) {
+            case 0:
+                return ReceiverSettleMode.FIRST;
+            case 1:
+                return ReceiverSettleMode.SECOND;
+            default:
+                throw new IllegalArgumentException("The value can be only 0 (for FIRST) and 1 (for SECOND)");
+        }
+    }
+
+    public UnsignedByte getValue() {
+        return this.value;
+    }
 }

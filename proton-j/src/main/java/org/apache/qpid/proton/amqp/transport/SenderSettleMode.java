@@ -27,11 +27,32 @@ import org.apache.qpid.proton.amqp.UnsignedByte;
 
 public enum SenderSettleMode
 {
-    UNSETTLED, SETTLED, MIXED;
+    UNSETTLED(0),
+    SETTLED(1),
+    MIXED(2);
 
-    public UnsignedByte getValue()
-    {
-        return UnsignedByte.valueOf((byte)ordinal());
+    private UnsignedByte value;
+
+    private SenderSettleMode(int value) {
+        this.value = UnsignedByte.valueOf((byte)value);
     }
 
+    public static SenderSettleMode valueOf(UnsignedByte value) {
+
+        switch (value.intValue()) {
+
+            case 0:
+                return SenderSettleMode.UNSETTLED;
+            case 1:
+                return SenderSettleMode.SETTLED;
+            case 2:
+                return SenderSettleMode.MIXED;
+            default:
+                throw new IllegalArgumentException("The value can be only 0 (for UNSETTLED), 1 (for SETTLED) and 2 (for MIXED)");
+        }
+    }
+
+    public UnsignedByte getValue() {
+        return this.value;
+    }
 }
