@@ -769,6 +769,10 @@ public class MessageImpl implements ProtonJMessage
             sb.append("properties=");
             sb.append(_properties);
         }
+        if (_messageAnnotations != null) {
+            sb.append("message_annotations=");
+            sb.append(_messageAnnotations);
+        }
         if (_body != null) {
             sb.append("body=");
             sb.append(_body);
