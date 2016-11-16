@@ -32,12 +32,6 @@
 
 #include <assert.h>
 
-static inline pn_transport_t *get_transport_internal(pn_sasl_t *sasl)
-{
-  // The external pn_sasl_t is really a pointer to the internal pni_transport_t
-  return ((pn_transport_t *)sasl);
-}
-
 static inline pni_sasl_t *get_sasl_internal(pn_sasl_t *sasl)
 {
   // The external pn_sasl_t is really a pointer to the internal pni_transport_t
