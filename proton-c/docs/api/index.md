@@ -1,35 +1,23 @@
 Proton Documentation            {#index}
 ====================
 
-## The Protocol Engine
+The @ref engine is an AMQP "protocol engine".  It provides functions to
+manipulate AMQP endpoints and messages and generates [events](@ref event) for
+the application to handle.  The @ref engine has no dependencies on IO or
+threading libraries.
 
-The [Engine API](@ref engine) is a "pure AMQP" toolkit, it decodes AMQP bytes
-into proton [events](@ref event) and generates AMQP bytes from application
-calls. There is no IO or threading code in this part of the library.
-
-## Proactive event-driven programming
-
-The [Proactor API](@ref proactor) is a pro-active, asynchronous framework to
+The @ref proactor is a proactive, asynchronous framework to
 build single or multi-threaded Proton C applications. It manages the IO
-transport layer so you can write portable, event-driven AMQP code using the @ref
-engine API.
+transport layer so you can write portable, event-driven AMQP code using the
+@ref engine API.
 
-## IO Integration
+**Low-level integration**: The @ref connection_driver provides
+a simple bytes in/bytes out interface to the @ref engine for a single
+connection.  You can use this to integrate proton with special IO libraries or
+external event loops. It is also possible to write your own implementation of the
+@ref proactor if you want to transparently replace proton's IO layer.
 
-The [connection driver](@ref connection_driver) provides a simple bytes in/bytes
-out, event-driven interface so you can read AMQP data from any source, process
-the resulting [events](@ref event) and write AMQP output to any destination. It
-lets you use proton in in alternate event loops, or for specialized embedded
-applications.
-
-It is also possible to write your own implementation of the @ref proactor if you
-are dealing with an unusual IO or threading framework. Any proton application
-written to the proactor API will be able to use your implementation.
-
-## Messenger and Reactor APIs (deprecated)
-
-The [Messenger](@ref messenger) [Reactor](@ref reactor) APIs are older APIs
-that were limited to single-threaded applications.
-
-Existing @ref reactor applications can be converted easily to use the @ref proactor,
-since they share the same @engine API and @ref event set.
+**Old APIs**: The @ref messenger and @ref reactor APIs are
+older APIs that were limited to single-threaded applications.
+@ref reactor applications can be converted to use the @ref proactor since
+most of the code is written to the common @ref engine API.

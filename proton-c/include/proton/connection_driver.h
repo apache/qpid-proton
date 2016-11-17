@@ -26,8 +26,7 @@
  * @defgroup connection_driver Connection Driver
  *
  * **Experimental**: Toolkit for integrating proton with arbitrary network or IO
- * transports. Provides a single point of control for an AMQP connection and
- * a simple bytes-in/bytes-out interface that lets you:
+ * transports via a bytes-in, bytes-out interface.
  *
  * - process AMQP-encoded bytes from some input byte stream
  * - generate ::pn_event_t events for your application to handle
@@ -35,10 +34,10 @@
  *
  * The pn_connection_driver_() functions provide a simplified API and extra
  * logic to use ::pn_connection_t and ::pn_transport_t as a unit.  You can also
- * access them directly for features that are not exposed via the @ref
- * connection_driver API.
+ * access them directly for features that do not have pn_connection_driver_()
+ * functions
  *
- * The engine buffers events and data, you should run it until
+ * The driver buffers events and data, you should run it until
  * pn_connection_driver_finished() is true, to ensure all reading, writing and
  * event handling (including ERROR and FINAL events) is finished.
  *
@@ -62,7 +61,7 @@
  *
  * ## Thread safety
  *
- * The @ref engine types are not thread safe, but each connection and its
+ * The @ref connection_driver types are not thread safe, but each connection and its
  * associated types forms an independent unit. Different connections can be
  * processed concurrently by different threads.
  *
@@ -89,7 +88,7 @@ typedef struct pn_connection_driver_t {
 } pn_connection_driver_t;
 
 /**
- * Set #connection and #transport to the provided values, or create a new
+ * Set connection and transport to the provided values, or create a new
  * @ref pn_connection_t or @ref pn_transport_t if either is NULL.
  * The provided values belong to the connection driver and will be freed by
  * pn_connection_driver_destroy()
@@ -114,7 +113,7 @@ PN_EXTERN int pn_connection_driver_init(pn_connection_driver_t*, pn_connection_t
 PN_EXTERN int pn_connection_driver_bind(pn_connection_driver_t *d);
 
 /**
- * Unbind, release and free #connection and #transport. Set all pointers to
+ * Unbind, release and free the connection and transport. Set all pointers to
  * NULL.  Does not free the @ref pn_connection_driver_t struct itself.
  */
 PN_EXTERN void pn_connection_driver_destroy(pn_connection_driver_t *);
@@ -191,7 +190,7 @@ PN_EXTERN pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *);
 PN_EXTERN bool pn_connection_driver_has_event(pn_connection_driver_t *);
 
 /**
- * Return true if the the engine is closed for reading and writing and there are
+ * Return true if the the driver is closed for reading and writing and there are
  * no more events.
  *
  * Call pn_connection_driver_free() to free all related memory.

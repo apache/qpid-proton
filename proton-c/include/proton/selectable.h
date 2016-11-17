@@ -51,11 +51,11 @@ typedef pn_iterator_t pn_selectables_t;
  * pipe version is uni-directional.  The network socket version is
  * bi-directional.  Both are non-blocking.
  *
- * pn_socket_t handles from ::pn_pipe() may only be used with
- * ::pn_read(), ::pn_write(), ::pn_close() and pn_selector_select().
+ * pn_socket_t handles from pn_pipe() may only be used with
+ * pn_read(), pn_write(), pn_close() and pn_selector_select().
  *
- * pn_socket_t handles from ::pn_listen(), ::pn_accept() and
- * ::pn_connect() must perform further IO using Proton functions.
+ * pn_socket_t handles from pn_listen(), pn_accept() and
+ * pn_connect() must perform further IO using Proton functions.
  * Mixing Proton io.h functions with native IO functions on the same
  * handles will result in undefined behavior.
  *

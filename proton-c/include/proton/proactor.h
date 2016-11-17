@@ -39,9 +39,9 @@ typedef struct pn_condition_t pn_condition_t;
  *
  * **Experimental**: Proactor API for portable, multi-threaded, asynchronous applications.
  *
- * The proactor establishes and listens for connections. It creates
- * the @ref transport that sends and receives data over the network and
- * delivers @ref event to application threads for handling.
+ * The proactor associates a @ref connection with a @ref transport, either
+ * by making an outgoing connection or accepting an incoming one.
+ * It delivers @ref event "events" to application threads for handling.
  *
  * **Multi-threading**:
  * The @ref proactor is thread-safe, but the @ref engine is not.  The proactor
@@ -53,7 +53,7 @@ typedef struct pn_condition_t pn_condition_t;
  */
 
 /**
- * The proactor.
+ * The proactor, see pn_proactor()
  */
 typedef struct pn_proactor_t pn_proactor_t;
 
@@ -71,9 +71,9 @@ void pn_proactor_free(pn_proactor_t*);
  * Connect connection to host/port. Connection and transport events will be
  * returned by pn_proactor_wait()
  *
- * @param[in] connection the proactor takes ownership do not free.
- * @param[in] host the address to listen on
- * @param[in] port the port to connect to
+ * @param[in] connection the proactor takes ownership, do not free
+ * @param[in] host address to connect on
+ * @param[in] port port to connect to
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by connection or transport events via pn_proactor_wait()
@@ -84,35 +84,40 @@ int pn_proactor_connect(pn_proactor_t*, pn_connection_t *connection, const char 
  * Start listening with listener.
  * pn_proactor_wait() will return a PN_LISTENER_ACCEPT event when a connection can be accepted.
  *
- * @param[in] listener proactor takes ownership of listener, do not free.
- * @param[in] host the address to listen on
- * @param[in] port the port to listen on
+ * @param[in] listener proactor takes ownership of listener, do not free
+ * @param[in] host address to listen on
+ * @param[in] port port to listen on
+ * @param[in] backlog number of connection requests to queue
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by pn_listener_condition() on the PN_LISTENER_CLOSE event.
  */
-int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *listener, const char *host, const char *port, int backlog);
+int pn_proactor_listen(pn_proactor_t *, pn_listener_t *listener, const char *host, const char *port, int backlog);
 
 /**
- * Wait for events to handle. Call pn_proactor_done() after handling events.
+ * Wait for events to handle.
  *
- * Thread safe: pn_proactor_wait() can be called concurrently, but the events in
- * the returned ::pn_event_batch_t must be handled sequentially.
+ * Handle events in the returned batch by calling pn_event_batch_next() until it
+ * returns NULL. You must call pn_proactor_done() to when you are finished.
  *
- * The proactor always returns events that must be handled sequentially in the
- * same batch or sequentially in a later batch after pn_proactor_done(). Any
- * events returned concurrently by pn_proactor_wait() are safe to handle
- * concurrently.
+ * If you call pn_proactor_done() before finishing the batch, the remaining
+ * events will be returned again by another call pn_proactor_wait().  This is
+ * less efficient, but allows you to handle part of a batch and then hand off
+ * the rest to another thread.
+ *
+ * Thread safe: can be called concurrently. Events in a single batch must be
+ * handled in sequence, but batches returned by separate calls to
+ * pn_proactor_wait() can be handled concurrently.
  */
 pn_event_batch_t *pn_proactor_wait(pn_proactor_t* d);
 
 /**
  * Call when done handling events.
  *
- * It is generally most efficient to handle the entire batch in the thread
- * that calls pn_proactor_wait(), then call pn_proactor_done(). If you call
- * pn_proactor_done() earlier, the remaining events will be returned again by
- * pn_proactor_wait(), possibly to another thread.
+ * Must be called exactly once to match each call to pn_proactor_wait().
+ *
+ * Thread safe: may be called from any thread provided the exactly once rules is
+ * respected.
  */
 void pn_proactor_done(pn_proactor_t* d, pn_event_batch_t *events);
 
@@ -145,17 +150,17 @@ void pn_proactor_set_timeout(pn_proactor_t* d, pn_millis_t timeout);
 void pn_connection_wake(pn_connection_t *c);
 
 /**
- * The proactor that created the connection.
+ * Return the proactor associated with a connection or null
  */
 pn_proactor_t *pn_connection_proactor(pn_connection_t *c);
 
 /**
- * Get the proactor that created the event or NULL.
+ * Return the proactor associated with an event or NULL.
  */
 pn_proactor_t *pn_event_proactor(pn_event_t *);
 
 /**
- * Get the listener for the event or NULL.
+ * Return the listener associated with an event or NULL.
  */
 pn_listener_t *pn_event_listener(pn_event_t *);
 

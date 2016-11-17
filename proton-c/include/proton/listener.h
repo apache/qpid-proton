@@ -29,7 +29,7 @@ extern "C" {
 /**
  * @file
  *
- * Listener API for the proton @proactor
+ * Listener API for the proton @ref proactor
  *
  * @defgroup listener Listener
  * @ingroup proactor
