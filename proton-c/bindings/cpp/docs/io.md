@@ -7,16 +7,16 @@ The `proton::io` namespace contains a service provider interface (SPI)
 that allows you to implement the Proton API over alternative IO or
 threading libraries.
 
-The `proton::io::connection_engine` class converts an AMQP-encoded
+The `proton::io::connection_driver` class converts an AMQP-encoded
 byte stream, read from any IO source, into `proton::messaging_handler`
 calls. It generates an AMQP-encoded byte stream as output that can be
 written to any IO destination.
 
-The connection engine is deliberately very simple and low level. It
+The connection driver is deliberately very simple and low level. It
 performs no IO of its own, no thread-related locking, and is written
 in simple C++98-compatible code.
 
-The connection engine can be used standalone as an AMQP translator, or
+The connection dirver can be used standalone as an AMQP translator, or
 you can implement the following two interfaces to provide a complete
 implementation of the Proton API that can run any Proton application:
 

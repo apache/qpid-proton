@@ -40,7 +40,7 @@ class message;
 class messaging_adapter;
 
 namespace io {
-class connection_engine;
+class connection_driver;
 }
 
 /// A handler for Proton messaging events.

@@ -123,6 +123,6 @@ The default container implementation is created using
 `proton::default_container`.
 
 You can implement your own container to integrate proton with any IO
-provider using the `proton::io::connection_engine`.
+provider using the `proton::io::connection_driver`.
 
 @see @ref io_page

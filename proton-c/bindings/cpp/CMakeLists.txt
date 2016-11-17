@@ -48,7 +48,7 @@ set(qpid-proton-cpp-source
   src/error_condition.cpp
   src/event_loop.cpp
   src/handler.cpp
-  src/io/connection_engine.cpp
+  src/io/connection_driver.cpp
   src/io/link_namer.cpp
   src/link.cpp
   src/listener.cpp

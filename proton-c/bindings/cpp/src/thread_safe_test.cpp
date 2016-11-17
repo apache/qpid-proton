@@ -24,7 +24,7 @@
 #include "proton_bits.hpp"
 
 #include "proton/thread_safe.hpp"
-#include "proton/io/connection_engine.hpp"
+#include "proton/io/connection_driver.hpp"
 
 #include <proton/connection.h>
 
@@ -37,7 +37,7 @@ void test_new() {
     pn_connection_t* c = 0;
     thread_safe<connection>* p = 0;
     {
-        io::connection_engine e;
+        io::connection_driver e;
         c = unwrap(e.connection());
         int r = pn_refcount(c);
         ASSERT(r >= 1); // engine may have internal refs (transport, collector).
@@ -54,7 +54,7 @@ void test_new() {
     {
         std::shared_ptr<thread_safe<connection> > sp;
         {
-            io::connection_engine e;
+            io::connection_driver e;
             c = unwrap(e.connection());
             sp = make_shared_thread_safe(e.connection());
         }
@@ -63,7 +63,7 @@ void test_new() {
     {
         std::unique_ptr<thread_safe<connection> > up;
         {
-            io::connection_engine e;
+            io::connection_driver e;
             c = unwrap(e.connection());
             up = make_unique_thread_safe(e.connection());
         }
@@ -78,7 +78,7 @@ void test_convert() {
     connection c;
     pn_connection_t* pc = 0;
     {
-        io::connection_engine eng;
+        io::connection_driver eng;
         c = eng.connection();
         pc = unwrap(c);         // Unwrap in separate scope to avoid confusion from temp values.
     }

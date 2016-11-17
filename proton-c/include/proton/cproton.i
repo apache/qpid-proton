@@ -39,6 +39,9 @@ typedef unsigned long int uintptr_t;
 %ignore pn_bytes_t;
 %ignore pn_rwbytes_t;
 
+/* pn_event_batch_t is not used directly by bindings */
+%ignore pn_event_batch_t;
+
 /* There is no need to wrap pn_class_t aa it is an internal implementation detail and cannot be used outside the library */
 %ignore pn_class_t;
 

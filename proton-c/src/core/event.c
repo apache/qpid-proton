@@ -28,7 +28,8 @@ struct pn_collector_t {
   pn_list_t *pool;
   pn_event_t *head;
   pn_event_t *tail;
-  bool freed;
+  bool freed:1;
+  bool head_returned:1;         /* Head has been returned by pn_collector_next() */
 };
 
 struct pn_event_t {
@@ -51,11 +52,8 @@ static void pn_collector_initialize(pn_collector_t *collector)
 static void pn_collector_drain(pn_collector_t *collector)
 {
   assert(collector);
-
-  while (pn_collector_peek(collector)) {
-    pn_collector_pop(collector);
-  }
-
+  while (pn_collector_next(collector))
+    ;
   assert(!collector->head);
   assert(!collector->tail);
 }
@@ -175,6 +173,7 @@ pn_event_t *pn_collector_peek(pn_collector_t *collector)
 
 bool pn_collector_pop(pn_collector_t *collector)
 {
+  collector->head_returned = false;
   pn_event_t *event = collector->head;
   if (event) {
     collector->head = event->next;
@@ -188,6 +187,19 @@ bool pn_collector_pop(pn_collector_t *collector)
 
   pn_decref(event);
   return true;
+}
+
+pn_event_t *pn_collector_next(pn_collector_t *collector)
+{
+  if (collector->head_returned) {
+    pn_collector_pop(collector);
+  }
+  collector->head_returned = collector->head;
+  return collector->head;
+}
+
+pn_event_t *pn_collector_prev(pn_collector_t *collector) {
+  return collector->head_returned ? collector->head : NULL;
 }
 
 bool pn_collector_more(pn_collector_t *collector)
@@ -385,4 +397,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_UNKNOWN";
   }
   return NULL;
+}
+
+pn_event_t *pn_event_batch_next(pn_event_batch_t *batch) {
+  return batch->next_event(batch);
 }

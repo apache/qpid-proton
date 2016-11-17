@@ -123,7 +123,7 @@ subscribe.
 /** @example mt/epoll_container.cpp
 
 An example implementation of the proton::container API that shows how
-to use the proton::io::connection_engine SPI to adapt the proton API
+to use the proton::io::connection_driver SPI to adapt the proton API
 to native IO, in this case using a multithreaded Linux epoll poller as
 the implementation.
 

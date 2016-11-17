@@ -24,7 +24,7 @@
 
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/io/connection_engine.hpp"
+#include "proton/io/connection_driver.hpp"
 #include "proton/event_loop.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/message.hpp"

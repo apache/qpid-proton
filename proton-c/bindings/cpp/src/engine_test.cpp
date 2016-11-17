@@ -24,7 +24,7 @@
 
 #include "proton/container.hpp"
 #include "proton/uuid.hpp"
-#include "proton/io/connection_engine.hpp"
+#include "proton/io/connection_driver.hpp"
 #include "proton/io/link_namer.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/types_fwd.hpp"
@@ -37,7 +37,7 @@ namespace {
 using namespace std;
 using namespace proton;
 
-using proton::io::connection_engine;
+using proton::io::connection_driver;
 using proton::io::const_buffer;
 using proton::io::mutable_buffer;
 
@@ -45,14 +45,14 @@ using test::dummy_container;
 
 typedef std::deque<char> byte_stream;
 
-/// In memory connection_engine that reads and writes from byte_streams
-struct in_memory_engine : public connection_engine {
+/// In memory connection_driver that reads and writes from byte_streams
+struct in_memory_engine : public connection_driver {
 
     byte_stream& reads;
     byte_stream& writes;
 
     in_memory_engine(byte_stream& rd, byte_stream& wr, class container& cont) :
-        connection_engine(cont), reads(rd), writes(wr) {}
+        connection_driver(cont), reads(rd), writes(wr) {}
 
     void do_read() {
         mutable_buffer rbuf = read_buffer();
@@ -247,7 +247,7 @@ void test_engine_disconnected() {
 
 void test_no_container() {
     // An engine with no container should throw, not crash.
-    connection_engine e;
+    connection_driver e;
     try {
         e.connection().container();
         FAIL("expected error");

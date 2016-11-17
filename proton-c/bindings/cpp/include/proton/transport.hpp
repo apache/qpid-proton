@@ -35,7 +35,7 @@ class error_condition;
 class sasl;
 
 namespace io {
-class connection_engine;
+class connection_driver;
 }
 
 /// A network channel supporting an AMQP connection.

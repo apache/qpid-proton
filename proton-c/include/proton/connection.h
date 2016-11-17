@@ -38,7 +38,7 @@ extern "C" {
 /**
  * @file
  *
- * Connection API for the proton Engine.
+ * Connection API for the proton @ref engine
  *
  * @defgroup connection Connection
  * @ingroup engine

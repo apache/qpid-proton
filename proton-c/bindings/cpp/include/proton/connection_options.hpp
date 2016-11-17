@@ -40,7 +40,7 @@ class proton_handler;
 class connection;
 
 namespace io {
-class connection_engine;
+class connection_driver;
 }
 
 /// Options for creating a connection.
@@ -163,7 +163,7 @@ class connection_options {
     /// @cond INTERNAL
   friend class container_impl;
   friend class connector;
-  friend class io::connection_engine;
+  friend class io::connection_driver;
   friend class connection;
     /// @endcond
 };

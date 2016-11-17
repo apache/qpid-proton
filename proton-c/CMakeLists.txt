@@ -369,7 +369,7 @@ set (qpid-proton-core
   src/core/encoder.c
 
   src/core/dispatcher.c
-  src/core/connection_engine.c
+  src/core/connection_driver.c
   src/core/engine.c
   src/core/event.c
   src/core/autodetect.c
@@ -440,7 +440,7 @@ set (qpid-proton-include
   include/proton/codec.h
   include/proton/condition.h
   include/proton/connection.h
-  include/proton/connection_engine.h
+  include/proton/connection_driver.h
   include/proton/delivery.h
   include/proton/disposition.h
   include/proton/engine.h

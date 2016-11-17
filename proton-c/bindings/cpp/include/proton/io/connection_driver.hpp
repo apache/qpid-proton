@@ -1,5 +1,5 @@
-#ifndef PROTON_IO_CONNECTION_ENGINE_HPP
-#define PROTON_IO_CONNECTION_ENGINE_HPP
+#ifndef PROTON_IO_CONNECTION_DRIVER_HPP
+#define PROTON_IO_CONNECTION_DRIVER_HPP
 
 /*
  *
@@ -32,7 +32,7 @@
 #include "../transport.hpp"
 #include "../types.hpp"
 
-#include <proton/connection_engine.h>
+#include <proton/connection_driver.h>
 
 #include <cstddef>
 #include <utility>
@@ -63,13 +63,9 @@ struct const_buffer {
     const_buffer(const char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// **Experimental** - An AMQP protocol engine for a single
-/// connection.
+/// **Experimental** - An AMQP driver for a single connection.
 ///
-/// A connection_engine is a protocol engine that integrates AMQP into
-/// any IO or concurrency framework.
-///
-/// io::connection_engine manages a single proton::connection and dispatches
+/// io::connection_driver manages a single proton::connection and dispatches
 /// events to a proton::messaging_handler. It does no IO of its own, but allows you to
 /// integrate AMQP protocol handling into any IO or concurrency framework.
 ///
@@ -78,7 +74,7 @@ struct const_buffer {
 /// proton::messaging_handler to respond to transport, connection,
 /// session, link, and message events. With a little care, the same
 /// handler classes can be used for both container and
-/// connection_engine. the @ref broker.cpp example illustrates this.
+/// connection_driver. the @ref broker.cpp example illustrates this.
 ///
 /// You need to write the IO code to read AMQP data to the
 /// read_buffer(). The engine parses the AMQP frames. dispatch() calls
@@ -96,7 +92,7 @@ struct const_buffer {
 ///
 /// The engine never throws exceptions.
 class
-PN_CPP_CLASS_EXTERN connection_engine {
+PN_CPP_CLASS_EXTERN connection_driver {
   public:
     /// An engine that is not associated with a proton::container or
     /// proton::event_loop.
@@ -104,20 +100,20 @@ PN_CPP_CLASS_EXTERN connection_engine {
     /// Accessing the container or event_loop for this connection in
     /// a proton::messaging_handler will throw a proton::error exception.
     ///
-    PN_CPP_EXTERN connection_engine();
+    PN_CPP_EXTERN connection_driver();
 
-    /// Create a connection engine associated with a proton::container and
+    /// Create a connection driver associated with a proton::container and
     /// optional event_loop. If the event_loop is not provided attempts to use
     /// it will throw proton::error.
     ///
     /// Takes ownership of the event_loop. Note the proton::connection created
-    /// by this connection_engine can outlive the connection_engine itself if
+    /// by this connection_driver can outlive the connection_driver itself if
     /// the user pins it in memory using the proton::thread_safe<> template.
     /// The event_loop is deleted when, and only when, the proton::connection is.
     ///
-    PN_CPP_EXTERN connection_engine(proton::container&, event_loop* loop = 0);
+    PN_CPP_EXTERN connection_driver(proton::container&, event_loop* loop = 0);
 
-    PN_CPP_EXTERN ~connection_engine();
+    PN_CPP_EXTERN ~connection_driver();
 
     /// Configure a connection by applying exactly the options in opts (including proton::messaging_handler)
     /// Does not apply any default options, to apply container defaults use connect() or accept()
@@ -189,27 +185,27 @@ PN_CPP_CLASS_EXTERN connection_engine {
     ///
     PN_CPP_EXTERN bool dispatch();
 
-    /// Get the AMQP connection associated with this connection_engine.
+    /// Get the AMQP connection associated with this connection_driver.
     /// The event_loop is availabe via proton::thread_safe<connection>(connection())
     PN_CPP_EXTERN proton::connection connection() const;
 
-    /// Get the transport associated with this connection_engine.
+    /// Get the transport associated with this connection_driver.
     PN_CPP_EXTERN proton::transport transport() const;
 
-    /// Get the container associated with this connection_engine, if there is one.
+    /// Get the container associated with this connection_driver, if there is one.
     PN_CPP_EXTERN proton::container* container() const;
 
  private:
     void init();
-    connection_engine(const connection_engine&);
-    connection_engine& operator=(const connection_engine&);
+    connection_driver(const connection_driver&);
+    connection_driver& operator=(const connection_driver&);
 
     messaging_handler* handler_;
     proton::container* container_;
-    pn_connection_engine_t engine_;
+    pn_connection_driver_t driver_;
 };
 
 } // io
 } // proton
 
-#endif // PROTON_IO_CONNECTION_ENGINE_HPP
+#endif // PROTON_IO_CONNECTION_DRIVER_HPP

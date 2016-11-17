@@ -5,35 +5,31 @@ Proton Documentation            {#index}
 
 The [Engine API](@ref engine) is a "pure AMQP" toolkit, it decodes AMQP bytes
 into proton [events](@ref event) and generates AMQP bytes from application
-calls.
+calls. There is no IO or threading code in this part of the library.
 
-The [connection engine](@ref connection_engine) provides a simple bytes in/bytes
+## Proactive event-driven programming
+
+The [Proactor API](@ref proactor) is a pro-active, asynchronous framework to
+build single or multi-threaded Proton C applications. It manages the IO
+transport layer so you can write portable, event-driven AMQP code using the @ref
+engine API.
+
+## IO Integration
+
+The [connection driver](@ref connection_driver) provides a simple bytes in/bytes
 out, event-driven interface so you can read AMQP data from any source, process
-the resulting [events](@ref event) and write AMQP output to any destination.
+the resulting [events](@ref event) and write AMQP output to any destination. It
+lets you use proton in in alternate event loops, or for specialized embedded
+applications.
 
-There is no IO or threading code in this part of the library, so it can be
-embedded in many different environments. The proton project provides language
-bindings (Python, Ruby, Go etc.) that embed it into the standard IO and
-threading facilities of the bound language.
-
-## Integrating with IO
-
-The [Proactor API](@ref proactor) is a pro-active, asynchronous framewokr to
-build single or multi-threaded Proton C applications.
-
-For advanced use-cases it is possible to write your own implementation of the
-proactor API for an unusual IO or threading framework. Any proton application
+It is also possible to write your own implementation of the @ref proactor if you
+are dealing with an unusual IO or threading framework. Any proton application
 written to the proactor API will be able to use your implementation.
 
-## Messenger and Reactor APIs
+## Messenger and Reactor APIs (deprecated)
 
-The [Messenger](@ref messenger) [Reactor](@ref reactor) APIs were intended
-to be simple APIs that included IO support directly out of the box.
+The [Messenger](@ref messenger) [Reactor](@ref reactor) APIs are older APIs
+that were limited to single-threaded applications.
 
-They both had good points but were both based on the assumption of a single-threaded
-environment using a POSIX-like poll() call. This was a problem for performance on some
-platforms and did not support multi-threaded applications.
-
-Note however that application code which interacts with the AMQP @ref engine and
-processes AMQP @ref "events" event is the same for the proactor and reactor APIs,
-so is quite easy to convert. The main difference is in how connections are set up.
+Existing @ref reactor applications can be converted easily to use the @ref proactor,
+since they share the same @engine API and @ref event set.

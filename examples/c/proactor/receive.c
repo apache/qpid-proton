@@ -20,7 +20,7 @@
  */
 
 #include <proton/connection.h>
-#include <proton/connection_engine.h>
+#include <proton/connection_driver.h>
 #include <proton/delivery.h>
 #include <proton/proactor.h>
 #include <proton/link.h>
@@ -37,12 +37,13 @@
 typedef char str[1024];
 
 typedef struct app_data_t {
-    str address;
-    str container_id;
-    pn_rwbytes_t message_buffer;
-    int message_count;
-    int received;
-    pn_proactor_t *proactor;
+  str address;
+  str container_id;
+  pn_rwbytes_t message_buffer;
+  int message_count;
+  int received;
+  pn_proactor_t *proactor;
+  bool finished;
 } app_data_t;
 
 static const int BATCH = 100; /* Batch size for unlimited receive */
@@ -80,9 +81,7 @@ static void decode_message(pn_delivery_t *dlv) {
   }
 }
 
-/* Handle event, return true of we should handle more */
-static bool handle(app_data_t* app, pn_event_t* event) {
-  bool more = true;
+static void handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
    case PN_CONNECTION_INIT: {
@@ -149,53 +148,58 @@ static bool handle(app_data_t* app, pn_event_t* event) {
     break;
 
    case PN_PROACTOR_INACTIVE:
-    more = false;
+    app->finished = true;
     break;
 
    default: break;
   }
-  pn_event_done(event);
-  return more;
 }
 
 static void usage(const char *arg0) {
-    fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
-    exit(1);
+  fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
+  exit(1);
 }
 
 int main(int argc, char **argv) {
-    /* Default values for application and connection. */
-    app_data_t app = {{0}};
-    app.message_count = 100;
-    const char* urlstr = NULL;
+  /* Default values for application and connection. */
+  app_data_t app = {{0}};
+  app.message_count = 100;
+  const char* urlstr = NULL;
 
-    int opt;
-    while((opt = getopt(argc, argv, "a:m:")) != -1) {
-        switch(opt) {
-          case 'a': urlstr = optarg; break;
-          case 'm': app.message_count = atoi(optarg); break;
-          default: usage(argv[0]); break;
-        }
+  int opt;
+  while((opt = getopt(argc, argv, "a:m:")) != -1) {
+    switch(opt) {
+     case 'a': urlstr = optarg; break;
+     case 'm': app.message_count = atoi(optarg); break;
+     default: usage(argv[0]); break;
     }
-    if (optind < argc)
-        usage(argv[0]);
+  }
+  if (optind < argc)
+    usage(argv[0]);
 
-    snprintf(app.container_id, sizeof(app.container_id), "%s:%d", argv[0], getpid());
+  snprintf(app.container_id, sizeof(app.container_id), "%s:%d", argv[0], getpid());
 
-    /* Parse the URL or use default values */
-    pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-    const char *host = url ? pn_url_get_host(url) : NULL;
-    const char *port = url ? pn_url_get_port(url) : "amqp";
-    strncpy(app.address, (url && pn_url_get_path(url)) ? pn_url_get_path(url) : "example", sizeof(app.address));
+  /* Parse the URL or use default values */
+  pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
+  const char *host = url ? pn_url_get_host(url) : NULL;
+  const char *port = url ? pn_url_get_port(url) : "amqp";
+  strncpy(app.address, (url && pn_url_get_path(url)) ? pn_url_get_path(url) : "example", sizeof(app.address));
 
-    /* Create the proactor and connect */
-    app.proactor = pn_proactor();
-    pn_proactor_connect(app.proactor, host, port, pn_rwbytes_null);
-    if (url) pn_url_free(url);
+  /* Create the proactor and connect */
+  app.proactor = pn_proactor();
+  pn_proactor_connect(app.proactor, host, port, pn_rwbytes_null);
+  if (url) pn_url_free(url);
 
-    while (handle(&app, pn_proactor_wait(app.proactor)))
-           ;
-    pn_proactor_free(app.proactor);
-    free(app.message_buffer.start);
-    return exit_code;
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(app.proactor);
+    pn_event_t *e;
+    while ((e = pn_event_batch_next(events))) {
+      handle(&app, e);
+    }
+    pn_proactor_done(app.proactor, events);
+  } while(!app.finished);
+
+  pn_proactor_free(app.proactor);
+  free(app.message_buffer.start);
+  return exit_code;
 }

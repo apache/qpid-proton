@@ -30,24 +30,24 @@ proton::connection::transport() const
 proton::connection::user(std::string const&)
 proton::connection::~connection()
 
-proton::connection_engine::can_read() const
-proton::connection_engine::can_write() const
-proton::connection_engine::closed() const
-proton::connection_engine::connection() const
-proton::connection_engine::connection_engine(proton::handler&, proton::connection_options const&)
-proton::connection_engine::container::container(std::string const&)
-proton::connection_engine::container::id() const
-proton::connection_engine::container::make_options()
-proton::connection_engine::container::options(proton::connection_options const&)
-proton::connection_engine::container::~container()
-proton::connection_engine::dispatch()
-proton::connection_engine::io_error::io_error(std::string const&)
-proton::connection_engine::io_error::~io_error()
-proton::connection_engine::no_opts
-proton::connection_engine::process(int)
-proton::connection_engine::try_read()
-proton::connection_engine::try_write()
-proton::connection_engine::~connection_engine()
+proton::connection_driver::can_read() const
+proton::connection_driver::can_write() const
+proton::connection_driver::closed() const
+proton::connection_driver::connection() const
+proton::connection_driver::connection_driver(proton::handler&, proton::connection_options const&)
+proton::connection_driver::container::container(std::string const&)
+proton::connection_driver::container::id() const
+proton::connection_driver::container::make_options()
+proton::connection_driver::container::options(proton::connection_options const&)
+proton::connection_driver::container::~container()
+proton::connection_driver::dispatch()
+proton::connection_driver::io_error::io_error(std::string const&)
+proton::connection_driver::io_error::~io_error()
+proton::connection_driver::no_opts
+proton::connection_driver::process(int)
+proton::connection_driver::try_read()
+proton::connection_driver::try_write()
+proton::connection_driver::~connection_driver()
 
 proton::connection_options::connection_options()
 proton::connection_options::connection_options(proton::connection_options const&)
@@ -587,8 +587,8 @@ proton::value::value(proton::value const&)
 # Only types with the following info can be thrown across shared abject boundary
 # Or correctly dynamically cast by user
 typeinfo for proton::connection
-typeinfo for proton::connection_engine
-typeinfo for proton::connection_engine::io_error
+typeinfo for proton::connection_driver
+typeinfo for proton::connection_driver::io_error
 typeinfo for proton::conversion_error
 typeinfo for proton::endpoint
 typeinfo for proton::error
@@ -600,8 +600,8 @@ typeinfo for proton::session
 typeinfo for proton::timeout_error
 typeinfo for proton::url_error
 typeinfo name for proton::connection
-typeinfo name for proton::connection_engine
-typeinfo name for proton::connection_engine::io_error
+typeinfo name for proton::connection_driver
+typeinfo name for proton::connection_driver::io_error
 typeinfo name for proton::conversion_error
 typeinfo name for proton::endpoint
 typeinfo name for proton::error
@@ -613,8 +613,8 @@ typeinfo name for proton::session
 typeinfo name for proton::timeout_error
 typeinfo name for proton::url_error
 vtable for proton::connection
-vtable for proton::connection_engine
-vtable for proton::connection_engine::io_error
+vtable for proton::connection_driver
+vtable for proton::connection_driver::io_error
 vtable for proton::conversion_error
 vtable for proton::endpoint
 vtable for proton::error

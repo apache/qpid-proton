@@ -20,7 +20,7 @@
  */
 
 #include <proton/connection.h>
-#include <proton/connection_engine.h>
+#include <proton/connection_driver.h>
 #include <proton/delivery.h>
 #include <proton/proactor.h>
 #include <proton/link.h>
@@ -37,13 +37,14 @@
 typedef char str[1024];
 
 typedef struct app_data_t {
-    str address;
-    str container_id;
-    pn_rwbytes_t message_buffer;
-    int message_count;
-    int sent;
-    int acknowledged;
-    pn_proactor_t *proactor;
+  str address;
+  str container_id;
+  pn_rwbytes_t message_buffer;
+  int message_count;
+  int sent;
+  int acknowledged;
+  pn_proactor_t *proactor;
+  bool finished;
 } app_data_t;
 
 int exit_code = 0;
@@ -58,41 +59,39 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 
 /* Create a message with a map { "sequence" : number } encode it and return the encoded buffer. */
 static pn_bytes_t encode_message(app_data_t* app) {
-    /* Construct a message with the map { "sequence": app.sent } */
-    pn_message_t* message = pn_message();
-    pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
-    pn_data_t* body = pn_message_body(message);
-    pn_data_put_map(body);
-    pn_data_enter(body);
-    pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
-    pn_data_put_int(body, app->sent); /* The sequence number */
-    pn_data_exit(body);
+  /* Construct a message with the map { "sequence": app.sent } */
+  pn_message_t* message = pn_message();
+  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_data_t* body = pn_message_body(message);
+  pn_data_put_map(body);
+  pn_data_enter(body);
+  pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
+  pn_data_put_int(body, app->sent); /* The sequence number */
+  pn_data_exit(body);
 
-    /* encode the message, expanding the encode buffer as needed */
-    if (app->message_buffer.start == NULL) {
-        static const size_t initial_size = 128;
-        app->message_buffer = pn_rwbytes(initial_size, (char*)malloc(initial_size));
-    }
-    /* app->message_buffer is the total buffer space available. */
-    /* mbuf wil point at just the portion used by the encoded message */
-    pn_rwbytes_t mbuf = pn_rwbytes(app->message_buffer.size, app->message_buffer.start);
-    int status = 0;
-    while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
-        app->message_buffer.size *= 2;
-        app->message_buffer.start = (char*)realloc(app->message_buffer.start, app->message_buffer.size);
-        mbuf.size = app->message_buffer.size;
-    }
-    if (status != 0) {
-        fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
-        exit(1);
-    }
-    pn_message_free(message);
-    return pn_bytes(mbuf.size, mbuf.start);
+  /* encode the message, expanding the encode buffer as needed */
+  if (app->message_buffer.start == NULL) {
+    static const size_t initial_size = 128;
+    app->message_buffer = pn_rwbytes(initial_size, (char*)malloc(initial_size));
+  }
+  /* app->message_buffer is the total buffer space available. */
+  /* mbuf wil point at just the portion used by the encoded message */
+  pn_rwbytes_t mbuf = pn_rwbytes(app->message_buffer.size, app->message_buffer.start);
+  int status = 0;
+  while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
+    app->message_buffer.size *= 2;
+    app->message_buffer.start = (char*)realloc(app->message_buffer.start, app->message_buffer.size);
+    mbuf.size = app->message_buffer.size;
+  }
+  if (status != 0) {
+    fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
+    exit(1);
+  }
+  pn_message_free(message);
+  return pn_bytes(mbuf.size, mbuf.start);
 }
 
-/* Handle event, return true of we should handle more */
-static bool handle(app_data_t* app, pn_event_t* event) {
-  bool more = true;
+static void handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
    case PN_CONNECTION_INIT: {
@@ -130,7 +129,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      }
    } break;
 
-   case PN_TRANSPORT_ERROR:
+   case PN_TRANSPORT_CLOSED:
     check_condition(event, pn_transport_condition(pn_event_transport(event)));
     break;
 
@@ -151,53 +150,58 @@ static bool handle(app_data_t* app, pn_event_t* event) {
     break;
 
    case PN_PROACTOR_INACTIVE:
-    more = false;
+    app->finished = true;
     break;
 
    default: break;
   }
-  pn_event_done(event);
-  return more;
 }
 
 static void usage(const char *arg0) {
-    fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
-    exit(1);
+  fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
+  exit(1);
 }
 
 int main(int argc, char **argv) {
-    /* Default values for application and connection. */
-    app_data_t app = {{0}};
-    app.message_count = 100;
-    const char* urlstr = NULL;
+  /* Default values for application and connection. */
+  app_data_t app = {{0}};
+  app.message_count = 100;
+  const char* urlstr = NULL;
 
-    int opt;
-    while((opt = getopt(argc, argv, "a:m:")) != -1) {
-        switch(opt) {
-          case 'a': urlstr = optarg; break;
-          case 'm': app.message_count = atoi(optarg); break;
-          default: usage(argv[0]); break;
-        }
+  int opt;
+  while((opt = getopt(argc, argv, "a:m:")) != -1) {
+    switch(opt) {
+     case 'a': urlstr = optarg; break;
+     case 'm': app.message_count = atoi(optarg); break;
+     default: usage(argv[0]); break;
     }
-    if (optind < argc)
-        usage(argv[0]);
+  }
+  if (optind < argc)
+    usage(argv[0]);
 
-    snprintf(app.container_id, sizeof(app.container_id), "%s:%d", argv[0], getpid());
+  snprintf(app.container_id, sizeof(app.container_id), "%s:%d", argv[0], getpid());
 
-    /* Parse the URL or use default values */
-    pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-    const char *host = url ? pn_url_get_host(url) : NULL;
-    const char *port = url ? pn_url_get_port(url) : "amqp";
-    strncpy(app.address, (url && pn_url_get_path(url)) ? pn_url_get_path(url) : "example", sizeof(app.address));
+  /* Parse the URL or use default values */
+  pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
+  const char *host = url ? pn_url_get_host(url) : NULL;
+  const char *port = url ? pn_url_get_port(url) : "amqp";
+  strncpy(app.address, (url && pn_url_get_path(url)) ? pn_url_get_path(url) : "example", sizeof(app.address));
 
-    /* Create the proactor and connect */
-    app.proactor = pn_proactor();
-    pn_proactor_connect(app.proactor, host, port, pn_rwbytes_null);
-    if (url) pn_url_free(url);
+  /* Create the proactor and connect */
+  app.proactor = pn_proactor();
+  pn_proactor_connect(app.proactor, host, port, pn_rwbytes_null);
+  if (url) pn_url_free(url);
 
-    while (handle(&app, pn_proactor_wait(app.proactor)))
-           ;
-    pn_proactor_free(app.proactor);
-    free(app.message_buffer.start);
-    return exit_code;
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(app.proactor);
+    pn_event_t *e;
+    while ((e = pn_event_batch_next(events))) {
+      handle(&app, e);
+    }
+    pn_proactor_done(app.proactor, events);
+  } while(!app.finished);
+
+  pn_proactor_free(app.proactor);
+  free(app.message_buffer.start);
+  return exit_code;
 }

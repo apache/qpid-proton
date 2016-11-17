@@ -313,7 +313,8 @@ static void test_transport_connection(void) {
 }
 
 static void drain(pn_collector_t *collector) {
-  while (pn_collector_peek(collector)) { pn_collector_pop(collector); }
+  while (pn_collector_next(collector))
+    ;
 }
 
 static void test_collector_connection_transport(void) {

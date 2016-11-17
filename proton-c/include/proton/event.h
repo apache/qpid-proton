@@ -428,6 +428,32 @@ PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
 PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
 
 /**
+ * Return the next event to be handled.
+ *
+ * Returns the head event if it has not previously been returned by
+ * pn_collector_next(), otherwise does pn_collector_pop() and returns
+ * the new head event.
+ *
+ * The returned pointer is valid till the next call of pn_collector_pop(),
+ * pn_collector_next(), pn_collector_release() or pn_collector_free()
+ *
+ * @param[in] collector a collector object
+ * @return the next event.
+ */
+PN_EXTERN pn_event_t *pn_collector_next(pn_collector_t *collector);
+
+/**
+ * Return the same event as the previous call to pn_collector_next()
+ *
+ * The returned pointer is valid till the next call of pn_collector_pop(),
+ * pn_collector_next(), pn_collector_release() or pn_collector_free()
+ *
+ * @param[in] collector a collector object
+ * @return a pointer to the event returned by previous call to pn_collector_next()
+ */
+PN_EXTERN pn_event_t *pn_collector_prev(pn_collector_t *collector);
+
+/**
  * Check if there are more events after the current event. If this
  * returns true, then pn_collector_peek() will return an event even
  * after pn_collector_pop() is called.
@@ -505,6 +531,36 @@ PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
  * @return the record holding the attachments
  */
 PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
+
+/**
+ * **Experimental**: A batch of events to handle. Call pn_event_batch_next() in
+ * a loop until it returns NULL to handle them.
+ */
+typedef struct pn_event_batch_t pn_event_batch_t;
+
+/* NOTE: there is deliberately no peek(), more() or other look-ahead on an event
+ * batch. We want to know exactly which events have been handled, next() only
+ * allows the user to get each event exactly once, in order.
+ */
+
+/**
+ * **Experimental**: Remove the next event from the batch and return it. NULL
+ *  means the batch is empty. The returned event pointer is valid until
+ *  pn_event_batch_next() is called again on the same batch.
+ */
+PN_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
+
+/**
+ *@cond INTERNAL
+ * pn_event_batch_next() can be re-implemented for different behaviors in different contextxs.
+ */
+struct pn_event_batch_t {
+  pn_event_t *(*next_event)(pn_event_batch_t *batch);
+};
+
+/**
+ *@endcond
+ */
 
 #ifdef __cplusplus
 }

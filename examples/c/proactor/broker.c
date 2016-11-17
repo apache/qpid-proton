@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <proton/connection_engine.h>
+#include <proton/connection_driver.h>
 #include <proton/proactor.h>
 #include <proton/engine.h>
 #include <proton/sasl.h>
@@ -220,9 +220,11 @@ typedef struct broker_t {
   const char *container_id;     /* AMQP container-id */
   size_t threads;
   pn_millis_t heartbeat;
+  bool finished;
 } broker_t;
 
 void broker_init(broker_t *b, const char *container_id, size_t threads, pn_millis_t heartbeat) {
+  memset(b, 0, sizeof(*b));
   b->proactor = pn_proactor();
   b->listener = NULL;
   queues_init(&b->queues);
@@ -293,8 +295,7 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 
 const int WINDOW=10;            /* Incoming credit window */
 
-static bool handle(broker_t* b, pn_event_t* e) {
-  bool more = true;
+static void handle(broker_t* b, pn_event_t* e) {
   pn_connection_t *c = pn_event_connection(e);
 
   switch (pn_event_type(e)) {
@@ -398,20 +399,24 @@ static bool handle(broker_t* b, pn_event_t* e) {
     break;
 
    case PN_PROACTOR_INTERRUPT:
-    more = false;
+    b->finished = true;
     break;
 
    default:
     break;
   }
-  pn_event_done(e);
-  return more;
 }
 
 static void broker_thread(void *void_broker) {
   broker_t *b = (broker_t*)void_broker;
-  while (handle(b, pn_proactor_wait(b->proactor)))
-    ;
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(b->proactor);
+    pn_event_t *e;
+    while ((e = pn_event_batch_next(events))) {
+      handle(b, e);
+    }
+    pn_proactor_done(b->proactor, events);
+  } while(!b->finished);
 }
 
 static void usage(const char *arg0) {

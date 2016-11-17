@@ -33,30 +33,27 @@ typedef struct pn_condition_t pn_condition_t;
 /**
  * @file
  *
- * **Experimental**: Proactor API for the the proton @ref engine.
+ * **Experimental**: Proactor API for the the proton @ref engine
  *
  * @defgroup proactor Proactor
  *
  * **Experimental**: Proactor API for portable, multi-threaded, asynchronous applications.
  *
- * The proactor establishes and listens for connections. It creates the @ref
- * "transport" transport that sends and receives data over the network and
- * delivers @ref "events" event to application threads for processing.
+ * The proactor establishes and listens for connections. It creates
+ * the @ref transport that sends and receives data over the network and
+ * delivers @ref event to application threads for handling.
  *
- * ## Multi-threading
- *
- * The @ref proactor is thread-safe, but the @ref "protocol engine" is not.  The
- * proactor ensures that each @ref "connection" connection and its associated
- * values (@ref session, @ref link etc.) is processed sequentially, even if there
- * are multiple application threads. See pn_proactor_wait()
+ * **Multi-threading**:
+ * The @ref proactor is thread-safe, but the @ref engine is not.  The proactor
+ * ensures that each @ref connection and its associated values (@ref session,
+ * @ref link etc.) is handle sequentially, even if there are multiple
+ * application threads. See pn_proactor_wait()
  *
  * @{
  */
 
 /**
- * The proactor creates and manage @ref "transports" transport and delivers @ref
- * "event" events to the application.
- *
+ * The proactor.
  */
 typedef struct pn_proactor_t pn_proactor_t;
 
@@ -69,13 +66,6 @@ pn_proactor_t *pn_proactor(void);
  * Free the proactor.
  */
 void pn_proactor_free(pn_proactor_t*);
-
-/* FIXME aconway 2016-11-12: connect and listen need options to enable
-   things like websockets, alternate encryption or other features.
-   The "extra" parameter will be replaced by an "options" parameter
-   that will include providing extra data and other manipulators
-   to affect how the connection is processed.
-*/
 
 /**
  * Asynchronous connect: a connection and transport will be created, the
@@ -104,13 +94,27 @@ int pn_proactor_connect(pn_proactor_t*, const char *host, const char *port, pn_b
 pn_listener_t *pn_proactor_listen(pn_proactor_t *, const char *host, const char *port, int backlog, pn_bytes_t extra);
 
 /**
- * Wait for an event. Can be called in multiple threads concurrently.
- * You must call pn_event_done() when the event has been handled.
+ * Wait for events to handle. Call pn_proactor_done() after handling events.
  *
- * The proactor ensures that events that cannot be handled concurrently
- * (e.g. events for for the same connection) are never returned concurrently.
+ * Thread safe: pn_proactor_wait() can be called concurrently, but the events in
+ * the returned ::pn_event_batch_t must be handled sequentially.
+ *
+ * The proactor always returns events that must be handled sequentially in the
+ * same batch or sequentially in a later batch after pn_proactor_done(). Any
+ * events returned concurrently by pn_proactor_wait() are safe to handle
+ * concurrently.
  */
-pn_event_t *pn_proactor_wait(pn_proactor_t* d);
+pn_event_batch_t *pn_proactor_wait(pn_proactor_t* d);
+
+/**
+ * Call when done handling events.
+ *
+ * It is generally most efficient to handle the entire batch in the thread
+ * that calls pn_proactor_wait(), then call pn_proactor_done(). If you call
+ * pn_proactor_done() earlier, the remaining events will be returned again by
+ * pn_proactor_wait(), possibly to another thread.
+ */
+void pn_proactor_done(pn_proactor_t* d, pn_event_batch_t *events);
 
 /**
  * Cause PN_PROACTOR_INTERRUPT to be returned to exactly one thread calling wait()
@@ -144,14 +148,6 @@ void pn_connection_wake(pn_connection_t *c);
  * The proactor that created the connection.
  */
 pn_proactor_t *pn_connection_proactor(pn_connection_t *c);
-
-/**
- * Call when a proactor event has been handled. Does nothing if not a proactor event.
- *
- * Thread safe: May be called from any thread but must be called exactly once
- * for each event returned by pn_proactor_wait()
- */
-void pn_event_done(pn_event_t *);
 
 /**
  * Get the proactor that created the event or NULL.
