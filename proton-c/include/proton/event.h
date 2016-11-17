@@ -323,19 +323,25 @@ typedef enum {
   PN_CONNECTION_WAKE,
 
   /**
-   * pn_listener_close() was called or an error occurred, see pn_listener_condition()
+   * Indicates the listener is ready to call pn_listener_accept() 
+   * Events of this type point to the @ref pn_listener_t.
+   */
+  PN_LISTENER_ACCEPT,
+
+  /**
+   * Indicates the listener has closed. pn_listener_condition() provides error information.
    * Events of this type point to the @ref pn_listener_t.
    */
   PN_LISTENER_CLOSE,
 
   /**
-   * pn_proactor_interrupt() was called to interrupt a proactor thread
+   * Indicates pn_proactor_interrupt() was called to interrupt a proactor thread
    * Events of this type point to the @ref pn_proactor_t.
    */
   PN_PROACTOR_INTERRUPT,
 
   /**
-   * pn_proactor_set_timeout() time limit expired.
+   * Timeout set by pn_proactor_set_timeout() time limit expired.
    * Events of this type point to the @ref pn_proactor_t.
    */
   PN_PROACTOR_TIMEOUT,

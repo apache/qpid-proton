@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
-  pn_proactor_connect(app.proactor, host, port, pn_rwbytes_null);
+  pn_proactor_connect(app.proactor, pn_connection(), host, port);
   if (url) pn_url_free(url);
 
   do {

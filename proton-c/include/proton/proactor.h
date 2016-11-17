@@ -68,30 +68,30 @@ pn_proactor_t *pn_proactor(void);
 void pn_proactor_free(pn_proactor_t*);
 
 /**
- * Asynchronous connect: a connection and transport will be created, the
- * relevant events will be returned by pn_proactor_wait()
+ * Connect connection to host/port. Connection and transport events will be
+ * returned by pn_proactor_wait()
  *
- * Errors are indicated by PN_TRANSPORT_ERROR/PN_TRANSPORT_CLOSE events.
+ * @param[in] connection the proactor takes ownership do not free.
+ * @param[in] host the address to listen on
+ * @param[in] port the port to connect to
  *
- * @param extra bytes to copy to pn_connection_get_extra() on the new connection, @ref
- * pn_rwbytes_null for nothing.
- *
- * @return error if the connect cannot be initiated e.g. an allocation failure.
- * IO errors will be returned as transport events via pn_proactor_wait()
+ * @return error on immediate error, e.g. an allocation failure.
+ * Other errors are indicated by connection or transport events via pn_proactor_wait()
  */
-int pn_proactor_connect(pn_proactor_t*, const char *host, const char *port, pn_bytes_t extra);
+int pn_proactor_connect(pn_proactor_t*, pn_connection_t *connection, const char *host, const char *port);
 
 /**
- * Asynchronous listen: start listening, connections will be returned by pn_proactor_wait()
- * An error are indicated by PN_LISTENER_ERROR event.
+ * Start listening with listener.
+ * pn_proactor_wait() will return a PN_LISTENER_ACCEPT event when a connection can be accepted.
  *
- * @param extra bytes to copy to pn_connection_get_extra() on the new connection, @ref
- * pn_rwbytes_null for nothing.
+ * @param[in] listener proactor takes ownership of listener, do not free.
+ * @param[in] host the address to listen on
+ * @param[in] port the port to listen on
  *
- * @return error if the connect cannot be initiated e.g. an allocation failure.
- * IO errors will be returned as transport events via pn_proactor_wait()
+ * @return error on immediate error, e.g. an allocation failure.
+ * Other errors are indicated by pn_listener_condition() on the PN_LISTENER_CLOSE event.
  */
-pn_listener_t *pn_proactor_listen(pn_proactor_t *, const char *host, const char *port, int backlog, pn_bytes_t extra);
+int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *listener, const char *host, const char *port, int backlog);
 
 /**
  * Wait for events to handle. Call pn_proactor_done() after handling events.

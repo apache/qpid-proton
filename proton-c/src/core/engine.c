@@ -32,9 +32,6 @@
 #include "platform/platform_fmt.h"
 #include "transport.h"
 
-#include <proton/extra.h>
-
-
 static void pni_session_bound(pn_session_t *ssn);
 static void pni_link_bound(pn_link_t *link);
 
@@ -511,15 +508,10 @@ static void pn_connection_finalize(void *object)
 #define pn_connection_compare NULL
 #define pn_connection_inspect NULL
 
-PN_EXTRA_DECLARE(pn_connection_t);
-
-pn_rwbytes_t pn_connection_get_extra(pn_connection_t *c) { return PN_EXTRA_GET(pn_connection_t, c); }
-
-pn_connection_t *pn_connection_with_extra(size_t extra)
+pn_connection_t *pn_connection()
 {
   static const pn_class_t clazz = PN_CLASS(pn_connection);
-  size_t size = PN_EXTRA_SIZEOF(pn_connection_t, extra);
-  pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, size);
+  pn_connection_t *conn = (pn_connection_t *) pn_class_new(&clazz, sizeof(pn_connection_t));
   if (!conn) return NULL;
 
   conn->endpoint_head = NULL;
@@ -546,10 +538,6 @@ pn_connection_t *pn_connection_with_extra(size_t extra)
   conn->delivery_pool = pn_list(PN_OBJECT, 0);
 
   return conn;
-}
-
-pn_connection_t *pn_connection(void) {
-  return pn_connection_with_extra(0);
 }
 
 static const pn_event_type_t endpoint_init_event_map[] = {

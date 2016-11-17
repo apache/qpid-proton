@@ -156,7 +156,6 @@ PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 
 
 /**
- * @deprecated
  * Get the application context that is associated with a connection
  * object.
  *
@@ -169,7 +168,6 @@ PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
 
 /**
- * @deprecated
  * Set a new application context for a connection object.
  *
  * The application context for a connection object may be retrieved
@@ -484,16 +482,6 @@ PN_EXTERN pn_data_t *pn_connection_remote_properties(pn_connection_t *connection
  * connection is unbound
  */
 PN_EXTERN pn_transport_t *pn_connection_transport(pn_connection_t *connection);
-
-/**
- * Create a connection with `size` bytes of extra aligned storage in the same heap block.
- */
-PN_EXTERN pn_connection_t* pn_connection_with_extra(size_t size);
-
-/**
- * Get the start and size of extra storage allocated by pn_connection_extra()
- */
-PN_EXTERN pn_rwbytes_t pn_connection_get_extra(pn_connection_t *connection);
 
 /** @}
  */

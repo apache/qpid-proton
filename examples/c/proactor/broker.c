@@ -158,6 +158,15 @@ typedef struct broker_data_t {
   bool check_queues;          /* Check senders on the connection for available data in queues. */
 } broker_data_t;
 
+/* Use the context pointer as a boolean flag to indicate we need to check queues */
+void pn_connection_set_check_queues(pn_connection_t *c, bool check) {
+  pn_connection_set_context(c, (void*)check);
+}
+
+bool pn_connection_get_check_queues(pn_connection_t *c) {
+  return (bool)pn_connection_get_context(c);
+}
+
 /* Put a message on the queue, called in receiver dispatch loop.
    If the queue was previously empty, notify waiting senders.
 */
@@ -168,8 +177,7 @@ static void queue_receive(pn_proactor_t *d, queue_t *q, pn_rwbytes_t m) {
   if (q->messages.len == 1) { /* Was empty, notify waiting connections */
     for (size_t i = 0; i < q->waiting.len; ++i) {
       pn_connection_t *c = q->waiting.data[i];
-      broker_data_t *bd = (broker_data_t*)pn_connection_get_extra(c).start;
-      bd->check_queues = true;
+      pn_connection_set_check_queues(c, true);
       pn_connection_wake(c); /* Wake the connection */
     }
     q->waiting.len = 0;
@@ -215,7 +223,6 @@ queue_t* queues_get(queues_t *qs, const char* name) {
 /* The broker implementation */
 typedef struct broker_t {
   pn_proactor_t *proactor;
-  pn_listener_t *listener;
   queues_t queues;
   const char *container_id;     /* AMQP container-id */
   size_t threads;
@@ -226,7 +233,6 @@ typedef struct broker_t {
 void broker_init(broker_t *b, const char *container_id, size_t threads, pn_millis_t heartbeat) {
   memset(b, 0, sizeof(*b));
   b->proactor = pn_proactor();
-  b->listener = NULL;
   queues_init(&b->queues);
   b->container_id = container_id;
   b->threads = threads;
@@ -300,10 +306,14 @@ static void handle(broker_t* b, pn_event_t* e) {
 
   switch (pn_event_type(e)) {
 
-   case PN_CONNECTION_INIT: {
+   case PN_LISTENER_ACCEPT:
+    pn_listener_accept(pn_event_listener(e), pn_connection());
+    break;
+
+   case PN_CONNECTION_INIT: 
      pn_connection_set_container(c, b->container_id);
      break;
-   }
+
    case PN_CONNECTION_BOUND: {
      /* Turn off security */
      pn_transport_t *t = pn_connection_transport(c);
@@ -316,9 +326,8 @@ static void handle(broker_t* b, pn_event_t* e) {
      break;
    }
    case PN_CONNECTION_WAKE: {
-     broker_data_t *bd = (broker_data_t*)pn_connection_get_extra(c).start;
-     if (bd->check_queues) {
-       bd->check_queues = false;
+     if (pn_connection_get_check_queues(c)) {
+       pn_connection_set_check_queues(c, false);
        int flags = PN_LOCAL_ACTIVE&PN_REMOTE_ACTIVE;
        for (pn_link_t *l = pn_link_head(c, flags); l != NULL; l = pn_link_next(l, flags))
          link_send(b, l);
@@ -456,11 +465,7 @@ int main(int argc, char **argv) {
   */
   const char *host = url ? pn_url_get_host(url) : "::";
   const char *port = url ? pn_url_get_port(url) : "amqp";
-
-  /* Initial broker_data value copied to each accepted connection */
-  broker_data_t bd = { false };
-  b.listener = pn_proactor_listen(b.proactor, host, port, 16,
-                                  pn_bytes(sizeof(bd), (char*)&bd));
+  pn_proactor_listen(b.proactor, pn_listener(), host, port, 16);
   printf("listening on '%s:%s' %zd threads\n", host, port, b.threads);
 
   if (url) pn_url_free(url);

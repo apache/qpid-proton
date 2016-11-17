@@ -24,7 +24,6 @@
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
-#include <proton/extra.h>
 #include <proton/message.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
@@ -142,13 +141,15 @@ struct pn_listener_t {
   psocket_t psocket;
 
   /* Only used by owner thread */
+  pconnection_t *accepting;     /* accept in progress */
   pn_condition_t *condition;
   pn_collector_t *collector;
   pn_event_batch_t batch;
+  pn_record_t *attachments;
+  void *context;
   size_t backlog;
 };
 
-PN_EXTRA_DECLARE(pn_listener_t);
 
 typedef struct queue { psocket_t *front, *back; } queue;
 
@@ -222,24 +223,26 @@ static void to_leader(psocket_t *ps) {
 
 /* Detach from IO and put ps on the worker queue */
 static void leader_to_worker(psocket_t *ps) {
-  pconnection_t *pc = as_pconnection_t(ps);
-  /* Don't detach if there are no events yet. */
-  if (pc && pn_connection_driver_has_event(&pc->driver)) {
-    if (pc->writing) {
-      pc->writing  = 0;
-      uv_cancel((uv_req_t*)&pc->write);
+  if (ps->is_conn) {
+    pconnection_t *pc = as_pconnection_t(ps);
+    /* Don't detach if there are no events yet. */
+    if (pn_connection_driver_has_event(&pc->driver)) {
+      if (pc->writing) {
+        pc->writing  = 0;
+        uv_cancel((uv_req_t*)&pc->write);
+      }
+      if (pc->reading) {
+        pc->reading = false;
+        uv_read_stop((uv_stream_t*)&pc->psocket.tcp);
+      }
+      if (pc->timer.data && !uv_is_closing((uv_handle_t*)&pc->timer)) {
+        uv_timer_stop(&pc->timer);
+      }
     }
-    if (pc->reading) {
-      pc->reading = false;
-      uv_read_stop((uv_stream_t*)&pc->psocket.tcp);
-    }
-    if (pc->timer.data && !uv_is_closing((uv_handle_t*)&pc->timer)) {
-      uv_timer_stop(&pc->timer);
-    }
+  } else {
+    pn_listener_t *l = as_listener(ps);
+    uv_read_stop((uv_stream_t*)&l->psocket.tcp);
   }
-
-  /* Nothing to do for a listener, on_accept doesn't touch worker state. */
-
   uv_mutex_lock(&ps->proactor->lock);
   push_lh(&ps->proactor->worker_q, ps);
   uv_mutex_unlock(&ps->proactor->lock);
@@ -275,14 +278,11 @@ static void worker_requeue(psocket_t* ps) {
   uv_mutex_unlock(&ps->proactor->lock);
 }
 
-static pconnection_t *new_pconnection_t(pn_proactor_t *p, bool server, const char *host, const char *port, pn_bytes_t extra) {
+static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bool server, const char *host, const char *port) {
   pconnection_t *pc = (pconnection_t*)calloc(1, sizeof(*pc));
   if (!pc) return NULL;
-  if (pn_connection_driver_init(&pc->driver, pn_connection_with_extra(extra.size), NULL) != 0) {
+  if (pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
     return NULL;
-  }
-  if (extra.start && extra.size) {
-    memcpy(pn_connection_get_extra(pc->driver.connection).start, extra.start, extra.size);
   }
   psocket_init(&pc->psocket, p,  true, host, port);
   if (server) {
@@ -310,26 +310,6 @@ static inline pn_listener_t *batch_listener(pn_event_batch_t *batch) {
 static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
   pn_connection_driver_t *d = pn_event_batch_connection_driver(batch);
   return d ? (pconnection_t*)((char*)d - offsetof(pconnection_t, driver)) : NULL;
-}
-
-pn_listener_t *new_listener(pn_proactor_t *p, const char *host, const char *port, int backlog, pn_bytes_t extra) {
-  pn_listener_t *l = (pn_listener_t*)calloc(1, PN_EXTRA_SIZEOF(pn_listener_t, extra.size));
-  if (!l) {
-    return NULL;
-  }
-  l->collector = pn_collector();
-  if (!l->collector) {
-    free(l);
-    return NULL;
-  }
-  if (extra.start && extra.size) {
-    memcpy(pn_listener_get_extra(l).start, extra.start, extra.size);
-  }
-  psocket_init(&l->psocket, p, false, host, port);
-  l->condition = pn_condition();
-  l->batch.next_event = listener_batch_next;
-  l->backlog = backlog;
-  return l;
 }
 
 static void leader_count(pn_proactor_t *p, int change) {
@@ -456,23 +436,22 @@ static void on_connect(uv_connect_t *connect, int err) {
 }
 
 static void on_accept(uv_stream_t* server, int err) {
-  pn_listener_t* l = (pn_listener_t*)server->data;
-  if (!err) {
-    pn_rwbytes_t v =  pn_listener_get_extra(l);
-    pconnection_t *pc = new_pconnection_t(l->psocket.proactor, true,
-                          fixstr(l->psocket.host),
-                          fixstr(l->psocket.port),
-                          pn_bytes(v.size, v.start));
-    if (pc) {
-      int err2 = leader_init(&pc->psocket);
-      if (!err2) err2 = uv_accept((uv_stream_t*)&l->psocket.tcp, (uv_stream_t*)&pc->psocket.tcp);
-      leader_connect_accept(pc, err2, "on accept");
-    } else {
-      err = UV_ENOMEM;
-    }
-  }
+  pn_listener_t *l = (pn_listener_t*) server->data;
   if (err) {
     leader_error(&l->psocket, err, "on accept");
+  }
+  pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_ACCEPT);
+  leader_to_worker(&l->psocket); /* Let user call pn_listener_accept */
+}
+
+static void leader_accept(psocket_t *ps) {
+  pn_listener_t * l = as_listener(ps);
+  pconnection_t *pc = l->accepting;
+  l->accepting = NULL;
+  if (pc) {
+    int err = leader_init(&pc->psocket);
+    if (!err) err = uv_accept((uv_stream_t*)&l->psocket.tcp, (uv_stream_t*)&pc->psocket.tcp);
+    leader_connect_accept(pc, err, "on accept");
   }
 }
 
@@ -570,31 +549,39 @@ static void alloc_read_buffer(uv_handle_t* stream, size_t size, uv_buf_t* buf) {
 }
 
 static void leader_rewatch(psocket_t *ps) {
-  pconnection_t *pc = as_pconnection_t(ps);
+  int err = 0;
+  if (ps->is_conn) {
+    pconnection_t *pc = as_pconnection_t(ps);
+    if (pc->timer.data) {         /* uv-initialized */
+      on_tick(&pc->timer);        /* Re-enable ticks if required */
+    }
+    pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
+    pn_bytes_t wbuf = pn_connection_driver_write_buffer(&pc->driver);
 
-  if (pc->timer.data) {         /* uv-initialized */
-    on_tick(&pc->timer);        /* Re-enable ticks if required */
+    /* Ticks and checking buffers can generate events, process before proceeding */
+    if (pn_connection_driver_has_event(&pc->driver)) {
+      leader_to_worker(ps);
+    } else {                      /* Re-watch for IO */
+      if (wbuf.size > 0 && !pc->writing) {
+        pc->writing = wbuf.size;
+        uv_buf_t buf = uv_buf_init((char*)wbuf.start, wbuf.size);
+        pc->write.data = ps;
+        uv_write(&pc->write, (uv_stream_t*)&pc->psocket.tcp, &buf, 1, on_write);
+      } else if (wbuf.size == 0 && pn_connection_driver_write_closed(&pc->driver)) {
+        pc->shutdown.data = ps;
+        uv_shutdown(&pc->shutdown, (uv_stream_t*)&pc->psocket.tcp, on_shutdown);
+      }
+      if (rbuf.size > 0 && !pc->reading) {
+        pc->reading = true;
+        err = uv_read_start((uv_stream_t*)&pc->psocket.tcp, alloc_read_buffer, on_read);
+      }
+    }
+  } else {
+    pn_listener_t *l = as_listener(ps);
+    err = uv_listen((uv_stream_t*)&l->psocket.tcp, l->backlog, on_accept);
   }
-  pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
-  pn_bytes_t wbuf = pn_connection_driver_write_buffer(&pc->driver);
-
-  /* Ticks and checking buffers can generate events, process before proceeding */
-  if (pn_connection_driver_has_event(&pc->driver)) {
-    leader_to_worker(ps);
-  } else {                      /* Re-watch for IO */
-    if (wbuf.size > 0 && !pc->writing) {
-      pc->writing = wbuf.size;
-      uv_buf_t buf = uv_buf_init((char*)wbuf.start, wbuf.size);
-      pc->write.data = ps;
-      uv_write(&pc->write, (uv_stream_t*)&pc->psocket.tcp, &buf, 1, on_write);
-    } else if (wbuf.size == 0 && pn_connection_driver_write_closed(&pc->driver)) {
-      pc->shutdown.data = ps;
-      uv_shutdown(&pc->shutdown, (uv_stream_t*)&pc->psocket.tcp, on_shutdown);
-    }
-    if (rbuf.size > 0 && !pc->reading) {
-      pc->reading = true;
-      uv_read_start((uv_stream_t*)&pc->psocket.tcp, alloc_read_buffer, on_read);
-    }
+  if (err) {
+    leader_error(ps, err, "rewatch");
   }
 }
 
@@ -668,6 +655,11 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     }
     return;
   }
+  pn_listener_t *l = batch_listener(batch);
+  if (l) {
+    owner_to_leader(&l->psocket, leader_rewatch);
+    return;
+  }
   pn_proactor_t *bp = batch_proactor(batch);
   if (bp == p) {
     uv_mutex_lock(&p->lock);
@@ -676,7 +668,6 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     uv_mutex_unlock(&p->lock);
     return;
   }
-  /* Nothing extra to do for listener, it is always in the UV loop. */
 }
 
 /* Run follower/leader loop till we can return an event and be a worker */
@@ -742,8 +733,8 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   uv_mutex_unlock(&p->lock);
 }
 
-int pn_proactor_connect(pn_proactor_t *p, const char *host, const char *port, pn_bytes_t extra) {
-  pconnection_t *pc = new_pconnection_t(p, false, host, port, extra);
+int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, const char *port) {
+  pconnection_t *pc = new_pconnection_t(p, c, false, host, port);
   if (!pc) {
     return PN_OUT_OF_MEMORY;
   }
@@ -752,21 +743,17 @@ int pn_proactor_connect(pn_proactor_t *p, const char *host, const char *port, pn
   return 0;
 }
 
-pn_rwbytes_t pn_listener_get_extra(pn_listener_t *l) { return PN_EXTRA_GET(pn_listener_t, l); }
-
-pn_listener_t *pn_proactor_listen(pn_proactor_t *p, const char *host, const char *port, int backlog, pn_bytes_t extra) {
-  pn_listener_t *l = new_listener(p, host, port, backlog, extra);
-  if (l)  owner_to_leader(&l->psocket, leader_listen);
-  return l;
+int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *host, const char *port, int backlog)
+{
+  psocket_init(&l->psocket, p, false, host, port);
+  l->backlog = backlog;
+  owner_to_leader(&l->psocket, leader_listen);
+  return 0;
 }
 
 pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
   pconnection_t *pc = get_pconnection_t(c);
   return pc ? pc->psocket.proactor : NULL;
-}
-
-pn_proactor_t *pn_listener_proactor(pn_listener_t* l) {
-  return l ? l->psocket.proactor : NULL;
 }
 
 void leader_wake_connection(psocket_t *ps) {
@@ -778,15 +765,6 @@ void leader_wake_connection(psocket_t *ps) {
 
 void pn_connection_wake(pn_connection_t* c) {
   wakeup(&get_pconnection_t(c)->psocket, leader_wake_connection);
-}
-
-void pn_listener_close(pn_listener_t* l) {
-  wakeup(&l->psocket, leader_close);
-}
-
-/* Only called when condition is closed by error. */
-pn_condition_t* pn_listener_condition(pn_listener_t* l) {
-  return l->condition;
 }
 
 pn_proactor_t *pn_proactor() {
@@ -831,3 +809,65 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
 static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   return pn_collector_next(batch_proactor(batch)->collector);
 }
+
+pn_listener_t *pn_listener() {
+  pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
+  if (l) {
+    l->batch.next_event = listener_batch_next;
+    l->collector = pn_collector();
+    l->condition = pn_condition();
+    l->attachments = pn_record();
+    if (!l->condition || !l->collector || !l->attachments) {
+      pn_listener_free(l);
+      return NULL;
+    }
+  }
+  return l;
+}
+
+void pn_listener_free(pn_listener_t *l) {
+  if (l) {
+    if (!l->collector) pn_collector_free(l->collector);
+    if (!l->condition) pn_condition_free(l->condition);
+    if (!l->attachments) pn_free(l->attachments);
+    free(l);
+  }
+}
+
+void pn_listener_close(pn_listener_t* l) {
+  wakeup(&l->psocket, leader_close);
+}
+
+pn_proactor_t *pn_listener_proactor(pn_listener_t* l) {
+  return l ? l->psocket.proactor : NULL;
+}
+
+pn_condition_t* pn_listener_condition(pn_listener_t* l) {
+  return l->condition;
+}
+
+void *pn_listener_get_context(pn_listener_t *l) {
+  return l->context;
+}
+
+void pn_listener_set_context(pn_listener_t *l, void *context) {
+  l->context = context;
+}
+
+pn_record_t *pn_listener_attachments(pn_listener_t *l) {
+  return l->attachments;
+}
+
+int pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
+  if (l->accepting) {
+    return PN_STATE_ERR;        /* Only one at a time */
+  }
+  l->accepting = new_pconnection_t(
+      l->psocket.proactor, c, true, l->psocket.host, l->psocket.port);
+  if (!l->accepting) {
+    return UV_ENOMEM;
+  }
+  owner_to_leader(&l->psocket, leader_accept);
+  return 0;
+}
+

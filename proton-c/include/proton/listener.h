@@ -40,30 +40,57 @@ typedef struct pn_proactor_t pn_proactor_t;
 typedef struct pn_condition_t pn_condition_t;
 
 /**
- * Listener accepts connections, see pn_proactor_listen()
+ * A listener accepts connections.
  */
 typedef struct pn_listener_t pn_listener_t;
 
 /**
- * The proactor that created the listener.
+ * Create a listener.
  */
-pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
+PN_EXTERN pn_listener_t *pn_listener(void);
+
+/**
+ * Free a listener
+ */
+PN_EXTERN void pn_listener_free(pn_listener_t*);
+
+/**
+ * Asynchronously accept a connection using the listener.
+ *
+ * @param[in] connection the listener takes ownership, do not free.
+ */
+PN_EXTERN int pn_listener_accept(pn_listener_t*, pn_connection_t *connection);
 
 /**
  * Get the error condition for a listener.
  */
-pn_condition_t *pn_listener_condition(pn_listener_t *l);
+PN_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
 
 /**
- * Get the user-provided value associated with the listener in pn_proactor_listen()
- * The start address is aligned so you can cast it to any type.
+ * Get the application context that is associated with a listener.
  */
-pn_rwbytes_t pn_listener_get_extra(pn_listener_t*);
+PN_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
+
+/**
+ * Set a new application context for a listener.
+ */
+PN_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
+
+/**
+ * Get the attachments that are associated with a listener object.
+ */
+PN_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
 
 /**
  * Close the listener (thread safe).
  */
-void pn_listener_close(pn_listener_t *l);
+PN_EXTERN void pn_listener_close(pn_listener_t *l);
+
+/**
+ * The proactor associated with a listener.
+ */
+PN_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
+
 
 /**
  *@}
