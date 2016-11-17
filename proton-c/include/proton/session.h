@@ -34,10 +34,12 @@
 extern "C" {
 #endif
 
-/** @file
- * Session API for the proton Engine.
+/**
+ *   @file
+ * Serialized session
  *
  * @defgroup session Session
+ * Serialized session
  * @ingroup engine
  * @{
  */

@@ -22,11 +22,13 @@
 
 /**
  * @file
+ * **Experimental**: Low-level IO integration
  *
  * @defgroup connection_driver Connection Driver
  *
- * **Experimental**: Toolkit for integrating proton with arbitrary network or IO
- * transports via a bytes-in, bytes-out interface.
+ * **Experimental**: Low-level IO integration
+ *
+ * Associate an @ref engine with AMQP byte-streams from any source.
  *
  * - process AMQP-encoded bytes from some input byte stream
  * - generate ::pn_event_t events for your application to handle

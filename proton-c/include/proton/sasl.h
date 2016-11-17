@@ -30,16 +30,18 @@
 extern "C" {
 #endif
 
-/** @file
- * API for the SASL Secure Transport Layer.
+/**
+ * @file
+ * SASL Secure Transport Layer.
  *
+ * @defgroup sasl SASL
+ * SASL Secure Transport Layer.
  * The SASL layer is responsible for establishing an authenticated
  * and/or encrypted tunnel over which AMQP frames are passed between
  * peers. The peer acting as the SASL Client must provide
  * authentication credentials. The peer acting as the SASL Server must
  * provide authentication against the received credentials.
  *
- * @defgroup sasl SASL
  * @ingroup transport
  * @{
  */

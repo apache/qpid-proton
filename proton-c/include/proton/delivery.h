@@ -33,10 +33,10 @@ extern "C" {
 
 /**
  * @file
- *
- * Delivery API for the proton Engine.
+ * Track message delivery
  *
  * @defgroup delivery Delivery
+ * Track message delivery
  * @ingroup engine
  * @{
  */

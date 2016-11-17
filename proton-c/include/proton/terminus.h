@@ -31,11 +31,12 @@
 extern "C" {
 #endif
 
-/** @file
- *
- * Terminus API for the proton Engine.
+/**
+ * @file
+ * Message terminus (source or target)
  *
  * @defgroup terminus Terminus
+ * Message terminus (source or target)
  * @ingroup link
  * @{
  */

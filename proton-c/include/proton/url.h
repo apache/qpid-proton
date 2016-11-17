@@ -26,11 +26,13 @@ extern "C" {
 #endif
 
 
-/** @file
- * URL API for parsing URLs.
+/**
+ * @file
+ * Parsing URLs.
  *
  * @defgroup url URL
- * @{
+ * Parsing URLs.
+! * @{
  */
 
 /** A parsed URL */

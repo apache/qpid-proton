@@ -29,9 +29,11 @@ extern "C" {
 /**
  * @file
  *
- * Listener API for the proton @ref proactor
+ * Listener for the @ref proactor
  *
  * @defgroup listener Listener
+ * Listen for incoming connections with a @ref proactor
+ *
  * @ingroup proactor
  * @{
  */

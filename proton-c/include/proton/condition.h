@@ -31,12 +31,13 @@
 extern "C" {
 #endif
 
-/** @file
- *
- * The Condition API for the proton Engine.
+/**
+ * @file
+ * Error condition
  *
  * @defgroup condition Condition
- * @ingroup connection
+ * Error condition
+ * @ingroup engine
  * @{
  */
 

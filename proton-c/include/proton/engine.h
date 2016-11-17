@@ -22,12 +22,14 @@
  *
  */
 
-/** @file
+/**
+ * @file
  *
- * The proton Engine API. The Engine API provides a complete
- * implementation of AMQP as a Protocol Engine.
+ * The AMQP protocol engine
  *
  * @defgroup engine Engine
+ *
+ * Types and functions that implement the AMQP protocol
  */
 
 #include <proton/condition.h>

@@ -33,11 +33,10 @@ typedef struct pn_condition_t pn_condition_t;
 /**
  * @file
  *
- * **Experimental**: Proactor API for the the proton @ref engine
- *
+ * **Experimental**: Multi-threaded IO
  * @defgroup proactor Proactor
  *
- * **Experimental**: Proactor API for portable, multi-threaded, asynchronous applications.
+ * **Experimental**: Multi-threaded IO
  *
  * The proactor associates a @ref connection with a @ref transport, either
  * by making an outgoing connection or accepting an incoming one.

@@ -35,10 +35,10 @@ extern "C" {
 
 /**
  * @file
- *
- * Data API for proton.
+ * AMQP data encoding and decoding
  *
  * @defgroup data Data
+ * AMQP data encoding and decoding
  * @{
  */
 

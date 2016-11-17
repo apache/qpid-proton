@@ -36,10 +36,10 @@ extern "C" {
 
 /**
  * @file
- *
- * Link API for the proton Engine.
+ * One-way message link
  *
  * @defgroup link Link
+ * One-way message link
  * @ingroup engine
  * @{
  */
@@ -566,6 +566,7 @@ PN_EXTERN pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
 /**
  * @defgroup sender Sender
+ * Sending link
  * @{
  */
 
@@ -592,9 +593,9 @@ PN_EXTERN ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
 
 /** @} */
 
-// receiver
 /**
  * @defgroup receiver Receiver
+ * Receiving link
  * @{
  */
 

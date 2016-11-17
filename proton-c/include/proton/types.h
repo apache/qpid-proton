@@ -29,8 +29,10 @@
 
 /**
  * @file
+ * AMQP type system
  *
  * @defgroup types Types
+ * AMQP type system
  * @{
  */
 
@@ -40,6 +42,7 @@ extern "C" {
 
 /**
  * @defgroup primitives Primitive Types
+ * Primitive types
  * @{
  */
 
@@ -83,6 +86,7 @@ static const pn_bytes_t pn_rwbytes_null = { 0, NULL };
 
 /**
  * @defgroup abstract Abstract Types
+ * Abstract types
  * @{
  */
 

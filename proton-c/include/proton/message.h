@@ -32,10 +32,12 @@
 extern "C" {
 #endif
 
-/** @file
- * Message API for encoding/decoding AMQP Messages.
+/**
+ * @file
+ * Encode/decode AMQP Messages
  *
  * @defgroup message Message
+ * Encode/decode AMQP Messages
  * @{
  */
 

@@ -30,7 +30,13 @@
 extern "C" {
 #endif
 
-/** @file
+/**
+ * @file
+ * API for using SSL with the Transport Layer.
+ *
+ * @defgroup ssl SSL
+ * @ingroup transport
+ *
  * API for using SSL with the Transport Layer.
  *
  * A Transport may be configured to use SSL for encryption and/or authentication.  A
@@ -68,8 +74,6 @@ extern "C" {
  * Support for SSL Client Session resume is provided (see ::pn_ssl_init,
  * ::pn_ssl_resume_status).
  *
- * @defgroup ssl SSL
- * @ingroup transport
  * @{
  */
 

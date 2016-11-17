@@ -33,10 +33,10 @@ extern "C" {
 
 /**
  * @file
- *
- * Disposition API for the proton Engine.
+ * Outcome of message delivery
  *
  * @defgroup disposition Disposition
+ * Outcome of message delivery
  * @ingroup delivery
  * @{
  */

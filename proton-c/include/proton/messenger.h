@@ -40,6 +40,7 @@ extern "C" {
  * receiving AMQP messages.
  *
  * @defgroup messenger Messenger
+ * **Deprecated**
  * @{
  */
 

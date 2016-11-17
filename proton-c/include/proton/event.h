@@ -33,10 +33,10 @@ extern "C" {
 
 /**
  * @file
- *
- * Event API for the proton Engine.
+ * AMQP and transport events
  *
  * @defgroup event Event
+ * AMQP and transport events
  * @ingroup engine
  * @{
  */

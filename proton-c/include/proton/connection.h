@@ -38,9 +38,10 @@ extern "C" {
 /**
  * @file
  *
- * Connection API for the proton @ref engine
+ * AMQP protocol connection
  *
  * @defgroup connection Connection
+ * AMQP protocol connection
  * @ingroup engine
  * @{
  */

@@ -38,6 +38,7 @@ extern "C" {
  * party event loops.
  *
  * @defgroup selectable Selectable
+ * **Deprecated**
  * @{
  */
 

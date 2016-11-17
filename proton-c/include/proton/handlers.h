@@ -36,6 +36,7 @@ extern "C" {
  * Reactor API for proton.
  *
  * @defgroup handlers Handlers
+ * Reactor API for proton.
  * @{
  */
 

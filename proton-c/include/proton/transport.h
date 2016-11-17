@@ -33,10 +33,12 @@ extern "C" {
 
 /**
  * @file
- *
- * Transport API for the proton Engine.
+ * Network transport
  *
  * @defgroup transport Transport
+ * Network transport
+ *
+ * State of a network connection being used as a transport for an AMQP connection.
  * @ingroup engine
  * @{
  */
