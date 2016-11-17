@@ -157,6 +157,7 @@ struct pn_proactor_t {
   uv_cond_t cond;
   uv_loop_t loop;
   uv_async_t async;
+  uv_timer_t timer;
 
   /* Owner thread: proactor collector and batch can belong to leader or a worker */
   pn_collector_t *collector;
@@ -168,8 +169,11 @@ struct pn_proactor_t {
   queue worker_q;
   queue leader_q;
   size_t interrupt;             /* pending interrupts */
+  pn_millis_t timeout;
   size_t count;                 /* psocket count */
   bool inactive:1;
+  bool timeout_request:1;
+  bool timeout_elapsed:1;
   bool has_leader:1;
   bool batch_working:1;          /* batch belongs to a worker.  */
 };
@@ -551,6 +555,13 @@ static void on_write(uv_write_t* write, int err) {
   pc->writing = 0;              /* Need to send a new write request */
 }
 
+static void on_timeout(uv_timer_t *timer) {
+  pn_proactor_t *p = (pn_proactor_t*)timer->data;
+  uv_mutex_lock(&p->lock);
+  p->timeout_elapsed = true;
+  uv_mutex_unlock(&p->lock);
+}
+
 // Read buffer allocation function for uv, just returns the transports read buffer.
 static void alloc_read_buffer(uv_handle_t* stream, size_t size, uv_buf_t* buf) {
   pconnection_t *pc = (pconnection_t*)stream->data;
@@ -587,6 +598,7 @@ static void leader_rewatch(psocket_t *ps) {
   }
 }
 
+/* Set the event in the proactor's batch  */
 static pn_event_batch_t *proactor_batch_lh(pn_proactor_t *p, pn_event_type_t t) {
   pn_collector_put(p->collector, pn_proactor__class(), p, t);
   p->batch_working = true;
@@ -603,6 +615,10 @@ static pn_event_batch_t* get_batch_lh(pn_proactor_t *p) {
     if (p->interrupt > 0) {
       --p->interrupt;
       return proactor_batch_lh(p, PN_PROACTOR_INTERRUPT);
+    }
+    if (p->timeout_elapsed) {
+      p->timeout_elapsed = false;
+      return proactor_batch_lh(p, PN_PROACTOR_TIMEOUT);
     }
   }
   for (psocket_t *ps = pop_lh(&p->worker_q); ps; ps = pop_lh(&p->worker_q)) {
@@ -676,6 +692,14 @@ pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
     /* Lead till there is work to do. */
     p->has_leader = true;
     while (batch == NULL) {
+      if (p->timeout_request) {
+        p->timeout_request = false;
+        if (p->timeout) {
+          uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
+        } else {
+          uv_timer_stop(&p->timer);
+        }
+      }
       for (psocket_t *ps = pop_lh(&p->leader_q); ps; ps = pop_lh(&p->leader_q)) {
         void (*action)(psocket_t*) = ps->action;
         void (*wakeup)(psocket_t*) = ps->wakeup;
@@ -706,6 +730,14 @@ pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
 void pn_proactor_interrupt(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
   ++p->interrupt;
+  uv_async_send(&p->async);   /* Interrupt the UV loop */
+  uv_mutex_unlock(&p->lock);
+}
+
+void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
+  uv_mutex_lock(&p->lock);
+  p->timeout = t;
+  p->timeout_request = true;
   uv_async_send(&p->async);   /* Interrupt the UV loop */
   uv_mutex_unlock(&p->lock);
 }
@@ -765,7 +797,9 @@ pn_proactor_t *pn_proactor() {
   uv_loop_init(&p->loop);
   uv_mutex_init(&p->lock);
   uv_cond_init(&p->cond);
-  uv_async_init(&p->loop, &p->async, NULL); /* Just wake the loop */
+  uv_async_init(&p->loop, &p->async, NULL);
+  uv_timer_init(&p->loop, &p->timer); /* Just wake the loop */
+  p->timer.data = p;
   return p;
 }
 

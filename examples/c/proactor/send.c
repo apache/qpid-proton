@@ -44,6 +44,9 @@ typedef struct app_data_t {
   int sent;
   int acknowledged;
   pn_proactor_t *proactor;
+  pn_millis_t delay;
+  bool delaying;
+  pn_link_t *sender;
   bool finished;
 } app_data_t;
 
@@ -91,6 +94,23 @@ static pn_bytes_t encode_message(app_data_t* app) {
   return pn_bytes(mbuf.size, mbuf.start);
 }
 
+static void send(app_data_t* app) {
+  while (pn_link_credit(app->sender) > 0 && app->sent < app->message_count) {
+    ++app->sent;
+    // Use sent counter bytes as unique delivery tag.
+    pn_delivery(app->sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
+    pn_bytes_t msgbuf = encode_message(app);
+    pn_link_send(app->sender, msgbuf.start, msgbuf.size);
+    pn_link_advance(app->sender);
+    if (app->delay && app->sent < app->message_count) {
+      /* If delay is set, wait for TIMEOUT event to send more */
+      app->delaying = true;
+      pn_proactor_set_timeout(app->proactor, app->delay);
+      break;
+    }
+  }
+}
+
 static void handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
@@ -105,18 +125,24 @@ static void handle(app_data_t* app, pn_event_t* event) {
      pn_link_open(l);
    } break;
 
-   case PN_LINK_FLOW: {
-     /* The peer has given us some credit, now we can send messages */
-     pn_link_t *sender = pn_event_link(event);
-     while (pn_link_credit(sender) > 0 && app->sent < app->message_count) {
-       ++app->sent;
-       // Use sent counter bytes as unique delivery tag.
-       pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
-       pn_bytes_t msgbuf = encode_message(app);
-       pn_link_send(sender, msgbuf.start, msgbuf.size);
-       pn_link_advance(sender);
-     }
-   } break;
+   case PN_LINK_FLOW:
+    /* The peer has given us some credit, now we can send messages */
+    if (!app->delaying) {
+      app->sender = pn_event_link(event);
+      send(app);
+    }
+    break;
+
+   case PN_PROACTOR_TIMEOUT:
+    /* Wake the sender's connection */
+    pn_connection_wake(pn_session_connection(pn_link_session(app->sender)));
+    break;
+
+   case PN_CONNECTION_WAKE:
+    /* Timeout, we can send more. */
+    app->delaying = false;
+    send(app);
+    break;
 
    case PN_DELIVERY: {
      /* We received acknowledgedment from the peer that a message was delivered. */
@@ -158,7 +184,7 @@ static void handle(app_data_t* app, pn_event_t* event) {
 }
 
 static void usage(const char *arg0) {
-  fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
+  fprintf(stderr, "Usage: %s [-a url] [-m message-count] [-d delay-ms]\n", arg0);
   exit(1);
 }
 
@@ -169,10 +195,11 @@ int main(int argc, char **argv) {
   const char* urlstr = NULL;
 
   int opt;
-  while((opt = getopt(argc, argv, "a:m:")) != -1) {
+  while((opt = getopt(argc, argv, "a:m:d:")) != -1) {
     switch(opt) {
      case 'a': urlstr = optarg; break;
      case 'm': app.message_count = atoi(optarg); break;
+     case 'd': app.delay = atoi(optarg); break;
      default: usage(argv[0]); break;
     }
   }

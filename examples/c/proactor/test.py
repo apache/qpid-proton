@@ -48,5 +48,13 @@ class CExampleTest(BrokerTestCase):
         self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
         self.assertEqual(receive_expect(100), r.wait_out())
 
+    def test_timed_send(self):
+        """Send with timed delay"""
+        s = self.proc(["libuv_send", "-a", self.addr, "-d100", "-m3"])
+        self.assertEqual("3 messages sent and acknowledged\n", s.wait_out())
+        r = self.proc(["libuv_receive", "-a", self.addr, "-m3"])
+        self.assertEqual(receive_expect(3), r.wait_out())
+
+
 if __name__ == "__main__":
     unittest.main()
