@@ -565,7 +565,7 @@ class Connector(Handler):
             if not self.ssl_domain:
                 raise SSLUnavailable("amqps: SSL libraries not found")
             self.ssl = SSL(transport, self.ssl_domain)
-            self.ssl.peer_hostname = url.host
+            self.ssl.peer_hostname = self.virtual_host if self.virtual_host != None else url.host
 
     def on_connection_local_open(self, event):
         self._connect(event.connection, event.reactor)
