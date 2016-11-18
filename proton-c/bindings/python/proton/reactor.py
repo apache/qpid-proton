@@ -534,6 +534,7 @@ class Connector(Handler):
         self.user = None
         self.password = None
         self.virtual_host = None
+        self.ssl_sni = None
 
     def _connect(self, connection, reactor):
         assert(reactor is not None)
@@ -565,7 +566,7 @@ class Connector(Handler):
             if not self.ssl_domain:
                 raise SSLUnavailable("amqps: SSL libraries not found")
             self.ssl = SSL(transport, self.ssl_domain)
-            self.ssl.peer_hostname = self.virtual_host if self.virtual_host != None else url.host
+            self.ssl.peer_hostname = self.ssl_sni or self.virtual_host or url.host
 
     def on_connection_local_open(self, event):
         self._connect(event.connection, event.reactor)
@@ -724,6 +725,7 @@ class Container(Reactor):
         if connector.virtual_host:
             # only set hostname if virtual-host is a non-empty string
             conn.hostname = connector.virtual_host
+        connector.ssl_sni = kwargs.get('sni')
 
         conn._overrides = connector
         if url: connector.address = Urls([url])
