@@ -61,6 +61,129 @@ public class LinkTest extends EngineTestBase
     private final String _sourceAddress = getServer().containerId + "-link1-source";
 
     @Test
+    public void testCapabilities() throws Exception
+    {
+        final Symbol recvOfferedCap = Symbol.valueOf("recvOfferedCapability");
+        final Symbol recvDesiredCap = Symbol.valueOf("recvDesiredCapability");
+        final Symbol senderOfferedCap = Symbol.valueOf("senderOfferedCapability");
+        final Symbol senderDesiredCap = Symbol.valueOf("senderDesiredCapability");
+
+        Symbol[] clientOfferedCapabilities = new Symbol[] { recvOfferedCap };
+        Symbol[] clientDesiredCapabilities = new Symbol[] { recvDesiredCap };
+
+        Symbol[] serverOfferedCapabilities = new Symbol[] { senderOfferedCap };
+        Symbol[] serverDesiredCapabilities = new Symbol[] { senderDesiredCap };
+
+        LOGGER.fine(bold("======== About to create transports"));
+
+        getClient().transport = Proton.transport();
+        ProtocolTracerEnabler.setProtocolTracer(getClient().transport, TestLoggingHelper.CLIENT_PREFIX);
+
+        getServer().transport = Proton.transport();
+        ProtocolTracerEnabler.setProtocolTracer(getServer().transport, "            " + TestLoggingHelper.SERVER_PREFIX);
+
+        doOutputInputCycle();
+
+        getClient().connection = Proton.connection();
+        getClient().transport.bind(getClient().connection);
+
+        getServer().connection = Proton.connection();
+        getServer().transport.bind(getServer().connection);
+
+        LOGGER.fine(bold("======== About to open connections"));
+        getClient().connection.open();
+        getServer().connection.open();
+
+        doOutputInputCycle();
+
+        LOGGER.fine(bold("======== About to open sessions"));
+        getClient().session = getClient().connection.session();
+        getClient().session.open();
+
+        pumpClientToServer();
+
+        getServer().session = getServer().connection.sessionHead(of(UNINITIALIZED), of(ACTIVE));
+        assertEndpointState(getServer().session, UNINITIALIZED, ACTIVE);
+
+        getServer().session.open();
+        assertEndpointState(getServer().session, ACTIVE, ACTIVE);
+
+        pumpServerToClient();
+        assertEndpointState(getClient().session, ACTIVE, ACTIVE);
+
+        LOGGER.fine(bold("======== About to create reciever"));
+
+        getClient().source = new Source();
+        getClient().source.setAddress(_sourceAddress);
+
+        getClient().target = new Target();
+        getClient().target.setAddress(null);
+
+        getClient().receiver = getClient().session.receiver("link1");
+        getClient().receiver.setTarget(getClient().target);
+        getClient().receiver.setSource(getClient().source);
+
+        getClient().receiver.setReceiverSettleMode(ReceiverSettleMode.FIRST);
+        getClient().receiver.setSenderSettleMode(SenderSettleMode.UNSETTLED);
+
+        // Set the client receivers capabilities
+        getClient().receiver.setOfferedCapabilities(clientOfferedCapabilities);
+        getClient().receiver.setDesiredCapabilities(clientDesiredCapabilities);
+
+        assertEndpointState(getClient().receiver, UNINITIALIZED, UNINITIALIZED);
+
+        getClient().receiver.open();
+        assertEndpointState(getClient().receiver, ACTIVE, UNINITIALIZED);
+
+        pumpClientToServer();
+
+        LOGGER.fine(bold("======== About to set up implicitly created sender"));
+
+        getServer().sender = (Sender) getServer().connection.linkHead(of(UNINITIALIZED), of(ACTIVE));
+
+        getServer().sender.setReceiverSettleMode(getServer().sender.getRemoteReceiverSettleMode());
+        getServer().sender.setSenderSettleMode(getServer().sender.getRemoteSenderSettleMode());
+
+        org.apache.qpid.proton.amqp.transport.Source serverRemoteSource = getServer().sender.getRemoteSource();
+        getServer().sender.setSource(serverRemoteSource);
+
+        // Set the server senders capabilities
+        getServer().sender.setOfferedCapabilities(serverOfferedCapabilities);
+        getServer().sender.setDesiredCapabilities(serverDesiredCapabilities);
+
+        assertEndpointState(getServer().sender, UNINITIALIZED, ACTIVE);
+        getServer().sender.open();
+
+        assertEndpointState(getServer().sender, ACTIVE, ACTIVE);
+
+        pumpServerToClient();
+
+        assertEndpointState(getClient().receiver, ACTIVE, ACTIVE);
+
+        // Verify server side got the clients receiver capabilities as expected
+        Symbol[] serverRemoteOfferedCapabilities = getServer().sender.getRemoteOfferedCapabilities();
+        assertNotNull("Server had no remote offered capabilities", serverRemoteOfferedCapabilities);
+        assertEquals("Server remote offered capabilities not expected size", 1, serverRemoteOfferedCapabilities.length);
+        assertTrue("Server remote offered capabilities lack expected value: " + recvOfferedCap, Arrays.asList(serverRemoteOfferedCapabilities).contains(recvOfferedCap));
+
+        Symbol[] serverRemoteDesiredCapabilities = getServer().sender.getRemoteDesiredCapabilities();
+        assertNotNull("Server had no remote desired capabilities", serverRemoteDesiredCapabilities);
+        assertEquals("Server remote desired capabilities not expected size", 1, serverRemoteDesiredCapabilities.length);
+        assertTrue("Server remote desired capabilities lack expected value: " + recvDesiredCap, Arrays.asList(serverRemoteDesiredCapabilities).contains(recvDesiredCap));
+
+        // Verify the client side got the servers sender capabilities as expected
+        Symbol[]  clientRemoteOfferedCapabilities = getClient().receiver.getRemoteOfferedCapabilities();
+        assertNotNull("Client had no remote offered capabilities", clientRemoteOfferedCapabilities);
+        assertEquals("Client remote offered capabilities not expected size", 1, clientRemoteOfferedCapabilities.length);
+        assertTrue("Client remote offered capabilities lack expected value: " + senderOfferedCap, Arrays.asList(clientRemoteOfferedCapabilities).contains(senderOfferedCap));
+
+        Symbol[]  clientRemoteDesiredCapabilities = getClient().receiver.getRemoteDesiredCapabilities();
+        assertNotNull("Client had no remote desired capabilities", clientRemoteDesiredCapabilities);
+        assertEquals("Client remote desired capabilities not expected size", 1, clientRemoteDesiredCapabilities.length);
+        assertTrue("Client remote desired capabilities lack expected value: " + senderDesiredCap, Arrays.asList(clientRemoteDesiredCapabilities).contains(senderDesiredCap));
+    }
+
+    @Test
     public void testProperties() throws Exception
     {
         Map<Symbol, Object> receiverProps = new HashMap<>();

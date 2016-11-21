@@ -781,6 +781,16 @@ public class TransportImpl extends EndpointImpl
                                 attach.setProperties(link.getProperties());
                             }
 
+                            if(link.getOfferedCapabilities() != null)
+                            {
+                                attach.setOfferedCapabilities(link.getOfferedCapabilities());
+                            }
+
+                            if(link.getDesiredCapabilities() != null)
+                            {
+                                attach.setDesiredCapabilities(link.getDesiredCapabilities());
+                            }
+
                             attach.setRole(endpoint instanceof ReceiverImpl ? Role.RECEIVER : Role.SENDER);
 
                             if(link instanceof SenderImpl)
@@ -1181,6 +1191,9 @@ public class TransportImpl extends EndpointImpl
                 link.setRemoteSenderSettleMode(attach.getSndSettleMode());
 
                 link.setRemoteProperties(attach.getProperties());
+
+                link.setRemoteDesiredCapabilities(attach.getDesiredCapabilities());
+                link.setRemoteOfferedCapabilities(attach.getOfferedCapabilities());
 
                 transportLink.setName(attach.getName());
                 transportLink.setRemoteHandle(handle);

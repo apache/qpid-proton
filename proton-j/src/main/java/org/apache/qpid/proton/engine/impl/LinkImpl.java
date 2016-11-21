@@ -61,6 +61,10 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     private boolean _detached;
     private Map<Symbol, Object> _properties;
     private Map<Symbol, Object> _remoteProperties;
+    private Symbol[] _offeredCapabilities;
+    private Symbol[] _remoteOfferedCapabilities;
+    private Symbol[] _desiredCapabilities;
+    private Symbol[] _remoteDesiredCapabilities;
 
     LinkImpl(SessionImpl session, String name)
     {
@@ -397,6 +401,52 @@ public abstract class LinkImpl extends EndpointImpl implements Link
     void setRemoteProperties(Map<Symbol, Object> remoteProperties)
     {
         _remoteProperties = remoteProperties;
+    }
+
+    @Override
+    public Symbol[] getDesiredCapabilities()
+    {
+        return _desiredCapabilities;
+    }
+
+    @Override
+    public void setDesiredCapabilities(Symbol[] desiredCapabilities)
+    {
+        _desiredCapabilities = desiredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteDesiredCapabilities()
+    {
+        return _remoteDesiredCapabilities;
+    }
+
+    void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
+    {
+        _remoteDesiredCapabilities = remoteDesiredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getOfferedCapabilities()
+    {
+        return _offeredCapabilities;
+    }
+
+    @Override
+    public void setOfferedCapabilities(Symbol[] offeredCapabilities)
+    {
+        _offeredCapabilities = offeredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteOfferedCapabilities()
+    {
+        return _remoteOfferedCapabilities;
+    }
+
+    void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
+    {
+        _remoteOfferedCapabilities = remoteOfferedCapabilities;
     }
 
     @Override

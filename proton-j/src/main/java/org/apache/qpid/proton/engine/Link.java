@@ -243,4 +243,59 @@ public interface Link extends Endpoint
     public void detach();
     public boolean detached();
 
+    /**
+     * Sets the local link offered capabilities, to be conveyed to the peer via the Attach frame
+     * when attaching the link to the session.
+     *
+     * Must be called during link setup, i.e. before calling the {@link #open()} method.
+     *
+     * @param offeredCapabilities
+     *          the offered capabilities array to send, or null for none.
+     */
+    public void setOfferedCapabilities(Symbol[] offeredCapabilities);
+
+    /**
+     * Gets the local link offered capabilities.
+     *
+     * @return the offered capabilities array, or null if none was set.
+     *
+     * @see #setOfferedCapabilities(Symbol[])
+     */
+    Symbol[] getOfferedCapabilities();
+
+    /**
+     * Gets the remote link offered capabilities, as conveyed from the peer via the Attach frame
+     * when attaching the link to the session.
+     *
+     * @return the offered capabilities array conveyed by the peer, or null if there was none.
+     */
+    Symbol[] getRemoteOfferedCapabilities();
+
+    /**
+     * Sets the local link desired capabilities, to be conveyed to the peer via the Attach frame
+     * when attaching the link to the session.
+     *
+     * Must be called during link setup, i.e. before calling the {@link #open()} method.
+     *
+     * @param desiredCapabilities
+     *          the desired capabilities array to send, or null for none.
+     */
+    public void setDesiredCapabilities(Symbol[] desiredCapabilities);
+
+    /**
+     * Gets the local link desired capabilities.
+     *
+     * @return the desired capabilities array, or null if none was set.
+     *
+     * @see #setDesiredCapabilities(Symbol[])
+     */
+    Symbol[] getDesiredCapabilities();
+
+    /**
+     * Gets the remote link desired capabilities, as conveyed from the peer via the Attach frame
+     * when attaching the link to the session.
+     *
+     * @return the desired capabilities array conveyed by the peer, or null if there was none.
+     */
+    Symbol[] getRemoteDesiredCapabilities();
 }
