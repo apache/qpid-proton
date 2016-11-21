@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.qpid.proton.amqp.Symbol;
 import org.apache.qpid.proton.engine.EndpointState;
 import org.apache.qpid.proton.engine.Event;
 import org.apache.qpid.proton.engine.ProtonJSession;
@@ -45,6 +46,12 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     private int _incomingDeliveries = 0;
     private int _outgoingDeliveries = 0;
     private long _outgoingWindow = Integer.MAX_VALUE;
+    private Map<Symbol, Object> _properties;
+    private Map<Symbol, Object> _remoteProperties;
+    private Symbol[] _offeredCapabilities;
+    private Symbol[] _remoteOfferedCapabilities;
+    private Symbol[] _desiredCapabilities;
+    private Symbol[] _remoteDesiredCapabilities;
 
     private LinkNode<SessionImpl> _node;
 
@@ -285,5 +292,74 @@ public class SessionImpl extends EndpointImpl implements ProtonJSession
     public long getOutgoingWindow()
     {
         return _outgoingWindow;
+    }
+
+    @Override
+    public Map<Symbol, Object> getProperties()
+    {
+        return _properties;
+    }
+
+    @Override
+    public void setProperties(Map<Symbol, Object> properties)
+    {
+        _properties = properties;
+    }
+
+    @Override
+    public Map<Symbol, Object> getRemoteProperties()
+    {
+        return _remoteProperties;
+    }
+
+    void setRemoteProperties(Map<Symbol, Object> remoteProperties)
+    {
+        _remoteProperties = remoteProperties;
+    }
+
+    @Override
+    public Symbol[] getDesiredCapabilities()
+    {
+        return _desiredCapabilities;
+    }
+
+    @Override
+    public void setDesiredCapabilities(Symbol[] desiredCapabilities)
+    {
+        _desiredCapabilities = desiredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteDesiredCapabilities()
+    {
+        return _remoteDesiredCapabilities;
+    }
+
+    void setRemoteDesiredCapabilities(Symbol[] remoteDesiredCapabilities)
+    {
+        _remoteDesiredCapabilities = remoteDesiredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getOfferedCapabilities()
+    {
+        return _offeredCapabilities;
+    }
+
+    @Override
+    public void setOfferedCapabilities(Symbol[] offeredCapabilities)
+    {
+        _offeredCapabilities = offeredCapabilities;
+    }
+
+    @Override
+    public Symbol[] getRemoteOfferedCapabilities()
+    {
+        return _remoteOfferedCapabilities;
+    }
+
+    void setRemoteOfferedCapabilities(Symbol[] remoteOfferedCapabilities)
+    {
+        _remoteOfferedCapabilities = remoteOfferedCapabilities;
     }
 }

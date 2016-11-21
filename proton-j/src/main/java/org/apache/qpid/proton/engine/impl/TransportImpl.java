@@ -881,6 +881,21 @@ public class TransportImpl extends EndpointImpl
                         begin.setOutgoingWindow(transportSession.getOutgoingWindowSize());
                         begin.setNextOutgoingId(transportSession.getNextOutgoingId());
 
+                        if(session.getProperties() != null)
+                        {
+                            begin.setProperties(session.getProperties());
+                        }
+
+                        if(session.getOfferedCapabilities() != null)
+                        {
+                            begin.setOfferedCapabilities(session.getOfferedCapabilities());
+                        }
+
+                        if(session.getDesiredCapabilities() != null)
+                        {
+                            begin.setDesiredCapabilities(session.getDesiredCapabilities());
+                        }
+
                         writeFrame(channelId, begin, null, null);
                         transportSession.sentBegin();
                     }
@@ -1118,6 +1133,10 @@ public class TransportImpl extends EndpointImpl
             transportSession.setRemoteChannel(channel);
             session.setRemoteState(EndpointState.ACTIVE);
             transportSession.setNextIncomingId(begin.getNextOutgoingId());
+            session.setRemoteProperties(begin.getProperties());
+            session.setRemoteDesiredCapabilities(begin.getDesiredCapabilities());
+            session.setRemoteOfferedCapabilities(begin.getOfferedCapabilities());
+
             _remoteSessions.put(channel, transportSession);
 
             _connectionEndpoint.put(Event.Type.SESSION_REMOTE_OPEN, session);
