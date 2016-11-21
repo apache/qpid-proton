@@ -35,7 +35,6 @@ from ccodec import *
 from cengine import *
 from csasl import *
 from cssl import *
-from cdriver import *
 from cmessenger import *
 from cmessage import *
 from curl import *
