@@ -29,6 +29,7 @@
 #include <cstring>
 #include <iomanip>
 #include <sstream>
+#include <vector>
 
 namespace {
 
@@ -156,20 +157,15 @@ struct url::impl {
     const char* host;
     const char* port;
     const char* path;
-    char* cstr;
+    std::vector<char> cstr;
     mutable std::string str;
 
     impl(const std::string& s) :
-      scheme(0), username(0), password(0), host(0), port(0), path(0),
-      cstr(new char[s.size()+1])
+        scheme(0), username(0), password(0), host(0), port(0), path(0),
+        cstr(s.size()+1, '\0')
     {
-        std::strncpy(cstr, s.c_str(), s.size());
-        cstr[s.size()] = 0;
-        parse_url(cstr, &scheme, &username, &password, &host, &port, &path);
-    }
-
-    ~impl() {
-        delete [] cstr;
+        std::copy(s.begin(), s.end(), cstr.begin());
+        parse_url(&cstr[0], &scheme, &username, &password, &host, &port, &path);
     }
 
     void defaults() {
