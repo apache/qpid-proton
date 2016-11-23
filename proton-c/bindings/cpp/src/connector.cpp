@@ -25,7 +25,6 @@
 #include "proton/transport.hpp"
 #include "proton/container.hpp"
 #include "proton/reconnect_timer.hpp"
-#include "proton/task.hpp"
 #include "proton/sasl.hpp"
 #include "proton/url.hpp"
 

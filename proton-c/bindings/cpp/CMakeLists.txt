@@ -27,7 +27,6 @@ include_directories(
 add_definitions(${CXX_WARNING_FLAGS})
 
 set(qpid-proton-cpp-source
-  src/acceptor.cpp
   src/binary.cpp
   src/byte_array.cpp
   src/cached_map.cpp
@@ -73,7 +72,6 @@ set(qpid-proton-cpp-source
   src/ssl.cpp
   src/ssl_domain.cpp
   src/target.cpp
-  src/task.cpp
   src/terminus.cpp
   src/timestamp.cpp
   src/tracker.cpp

@@ -85,13 +85,12 @@ class context {
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : container(0), default_session(0), link_gen(0), collector(0) {}
+    connection_context() : container(0), default_session(0), link_gen(0) {}
 
     class container* container;
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
     io::link_namer* link_gen;      // Link name generator.
-    pn_collector_t* collector;
 
     internal::pn_unique_ptr<proton_handler> handler;
     internal::pn_unique_ptr<class event_loop> event_loop;

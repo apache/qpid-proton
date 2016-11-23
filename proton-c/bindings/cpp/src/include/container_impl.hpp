@@ -22,8 +22,6 @@
  *
  */
 
-#include "proton/io/link_namer.hpp"
-
 #include "proton/container.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
@@ -48,7 +46,6 @@ class connector;
 class acceptor;
 class container;
 class url;
-class task;
 class listen_handler;
 
 class container_impl : public standard_container {
@@ -88,7 +85,7 @@ class container_impl : public standard_container {
 
     // non-interface functions
     void configure_server_connection(connection &c);
-    static task schedule(container& c, int delay, proton_handler *h);
+    static void schedule(container& c, int delay, proton_handler *h);
     template <class T> static void set_handler(T s, messaging_handler* h);
 
   private:

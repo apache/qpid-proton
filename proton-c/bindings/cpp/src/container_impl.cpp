@@ -27,7 +27,6 @@
 #include "proton/event_loop.hpp"
 #include "proton/sender.hpp"
 #include "proton/receiver.hpp"
-#include "proton/task.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 #include "proton/transport.hpp"
@@ -265,12 +264,12 @@ void container_impl::stop_listening(const std::string& url) {
         close_acceptor(i->second);
 }
 
-task container_impl::schedule(container& c, int delay, proton_handler *h) {
+void container_impl::schedule(container& c, int delay, proton_handler *h) {
     container_impl& ci = static_cast<container_impl&>(c);
     internal::pn_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = ci.cpp_handler(h);
-    return ci.reactor_.schedule(delay, task_handler.get());
+    ci.reactor_.schedule(delay, task_handler.get());
 }
 
 namespace {

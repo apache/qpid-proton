@@ -68,8 +68,6 @@ void connection_driver::configure(const connection_options& opts, bool server) {
     pn_connection_driver_bind(&driver_);
     opts.apply_bound(c);
     handler_ =  opts.handler();
-    connection_context::get(connection()).collector =
-      pn_connection_collector(driver_.connection);
 }
 
 void connection_driver::connect(const connection_options& opts) {

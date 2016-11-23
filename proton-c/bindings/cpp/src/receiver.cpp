@@ -73,12 +73,7 @@ void receiver::drain() {
             // Drain is already complete.  No state to communicate over the wire.
             // Create dummy flow event where "drain finish" can be detected.
             pn_connection_t *pnc = pn_session_connection(pn_link_session(pn_object()));
-            connection_context& cctx = connection_context::get(pnc);
-            // connection_driver collector is per connection.  Reactor collector is global.
-            pn_collector_t *coll = cctx.collector;
-            if (!coll)
-                coll = pn_reactor_collector(pn_object_reactor(pnc));
-            pn_collector_put(coll, PN_OBJECT, pn_object(), PN_LINK_FLOW);
+            pn_collector_put(pn_connection_collector(pnc), PN_OBJECT, pn_object(), PN_LINK_FLOW);
         }
     }
 }

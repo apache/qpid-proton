@@ -38,7 +38,6 @@ class container;
 class acceptor;
 class url;
 class messaging_handler;
-class task;
 
 class reactor : public internal::object<pn_reactor_t> {
   public:
@@ -74,7 +73,7 @@ class reactor : public internal::object<pn_reactor_t> {
     timestamp mark();
     timestamp now();
 
-    task schedule(int, pn_handler_t*);
+    void schedule(int, pn_handler_t*);
 
     class connection connection(pn_handler_t*) const;
 

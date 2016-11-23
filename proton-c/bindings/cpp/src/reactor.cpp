@@ -21,7 +21,6 @@
 #include "acceptor.hpp"
 
 #include "proton/connection.hpp"
-#include "proton/task.hpp"
 #include "proton/url.hpp"
 
 #include "contexts.hpp"
@@ -45,12 +44,14 @@ void reactor::yield() { pn_reactor_yield(pn_object()); }
 timestamp reactor::mark() { return timestamp(pn_reactor_mark(pn_object())); }
 timestamp reactor::now() { return timestamp(pn_reactor_now(pn_object())); }
 
+void acceptor::close() { pn_acceptor_close(pn_object()); }
+
 acceptor reactor::listen(const url& url){
     return make_wrapper(pn_reactor_acceptor(pn_object(), url.host().c_str(), url.port().c_str(), 0));
 }
 
-task reactor::schedule(int delay, pn_handler_t* handler) {
-    return pn_reactor_schedule(pn_object(), delay, handler);
+void reactor::schedule(int delay, pn_handler_t* handler) {
+    pn_reactor_schedule(pn_object(), delay, handler);
 }
 
 connection reactor::connection(pn_handler_t* h) const {

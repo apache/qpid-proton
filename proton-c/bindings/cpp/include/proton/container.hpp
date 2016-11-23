@@ -46,7 +46,6 @@ class receiver;
 class receiver_options;
 class sender;
 class sender_options;
-class task;
 
 /// A top-level container of connections, sessions, senders, and
 /// receivers.
