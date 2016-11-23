@@ -62,7 +62,8 @@ typedef struct pn_proactor_t pn_proactor_t;
 pn_proactor_t *pn_proactor(void);
 
 /**
- * Free the proactor.
+ * Free the proactor. Abort any open network connections and clean up all
+ * associated resources.
  */
 void pn_proactor_free(pn_proactor_t*);
 
@@ -97,7 +98,7 @@ int pn_proactor_listen(pn_proactor_t *, pn_listener_t *listener, const char *hos
  * Wait for events to handle.
  *
  * Handle events in the returned batch by calling pn_event_batch_next() until it
- * returns NULL. You must call pn_proactor_done() to when you are finished.
+ * returns NULL. You must call pn_proactor_done() when you are finished with the batch.
  *
  * If you call pn_proactor_done() before finishing the batch, the remaining
  * events will be returned again by another call pn_proactor_wait().  This is
@@ -108,21 +109,28 @@ int pn_proactor_listen(pn_proactor_t *, pn_listener_t *listener, const char *hos
  * handled in sequence, but batches returned by separate calls to
  * pn_proactor_wait() can be handled concurrently.
  */
-pn_event_batch_t *pn_proactor_wait(pn_proactor_t* d);
+pn_event_batch_t *pn_proactor_wait(pn_proactor_t *d);
 
 /**
- * Call when done handling events.
+ * Call when done handling a batch of events.
  *
  * Must be called exactly once to match each call to pn_proactor_wait().
  *
- * Thread safe: may be called from any thread provided the exactly once rules is
+ * Thread safe: may be called from any thread provided the exactly once rule is
  * respected.
  */
-void pn_proactor_done(pn_proactor_t* d, pn_event_batch_t *events);
+void pn_proactor_done(pn_proactor_t *d, pn_event_batch_t *events);
 
 /**
- * Cause PN_PROACTOR_INTERRUPT to be returned to exactly one thread calling wait()
- * for each call to pn_proactor_interrupt(). Thread safe.
+ * Cause PN_PROACTOR_INTERRUPT to be returned to exactly one call of
+ * pn_proactor_wait().
+ *
+ * If threads are blocked in pn_proactor_wait(), one of them will be
+ * interrupted, otherwise the interrupt will be returned by a future call to
+ * pn_proactor_wait(). Calling pn_proactor_interrupt() N times will return
+ * PN_PROACTOR_INTERRUPT to N current or future calls of pn_proactor_wait()
+ *
+ * Thread safe.
  */
 void pn_proactor_interrupt(pn_proactor_t* d);
 
@@ -131,8 +139,9 @@ void pn_proactor_interrupt(pn_proactor_t* d);
  * timeout milliseconds. Thread safe.
  *
  * Note calling pn_proactor_set_timeout() again before the PN_PROACTOR_TIMEOUT is
- * delivered will cancel the previous timeout and deliver an event only after
- * the new timeout.
+  *delivered will cancel the previous timeout and deliver an event only after
+ * the new timeout. ::pn_proactor_set_timeout(0) will cancel the timeout
+ * without setting a new one.
  */
 void pn_proactor_set_timeout(pn_proactor_t* d, pn_millis_t timeout);
 
@@ -140,7 +149,7 @@ void pn_proactor_set_timeout(pn_proactor_t* d, pn_millis_t timeout);
  * Cause a PN_CONNECTION_WAKE event to be returned by the proactor, even if
  * there are no IO events pending for the connection.
  *
- * Thread safe: this is the only pn_connection_ function that can be
+ * **Thread safe**: this is the only pn_connection_ function that can be
  * called concurrently.
  *
  * Wakes can be "coalesced" - if several pn_connection_wake() calls happen

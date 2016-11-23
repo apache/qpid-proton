@@ -48,13 +48,14 @@ typedef struct pn_listener_t pn_listener_t;
 
 /**
  * Create a listener.
+ *
+ * You can use pn_listener_set_context() or pn_listener_attachments() to set
+ * application data that can be accessed when accepting connections.
+ *
+ * You must pass the returned listener to pn_proactor_listen(), the proactor
+ * will free the listener when it is no longer active.
  */
 PN_EXTERN pn_listener_t *pn_listener(void);
-
-/**
- * Free a listener
- */
-PN_EXTERN void pn_listener_free(pn_listener_t*);
 
 /**
  * Asynchronously accept a connection using the listener.

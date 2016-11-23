@@ -810,6 +810,15 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   return pn_collector_next(batch_proactor(batch)->collector);
 }
 
+static void pn_listener_free(pn_listener_t *l) {
+  if (l) {
+    if (!l->collector) pn_collector_free(l->collector);
+    if (!l->condition) pn_condition_free(l->condition);
+    if (!l->attachments) pn_free(l->attachments);
+    free(l);
+  }
+}
+
 pn_listener_t *pn_listener() {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
@@ -823,15 +832,6 @@ pn_listener_t *pn_listener() {
     }
   }
   return l;
-}
-
-void pn_listener_free(pn_listener_t *l) {
-  if (l) {
-    if (!l->collector) pn_collector_free(l->collector);
-    if (!l->condition) pn_condition_free(l->condition);
-    if (!l->attachments) pn_free(l->attachments);
-    free(l);
-  }
 }
 
 void pn_listener_close(pn_listener_t* l) {
