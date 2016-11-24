@@ -23,6 +23,10 @@ package org.apache.qpid.proton.messenger;
 
 import org.apache.qpid.proton.ProtonException;
 
+/**
+ * @deprecated  Messenger will be removed from upcoming proton-j releases.
+ */
+@Deprecated
 public class MessengerException extends ProtonException
 {
     public MessengerException()

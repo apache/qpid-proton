@@ -29,8 +29,8 @@ import java.util.regex.Pattern;
 /**
  * Transform
  *
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
  */
-
 class Transform
 {
 

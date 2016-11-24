@@ -33,6 +33,9 @@ import org.apache.qpid.proton.engine.Delivery;
 import org.apache.qpid.proton.amqp.messaging.Accepted;
 import org.apache.qpid.proton.amqp.messaging.Rejected;
 
+/**
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
+ */
 class Store
 {
     private static final Accepted ACCEPTED = Accepted.getInstance();

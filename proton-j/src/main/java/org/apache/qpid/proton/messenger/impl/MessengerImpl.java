@@ -54,9 +54,12 @@ import org.apache.qpid.proton.amqp.messaging.Source;
 import org.apache.qpid.proton.amqp.messaging.Target;
 import org.apache.qpid.proton.amqp.transport.ReceiverSettleMode;
 import org.apache.qpid.proton.amqp.transport.SenderSettleMode;
-
 import org.apache.qpid.proton.amqp.Binary;
 
+/**
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
+ */
+@Deprecated
 public class MessengerImpl implements Messenger
 {
     private enum LinkCreditMode
@@ -103,8 +106,7 @@ public class MessengerImpl implements Messenger
 
 
     /**
-     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use {@link Messenger.Factory#create()} instead
+     * @deprecated Messenger will be removed from upcoming proton-j releases.
      */
     @Deprecated public MessengerImpl()
     {
@@ -112,8 +114,7 @@ public class MessengerImpl implements Messenger
     }
 
     /**
-     * @deprecated This constructor's visibility will be reduced to the default scope in a future release.
-     * Client code outside this module should use a {@link Messenger.Factory#create(String)} instead
+     * @deprecated Messenger will be removed from upcoming proton-j releases.
      */
     @Deprecated public MessengerImpl(String name)
     {

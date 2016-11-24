@@ -42,6 +42,7 @@ import org.apache.qpid.proton.reactor.Selectable;
 import org.apache.qpid.proton.reactor.Selectable.Callback;
 import org.apache.qpid.proton.messenger.impl.Address;
 
+@SuppressWarnings("deprecation")
 public class AcceptorImpl implements Acceptor {
 
     private Record attachments = new RecordImpl();

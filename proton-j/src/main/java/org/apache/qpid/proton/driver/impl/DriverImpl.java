@@ -42,6 +42,7 @@ import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Driver;
 import org.apache.qpid.proton.driver.Listener;
 
+@SuppressWarnings("deprecation")
 public class DriverImpl implements Driver
 {
     private Selector _selector;

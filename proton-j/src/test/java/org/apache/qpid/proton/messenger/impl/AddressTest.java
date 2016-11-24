@@ -22,6 +22,7 @@ import org.junit.Test;
 
 public class AddressTest {
 
+    @SuppressWarnings("deprecation")
     private void testParse(String url, String scheme, String user, String pass, String host, String port, String name)
     {
         Address address = new Address(url);

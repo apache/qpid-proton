@@ -24,6 +24,7 @@ package org.apache.qpid.proton.driver;
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
+
 import org.apache.qpid.proton.driver.impl.DriverImpl;
 
 /**
@@ -39,10 +40,16 @@ import org.apache.qpid.proton.driver.impl.DriverImpl;
  * AMQP over SASL over TCP.
  *
  * Unless otherwise stated, methods on Driver implementations are not necessarily thread-safe.
+ *
+ * @deprecated Messenger and its driver will be removed from upcoming proton-j releases.
  */
+@Deprecated
 public interface Driver
 {
-
+    /**
+     * @deprecated Messenger and its driver will be removed from upcoming proton-j releases.
+     */
+    @Deprecated
     public static final class Factory
     {
         public static Driver create() throws IOException {

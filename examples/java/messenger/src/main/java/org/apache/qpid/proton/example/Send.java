@@ -36,7 +36,9 @@ import java.util.logging.Logger;
  * Based closely qpid src/proton/examples/messenger/py/send.py
  * @author mberkowitz@sf.org
  * @since 8/4/2013
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
  */
+@Deprecated
 public class Send {
 
     private static Logger tracer = Logger.getLogger("proton.example");

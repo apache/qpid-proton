@@ -53,6 +53,7 @@ import org.apache.qpid.proton.reactor.Selector;
 import org.apache.qpid.proton.reactor.Task;
 import org.apache.qpid.proton.messenger.impl.Address;
 
+@SuppressWarnings("deprecation")
 public class ReactorImpl implements Reactor, Extendable {
     public static final ExtendableAccessor<Event, Handler> ROOT = new ExtendableAccessor<>(Handler.class);
 

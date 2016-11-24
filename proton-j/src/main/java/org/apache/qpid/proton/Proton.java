@@ -43,6 +43,7 @@ import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.reactor.Reactor;
 
+@SuppressWarnings("deprecation")
 public final class Proton
 {
 
@@ -95,17 +96,28 @@ public final class Proton
                                       applicationProperties, body, footer);
     }
 
-
+    /**
+     * @deprecated Messenger will be removed from upcoming proton-j releases.
+     */
+    @Deprecated
     public static Messenger messenger()
     {
         return Messenger.Factory.create();
     }
 
+    /**
+     * @deprecated  Messenger will be removed from upcoming proton-j releases.
+     */
+    @Deprecated
     public static Messenger messenger(String name)
     {
         return Messenger.Factory.create(name);
     }
 
+    /**
+     * @deprecated Messenger and its driver will be removed from upcoming proton-j releases.
+     */
+    @Deprecated
     public static Driver driver() throws IOException
     {
         return Driver.Factory.create();

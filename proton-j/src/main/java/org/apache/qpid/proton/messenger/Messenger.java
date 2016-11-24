@@ -24,7 +24,6 @@ import java.io.IOException;
 
 import org.apache.qpid.proton.TimeoutException;
 import org.apache.qpid.proton.message.Message;
-
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
 
 /**
@@ -68,10 +67,17 @@ import org.apache.qpid.proton.messenger.impl.MessengerImpl;
  *
  *  Similarly, the get method will decode the content in the incoming
  *  message queue into the supplied Message object.
+ *
+ *  @deprecated Messenger will be removed from upcoming proton-j releases.
 */
+@Deprecated
 public interface Messenger
 {
 
+    /**
+     * @deprecated Messenger will be removed from upcoming proton-j releases.
+     */
+    @Deprecated
     public static final class Factory
     {
         public static Messenger create() {

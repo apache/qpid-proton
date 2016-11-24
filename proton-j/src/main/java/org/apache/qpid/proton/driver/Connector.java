@@ -21,6 +21,7 @@
 package org.apache.qpid.proton.driver;
 
 import java.io.IOException;
+
 import org.apache.qpid.proton.engine.Connection;
 import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
@@ -36,7 +37,9 @@ import org.apache.qpid.proton.engine.Transport;
  * Implementations are not necessarily thread-safe.
  *
  * @param <C> application supplied context
+ * @deprecated Messenger and its connector will be removed from upcoming proton-j releases.
  */
+@Deprecated
 public interface Connector<C>
 {
     /**

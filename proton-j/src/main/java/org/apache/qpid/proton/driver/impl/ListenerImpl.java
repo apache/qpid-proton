@@ -29,6 +29,7 @@ import java.util.logging.Logger;
 import org.apache.qpid.proton.driver.Connector;
 import org.apache.qpid.proton.driver.Listener;
 
+@SuppressWarnings("deprecation")
 class ListenerImpl<C> implements Listener<C>
 {
     private C _context;

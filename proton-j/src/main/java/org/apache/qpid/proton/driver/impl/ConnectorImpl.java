@@ -33,6 +33,7 @@ import org.apache.qpid.proton.engine.Sasl;
 import org.apache.qpid.proton.engine.Transport;
 import org.apache.qpid.proton.engine.TransportException;
 
+@SuppressWarnings("deprecation")
 class ConnectorImpl<C> implements Connector<C>
 {
     private static int DEFAULT_BUFFER_SIZE = 64 * 1024;

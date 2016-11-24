@@ -22,6 +22,9 @@ package org.apache.qpid.proton.messenger.impl;
 
 import org.apache.qpid.proton.messenger.Tracker;
 
+/**
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
+ */
 class TrackerImpl implements Tracker
 {
     public enum Type {

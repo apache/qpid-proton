@@ -47,6 +47,7 @@ import org.apache.qpid.proton.reactor.Acceptor;
 import org.apache.qpid.proton.reactor.impl.AcceptorImpl;
 import org.apache.qpid.proton.messenger.impl.Address;
 
+@SuppressWarnings("deprecation")
 public class IOHandler extends BaseHandler {
 
     // pni_handle_quiesced from connection.c

@@ -20,5 +20,9 @@
 */
 package org.apache.qpid.proton.messenger;
 
+/**
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
+ */
+@Deprecated
 public interface Tracker { }
 

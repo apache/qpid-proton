@@ -30,6 +30,9 @@ import org.apache.qpid.proton.amqp.messaging.Released;
 import org.apache.qpid.proton.amqp.messaging.Received;
 import org.apache.qpid.proton.amqp.transport.DeliveryState;
 
+/**
+ * @deprecated Messenger will be removed from upcoming proton-j releases.
+ */
 class StoreEntry
 {
     private Store  _store;

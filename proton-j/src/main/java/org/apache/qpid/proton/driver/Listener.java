@@ -24,7 +24,9 @@ package org.apache.qpid.proton.driver;
  * Server API.
  *
  * @param <C> application supplied context
+ * @deprecated Messenger and its listener will be removed from upcoming proton-j releases.
  */
+@Deprecated
 public interface Listener<C>
 {
     /**
