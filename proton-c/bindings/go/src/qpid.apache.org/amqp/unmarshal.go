@@ -451,8 +451,6 @@ func rewindUnmarshal(v interface{}, data *C.pn_data_t) {
 func getInterface(data *C.pn_data_t, v *interface{}) {
 	pnType := C.pn_data_type(data)
 	switch pnType {
-	case C.PN_NULL, C.PN_INVALID: // No data.
-		*v = nil
 	case C.PN_BOOL:
 		*v = bool(C.pn_data_get_bool(data))
 	case C.PN_UBYTE:
@@ -491,8 +489,8 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 		l := make(List, 0)
 		unmarshal(&l, data)
 		*v = l
-	default:
-		panic(newUnmarshalError(pnType, v))
+	default: // No data (-1 or NULL)
+		*v = nil
 	}
 }
 
@@ -517,9 +515,7 @@ func getMap(data *C.pn_data_t, v interface{}) {
 				}
 			}
 		}
-	case C.PN_INVALID: // Leave the map empty
-	default:
-		panic(newUnmarshalError(pnType, v))
+	default: // Empty/error/unknown, leave map empty
 	}
 }
 
