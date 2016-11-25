@@ -19,7 +19,7 @@ under the License.
 
 package amqp
 
-//#include "codec_shim.h"
+// #include <proton/codec.h>
 import "C"
 
 import (
