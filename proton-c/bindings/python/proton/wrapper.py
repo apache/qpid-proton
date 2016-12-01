@@ -38,6 +38,9 @@ class Wrapper(object):
         if callable(impl_or_constructor):
             # we are constructing a new object
             impl = impl_or_constructor()
+            if impl is None:
+                from proton import ProtonException
+                raise ProtonException("Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
             init = True
         else:
             # we are wrapping an existing object
