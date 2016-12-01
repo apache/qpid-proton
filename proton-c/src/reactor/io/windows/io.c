@@ -92,8 +92,11 @@ void pn_io_initialize(void *obj)
 void pn_io_finalize(void *obj)
 {
   pn_io_t *io = (pn_io_t *) obj;
-  pn_error_free(io->error);
+  pn_selector_t *sel = io->iocp->selector;
   pn_free(io->iocp);
+  if (sel)
+    pn_decref(sel);
+  pn_error_free(io->error);
   WSACleanup();
 }
 
@@ -368,8 +371,10 @@ bool pn_wouldblock(pn_io_t *io)
 
 pn_selector_t *pn_io_selector(pn_io_t *io)
 {
-  if (io->iocp->selector == NULL)
+  if (io->iocp->selector == NULL) {
     io->iocp->selector = pni_selector_create(io->iocp);
+    pn_incref(io->iocp->selector);
+  }
   return io->iocp->selector;
 }
 
