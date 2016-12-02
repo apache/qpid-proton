@@ -28,9 +28,7 @@ REPEAT_BRIEF            = YES
 ALWAYS_DETAILED_SEC     = NO
 INLINE_INHERITED_MEMB   = YES
 JAVADOC_AUTOBRIEF       = YES
-#MULTILINE_CPP_IS_BRIEF  = NO
 INHERIT_DOCS            = YES
-BUILTIN_STL_SUPPORT     = YES
 INLINE_SIMPLE_STRUCTS   = YES
 HIDE_UNDOC_CLASSES      = YES
 HIDE_COMPOUND_REFERENCE = YES
@@ -45,7 +43,6 @@ ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 PREDEFINED = PN_EXTERN= PNX_EXTERN=
-#EXCLUDE_SYMBOLS =
 
 # Configuration options related to warning and progress messages
 
@@ -56,18 +53,18 @@ WARNINGS               = YES
 
 INPUT = @CMAKE_SOURCE_DIR@/proton-c/include @CMAKE_SOURCE_DIR@/proton-c/docs @CMAKE_SOURCE_DIR@/examples/c
 FILE_PATTERNS          = *.h *.md *.dox
-EXCLUDE = \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/cid.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/engine.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/handlers.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/import_export.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/log.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/object.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/parser.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/reactor.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/selectable.h \
-  @CMAKE_SOURCE_DIR@/proton-c/include/proton/type_compat.h
-EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/examples/*.c @CMAKE_SOURCE_DIR@/examples/*.h
+EXCLUDE_PATTERNS       = */examples/*.c \
+                         */examples/*.h \
+                         */include/proton/cid.h \
+                         */include/proton/engine.h \
+                         */include/proton/handlers.h \
+                         */include/proton/import_export.h \
+                         */include/proton/log.h \
+                         */include/proton/object.h \
+                         */include/proton/parser.h \
+                         */include/proton/reactor.h \
+                         */include/proton/selectable.h \
+                         */include/proton/type_compat.h
 FULL_PATH_NAMES        = YES
 RECURSIVE              = YES
 STRIP_FROM_PATH        = @CMAKE_SOURCE_DIR@/proton-c/include
