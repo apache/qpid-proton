@@ -35,12 +35,9 @@ extern "C" {
 #endif
 
 /**
- *   @file
- * Serialized session
+ * @file
  *
- * @defgroup session Session
- * Serialized session
- * @ingroup engine
+ * @addtogroup session
  * @{
  */
 
@@ -63,12 +60,13 @@ PN_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
  * longer needed. Freeing a session will free all links on that
  * session and settle any deliveries on those links.
  *
- * @param[in] session a session object to free (or NULL)
+ * @param[in] session the session object to free (or NULL)
  */
 PN_EXTERN void pn_session_free(pn_session_t *session);
 
 /**
  * @deprecated
+ *
  * Get the application context that is associated with a session
  * object.
  *
@@ -82,6 +80,7 @@ PN_EXTERN void *pn_session_get_context(pn_session_t *session);
 
 /**
  * @deprecated
+ *
  * Set a new application context for a session object.
  *
  * The application context for a session object may be retrieved
@@ -103,7 +102,7 @@ PN_EXTERN pn_record_t *pn_session_attachments(pn_session_t *session);
 /**
  * Get the endpoint state flags for a session.
  *
- * @param[in] session the session
+ * @param[in] session the session object
  * @return the session's state flags
  */
 PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
@@ -119,7 +118,7 @@ PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
  * The pointer returned by this operation is valid until the
  * session object is freed.
  *
- * @param[in] session the sesion object
+ * @param[in] session the session object
  * @return the session's error object
  */
 PN_EXTERN pn_error_t *pn_session_error(pn_session_t *session);
@@ -175,7 +174,7 @@ PN_EXTERN pn_connection_t *pn_session_connection(pn_session_t *session);
  * Once this operation has completed, the PN_LOCAL_ACTIVE state flag
  * will be set.
  *
- * @param[in] session a session object
+ * @param[in] session the session object
  */
 PN_EXTERN void pn_session_open(pn_session_t *session);
 
@@ -187,7 +186,7 @@ PN_EXTERN void pn_session_open(pn_session_t *session);
  * ::pn_session_open, in this case it is equivalent to calling
  * ::pn_session_open followed by ::pn_session_close.
  *
- * @param[in] session a session object
+ * @param[in] session the session object
  */
 PN_EXTERN void pn_session_close(pn_session_t *session);
 
@@ -236,7 +235,7 @@ PN_EXTERN void pn_session_set_outgoing_window(pn_session_t *session, size_t wind
 /**
  * Get the number of outgoing bytes currently buffered by a session.
  *
- * @param[in] session a session object
+ * @param[in] session the session object
  * @return the number of outgoing bytes currently buffered
  */
 PN_EXTERN size_t pn_session_outgoing_bytes(pn_session_t *session);
@@ -244,7 +243,7 @@ PN_EXTERN size_t pn_session_outgoing_bytes(pn_session_t *session);
 /**
  * Get the number of incoming bytes currently buffered by a session.
  *
- * @param[in] session a session object
+ * @param[in] session the session object
  * @return the number of incoming bytes currently buffered
  */
 PN_EXTERN size_t pn_session_incoming_bytes(pn_session_t *session);
@@ -283,7 +282,8 @@ PN_EXTERN pn_session_t *pn_session_head(pn_connection_t *connection, pn_state_t 
  */
 PN_EXTERN pn_session_t *pn_session_next(pn_session_t *session, pn_state_t state);
 
-/** @}
+/**
+ * @}
  */
 
 #ifdef __cplusplus

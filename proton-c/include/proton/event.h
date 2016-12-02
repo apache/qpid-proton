@@ -33,17 +33,13 @@ extern "C" {
 
 /**
  * @file
- * AMQP and transport events
  *
- * @defgroup event Event
- * AMQP and transport events
- * @ingroup engine
+ * @addtogroup event
  * @{
  */
 
 /**
- * An event provides notification of a state change within the
- * protocol engine's object model.
+ * Notification of a state change in the protocol engine.
  *
  * The AMQP endpoint state modeled by the protocol engine is captured
  * by the following object types: @link pn_delivery_t Deliveries
@@ -539,8 +535,9 @@ PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
 PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
 
 /**
- * **Experimental**: A batch of events to handle. Call pn_event_batch_next() in
- * a loop until it returns NULL to handle them.
+ * **Experimental** - A batch of events to handle. Call
+ * pn_event_batch_next() in a loop until it returns NULL to handle
+ * them.
  */
 typedef struct pn_event_batch_t pn_event_batch_t;
 
@@ -550,29 +547,31 @@ typedef struct pn_event_batch_t pn_event_batch_t;
  */
 
 /**
- * **Experimental**: Remove the next event from the batch and return it. NULL
- *  means the batch is empty. The returned event pointer is valid until
- *  pn_event_batch_next() is called again on the same batch.
+ * **Experimental** - Remove the next event from the batch and return
+ *  it. NULL means the batch is empty. The returned event pointer is
+ *  valid until pn_event_batch_next() is called again on the same
+ *  batch.
  */
 PN_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
 
 /**
- *@cond INTERNAL
+ * @cond INTERNAL
+ *
  * pn_event_batch_next() can be re-implemented for different behaviors in different contextxs.
  */
 struct pn_event_batch_t {
   pn_event_t *(*next_event)(pn_event_batch_t *batch);
 };
-
 /**
- *@endcond
+ * @endcond
  */
 
 #ifdef __cplusplus
 }
 #endif
 
-/** @}
+/**
+ * @}
  */
 
 #endif /* event.h */

@@ -33,13 +33,8 @@ extern "C" {
 
 /**
  * @file
- * Network transport
  *
- * @defgroup transport Transport
- * Network transport
- *
- * State of a network connection being used as a transport for an AMQP connection.
- * @ingroup engine
+ * @addtogroup transport
  * @{
  */
 
@@ -128,29 +123,38 @@ PN_EXTERN void pn_transport_set_server(pn_transport_t *transport);
  */
 PN_EXTERN void pn_transport_free(pn_transport_t *transport);
 
-/** Retrieve the authenticated user
+/**
+ * @deprecated
  *
- * This is usually used at the the server end to find the name of the authenticated user.
- * On the client it will merely return whatever user was passed in to the
- * pn_connection_set_user() API of the bound connection.
+ * Retrieve the authenticated user.
  *
- * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
+ * This is usually used at the the server end to find the name of the
+ * authenticated user.  On the client it will merely return whatever
+ * user was passed in to the pn_connection_set_user() API of the bound
+ * connection.
+ *
+ * The returned value is only reliable after the
+ * PN_TRANSPORT_AUTHENTICATED event has been received.
  *
  * @param[in] transport the transport
  *
- * @return
- * If a the user is anonymous (either no SASL layer is negotiated or the SASL ANONYMOUS mechanism is used)
- * then the user will be "anonymous"
- * Otherwise a string containing the user is returned.
+ * @return If a the user is anonymous (either no SASL layer is
+ * negotiated or the SASL ANONYMOUS mechanism is used) then the user
+ * will be "anonymous" Otherwise a string containing the user is
+ * returned.
  */
 PN_EXTERN const char *pn_transport_get_user(pn_transport_t *transport);
 
 /**
- * Set whether a non authenticated transport connection is allowed
+ * @deprecated
  *
- * There are several ways within the AMQP protocol suite to get unauthenticated connections:
+ * Set whether a non-authenticated transport connection is allowed.
+ *
+ * There are several ways within the AMQP protocol suite to get
+ * unauthenticated connections:
+ *
  * - Use no SASL layer (with either no TLS or TLS without client certificates)
- * - Use an SASL layer but the ANONYMOUS mechanism
+ * - Use a SASL layer but the ANONYMOUS mechanism
  *
  * The default if this option is not set is to allow unauthenticated connections.
  *
@@ -160,6 +164,8 @@ PN_EXTERN const char *pn_transport_get_user(pn_transport_t *transport);
 PN_EXTERN void pn_transport_require_auth(pn_transport_t *transport, bool required);
 
 /**
+ * @deprecated
+ *
  * Tell whether the transport connection is authenticated
  *
  * Note that this property may not be stable until the PN_CONNECTION_REMOTE_OPEN
@@ -171,11 +177,13 @@ PN_EXTERN void pn_transport_require_auth(pn_transport_t *transport, bool require
 PN_EXTERN bool pn_transport_is_authenticated(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Set whether a non encrypted transport connection is allowed
  *
  * There are several ways within the AMQP protocol suite to get encrypted connections:
- * - Use TLS/SSL
- * - Use an SASL with a mechanism that supports saecurity layers
+ * - Use TLS
+ * - Use a SASL with a mechanism that supports saecurity layers
  *
  * The default if this option is not set is to allow unencrypted connections.
  *
@@ -185,6 +193,8 @@ PN_EXTERN bool pn_transport_is_authenticated(pn_transport_t *transport);
 PN_EXTERN void pn_transport_require_encryption(pn_transport_t *transport, bool required);
 
 /**
+ * @deprecated
+ *
  * Tell whether the transport connection is encrypted
  *
  * Note that this property may not be stable until the PN_CONNECTION_REMOTE_OPEN
@@ -212,7 +222,7 @@ PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
 /**
  * @deprecated
  */
-PN_EXTERN  pn_error_t *pn_transport_error(pn_transport_t *transport);
+PN_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
 
 /**
  * Binds the transport to an AMQP connection.
@@ -252,7 +262,7 @@ PN_EXTERN void pn_transport_trace(pn_transport_t *transport, pn_trace_t trace);
 PN_EXTERN void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tracer);
 
 /**
- * Get the tracning function used by a transport.
+ * Get the tracing function used by a transport.
  *
  * @param[in] transport a transport object
  * @return the tracing function used by a transport
@@ -260,6 +270,8 @@ PN_EXTERN void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tr
 PN_EXTERN pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Get the application context that is associated with a transport object.
  *
  * The application context for a transport may be set using
@@ -272,6 +284,7 @@ PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 
 /**
  * @deprecated
+ *
  * Set a new application context for a transport object.
  *
  * The application context for a transport object may be retrieved using
@@ -291,6 +304,8 @@ PN_EXTERN void pn_transport_set_context(pn_transport_t *transport, void *context
 PN_EXTERN pn_record_t *pn_transport_attachments(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Log a message using a transport's logging mechanism.
  *
  * This can be useful in a debugging context as the log message will
@@ -302,6 +317,8 @@ PN_EXTERN pn_record_t *pn_transport_attachments(pn_transport_t *transport);
 PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
 
 /**
+ * @deprecated
+ *
  * Log a printf formatted message using a transport's logging
  * mechanism.
  *
@@ -315,6 +332,8 @@ PN_EXTERN void pn_transport_log(pn_transport_t *transport, const char *message);
 PN_EXTERN void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va_list ap);
 
 /**
+ * @deprecated
+ *
  * Log a printf formatted message using a transport's logging
  * mechanism.
  *
@@ -327,6 +346,8 @@ PN_EXTERN void pn_transport_vlogf(pn_transport_t *transport, const char *fmt, va
 PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...);
 
 /**
+ * @deprecated
+ *
  * Get the maximum allowed channel for a transport.
  * This will be the minimum of 
  *   1. limit imposed by this proton implementation
@@ -339,6 +360,8 @@ PN_EXTERN void pn_transport_logf(pn_transport_t *transport, const char *fmt, ...
 PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Set the maximum allowed channel number for a transport.
  * Note that this is the maximum channel number allowed, giving a 
  * valid channel number range of [0..channel_max]. Therefore the 
@@ -358,6 +381,8 @@ PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
 PN_EXTERN int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t channel_max);
 
 /**
+ * @deprecated
+ *
  * Get the maximum allowed channel of a transport's remote peer.
  *
  * @param[in] transport a transport object
@@ -366,6 +391,8 @@ PN_EXTERN int pn_transport_set_channel_max(pn_transport_t *transport, uint16_t c
 PN_EXTERN uint16_t pn_transport_remote_channel_max(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Get the maximum frame size of a transport.
  *
  * @param[in] transport a transport object
@@ -374,6 +401,8 @@ PN_EXTERN uint16_t pn_transport_remote_channel_max(pn_transport_t *transport);
 PN_EXTERN uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Set the maximum frame size of a transport.
  *
  * @param[in] transport a transport object
@@ -382,6 +411,8 @@ PN_EXTERN uint32_t pn_transport_get_max_frame(pn_transport_t *transport);
 PN_EXTERN void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t size);
 
 /**
+ * @deprecated
+ *
  * Get the maximum frame size of a transport's remote peer.
  *
  * @param[in] transport a transport object
@@ -390,6 +421,8 @@ PN_EXTERN void pn_transport_set_max_frame(pn_transport_t *transport, uint32_t si
 PN_EXTERN uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Get the idle timeout for a transport.
  *
  * A zero idle timeout means heartbeats are disabled.
@@ -400,6 +433,8 @@ PN_EXTERN uint32_t pn_transport_get_remote_max_frame(pn_transport_t *transport);
 PN_EXTERN pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
 
 /**
+ * @deprecated
+ *
  * Set the idle timeout for a transport.
  *
  * A zero idle timeout means heartbeats are disabled.
@@ -410,6 +445,8 @@ PN_EXTERN pn_millis_t pn_transport_get_idle_timeout(pn_transport_t *transport);
 PN_EXTERN void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_millis_t timeout);
 
 /**
+ * @deprecated
+ *
  * Get the idle timeout for a transport's remote peer.
  *
  * A zero idle timeout means heartbeats are disabled.
@@ -423,6 +460,7 @@ PN_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *trans
  * @deprecated
  */
 PN_EXTERN ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
+
 /**
  * @deprecated
  */
@@ -618,7 +656,8 @@ PN_EXTERN uint64_t pn_transport_get_frames_output(const pn_transport_t *transpor
  */
 PN_EXTERN uint64_t pn_transport_get_frames_input(const pn_transport_t *transport);
 
-/** Access the AMQP Connection associated with the transport.
+/**
+ * Access the AMQP Connection associated with the transport.
  *
  * @param[in] transport a transport object
  * @return the connection context for the transport, or NULL if
@@ -630,7 +669,8 @@ PN_EXTERN pn_connection_t *pn_transport_connection(pn_transport_t *transport);
 }
 #endif
 
-/** @}
+/**
+ * @}
  */
 
 #endif /* transport.h */

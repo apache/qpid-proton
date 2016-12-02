@@ -29,6 +29,10 @@
 extern "C" {
 #endif
 
+/**
+ * @cond INTERNAL
+ */
+
 typedef struct pn_parser_t pn_parser_t;
 
 PN_EXTERN pn_parser_t *pn_parser(void);
@@ -36,6 +40,10 @@ PN_EXTERN int pn_parser_parse(pn_parser_t *parser, const char *str, pn_data_t *d
 PN_EXTERN int pn_parser_errno(pn_parser_t *parser);
 PN_EXTERN const char *pn_parser_error(pn_parser_t *parser);
 PN_EXTERN void pn_parser_free(pn_parser_t *parser);
+
+/**
+ * @endcond
+ */
 
 #ifdef __cplusplus
 }

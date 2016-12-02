@@ -36,11 +36,8 @@ extern "C" {
 
 /**
  * @file
- * One-way message link
  *
- * @defgroup link Link
- * One-way message link
- * @ingroup engine
+ * @addtogroup link
  * @{
  */
 
@@ -85,6 +82,7 @@ PN_EXTERN void pn_link_free(pn_link_t *link);
 
 /**
  * @deprecated
+ *
  * Get the application context that is associated with a link object.
  *
  * The application context for a link may be set using
@@ -97,6 +95,7 @@ PN_EXTERN void *pn_link_get_context(pn_link_t *link);
 
 /**
  * @deprecated
+ *
  * Set a new application context for a link object.
  *
  * The application context for a link object may be retrieved using
@@ -565,12 +564,6 @@ PN_EXTERN pn_delivery_t *pn_unsettled_head(pn_link_t *link);
 PN_EXTERN pn_delivery_t *pn_unsettled_next(pn_delivery_t *delivery);
 
 /**
- * @defgroup sender Sender
- * Sending link
- * @{
- */
-
-/**
  * Signal the availability of deliveries for a link.
  *
  * @param[in] sender a sender link object
@@ -590,14 +583,6 @@ PN_EXTERN void pn_link_offered(pn_link_t *sender, int credit);
 PN_EXTERN ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
 
 //PN_EXTERN void pn_link_abort(pn_sender_t *sender);
-
-/** @} */
-
-/**
- * @defgroup receiver Receiver
- * Receiving link
- * @{
- */
 
 /**
  * Grant credit for incoming deliveries on a receiver.
@@ -657,9 +642,8 @@ PN_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
  */
 PN_EXTERN bool pn_link_draining(pn_link_t *receiver);
 
-/** @} */
-
-/** @}
+/**
+ * @}
  */
 
 #ifdef __cplusplus

@@ -33,11 +33,8 @@ extern "C" {
 
 /**
  * @file
- * Track message delivery
  *
- * @defgroup delivery Delivery
- * Track message delivery
- * @ingroup engine
+ * @addtogroup delivery
  * @{
  */
 
@@ -70,6 +67,7 @@ PN_EXTERN pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 
 /**
  * @deprecated
+ *
  * Get the application context that is associated with a delivery object.
  *
  * The application context for a delivery may be set using
@@ -82,6 +80,7 @@ PN_EXTERN void *pn_delivery_get_context(pn_delivery_t *delivery);
 
 /**
  * @deprecated
+ *
  * Set a new application context for a delivery object.
  *
  * The application context for a delivery object may be retrieved using
@@ -245,7 +244,7 @@ PN_EXTERN bool pn_delivery_current(pn_delivery_t *delivery);
  *
  * A settled delivery can never be used again.
  *
- * NOTE: if pn_delivery_current(delivery) is true before the call then
+ * @note If pn_delivery_current(delivery) is true before the call then
  * pn_link_advance(pn_delivery_link(deliver)) is called automatically.
  *
  * @param[in] delivery a delivery object
@@ -302,7 +301,8 @@ PN_EXTERN pn_delivery_t *pn_work_head(pn_connection_t *connection);
  */
 PN_EXTERN pn_delivery_t *pn_work_next(pn_delivery_t *delivery);
 
-/** @}
+/**
+ * @}
  */
 
 #ifdef __cplusplus

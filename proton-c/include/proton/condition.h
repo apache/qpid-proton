@@ -33,11 +33,8 @@ extern "C" {
 
 /**
  * @file
- * Error condition
  *
- * @defgroup condition Condition
- * Error condition
- * @ingroup engine
+ * @addtogroup condition
  * @{
  */
 
@@ -166,11 +163,23 @@ PN_EXTERN const char *pn_condition_redirect_host(pn_condition_t *condition);
  */
 PN_EXTERN int pn_condition_redirect_port(pn_condition_t *condition);
 
+/**
+ * Copy the src condition to the dst condition.
+ */
 PN_EXTERN int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src);
+
+/**
+ * Create a condition object.
+ */
 PN_EXTERN pn_condition_t *pn_condition(void);
+
+/**
+ * Free a condition object.
+ */  
 PN_EXTERN void pn_condition_free(pn_condition_t *);
 
-/** @}
+/**
+ * @}
  */
 
 #ifdef __cplusplus

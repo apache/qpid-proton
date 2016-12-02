@@ -23,13 +23,7 @@
  */
 
 /**
- * @file
- *
- * The AMQP protocol engine
- *
- * @defgroup engine Engine
- *
- * Types and functions that implement the AMQP protocol
+ * @cond INTERNAL
  */
 
 #include <proton/condition.h>
@@ -40,5 +34,9 @@
 #include <proton/delivery.h>
 #include <proton/event.h>
 #include <proton/transport.h>
+
+/**
+ * @endcond
+ */
 
 #endif /* engine.h */

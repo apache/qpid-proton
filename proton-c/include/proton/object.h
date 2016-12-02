@@ -33,6 +33,10 @@
 extern "C" {
 #endif
 
+/**
+ * @cond INTERNAL
+ */
+
 typedef void* pn_handle_t;
 typedef intptr_t pn_shandle_t;
 
@@ -329,6 +333,10 @@ PN_EXTERN bool pn_record_has(pn_record_t *record, pn_handle_t key);
 PN_EXTERN void *pn_record_get(pn_record_t *record, pn_handle_t key);
 PN_EXTERN void pn_record_set(pn_record_t *record, pn_handle_t key, void *value);
 PN_EXTERN void pn_record_clear(pn_record_t *record);
+
+/**
+ * @endcond
+ */
 
 #ifdef __cplusplus
 }

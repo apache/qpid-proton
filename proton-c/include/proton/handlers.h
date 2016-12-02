@@ -33,11 +33,7 @@ extern "C" {
 /**
  * @file
  *
- * Reactor API for proton.
- *
- * @defgroup handlers Handlers
- * Reactor API for proton.
- * @{
+ * @cond INTERNAL
  */
 
 typedef pn_handler_t pn_handshaker_t;
@@ -48,7 +44,8 @@ PNX_EXTERN pn_handshaker_t *pn_handshaker(void);
 PNX_EXTERN pn_iohandler_t *pn_iohandler(void);
 PNX_EXTERN pn_flowcontroller_t *pn_flowcontroller(int window);
 
-/** @}
+/**
+ * @endcond
  */
 
 #ifdef __cplusplus

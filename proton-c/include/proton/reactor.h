@@ -1,4 +1,3 @@
-
 #ifndef PROTON_REACTOR_H
 #define PROTON_REACTOR_H 1
 
@@ -37,11 +36,7 @@ extern "C" {
 /**
  * @file
  *
- * Reactor API for proton.
- *
- * @defgroup reactor Reactor
- * Reactor API for proton.
- * @{
+ * @cond INTERNAL
  */
 
 typedef struct pn_reactor_t pn_reactor_t;
@@ -184,7 +179,8 @@ PNX_EXTERN void pn_record_set_handler(pn_record_t *record, pn_handler_t *handler
  */
 PNX_EXTERN pn_handler_t *pn_event_root(pn_event_t *event);
 
-/** @}
+/**
+ * @endcond
  */
 
 #ifdef __cplusplus

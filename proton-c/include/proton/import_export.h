@@ -22,6 +22,10 @@
  *
  */
 
+/**
+ * @cond INTERNAL
+ */
+
 //
 // Compiler specific mechanisms for managing the import and export of
 // symbols between shared objects.
@@ -59,5 +63,8 @@
 #  define PNX_EXTERN PN_IMPORT
 #endif
 
+/**
+ * @endcond
+ */
 
 #endif /* import_export.h */

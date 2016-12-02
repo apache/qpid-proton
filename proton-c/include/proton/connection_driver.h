@@ -1,5 +1,5 @@
 #ifndef PROTON_CONNECTION_DRIVER_H
-#define PROTON_CONNECTION_DRIVER_H
+#define PROTON_CONNECTION_DRIVER_H 1
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,51 +22,55 @@
 
 /**
  * @file
- * **Experimental**: Low-level IO integration
  *
- * @defgroup connection_driver Connection Driver
+ * **Experimental** - Low-level IO integration
  *
- * **Experimental**: Low-level IO integration
- *
- * Associate an @ref engine with AMQP byte-streams from any source.
+ * Associate a @ref connection and @ref transport with AMQP byte
+ * streams from any source.
  *
  * - process AMQP-encoded bytes from some input byte stream
  * - generate ::pn_event_t events for your application to handle
  * - encode resulting AMQP output bytes for some output byte stream
  *
- * The pn_connection_driver_() functions provide a simplified API and extra
- * logic to use ::pn_connection_t and ::pn_transport_t as a unit.  You can also
- * access them directly for features that do not have pn_connection_driver_()
- * functions
+ * The pn_connection_driver_() functions provide a simplified API and
+ * extra logic to use ::pn_connection_t and ::pn_transport_t as a
+ * unit.  You can also access them directly for features that do not
+ * have pn_connection_driver_() functions.
  *
  * The driver buffers events and data, you should run it until
- * pn_connection_driver_finished() is true, to ensure all reading, writing and
- * event handling (including ERROR and FINAL events) is finished.
+ * pn_connection_driver_finished() is true, to ensure all reading,
+ * writing and event handling (including ERROR and FINAL events) is
+ * finished.
  *
  * ## Error handling
  *
- * The pn_connection_driver_*() functions do not return an error code. IO errors set
- * the transport condition and are returned as a PN_TRANSPORT_ERROR. The integration
- * code can set errors using pn_connection_driver_errorf()
+ * The pn_connection_driver_*() functions do not return an error
+ * code. IO errors set the transport condition and are returned as a
+ * PN_TRANSPORT_ERROR. The integration code can set errors using
+ * pn_connection_driver_errorf().
  *
  * ## IO patterns
  *
- * This API supports asynchronous, proactive, non-blocking and reactive IO. An
- * integration does not have to follow the dispatch-read-write sequence above,
- * but note that you should handle all available events before calling
- * pn_connection_driver_read_buffer() and check that `size` is non-zero before
- * starting a blocking or asynchronous read call. A `read` started while there
- * are unprocessed CLOSE events in the buffer may never complete.
+ * This API supports asynchronous, proactive, non-blocking and
+ * reactive IO. An integration does not have to follow the
+ * dispatch-read-write sequence above, but note that you should handle
+ * all available events before calling
+ * pn_connection_driver_read_buffer() and check that `size` is
+ * non-zero before starting a blocking or asynchronous read call. A
+ * `read` started while there are unprocessed CLOSE events in the
+ * buffer may never complete.
  *
- * AMQP is a full-duplex, asynchronous protocol. The "read" and "write" sides of
- * an AMQP connection can close separately
+ * AMQP is a full-duplex, asynchronous protocol. The "read" and
+ * "write" sides of an AMQP connection can close separately.
  *
  * ## Thread safety
  *
- * The @ref connection_driver types are not thread safe, but each connection and its
- * associated types forms an independent unit. Different connections can be
- * processed concurrently by different threads.
+ * The @ref connection_driver types are not thread safe, but each
+ * connection and its associated types forms an independent
+ * unit. Different connections can be processed concurrently by
+ * different threads.
  *
+ * @addtogroup connection_driver
  * @{
  */
 
@@ -81,7 +85,7 @@ extern "C" {
 #endif
 
 /**
- * Struct containing the 3 elements needed to driver AMQP IO and events, aggregated as a unit.
+ * The elements needed to drive AMQP IO and events.
  */
 typedef struct pn_connection_driver_t {
   pn_connection_t *connection;
@@ -235,10 +239,13 @@ PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char 
  * else return NULL
  */
 PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch);
-///@}
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // PROTON_CONNECTION_DRIVER_H
+#endif /* connection_driver.h */

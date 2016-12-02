@@ -26,23 +26,32 @@
 extern "C" {
 #endif
 
-/**@file
+/**
+ * @cond INTERNAL
+ */
+    
+/**
+ * @file
  *
  * Control log messages that are not associated with a transport.
  * See pn_transport_trace for transport-related logging.
  */
 
-/** Callback for customized logging. */
+/**
+ * Callback for customized logging.
+ */
 typedef void (*pn_logger_t)(const char *message);
 
-/** Enable/disable global logging.
+/**
+ * Enable/disable global logging.
  *
  * By default, logging is enabled by envionment variable PN_TRACE_LOG.
  * Calling this function overrides the environment setting.
  */
 PN_EXTERN void pn_log_enable(bool enabled);
 
-/** Set the logger.
+/**
+ * Set the logger.
  *
  * By default a logger that prints to stderr is installed.
  *  
@@ -50,6 +59,10 @@ PN_EXTERN void pn_log_enable(bool enabled);
  * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
  */
 PN_EXTERN void pn_log_logger(pn_logger_t logger);
+
+/**
+ * @endcond
+ */
 
 #ifdef __cplusplus
 }

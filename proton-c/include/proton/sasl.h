@@ -32,33 +32,34 @@ extern "C" {
 
 /**
  * @file
- * SASL Secure Transport Layer.
  *
- * @defgroup sasl SASL
- * SASL Secure Transport Layer.
+ * @addtogroup sasl
+ * @{
+ */
+
+/**
  * The SASL layer is responsible for establishing an authenticated
  * and/or encrypted tunnel over which AMQP frames are passed between
  * peers. The peer acting as the SASL Client must provide
  * authentication credentials. The peer acting as the SASL Server must
  * provide authentication against the received credentials.
- *
- * @ingroup transport
- * @{
  */
-
 typedef struct pn_sasl_t pn_sasl_t;
 
-/** The result of the SASL negotiation */
+/**
+ * The result of the SASL negotiation.
+ */
 typedef enum {
-  PN_SASL_NONE=-1,  /** negotiation not completed */
-  PN_SASL_OK=0,     /** authentication succeeded */
-  PN_SASL_AUTH=1,   /** failed due to bad credentials */
-  PN_SASL_SYS=2,    /** failed due to a system error */
-  PN_SASL_PERM=3,   /** failed due to unrecoverable error */
-  PN_SASL_TEMP=4    /** failed due to transient error */
+  PN_SASL_NONE = -1,  /** negotiation not completed */
+  PN_SASL_OK = 0,     /** authentication succeeded */
+  PN_SASL_AUTH = 1,   /** failed due to bad credentials */
+  PN_SASL_SYS = 2,    /** failed due to a system error */
+  PN_SASL_PERM = 3,   /** failed due to unrecoverable error */
+  PN_SASL_TEMP = 4    /** failed due to transient error */
 } pn_sasl_outcome_t;
 
-/** Construct an Authentication and Security Layer object
+/**
+ * Construct an Authentication and Security Layer object.
  *
  * This will return the SASL layer object for the supplied transport
  * object. If there is currently no SASL layer one will be created.
@@ -70,7 +71,8 @@ typedef enum {
  */
 PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
 
-/** Do we support extended SASL negotiation
+/**
+ * Do we support extended SASL negotiation
  *
  * Do we support extended SASL negotiation?
  * All implementations of Proton support ANONYMOUS and EXTERNAL on both
@@ -83,7 +85,8 @@ PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
  */
 PN_EXTERN bool pn_sasl_extended(void);
 
-/** Set the outcome of SASL negotiation
+/**
+ * Set the outcome of SASL negotiation
  *
  * Used by the server to set the result of the negotiation process.
  *
@@ -91,13 +94,15 @@ PN_EXTERN bool pn_sasl_extended(void);
  */
 PN_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
 
-/** Retrieve the outcome of SASL negotiation.
+/**
+ * Retrieve the outcome of SASL negotiation.
  *
  * @todo
  */
 PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
 
-/** Retrieve the authenticated user
+/**
+ * Retrieve the authenticated user
  *
  * This is usually used at the the server end to find the name of the authenticated user.
  * On the client it will merely return whatever user was passed in to the
@@ -115,7 +120,8 @@ PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
  */
 PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
 
-/** Return the selected SASL mechanism
+/**
+ * Return the selected SASL mechanism
  *
  * The returned value is only reliable after the PN_TRANSPORT_AUTHENTICATED event has been received.
  *
@@ -125,7 +131,8 @@ PN_EXTERN const char *pn_sasl_get_user(pn_sasl_t *sasl);
  */
 PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
 
-/** SASL mechanisms that are to be considered for authentication
+/**
+ * SASL mechanisms that are to be considered for authentication
  *
  * This can be used on either the client or the server to restrict the SASL
  * mechanisms that may be used to the mechanisms on the list.
@@ -135,7 +142,8 @@ PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
  */
 PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
 
-/** Boolean to allow use of clear text authentication mechanisms
+/**
+ * Boolean to allow use of clear text authentication mechanisms
  *
  * By default the SASL layer is configured not to allow mechanisms that disclose
  * the clear text of the password over an unencrypted AMQP connection. This specifically
@@ -153,7 +161,8 @@ PN_EXTERN void pn_sasl_allowed_mechs(pn_sasl_t *sasl, const char *mechs);
  */
 PN_EXTERN void pn_sasl_set_allow_insecure_mechs(pn_sasl_t *sasl, bool insecure);
 
-/** Return the current value for allow_insecure_mechs
+/**
+ * Return the current value for allow_insecure_mechs
  *
  * @param[in] sasl the SASL layer
  */
@@ -190,7 +199,9 @@ PN_EXTERN void pn_sasl_config_name(pn_sasl_t *sasl, const char *name);
  */
 PN_EXTERN void pn_sasl_config_path(pn_sasl_t *sasl, const char *path);
 
-/** @} */
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

@@ -35,12 +35,12 @@ extern "C" {
 
 /**
  * @file
+ * @deprecated
  *
  * The messenger API provides a high level interface for sending and
  * receiving AMQP messages.
  *
- * @defgroup messenger Messenger
- * **Deprecated**
+ * @addtogroup messenger
  * @{
  */
 
@@ -934,8 +934,7 @@ PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *patte
                                    const char *address);
 
 /**
- * Extract @link pn_selectable_t selectables @endlink from a passive
- * messenger.
+ * Extract selectables from a passive messenger.
  *
  * A messenger that is in passive mode (see
  * ::pn_messenger_is_passive()) will never attempt to perform any I/O
@@ -945,17 +944,16 @@ PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *patte
  *
  * An application wishing to perform I/O on behalf of a passive
  * messenger must extract all available selectables by calling this
- * operation until it returns NULL. The ::pn_selectable_t interface
- * may then be used by the application to perform I/O outside the
- * messenger.
+ * operation until it returns NULL. The selectable interface may then
+ * be used by the application to perform I/O outside the messenger.
  *
  * All selectables returned by this operation must be serviced until
  * they reach a terminal state and then freed. See
- * ::pn_selectable_is_terminal() for more details.
+ * `pn_selectable_is_terminal()` for more details.
  *
  * By default any given selectable will only ever be returned once by
  * this operation, however if the selectable's registered flag is set
- * to true (see ::pn_selectable_set_registered()), then the selectable
+ * to true (see `pn_selectable_set_registered()`), then the selectable
  * will be returned whenever its interest set may have changed.
  *
  * @param[in] messenger a messenger object
@@ -971,21 +969,18 @@ PNX_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
  */
 PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 
+#define PN_FLAGS_CHECK_ROUTES                                                   \
+  (0x1) /**< Messenger flag to indicate that a call                             \
+             to pn_messenger_start should check that                            \
+             any defined routes are valid */
+
+#define PN_FLAGS_ALLOW_INSECURE_MECHS                                           \
+  (0x2) /**< Messenger flag to indicate that the PLAIN                          \
+             mechanism is allowed on an unencrypted                             \
+             connection */
+
 /**
- * @}
- */
-
-#define PN_FLAGS_CHECK_ROUTES                                                  \
-  (0x1) /** Messenger flag to indicate that a call                             \
-            to pn_messenger_start should check that                            \
-            any defined routes are valid */
-
-#define PN_FLAGS_ALLOW_INSECURE_MECHS                                          \
-  (0x2) /** Messenger flag to indicate that the PLAIN                          \
-            mechanism is allowed on an unencrypted                             \
-            connection */
-
-/** Sets control flags to enable additional function for the Messenger.
+ * Sets control flags to enable additional function for the Messenger.
  *
  * @param[in] messenger the messenger
  * @param[in] flags 0 or PN_FLAGS_CHECK_ROUTES
@@ -995,7 +990,8 @@ PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 PNX_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
                                      const int flags);
 
-/** Gets the flags for a Messenger.
+/**
+ * Gets the flags for a Messenger.
  *
  * @param[in] messenger the messenger
  * @return The flags set for the messenger
@@ -1052,6 +1048,10 @@ PNX_EXTERN pn_millis_t
 PNX_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
+
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

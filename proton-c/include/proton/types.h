@@ -1,7 +1,6 @@
 #ifndef PROTON_TYPES_H
 #define PROTON_TYPES_H 1
 
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -29,11 +28,90 @@
 
 /**
  * @file
- * AMQP type system
+ *
+ * @defgroup core Core
+ * @brief Core protocol entities and event handling
+ *
+ * @defgroup connection Connection
+ * @brief A channel for communication between two peers on a network
+ * @ingroup core
+ *
+ * @defgroup session Session
+ * @brief A container of links
+ * @ingroup core
+ *
+ * @defgroup link Link
+ * @brief A channel for transferring messages
+ * @ingroup core
+ *
+ * @defgroup terminus Terminus
+ * @brief A source or target for messages
+ * @ingroup core
+ *
+ * @defgroup message Message
+ * @brief A mutable holder of application content
+ * @ingroup core
+ *
+ * @defgroup delivery Delivery
+ * @brief A message transfer
+ * @ingroup core
+ *
+ * @defgroup condition Condition
+ * @brief An endpoint error state
+ * @ingroup core
+ *
+ * @defgroup event Event
+ * @brief Protocol and transport events
+ * @ingroup core
+ *
+ * @defgroup transport Transport
+ * @brief A network channel supporting an AMQP connection
+ * @ingroup core
+ *
+ * @defgroup sasl SASL
+ * @brief SASL secure transport layer
+ * @ingroup core
+ *
+ * @defgroup ssl SSL
+ * @brief SSL secure transport layer
+ * @ingroup core
+ *
+ * @defgroup error Error
+ * @brief A Proton error
+ * @ingroup core
  *
  * @defgroup types Types
- * AMQP type system
- * @{
+ * @brief Protocol and API data types
+ *
+ * @defgroup amqp_types AMQP types
+ * @brief AMQP data types
+ * @ingroup types
+ *
+ * @defgroup api_types API types
+ * @brief Additional data types used in the API
+ * @ingroup types
+ *
+ * @defgroup codec Codec
+ * @brief AMQP data encoding and decoding
+ *
+ * @defgroup io IO
+ * @brief IO integration interfaces
+ *
+ * @defgroup connection_driver Connection Driver
+ * @brief **Experimental** - Low-level IO integration
+ * @ingroup io
+ *
+ * @defgroup proactor Proactor
+ * @brief **Experimental** - Multithreaded IO
+ * @ingroup io
+ *
+ * @defgroup messenger Messenger
+ * @deprecated
+ * @brief **Deprecated** - The Messenger API
+ *
+ * @defgroup url URL
+ * @deprecated
+ * @brief **Deprecated** - A URL parser
  */
 
 #ifdef __cplusplus
@@ -41,54 +119,116 @@ extern "C" {
 #endif
 
 /**
- * @defgroup primitives Primitive Types
- * Primitive types
- * @{
+ * A sequence number.
+ *
+ * @ingroup api_types
  */
-
 typedef int32_t  pn_sequence_t;
+
+/**
+ * A span of time in milliseconds.
+ *
+ * @ingroup api_types
+ */
 typedef uint32_t pn_millis_t;
+
+/**
+ * The maximum value for @ref pn_millis_t.
+ *
+ * @ingroup api_types
+ */
 #define PN_MILLIS_MAX (~0U)
+
+/**
+ * A span of time in seconds.
+ *
+ * @ingroup api_types
+ */
 typedef uint32_t pn_seconds_t;
 
-typedef int64_t  pn_timestamp_t;
+/**
+ * A 64-bit timestamp in milliseconds since the Unix epoch.
+ *
+ * @ingroup amqp_types
+ */
+typedef int64_t pn_timestamp_t;
 
+/**
+ * A 32-bit Unicode code point.
+ *
+ * @ingroup amqp_types
+ */
 typedef uint32_t pn_char_t;
+
+/**
+ * A 32-bit decimal floating-point number.
+ *
+ * @ingroup amqp_types
+ */
 typedef uint32_t pn_decimal32_t;
+
+/**
+ * A 64-bit decimal floating-point number.
+ *
+ * @ingroup amqp_types
+ */
 typedef uint64_t pn_decimal64_t;
+
+/**
+ * A 128-bit decimal floating-point number.
+ *
+ * @ingroup amqp_types
+ */
 typedef struct {
   char bytes[16];
 } pn_decimal128_t;
+
+/**
+ * A 16-byte universally unique identifier.
+ *
+ * @ingroup amqp_types
+ */
 typedef struct {
   char bytes[16];
 } pn_uuid_t;
 
-/** A const byte buffer. */
+/**
+ * A const byte buffer.
+ *
+ * @ingroup api_types
+ */
 typedef struct pn_bytes_t {
   size_t size;
   const char *start;
 } pn_bytes_t;
 
+/**
+ * Create a @ref pn_bytes_t
+ *
+ * @ingroup api_types
+ */
 PN_EXTERN pn_bytes_t pn_bytes(size_t size, const char *start);
+
 static const pn_bytes_t pn_bytes_null = { 0, NULL };
 
-/** A non-const byte buffer. */
+/**
+ * A non-const byte buffer.
+ *
+ * @ingroup api_types
+ */
 typedef struct pn_rwbytes_t {
   size_t size;
   char *start;
 } pn_rwbytes_t;
 
-PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
-static const pn_bytes_t pn_rwbytes_null = { 0, NULL };
-
-/** @}
- */
-
 /**
- * @defgroup abstract Abstract Types
- * Abstract types
- * @{
+ * Create a @ref pn_rwbytes_t
+ *
+ * @ingroup api_types
  */
+PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
+
+static const pn_bytes_t pn_rwbytes_null = { 0, NULL };
 
 /**
  * Holds the state flags for an AMQP endpoint.
@@ -122,8 +262,7 @@ typedef int pn_state_t;
  * contains zero or more ::pn_session_t objects, which in turn contain
  * zero or more ::pn_link_t objects. Each ::pn_link_t object contains
  * an ordered sequence of ::pn_delivery_t objects. A link is either a
- * @link sender Sender @endlink, or a @link receiver Receiver
- * @endlink, but never both.
+ * sender or a receiver but never both.
  *
  * @ingroup connection
  */
@@ -146,8 +285,8 @@ typedef struct pn_session_t pn_session_t;
  * A pn_link_t object encapsulates all of the endpoint state
  * associated with an AMQP Link. A pn_link_t object contains an
  * ordered sequence of ::pn_delivery_t objects representing in-flight
- * deliveries. A pn_link_t may be either a @link sender Sender
- * @endlink, or a @link receiver Receiver @endlink, but never both.
+ * deliveries. A pn_link_t may be either sender or a receiver but
+ * never both.
  *
  * A pn_link_t object maintains a pointer to the *current* delivery
  * within the ordered sequence of deliveries contained by the link
@@ -274,21 +413,19 @@ typedef struct pn_collector_t pn_collector_t;
 typedef struct pn_transport_t pn_transport_t;
 
 /**
+ * @cond INTERNAL
+ *
  * An event handler
  *
- * A pn_handler_t is target of ::pn_event_t dispatched by the ::pn_reactor_t
- *
- * @ingroup reactor
+ * A pn_handler_t is target of ::pn_event_t dispatched by the pn_reactor_t
  */
 typedef struct pn_handler_t pn_handler_t;
-
-/** @}
+/**
+ * @endcond
  */
+
 #ifdef __cplusplus
 }
 #endif
-
-/** @}
- */
 
 #endif /* types.h */

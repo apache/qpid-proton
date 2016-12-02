@@ -32,11 +32,12 @@ extern "C" {
 
 /**
  * @file
- * API for using SSL with the Transport Layer.
  *
- * @defgroup ssl SSL
- * @ingroup transport
- *
+ * @addtogroup ssl
+ * @{
+ */
+
+/**    
  * API for using SSL with the Transport Layer.
  *
  * A Transport may be configured to use SSL for encryption and/or authentication.  A
@@ -73,33 +74,40 @@ extern "C" {
  *
  * Support for SSL Client Session resume is provided (see ::pn_ssl_init,
  * ::pn_ssl_resume_status).
- *
- * @{
  */
-
 typedef struct pn_ssl_domain_t pn_ssl_domain_t;
+
+/**
+ * @see pn_ssl
+ */
 typedef struct pn_ssl_t pn_ssl_t;
 
-/** Determines the type of SSL endpoint. */
+/**
+ * Determines the type of SSL endpoint.
+ */
 typedef enum {
-  PN_SSL_MODE_CLIENT=1, /**< Local connection endpoint is an SSL client */
-  PN_SSL_MODE_SERVER    /**< Local connection endpoint is an SSL server */
+  PN_SSL_MODE_CLIENT = 1, /**< Local connection endpoint is an SSL client */
+  PN_SSL_MODE_SERVER      /**< Local connection endpoint is an SSL server */
 } pn_ssl_mode_t;
 
-/** Indicates whether an SSL session has been resumed. */
+/**
+ * Indicates whether an SSL session has been resumed.
+ */
 typedef enum {
   PN_SSL_RESUME_UNKNOWN,        /**< Session resume state unknown/not supported */
   PN_SSL_RESUME_NEW,            /**< Session renegotiated - not resumed */
   PN_SSL_RESUME_REUSED          /**< Session resumed from previous session. */
 } pn_ssl_resume_status_t;
 
-/** Tests for SSL implementation present
+/**
+ * Tests for SSL implementation present
  *
  *  @return true if we support SSL, false if not
  */
 PN_EXTERN bool pn_ssl_present( void );
 
-/** Create an SSL configuration domain
+/**
+ * Create an SSL configuration domain
  *
  * This method allocates an SSL domain object.  This object is used to hold the SSL
  * configuration for one or more SSL sessions.  The SSL session object (pn_ssl_t) is
@@ -109,16 +117,18 @@ PN_EXTERN bool pn_ssl_present( void );
  * with this domain.
  * @return a pointer to the SSL domain, if SSL support is present.
  */
-PN_EXTERN pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode);
+PN_EXTERN pn_ssl_domain_t *pn_ssl_domain(pn_ssl_mode_t mode);
 
-/** Release an SSL configuration domain
+/**
+ * Release an SSL configuration domain
  *
  * This method frees an SSL domain object allocated by ::pn_ssl_domain.
  * @param[in] domain the domain to destroy.
  */
-PN_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
+PN_EXTERN void pn_ssl_domain_free(pn_ssl_domain_t *domain);
 
-/** Set the certificate that identifies the local node to the remote.
+/**
+ * Set the certificate that identifies the local node to the remote.
  *
  * This certificate establishes the identity for the local node for all SSL sessions
  * created from this domain.  It will be sent to the remote if the remote needs to verify
@@ -141,12 +151,13 @@ PN_EXTERN void pn_ssl_domain_free( pn_ssl_domain_t *domain );
  * protected.
  * @return 0 on success
  */
-PN_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
-                                             const char *credential_1,
-                                             const char *credential_2,
-                                             const char *password);
+PN_EXTERN int pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
+                                            const char *credential_1,
+                                            const char *credential_2,
+                                            const char *password);
 
-/** Configure the set of trusted CA certificates used by this domain to verify peers.
+/**
+ * Configure the set of trusted CA certificates used by this domain to verify peers.
  *
  * If the local SSL client/server needs to verify the identity of the remote, it must
  * validate the signature of the remote's certificate.  This function sets the database of
@@ -163,27 +174,31 @@ PN_EXTERN int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
 PN_EXTERN int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                 const char *certificate_db);
 
-/** Determines the level of peer validation.
+/**
+ * Determines the level of peer validation.
  *
- *  ANONYMOUS_PEER does not require a valid certificate, and permits use of ciphers that
- *  do not provide authentication.
+ * ANONYMOUS_PEER does not require a valid certificate, and permits
+ * use of ciphers that do not provide authentication.
  *
- *  VERIFY_PEER will only connect to those peers that provide a valid identifying
- *  certificate signed by a trusted CA and are using an authenticated cipher.
+ * VERIFY_PEER will only connect to those peers that provide a valid
+ * identifying certificate signed by a trusted CA and are using an
+ * authenticated cipher.
  *
- *  VERIFY_PEER_NAME is like VERIFY_PEER, but also requires the peer's identity as
- *  contained in the certificate to be valid (see ::pn_ssl_set_peer_hostname).
+ * VERIFY_PEER_NAME is like VERIFY_PEER, but also requires the peer's
+ * identity as contained in the certificate to be valid (see
+ * ::pn_ssl_set_peer_hostname).
  *
- *  ANONYMOUS_PEER is configured by default.
+ * ANONYMOUS_PEER is configured by default.
  */
 typedef enum {
-  PN_SSL_VERIFY_NULL=0,   /**< internal use only */
-  PN_SSL_VERIFY_PEER,     /**< require peer to provide a valid identifying certificate */
-  PN_SSL_ANONYMOUS_PEER,  /**< do not require a certificate nor cipher authorization */
-  PN_SSL_VERIFY_PEER_NAME /**< require valid certificate and matching name */
+  PN_SSL_VERIFY_NULL = 0,   /**< internal use only */
+  PN_SSL_VERIFY_PEER,       /**< require peer to provide a valid identifying certificate */
+  PN_SSL_ANONYMOUS_PEER,    /**< do not require a certificate nor cipher authorization */
+  PN_SSL_VERIFY_PEER_NAME   /**< require valid certificate and matching name */
 } pn_ssl_verify_mode_t;
 
-/** Configure the level of verification used on the peer certificate.
+/**
+ * Configure the level of verification used on the peer certificate.
  *
  * This method controls how the peer's certificate is validated, if at all.  By default,
  * neither servers nor clients attempt to verify their peers (PN_SSL_ANONYMOUS_PEER).
@@ -206,10 +221,11 @@ typedef enum {
  * @return 0 on success
  */
 PN_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
-                                          const pn_ssl_verify_mode_t mode,
-                                          const char *trusted_CAs);
+                                                    const pn_ssl_verify_mode_t mode,
+                                                    const char *trusted_CAs);
 
-/** Permit a server to accept connection requests from non-SSL clients.
+/**
+ * Permit a server to accept connection requests from non-SSL clients.
  *
  * This configures the server to "sniff" the incoming client data stream, and dynamically
  * determine whether SSL/TLS is being used.  This option is disabled by default: only
@@ -220,7 +236,8 @@ PN_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
  */
 PN_EXTERN int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
 
-/** Create a new SSL session object associated with a transport.
+/**
+ * Create a new SSL session object associated with a transport.
  *
  * A transport must have an SSL object in order to "speak" SSL over its connection. This
  * method allocates an SSL object associates it with the transport.
@@ -231,7 +248,8 @@ PN_EXTERN int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain);
  */
 PN_EXTERN pn_ssl_t *pn_ssl(pn_transport_t *transport);
 
-/** Initialize an SSL session.
+/**
+ * Initialize an SSL session.
  *
  * This method configures an SSL object using the configuration provided by the given
  * domain.
@@ -244,15 +262,17 @@ PN_EXTERN pn_ssl_t *pn_ssl(pn_transport_t *transport);
  * and stored for future session restore (see ::::pn_ssl_resume_status).
  * @return 0 on success, else an error code.
  */
-PN_EXTERN int pn_ssl_init( pn_ssl_t *ssl,
-                 pn_ssl_domain_t *domain,
-                 const char *session_id);
+PN_EXTERN int pn_ssl_init(pn_ssl_t *ssl,
+                          pn_ssl_domain_t *domain,
+                          const char *session_id);
 
-/** Get the name of the Cipher that is currently in use.
+/**
+ * Get the name of the Cipher that is currently in use.
  *
- * Gets a text description of the cipher that is currently active, or returns FALSE if SSL
- * is not active (no cipher).  Note that the cipher in use may change over time due to
- * renegotiation or other changes to the SSL state.
+ * Gets a text description of the cipher that is currently active, or
+ * returns FALSE if SSL is not active (no cipher).  Note that the
+ * cipher in use may change over time due to renegotiation or other
+ * changes to the SSL state.
  *
  * @param[in] ssl the ssl client/server to query.
  * @param[in,out] buffer buffer of size bytes to hold cipher name
@@ -261,14 +281,16 @@ PN_EXTERN int pn_ssl_init( pn_ssl_t *ssl,
  */
 PN_EXTERN bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
-/** Get the SSF (security strength factor) of the Cipher that is currently in use.
+/**
+ * Get the SSF (security strength factor) of the Cipher that is currently in use.
  *
  * @param[in] ssl the ssl client/server to query.
  * @return the ssf, note that 0 means no security.
  */
 PN_EXTERN int pn_ssl_get_ssf(pn_ssl_t *ssl);
 
-/** Get the name of the SSL protocol that is currently in use.
+/**
+ * Get the name of the SSL protocol that is currently in use.
  *
  * Gets a text description of the SSL protocol that is currently active, or returns FALSE if SSL
  * is not active.  Note that the protocol may change over time due to renegotiation.
@@ -281,7 +303,8 @@ PN_EXTERN int pn_ssl_get_ssf(pn_ssl_t *ssl);
  */
 PN_EXTERN bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size);
 
-/** Check whether the state has been resumed.
+/**
+ * Check whether the state has been resumed.
  *
  * Used for client session resume.  When called on an active session, indicates whether
  * the state has been resumed from a previous session.
@@ -293,9 +316,10 @@ PN_EXTERN bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size
  * @param[in] ssl the ssl session to check
  * @return status code indicating whether or not the session has been resumed.
  */
-PN_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
+PN_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl);
 
-/** Set the expected identity of the remote peer.
+/**
+ * Set the expected identity of the remote peer.
  *
  * By default, SSL will use the hostname associated with the connection that
  * the transport is bound to (see ::pn_connection_set_hostname).  This method
@@ -316,10 +340,10 @@ PN_EXTERN pn_ssl_resume_status_t pn_ssl_resume_status( pn_ssl_t *ssl );
  * given in RFC1034, Section 3.5.
  * @return 0 on success.
  */
-PN_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
+PN_EXTERN int pn_ssl_set_peer_hostname(pn_ssl_t *ssl, const char *hostname);
 
-
-/** Access the configured peer identity.
+/**
+ * Access the configured peer identity.
  *
  * Return the expected identity of the remote peer, as set by ::pn_ssl_set_peer_hostname.
  *
@@ -331,9 +355,10 @@ PN_EXTERN int pn_ssl_set_peer_hostname( pn_ssl_t *ssl, const char *hostname);
  * no hostname set.
  * @return 0 on success.
  */
-PN_EXTERN int pn_ssl_get_peer_hostname( pn_ssl_t *ssl, char *hostname, size_t *bufsize );
+PN_EXTERN int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *hostname, size_t *bufsize);
 
-/** Get the subject from the peers certificate.
+/**
+ * Get the subject from the peers certificate.
  *
  * @param[in] ssl the ssl client/server to query.
  * @return A null terminated string representing the full subject,
@@ -352,7 +377,6 @@ typedef enum {
   PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT,
   PN_SSL_CERT_SUBJECT_COMMON_NAME
 } pn_ssl_cert_subject_subfield;
-
 
 /**
  * Enumeration identifying hashing algorithm.
@@ -396,7 +420,9 @@ PN_EXTERN int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
  */
 PN_EXTERN const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field);
 
-/** @} */
+/**
+ * @}
+ */
 
 #ifdef __cplusplus
 }

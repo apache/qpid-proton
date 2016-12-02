@@ -22,6 +22,10 @@
  *
  */
 
+/**
+ * @cond INTERNAL
+ */
+
 // Get Boolean
 #if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
 # if __STDC_VERSION__ >= 199901L || __GNUC__ >= 3 || _MSC_VER >=1800
@@ -138,5 +142,9 @@ typedef unsigned __int64 uint64_t;
 #  error stdint.h definitions not kown
 # endif
 #endif // PNI_DEFINE_SSIZE_T
+
+/**
+ * @endcond
+ */
 
 #endif /* type_compat.h */

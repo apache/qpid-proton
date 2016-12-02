@@ -34,12 +34,7 @@ extern "C" {
 /**
  * @file
  *
- * The selectable API provides an interface for integration with third
- * party event loops.
- *
- * @defgroup selectable Selectable
- * **Deprecated**
- * @{
+ * @cond INTERNAL
  */
 
 /**
@@ -268,7 +263,7 @@ PNX_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
 PNX_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);
 
 /**
- * @}
+ * @endcond
  */
 
 #ifdef __cplusplus
