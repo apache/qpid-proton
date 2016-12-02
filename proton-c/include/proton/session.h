@@ -37,6 +37,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief session
+ *
  * @addtogroup session
  * @{
  */
@@ -108,6 +110,8 @@ PN_EXTERN pn_record_t *pn_session_attachments(pn_session_t *session);
 PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
 
 /**
+ * @deprecated
+ *
  * Get additional error information associated with the session.
  *
  * Whenever a session operation fails (i.e. returns an error code),

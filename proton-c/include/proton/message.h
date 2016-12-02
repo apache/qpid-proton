@@ -35,6 +35,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief message
+ *
  * @addtogroup message
  * @{
  */

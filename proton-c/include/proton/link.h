@@ -37,6 +37,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief link
+ *
  * @addtogroup link
  * @{
  */
@@ -147,6 +149,8 @@ PN_EXTERN bool pn_link_is_receiver(pn_link_t *link);
 PN_EXTERN pn_state_t pn_link_state(pn_link_t *link);
 
 /**
+ * @deprecated
+ *
  * Get additional error information associated with the link.
  *
  * Whenever a link operation fails (i.e. returns an error code),

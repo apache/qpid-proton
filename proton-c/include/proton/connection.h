@@ -38,6 +38,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief connection
+ *
  * @addtogroup connection
  * @{
  */
@@ -117,6 +119,8 @@ PN_EXTERN void pn_connection_free(pn_connection_t *connection);
 PN_EXTERN void pn_connection_release(pn_connection_t *connection);
 
 /**
+ * @deprecated
+ *
  * Get additional error information associated with the connection.
  *
  * Whenever a connection operation fails (i.e. returns an error code),

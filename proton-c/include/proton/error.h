@@ -32,6 +32,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief error
+ *
  * @addtogroup error
  * @{
  */

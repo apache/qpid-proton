@@ -19,7 +19,7 @@
 
 # Project options
 
-PROJECT_NAME            = "Qpid Proton C"
+PROJECT_NAME            = "Qpid Proton C API"
 PROJECT_NUMBER          = @PN_VERSION_MAJOR@.@PN_VERSION_MINOR@.@PN_VERSION_POINT@
 OUTPUT_DIRECTORY        = .
 OUTPUT_LANGUAGE         = English
@@ -28,7 +28,7 @@ REPEAT_BRIEF            = YES
 ALWAYS_DETAILED_SEC     = NO
 INLINE_INHERITED_MEMB   = YES
 JAVADOC_AUTOBRIEF       = YES
-MULTILINE_CPP_IS_BRIEF  = NO
+#MULTILINE_CPP_IS_BRIEF  = NO
 INHERIT_DOCS            = YES
 BUILTIN_STL_SUPPORT     = YES
 INLINE_SIMPLE_STRUCTS   = YES
@@ -45,7 +45,7 @@ ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
 EXPAND_ONLY_PREDEF = YES
 PREDEFINED = PN_EXTERN= PNX_EXTERN=
-#EXCLUDE_SYMBOLS = 
+#EXCLUDE_SYMBOLS =
 
 # Configuration options related to warning and progress messages
 
@@ -56,7 +56,17 @@ WARNINGS               = YES
 
 INPUT = @CMAKE_SOURCE_DIR@/proton-c/include @CMAKE_SOURCE_DIR@/proton-c/docs @CMAKE_SOURCE_DIR@/examples/c
 FILE_PATTERNS          = *.h *.md *.dox
-# Don't parse example sources, only *. md and *.dox
+EXCLUDE = \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/cid.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/engine.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/handlers.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/import_export.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/log.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/object.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/parser.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/reactor.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/selectable.h \
+  @CMAKE_SOURCE_DIR@/proton-c/include/proton/type_compat.h
 EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/examples/*.c @CMAKE_SOURCE_DIR@/examples/*.h
 FULL_PATH_NAMES        = YES
 RECURSIVE              = YES
@@ -71,6 +81,7 @@ GENERATE_TODOLIST       = NO
 GENERATE_TESTLIST       = NO
 GENERATE_BUGLIST        = NO
 GENERATE_DEPRECATEDLIST = YES
+IGNORE_PREFIX           = pn_ PN_
 
 # Configuration options related to the output format
 

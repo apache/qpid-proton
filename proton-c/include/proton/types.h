@@ -29,6 +29,8 @@
 /**
  * @file
  *
+ * @copybrief types
+ *
  * @defgroup core Core
  * @brief Core protocol entities and event handling
  *
@@ -77,32 +79,36 @@
  * @ingroup core
  *
  * @defgroup error Error
- * @brief A Proton error
+ * @brief A Proton API error
  * @ingroup core
  *
  * @defgroup types Types
- * @brief Protocol and API data types
+ * @brief AMQP and API data types
  *
- * @defgroup amqp_types AMQP types
+ * @defgroup amqp_types AMQP data types
  * @brief AMQP data types
  * @ingroup types
  *
- * @defgroup api_types API types
+ * @defgroup api_types API data types
  * @brief Additional data types used in the API
  * @ingroup types
  *
  * @defgroup codec Codec
  * @brief AMQP data encoding and decoding
  *
+ * @defgroup data Data
+ * @brief A data structure for AMQP data
+ * @ingroup codec
+ *
  * @defgroup io IO
  * @brief IO integration interfaces
  *
- * @defgroup connection_driver Connection Driver
- * @brief **Experimental** - Low-level IO integration
- * @ingroup io
- *
  * @defgroup proactor Proactor
  * @brief **Experimental** - Multithreaded IO
+ * @ingroup io
+ *
+ * @defgroup connection_driver Connection driver
+ * @brief **Experimental** - Low-level IO integration
  * @ingroup io
  *
  * @defgroup messenger Messenger

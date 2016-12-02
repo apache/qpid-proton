@@ -1,5 +1,9 @@
 # Introduction {#index}
 
+This is the C API for the Proton AMQP protocol engine. It allows you
+to write client and server applications that send and receive AMQP
+messages.
+
 ## Core
 
 @ref core is a collection of types and functions representing AMQP
@@ -9,7 +13,8 @@ receive @ref message "messages".
 
 ## Types
 
-@ref types contains Protocol and API data types.
+@ref types contains C data types, including @ref amqp\_types and @ref
+api\_types.
 
 ## Codec
 
@@ -17,7 +22,7 @@ receive @ref message "messages".
 
 ## IO
 
-@ref io holds interfaces for IO integration.
+@ref io holds interfaces for integrating Proton with platform IO.
 
 The @ref proactor is a portable, proactive, asynchronous API for
 single- or multithreaded applications. It associates AMQP @ref
@@ -30,12 +35,3 @@ low-level SPI to feed byte streams from any source to the protocol
 engine. You can use it to integrate Proton directly with a foreign
 event loop or IO library, or to implement your own @ref proactor to
 transparently replace Proton's IO layer.
-
-<!--
-
-**Old APIs** - The @ref messenger and @ref reactor APIs are older APIs
-that were limited to single-threaded applications.  @ref reactor
-applications can be converted to use the @ref proactor since most of
-the code is written to the common @ref engine API.
-
--->

@@ -34,6 +34,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief condition
+ *
  * @addtogroup condition
  * @{
  */
@@ -129,10 +131,14 @@ PN_EXTERN int pn_condition_set_description(pn_condition_t *condition, const char
  */
 PN_EXTERN pn_data_t *pn_condition_info(pn_condition_t *condition);
 
-/** Set the name and printf-style formatted description. */
+/**
+ * Set the name and printf-style formatted description.
+ */
 PN_EXTERN int pn_condition_vformat(pn_condition_t *, const char *name, const char *fmt, va_list ap);
 
-/** Set the name and printf-style formatted description. */
+/**
+ * Set the name and printf-style formatted description.
+ */
 PN_EXTERN int pn_condition_format(pn_condition_t *, const char *name, const char *fmt, ...);
 
 /**

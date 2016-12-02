@@ -34,6 +34,8 @@ extern "C" {
 /**
  * @file
  *
+ * Delivery state
+ *
  * @addtogroup delivery
  * @{
  */

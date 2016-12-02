@@ -33,6 +33,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief sasl
+ *
  * @addtogroup sasl
  * @{
  */

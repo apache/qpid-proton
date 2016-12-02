@@ -34,6 +34,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief terminus
+ *
  * @addtogroup terminus
  * @{
  */

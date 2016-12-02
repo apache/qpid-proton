@@ -35,10 +35,10 @@ extern "C" {
 
 /**
  * @file
- * @deprecated
  *
- * The messenger API provides a high level interface for sending and
- * receiving AMQP messages.
+ * @copybrief messenger
+ *
+ * @deprecated
  *
  * @addtogroup messenger
  * @{

@@ -23,7 +23,7 @@
 /**
  * @file
  *
- * **Experimental** - Low-level IO integration
+ * @copybrief connection_driver
  *
  * Associate a @ref connection and @ref transport with AMQP byte
  * streams from any source.

@@ -34,6 +34,8 @@ extern "C" {
 /**
  * @file
  *
+ * @copybrief event
+ *
  * @addtogroup event
  * @{
  */

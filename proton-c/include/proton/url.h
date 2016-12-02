@@ -29,8 +29,7 @@ extern "C" {
 /**
  * @file
  *
- * **Deprecated**
- *
+ * @copybrief url
  * @deprecated
  *
  * @addtogroup url

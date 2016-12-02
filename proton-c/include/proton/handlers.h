@@ -31,8 +31,6 @@ extern "C" {
 #endif
 
 /**
- * @file
- *
  * @cond INTERNAL
  */
 
