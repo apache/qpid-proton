@@ -746,6 +746,17 @@ class LinkTest(Test):
     assert self.snd.remote_rcv_settle_mode == Link.RCV_SECOND
     assert self.rcv.remote_snd_settle_mode == Link.SND_UNSETTLED
 
+  def test_max_message_size(self):
+    if "java" in sys.platform:
+      raise Skipped()
+    assert self.snd.max_message_size == 0
+    assert self.rcv.remote_max_message_size == 0
+    self.snd.max_message_size = 13579
+    self.snd.open()
+    self.rcv.open()
+    self.pump()
+    assert self.rcv.remote_max_message_size == 13579
+
   def test_cleanup(self):
     snd, rcv = self.link("test-link")
     snd.open()

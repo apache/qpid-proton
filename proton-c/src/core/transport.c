@@ -1342,13 +1342,14 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   pn_bytes_t dist_mode;
   bool snd_settle, rcv_settle;
   uint8_t snd_settle_mode, rcv_settle_mode;
-  int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..I]", &name, &handle,
+  uint64_t max_msgsz;
+  int err = pn_data_scan(args, "D.[SIo?B?BD.[SIsIo.s]D.[SIsIo]..IL]", &name, &handle,
                          &is_sender,
                          &snd_settle, &snd_settle_mode,
                          &rcv_settle, &rcv_settle_mode,
                          &source, &src_dr, &src_exp, &src_timeout, &src_dynamic, &dist_mode,
                          &target, &tgt_dr, &tgt_exp, &tgt_timeout, &tgt_dynamic,
-                         &idc);
+                         &idc, &max_msgsz);
   if (err) return err;
   char strbuf[128];      // avoid malloc for most link names
   char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
@@ -1442,6 +1443,10 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   if (!is_sender) {
     link->state.delivery_count = idc;
+  }
+
+  if (max_msgsz) {
+    link->remote_max_message_size = max_msgsz;
   }
 
   pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_REMOTE_OPEN);
@@ -1988,7 +1993,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         if (err) return err;
       } else {
         int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnI]", ATTACH,
+                                "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnIL]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
@@ -2013,7 +2018,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->target.dynamic,
                                 link->target.properties,
                                 link->target.capabilities,
-                                0);
+                                0, link->max_message_size);
         if (err) return err;
       }
     }

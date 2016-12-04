@@ -1176,6 +1176,8 @@ pn_link_t *pn_link_new(int type, pn_session_t *session, const char *name)
   pni_terminus_init(&link->remote_target, PN_UNSPECIFIED);
   link->unsettled_head = link->unsettled_tail = link->current = NULL;
   link->unsettled_count = 0;
+  link->max_message_size = 0;
+  link->remote_max_message_size = 0;
   link->available = 0;
   link->credit = 0;
   link->queued = 0;
@@ -1954,6 +1956,21 @@ bool pn_link_draining(pn_link_t *receiver)
   assert(receiver);
   assert(pn_link_is_receiver(receiver));
   return receiver->drain && (pn_link_credit(receiver) > pn_link_queued(receiver));
+}
+
+uint64_t pn_link_max_message_size(pn_link_t *link)
+{
+  return link->max_message_size;
+}
+
+void pn_link_set_max_message_size(pn_link_t *link, uint64_t size)
+{
+  link->max_message_size = size;
+}
+
+uint64_t pn_link_remote_max_message_size(pn_link_t *link)
+{
+  return link->remote_max_message_size;
 }
 
 pn_link_t *pn_delivery_link(pn_delivery_t *delivery)

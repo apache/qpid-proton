@@ -2868,6 +2868,16 @@ class Link(Wrapper, Endpoint):
   def drained(self):
     return pn_link_drained(self._impl)
 
+  @property
+  def remote_max_message_size(self):
+    return pn_link_remote_max_message_size(self._impl)
+
+  def _get_max_message_size(self):
+    return pn_link_max_message_size(self._impl)
+  def _set_max_message_size(self, mode):
+    pn_link_set_max_message_size(self._impl, mode)
+  max_message_size = property(_get_max_message_size, _set_max_message_size)
+
   def detach(self):
     return pn_link_detach(self._impl)
 

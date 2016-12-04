@@ -291,6 +291,8 @@ struct pn_link_t {
   pn_delivery_t *current;
   pn_record_t *context;
   size_t unsettled_count;
+  uint64_t max_message_size;
+  uint64_t remote_max_message_size;
   pn_sequence_t available;
   pn_sequence_t credit;
   pn_sequence_t queued;
