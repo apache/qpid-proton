@@ -23,6 +23,7 @@
 /// @cond INTERNAL
 /// XXX remove
 
+#include "proton/fwd.hpp"
 #include "proton/internal/object.hpp"
 #include "proton/duration.hpp"
 #include "proton/timestamp.hpp"
@@ -33,11 +34,7 @@ struct pn_io_t;
 
 namespace proton {
 
-class connection;
-class container;
 class acceptor;
-class url;
-class messaging_handler;
 
 class reactor : public internal::object<pn_reactor_t> {
   public:

@@ -22,12 +22,14 @@
  *
  */
 
+#include "./fwd.hpp"
+#include "./types_fwd.hpp"
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
-#include "./duration.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./reconnect_timer.hpp"
-#include "./types_fwd.hpp"
+#include "./duration.hpp"
+
+#include <proton/type_compat.h>
 
 #include <vector>
 #include <string>
@@ -35,13 +37,6 @@
 struct pn_connection_t;
 
 namespace proton {
-
-class proton_handler;
-class connection;
-
-namespace io {
-class connection_driver;
-}
 
 /// Options for creating a connection.
 ///

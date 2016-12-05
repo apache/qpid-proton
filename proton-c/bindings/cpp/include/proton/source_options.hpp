@@ -22,19 +22,14 @@
  *
  */
 
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./types.hpp"
-#include "./delivery_mode.hpp"
+#include "./duration.hpp"
 #include "./source.hpp"
 
-#include <vector>
 #include <string>
 
 namespace proton {
-
-class proton_handler;
 
 /// Options for creating a source node for a sender or receiver.
 ///

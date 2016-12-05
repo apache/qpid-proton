@@ -84,13 +84,19 @@ Done. No more messages.
 
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
-#include <proton/messaging_handler.hpp>
-#include <proton/sender.hpp>
-#include <proton/tracker.hpp>
 #include <proton/delivery.hpp>
-#include <proton/url.hpp>
+#include <proton/function.hpp>
+#include <proton/message.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/receiver_options.hpp>
+#include <proton/sender.hpp>
+#include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
+#include <proton/thread_safe.hpp>
+#include <proton/tracker.hpp>
+#include <proton/url.hpp>
 
 #include <iostream>
 #include <sstream>

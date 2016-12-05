@@ -21,9 +21,14 @@
 
 #include "options.hpp"
 
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
+#include <proton/listener.hpp>
+#include <proton/message.hpp>
+#include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender.hpp>
+#include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
 

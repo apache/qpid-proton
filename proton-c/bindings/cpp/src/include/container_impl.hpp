@@ -22,12 +22,15 @@
  *
  */
 
+#include "proton/fwd.hpp"
 #include "proton/container.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
 #include "proton/sender.hpp"
+#include "proton/sender_options.hpp"
 #include "proton/receiver.hpp"
+#include "proton/receiver_options.hpp"
 
 #include "messaging_adapter.hpp"
 #include "reactor.hpp"
@@ -41,10 +44,8 @@
 namespace proton {
 
 class dispatch_helper;
-class connection;
 class connector;
 class acceptor;
-class container;
 class url;
 class listen_handler;
 

@@ -23,8 +23,8 @@
  */
 
 #include "./internal/export.hpp"
-#include "./value.hpp"
 #include "./internal/config.hpp"
+#include "./value.hpp"
 
 #include <string>
 #include <iosfwd>

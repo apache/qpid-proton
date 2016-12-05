@@ -22,22 +22,12 @@
  *
  */
 
-#include "./internal/config.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./types.hpp"
 #include "./delivery_mode.hpp"
-#include "./terminus.hpp"
-
-#include <vector>
-#include <string>
 
 namespace proton {
-
-class proton_handler;
-class receiver;
-class source_options;
-class target_options;
 
 /// Options for creating a receiver.
 ///

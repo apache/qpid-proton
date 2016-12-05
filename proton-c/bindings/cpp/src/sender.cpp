@@ -19,8 +19,12 @@
  *
  */
 
-#include "proton/link.hpp"
 #include "proton/sender.hpp"
+
+#include "proton/link.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/source.hpp"
+#include "proton/target.hpp"
 #include "proton/tracker.hpp"
 
 #include <proton/delivery.h>

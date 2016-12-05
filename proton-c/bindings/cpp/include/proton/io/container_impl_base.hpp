@@ -24,6 +24,7 @@
 
 #include "../container.hpp"
 
+#include <future>
 #include <mutex>
 #include <sstream>
 

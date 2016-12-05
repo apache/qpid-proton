@@ -26,6 +26,8 @@
 #include "./internal/comparable.hpp"
 #include "./types_fwd.hpp"
 
+#include <proton/type_compat.h>
+
 #include <iosfwd>
 
 namespace proton {

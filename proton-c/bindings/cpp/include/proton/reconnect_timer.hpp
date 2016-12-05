@@ -28,9 +28,8 @@
 #include "./internal/export.hpp"
 #include "./duration.hpp"
 #include "./timestamp.hpp"
-#include "./types.hpp"
 
-#include <string>
+#include <proton/type_compat.h>
 
 namespace proton {
 

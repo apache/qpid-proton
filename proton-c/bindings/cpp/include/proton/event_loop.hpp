@@ -22,15 +22,11 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/config.hpp"
-#include "./function.hpp"
+#include "./internal/export.hpp"
 
 #include <functional>
-
-#if PN_CPP_HAS_CPP11
-#include <future>
-#include <type_traits>
-#endif
 
 struct pn_connection_t;
 struct pn_session_t;

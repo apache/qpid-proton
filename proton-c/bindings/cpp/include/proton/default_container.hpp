@@ -22,6 +22,7 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./container.hpp"
 
 #include "./internal/config.hpp"
@@ -31,7 +32,6 @@
 #include <string>
 
 namespace proton {
-class messaging_handler;
 
 // Avoid deprecated diagnostics from auto_ptr
 #if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)

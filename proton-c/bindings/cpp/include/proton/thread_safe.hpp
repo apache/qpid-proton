@@ -22,21 +22,17 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/config.hpp"
 #include "./connection.hpp"
 #include "./event_loop.hpp"
+#include "./function.hpp"
 #include "./internal/object.hpp"
 #include "./internal/type_traits.hpp"
 
 #include <functional>
 
 namespace proton {
-
-class connection;
-class session;
-class link;
-class sender;
-class receiver;
 
 namespace internal {
 template <class T> struct endpoint_traits;

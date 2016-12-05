@@ -34,12 +34,14 @@
 #include "./types_fwd.hpp"
 #include "./uuid.hpp"
 
+#include <proton/type_compat.h>
+
 #include <iosfwd>
 #include <string>
 #include <typeinfo>
 
 namespace proton {
-class message;
+
 class scalar_base;
 
 namespace codec {
@@ -150,7 +152,7 @@ class scalar_base : private internal::comparable<scalar_base> {
     binary bytes_; // Hold binary data.
 
     /// @cond INTERNAL
-  friend class proton::message;
+  friend class message;
   friend class codec::encoder;
   friend class codec::decoder;
   template<class T> friend T internal::get(const scalar_base& s);

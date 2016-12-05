@@ -22,18 +22,16 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./endpoint.hpp"
 #include "./link.hpp"
 
-#include <proton/types.h>
+#include <proton/type_compat.h>
 
-#include <string>
-
-struct pn_connection_t;
+struct pn_link_t;
+struct pn_session_t;
 
 namespace proton {
-template <class T> class thread_safe;
 
 /// A channel for receiving messages.
 class

@@ -29,9 +29,9 @@
 
 #include "./internal/config.hpp"
 
-#include <proton/type_compat.h>
-
-#include <string>
+#if PN_CPP_HAS_NULLPTR
+#include <cstddef>
+#endif
 
 namespace proton {
 
@@ -43,7 +43,6 @@ class scalar;
 class symbol;
 class timestamp;
 class duration;
-class uuid;
 class uuid;
 class value;
 

@@ -23,8 +23,9 @@
  */
 
 #include "./internal/pn_unique_ptr.hpp"
-#include "./types_fwd.hpp"
 #include "./error.hpp"
+
+#include <proton/type_compat.h>
 
 #include <iosfwd>
 #include <string>

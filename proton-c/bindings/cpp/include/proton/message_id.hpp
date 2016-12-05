@@ -26,6 +26,8 @@
 #include "./scalar_base.hpp"
 #include "./uuid.hpp"
 
+#include <proton/type_compat.h>
+
 #include <string>
 
 namespace proton {

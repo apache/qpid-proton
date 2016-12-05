@@ -22,10 +22,9 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/config.hpp"
-#include "./error_condition.hpp"
 #include "./internal/export.hpp"
-#include "./internal/comparable.hpp"
 
 namespace proton {
 

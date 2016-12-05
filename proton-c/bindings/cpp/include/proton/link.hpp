@@ -22,34 +22,16 @@
  *
  */
 
-#include "./endpoint.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./message.hpp"
-#include "./source.hpp"
-#include "./target.hpp"
+#include "./endpoint.hpp"
 #include "./internal/object.hpp"
-#include "./sender_options.hpp"
-#include "./receiver_options.hpp"
-
-#include <proton/types.h>
 
 #include <string>
 
-namespace proton {
+struct pn_link_t;
 
-class sender;
-class receiver;
-class error_condition;
-class link_context;
-class proton_event;
-class messaging_adapter;
-class proton_handler;
-class delivery;
-class connection;
-class container;
-class session;
-class sender_iterator;
-class receiver_iterator;
+namespace proton {
 
 /// A named channel for sending or receiving messages.  It is the base
 /// class for sender and receiver.

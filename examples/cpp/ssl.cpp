@@ -23,9 +23,14 @@
 
 #include <proton/connection_options.hpp>
 #include <proton/connection.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
+#include <proton/error_condition.hpp>
+#include <proton/listener.hpp>
+#include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/ssl.hpp>
+#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transport.hpp>
 

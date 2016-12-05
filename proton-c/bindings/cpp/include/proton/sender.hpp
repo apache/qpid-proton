@@ -22,19 +22,14 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./link.hpp"
-#include "./message.hpp"
-#include "./tracker.hpp"
 
-#include <proton/types.h>
-
-#include <string>
-
-struct pn_connection_t;
+struct pn_link_t;
+struct pn_session_t;
 
 namespace proton {
-template <class T> class thread_safe;
 
 /// A channel for sending messages.
 class

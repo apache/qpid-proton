@@ -30,6 +30,9 @@
 #include "./config.hpp"
 #include "../types_fwd.hpp"
 #include "../type_id.hpp"
+
+#include <proton/type_compat.h>
+
 #include <limits>
 
 namespace proton {

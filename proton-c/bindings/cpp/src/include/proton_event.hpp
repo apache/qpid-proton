@@ -22,6 +22,7 @@
  *
  */
 
+#include "proton/fwd.hpp"
 #include "proton/error.hpp"
 
 #include <proton/event.h>
@@ -29,7 +30,6 @@
 namespace proton {
 
 class proton_handler;
-class container;
 
 /** Event information for a proton::proton_handler */
 class proton_event

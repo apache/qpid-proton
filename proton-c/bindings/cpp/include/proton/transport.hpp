@@ -22,21 +22,13 @@
  *
  */
 
-#include "./internal/object.hpp"
-#include "./types.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
+#include "./internal/object.hpp"
 
 struct pn_transport_t;
 
 namespace proton {
-
-class connection;
-class error_condition;
-class sasl;
-
-namespace io {
-class connection_driver;
-}
 
 /// A network channel supporting an AMQP connection.
 class transport : public internal::object<pn_transport_t> {

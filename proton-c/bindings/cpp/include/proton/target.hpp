@@ -22,17 +22,19 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/object.hpp"
-#include "./value.hpp"
 #include "./terminus.hpp"
 
 #include <string>
 
+struct pn_terminus_t;
+
 namespace proton {
 
-class sender;
-class receiver;
+namespace internal {
+template <class T> class factory;
+}
 
 /// A destination for messages.
 ///

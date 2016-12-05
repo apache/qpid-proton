@@ -18,9 +18,13 @@
  * under the License.
  *
  */
-#include "proton/link.hpp"
 #include "proton/receiver.hpp"
+
 #include "proton/error.hpp"
+#include "proton/link.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/source.hpp"
+#include "proton/target.hpp"
 
 #include "msg.hpp"
 #include "proton_bits.hpp"

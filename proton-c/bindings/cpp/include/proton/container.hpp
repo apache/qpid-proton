@@ -22,6 +22,7 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./connection_options.hpp"
 #include "./function.hpp"
 #include "./listener.hpp"
@@ -35,17 +36,6 @@
 #include <string>
 
 namespace proton {
-
-class connection;
-class connection_options;
-class container_impl;
-class messaging_handler;
-class listen_handler;
-class listener;
-class receiver;
-class receiver_options;
-class sender;
-class sender_options;
 
 /// A top-level container of connections, sessions, senders, and
 /// receivers.

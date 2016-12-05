@@ -1,3 +1,6 @@
+#ifndef PROTON_FWD_HPP
+#define PROTON_FWD_HPP
+
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,30 +22,49 @@
  *
  */
 
-#include "proton/delivery.hpp"
-
-#include "proton/receiver.hpp"
-
-#include "proton_bits.hpp"
-
-#include <proton/delivery.h>
-
-namespace {
-
-void settle_delivery(pn_delivery_t* o, uint64_t state) {
-    pn_delivery_update(o, state);
-    pn_delivery_settle(o);
-}
-
-}
-
 namespace proton {
 
-delivery::delivery(pn_delivery_t* d): transfer(make_wrapper(d)) {}
-receiver delivery::receiver() const { return make_wrapper<class receiver>(pn_delivery_link(pn_object())); }
-void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
-void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
-void delivery::release() { settle_delivery(pn_object(), RELEASED); }
-void delivery::modify() { settle_delivery(pn_object(), MODIFIED); }
+class annotation_key;
+class connection;
+class connection_options;
+class container;
+class container_impl;
+class delivery;
+class error_condition;
+class event;
+class message;
+class message_id;
+class messaging_handler;
+class listen_handler;
+class listener;
+class receiver;
+class receiver_iterator;
+class receiver_options;
+class reconnect_timer;
+class sasl;
+class sender;
+class sender_iterator;
+class sender_options;
+class session;
+class session_options;
+class source_options;
+class ssl;
+class target_options;
+class tracker;
+class transport;
+class url;
+class void_function0;
+
+
+namespace io {
+
+class connection_driver;
 
 }
+
+template <class T> class returned;
+template <class T> class thread_safe;
+
+}
+
+#endif // PROTON_FWD_HPP

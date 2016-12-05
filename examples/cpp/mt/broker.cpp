@@ -21,18 +21,26 @@
 #include "mt_container.hpp"
 
 #include <proton/connection.hpp>
+#include <proton/connection_options.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/error_condition.hpp>
 #include <proton/listen_handler.hpp>
+#include <proton/listener.hpp>
+#include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
+#include <proton/target.hpp>
 #include <proton/thread_safe.hpp>
+#include <proton/tracker.hpp>
 
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <thread>
 

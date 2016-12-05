@@ -22,6 +22,8 @@
  *
  */
 
+#include "./fwd.hpp"
+
 namespace proton {
 
 // XXX Discuss more

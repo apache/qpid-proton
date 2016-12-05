@@ -22,25 +22,17 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./endpoint.hpp"
 #include "./receiver.hpp"
 #include "./sender.hpp"
-#include "./session_options.hpp"
-
-#include <proton/types.h>
-#include <proton/link.h>
 
 #include <string>
 
-struct pn_connection_t;
 struct pn_session_t;
 
 namespace proton {
-
-class container;
-class messaging_handler;
-template <class T> class thread_safe;
 
 /// A container of senders and receivers.
 class

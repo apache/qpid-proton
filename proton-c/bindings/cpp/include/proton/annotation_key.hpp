@@ -25,6 +25,8 @@
 #include "./scalar_base.hpp"
 #include "./symbol.hpp"
 
+#include <proton/type_compat.h>
+
 namespace proton {
 
 /// A key for use with AMQP annotation maps.

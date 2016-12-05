@@ -29,13 +29,14 @@
 
 // TODO aconway 2016-03-15: described types, described arrays.
 
+#include "./internal/config.hpp"
+
 #include "./annotation_key.hpp"
 #include "./binary.hpp"
 #include "./codec/deque.hpp"
 #include "./codec/list.hpp"
 #include "./codec/map.hpp"
 #include "./codec/vector.hpp"
-#include "./internal/config.hpp"
 #include "./decimal.hpp"
 #include "./duration.hpp"
 #include "./message_id.hpp"
@@ -45,7 +46,6 @@
 #include "./types_fwd.hpp"
 #include "./uuid.hpp"
 #include "./value.hpp"
-#include "./internal/config.hpp"
 
 #if PN_CPP_HAS_CPP11
 #include "./codec/forward_list.hpp"

@@ -21,10 +21,10 @@
 
 #include "proton/terminus.hpp"
 
-#include "proton_bits.hpp"
+#include "proton/duration.hpp"
+#include "proton/value.hpp"
 
-#include "proton/link.hpp"
-#include <proton/link.h>
+#include "proton_bits.hpp"
 
 namespace proton {
 

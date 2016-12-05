@@ -22,21 +22,14 @@
  *
  */
 
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./types.hpp"
-#include "./delivery_mode.hpp"
+#include "./duration.hpp"
 #include "./target.hpp"
-#include "./terminus.hpp"
 
-#include <vector>
 #include <string>
 
 namespace proton {
-
-class proton_handler;
-class target;
 
 /// Options for creating a target node for a sender or receiver.
 ///

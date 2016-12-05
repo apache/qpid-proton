@@ -22,15 +22,11 @@
  *
  */
 
-#include "./internal/config.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./types.hpp"
 
 namespace proton {
-
-class messaging_handler;
-class session;
 
 /// Options for creating a session.
 ///

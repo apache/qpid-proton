@@ -22,16 +22,12 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
 #include "./transfer.hpp"
 
-#include <proton/delivery.h>
-#include <proton/disposition.h>
-
 namespace proton {
-
-class receiver;
 
 /// A received message.
 /// 

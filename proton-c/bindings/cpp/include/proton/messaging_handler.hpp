@@ -22,26 +22,11 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 
 namespace proton {
 
-class error_condition;
-class container;
-class event;
-class transport;
-class connection;
-class session;
-class sender;
-class receiver;
-class tracker;
-class delivery;
-class message;
-class messaging_adapter;
-
-namespace io {
-class connection_driver;
-}
 
 /// A handler for Proton messaging events.
 ///

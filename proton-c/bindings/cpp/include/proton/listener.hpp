@@ -20,13 +20,12 @@
  * under the License.
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
 
 #include <string>
 
 namespace proton {
-
-class container;
 
 /// A listener for incoming connections.
 class PN_CPP_CLASS_EXTERN listener {

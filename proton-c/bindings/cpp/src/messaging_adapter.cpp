@@ -22,8 +22,10 @@
 #include "messaging_adapter.hpp"
 
 #include "proton/delivery.hpp"
-#include "proton/sender.hpp"
 #include "proton/error.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/sender.hpp"
+#include "proton/sender_options.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 

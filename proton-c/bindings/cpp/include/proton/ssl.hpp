@@ -23,7 +23,6 @@
  */
 
 #include "./internal/export.hpp"
-#include "./internal/object.hpp"
 
 #include <proton/ssl.h>
 
@@ -31,7 +30,9 @@
 
 namespace proton {
 
-class connection_options;
+namespace internal {
+template <class T> class factory;
+}
 
 /// SSL information.
 class ssl {

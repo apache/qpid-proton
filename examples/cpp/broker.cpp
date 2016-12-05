@@ -22,8 +22,11 @@
 #include "options.hpp"
 
 #include <proton/connection.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
+#include <proton/error_condition.hpp>
+#include <proton/listener.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/message.hpp>
 #include <proton/receiver_options.hpp>
@@ -31,6 +34,7 @@
 #include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/target_options.hpp>
+#include <proton/tracker.hpp>
 #include <proton/transport.hpp>
 #include <proton/url.hpp>
 

@@ -22,27 +22,23 @@
  *
  */
 
-#include "./annotation_key.hpp"
-#include "./codec/map.hpp"
-#include "./duration.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./message_id.hpp"
+#include "./duration.hpp"
+#include "./timestamp.hpp"
 #include "./value.hpp"
 
 #include "./internal/cached_map.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
+#include <proton/type_compat.h>
+
 #include <string>
 #include <vector>
-#include <utility>
 
 struct pn_message_t;
 
 namespace proton {
-
-class delivery;
-class message_id;
-class annotation_key;
 
 /// An AMQP message.
 ///

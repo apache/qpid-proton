@@ -27,6 +27,8 @@
 #include "../types_fwd.hpp"
 #include "./common.hpp"
 
+#include <proton/type_compat.h>
+
 namespace proton {
 class scalar_base;
 

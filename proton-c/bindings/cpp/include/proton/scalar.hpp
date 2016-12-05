@@ -22,12 +22,9 @@
 
 #include "./scalar_base.hpp"
 
-namespace proton {
+#include <proton/type_compat.h>
 
-namespace codec {
-class decoder;
-class encoder;
-}
+namespace proton {
 
 /// A holder for an instance of any scalar AMQP type.
 ///

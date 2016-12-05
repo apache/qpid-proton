@@ -22,27 +22,19 @@
  *
  */
 
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./endpoint.hpp"
 #include "./internal/object.hpp"
+#include "./endpoint.hpp"
 #include "./session.hpp"
 
-#include <proton/types.h>
+#include <proton/type_compat.h>
 
 #include <string>
 
 struct pn_connection_t;
 
 namespace proton {
-
-class messaging_handler;
-class connection_options;
-class sender;
-class sender_options;
-class receiver;
-class receiver_options;
-class container;
-template <class T> class thread_safe;
 
 /// A connection to a remote AMQP peer.
 class

@@ -21,8 +21,10 @@
 
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/thread_safe.hpp>
 #include <proton/transport.hpp>
 
 #include <iostream>

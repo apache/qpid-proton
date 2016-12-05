@@ -25,6 +25,8 @@
 
 #include "proton_bits.hpp"
 
+#include <proton/delivery.h>
+
 namespace proton {
 
 tracker::tracker(pn_delivery_t *d): transfer(make_wrapper(d)) {}

@@ -21,6 +21,7 @@
 #include "proton/messaging_handler.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/error_condition.hpp"
 #include "proton/receiver.hpp"
 #include "proton/sender.hpp"
 #include "proton/session.hpp"

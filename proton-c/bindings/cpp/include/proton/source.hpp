@@ -22,20 +22,18 @@
  *
  */
 
-#include "./value.hpp"
-#include "./terminus.hpp"
-#include "./codec/map.hpp"
-
-#include "./internal/cached_map.hpp"
+#include "./fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/object.hpp"
+#include "./internal/cached_map.hpp"
+#include "./symbol.hpp"
+#include "./terminus.hpp"
+#include "./value.hpp"
 
 #include <string>
 
-namespace proton {
+struct pn_terminus_t;
 
-class sender;
-class receiver;
+namespace proton {
 
 /// A point of origin for messages.
 ///

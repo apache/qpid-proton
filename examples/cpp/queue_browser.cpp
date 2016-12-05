@@ -20,11 +20,14 @@
  */
 
 #include <proton/connection.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
+#include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
+#include <proton/thread_safe.hpp>
 #include <proton/url.hpp>
 
 #include <iostream>

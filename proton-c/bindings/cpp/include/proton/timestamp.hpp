@@ -22,6 +22,8 @@
 
 #include "./duration.hpp"
 
+#include <proton/type_compat.h>
+
 namespace proton {
 
 /// A 64-bit timestamp in milliseconds since the Unix epoch.

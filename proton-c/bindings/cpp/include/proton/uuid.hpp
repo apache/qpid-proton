@@ -22,8 +22,8 @@
  *
  */
 
-#include "./byte_array.hpp"
 #include "./internal/export.hpp"
+#include "./byte_array.hpp"
 
 #include <string>
 #include <iosfwd>

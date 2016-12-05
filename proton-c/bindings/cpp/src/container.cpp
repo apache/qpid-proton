@@ -20,6 +20,7 @@
  */
 
 #include "proton/container.hpp"
+#include "proton/error_condition.hpp"
 
 #include "proton/listen_handler.hpp"
 

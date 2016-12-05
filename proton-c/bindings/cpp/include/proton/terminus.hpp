@@ -22,14 +22,21 @@
  *
  */
 
+#include "./types_fwd.hpp"
 #include "./internal/export.hpp"
-#include "./internal/object.hpp"
-#include "./value.hpp"
 
-#include <proton/link.h>
+#include <proton/terminus.h>
+
 #include <string>
 
+struct pn_link_t;
+struct pn_terminus_t;
+
 namespace proton {
+
+namespace internal {
+template <class T> class factory;
+}
 
 /// One end of a link, either a source or a target.
 ///

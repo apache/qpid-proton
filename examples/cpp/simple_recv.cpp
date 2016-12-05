@@ -22,11 +22,15 @@
 #include "options.hpp"
 
 #include <proton/connection.hpp>
+#include <proton/connection_options.hpp>
+#include <proton/container.hpp>
 #include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/messaging_handler.hpp>
 #include <proton/link.hpp>
+#include <proton/message.hpp>
 #include <proton/message_id.hpp>
+#include <proton/messaging_handler.hpp>
+#include <proton/thread_safe.hpp>
 #include <proton/value.hpp>
 
 #include <iostream>
