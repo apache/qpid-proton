@@ -19,16 +19,17 @@
  *
  */
 
-#include "proton/default_container.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/connection.hpp"
-#include "proton/session.hpp"
 #include "proton/error.hpp"
 #include "proton/event_loop.hpp"
-#include "proton/sender.hpp"
+#include "proton/listener.hpp"
 #include "proton/receiver.hpp"
+#include "proton/sender.hpp"
+#include "proton/session.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
+#include "proton/thread_safe.hpp"
 #include "proton/transport.hpp"
 #include "proton/url.hpp"
 #include "proton/uuid.hpp"
@@ -49,7 +50,7 @@
 
 namespace proton {
 
-class handler_context {
+class container::impl::handler_context {
   public:
     static handler_context& get(pn_handler_t* h) {
         return *reinterpret_cast<handler_context*>(pn_handler_mem(h));
@@ -77,13 +78,13 @@ class handler_context {
 };
 
 // Used to sniff for connector events before the reactor's global handler sees them.
-class override_handler : public proton_handler
+class container::impl::override_handler : public proton_handler
 {
   public:
     internal::pn_ptr<pn_handler_t> base_handler;
-    container_impl &container_impl_;
+    container::impl &container_impl_;
 
-    override_handler(pn_handler_t *h, container_impl &c) : base_handler(h), container_impl_(c) {}
+    override_handler(pn_handler_t *h, container::impl &c) : base_handler(h), container_impl_(c) {}
 
     virtual void on_unhandled(proton_event &pe) {
         proton_event::event_type type = pe.type();
@@ -107,24 +108,25 @@ class override_handler : public proton_handler
     }
 };
 
-internal::pn_ptr<pn_handler_t> container_impl::cpp_handler(proton_handler *h) {
+internal::pn_ptr<pn_handler_t> container::impl::cpp_handler(proton_handler *h) {
     pn_handler_t *handler = h ? pn_handler_new(&handler_context::dispatch,
                                                sizeof(class handler_context),
                                                &handler_context::cleanup) : 0;
     if (handler) {
         handler_context &hc = handler_context::get(handler);
-        hc.container_ = this;
+        hc.container_ = &container_;
         hc.handler_ = h;
     }
     return internal::take_ownership(handler);
 }
 
-container_impl::container_impl(const std::string& id, messaging_handler *mh) :
+container::impl::impl(container& c, const std::string& id, messaging_handler *mh) :
+    container_(c),
     reactor_(reactor::create()),
     id_(id.empty() ? uuid::random().str() : id),
     auto_stop_(true)
 {
-    container_context::set(reactor_, *this);
+    container_context::set(reactor_, container_);
 
     // Set our own global handler that "subclasses" the existing one
     pn_handler_t *global_handler = reactor_.pn_global_handler();
@@ -153,7 +155,7 @@ void close_acceptor(acceptor a) {
 }
 }
 
-container_impl::~container_impl() {
+container::impl::~impl() {
     for (acceptors::iterator i = acceptors_.begin(); i != acceptors_.end(); ++i)
         close_acceptor(i->second);
 }
@@ -177,7 +179,7 @@ struct immediate_event_loop : public event_loop {
 };
 }
 
-returned<connection> container_impl::connect(const std::string &urlstr, const connection_options &user_opts) {
+returned<connection> container::impl::connect(const std::string &urlstr, const connection_options &user_opts) {
     connection_options opts = client_connection_options(); // Defaults
     opts.update(user_opts);
     messaging_handler* mh = opts.handler();
@@ -207,7 +209,7 @@ returned<connection> container_impl::connect(const std::string &urlstr, const co
     return make_thread_safe(conn);
 }
 
-returned<sender> container_impl::open_sender(const std::string &url, const proton::sender_options &o1, const connection_options &o2) {
+returned<sender> container::impl::open_sender(const std::string &url, const proton::sender_options &o1, const connection_options &o2) {
     proton::sender_options lopts(sender_options_);
     lopts.update(o1);
     connection_options copts(client_connection_options_);
@@ -216,7 +218,7 @@ returned<sender> container_impl::open_sender(const std::string &url, const proto
     return make_thread_safe(conn.default_session().open_sender(proton::url(url).path(), lopts));
 }
 
-returned<receiver> container_impl::open_receiver(const std::string &url, const proton::receiver_options &o1, const connection_options &o2) {
+returned<receiver> container::impl::open_receiver(const std::string &url, const proton::receiver_options &o1, const connection_options &o2) {
     proton::receiver_options lopts(receiver_options_);
     lopts.update(o1);
     connection_options copts(client_connection_options_);
@@ -226,7 +228,7 @@ returned<receiver> container_impl::open_receiver(const std::string &url, const p
         conn.default_session().open_receiver(proton::url(url).path(), lopts));
 }
 
-listener container_impl::listen(const std::string& url, listen_handler& lh) {
+listener container::impl::listen(const std::string& url, listen_handler& lh) {
     if (acceptors_.find(url) != acceptors_.end())
         throw error("already listening on " + url);
     connection_options opts = server_connection_options(); // Defaults
@@ -241,9 +243,9 @@ listener container_impl::listen(const std::string& url, listen_handler& lh) {
 
     proton::url u(url);
     pn_acceptor_t *acptr = pn_reactor_acceptor(
-        reactor_.pn_object(), u.host().c_str(), u.port().c_str(), chandler.get());
+        unwrap(reactor_), u.host().c_str(), u.port().c_str(), chandler.get());
     if (!acptr) {
-        std::string err(pn_error_text(pn_reactor_error(reactor_.pn_object())));
+        std::string err(pn_error_text(pn_reactor_error(unwrap(reactor_))));
         lh.on_error(err);
         lh.on_close();
         throw error(err);
@@ -255,21 +257,24 @@ listener container_impl::listen(const std::string& url, listen_handler& lh) {
     lc.ssl = u.scheme() == url::AMQPS;
     listener_context::get(acptr).listen_handler_ = &lh;
     acceptors_[url] = make_wrapper(acptr);
-    return listener(*this, url);
+    return listener(container_, url);
 }
 
-void container_impl::stop_listening(const std::string& url) {
+void container::impl::stop_listening(const std::string& url) {
     acceptors::iterator i = acceptors_.find(url);
     if (i != acceptors_.end())
         close_acceptor(i->second);
 }
 
-void container_impl::schedule(container& c, int delay, proton_handler *h) {
-    container_impl& ci = static_cast<container_impl&>(c);
+void container::impl::schedule(impl& ci, int delay, proton_handler *h) {
     internal::pn_ptr<pn_handler_t> task_handler;
     if (h)
         task_handler = ci.cpp_handler(h);
     ci.reactor_.schedule(delay, task_handler.get());
+}
+
+void container::impl::schedule(container& c, int delay, proton_handler *h) {
+    schedule(*c.impl_.get(), delay, h);
 }
 
 namespace {
@@ -291,7 +296,7 @@ struct timer_handler_03 : public timer_handler {
 };
 }
 
-void container_impl::schedule(duration delay, void_function0& f) {
+void container::impl::schedule(duration delay, void_function0& f) {
     schedule(*this, delay.milliseconds(), new timer_handler_03(f));
 }
 
@@ -304,28 +309,28 @@ struct timer_handler_std : public timer_handler {
 };
 }
 
-void container_impl::schedule(duration delay, std::function<void()> f) {
+void container::impl::schedule(duration delay, std::function<void()> f) {
     schedule(*this, delay.milliseconds(), new timer_handler_std(f));
 }
 #endif
 
-void container_impl::client_connection_options(const connection_options &opts) {
+void container::impl::client_connection_options(const connection_options &opts) {
     client_connection_options_ = opts;
 }
 
-void container_impl::server_connection_options(const connection_options &opts) {
+void container::impl::server_connection_options(const connection_options &opts) {
     server_connection_options_ = opts;
 }
 
-void container_impl::sender_options(const proton::sender_options &opts) {
+void container::impl::sender_options(const proton::sender_options &opts) {
     sender_options_ = opts;
 }
 
-void container_impl::receiver_options(const proton::receiver_options &opts) {
+void container::impl::receiver_options(const proton::receiver_options &opts) {
     receiver_options_ = opts;
 }
 
-void container_impl::configure_server_connection(connection &c) {
+void container::impl::configure_server_connection(connection &c) {
     pn_acceptor_t *pnp = pn_connection_acceptor(unwrap(c));
     listener_context &lc(listener_context::get(pnp));
     pn_connection_set_container(unwrap(c), id_.c_str());
@@ -345,44 +350,19 @@ void container_impl::configure_server_connection(connection &c) {
     connection_context::get(c).event_loop.reset(new immediate_event_loop);
 }
 
-void container_impl::run() {
+void container::impl::run() {
     do {
         reactor_.run();
     } while (!auto_stop_);
 }
 
-void container_impl::stop(const error_condition&) {
+void container::impl::stop(const error_condition&) {
     reactor_.stop();
     auto_stop_ = true;
 }
 
-void container_impl::auto_stop(bool set) {
+void container::impl::auto_stop(bool set) {
     auto_stop_ = set;
 }
 
-#if PN_CPP_HAS_UNIQUE_PTR
-std::unique_ptr<container> make_default_container(messaging_handler& h, const std::string& id) {
-    return std::unique_ptr<container>(new container_impl(id, &h));
-}
-std::unique_ptr<container> make_default_container(const std::string& id) {
-  return std::unique_ptr<container>(new container_impl(id));
-}
-#endif
-
-// Avoid deprecated diagnostics from auto_ptr
-#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-std::auto_ptr<container> make_auto_default_container(messaging_handler& h, const std::string& id) {
-  return std::auto_ptr<container>(new container_impl(id, &h));
-}
-std::auto_ptr<container> make_auto_default_container(const std::string& id) {
-  return std::auto_ptr<container>(new container_impl(id));
-}
-
-#if defined(__GNUC__) && __GNUC__*100 + __GNUC_MINOR__ >= 406 || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
 }

@@ -37,18 +37,18 @@
 
 namespace proton {
 
-connector::connector(connection&c, const connection_options& options, const url& a) :
+container::impl::connector::connector(connection&c, const connection_options& options, const url& a) :
     connection_(c), options_(options), address_(a), reconnect_timer_(0)
 {}
 
-connector::~connector() { delete reconnect_timer_; }
+container::impl::connector::~connector() { delete reconnect_timer_; }
 
-void connector::reconnect_timer(const class reconnect_timer &rt) {
+void container::impl::connector::reconnect_timer(const class reconnect_timer &rt) {
     delete reconnect_timer_;
     reconnect_timer_ = new class reconnect_timer(rt);
 }
 
-void connector::connect() {
+void container::impl::connector::connect() {
     pn_transport_t *pnt = pn_transport();
     transport t(make_wrapper(pnt));
     pn_transport_bind(pnt, unwrap(connection_));
@@ -57,24 +57,24 @@ void connector::connect() {
     options_.apply_bound(connection_);
 }
 
-void connector::on_connection_local_open(proton_event &) {
+void container::impl::connector::on_connection_local_open(proton_event &) {
     connect();
 }
 
-void connector::on_connection_remote_open(proton_event &) {
+void container::impl::connector::on_connection_remote_open(proton_event &) {
     if (reconnect_timer_) {
         reconnect_timer_->reset();
     }
 }
 
-void connector::on_connection_init(proton_event &) {
+void container::impl::connector::on_connection_init(proton_event &) {
 }
 
-void connector::on_transport_tail_closed(proton_event &e) {
+void container::impl::connector::on_transport_tail_closed(proton_event &e) {
     on_transport_closed(e);
 }
 
-void connector::on_transport_closed(proton_event &) {
+void container::impl::connector::on_transport_closed(proton_event &) {
     if (!connection_) return;
     if (connection_.active()) {
         if (reconnect_timer_) {
@@ -88,7 +88,7 @@ void connector::on_transport_closed(proton_event &) {
                 }
                 else {
                     // log "Disconnected, reconnecting in " <<  delay << " milliseconds"
-                    container_impl::schedule(connection_.container(), delay, this);
+                    container::impl::schedule(connection_.container(), delay, this);
                     return;
                 }
             }
@@ -98,7 +98,7 @@ void connector::on_transport_closed(proton_event &) {
     connection_  = 0;
 }
 
-void connector::on_timer_task(proton_event &) {
+void container::impl::connector::on_timer_task(proton_event &) {
     connect();
 }
 

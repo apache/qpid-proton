@@ -90,8 +90,6 @@ class reactor : public internal::object<pn_reactor_t> {
     bool quiesced();
     void yield();
 
-  friend class container_impl;
-  friend class container_context;
   friend class internal::factory<reactor>;
 };
 

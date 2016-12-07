@@ -28,6 +28,7 @@
 #include <proton/reactor.h>
 #include "proton/url.hpp"
 
+#include "container_impl.hpp"
 #include "proton_handler.hpp"
 
 #include <string>
@@ -37,7 +38,7 @@ namespace proton {
 
 class reconnect_timer;
 
-class connector : public proton_handler
+class container::impl::connector : public proton_handler
 {
   public:
     connector(connection &c, const connection_options &options, const url&);

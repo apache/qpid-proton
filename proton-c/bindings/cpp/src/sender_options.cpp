@@ -69,7 +69,7 @@ class sender_options::impl {
     void apply(sender& s) {
         if (s.uninitialized()) {
             if (delivery_mode.set) set_delivery_mode(s, delivery_mode.value);
-            if (handler.set && handler.value) container_impl::set_handler(s, handler.value);
+            if (handler.set && handler.value) container::impl::set_handler(s, handler.value);
             if (auto_settle.set) get_context(s).auto_settle = auto_settle.value;
             if (source.set) {
                 proton::source local_s(make_wrapper<proton::source>(pn_link_source(unwrap(s))));

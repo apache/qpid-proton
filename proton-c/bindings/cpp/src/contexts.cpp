@@ -82,7 +82,7 @@ context::id connection_context::id(const connection& c) {
 }
 
 void container_context::set(const reactor& r, container& c) {
-    set_context(pn_reactor_attachments(r.pn_object()), CONTAINER_CONTEXT, PN_VOID, &c);
+    set_context(pn_reactor_attachments(unwrap(r)), CONTAINER_CONTEXT, PN_VOID, &c);
 }
 
 container &container_context::get(pn_reactor_t *pn_reactor) {

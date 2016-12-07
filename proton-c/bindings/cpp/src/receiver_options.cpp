@@ -75,7 +75,7 @@ class receiver_options::impl {
     void apply(receiver& r) {
         if (r.uninitialized()) {
             if (delivery_mode.set) set_delivery_mode(r, delivery_mode.value);
-            if (handler.set && handler.value) container_impl::set_handler(r, handler.value);
+            if (handler.set && handler.value) container::impl::set_handler(r, handler.value);
             if (auto_settle.set) get_context(r).auto_settle = auto_settle.value;
             if (auto_accept.set) get_context(r).auto_accept = auto_accept.value;
             if (credit_window.set) get_context(r).credit_window = credit_window.value;

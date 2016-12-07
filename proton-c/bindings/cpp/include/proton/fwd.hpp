@@ -28,7 +28,6 @@ class annotation_key;
 class connection;
 class connection_options;
 class container;
-class container_impl;
 class delivery;
 class error_condition;
 class event;

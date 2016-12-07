@@ -132,7 +132,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// @cond INTERNAL
   friend class internal::factory<connection>;
-  friend class connector;
+  friend class container;
   friend class proton::thread_safe<connection>;
     /// @endcond
 };

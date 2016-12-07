@@ -74,7 +74,7 @@ class connection_options::impl {
      */
     void apply_unbound(connection& c) {
         pn_connection_t *pnc = unwrap(c);
-        connector *outbound = dynamic_cast<connector*>(
+        container::impl::connector *outbound = dynamic_cast<container::impl::connector*>(
             connection_context::get(c).handler.get());
 
         // Only apply connection options if uninit.
@@ -97,7 +97,7 @@ class connection_options::impl {
         // Transport options.  pnt is NULL between reconnect attempts
         // and if there is a pipelined open frame.
         pn_connection_t *pnc = unwrap(c);
-        connector *outbound = dynamic_cast<connector*>(
+        container::impl::connector *outbound = dynamic_cast<container::impl::connector*>(
             connection_context::get(c).handler.get());
 
         pn_transport_t *pnt = pn_connection_transport(pnc);

@@ -47,7 +47,7 @@ class session_options::impl {
 
     void apply(session& s) {
         if (s.uninitialized()) {
-            if (handler.set && handler.value) container_impl::set_handler(s, handler.value);
+            if (handler.set && handler.value) container::impl::set_handler(s, handler.value);
         }
     }
 
