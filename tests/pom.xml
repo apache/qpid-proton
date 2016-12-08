@@ -27,7 +27,7 @@
   <parent>
     <groupId>org.apache.qpid</groupId>
     <artifactId>proton-project</artifactId>
-    <version>0.16.0-SNAPSHOT</version>
+    <version>0.16.0</version>
   </parent>
 
   <description>The Proton python system tests execute against the Java or C implementation, using Maven (via this pom) and CMake/CTest respectively.
