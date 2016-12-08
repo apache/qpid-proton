@@ -100,9 +100,9 @@ when running the Maven build directly:
 Mailing list
 ------------
 
-Subscribe to the Qpid Proton mailing list here:
+Subscribe to the Qpid mailing lists using details at:
 
-  http://qpid.apache.org/proton/mailing_lists.html
+  http://qpid.apache.org/discussion.html
 
 
 Patches
