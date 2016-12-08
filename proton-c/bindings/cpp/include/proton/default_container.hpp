@@ -23,7 +23,11 @@
  */
 
 namespace proton {
+
+/// @cond INTERNAL
 typedef class container default_container;
+/// @endcond
+
 } // proton
 
 #endif // PROTON_DEFAULT_CONTAINER_HPP

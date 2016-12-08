@@ -22,10 +22,10 @@
  *
  */
 
-/// Type traits for mapping between AMQP and C++ types.
-///
-/// Also provides workarounds for missing type_traits classes on older
-/// C++ compilers.
+// Type traits for mapping between AMQP and C++ types.
+//
+// Also provides workarounds for missing type_traits classes on older
+// C++ compilers.
 
 #include "./config.hpp"
 #include "../types_fwd.hpp"

@@ -46,8 +46,12 @@ namespace proton {
 /// messages.
 class PN_CPP_CLASS_EXTERN container {
   public:
+    /// Create a container.
     PN_CPP_EXTERN container(messaging_handler& h, const std::string& id="");
+
+    /// Create a container.
     PN_CPP_EXTERN container(const std::string& id="");
+
     PN_CPP_EXTERN ~container();
 
     /// Connect to `url` and send an open request to the remote peer.
@@ -205,8 +209,9 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
-    /// Schedule a function to be called after the duration.
-    /// C++03 compatible, for C++11 use the schedule(duration, std::function<void()>)
+    /// Schedule a function to be called after the duration.  C++03
+    /// compatible, for C++11 use schedule(duration,
+    /// std::function<void()>)
     PN_CPP_EXTERN void schedule(duration, void_function0&);
 
 #if PN_CPP_HAS_STD_FUNCTION

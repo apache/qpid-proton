@@ -46,7 +46,9 @@ class sasl {
     sasl& operator=(sasl&&) = delete;
 #endif
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS
+    /// @cond INTERNAL
     sasl(sasl&&) = default;
+    /// @endcond
 #endif
 
     /// The result of the SASL negotiation.

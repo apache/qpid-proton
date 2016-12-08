@@ -45,54 +45,54 @@ class container_impl_base : public standard_container {
     using standard_container::open_receiver;
     using standard_container::open_sender;
 
-    /// @copydoc container::client_connection_options
+    /// @see proton::container::client_connection_options
     void client_connection_options(const connection_options & opts) {
         store(client_copts_, opts);
     }
     
-    /// @copydoc container::client_connection_options
+    /// @see proton::container::client_connection_options
     connection_options client_connection_options() const {
         return load(client_copts_);
     }
     
-    /// @copydoc container::server_connection_options
+    /// @see proton::container::server_connection_options
     void server_connection_options(const connection_options & opts) {
         store(server_copts_, opts);
     }
     
-    /// @copydoc container::server_connection_options
+    /// @see proton::container::server_connection_options
     connection_options server_connection_options() const {
         return load(server_copts_);
     }
     
-    /// @copydoc container::sender_options
+    /// @see proton::container::sender_options
     void sender_options(const class sender_options & opts) {
         store(sender_opts_, opts);
     }
     
-    /// @copydoc container::sender_options
+    /// @see proton::container::sender_options
     class sender_options sender_options() const {
         return load(sender_opts_);
     }
     
-    /// @copydoc container::receiver_options
+    /// @see proton::container::receiver_options
     void receiver_options(const class receiver_options & opts) {
         store(receiver_opts_, opts);
     }
     
-    /// @copydoc container::receiver_options
+    /// @see proton::container::receiver_options
     class receiver_options receiver_options() const {
         return load(receiver_opts_);
     }
 
-    /// @copydoc container::open_sender
+    /// @see proton::container::open_sender
     returned<sender> open_sender(
         const std::string &url, const class sender_options &opts, const connection_options &copts)
     {
         return open_link<sender, class sender_options>(url, opts, copts, &connection::open_sender);
     }
 
-    /// @copydoc container::open_receiver
+    /// @see proton::container::open_receiver
     returned<receiver> open_receiver(
         const std::string &url, const class receiver_options &opts, const connection_options &copts)
     {

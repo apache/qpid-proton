@@ -41,7 +41,7 @@ PN_CPP_CLASS_EXTERN url_error : public error {
     /// @endcond
 };
 
-/// A Proton URL.
+/// A URL parser.
 ///
 ///  Proton URLs take the form
 /// `<scheme>://<username>:<password>@<host>:<port>/<path>`.

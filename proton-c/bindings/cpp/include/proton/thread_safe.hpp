@@ -113,7 +113,7 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     /// @endcond
 };
 
-// return value for functions returning a thread_safe<> object.
+// A return value for functions returning a thread_safe<> object.
 //
 // Temporary return value only, you should release() to get a plain pointer or
 // assign to a smart pointer type.
@@ -161,12 +161,17 @@ class returned : private internal::endpoint_traits<T>
 template <class T> returned<T> make_thread_safe(const T& obj) { return returned<T>(obj); }
 
 #if PN_CPP_HAS_CPP11
+
+/// Create a thread-safe shared_ptr to `obj`.
 template <class T> std::shared_ptr<thread_safe<T> > make_shared_thread_safe(const T& obj) {
     return make_thread_safe(obj);
 }
+
+/// Create a thread-safe unique_ptr to `obj`.
 template <class T> std::unique_ptr<thread_safe<T> > make_unique_thread_safe(const T& obj) {
     return make_thread_safe(obj);
 }
+
 #endif
 
 } // proton
