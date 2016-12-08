@@ -180,7 +180,7 @@ endif (ENABLE_VALGRIND)
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 
-install (FILES LICENSE README.md TODO
+install (FILES LICENSE README.md
          DESTINATION ${PROTON_SHARE})
 
 install (DIRECTORY examples
