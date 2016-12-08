@@ -50,7 +50,7 @@ void test_new() {
     ASSERT_EQUAL(1, pn_refcount(c)); // Engine gone, thread_safe keeping c alive.
     delete p;
 
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_SHARED_PTR
     {
         std::shared_ptr<thread_safe<connection> > sp;
         {
@@ -60,6 +60,8 @@ void test_new() {
         }
         ASSERT_EQUAL(1, pn_refcount(c)); // Engine gone, sp keeping c alive.
     }
+#endif
+#if PN_CPP_HAS_UNIQUE_PTR
     {
         std::unique_ptr<thread_safe<connection> > up;
         {

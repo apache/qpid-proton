@@ -49,12 +49,20 @@ void connection_driver::init() {
 
 connection_driver::connection_driver() : handler_(0), container_(0) { init(); }
 
-connection_driver::connection_driver(class container& cont, event_loop* loop) : handler_(0), container_(&cont) {
+connection_driver::connection_driver(class container& cont) : handler_(0), container_(&cont) {
     init();
     connection_context& ctx = connection_context::get(connection());
     ctx.container = container_;
-    ctx.event_loop.reset(loop);
 }
+
+#if PN_CPP_HAS_RVALUE_REFERENCES
+connection_driver::connection_driver(class container& cont, event_loop&& loop) : handler_(0), container_(&cont) {
+    init();
+    connection_context& ctx = connection_context::get(connection());
+    ctx.container = container_;
+    ctx.event_loop_ = loop.impl_.get();
+}
+#endif
 
 connection_driver::~connection_driver() {
     pn_connection_driver_destroy(&driver_);

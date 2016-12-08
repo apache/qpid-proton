@@ -101,7 +101,7 @@ template <class T> class object : private comparable<object<T> > {
     friend bool operator==(const object& a, const object& b) { return a.object_ == b.object_; }
     friend bool operator<(const object& a, const object& b) { return a.object_ < b.object_; }
     friend std::ostream& operator<<(std::ostream& o, const object& a) { o << a.object_.inspect(); return o; }
-  template <class U> friend class proton::thread_safe;
+    template <class U> friend class proton::thread_safe;
 };
 
 /// Factory class used internally to make wrappers and extract proton objects

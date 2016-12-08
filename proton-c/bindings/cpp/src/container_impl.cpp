@@ -38,6 +38,7 @@
 #include "connector.hpp"
 #include "container_impl.hpp"
 #include "contexts.hpp"
+#include "event_loop_impl.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
@@ -160,24 +161,20 @@ container::impl::~impl() {
         close_acceptor(i->second);
 }
 
-namespace {
 // FIXME aconway 2016-06-07: this is not thread safe. It is sufficient for using
 // default_container::schedule() inside a handler but not for inject() from
 // another thread.
-struct immediate_event_loop : public event_loop {
-    virtual bool inject(void_function0& f) PN_CPP_OVERRIDE {
-        try { f(); } catch(...) {}
-        return true;
-    }
-
-#if PN_CPP_HAS_CPP11
-    virtual bool inject(std::function<void()> f) PN_CPP_OVERRIDE {
-        try { f(); } catch(...) {}
-        return true;
-    }
-#endif
-};
+bool event_loop::impl::inject(void_function0& f) {
+    try { f(); } catch(...) {}
+    return true;
 }
+
+#if PN_CPP_HAS_STD_FUNCTION
+bool event_loop::impl::inject(std::function<void()> f) {
+    try { f(); } catch(...) {}
+    return true;
+}
+#endif
 
 returned<connection> container::impl::connect(const std::string &urlstr, const connection_options &user_opts) {
     connection_options opts = client_connection_options(); // Defaults
@@ -195,7 +192,7 @@ returned<connection> container::impl::connect(const std::string &urlstr, const c
     internal::pn_unique_ptr<connector> ctor(new connector(conn, opts, url));
     connection_context& cc(connection_context::get(conn));
     cc.handler.reset(ctor.release());
-    cc.event_loop.reset(new immediate_event_loop);
+    cc.event_loop_ = new event_loop::impl;
 
     pn_connection_t *pnc = unwrap(conn);
     pn_connection_set_container(pnc, id_.c_str());
@@ -347,7 +344,7 @@ void container::impl::configure_server_connection(connection &c) {
         pn_record_t *record = pn_connection_attachments(unwrap(c));
         pn_record_set_handler(record, chandler.get());
     }
-    connection_context::get(c).event_loop.reset(new immediate_event_loop);
+    connection_context::get(c).event_loop_ = new event_loop::impl;
 }
 
 void container::impl::run() {

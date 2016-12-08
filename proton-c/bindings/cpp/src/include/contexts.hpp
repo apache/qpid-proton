@@ -93,7 +93,7 @@ class connection_context : public context {
     io::link_namer* link_gen;      // Link name generator.
 
     internal::pn_unique_ptr<proton_handler> handler;
-    internal::pn_unique_ptr<class event_loop> event_loop;
+    event_loop event_loop_;
 
     static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
     static connection_context& get(const connection& c) { return ref<connection_context>(id(c)); }

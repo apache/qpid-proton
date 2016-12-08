@@ -43,8 +43,6 @@ template<> struct endpoint_traits<sender> {};
 template<> struct endpoint_traits<receiver> {};
 }
 
-template <class T> class returned;
-
 /// **Experimental** - A thread-safe object wrapper.
 ///
 /// The proton::object subclasses (proton::connection, proton::sender etc.) are
@@ -78,11 +76,11 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
 
     ~thread_safe() {
         if (ptr()) {
-            if (event_loop()) {
-#if PN_CPP_HAS_CPP11
-                event_loop()->inject(std::bind(&decref, ptr()));
+            if (!!event_loop()) {
+#if PN_CPP_HAS_STD_BIND
+                event_loop().inject(std::bind(&decref, ptr()));
 #else
-                event_loop()->inject(*new inject_decref(ptr()));
+                event_loop().inject(*new inject_decref(ptr()));
 #endif
             } else {
                 decref(ptr());
@@ -91,7 +89,7 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
     }
 
     /// Get the event loop for this object.
-    class event_loop* event_loop() { return event_loop::get(ptr()); }
+    class event_loop& event_loop() { return event_loop::get(ptr()); }
 
     /// Get the thread-unsafe proton object wrapped by this thread_safe<T>
     T unsafe() { return T(ptr()); }
@@ -140,12 +138,13 @@ class returned : private internal::endpoint_traits<T>
     /// Implicit conversion to target, usable only in a safe context.
     operator T() { return ptr_->unsafe(); }
 
-#if PN_CPP_HAS_CPP11
+#if PN_CPP_HAS_SHARED_PTR
     /// Release to a std::shared_ptr
     operator std::shared_ptr<thread_safe<T> >() {
         return std::shared_ptr<thread_safe<T> >(release());
     }
-
+#endif
+#if PN_CPP_HAS_UNIQUE_PTR
     /// Release to a std::unique_ptr
     operator std::unique_ptr<thread_safe<T> >() {
         return std::unique_ptr<thread_safe<T> >(release());
@@ -160,13 +159,13 @@ class returned : private internal::endpoint_traits<T>
 /// Make a thread-safe wrapper for `obj`.
 template <class T> returned<T> make_thread_safe(const T& obj) { return returned<T>(obj); }
 
-#if PN_CPP_HAS_CPP11
-
+#if PN_CPP_HAS_SHARED_PTR
 /// Create a thread-safe shared_ptr to `obj`.
 template <class T> std::shared_ptr<thread_safe<T> > make_shared_thread_safe(const T& obj) {
     return make_thread_safe(obj);
 }
-
+#endif
+#if PN_CPP_HAS_UNIQUE_PTR
 /// Create a thread-safe unique_ptr to `obj`.
 template <class T> std::unique_ptr<thread_safe<T> > make_unique_thread_safe(const T& obj) {
     return make_thread_safe(obj);

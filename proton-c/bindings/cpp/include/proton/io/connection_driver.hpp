@@ -111,7 +111,10 @@ PN_CPP_CLASS_EXTERN connection_driver {
     /// the user pins it in memory using the proton::thread_safe<> template.
     /// The event_loop is deleted when, and only when, the proton::connection is.
     ///
-    PN_CPP_EXTERN connection_driver(proton::container&, event_loop* loop = 0);
+    PN_CPP_EXTERN connection_driver(proton::container&);
+#if PN_CPP_HAS_RVALUE_REFERENCES
+    PN_CPP_EXTERN connection_driver(proton::container&, event_loop&& loop);
+#endif
 
     PN_CPP_EXTERN ~connection_driver();
 
