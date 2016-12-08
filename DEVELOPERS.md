@@ -1,9 +1,6 @@
 Qpid Proton Developer Information
 =================================
 
-Please see http://qpid.apache.org/proton/development.html for the current
-roadmap.
-
 Development Environment
 -----------------------
 
