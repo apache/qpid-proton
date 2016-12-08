@@ -554,7 +554,7 @@ if (MSVC)
 endif(MSVC)
 
 # Install executables and libraries
-install (TARGETS qpid-proton
+install (TARGETS qpid-proton qpid-proton-core
   EXPORT  proton
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
