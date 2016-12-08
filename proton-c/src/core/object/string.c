@@ -80,6 +80,7 @@ static int pn_string_inspect(void *obj, pn_string_t *dst)
   }
 
   int err = pn_string_addf(dst, "\"");
+  if (err) return err;
 
   for (int i = 0; i < str->size; i++) {
     uint8_t c = str->bytes[i];
