@@ -50,7 +50,7 @@ static pn_list_t *build_list(size_t capacity, ...)
   return result;
 }
 
-static pn_map_t *build_map(size_t capacity, float load_factor, ...)
+static pn_map_t *build_map(size_t capacity, double load_factor, ...)
 {
   pn_map_t *result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor);
   va_list ap;
