@@ -64,10 +64,12 @@ public class Address
     {
         clear();
         int start = 0;
-        int schemeEnd = address.indexOf("://", start);
-        if (schemeEnd >= 0) {
-            _scheme = address.substring(start, schemeEnd);
-            start = schemeEnd + 3;
+        if (address.startsWith("amqp://")) {
+            _scheme = "amqp";
+            start = 7;
+        } else if (address.startsWith("amqps://")) {
+            _scheme = "amqps";
+            start = 8;
         }
 
         String uphp;

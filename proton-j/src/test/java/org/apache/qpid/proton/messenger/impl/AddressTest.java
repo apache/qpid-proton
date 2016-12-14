@@ -39,6 +39,7 @@ public class AddressTest {
     {
         testParse("host", null, null, null, "host", null, null);
         testParse("host:423", null, null, null, "host", "423", null);
+        testParse("host:423/topic://topicname", null, null, null, "host", "423", "topic://topicname");
         testParse("user@host", null, "user", null, "host", null, null);
         testParse("user:1243^&^:pw@host:423", null, "user", "1243^&^:pw", "host", "423", null);
         testParse("user:1243^&^:pw@host:423/Foo.bar:90087", null, "user", "1243^&^:pw", "host", "423", "Foo.bar:90087");
@@ -58,6 +59,7 @@ public class AddressTest {
         testParse("amqp://user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", "amqp", "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087");
         testParse("amqp://host", "amqp", null, null, "host", null, null);
         testParse("amqp://user@host", "amqp", "user", null, "host", null, null);
+        testParse("amqps://user@host", "amqps", "user", null, "host", null, null);
         testParse("amqp://user@host/path:%", "amqp", "user", null, "host", null, "path:%");
         testParse("amqp://user@host:5674/path:%", "amqp", "user", null, "host", "5674", "path:%");
         testParse("amqp://user@host/path:%", "amqp", "user", null, "host", null, "path:%");
