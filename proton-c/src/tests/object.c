@@ -50,14 +50,14 @@ static pn_list_t *build_list(size_t capacity, ...)
   return result;
 }
 
-static pn_map_t *build_map(size_t capacity, float load_factor, ...)
+static pn_map_t *build_map(float load_factor, size_t capacity, ...)
 {
   pn_map_t *result = pn_map(PN_OBJECT, PN_OBJECT, capacity, load_factor);
   va_list ap;
 
   void *prev = NULL;
 
-  va_start(ap, load_factor);
+  va_start(ap, capacity);
   int count = 0;
   while (true) {
     void *arg = va_arg(ap, void *);
@@ -397,7 +397,7 @@ static void test_build_list(void)
 
 static void test_build_map(void)
 {
-  pn_map_t *m = build_map(0, 0.75,
+  pn_map_t *m = build_map(0.75, 0,
                           pn_string("key"),
                           pn_string("value"),
                           pn_string("key2"),
@@ -421,7 +421,7 @@ static void test_build_map(void)
 
 static void test_build_map_odd(void)
 {
-  pn_map_t *m = build_map(0, 0.75,
+  pn_map_t *m = build_map(0.75, 0,
                           pn_string("key"),
                           pn_string("value"),
                           pn_string("key2"),
@@ -767,24 +767,24 @@ void test_map_inspect(void)
   // note that when there is more than one entry in a map, the order
   // of the entries is dependent on the hashes involved, it will be
   // deterministic though
-  pn_map_t *m = build_map(0, 0.75, END);
+  pn_map_t *m = build_map(0.75, 0, END);
   test_inspect(m, "{}");
   pn_free(m);
 
-  m = build_map(0, 0.75,
+  m = build_map(0.75, 0,
                 pn_string("key"), pn_string("value"),
                 END);
   test_inspect(m, "{\"key\": \"value\"}");
   pn_free(m);
 
-  m = build_map(0, 0.75,
+  m = build_map(0.75, 0,
                 pn_string("k1"), pn_string("v1"),
                 pn_string("k2"), pn_string("v2"),
                 END);
   test_inspect(m, "{\"k1\": \"v1\", \"k2\": \"v2\"}");
   pn_free(m);
 
-  m = build_map(0, 0.75,
+  m = build_map(0.75, 0,
                 pn_string("k1"), pn_string("v1"),
                 pn_string("k2"), pn_string("v2"),
                 pn_string("k3"), pn_string("v3"),
