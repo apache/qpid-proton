@@ -538,6 +538,14 @@ add_library(
   )
 add_dependencies(qpid-proton generated_c_files)
 
+if (MSVC)
+  # Add a phony dependency for Windows builds to serialize creation
+  # of generated files. See issue PROTON-1376.
+  # When a Windows build creates src/encodings.h and src/protocol.h
+  # only once then this can be removed.
+  add_dependencies(qpid-proton qpid-proton-core)
+endif (MSVC)
+
 target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
 set_target_properties (
