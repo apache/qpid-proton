@@ -436,7 +436,8 @@ bool pn_reactor_process(pn_reactor_t *reactor) {
         pn_reactor_update(reactor, reactor->selectable);
         reactor->selectable = NULL;
       } else {
-        pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
+        if (reactor->previous != PN_REACTOR_FINAL)
+          pn_collector_put(reactor->collector, PN_OBJECT, reactor, PN_REACTOR_FINAL);
         return false;
       }
     }
