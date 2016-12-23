@@ -29,6 +29,9 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
+#ifdef PN_CPP_HAS_STD_FUNCTION
+#include <functional>
+#endif
 #include <string>
 
 namespace proton {
