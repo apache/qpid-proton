@@ -169,14 +169,14 @@ type Endpoint interface {
 	RemoteCondition() Condition
 	// Human readable name
 	String() string
-	// Human readable endpoint type "link", "session" etc.
+	// Human readable endpoint type "sender-link", "session" etc.
 	Type() string
 }
 
 // CloseError sets an error condition (if err != nil) on an endpoint and closes
 // the endpoint if not already closed
 func CloseError(e Endpoint, err error) {
-	if err != nil {
+	if err != nil && !e.Condition().IsSet() {
 		e.Condition().SetError(err)
 	}
 	e.Close()
@@ -262,9 +262,9 @@ func (l Link) String() string {
 
 func (l Link) Type() string {
 	if l.IsSender() {
-		return "link(sender)"
+		return "sender-link"
 	} else {
-		return "link(receiver)"
+		return "receiver-link"
 	}
 }
 

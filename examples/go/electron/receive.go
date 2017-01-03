@@ -57,7 +57,7 @@ func main() {
 	var wait sync.WaitGroup // Used by main() to wait for all goroutines to end.
 	wait.Add(len(urls))     // Wait for one goroutine per URL.
 
-	container := electron.NewContainer(fmt.Sprintf("receive[%s]", os.Getpid()))
+	container := electron.NewContainer(fmt.Sprintf("receive[%v]", os.Getpid()))
 	connections := make(chan electron.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine to for each URL to receive messages and send them to the messages channel.
@@ -81,12 +81,13 @@ func main() {
 
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
-				if rm, err := r.Receive(); err != nil {
-					util.Debugf("closed %v: %v", urlStr, err)
-					return
-				} else {
+				if rm, err := r.Receive(); err == nil {
 					rm.Accept()
 					messages <- rm.Message
+				} else if err == electron.Closed {
+					return
+				} else {
+					log.Fatalf("receive error %v: %v", urlStr, err)
 				}
 			}
 		}(urlStr)
@@ -103,6 +104,7 @@ func main() {
 	fmt.Printf("Received %d messages\n", *count)
 
 	// Close all connections, this will interrupt goroutines blocked in Receiver.Receive()
+	// with electron.Closed.
 	for i := 0; i < len(urls); i++ {
 		c := <-connections
 		util.Debugf("close %s", c)

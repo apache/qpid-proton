@@ -29,6 +29,10 @@ import (
 // was closed cleanly.
 var Closed = io.EOF
 
+// EOF is an alias for io.EOF. It is returned as an error when an endpoint
+// was closed cleanly.
+var EOF = io.EOF
+
 // Endpoint is the local end of a communications channel to the remote peer
 // process.  The following interface implement Endpoint: Connection, Session,
 // Sender and Receiver.

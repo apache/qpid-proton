@@ -55,7 +55,7 @@ func main() {
 	flag.Parse()
 	b := &broker{
 		queues:    util.MakeQueues(*qsize),
-		container: electron.NewContainer(fmt.Sprintf("broker[%s]", os.Getpid())),
+		container: electron.NewContainer(fmt.Sprintf("broker[%v]", os.Getpid())),
 		acks:      make(chan electron.Outcome),
 		sent:      make(chan sentMessage),
 	}
@@ -113,28 +113,23 @@ type connection struct {
 // and start goroutines to service them.
 func (c *connection) run() {
 	for in := range c.connection.Incoming() {
+		util.Debugf("incoming %v", in)
+
 		switch in := in.(type) {
 
 		case *electron.IncomingSender:
-			if in.Source() == "" {
-				in.Reject(fmt.Errorf("no source"))
-			} else {
-				go c.sender(in.Accept().(electron.Sender))
-			}
+			s := in.Accept().(electron.Sender)
+			go c.sender(s)
 
 		case *electron.IncomingReceiver:
-			if in.Target() == "" {
-				in.Reject(fmt.Errorf("no target"))
-			} else {
-				in.SetPrefetch(true)
-				in.SetCapacity(*credit) // Pre-fetch up to credit window.
-				go c.receiver(in.Accept().(electron.Receiver))
-			}
+			in.SetPrefetch(true)
+			in.SetCapacity(*credit) // Pre-fetch up to credit window.
+			r := in.Accept().(electron.Receiver)
+			go c.receiver(r)
 
 		default:
 			in.Accept() // Accept sessions unconditionally
 		}
-		util.Debugf("incoming: %v", in)
 	}
 	util.Debugf("incoming closed: %v", c.connection)
 }
