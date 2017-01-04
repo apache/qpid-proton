@@ -58,6 +58,7 @@ import org.apache.qpid.proton.engine.SslPeerDetails;
 import org.apache.qpid.proton.engine.TransportException;
 import org.apache.qpid.proton.engine.TransportResult;
 import org.apache.qpid.proton.engine.TransportResultFactory;
+import org.apache.qpid.proton.engine.WebSocket;
 import org.apache.qpid.proton.engine.impl.ssl.SslImpl;
 import org.apache.qpid.proton.framing.TransportFrame;
 import org.apache.qpid.proton.reactor.Reactor;
@@ -110,6 +111,7 @@ public class TransportImpl extends EndpointImpl
 
     private boolean _closeReceived;
     private Open _open;
+    private WebSocketImpl _webSocketImpl;
     private SaslImpl _sasl;
     private SslImpl _ssl;
     private final Ref<ProtocolTracer> _protocolTracer = new Ref(null);
@@ -359,6 +361,20 @@ public class TransportImpl extends EndpointImpl
         }
         return _sasl;
 
+    }
+
+    @Override
+    public WebSocket webSocket()
+    {
+        if (_webSocketImpl == null)
+        {
+            init();
+            _webSocketImpl = new WebSocketImpl();
+            TransportWrapper transportWrapper = _webSocketImpl.wrap(_inputProcessor, _outputProcessor);
+            _inputProcessor = transportWrapper;
+            _outputProcessor = transportWrapper;
+        }
+        return _webSocketImpl;
     }
 
     /**

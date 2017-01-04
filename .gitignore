@@ -45,3 +45,7 @@ testresults
 /proton-c/bindings/python/MANIFEST
 /proton-c/bindings/python/build
 
+proton-j/proton-j.vpj
+proton-j/proton-j.vpw
+proton-j/proton-j.vpwhist
+proton-j/proton-j.vtg
