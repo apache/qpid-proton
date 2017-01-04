@@ -28,8 +28,8 @@ struct pn_collector_t {
   pn_list_t *pool;
   pn_event_t *head;
   pn_event_t *tail;
-  bool freed:1;
-  bool head_returned:1;         /* Head has been returned by pn_collector_next() */
+  bool freed;
+  bool head_returned;         /* Head has been returned by pn_collector_next() */
 };
 
 struct pn_event_t {
