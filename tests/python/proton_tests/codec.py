@@ -357,25 +357,31 @@ class DataTest(Test):
     copy = data.get_object()
     assert copy == obj, (copy, obj)
 
-  if getattr(__builtins__, 'buffer', None):
-    def testBuffer(self):
-      self.data.put_object(buffer("foo"))
-      data = Data()
-      data.decode(self.data.encode())
-      data.rewind()
-      assert data.next()
-      assert data.type() == Data.BINARY
-      assert data.get_object() == "foo"
+  def testBuffer(self):
+    try:
+      self.data.put_object(buffer(str2bin("foo")))
+    except NameError:
+      # python >= 3.0 does not have `buffer`
+      return
+    data = Data()
+    data.decode(self.data.encode())
+    data.rewind()
+    assert data.next()
+    assert data.type() == Data.BINARY
+    assert data.get_object() == str2bin("foo")
 
-  if getattr(__builtins__, 'memoryview', None):
-    def testBuffer(self):
-      self.data.put_object(memoryview("foo"))
-      data = Data()
-      data.decode(self.data.encode())
-      data.rewind()
-      assert data.next()
-      assert data.type() == Data.BINARY
-      assert data.get_object() == "foo"
+  def testMemoryView(self):
+    try:
+      self.data.put_object(memoryview(str2bin("foo")))
+    except NameError:
+      # python <= 2.6 does not have `memoryview`
+      return
+    data = Data()
+    data.decode(self.data.encode())
+    data.rewind()
+    assert data.next()
+    assert data.type() == Data.BINARY
+    assert data.get_object() == str2bin("foo")
 
   def testLookup(self):
     obj = {symbol("key"): str2unicode("value"),

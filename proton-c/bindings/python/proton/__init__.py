@@ -1840,7 +1840,15 @@ class Data:
     @type b: binary
     @param b: a binary value
     """
-    self._check(pn_data_put_binary(self._data, bytes(b)))
+    self._check(pn_data_put_binary(self._data, b))
+
+  def put_memoryview(self, mv):
+    """Put a python memoryview object as an AMQP binary value"""
+    self.put_binary(mv.tobytes())
+
+  def put_buffer(self, buff):
+    """Put a python buffer object as an AMQP binary value"""
+    self.put_binary(bytes(buff))
 
   def put_string(self, s):
     """
@@ -2236,12 +2244,11 @@ class Data:
   # we need to add an explicit int since it is a different type
   if int not in put_mappings:
     put_mappings[int] = put_int
-  # For python 3.x use 'memoryview', for <=2.5 use 'buffer'. Python >=2.6 has both.
-  if getattr(__builtins__, 'memoryview', None):
-    put_mappings[memoryview] = put_binary
-  if getattr(__builtins__, 'buffer', None):
-    put_mappings[buffer] = put_binary
-
+  # Python >=3.0 has 'memoryview', <=2.5 has 'buffer', >=2.6 has both.
+  try: put_mappings[memoryview] = put_memoryview
+  except NameError: pass
+  try: put_mappings[buffer] = put_buffer
+  except NameError: pass
   get_mappings = {
     NULL: lambda s: None,
     BOOL: get_bool,
