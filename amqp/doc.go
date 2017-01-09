@@ -24,6 +24,8 @@ It follows the standard 'encoding' libraries pattern. The mapping between AMQP
 and Go types is described in the documentation of the Marshal and Unmarshal
 functions.
 
+This package requires the [proton-C library](http://qpid.apache.org/proton) to be installed.
+
 Package 'electron' is a full AMQP 1.0 client/server toolkit using this package.
 
 AMQP 1.0 is an open standard for inter-operable message exchange, see <http://www.amqp.org/>

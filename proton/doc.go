@@ -21,6 +21,8 @@ under the License.
 Package proton wraps Proton-C, an event-driven, concurrent-unsafe AMQP 1.0
 C library (package 'electron' is more "Go-like" and concurrent-safe)
 
+This package requires the [proton-C library](http://qpid.apache.org/proton) to be installed.
+
 Consult the C API documentation at http://qpid.apache.org/proton for more
 information about the types here. There is a 1-1 correspondence between C type
 pn_foo_t and Go type proton.Foo, and between C function
