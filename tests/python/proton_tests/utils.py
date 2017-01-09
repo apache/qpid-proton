@@ -136,8 +136,6 @@ class SyncRequestResponseTest(Test):
 
     def test_allowed_mechs_external(self):
         # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used. 
-        if "java" in sys.platform:
-            raise Skipped("")
         port = free_tcp_port()
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=port), timeout=self.timeout)
         server.start()

@@ -189,9 +189,6 @@ class SslTest(common.Test):
         if os.name=="nt":
             raise Skipped("Windows support for certificate fingerprint and subfield not implemented yet")
 
-        if "java" in sys.platform:
-            raise Skipped("Not yet implemented in Proton-J")
-
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                            self._testpath("server-private-key.pem"),
                                            "server-password")
@@ -967,9 +964,6 @@ class MessengerSSLTests(common.Test):
                                 password="server-password",
                                 exception=None):
         import sys
-        # java doesn't do validation in the same way (yet)
-        if exception and "java" in sys.platform:
-            raise Skipped()
         self.server.certificate = _testpath(cert)
         self.server.private_key = _testpath(key)
         self.server.password = password

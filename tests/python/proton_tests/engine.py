@@ -240,16 +240,10 @@ class ConnectionTest(Test):
     self.c1.transport.channel_max = value
     self.c1.open()
     self.pump()
-    if "java" in sys.platform:
-      assert self.c1.transport.channel_max == 65535, (self.c1.transport.channel_max, value)
-    else:
-      assert self.c1.transport.channel_max == 32767, (self.c1.transport.channel_max, value)
+    assert self.c1.transport.channel_max == 32767, (self.c1.transport.channel_max, value)
 
   def test_channel_max_raise_and_lower(self):
-    if "java" in sys.platform:
-      upper_limit = 65535
-    else:
-      upper_limit = 32767
+    upper_limit = 32767
 
     # It's OK to lower the max below upper_limit.
     self.c1.transport.channel_max = 12345
@@ -308,9 +302,6 @@ class ConnectionTest(Test):
     assert c2.state == Endpoint.LOCAL_ACTIVE | Endpoint.REMOTE_CLOSED
 
   def test_user_config(self):
-    if "java" in sys.platform:
-      raise Skipped("Unsupported API")
-
     self.c1.user = "vindaloo"
     self.c1.password = "secret"
     self.c1.open()
@@ -747,8 +738,6 @@ class LinkTest(Test):
     assert self.rcv.remote_snd_settle_mode == Link.SND_UNSETTLED
 
   def test_max_message_size(self):
-    if "java" in sys.platform:
-      raise Skipped()
     assert self.snd.max_message_size == 0
     assert self.rcv.remote_max_message_size == 0
     self.snd.max_message_size = 13579
@@ -2030,8 +2019,6 @@ class ServerTest(Test):
   def testKeepalive(self):
     """ Verify that idle frames are sent to keep a Connection alive
     """
-    if "java" in sys.platform:
-      raise Skipped()
     idle_timeout = self.delay
     server = common.TestServer()
     server.start()
@@ -2063,8 +2050,6 @@ class ServerTest(Test):
     """ Verify that a Connection is terminated properly when Idle frames do not
     arrive in a timely manner.
     """
-    if "java" in sys.platform:
-      raise Skipped()
     idle_timeout = self.delay
     server = common.TestServer(idle_timeout=idle_timeout)
     server.start()
@@ -2652,8 +2637,6 @@ class DeliverySegFaultTest(Test):
 class SaslEventTest(CollectorTest):
 
   def testAnonymousNoInitialResponse(self):
-    if "java" in sys.platform:
-      raise Skipped()
     conn = Connection()
     conn.collect(self.collector)
     transport = Transport(Transport.SERVER)
@@ -2671,8 +2654,6 @@ class SaslEventTest(CollectorTest):
     self.expect()
 
   def testPipelinedServerReadFirst(self):
-    if "java" in sys.platform:
-      raise Skipped()
     conn = Connection()
     conn.collect(self.collector)
     transport = Transport(Transport.CLIENT)
@@ -2701,8 +2682,6 @@ class SaslEventTest(CollectorTest):
     assert server.sasl().outcome == SASL.OK
 
   def testPipelinedServerWriteFirst(self):
-    if "java" in sys.platform:
-      raise Skipped()
     conn = Connection()
     conn.collect(self.collector)
     transport = Transport(Transport.CLIENT)

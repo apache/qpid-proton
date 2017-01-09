@@ -473,12 +473,8 @@ class ContainerTest(Test):
 
     def test_no_virtual_host(self):
         # explicitly setting an empty virtual host should prevent the hostname
-        # field from being sent in the Open performative
-        if "java" in sys.platform:
-            # This causes Python Container to *not* set the connection virtual
-            # host, so when proton-j sets up the connection the virtual host
-            # seems to be unset and the URL's host is used (as expected).
-            raise SkipTest("Does not apply for proton-j");
+        # field from being sent in the Open performative when using the
+        # Python Container.
         server_handler = ContainerTest._ServerHandler("localhost")
         container = Container(server_handler)
         conn = container.connect(url=Url(host="localhost",

@@ -104,10 +104,6 @@ class SaslTest(Test):
   # We have to generate the client frames manually because proton does not
   # generate pipelined SASL and AMQP frames together
   def testIllegalProtocolLayering(self):
-    # TODO: Skip Proton-J for now
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not set error condition on protocol layering violation")
-
     # Server
     self.s2.allowed_mechs('ANONYMOUS')
 
@@ -139,10 +135,6 @@ class SaslTest(Test):
     assert not c2.state & Endpoint.REMOTE_ACTIVE
 
   def testPipelinedClient(self):
-    # TODO: When PROTON-1136 is fixed then remove this test
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support pipelined client input")
-
     # Server
     self.s2.allowed_mechs('ANONYMOUS')
 
@@ -200,9 +192,6 @@ class SaslTest(Test):
     assert c1.state & Endpoint.REMOTE_ACTIVE
 
   def testPipelined2(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support client pipelining")
-
     out1 = self.t1.peek(1024)
     self.t1.pop(len(out1))
     self.t2.push(out1)
@@ -291,8 +280,6 @@ class SaslTest(Test):
     assert self.t1.condition != None
 
   def testMechNotFound(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support checking authentication state")
     self.c1 = Connection()
     self.c1.open()
     self.t1.bind(self.c1)
@@ -397,8 +384,6 @@ class SSLSASLTest(Test):
     self.c2 = Connection()
 
   def testSSLPlainSimple(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support SSL with SASL")
     if not SASL.extended():
       raise Skipped("Simple SASL server does not support PLAIN")
     common.ensureCanTestExtendedSASL()
@@ -416,8 +401,6 @@ class SSLSASLTest(Test):
     _testSaslMech(self, mech, encrypted=True)
 
   def testSSLPlainSimpleFail(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support SSL with SASL")
     if not SASL.extended():
       raise Skipped("Simple SASL server does not support PLAIN")
     common.ensureCanTestExtendedSASL()
@@ -435,9 +418,6 @@ class SSLSASLTest(Test):
     _testSaslMech(self, mech, clientUser='usr@proton', encrypted=True, authenticated=False)
 
   def testSSLExternalSimple(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support SSL with SASL")
-
     if os.name=="nt":
       extUser = 'O=Client, CN=127.0.0.1'
     else:
@@ -462,9 +442,6 @@ class SSLSASLTest(Test):
     _testSaslMech(self, mech, clientUser=None, authUser=extUser, encrypted=True)
 
   def testSSLExternalSimpleFail(self):
-    if "java" in sys.platform:
-      raise Skipped("Proton-J does not support SSL with SASL")
-
     mech = 'EXTERNAL'
 
     self.server_domain.set_credentials(_sslCertpath("server-certificate.pem"),

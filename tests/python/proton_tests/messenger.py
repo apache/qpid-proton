@@ -1053,8 +1053,6 @@ class IdleTimeoutTest(common.Test):
     Verify that a Messenger connection is kept alive using empty idle frames
     when a idle_timeout is advertised by the remote peer.
     """
-    if "java" in sys.platform:
-      raise Skipped()
     idle_timeout_secs = self.delay
 
     try:
