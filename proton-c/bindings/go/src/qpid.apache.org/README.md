@@ -4,6 +4,11 @@ These packages provide [Go](http://golang.org) support for sending and receiving
 AMQP messages in client or server applications. Reference documentation is
 available at: <http://godoc.org/?q=qpid.apache.org>
 
+They require the [proton-C library](http://qpid.apache.org/proton) to be installed.
+On many platforms it is avaialable pre-packaged, for example on Fedora
+
+    yum install qpid-proton-c-devel
+
 There are 3 packages:
 
 [qpid.apache.org/amqp](http://godoc.org/qpid.apache.org/amqp) provides functions
