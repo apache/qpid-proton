@@ -26,7 +26,6 @@ CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=DEBUG -DCMAKE_INSTALL_PREFIX=$PWD/build/ship"
 XMLOUTPUT=../testresults/TEST-protonc.xml
 
 echo Arch: `arch` Uname: `uname -a` lsb_release: `lsb_release -a` User: `whoami`
-echo Java home: $JAVA_HOME
 
 echo =========================
 echo Listing installed packages
@@ -74,8 +73,5 @@ python ../tests/python/proton-test --xml=${XMLOUTPUT}
 
 # proton-c native c-* tests
 ctest -V -R '^c-*'
-
-# proton-j tests via jython
-which mvn && ctest -V -R proton-java
 
 echo 'Build completed'

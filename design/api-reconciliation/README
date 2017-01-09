@@ -1,4 +1,0 @@
-Tool to generate a report mapping proton-c functions to proton-j class methods.
-On Linux, the list of proton-c functions can be generated using generate-c-functions.sh
-
-See pom.xml for more details.

@@ -1,5 +1,0 @@
-C function,Java Method,Java Annotation
-function1,org.apache.qpid.proton.apireconciliation.reportwriter.ReconciliationReportWriterTest#methodWithMapping,function1
-function2,org.apache.qpid.proton.apireconciliation.reportwriter.ReconciliationReportWriterTest#anotherMethodWithMapping,function2
-,org.apache.qpid.proton.apireconciliation.reportwriter.ReconciliationReportWriterTest#methodWithoutMapping,
-function4,,

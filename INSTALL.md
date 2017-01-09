@@ -1,10 +1,8 @@
 Qpid Proton Install Information
 ===============================
 
-Proton comes with two separate build systems. The CMake build system can builds
-the entire codebase, including proton-c, all proton-c language bindings, and
-the pure Java proton-j implementation. The maven build system can only build
-the Java portions of the code.
+The CMake build system can build the entire codebase, including proton-c,
+and all its language bindings.
 
 CMake (Linux)
 -------------
@@ -29,10 +27,6 @@ package for that language:
     $ yum install pphp-devel                                 # PHP
     $ yum install perl-devel                                 # Perl
 
-    # dependencies needed for java (note that any non-ancient jvm will
-    # work, 1.8.0 is just what is current for fedora 23)
-    $ yum install java-1.8.0-openjdk-devel
-
     # dependencies needed for python docs
     $ yum install epydoc
 
@@ -51,10 +45,6 @@ package for that language:
 
     # dependencies needed for bindings
     $ apt-get install swig python-dev ruby-dev libperl-dev
-
-    # dependencies needed for java (note that any non-ancient jvm will
-    # work, 1.8.0 is just what is current for ubuntu 14)
-    $ apt-get install openjdk-8-jdk
 
     # dependencies needed for python docs
     $ apt-get install python-epydoc
@@ -167,7 +157,7 @@ interpreter to load the bindings from the appropriate directory:
 
 You can configure the build to install a specific binding to the
 location specified by the system interpreter with the
-SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of JAVA, PERL,
+SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of PERL,
 PHP, PYTHON, or RUBY.:
 
     $ cmake .. -DSYSINSTALL_PHP=ON
@@ -176,23 +166,8 @@ Disabling Language Bindings
 ---------------------------
 
 To disable any given language bindings, you can use the
-BUILD_[LANGUAGE] option where [LANGUAGE] is one of JAVA, PERL, PHP,
+BUILD_[LANGUAGE] option where [LANGUAGE] is one of PERL, PHP,
 PYTHON or RUBY, e.g.:
 
     $ cmake .. -DBUILD_PHP=OFF
-
-Maven (All platforms)
----------------------
-
-The following prerequisites are required to do a full build.
-
-  + Apache Maven 3.0 (or higher) (http://maven.apache.org/)
-
-From the directory where you found this README file:
-
-    # To compile and package all Java modules (omitting the tests)
-    $ mvn -DskipTests package
-
-    # To install the packages in the local Maven repository (usually ~/.m2/repo)
-    $ mvn -DskipTests install
 

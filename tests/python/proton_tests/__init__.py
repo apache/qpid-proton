@@ -22,7 +22,6 @@ import proton_tests.engine
 import proton_tests.message
 import proton_tests.handler
 import proton_tests.reactor
-import proton_tests.reactor_interop
 import proton_tests.messenger
 import proton_tests.sasl
 import proton_tests.transport

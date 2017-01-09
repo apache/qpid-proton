@@ -4,11 +4,6 @@ Qpid Proton Developer Information
 Development Environment
 -----------------------
 
-Developers wishing to work across multiple languages should become
-familiar with the CMake build system as this will build and run all
-available tests and code whereas the maven build system only run Java
-tests.
-
 First you will need to set up your basic build environment with CMake and all
 prerequisites (see the instructions in INSTALL) so that you can build the full
 code base.
@@ -19,7 +14,7 @@ the file config.sh from the CMake build directory.
     $ cd build
     $ source config.sh
 
-This file sets the necessary environment variables for Java, for all supported
+This file sets the necessary environment variables for all supported
 dynamic languages (Python, Perl, Ruby, PHP) and for running the tests.
 
 Testing
@@ -28,17 +23,6 @@ Testing
 As a developer on Proton, it is a good idea to build and test with the
 appropriate dependencies and settings in place so that the complete set of
 language bindings and implementations are present.
-
-Note that there is a common test suite written in python which will run against
-both the proton-c and proton-j implementations to help keep them in sync with
-each other. This can be found under the top level `tests/python` directory.
-This has been integrated into the maven build via Jython (and is hence included
-in the proton-java ctest suite). When you run the python test suite in
-Jython, the swig generated cproton doesn't actually exist since it is a C
-module. Instead, you get the `cproton.py` that resides in the Java source tree
-under `proton-j/src/main/resources`.  This `cproton.py` and its dependent files
-serve as a shim that adapts between the Java API and the C API.
-
 
 ### Running tests
 
@@ -88,14 +72,6 @@ Additional packages required for testing the language bindings:
 
     # alternatively ruby depedencies on non-RPM based systems
     $ gem install minitest rspec simplecov
-
-If wishing to run a particular subset of python tests against proton-j, a
-pattern can be set via the Java system property "proton.pythontest.pattern"
-when running the Maven build directly:
-
-    # Run the tests in transport.py class ClientTransportTest against proton-j:
-    $ mvn test -Dproton.pythontest.pattern='proton_tests.transport.ClientTransportTest.*'
-
 
 Mailing list
 ------------

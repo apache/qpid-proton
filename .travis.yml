@@ -19,7 +19,6 @@ addons:
     - ruby-dev
     - python3-dev
     - php5
-    - openjdk-7-jdk
 install:
 - pip install --upgrade pip
 - pip install tox

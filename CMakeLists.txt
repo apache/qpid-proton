@@ -155,13 +155,6 @@ endforeach()
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-find_package(Java)
-option (BUILD_JAVA "Build proton-j." ${JAVA_FOUND})
-
-if (BUILD_JAVA)
-  add_subdirectory(proton-j)
-endif()
-
 # Check for valgrind here so tests under proton-c/ and examples/ can use it.
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 mark_as_advanced (VALGRIND_EXE)
