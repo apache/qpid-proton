@@ -494,12 +494,7 @@ class SessionPerConnection(object):
     def session(self, connection):
         if not self._default_session:
             self._default_session = _create_session(connection)
-            self._default_session.context = self
         return self._default_session
-
-    def on_session_remote_close(self, event):
-        event.connection.close()
-        self._default_session = None
 
 class GlobalOverrides(object):
     """

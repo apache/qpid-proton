@@ -2581,6 +2581,9 @@ and SASL layers to identify the peer.
     """
     self._update_cond()
     pn_connection_close(self._impl)
+    if hasattr(self, '_session_policy'):
+      # break circular ref
+      del self._session_policy
 
   @property
   def state(self):
