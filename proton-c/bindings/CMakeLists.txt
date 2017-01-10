@@ -134,7 +134,7 @@ endif()
 foreach(BINDING ${BINDINGS})
   string(TOUPPER ${BINDING} UBINDING)
   # Check whether default was overridden
-  if ("NOBUILD_${UBINDING}")
+  if (NOBUILD_${UBINDING})
     set ("DEFAULT_${UBINDING}" OFF)
   endif ()
   option("BUILD_${UBINDING}" "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})

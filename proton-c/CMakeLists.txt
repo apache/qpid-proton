@@ -190,6 +190,10 @@ endif (PN_WINAPI)
 
 # Try to keep any platform specific overrides together here:
 
+# Until we can decide what to do with PHP support, turn it off by default
+# (We can't build with recent versions of PHP)
+set (NOBUILD_PHP ON)
+
 # MacOS has a bunch of differences in build tools and process and so we have to turn some things
 # off if building there:
 if (APPLE)
