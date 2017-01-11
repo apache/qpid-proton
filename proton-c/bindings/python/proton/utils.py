@@ -132,10 +132,15 @@ class BlockingReceiver(BlockingLink):
             raise LinkException("Failed to open receiver %s, source does not match" % self.link.name)
         if credit: receiver.flow(credit)
         self.fetcher = fetcher
+        self.container = connection.container
 
     def __del__(self):
         self.fetcher = None
+        # The next line causes a core dump if the Proton-C reactor finalizes
+        # first.  The self.container reference prevents reactor finalization
+        # until after it is set to None.
         self.link.handler = None
+        self.container = None
 
     def receive(self, timeout=False):
         if not self.fetcher:
@@ -222,12 +227,19 @@ class BlockingConnection(Handler):
             self, self.container.create_receiver(self.conn, address, name=name, dynamic=dynamic, handler=handler or fetcher, options=options), fetcher, credit=prefetch)
 
     def close(self):
+        if not self.conn:
+            return
         self.conn.close()
         try:
             self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_ACTIVE),
                       msg="Closing connection")
         finally:
+            self.conn.free()
+            # For cleanup, reactor needs to process PN_CONNECTION_FINAL
+            # and all events with embedded contexts must be drained.
+            self.run() # will not block any more
             self.conn = None
+            self.container.global_handler = None # break circular ref: container to cadapter.on_error
             self.container = None
 
     def _is_closed(self):
@@ -236,6 +248,8 @@ class BlockingConnection(Handler):
     def run(self):
         """ Hand control over to the event loop (e.g. if waiting indefinitely for incoming messages) """
         while self.container.process(): pass
+        self.container.stop()
+        self.container.process()
 
     def wait(self, condition, timeout=False, msg=None):
         """Call process until condition() is true"""
