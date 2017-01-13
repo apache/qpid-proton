@@ -395,6 +395,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_PROACTOR_TIMEOUT";
    case PN_PROACTOR_INACTIVE:
     return "PN_PROACTOR_INACTIVE";
+   case PN_LISTENER_OPEN:
+    return "PN_LISTENER_OPEN";
    default:
     return "PN_UNKNOWN";
   }

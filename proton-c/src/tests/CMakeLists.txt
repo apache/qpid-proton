@@ -20,15 +20,15 @@
 add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 
 if (ENABLE_VALGRIND AND VALGRIND_EXE)
-  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=1 --quiet
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet
                    --leak-check=full --trace-children=yes)
 endif ()
 
-macro (pn_add_c_test test file)
-  add_executable (${test} ${file})
+macro (pn_add_c_test test)
+  add_executable (${test} ${ARGN})
   target_link_libraries (${test} qpid-proton)
   if (BUILD_WITH_CXX)
-    set_source_files_properties (${file} PROPERTIES LANGUAGE CXX)
+    set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME ${test}
@@ -49,3 +49,4 @@ pn_add_c_test (c-reactor-tests reactor.c)
 pn_add_c_test (c-event-tests event.c)
 pn_add_c_test (c-data-tests data.c)
 pn_add_c_test (c-condition-tests condition.c)
+pn_add_c_test (c-proactor-tests proactor.c)

@@ -20,10 +20,9 @@
  * under the License.
  */
 
-#include <proton/types.h>
-#include <proton/import_export.h>
-#include <proton/listener.h>
 #include <proton/event.h>
+#include <proton/import_export.h>
+#include <proton/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,23 +94,32 @@ PNP_EXTERN int pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listen
                        const char *host, const char *port, int backlog);
 
 /**
- * Wait for events to handle.
+ * Wait until there is at least one event to handle.
+ * Always returns a non-empty batch of events.
  *
- * Handle events in the returned batch by calling
- * pn_event_batch_next() until it returns NULL. You must call
- * pn_proactor_done() when you are finished with the batch.
+ * You must call pn_proactor_done() when you are finished with the batch, you
+ * must not use the batch pointer after calling pn_proactor_done().
  *
- * If you call pn_proactor_done() before finishing the batch, the
- * remaining events will be returned again by another call
- * pn_proactor_wait().  This is less efficient, but allows you to
- * handle part of a batch and then hand off the rest to another
- * thread.
+ * Normally it is most efficient to handle the entire batch in one thread, but
+ * you can call pn_proactor_done() on an unfinished the batch. The remaining
+ * events will be returned by another call to pn_proactor_done(), possibly in a
+ * different thread.
+ *
+ * @note You can generate events to force threads to wake up from
+ * pn_proactor_wait() using pn_proactor_interrupt(), pn_proactor_set_timeout()
+ * and pn_connection_wake()
  *
  * @note Thread-safe: can be called concurrently. Events in a single
  * batch must be handled in sequence, but batches returned by separate
- * calls to pn_proactor_wait() can be handled concurrently.
+ * calls can be handled concurrently.
  */
 PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
+
+/**
+ * Return a batch of events if one is available immediately, otherwise return NULL.  If it
+ * does return an event batch, the rules are the same as for pn_proactor_wait()
+ */
+PNP_EXTERN pn_event_batch_t *pn_proactor_grab(pn_proactor_t *proactor);
 
 /**
  * Call when done handling a batch of events.

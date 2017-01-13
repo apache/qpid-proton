@@ -321,7 +321,8 @@ typedef enum {
   PN_CONNECTION_WAKE,
 
   /**
-   * Indicates the listener is ready to call pn_listener_accept() 
+   * Indicates the listener has an incoming connection, call pn_listener_accept()
+   * to accept it.
    * Events of this type point to the @ref pn_listener_t.
    */
   PN_LISTENER_ACCEPT,
@@ -350,7 +351,13 @@ typedef enum {
    *
    * Events of this type point to the @ref pn_proactor_t.
    */
-  PN_PROACTOR_INACTIVE
+  PN_PROACTOR_INACTIVE,
+
+  /**
+   * Indicates the listener is listeneing.
+   * Events of this type point to the @ref pn_listener_t.
+   */
+  PN_LISTENER_OPEN
 
 } pn_event_type_t;
 
@@ -537,9 +544,9 @@ PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
 PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
 
 /**
- * **Experimental** - A batch of events to handle. Call
- * pn_event_batch_next() in a loop until it returns NULL to handle
- * them.
+ * **Experimental** - A batch of events that must be handled in sequence.
+ * Call pn_event_batch_next() in a loop until it returns NULL to extract
+ * the events.
  */
 typedef struct pn_event_batch_t pn_event_batch_t;
 

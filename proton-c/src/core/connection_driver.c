@@ -127,7 +127,9 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
 }
 
 bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
-  return pn_collector_peek(pn_connection_collector(d->connection));
+  /* FIXME aconway 2017-02-15: this is ugly */
+  pn_collector_t *c = pn_connection_collector(d->connection);
+  return pn_collector_more(c) || (pn_collector_peek(c) && pn_collector_peek(c) != pn_collector_prev(c));
 }
 
 bool pn_connection_driver_finished(pn_connection_driver_t *d) {

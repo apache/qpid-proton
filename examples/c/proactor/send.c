@@ -50,7 +50,7 @@ typedef struct app_data_t {
   bool finished;
 } app_data_t;
 
-int exit_code = 0;
+static int exit_code = 0;
 
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {

@@ -22,6 +22,7 @@
 #include <proton/connection_driver.h>
 #include <proton/proactor.h>
 #include <proton/engine.h>
+#include <proton/listener.h>
 #include <proton/sasl.h>
 #include <proton/transport.h>
 #include <proton/url.h>
@@ -288,8 +289,11 @@ static void session_unsub(broker_t *b, pn_session_t *ssn) {
   }
 }
 
+static int exit_code = 0;
+
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
+    exit_code = 1;
     const char *ename = e ? pn_event_type_name(pn_event_type(e)) : "UNKNOWN";
     fprintf(stderr, "%s: %s: %s\n", ename,
             pn_condition_get_name(cond), pn_condition_get_description(cond));
@@ -483,5 +487,5 @@ int main(int argc, char **argv) {
   }
   pn_proactor_free(b.proactor);
   free(threads);
-  return 0;
+  return exit_code;
 }

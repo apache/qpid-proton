@@ -20,7 +20,7 @@
  * under the License.
  */
 
-#include <proton/condition.h>
+#include <proton/import_export.h>
 #include <proton/types.h>
 
 #ifdef __cplusplus

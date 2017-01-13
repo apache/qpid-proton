@@ -113,6 +113,7 @@ PN_CPP_CLASS_EXTERN connection_driver {
     ///
     PN_CPP_EXTERN connection_driver(proton::container&);
 #if PN_CPP_HAS_RVALUE_REFERENCES
+    /// @copydoc connection_driver()
     PN_CPP_EXTERN connection_driver(proton::container&, event_loop&& loop);
 #endif
 

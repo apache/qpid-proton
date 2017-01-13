@@ -22,9 +22,10 @@
 #include <proton/connection.h>
 #include <proton/connection_driver.h>
 #include <proton/delivery.h>
-#include <proton/proactor.h>
 #include <proton/link.h>
+#include <proton/listener.h>
 #include <proton/message.h>
+#include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
 #include <proton/transport.h>
@@ -59,7 +60,7 @@ typedef struct app_data_t {
 
 static const int BATCH = 1000; /* Batch size for unlimited receive */
 
-int exit_code = 0;
+static int exit_code = 0;
 
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
