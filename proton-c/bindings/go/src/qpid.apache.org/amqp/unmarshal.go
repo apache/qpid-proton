@@ -38,28 +38,39 @@ type UnmarshalError struct {
 	AMQPType string
 	// The Go type.
 	GoType reflect.Type
+
+	s string
 }
+
+func (e UnmarshalError) Error() string { return e.s }
 
 func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
-	return &UnmarshalError{C.pn_type_t(pnType).String(), reflect.TypeOf(v)}
-}
-
-func (e UnmarshalError) Error() string {
+	e := &UnmarshalError{AMQPType: C.pn_type_t(pnType).String(), GoType: reflect.TypeOf(v)}
 	if e.GoType.Kind() != reflect.Ptr {
-		return fmt.Sprintf("cannot unmarshal to type %s, not a pointer", e.GoType)
+		e.s = fmt.Sprintf("cannot unmarshal to type %s, not a pointer", e.GoType)
 	} else {
-		return fmt.Sprintf("cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
+		e.s = fmt.Sprintf("cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
 	}
+	return e
 }
 
-func doRecover(err *error) {
-	r := recover()
-	switch r := r.(type) {
-	case nil:
-	case *UnmarshalError:
-		*err = r
-	default:
-		panic(r)
+func newUnmarshalErrorData(data *C.pn_data_t, v interface{}) *UnmarshalError {
+	err := PnError(C.pn_data_error(data))
+	if err == nil {
+		return nil
+	}
+	e := newUnmarshalError(C.pn_data_type(data), v)
+	e.s = e.s + ": " + err.Error()
+	return e
+}
+
+func recoverUnmarshal(err *error) {
+	if r := recover(); r != nil {
+		if uerr, ok := r.(*UnmarshalError); ok {
+			*err = uerr
+		} else {
+			panic(r)
+		}
 	}
 }
 
@@ -99,7 +110,7 @@ func (d *Decoder) Buffered() io.Reader {
 // See the documentation for Unmarshal for details about the conversion of AMQP into a Go value.
 //
 func (d *Decoder) Decode(v interface{}) (err error) {
-	defer doRecover(&err)
+	defer recoverUnmarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	var n int
@@ -181,7 +192,7 @@ AMQP maps with mixed/unhashable key types need an alternate representation.
 Described types.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
-	defer doRecover(&err)
+	defer recoverUnmarshal(&err)
 
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
@@ -433,8 +444,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 			panic(newUnmarshalError(pnType, v))
 		}
 	}
-	err := dataError("unmarshaling", data)
-	if err != nil {
+	if err := newUnmarshalErrorData(data, v); err != nil {
 		panic(err)
 	}
 	return
