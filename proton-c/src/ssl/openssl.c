@@ -356,12 +356,22 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
   return preverify_ok;
 }
 
+// This was introduced in v1.1
+#if OPENSSL_VERSION_NUMBER < 0x10100000
+int DH_set0_pqg(DH *dh, BIGNUM *p, BIGNUM *q, BIGNUM *g)
+{
+  dh->p = p;
+  dh->q = q;
+  dh->g = g;
+  return 1;
+}
+#endif
 
 // this code was generated using the command:
 // "openssl dhparam -C -2 2048"
 static DH *get_dh2048(void)
 {
-  static const unsigned char dh2048_p[]={
+  static const unsigned char dhp_2048[]={
     0xAE,0xF7,0xE9,0x66,0x26,0x7A,0xAC,0x0A,0x6F,0x1E,0xCD,0x81,
     0xBD,0x0A,0x10,0x7E,0xFA,0x2C,0xF5,0x2D,0x98,0xD4,0xE7,0xD9,
     0xE4,0x04,0x8B,0x06,0x85,0xF2,0x0B,0xA3,0x90,0x15,0x56,0x0C,
@@ -385,17 +395,24 @@ static DH *get_dh2048(void)
     0xA4,0xED,0xFD,0x49,0x0B,0xE3,0x4A,0xF6,0x28,0xB3,0x98,0xB0,
     0x23,0x1C,0x09,0x33,
   };
-  static const unsigned char dh2048_g[]={
+  static const unsigned char dhg_2048[]={
     0x02,
   };
-  DH *dh;
+  DH *dh = DH_new();
+  BIGNUM *dhp_bn, *dhg_bn;
 
-  if ((dh=DH_new()) == NULL) return(NULL);
-  dh->p=BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
-  dh->g=BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
-  if ((dh->p == NULL) || (dh->g == NULL))
-    { DH_free(dh); return(NULL); }
-  return(dh);
+  if (dh == NULL)
+    return NULL;
+  dhp_bn = BN_bin2bn(dhp_2048, sizeof (dhp_2048), NULL);
+  dhg_bn = BN_bin2bn(dhg_2048, sizeof (dhg_2048), NULL);
+  if (dhp_bn == NULL || dhg_bn == NULL
+      || !DH_set0_pqg(dh, dhp_bn, NULL, dhg_bn)) {
+    DH_free(dh);
+    BN_free(dhp_bn);
+    BN_free(dhg_bn);
+    return NULL;
+  }
+  return dh;
 }
 
 typedef struct {
