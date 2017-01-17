@@ -143,7 +143,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case int64:
 		C.pn_data_put_long(data, C.int64_t(v))
 	case int:
-		if unsafe.Sizeof(0) == 8 {
+		if unsafe.Sizeof(int(0)) == 8 {
 			C.pn_data_put_long(data, C.int64_t(v))
 		} else {
 			C.pn_data_put_int(data, C.int32_t(v))
@@ -157,7 +157,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case uint64:
 		C.pn_data_put_ulong(data, C.uint64_t(v))
 	case uint:
-		if unsafe.Sizeof(0) == 8 {
+		if unsafe.Sizeof(int(0)) == 8 {
 			C.pn_data_put_ulong(data, C.uint64_t(v))
 		} else {
 			C.pn_data_put_uint(data, C.uint32_t(v))

@@ -330,7 +330,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_INT:
 			*v = int(C.pn_data_get_int(data))
 		case C.PN_LONG:
-			if unsafe.Sizeof(0) == 8 {
+			if unsafe.Sizeof(int(0)) == 8 {
 				*v = int(C.pn_data_get_long(data))
 			} else {
 				panic(newUnmarshalError(pnType, v))
@@ -350,7 +350,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_UINT:
 			*v = uint(C.pn_data_get_uint(data))
 		case C.PN_ULONG:
-			if unsafe.Sizeof(0) == 8 {
+			if unsafe.Sizeof(int(0)) == 8 {
 				*v = uint(C.pn_data_get_ulong(data))
 			} else {
 				panic(newUnmarshalError(pnType, v))
