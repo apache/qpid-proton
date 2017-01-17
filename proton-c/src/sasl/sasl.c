@@ -120,7 +120,9 @@ static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
 static bool pni_sasl_is_final_output_state(pni_sasl_t *sasl)
 {
   enum pni_sasl_state last_state = sasl->last_state;
-  return last_state==SASL_RECVED_OUTCOME_SUCCEED
+  enum pni_sasl_state desired_state = sasl->desired_state;
+  return (desired_state==SASL_RECVED_OUTCOME_SUCCEED && last_state>=SASL_POSTED_INIT)
+      || last_state==SASL_RECVED_OUTCOME_SUCCEED
       || last_state==SASL_RECVED_OUTCOME_FAIL
       || last_state==SASL_ERROR
       || last_state==SASL_POSTED_OUTCOME;
