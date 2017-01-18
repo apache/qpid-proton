@@ -211,7 +211,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[B]", SASL_OUTCOME, sasl->outcome);
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
-        pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]", transport->sasl->selected_mechanism);
+        pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]",
+		    transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
         desired_state = SASL_ERROR;
       }
       break;
@@ -222,7 +223,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       }
       break;
     case SASL_RECVED_OUTCOME_FAIL:
-      pn_do_error(transport, "amqp:unauthorized-access", "Authentication failed [mech=%s]", transport->sasl->selected_mechanism);
+      pn_do_error(transport, "amqp:unauthorized-access", "Authentication failed [mech=%s]",
+		  transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
       desired_state = SASL_ERROR;
       break;
     case SASL_ERROR:
