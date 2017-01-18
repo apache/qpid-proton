@@ -20,7 +20,6 @@ under the License.
 package main
 
 import (
-	"../util"
 	"flag"
 	"fmt"
 	"log"
@@ -39,10 +38,16 @@ Send messages to each URL concurrently with body "<url-path>-<n>" where n is the
 }
 
 var count = flag.Int64("count", 1, "Send this may messages per address.")
+var debug = flag.Bool("debug", false, "Print detailed debug output")
+var Debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	if *debug {
+		Debugf = func(format string, data ...interface{}) { log.Printf(format, data...) }
+	}
 
 	urls := flag.Args() // Non-flag arguments are URLs to receive from
 	if len(urls) == 0 {
@@ -61,41 +66,39 @@ func main() {
 
 	// Start a goroutine for each URL to send messages.
 	for _, urlStr := range urls {
-		util.Debugf("Connecting to %v\n", urlStr)
+		Debugf("Connecting to %v\n", urlStr)
 		go func(urlStr string) {
-
-			defer wait.Done()                 // Notify main() that this goroutine is done.
-			url, err := amqp.ParseURL(urlStr) // Like net/url.Parse() but with AMQP defaults.
-			util.ExitIf(err)
-
-			// Open a new connection
-			c, err := container.Dial("tcp", url.Host) // Note net.URL.Host is actually "host:port"
-			util.ExitIf(err)
-			connections <- c // Save connection so we can Close() when main() ends
-
-			// Create a Sender using the path of the URL as the AMQP address
-			s, err := c.Sender(electron.Target(url.Path))
-			util.ExitIf(err)
-
-			// Loop sending messages.
-			for i := int64(0); i < *count; i++ {
-				m := amqp.NewMessage()
-				body := fmt.Sprintf("%v-%v", url.Path, i)
-				m.Marshal(body)
-				s.SendAsync(m, sentChan, body) // Outcome will be sent to sentChan
+			defer wait.Done() // Notify main() when this goroutine is done.
+			var err error
+			if url, err := amqp.ParseURL(urlStr); err == nil {
+				if c, err := container.Dial("tcp", url.Host); err == nil {
+					connections <- c // Save connection so we can Close() when main() ends
+					if s, err := c.Sender(electron.Target(url.Path)); err == nil {
+						// Loop sending messages.
+						for i := int64(0); i < *count; i++ {
+							m := amqp.NewMessage()
+							body := fmt.Sprintf("%v-%v", url.Path, i)
+							m.Marshal(body)
+							s.SendAsync(m, sentChan, body) // Outcome will be sent to sentChan
+						}
+					}
+				}
+			}
+			if err != nil {
+				log.Fatal(err)
 			}
 		}(urlStr)
 	}
 
 	// Wait for all the acknowledgements
 	expect := int(*count) * len(urls)
-	util.Debugf("Started senders, expect %v acknowledgements\n", expect)
+	Debugf("Started senders, expect %v acknowledgements\n", expect)
 	for i := 0; i < expect; i++ {
 		out := <-sentChan // Outcome of async sends.
 		if out.Error != nil {
 			log.Fatalf("acknowledgement[%v] %v error: %v\n", i, out.Value, out.Error)
 		} else {
-			util.Debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
+			Debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
 		}
 	}
 	fmt.Printf("Received all %v acknowledgements\n", expect)

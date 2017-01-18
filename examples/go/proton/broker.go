@@ -30,7 +30,6 @@ under the License.
 package main
 
 import (
-	"../util"
 	"flag"
 	"fmt"
 	"log"
@@ -38,6 +37,7 @@ import (
 	"os"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
+	"sync"
 )
 
 // Usage and command-line flags
@@ -52,11 +52,16 @@ A simple broker-like demo. Queues are created automatically for sender or receiv
 var addr = flag.String("addr", ":amqp", "Listening address")
 var credit = flag.Int("credit", 100, "Receiver credit window")
 var qsize = flag.Int("qsize", 1000, "Max queue size")
+var debug = flag.Bool("debug", false, "Print detailed debug output")
+var debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
-	b := &broker{util.MakeQueues(*qsize)}
+	if *debug {
+		debugf = func(format string, data ...interface{}) { log.Printf(format, data...) }
+	}
+	b := &broker{makeQueues(*qsize)}
 	if err := b.run(); err != nil {
 		log.Fatal(err)
 	}
@@ -64,7 +69,7 @@ func main() {
 
 // State for the broker
 type broker struct {
-	queues util.Queues
+	queues queues
 }
 
 // Listens for connections and starts a proton.Engine for each one.
@@ -78,7 +83,7 @@ func (b *broker) run() error {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			util.Debugf("Accept error: %v", err)
+			debugf("Accept error: %v", err)
 			continue
 		}
 		adapter := proton.NewMessagingAdapter(newHandler(&b.queues))
@@ -88,14 +93,14 @@ func (b *broker) run() error {
 		adapter.AutoAccept = false
 		engine, err := proton.NewEngine(conn, adapter)
 		if err != nil {
-			util.Debugf("Connection error: %v", err)
+			debugf("Connection error: %v", err)
 			continue
 		}
 		engine.Server() // Enable server-side protocol negotiation.
-		util.Debugf("Accepted connection %s", engine)
+		debugf("Accepted connection %s", engine)
 		go func() { // Start goroutine to run the engine event loop
 			engine.Run()
-			util.Debugf("Closed %s", engine)
+			debugf("Closed %s", engine)
 		}()
 	}
 }
@@ -105,13 +110,13 @@ func (b *broker) run() error {
 // all calls to the handler. We use channels to communicate between the handler
 // goroutine and other goroutines sending and receiving messages.
 type handler struct {
-	queues    *util.Queues
+	queues    *queues
 	receivers map[proton.Link]*receiver
 	senders   map[proton.Link]*sender
 	injecter  proton.Injecter
 }
 
-func newHandler(queues *util.Queues) *handler {
+func newHandler(queues *queues) *handler {
 	return &handler{
 		queues:    queues,
 		receivers: make(map[proton.Link]*receiver),
@@ -156,7 +161,7 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 		// This will not block as AMQP credit is set to the buffer capacity.
 		r.buffer <- receivedMessage{e.Delivery(), m}
-		util.Debugf("link %s received %s", e.Link(), util.FormatMessage(m))
+		debugf("link %s received %#v", e.Link(), m)
 
 	case proton.MConnectionClosed, proton.MDisconnected:
 		for l, _ := range h.receivers {
@@ -187,11 +192,11 @@ func (h *handler) linkClosed(l proton.Link, err error) {
 // channels.
 type link struct {
 	l proton.Link
-	q util.Queue
+	q queue
 	h *handler
 }
 
-func makeLink(l proton.Link, q util.Queue, h *handler) link {
+func makeLink(l proton.Link, q queue, h *handler) link {
 	lnk := link{l: l, q: q, h: h}
 	return lnk
 }
@@ -280,7 +285,7 @@ func (s *sender) sendable() {
 // run runs in a separate goroutine. It monitors the queue for messages and injects
 // a function to send them when there is credit
 func (s *sender) run() {
-	var q util.Queue // q is nil initially as we have no credit.
+	var q queue // q is nil initially as we have no credit.
 	for {
 		select {
 		case _, ok := <-s.credit:
@@ -323,9 +328,45 @@ func (s *sender) sendOne(m amqp.Message) error {
 	delivery, err := s.l.Send(m)
 	if err == nil {
 		delivery.Settle() // Pre-settled, unreliable.
-		util.Debugf("link %s sent %s", s.l, util.FormatMessage(m))
+		debugf("link %s sent %#v", s.l, m)
 	} else {
 		s.q.PutBack(m) // Put the message back on the queue, don't block
 	}
 	return err
+}
+
+// Use a buffered channel as a very simple queue.
+type queue chan amqp.Message
+
+// Put a message back on the queue, does not block.
+func (q queue) PutBack(m amqp.Message) {
+	select {
+	case q <- m:
+	default:
+		// Not an efficient implementation but ensures we don't block the caller.
+		go func() { q <- m }()
+	}
+}
+
+// Concurrent-safe map of queues.
+type queues struct {
+	queueSize int
+	m         map[string]queue
+	lock      sync.Mutex
+}
+
+func makeQueues(queueSize int) queues {
+	return queues{queueSize: queueSize, m: make(map[string]queue)}
+}
+
+// Create a queue if not found.
+func (qs *queues) Get(name string) queue {
+	qs.lock.Lock()
+	defer qs.lock.Unlock()
+	q := qs.m[name]
+	if q == nil {
+		q = make(queue, qs.queueSize)
+		qs.m[name] = q
+	}
+	return q
 }

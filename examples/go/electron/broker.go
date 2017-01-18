@@ -27,7 +27,6 @@ under the License.
 package main
 
 import (
-	"../util"
 	"flag"
 	"fmt"
 	"log"
@@ -35,6 +34,7 @@ import (
 	"os"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/electron"
+	"sync"
 )
 
 // Usage and command-line flags
@@ -49,12 +49,19 @@ A simple broker-like demo. Queues are created automatically for sender or receiv
 var addr = flag.String("addr", ":amqp", "Listening address")
 var credit = flag.Int("credit", 100, "Receiver credit window")
 var qsize = flag.Int("qsize", 1000, "Max queue size")
+var debug = flag.Bool("debug", false, "Print detailed debug output")
+var debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	if *debug {
+		debugf = func(format string, data ...interface{}) { log.Printf(format, data...) }
+	}
+
 	b := &broker{
-		queues:    util.MakeQueues(*qsize),
+		queues:    makeQueues(*qsize),
 		container: electron.NewContainer(fmt.Sprintf("broker[%v]", os.Getpid())),
 		acks:      make(chan electron.Outcome),
 		sent:      make(chan sentMessage),
@@ -66,7 +73,7 @@ func main() {
 
 // State for the broker
 type broker struct {
-	queues    util.Queues           // A collection of queues.
+	queues    queues                // A collection of queues.
 	container electron.Container    // electron.Container manages AMQP connections.
 	sent      chan sentMessage      // Channel to record sent messages.
 	acks      chan electron.Outcome // Channel to receive the Outcome of sent messages.
@@ -76,7 +83,7 @@ type broker struct {
 // If a message is rejected or not acknowledged due to a failure, we will put it back on the queue.
 type sentMessage struct {
 	m amqp.Message
-	q util.Queue
+	q queue
 }
 
 // run listens for incoming net.Conn connections and starts an electron.Connection for each one.
@@ -94,12 +101,12 @@ func (b *broker) run() error {
 	for {
 		c, err := b.container.Accept(listener)
 		if err != nil {
-			util.Debugf("Accept error: %v", err)
+			debugf("Accept error: %v", err)
 			continue
 		}
 		cc := &connection{b, c}
 		go cc.run() // Handle the connection
-		util.Debugf("Accepted %v", c)
+		debugf("Accepted %v", c)
 	}
 }
 
@@ -113,7 +120,7 @@ type connection struct {
 // and start goroutines to service them.
 func (c *connection) run() {
 	for in := range c.connection.Incoming() {
-		util.Debugf("incoming %v", in)
+		debugf("incoming %v", in)
 
 		switch in := in.(type) {
 
@@ -131,7 +138,7 @@ func (c *connection) run() {
 			in.Accept() // Accept sessions unconditionally
 		}
 	}
-	util.Debugf("incoming closed: %v", c.connection)
+	debugf("incoming closed: %v", c.connection)
 }
 
 // receiver receives messages and pushes to a queue.
@@ -139,11 +146,11 @@ func (c *connection) receiver(receiver electron.Receiver) {
 	q := c.broker.queues.Get(receiver.Target())
 	for {
 		if rm, err := receiver.Receive(); err == nil {
-			util.Debugf("%v: received %v", receiver, util.FormatMessage(rm.Message))
+			debugf("%v: received %v %#v", receiver, rm.Message)
 			q <- rm.Message
 			rm.Accept()
 		} else {
-			util.Debugf("%v error: %v", receiver, err)
+			debugf("%v error: %v", receiver, err)
 			break
 		}
 	}
@@ -154,13 +161,13 @@ func (c *connection) sender(sender electron.Sender) {
 	q := c.broker.queues.Get(sender.Source())
 	for {
 		if sender.Error() != nil {
-			util.Debugf("%v closed: %v", sender, sender.Error())
+			debugf("%v closed: %v", sender, sender.Error())
 			return
 		}
 		select {
 
 		case m := <-q:
-			util.Debugf("%v: sent %v", sender, util.FormatMessage(m))
+			debugf("%v: sent %#v", sender, m)
 			sm := sentMessage{m, q}
 			c.broker.sent <- sm                    // Record sent message
 			sender.SendAsync(m, c.broker.acks, sm) // Receive outcome on c.broker.acks with Value sm
@@ -191,9 +198,44 @@ func (b *broker) acknowledgements() {
 			delete(sentMap, sm)
 			if outcome.Status != electron.Accepted { // Error, release or rejection
 				sm.q.PutBack(sm.m) // Put the message back on the queue.
-				util.Debugf("message %v put back, status %v, error %v",
-					util.FormatMessage(sm.m), outcome.Status, outcome.Error)
+				debugf("message %#v put back, status %v, error %v", sm.m, outcome.Status, outcome.Error)
 			}
 		}
 	}
+}
+
+// Use a buffered channel as a very simple queue.
+type queue chan amqp.Message
+
+// Put a message back on the queue, does not block.
+func (q queue) PutBack(m amqp.Message) {
+	select {
+	case q <- m:
+	default:
+		// Not an efficient implementation but ensures we don't block the caller.
+		go func() { q <- m }()
+	}
+}
+
+// Concurrent-safe map of queues.
+type queues struct {
+	queueSize int
+	m         map[string]queue
+	lock      sync.Mutex
+}
+
+func makeQueues(queueSize int) queues {
+	return queues{queueSize: queueSize, m: make(map[string]queue)}
+}
+
+// Create a queue if not found.
+func (qs *queues) Get(name string) queue {
+	qs.lock.Lock()
+	defer qs.lock.Unlock()
+	q := qs.m[name]
+	if q == nil {
+		q = make(queue, qs.queueSize)
+		qs.m[name] = q
+	}
+	return q
 }
