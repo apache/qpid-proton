@@ -105,10 +105,5 @@ class Wrapper(object):
                                                id(self), addressof(self._impl))
 
 
-if pn_py2void(Wrapper) is Wrapper:
-    PYCTX = Wrapper
-    import java.lang.System
-    addressof = java.lang.System.identityHashCode
-else:
-    PYCTX = int(pn_py2void(Wrapper))
-    addressof = int
+PYCTX = int(pn_py2void(Wrapper))
+addressof = int
