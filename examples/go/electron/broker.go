@@ -146,7 +146,7 @@ func (c *connection) receiver(receiver electron.Receiver) {
 	q := c.broker.queues.Get(receiver.Target())
 	for {
 		if rm, err := receiver.Receive(); err == nil {
-			debugf("%v: received %v %#v", receiver, rm.Message)
+			debugf("%v: received %v", receiver, rm.Message.Body())
 			q <- rm.Message
 			rm.Accept()
 		} else {
@@ -167,7 +167,7 @@ func (c *connection) sender(sender electron.Sender) {
 		select {
 
 		case m := <-q:
-			debugf("%v: sent %#v", sender, m)
+			debugf("%v: sent %v", sender, m.Body())
 			sm := sentMessage{m, q}
 			c.broker.sent <- sm                    // Record sent message
 			sender.SendAsync(m, c.broker.acks, sm) // Receive outcome on c.broker.acks with Value sm
@@ -198,7 +198,7 @@ func (b *broker) acknowledgements() {
 			delete(sentMap, sm)
 			if outcome.Status != electron.Accepted { // Error, release or rejection
 				sm.q.PutBack(sm.m) // Put the message back on the queue.
-				debugf("message %#v put back, status %v, error %v", sm.m, outcome.Status, outcome.Error)
+				debugf("message %v put back, status %v, error %v", sm.m.Body(), outcome.Status, outcome.Error)
 			}
 		}
 	}

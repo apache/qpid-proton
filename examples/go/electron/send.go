@@ -77,7 +77,7 @@ func main() {
 						// Loop sending messages.
 						for i := int64(0); i < *count; i++ {
 							m := amqp.NewMessage()
-							body := fmt.Sprintf("%v-%v", url.Path, i)
+							body := fmt.Sprintf("%v%v", url.Path, i)
 							m.Marshal(body)
 							s.SendAsync(m, sentChan, body) // Outcome will be sent to sentChan
 						}

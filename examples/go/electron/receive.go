@@ -101,7 +101,7 @@ func main() {
 	// print each message until the count is exceeded.
 	for i := uint64(0); i < *count; i++ {
 		m := <-messages
-		debugf("%#v\n", m)
+		debugf("%v\n", m.Body())
 	}
 	fmt.Printf("Received %d messages\n", *count)
 
