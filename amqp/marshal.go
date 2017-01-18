@@ -29,12 +29,25 @@ import (
 	"unsafe"
 )
 
-func dataError(prefix string, data *C.pn_data_t) error {
-	err := PnError(C.pn_data_error(data))
-	if err != nil {
-		err = fmt.Errorf("%s: %s", prefix, err.Error())
+// Error returned if Go data cannot be marshaled as an AMQP type.
+type MarshalError struct {
+	// The Go type.
+	GoType reflect.Type
+	s      string
+}
+
+func (e MarshalError) Error() string { return e.s }
+
+func newMarshalError(v interface{}, s string) *MarshalError {
+	t := reflect.TypeOf(v)
+	return &MarshalError{GoType: t, s: fmt.Sprintf("cannot marshal %s: %s", t, s)}
+}
+
+func dataMarshalError(v interface{}, data *C.pn_data_t) error {
+	if pe := PnError(C.pn_data_error(data)); pe != nil {
+		return newMarshalError(v, pe.Error())
 	}
-	return err
+	return nil
 }
 
 /*
@@ -87,7 +100,16 @@ Described types.
 
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer doRecover(&err)
+	defer func() {
+		if r := recover(); r != nil {
+			if merr, ok := r.(*MarshalError); ok {
+				err = merr
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	marshal(v, data)
@@ -97,7 +119,7 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 		case n == int(C.PN_OVERFLOW):
 			return buf, overflow
 		case n < 0:
-			return buf, dataError("marshal error", data)
+			return buf, dataMarshalError(v, data)
 		default:
 			return buf[:n], nil
 		}
@@ -143,7 +165,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case int64:
 		C.pn_data_put_long(data, C.int64_t(v))
 	case int:
-		if unsafe.Sizeof(0) == 8 {
+		if unsafe.Sizeof(int(0)) == 8 {
 			C.pn_data_put_long(data, C.int64_t(v))
 		} else {
 			C.pn_data_put_int(data, C.int32_t(v))
@@ -157,7 +179,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case uint64:
 		C.pn_data_put_ulong(data, C.uint64_t(v))
 	case uint:
-		if unsafe.Sizeof(0) == 8 {
+		if unsafe.Sizeof(int(0)) == 8 {
 			C.pn_data_put_ulong(data, C.uint64_t(v))
 		} else {
 			C.pn_data_put_uint(data, C.uint32_t(v))
@@ -189,11 +211,10 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		case reflect.Slice:
 			putList(data, v)
 		default:
-			panic(fmt.Errorf("cannot marshal %s to AMQP", reflect.TypeOf(v)))
+			panic(newMarshalError(v, "no conversion"))
 		}
 	}
-	err := dataError("marshal", data)
-	if err != nil {
+	if err := dataMarshalError(v, data); err != nil {
 		panic(err)
 	}
 	return
