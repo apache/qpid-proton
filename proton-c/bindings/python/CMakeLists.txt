@@ -29,6 +29,12 @@ set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 # Suppress warnings in swig generated code.
 set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
+# Set Compiler extra flags for Solaris when using SunStudio
+if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DSWIGEXPORT=__global")
+endif ()
+
+
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
