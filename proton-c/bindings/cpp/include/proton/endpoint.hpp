@@ -23,6 +23,7 @@
  */
 
 #include "./fwd.hpp"
+#include "./error_condition.hpp"
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 
