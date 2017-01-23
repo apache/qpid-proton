@@ -385,6 +385,8 @@ const char *pn_event_type_name(pn_event_type_t type)
     return "PN_SELECTABLE_FINAL";
    case PN_CONNECTION_WAKE:
     return "PN_CONNECTION_WAKE";
+   case PN_LISTENER_ACCEPT:
+    return "PN_LISTENER_ACCEPT";
    case PN_LISTENER_CLOSE:
     return "PN_LISTENER_CLOSE";
    case PN_PROACTOR_INTERRUPT:
