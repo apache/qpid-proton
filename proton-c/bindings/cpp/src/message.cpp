@@ -300,20 +300,6 @@ void message::decode(const std::vector<char> &s) {
     check(pn_message_decode(pn_msg(), &s[0], s.size()));
 }
 
-void message::decode(proton::delivery delivery) {
-    std::vector<char> buf;
-    buf.resize(pn_delivery_pending(unwrap(delivery)));
-    if (buf.empty())
-        throw error("message decode: no delivery pending on link");
-    proton::receiver link = delivery.receiver();
-    assert(!buf.empty());
-    ssize_t n = pn_link_recv(unwrap(link), const_cast<char *>(&buf[0]), buf.size());
-    if (n != ssize_t(buf.size())) throw error(MSG("receiver read failure"));
-    clear();
-    decode(buf);
-    pn_link_advance(unwrap(link));
-}
-
 bool message::durable() const { return pn_message_is_durable(pn_msg()); }
 void message::durable(bool b) { pn_message_set_durable(pn_msg(), b); }
 

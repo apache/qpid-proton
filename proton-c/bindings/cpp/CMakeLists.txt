@@ -55,8 +55,6 @@ set(qpid-proton-cpp-source
   src/node_options.cpp
   src/object.cpp
   src/proton_bits.cpp
-  src/proton_event.cpp
-  src/proton_handler.cpp
   src/receiver.cpp
   src/receiver_options.cpp
   src/reconnect_timer.cpp

@@ -28,7 +28,6 @@
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "proton_event.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -88,11 +87,9 @@ bool connection_driver::has_events() const {
 bool connection_driver::dispatch() {
     pn_event_t* c_event;
     while ((c_event = pn_connection_driver_next_event(&driver_)) != NULL) {
-        proton_event cpp_event(c_event);
         try {
             if (handler_ != 0) {
-                messaging_adapter adapter(*handler_);
-                cpp_event.dispatch(adapter);
+                messaging_adapter::dispatch(*handler_, c_event);
             }
         } catch (const std::exception& e) {
             pn_condition_t *cond = pn_transport_condition(driver_.transport);

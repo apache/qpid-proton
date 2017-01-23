@@ -35,7 +35,6 @@
 #include "proton/sender_options.hpp"
 
 #include "proton_bits.hpp"
-#include "proton_handler.hpp"
 
 #include <list>
 #include <map>

@@ -32,8 +32,6 @@
 
 #include "proton/io/link_namer.hpp"
 
-#include "proton_handler.hpp"
-
 struct pn_record_t;
 struct pn_link_t;
 struct pn_session_t;
