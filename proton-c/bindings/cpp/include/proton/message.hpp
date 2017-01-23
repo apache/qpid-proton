@@ -319,11 +319,7 @@ class message {
 
     mutable pn_message_t *pn_msg_;
 
-    /// Decode the message corresponding to a delivery from a link.
-    void decode(proton::delivery);
-
   PN_CPP_EXTERN friend void swap(message&, message&);
-  friend class messaging_adapter;
     /// @endcond
 };
 
