@@ -22,39 +22,19 @@
  *
  */
 
-#include "proton/messaging_handler.hpp"
-
-#include "proton_handler.hpp"
-
-#include <proton/event.h>
-#include <proton/reactor.h>
-
 ///@cond INTERNAL
+
+struct pn_event_t;
 
 namespace proton {
 
+class messaging_handler;
+
 /// Convert the low level proton-c events to the higher level proton::messaging_handler calls
-class messaging_adapter : public proton_handler
+class messaging_adapter
 {
   public:
-    messaging_adapter(messaging_handler &delegate) : delegate_(delegate) {}
-
-    void on_reactor_init(proton_event &e);
-    void on_reactor_final(proton_event & e);
-    void on_link_flow(proton_event &e);
-    void on_delivery(proton_event &e);
-    void on_connection_remote_open(proton_event &e);
-    void on_connection_remote_close(proton_event &e);
-    void on_session_remote_open(proton_event &e);
-    void on_session_remote_close(proton_event &e);
-    void on_link_local_open(proton_event &e);
-    void on_link_remote_open(proton_event &e);
-    void on_link_remote_detach(proton_event & e);
-    void on_link_remote_close(proton_event &e);
-    void on_transport_closed(proton_event &e);
-
-  private:
-    messaging_handler &delegate_;  // The handler for generated messaging_event's
+    static void dispatch(messaging_handler& delegate, pn_event_t* e);
 };
 
 }

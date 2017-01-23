@@ -27,7 +27,6 @@
 #include "proton/session.hpp"
 #include "proton/transport.hpp"
 
-#include "proton_event.hpp"
 #include "messaging_adapter.hpp"
 
 #include <proton/handlers.h>

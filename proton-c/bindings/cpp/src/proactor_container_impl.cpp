@@ -35,7 +35,6 @@
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "proton_bits.hpp"
-#include "proton_event.hpp"
 
 #include <assert.h>
 
@@ -373,10 +372,7 @@ bool container::impl::handle(pn_event_t* event) {
     // This is pretty unusual, but possible if we use the default constructor for container
     if (!mh) return false;
 
-    // TODO: Currently create a throwaway messaging_adapter and proton_event so we can call dispatch, a bit inefficient
-    messaging_adapter ma(*mh);
-    proton_event pe(event, &container_);
-    pe.dispatch(ma);
+    messaging_adapter::dispatch(*mh, event);
     return false;
 }
 
