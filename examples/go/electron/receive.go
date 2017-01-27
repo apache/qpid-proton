@@ -70,27 +70,23 @@ func main() {
 		debugf("Connecting to %s\n", urlStr)
 		go func(urlStr string) { // Start the goroutine
 			defer wait.Done() // Notify main() when this goroutine is done.
-			var err error
-			if url, err := amqp.ParseURL(urlStr); err == nil {
-				if c, err := container.Dial("tcp", url.Host); err == nil {
-					connections <- c // Save connection so we can Close() when main() ends
-					if r, err := c.Receiver(electron.Source(url.Path)); err == nil {
-						// Loop receiving messages and sending them to the main() goroutine
-						for {
-							if rm, err := r.Receive(); err == nil {
-								rm.Accept()
-								messages <- rm.Message
-							} else if err == electron.Closed {
-								return
-							} else {
-								log.Fatal("receive error %v: %v", urlStr, err)
-							}
-						}
-					}
+			url, err := amqp.ParseURL(urlStr)
+			fatalIf(err)
+			c, err := container.Dial("tcp", url.Host)
+			fatalIf(err)
+			connections <- c // Save connection so we can Close() when main() ends
+			r, err := c.Receiver(electron.Source(url.Path))
+			fatalIf(err)
+			// Loop receiving messages and sending them to the main() goroutine
+			for {
+				if rm, err := r.Receive(); err == nil {
+					rm.Accept()
+					messages <- rm.Message
+				} else if err == electron.Closed {
+					return
+				} else {
+					log.Fatal("receive error %v: %v", urlStr, err)
 				}
-			}
-			if err != nil {
-				log.Fatal(err)
 			}
 		}(urlStr)
 	}
@@ -113,4 +109,10 @@ func main() {
 		c.Close(nil)
 	}
 	wait.Wait() // Wait for all goroutines to finish.
+}
+
+func fatalIf(err error) {
+	if err != nil {
+		log.Fatal(err)
+	}
 }
