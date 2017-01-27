@@ -92,7 +92,9 @@ func main() {
 	for i := 0; i < expect; i++ {
 		out := <-sentChan // Outcome of async sends.
 		if out.Error != nil {
-			log.Fatalf("acknowledgement[%v] %v error: %v\n", i, out.Value, out.Error)
+			log.Fatalf("acknowledgement[%v] %v error: %v", i, out.Value, out.Error)
+		} else if out.Status != electron.Accepted {
+			log.Fatalf("acknowledgement[%v] unexpected status: %v", i, out.Status)
 		} else {
 			Debugf("acknowledgement[%v]  %v (%v)\n", i, out.Value, out.Status)
 		}
