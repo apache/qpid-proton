@@ -22,14 +22,13 @@ execute_process(COMMAND ${GO_EXE} version OUTPUT_VARIABLE go_ver OUTPUT_STRIP_TR
 message(STATUS "Found Go: ${GO_EXE} (${go_ver})")
 
 set(GO_BUILD_FLAGS "" CACHE STRING "Flags for 'go build'")
+set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
 if (go_ver MATCHES "gccgo")
   # TODO aconway 2015-10-08: import cycles with -race under gccgo, investigate.
-  set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}/proton-c")
 else()
-  set(GO_TEST_FLAGS "-v -race" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}/proton-c")
 endif()
 
