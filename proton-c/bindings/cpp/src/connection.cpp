@@ -31,7 +31,6 @@
 #include "proton/session_options.hpp"
 #include "proton/transport.hpp"
 
-#include "connector.hpp"
 #include "contexts.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
