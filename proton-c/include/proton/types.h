@@ -426,6 +426,12 @@ typedef struct pn_transport_t pn_transport_t;
  * A pn_handler_t is target of ::pn_event_t dispatched by the pn_reactor_t
  */
 typedef struct pn_handler_t pn_handler_t;
+
+/**
+ *
+ */
+typedef struct pn_proactor_t pn_proactor_t;
+typedef struct pn_listener_t pn_listener_t;
 /**
  * @endcond
  */

@@ -23,18 +23,11 @@
 #include <proton/types.h>
 #include <proton/import_export.h>
 #include <proton/listener.h>
+#include <proton/event.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @cond INTERNAL
- */
-typedef struct pn_condition_t pn_condition_t;
-/**
- * @endcond
- */
 
 /**
  * @file
@@ -56,11 +49,6 @@ typedef struct pn_condition_t pn_condition_t;
  * @addtogroup proactor
  * @{
  */
-
-/**
- * The proactor, see pn_proactor()
- */
-typedef struct pn_proactor_t pn_proactor_t;
 
 /**
  * Create a proactor. Must be freed with pn_proactor_free()

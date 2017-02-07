@@ -20,6 +20,7 @@
  * under the License.
  */
 
+#include <proton/condition.h>
 #include <proton/types.h>
 
 #ifdef __cplusplus
@@ -35,20 +36,6 @@ extern "C" {
  * @addtogroup proactor
  * @{
  */
-
-/**
- * @cond INTERNAL
- */
-typedef struct pn_proactor_t pn_proactor_t;
-typedef struct pn_condition_t pn_condition_t;
-/**
- * @endcond
- */
-
-/**
- * A listener accepts connections.
- */
-typedef struct pn_listener_t pn_listener_t;
 
 /**
  * Create a listener.
