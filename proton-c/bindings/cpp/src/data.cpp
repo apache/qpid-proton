@@ -46,9 +46,9 @@ void data::rewind() { ::pn_data_rewind(pn_object()); }
 
 bool data::empty() const { return ::pn_data_size(pn_object()) == 0; }
 
-void* data::point() const { return pn_data_point(pn_object()); }
+const void* data::point() const { return pn_data_point(pn_object()); }
 
-void data::restore(void* h) { pn_data_restore(pn_object(), pn_handle_t(h)); }
+void data::restore(const void* h) { pn_data_restore(pn_object(), pn_handle_t(h)); }
 
 void data::narrow() { pn_data_narrow(pn_object()); }
 

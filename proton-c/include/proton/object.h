@@ -37,7 +37,7 @@ extern "C" {
  * @cond INTERNAL
  */
 
-typedef void* pn_handle_t;
+typedef const void* pn_handle_t;
 typedef intptr_t pn_shandle_t;
 
 typedef struct pn_class_t pn_class_t;

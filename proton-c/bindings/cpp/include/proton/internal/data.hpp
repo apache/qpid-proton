@@ -65,8 +65,8 @@ class data : public object<pn_data_t> {
     PN_CPP_EXTERN int appendn(data src, int limit);
 
     PN_CPP_EXTERN bool next();
-    PN_CPP_EXTERN void* point() const;
-    PN_CPP_EXTERN void restore(void* h);
+    PN_CPP_EXTERN const void* point() const;
+    PN_CPP_EXTERN void restore(const void* h);
 
   protected:
     void narrow();
@@ -85,7 +85,7 @@ class data : public object<pn_data_t> {
 struct state_guard {
     /// @cond INTERNAL
     data& data_;
-    void* point_;
+    const void* point_;
     bool cancel_;
     /// @endcond
 
