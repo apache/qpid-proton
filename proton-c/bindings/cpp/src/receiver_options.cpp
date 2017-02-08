@@ -27,7 +27,7 @@
 #include <proton/link.h>
 
 #include "contexts.hpp"
-#include "container_impl.hpp"
+#include "proactor_container_impl.hpp"
 #include "messaging_adapter.hpp"
 #include "proton_bits.hpp"
 

@@ -179,6 +179,11 @@ class stop_tester : public proton::messaging_handler {
         state = 5;
     }
 
+    void on_transport_error(proton::transport & t) PN_CPP_OVERRIDE {
+        // Do nothing - ignore transport errors - we're going to get one when
+        // the container stops.
+    }
+
 public:
     stop_tester(): state(0) {}
 

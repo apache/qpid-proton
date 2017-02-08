@@ -1,4 +1,8 @@
+#ifndef PROTON_CPP_EVENT_LOOP_IMPL_HPP
+#define PROTON_CPP_EVENT_LOOP_IMPL_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,43 +19,36 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include "proton/event_loop.hpp"
+#include "proton/fwd.hpp"
 
-#include "contexts.hpp"
-#include "proactor_event_loop_impl.hpp"
-
-#include <proton/session.h>
-#include <proton/link.h>
+struct pn_connection_t;
 
 namespace proton {
 
-event_loop::event_loop() {}
-event_loop::~event_loop() {}
+class event_loop::impl {
+  public:
+    impl(pn_connection_t*);
 
-event_loop& event_loop::operator=(impl* i) { impl_.reset(i); return *this; }
-
-bool event_loop::inject(void_function0& f) {
-    return impl_->inject(f);
-}
-
+    bool inject(void_function0& f);
 #if PN_CPP_HAS_STD_FUNCTION
-bool event_loop::inject(std::function<void()> f) {
-    return impl_->inject(f);
-}
+    bool inject(std::function<void()> f);
+    typedef std::vector<std::function<void()> > jobs;
+#else
+    typedef std::vector<void_function0*> jobs;
 #endif
 
-event_loop& event_loop::get(pn_connection_t* c) {
-    return connection_context::get(c).event_loop_;
-}
 
-event_loop& event_loop::get(pn_session_t* s) {
-    return get(pn_session_connection(s));
-}
+    void run_all_jobs();
+    void finished();
 
-event_loop& event_loop::get(pn_link_t* l) {
-    return get(pn_link_session(l));
-}
+    jobs jobs_;
+    pn_connection_t* connection_;
+    bool finished_;
+};
 
 }
+
+#endif // PROTON_CPP_EVENT_LOOP_IMPL_HPP

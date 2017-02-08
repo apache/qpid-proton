@@ -32,9 +32,8 @@ set(qpid-proton-cpp-source
   src/cached_map.cpp
   src/connection.cpp
   src/connection_options.cpp
-  src/connector.cpp
   src/container.cpp
-  src/container_impl.cpp
+  src/proactor_container_impl.cpp
   src/contexts.cpp
   src/data.cpp
   src/decimal.cpp
@@ -58,7 +57,6 @@ set(qpid-proton-cpp-source
   src/proton_bits.cpp
   src/proton_event.cpp
   src/proton_handler.cpp
-  src/reactor.cpp
   src/receiver.cpp
   src/receiver_options.cpp
   src/reconnect_timer.cpp
@@ -91,7 +89,7 @@ set_source_files_properties (
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 
-target_link_libraries (qpid-proton-cpp ${PLATFORM_LIBS} qpid-proton)
+target_link_libraries (qpid-proton-cpp ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor)
 
 set_target_properties (
   qpid-proton-cpp

@@ -66,16 +66,16 @@ namespace {
 
 
 struct server_handler : public proton::messaging_handler {
-    std::string url;
+    proton::listener listener;
 
     void on_connection_open(proton::connection &c) OVERRIDE {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             c.transport().ssl().protocol() << std::endl;
-        c.container().stop_listening(url);  // Just expecting the one connection.
+        listener.stop();  // Just expecting the one connection.
     }
 
     void on_transport_error(proton::transport &t) OVERRIDE {
-        t.connection().container().stop_listening(url);
+        listener.stop();
     }
 
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {
@@ -122,8 +122,7 @@ class hello_world_direct : public proton::messaging_handler {
         } else throw std::logic_error("bad verify mode: " + verify);
 
         c.client_connection_options(client_opts);
-        s_handler.url = url;
-        c.listen(url);
+        s_handler.listener = c.listen(url);
         c.open_sender(url);
     }
 

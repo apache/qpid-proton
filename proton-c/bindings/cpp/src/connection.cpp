@@ -38,7 +38,6 @@
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/transport.h>
-#include <proton/reactor.h>
 #include <proton/object.h>
 
 namespace proton {
@@ -72,13 +71,6 @@ std::string connection::user() const {
 
 container& connection::container() const {
     class container* c = connection_context::get(pn_object()).container;
-    if (!c) {
-        pn_reactor_t *r = pn_object_reactor(pn_object());
-        if (r)
-            c = &container_context::get(r);
-    }
-    if (!c)
-        throw proton::error("connection does not have a container");
     return *c;
 }
 

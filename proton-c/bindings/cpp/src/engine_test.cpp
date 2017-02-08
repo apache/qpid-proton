@@ -19,7 +19,6 @@
 
 
 #include "test_bits.hpp"
-#include "test_dummy_container.hpp"
 #include "proton_bits.hpp"
 
 #include "proton/container.hpp"

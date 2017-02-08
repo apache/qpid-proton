@@ -27,7 +27,7 @@
 #include "proton/listener.hpp"
 #include "proton/thread_safe.hpp"
 
-#include "container_impl.hpp"
+#include "proactor_container_impl.hpp"
 
 namespace proton {
 
@@ -65,24 +65,12 @@ returned<receiver> container::open_receiver(const std::string &url, const proton
     return open_receiver(url, receiver_options(), co);
 }
 
-namespace{
-    struct listen_opts : public listen_handler {
-        connection_options  opts;
-        listen_opts(const connection_options& o) : opts(o) {}
-        connection_options on_accept() { return opts; }
-        void on_close() { delete this; }
-    };
-}
-
 listener container::listen(const std::string& url, const connection_options& opts) {
-    // Note: listen_opts::on_close() calls delete(this) so this is not a leak.
-    // The container will always call on_closed() even if there are errors or exceptions.
-    listen_opts* lh = new listen_opts(opts);
-    return listen(url, *lh);
+    return impl_->listen(url, opts);
 }
 
 listener container::listen(const std::string &url) {
-    return listen(url, connection_options());
+    return impl_->listen(url);
 }
 
 void container::stop() { stop(error_condition()); }
@@ -92,8 +80,6 @@ returned<connection> container::connect(const std::string& url, const connection
 }
 
 listener container::listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
-
-void container::stop_listening(const std::string& url) { impl_->stop_listening(url); }
 
 void container::run() { impl_->run(); }
 

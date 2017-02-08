@@ -23,7 +23,6 @@
 #include "proton/error.hpp"
 #include "msg.hpp"
 #include <proton/types.h>
-#include <proton/reactor.h>
 
 namespace proton {
 
