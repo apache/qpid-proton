@@ -73,12 +73,6 @@ class PN_CPP_CLASS_EXTERN container {
     /// Connect to `url` and send an open request to the remote peer.
     PN_CPP_EXTERN returned<connection> connect(const std::string& url);
 
-    /// @cond INTERNAL
-    /// Stop listening on url, must match the url string given to listen().
-    /// You can also use the proton::listener object returned by listen()
-    PN_CPP_EXTERN void stop_listening(const std::string& url);
-    /// @endcond
-
     /// Start listening on url.
     ///
     /// Calls to the @ref listen_handler are serialized for this listener,

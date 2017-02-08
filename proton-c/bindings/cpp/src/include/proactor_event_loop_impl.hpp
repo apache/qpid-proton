@@ -1,4 +1,8 @@
+#ifndef PROTON_CPP_EVENT_LOOP_IMPL_HPP
+#define PROTON_CPP_EVENT_LOOP_IMPL_HPP
+
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +19,36 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include "proton/listener.hpp"
+#include "proton/fwd.hpp"
 
-#include <proton/listener.h>
-
-#include "contexts.hpp"
+struct pn_connection_t;
 
 namespace proton {
 
-listener::listener(): listener_(0) {}
-listener::listener(pn_listener_t* l) : listener_(l) {}
-void listener::stop() { if (listener_) pn_listener_close(listener_); }
+class event_loop::impl {
+  public:
+    impl(pn_connection_t*);
+
+    bool inject(void_function0& f);
+#if PN_CPP_HAS_STD_FUNCTION
+    bool inject(std::function<void()> f);
+    typedef std::vector<std::function<void()> > jobs;
+#else
+    typedef std::vector<void_function0*> jobs;
+#endif
+
+
+    void run_all_jobs();
+    void finished();
+
+    jobs jobs_;
+    pn_connection_t* connection_;
+    bool finished_;
+};
 
 }
+
+#endif // PROTON_CPP_EVENT_LOOP_IMPL_HPP

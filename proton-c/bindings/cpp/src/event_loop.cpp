@@ -20,7 +20,7 @@
 #include "proton/event_loop.hpp"
 
 #include "contexts.hpp"
-#include "event_loop_impl.hpp"
+#include "proactor_event_loop_impl.hpp"
 
 #include <proton/session.h>
 #include <proton/link.h>

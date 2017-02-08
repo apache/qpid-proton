@@ -41,14 +41,14 @@ class listen_handler {
     /// the connection.  messaging_handler::on_connection_open() will be called with
     /// the proton::connection, it can call connection::open() to accept or
     /// connection::close() to reject the connection.
-    virtual connection_options on_accept()= 0;
+    virtual connection_options on_accept(listener&)= 0;
 
     /// Called if there is a listening error, with an error message.
     /// close() will also be called.
-    virtual void on_error(const std::string&) {}
+    virtual void on_error(listener&, const std::string&) {}
 
     /// Called when this listen_handler is no longer needed, and can be deleted.
-    virtual void on_close() {}
+    virtual void on_close(listener&) {}
 };
 
 } // proton
