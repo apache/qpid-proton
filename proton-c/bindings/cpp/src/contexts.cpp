@@ -77,10 +77,6 @@ context::id connection_context::id(pn_connection_t* c) {
     return context::id(pn_connection_attachments(c), CONNECTION_CONTEXT);
 }
 
-context::id connection_context::id(const connection& c) {
-    return id(unwrap(c));
-}
-
 void container_context::set(const reactor& r, container& c) {
     set_context(pn_reactor_attachments(unwrap(r)), CONTAINER_CONTEXT, PN_VOID, &c);
 }

@@ -190,7 +190,7 @@ returned<connection> container::impl::connect(const std::string &urlstr, const c
     proton::url  url(urlstr);
     connection conn(reactor_.connection_to_host(url.host(), url.port(), chandler.get()));
     internal::pn_unique_ptr<connector> ctor(new connector(conn, opts, url));
-    connection_context& cc(connection_context::get(conn));
+    connection_context& cc(connection_context::get(unwrap(conn)));
     cc.handler.reset(ctor.release());
     cc.event_loop_ = new event_loop::impl;
 
@@ -344,7 +344,7 @@ void container::impl::configure_server_connection(connection &c) {
         pn_record_t *record = pn_connection_attachments(unwrap(c));
         pn_record_set_handler(record, chandler.get());
     }
-    connection_context::get(c).event_loop_ = new event_loop::impl;
+    connection_context::get(unwrap(c)).event_loop_ = new event_loop::impl;
 }
 
 void container::impl::run() {

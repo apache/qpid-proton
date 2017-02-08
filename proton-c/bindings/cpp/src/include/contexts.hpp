@@ -96,11 +96,9 @@ class connection_context : public context {
     event_loop event_loop_;
 
     static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
-    static connection_context& get(const connection& c) { return ref<connection_context>(id(c)); }
 
   protected:
     static context::id id(pn_connection_t*);
-    static context::id id(const connection& c);
 };
 
 void container_context(const reactor&, container&);

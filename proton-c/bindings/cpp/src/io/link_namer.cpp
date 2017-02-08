@@ -18,13 +18,14 @@
  */
 
 #include "proton/io/link_namer.hpp"
+#include "proton_bits.hpp"
 #include "contexts.hpp"
 
 namespace proton {
 namespace io {
 
 void set_link_namer(connection& c, link_namer& l) {
-    connection_context::get(c).link_gen = &l;
+    connection_context::get(unwrap(c)).link_gen = &l;
 }
 
 }}

@@ -59,7 +59,7 @@ connection session::connection() const {
 
 namespace {
 std::string next_link_name(const connection& c) {
-    io::link_namer* ln = connection_context::get(c).link_gen;
+    io::link_namer* ln = connection_context::get(unwrap(c)).link_gen;
 
     return ln ? ln->link_name() : uuid::random().str();
 }

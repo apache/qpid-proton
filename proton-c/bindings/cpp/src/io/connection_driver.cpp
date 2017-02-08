@@ -51,14 +51,14 @@ connection_driver::connection_driver() : handler_(0), container_(0) { init(); }
 
 connection_driver::connection_driver(class container& cont) : handler_(0), container_(&cont) {
     init();
-    connection_context& ctx = connection_context::get(connection());
+    connection_context& ctx = connection_context::get(unwrap(connection()));
     ctx.container = container_;
 }
 
 #if PN_CPP_HAS_RVALUE_REFERENCES
 connection_driver::connection_driver(class container& cont, event_loop&& loop) : handler_(0), container_(&cont) {
     init();
-    connection_context& ctx = connection_context::get(connection());
+    connection_context& ctx = connection_context::get(unwrap(connection()));
     ctx.container = container_;
     ctx.event_loop_ = loop.impl_.get();
 }
