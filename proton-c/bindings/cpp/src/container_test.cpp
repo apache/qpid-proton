@@ -124,12 +124,12 @@ struct test_listener : public proton::listen_handler {
     bool on_accept_, on_close_;
     std::string on_error_;
     test_listener() : on_accept_(false), on_close_(false) {}
-    proton::connection_options on_accept() PN_CPP_OVERRIDE {
+    proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE {
         on_accept_ = true;
         return proton::connection_options();
     }
-    void on_close() PN_CPP_OVERRIDE { on_close_ = true; }
-    void on_error(const std::string& e) PN_CPP_OVERRIDE { on_error_ = e; }
+    void on_close(proton::listener&) PN_CPP_OVERRIDE { on_close_ = true; }
+    void on_error(proton::listener&, const std::string& e) PN_CPP_OVERRIDE { on_error_ = e; }
 };
 
 int test_container_bad_address() {
@@ -177,6 +177,11 @@ class stop_tester : public proton::messaging_handler {
     void on_container_stop(proton::container & ) PN_CPP_OVERRIDE {
         ASSERT(state==4);
         state = 5;
+    }
+
+    void on_transport_error(proton::transport & t) PN_CPP_OVERRIDE {
+        // Do nothing - ignore transport errors - we're going to get one when
+        // the container stops.
     }
 
 public:

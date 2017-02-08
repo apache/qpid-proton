@@ -24,6 +24,8 @@
 #include <string>
 #include <iosfwd>
 
+#include "contexts.hpp"
+
 /**@file
  *
  * Assorted internal proton utilities.
@@ -65,6 +67,7 @@ class terminus;
 class source;
 class target;
 class reactor;
+class messaging_handler;
 
 std::string error_str(long code);
 
@@ -127,12 +130,19 @@ public:
     static typename wrapped<T>::type* unwrap(const T& t) { return t.pn_object(); }
 };
 
-// Get attachments for various proton-c types
-template <class T>
-inline pn_record_t* get_attachments(T*);
+template <class T> struct context {};
+template <> struct context<link> {typedef link_context type; };
+template <> struct context<receiver> {typedef link_context type; };
+template <> struct context<sender> {typedef link_context type; };
+template <> struct context<session> {typedef session_context type; };
+template <> struct context<connection> {typedef connection_context type; };
 
-template <> inline pn_record_t* get_attachments(pn_session_t* s) { return pn_session_attachments(s); }
-template <> inline pn_record_t* get_attachments(pn_link_t* l) { return pn_link_attachments(l); }
+template <class T>
+inline void set_messaging_handler(T t, messaging_handler* mh) { context<T>::type::get(factory<T>::unwrap(t)).handler = mh; }
+
+template <class T>
+inline messaging_handler* get_messaging_handler(T* t) { return context<typename internal::wrapper<T>::type>::type::get(t).handler; }
+
 }
 
 template <class T>

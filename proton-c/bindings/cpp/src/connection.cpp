@@ -38,7 +38,6 @@
 #include <proton/connection.h>
 #include <proton/session.h>
 #include <proton/transport.h>
-#include <proton/reactor.h>
 #include <proton/object.h>
 
 namespace proton {
@@ -72,13 +71,7 @@ std::string connection::user() const {
 
 container& connection::container() const {
     class container* c = connection_context::get(pn_object()).container;
-    if (!c) {
-        pn_reactor_t *r = pn_object_reactor(pn_object());
-        if (r)
-            c = &container_context::get(r);
-    }
-    if (!c)
-        throw proton::error("connection does not have a container");
+    if (!c) throw proton::error("No container");
     return *c;
 }
 
@@ -133,7 +126,7 @@ sender connection::open_sender(const std::string &addr) {
     return open_sender(addr, sender_options());
 }
 
-sender connection::open_sender(const std::string &addr, const sender_options &opts) {
+sender connection::open_sender(const std::string &addr, const class sender_options &opts) {
     return default_session().open_sender(addr, opts);
 }
 
@@ -141,9 +134,23 @@ receiver connection::open_receiver(const std::string &addr) {
     return open_receiver(addr, receiver_options());
 }
 
-receiver connection::open_receiver(const std::string &addr, const receiver_options &opts)
+receiver connection::open_receiver(const std::string &addr, const class receiver_options &opts)
 {
     return default_session().open_receiver(addr, opts);
+}
+
+class sender_options connection::sender_options() const {
+    connection_context& ctx = connection_context::get(pn_object());
+    return ctx.container ?
+        ctx.container->sender_options() :
+        proton::sender_options();
+}
+
+class receiver_options connection::receiver_options() const {
+    connection_context& ctx = connection_context::get(pn_object());
+    return ctx.container ?
+        ctx.container->receiver_options() :
+        proton::receiver_options();
 }
 
 error_condition connection::error() const {

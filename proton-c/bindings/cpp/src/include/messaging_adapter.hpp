@@ -39,8 +39,6 @@ class messaging_adapter : public proton_handler
   public:
     messaging_adapter(messaging_handler &delegate) : delegate_(delegate) {}
 
-    void on_reactor_init(proton_event &e);
-    void on_reactor_final(proton_event & e);
     void on_link_flow(proton_event &e);
     void on_delivery(proton_event &e);
     void on_connection_remote_open(proton_event &e);

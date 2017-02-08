@@ -58,16 +58,6 @@ void credit_topup(pn_link_t *link) {
 }
 }
 
-void messaging_adapter::on_reactor_init(proton_event &pe) {
-    container* c = pe.container_ptr();
-    if (c) delegate_.on_container_start(*c);
-}
-
-void messaging_adapter::on_reactor_final(proton_event &pe) {
-    container* c = pe.container_ptr();
-    if (c) delegate_.on_container_stop(*c);
-}
-
 void messaging_adapter::on_link_flow(proton_event &pe) {
     pn_event_t *pne = pe.pn_event();
     pn_link_t *lnk = pn_event_link(pne);
@@ -281,24 +271,17 @@ void messaging_adapter::on_link_local_open(proton_event &pe) {
 
 void messaging_adapter::on_link_remote_open(proton_event &pe) {
     pn_link_t *lnk = pn_event_link(pe.pn_event());
-    container* c = pe.container_ptr();
     if (pn_link_is_receiver(lnk)) {
       receiver r(make_wrapper<receiver>(lnk));
       delegate_.on_receiver_open(r);
       if (is_local_unititialised(pn_link_state(lnk))) {
-          if (c)
-              r.open(c->receiver_options());
-          else
-              r.open();
+          r.open(r.connection().receiver_options());
       }
     } else {
       sender s(make_wrapper<sender>(lnk));
       delegate_.on_sender_open(s);
       if (is_local_unititialised(pn_link_state(lnk))) {
-          if (c)
-              s.open(c->sender_options());
-          else
-              s.open();
+          s.open(s.connection().sender_options());
       }
     }
     credit_topup(lnk);

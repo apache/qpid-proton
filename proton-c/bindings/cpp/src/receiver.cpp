@@ -34,7 +34,6 @@
 #include <proton/session.h>
 #include <proton/link.h>
 #include <proton/event.h>
-#include <proton/reactor.h>
 
 namespace proton {
 
