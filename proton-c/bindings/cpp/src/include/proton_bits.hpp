@@ -102,11 +102,9 @@ template <> struct wrapped<transfer> { typedef pn_delivery_t type; };
 template <> struct wrapped<tracker> { typedef pn_delivery_t type; };
 template <> struct wrapped<delivery> { typedef pn_delivery_t type; };
 template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
-template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; }; // TODO aconway 2016-05-13: reactor only
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };
-template <> struct wrapped<reactor> { typedef pn_reactor_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_data_t> { typedef internal::data type; };
@@ -118,9 +116,7 @@ template <> struct wrapper<pn_session_t> { typedef session type; };
 template <> struct wrapper<pn_link_t> { typedef link type; };
 template <> struct wrapper<pn_delivery_t> { typedef transfer type; };
 template <> struct wrapper<pn_condition_t> { typedef error_condition type; };
-template <> struct wrapper<pn_acceptor_t> { typedef acceptor type; };
 template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
-template <> struct wrapper<pn_reactor_t> { typedef reactor type; };
 
 // Factory for wrapper types
 template <class T>

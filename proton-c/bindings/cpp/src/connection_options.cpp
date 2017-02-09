@@ -26,7 +26,6 @@
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 
-#include "acceptor.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
