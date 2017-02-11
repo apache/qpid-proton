@@ -105,6 +105,13 @@ else(PN_WINAPI)
   set (pn_selector_impl src/reactor/io/posix/selector.c)
 endif(PN_WINAPI)
 
+# Select proactor impl
+find_package(Libuv)
+if (Libuv_FOUND)
+  set (qpid-proton-proactor src/proactor/libuv.c)
+  set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+endif()
+
 # Link in SASL if present
 if (SASL_IMPL STREQUAL cyrus)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
@@ -116,7 +123,7 @@ endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
 if(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro" )
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
 endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "SunPro" )
@@ -327,6 +334,7 @@ set (qpid-proton-platform-all
   src/reactor/io/windows/selector.c
   src/reactor/io/posix/io.c
   src/reactor/io/posix/selector.c
+  src/proactor/libuv.c
   )
 
 # platform specific library build:
@@ -379,7 +387,7 @@ set (qpid-proton-core
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
-  )
+)
 
 set (qpid-proton-include-generated
   ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
@@ -455,6 +463,7 @@ set (qpid-proton-include
   include/proton/log.h
   include/proton/message.h
   include/proton/object.h
+  include/proton/proactor.h
   include/proton/sasl.h
   include/proton/session.h
   include/proton/ssl.h
@@ -495,9 +504,15 @@ set_source_files_properties (
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
+set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+  # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
+  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
+  )
+
 if (BUILD_WITH_CXX)
   set_source_files_properties (
     ${qpid-proton-core}
+    ${qpid-proton-proactor}
     ${qpid-proton-layers}
     ${qpid-proton-extra}
     ${qpid-proton-platform}
@@ -526,6 +541,12 @@ set_target_properties (
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
+add_library (
+  qpid-proton-proactor SHARED
+  ${qpid-proton-proactor}
+  )
+target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
+
 add_library(
   qpid-proton SHARED
   # Proton Core
@@ -534,7 +555,8 @@ add_library(
   ${qpid-proton-platform}
   ${qpid-proton-include}
   ${qpid-proton-include-generated}
-
+  # Proactor
+  ${qpid-proton-proactor}
   # Proton Reactor/Messenger
   ${qpid-proton-extra}
   ${qpid-proton-platform-io}
@@ -550,7 +572,7 @@ if (MSVC)
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
 set_target_properties (
   qpid-proton
@@ -586,32 +608,26 @@ install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
          DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
-# Pkg config file
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton.pc.in
-  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc @ONLY)
-install (FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton.pc
-  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/libqpid-proton-core.pc.in
-  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-core.pc @ONLY)
-install (FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-core.pc
-  DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+# Set ${VAR}/${VAR}DEBUG variables, configure and install the packageconf files for LIB
+macro(configure_lib VAR LIB)
+  if(DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
+    set(LIB_PREFIX ${CMAKE_IMPORT_LIBRARY_PREFIX})
+    set(LIB_SUFFIX ${CMAKE_IMPORT_LIBRARY_SUFFIX})
+  else()
+    set(LIB_PREFIX ${CMAKE_SHARED_LIBRARY_PREFIX})
+    set(LIB_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
+  endif()
+  set(${VAR} ${LIB_PREFIX}${LIB}${LIB_SUFFIX})
+  set("${VAR}DEBUG" ${LIB_PREFIX}${LIB}${CMAKE_DEBUG_POSTFIX}${LIB_SUFFIX})
+  configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lib${LIB}.pc.in
+    ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc @ONLY)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
+endmacro()
 
-
-if (DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
-set(PROTONLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton${CMAKE_IMPORT_LIBRARY_SUFFIX})
-set(PROTONLIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-set(PROTONCORELIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-core${CMAKE_IMPORT_LIBRARY_SUFFIX})
-set(PROTONCORELIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-core${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
-else ()
-set(PROTONLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_SHARED_LIBRARY_SUFFIX})
-set(PROTONLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
-set(PROTONCORELIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-core${CMAKE_SHARED_LIBRARY_SUFFIX})
-set(PROTONCORELIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-core${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
-endif ()
+configure_lib(PROTONLIB qpid-proton)
+configure_lib(PROTONCORELIB qpid-proton-core)
+configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
 
 include(WriteBasicConfigVersionFile)
 

@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "thread.h"
+
 #include <proton/connection_driver.h>
 #include <proton/proactor.h>
 #include <proton/engine.h>
@@ -28,11 +30,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-/* TODO aconway 2016-10-14: this example does not require libuv IO,
-   it uses uv.h only for portable mutex and thread functions.
-*/
-#include <uv.h>
 
 bool enable_debug = false;
 
@@ -91,7 +88,7 @@ void pcheck(int err, const char* s) {
 
 /* Simple thread-safe queue implementation */
 typedef struct queue_t {
-  uv_mutex_t lock;
+  pthread_mutex_t lock;
   char* name;
   VEC(pn_rwbytes_t) messages;   /* Messages on the queue_t */
   VEC(pn_connection_t*) waiting; /* Connections waiting to send messages from this queue */
@@ -101,7 +98,7 @@ typedef struct queue_t {
 
 static void queue_init(queue_t *q, const char* name, queue_t *next) {
   debug("created queue %s", name);
-  uv_mutex_init(&q->lock);
+  pthread_mutex_init(&q->lock, NULL);
   q->name = strdup(name);
   VEC_INIT(q->messages);
   VEC_INIT(q->waiting);
@@ -110,7 +107,7 @@ static void queue_init(queue_t *q, const char* name, queue_t *next) {
 }
 
 static void queue_destroy(queue_t *q) {
-  uv_mutex_destroy(&q->lock);
+  pthread_mutex_destroy(&q->lock);
   free(q->name);
   for (size_t i = 0; i < q->messages.len; ++i)
     free(q->messages.data[i].start);
@@ -126,7 +123,7 @@ static void queue_destroy(queue_t *q) {
 static void queue_send(queue_t *q, pn_link_t *s) {
   pn_rwbytes_t m = { 0 };
   size_t tag = 0;
-  uv_mutex_lock(&q->lock);
+  pthread_mutex_lock(&q->lock);
   if (q->messages.len == 0) { /* Empty, record connection as waiting */
     debug("queue is empty %s", q->name);
     /* Record connection for wake-up if not already on the list. */
@@ -143,7 +140,7 @@ static void queue_send(queue_t *q, pn_link_t *s) {
     VEC_POP(q->messages);
     tag = ++q->sent;
   }
-  uv_mutex_unlock(&q->lock);
+  pthread_mutex_unlock(&q->lock);
   if (m.start) {
     pn_delivery_t *d = pn_delivery(s, pn_dtag((char*)&tag, sizeof(tag)));
     pn_link_send(s, m.start, m.size);
@@ -172,7 +169,7 @@ bool pn_connection_get_check_queues(pn_connection_t *c) {
 */
 static void queue_receive(pn_proactor_t *d, queue_t *q, pn_rwbytes_t m) {
   debug("received to queue %s", q->name);
-  uv_mutex_lock(&q->lock);
+  pthread_mutex_lock(&q->lock);
   VEC_PUSH(q->messages, m);
   if (q->messages.len == 1) { /* Was empty, notify waiting connections */
     for (size_t i = 0; i < q->waiting.len; ++i) {
@@ -182,18 +179,18 @@ static void queue_receive(pn_proactor_t *d, queue_t *q, pn_rwbytes_t m) {
     }
     q->waiting.len = 0;
   }
-  uv_mutex_unlock(&q->lock);
+  pthread_mutex_unlock(&q->lock);
 }
 
 /* Thread safe set of queues */
 typedef struct queues_t {
-  uv_mutex_t lock;
+  pthread_mutex_t lock;
   queue_t *queues;
   size_t sent;
 } queues_t;
 
 void queues_init(queues_t *qs) {
-  uv_mutex_init(&qs->lock);
+  pthread_mutex_init(&qs->lock, NULL);
   qs->queues = NULL;
 }
 
@@ -202,12 +199,12 @@ void queues_destroy(queues_t *qs) {
     queue_destroy(q);
     free(q);
   }
-  uv_mutex_destroy(&qs->lock);
+  pthread_mutex_destroy(&qs->lock);
 }
 
 /** Get or create the named queue. */
 queue_t* queues_get(queues_t *qs, const char* name) {
-  uv_mutex_lock(&qs->lock);
+  pthread_mutex_lock(&qs->lock);
   queue_t *q;
   for (q = qs->queues; q && strcmp(q->name, name) != 0; q = q->next)
     ;
@@ -216,7 +213,7 @@ queue_t* queues_get(queues_t *qs, const char* name) {
     queue_init(q, name, qs->queues);
     qs->queues = q;
   }
-  uv_mutex_unlock(&qs->lock);
+  pthread_mutex_unlock(&qs->lock);
   return q;
 }
 
@@ -255,7 +252,7 @@ static void link_send(broker_t *b, pn_link_t *s) {
 }
 
 static void queue_unsub(queue_t *q, pn_connection_t *c) {
-  uv_mutex_lock(&q->lock);
+  pthread_mutex_lock(&q->lock);
   for (size_t i = 0; i < q->waiting.len; ++i) {
     if (q->waiting.data[i] == c){
       q->waiting.data[i] = q->waiting.data[0]; /* save old [0] */
@@ -263,7 +260,7 @@ static void queue_unsub(queue_t *q, pn_connection_t *c) {
       break;
     }
   }
-  uv_mutex_unlock(&q->lock);
+  pthread_mutex_unlock(&q->lock);
 }
 
 /* Unsubscribe from the queue of interest to this link. */
@@ -416,7 +413,7 @@ static void handle(broker_t* b, pn_event_t* e) {
   }
 }
 
-static void broker_thread(void *void_broker) {
+static void* broker_thread(void *void_broker) {
   broker_t *b = (broker_t*)void_broker;
   do {
     pn_event_batch_t *events = pn_proactor_wait(b->proactor);
@@ -426,6 +423,7 @@ static void broker_thread(void *void_broker) {
     }
     pn_proactor_done(b->proactor, events);
   } while(!b->finished);
+  return NULL;
 }
 
 static void usage(const char *arg0) {
@@ -474,13 +472,13 @@ int main(int argc, char **argv) {
     exit(1);
   }
   /* Start n-1 threads and use main thread */
-  uv_thread_t* threads = (uv_thread_t*)calloc(sizeof(uv_thread_t), b.threads);
+  pthread_t* threads = (pthread_t*)calloc(sizeof(pthread_t), b.threads);
   for (size_t i = 0; i < b.threads-1; ++i) {
-    check(uv_thread_create(&threads[i], broker_thread, &b), "pthread_create");
+    check(pthread_create(&threads[i], NULL, broker_thread, &b), "pthread_create");
   }
   broker_thread(&b);            /* Use the main thread too. */
   for (size_t i = 0; i < b.threads-1; ++i) {
-    check(uv_thread_join(&threads[i]), "pthread_join");
+    check(pthread_join(threads[i], NULL), "pthread_join");
   }
   pn_proactor_free(b.proactor);
   free(threads);

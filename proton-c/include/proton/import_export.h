@@ -56,6 +56,13 @@
 #  define PN_EXTERN PN_IMPORT
 #endif
 
+// For proactor proton symbols
+#if defined(qpid_proton_proactor_EXPORTS) || defined(qpid_proton_EXPORTS)
+#  define PNP_EXTERN PN_EXPORT
+#else
+#  define PNP_EXTERN PN_IMPORT
+#endif
+
 // For extra proton symbols
 #if defined(qpid_proton_EXPORTS)
 #  define PNX_EXTERN PN_EXPORT

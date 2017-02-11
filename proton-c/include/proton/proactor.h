@@ -53,13 +53,13 @@ extern "C" {
 /**
  * Create a proactor. Must be freed with pn_proactor_free()
  */
-pn_proactor_t *pn_proactor(void);
+PNP_EXTERN pn_proactor_t *pn_proactor(void);
 
 /**
  * Free the proactor. Abort any open network connections and clean up all
  * associated resources.
  */
-void pn_proactor_free(pn_proactor_t *proactor);
+PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
 
 /**
  * Connect connection to host/port. Connection and transport events will be
@@ -72,9 +72,9 @@ void pn_proactor_free(pn_proactor_t *proactor);
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by connection or transport events via
- * pn_proactor_wait()
+PNP_EXTERN  * pn_proactor_wait()
  */
-int pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection,
+PNP_EXTERN int pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection,
                         const char *host, const char *port);
 
 /**
@@ -91,7 +91,7 @@ int pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection,
  * Other errors are indicated by pn_listener_condition() on the
  * PN_LISTENER_CLOSE event.
  */
-int pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listener,
+PNP_EXTERN int pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listener,
                        const char *host, const char *port, int backlog);
 
 /**
@@ -111,7 +111,7 @@ int pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listener,
  * batch must be handled in sequence, but batches returned by separate
  * calls to pn_proactor_wait() can be handled concurrently.
  */
-pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
+PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
 
 /**
  * Call when done handling a batch of events.
@@ -122,7 +122,7 @@ pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
  * @note Thread-safe: may be called from any thread provided the
  * exactly once rule is respected.
  */
-void pn_proactor_done(pn_proactor_t *proactor, pn_event_batch_t *events);
+PNP_EXTERN void pn_proactor_done(pn_proactor_t *proactor, pn_event_batch_t *events);
 
 /**
  * Cause PN_PROACTOR_INTERRUPT to be returned to exactly one call of
@@ -136,7 +136,7 @@ void pn_proactor_done(pn_proactor_t *proactor, pn_event_batch_t *events);
  *
  * @note Thread-safe.
  */
-void pn_proactor_interrupt(pn_proactor_t *proactor);
+PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
 
 /**
  * Cause PN_PROACTOR_TIMEOUT to be returned to a thread calling wait()
@@ -148,7 +148,7 @@ void pn_proactor_interrupt(pn_proactor_t *proactor);
  * timeout. `pn_proactor_set_timeout(0)` will cancel the timeout
  * without setting a new one.
  */
-void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
+PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
 
 /**
  * Cause a PN_CONNECTION_WAKE event to be returned by the proactor, even if
@@ -160,22 +160,22 @@ void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
  * Wakes can be "coalesced" - if several pn_connection_wake() calls happen
  * concurrently, there may be only one PN_CONNECTION_WAKE event.
  */
-void pn_connection_wake(pn_connection_t *connection);
+PNP_EXTERN void pn_connection_wake(pn_connection_t *connection);
 
 /**
  * Return the proactor associated with a connection or NULL.
  */
-pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
+PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
 
 /**
  * Return the proactor associated with an event or NULL.
  */
-pn_proactor_t *pn_event_proactor(pn_event_t *event);
+PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
 
 /**
  * Return the listener associated with an event or NULL.
  */
-pn_listener_t *pn_event_listener(pn_event_t *event);
+PNP_EXTERN pn_listener_t *pn_event_listener(pn_event_t *event);
 
 /**
  * @}

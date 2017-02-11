@@ -63,7 +63,7 @@ PN_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
 /**
  * @cond INTERNAL
  */
-    
+
 /**
  * @deprecated
  *
@@ -81,7 +81,7 @@ PN_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 /**
  * @endcond
  */
-    
+
 /**
  * Get the attachments that are associated with a listener object.
  */

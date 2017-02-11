@@ -407,6 +407,12 @@ typedef struct pn_delivery_t pn_delivery_t;
 typedef struct pn_collector_t pn_collector_t;
 
 /**
+ * A listener accepts connections.
+ * @ingroup listener
+ */
+typedef struct pn_listener_t pn_listener_t;
+
+/**
  * An AMQP Transport object.
  *
  * A pn_transport_t encapsulates the transport related state of all
@@ -419,6 +425,11 @@ typedef struct pn_collector_t pn_collector_t;
 typedef struct pn_transport_t pn_transport_t;
 
 /**
+ * The proactor, see pn_proactor()
+ */
+typedef struct pn_proactor_t pn_proactor_t;
+
+/**
  * @cond INTERNAL
  *
  * An event handler
@@ -426,12 +437,6 @@ typedef struct pn_transport_t pn_transport_t;
  * A pn_handler_t is target of ::pn_event_t dispatched by the pn_reactor_t
  */
 typedef struct pn_handler_t pn_handler_t;
-
-/**
- *
- */
-typedef struct pn_proactor_t pn_proactor_t;
-typedef struct pn_listener_t pn_listener_t;
 /**
  * @endcond
  */

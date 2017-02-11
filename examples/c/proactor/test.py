@@ -32,27 +32,27 @@ def receive_expect(n):
     return ''.join('{"sequence"=%s}\n'%i for i in xrange(1, n+1)) + "%s messages received\n"%n
 
 class CExampleTest(BrokerTestCase):
-    broker_exe = ["libuv_broker"]
+    broker_exe = ["broker"]
 
     def test_send_receive(self):
         """Send first then receive"""
-        s = self.proc(["libuv_send", "-a", self.addr])
+        s = self.proc(["send", "-a", self.addr])
         self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
-        r = self.proc(["libuv_receive", "-a", self.addr])
+        r = self.proc(["receive", "-a", self.addr])
         self.assertEqual(receive_expect(100), r.wait_out())
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
-        r = self.proc(["libuv_receive", "-a", self.addr]);
-        s = self.proc(["libuv_send", "-a", self.addr]);
+        r = self.proc(["receive", "-a", self.addr]);
+        s = self.proc(["send", "-a", self.addr]);
         self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
         self.assertEqual(receive_expect(100), r.wait_out())
 
     def test_timed_send(self):
         """Send with timed delay"""
-        s = self.proc(["libuv_send", "-a", self.addr, "-d100", "-m3"])
+        s = self.proc(["send", "-a", self.addr, "-d100", "-m3"])
         self.assertEqual("3 messages sent and acknowledged\n", s.wait_out())
-        r = self.proc(["libuv_receive", "-a", self.addr, "-m3"])
+        r = self.proc(["receive", "-a", self.addr, "-m3"])
         self.assertEqual(receive_expect(3), r.wait_out())
 
 
