@@ -19,9 +19,13 @@
 
 find_package(Proton REQUIRED)
 include(CheckCCompilerFlag)
-
+include(CheckFunctionExists)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_subdirectory(proactor)
+check_function_exists(pn_proactor, HAS_PROACTOR)
+if (HAS_PROACTOR)
+  add_subdirectory(proactor)
+endif()
+
 add_subdirectory(messenger)
 add_subdirectory(reactor)

@@ -28,11 +28,11 @@
 #include <proton/session.h>
 #include <proton/transport.h>
 #include <proton/url.h>
+#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 typedef char str[1024];
 
@@ -176,8 +176,8 @@ int main(int argc, char **argv) {
   }
   if (optind < argc)
     usage(argv[0]);
-
-  snprintf(app.container_id, sizeof(app.container_id), "%s:%d", argv[0], getpid());
+  /* Note container-id should be unique */
+  snprintf(app.container_id, sizeof(app.container_id), "%s", argv[0]);
 
   /* Parse the URL or use default values */
   pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;

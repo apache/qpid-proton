@@ -541,12 +541,6 @@ set_target_properties (
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
-add_library (
-  qpid-proton-proactor SHARED
-  ${qpid-proton-proactor}
-  )
-target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
-
 add_library(
   qpid-proton SHARED
   # Proton Core
@@ -627,7 +621,16 @@ endmacro()
 
 configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
-configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
+
+if (qpid-proton-proactor)
+  add_library (
+    qpid-proton-proactor SHARED
+    ${qpid-proton-proactor}
+    )
+  target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
+  configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
+endif()
+
 
 include(WriteBasicConfigVersionFile)
 

@@ -25,11 +25,11 @@
 #include <proton/sasl.h>
 #include <proton/transport.h>
 #include <proton/url.h>
+#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 bool enable_debug = false;
 
@@ -435,8 +435,8 @@ int main(int argc, char **argv) {
   /* Command line options */
   char *urlstr = NULL;
   char container_id[256];
-  /* Default container-id is program:pid */
-  snprintf(container_id, sizeof(container_id), "%s:%d", argv[0], getpid());
+  /* Note container-id should be unique */
+  snprintf(container_id, sizeof(container_id), "%s", argv[0]);
   size_t nthreads = 4;
   pn_millis_t heartbeat = 0;
   int opt;
