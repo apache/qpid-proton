@@ -901,17 +901,14 @@ pn_condition_t* pn_listener_condition(pn_listener_t* l) {
 }
 
 void *pn_listener_get_context(pn_listener_t *l) {
-  assert(l->psocket.state == ON_WORKER);
   return l->context;
 }
 
 void pn_listener_set_context(pn_listener_t *l, void *context) {
-  assert(l->psocket.state == ON_WORKER);
   l->context = context;
 }
 
 pn_record_t *pn_listener_attachments(pn_listener_t *l) {
-  assert(l->psocket.state == ON_WORKER);
   return l->attachments;
 }
 
