@@ -46,19 +46,19 @@ extern "C" {
  * You must pass the returned listener to pn_proactor_listen(), the proactor
  * will free the listener when it is no longer active.
  */
-PN_EXTERN pn_listener_t *pn_listener(void);
+PNP_EXTERN pn_listener_t *pn_listener(void);
 
 /**
  * Asynchronously accept a connection using the listener.
  *
  * @param[in] connection the listener takes ownership, do not free.
  */
-PN_EXTERN int pn_listener_accept(pn_listener_t*, pn_connection_t *connection);
+PNP_EXTERN int pn_listener_accept(pn_listener_t*, pn_connection_t *connection);
 
 /**
  * Get the error condition for a listener.
  */
-PN_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
+PNP_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
 
 /**
  * @cond INTERNAL
@@ -69,14 +69,14 @@ PN_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
  *
  * Get the application context that is associated with a listener.
  */
-PN_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
+PNP_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
 
 /**
  * @deprecated
  *
  * Set a new application context for a listener.
  */
-PN_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
+PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 
 /**
  * @endcond
@@ -85,17 +85,17 @@ PN_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 /**
  * Get the attachments that are associated with a listener object.
  */
-PN_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
+PNP_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
 
 /**
  * Close the listener (thread safe).
  */
-PN_EXTERN void pn_listener_close(pn_listener_t *l);
+PNP_EXTERN void pn_listener_close(pn_listener_t *l);
 
 /**
  * The proactor associated with a listener.
  */
-PN_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
+PNP_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
 
 
 /**
