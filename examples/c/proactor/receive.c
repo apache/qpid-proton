@@ -46,7 +46,7 @@ typedef struct app_data_t {
   bool finished;
 } app_data_t;
 
-static const int BATCH = 100; /* Batch size for unlimited receive */
+static const int BATCH = 1000; /* Batch size for unlimited receive */
 
 static int exit_code = 0;
 

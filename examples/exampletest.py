@@ -65,6 +65,7 @@ class Proc(Popen):
         """Start an example process"""
         args = list(args)
         self.args = args
+        self.kwargs = kwargs
         self._out = os.tmpfile()
         try:
             Popen.__init__(self, self.env_args + self.args, stdout=self._out, stderr=STDOUT, **kwargs)

@@ -2,16 +2,22 @@
  * @example send.c
  *
  * Send a fixed number of messages to the "example" node.
+ * Can be used with @ref broker.c, @ref direct.c or an external AMQP broker.
  *
  * @example receive.c
  *
- * Subscribes to the 'example' node and prints the message bodies
- * received.
+ * Subscribes to the 'example' node and prints the message bodies received.
+ * Can be used with @ref broker.c, @ref direct.c or an external AMQP broker.
+ *
+ * @example direct.c
+ *
+ * A server that can be used to demonstrate direct (no broker) peer-to-peer communication
+ * It can accept an incoming connection from either the @ref send.c or @ref receive.c examples
+ * and will act as the directly-connected counterpart (receive or send)
  *
  * @example broker.c
  *
- * A simple multithreaded broker that works with the send and receive
- * examples.
+ * A simple multithreaded broker that works with the @ref send.c and @ref receive.c examples.
  *
  * __Requires C++11__
  */

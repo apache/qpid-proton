@@ -19,10 +19,8 @@
 
 # This is a test script to run the examples and verify that they behave as expected.
 
+import unittest, sys, time
 from exampletest import *
-
-import unittest
-import sys
 
 def python_cmd(name):
     dir = os.path.dirname(__file__)
@@ -55,6 +53,31 @@ class CExampleTest(BrokerTestCase):
         r = self.proc(["receive", "-a", self.addr, "-m3"])
         self.assertEqual(receive_expect(3), r.wait_out())
 
+    def retry(self, args, max=10):
+        """Run until output does not contain "connection refused", up to max retries"""
+        while True:
+            try:
+                return self.proc(args).wait_out()
+            except ProcError, e:
+                if "connection refused" in e.args[0] and max > 0:
+                    max -= 1
+                    time.sleep(.01)
+                    continue
+                raise
+
+    def test_send_direct(self):
+        """Send first then receive"""
+        addr = "127.0.0.1:%s/examples" % (pick_port())
+        d = self.proc(["direct", "-a", addr])
+        self.assertEqual("100 messages sent and acknowledged\n", self.retry(["send", "-a", addr]))
+        self.assertIn(receive_expect(100), d.wait_out())
+
+    def test_receive_direct(self):
+        """Send first then receive"""
+        addr = "127.0.0.1:%s/examples" % (pick_port())
+        d = self.proc(["direct", "-a", addr])
+        self.assertEqual(receive_expect(100), self.retry(["receive", "-a", addr]))
+        self.assertIn("100 messages sent and acknowledged\n", d.wait_out())
 
 if __name__ == "__main__":
     unittest.main()

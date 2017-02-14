@@ -307,7 +307,7 @@ static void handle(broker_t* b, pn_event_t* e) {
     pn_listener_accept(pn_event_listener(e), pn_connection());
     break;
 
-   case PN_CONNECTION_INIT: 
+   case PN_CONNECTION_INIT:
      pn_connection_set_container(c, b->container_id);
      break;
 
@@ -398,6 +398,7 @@ static void handle(broker_t* b, pn_event_t* e) {
 
    case PN_LISTENER_CLOSE:
     check_condition(e, pn_listener_condition(pn_event_listener(e)));
+    broker_stop(b);
     break;
 
    case PN_PROACTOR_INACTIVE: /* listener and all connections closed */
