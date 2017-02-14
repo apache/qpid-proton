@@ -493,8 +493,7 @@ static void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
   assert(pc->psocket.state == ON_UV);
   if (nread >= 0) {
     pn_connection_driver_read_done(&pc->driver, nread);
-    on_tick(&pc->timer);         /* check for tick changes. */
-    /* Reading continues automatically until stopped. */
+    leader_unwatch(&pc->psocket); /* Handle events */
   } else if (nread == UV_EOF) { /* hangup */
     pn_connection_driver_read_close(&pc->driver);
     leader_unwatch(&pc->psocket);
@@ -535,7 +534,7 @@ static void alloc_read_buffer(uv_handle_t* stream, size_t size, uv_buf_t* buf) {
 
 /* Monitor a socket in the UV loop */
 static void leader_watch(psocket_t *ps) {
-  assert(ps->state == ON_LEADER);
+  assert(ps->state != ON_WORKER);
   int err = 0;
   set_state(ps, ON_UV, NULL); /* Assume we are going to UV loop unless sent to worker or leader. */
 
@@ -593,12 +592,8 @@ static void leader_unwatch(psocket_t *ps) {
   if (ps->is_conn) {
     pconnection_t *pc = as_pconnection(ps);
     if (!pn_connection_driver_has_event(&pc->driver)) {
-      /* Don't return an empty event batch */
-      if (ps->state == ON_UV) {
-        return;                 /* Just leave it in the UV loop */
-      } else {
-        leader_watch(ps);     /* Re-attach to UV loop */
-      }
+      /* Don't return an empty event batch, re-attach to UV loop */
+      leader_watch(ps);
       return;
     } else {
       if (pc->writing) {
