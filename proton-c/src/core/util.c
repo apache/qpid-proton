@@ -147,7 +147,7 @@ char *pn_strndup(const char *src, size_t n)
 
     char *dest = (char *) malloc(size + 1);
     if (!dest) return NULL;
-    strncpy(dest, src, n);
+    strncpy(dest, src, pn_min(n, size));
     dest[size] = '\0';
     return dest;
   } else {
