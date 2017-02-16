@@ -26,7 +26,6 @@ set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
 if (go_ver MATCHES "gccgo")
-  # TODO aconway 2015-10-08: import cycles with -race under gccgo, investigate.
   set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}/proton-c")
 else()
   set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}/proton-c")
@@ -37,7 +36,7 @@ separate_arguments(GO_TEST_FLAGS)
 
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
 set(GO_ENV ${env_py} --
-  "GOPATH=${CMAKE_CURRENT_SOURCE_DIR}"
+  "GOPATH=${CMAKE_CURRENT_BINARY_DIR}"
   "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include -I${CMAKE_BINARY_DIR}/proton-c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
@@ -47,15 +46,15 @@ set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 
 set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
 set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
-set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
+set(GO_TEST ${GO} test ${GO_TEST_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go test")
 
-# Go tools insist on standard Go layout which puts compiled code in the source tree :(
-# Build output is all under git-ignored pkg or bin subdirectories, they are removed by make clean.
-
-# The go build tools handle dependency checks and incremental builds better than
-# CMake so just run them every time, they do nothing if nothing needs to be
-# done.
+# The go build tools handle dependency checks and incremental builds better than CMake so
+# just run them every time, they do nothing if nothing needs to be done.
+#
+# The Go sources are copied to the binary directory so we can respect the standard Go tree
+# layout without polluting the source tree.
 add_custom_target(go-build ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/src
   COMMAND ${GO_INSTALL} qpid.apache.org/...
   DEPENDS qpid-proton-core
   WORKING_DIRECTORY $ENV{PWD})

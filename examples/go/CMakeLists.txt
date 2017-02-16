@@ -20,12 +20,11 @@
 if(BUILD_GO)
 
   set(examples electron/broker electron/receive electron/send proton/broker)
-  file(GLOB_RECURSE example_source FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/*.go)
 
   # Build example exes
   foreach(example ${examples})
-    string(REPLACE / _ target ${example})
-    set(target "go_example_${target}")
+    string(REPLACE / - target ${example})
+    set(target "go-example-${target}")
     set(output ${CMAKE_CURRENT_BINARY_DIR}/${example})
     # Always run go_build, it will do nothing if there is nothing to do.
     # Otherwise it's too hard to get the dependencies right.
@@ -33,12 +32,11 @@ if(BUILD_GO)
       COMMAND ${GO_BUILD} ${GO_EXAMPLE_FLAGS} -o ${output} ${CMAKE_CURRENT_SOURCE_DIR}/${example}.go
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       DEPENDS go-build)
-    list(APPEND example_targets ${target})
   endforeach()
 
   # Build test driver exe
   set(test_exe ${CMAKE_CURRENT_BINARY_DIR}/example_test)
-  add_custom_target(go_example_test ALL
+  add_custom_target(go-example-test ALL
     COMMAND ${GO_TEST} -c -o ${test_exe} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.go
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 
