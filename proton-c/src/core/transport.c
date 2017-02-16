@@ -1237,11 +1237,11 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
 
   // AMQP 1.0 section 2.7.1 - if the peer doesn't honor our channel_max --
   // express our displeasure by closing the connection with a framing error.
-  if (remote_channel > transport->channel_max) {
+  if (channel > transport->channel_max) {
     pn_do_error(transport,
                 "amqp:connection:framing-error",
                 "remote channel %d is above negotiated channel_max %d.",
-                remote_channel,
+                channel,
                 transport->channel_max
                );
     return PN_TRANSPORT_ERROR;
@@ -1250,16 +1250,16 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   pn_session_t *ssn;
   if (reply) {
     ssn = (pn_session_t *) pn_hash_get(transport->local_channels, remote_channel);
+    if (ssn == 0) {
+      pn_do_error(transport,
+                "amqp:invalid-field",
+                "begin reply to unknown channel %d.",
+                remote_channel
+               );
+      return PN_TRANSPORT_ERROR;
+    }
   } else {
     ssn = pn_session(transport->connection);
-  }
-  if (ssn == 0) {
-    pn_do_error(transport,
-                "amqp:connection:framing-error",
-                "remote channel is above negotiated channel_max %d.",
-                transport->channel_max
-               );
-    return PN_TRANSPORT_ERROR;
   }
   ssn->state.incoming_transfer_count = next;
   pni_map_remote_channel(ssn, channel);
