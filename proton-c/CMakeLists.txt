@@ -274,8 +274,9 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
 endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set (COMPILE_WARNING_FLAGS  "-Wall -pedantic")
   if (ENABLE_WARNING_ERROR)
-    set (COMPILE_WARNING_FLAGS "-Werror -Wall -pedantic")
+    set (COMPILE_WARNING_FLAGS "-Werror ${COMPILE_WARNING_FLAGS}")
   endif (ENABLE_WARNING_ERROR)
 endif()
 
@@ -285,7 +286,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   endif (ENABLE_WARNING_ERROR)
   # TODO aconway 2016-01-06: we should be able to clean up the code and turn on
   # some of these warnings.
-  set (CXX_WARNING_FLAGS "${WERROR} -pedantic -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 endif()
 
 # Make flags visible to examples.
