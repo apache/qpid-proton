@@ -20,7 +20,7 @@ under the License.
 // Internal implementation details - ignore.
 package proton
 
-// #cgo LDFLAGS: -lqpid-proton
+// #cgo LDFLAGS: -lqpid-proton-core
 // #include <proton/error.h>
 // #include <proton/codec.h>
 import "C"
