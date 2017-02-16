@@ -19,8 +19,6 @@
  *
  */
 
-#include <uv.h>
-
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
@@ -30,6 +28,8 @@
 #include <proton/proactor.h>
 #include <proton/transport.h>
 #include <proton/url.h>
+
+#include <uv.h>
 
 /* All asserts are cheap and should remain in a release build for debugability */
 #undef NDEBUG

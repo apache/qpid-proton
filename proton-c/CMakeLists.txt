@@ -618,6 +618,7 @@ configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
 
 if (qpid-proton-proactor)
+  set(HAS_PROACTOR 1)
   add_library (
     qpid-proton-proactor SHARED
     ${qpid-proton-proactor}
