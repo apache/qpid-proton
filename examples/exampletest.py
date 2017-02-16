@@ -29,10 +29,18 @@ from copy import copy
 import platform
 from os.path import dirname as dirname
 
-def pick_port():
-    """Pick a random port."""
-    p =  randrange(10000, 20000)
-    return p
+def bind0():
+    """Bind a socket with bind(0) and SO_REUSEADDR to get a free port to listen on"""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)    
+    sock.bind(('', 0))
+    return sock
+
+# Monkeypatch add port() and with support to socket.socket
+socket.socket.port = lambda(self): socket.getnameinfo(self.getsockname(), 0)[1]
+socket.socket.__enter__ = lambda(self): self
+def socket__exit__(self, *args): self.close()
+socket.socket.__exit__ = socket__exit__
 
 class ProcError(Exception):
     """An exception that captures failed process output"""
@@ -91,7 +99,7 @@ class Proc(Popen):
         t.join(timeout)
         if self.poll() is None:      # Still running
             self.kill()
-            raise ProcError(self, "timeout")
+            raise ProcError(self, "still running after %ss" % timeout)
         if expect is not None and self.poll() != expect:
             raise ProcError(self)
         return self.out
@@ -148,7 +156,7 @@ def wait_port(port, timeout=10):
         except socket.error, e:
             if e.errno != errno.ECONNREFUSED: # Only retry on connection refused error.
                 raise
-    raise socket.timeout()
+    raise socket.timeout("waiting for port %s" % port)
 
 
 class BrokerTestCase(ExampleTestCase):
@@ -159,7 +167,8 @@ class BrokerTestCase(ExampleTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.port = pick_port()
+        sock = bind0()
+        cls.port = sock.port()
         cls.addr = "127.0.0.1:%s/examples" % (cls.port)
         cls.broker = None       # In case Proc throws, create the attribute.
         cls.broker = Proc(cls.broker_exe + ["-a", cls.addr])
@@ -168,6 +177,7 @@ class BrokerTestCase(ExampleTestCase):
         except Exception, e:
             cls.broker.kill()
             raise ProcError(cls.broker, "timed out waiting for port")
+        sock.close()
 
     @classmethod
     def tearDownClass(cls):

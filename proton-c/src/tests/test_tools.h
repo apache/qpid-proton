@@ -22,30 +22,45 @@
 
 #include <proton/type_compat.h>
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-/* Call via ASSERT macro. */
-static void assert_fail_(const char* cond, const char* file, int line) {
-  printf("%s:%d: Assertion failed: %s\n", file, line, cond);
+/*
+  All output from test marcros goes to stdout not stderr, error messages are normal for a test.
+  Some errno handling functions are thread-unsafe
+  */
+
+
+/* Call via TEST_ASSERT macros */
+static void assert_fail_(const char* cond, const char* file, int line, const char *fmt, ...) {
+  printf("%s:%d: Assertion failed: %s", file, line, cond);
+  if (fmt && *fmt) {
+    va_list ap;
+    va_start(ap, fmt);
+    printf(" - ");
+    vprintf(fmt, ap);
+    printf("\n");
+    fflush(stdout);
+    va_end(ap);
+  }
   abort();
 }
 
 /* Unconditional assert (does not depend on NDEBUG) for tests. */
-#define ASSERT(expr)                                            \
-  ((expr) ?  (void)0 : assert_fail_(#expr, __FILE__, __LINE__))
+#define TEST_ASSERT(expr) \
+  ((expr) ?  (void)0 : assert_fail_(#expr, __FILE__, __LINE__, NULL))
 
-/* Call via macro ASSERT_PERROR */
-static void assert_perror_fail_(const char* cond, const char* file, int line) {
-  perror(cond);
-  printf("%s:%d: Assertion failed (error above): %s\n", file, line, cond);
-  abort();
-}
+/* Unconditional assert with printf-style message (does not depend on NDEBUG) for tests. */
+#define TEST_ASSERTF(expr, ...) \
+  ((expr) ?  (void)0 : assert_fail_(#expr, __FILE__, __LINE__, __VA_ARGS__))
 
-/* Like ASSERT but also calls perror() to print the current errno error. */
-#define ASSERT_PERROR(expr)                                             \
-  ((expr) ?  (void)0 : assert_perror_fail_(#expr, __FILE__, __LINE__))
+/* Like TEST_ASSERT but includes  errno string for err */
+/* TODO aconway 2017-02-16: not thread safe, replace with safe strerror_r or similar */
+#define TEST_ASSERT_ERRNO(expr, err) \
+  TEST_ASSERTF((expr), "%s", strerror(err))
 
 
 /* A struct to collect the results of a test.
@@ -61,12 +76,12 @@ static inline bool test_check_(test_t *t, bool expr, const char *sexpr, const ch
   if (!expr) {
     va_list ap;
     va_start(ap, fmt);
-    fprintf(stderr, "%s:%d:[%s] check failed: (%s)", file, line, t->name, sexpr);
+    printf("%s:%d:[%s] check failed: (%s)", file, line, t->name, sexpr);
     if (fmt && *fmt) {
-      fprintf(stderr, " - ");
-      vfprintf(stderr, fmt, ap);
+      printf(" - ");
+      vprintf(fmt, ap);
     }
-    fprintf(stderr, "\n");
+    printf("\n");
     fflush(stderr);
     ++t->errors;
   }
@@ -89,6 +104,8 @@ static inline bool test_check_(test_t *t, bool expr, const char *sexpr, const ch
     }                                                           \
   } while(0)
 
+
+/* Some very simple platform-secifics to acquire an unused socket */
 #if defined(WIN32)
 
 #include <winsock2.h>
@@ -96,45 +113,44 @@ static inline bool test_check_(test_t *t, bool expr, const char *sexpr, const ch
 typedef SOCKET sock_t;
 static inline void sock_close(sock_t sock) { closesocket(sock); }
 
-#else
+#else  /* POSIX */
 
-#include <netdb.h>
-#include <netinet/in.h>
-#include <time.h>
-#include <unistd.h>
-
-static int port_in_use(int port) {
-  /* Attempt to bind a dummy socket to test if the port is in use. */
-  int dummy_socket = socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT_PERROR(dummy_socket >= 0);
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = INADDR_ANY;
-  addr.sin_port = htons(port);
-  int ret = bind(dummy_socket, (struct sockaddr *) &addr, sizeof(addr));
-  close(dummy_socket);
-  return ret < 0;
-}
-
-/* Try to pick an unused port by picking random ports till we find one
-   that is not in use. This is not foolproof as some other process may
-   grab it before the caller binds or connects.
-*/
-static int pick_port(void) {
-  srand(time(NULL));
-  static int MAX_TRIES = 10;
-  int port = -1;
-  int i = 0;
-  do {
-    /* Pick a random port. Avoid the standard OS ephemeral port range used by
-       bind(0) - ports can be allocated and re-allocated very rapidly there.
-    */
-    port =  (rand()%10000) + 10000;
-  } while (i++ < MAX_TRIES && port_in_use(port));
-  ASSERT(i < MAX_TRIES && "cannot pick a port");
-  return port;
-}
-
+typedef int sock_t;
+# include <netinet/in.h>
+# include <unistd.h>
+static inline void sock_close(sock_t sock) { close(sock); }
 #endif
+
+
+/* Create a socket and bind(LOOPBACK:0) to get a free port.
+   Use SO_REUSEADDR so other processes can bind and listen on this port.
+   Close the returned fd when the other process is listening.
+   Asserts on error.
+*/
+static sock_t sock_bind0(void) {
+  int sock =  socket(AF_INET, SOCK_STREAM, 0);
+  TEST_ASSERT_ERRNO(sock >= 0, errno);
+  int on = 1;
+  TEST_ASSERT_ERRNO(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) == 0, errno);
+  struct sockaddr_in addr = {0};
+  addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = 0;            /* bind to port 0 */
+  TEST_ASSERT_ERRNO(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0, errno);
+  return sock;
+}
+
+static int sock_port(sock_t sock) {
+  struct sockaddr addr = {0};
+  socklen_t len = sizeof(addr);
+  TEST_ASSERT_ERRNO(getsockname(sock, &addr, &len) == 0, errno);
+  int port = -1;
+  switch (addr.sa_family) {
+   case AF_INET: port = ((struct sockaddr_in*)&addr)->sin_port; break;
+   case AF_INET6: port = ((struct sockaddr_in6*)&addr)->sin6_port; break;
+   default: TEST_ASSERTF(false, "unknown protocol type %d\n", addr.sa_family); break;
+  }
+  return ntohs(port);
+}
 
 #endif // TESTS_TEST_TOOLS_H

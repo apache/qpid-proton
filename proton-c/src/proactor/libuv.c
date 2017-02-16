@@ -427,7 +427,6 @@ static void on_connection(uv_stream_t* server, int err) {
   listener_to_worker(l);        /* If already ON_WORKER it will stay there */
 }
 
-/* FIXME aconway 2017-02-16:  listener events in unwatch*/
 static void leader_accept(pn_listener_t * l) {
   assert(l->accepting);
   pconnection_t *pc = l->accepting;
