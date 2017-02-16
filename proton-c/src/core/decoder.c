@@ -373,6 +373,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     case PNE_ARRAY32:
     case PNE_LIST32:
     case PNE_MAP32:
+      if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
       size = pn_decoder_readf32(decoder);
       count = pn_decoder_readf32(decoder);
       break;
