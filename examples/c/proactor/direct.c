@@ -331,12 +331,15 @@ int main(int argc, char **argv) {
   snprintf(app.container_id, sizeof(app.container_id), "%s", argv[0]);
 
   /* Parse the URL or use default values */
+  const char *host = "0.0.0.0";
+  const char *port = "amqp";
+  strncpy(app.address, "example", sizeof(app.address));
   pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  /* Listen on IPv6 wildcard. On systems that do not set IPV6ONLY by default,
-     this will also listen for mapped IPv4 on the same port.
-  */
-  const char *host = url ? pn_url_get_host(url) : "::";
-  const char *port = url ? pn_url_get_port(url) : "amqp";
+  if (url) {
+    if (pn_url_get_host(url)) host = pn_url_get_host(url);
+    if (pn_url_get_port(url)) port = (pn_url_get_port(url));
+    if (pn_url_get_path(url)) strncpy(app.address, pn_url_get_path(url), sizeof(app.address));
+  }
 
   app.proactor = pn_proactor();
   pn_proactor_listen(app.proactor, pn_listener(), host, port, 16);

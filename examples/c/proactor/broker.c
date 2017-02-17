@@ -462,12 +462,14 @@ int main(int argc, char **argv) {
   broker_init(&b, container_id, nthreads, heartbeat);
 
   /* Parse the URL or use default values */
+  const char *host = "0.0.0.0";
+  const char *port = "amqp";
   pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  /* Listen on IPv6 wildcard. On systems that do not set IPV6ONLY by default,
-     this will also listen for mapped IPv4 on the same port.
-  */
-  const char *host = url ? pn_url_get_host(url) : "::";
-  const char *port = url ? pn_url_get_port(url) : "amqp";
+  if (url) {
+    if (pn_url_get_host(url)) host = pn_url_get_host(url);
+    if (pn_url_get_port(url)) port = (pn_url_get_port(url));
+  }
+
   pn_proactor_listen(b.proactor, pn_listener(), host, port, 16);
   printf("listening on '%s:%s' %zd threads\n", host, port, b.threads);
 
