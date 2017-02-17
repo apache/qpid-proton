@@ -576,8 +576,18 @@ if (MSVC)
   include(WindowsC99CheckDef)
 endif(MSVC)
 
+if (qpid-proton-proactor)
+  set(HAS_PROACTOR 1)
+  add_library (
+    qpid-proton-proactor SHARED
+    ${qpid-proton-proactor}
+    )
+  target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
+  list(APPEND LIB_TARGETS qpid-proton-proactor)
+endif()
+
 # Install executables and libraries
-install (TARGETS qpid-proton qpid-proton-core
+install(TARGETS qpid-proton qpid-proton-core ${LIB_TARGETS}
   EXPORT  proton
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
@@ -616,17 +626,9 @@ endmacro()
 
 configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
-
-if (qpid-proton-proactor)
-  set(HAS_PROACTOR 1)
-  add_library (
-    qpid-proton-proactor SHARED
-    ${qpid-proton-proactor}
-    )
-  target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
+if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
-endif()
-
+endif(HAS_PROACTOR)
 
 include(WriteBasicConfigVersionFile)
 
