@@ -621,17 +621,11 @@ static void pconnection_to_worker(pconnection_t *pc) {
   to_worker(&pc->psocket);
 }
 
-/* TODO aconway 2017-02-16: simplify collector API*/
-static bool collector_has_next(pn_collector_t *c) {
-  return pn_collector_more(c) ||
-    (pn_collector_peek(c) && pn_collector_peek(c) != pn_collector_prev(c));
-}
-
 /* Can't really detach a listener, as on_connection can always be called.
    Generate events here safely.
 */
 static void listener_to_worker(pn_listener_t *l) {
-  if (collector_has_next(l->collector)) { /* Already have events */
+  if (pn_collector_peek(l->collector)) { /* Already have events */
     to_worker(&l->psocket);
   } else if (l->err) {
     if (l->err != UV_EOF) {

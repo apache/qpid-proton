@@ -431,7 +431,7 @@ PN_EXTERN pn_event_t *pn_collector_put(pn_collector_t *collector,
 PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
 
 /**
- * Clear the head event on a collector.
+ * Remove the head event on a collector.
  *
  * @param[in] collector a collector object
  * @return true if the event was popped, false if the collector is empty
@@ -439,14 +439,8 @@ PN_EXTERN pn_event_t *pn_collector_peek(pn_collector_t *collector);
 PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
 
 /**
- * Return the next event to be handled.
- *
- * Returns the head event if it has not previously been returned by
- * pn_collector_next(), otherwise does pn_collector_pop() and returns
- * the new head event.
- *
- * The returned pointer is valid till the next call of pn_collector_pop(),
- * pn_collector_next(), pn_collector_release() or pn_collector_free()
+ * Pop and return the head event, returns NULL if the collector is empty.
+ * The returned pointer is valid till the next call of pn_collector_next().
  *
  * @param[in] collector a collector object
  * @return the next event.
@@ -454,10 +448,7 @@ PN_EXTERN bool pn_collector_pop(pn_collector_t *collector);
 PN_EXTERN pn_event_t *pn_collector_next(pn_collector_t *collector);
 
 /**
- * Return the same event as the previous call to pn_collector_next()
- *
- * The returned pointer is valid till the next call of pn_collector_pop(),
- * pn_collector_next(), pn_collector_release() or pn_collector_free()
+ * Return the same pointer as the most recent call to pn_collector_next().
  *
  * @param[in] collector a collector object
  * @return a pointer to the event returned by previous call to pn_collector_next()
@@ -465,7 +456,7 @@ PN_EXTERN pn_event_t *pn_collector_next(pn_collector_t *collector);
 PN_EXTERN pn_event_t *pn_collector_prev(pn_collector_t *collector);
 
 /**
- * Check if there are more events after the current event. If this
+ * Check if there are more events after the current head event. If this
  * returns true, then pn_collector_peek() will return an event even
  * after pn_collector_pop() is called.
  *
