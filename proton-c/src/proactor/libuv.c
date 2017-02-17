@@ -781,7 +781,7 @@ pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
   return batch;
 }
 
-pn_event_batch_t *pn_proactor_grab(struct pn_proactor_t* p) {
+pn_event_batch_t *pn_proactor_get(struct pn_proactor_t* p) {
   uv_mutex_lock(&p->lock);
   pn_event_batch_t *batch = get_batch_lh(p);
   if (batch == NULL && !p->has_leader) {

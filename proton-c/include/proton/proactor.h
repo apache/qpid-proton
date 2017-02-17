@@ -119,7 +119,7 @@ PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
  * Return a batch of events if one is available immediately, otherwise return NULL.  If it
  * does return an event batch, the rules are the same as for pn_proactor_wait()
  */
-PNP_EXTERN pn_event_batch_t *pn_proactor_grab(pn_proactor_t *proactor);
+PNP_EXTERN pn_event_batch_t *pn_proactor_get(pn_proactor_t *proactor);
 
 /**
  * Call when done handling a batch of events.

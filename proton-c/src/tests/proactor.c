@@ -90,7 +90,7 @@ static void proactor_test_init(proactor_test_t *pts, size_t n) {
 }
 
 /* Iterate over an array of proactors, draining or handling events with the non-blocking
-   pn_proactor_grab.  Continue till all handlers return H_FINISHED (and return 0) or one
+   pn_proactor_get.  Continue till all handlers return H_FINISHED (and return 0) or one
    returns H_FAILED  (and return non-0)
 */
 int proactor_test_run(proactor_test_t *pts, size_t n) {
@@ -100,7 +100,7 @@ int proactor_test_run(proactor_test_t *pts, size_t n) {
   do {
     finished = 0;
     for (proactor_test_t *pt = pts; pt < pts + n; ++pt) {
-      pn_event_batch_t *events = pn_proactor_grab(pt->proactor);
+      pn_event_batch_t *events = pn_proactor_get(pt->proactor);
       if (events) {
           pn_event_t *e;
           while ((e = pn_event_batch_next(events))) {
