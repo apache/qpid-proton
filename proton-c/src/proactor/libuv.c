@@ -71,7 +71,6 @@
   of the uv_tcp_t handle, and executed in an on_close() handler when it is safe.
 */
 
-const char *COND_NAME = "proactor";
 const char *AMQP_PORT = "5672";
 const char *AMQP_PORT_NAME = "amqp";
 const char *AMQPS_PORT = "5671";
@@ -356,7 +355,7 @@ int pconnection_error(pconnection_t *pc, int err, const char* what) {
   if (err) {
     pn_connection_driver_t *driver = &pc->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
-    pn_connection_driver_errorf(driver, COND_NAME, "%s %s:%s: %s",
+    pn_connection_driver_errorf(driver, uv_err_name(err), "%s %s:%s: %s",
                                 what, fixstr(pc->psocket.host), fixstr(pc->psocket.port),
                                 uv_strerror(err));
     pn_connection_driver_close(driver);
@@ -629,7 +628,7 @@ static void listener_to_worker(pn_listener_t *l) {
     to_worker(&l->psocket);
   } else if (l->err) {
     if (l->err != UV_EOF) {
-      pn_condition_format(l->condition, COND_NAME, "%s %s:%s: %s",
+      pn_condition_format(l->condition, uv_err_name(l->err), "%s %s:%s: %s",
                           l->what, fixstr(l->psocket.host), fixstr(l->psocket.port),
                           uv_strerror(l->err));
     }
@@ -721,9 +720,9 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     uv_mutex_lock(&p->lock);
     p->batch_working = false;
     uv_mutex_unlock(&p->lock);
+    uv_async_send(&p->async); /* Wake leader */
     return;
   }
-  uv_async_send(&p->async); /* Wake leader */
 }
 
 /* Process the leader_q, in the leader thread */
@@ -802,7 +801,7 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
   ++p->interrupt;
   uv_mutex_unlock(&p->lock);
-  uv_async_send(&p->async);   /* Interrupt the UV loop */
+  uv_async_send(&p->async);   /* Wake the UV loop */
 }
 
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
@@ -810,7 +809,7 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   p->timeout = t;
   p->timeout_request = true;
   uv_mutex_unlock(&p->lock);
-  uv_async_send(&p->async);   /* Interrupt the UV loop */
+  uv_async_send(&p->async);   /* Wake the UV loop */
 }
 
 int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, const char *port) {
