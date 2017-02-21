@@ -235,11 +235,8 @@ static void to_leader(psocket_t *ps, void (*action)(psocket_t*)) {
 /* Push to the worker thread */
 static void to_worker(psocket_t *ps) {
   uv_mutex_lock(&ps->proactor->lock);
-  /* If already ON_WORKER do nothing */
-  if (ps->next == &UNLISTED && ps->state != ON_WORKER) {
-    ps->state = ON_WORKER;
-    push_lh(&ps->proactor->worker_q, ps);
-  }
+  ps->state = ON_WORKER;
+  push_lh(&ps->proactor->worker_q, ps);
   uv_mutex_unlock(&ps->proactor->lock);
 }
 
@@ -310,7 +307,10 @@ static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
 static void leader_count(pn_proactor_t *p, int change) {
   uv_mutex_lock(&p->lock);
   p->count += change;
-  p->inactive = (p->count == 0);
+  if (p->count == 0) {
+    p->inactive = true;
+    uv_async_send(&p->async); /* Wake leader */
+  }
   uv_mutex_unlock(&p->lock);
 }
 
@@ -329,8 +329,8 @@ static void on_close_pconnection_final(uv_handle_t *h) {
 /* Close event for uv_tcp_t of a psocket_t */
 static void on_close_psocket(uv_handle_t *h) {
   psocket_t *ps = (psocket_t*)h->data;
+  leader_count(ps->proactor, -1);
   if (ps->is_conn) {
-    leader_count(ps->proactor, -1);
     pconnection_t *pc = as_pconnection(ps);
     uv_timer_stop(&pc->timer);
     /* Delay the free till the timer handle is also closed */
@@ -465,7 +465,7 @@ static void leader_connect(psocket_t *ps) {
   if (!err) {
     ps->state = ON_UV;
   } else {
-    psocket_error(ps, err, "connecting to");
+    pconnection_error(pc, err, "connecting to");
   }
 }
 
@@ -737,15 +737,15 @@ static void leader_process_lh(pn_proactor_t *p) {
   }
   for (psocket_t *ps = pop_lh(&p->leader_q); ps; ps = pop_lh(&p->leader_q)) {
     assert(ps->state == ON_LEADER);
-    if (ps->wakeup) {
-      uv_mutex_unlock(&p->lock);
-      ps->wakeup(ps);
-      ps->wakeup = NULL;
-      uv_mutex_lock(&p->lock);
-    } else if (ps->action) {
+    if (ps->action) {
       uv_mutex_unlock(&p->lock);
       ps->action(ps);
       ps->action = NULL;
+      uv_mutex_lock(&p->lock);
+    } else if (ps->wakeup) {
+      uv_mutex_unlock(&p->lock);
+      ps->wakeup(ps);
+      ps->wakeup = NULL;
       uv_mutex_lock(&p->lock);
     }
   }

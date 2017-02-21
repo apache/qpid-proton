@@ -32,6 +32,11 @@ static pn_millis_t timeout = 5*1000; /* timeout for hanging tests */
 
 static const char *localhost = "127.0.0.1"; /* host for connect/listen */
 
+struct test_events {
+  pn_proactor_t *proactor;
+  pn_event_batch_t *events;
+};
+
 /* Wait for the next single event, return its type */
 static pn_event_type_t wait_next(pn_proactor_t *proactor) {
   pn_event_batch_t *events = pn_proactor_wait(proactor);
@@ -121,24 +126,38 @@ int proactor_test_run(proactor_test_t *pts, size_t n) {
 }
 
 
-/* Simple test of client connect to a listening server */
-handler_state_t listen_connect_server(test_t *t, pn_event_t *e) {
+/* Handler for test_listen_connect, does both sides of the connection */
+handler_state_t listen_connect_handler(test_t *t, pn_event_t *e) {
+  pn_connection_t *c = pn_event_connection(e);
+  pn_listener_t *l = pn_event_listener(e);
+
   switch (pn_event_type(e)) {
     /* Ignore these events */
-   case PN_LISTENER_OPEN:
    case PN_CONNECTION_LOCAL_OPEN:
-   case PN_CONNECTION_REMOTE_OPEN:
    case PN_CONNECTION_BOUND:
+   case PN_CONNECTION_INIT:
     return H_CONTINUE;
 
     /* Act on these events */
-   case PN_LISTENER_ACCEPT:
-     pn_listener_accept(pn_event_listener(e), pn_connection());
-     return H_CONTINUE;
-   case PN_CONNECTION_INIT:
-    pn_connection_open(pn_event_connection(e));
+   case PN_LISTENER_ACCEPT: {
+    pn_connection_t *accepted = pn_connection();
+    pn_connection_open(accepted);
+    pn_listener_accept(l, accepted); /* Listener takes ownership of accepted */
     return H_CONTINUE;
+   }
+
+   case PN_CONNECTION_REMOTE_OPEN:
+    if (pn_connection_state(c) | PN_LOCAL_ACTIVE) { /* Client is fully open - the test is done */
+      pn_connection_close(c);
+      return H_FINISHED;
+    }  else {                   /* Server returns the open */
+      pn_connection_open(c);
+    }
+
    case PN_CONNECTION_REMOTE_CLOSE:
+    if (pn_connection_state(c) | PN_LOCAL_ACTIVE) {
+      pn_connection_close(c);    /* Return the close */
+    }
     return H_FINISHED;
 
    default:
@@ -148,61 +167,18 @@ handler_state_t listen_connect_server(test_t *t, pn_event_t *e) {
   }
 }
 
-handler_state_t listen_connect_client(test_t *t, pn_event_t *e) {
-  switch (pn_event_type(e)) {
-    /* Ignore these events */
-   case PN_CONNECTION_LOCAL_OPEN:
-   case PN_CONNECTION_BOUND:
-    return H_CONTINUE;
-
-    /* Act on these events */
-   case PN_CONNECTION_INIT:
-    pn_connection_open(pn_event_connection(e));
-    return H_CONTINUE;
-   case PN_CONNECTION_REMOTE_OPEN:
-    pn_connection_close(pn_event_connection(e));
-    return H_FINISHED;
-
-    /* Unexpected events */
-   default:
-    TEST_CHECK(t, false, "unexpected event %s", pn_event_type_name(pn_event_type(e)));
-    return H_FAILED;
-    break;
-  }
-}
-
-/* Simplest client/server interaction */
-static void test_listen_connect(test_t *t) {
-  proactor_test_t pts[] =  { { t, listen_connect_client }, { t, listen_connect_server } };
-  proactor_test_t *client = &pts[0], *server = &pts[1];
-  proactor_test_init(pts, 2);
-
-  sock_t sock = sock_bind0();          /* Hold a port */
-  char port_str[16];
-  snprintf(port_str, sizeof(port_str), "%d", sock_port(sock));
-  pn_proactor_listen(server->proactor, pn_listener(), localhost, port_str, 4);
-  pn_event_type_t etype = wait_for(server->proactor, PN_LISTENER_OPEN);
-  if (TEST_CHECK(t, PN_LISTENER_OPEN == etype, pn_event_type_name(etype))) {
-    pn_proactor_connect(client->proactor, pn_connection(), localhost, port_str);
-    proactor_test_run(pts, 2);
-  }
-  sock_close(sock);
-  pn_proactor_free(client->proactor);
-  pn_proactor_free(server->proactor);
-}
-
-/* Test error handling */
-static void test_listen_connect_error(test_t *t) {
+/* Test bad-address error handling for listen and connect */
+static void test_early_error(test_t *t) {
   pn_proactor_t *p = pn_proactor();
   pn_proactor_set_timeout(p, timeout); /* In case of hang */
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(p, c, "nosuchost", "nosuchport");
+  pn_proactor_connect(p, c, "badhost", "amqp");
   pn_event_type_t etype = wait_for(p, PN_TRANSPORT_CLOSED);
   TEST_CHECK(t, PN_TRANSPORT_CLOSED == etype, pn_event_type_name(etype));
   TEST_CHECK(t, pn_condition_is_set(pn_transport_condition(pn_connection_transport(c))), "");
 
   pn_listener_t *l = pn_listener();
-  pn_proactor_listen(p, l, "nosuchost", "nosuchport", 1);
+  pn_proactor_listen(p, l, "badhost", "amqp", 1);
   etype = wait_for(p, PN_LISTENER_CLOSE);
   TEST_CHECK(t, PN_LISTENER_CLOSE == etype, pn_event_type_name(etype));
   TEST_CHECK(t, pn_condition_is_set(pn_listener_condition(l)), "");
@@ -210,12 +186,51 @@ static void test_listen_connect_error(test_t *t) {
   pn_proactor_free(p);
 }
 
+/* Simplest client/server interaction with 2 proactors */
+static void test_listen_connect(test_t *t) {
+  proactor_test_t pts[] =  { { t, listen_connect_handler }, { t, listen_connect_handler } };
+  proactor_test_init(pts, 2);
+  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  test_port_t port = test_port();          /* Hold a port */
+
+  pn_proactor_listen(server, pn_listener(), localhost, port.str, 4);
+  pn_event_type_t etype = wait_for(server, PN_LISTENER_OPEN);
+  if (TEST_CHECK(t, PN_LISTENER_OPEN == etype, pn_event_type_name(etype))) {
+    sock_close(port.sock);
+    pn_proactor_connect(client, pn_connection(), localhost, port.str);
+    proactor_test_run(pts, 2);
+  }
+  pn_proactor_free(client);
+  pn_proactor_free(server);
+}
+
+/* Test that INACTIVE event is generated when last connections/listeners closes. */
+static void test_inactive(test_t *t) {
+  proactor_test_t pts[] =  { { t, listen_connect_handler }, { t, listen_connect_handler }};
+  proactor_test_init(pts, 2);
+  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  test_port_t port = test_port();          /* Hold a port */
+
+  pn_listener_t *l = pn_listener();
+  pn_proactor_listen(server, l, localhost, port.str,  4);
+  pn_event_type_t etype = wait_for(server, PN_LISTENER_OPEN);
+  if (TEST_CHECK(t, PN_LISTENER_OPEN == etype, pn_event_type_name(etype))) {
+    sock_close(port.sock);
+    pn_proactor_connect(client, pn_connection(), localhost, port.str);
+    proactor_test_run(pts, 2);
+    etype = wait_for(client, PN_PROACTOR_INACTIVE);
+    pn_listener_close(l);
+    etype = wait_for(server, PN_PROACTOR_INACTIVE);
+  }
+  pn_proactor_free(client);
+  pn_proactor_free(server);
+}
+
 int main(int argv, char** argc) {
   int failed = 0;
-  if (0) {
-    RUN_TEST(failed, t, test_interrupt_timeout(&t));
-    RUN_TEST(failed, t, test_listen_connect_error(&t));
-  }
+  RUN_TEST(failed, t, test_inactive(&t));
+  RUN_TEST(failed, t, test_interrupt_timeout(&t));
+  RUN_TEST(failed, t, test_early_error(&t));
   RUN_TEST(failed, t, test_listen_connect(&t));
   return failed;
 }

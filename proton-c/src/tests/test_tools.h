@@ -153,4 +153,18 @@ static int sock_port(sock_t sock) {
   return ntohs(port);
 }
 
+typedef struct test_port_t {
+  sock_t sock;
+  int port;
+  char str[256];
+} test_port_t;
+
+static inline test_port_t test_port(void) {
+  test_port_t tp = {0};
+  tp.sock = sock_bind0();
+  tp.port = sock_port(tp.sock);
+  snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
+  return tp;
+}
+
 #endif // TESTS_TEST_TOOLS_H
