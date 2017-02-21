@@ -44,7 +44,7 @@
 
 /*
   libuv functions are thread unsafe. The exception is uv_async_send(), a thread safe
-  "wakeup" that can wake the uv_loop from another thread.
+  call that we use to make uv_run() return.
 
   To provide concurrency proactor uses a "leader-worker-follower" model, threads take
   turns at the roles:
@@ -97,6 +97,9 @@ typedef enum {
 typedef struct psocket_t {
   /* Immutable */
   pn_proactor_t *proactor;
+  char host[NI_MAXHOST];
+  char port[NI_MAXSERV];
+  bool is_conn;
 
   /* Protected by proactor.lock */
   struct psocket_t* next;
@@ -106,9 +109,6 @@ typedef struct psocket_t {
 
   /* Only used by leader thread when it owns the psocket */
   uv_tcp_t tcp;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  bool is_conn;
 } psocket_t;
 
 /* Special value for psocket.next pointer when socket is not on any any list. */
@@ -165,7 +165,6 @@ struct pn_listener_t {
   pn_record_t *attachments;
   void *context;
   size_t backlog;
-  bool closing;                 /* close requested or closed by error */
 
   /* Only used in leader thread */
   size_t connections;           /* number of connections waiting to be accepted  */
@@ -201,15 +200,18 @@ struct pn_proactor_t {
 };
 
 /* Push ps to back of q. Must not be on a different queue */
-static void push_lh(queue *q, psocket_t *ps) {
-  assert(ps->next == &UNLISTED);
-  ps->next = NULL;
-  if (!q->front) {
-    q->front = q->back = ps;
-  } else {
-    q->back->next = ps;
-    q->back =  ps;
+static bool push_lh(queue *q, psocket_t *ps) {
+  if (ps->next == &UNLISTED) {
+    ps->next = NULL;
+    if (!q->front) {
+      q->front = q->back = ps;
+    } else {
+      q->back->next = ps;
+      q->back =  ps;
+    }
+    return true;
   }
+  return false;
 }
 
 /* Pop returns front of q or NULL if empty */
@@ -222,23 +224,33 @@ static psocket_t* pop_lh(queue *q) {
   return ps;
 }
 
+/* Notify the leader thread that there is something to do outside of uv_run() */
+static inline void notify(pn_proactor_t* p) {
+  uv_async_send(&p->async);
+}
+
+static void to_leader_lh(psocket_t *ps) {
+  if (push_lh(&ps->proactor->leader_q, ps)) {
+    ps->state = ON_LEADER;
+  }
+}
+
 /* Queue an action for the leader thread */
 static void to_leader(psocket_t *ps, void (*action)(psocket_t*)) {
   uv_mutex_lock(&ps->proactor->lock);
   ps->action = action;
-  if (ps->next == &UNLISTED) {
-    ps->state = ON_LEADER;
-    push_lh(&ps->proactor->leader_q, ps);
-  }
+  to_leader_lh(ps);
   uv_mutex_unlock(&ps->proactor->lock);
-  uv_async_send(&ps->proactor->async); /* Wake leader */
+  notify(ps->proactor);
 }
 
 /* Push to the worker thread */
 static void to_worker(psocket_t *ps) {
   uv_mutex_lock(&ps->proactor->lock);
-  ps->state = ON_WORKER;
-  push_lh(&ps->proactor->worker_q, ps);
+  if (push_lh(&ps->proactor->worker_q, ps)) {
+      ps->state = ON_WORKER;
+  }
+  notify(ps->proactor);
   uv_mutex_unlock(&ps->proactor->lock);
 }
 
@@ -260,8 +272,8 @@ static void wakeup(psocket_t *ps, void (*action)(psocket_t*)) {
     push_lh(&ps->proactor->leader_q, ps);
     ps->state = ON_LEADER;      /* Otherwise notify the leader */
   }
-  uv_mutex_unlock(&ps->proactor->lock);
   uv_async_send(&ps->proactor->async); /* Wake leader */
+  uv_mutex_unlock(&ps->proactor->lock);
 }
 
 static inline pconnection_t *as_pconnection(psocket_t* ps) {
@@ -311,7 +323,7 @@ static void leader_count(pn_proactor_t *p, int change) {
   p->count += change;
   if (p->count == 0) {
     p->inactive = true;
-    uv_async_send(&p->async); /* Wake leader */
+    notify(p);
   }
   uv_mutex_unlock(&p->lock);
 }
@@ -409,10 +421,8 @@ static int leader_init(psocket_t *ps) {
 /* Outgoing connection */
 static void on_connect(uv_connect_t *connect, int err) {
   pconnection_t *pc = (pconnection_t*)connect->data;
-  if (!err) {
+  if (!pconnection_error(pc, err, "on connect to")) {
     pconnection_to_worker(pc);
-  } else {
-    pconnection_error(pc, err, "on connect to");
   }
 }
 
@@ -552,7 +562,7 @@ static void alloc_read_buffer(uv_handle_t* stream, size_t size, uv_buf_t* buf) {
 static void pconnection_to_uv(pconnection_t *pc) {
   to_uv(&pc->psocket);          /* Assume we're going to UV unless sent elsewhere */
   if (pn_connection_driver_finished(&pc->driver)) {
-    if (!uv_is_closing((uv_handle_t*)&pc->psocket)) {
+    if (!uv_is_closing((uv_handle_t*)&pc->psocket.tcp)) {
       uv_close((uv_handle_t*)&pc->psocket.tcp, on_close_psocket);
     }
     return;
@@ -653,214 +663,12 @@ static pn_event_batch_t *proactor_batch_lh(pn_proactor_t *p, pn_event_type_t t) 
   return &p->batch;
 }
 
-/* Return the next event batch or 0 if no events are available in the worker_q */
-static pn_event_batch_t* get_batch_lh(pn_proactor_t *p) {
-  if (!p->batch_working) {       /* Can generate proactor events */
-    if (p->inactive) {
-      p->inactive = false;
-      return proactor_batch_lh(p, PN_PROACTOR_INACTIVE);
-    }
-    if (p->interrupt > 0) {
-      --p->interrupt;
-      return proactor_batch_lh(p, PN_PROACTOR_INTERRUPT);
-    }
-    if (p->timeout_elapsed) {
-      p->timeout_elapsed = false;
-      return proactor_batch_lh(p, PN_PROACTOR_TIMEOUT);
-    }
-  }
-  for (psocket_t *ps = pop_lh(&p->worker_q); ps; ps = pop_lh(&p->worker_q)) {
-    assert(ps->state == ON_WORKER);
-    if (ps->is_conn) {
-      return &as_pconnection(ps)->driver.batch;
-    } else {                    /* Listener */
-      return &as_listener(ps)->batch;
-    }
-  }
-  return 0;
-}
-
-pn_listener_t *pn_event_listener(pn_event_t *e) {
-  return (pn_event_class(e) == pn_listener__class()) ? (pn_listener_t*)pn_event_context(e) : NULL;
-}
-
-pn_proactor_t *pn_event_proactor(pn_event_t *e) {
-  if (pn_event_class(e) == pn_proactor__class()) {
-    return (pn_proactor_t*)pn_event_context(e);
-  }
-  pn_listener_t *l = pn_event_listener(e);
-  if (l) {
-    return l->psocket.proactor;
-  }
-  pn_connection_t *c = pn_event_connection(e);
-  if (c) {
-    return pn_connection_proactor(pn_event_connection(e));
-  }
-  return NULL;
-}
-
-void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
-  pconnection_t *pc = batch_pconnection(batch);
-  if (pc) {
-    assert(pc->psocket.state == ON_WORKER);
-    if (pn_connection_driver_has_event(&pc->driver)) {
-      /* Process all events before going back to leader */
-      pconnection_to_worker(pc);
-    } else {
-      to_leader(&pc->psocket, psocket_to_uv);
-    }
-    return;
-  }
-  pn_listener_t *l = batch_listener(batch);
-  if (l) {
-    assert(l->psocket.state == ON_WORKER);
-    to_leader(&l->psocket, psocket_to_uv);
-    return;
-  }
-  pn_proactor_t *bp = batch_proactor(batch);
-  if (bp == p) {
-    uv_mutex_lock(&p->lock);
-    p->batch_working = false;
-    uv_mutex_unlock(&p->lock);
-    uv_async_send(&p->async); /* Wake leader */
-    return;
-  }
-}
-
-/* Process the leader_q, in the leader thread */
-static void leader_process_lh(pn_proactor_t *p) {
-  if (p->timeout_request) {
-    p->timeout_request = false;
-    if (p->timeout) {
-      uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
-    } else {
-      uv_timer_stop(&p->timer);
-    }
-  }
-  for (psocket_t *ps = pop_lh(&p->leader_q); ps; ps = pop_lh(&p->leader_q)) {
-    assert(ps->state == ON_LEADER);
-    if (ps->action) {
-      uv_mutex_unlock(&p->lock);
-      ps->action(ps);
-      ps->action = NULL;
-      uv_mutex_lock(&p->lock);
-    } else if (ps->wakeup) {
-      uv_mutex_unlock(&p->lock);
-      ps->wakeup(ps);
-      ps->wakeup = NULL;
-      uv_mutex_lock(&p->lock);
-    }
-  }
-}
-
-/* Run follower/leader loop till we can return an event and be a worker */
-pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
-  uv_mutex_lock(&p->lock);
-  /* Try to grab work immediately. */
-  pn_event_batch_t *batch = get_batch_lh(p);
-  if (batch == NULL) {
-    /* No work available, follow the leader */
-    while (p->has_leader) {
-      uv_cond_wait(&p->cond, &p->lock);
-    }
-    /* Lead till there is work to do. */
-    p->has_leader = true;
-    while (batch == NULL) {
-      leader_process_lh(p);
-      batch = get_batch_lh(p);
-      if (batch == NULL) {
-        uv_mutex_unlock(&p->lock);
-        uv_run(&p->loop, UV_RUN_ONCE);
-        uv_mutex_lock(&p->lock);
-      }
-    }
-    /* Signal the next leader and go to work */
-    p->has_leader = false;
-    uv_cond_signal(&p->cond);
-  }
-  uv_mutex_unlock(&p->lock);
-  return batch;
-}
-
-pn_event_batch_t *pn_proactor_get(struct pn_proactor_t* p) {
-  uv_mutex_lock(&p->lock);
-  pn_event_batch_t *batch = get_batch_lh(p);
-  if (batch == NULL && !p->has_leader) {
-    /* If there is no leader, try a non-waiting lead to generate some work */
-    p->has_leader = true;
-    leader_process_lh(p);
-    uv_mutex_unlock(&p->lock);
-    uv_run(&p->loop, UV_RUN_NOWAIT);
-    uv_mutex_lock(&p->lock);
-    batch = get_batch_lh(p);
-    p->has_leader = false;
-  }
-  uv_mutex_unlock(&p->lock);
-  return batch;
-}
-
-void pn_proactor_interrupt(pn_proactor_t *p) {
-  uv_mutex_lock(&p->lock);
-  ++p->interrupt;
-  uv_mutex_unlock(&p->lock);
-  uv_async_send(&p->async);   /* Wake the UV loop */
-}
-
-void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
-  uv_mutex_lock(&p->lock);
-  p->timeout = t;
-  p->timeout_request = true;
-  uv_mutex_unlock(&p->lock);
-  uv_async_send(&p->async);   /* Wake the UV loop */
-}
-
-int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, const char *port) {
-  pconnection_t *pc = pconnection(p, c, false, host, port);
-  if (!pc) {
-    return PN_OUT_OF_MEMORY;
-  }
-  to_leader(&pc->psocket, leader_connect);
-  return 0;
-}
-
-int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *host, const char *port, int backlog)
-{
-  psocket_init(&l->psocket, p, false, host, port);
-  l->backlog = backlog;
-  to_leader(&l->psocket, leader_listen);
-  return 0;
-}
-
-pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
-  pconnection_t *pc = get_pconnection(c);
-  return pc ? pc->psocket.proactor : NULL;
-}
-
 void leader_wake_connection(psocket_t *ps) {
   assert(ps->state == ON_LEADER);
   pconnection_t *pc = as_pconnection(ps);
   pn_connection_t *c = pc->driver.connection;
   pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
   pconnection_to_worker(pc);
-}
-
-void pn_connection_wake(pn_connection_t* c) {
-  /* May be called from any thread */
-  wakeup(&get_pconnection(c)->psocket, leader_wake_connection);
-}
-
-pn_proactor_t *pn_proactor() {
-  pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(*p));
-  p->collector = pn_collector();
-  p->batch.next_event = &proactor_batch_next;
-  if (!p->collector) return NULL;
-  uv_loop_init(&p->loop);
-  uv_mutex_init(&p->lock);
-  uv_cond_init(&p->cond);
-  uv_async_init(&p->loop, &p->async, NULL);
-  uv_timer_init(&p->loop, &p->timer); /* Just wake the loop */
-  p->timer.data = p;
-  return p;
 }
 
 static void on_stopping(uv_handle_t* h, void* v) {
@@ -870,24 +678,9 @@ static void on_stopping(uv_handle_t* h, void* v) {
   }
 }
 
-void pn_proactor_free(pn_proactor_t *p) {
-  uv_timer_stop(&p->timer);
-  uv_close((uv_handle_t*)&p->timer, NULL);
-  uv_close((uv_handle_t*)&p->async, NULL);
-  uv_walk(&p->loop, on_stopping, NULL); /* Close all TCP handles */
-  while (uv_loop_alive(&p->loop)) {
-    uv_run(&p->loop, UV_RUN_ONCE);       /* Run till all handles closed */
-  }
-  uv_loop_close(&p->loop);
-  uv_mutex_destroy(&p->lock);
-  uv_cond_destroy(&p->cond);
-  pn_collector_free(p->collector);
-  free(p);
-}
-
 static pn_event_t *log_event(void* p, pn_event_t *e) {
   if (e) {
-    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+    pn_logf("[%p]:(%s)\n", (void*)p, pn_event_type_name(pn_event_type(e)));
   }
   return e;
 }
@@ -918,6 +711,227 @@ static void pn_listener_free(pn_listener_t *l) {
   }
 }
 
+void leader_listener_close(psocket_t *ps) {
+  assert(ps->state = ON_LEADER);
+  pn_listener_t *l = (pn_listener_t*)ps;
+  l->err = UV_EOF;
+  listener_to_uv(l);
+}
+
+/* Return the next event batch or 0 if no events are available in the worker_q */
+static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
+  /* FIXME aconway 2017-02-21: generate these in parallel? */
+  if (!p->batch_working) {       /* Can generate proactor events */
+    if (p->inactive) {
+      p->inactive = false;
+      return proactor_batch_lh(p, PN_PROACTOR_INACTIVE);
+    }
+    if (p->interrupt > 0) {
+      --p->interrupt;
+      return proactor_batch_lh(p, PN_PROACTOR_INTERRUPT);
+    }
+    if (p->timeout_elapsed) {
+      p->timeout_elapsed = false;
+      return proactor_batch_lh(p, PN_PROACTOR_TIMEOUT);
+    }
+  }
+  for (psocket_t *ps = pop_lh(&p->worker_q); ps; ps = pop_lh(&p->worker_q)) {
+    assert(ps->state == ON_WORKER);
+    if (ps->is_conn) {
+      return &as_pconnection(ps)->driver.batch;
+    } else {                    /* Listener */
+      return &as_listener(ps)->batch;
+    }
+  }
+  return 0;
+}
+
+/* Process the leader_q and the UV loop, in the leader thread */
+static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
+
+  if (p->timeout_request) {
+    p->timeout_request = false;
+    if (p->timeout) {
+      uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
+    } else {
+      uv_timer_stop(&p->timer);
+    }
+  }
+  for (psocket_t *ps = pop_lh(&p->leader_q); ps; ps = pop_lh(&p->leader_q)) {
+    if (ps->action) {
+      uv_mutex_unlock(&p->lock);
+      ps->action(ps);
+      ps->action = NULL;
+      uv_mutex_lock(&p->lock);
+    } else if (ps->wakeup) {
+      uv_mutex_unlock(&p->lock);
+      ps->wakeup(ps);
+      ps->wakeup = NULL;
+      uv_mutex_lock(&p->lock);
+    }
+    pn_event_batch_t *batch = get_batch_lh(p);
+    if (batch) return batch;
+  }
+  uv_mutex_unlock(&p->lock);
+  uv_run(&p->loop, mode);
+  uv_mutex_lock(&p->lock);
+  return get_batch_lh(p);
+}
+
+/*  ==== public API ==== */
+
+pn_event_batch_t *pn_proactor_get(struct pn_proactor_t* p) {
+  uv_mutex_lock(&p->lock);
+  pn_event_batch_t *batch = get_batch_lh(p);
+  if (batch == NULL && !p->has_leader) {
+    /* Try a non-blocking lead to generate some work */
+    p->has_leader = true;
+    batch = leader_lead_lh(p, UV_RUN_NOWAIT);
+    p->has_leader = false;
+    uv_cond_signal(&p->cond);   /* Notify next leader */
+  }
+  uv_mutex_unlock(&p->lock);
+  return batch;
+}
+
+pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
+  uv_mutex_lock(&p->lock);
+  pn_event_batch_t *batch = get_batch_lh(p);
+  while (!batch && p->has_leader) {
+    uv_cond_wait(&p->cond, &p->lock); /* Follow the leader */
+    batch = get_batch_lh(p);
+  }
+  if (!batch) {                 /* Become leader */
+    assert(!p->has_leader);     /* Implied by loop condition */
+    p->has_leader = true;
+    do {
+      batch = leader_lead_lh(p, UV_RUN_ONCE);
+    } while (!batch);
+    p->has_leader = false;
+    uv_cond_signal(&p->cond);
+  }
+  uv_mutex_unlock(&p->lock);
+  return batch;
+}
+
+void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
+  pconnection_t *pc = batch_pconnection(batch);
+  if (pc) {
+    assert(pc->psocket.state == ON_WORKER);
+    if (pn_connection_driver_has_event(&pc->driver)) {
+      /* Process all events before going back to leader */
+      pconnection_to_worker(pc);
+    } else {
+      to_leader(&pc->psocket, psocket_to_uv);
+    }
+    return;
+  }
+  pn_listener_t *l = batch_listener(batch);
+  if (l) {
+    assert(l->psocket.state == ON_WORKER);
+    to_leader(&l->psocket, psocket_to_uv);
+    return;
+  }
+  pn_proactor_t *bp = batch_proactor(batch);
+  if (bp == p) {
+    uv_mutex_lock(&p->lock);
+    p->batch_working = false;
+    notify(p);
+    uv_mutex_unlock(&p->lock);
+    return;
+  }
+}
+
+pn_listener_t *pn_event_listener(pn_event_t *e) {
+  return (pn_event_class(e) == pn_listener__class()) ? (pn_listener_t*)pn_event_context(e) : NULL;
+}
+
+pn_proactor_t *pn_event_proactor(pn_event_t *e) {
+  if (pn_event_class(e) == pn_proactor__class()) {
+    return (pn_proactor_t*)pn_event_context(e);
+  }
+  pn_listener_t *l = pn_event_listener(e);
+  if (l) {
+    return l->psocket.proactor;
+  }
+  pn_connection_t *c = pn_event_connection(e);
+  if (c) {
+    return pn_connection_proactor(pn_event_connection(e));
+  }
+  return NULL;
+}
+
+void pn_proactor_interrupt(pn_proactor_t *p) {
+  uv_mutex_lock(&p->lock);
+  ++p->interrupt;
+  notify(p);
+  uv_mutex_unlock(&p->lock);
+}
+
+void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
+  uv_mutex_lock(&p->lock);
+  p->timeout = t;
+  p->timeout_request = true;
+  notify(p);
+  uv_mutex_unlock(&p->lock);
+}
+
+int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, const char *port) {
+  pconnection_t *pc = pconnection(p, c, false, host, port);
+  if (!pc) {
+    return PN_OUT_OF_MEMORY;
+  }
+  to_leader(&pc->psocket, leader_connect);
+  return 0;
+}
+
+int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *host, const char *port, int backlog)
+{
+  psocket_init(&l->psocket, p, false, host, port);
+  l->backlog = backlog;
+  to_leader(&l->psocket, leader_listen);
+  return 0;
+}
+
+pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
+  pconnection_t *pc = get_pconnection(c);
+  return pc ? pc->psocket.proactor : NULL;
+}
+
+void pn_connection_wake(pn_connection_t* c) {
+  /* May be called from any thread */
+  wakeup(&get_pconnection(c)->psocket, leader_wake_connection);
+}
+
+pn_proactor_t *pn_proactor() {
+  pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(*p));
+  p->collector = pn_collector();
+  p->batch.next_event = &proactor_batch_next;
+  if (!p->collector) return NULL;
+  uv_loop_init(&p->loop);
+  uv_mutex_init(&p->lock);
+  uv_cond_init(&p->cond);
+  uv_async_init(&p->loop, &p->async, NULL);
+  uv_timer_init(&p->loop, &p->timer);
+  p->timer.data = p;
+  return p;
+}
+
+void pn_proactor_free(pn_proactor_t *p) {
+  uv_timer_stop(&p->timer);
+  uv_close((uv_handle_t*)&p->timer, NULL);
+  uv_close((uv_handle_t*)&p->async, NULL);
+  uv_walk(&p->loop, on_stopping, NULL); /* Close all TCP handles */
+  while (uv_loop_alive(&p->loop)) {
+    uv_run(&p->loop, UV_RUN_ONCE);       /* Run till all handles closed */
+  }
+  uv_loop_close(&p->loop);
+  uv_mutex_destroy(&p->lock);
+  uv_cond_destroy(&p->cond);
+  pn_collector_free(p->collector);
+  free(p);
+}
+
 pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
@@ -931,13 +945,6 @@ pn_listener_t *pn_listener(void) {
     }
   }
   return l;
-}
-
-void leader_listener_close(psocket_t *ps) {
-  assert(ps->state = ON_LEADER);
-  pn_listener_t *l = (pn_listener_t*)ps;
-  l->err = UV_EOF;
-  listener_to_uv(l);
 }
 
 void pn_listener_close(pn_listener_t* l) {

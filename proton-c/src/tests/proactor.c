@@ -98,7 +98,7 @@ static void proactor_test_init(proactor_test_t *pts, size_t n) {
    pn_proactor_get.  Continue till all handlers return H_FINISHED (and return 0) or one
    returns H_FAILED  (and return non-0)
 */
-int proactor_test_run(proactor_test_t *pts, size_t n) {
+static int proactor_test_run(proactor_test_t *pts, size_t n) {
   /* Make sure pts are initialized */
   proactor_test_init(pts, n);
   size_t finished = 0;
@@ -127,17 +127,11 @@ int proactor_test_run(proactor_test_t *pts, size_t n) {
 
 
 /* Handler for test_listen_connect, does both sides of the connection */
-handler_state_t listen_connect_handler(test_t *t, pn_event_t *e) {
+static handler_state_t listen_connect_handler(test_t *t, pn_event_t *e) {
   pn_connection_t *c = pn_event_connection(e);
   pn_listener_t *l = pn_event_listener(e);
 
   switch (pn_event_type(e)) {
-    /* Ignore these events */
-   case PN_CONNECTION_LOCAL_OPEN:
-   case PN_CONNECTION_BOUND:
-   case PN_CONNECTION_INIT:
-    return H_CONTINUE;
-
     /* Act on these events */
    case PN_LISTENER_ACCEPT: {
     pn_connection_t *accepted = pn_connection();
@@ -149,20 +143,22 @@ handler_state_t listen_connect_handler(test_t *t, pn_event_t *e) {
    case PN_CONNECTION_REMOTE_OPEN:
     if (pn_connection_state(c) | PN_LOCAL_ACTIVE) { /* Client is fully open - the test is done */
       pn_connection_close(c);
-      return H_FINISHED;
     }  else {                   /* Server returns the open */
       pn_connection_open(c);
     }
+    return H_CONTINUE;
 
    case PN_CONNECTION_REMOTE_CLOSE:
     if (pn_connection_state(c) | PN_LOCAL_ACTIVE) {
       pn_connection_close(c);    /* Return the close */
     }
+    return H_CONTINUE;
+
+   case PN_TRANSPORT_CLOSED:
     return H_FINISHED;
 
    default:
-    TEST_CHECK(t, false, "unexpected event %s", pn_event_type_name(pn_event_type(e)));
-    return H_FAILED;
+    return H_CONTINUE;
     break;
   }
 }
@@ -172,13 +168,13 @@ static void test_early_error(test_t *t) {
   pn_proactor_t *p = pn_proactor();
   pn_proactor_set_timeout(p, timeout); /* In case of hang */
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(p, c, "badhost", "amqp");
+  pn_proactor_connect(p, c, localhost, "1"); /* Bad port */
   pn_event_type_t etype = wait_for(p, PN_TRANSPORT_CLOSED);
   TEST_CHECK(t, PN_TRANSPORT_CLOSED == etype, pn_event_type_name(etype));
   TEST_CHECK(t, pn_condition_is_set(pn_transport_condition(pn_connection_transport(c))), "");
 
   pn_listener_t *l = pn_listener();
-  pn_proactor_listen(p, l, "badhost", "amqp", 1);
+  pn_proactor_listen(p, l, localhost, "1", 1); /* Bad port */
   etype = wait_for(p, PN_LISTENER_CLOSE);
   TEST_CHECK(t, PN_LISTENER_CLOSE == etype, pn_event_type_name(etype));
   TEST_CHECK(t, pn_condition_is_set(pn_listener_condition(l)), "");
@@ -199,6 +195,45 @@ static void test_listen_connect(test_t *t) {
     sock_close(port.sock);
     pn_proactor_connect(client, pn_connection(), localhost, port.str);
     proactor_test_run(pts, 2);
+  }
+  pn_proactor_free(client);
+  pn_proactor_free(server);
+}
+
+static handler_state_t connection_wakeup_handler(test_t *t, pn_event_t *e) {
+  pn_connection_t *c = pn_event_connection(e);
+  switch (pn_event_type(e)) {
+
+   case PN_CONNECTION_REMOTE_OPEN:
+    if (pn_connection_state(c) | PN_LOCAL_UNINIT) {
+      pn_connection_open(c);    /* Server returns the open */
+    }
+    return H_FINISHED;          /* Finish when open at both ends */
+
+   default:
+    /* Otherwise same as listen_connect_handler */
+    return listen_connect_handler(t, e);
+  }
+}
+
+/* Test waking up a connection that is idle */
+static void test_connection_wakeup(test_t *t) {
+  proactor_test_t pts[] =  { { t, connection_wakeup_handler }, { t, connection_wakeup_handler } };
+  proactor_test_init(pts, 2);
+  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  test_port_t port = test_port();          /* Hold a port */
+  pn_proactor_listen(server, pn_listener(), localhost, port.str, 4);
+  pn_event_type_t etype = wait_for(server, PN_LISTENER_OPEN);
+  if (TEST_CHECK(t, PN_LISTENER_OPEN == etype, pn_event_type_name(etype))) {
+    sock_close(port.sock);
+    pn_connection_t *c = pn_connection();
+    pn_proactor_connect(client, c, localhost, port.str);
+    proactor_test_run(pts, 2);                          /* Will finish when client is connected */
+    TEST_CHECK(t, NULL == pn_proactor_get(client), ""); /* Should be idle */
+    pn_connection_wake(c);
+    etype = wait_next(client);
+    /* FIXME aconway 2017-02-21: TEST_EVENT_TYPE */
+    TEST_CHECK(t, PN_CONNECTION_WAKE == etype, pn_event_type_name(etype));
   }
   pn_proactor_free(client);
   pn_proactor_free(server);
@@ -226,11 +261,12 @@ static void test_inactive(test_t *t) {
   pn_proactor_free(server);
 }
 
-int main(int argv, char** argc) {
+int main(int argc, char **argv) {
   int failed = 0;
-  RUN_TEST(failed, t, test_inactive(&t));
-  RUN_TEST(failed, t, test_interrupt_timeout(&t));
-  RUN_TEST(failed, t, test_early_error(&t));
-  RUN_TEST(failed, t, test_listen_connect(&t));
+  RUN_ARGV_TEST(failed, t, test_inactive(&t));
+  RUN_ARGV_TEST(failed, t, test_interrupt_timeout(&t));
+  RUN_ARGV_TEST(failed, t, test_early_error(&t));
+  RUN_ARGV_TEST(failed, t, test_listen_connect(&t));
+  RUN_ARGV_TEST(failed, t, test_connection_wakeup(&t));
   return failed;
 }

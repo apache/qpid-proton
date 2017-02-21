@@ -472,6 +472,7 @@ int main(int argc, char **argv) {
 
   pn_proactor_listen(b.proactor, pn_listener(), host, port, 16);
   printf("listening on '%s:%s' %zd threads\n", host, port, b.threads);
+  fflush(stdout);
 
   if (url) pn_url_free(url);
   if (b.threads <= 0) {

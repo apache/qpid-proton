@@ -344,6 +344,7 @@ int main(int argc, char **argv) {
   app.proactor = pn_proactor();
   pn_proactor_listen(app.proactor, pn_listener(), host, port, 16);
   printf("listening on '%s:%s'\n", host, port);
+  fflush(stdout);
   if (url) pn_url_free(url);
 
   do {

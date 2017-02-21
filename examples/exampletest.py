@@ -104,6 +104,20 @@ class Proc(Popen):
             raise ProcError(self)
         return self.out
 
+    def wait_re(self, regexp, timeout=10):
+        """
+        Wait for regexp to appear in the output, returns the re.search match result.
+        The target process should flush() important output to ensure it appears.
+        """
+        if timeout:
+            deadline = time.time() + timeout
+        while timeout is None or time.time() < deadline:
+            match = re.search(regexp, self.out)
+            if match:
+                return match
+            time.sleep(0.01)    # Not very efficient
+        raise ProcError(self, "gave up waiting for '%s' after %ss" % (regexp, timeout))
+
 # Work-around older python unittest that lacks setUpClass.
 if hasattr(unittest.TestCase, 'setUpClass') and  hasattr(unittest.TestCase, 'tearDownClass'):
     TestCase = unittest.TestCase
@@ -144,21 +158,6 @@ class ExampleTestCase(TestCase):
         self.procs.append(p)
         return p
 
-def wait_port(port, timeout=10):
-    """Wait up to timeout for port to be connectable."""
-    if timeout:
-        deadline = time.time() + timeout
-    while (timeout is None or time.time() < deadline):
-        try:
-            s = socket.create_connection((None, port), timeout) # Works for IPv6 and v4
-            s.close()
-            return
-        except socket.error, e:
-            if e.errno != errno.ECONNREFUSED: # Only retry on connection refused error.
-                raise
-    raise socket.timeout("waiting for port %s" % port)
-
-
 class BrokerTestCase(ExampleTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
@@ -171,13 +170,14 @@ class BrokerTestCase(ExampleTestCase):
         cls.port = sock.port()
         cls.addr = "127.0.0.1:%s/examples" % (cls.port)
         cls.broker = None       # In case Proc throws, create the attribute.
-        cls.broker = Proc(cls.broker_exe + ["-a", cls.addr])
+        cls.broker = Proc(cls.broker_exe + ["-a", cls.addr], bufsize=0)
         try:
-            wait_port(cls.port)
+            cls.broker.wait_re("listening")
         except Exception, e:
             cls.broker.kill()
-            raise ProcError(cls.broker, "timed out waiting for port")
-        sock.close()
+            raise
+        finally:
+            sock.close()
 
     @classmethod
     def tearDownClass(cls):

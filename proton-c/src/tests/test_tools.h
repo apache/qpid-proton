@@ -104,6 +104,19 @@ static inline bool test_check_(test_t *t, bool expr, const char *sexpr, const ch
     }                                                           \
   } while(0)
 
+/* Like RUN_TEST but only if one of the argv strings is found in the test EXPR */
+#define RUN_ARGV_TEST(FAILED, T, EXPR) do {                             \
+    if (argc == 1) {                                                    \
+      RUN_TEST(FAILED, T, EXPR);                                        \
+    } else {                                                            \
+      for (int i = 1; i < argc; ++i) {                                  \
+        if (strstr(#EXPR, argv[i])) {                                   \
+          RUN_TEST(FAILED, T, EXPR);                                    \
+          break;                                                        \
+        }                                                               \
+      }                                                                 \
+    }                                                                   \
+  } while(0)
 
 /* Some very simple platform-secifics to acquire an unused socket */
 #if defined(WIN32)

@@ -53,23 +53,13 @@ class CExampleTest(BrokerTestCase):
         r = self.proc(["receive", "-a", self.addr, "-m3"])
         self.assertEqual(receive_expect(3), r.wait_out())
 
-    def retry(self, args, max=10):
-        """Run until output does not contain "connection refused", up to max retries"""
-        while True:
-            try:
-                return self.proc(args).wait_out()
-            except ProcError, e:
-                if "connection refused" in e.args[0] and max > 0:
-                    max -= 1
-                    continue
-                raise
-
     def test_send_direct(self):
         """Send to direct server"""
         with bind0() as sock:
             addr = "127.0.0.1:%s/examples" % sock.port()
             d = self.proc(["direct", "-a", addr])
-            self.assertEqual("100 messages sent and acknowledged\n", self.retry(["send", "-a", addr]))
+            d.wait_re("listening")
+            self.assertEqual("100 messages sent and acknowledged\n", self.proc(["send", "-a", addr]).wait_out())
             self.assertIn(receive_expect(100), d.wait_out())
 
     def test_receive_direct(self):
@@ -77,7 +67,8 @@ class CExampleTest(BrokerTestCase):
         with bind0() as sock:
             addr = "127.0.0.1:%s/examples" % sock.port()
             d = self.proc(["direct", "-a", addr])
-            self.assertEqual(receive_expect(100), self.retry(["receive", "-a", addr]))
+            d.wait_re("listenin")
+            self.assertEqual(receive_expect(100), self.proc(["receive", "-a", addr]).wait_out())
             self.assertIn("100 messages sent and acknowledged\n", d.wait_out())
 
 
