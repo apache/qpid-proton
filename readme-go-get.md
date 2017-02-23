@@ -9,6 +9,7 @@ Created with:
 Update with:
 
     git checkout go1
+    git pull
     git merge -s recursive -Xsubtree=proton-c/bindings/go/src/qpid.apache.org master
 
 To see the branch description: `git config branch.go1.description`

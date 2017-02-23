@@ -29,11 +29,13 @@ import (
 	"unsafe"
 )
 
-// #include <proton/types.h>
-// #include <proton/error.h>
 // #include <proton/condition.h>
+// #include <proton/error.h>
 // #include <proton/event.h>
+// #include <proton/types.h>
 // #include <stdlib.h>
+import "C"
+
 // #include <proton/session.h>
 // #include <proton/link.h>
 // #include <proton/delivery.h>
@@ -630,7 +632,7 @@ func (t Terminus) Timeout() time.Duration {
 	return (time.Duration(C.pn_terminus_get_timeout(t.pn)) * time.Second)
 }
 func (t Terminus) SetTimeout(timeout time.Duration) int {
-	return int(C.pn_terminus_set_timeout(t.pn, C.pn_seconds_t(timeout)))
+	return int(C.pn_terminus_set_timeout(t.pn, C.pn_seconds_t(timeout/time.Second)))
 }
 func (t Terminus) IsDynamic() bool {
 	return bool(C.pn_terminus_is_dynamic(t.pn))
