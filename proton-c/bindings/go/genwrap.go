@@ -161,10 +161,7 @@ func panicIf(err error) {
 }
 
 func readHeader(name string) string {
-	file, err := os.Open(path.Join(includeProton, name+".h"))
-	panicIf(err)
-	defer file.Close()
-	s, err := ioutil.ReadAll(file)
+	s, err := ioutil.ReadFile(path.Join(includeProton, name+".h"))
 	panicIf(err)
 	return string(s)
 }
@@ -314,6 +311,7 @@ func mapType(ctype string) (g genType) {
 	case "C.pn_seconds_t":
 		g.Gotype = "time.Duration"
 		g.ToGo = func(v string) string { return fmt.Sprintf("(time.Duration(%s) * time.Second)", v) }
+		g.ToC = func(v string) string { return fmt.Sprintf("C.pn_seconds_t(%s/time.Second)", v) }
 	case "C.pn_millis_t":
 		g.Gotype = "time.Duration"
 		g.ToGo = func(v string) string { return fmt.Sprintf("(time.Duration(%s) * time.Millisecond)", v) }

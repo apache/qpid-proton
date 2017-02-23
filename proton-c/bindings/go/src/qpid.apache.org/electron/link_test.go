@@ -24,13 +24,14 @@ import (
 	"net"
 	"qpid.apache.org/proton"
 	"testing"
+	"time"
 )
 
 func TestLinkSettings(t *testing.T) {
 	cConn, sConn := net.Pipe()
 	done := make(chan error)
 	// FIXME aconway 2017-02-23: bug in timeout conversion (pn_second_t)
-	settings := TerminusSettings{Durability: 1, Expiry: 2 /*, Timeout: 42 * time.Second*/, Dynamic: true}
+	settings := TerminusSettings{Durability: 1, Expiry: 2, Timeout: 42 * time.Second, Dynamic: true}
 	go func() { // Server
 		close(done)
 		defer sConn.Close()
