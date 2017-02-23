@@ -31,8 +31,15 @@ eclipse-classes
 # The usual location for proton-c build files
 proton-c/build
 
+# Executables built by go binding tests
+proton-c/bindings/go/bin
+
 # Testresults from the jenkins build script
 testresults
+
+# Go binding build output
+/proton-c/bindings/go/pkg
+/proton-c/bindings/go/bin
 
 # Python TOX test build output
 /proton-c/bindings/python/MANIFEST
