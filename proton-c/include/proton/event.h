@@ -282,23 +282,11 @@ typedef enum {
   PN_TRANSPORT_HEAD_CLOSED,
 
   /**
-   * The write side of the transport is closed, it will no longer produce bytes
-   * to write to external IO. Synonynm for PN_TRANSPORT_HEAD_CLOSED
-   */
-  PN_TRANSPORT_WRITE_CLOSED = PN_TRANSPORT_HEAD_CLOSED,
-
-  /**
    * Indicates that the tail of the transport has been closed. This
    * means the transport will never be able to process more bytes from
    * the network. Events of this type point to the relevant transport.
    */
   PN_TRANSPORT_TAIL_CLOSED,
-
-  /**
-   * The read side of the transport is closed, it will no longer read bytes
-   * from external IO. Synonynm for PN_TRANSPORT_TAIL_CLOSED
-   */
-  PN_TRANSPORT_READ_CLOSED = PN_TRANSPORT_TAIL_CLOSED,
 
   /**
    * Indicates that the both the head and tail of the transport are
@@ -360,6 +348,19 @@ typedef enum {
   PN_LISTENER_OPEN
 
 } pn_event_type_t;
+
+
+/**
+ * The write side of the transport is closed, it will no longer produce bytes
+ * to write to external IO. Synonynm for PN_TRANSPORT_HEAD_CLOSED
+ */
+static const pn_event_type_t PN_TRANSPORT_WRITE_CLOSED = PN_TRANSPORT_HEAD_CLOSED;
+
+/**
+ * The read side of the transport is closed, it will no longer read bytes
+ * from external IO. Synonynm for PN_TRANSPORT_TAIL_CLOSED
+ */
+static const pn_event_type_t PN_TRANSPORT_READ_CLOSED = PN_TRANSPORT_TAIL_CLOSED;
 
 /**
  * Get a human readable name for an event type.
