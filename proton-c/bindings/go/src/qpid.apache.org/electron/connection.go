@@ -276,7 +276,7 @@ func (c *connection) WaitTimeout(timeout time.Duration) error {
 }
 
 func (c *connection) Incoming() <-chan Incoming {
-	assert(c.incoming != nil, "electron.Connection.Incoming() disabled for %s", c)
+	assert(c.incoming != nil, "Incoming() is only allowed for a Connection created with the Server() option: %s", c)
 	return c.incoming
 }
 
