@@ -22,6 +22,12 @@ under the License.
 // Not run automatically, generated sources are checked in. To update the
 // generated sources run `go run genwrap.go` in this directory.
 //
+// WARNING: generating code from the wrong proton header file versions
+// will break compatibility guarantees. This program will attempt to detect
+// such errors. If you are deliberately changing the compatibility requirements
+// update the variable minVersion below.
+//
+
 package main
 
 import (
@@ -37,12 +43,61 @@ import (
 	"text/template"
 )
 
-var includeProton = "../../include/proton"
-var outpath = "src/qpid.apache.org/proton/wrappers_gen.go"
+var minVersion = "0.10" // The minimum version of proton-c that the Go binding can use
+var include = flag.String("include", "../../include", "Directory containing proton/*.h include files")
+
+var versionH = regexp.MustCompile("(?s:PN_VERSION_MAJOR ([0-9]+).*PN_VERSION_MINOR ([0-9]+))")
+var versionTxt = regexp.MustCompile("^[0-9]+\\.[0-9]+")
 
 func main() {
 	flag.Parse()
-	out, err := os.Create(outpath)
+	genVersion()
+	genWrappers()
+}
+
+func getVersion() string {
+	_, err := ioutil.ReadFile(path.Join(*include, "proton/version.h.in"))
+	if err == nil {
+		// We are using the headers in git sources, get the version.txt
+		vt, err := ioutil.ReadFile(path.Join(*include, "../../version.txt"))
+		panicIf(err)
+		return versionTxt.FindString(string(vt))
+	}
+	vh, err := ioutil.ReadFile(path.Join(*include, "proton/version.h"))
+	if err == nil {
+		// We are using installed headers
+		return strings.Join(versionH.FindStringSubmatch(string(vh))[1:], ".")
+	}
+	panic(err)
+}
+
+func genVersion() {
+	version := getVersion()
+	if minVersion != version {
+		panic(fmt.Errorf("Generating from wrong version %v, expected %v", version, minVersion))
+	}
+	out, err := os.Create("src/qpid.apache.org/amqp/version.go")
+	panicIf(err)
+	defer out.Close()
+	splitVersion := strings.Split(minVersion, ".")
+	fmt.Fprintf(out, copyright+`
+
+package amqp
+
+// Version check for proton library.
+// Done here because this is the lowest-level dependency for all the proton Go packages.
+
+// #include <proton/version.h>
+// #if PN_VERSION_MAJOR == %s && PN_VERSION_MINOR < %s
+// #error packages qpid.apache.org/... require Proton-C library version 0.10 or greater
+// #endif
+import "C"
+`, splitVersion[0], splitVersion[1])
+}
+
+func genWrappers() {
+	outPath := "src/qpid.apache.org/proton/wrappers_gen.go"
+	out, err := os.Create(outPath)
 	panicIf(err)
 	defer out.Close()
 
@@ -56,11 +111,13 @@ import (
   "unsafe"
 )
 
-// #include <proton/types.h>
-// #include <proton/error.h>
 // #include <proton/condition.h>
+// #include <proton/error.h>
 // #include <proton/event.h>
+// #include <proton/types.h>
 // #include <stdlib.h>
+import "C"
+
 `)
 	for _, api := range apis {
 		fmt.Fprintf(out, "// #include <proton/%s.h>\n", api)
@@ -79,13 +136,7 @@ import (
 		apiWrapFns(api, header, out)
 	}
 	out.Close()
-
-	// Run gofmt.
-	cmd := exec.Command("gofmt", "-w", outpath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if err != nil {
+	if err := exec.Command("gofmt", "-w", outPath).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "gofmt: %s", err)
 		os.Exit(1)
 	}
@@ -161,7 +212,7 @@ func panicIf(err error) {
 }
 
 func readHeader(name string) string {
-	s, err := ioutil.ReadFile(path.Join(includeProton, name+".h"))
+	s, err := ioutil.ReadFile(path.Join(*include, "proton", name+".h"))
 	panicIf(err)
 	return string(s)
 }
