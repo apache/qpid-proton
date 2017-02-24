@@ -351,18 +351,6 @@ typedef enum {
 
 
 /**
- * The write side of the transport is closed, it will no longer produce bytes
- * to write to external IO. Synonynm for PN_TRANSPORT_HEAD_CLOSED
- */
-static const pn_event_type_t PN_TRANSPORT_WRITE_CLOSED = PN_TRANSPORT_HEAD_CLOSED;
-
-/**
- * The read side of the transport is closed, it will no longer read bytes
- * from external IO. Synonynm for PN_TRANSPORT_TAIL_CLOSED
- */
-static const pn_event_type_t PN_TRANSPORT_READ_CLOSED = PN_TRANSPORT_TAIL_CLOSED;
-
-/**
  * Get a human readable name for an event type.
  *
  * @param[in] type an event type

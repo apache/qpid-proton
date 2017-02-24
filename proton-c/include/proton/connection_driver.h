@@ -241,6 +241,19 @@ PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char 
 PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch);
 
 /**
+ * The write side of the transport is closed, it will no longer produce bytes to write to
+ * external IO. Synonynm for PN_TRANSPORT_HEAD_CLOSED
+ */
+#define PN_TRANSPORT_WRITE_CLOSED PN_TRANSPORT_HEAD_CLOSED
+
+/**
+ * The read side of the transport is closed, it will no longer read bytes from external
+ * IO. Alisas for PN_TRANSPORT_TAIL_CLOSED
+ */
+#define PN_TRANSPORT_READ_CLOSED PN_TRANSPORT_TAIL_CLOSED
+
+
+/**
  * @}
  */
 
