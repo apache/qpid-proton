@@ -49,9 +49,7 @@ void pn_log_logger(pn_logger_t new_logger) {
 }
 
 void pn_vlogf_impl(const char *fmt, va_list ap) {
-    pn_string_t *msg = pn_string("");
-    pn_string_vformat(msg, fmt, ap);
-    fprintf(stderr, "%s\n", pn_string_get(msg));
+    vfprintf(stderr, fmt, ap);
 }
 
 /**@internal
