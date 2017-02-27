@@ -21,6 +21,7 @@
  */
 
 #include <proton/type_compat.h>
+#include <proton/event.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -28,24 +29,46 @@
 #include <stdlib.h>
 #include <string.h>
 
-/*
-  All output from test marcros goes to stdout not stderr, error messages are normal for a test.
-  Some errno handling functions are thread-unsafe
-  */
+/* A struct to collect the results of a test, created by RUN_TEST macro. */
+typedef struct test_t {
+  const char* name;
+  int errors;
+  uintptr_t data;               /* Test can store some non-error data here */
+} test_t;
 
+/* Internal, use macros. Print error message and increase the t->errors count.
+   All output from test marcros goes to stdout not stderr, error messages are normal for a test.
+*/
+static void test_vlogf_(test_t *t, const char *prefix, const char* expr,
+                        const char* file, int line, const char *fmt, va_list ap)
+{
+  printf("%s:%d", file, line);
+  if (prefix && *prefix) printf(": %s", prefix);
+  if (expr && *expr) printf(": %s", expr);
+  if (fmt && *fmt) {
+    printf(": ");
+    vprintf(fmt, ap);
+  }
+  if (t) printf(" [%s]", t->name);
+  printf("\n");
+  fflush(stdout);
+}
+
+static void test_errorf_(test_t *t, const char *prefix, const char* expr,
+                         const char* file, int line, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  ++t->errors;
+  test_vlogf_(t, prefix, expr, file, line, fmt, ap);
+  va_end(ap);
+}
 
 /* Call via TEST_ASSERT macros */
-static void assert_fail_(const char* cond, const char* file, int line, const char *fmt, ...) {
-  printf("%s:%d: Assertion failed: %s", file, line, cond);
-  if (fmt && *fmt) {
-    va_list ap;
-    va_start(ap, fmt);
-    printf(" - ");
-    vprintf(fmt, ap);
-    printf("\n");
-    fflush(stdout);
-    va_end(ap);
-  }
+static void assert_fail_(const char* expr, const char* file, int line, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  test_vlogf_(NULL, "assertion failed", expr, file, line, fmt, ap);
+  va_end(ap);
   abort();
 }
 
@@ -63,32 +86,42 @@ static void assert_fail_(const char* cond, const char* file, int line, const cha
   TEST_ASSERTF((expr), "%s", strerror(err))
 
 
-/* A struct to collect the results of a test.
- * Declare and initialize with TEST_START(t) where t will be declared as a test_t
- */
-typedef struct test_t {
-  const char* name;
-  int errors;
-} test_t;
-
-/* if !expr print the printf-style error and increment t->errors. Use via macros. Returns expr. */
+/* Internal, use macros */
 static inline bool test_check_(test_t *t, bool expr, const char *sexpr, const char *file, int line, const char* fmt, ...) {
   if (!expr) {
+    ++t->errors;
     va_list ap;
     va_start(ap, fmt);
-    printf("%s:%d:[%s] check failed: (%s)", file, line, t->name, sexpr);
-    if (fmt && *fmt) {
-      printf(" - ");
-      vprintf(fmt, ap);
-    }
-    printf("\n");
-    fflush(stderr);
-    ++t->errors;
+    test_vlogf_(t, "check failed", sexpr, file, line, fmt, ap);
+    va_end(ap);
   }
   return expr;
 }
 
-#define TEST_CHECK(TEST, EXPR, ...) test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, __VA_ARGS__)
+/* Print a message but don't mark the test as having an error */
+#define TEST_LOGF(TEST, ...) \
+  test_logf_((TEST), "info", NULL, __FILE__, __LINE__, __VA_ARGS__)
+
+/* Print an error with printf-style message, increment TEST->errors */
+#define TEST_ERRORF(TEST, ...) \
+  test_errorf_((TEST), "error", NULL, __FILE__, __LINE__, __VA_ARGS__)
+
+/* If EXPR is false, print and record an error for t  */
+#define TEST_CHECKF(TEST, EXPR, ...) \
+  test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, __VA_ARGS__)
+
+/* If EXPR is false, print and record an error for t including EXPR  */
+#define TEST_CHECK(TEST, EXPR) \
+  test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, "")
+
+static inline bool test_etype_equal_(test_t *t, int want, int got, const char *file, int line) {
+  return test_check_(t, want == got, NULL, file, line, "want %s got %s",
+                     pn_event_type_name((pn_event_type_t)want),
+                     pn_event_type_name((pn_event_type_t)got));
+}
+
+#define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
+  test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 /* T is name of a test_t variable, EXPR is the test expression (which should update T)
    FAILED is incremented if the test has errors
@@ -166,12 +199,14 @@ static int sock_port(sock_t sock) {
   return ntohs(port);
 }
 
+/* Combines includes a sock_t with the int and char* versions of the port for convenience */
 typedef struct test_port_t {
   sock_t sock;
   int port;
   char str[256];
 } test_port_t;
 
+/* Create a test_port_t  */
 static inline test_port_t test_port(void) {
   test_port_t tp = {0};
   tp.sock = sock_bind0();
