@@ -29,29 +29,49 @@ def python_cmd(name):
 def receive_expect(n):
     return ''.join('{"sequence"=%s}\n'%i for i in xrange(1, n+1)) + "%s messages received\n"%n
 
-class CExampleTest(BrokerTestCase):
-    broker_exe = ["broker"]
+class Broker(object):
+    def __init__(self, test):
+        self.test = test
+
+    def __enter__(self):
+        with bind0() as sock:
+            self.addr = "127.0.0.1:%s/examples" % (sock.port())
+            self.proc = self.test.proc(["broker", "-a", self.addr])
+            self.proc.wait_re("listening")
+            return self
+
+    def __exit__(self, *args):
+        b = getattr(self, "proc")
+        if b:
+            if b.poll() !=  None: # Broker crashed
+                raise ProcError(b, "broker crash")
+            b.kill()
+
+class CExampleTest(ExampleTestCase):
 
     def test_send_receive(self):
         """Send first then receive"""
-        s = self.proc(["send", "-a", self.addr])
-        self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
-        r = self.proc(["receive", "-a", self.addr])
-        self.assertEqual(receive_expect(100), r.wait_out())
+        with Broker(self) as b:
+            s = self.proc(["send", "-a", b.addr])
+            self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
+            r = self.proc(["receive", "-a", b.addr])
+            self.assertEqual(receive_expect(100), r.wait_out())
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
-        r = self.proc(["receive", "-a", self.addr]);
-        s = self.proc(["send", "-a", self.addr]);
-        self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
-        self.assertEqual(receive_expect(100), r.wait_out())
+        with Broker(self) as b:
+            r = self.proc(["receive", "-a", b.addr]);
+            s = self.proc(["send", "-a", b.addr]);
+            self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
+            self.assertEqual(receive_expect(100), r.wait_out())
 
     def test_timed_send(self):
         """Send with timed delay"""
-        s = self.proc(["send", "-a", self.addr, "-d100", "-m3"])
-        self.assertEqual("3 messages sent and acknowledged\n", s.wait_out())
-        r = self.proc(["receive", "-a", self.addr, "-m3"])
-        self.assertEqual(receive_expect(3), r.wait_out())
+        with Broker(self) as b:
+            s = self.proc(["send", "-a", b.addr, "-d100", "-m3"])
+            self.assertEqual("3 messages sent and acknowledged\n", s.wait_out())
+            r = self.proc(["receive", "-a", b.addr, "-m3"])
+            self.assertEqual(receive_expect(3), r.wait_out())
 
     def test_send_direct(self):
         """Send to direct server"""

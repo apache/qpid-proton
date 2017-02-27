@@ -29,10 +29,12 @@ from copy import copy
 import platform
 from os.path import dirname as dirname
 
+DEFAULT_TIMEOUT=10
+
 def bind0():
     """Bind a socket with bind(0) and SO_REUSEADDR to get a free port to listen on"""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)    
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(('', 0))
     return sock
 
@@ -92,7 +94,7 @@ class Proc(Popen):
             pass                # Already exited.
         return self.out
 
-    def wait_out(self, timeout=10, expect=0):
+    def wait_out(self, timeout=DEFAULT_TIMEOUT, expect=0):
         """Wait for process to exit, return output. Raise ProcError  on failure."""
         t = threading.Thread(target=self.wait)
         t.start()
@@ -104,7 +106,7 @@ class Proc(Popen):
             raise ProcError(self)
         return self.out
 
-    def wait_re(self, regexp, timeout=10):
+    def wait_re(self, regexp, timeout=DEFAULT_TIMEOUT):
         """
         Wait for regexp to appear in the output, returns the re.search match result.
         The target process should flush() important output to ensure it appears.
@@ -157,38 +159,6 @@ class ExampleTestCase(TestCase):
         p = Proc(*args, **kwargs)
         self.procs.append(p)
         return p
-
-class BrokerTestCase(ExampleTestCase):
-    """
-    ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
-    Subclass must set `broker_exe` class variable with the name of the broker executable.
-    """
-
-    @classmethod
-    def setUpClass(cls):
-        sock = bind0()
-        cls.port = sock.port()
-        cls.addr = "127.0.0.1:%s/examples" % (cls.port)
-        cls.broker = None       # In case Proc throws, create the attribute.
-        cls.broker = Proc(cls.broker_exe + ["-a", cls.addr], bufsize=0)
-        try:
-            cls.broker.wait_re("listening")
-        except Exception, e:
-            cls.broker.kill()
-            raise
-        finally:
-            sock.close()
-
-    @classmethod
-    def tearDownClass(cls):
-        if cls.broker: cls.broker.kill()
-
-    def tearDown(self):
-        b = type(self).broker
-        if b and b.poll() !=  None: # Broker crashed
-            type(self).setUpClass() # Start another for the next test.
-            raise ProcError(b, "broker crash")
-        super(BrokerTestCase, self).tearDown()
 
 if __name__ == "__main__":
     unittest.main()
