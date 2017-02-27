@@ -22,13 +22,14 @@
 #include "options.hpp"
 
 #include <proton/connection.hpp>
+#include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/default_container.hpp>
-#include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/value.hpp>
+#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/types.hpp>
 
@@ -40,7 +41,7 @@
 class simple_send : public proton::messaging_handler {
   private:
     std::string url;
-    proton::listener listener;
+    proton::sender sender;
     int sent;
     int confirmed;
     int total;
@@ -49,8 +50,8 @@ class simple_send : public proton::messaging_handler {
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        listener = c.listen(url);
-        std::cout << "direct_send listening on " << url << std::endl;
+        proton::connection_options co;
+        sender = c.open_sender(url, co);
     }
 
     void on_sendable(proton::sender &sender) OVERRIDE {
@@ -73,7 +74,6 @@ class simple_send : public proton::messaging_handler {
         if (confirmed == total) {
             std::cout << "all messages confirmed" << std::endl;
             t.connection().close();
-            listener.stop();
         }
     }
 
