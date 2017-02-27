@@ -176,7 +176,7 @@ class Reactor(Wrapper):
         if aimpl:
             return Acceptor(aimpl)
         else:
-            raise IOError("%s (%s:%s)" % pn_error_text(pn_reactor_error(self._impl)), host, port)
+            raise IOError("%s (%s:%s)" % (pn_error_text(pn_reactor_error(self._impl)), host, port))
 
     def connection(self, handler=None):
         """Deprecated: use connection_to_host() instead
