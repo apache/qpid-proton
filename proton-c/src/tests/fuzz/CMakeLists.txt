@@ -19,6 +19,11 @@
 
 add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 
+if (ENABLE_VALGRIND AND VALGRIND_EXE)
+  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet
+                   --leak-check=full --trace-children=yes)
+endif ()
+
 add_library (StandaloneFuzzTargetMain StandaloneFuzzTargetMain.c)
 if (BUILD_WITH_CXX)
   # ignore the flag for this file, it complicates things for no gain
@@ -42,7 +47,7 @@ macro (pn_add_fuzz_test test)
   else (FUZZING_ENGINE)
     # StandaloneFuzzTargetMain cannot walk directory trees
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
-    add_test (${test} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${files})
+    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${files})
   endif (FUZZING_ENGINE)
 endmacro(pn_add_fuzz_test)
 
