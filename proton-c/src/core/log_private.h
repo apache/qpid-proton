@@ -42,12 +42,12 @@
     } while(0)
 
 /** Return true if logging is enabled. */
-bool pn_log_enabled(void);
+PN_EXTERN bool pn_log_enabled(void);
 
 /**@internal*/
-void pn_logf_impl(const char* fmt, ...);
+PN_EXTERN void pn_logf_impl(const char* fmt, ...);
 /**@internal*/
-void pn_vlogf_impl(const char *fmt, va_list ap);
+PN_EXTERN void pn_vlogf_impl(const char *fmt, va_list ap);
 
 
 

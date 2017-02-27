@@ -153,12 +153,15 @@ void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg) {
   pn_transport_log(d->transport, msg);
 }
 
-void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap) {
+void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
   pn_transport_vlogf(d->transport, fmt, ap);
+  va_end(ap);
 }
 
-void pn_connection_driver_vlog(pn_connection_driver_t *d, const char *msg) {
-  pn_transport_log(d->transport, msg);
+void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap) {
+  pn_transport_vlogf(d->transport, fmt, ap);
 }
 
 pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch) {

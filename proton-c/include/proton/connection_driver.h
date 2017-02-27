@@ -227,7 +227,7 @@ PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *m
 /**
  * Log a printf formatted message using the connection's transport log.
  */
-PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, char *fmt, ...);
+PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
 
 /**
  * Log a printf formatted message using the connection's transport log.

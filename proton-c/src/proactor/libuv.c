@@ -19,6 +19,8 @@
  *
  */
 
+#include "../core/log_private.h"
+
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
@@ -883,6 +885,13 @@ void pn_proactor_free(pn_proactor_t *p) {
   free(p);
 }
 
+static pn_event_t *log_event(void* p, pn_event_t *e) {
+  if (e) {
+    pn_logf("[%p]:(%s)", (void*)p, pn_event_type_name(pn_event_type(e)));
+  }
+  return e;
+}
+
 static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_listener_t *l = batch_listener(batch);
   assert(l->psocket.state == ON_WORKER);
@@ -890,13 +899,13 @@ static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   if (prev && pn_event_type(prev) == PN_LISTENER_CLOSE) {
     l->err = UV_EOF;
   }
-  return pn_collector_next(l->collector);
+  return log_event(l, pn_collector_next(l->collector));
 }
 
 static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   pn_proactor_t *p = batch_proactor(batch);
   assert(p->batch_working);
-  return pn_collector_next(p->collector);
+  return log_event(p, pn_collector_next(p->collector));
 }
 
 static void pn_listener_free(pn_listener_t *l) {
