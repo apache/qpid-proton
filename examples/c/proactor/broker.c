@@ -19,44 +19,15 @@
 
 #include "thread.h"
 
-#include <proton/connection_driver.h>
-#include <proton/proactor.h>
 #include <proton/engine.h>
 #include <proton/listener.h>
+#include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/transport.h>
-#include <proton/url.h>
-#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-bool enable_debug = false;
-
-void debug(const char* fmt, ...) {
-  if (enable_debug) {
-    va_list(ap);
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    fputc('\n', stderr);
-    fflush(stderr);
-  }
-}
-
-void check(int err, const char* s) {
-  if (err != 0) {
-    perror(s);
-    exit(1);
-  }
-}
-
-void pcheck(int err, const char* s) {
-  if (err != 0) {
-    fprintf(stderr, "%s: %s", s, pn_code(err));
-    exit(1);
-  }
-}
 
 /* Simple re-sizable vector that acts as a queue */
 #define VEC(T) struct { T* data; size_t len, cap; }
@@ -98,7 +69,6 @@ typedef struct queue_t {
 } queue_t;
 
 static void queue_init(queue_t *q, const char* name, queue_t *next) {
-  debug("created queue %s", name);
   pthread_mutex_init(&q->lock, NULL);
   q->name = strdup(name);
   VEC_INIT(q->messages);
@@ -126,7 +96,6 @@ static void queue_send(queue_t *q, pn_link_t *s) {
   size_t tag = 0;
   pthread_mutex_lock(&q->lock);
   if (q->messages.len == 0) { /* Empty, record connection as waiting */
-    debug("queue is empty %s", q->name);
     /* Record connection for wake-up if not already on the list. */
     pn_connection_t *c = pn_session_connection(pn_link_session(s));
     size_t i = 0;
@@ -136,7 +105,6 @@ static void queue_send(queue_t *q, pn_link_t *s) {
       VEC_PUSH(q->waiting, c);
     }
   } else {
-    debug("sending from queue %s", q->name);
     m = q->messages.data[0];
     VEC_POP(q->messages);
     tag = ++q->sent;
@@ -169,7 +137,6 @@ bool pn_connection_get_check_queues(pn_connection_t *c) {
    If the queue was previously empty, notify waiting senders.
 */
 static void queue_receive(pn_proactor_t *d, queue_t *q, pn_rwbytes_t m) {
-  debug("received to queue %s", q->name);
   pthread_mutex_lock(&q->lock);
   VEC_PUSH(q->messages, m);
   if (q->messages.len == 1) { /* Was empty, notify waiting connections */
@@ -221,21 +188,11 @@ queue_t* queues_get(queues_t *qs, const char* name) {
 /* The broker implementation */
 typedef struct broker_t {
   pn_proactor_t *proactor;
-  queues_t queues;
-  const char *container_id;     /* AMQP container-id */
   size_t threads;
-  pn_millis_t heartbeat;
+  const char *container_id;     /* AMQP container-id */
+  queues_t queues;
   bool finished;
 } broker_t;
-
-void broker_init(broker_t *b, const char *container_id, size_t threads, pn_millis_t heartbeat) {
-  memset(b, 0, sizeof(*b));
-  b->proactor = pn_proactor();
-  queues_init(&b->queues);
-  b->container_id = container_id;
-  b->threads = threads;
-  b->heartbeat = 0;
-}
 
 void broker_stop(broker_t *b) {
   /* In this broker an interrupt stops a thread, stopping all threads stops the broker */
@@ -293,10 +250,10 @@ static int exit_code = 0;
 
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
-    exit_code = 1;
-    const char *ename = e ? pn_event_type_name(pn_event_type(e)) : "UNKNOWN";
-    fprintf(stderr, "%s: %s: %s\n", ename,
+    fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
+    pn_connection_close(pn_event_connection(e));
+    exit_code = 1;
   }
 }
 
@@ -306,6 +263,11 @@ static void handle(broker_t* b, pn_event_t* e) {
   pn_connection_t *c = pn_event_connection(e);
 
   switch (pn_event_type(e)) {
+
+   case PN_LISTENER_OPEN:
+    printf("listening\n");
+    fflush(stdout);
+    break;
 
    case PN_LISTENER_ACCEPT:
     pn_listener_accept(pn_event_listener(e), pn_connection());
@@ -320,7 +282,6 @@ static void handle(broker_t* b, pn_event_t* e) {
      pn_transport_t *t = pn_connection_transport(c);
      pn_transport_require_auth(t, false);
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
-     pn_transport_set_idle_timeout(t, 2 * b->heartbeat);
    }
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_connection_open(pn_event_connection(e)); /* Complete the open */
@@ -431,62 +392,26 @@ static void* broker_thread(void *void_broker) {
   return NULL;
 }
 
-static void usage(const char *arg0) {
-  fprintf(stderr, "Usage: %s [-d] [-a url] [-t thread-count]\n", arg0);
-  exit(1);
-}
-
 int main(int argc, char **argv) {
-  /* Command line options */
-  char *urlstr = NULL;
-  char container_id[256];
-  /* Note container-id should be unique */
-  snprintf(container_id, sizeof(container_id), "%s", argv[0]);
-  size_t nthreads = 4;
-  pn_millis_t heartbeat = 0;
-  int opt;
-  while ((opt = getopt(argc, argv, "a:t:dh:c:")) != -1) {
-    switch (opt) {
-     case 'a': urlstr = optarg; break;
-     case 't': nthreads = atoi(optarg); break;
-     case 'd': enable_debug = true; break;
-     case 'h': heartbeat = atoi(optarg); break;
-     case 'c': strncpy(container_id, optarg, sizeof(container_id)); break;
-     default: usage(argv[0]); break;
-    }
-  }
-  if (optind < argc)
-    usage(argv[0]);
+  broker_t b = {0};
+  b.proactor = pn_proactor();
+  queues_init(&b.queues);
+  b.container_id = argv[0];
+  b.threads = 4;
+  const char *addr = (argc > 1) ? argv[1] : "127.0.0.1:amqp";
 
-  broker_t b;
-  broker_init(&b, container_id, nthreads, heartbeat);
+  /* Listen on addr */
+  pn_proactor_listen(b.proactor, pn_listener(), addr, 16);
 
-  /* Parse the URL or use default values */
-  const char *host = "0.0.0.0";
-  const char *port = "amqp";
-  pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  if (url) {
-    if (pn_url_get_host(url)) host = pn_url_get_host(url);
-    if (pn_url_get_port(url)) port = (pn_url_get_port(url));
-  }
-
-  pn_proactor_listen(b.proactor, pn_listener(), host, port, 16);
-  printf("listening on '%s:%s' %zd threads\n", host, port, b.threads);
-  fflush(stdout);
-
-  if (url) pn_url_free(url);
-  if (b.threads <= 0) {
-    fprintf(stderr, "invalid value -t %zu, threads must be > 0\n", b.threads);
-    exit(1);
-  }
-  /* Start n-1 threads and use main thread */
+  /* Start n-1 threads */
   pthread_t* threads = (pthread_t*)calloc(sizeof(pthread_t), b.threads);
   for (size_t i = 0; i < b.threads-1; ++i) {
-    check(pthread_create(&threads[i], NULL, broker_thread, &b), "pthread_create");
+    pthread_create(&threads[i], NULL, broker_thread, &b);
   }
   broker_thread(&b);            /* Use the main thread too. */
+  /* Join the other threads */
   for (size_t i = 0; i < b.threads-1; ++i) {
-    check(pthread_join(threads[i], NULL), "pthread_join");
+    pthread_join(threads[i], NULL);
   }
   pn_proactor_free(b.proactor);
   free(threads);

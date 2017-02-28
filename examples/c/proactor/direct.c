@@ -19,8 +19,8 @@
  *
  */
 
+#include <proton/condition.h>
 #include <proton/connection.h>
-#include <proton/connection_driver.h>
 #include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/listener.h>
@@ -29,30 +29,24 @@
 #include <proton/sasl.h>
 #include <proton/session.h>
 #include <proton/transport.h>
-#include <proton/url.h>
-#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-typedef char str[1024];
 
 typedef struct app_data_t {
-  /* Common values */
-  pn_proactor_t *proactor;
-  bool finished;
-  str address;
-  str container_id;
-  pn_rwbytes_t message_buffer;
+  const char *connection_address;
+  const char *amqp_address;
+  const char *container_id;
   int message_count;
+
+  pn_proactor_t *proactor;
+  pn_listener_t *listener;
+  pn_rwbytes_t message_buffer;
 
   /* Sender values */
   int sent;
   int acknowledged;
   pn_link_t *sender;
-  pn_millis_t delay;
-  bool delaying;
 
   /* Receiver values */
   int received;
@@ -64,9 +58,10 @@ static int exit_code = 0;
 
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
-    exit_code = 1;
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
+    pn_connection_close(pn_event_connection(e));
+    exit_code = 1;
   }
 }
 
@@ -102,23 +97,6 @@ static pn_bytes_t encode_message(app_data_t* app) {
   }
   pn_message_free(message);
   return pn_bytes(mbuf.size, mbuf.start);
-}
-
-static void send(app_data_t* app) {
-  while (pn_link_credit(app->sender) > 0 && app->sent < app->message_count) {
-    ++app->sent;
-    // Use sent counter bytes as unique delivery tag.
-    pn_delivery(app->sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
-    pn_bytes_t msgbuf = encode_message(app);
-    pn_link_send(app->sender, msgbuf.start, msgbuf.size);
-    pn_link_advance(app->sender);
-    if (app->delay && app->sent < app->message_count) {
-      /* If delay is set, wait for TIMEOUT event to send more */
-      app->delaying = true;
-      pn_proactor_set_timeout(app->proactor, app->delay);
-      break;
-    }
-  }
 }
 
 #define MAX_SIZE 1024
@@ -195,16 +173,23 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
 
    case PN_LINK_REMOTE_OPEN: {
      pn_link_t* l = pn_event_link(event);
-     pn_terminus_set_address(pn_link_target(l), app->address);
+     pn_terminus_set_address(pn_link_target(l), app->amqp_address);
      pn_link_open(l);
    } break;
 
-   case PN_LINK_FLOW:
-    /* The peer has given us some credit, now we can send messages */
-    if (!app->delaying) {
-      app->sender = pn_event_link(event);
-      send(app);
-    } break;
+   case PN_LINK_FLOW: {
+     /* The peer has given us some credit, now we can send messages */
+     pn_link_t *sender = pn_event_link(event);
+     while (pn_link_credit(sender) > 0 && app->sent < app->message_count) {
+       ++app->sent;
+       // Use sent counter as unique delivery tag.
+       pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
+       pn_bytes_t msgbuf = encode_message(app);
+       pn_link_send(sender, msgbuf.start, msgbuf.size);
+       pn_link_advance(sender);
+     }
+     break;
+   }
 
    case PN_DELIVERY: {
      /* We received acknowledgedment from the peer that a message was delivered. */
@@ -213,6 +198,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
        if (++app->acknowledged == app->message_count) {
          printf("%d messages sent and acknowledged\n", app->acknowledged);
          pn_connection_close(pn_event_connection(event));
+         /* Continue handling events till we receive TRANSPORT_CLOSED */
        }
      }
    } break;
@@ -222,9 +208,16 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
   }
 }
 
-/* Handle all events, delegate to handle_send or handle_receive depending on link mode */
-static void handle(app_data_t* app, pn_event_t* event) {
+/* Handle all events, delegate to handle_send or handle_receive depending on link mode.
+   Return true to continue, false to exit
+*/
+static bool handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
+
+   case PN_LISTENER_OPEN:
+    printf("listening\n");
+    fflush(stdout);
+    break;
 
    case PN_LISTENER_ACCEPT:
     pn_listener_accept(pn_event_listener(event), pn_connection());
@@ -252,7 +245,7 @@ static void handle(app_data_t* app, pn_event_t* event) {
 
    case PN_TRANSPORT_CLOSED:
     check_condition(event, pn_transport_condition(pn_event_transport(event)));
-    app->finished = true;
+    pn_listener_close(app->listener); /* Finished */
     break;
 
    case PN_CONNECTION_REMOTE_CLOSE:
@@ -276,19 +269,12 @@ static void handle(app_data_t* app, pn_event_t* event) {
     pn_connection_wake(pn_session_connection(pn_link_session(app->sender)));
     break;
 
-   case PN_CONNECTION_WAKE:
-    /* Timeout, we can send more. */
-    app->delaying = false;
-    send(app);
+   case PN_LISTENER_CLOSE:
+    check_condition(event, pn_listener_condition(pn_event_listener(event)));
     break;
 
    case PN_PROACTOR_INACTIVE:
-    app->finished = true;
-    break;
-
-   case PN_LISTENER_CLOSE:
-    check_condition(event, pn_listener_condition(pn_event_listener(event)));
-    app->finished = true;
+    return false;
     break;
 
    default: {
@@ -302,60 +288,34 @@ static void handle(app_data_t* app, pn_event_t* event) {
      }
    }
   }
+  return true;
 }
 
-static void usage(const char *arg0) {
-  fprintf(stderr, "Usage: %s [-a URL] [-m message-count] [-d delay-ms]\n", arg0);
-  fprintf(stderr, "Demonstrates direct peer-to-peer AMQP communication without a broker. Accepts a connection from either the send.c or receive.c client and provides the complementary behavior (receive or send.");
-  exit(1);
+void run(app_data_t *app) {
+  /* Loop and handle events */
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(app->proactor);
+    for (pn_event_t *e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
+      if (!handle(app, e)) {
+        return;
+      }
+    }
+    pn_proactor_done(app->proactor, events);
+  } while(true);
 }
 
 int main(int argc, char **argv) {
-  /* Default values for application and connection. */
-  app_data_t app = {0};
-  app.message_count = 100;
-  const char* urlstr = NULL;
+  struct app_data_t app = {0};
+  app.container_id = argv[0];   /* Should be unique */
+  app.connection_address = (argc > 1) ? argv[1] : "127.0.0.1:amqp";
+  app.amqp_address = (argc > 2) ? argv[2] : "example";
+  app.message_count = (argc > 3) ? atoi(argv[3]) : 10;
 
-  int opt;
-  while((opt = getopt(argc, argv, "a:m:d:")) != -1) {
-    switch(opt) {
-     case 'a': urlstr = optarg; break;
-     case 'm': app.message_count = atoi(optarg); break;
-     case 'd': app.delay = atoi(optarg); break;
-     default: usage(argv[0]); break;
-    }
-  }
-  if (optind < argc)
-    usage(argv[0]);
-  /* Note container-id should be unique */
-  snprintf(app.container_id, sizeof(app.container_id), "%s", argv[0]);
-
-  /* Parse the URL or use default values */
-  const char *host = "0.0.0.0";
-  const char *port = "amqp";
-  strncpy(app.address, "example", sizeof(app.address));
-  pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  if (url) {
-    if (pn_url_get_host(url)) host = pn_url_get_host(url);
-    if (pn_url_get_port(url)) port = (pn_url_get_port(url));
-    if (pn_url_get_path(url)) strncpy(app.address, pn_url_get_path(url), sizeof(app.address));
-  }
-
+  /* Create the proactor and connect */
   app.proactor = pn_proactor();
-  pn_proactor_listen(app.proactor, pn_listener(), host, port, 16);
-  printf("listening on '%s:%s'\n", host, port);
-  fflush(stdout);
-  if (url) pn_url_free(url);
-
-  do {
-    pn_event_batch_t *events = pn_proactor_wait(app.proactor);
-    pn_event_t *e;
-    while ((e = pn_event_batch_next(events))) {
-      handle(&app, e);
-    }
-    pn_proactor_done(app.proactor, events);
-  } while(!app.finished);
-
+  app.listener = pn_listener();
+  pn_proactor_listen(app.proactor, app.listener, app.connection_address, 16);
+  run(&app);
   pn_proactor_free(app.proactor);
   free(app.message_buffer.start);
   return exit_code;

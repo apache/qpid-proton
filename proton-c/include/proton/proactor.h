@@ -66,15 +66,17 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  *
  * @param[in] proactor the proactor object
  * @param[in] connection the proactor takes ownership, do not free
- * @param[in] host address to connect on
+ * @param[in] addr the network address (not AMQP address) to connect to. May
+ * be in the form "host:port" or an "amqp://" or "amqps://" URL. The `/path` part of
+ * the URL is ignored.
  * @param[in] port port to connect to
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by connection or transport events via
 PNP_EXTERN  * pn_proactor_wait()
  */
-PNP_EXTERN int pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection,
-                        const char *host, const char *port);
+PNP_EXTERN int pn_proactor_connect(
+  pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 
 /**
  * Start listening with listener.  pn_proactor_wait() will return a
@@ -82,16 +84,17 @@ PNP_EXTERN int pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *con
  *
  * @param[in] proactor the proactor object
  * @param[in] listener proactor takes ownership of listener, do not free
- * @param[in] host address to listen on
- * @param[in] port port to listen on
+ * @param[in] addr the network address (not AMQP address) to connect to. May
+ * be in the form "host:port" or an "amqp://" or "amqps://" URL. The `/path` part of
+ * the URL is ignored.
  * @param[in] backlog number of connection requests to queue
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by pn_listener_condition() on the
  * PN_LISTENER_CLOSE event.
  */
-PNP_EXTERN int pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listener,
-                       const char *host, const char *port, int backlog);
+PNP_EXTERN int pn_proactor_listen(
+  pn_proactor_t *proactor, pn_listener_t *listener, const char *addr, int backlog);
 
 /**
  * Wait until there is at least one event to handle.

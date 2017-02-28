@@ -36,7 +36,7 @@ class Broker(object):
     def __enter__(self):
         with bind0() as sock:
             self.addr = "127.0.0.1:%s/examples" % (sock.port())
-            self.proc = self.test.proc(["broker", "-a", self.addr])
+            self.proc = self.test.proc(["broker", self.addr])
             self.proc.wait_re("listening")
             return self
 
@@ -52,44 +52,36 @@ class CExampleTest(ExampleTestCase):
     def test_send_receive(self):
         """Send first then receive"""
         with Broker(self) as b:
-            s = self.proc(["send", "-a", b.addr])
-            self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
-            r = self.proc(["receive", "-a", b.addr])
-            self.assertEqual(receive_expect(100), r.wait_out())
+            s = self.proc(["send", b.addr])
+            self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
+            r = self.proc(["receive", b.addr])
+            self.assertEqual(receive_expect(10), r.wait_out())
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
         with Broker(self) as b:
-            r = self.proc(["receive", "-a", b.addr]);
-            s = self.proc(["send", "-a", b.addr]);
-            self.assertEqual("100 messages sent and acknowledged\n", s.wait_out())
-            self.assertEqual(receive_expect(100), r.wait_out())
-
-    def test_timed_send(self):
-        """Send with timed delay"""
-        with Broker(self) as b:
-            s = self.proc(["send", "-a", b.addr, "-d100", "-m3"])
-            self.assertEqual("3 messages sent and acknowledged\n", s.wait_out())
-            r = self.proc(["receive", "-a", b.addr, "-m3"])
-            self.assertEqual(receive_expect(3), r.wait_out())
+            r = self.proc(["receive", b.addr]);
+            s = self.proc(["send", b.addr]);
+            self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
+            self.assertEqual(receive_expect(10), r.wait_out())
 
     def test_send_direct(self):
         """Send to direct server"""
         with bind0() as sock:
-            addr = "127.0.0.1:%s/examples" % sock.port()
-            d = self.proc(["direct", "-a", addr])
+            addr = "127.0.0.1:%s" % sock.port()
+            d = self.proc(["direct", addr])
             d.wait_re("listening")
-            self.assertEqual("100 messages sent and acknowledged\n", self.proc(["send", "-a", addr]).wait_out())
-            self.assertIn(receive_expect(100), d.wait_out())
+            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", addr]).wait_out())
+            self.assertIn(receive_expect(10), d.wait_out())
 
     def test_receive_direct(self):
         """Receive from direct server"""
         with bind0() as sock:
-            addr = "127.0.0.1:%s/examples" % sock.port()
-            d = self.proc(["direct", "-a", addr])
-            d.wait_re("listenin")
-            self.assertEqual(receive_expect(100), self.proc(["receive", "-a", addr]).wait_out())
-            self.assertIn("100 messages sent and acknowledged\n", d.wait_out())
+            addr = "127.0.0.1:%s" % sock.port()
+            d = self.proc(["direct", addr])
+            d.wait_re("listening")
+            self.assertEqual(receive_expect(10), self.proc(["receive", addr]).wait_out())
+            self.assertIn("10 messages sent and acknowledged\n", d.wait_out())
 
 
 if __name__ == "__main__":

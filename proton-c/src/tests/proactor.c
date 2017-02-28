@@ -163,10 +163,10 @@ static void test_client_server(test_t *t) {
   proactor_test_t pts[] ={ { open_close_handler }, { common_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port();
-  pn_proactor_listen(server, pn_listener(), localhost, port.str, 4);
+  test_port_t port = test_port(localhost);
+  pn_proactor_listen(server, pn_listener(), port.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-  pn_proactor_connect(client, pn_connection(), localhost, port.str);
+  pn_proactor_connect(client, pn_connection(), port.host_port);
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
   PROACTOR_TEST_FREE(pts);
@@ -190,11 +190,11 @@ static void test_connection_wake(test_t *t) {
   proactor_test_t pts[] =  { { open_wake_handler }, { common_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port();          /* Hold a port */
-  pn_proactor_listen(server, pn_listener(), localhost, port.str, 4);
+  test_port_t port = test_port(localhost);          /* Hold a port */
+  pn_proactor_listen(server, pn_listener(), port.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, localhost, port.str);
+  pn_proactor_connect(client, c, port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
   pn_connection_wake(c);
@@ -209,13 +209,13 @@ static void test_inactive(test_t *t) {
   proactor_test_t pts[] =  { { open_wake_handler }, { common_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port();          /* Hold a port */
+  test_port_t port = test_port(localhost);          /* Hold a port */
 
   pn_listener_t *l = pn_listener();
-  pn_proactor_listen(server, l, localhost, port.str,  4);
+  pn_proactor_listen(server, l, port.host_port,  4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, localhost, port.str);
+  pn_proactor_connect(client, c, port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
@@ -246,17 +246,17 @@ static void test_errors(test_t *t) {
   proactor_test_t pts[] =  { { open_wake_handler }, { common_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port();          /* Hold a port */
+  test_port_t port = test_port(localhost);          /* Hold a port */
 
   /* Invalid connect/listen parameters */
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, localhost, "xxx");
+  pn_proactor_connect(client, c, "127.0.0.1:xxx");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_CHECK_ERROR(t, "xxx", pn_transport_condition(pn_connection_transport(c)));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   pn_listener_t *l = pn_listener();
-  pn_proactor_listen(server, l, localhost, "xxx", 1);
+  pn_proactor_listen(server, l, "127.0.0.1:xxx", 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
   TEST_CHECK_ERROR(t, "xxx", pn_listener_condition(l));
@@ -264,7 +264,7 @@ static void test_errors(test_t *t) {
 
   /* Connect with no listener */
   c = pn_connection();
-  pn_proactor_connect(client, c, localhost, port.str);
+  pn_proactor_connect(client, c, port.host_port);
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_CHECK(t, pn_condition_is_set(pn_transport_condition(pn_connection_transport(c))));
   TEST_CHECK_ERROR(t, "connection refused", pn_transport_condition(pn_connection_transport(c)));
@@ -273,6 +273,8 @@ static void test_errors(test_t *t) {
   sock_close(port.sock);
   PROACTOR_TEST_FREE(pts);
 }
+
+/* Tests for use of URLs */
 
 
 int main(int argc, char **argv) {

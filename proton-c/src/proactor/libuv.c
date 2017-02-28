@@ -366,8 +366,6 @@ static void psocket_error(psocket_t *ps, int err, const char* what) {
   }
 }
 
-/* FIXME aconway 2017-02-25: split socket/queue */
-
 /* psocket uv-initialization */
 static int leader_init(psocket_t *ps) {
   ps->working = false;
@@ -418,7 +416,7 @@ static void on_connect(uv_connect_t *connect, int err) {
   pconnection_t *pc = (pconnection_t*)connect->data;
   assert(!pc->psocket.working);
   if (err) pconnection_error(pc, err, "on connect to");
-  pconnection_detach(pc);       /* FIXME aconway 2017-02-25: detach AFTER error or vv */
+  pconnection_detach(pc);
 }
 
 /* Incoming connection ready to be accepted */
@@ -437,8 +435,6 @@ static void on_connection(uv_stream_t* server, int err) {
     psocket_notify(&l->psocket);
   }
 }
-
-// #error FIXME REVIW UPWARDS FROM HERE ^^^^
 
 /* Common address resolution for leader_listen and leader_connect */
 static int leader_resolve(psocket_t *ps, uv_getaddrinfo_t *info, bool server) {
@@ -532,7 +528,6 @@ static void on_tick(uv_timer_t *timer) {
   assert(!pc->psocket.working);
   leader_tick(pc);
   pconnection_detach(pc);
-  /* FIXME aconway 2017-02-25: optimize - don't detach if no work. Need to check for finished? */
 }
 
 static void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
@@ -768,7 +763,7 @@ pn_event_batch_t *pn_proactor_wait(struct pn_proactor_t* p) {
 
 void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
   uv_mutex_lock(&p->lock);
-  psocket_t *ps = batch_psocket(batch); /* FIXME aconway 2017-02-26: replace with switch? */
+  psocket_t *ps = batch_psocket(batch);
   if (ps) {
     assert(ps->working);
     assert(ps->next == &UNLISTED);
@@ -817,8 +812,13 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   notify(p);
 }
 
-int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, const char *port) {
-  pconnection_t *pc = pconnection(p, c, false, host, port);
+int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
+  pn_url_t *url = pn_url_parse(addr);
+  if (!url) {
+    return PN_OUT_OF_MEMORY;
+  }
+  pconnection_t *pc = pconnection(p, c, false, pn_url_get_host(url), pn_url_get_port(url));
+  pn_url_free(url);
   if (!pc) {
     return PN_OUT_OF_MEMORY;
   }
@@ -826,10 +826,14 @@ int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *host, 
   return 0;
 }
 
-int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *host, const char *port, int backlog)
-{
+int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int backlog) {
   assert(!l->closed);
-  psocket_init(&l->psocket, p, false, host, port);
+  pn_url_t *url = pn_url_parse(addr);
+  if (!url) {
+    return PN_OUT_OF_MEMORY;
+  }
+  psocket_init(&l->psocket, p, false, pn_url_get_host(url), pn_url_get_port(url));
+  pn_url_free(url);
   l->backlog = backlog;
   psocket_start(&l->psocket);
   return 0;
@@ -861,7 +865,7 @@ void pn_proactor_free(pn_proactor_t *p) {
   uv_mutex_destroy(&p->lock);
   uv_cond_destroy(&p->cond);
   pn_collector_free(p->collector);
-  /* FIXME aconway 2017-02-25: restore */
+  /* FIXME aconway 2017-02-25: memory leaks, need to clean up the queues */
   /* assert(!p->worker_q.front); */
   /* assert(!p->leader_q.front); */
   free(p);

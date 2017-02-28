@@ -202,16 +202,18 @@ static int sock_port(sock_t sock) {
 /* Combines includes a sock_t with the int and char* versions of the port for convenience */
 typedef struct test_port_t {
   sock_t sock;
-  int port;
-  char str[256];
+  int port;                     /* port as integer */
+  char str[256];                /* port as string */
+  char host_port[256];          /* host:port string */
 } test_port_t;
 
 /* Create a test_port_t  */
-static inline test_port_t test_port(void) {
+static inline test_port_t test_port(const char* host) {
   test_port_t tp = {0};
   tp.sock = sock_bind0();
   tp.port = sock_port(tp.sock);
   snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
+  snprintf(tp.host_port, sizeof(tp.host_port), "%s:%d", host, tp.port);
   return tp;
 }
 

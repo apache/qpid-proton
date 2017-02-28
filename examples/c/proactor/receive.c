@@ -20,29 +20,25 @@
  */
 
 #include <proton/connection.h>
-#include <proton/connection_driver.h>
+#include <proton/condition.h>
 #include <proton/delivery.h>
-#include <proton/proactor.h>
 #include <proton/link.h>
 #include <proton/message.h>
+#include <proton/proactor.h>
 #include <proton/session.h>
 #include <proton/transport.h>
-#include <proton/url.h>
-#include "pncompat/misc_funcs.inc"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-
-typedef char str[1024];
 
 typedef struct app_data_t {
-  str address;
-  str container_id;
-  pn_rwbytes_t message_buffer;
+  const char *connection_address;
+  const char *amqp_address;
+  const char *container_id;
   int message_count;
-  int received;
+
   pn_proactor_t *proactor;
+  int received;
   bool finished;
 } app_data_t;
 
@@ -52,9 +48,10 @@ static int exit_code = 0;
 
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
-    exit_code = 1;
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
+    pn_connection_close(pn_event_connection(e));
+    exit_code = 1;
   }
 }
 
@@ -81,7 +78,8 @@ static void decode_message(pn_delivery_t *dlv) {
   }
 }
 
-static void handle(app_data_t* app, pn_event_t* event) {
+/* Return true to continue, false to exit */
+static bool handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
    case PN_CONNECTION_INIT: {
@@ -91,7 +89,7 @@ static void handle(app_data_t* app, pn_event_t* event) {
      pn_session_t* s = pn_session(c);
      pn_session_open(s);
      pn_link_t* l = pn_receiver(s, "my_receiver");
-     pn_terminus_set_address(pn_link_source(l), app->address);
+     pn_terminus_set_address(pn_link_source(l), app->amqp_address);
      pn_link_open(l);
      /* cannot receive without granting credit: */
      pn_link_flow(l, app->message_count ? app->message_count : BATCH);
@@ -148,63 +146,38 @@ static void handle(app_data_t* app, pn_event_t* event) {
     break;
 
    case PN_PROACTOR_INACTIVE:
-    app->finished = true;
+    return false;
     break;
 
-   default: break;
+   default:
+    break;
   }
+    return true;
 }
 
-static void usage(const char *arg0) {
-  fprintf(stderr, "Usage: %s [-a url] [-m message-count]\n", arg0);
-  exit(1);
+void run(app_data_t *app) {
+  /* Loop and handle events */
+  do {
+    pn_event_batch_t *events = pn_proactor_wait(app->proactor);
+    for (pn_event_t *e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
+      if (!handle(app, e)) {
+        return;
+      }
+    }
+    pn_proactor_done(app->proactor, events);
+  } while(true);
 }
 
 int main(int argc, char **argv) {
-  /* Default values for application and connection. */
-  app_data_t app = {{0}};
-  app.message_count = 100;
-  const char* urlstr = NULL;
-
-  int opt;
-  while((opt = getopt(argc, argv, "a:m:")) != -1) {
-    switch(opt) {
-     case 'a': urlstr = optarg; break;
-     case 'm': app.message_count = atoi(optarg); break;
-     default: usage(argv[0]); break;
-    }
-  }
-  if (optind < argc)
-    usage(argv[0]);
-  /* Note container-id should be unique */
-  snprintf(app.container_id, sizeof(app.container_id), "%s", argv[0]);
-
-  /* Parse the URL or use default values */
-  const char *host = "127.0.0.1";
-  const char *port = "amqp";
-  strncpy(app.address, "example", sizeof(app.address));
-  pn_url_t *url = urlstr ? pn_url_parse(urlstr) : NULL;
-  if (url) {
-    if (pn_url_get_host(url)) host = pn_url_get_host(url);
-    if (pn_url_get_port(url)) port = (pn_url_get_port(url));
-    if (pn_url_get_path(url)) strncpy(app.address, pn_url_get_path(url), sizeof(app.address));
-  }
+  struct app_data_t app = {0};
+  app.container_id = argv[0];   /* Should be unique */
+  app.connection_address = (argc > 1) ? argv[1] : "127.0.0.1:amqp";
+  app.amqp_address = (argc > 2) ? argv[2] : "example";
+  app.message_count = (argc > 3) ? atoi(argv[3]) : 10;
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
-  pn_proactor_connect(app.proactor, pn_connection(), host, port);
-  if (url) pn_url_free(url);
-
-  do {
-    pn_event_batch_t *events = pn_proactor_wait(app.proactor);
-    pn_event_t *e;
-    while ((e = pn_event_batch_next(events))) {
-      handle(&app, e);
-    }
-    pn_proactor_done(app.proactor, events);
-  } while(!app.finished);
-
+  pn_proactor_connect(app.proactor, pn_connection(), app.connection_address);
+  run(&app);
   pn_proactor_free(app.proactor);
-  free(app.message_buffer.start);
-  return exit_code;
 }
