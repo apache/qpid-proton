@@ -578,6 +578,7 @@ endif(MSVC)
 
 if (qpid-proton-proactor)
   set(HAS_PROACTOR 1)
+  set(HAS_PROACTOR 1 PARENT_SCOPE) # Visible to examples
   add_library (
     qpid-proton-proactor SHARED
     ${qpid-proton-proactor}

@@ -21,11 +21,6 @@ find_package(Proton REQUIRED)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${Proton_INCLUDE_DIRS})
 
-# Check if the proton library has a proactor implementation.
-include(CheckFunctionExists)
-set(CMAKE_REQUIRED_LIBRARIES ${Proton_LIBRARIES})
-check_function_exists(pn_proactor HAS_PROACTOR)
-
 if(HAS_PROACTOR)
 
 add_definitions(${COMPILE_WARNING_FLAGS} ${WERROR} ${COMPILE_PLATFORM_FLAGS} ${LINK_TIME_OPTIMIZATION})
