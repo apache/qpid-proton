@@ -20,6 +20,7 @@
  */
 
 #include "../core/log_private.h"
+#include "../core/url-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
@@ -29,7 +30,6 @@
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
-#include <proton/url.h>
 
 #include <uv.h>
 
@@ -813,12 +813,14 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
 }
 
 int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
-  pn_url_t *url = pn_url_parse(addr);
-  if (!url) {
+  char *buf = strdup(addr);
+  if (!buf) {
     return PN_OUT_OF_MEMORY;
   }
-  pconnection_t *pc = pconnection(p, c, false, pn_url_get_host(url), pn_url_get_port(url));
-  pn_url_free(url);
+  char *scheme, *user, *pass, *host, *port, *path;
+  pni_parse_url(buf, &scheme, &user, &pass, &host, &port, &path);
+  pconnection_t *pc = pconnection(p, c, false, host, port);
+  free(buf);
   if (!pc) {
     return PN_OUT_OF_MEMORY;
   }
@@ -828,12 +830,14 @@ int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) 
 
 int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int backlog) {
   assert(!l->closed);
-  pn_url_t *url = pn_url_parse(addr);
-  if (!url) {
+  char *buf = strdup(addr);
+  if (!buf) {
     return PN_OUT_OF_MEMORY;
   }
-  psocket_init(&l->psocket, p, false, pn_url_get_host(url), pn_url_get_port(url));
-  pn_url_free(url);
+  char *scheme, *user, *pass, *host, *port, *path;
+  pni_parse_url(buf, &scheme, &user, &pass, &host, &port, &path);
+  psocket_init(&l->psocket, p, false, host, port);
+  free(buf);
   l->backlog = backlog;
   psocket_start(&l->psocket);
   return 0;

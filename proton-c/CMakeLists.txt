@@ -110,6 +110,10 @@ find_package(Libuv)
 if (Libuv_FOUND)
   set (qpid-proton-proactor src/proactor/libuv.c)
   set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+  set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+    # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
+  )
 endif()
 
 # Link in SASL if present
@@ -382,6 +386,7 @@ set (qpid-proton-core
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
+  src/core/url-internal.c
 )
 
 set (qpid-proton-include-generated
@@ -499,11 +504,6 @@ set_source_files_properties (
   COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
   )
 
-set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-  # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
-  COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
-  )
-
 if (BUILD_WITH_CXX)
   set_source_files_properties (
     ${qpid-proton-core}
@@ -580,10 +580,8 @@ if (qpid-proton-proactor)
   set(HAS_PROACTOR 1)
   set(HAS_PROACTOR 1 PARENT_SCOPE) # Visible to examples
   add_library (
-    qpid-proton-proactor SHARED
-    ${qpid-proton-proactor}
-    )
-  target_link_libraries (qpid-proton-proactor qpid-proton-core ${PROACTOR_LIBS})
+    qpid-proton-proactor SHARED ${qpid-proton-proactor})
+  target_link_libraries (qpid-proton-proactor  qpid-proton-core ${PROACTOR_LIBS})
   list(APPEND LIB_TARGETS qpid-proton-proactor)
 endif()
 

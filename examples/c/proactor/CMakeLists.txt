@@ -35,7 +35,7 @@ endif(WIN32)
 
 foreach(name broker send receive direct)
   add_executable(proactor-${name} ${name}.c)
-  target_link_libraries(proactor-${name} ${Proton_LIBRARIES} ${PLATFORM_LIBS})
+  target_link_libraries(proactor-${name} ${ProtonProactor_LIBRARIES} ${PLATFORM_LIBS})
   set_target_properties(proactor-${name} PROPERTIES OUTPUT_NAME ${name})
 endforeach()
 

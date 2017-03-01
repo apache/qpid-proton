@@ -274,9 +274,6 @@ static void test_errors(test_t *t) {
   PROACTOR_TEST_FREE(pts);
 }
 
-/* Tests for use of URLs */
-
-
 int main(int argc, char **argv) {
   int failed = 0;
   RUN_ARGV_TEST(failed, t, test_inactive(&t));
