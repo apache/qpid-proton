@@ -561,7 +561,7 @@ if (MSVC)
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
 
-target_link_libraries (qpid-proton ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+target_link_libraries (qpid-proton LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
 set_target_properties (
   qpid-proton
@@ -581,7 +581,8 @@ if (qpid-proton-proactor)
   set(HAS_PROACTOR 1 PARENT_SCOPE) # Visible to examples
   add_library (
     qpid-proton-proactor SHARED ${qpid-proton-proactor})
-  target_link_libraries (qpid-proton-proactor  qpid-proton-core ${PROACTOR_LIBS})
+  target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
+  target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PROACTOR_LIBS})
   list(APPEND LIB_TARGETS qpid-proton-proactor)
 endif()
 
