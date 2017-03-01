@@ -576,25 +576,26 @@ class Connector(Handler):
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
-        if self.connection and self.connection.state & Endpoint.LOCAL_ACTIVE:
+        if self.connection is None: return
+        if self.connection.state & Endpoint.LOCAL_ACTIVE:
             if self.reconnect:
                 event.transport.unbind()
                 delay = self.reconnect.next()
                 if delay == 0:
                     logging.info("Disconnected, reconnecting...")
                     self._connect(self.connection, event.reactor)
+                    return
                 else:
                     logging.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
+                    return
             else:
                 logging.debug("Disconnected")
-                self.connection = None
+        # See connector.cpp: conn.free()/pn_connection_release() here?
+        self.connection = None
 
     def on_timer_task(self, event):
         self._connect(self.connection, event.reactor)
-
-    def on_connection_remote_close(self, event):
-        self.connection = None
 
 class Backoff(object):
     """

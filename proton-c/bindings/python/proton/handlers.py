@@ -255,6 +255,10 @@ class EndpointStateHandler(Handler):
 
     def on_connection_remote_close(self, event):
         if event.connection.remote_condition:
+            if event.connection.remote_condition.name == "amqp:connection:forced":
+                # Treat this the same as just having the transport closed by the peer without
+                # sending any events. Allow reconnection to happen transparently.
+                return
             self.on_connection_error(event)
         elif self.is_local_closed(event.connection):
            self.on_connection_closed(event)
