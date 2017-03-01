@@ -60,7 +60,7 @@ static void pni_urldecode(const char *src, char *dst)
 void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path)
 {
   if (!url) return;
-  *scheme = *user = *pass = *host = *port = *path = '\0';
+  *scheme = *user = *pass = *host = *port = *path = NULL;
 
   char *slash = strchr(url, '/');
 
