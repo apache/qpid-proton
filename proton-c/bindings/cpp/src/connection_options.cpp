@@ -19,6 +19,7 @@
  *
  */
 #include "proton/fwd.hpp"
+#include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"

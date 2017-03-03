@@ -22,15 +22,9 @@
  *
  */
 
-#include "proton/connection.hpp"
-#include "proton/container.hpp"
-#include "proton/io/connection_driver.hpp"
 #include "proton/event_loop.hpp"
-#include "proton/listen_handler.hpp"
 #include "proton/message.hpp"
 #include "proton/internal/pn_unique_ptr.hpp"
-
-#include "proton/io/link_namer.hpp"
 
 struct pn_record_t;
 struct pn_link_t;
@@ -42,6 +36,8 @@ namespace proton {
 
 class proton_handler;
 class reconnect_timer;
+
+namespace io {class link_namer;}
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -101,7 +97,7 @@ class connection_context : public context {
 
 class listener_context : public context {
   public:
-    listener_context() : listen_handler_(0) {}
+    listener_context();
     static listener_context& get(pn_listener_t* c);
 
     listen_handler* listen_handler_;
