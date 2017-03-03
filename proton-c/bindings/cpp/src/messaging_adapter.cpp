@@ -21,12 +21,16 @@
 
 #include "messaging_adapter.hpp"
 
+#include "proton/connection.hpp"
+#include "proton/container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/receiver.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/session.hpp"
 #include "proton/tracker.hpp"
 #include "proton/transport.hpp"
 

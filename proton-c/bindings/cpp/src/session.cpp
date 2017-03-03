@@ -21,6 +21,7 @@
 #include "proton/session.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/io/link_namer.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"

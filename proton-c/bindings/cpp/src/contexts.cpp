@@ -23,6 +23,7 @@
 #include "msg.hpp"
 #include "proton_bits.hpp"
 
+#include "proton/connection_options.hpp"
 #include "proton/error.hpp"
 
 #include <proton/connection.h>
@@ -68,6 +69,8 @@ pn_class_t* context::pn_class() { return &cpp_context_class; }
 connection_context::connection_context() :
     container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
 {}
+
+listener_context::listener_context() : listen_handler_(0) {}
 
 connection_context& connection_context::get(pn_connection_t *c) {
     return ref<connection_context>(id(pn_connection_attachments(c), CONNECTION_CONTEXT));
