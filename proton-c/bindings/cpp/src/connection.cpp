@@ -22,6 +22,7 @@
 #include "proton_bits.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/error.hpp"
 #include "proton/event_loop.hpp"

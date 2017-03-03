@@ -18,8 +18,11 @@
  */
 
 #include "proton/io/link_namer.hpp"
-#include "proton_bits.hpp"
+
+#include "proton/connection.hpp"
+
 #include "contexts.hpp"
+#include "proton_bits.hpp"
 
 namespace proton {
 namespace io {

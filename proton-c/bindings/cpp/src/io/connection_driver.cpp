@@ -19,6 +19,7 @@
 
 #include "proton/io/connection_driver.hpp"
 
+#include "proton/container.hpp"
 #include "proton/event_loop.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
