@@ -105,17 +105,6 @@ else(PN_WINAPI)
   set (pn_selector_impl src/reactor/io/posix/selector.c)
 endif(PN_WINAPI)
 
-# Select proactor impl
-find_package(Libuv)
-if (Libuv_FOUND)
-  set (qpid-proton-proactor src/proactor/libuv.c)
-  set (PROACTOR_LIBS ${Libuv_LIBRARIES})
-  set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-    # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
-  )
-endif()
-
 # Link in SASL if present
 if (SASL_IMPL STREQUAL cyrus)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
@@ -292,7 +281,6 @@ set(CXX_WARNING_FLAGS "${CXX_WARNING_FLAGS}" PARENT_SCOPE)
 set(COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS}" PARENT_SCOPE)
 set(COMPILE_LANGUAGE_FLAGS "${COMPILE_LANGUAGE_FLAGS}" PARENT_SCOPE)
 set(LINK_TIME_OPTIMIZATION "${LTO}" PARENT_SCOPE)
-
 
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
@@ -481,6 +469,18 @@ set (qpid-proton-include-extra
   include/proton/selectable.h
   include/proton/url.h
 )
+
+# Select proactor sources and build flags
+find_package(Libuv)
+if (Libuv_FOUND)
+  set (qpid-proton-proactor src/proactor/libuv.c)
+  set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+  set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+    # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
+    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
+  )
+endif()
+
 
 # note: process bindings after the source lists have been defined so
 # the bindings can reference them
