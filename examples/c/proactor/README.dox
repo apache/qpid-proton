@@ -18,6 +18,4 @@
  * @example broker.c
  *
  * A simple multithreaded broker that works with the @ref send.c and @ref receive.c examples.
- *
- * __Requires C++11__
  */

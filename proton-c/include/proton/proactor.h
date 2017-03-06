@@ -153,11 +153,14 @@ PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
  * Cause PN_PROACTOR_TIMEOUT to be returned to a thread calling wait()
  * after timeout milliseconds. Thread-safe.
  *
- * Note that calling pn_proactor_set_timeout() again before the
+ * Note: calling pn_proactor_set_timeout() again before the
  * PN_PROACTOR_TIMEOUT is delivered will cancel the previous timeout
  * and deliver an event only after the new
  * timeout. `pn_proactor_set_timeout(0)` will cancel the timeout
  * without setting a new one.
+ *
+ * Note: PN_PROACTOR_TIMEOUT events will be delivered in series, never
+ * concurrently.
  */
 PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
 

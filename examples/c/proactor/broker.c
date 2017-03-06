@@ -252,7 +252,8 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
-    pn_connection_close(pn_event_connection(e));
+    pn_connection_t *c = pn_event_connection(e);
+    if (c) pn_connection_close(c); /* It might be a listener event */
     exit_code = 1;
   }
 }
