@@ -640,6 +640,10 @@ static bool check_wake(pconnection_t *pc) {
 /* Process a pconnection, return true if it has events for a worker thread */
 static bool leader_process_pconnection(pconnection_t *pc) {
   /* Important to do the following steps in order */
+  if (pc->writing) {
+    /* We can't do anything while a write request is pending */
+    return false;
+  }
   if (pc->psocket.tcp.data == NULL) {
     /* Start the connection if not already connected */
     leader_connect(pc);
@@ -664,7 +668,7 @@ static bool leader_process_pconnection(pconnection_t *pc) {
         what = "connection timer start";
         err = uv_timer_start(&pc->timer, on_tick, next_tick, 0);
       }
-      if (!err && !pc->writing) {
+      if (!err) {
         what = "write";
         if (wbuf.size > 0) {
           uv_buf_t buf = uv_buf_init((char*)wbuf.start, wbuf.size);
