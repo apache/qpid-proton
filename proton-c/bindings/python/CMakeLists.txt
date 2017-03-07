@@ -143,13 +143,6 @@ set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
 
 set(py_dist_dir ${CMAKE_CURRENT_BINARY_DIR}/dist)
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
-               ${py_dist_dir}/setup.py
-)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
-               ${py_dist_dir}/README.rst
-)
-
 file(COPY ${py_dist_files} DESTINATION ${py_dist_dir})
 
 file(MAKE_DIRECTORY ${py_dist_dir}/proton)
@@ -183,3 +176,10 @@ foreach(sfile ${all_src})
                      COMMAND ${CMAKE_COMMAND} -E
                          copy ${CMAKE_SOURCE_DIR}/proton-c/${sfile} ${py_dist_dir}/proton-c/${sfile})
 endforeach()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
+               ${py_dist_dir}/setup.py
+)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
+               ${py_dist_dir}/README.rst
+)

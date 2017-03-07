@@ -404,6 +404,7 @@ set (qpid-proton-private-includes
   src/core/dispatcher.h
   src/core/data.h
   src/core/decoder.h
+  src/core/url-internal.h
   src/reactor/io/windows/iocp.h
   src/reactor/selector.h
   src/reactor/io.h
@@ -448,6 +449,7 @@ set (qpid-proton-include
   include/proton/event.h
   include/proton/import_export.h
   include/proton/link.h
+  include/proton/listener.h
   include/proton/log.h
   include/proton/message.h
   include/proton/object.h
