@@ -136,21 +136,18 @@ class Configure(build_ext):
 
         log.debug("Using Proton C sources: %s" % proton_base)
 
-        # Collect all the Proton C files that need to be built.
-        # we could've used `glob(.., '*', '*.c')` but I preferred going
-        # with an explicit list of subdirs that we can control and expand
-        # depending on the version. Specifically, lets avoid adding things
-        # we don't need.
-
-        sources = []
-        for subdir in ['core', 'core/object', 'compiler',
-                       'extra', 'message', 'reactor', 'messenger', 'handlers',
-                       'platform', 'reactor/io/posix']:
-
-            sources.extend(glob.glob(os.path.join(proton_src, subdir, '*.c')))
-
-        sources.extend(filter(lambda x: not x.endswith('dump.c'),
-                       glob.iglob(os.path.join(proton_src, '*.c'))))
+        # Collect all the Proton C files packaged in the sdist and strip out
+        # anything windows and configuration-dependent
+        sources = [x for x in "@all_src@".split(';')
+                   if x.endswith(".c") and x.find('windows') == -1]
+        cfgdep = ['openssl.c',
+                  'schannel.c',
+                  'ssl_stub.c',
+                  'cyrus_sasl.c',
+                  'none_sasl.c',
+                  'libuv.c']
+        sources = filter(lambda x: os.path.basename(x) not in cfgdep, sources)
+        sources = [os.path.join(proton_base, x) for x in sources]
 
         # Look for any optional libraries that proton needs, and adjust the
         # source list and compile flags as necessary.
@@ -196,7 +193,12 @@ class Configure(build_ext):
             sources.append(os.path.join(proton_src, 'sasl', 'none_sasl.c'))
             log.warn("Cyrus SASL not installed - only the ANONYMOUS and"
                      " PLAIN mechanisms will be supported!")
-        sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
+
+        # Include proactor if libuv is available
+        if cc.has_function('uv_tcp_init', includes=['uv.h'],
+                           libraries=['uv']):
+            libraries.append('uv')
+            sources.append(os.path.join(proton_src, 'proactor', 'libuv.c'))
 
         # compile all the proton sources.  We'll add the resulting list of
         # objects to the _cproton extension as 'extra objects'.  We do this
