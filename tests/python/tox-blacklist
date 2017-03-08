@@ -1,0 +1,13 @@
+# Running *all* the python tests under tox is redundant as this is
+# already done by the python-test suite.
+# This file contains a list of the longer running tests that can be
+# skipped in order to speed up the tox test run
+
+proton_tests.soak.*
+proton_tests.engine.ServerTest.testIdleTimeout
+proton_tests.engine.ServerTest.testKeepalive
+proton_tests.messenger.IdleTimeoutTest.testIdleTimeout
+proton_tests.messenger.MessengerTest.testCreditBlockingRebalance
+proton_tests.messenger.NBMessengerTest.testCreditReplenish
+proton_tests.messenger.NBMessengerTest.testRecvBeforeSubscribe
+
