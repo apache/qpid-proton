@@ -31,18 +31,22 @@ from os.path import dirname as dirname
 
 DEFAULT_TIMEOUT=10
 
-def bind0():
-    """Bind a socket with bind(0) and SO_REUSEADDR to get a free port to listen on"""
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', 0))
-    return sock
+class TestPort(object):
+    """Get an unused port using bind(0) and SO_REUSEADDR and hold it till close()"""
+    def __init__(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind(('', 0))
+        self.port = socket.getnameinfo(self.sock.getsockname(), 0)[1]
 
-# Monkeypatch add port() and with support to socket.socket
-socket.socket.port = lambda(self): socket.getnameinfo(self.getsockname(), 0)[1]
-socket.socket.__enter__ = lambda(self): self
-def socket__exit__(self, *args): self.close()
-socket.socket.__exit__ = socket__exit__
+    def __enter__(self):
+        return self.port
+
+    def __exit__(self, *args):
+        self.close()
+
+    def close(self):
+        self.sock.close()
 
 class ProcError(Exception):
     """An exception that captures failed process output"""

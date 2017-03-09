@@ -34,8 +34,8 @@ class Broker(object):
         self.test = test
 
     def __enter__(self):
-        with bind0() as sock:
-            self.addr = "127.0.0.1:%s/examples" % (sock.port())
+        with TestPort() as port:
+            self.addr = "127.0.0.1:%s" % port
             self.proc = self.test.proc(["broker", self.addr])
             self.proc.wait_re("listening")
             return self
@@ -67,8 +67,8 @@ class CExampleTest(ExampleTestCase):
 
     def test_send_direct(self):
         """Send to direct server"""
-        with bind0() as sock:
-            addr = "127.0.0.1:%s" % sock.port()
+        with TestPort() as port:
+            addr = "127.0.0.1:%s" % port
             d = self.proc(["direct", addr])
             d.wait_re("listening")
             self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", addr]).wait_out())
@@ -76,8 +76,8 @@ class CExampleTest(ExampleTestCase):
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        with bind0() as sock:
-            addr = "127.0.0.1:%s" % sock.port()
+        with TestPort() as port:
+            addr = "127.0.0.1:%s" % port
             d = self.proc(["direct", addr])
             d.wait_re("listening")
             self.assertEqual(receive_expect(10), self.proc(["receive", addr]).wait_out())
