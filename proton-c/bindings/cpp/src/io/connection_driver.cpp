@@ -68,7 +68,6 @@ connection_driver::~connection_driver() {
     pn_connection_driver_destroy(&driver_);
 }
 
-// FIXME aconway 2016-11-16: rename _engine > _driver
 void connection_driver::configure(const connection_options& opts, bool server) {
     proton::connection c(connection());
     opts.apply_unbound(c);
