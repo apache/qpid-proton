@@ -104,7 +104,7 @@ void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **ho
     }
   }
 
-  char *colon = strchr(url, ':');
+  char *colon = strrchr(url, ':'); /* Be flexible about unbracketed IPV6 literals like ::1:<port> */
   if (colon) {
     *colon = '\0';
     *port = colon + 1;

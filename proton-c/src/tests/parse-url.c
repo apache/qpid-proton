@@ -83,8 +83,8 @@ int main(int argc, char **argv)
   // Can't round-trip passwords with ':', not strictly legal but the parser allows it.
   TEST(test("user:1243^&^:pw@[::1]:amqp", 0, "user", "1243^&^:pw", "::1", "amqp", 0));
   TEST(test("user:1243^&^:pw@[::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "::1", "amqp", "Foo.bar:90087"));
-  TEST(test("user:1243^&^:pw@[::1:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "[", ":1:amqp", "Foo.bar:90087"));
-  TEST(test("user:1243^&^:pw@::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", 0, ":1]:amqp", "Foo.bar:90087"));
+  TEST(test("user:1243^&^:pw@[::1:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "[::1", "amqp", "Foo.bar:90087"));
+  TEST(test("user:1243^&^:pw@::1]:amqp/Foo.bar:90087", 0, "user", "1243^&^:pw", "::1]", "amqp", "Foo.bar:90087"));
 
   TEST(testrt("amqp://user@[::1]", "amqp", "user", 0, "::1", 0, 0));
   TEST(testrt("amqp://user@[::1]:amqp", "amqp", "user", 0, "::1", "amqp", 0));

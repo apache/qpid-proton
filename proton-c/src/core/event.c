@@ -277,7 +277,7 @@ pn_event_t *pn_event(void)
 
 pn_event_type_t pn_event_type(pn_event_t *event)
 {
-  return event->type;
+  return event ? event->type : PN_EVENT_NONE;
 }
 
 const pn_class_t *pn_event_class(pn_event_t *event)
