@@ -91,6 +91,9 @@ class Config:
 
 opts, args = parser.parse_args()
 
+# Known bad tests, skipped unless specifically matched on the command line
+known_bad = ["proton_tests.messenger.*"]
+
 includes = []
 excludes = ["*__*__"]
 config = Config()
@@ -119,9 +122,6 @@ for v in opts.ignore_file:
 for a in args:
   includes.append(a.strip())
 
-if not includes:
-  includes.append("*")
-
 def is_ignored(path):
   for p in excludes:
     if match(path, p):
@@ -134,7 +134,10 @@ def is_included(path):
   for p in includes:
     if match(path, p):
       return True
-  return False
+  for p in known_bad:
+    if match(path, p):
+      return False
+  return not includes           # If includes is empty, include everything
 
 def is_smart():
   return sys.stdout.isatty() and os.environ.get("TERM", "dumb") != "dumb"
