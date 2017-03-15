@@ -2275,3 +2275,37 @@ int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src) {
   }
   return err;
 }
+
+
+static pn_condition_t *cond_set(pn_condition_t *cond) {
+  return cond && pn_condition_is_set(cond) ? cond : NULL;
+}
+
+static pn_condition_t *cond2_set(pn_condition_t *cond1, pn_condition_t *cond2) {
+  pn_condition_t *cond = cond_set(cond1);
+  if (!cond) cond = cond_set(cond2);
+  return cond;
+}
+
+pn_condition_t *pn_event_condition(pn_event_t *e) {
+  void *ctx = pn_event_context(e);
+  switch (pn_class_id(pn_event_class(e))) {
+   case CID_pn_connection: {
+     pn_connection_t *c = (pn_connection_t*)ctx;
+     return cond2_set(pn_connection_remote_condition(c), pn_connection_condition(c));
+   }
+   case CID_pn_session: {
+     pn_session_t *s = (pn_session_t*)ctx;
+     return cond2_set(pn_session_remote_condition(s), pn_session_condition(s));
+   }
+   case CID_pn_link: {
+     pn_link_t *l = (pn_link_t*)ctx;
+     return cond2_set(pn_link_remote_condition(l), pn_link_condition(l));
+   }
+   case CID_pn_transport:
+    return cond_set(pn_transport_condition((pn_transport_t*)ctx));
+
+   default:
+    return NULL;
+  }
+}

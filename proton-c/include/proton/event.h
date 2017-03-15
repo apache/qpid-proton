@@ -524,6 +524,14 @@ PN_EXTERN pn_transport_t *pn_event_transport(pn_event_t *event);
 PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
 
 /**
+ * If the event context object has a condition and the condition is set
+ * return it, otherwise return NULL.
+ * If the event context object has remote and local conditions,
+ * try the remote condition first, then the local.
+ */
+PN_EXTERN struct pn_condition_t *pn_event_condition(pn_event_t *event);
+
+/**
  * **Experimental** - A batch of events that must be handled in sequence.
  * Call pn_event_batch_next() in a loop until it returns NULL to extract
  * the events.

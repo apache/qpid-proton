@@ -21,6 +21,7 @@
  */
 
 #include <proton/type_compat.h>
+#include <proton/condition.h>
 #include <proton/event.h>
 
 #include <errno.h>
@@ -122,6 +123,24 @@ static inline bool test_etype_equal_(test_t *t, int want, int got, const char *f
 
 #define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
+
+static inline pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, const char *file, int line) {
+  test_check_(t, want == pn_event_type(got), NULL, file, line, "want %s got %s",
+              pn_event_type_name(want),
+              pn_event_type_name(pn_event_type(got)));
+  if (want != pn_event_type(got)) {
+    pn_condition_t *cond = pn_event_condition(got);
+    if (cond && pn_condition_is_set(cond)) {
+      test_errorf_(t, NULL, NULL, file, line, "condition: %s:%s",
+                   pn_condition_get_name(cond), pn_condition_get_description(cond));
+    }
+    return NULL;
+  }
+  return got;
+}
+
+#define TEST_EVENT_TYPE(TEST, WANT, GOT) \
+  test_event_type_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 /* T is name of a test_t variable, EXPR is the test expression (which should update T)
    FAILED is incremented if the test has errors
