@@ -193,15 +193,22 @@ static void test_connection_wake(test_t *t) {
   test_port_t port = test_port(localhost);          /* Hold a port */
   pn_proactor_listen(server, pn_listener(), port.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  sock_close(port.sock);
+
   pn_connection_t *c = pn_connection();
+  pn_incref(c);                 /* Keep c alive after proactor frees it */
   pn_proactor_connect(client, c, port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  sock_close(port.sock);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   PROACTOR_TEST_FREE(pts);
+
+  /* The pn_connection_t is still valid so wake is legal but a no-op */
+  pn_connection_wake(c);
+  pn_decref(c);
 }
 
 /* Test that INACTIVE event is generated when last connections/listeners closes. */
