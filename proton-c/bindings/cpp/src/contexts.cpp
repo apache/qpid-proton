@@ -41,7 +41,6 @@ namespace {
 void cpp_context_finalize(void* v) { reinterpret_cast<context*>(v)->~context(); }
 #define CID_cpp_context CID_pn_object
 #define cpp_context_initialize NULL
-#define cpp_context_finalize cpp_context_finalize
 #define cpp_context_hashcode NULL
 #define cpp_context_compare NULL
 #define cpp_context_inspect NULL
