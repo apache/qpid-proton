@@ -79,15 +79,23 @@ PNP_EXTERN int pn_proactor_connect(
   pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 
 /**
- * Start listening with listener.  pn_proactor_wait() will return a
- * PN_LISTENER_ACCEPT event when a connection can be accepted.
+ * Start listening with listener.
+ *
+ * pn_proactor_wait() will return a PN_LISTENER_ACCEPT event when a connection can be
+ * accepted.
+ *
  *
  * @param[in] proactor the proactor object
  * @param[in] listener proactor takes ownership of listener, do not free
- * @param[in] addr the network address (not AMQP address) to connect to. May
- * be in the form "host:port" or an "amqp://" or "amqps://" URL. The `/path` part of
- * the URL is ignored.
- * @param[in] backlog number of connection requests to queue
+ * @param[in] addr the network address (not AMQP address) to connect to in "host:port"
+ *
+ * The host can be a host name, IPV4 or IPV6 literal, or the empty string. The empty
+ * string listens on all local addresses. A host name listens on all addresses associated
+ * with the name. An IPV6 literal address (or wildcard '[::]') listens only for IPV6. An
+ * IPV4 literal address (or wildcard '0.0.0.0') listens only for IPV4."
+ *
+ * @param[in] backlog number of connection requests to queue. If the host resolves
+ * to multiple addresses, this backlog applies to each address.
  *
  * @return error on immediate error, e.g. an allocation failure.
  * Other errors are indicated by pn_listener_condition() on the
@@ -185,11 +193,6 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
  * Return the proactor associated with an event or NULL.
  */
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
-
-/**
- * Return the listener associated with an event or NULL.
- */
-PNP_EXTERN pn_listener_t *pn_event_listener(pn_event_t *event);
 
 /**
  * @}

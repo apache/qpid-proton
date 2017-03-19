@@ -22,6 +22,7 @@
 
 #include <proton/import_export.h>
 #include <proton/types.h>
+#include <proton/event.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -89,6 +90,9 @@ PNP_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
 
 /**
  * Close the listener (thread safe).
+ *
+ * The PN_LISTENER_CLOSE event is generated when the listener has stopped listening.
+ *
  */
 PNP_EXTERN void pn_listener_close(pn_listener_t *l);
 
@@ -97,6 +101,10 @@ PNP_EXTERN void pn_listener_close(pn_listener_t *l);
  */
 PNP_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
 
+/**
+ * Return the listener associated with an event or NULL.
+ */
+PNP_EXTERN pn_listener_t *pn_event_listener(pn_event_t *event);
 
 /**
  *@}
