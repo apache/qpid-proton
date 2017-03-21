@@ -1619,6 +1619,17 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   return 0;
 }
 
+/*
+  This operator, copied from code for the qpid cpp broker, gives the correct
+  result when comparing sequence numbers implemented in a signed integer type.
+*/
+static bool sequence_less_than ( pn_sequence_t a, pn_sequence_t b )
+{
+  return (a - b) < 0;
+}
+
+
+
 int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   bool role;
@@ -1648,7 +1659,7 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   bool remote_data = (pn_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
-  for (pn_sequence_t id = first; id <= last; id++) {
+  for (pn_sequence_t id = first; sequence_less_than(id, last) || (id == last); id++) {
     pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
     pn_disposition_t *remote = &delivery->remote;
     if (delivery) {
