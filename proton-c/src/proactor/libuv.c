@@ -737,6 +737,7 @@ static void on_timeout(uv_timer_t *timer) {
   pn_proactor_t *p = (pn_proactor_t*)timer->data;
   uv_mutex_lock(&p->lock);
   p->timeout_elapsed = true;
+  uv_stop(&p->loop);            /* UV does not always stop after on_timeout without this */
   uv_mutex_unlock(&p->lock);
 }
 
@@ -881,6 +882,14 @@ void pconnection_detach(pconnection_t *pc) {
 
 /* Process the leader_q and the UV loop, in the leader thread */
 static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
+  /* Set timeout timer if there was a request, let it count down while we process work */
+  if (p->timeout_request) {
+    p->timeout_request = false;
+    uv_timer_stop(&p->timer);
+    if (p->timeout) {
+      uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
+    }
+  }
   pn_event_batch_t *batch = NULL;
   for (work_t *w = work_pop(&p->leader_q); w; w = work_pop(&p->leader_q)) {
     assert(!w->working);
@@ -909,14 +918,6 @@ static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
   }
   batch = get_batch_lh(p);      /* Check for work */
   if (!batch) { /* No work, run the UV loop */
-    /* Set timeout timer before uv_run */
-    if (p->timeout_request) {
-      p->timeout_request = false;
-      uv_timer_stop(&p->timer);
-      if (p->timeout) {
-        uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
-      }
-    }
     uv_mutex_unlock(&p->lock);  /* Unlock to run UV loop */
     uv_run(&p->loop, mode);
     uv_mutex_lock(&p->lock);
