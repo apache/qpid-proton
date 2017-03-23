@@ -217,6 +217,8 @@ struct pn_listener_t {
   listener_state state;
 };
 
+typedef enum { TM_NONE, TM_REQUEST, TM_PENDING, TM_FIRED } timeout_state_t;
+
 struct pn_proactor_t {
   /* Leader thread  */
   uv_cond_t cond;
@@ -230,16 +232,15 @@ struct pn_proactor_t {
 
   /* Protected by lock */
   uv_mutex_t lock;
-  work_queue_t worker_q;               /* ready for work, to be returned via pn_proactor_wait()  */
-  work_queue_t leader_q;               /* waiting for attention by the leader thread */
-  size_t interrupt;             /* pending interrupts */
+  work_queue_t worker_q;      /* ready for work, to be returned via pn_proactor_wait()  */
+  work_queue_t leader_q;      /* waiting for attention by the leader thread */
+  size_t interrupt;           /* pending interrupts */
+  timeout_state_t timeout_state;
   pn_millis_t timeout;
-  size_t count;                 /* connection/listener count for INACTIVE events */
+  size_t count;               /* connection/listener count for INACTIVE events */
   bool inactive;
-  bool timeout_request;
-  bool timeout_elapsed;
   bool has_leader;
-  bool batch_working;          /* batch is being processed in a worker thread */
+  bool batch_working;         /* batch is being processed in a worker thread */
 };
 
 
@@ -736,7 +737,9 @@ static void on_write(uv_write_t* write, int err) {
 static void on_timeout(uv_timer_t *timer) {
   pn_proactor_t *p = (pn_proactor_t*)timer->data;
   uv_mutex_lock(&p->lock);
-  p->timeout_elapsed = true;
+  if (p->timeout_state == TM_PENDING) { /* Only fire if still pending */
+    p->timeout_state = TM_FIRED;
+  }
   uv_stop(&p->loop);            /* UV does not always stop after on_timeout without this */
   uv_mutex_unlock(&p->lock);
 }
@@ -787,8 +790,8 @@ static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
       --p->interrupt;
       return proactor_batch_lh(p, PN_PROACTOR_INTERRUPT);
     }
-    if (p->timeout_elapsed) {
-      p->timeout_elapsed = false;
+    if (p->timeout_state == TM_FIRED) {
+      p->timeout_state = TM_NONE;
       return proactor_batch_lh(p, PN_PROACTOR_TIMEOUT);
     }
   }
@@ -883,12 +886,10 @@ void pconnection_detach(pconnection_t *pc) {
 /* Process the leader_q and the UV loop, in the leader thread */
 static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
   /* Set timeout timer if there was a request, let it count down while we process work */
-  if (p->timeout_request) {
-    p->timeout_request = false;
+  if (p->timeout_state == TM_REQUEST) {
+    p->timeout_state = TM_PENDING;
     uv_timer_stop(&p->timer);
-    if (p->timeout) {
-      uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
-    }
+    uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
   }
   pn_event_batch_t *batch = NULL;
   for (work_t *w = work_pop(&p->leader_q); w; w = work_pop(&p->leader_q)) {
@@ -1014,7 +1015,14 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   uv_mutex_lock(&p->lock);
   p->timeout = t;
-  p->timeout_request = true;
+  p->timeout_state = TM_REQUEST;
+  uv_mutex_unlock(&p->lock);
+  notify(p);
+}
+
+void pn_proactor_cancel_timeout(pn_proactor_t *p) {
+  uv_mutex_lock(&p->lock);
+  p->timeout_state = TM_NONE;
   uv_mutex_unlock(&p->lock);
   notify(p);
 }

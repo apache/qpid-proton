@@ -121,8 +121,20 @@ static void test_interrupt_timeout(test_t *t) {
   pn_proactor_interrupt(p);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INTERRUPT, wait_next(p));
   TEST_CHECK(t, pn_proactor_get(p) == NULL); /* idle */
-  pn_proactor_set_timeout(p, 1); /* very short timeout */
+
+  /* Set an immediate timeout */
+  pn_proactor_set_timeout(p, 0);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_TIMEOUT, wait_next(p));
+
+  /* Set a (very short) timeout */
+  pn_proactor_set_timeout(p, 10);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_TIMEOUT, wait_next(p));
+
+  /* Set and cancel a timeout, make sure we don't get the timeout event */
+  pn_proactor_set_timeout(p, 10);
+  pn_proactor_cancel_timeout(p);
+  TEST_CHECK(t, pn_proactor_get(p) == NULL); /* idle */
+
   pn_proactor_free(p);
 }
 

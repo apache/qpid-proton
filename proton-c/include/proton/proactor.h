@@ -164,13 +164,17 @@ PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
  * Note: calling pn_proactor_set_timeout() again before the
  * PN_PROACTOR_TIMEOUT is delivered will cancel the previous timeout
  * and deliver an event only after the new
- * timeout. `pn_proactor_set_timeout(0)` will cancel the timeout
- * without setting a new one.
+ * timeout.
  *
  * Note: PN_PROACTOR_TIMEOUT events will be delivered in series, never
  * concurrently.
  */
 PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
+
+/**
+ * Cancel the pending timeout set by pn_proactor_set_timeout() if there is one.
+ */
+PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
 
 /**
  * Cause a PN_CONNECTION_WAKE event to be returned by the proactor, even if
