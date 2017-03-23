@@ -130,22 +130,11 @@ static inline bool test_etype_equal_(test_t *t, int want, int got, const char *f
                      pn_event_type_name((pn_event_type_t)got));
 }
 
-#define TEST_CHECK_COND(T, WANT, COND) do {                             \
-    pn_condition_t *cond = (COND);                                      \
-    if (TEST_CHECKF((T), pn_condition_is_set(cond), "expecting error")) { \
-      const char* description = pn_condition_get_description(cond);     \
-      if (!strstr(description, (WANT))) {                               \
-        TEST_ERRORF((T), "expected '%s' in '%s'", (WANT), description); \
-      }                                                                 \
-    }                                                                   \
-  } while(0)
+#define TEST_STR_EQUAL(TEST, WANT, GOT) \
+  TEST_CHECKF((TEST), !strcmp((WANT), (GOT)), " got '%s'", (GOT))
 
-#define TEST_CHECK_NO_COND(T, COND) do {                                \
-    pn_condition_t *cond = (COND);                                      \
-    if (cond && pn_condition_is_set(cond)) {                            \
-      TEST_ERRORF((T), "unexpected condition: %s", pn_condition_get_description(cond)); \
-    }                                                                   \
-  } while(0)
+#define TEST_STR_IN(TEST, WANT, GOT) \
+  TEST_CHECKF((TEST), strstr((GOT), (WANT)), " got '%s'", (GOT))
 
 #define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)

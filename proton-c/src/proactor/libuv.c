@@ -215,6 +215,7 @@ struct pn_listener_t {
   pn_collector_t *collector;
   pconnection_queue_t accept;   /* pconnection_t list for accepting */
   listener_state state;
+  int refcount;                 /* Free when proactor and user are done */
 };
 
 typedef enum { TM_NONE, TM_REQUEST, TM_PENDING, TM_FIRED } timeout_state_t;
@@ -304,6 +305,7 @@ static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool ser
   if (!pc || pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
     return NULL;
   }
+  pn_incref(c);                 /* User owns original ref, make one for the proactor */
   work_init(&pc->work, p,  T_CONNECTION);
   pc->next = pconnection_unqueued;
   pc->write.data = &pc->work;
@@ -366,10 +368,16 @@ static void pconnection_free(pconnection_t *pc) {
   if (pc->addr.getaddrinfo.addrinfo) {
     uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Interrupted after resolve */
   }
-  pn_incref(pc);                /* Make sure we don't do a circular free */
+  /* Don't let driver_destroy call pn_connection_free(), the user does that */
+  pn_connection_t *c = pc->driver.connection;
+  pc->driver.connection = NULL;
+  pn_collector_t *collector = pn_connection_collector(c);
+  if (collector) {
+    pn_collector_release(collector); /* Break circular refs */
+  }
   pn_connection_driver_destroy(&pc->driver);
-  pn_decref(pc);
-  /* Now pc is freed iff the connection is, otherwise remains till the pn_connection_t is freed. */
+  /* The user either has or will call pn_connection_free(), drop our ref. */
+  pn_decref(c);
 }
 
 /* Final close event for for a pconnection_t, disconnects from proactor */
@@ -628,8 +636,8 @@ static void leader_listen_lh(pn_listener_t *l) {
   }
 }
 
-static void pn_listener_free(pn_listener_t *l) {
-  if (l) {
+void pn_listener_free(pn_listener_t *l) {
+  if (l && --l->refcount == 0) {
     if (l->addr.getaddrinfo.addrinfo) { /* Interrupted after resolve */
       uv_freeaddrinfo(l->addr.getaddrinfo.addrinfo);
     }
@@ -1042,6 +1050,7 @@ int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int
   work_init(&l->work, p, T_LISTENER);
   parse_addr(&l->addr, addr);
   l->backlog = backlog;
+  ++l->refcount;
   work_start(&l->work);
   return 0;
 }
@@ -1128,6 +1137,7 @@ void pn_connection_wake(pn_connection_t* c) {
 pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
+    l->refcount = 1;
     l->batch.next_event = listener_batch_next;
     l->collector = pn_collector();
     l->condition = pn_condition();

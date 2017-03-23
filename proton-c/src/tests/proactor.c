@@ -32,7 +32,10 @@ static pn_millis_t timeout = 7*1000; /* timeout for hanging tests */
 
 static const char *localhost = "127.0.0.1"; /* host for connect/listen */
 
-typedef pn_event_t *(*test_handler_fn)(test_t *, pn_event_t*);
+typedef pn_event_type_t (*test_handler_fn)(test_t *, pn_event_t*);
+
+/* Save the last condition description of a handled event here  */
+char last_condition[1024] = {0};
 
 /* Proactor and handler that take part in a test */
 typedef struct proactor_test_t {
@@ -61,18 +64,34 @@ static void proactor_test_free(proactor_test_t *pts, size_t n) {
 
 #define PROACTOR_TEST_FREE(A) proactor_test_free(A, sizeof(A)/sizeof(*A))
 
+static void save_condition(pn_event_t *e) {
+  /* FIXME aconway 2017-03-23: extend pn_event_condition to include listener */
+  last_condition[0] = '\0';
+  pn_condition_t *cond = NULL;
+  if (pn_event_listener(e)) {
+    cond = pn_listener_condition(pn_event_listener(e));
+  } else {
+    cond = pn_event_condition(e);
+  }
+  if (cond && pn_condition_is_set(cond)) {
+    const char *desc = pn_condition_get_description(cond);
+    strncpy(last_condition, desc, sizeof(last_condition));
+  }
+}
+
 /* Process events on a proactor array until a handler returns an event, or
  * all proactors return NULL
  */
-static pn_event_t *proactor_test_get(proactor_test_t *pts, size_t n) {
+static pn_event_type_t proactor_test_get(proactor_test_t *pts, size_t n) {
   while (true) {
     bool busy = false;
     for (proactor_test_t *pt = pts; pt < pts + n; ++pt) {
       pn_event_batch_t *eb =  pn_proactor_get(pt->proactor);
       if (eb) {
         busy = true;
-        pn_event_t *ret = NULL;
+        pn_event_type_t ret = PN_EVENT_NONE;
         for (pn_event_t* e = pn_event_batch_next(eb); e; e = pn_event_batch_next(eb)) {
+          save_condition(e);
           ret = pt->handler(pt->t, e);
           if (ret) break;
         }
@@ -81,15 +100,15 @@ static pn_event_t *proactor_test_get(proactor_test_t *pts, size_t n) {
       }
     }
     if (!busy) {
-      return NULL;
+      return PN_EVENT_NONE;
     }
   }
 }
 
 /* Run an array of proactors till a handler returns an event. */
-static pn_event_t *proactor_test_run(proactor_test_t *pts, size_t n) {
-  pn_event_t *e;
-  while ((e = proactor_test_get(pts, n)) == NULL)
+static pn_event_type_t proactor_test_run(proactor_test_t *pts, size_t n) {
+  pn_event_type_t e;
+  while ((e = proactor_test_get(pts, n)) == PN_EVENT_NONE)
          ;
   return e;
 }
@@ -139,31 +158,37 @@ static void test_interrupt_timeout(test_t *t) {
 }
 
 /* Common handler for simple client/server interactions,  */
-static pn_event_t *common_handler(test_t *t, pn_event_t *e) {
+static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
   pn_connection_t *c = pn_event_connection(e);
   pn_listener_t *l = pn_event_listener(e);
 
   switch (pn_event_type(e)) {
 
-    /* Stop on these events */
+    /* Cleanup events */
    case PN_LISTENER_CLOSE:
+    pn_listener_free(pn_event_listener(e));
+    return PN_LISTENER_CLOSE;
+   case PN_TRANSPORT_CLOSED:
+    pn_connection_free(pn_event_connection(e));
+    return PN_TRANSPORT_CLOSED;
+
+    /* Stop on these events */
    case PN_LISTENER_OPEN:
    case PN_PROACTOR_INACTIVE:
    case PN_PROACTOR_TIMEOUT:
-   case PN_TRANSPORT_CLOSED:
-    return e;
+    return pn_event_type(e);
 
    case PN_LISTENER_ACCEPT:
     pn_listener_accept(l, pn_connection());
-    return NULL;
+    return PN_EVENT_NONE;
 
    case PN_CONNECTION_REMOTE_OPEN:
     pn_connection_open(c);      /* Return the open (no-op if already open) */
-    return NULL;
+    return PN_EVENT_NONE;
 
    case PN_CONNECTION_REMOTE_CLOSE:
     pn_connection_close(c);     /* Return the close */
-    return NULL;
+    return PN_EVENT_NONE;
 
     /* Ignored these events */
    case PN_CONNECTION_INIT:
@@ -174,20 +199,20 @@ static pn_event_t *common_handler(test_t *t, pn_event_t *e) {
    case PN_TRANSPORT_ERROR:
    case PN_TRANSPORT_HEAD_CLOSED:
    case PN_TRANSPORT_TAIL_CLOSED:
-    return NULL;
+    return PN_EVENT_NONE;
 
    default:
     TEST_ERRORF(t, "unexpected event %s", pn_event_type_name(pn_event_type(e)));
-    return NULL;                   /* Fail the test but keep going */
+    return PN_EVENT_NONE;                   /* Fail the test but keep going */
   }
 }
 
 /* close a connection when it is remote open */
-static pn_event_t *open_close_handler(test_t *t, pn_event_t *e) {
+static pn_event_type_t open_close_handler(test_t *t, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_CONNECTION_REMOTE_OPEN:
     pn_connection_close(pn_event_connection(e));
-    return NULL;          /* common_handler will finish on TRANSPORT_CLOSED */
+    return PN_EVENT_NONE;          /* common_handler will finish on TRANSPORT_CLOSED */
    default:
     return common_handler(t, e);
   }
@@ -200,28 +225,28 @@ static void test_client_server(test_t *t) {
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
   test_port_t port = test_port(localhost);
   pn_proactor_listen(server, pn_listener(), port.host_port, 4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
   /* Connect and wait for close at both ends */
   pn_proactor_connect(client, pn_connection(), port.host_port);
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   /* Connect and wait for close at both ends */
   pn_proactor_connect(client, pn_connection(), port.host_port);
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
 
   PROACTOR_TEST_FREE(pts);
 }
 
 /* Return on connection open, close and return on wake */
-static pn_event_t *open_wake_handler(test_t *t, pn_event_t *e) {
+static pn_event_type_t open_wake_handler(test_t *t, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_CONNECTION_REMOTE_OPEN:
-    return e;
+    return pn_event_type(e);
    case PN_CONNECTION_WAKE:
     pn_connection_close(pn_event_connection(e));
-    return e;
+    return pn_event_type(e);
    default:
     return common_handler(t, e);
   }
@@ -234,17 +259,17 @@ static void test_connection_wake(test_t *t) {
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
   test_port_t port = test_port(localhost);          /* Hold a port */
   pn_proactor_listen(server, pn_listener(), port.host_port, 4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
 
   pn_connection_t *c = pn_connection();
   pn_incref(c);                 /* Keep c alive after proactor frees it */
   pn_proactor_connect(client, c, port.host_port);
-  TEST_EVENT_TYPE(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
   pn_connection_wake(c);
-  TEST_EVENT_TYPE(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
     /* The pn_connection_t is still valid so wake is legal but a no-op */
   pn_connection_wake(c);
 
@@ -263,21 +288,21 @@ static void test_inactive(test_t *t) {
 
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(server, l, port.host_port,  4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_t *c = pn_connection();
   pn_proactor_connect(client, c, port.host_port);
-  TEST_EVENT_TYPE(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_wake(c);
-  TEST_EVENT_TYPE(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
   /* expect TRANSPORT_CLOSED from client and server, INACTIVE from client */
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
   /* server won't be INACTIVE until listener is closed */
   TEST_CHECK(t, pn_proactor_get(server) == NULL);
   pn_listener_close(l);
-  TEST_EVENT_TYPE(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   sock_close(port.sock);
   PROACTOR_TEST_FREE(pts);
@@ -293,30 +318,26 @@ static void test_errors(test_t *t) {
   /* Invalid connect/listen parameters */
   pn_connection_t *c = pn_connection();
   pn_proactor_connect(client, c, "127.0.0.1:xxx");
-  TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_CHECK_COND(t, "xxx", pn_transport_condition(pn_connection_transport(c)));
-  TEST_EVENT_TYPE(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_STR_IN(t, "xxx", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(server, l, "127.0.0.1:xxx", 1);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-  TEST_EVENT_TYPE(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  TEST_CHECK_COND(t, "xxx", pn_listener_condition(l));
-  TEST_EVENT_TYPE(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
+  TEST_STR_IN(t, "xxx", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Connect with no listener */
   c = pn_connection();
   pn_proactor_connect(client, c, port.host_port);
-  if (TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
-    TEST_CHECK_COND(t, "connection refused", pn_transport_condition(pn_connection_transport(c)));
-    TEST_EVENT_TYPE(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
+    TEST_STR_IN(t, "connection refused", last_condition);
+    TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
     sock_close(port.sock);
     PROACTOR_TEST_FREE(pts);
   }
-}
-
-static inline const char *event_listener_desc(pn_event_t *e) {
-  return pn_condition_get_description(pn_listener_condition(pn_event_listener(e)));
 }
 
 /* Test that we can control listen/select on ipv6/v4 and listen on both by default */
@@ -328,48 +349,42 @@ static void test_ipv4_ipv6(test_t *t) {
   /* Listen on all interfaces for IPv6 only. If this fails, skip IPv6 tests */
   test_port_t port6 = test_port("[::]");
   pn_proactor_listen(server, pn_listener(), port6.host_port, 4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port6.sock);
-  pn_event_t *e = PROACTOR_TEST_GET(pts);
-  bool has_ipv6 = (pn_event_type(e) != PN_LISTENER_CLOSE);
+  pn_event_type_t e = PROACTOR_TEST_GET(pts);
+  bool has_ipv6 = (e != PN_LISTENER_CLOSE);
   if (!has_ipv6) {
-    TEST_LOGF(t, "skip IPv6 tests: %s", event_listener_desc(e));
+    TEST_LOGF(t, "skip IPv6 tests: %s", last_condition);
   }
   PROACTOR_TEST_DRAIN(pts);
 
   /* Listen on all interfaces for IPv4 only. */
   test_port_t port4 = test_port("0.0.0.0");
   pn_proactor_listen(server, pn_listener(), port4.host_port, 4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port4.sock);
-  e = PROACTOR_TEST_GET(pts);
-  if (pn_event_type(e) == PN_LISTENER_CLOSE) {
-    TEST_ERRORF(t, "listener error: %s",  event_listener_desc(e));
-  }
+  TEST_CHECKF(t, PROACTOR_TEST_GET(pts) != PN_LISTENER_CLOSE, "listener error: %s",  last_condition);
   PROACTOR_TEST_DRAIN(pts);
 
   /* Empty address listens on both IPv4 and IPv6 on all interfaces */
   test_port_t port = test_port("");
   pn_proactor_listen(server, pn_listener(), port.host_port, 4);
-  TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
   e = PROACTOR_TEST_GET(pts);
-  if (pn_event_type(e) == PN_LISTENER_CLOSE) {
-    TEST_ERRORF(t, "listener error: %s",  event_listener_desc(e));
-  }
-  PROACTOR_TEST_DRAIN(pts);
+  TEST_CHECKF(t, PROACTOR_TEST_GET(pts) != PN_LISTENER_CLOSE, "listener error: %s",  last_condition);   PROACTOR_TEST_DRAIN(pts);
 
 #define EXPECT_CONNECT(TP, HOST) do {                                   \
     pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
-    pn_event_t *e = TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); \
-    if (e) TEST_CHECK_NO_COND(t, pn_transport_condition(pn_event_transport(e))); \
+    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));    \
+    TEST_STR_EQUAL(t, "", last_condition);                              \
     PROACTOR_TEST_DRAIN(pts);                                           \
   } while(0)
 
 #define EXPECT_FAIL(TP, HOST) do {                                      \
     pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
-    pn_event_t *e = TEST_EVENT_TYPE(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); \
-    if (e) TEST_CHECK_COND(t, "refused", pn_transport_condition(pn_event_transport(e))); \
+    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));    \
+    TEST_STR_IN(t, "refused", last_condition);                          \
     PROACTOR_TEST_DRAIN(pts);                                           \
   } while(0)
 
@@ -399,7 +414,7 @@ static void test_free_cleanup(test_t *t) {
   test_port_t ports[3] = { test_port(localhost), test_port(localhost), test_port(localhost) };
   for (int i = 0; i < 3; ++i) {
     pn_proactor_listen(server, pn_listener(), ports[i].host_port, 2);
-    TEST_EVENT_TYPE(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+    TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
     sock_close(ports[i].sock);
     pn_proactor_connect(client, pn_connection(), ports[i].host_port);
     pn_proactor_connect(client, pn_connection(), ports[i].host_port);

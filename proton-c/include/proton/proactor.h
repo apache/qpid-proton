@@ -65,7 +65,7 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  * returned by pn_proactor_wait()
  *
  * @param[in] proactor the proactor object
- * @param[in] connection the proactor takes ownership, do not free
+ * @param[in] connection must not be freed until after the final PN_TRANSPORT_CLOSED event or pn_proactor_free()
  * @param[in] addr the network address (not AMQP address) to connect to. May
  * be in the form "host:port" or an "amqp://" or "amqps://" URL. The `/path` part of
  * the URL is ignored.
@@ -86,7 +86,7 @@ PNP_EXTERN int pn_proactor_connect(
  *
  *
  * @param[in] proactor the proactor object
- * @param[in] listener proactor takes ownership of listener, do not free
+ * @param[in] listener must not be freed until after the final PN_LISTENER_CLOSE event or pn_proactor_free()
  * @param[in] addr the network address (not AMQP address) to connect to in "host:port"
  *
  * The host can be a host name, IPV4 or IPV6 literal, or the empty string. The empty

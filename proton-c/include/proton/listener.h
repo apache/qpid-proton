@@ -39,15 +39,19 @@ extern "C" {
  */
 
 /**
- * Create a listener.
+ * Create a listener to pass to pn_proactor_listen()
+ *
+ * Must be freed with pn_listener_free()
  *
  * You can use pn_listener_set_context() or pn_listener_attachments() to set
  * application data that can be accessed when accepting connections.
- *
- * You must pass the returned listener to pn_proactor_listen(), the proactor
- * will free the listener when it is no longer active.
  */
 PNP_EXTERN pn_listener_t *pn_listener(void);
+
+/**
+ * Free a listener. Must not be in use, see pn_proactor_listen()
+ */
+PNP_EXTERN void pn_listener_free(pn_listener_t *l);
 
 /**
  * Asynchronously accept a connection using the listener.
