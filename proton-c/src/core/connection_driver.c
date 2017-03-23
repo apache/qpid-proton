@@ -57,6 +57,7 @@ int pn_connection_driver_init(pn_connection_driver_t* d, pn_connection_t *c, pn_
     return PN_OUT_OF_MEMORY;
   }
   pn_connection_collect(d->connection, collector);
+  pn_decref(collector);
   return 0;
 }
 
@@ -71,8 +72,10 @@ void pn_connection_driver_destroy(pn_connection_driver_t *d) {
   }
   if (d->connection) {
     pn_collector_t *collector = pn_connection_collector(d->connection);
+    if (collector) {
+      pn_collector_release(collector);
+    }
     pn_connection_free(d->connection);
-    pn_collector_free(collector);
   }
   memset(d, 0, sizeof(*d));
 }
