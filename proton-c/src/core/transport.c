@@ -82,9 +82,11 @@ void pn_delivery_map_free(pn_delivery_map_t *db)
   pn_free(db->deliveries);
 }
 
+#define BOTTOM_32_BITS 0x00000000FFFFFFFF
+
 static pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
 {
-  return (pn_delivery_t *) pn_hash_get(db->deliveries, id);
+  return (pn_delivery_t *) pn_hash_get(db->deliveries, id & BOTTOM_32_BITS);
 }
 
 static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *delivery, pn_sequence_t id)
@@ -98,7 +100,7 @@ static pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_deli
 {
   pn_delivery_state_t *ds = &delivery->state;
   pn_delivery_state_init(ds, delivery, db->next++);
-  pn_hash_put(db->deliveries, ds->id, delivery);
+  pn_hash_put(db->deliveries, ds->id & BOTTOM_32_BITS, delivery);
   return ds;
 }
 
@@ -1620,12 +1622,12 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
 }
 
 /*
-  This operator, copied from code for the qpid cpp broker, gives the correct
+  This operator, inspired by code for the qpid cpp broker, gives the correct
   result when comparing sequence numbers implemented in a signed integer type.
 */
-static bool sequence_less_than ( pn_sequence_t a, pn_sequence_t b )
+static bool sequence_cmp ( pn_sequence_t a, pn_sequence_t b )
 {
-  return (a - b) < 0;
+  return a - b;
 }
 
 
@@ -1659,7 +1661,7 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   bool remote_data = (pn_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
-  for (pn_sequence_t id = first; sequence_less_than(id, last) || (id == last); id++) {
+  for (pn_sequence_t id = first; sequence_cmp(id, last) <= 0; ++id) {
     pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
     pn_disposition_t *remote = &delivery->remote;
     if (delivery) {
