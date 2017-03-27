@@ -109,9 +109,11 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
   if (delivery->state.init) {
     delivery->state.init = false;
     delivery->state.sent = false;
-    pn_hash_del(db->deliveries, delivery->state.id);
+    pn_hash_del(db->deliveries, delivery->state.id & BOTTOM_32_BITS);
   }
 }
+
+#undef BOTTOM_32_BITS
 
 static void pni_delivery_map_clear(pn_delivery_map_t *dm)
 {
