@@ -18,11 +18,13 @@
  */
 
 #include "test_tools.h"
+#include "test_config.h"
 #include <proton/condition.h>
 #include <proton/connection.h>
 #include <proton/event.h>
 #include <proton/listener.h>
 #include <proton/proactor.h>
+#include <proton/ssl.h>
 #include <proton/transport.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,7 +67,7 @@ static void proactor_test_free(proactor_test_t *pts, size_t n) {
 #define PROACTOR_TEST_FREE(A) proactor_test_free(A, sizeof(A)/sizeof(*A))
 
 static void save_condition(pn_event_t *e) {
-  /* FIXME aconway 2017-03-23: extend pn_event_condition to include listener */
+  /* TODO aconway 2017-03-23: extend pn_event_condition to include listener */
   last_condition[0] = '\0';
   pn_condition_t *cond = NULL;
   if (pn_event_listener(e)) {
@@ -283,7 +285,7 @@ static void test_connection_wake(test_t *t) {
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-    /* The pn_connection_t is still valid so wake is legal but a no-op */
+  /* The pn_connection_t is still valid so wake is legal but a no-op */
   pn_connection_wake(c);
 
   PROACTOR_TEST_FREE(pts);
@@ -465,6 +467,68 @@ static void test_free_cleanup(test_t *t) {
   pn_connection_free(pn_connection());
 }
 
+/* TODO aconway 2017-03-27: need windows version with .p12 certs */
+#define CERTFILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl_certs/" NAME ".pem"
+
+static pn_event_type_t ssl_handler(test_t *t, pn_event_t *e) {
+  pn_connection_t *c = pn_event_connection(e);
+  switch (pn_event_type(e)) {
+
+   case PN_CONNECTION_BOUND: {
+     bool incoming = (pn_connection_state(c) & PN_LOCAL_UNINIT);
+     pn_ssl_domain_t *ssld = pn_ssl_domain(incoming ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
+     TEST_CHECK(t, 0 == pn_ssl_domain_set_credentials(
+                  ssld, CERTFILE("tserver-certificate"), CERTFILE("tserver-private-key"), "tserverpw"));
+     TEST_CHECK(t, 0 == pn_ssl_init(pn_ssl(pn_event_transport(e)), ssld, NULL));
+     pn_ssl_domain_free(ssld);
+     return PN_EVENT_NONE;
+   }
+
+   case PN_CONNECTION_REMOTE_OPEN: {
+     if (pn_connection_state(c) | PN_LOCAL_ACTIVE) {
+       /* Outgoing connection is complete, close it */
+       pn_connection_close(c);
+     } else {
+       /* Incoming connection, check for SSL */
+       pn_ssl_t *ssl = pn_ssl(pn_event_transport(e));
+       TEST_CHECK(t, ssl);
+       TEST_CHECK(t, pn_ssl_get_protocol_name(ssl, NULL, 0));
+       pn_connection_open(c);      /* Return the open (no-op if already open) */
+     }
+    return PN_CONNECTION_REMOTE_OPEN;
+   }
+
+   default:
+    return common_handler(t, e);
+  }
+}
+
+/* Establish an SSL connection between proactors*/
+static void test_ssl(test_t *t) {
+  if (!pn_ssl_present()) {
+    TEST_LOGF(t, "Skip SSL test, no support");
+    return;
+  }
+
+  proactor_test_t pts[] ={ { ssl_handler }, { ssl_handler } };
+  PROACTOR_TEST_INIT(pts, t);
+  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  test_port_t port = test_port(localhost);
+  pn_proactor_listen(server, pn_listener(), port.host_port, 4);
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  sock_close(port.sock);
+  pn_connection_t *c = pn_connection();
+  pn_proactor_connect(client, c, port.host_port);
+  /* Open ok at both ends */
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_STR_EQUAL(t,"", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  TEST_STR_EQUAL(t, "", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+
+  PROACTOR_TEST_FREE(pts);
+}
 
 int main(int argc, char **argv) {
   int failed = 0;
@@ -475,5 +539,6 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_connection_wake(&t));
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
   RUN_ARGV_TEST(failed, t, test_free_cleanup(&t));
+  RUN_ARGV_TEST(failed, t, test_ssl(&t));
   return failed;
 }

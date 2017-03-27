@@ -153,7 +153,7 @@ PN_EXTERN void pn_ssl_domain_free(pn_ssl_domain_t *domain);
  * protected.
  * @return 0 on success
  */
-PN_EXTERN int pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
+PN_EXTERN int  pn_ssl_domain_set_credentials(pn_ssl_domain_t *domain,
                                             const char *credential_1,
                                             const char *credential_2,
                                             const char *password);

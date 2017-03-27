@@ -504,7 +504,6 @@ static void on_connect(uv_connect_t *connect, int err) {
   pconnection_t *pc = (pconnection_t*)connect->data;
   if (!err) {
     pc->connected = 1;
-    pn_connection_open(pc->driver.connection);
     work_notify(&pc->work);
     uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Done with address info */
     pc->addr.getaddrinfo.addrinfo = NULL;
@@ -840,6 +839,10 @@ static bool leader_process_pconnection(pconnection_t *pc) {
     /* We can't do anything while a write request is pending */
     return false;
   }
+  /* Must process INIT and BOUND events before we do any IO-related stuff  */
+  if (pn_connection_driver_has_event(&pc->driver)) {
+    return true;
+  }
   if (pn_connection_driver_finished(&pc->driver)) {
     uv_mutex_lock(&pc->lock);
     pc->wake = W_CLOSED;        /* wake() is a no-op from now on */
@@ -851,7 +854,6 @@ static bool leader_process_pconnection(pconnection_t *pc) {
     pn_millis_t next_tick = leader_tick(pc);
     pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
     pn_bytes_t wbuf = pn_connection_driver_write_buffer(&pc->driver);
-
     /* If we still have no events, make async UV requests */
     if (!pn_connection_driver_has_event(&pc->driver)) {
       int err = 0;
@@ -1040,6 +1042,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
 int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   pconnection_t *pc = pconnection(p, c, false);
   if (pc) {
+    pn_connection_open(pc->driver.connection); /* Auto-open */
     parse_addr(&pc->addr, addr);
     work_start(&pc->work);
   } else {
