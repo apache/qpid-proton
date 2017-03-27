@@ -655,6 +655,19 @@ static bool leader_process_listener(pn_listener_t *l) {
   /* NOTE: l may be concurrently accessed by on_connection() */
   bool closed = false;
   uv_mutex_lock(&l->lock);
+
+  /* Process accepted connections */
+  for (pconnection_t *pc = pconnection_pop(&l->accept); pc; pc = pconnection_pop(&l->accept)) {
+    int err = pconnection_init(pc);
+    if (!err) {
+      err = uv_accept((uv_stream_t*)&pc->lsocket->tcp, (uv_stream_t*)&pc->tcp);
+    } else {
+      listener_error(l, err, "accepting from");
+      pconnection_error(pc, err, "accepting from");
+    }
+    work_start(&pc->work);      /* Process events for the accepted/failed connection */
+  }
+
   switch (l->state) {
 
    case L_UNINIT:
@@ -684,17 +697,6 @@ static bool leader_process_listener(pn_listener_t *l) {
       leader_dec(l->work.proactor);
       closed = true;
     }
-  }
-  /* Process accepted connections - if we are closed they will get an error */
-  for (pconnection_t *pc = pconnection_pop(&l->accept); pc; pc = pconnection_pop(&l->accept)) {
-    int err = pconnection_init(pc);
-    if (!err) {
-      err = uv_accept((uv_stream_t*)&pc->lsocket->tcp, (uv_stream_t*)&pc->tcp);
-    } else {
-      listener_error(l, err, "accepting from");
-      pconnection_error(pc, err, "accepting from");
-    }
-    work_start(&pc->work);      /* Process events for the accepted/failed connection */
   }
   bool has_work = !closed && pn_collector_peek(l->collector);
   uv_mutex_unlock(&l->lock);
