@@ -82,9 +82,15 @@ void pn_delivery_map_free(pn_delivery_map_t *db)
   pn_free(db->deliveries);
 }
 
+static inline uintptr_t pni_sequence_make_hash ( pn_sequence_t i )
+{
+  return i & 0x00000000FFFFFFFFUL;
+}
+
+
 static pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t id)
 {
-  return (pn_delivery_t *) pn_hash_get(db->deliveries, id);
+  return (pn_delivery_t *) pn_hash_get(db->deliveries, pni_sequence_make_hash(id) );
 }
 
 static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *delivery, pn_sequence_t id)
@@ -98,7 +104,7 @@ static pn_delivery_state_t *pni_delivery_map_push(pn_delivery_map_t *db, pn_deli
 {
   pn_delivery_state_t *ds = &delivery->state;
   pn_delivery_state_init(ds, delivery, db->next++);
-  pn_hash_put(db->deliveries, ds->id, delivery);
+  pn_hash_put(db->deliveries, pni_sequence_make_hash(ds->id), delivery);
   return ds;
 }
 
@@ -107,7 +113,7 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
   if (delivery->state.init) {
     delivery->state.init = false;
     delivery->state.sent = false;
-    pn_hash_del(db->deliveries, delivery->state.id);
+    pn_hash_del(db->deliveries, pni_sequence_make_hash(delivery->state.id) );
   }
 }
 
@@ -1619,6 +1625,15 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   return 0;
 }
 
+/*
+  This operator, inspired by code for the qpid cpp broker, gives the correct
+  result when comparing sequence numbers implemented in a signed integer type.
+*/
+
+static inline int sequence_cmp(pn_sequence_t a, pn_sequence_t b) {
+  return a-b;
+}
+
 int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   bool role;
@@ -1648,7 +1663,7 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   bool remote_data = (pn_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
-  for (pn_sequence_t id = first; id <= last; id++) {
+  for (pn_sequence_t id = first; sequence_cmp(id, last) <= 0; ++id) {
     pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
     pn_disposition_t *remote = &delivery->remote;
     if (delivery) {
