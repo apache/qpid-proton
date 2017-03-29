@@ -131,10 +131,11 @@ static inline bool test_etype_equal_(test_t *t, int want, int got, const char *f
 }
 
 #define TEST_STR_EQUAL(TEST, WANT, GOT) \
-  TEST_CHECKF((TEST), !strcmp((WANT), (GOT)), " got '%s'", (GOT))
+  test_check_((TEST), !strcmp((WANT), (GOT)), NULL, __FILE__, __LINE__, "want '%s', got '%s'", (WANT), (GOT))
+
 
 #define TEST_STR_IN(TEST, WANT, GOT) \
-  TEST_CHECKF((TEST), strstr((GOT), (WANT)), " got '%s'", (GOT))
+  test_check_((TEST), strstr((GOT), (WANT)), NULL, __FILE__, __LINE__, "'%s' not in '%s'", (WANT), (GOT))
 
 #define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)

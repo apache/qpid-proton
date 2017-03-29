@@ -159,6 +159,9 @@ static void test_interrupt_timeout(test_t *t) {
   pn_proactor_free(p);
 }
 
+/* Save the last connection accepted by the common_handler */
+pn_connection_t *last_accepted = NULL;
+
 /* Common handler for simple client/server interactions,  */
 static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
   pn_connection_t *c = pn_event_connection(e);
@@ -176,13 +179,17 @@ static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
     return PN_TRANSPORT_CLOSED;
 
     /* Stop on these events */
-   case PN_LISTENER_OPEN:
    case PN_PROACTOR_INACTIVE:
    case PN_PROACTOR_TIMEOUT:
     return pn_event_type(e);
 
+   case PN_LISTENER_OPEN:
+    last_accepted = NULL;
+    return pn_event_type(e);
+
    case PN_LISTENER_ACCEPT:
-    pn_listener_accept(l, pn_connection());
+    last_accepted = pn_connection();
+    pn_listener_accept(l, last_accepted);
     pn_listener_close(l);       /* Only accept one connection */
     return PN_EVENT_NONE;
 
@@ -215,8 +222,9 @@ static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
 static pn_event_type_t listen_handler(test_t *t, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_LISTENER_ACCEPT:
-    /* No automatic listener close/free for the inactive test */
-    pn_listener_accept(pn_event_listener(e), pn_connection());
+    /* No automatic listener close/free for tests that accept multiple connections */
+    last_accepted = pn_connection();
+    pn_listener_accept(pn_event_listener(e), last_accepted);
     return PN_EVENT_NONE;
 
    case PN_LISTENER_CLOSE:
@@ -530,6 +538,53 @@ static void test_ssl(test_t *t) {
   PROACTOR_TEST_FREE(pts);
 }
 
+/* Test pn_proactor_addr funtions */
+static void test_addr(test_t *t) {
+  /* Make sure NULL addr gives empty string */
+  char str[1024] = "not-empty";
+  pn_proactor_addr_str(str, sizeof(str), NULL);
+  TEST_STR_EQUAL(t, "", str);
+
+  proactor_test_t pts[] ={ { open_wake_handler }, { listen_handler } };
+  PROACTOR_TEST_INIT(pts, t);
+  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  test_port_t port = test_port(localhost);
+  pn_listener_t *l = pn_listener();
+  pn_proactor_listen(server, l, port.host_port, 4);
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
+  pn_connection_t *c = pn_connection();
+  pn_proactor_connect(client, c, port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+
+  /* client remote, client local, server remote and server local address strings */
+  char cr[1024], cl[1024], sr[1024], sl[1024];
+
+  pn_transport_t *ct = pn_connection_transport(c);
+  pn_proactor_addr_str(cr, sizeof(cr), pn_proactor_addr_remote(ct));
+  TEST_STR_IN(t, test_port_use_host(&port, ""), cr); /* remote address has listening port */
+
+  pn_connection_t *s = last_accepted; /* server side of the connection */
+  pn_transport_t *st = pn_connection_transport(s);
+  if (!TEST_CHECK(t, st)) return;
+  pn_proactor_addr_str(sl, sizeof(sl), pn_proactor_addr_local(st));
+  TEST_STR_EQUAL(t, cr, sl);  /* client remote == server local */
+
+  pn_proactor_addr_str(cl, sizeof(cl), pn_proactor_addr_local(ct));
+  pn_proactor_addr_str(sr, sizeof(sr), pn_proactor_addr_remote(st));
+  TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
+
+  /* Make sure you can use NULL, 0 to get length of address string without a crash */
+  size_t len = pn_proactor_addr_str(NULL, 0, pn_proactor_addr_local(ct));
+  TEST_CHECK(t, strlen(cl) == len);
+
+  sock_close(port.sock);
+  PROACTOR_TEST_DRAIN(pts);
+  PROACTOR_TEST_FREE(pts);
+  pn_listener_free(l);
+  pn_connection_free(c);
+  pn_connection_free(s);
+}
+
 int main(int argc, char **argv) {
   int failed = 0;
   RUN_ARGV_TEST(failed, t, test_inactive(&t));
@@ -540,5 +595,6 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
   RUN_ARGV_TEST(failed, t, test_free_cleanup(&t));
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
+  RUN_ARGV_TEST(failed, t, test_addr(&t));
   return failed;
 }

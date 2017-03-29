@@ -170,6 +170,7 @@ typedef struct pconnection_t {
 
   lsocket_t *lsocket;         /* Incoming connection only */
 
+  struct sockaddr_storage local, remote; /* Actual addresses */
   uv_timer_t timer;
   uv_write_t write;
   size_t writing;               /* size of pending write request, 0 if none pending */
@@ -499,11 +500,20 @@ static void on_connect_fail(uv_handle_t *handle) {
   }
 }
 
+static void pconnection_addresses(pconnection_t *pc) {
+  int len;
+  len = sizeof(pc->local);
+  uv_tcp_getsockname(&pc->tcp, (struct sockaddr*)&pc->local, &len);
+  len = sizeof(pc->remote);
+  uv_tcp_getpeername(&pc->tcp, (struct sockaddr*)&pc->remote, &len);
+}
+
 /* Outgoing connection */
 static void on_connect(uv_connect_t *connect, int err) {
   pconnection_t *pc = (pconnection_t*)connect->data;
   if (!err) {
     pc->connected = 1;
+    pconnection_addresses(pc);
     work_notify(&pc->work);
     uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Done with address info */
     pc->addr.getaddrinfo.addrinfo = NULL;
@@ -658,8 +668,9 @@ static bool leader_process_listener(pn_listener_t *l) {
   /* Process accepted connections */
   for (pconnection_t *pc = pconnection_pop(&l->accept); pc; pc = pconnection_pop(&l->accept)) {
     int err = pconnection_init(pc);
+    if (!err) err = uv_accept((uv_stream_t*)&pc->lsocket->tcp, (uv_stream_t*)&pc->tcp);
     if (!err) {
-      err = uv_accept((uv_stream_t*)&pc->lsocket->tcp, (uv_stream_t*)&pc->tcp);
+      pconnection_addresses(pc);
     } else {
       listener_error(l, err, "accepting from");
       pconnection_error(pc, err, "accepting from");
@@ -1198,4 +1209,32 @@ int pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   uv_mutex_unlock(&l->lock);
   work_notify(&l->work);
   return 0;
+}
+
+struct sockaddr *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr) {
+  return (struct sockaddr*)addr;
+}
+
+struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {
+  pconnection_t *pc = get_pconnection(pn_transport_connection(t));
+  return pc ? (pn_proactor_addr_t*)&pc->local : NULL;
+}
+
+struct pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t *t) {
+  pconnection_t *pc = get_pconnection(pn_transport_connection(t));
+  return pc ? (pn_proactor_addr_t*)&pc->remote : NULL;
+}
+
+size_t pn_proactor_addr_str(char *buf, size_t len, struct pn_proactor_addr_t* addr) {
+  struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
+  char host[NI_MAXHOST];
+  char port[NI_MAXSERV];
+  int err = getnameinfo((struct sockaddr *)sa, sizeof(*sa), host, sizeof(host), port, sizeof(port),
+                        NI_NUMERICHOST | NI_NUMERICSERV);
+  if (!err) {
+    return snprintf(buf, len, "%s:%s", host, port); /* FIXME aconway 2017-03-29: ipv6 format? */
+  } else {
+    if (buf) *buf = '\0';
+    return 0;
+  }
 }

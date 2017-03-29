@@ -50,6 +50,11 @@ extern "C" {
  */
 
 /**
+ * Stores a network address in native format.
+ */
+typedef struct pn_proactor_addr_t pn_proactor_addr_t;
+
+/**
  * Create a proactor. Must be freed with pn_proactor_free()
  */
 PNP_EXTERN pn_proactor_t *pn_proactor(void);
@@ -197,6 +202,35 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
  * Return the proactor associated with an event or NULL.
  */
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
+
+/**
+ * Format an address as a string in buf, with trailing NUL.
+ *
+ * @return the length of the addresss string.
+ * If the return value is >= len then the address was truncated to len-1 bytes.
+ * A return value of 0 means the address was invalid or NULL.
+ */
+PNP_EXTERN size_t pn_proactor_addr_str(char *buf, size_t len, pn_proactor_addr_t* addr);
+
+/**
+ * Get the local address of a transport.
+ *
+ * @return NULL if the transport is not connected or the address is not available. 
+ */
+PNP_EXTERN pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t* c);
+
+/**
+ * Get the remote address of a transport.
+ *
+ * @return NULL if the transport is not connected or the address is not available. 
+ */
+PNP_EXTERN pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t* c);
+
+/**
+ * If the underlying implementation uses `struct sockaddr` (for example POSIX or Windows
+ * sockets) return a pointer, otherwise return NULL.
+ */
+PNP_EXTERN struct sockaddr *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr);
 
 /**
  * @}
