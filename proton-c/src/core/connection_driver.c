@@ -90,7 +90,7 @@ void pn_connection_driver_read_done(pn_connection_driver_t *d, size_t n) {
 }
 
 bool pn_connection_driver_read_closed(pn_connection_driver_t *d) {
-  return pn_transport_capacity(d->transport) < 0;
+  return pn_transport_tail_closed(d->transport);
 }
 
 void pn_connection_driver_read_close(pn_connection_driver_t *d) {
@@ -111,7 +111,7 @@ void pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
 }
 
 bool pn_connection_driver_write_closed(pn_connection_driver_t *d) {
-  return pn_transport_pending(d->transport) < 0;
+  return pn_transport_head_closed(d->transport);
 }
 
 void pn_connection_driver_write_close(pn_connection_driver_t *d) {

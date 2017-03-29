@@ -610,14 +610,17 @@ PN_EXTERN int pn_transport_close_head(pn_transport_t *transport);
 PN_EXTERN bool pn_transport_quiesced(pn_transport_t *transport);
 
 /**
- * Check if a transport is closed.
- *
- * A transport is defined to be closed when both the tail and the head
- * are closed. In other words, when both ::pn_transport_capacity() < 0
- * and ::pn_transport_pending() < 0.
- *
- * @param[in] transport a transport object
- * @return true if the transport is closed, false otherwise
+ * True if pn_transport_close_head() has been called.
+ */
+PN_EXTERN bool pn_transport_head_closed(pn_transport_t *transport);
+
+/**
+ * True if pn_transport_close_tail() has been called.
+ */
+PN_EXTERN bool pn_transport_tail_closed(pn_transport_t *transport);
+
+/**
+ * Equivalent to pn_transport_head_closed(transport) && pn_transport_tail_closed(transport)
  */
 PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
 
