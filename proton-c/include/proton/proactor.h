@@ -60,6 +60,20 @@ typedef struct pn_proactor_addr_t pn_proactor_addr_t;
 PNP_EXTERN pn_proactor_t *pn_proactor(void);
 
 /**
+ * Disconnect all connections and listeners currently active in the proactor.
+ *
+ * PN_LISTENER_CLOSE, PN_TRANSPORT_CLOSED and other events are generated as usual.
+ * If no new listeners or connections are created, then a PN_PROACTOR_INACTIVE event
+ * will be generated when all connections and listeners are disconnected.
+ *
+ * Note the proactor remains active, connections and listeners created after a call to
+ * pn_proactor_disconnect() are not affected by it.
+ *
+ * @param condition if not NULL the condition data is copied to the transports and listeners.
+ */
+PNP_EXTERN void pn_proactor_disconnect(pn_proactor_t *proactor, pn_condition_t *condition);
+
+/**
  * Free the proactor. Abort any open network connections and clean up all
  * associated resources.
  */

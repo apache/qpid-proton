@@ -240,6 +240,8 @@ struct pn_proactor_t {
   timeout_state_t timeout_state;
   pn_millis_t timeout;
   size_t count;               /* connection/listener count for INACTIVE events */
+  pn_condition_t *disconnect_cond; /* disconnect condition */
+  bool disconnect;            /* disconnect requested */
   bool inactive;
   bool has_leader;
   bool batch_working;         /* batch is being processed in a worker thread */
@@ -906,6 +908,34 @@ void pconnection_detach(pconnection_t *pc) {
   }
 }
 
+static void on_proactor_disconnect(uv_handle_t* h, void* v) {
+  if (h->type == UV_TCP) {
+    switch (*(struct_type*)h->data) {
+     case T_CONNECTION: {
+       pconnection_t *pc = (pconnection_t*)h->data;
+       pn_condition_t *cond = pc->work.proactor->disconnect_cond;
+       if (cond) {
+         pn_condition_copy(pn_transport_condition(pc->driver.transport), cond);
+       }
+       pn_connection_driver_close(&pc->driver);
+       work_notify(&pc->work);
+       break;
+     }
+     case T_LSOCKET: {
+       pn_listener_t *l = ((lsocket_t*)h->data)->parent;
+       pn_condition_t *cond = l->work.proactor->disconnect_cond;
+       if (cond) {
+         pn_condition_copy(pn_listener_condition(l), cond);
+       }
+       pn_listener_close(l);
+       break;
+     }
+     default:
+      break;
+    }
+  }
+}
+
 /* Process the leader_q and the UV loop, in the leader thread */
 static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
   /* Set timeout timer if there was a request, let it count down while we process work */
@@ -913,6 +943,13 @@ static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
     p->timeout_state = TM_PENDING;
     uv_timer_stop(&p->timer);
     uv_timer_start(&p->timer, on_timeout, p->timeout, 0);
+  }
+  /* If disconnect was requested, walk the socket list */
+  if (p->disconnect) {
+    p->disconnect = false;
+    uv_mutex_unlock(&p->lock);
+    uv_walk(&p->loop, on_proactor_disconnect, NULL);
+    uv_mutex_lock(&p->lock);
   }
   pn_event_batch_t *batch = NULL;
   for (work_t *w = work_pop(&p->leader_q); w; w = work_pop(&p->leader_q)) {
@@ -1035,6 +1072,20 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
   notify(p);
 }
 
+void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
+  uv_mutex_lock(&p->lock);
+  if (!p->disconnect) {
+    p->disconnect = true;
+    if (cond) {
+      pn_condition_copy(p->disconnect_cond, cond);
+    } else {
+      pn_condition_clear(p->disconnect_cond);
+    }
+    notify(p);
+  }
+  uv_mutex_unlock(&p->lock);
+}
+
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   uv_mutex_lock(&p->lock);
   p->timeout = t;
@@ -1045,9 +1096,11 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
 
 void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
-  p->timeout_state = TM_NONE;
+  if (p->timeout_state != TM_NONE) {
+    p->timeout_state = TM_NONE;
+    notify(p);
+  }
   uv_mutex_unlock(&p->lock);
-  notify(p);
 }
 
 int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
@@ -1069,20 +1122,6 @@ int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int
   ++l->refcount;
   work_start(&l->work);
   return 0;
-}
-
-pn_proactor_t *pn_proactor() {
-  pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(pn_proactor_t));
-  p->collector = pn_collector();
-  p->batch.next_event = &proactor_batch_next;
-  if (!p->collector) return NULL;
-  uv_loop_init(&p->loop);
-  uv_mutex_init(&p->lock);
-  uv_cond_init(&p->cond);
-  uv_async_init(&p->loop, &p->async, NULL);
-  uv_timer_init(&p->loop, &p->timer);
-  p->timer.data = p;
-  return p;
 }
 
 static void on_proactor_free(uv_handle_t* h, void* v) {
@@ -1108,6 +1147,21 @@ static void work_free(work_t *w) {
   }
 }
 
+pn_proactor_t *pn_proactor() {
+  pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(pn_proactor_t));
+  p->collector = pn_collector();
+  p->batch.next_event = &proactor_batch_next;
+  if (!p->collector) return NULL;
+  uv_loop_init(&p->loop);
+  uv_mutex_init(&p->lock);
+  uv_cond_init(&p->cond);
+  uv_async_init(&p->loop, &p->async, NULL);
+  uv_timer_init(&p->loop, &p->timer);
+  p->timer.data = p;
+  p->disconnect_cond = pn_condition();
+  return p;
+}
+
 void pn_proactor_free(pn_proactor_t *p) {
   /* Close all open handles */
   uv_walk(&p->loop, on_proactor_free, NULL);
@@ -1125,6 +1179,7 @@ void pn_proactor_free(pn_proactor_t *p) {
   uv_mutex_destroy(&p->lock);
   uv_cond_destroy(&p->cond);
   pn_collector_free(p->collector);
+  pn_condition_free(p->disconnect_cond);
   free(p);
 }
 
