@@ -1,5 +1,5 @@
 [tox]
-envlist = py26,py27,py33,py34,py35
+envlist = @TOX_ENVLIST@
 minversion = 1.4
 skipdist = True
 setupdir = @py_bin@/dist

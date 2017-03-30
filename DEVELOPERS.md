@@ -49,10 +49,13 @@ development environments on your system.  Most modern Linux
 distributions support installing Python 2.x and Python 3.x in
 parallel.
 
-2. Install the **tox** Python testing tool, (e.g. for Fedora):
+2. Install the **tox** Python testing tool, e.g. for older Fedora:
 
    $ yum install python-tox
 
+   For newer fedora:
+
+   $ dnf install python3-tox redhat-rpm-config
 
 To run the tests, cd into your build directory and use the following commands:
 
