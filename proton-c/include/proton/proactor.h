@@ -248,9 +248,10 @@ PNP_EXTERN pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t* c);
 
 /**
  * If the underlying implementation uses `struct sockaddr` (for example POSIX or Windows
- * sockets) return a pointer, otherwise return NULL.
+ * sockets) return a pointer to a `struct sockaddr_storage` containing the address info,
+ * otherwise return NULL.
  */
-PNP_EXTERN struct sockaddr *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr);
+PNP_EXTERN struct sockaddr_storage *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr);
 
 /**
  * @}

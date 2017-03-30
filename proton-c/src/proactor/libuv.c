@@ -1266,8 +1266,8 @@ int pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   return 0;
 }
 
-struct sockaddr *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr) {
-  return (struct sockaddr*)addr;
+struct sockaddr_storage *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr) {
+  return (struct sockaddr_storage*)addr;
 }
 
 struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {

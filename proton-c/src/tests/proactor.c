@@ -541,6 +541,14 @@ static void test_ssl(test_t *t) {
 }
 
 /* Test pn_proactor_addr funtions */
+
+/* FIXME aconway 2017-03-30: windows will need winsock2.h etc.
+   These headers are *only* needed for test_addr and only for the getnameinfo part.
+   This is the only non-portable part of the proactor test suite.
+   */
+#include <sys/socket.h>         /* For socket_storage */
+#include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
+
 static void test_addr(test_t *t) {
   /* Make sure NULL addr gives empty string */
   char str[1024] = "not-empty";
@@ -550,7 +558,7 @@ static void test_addr(test_t *t) {
   proactor_test_t pts[] ={ { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port(localhost);
+  test_port_t port = test_port("127.0.0.1"); /* Use IPv4 to get consistent results all platforms */
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(server, l, port.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
@@ -574,6 +582,19 @@ static void test_addr(test_t *t) {
   pn_proactor_addr_str(cl, sizeof(cl), pn_proactor_addr_local(ct));
   pn_proactor_addr_str(sr, sizeof(sr), pn_proactor_addr_remote(st));
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
+
+  /* Examine as sockaddr */
+  struct sockaddr_storage* addr = pn_proactor_addr_sockaddr(pn_proactor_addr_remote(ct));
+  TEST_CHECK(t, AF_INET == addr->ss_family);
+  char host[NI_MAXHOST] = "";
+  char serv[NI_MAXSERV] = "";
+  int err = getnameinfo((struct sockaddr*)addr, sizeof(*addr),
+                        host, sizeof(host),
+                        serv, sizeof(serv),
+                        NI_NUMERICHOST | NI_NUMERICSERV);
+  TEST_CHECK(t, 0 == err);
+  TEST_STR_EQUAL(t, "127.0.0.1", host);
+  TEST_STR_EQUAL(t, port.str, serv);
 
   /* Make sure you can use NULL, 0 to get length of address string without a crash */
   size_t len = pn_proactor_addr_str(NULL, 0, pn_proactor_addr_local(ct));
