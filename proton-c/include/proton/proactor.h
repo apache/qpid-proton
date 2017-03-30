@@ -218,11 +218,17 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
 
 /**
- * Format an address as a string in buf, with trailing NUL.
+ * Format a network address as a human-readable string in buf, with trailing NUL.
  *
- * @return the length of the addresss string.
- * If the return value is >= len then the address was truncated to len-1 bytes.
- * A return value of 0 means the address was invalid or NULL.
+ * @return the length of the full address string, the string is copied to buf.
+ *
+ * If the address string is longer than len it is truncated to len-1 bytes, but the
+ * full length is returned.
+ *
+ * If len == 0 the length of the address string is returned, buf is ignored.
+ *
+ * If addr is NULL or points to an invalid address, 0 is returned and buf (if not
+ * NULL) is set to the empty string.
  */
 PNP_EXTERN size_t pn_proactor_addr_str(char *buf, size_t len, pn_proactor_addr_t* addr);
 
