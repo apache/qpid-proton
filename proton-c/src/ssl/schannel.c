@@ -668,9 +668,9 @@ int pn_ssl_get_ssf(pn_ssl_t *ssl0)
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  *buffer = '\0';
   if (ssl->state != RUNNING || !SecIsValidHandle(&ssl->ctxt_handle))
     return false;
-  *buffer = '\0';
   SecPkgContext_ConnectionInfo info;
   if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
     // TODO: come up with string for all permutations?
@@ -686,9 +686,9 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
 {
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  *buffer = '\0';
   if (ssl->state != RUNNING || !SecIsValidHandle(&ssl->ctxt_handle))
     return false;
-  *buffer = '\0';
   SecPkgContext_ConnectionInfo info;
   if (QueryContextAttributes(&ssl->ctxt_handle, SECPKG_ATTR_CONNECTION_INFO, &info) == SEC_E_OK) {
     if (info.dwProtocol & (SP_PROT_TLS1_CLIENT | SP_PROT_TLS1_SERVER))
@@ -2000,6 +2000,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0,
                                           size_t fingerprint_length,
                                           pn_ssl_hash_alg hash_alg)
 {
+    *fingerprint = '\0';
     return -1;
 }
 

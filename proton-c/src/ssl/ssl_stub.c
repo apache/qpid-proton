@@ -75,11 +75,13 @@ const pn_io_layer_t ssl_layer = {
 
 bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *buffer, size_t size)
 {
+  *buffer = '\0';
   return false;
 }
 
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *buffer, size_t size)
 {
+  *buffer = '\0';
   return false;
 }
 
@@ -150,6 +152,7 @@ int pn_ssl_get_ssf(pn_ssl_t *ssl)
 
 int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t fingerprint_length, pn_ssl_hash_alg hash_alg)
 {
+    *fingerprint = '\0';
     return -1;
 }
 
