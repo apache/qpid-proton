@@ -29,6 +29,6 @@ before_script:
 - export PATH=${HOME}/.local/bin:${PATH}
 - mkdir Build
 - cd Build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DTOX_ENVLIST="py26,py27,py35"
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install
 script:
 - cmake --build . --target install && ctest -V
