@@ -41,7 +41,7 @@ typedef struct test_t {
    All output from test marcros goes to stderr so it interleaves with PN_TRACE logs.
 */
 
-static void test_vlogf_(test_t *t, const char *prefix, const char* expr,
+void test_vlogf_(test_t *t, const char *prefix, const char* expr,
                         const char* file, int line, const char *fmt, va_list ap)
 {
   fprintf(stderr, "%s:%d", file, line);
@@ -56,7 +56,7 @@ static void test_vlogf_(test_t *t, const char *prefix, const char* expr,
   fflush(stdout);
 }
 
-static void test_errorf_(test_t *t, const char* expr,
+void test_errorf_(test_t *t, const char* expr,
                          const char* file, int line, const char *fmt, ...) {
   ++t->errors;
   va_list ap;
@@ -65,7 +65,7 @@ static void test_errorf_(test_t *t, const char* expr,
   va_end(ap);
 }
 
-static bool test_check_(test_t *t, bool expr, const char *sexpr,
+bool test_check_(test_t *t, bool expr, const char *sexpr,
                         const char *file, int line, const char* fmt, ...) {
   if (!expr) {
     ++t->errors;
@@ -77,7 +77,7 @@ static bool test_check_(test_t *t, bool expr, const char *sexpr,
   return expr;
 }
 
-static void test_logf_(test_t *t, const char *prefix, const char* expr,
+void test_logf_(test_t *t, const char *prefix, const char* expr,
                        const char* file, int line, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
@@ -86,7 +86,7 @@ static void test_logf_(test_t *t, const char *prefix, const char* expr,
 }
 
 /* Call via TEST_ASSERT macros */
-static void assert_fail_(const char* expr, const char* file, int line, const char *fmt, ...) {
+void assert_fail_(const char* expr, const char* file, int line, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   test_vlogf_(NULL, "assertion failed", expr, file, line, fmt, ap);
@@ -124,10 +124,33 @@ static void assert_fail_(const char* expr, const char* file, int line, const cha
 #define TEST_CHECK(TEST, EXPR) \
   test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, "")
 
-static inline bool test_etype_equal_(test_t *t, int want, int got, const char *file, int line) {
+bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, const char *file, int line) {
   return test_check_(t, want == got, NULL, file, line, "want %s got %s",
-                     pn_event_type_name((pn_event_type_t)want),
-                     pn_event_type_name((pn_event_type_t)got));
+                     pn_event_type_name(want),
+                     pn_event_type_name(got));
+}
+
+void print_bad_etypes(const char* prefix, const pn_event_type_t* seq, size_t len, size_t bad) {
+  fprintf(stderr, "%s", prefix);
+  for (int i = 0; i < len; ++i) {
+    fprintf(stderr, (i == bad) ? ">>>>%s" : "%s", pn_event_type_name(seq[i]));
+    if (i < len-1) fprintf(stderr, ", ");
+  }
+  if (bad > len) fprintf(stderr, " >>>>");
+  fprintf(stderr, "\n");
+}
+
+bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len, const pn_event_type_t* got, size_t got_len, const char *file, int line) {
+  size_t len = want_len < got_len ? want_len : got_len;
+  for (int i = 0; i < len; ++i) {
+    if (want[i] != got[i]) {
+      test_errorf_(t, NULL, file, line, "event sequences don't match:");
+      print_bad_etypes("  want: ", want, want_len, i);
+      print_bad_etypes("  got:  ", got, got_len, i);
+      return false;
+    }
+  }
+  return want_len == got_len;
 }
 
 #define TEST_STR_EQUAL(TEST, WANT, GOT) \
@@ -140,7 +163,11 @@ static inline bool test_etype_equal_(test_t *t, int want, int got, const char *f
 #define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
-static inline pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, const char *file, int line) {
+/* Compare arrays of pn_event_type_t */
+#define TEST_ETYPES_EQUAL(TEST, WANT, WLEN, GOT, GLEN)                       \
+  test_etypes_equal_((TEST), (WANT), (WLEN), (GOT), (GLEN), __FILE__, __LINE__)
+
+pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, const char *file, int line) {
   test_check_(t, want == pn_event_type(got), NULL, file, line, "want %s got %s",
               pn_event_type_name(want),
               pn_event_type_name(pn_event_type(got)));
@@ -192,14 +219,14 @@ static inline pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_e
 #include <winsock2.h>
 #include <ws2tcpip.h>
 typedef SOCKET sock_t;
-static inline void sock_close(sock_t sock) { closesocket(sock); }
+void sock_close(sock_t sock) { closesocket(sock); }
 
 #else  /* POSIX */
 
 typedef int sock_t;
 # include <netinet/in.h>
 # include <unistd.h>
-static inline void sock_close(sock_t sock) { close(sock); }
+void sock_close(sock_t sock) { close(sock); }
 #endif
 
 
@@ -208,7 +235,7 @@ static inline void sock_close(sock_t sock) { close(sock); }
    Close the returned fd when the other process is listening.
    Asserts on error.
 */
-static sock_t sock_bind0(void) {
+sock_t sock_bind0(void) {
   int sock =  socket(AF_INET, SOCK_STREAM, 0);
   TEST_ASSERT_ERRNO(sock >= 0, errno);
   int on = 1;
@@ -221,7 +248,7 @@ static sock_t sock_bind0(void) {
   return sock;
 }
 
-static int sock_port(sock_t sock) {
+int sock_port(sock_t sock) {
   struct sockaddr addr = {0};
   socklen_t len = sizeof(addr);
   TEST_ASSERT_ERRNO(getsockname(sock, &addr, &len) == 0, errno);
@@ -243,13 +270,13 @@ typedef struct test_port_t {
 } test_port_t;
 
 /* Modifies tp->host_port to use host, returns the new tp->host_port */
-static const char *test_port_use_host(test_port_t *tp, const char *host) {
+const char *test_port_use_host(test_port_t *tp, const char *host) {
   snprintf(tp->host_port, sizeof(tp->host_port), "%s:%d", host, tp->port);
   return tp->host_port;
 }
 
 /* Create a test_port_t  */
-static inline test_port_t test_port(const char* host) {
+test_port_t test_port(const char* host) {
   test_port_t tp = {0};
   tp.sock = sock_bind0();
   tp.port = sock_port(tp.sock);
