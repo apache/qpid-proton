@@ -22,7 +22,7 @@ if (DOXYGEN_FOUND)
   configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
                   ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
   add_custom_target (docs-c COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
-  add_dependencies (docs docs-c)
+  add_dependencies (docs docs-c user.doxygen.in)
 
   # HTML files are generated to ./html - put those in the install.
   install (DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"

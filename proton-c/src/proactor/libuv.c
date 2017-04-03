@@ -216,7 +216,6 @@ struct pn_listener_t {
   pn_collector_t *collector;
   pconnection_queue_t accept;   /* pconnection_t list for accepting */
   listener_state state;
-  int refcount;                 /* Free when proactor and user are done */
 };
 
 typedef enum { TM_NONE, TM_REQUEST, TM_PENDING, TM_FIRED } timeout_state_t;
@@ -308,7 +307,6 @@ static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool ser
   if (!pc || pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
     return NULL;
   }
-  pn_incref(c);                 /* User owns original ref, make one for the proactor */
   work_init(&pc->work, p,  T_CONNECTION);
   pc->next = pconnection_unqueued;
   pc->write.data = &pc->work;
@@ -371,16 +369,10 @@ static void pconnection_free(pconnection_t *pc) {
   if (pc->addr.getaddrinfo.addrinfo) {
     uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Interrupted after resolve */
   }
-  /* Don't let driver_destroy call pn_connection_free(), the user does that */
-  pn_connection_t *c = pc->driver.connection;
-  pc->driver.connection = NULL;
-  pn_collector_t *collector = pn_connection_collector(c);
-  if (collector) {
-    pn_collector_release(collector); /* Break circular refs */
-  }
+  pn_incref(pc);                /* Make sure we don't do a circular free */
   pn_connection_driver_destroy(&pc->driver);
-  /* The user either has or will call pn_connection_free(), drop our ref. */
-  pn_decref(c);
+  pn_decref(pc);
+  /* Now pc is freed iff the connection is, otherwise remains till the pn_connection_t is freed. */
 }
 
 /* Final close event for for a pconnection_t, disconnects from proactor */
@@ -648,7 +640,7 @@ static void leader_listen_lh(pn_listener_t *l) {
 }
 
 void pn_listener_free(pn_listener_t *l) {
-  if (l && --l->refcount == 0) {
+  if (l) {
     if (l->addr.getaddrinfo.addrinfo) { /* Interrupted after resolve */
       uv_freeaddrinfo(l->addr.getaddrinfo.addrinfo);
     }
@@ -1103,25 +1095,19 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   uv_mutex_unlock(&p->lock);
 }
 
-int pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
+void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   pconnection_t *pc = pconnection(p, c, false);
-  if (pc) {
-    pn_connection_open(pc->driver.connection); /* Auto-open */
-    parse_addr(&pc->addr, addr);
-    work_start(&pc->work);
-  } else {
-    return PN_OUT_OF_MEMORY;
-  }
-  return 0;
+  assert(pc);                                  /* FIXME aconway 2017-03-31: memory safety */
+  pn_connection_open(pc->driver.connection); /* Auto-open */
+  parse_addr(&pc->addr, addr);
+  work_start(&pc->work);
 }
 
-int pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int backlog) {
+void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int backlog) {
   work_init(&l->work, p, T_LISTENER);
   parse_addr(&l->addr, addr);
   l->backlog = backlog;
-  ++l->refcount;
   work_start(&l->work);
-  return 0;
 }
 
 static void on_proactor_free(uv_handle_t* h, void* v) {
@@ -1208,7 +1194,6 @@ void pn_connection_wake(pn_connection_t* c) {
 pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {
-    l->refcount = 1;
     l->batch.next_event = listener_batch_next;
     l->collector = pn_collector();
     l->condition = pn_condition();
@@ -1248,12 +1233,10 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
   return l->attachments;
 }
 
-int pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
+void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   uv_mutex_lock(&l->lock);
   pconnection_t *pc = pconnection(l->work.proactor, c, true);
-  if (!pc) {
-    return PN_OUT_OF_MEMORY;
-  }
+  assert(pc);
   /* Get the socket from the accept event that we are processing */
   pn_event_t *e = pn_collector_prev(l->collector);
   assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
@@ -1263,24 +1246,23 @@ int pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   pconnection_push(&l->accept, pc);
   uv_mutex_unlock(&l->lock);
   work_notify(&l->work);
-  return 0;
 }
 
-struct sockaddr_storage *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr) {
-  return (struct sockaddr_storage*)addr;
+const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr) {
+  return (const struct sockaddr_storage*)addr;
 }
 
-struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {
+const struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc ? (pn_proactor_addr_t*)&pc->local : NULL;
 }
 
-struct pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t *t) {
+const struct pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc ? (pn_proactor_addr_t*)&pc->remote : NULL;
 }
 
-size_t pn_proactor_addr_str(char *buf, size_t len, struct pn_proactor_addr_t* addr) {
+size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, size_t len) {
   struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];

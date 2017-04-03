@@ -260,7 +260,7 @@ typedef enum {
   PN_TRANSPORT,
 
   /**
-   * The transport has authenticated, if this is received by a server
+   * The transport has authenticated. If this is received by a server
    * the associated transport has authenticated an incoming connection
    * and pn_transport_get_user() can be used to obtain the authenticated
    * user.
@@ -322,7 +322,7 @@ typedef enum {
   PN_LISTENER_CLOSE,
 
   /**
-   * Indicates pn_proactor_interrupt() was called to interrupt a proactor thread
+   * Indicates pn_proactor_interrupt() was called to interrupt a proactor thread.
    * Events of this type point to the @ref pn_proactor_t.
    */
   PN_PROACTOR_INTERRUPT,
@@ -334,7 +334,7 @@ typedef enum {
   PN_PROACTOR_TIMEOUT,
 
   /**
-   * The proactor becaome inactive: all listeners and connections are closed and
+   * The proactor is inactive. All listeners and connections are closed and
    * their events processed, the timeout is expired.
    *
    * Events of this type point to the @ref pn_proactor_t.
@@ -342,7 +342,7 @@ typedef enum {
   PN_PROACTOR_INACTIVE,
 
   /**
-   * Indicates the listener is listeneing.
+   * The listener is listeneing.
    * Events of this type point to the @ref pn_listener_t.
    */
   PN_LISTENER_OPEN

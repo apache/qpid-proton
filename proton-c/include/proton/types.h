@@ -100,16 +100,12 @@
  * @brief A data structure for AMQP data
  * @ingroup codec
  *
- * @defgroup io IO
- * @brief IO integration interfaces
- *
  * @defgroup proactor Proactor
  * @brief **Experimental** - Multithreaded IO
  * @ingroup io
  *
  * @defgroup connection_driver Connection driver
  * @brief **Experimental** - Low-level IO integration
- * @ingroup io
  *
  * @defgroup messenger Messenger
  * @deprecated

@@ -137,7 +137,6 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
    case PN_TRANSPORT_CLOSED:
     check_condition(event, pn_transport_condition(pn_event_transport(event)));
-    pn_connection_free(pn_event_connection(event));
     break;
 
    case PN_CONNECTION_REMOTE_CLOSE:

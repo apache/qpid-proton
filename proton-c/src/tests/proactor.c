@@ -68,15 +68,6 @@ static void proactor_test_free(proactor_test_t *pts, size_t n) {
 
 #define PROACTOR_TEST_FREE(A) proactor_test_free(A, sizeof(A)/sizeof(*A))
 
-/* Clear the event logs in an array of proactors */
-static void proactor_test_clear_logs(proactor_test_t *pts, size_t n) {
-  for (proactor_test_t *pt = pts; pt < pts + n; ++pt) {
-    pt->log_len = 0;
-  }
-}
-
-#define PROACTOR_TEST_CLEAR_LOGS(A) proactor_test_clear_logs(A, sizeof(A)/sizeof(*A))
-
 #define TEST_LOG_EQUAL(T, A, PT) \
   TEST_ETYPES_EQUAL((T), (A), sizeof(A)/sizeof(*A), (PT).log, (PT).log_len)
 
@@ -155,6 +146,21 @@ static void proactor_test_drain(proactor_test_t *pts, size_t n) {
 #define PROACTOR_TEST_RUN(A) proactor_test_run((A), sizeof(A)/sizeof(*A))
 #define PROACTOR_TEST_DRAIN(A) proactor_test_drain((A), sizeof(A)/sizeof(*A))
 
+/* Combine a test_port with a pn_listener */
+typedef struct proactor_test_listener_t {
+  test_port_t port;
+  pn_listener_t *listener;
+} proactor_test_listener_t;
+
+proactor_test_listener_t proactor_test_listen(proactor_test_t *pt, const char *host) {
+  proactor_test_listener_t l = { test_port(host), pn_listener() };
+  pn_proactor_listen(pt->proactor, l.listener, l.port.host_port, 4);
+  TEST_ETYPE_EQUAL(pt->t, PN_LISTENER_OPEN, proactor_test_run(pt, 1));
+  sock_close(l.port.sock);
+  return l;
+}
+
+
 /* Wait for the next single event, return its type */
 static pn_event_type_t wait_next(pn_proactor_t *proactor) {
   pn_event_batch_t *events = pn_proactor_wait(proactor);
@@ -197,22 +203,11 @@ static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
 
   switch (pn_event_type(e)) {
 
-    /* Cleanup events */
-   case PN_LISTENER_CLOSE:
-    pn_listener_free(pn_event_listener(e));
-    return PN_EVENT_NONE;
-
-   case PN_TRANSPORT_CLOSED:
-    pn_connection_free(pn_event_connection(e));
-    return PN_TRANSPORT_CLOSED;
-
     /* Stop on these events */
+   case PN_TRANSPORT_CLOSED:
    case PN_PROACTOR_INACTIVE:
    case PN_PROACTOR_TIMEOUT:
-    return pn_event_type(e);
-
    case PN_LISTENER_OPEN:
-    last_accepted = NULL;
     return pn_event_type(e);
 
    case PN_LISTENER_ACCEPT:
@@ -229,11 +224,12 @@ static pn_event_type_t common_handler(test_t *t, pn_event_t *e) {
     pn_connection_close(c);     /* Return the close */
     return PN_EVENT_NONE;
 
-    /* Ignored these events */
+    /* Ignore these events */
    case PN_CONNECTION_INIT:
    case PN_CONNECTION_BOUND:
    case PN_CONNECTION_LOCAL_OPEN:
    case PN_CONNECTION_LOCAL_CLOSE:
+   case PN_LISTENER_CLOSE:
    case PN_TRANSPORT:
    case PN_TRANSPORT_ERROR:
    case PN_TRANSPORT_HEAD_CLOSED:
@@ -279,13 +275,9 @@ static pn_event_type_t open_close_handler(test_t *t, pn_event_t *e) {
 static void test_client_server(test_t *t) {
   proactor_test_t pts[] ={ { open_close_handler }, { common_handler } };
   PROACTOR_TEST_INIT(pts, t);
-  pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t port = test_port(localhost);
-  pn_proactor_listen(server, pn_listener(), port.host_port, 4);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-  sock_close(port.sock);
+  proactor_test_listener_t l = proactor_test_listen(&pts[1], localhost);
   /* Connect and wait for close at both ends */
-  pn_proactor_connect(client, pn_connection(), port.host_port);
+  pn_proactor_connect(pts[0].proactor, pn_connection(), l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   PROACTOR_TEST_FREE(pts);
@@ -315,6 +307,7 @@ static void test_connection_wake(test_t *t) {
   sock_close(port.sock);
 
   pn_connection_t *c = pn_connection();
+  pn_incref(c);                 /* Keep a reference for wake() after free */
   pn_proactor_connect(client, c, port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
@@ -327,15 +320,16 @@ static void test_connection_wake(test_t *t) {
   PROACTOR_TEST_FREE(pts);
   /* The pn_connection_t is still valid so wake is legal but a no-op */
   pn_connection_wake(c);
-  pn_connection_free(c);
+  pn_decref(c);
 }
 
-/* Close the transport to abort a connection, i.e. close the socket abruptly */
-static pn_event_type_t open_abort_handler(test_t *t, pn_event_t *e) {
+/* Close the transport to abort a connection, i.e. close the socket without an AMQP close */
+static pn_event_type_t listen_abort_handler(test_t *t, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_CONNECTION_REMOTE_OPEN:
     /* Close the transport - abruptly closes the socket */
-    pn_transport_close(pn_connection_transport(pn_event_connection(e)));
+    pn_transport_close_tail(pn_connection_transport(pn_event_connection(e)));
+    pn_transport_close_head(pn_connection_transport(pn_event_connection(e)));
     return PN_EVENT_NONE;
 
    default:
@@ -344,9 +338,9 @@ static pn_event_type_t open_abort_handler(test_t *t, pn_event_t *e) {
   }
 }
 
-/* Test an aborted connection */
+/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protoocol close */
 static void test_abort(test_t *t) {
-  proactor_test_t pts[] ={ { open_close_handler }, { open_abort_handler } };
+  proactor_test_t pts[] ={ { open_close_handler }, { listen_abort_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
   test_port_t port = test_port(localhost);
@@ -354,9 +348,6 @@ static void test_abort(test_t *t) {
   pn_proactor_listen(server, l, port.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
-
-  /* Run to completion, then examine logs */
-  PROACTOR_TEST_CLEAR_LOGS(pts);
   pn_proactor_connect(client, pn_connection(), port.host_port);
   /* server transport closes */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
@@ -370,15 +361,96 @@ static void test_abort(test_t *t) {
     TEST_STR_EQUAL(t, "amqp:connection:framing-error", pn_condition_get_name(last_condition));
     TEST_STR_IN(t, "abort", pn_condition_get_description(last_condition));
   }
+  pn_listener_close(l);
+  PROACTOR_TEST_DRAIN(pts);
 
-  /* Make sure there are PN_CONNECTION_CLOSE events in the shutdown sequence */
-  static const pn_event_type_t want_client[] = { PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN, PN_CONNECTION_BOUND, PN_TRANSPORT_TAIL_CLOSED, PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED };
+  /* Verify expected event sequences, no unexpected events */
+  static const pn_event_type_t want_client[] = {
+    PN_CONNECTION_INIT,
+    PN_CONNECTION_LOCAL_OPEN,
+    PN_CONNECTION_BOUND,
+    PN_TRANSPORT_TAIL_CLOSED,
+    PN_TRANSPORT_ERROR,
+    PN_TRANSPORT_HEAD_CLOSED,
+    PN_TRANSPORT_CLOSED
+  };
   TEST_LOG_EQUAL(t, want_client, pts[0]);
-  static const pn_event_type_t want_server[] = { PN_LISTENER_ACCEPT, PN_CONNECTION_INIT, PN_CONNECTION_BOUND, PN_CONNECTION_REMOTE_OPEN, PN_TRANSPORT_TAIL_CLOSED, PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED };
+
+  static const pn_event_type_t want_server[] = {
+    PN_LISTENER_OPEN,
+    PN_LISTENER_ACCEPT,
+    PN_CONNECTION_INIT,
+    PN_CONNECTION_BOUND,
+    PN_CONNECTION_REMOTE_OPEN,
+    PN_TRANSPORT_TAIL_CLOSED,
+    PN_TRANSPORT_ERROR,
+    PN_TRANSPORT_HEAD_CLOSED,
+    PN_TRANSPORT_CLOSED,
+    PN_LISTENER_CLOSE
+  };
   TEST_LOG_EQUAL(t, want_server, pts[1]);
 
   PROACTOR_TEST_FREE(pts);
-  pn_listener_free(l);
+}
+
+/* Refuse a connection: abort before the AMQP open sequence begins. */
+static pn_event_type_t listen_refuse_handler(test_t *t, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+
+   case PN_CONNECTION_BOUND:
+    /* Close the transport - abruptly closes the socket */
+    pn_transport_close_tail(pn_connection_transport(pn_event_connection(e)));
+    pn_transport_close_head(pn_connection_transport(pn_event_connection(e)));
+    return PN_EVENT_NONE;
+
+   default:
+    /* Don't auto-close the listener to keep the event sequences simple */
+    return listen_handler(t, e);
+  }
+}
+
+/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protoocol close */
+static void test_refuse(test_t *t) {
+  proactor_test_t pts[] = { { open_close_handler }, { listen_refuse_handler } };
+  PROACTOR_TEST_INIT(pts, t);
+  pn_proactor_t *client = pts[0].proactor;
+  proactor_test_listener_t l = proactor_test_listen(&pts[1], localhost);
+  pn_proactor_connect(client, pn_connection(), l.port.host_port);
+
+  /* client transport closes */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* client */
+  if (TEST_CHECK(t, last_condition) && TEST_CHECK(t, pn_condition_is_set(last_condition))) {
+    TEST_STR_EQUAL(t, "amqp:connection:framing-error", pn_condition_get_name(last_condition));
+  }
+  pn_listener_close(l.listener);
+  PROACTOR_TEST_DRAIN(pts);
+
+  /* Verify expected event sequences, no unexpected events */
+  static const pn_event_type_t want_client[] = {
+    PN_CONNECTION_INIT,
+    PN_CONNECTION_LOCAL_OPEN,
+    PN_CONNECTION_BOUND,
+    PN_TRANSPORT_TAIL_CLOSED,
+    PN_TRANSPORT_ERROR,
+    PN_TRANSPORT_HEAD_CLOSED,
+    PN_TRANSPORT_CLOSED
+  };
+  TEST_LOG_EQUAL(t, want_client, pts[0]);
+
+  static const pn_event_type_t want_server[] = {
+    PN_LISTENER_OPEN,
+    PN_LISTENER_ACCEPT,
+    PN_CONNECTION_INIT,
+    PN_CONNECTION_BOUND,
+    PN_TRANSPORT_TAIL_CLOSED,
+    PN_TRANSPORT_ERROR,
+    PN_TRANSPORT_HEAD_CLOSED,
+    PN_TRANSPORT_CLOSED,
+    PN_LISTENER_CLOSE
+  };
+  TEST_LOG_EQUAL(t, want_server, pts[1]);
+
+  PROACTOR_TEST_FREE(pts);
 }
 
 /* Test that INACTIVE event is generated when last connections/listeners closes. */
@@ -405,7 +477,6 @@ static void test_inactive(test_t *t) {
   pn_listener_close(l);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
-  pn_listener_free(l);
 
   sock_close(port.sock);
   PROACTOR_TEST_FREE(pts);
@@ -431,7 +502,6 @@ static void test_errors(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
   TEST_STR_IN(t, "xxx", pn_condition_get_description(last_condition));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
-  pn_listener_free(l);
 
   /* Connect with no listener */
   c = pn_connection();
@@ -514,15 +584,10 @@ static void test_ipv4_ipv6(test_t *t) {
 
   pn_listener_close(l);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  pn_listener_free(l);
-
   pn_listener_close(l6);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  pn_listener_free(l6);
-
   pn_listener_close(l4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  pn_listener_free(l4);
 
   PROACTOR_TEST_FREE(pts);
 }
@@ -544,11 +609,7 @@ static void test_free_cleanup(test_t *t) {
     pn_proactor_connect(client, c[i], ports[i].host_port);
   }
   PROACTOR_TEST_FREE(pts);
-  /* Safe to free after proactor is gone */
-  for (int i = 0; i < 3; ++i) {
-    pn_listener_free(l[i]);
-    pn_connection_free(c[i]);
-  }
+
   /* Freeing an unused listener/connector should be safe */
   pn_listener_free(pn_listener());
   pn_connection_free(pn_connection());
@@ -630,7 +691,7 @@ static void test_ssl(test_t *t) {
 static void test_addr(test_t *t) {
   /* Make sure NULL addr gives empty string */
   char str[1024] = "not-empty";
-  pn_proactor_addr_str(str, sizeof(str), NULL);
+  pn_proactor_addr_str(NULL, str, sizeof(str));
   TEST_STR_EQUAL(t, "", str);
 
   proactor_test_t pts[] ={ { open_wake_handler }, { listen_handler } };
@@ -648,21 +709,21 @@ static void test_addr(test_t *t) {
   char cr[1024], cl[1024], sr[1024], sl[1024];
 
   pn_transport_t *ct = pn_connection_transport(c);
-  pn_proactor_addr_str(cr, sizeof(cr), pn_proactor_addr_remote(ct));
+  pn_proactor_addr_str(pn_proactor_addr_remote(ct), cr, sizeof(cr));
   TEST_STR_IN(t, test_port_use_host(&port, ""), cr); /* remote address has listening port */
 
   pn_connection_t *s = last_accepted; /* server side of the connection */
   pn_transport_t *st = pn_connection_transport(s);
   if (!TEST_CHECK(t, st)) return;
-  pn_proactor_addr_str(sl, sizeof(sl), pn_proactor_addr_local(st));
+  pn_proactor_addr_str(pn_proactor_addr_local(st), sl, sizeof(sl));
   TEST_STR_EQUAL(t, cr, sl);  /* client remote == server local */
 
-  pn_proactor_addr_str(cl, sizeof(cl), pn_proactor_addr_local(ct));
-  pn_proactor_addr_str(sr, sizeof(sr), pn_proactor_addr_remote(st));
+  pn_proactor_addr_str(pn_proactor_addr_local(ct), cl, sizeof(cl));
+  pn_proactor_addr_str(pn_proactor_addr_remote(st), sr, sizeof(sr));
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
 
   /* Examine as sockaddr */
-  struct sockaddr_storage* addr = pn_proactor_addr_sockaddr(pn_proactor_addr_remote(ct));
+  const struct sockaddr_storage* addr = pn_proactor_addr_sockaddr(pn_proactor_addr_remote(ct));
   TEST_CHECK(t, AF_INET == addr->ss_family);
   char host[NI_MAXHOST] = "";
   char serv[NI_MAXSERV] = "";
@@ -675,15 +736,12 @@ static void test_addr(test_t *t) {
   TEST_STR_EQUAL(t, port.str, serv);
 
   /* Make sure you can use NULL, 0 to get length of address string without a crash */
-  size_t len = pn_proactor_addr_str(NULL, 0, pn_proactor_addr_local(ct));
+  size_t len = pn_proactor_addr_str(pn_proactor_addr_local(ct), NULL, 0);
   TEST_CHECK(t, strlen(cl) == len);
 
   sock_close(port.sock);
   PROACTOR_TEST_DRAIN(pts);
   PROACTOR_TEST_FREE(pts);
-  pn_listener_free(l);
-  pn_connection_free(c);
-  pn_connection_free(s);
 }
 
 /* Test pn_proactor_disconnect */
@@ -746,8 +804,6 @@ static void test_disconnect(test_t *t) {
   }
 
   pn_condition_free(cond);
-  pn_listener_free(l);
-  pn_listener_free(l2);
 
   /* Make sure the proactors are still functional */
   test_port_t port3 = test_port(localhost);
@@ -761,7 +817,6 @@ static void test_disconnect(test_t *t) {
 
   PROACTOR_TEST_DRAIN(pts);     /* Drain will  */
   PROACTOR_TEST_FREE(pts);
-  pn_listener_free(l3);
 }
 
 int main(int argc, char **argv) {
@@ -771,13 +826,14 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_interrupt_timeout(&t));
   RUN_ARGV_TEST(failed, t, test_errors(&t));
   RUN_ARGV_TEST(failed, t, test_client_server(&t));
-  RUN_ARGV_TEST(failed, t, test_abort(&t));
   RUN_ARGV_TEST(failed, t, test_connection_wake(&t));
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
   RUN_ARGV_TEST(failed, t, test_free_cleanup(&t));
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
   RUN_ARGV_TEST(failed, t, test_addr(&t));
   RUN_ARGV_TEST(failed, t, test_disconnect(&t));
+  RUN_ARGV_TEST(failed, t, test_abort(&t));
+  RUN_ARGV_TEST(failed, t, test_refuse(&t));
   pn_condition_free(last_condition);
   return failed;
 }

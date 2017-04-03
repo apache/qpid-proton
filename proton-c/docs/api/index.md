@@ -20,9 +20,7 @@ api\_types.
 
 @ref codec has functions for AMQP data encoding and decoding.
 
-## IO
-
-@ref io holds interfaces for integrating Proton with platform IO.
+## Proactor
 
 The @ref proactor is a portable, proactive, asynchronous API for
 single- or multithreaded applications. It associates AMQP @ref
@@ -30,8 +28,9 @@ connection "connections" with network connections (@ref transport
 "transports") and allows one or more threads to handle @ref event
 "events".
 
-**Low-level integration** - The @ref connection\_driver provides a
-low-level SPI to feed byte streams from any source to the protocol
-engine. You can use it to integrate Proton directly with a foreign
-event loop or IO library, or to implement your own @ref proactor to
-transparently replace Proton's IO layer.
+## Low-level IO integration
+
+The @ref connection\_driver Connection Driver is a low-level SPI to feed byte
+streams from any source to the protocol engine. You can use it to integrate
+Proton directly with a foreign event loop or IO library, or to implement your
+own @ref proactor to transparently replace Proton's IO layer.

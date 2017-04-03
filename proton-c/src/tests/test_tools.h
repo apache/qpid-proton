@@ -132,7 +132,7 @@ bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, con
 
 void print_bad_etypes(const char* prefix, const pn_event_type_t* seq, size_t len, size_t bad) {
   fprintf(stderr, "%s", prefix);
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i) {
     fprintf(stderr, (i == bad) ? ">>>>%s" : "%s", pn_event_type_name(seq[i]));
     if (i < len-1) fprintf(stderr, ", ");
   }
@@ -142,7 +142,7 @@ void print_bad_etypes(const char* prefix, const pn_event_type_t* seq, size_t len
 
 bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len, const pn_event_type_t* got, size_t got_len, const char *file, int line) {
   size_t len = want_len < got_len ? want_len : got_len;
-  for (int i = 0; i < len; ++i) {
+  for (size_t i = 0; i < len; ++i) {
     if (want[i] != got[i]) {
       test_errorf_(t, NULL, file, line, "event sequences don't match:");
       print_bad_etypes("  want: ", want, want_len, i);
@@ -261,7 +261,7 @@ int sock_port(sock_t sock) {
   return ntohs(port);
 }
 
-/* Combines includes a sock_t with the int and char* versions of the port for convenience */
+/* Combines a sock_t with the int and char* versions of the port for convenience */
 typedef struct test_port_t {
   sock_t sock;
   int port;                     /* port as integer */

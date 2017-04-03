@@ -30,35 +30,40 @@ extern "C" {
 
 /**
  * @file
+ * @copydoc listener
  *
- * **Experimental** - A listener for incoming connections for the @ref
- * proactor.
+ * @defgroup listener Listener
+ * @ingroup proactor
  *
- * @addtogroup proactor
+ * **Experimental** - A listener for incoming connections for the @ref proactor.
+ *
+ * @note Thread safety: Listener has the same thread-safety rules as a @ref core
+ * object; calls to a single listener must be serialized with the exception of
+ * pn_listener_close()
+ *
  * @{
  */
 
 /**
  * Create a listener to pass to pn_proactor_listen()
  *
- * Must be freed with pn_listener_free()
- *
- * You can use pn_listener_set_context() or pn_listener_attachments() to set
- * application data that can be accessed when accepting connections.
+ * You can use pn_listener_attachments() to set application data that can be
+ * accessed when accepting connections.
  */
 PNP_EXTERN pn_listener_t *pn_listener(void);
 
 /**
- * Free a listener. Must not be in use, see pn_proactor_listen()
+ * Free a listener. You don't need to call this unless you create a listener
+ * with pn_listen() but never pass it to pn_proactor_listen()
  */
 PNP_EXTERN void pn_listener_free(pn_listener_t *l);
 
 /**
- * Asynchronously accept a connection using the listener.
+ * Bind @p connection to a new transport accepted from @p listener.
+ * Errors are returned as @ref PN_TRANSPORT_CLOSED events by pn_proactor_wait().
  *
- * @param[in] connection the listener takes ownership, do not free.
  */
-PNP_EXTERN int pn_listener_accept(pn_listener_t*, pn_connection_t *connection);
+PNP_EXTERN void pn_listener_accept(pn_listener_t*, pn_connection_t *);
 
 /**
  * Get the error condition for a listener.
@@ -93,10 +98,11 @@ PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 PNP_EXTERN pn_record_t *pn_listener_attachments(pn_listener_t *listener);
 
 /**
- * Close the listener (thread safe).
- *
+ * Close the listener.
  * The PN_LISTENER_CLOSE event is generated when the listener has stopped listening.
  *
+ * @note Thread safe. Must not be called after the PN_LISTENER_CLOSE event has
+ * been handled as the listener may be freed .
  */
 PNP_EXTERN void pn_listener_close(pn_listener_t *l);
 
@@ -106,7 +112,9 @@ PNP_EXTERN void pn_listener_close(pn_listener_t *l);
 PNP_EXTERN pn_proactor_t *pn_listener_proactor(pn_listener_t *c);
 
 /**
- * Return the listener associated with an event or NULL.
+ * Return the listener associated with an event.
+ *
+ * @return NULL if the event is not associated with a listener.
  */
 PNP_EXTERN pn_listener_t *pn_event_listener(pn_event_t *event);
 

@@ -35,6 +35,8 @@ HIDE_COMPOUND_REFERENCE = YES
 HIDE_SCOPE_NAMES        = YES
 MAX_INITIALIZER_LINES   = 0
 ALPHABETICAL_INDEX      = NO
+# Use declaration order, don't alphabetize
+SORT_MEMBER_DOCS       = NO
 
 # Redefine protected as private and strip out the PN_EXTERN and
 # PNX_EXTERN macros

@@ -30,29 +30,39 @@ extern "C" {
 
 /**
  * @file
+ * @copydoc proactor
  *
- * **Experimental** - Multithreaded IO
+ * @addtogroup proactor Proactor
  *
- * The proactor associates a @ref connection with a @ref transport,
- * either by making an outgoing connection or accepting an incoming
- * one.  It delivers @ref event "events" to application threads for
- * handling.
+ * The proactor associates an abstract AMQP protocol @ref connection with a
+ * concrete IO @ref transport implementation for outgoing and incoming
+ * connections. pn_proactor_wait() returns @ref proactor_events to application
+ * threads for handling.
  *
- * ## Multi-threading
+ * The @ref pn_proactor* functions are thread-safe, but to handle @ref proactor_events you
+ * must also use the @ref core APIs which are not. @ref core objects associated
+ * with different connections can be used concurrently, but objects associated
+ * with a single connection cannot.
  *
- * The @ref proactor is thread-safe, but the protocol engine is not.
- * The proactor ensures that each @ref connection and its associated
- * values (@ref session, @ref link etc.) is handle sequentially, even
- * if there are multiple application threads. See pn_proactor_wait().
+ * The proactor *serializes* @ref proactor_events for each connection - it never returns
+ * @ref proactor_events for the same connection concurrently in different
+ * threads. Event-handling code can safely use any @ref core object obtained
+ * from the current event. You can attach application data to @ref core objects
+ * (for example with pn_connection_attachments()).
+ *
+ * pn_connection_wake() allows any thread to "wake up" a connection. It causes
+ * pn_proactor_wait() to return a @ref PN_CONNECTION_WAKE event that is
+ * serialized with the connection's other @ref proactor_events. You can use this to implement
+ * communication between different connections, or from non-proactor threads.
+ *
+ * Serialization and pn_connection_wake() simplify building applications with a
+ * shared thread pool, which serialize work per connection. Many other
+ * variations are possible, but you are responsible for any additional
+ * synchronization needed.
  *
  * @addtogroup proactor
  * @{
  */
-
-/**
- * Stores a network address in native format.
- */
-typedef struct pn_proactor_addr_t pn_proactor_addr_t;
 
 /**
  * Create a proactor. Must be freed with pn_proactor_free()
@@ -60,200 +70,316 @@ typedef struct pn_proactor_addr_t pn_proactor_addr_t;
 PNP_EXTERN pn_proactor_t *pn_proactor(void);
 
 /**
- * Disconnect all connections and listeners currently active in the proactor.
- *
- * PN_LISTENER_CLOSE, PN_TRANSPORT_CLOSED and other events are generated as usual.
- * If no new listeners or connections are created, then a PN_PROACTOR_INACTIVE event
- * will be generated when all connections and listeners are disconnected.
- *
- * Note the proactor remains active, connections and listeners created after a call to
- * pn_proactor_disconnect() are not affected by it.
- *
- * @param condition if not NULL the condition data is copied to the transports and listeners.
- */
-PNP_EXTERN void pn_proactor_disconnect(pn_proactor_t *proactor, pn_condition_t *condition);
-
-/**
- * Free the proactor. Abort any open network connections and clean up all
- * associated resources.
+ * Free the proactor. Abort open connections/listeners, clean up all resources.
  */
 PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
 
 /**
- * Connect connection to host/port. Connection and transport events will be
- * returned by pn_proactor_wait()
+ * Bind @p connection to a new @ref transport connected to @p addr.
+ * Errors are returned as  @ref PN_TRANSPORT_CLOSED events by pn_proactor_wait().
+ *
+ * @note Thread safe.
+ *
+ * @param connection @p proactor *takes ownership* of @p connection and will
+ * automatically call pn_connection_free() after the final @ref
+ * PN_TRANSPORT_CLOSED event is handled, or when pn_proactor_free() is
+ * called. You can prevent the automatic free with
+ * pn_proactor_release_connection()
+ *
+ * @param[in] addr the network address in the form "host:port" or as a URL
+ * For a URL *only* the host and port fields are used, the rest is ignored.
+ *
+ * Three special cases are allowed:
+ *
+ * - "host": Connect to "host" on the standard AMQP port (5672).
+ * - ":port": Connect to the local host on "port" using the default protocol.
+ * - "": Connect to the local host on the AMQP port using the default protocol.
+ *
+ * @note The network address @p addr and AMQP address are different things. The
+ * network address enables connection to a remote host, the AMQP address
+ * identifies an AMQP node (such as a queue or topic) *after* you have
+ * established the connection.
+ * The special case ":port" connects to the local host via the default protocol.
+ * The special case "" connects to the local host on the AMQP standard port.
+ *
+ * It is common to combine the two into a URL like this:
+ *
+ *     amqp[s]://user:pass@host:port/amqp_address
+ *
+ * The proactor will extract the host and port only. If you want to use other
+ * fields (e.g. to set up security) you must call the relevant functions on @p
+ * connection before pn_proactor_connect() and handle @ref PN_CONNECTION_BOUND
+ * to set up the @ref transport.
+ *
+ * @note Thread safe.
  *
  * @param[in] proactor the proactor object
- * @param[in] connection must not be freed until after the final PN_TRANSPORT_CLOSED event or pn_proactor_free()
- * @param[in] addr the network address (not AMQP address) to connect to. May
- * be in the form "host:port" or an "amqp://" or "amqps://" URL. The `/path` part of
- * the URL is ignored.
- * @param[in] port port to connect to
  *
- * @return error on immediate error, e.g. an allocation failure.
- * Other errors are indicated by connection or transport events via
-PNP_EXTERN  * pn_proactor_wait()
+ * @param[in] connection @ref connection to be connected to @p addr.
  */
-PNP_EXTERN int pn_proactor_connect(
-  pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
+PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 
 /**
- * Start listening with listener.
+ * Start listening for incoming connections.
+ * Errors are returned as @ref proactor_events by pn_proactor_wait().
  *
- * pn_proactor_wait() will return a PN_LISTENER_ACCEPT event when a connection can be
- * accepted.
- *
+ * @note Thread safe.
  *
  * @param[in] proactor the proactor object
- * @param[in] listener must not be freed until after the final PN_LISTENER_CLOSE event or pn_proactor_free()
- * @param[in] addr the network address (not AMQP address) to connect to in "host:port"
  *
- * The host can be a host name, IPV4 or IPV6 literal, or the empty string. The empty
- * string listens on all local addresses. A host name listens on all addresses associated
- * with the name. An IPV6 literal address (or wildcard '[::]') listens only for IPV6. An
- * IPV4 literal address (or wildcard '0.0.0.0') listens only for IPV4."
+ * @param[in] listener @p proactor *takes ownership* of @p listener, and will
+ * automatically call pn_listener_free() after the final PN_LISTENER_CLOSE event
+ * is handled, or when pn_proactor_free() is called.
  *
- * @param[in] backlog number of connection requests to queue. If the host resolves
- * to multiple addresses, this backlog applies to each address.
+ * @param[in] addr the network address in the form "host:port" or as a URL
+ * For a URL *only* the host and port fields are used, the rest is ignored.
  *
- * @return error on immediate error, e.g. an allocation failure.
- * Other errors are indicated by pn_listener_condition() on the
- * PN_LISTENER_CLOSE event.
+ * Three special cases are allowed:
+ *
+ * - "host": Listen on the standard AMQP port (5672) on the interface and protocol identified by "host"
+ * - ":port": Listen on "port", on all local interfaces, for all protocols.
+ * - "": Listen on the standard AMQP port, on all local interfaces, for all protocols.
+
+ * @param[in] backlog of un-handled connection requests to allow before refusing
+ * connections. If @p addr resolves to multiple interface/protocol combinations,
+ * the backlog applies to each separately.
  */
-PNP_EXTERN int pn_proactor_listen(
-  pn_proactor_t *proactor, pn_listener_t *listener, const char *addr, int backlog);
+PNP_EXTERN void pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *listener, const char *addr, int backlog);
 
 /**
- * Wait until there is at least one event to handle.
- * Always returns a non-empty batch of events.
+ * Disconnect all connections and listeners belonging to the proactor.
+ *
+ * @ref PN_LISTENER_CLOSE, @ref PN_TRANSPORT_CLOSED and other @ref proactor_events are
+ * generated as usual.  If no new listeners or connections are created, then a
+ * @ref PN_PROACTOR_INACTIVE event will be generated when all connections and
+ * listeners are disconnected.
+ *
+ * Note the proactor remains active, connections and listeners created after a call to
+ * pn_proactor_disconnect() are not affected by it.
+ *
+ * @note Thread safe.
+ *
+ * @param proactor the proactor
+ *
+ * @param condition if not NULL the condition data is copied to each
+ * disconnected transports and listener and is available in the close event.
+ */
+PNP_EXTERN void pn_proactor_disconnect(pn_proactor_t *proactor, pn_condition_t *condition);
+
+/**
+ * Wait until there are @ref proactor_events to handle.
  *
  * You must call pn_proactor_done() when you are finished with the batch, you
  * must not use the batch pointer after calling pn_proactor_done().
  *
- * Normally it is most efficient to handle the entire batch in one thread, but
- * you can call pn_proactor_done() on an unfinished the batch. The remaining
- * events will be returned by another call to pn_proactor_done(), possibly in a
- * different thread.
+ * Normally it is most efficient to handle the entire batch in the calling
+ * thread and then call pn_proactor_done(), but see pn_proactor_done() for more options.
  *
- * @note You can generate events to force threads to wake up from
- * pn_proactor_wait() using pn_proactor_interrupt(), pn_proactor_set_timeout()
- * and pn_connection_wake()
+ * pn_proactor_get() is a non-blocking version of this call.
  *
- * @note Thread-safe: can be called concurrently. Events in a single
- * batch must be handled in sequence, but batches returned by separate
- * calls can be handled concurrently.
+ * @note Thread Safe.
+ *
+ * @return a non-empty batch of events that must be processed in sequence.
+ *
  */
 PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
 
 /**
- * Return a batch of events if one is available immediately, otherwise return NULL.  If it
- * does return an event batch, the rules are the same as for pn_proactor_wait()
+ * Return @ref proactor_events if any are available immediately.  If not, return NULL.
+ * If the return value is not NULL, the behavior is the same as pn_proactor_wait()
+ *
+ * @note Thread Safe.
  */
 PNP_EXTERN pn_event_batch_t *pn_proactor_get(pn_proactor_t *proactor);
 
 /**
- * Call when done handling a batch of events.
+ * Call when finished handling a batch of events.
  *
- * Must be called exactly once to match each call to
- * pn_proactor_wait().
+ * Must be called exactly once to match each call to pn_proactor_wait().
  *
- * @note Thread-safe: may be called from any thread provided the
- * exactly once rule is respected.
+ * @note Thread-safe: May be called from any thread provided the exactly once
+ * rule is respected.
  */
 PNP_EXTERN void pn_proactor_done(pn_proactor_t *proactor, pn_event_batch_t *events);
 
 /**
- * Cause PN_PROACTOR_INTERRUPT to be returned to exactly one call of
- * pn_proactor_wait().
+ * Return a @ref PN_PROACTOR_INTERRUPT event as soon as possible.
  *
- * If threads are blocked in pn_proactor_wait(), one of them will be
- * interrupted, otherwise the interrupt will be returned by a future
- * call to pn_proactor_wait(). Calling pn_proactor_interrupt() N times
- * will return PN_PROACTOR_INTERRUPT to N current or future calls of
- * pn_proactor_wait()
+ * Exactly one @ref PN_PROACTOR_INTERRUPT event is generated for each call to
+ * pn_proactor_interrupt().  If threads are blocked in pn_proactor_wait(), one
+ * of them will be interrupted, otherwise the interrupt will be returned by a
+ * future call to pn_proactor_wait(). Calling pn_proactor_interrupt().
  *
- * @note Thread-safe.
+ * @note Thread safe
  */
 PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
 
 /**
- * Cause PN_PROACTOR_TIMEOUT to be returned to a thread calling wait()
- * after timeout milliseconds. Thread-safe.
+ * Return a @ref PN_PROACTOR_TIMEOUT after @p timeout milliseconds elapse. If no
+ * threads are blocked in pn_proactor_wait() when the timeout elapses, the event
+ * will be delivered to the next available thread.
  *
- * Note: calling pn_proactor_set_timeout() again before the
- * PN_PROACTOR_TIMEOUT is delivered will cancel the previous timeout
- * and deliver an event only after the new
- * timeout.
+ * Calling pn_proactor_set_timeout() again before the PN_PROACTOR_TIMEOUT
+ * is delivered will cancel the previous timeout and deliver an event only after
+ * the new timeout.
  *
- * Note: PN_PROACTOR_TIMEOUT events will be delivered in series, never
- * concurrently.
+ * @note Thread safe
  */
 PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
 
 /**
- * Cancel the pending timeout set by pn_proactor_set_timeout() if there is one.
+ * Cancel the pending timeout set by pn_proactor_set_timeout(). Does nothing
+ * if no timeout is set.
+ *
+ * @note Thread safe
  */
 PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
 
 /**
- * Cause a PN_CONNECTION_WAKE event to be returned by the proactor, even if
- * there are no IO events pending for the connection.
+ * Release ownership of @p connection, disassociate it from its proactor.
  *
- * @note Thread-safe: this is the only pn_connection_ function that
- * can be called concurrently.
+ * The connection and related objects (@ref session "sessions", @ref link "links"
+ * and so on) remain intact, but the transport is closed and unbound. The
+ * proactor will not return any more events for this connection. The caller must
+ * call pn_connection_free(), either directly or indirectly by re-using @p
+ * connection in another call to pn_proactor_connect() or pn_proactor_listen().
  *
- * Wakes can be "coalesced" - if several pn_connection_wake() calls happen
- * concurrently, there may be only one PN_CONNECTION_WAKE event.
+ * @note If @p connection does not belong to a proactor, this call does nothing.
+ *
+ * @note Thread safe.
+ */
+PNP_EXTERN void pn_proactor_release_connection(pn_connection_t *connection);
+
+/**
+ * Return a @ref PN_CONNECTION_WAKE event for @p connection as soon as possible.
+ *
+ * At least one wake event will be returned, serialized with other @ref proactor_events
+ * for the same connection.  Wakes can be "coalesced" - if several
+ * pn_connection_wake() calls happen close together, there may be only one
+ * PN_CONNECTION_WAKE event that occurs after all of them.
+ *
+ * @note If @p connection does not belong to a proactor, this call does nothing.
+ *
+ * @note Thread safe
  */
 PNP_EXTERN void pn_connection_wake(pn_connection_t *connection);
 
 /**
- * Return the proactor associated with a connection or NULL.
+ * Return the proactor associated with a connection.
+ *
+ * @note Not Thread safe.
+ *
+ * @return the proactor or NULL if the connection does not belong to a proactor.
  */
 PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
 
 /**
- * Return the proactor associated with an event or NULL.
+ * Return the proactor associated with an event.
+ *
+ * @note Not Thread safe.
+ *
+ * @return the proactor or NULL if the connection does not belong to a proactor.
  */
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
 
 /**
- * Format a network address as a human-readable string in buf, with trailing NUL.
+ * Stores a network address in native format.
+ */
+typedef struct pn_proactor_addr_t pn_proactor_addr_t;
+
+/**
+ * Format a network address as a human-readable string in buf.
  *
- * @return the length of the full address string, the string is copied to buf.
- *
- * If the address string is longer than len it is truncated to len-1 bytes, but the
- * full length is returned.
+ * @return the length of the full address string (including trailing NUL). The
+ * string is copied to buf. If the address string is longer than len it is
+ * truncated to len-1 bytes, but the full length is returned.
  *
  * If len == 0 the length of the address string is returned, buf is ignored.
  *
- * If addr is NULL or points to an invalid address, 0 is returned and buf (if not
- * NULL) is set to the empty string.
+ * If @p addr is not a pointer to a valid address, buf is set to "" and 0 is returned.
+ *
+ * @note Thread safe.
  */
-PNP_EXTERN size_t pn_proactor_addr_str(char *buf, size_t len, pn_proactor_addr_t* addr);
+PNP_EXTERN size_t pn_proactor_addr_str(const pn_proactor_addr_t* addr, char *buf, size_t len);
 
 /**
  * Get the local address of a transport.
  *
- * @return NULL if the transport is not connected or the address is not available. 
+ * @return NULL if the address is not available. Address is immutable, returned
+ * pointer is valid until @p transport is closed.
+ *
+ * @note Thread safe.
  */
-PNP_EXTERN pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t* c);
+PNP_EXTERN const pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t* c);
 
 /**
  * Get the remote address of a transport.
  *
- * @return NULL if the transport is not connected or the address is not available. 
+ * @return NULL if the address is not available. Address is immutable, returned
+ * pointer is valid until @p transport is closed.
+ *
+ * @note Thread safe.
  */
-PNP_EXTERN pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t* c);
+PNP_EXTERN const pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t* c);
 
 /**
- * If the underlying implementation uses `struct sockaddr` (for example POSIX or Windows
- * sockets) return a pointer to a `struct sockaddr_storage` containing the address info,
- * otherwise return NULL.
+ * If the proactor implementation uses `struct sockaddr` (for example on POSIX
+ * or Windows sockets) return a pointer to a `struct sockaddr_storage`
+ * containing the address info, otherwise return NULL.
+ *
+ * @note Thread safe.
  */
-PNP_EXTERN struct sockaddr_storage *pn_proactor_addr_sockaddr(pn_proactor_addr_t *addr);
+PNP_EXTERN const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr);
+
 
 /**
+ * @defgroup proactor_events Events
+ *
+ * **Experimental** - Events returned by pn_proactor_wait().
+ * pn_proactor_wait() returns a subset of the event types defined by @ref pn_event_type_t.
+ * The PN_REACTOR_..., PN_SELECTABLE_... and PN_..._FINAL events are not returned.
+ *
+ * Enumeration | Brief description, see @ref pn_event_type_t for more
+ * :-- | :--
+ * @ref PN_CONNECTION_INIT | @copybrief PN_CONNECTION_INIT
+ * @ref PN_CONNECTION_BOUND |  @copybrief PN_CONNECTION_BOUND
+ * @ref PN_TIMER_TASK | @copybrief PN_TIMER_TASK
+ * @ref PN_CONNECTION_INIT | @copybrief PN_CONNECTION_INIT
+ * @ref PN_CONNECTION_BOUND | @copybrief PN_CONNECTION_BOUND
+ * @ref PN_CONNECTION_UNBOUND | @copybrief PN_CONNECTION_UNBOUND
+ * @ref PN_CONNECTION_LOCAL_OPEN | @copybrief PN_CONNECTION_LOCAL_OPEN
+ * @ref PN_CONNECTION_REMOTE_OPEN | @copybrief PN_CONNECTION_REMOTE_OPEN
+ * @ref PN_CONNECTION_LOCAL_CLOSE | @copybrief PN_CONNECTION_LOCAL_CLOSE
+ * @ref PN_CONNECTION_REMOTE_CLOSE | @copybrief PN_CONNECTION_REMOTE_CLOSE
+ * @ref PN_SESSION_INIT | @copybrief PN_SESSION_INIT
+ * @ref PN_SESSION_LOCAL_OPEN | @copybrief PN_SESSION_LOCAL_OPEN
+ * @ref PN_SESSION_REMOTE_OPEN | @copybrief PN_SESSION_REMOTE_OPEN
+ * @ref PN_SESSION_LOCAL_CLOSE | @copybrief PN_SESSION_LOCAL_CLOSE
+ * @ref PN_SESSION_REMOTE_CLOSE | @copybrief PN_SESSION_REMOTE_CLOSE
+ * @ref PN_LINK_INIT | @copybrief PN_LINK_INIT
+ * @ref PN_LINK_LOCAL_OPEN | @copybrief PN_LINK_LOCAL_OPEN
+ * @ref PN_LINK_REMOTE_OPEN | @copybrief PN_LINK_REMOTE_OPEN
+ * @ref PN_LINK_LOCAL_CLOSE | @copybrief PN_LINK_LOCAL_CLOSE
+ * @ref PN_LINK_REMOTE_CLOSE | @copybrief PN_LINK_REMOTE_CLOSE
+ * @ref PN_LINK_LOCAL_DETACH | @copybrief PN_LINK_LOCAL_DETACH
+ * @ref PN_LINK_REMOTE_DETACH | @copybrief PN_LINK_REMOTE_DETACH
+ * @ref PN_LINK_FLOW | @copybrief PN_LINK_FLOW
+ * @ref PN_DELIVERY | @copybrief PN_DELIVERY
+ * @ref PN_TRANSPORT | @copybrief PN_TRANSPORT
+ * @ref PN_TRANSPORT_AUTHENTICATED | @copybrief PN_TRANSPORT_AUTHENTICATED
+ * @ref PN_TRANSPORT_ERROR | @copybrief PN_TRANSPORT_ERROR
+ * @ref PN_TRANSPORT_HEAD_CLOSED | @copybrief PN_TRANSPORT_HEAD_CLOSED
+ * @ref PN_TRANSPORT_TAIL_CLOSED | @copybrief PN_TRANSPORT_TAIL_CLOSED
+ * @ref PN_TRANSPORT_CLOSED | The final event for a proactor connection, the transport is closed.
+ * @ref PN_LISTENER_OPEN | @copybrief PN_LISTENER_OPEN
+ * @ref PN_LISTENER_ACCEPT | @copybrief PN_LISTENER_ACCEPT
+ * @ref PN_LISTENER_CLOSE | @copybrief PN_LISTENER_CLOSE
+ * @ref PN_PROACTOR_INTERRUPT | @copybrief PN_PROACTOR_INTERRUPT
+ * @ref PN_PROACTOR_TIMEOUT | @copybrief PN_PROACTOR_TIMEOUT
+ * @ref PN_PROACTOR_INACTIVE | @copybrief PN_PROACTOR_INACTIVE
+ * @ref PN_CONNECTION_WAKE | @copybrief PN_CONNECTION_WAKE
+ *
+ * @}
  * @}
  */
 

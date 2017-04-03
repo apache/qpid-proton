@@ -340,7 +340,6 @@ static void handle(broker_t* b, pn_event_t* e) {
    case PN_TRANSPORT_CLOSED:
     connection_unsub(b, pn_event_connection(e));
     check_condition(e, pn_transport_condition(pn_event_transport(e)));
-    pn_connection_free(pn_event_connection(e));
     break;
 
    case PN_CONNECTION_REMOTE_CLOSE:
@@ -366,7 +365,6 @@ static void handle(broker_t* b, pn_event_t* e) {
    case PN_LISTENER_CLOSE:
     check_condition(e, pn_listener_condition(pn_event_listener(e)));
     broker_stop(b);
-    pn_listener_free(pn_event_listener(e));
     break;
 
  break;
