@@ -221,6 +221,7 @@ option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_U
 option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
 option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
 
+option(ENABLE_EPOLL "Use the Linux epoll proactor implementation" OFF)
 # Set any additional compiler specific flags
 if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
@@ -322,6 +323,7 @@ set (qpid-proton-platform-all
   src/reactor/io/posix/io.c
   src/reactor/io/posix/selector.c
   src/proactor/libuv.c
+  src/proactor/epoll.c
   )
 
 # platform specific library build:
@@ -473,16 +475,23 @@ set (qpid-proton-include-extra
 )
 
 # Select proactor sources and build flags
-find_package(Libuv)
-if (Libuv_FOUND)
-  set (qpid-proton-proactor src/proactor/libuv.c)
-  set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+if (ENABLE_EPOLL)
+  set (qpid-proton-proactor src/proactor/epoll.c)
+  set (PROACTOR_LIBS "")
   set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-    # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
-    COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
-  )
-endif()
-
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
+    )
+else (ENABLE_EPOLL)
+  find_package(Libuv)
+  if (Libuv_FOUND)
+    set (qpid-proton-proactor src/proactor/libuv.c)
+    set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+      # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
+      )
+  endif(Libuv_FOUND)
+endif (ENABLE_EPOLL)
 
 # note: process bindings after the source lists have been defined so
 # the bindings can reference them
