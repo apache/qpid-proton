@@ -386,6 +386,13 @@ PN_EXTERN void pn_collector_free(pn_collector_t *collector);
 PN_EXTERN void pn_collector_release(pn_collector_t *collector);
 
 /**
+ * Drain a collector: remove and discard all events.
+ *
+ * @param[in] collector a collector object
+ */
+PN_EXTERN void pn_collector_drain(pn_collector_t *collector);
+
+/**
  * Place a new event on a collector.
  *
  * This operation will create a new event of the given type and

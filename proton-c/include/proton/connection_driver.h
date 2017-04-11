@@ -90,6 +90,7 @@ extern "C" {
 typedef struct pn_connection_driver_t {
   pn_connection_t *connection;
   pn_transport_t *transport;
+  pn_collector_t *collector;
   pn_event_batch_t batch;
 } pn_connection_driver_t;
 
@@ -123,6 +124,18 @@ PN_EXTERN int pn_connection_driver_bind(pn_connection_driver_t *d);
  * NULL.  Does not free the @ref pn_connection_driver_t struct itself.
  */
 PN_EXTERN void pn_connection_driver_destroy(pn_connection_driver_t *);
+
+/**
+ * Disassociate the driver's connection from its transport and collector and
+ * sets d->connection = NULL.  Returns the previous value, which must be freed
+ * by the caller.
+ *
+ * The transport and collector are still owned by the driver and will be freed by
+ * pn_connection_driver_destroy().
+ *
+ * @note This has nothing to do with pn_connection_release()
+ */
+PN_EXTERN pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d);
 
 /**
  * Get the read buffer.

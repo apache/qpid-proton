@@ -584,33 +584,51 @@ static void test_ipv4_ipv6(test_t *t) {
 
   pn_listener_close(l);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  pn_listener_close(l6);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
   pn_listener_close(l4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
+  if (has_ipv6) {
+    pn_listener_close(l6);
+    TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
+  }
 
   PROACTOR_TEST_FREE(pts);
 }
 
-/* Make sure pn_proactor_free cleans up open sockets */
-static void test_free_cleanup(test_t *t) {
+/* Make sure we clean up released connections and open sockets correctly */
+static void test_release_free(test_t *t) {
   proactor_test_t pts[] = { { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  test_port_t ports[3] = { test_port(localhost), test_port(localhost), test_port(localhost) };
-  pn_listener_t *l[3];
-  pn_connection_t *c[3];
-  for (int i = 0; i < 3; ++i) {
-    l[i] = pn_listener();
-    pn_proactor_listen(server, l[i], ports[i].host_port, 2);
-    TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-    sock_close(ports[i].sock);
-    c[i] = pn_connection();
-    pn_proactor_connect(client, c[i], ports[i].host_port);
-  }
-  PROACTOR_TEST_FREE(pts);
+  test_port_t port = test_port(localhost);
+  pn_listener_t *l = pn_listener();
+  pn_proactor_listen(server, l, port.host_port, 2);
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
 
-  /* Freeing an unused listener/connector should be safe */
+  /* leave one connection to the proactor  */
+  pn_proactor_connect(client, pn_connection(), port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+
+  /* release c1 and free immediately */
+  pn_connection_t *c1 = pn_connection();
+  pn_proactor_connect(client, c1, port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  pn_proactor_release_connection(c1); /* We free but socket should still be cleaned up */
+  pn_connection_free(c1);
+  TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* Server closed */
+
+  /* release c2 and but don't free till after proactor free */
+  pn_connection_t *c2 = pn_connection();
+  pn_proactor_connect(client, c2, port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  pn_proactor_release_connection(c2);
+  TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* Server closed */
+
+  PROACTOR_TEST_FREE(pts);
+  pn_connection_free(c2);
+
+  /* Check freeing a listener or connection that was never given to a proactor */
   pn_listener_free(pn_listener());
   pn_connection_free(pn_connection());
 }
@@ -828,7 +846,7 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_client_server(&t));
   RUN_ARGV_TEST(failed, t, test_connection_wake(&t));
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
-  RUN_ARGV_TEST(failed, t, test_free_cleanup(&t));
+  RUN_ARGV_TEST(failed, t, test_release_free(&t));
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
   RUN_ARGV_TEST(failed, t, test_addr(&t));
   RUN_ARGV_TEST(failed, t, test_disconnect(&t));

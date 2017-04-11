@@ -21,22 +21,23 @@
 #include <proton/condition.h>
 #include <proton/connection.h>
 #include <proton/connection_driver.h>
+#include <proton/event.h>
 #include <proton/transport.h>
 #include <string.h>
 
 struct driver_batch {
   pn_event_batch_t batch;
+  pn_collector_t *collector;
 };
 
 static pn_event_t *batch_next(pn_event_batch_t *batch) {
   pn_connection_driver_t *d =
     (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch));
-  pn_collector_t *collector = pn_connection_collector(d->connection);
-  pn_event_t *handled = pn_collector_prev(collector);
+  pn_event_t *handled = pn_collector_prev(d->collector);
   if (handled && pn_event_type(handled) == PN_CONNECTION_INIT) {
       pn_transport_bind(d->transport, d->connection); /* Init event handled, auto-bind */
   }
-  pn_event_t *next = pn_collector_next(collector);
+  pn_event_t *next = pn_collector_next(d->collector);
   if (next && d->transport->trace & PN_TRACE_EVT) {
     pn_string_clear(d->transport->scratch);
     pn_inspect(next, d->transport->scratch);
@@ -50,14 +51,12 @@ int pn_connection_driver_init(pn_connection_driver_t* d, pn_connection_t *c, pn_
   d->batch.next_event = &batch_next;
   d->connection = c ? c : pn_connection();
   d->transport = t ? t : pn_transport();
-  pn_collector_t *collector = pn_collector();
-  if (!d->connection || !d->transport || !collector) {
-    if (collector) pn_collector_free(collector);
+  d->collector = pn_collector();
+  if (!d->connection || !d->transport || !d->collector) {
     pn_connection_driver_destroy(d);
     return PN_OUT_OF_MEMORY;
   }
-  pn_connection_collect(d->connection, collector);
-  pn_decref(collector);
+  pn_connection_collect(d->connection, d->collector);
   return 0;
 }
 
@@ -65,18 +64,24 @@ int pn_connection_driver_bind(pn_connection_driver_t *d) {
   return pn_transport_bind(d->transport, d->connection);
 }
 
+pn_connection_t *pn_connection_driver_release_connection(pn_connection_driver_t *d) {
+  if (d->transport) {           /* Make sure transport is closed and unbound */
+      pn_connection_driver_close(d);
+      pn_transport_unbind(d->transport);
+  }
+  pn_connection_t *c = d->connection;
+  if (c) {
+    d->connection = NULL;
+    pn_connection_collect(c, NULL); /* Disconnect from the collector */
+  }
+  return c;
+}
+
 void pn_connection_driver_destroy(pn_connection_driver_t *d) {
-  if (d->transport) {
-    pn_transport_unbind(d->transport);
-    pn_transport_free(d->transport);
-  }
-  if (d->connection) {
-    pn_collector_t *collector = pn_connection_collector(d->connection);
-    if (collector) {
-      pn_collector_release(collector);
-    }
-    pn_connection_free(d->connection);
-  }
+  pn_connection_t *c = pn_connection_driver_release_connection(d);
+  if (c) pn_connection_free(c);
+  if (d->transport) pn_transport_free(d->transport);
+  if (d->collector) pn_collector_free(d->collector);
   memset(d, 0, sizeof(*d));
 }
 
@@ -130,7 +135,7 @@ pn_event_t* pn_connection_driver_next_event(pn_connection_driver_t *d) {
 }
 
 bool pn_connection_driver_has_event(pn_connection_driver_t *d) {
-  return pn_collector_peek(pn_connection_collector(d->connection));
+  return d->connection && pn_collector_peek(pn_connection_collector(d->connection));
 }
 
 bool pn_connection_driver_finished(pn_connection_driver_t *d) {

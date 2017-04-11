@@ -1191,6 +1191,13 @@ void pn_connection_wake(pn_connection_t* c) {
   }
 }
 
+void pn_proactor_release_connection(pn_connection_t *c) {
+  pconnection_t *pc = get_pconnection(c);
+  if (pc) {
+    pn_connection_driver_release_connection(&pc->driver);
+  }
+}
+
 pn_listener_t *pn_listener(void) {
   pn_listener_t *l = (pn_listener_t*)calloc(1, sizeof(pn_listener_t));
   if (l) {

@@ -50,7 +50,7 @@ static void pn_collector_initialize(pn_collector_t *collector)
   collector->freed = false;
 }
 
-static void pn_collector_drain(pn_collector_t *collector)
+void pn_collector_drain(pn_collector_t *collector)
 {
   assert(collector);
   while (pn_collector_next(collector))

@@ -244,9 +244,11 @@ PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
  * call pn_connection_free(), either directly or indirectly by re-using @p
  * connection in another call to pn_proactor_connect() or pn_proactor_listen().
  *
+ * @note **NOT** thread safe, call from connection event handler.
+ *
  * @note If @p connection does not belong to a proactor, this call does nothing.
  *
- * @note Thread safe.
+ * @note This has nothing to do with pn_connection_release()
  */
 PNP_EXTERN void pn_proactor_release_connection(pn_connection_t *connection);
 
