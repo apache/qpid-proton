@@ -221,7 +221,6 @@ option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_U
 option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
 option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
 
-option(ENABLE_EPOLL "Use the Linux epoll proactor implementation" OFF)
 # Set any additional compiler specific flags
 if (CMAKE_COMPILER_IS_GNUCC)
   if (ENABLE_WARNING_ERROR)
@@ -474,24 +473,46 @@ set (qpid-proton-include-extra
   include/proton/url.h
 )
 
-# Select proactor sources and build flags
-if (ENABLE_EPOLL)
-  set (qpid-proton-proactor src/proactor/epoll.c)
-  set (PROACTOR_LIBS "")
-  set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+#
+# Choose a proactor: user can set PROACTOR, or if not set pick a default.
+# The default is the first one that passes its build test, in order listed below.
+# "none" disables the proactor even if a default is available.
+#
+set(PROACTOR "" CACHE STRING "Override default proactor, one of: epoll, libuv, none")
+string(TOLOWER "${PROACTOR}" PROACTOR)
+
+# FIXME aconway 2017-04-12: not enabling epoll by default, must use PROACTOR=epoll
+# When it is more stable, enable as default by uncommenting # OR (NOT PROACTOR...
+if (PROACTOR STREQUAL "epoll") # OR (NOT PROACTOR AND NOT PROACTOR_OK))
+  check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
+  if (HAVE_EPOLL)
+    set (PROACTOR_OK epoll)
+    set (qpid-proton-proactor src/proactor/epoll.c)
+    set (PROACTOR_LIBS "")
+    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
-    )
-else (ENABLE_EPOLL)
+      )
+  endif()
+endif()
+
+if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
-  if (Libuv_FOUND)
+  if (LIBUV_FOUND)
+    set (PROACTOR_OK libuv)
     set (qpid-proton-proactor src/proactor/libuv.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
       )
-  endif(Libuv_FOUND)
-endif (ENABLE_EPOLL)
+  endif()
+endif()
+
+if (PROACTOR_OK)
+  message(STATUS "Building the ${PROACTOR_OK} proactor")
+elseif (PROACTOR AND NOT PROACTOR STREQUAL "none")
+  message(FATAL_ERROR "Cannot build the ${PROACTOR} proactor")
+endif()
 
 # note: process bindings after the source lists have been defined so
 # the bindings can reference them

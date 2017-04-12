@@ -34,4 +34,4 @@ find_library(Libuv_LIBRARIES Names uv libuv HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_RO
 find_path(Libuv_INCLUDE_DIRS NAMES uv.h HINTS ${LIBUV_INCLUDEDIR} ${LIBUV_ROOT} ${LIBUV_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include PATHS /usr/include)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Libuv DEFAULT_MSG Libuv_LIBRARIES Libuv_INCLUDE_DIRS)
+find_package_handle_standard_args(Libuv REQUIRED_VARS Libuv_LIBRARIES Libuv_INCLUDE_DIRS)
