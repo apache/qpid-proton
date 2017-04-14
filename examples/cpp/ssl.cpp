@@ -72,6 +72,9 @@ struct server_handler : public proton::messaging_handler {
         std::cout << "Inbound server connection connected via SSL.  Protocol: " <<
             c.transport().ssl().protocol() << std::endl;
         listener.stop();  // Just expecting the one connection.
+
+        // Go and do default inbound open stuff too
+        messaging_handler::on_connection_open(c);
     }
 
     void on_transport_error(proton::transport &t) OVERRIDE {

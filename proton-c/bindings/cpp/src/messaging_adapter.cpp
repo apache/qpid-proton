@@ -175,14 +175,6 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     }
 }
 
-bool is_local_open(pn_state_t state) {
-    return state & PN_LOCAL_ACTIVE;
-}
-
-bool is_local_unititialised(pn_state_t state) {
-    return state & PN_LOCAL_UNINIT;
-}
-
 bool is_remote_unititialised(pn_state_t state) {
     return state & PN_REMOTE_UNINIT;
 }
@@ -255,18 +247,12 @@ void on_connection_remote_open(messaging_handler& handler, pn_event_t* event) {
     pn_connection_t *conn = pn_event_connection(event);
     connection c(make_wrapper(conn));
     handler.on_connection_open(c);
-    if (!is_local_open(pn_connection_state(conn)) && is_local_unititialised(pn_connection_state(conn))) {
-        pn_connection_open(conn);
-    }
 }
 
 void on_session_remote_open(messaging_handler& handler, pn_event_t* event) {
     pn_session_t *session = pn_event_session(event);
     class session s(make_wrapper(session));
     handler.on_session_open(s);
-    if (!is_local_open(pn_session_state(session)) && is_local_unititialised(pn_session_state(session))) {
-        pn_session_open(session);
-    }
 }
 
 void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
@@ -285,16 +271,10 @@ void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     if (pn_link_is_receiver(lnk)) {
       receiver r(make_wrapper<receiver>(lnk));
       handler.on_receiver_open(r);
-      if (is_local_unititialised(pn_link_state(lnk))) {
-          r.open(r.container().receiver_options());
-      }
       credit_topup(lnk);
     } else {
       sender s(make_wrapper<sender>(lnk));
       handler.on_sender_open(s);
-      if (is_local_unititialised(pn_link_state(lnk))) {
-          s.open(s.container().sender_options());
-      }
     }
 }
 

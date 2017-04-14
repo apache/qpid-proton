@@ -65,6 +65,9 @@ struct server_handler : public proton::messaging_handler {
             c.close();
         }
         listener.stop();
+
+        // Go and do default inbound open stuff too
+        messaging_handler::on_connection_open(c);
     }
 
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {
