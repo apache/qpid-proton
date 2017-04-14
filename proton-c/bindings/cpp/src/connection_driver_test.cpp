@@ -131,14 +131,17 @@ struct record_handler : public messaging_handler {
     std::deque<proton::message> messages;
 
     void on_receiver_open(receiver &l) PN_CPP_OVERRIDE {
+        messaging_handler::on_receiver_open(l);
         receivers.push_back(l);
     }
 
     void on_sender_open(sender &l) PN_CPP_OVERRIDE {
+        messaging_handler::on_sender_open(l);
         senders.push_back(l);
     }
 
     void on_session_open(session &s) PN_CPP_OVERRIDE {
+        messaging_handler::on_session_open(s);
         sessions.push_back(s);
     }
 

@@ -29,9 +29,11 @@
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/receiver_options.hpp>
 #include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/target.hpp>
+#include <proton/target_options.hpp>
 #include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 
@@ -180,6 +182,7 @@ class broker_connection_handler : public proton::messaging_handler {
             r.connection().container().stop(
                 proton::error_condition("shutdown", "stop broker"));
         } else {
+            r.open(proton::receiver_options().target(proton::target_options().address(qname)));
             std::cout << "receiving to " << qname << std::endl;
         }
     }
