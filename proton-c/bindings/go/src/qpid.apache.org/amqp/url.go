@@ -102,3 +102,15 @@ func ParseURL(s string) (u *url.URL, err error) {
 	}
 	return u, err
 }
+
+// Provides the AMQP address from the provided URL
+// Example: localhost:5672/addr where 'addr' is the address
+// Ultimately removes the unecessary slash from url.Path
+func Address(u *url.URL) (address string, err error){
+       //a .Path will at least contain a '/' if set else empty
+       if len(u.Path) <= 1 {
+         return "", errors.New("URL not expected length.")
+       }
+
+       return u.Path[1:], nil //remove prepended '/'
+       }
