@@ -74,7 +74,9 @@ func main() {
 			c, err := container.Dial("tcp", url.Host)
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
-			s, err := c.Sender(electron.Target(url.Path))
+			addr, err := amqp.Address(url)
+			fatalIf(err)
+			s, err := c.Sender(electron.Target(addr))
 			fatalIf(err)
 			// Loop sending messages.
 			for i := int64(0); i < *count; i++ {
