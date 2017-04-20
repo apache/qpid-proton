@@ -50,6 +50,7 @@ class PN_CPP_CLASS_EXTERN event_loop {
   public:
     /// Create event_loop
     PN_CPP_EXTERN event_loop();
+    PN_CPP_EXTERN event_loop(container&);
 
     PN_CPP_EXTERN ~event_loop();
 

@@ -23,30 +23,19 @@
  */
 
 #include "proton/fwd.hpp"
-
-struct pn_connection_t;
+#include "proton/internal/config.hpp"
 
 namespace proton {
 
 class event_loop::impl {
   public:
-    impl(pn_connection_t*);
-
-    bool inject(void_function0& f);
+    virtual ~impl() {};
+    virtual bool inject(void_function0& f) = 0;
 #if PN_CPP_HAS_STD_FUNCTION
-    bool inject(std::function<void()> f);
-    typedef std::vector<std::function<void()> > jobs;
-#else
-    typedef std::vector<void_function0*> jobs;
+    virtual bool inject(std::function<void()> f) = 0;
 #endif
-
-
-    void run_all_jobs();
-    void finished();
-
-    jobs jobs_;
-    pn_connection_t* connection_;
-    bool finished_;
+    virtual void run_all_jobs() = 0;
+    virtual void finished() = 0;
 };
 
 }
