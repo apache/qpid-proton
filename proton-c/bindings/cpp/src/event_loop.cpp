@@ -20,6 +20,7 @@
 #include "proton/event_loop.hpp"
 
 #include "contexts.hpp"
+#include "proactor_container_impl.hpp"
 #include "proactor_event_loop_impl.hpp"
 
 #include <proton/session.h>
@@ -28,6 +29,8 @@
 namespace proton {
 
 event_loop::event_loop() {}
+event_loop::event_loop(container& c) { *this = container::impl::make_event_loop(c); }
+
 event_loop::~event_loop() {}
 
 event_loop& event_loop::operator=(impl* i) { impl_.reset(i); return *this; }
