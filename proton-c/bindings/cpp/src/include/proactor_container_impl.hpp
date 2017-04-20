@@ -28,6 +28,7 @@
 #include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
 #include "proton/error_condition.hpp"
+#include "proton/event_loop.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/receiver.hpp"
 #include "proton/receiver_options.hpp"
@@ -38,6 +39,7 @@
 
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -77,8 +79,12 @@ class container::impl {
 #endif
     template <class T> static void set_handler(T s, messaging_handler* h);
     template <class T> static messaging_handler* get_handler(T s);
+    static event_loop::impl* make_event_loop(container&);
 
   private:
+    class common_event_loop;
+    class connection_event_loop;
+    class container_event_loop;
     pn_listener_t* listen_common_lh(const std::string&);
     connection connect_common(const std::string&, const connection_options&);
 
@@ -89,6 +95,10 @@ class container::impl {
 
     container& container_;
 
+    typedef std::set<container_event_loop*> event_loops;
+    event_loops event_loops_;
+    container_event_loop* add_event_loop();
+    void remove_event_loop(container_event_loop*);
     struct scheduled {
         timestamp time; // duration from epoch for task
 #if PN_CPP_HAS_STD_FUNCTION

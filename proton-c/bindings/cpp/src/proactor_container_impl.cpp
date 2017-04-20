@@ -43,30 +43,25 @@
 
 namespace proton {
 
-event_loop::impl::impl(pn_connection_t* c)
-    : connection_(c), finished_(false)
-{}
-
-void event_loop::impl::finished() {
-    finished_ = true;
-}
+class container::impl::common_event_loop : public event_loop::impl {
+  public:
+    common_event_loop(): finished_(false) {}
 
 #if PN_CPP_HAS_STD_FUNCTION
-bool event_loop::impl::inject(std::function<void()> f) {
-    // Note this is an unbounded work queue.
-    // A resource-safe implementation should be bounded.
-    if (finished_)
-         return false;
-    jobs_.push_back(f);
-    pn_connection_wake(connection_);
-    return true;
-}
+    typedef std::vector<std::function<void()> > jobs;
+#else
+    typedef std::vector<void_function0*> jobs;
+#endif
 
-bool event_loop::impl::inject(proton::void_function0& f) {
-    return inject([&f]() { f(); });
-}
+    void run_all_jobs();
+    void finished() { finished_ = true; }
 
-void event_loop::impl::run_all_jobs() {
+    jobs jobs_;
+    bool finished_;
+};
+
+#if PN_CPP_HAS_STD_FUNCTION
+void container::impl::common_event_loop::run_all_jobs() {
     decltype(jobs_) j;
     {
         std::swap(j, jobs_);
@@ -77,25 +72,93 @@ void event_loop::impl::run_all_jobs() {
     } catch (...) {};
 }
 #else
-bool event_loop::impl::inject(proton::void_function0& f) {
-    // Note this is an unbounded work queue.
-    // A resource-safe implementation should be bounded.
-    if (finished_)
-         return false;
-    jobs_.push_back(&f);
-    pn_connection_wake(connection_);
-    return true;
-}
-
-void event_loop::impl::run_all_jobs() {
+void container::impl::common_event_loop::run_all_jobs() {
     // Run queued work, but ignore any exceptions
-    for (event_loop::impl::jobs::iterator f = jobs_.begin(); f != jobs_.end(); ++f) try {
+    for (jobs::iterator f = jobs_.begin(); f != jobs_.end(); ++f) try {
         (**f)();
     } catch (...) {};
     jobs_.clear();
     return;
 }
 #endif
+
+class container::impl::connection_event_loop : public common_event_loop {
+  public:
+    connection_event_loop(pn_connection_t* c): connection_(c) {}
+
+    bool inject(void_function0& f);
+#if PN_CPP_HAS_STD_FUNCTION
+    bool inject(std::function<void()> f);
+#endif
+
+    pn_connection_t* connection_;
+};
+
+#if PN_CPP_HAS_STD_FUNCTION
+bool container::impl::connection_event_loop::inject(std::function<void()> f) {
+    // Note this is an unbounded work queue.
+    // A resource-safe implementation should be bounded.
+    if (finished_) return false;
+    jobs_.emplace_back(std::move(f));
+    pn_connection_wake(connection_);
+    return true;
+}
+
+bool container::impl::connection_event_loop::inject(proton::void_function0& f) {
+    return inject([&f]() { f(); });
+}
+#else
+bool container::impl::connection_event_loop::inject(proton::void_function0& f) {
+    // Note this is an unbounded work queue.
+    // A resource-safe implementation should be bounded.
+    if (finished_) return false;
+    jobs_.push_back(&f);
+    pn_connection_wake(connection_);
+    return true;
+}
+#endif
+
+class container::impl::container_event_loop : public common_event_loop {
+  public:
+    container_event_loop(container::impl& c): container_(c) {}
+    ~container_event_loop() { container_.remove_event_loop(this); }
+
+    bool inject(void_function0& f);
+#if PN_CPP_HAS_STD_FUNCTION
+    bool inject(std::function<void()> f);
+#endif
+
+    container::impl& container_;
+};
+
+#if PN_CPP_HAS_STD_FUNCTION
+bool container::impl::container_event_loop::inject(std::function<void()> f) {
+    // Note this is an unbounded work queue.
+    // A resource-safe implementation should be bounded.
+    if (finished_) return false;
+    jobs_.emplace_back(std::move(f));
+    pn_proactor_set_timeout(container_.proactor_, 0);
+    return true;
+}
+
+bool container::impl::container_event_loop::inject(proton::void_function0& f) {
+    return inject([&f]() { f(); });
+}
+#else
+bool container::impl::container_event_loop::inject(proton::void_function0& f) {
+    // Note this is an unbounded work queue.
+    // A resource-safe implementation should be bounded.
+    if (finished_) return false;
+    jobs_.push_back(&f);
+    pn_proactor_set_timeout(container_.proactor_, 0);
+    return true;
+}
+#endif
+
+class event_loop::impl* container::impl::make_event_loop(container& c) {
+    return c.impl_->add_event_loop();
+}
+
 container::impl::impl(container& c, const std::string& id, messaging_handler* mh)
     : container_(c), proactor_(pn_proactor()), handler_(mh), id_(id),
       auto_stop_(true), stopping_(false)
@@ -107,6 +170,16 @@ container::impl::~impl() {
         //wait();
     } catch (...) {}
     pn_proactor_free(proactor_);
+}
+
+container::impl::container_event_loop* container::impl::add_event_loop() {
+    container_event_loop* c = new container_event_loop(*this);
+    event_loops_.insert(c);
+    return c;
+}
+
+void container::impl::remove_event_loop(container::impl::container_event_loop* l) {
+    event_loops_.erase(l);
 }
 
 proton::connection container::impl::connect_common(
@@ -125,7 +198,7 @@ proton::connection container::impl::connect_common(
     connection_context& cc(connection_context::get(pnc));
     cc.container = &container_;
     cc.handler = mh;
-    cc.event_loop_ = new event_loop::impl(pnc);
+    cc.event_loop_ = new container::impl::connection_event_loop(pnc);
 
     pn_connection_set_container(pnc, id_.c_str());
     pn_connection_set_hostname(pnc, url.host().c_str());
@@ -225,7 +298,7 @@ void container::impl::schedule(duration delay, void_function0& f) {
     pn_proactor_set_timeout(proactor_, delay.milliseconds());
 
     // Record timeout; Add callback to timeout sorted list
-    scheduled s={timestamp::now()+delay, &f};
+    scheduled s = {timestamp::now()+delay, &f};
     deferred_.push_back(s);
     std::push_heap(deferred_.begin(), deferred_.end());
 }
@@ -285,13 +358,20 @@ bool container::impl::handle(pn_event_t* event) {
     case PN_PROACTOR_INTERRUPT:
         return false;
 
-    case PN_PROACTOR_TIMEOUT:
-        // Maybe we got a timeout and have nothing scheduled (not sure if this is possible)
-        if  ( deferred_.size()==0 ) return false;
+    case PN_PROACTOR_TIMEOUT: {
+        // Can get an immediate timeout, if we have a container event loop inject
+        if  ( deferred_.size()>0 ) {
+            run_timer_jobs();
+        }
 
-        run_timer_jobs();
+        // Run every container event loop job
+        // This is not at all efficient and single threads all these jobs, but it does correctly
+        // serialise them
+        for (event_loops::iterator loop = event_loops_.begin(); loop!=event_loops_.end(); ++loop) {
+            (*loop)->run_all_jobs();
+        }
         return false;
-
+    }
     case PN_LISTENER_OPEN:
         return false;
 
@@ -312,7 +392,7 @@ bool container::impl::handle(pn_event_t* event) {
         cc.container = &container_;
         cc.listener_context_ = &lc;
         cc.handler = opts.handler();
-        cc.event_loop_ = new event_loop::impl(c);
+        cc.event_loop_ = new container::impl::connection_event_loop(c);
         pn_listener_accept(l, c);
         return false;
     }
