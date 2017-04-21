@@ -160,6 +160,7 @@ static int ptimer_callback(ptimer_t *pt) {
   lock(&pt->mutex);
   uint64_t u_exp_count;
   ssize_t l = read(pt->timerfd, &u_exp_count, sizeof(uint64_t));
+  (void)l; /* Silence compiler complaints in release build */
   assert(l == sizeof(uint64_t));
   assert(u_exp_count < INT_MAX);  // or test and log it?
   int exp_count = (int) u_exp_count;
@@ -1708,4 +1709,9 @@ size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, si
     if (buf) *buf = '\0';
     return 0;
   }
+}
+
+/* FIXME aconway 2017-04-21: dummy to make test link, needs implementation */
+void pn_proactor_release_connection(pn_connection_t *connection) {
+  abort();
 }
