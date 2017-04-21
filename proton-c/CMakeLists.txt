@@ -268,6 +268,7 @@ endif (CMAKE_COMPILER_IS_GNUCC)
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   set (COMPILE_WARNING_FLAGS  "-Wall -pedantic")
+  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
   if (ENABLE_WARNING_ERROR)
     set (COMPILE_WARNING_FLAGS "-Werror ${COMPILE_WARNING_FLAGS}")
   endif (ENABLE_WARNING_ERROR)
@@ -489,8 +490,9 @@ if (PROACTOR STREQUAL "epoll") # OR (NOT PROACTOR AND NOT PROACTOR_OK))
     set (PROACTOR_OK epoll)
     set (qpid-proton-proactor src/proactor/epoll.c)
     set (PROACTOR_LIBS "")
+    # Skip COMPILE_LANGUAGE_FLAGS, uses post-c99 pthread APIs.
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO}"
       )
   endif()
 endif()

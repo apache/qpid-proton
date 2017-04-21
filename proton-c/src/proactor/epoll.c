@@ -226,10 +226,6 @@ static void stop_polling(epoll_extended_t *ee, int epollfd) {
   ee->fd = -1;
 }
 
-static inline bool polling(epoll_extended_t *ee) {
-  return ee->fd != -1;
-}
-
 /*
  * The proactor maintains a number of serialization contexts: each
  * connection, each listener, the proactor itself.  The serialization
@@ -260,7 +256,7 @@ typedef struct pcontext_t {
   pcontext_type_t type;
   bool working;
   int wake_ops;             // unprocessed eventfd wake callback (convert to bool?)
-  pcontext_t *next;         // wake list, guarded by proactor eventfd_mutex
+  struct pcontext_t *next;         // wake list, guarded by proactor eventfd_mutex
 } pcontext_t;
 
 static void pcontext_init(pcontext_t *ctx, pcontext_type_t t, pn_proactor_t *p, void *o) {
