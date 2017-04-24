@@ -717,13 +717,12 @@ static inline bool pconnection_work_pending(pconnection_t *pc) {
 static void pconnection_done(pconnection_t *pc) {
   bool notify = false;
   lock(&pc->context.mutex);
-  // Is this a good time to write if not write_blocked? For now, rely on topup mechanism.
   pc->context.working = false;  // So we can wake() ourself if necessary.  We remain the defacto
                                 // working context while the lock is held.
   pc->hog_count = 0;
   if (pconnection_has_event(pc) || pconnection_work_pending(pc)) {
     notify = wake(&pc->context);
-  } else if (!pc->cached_event && pn_connection_driver_finished(&pc->driver)) {
+  } else if (!pc->read_closed && pn_connection_driver_finished(&pc->driver)) {
     pconnection_begin_close(pc);
     if (pconnection_is_final(pc)) {
       unlock(&pc->context.mutex);
