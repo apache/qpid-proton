@@ -26,6 +26,7 @@ import (
 	"os"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/electron"
+	"strings"
 	"sync"
 )
 
@@ -74,12 +75,13 @@ func main() {
 			c, err := container.Dial("tcp", url.Host)
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
-			s, err := c.Sender(electron.Target(url.Path))
+			addr := strings.TrimPrefix("/", url.Path)
+			s, err := c.Sender(electron.Target(addr))
 			fatalIf(err)
 			// Loop sending messages.
 			for i := int64(0); i < *count; i++ {
 				m := amqp.NewMessage()
-				body := fmt.Sprintf("%v%v", url.Path, i)
+				body := fmt.Sprintf("%v%v", addr, i)
 				m.Marshal(body)
 				s.SendAsync(m, sentChan, body) // Outcome will be sent to sentChan
 			}
