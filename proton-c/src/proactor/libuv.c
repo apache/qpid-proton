@@ -742,7 +742,7 @@ static void on_write(uv_write_t* write, int err) {
   pc->writing = 0;
   if (err) {
     pconnection_error(pc, err, "on write to");
-  } else {
+  } else if (!pn_connection_driver_write_closed(&pc->driver)) {
     pn_connection_driver_write_done(&pc->driver, size);
   }
   work_notify(&pc->work);

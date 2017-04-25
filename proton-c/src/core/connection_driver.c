@@ -111,8 +111,7 @@ pn_bytes_t pn_connection_driver_write_buffer(pn_connection_driver_t *d) {
 }
 
 void pn_connection_driver_write_done(pn_connection_driver_t *d, size_t n) {
-  if (n > 0)
-    pn_transport_pop(d->transport, n);
+  pn_transport_pop(d->transport, n);
 }
 
 bool pn_connection_driver_write_closed(pn_connection_driver_t *d) {
