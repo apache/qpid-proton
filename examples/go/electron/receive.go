@@ -75,7 +75,9 @@ func main() {
 			c, err := container.Dial("tcp", url.Host)
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
-			r, err := c.Receiver(electron.Source(url.Path))
+                        addr, err := amqp.Address(url)
+                        fatalIf(err)
+			r, err := c.Receiver(electron.Source(addr))
 			fatalIf(err)
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
