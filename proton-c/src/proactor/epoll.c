@@ -722,7 +722,7 @@ static void pconnection_done(pconnection_t *pc) {
   pc->hog_count = 0;
   if (pconnection_has_event(pc) || pconnection_work_pending(pc)) {
     notify = wake(&pc->context);
-  } else if (!pc->read_closed && pn_connection_driver_finished(&pc->driver)) {
+  } else if (pc->read_closed && pn_connection_driver_finished(&pc->driver)) {
     pconnection_begin_close(pc);
     if (pconnection_is_final(pc)) {
       unlock(&pc->context.mutex);
@@ -1669,6 +1669,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   bool notify = false;
   for (ps = disconnecting_psockets; ps; ps = ps->next) {
     bool do_free = false;
+    pcontext_t *psocket_context = NULL;
     pmutex *ps_mutex = NULL;
     pconnection_t *pc = as_pconnection(ps);
     if (pc) {
@@ -1679,6 +1680,8 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
           pn_condition_copy(pn_transport_condition(pc->driver.transport), cond);
         }
         pn_connection_driver_close(&pc->driver);
+        pc->read_closed = true;
+        psocket_context = &pc->context;
       }
     } else {
       pn_listener_t *l = as_listener(ps);
@@ -1689,17 +1692,24 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
         if (cond) {
           pn_condition_copy(pn_listener_condition(l), cond);
         }
-        pn_listener_close(l);
+        listener_begin_close(l);
+        psocket_context = &l->context;
       }
     }
 
     lock(&p->context.mutex);
     if (--ps->disconnect_ops == 0) {
       do_free = true;
+      psocket_context = NULL;
       if (--p->disconnects_pending == 0 && !p->psockets) {
         p->inactive = true;
         notify = wake(&p->context);
       }
+    } else {
+      // If initiating the close, wake the psocket to do the free.
+      if (psocket_context)
+        if (!wake(psocket_context))
+          psocket_context = NULL;  // Wake already pending.
     }
     unlock(&p->context.mutex);
     unlock(ps_mutex);
@@ -1707,12 +1717,14 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     if (do_free) {
       if (pc) pconnection_final_free(pc);
       else listener_final_free(as_listener(ps));
+    } else {
+      if (psocket_context)
+        wake_notify(psocket_context);
     }
   }
   if (notify)
     wake_notify(&p->context);
 }
-
 
 const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr) {
   assert(false);
