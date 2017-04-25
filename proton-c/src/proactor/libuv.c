@@ -424,23 +424,33 @@ static pconnection_t *get_pconnection(pn_connection_t* c) {
   return (pconnection_t*) pn_record_get(r, PN_PROACTOR);
 }
 
+/* Remember the first error code from a bad connect attempt.
+ * This is not yet a full-blown error as we might succeed connecting
+ * to a different address if there are several.
+ */
 static inline void pconnection_bad_connect(pconnection_t *pc, int err) {
   if (!pc->connected) {
     pc->connected = err;        /* Remember first connect error in case they all fail  */
   }
 }
 
-static void pconnection_error(pconnection_t *pc, int err, const char* what) {
-  assert(err);
-  pconnection_bad_connect(pc, err);
+/* Set the error condition, but don't close the driver. */
+static void pconnection_set_error(pconnection_t *pc, int err, const char* what) {
   pn_connection_driver_t *driver = &pc->driver;
-  pn_connection_driver_bind(driver); /* Bind so errors will be reported */
+  pn_connection_driver_bind(driver); /* Make sure we are bound so errors will be reported */
   if (!pn_condition_is_set(pn_transport_condition(driver->transport))) {
     pn_connection_driver_errorf(driver, uv_err_name(err), "%s %s:%s: %s",
                                 what, pc->addr.host, pc->addr.port,
                                 uv_strerror(err));
   }
-  pn_connection_driver_close(driver);
+}
+
+/* Set the error condition and close the driver. */
+static void pconnection_error(pconnection_t *pc, int err, const char* what) {
+  assert(err);
+  pconnection_bad_connect(pc, err);
+  pconnection_set_error(pc, err, what);
+  pn_connection_driver_close(&pc->driver);
 }
 
 static void listener_error_lh(pn_listener_t *l, int err, const char* what) {
@@ -726,12 +736,13 @@ static void on_tick(uv_timer_t *timer) {
 
 static void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
   pconnection_t *pc = (pconnection_t*)stream->data;
-  if (nread >= 0) {
+  if (nread > 0) {
     pn_connection_driver_read_done(&pc->driver, nread);
-  } else if (nread == UV_EOF) { /* hangup */
+  } else if (nread < 0) {
+    if (nread != UV_EOF) { /* hangup */
+      pconnection_set_error(pc, nread, "on read from");
+    }
     pn_connection_driver_read_close(&pc->driver);
-  } else {
-    pconnection_error(pc, nread, "on read from");
   }
   work_notify(&pc->work);
 }
@@ -741,7 +752,8 @@ static void on_write(uv_write_t* write, int err) {
   size_t size = pc->writing;
   pc->writing = 0;
   if (err) {
-    pconnection_error(pc, err, "on write to");
+    pconnection_set_error(pc, err, "on write to");
+    pn_connection_driver_write_close(&pc->driver);
   } else if (!pn_connection_driver_write_closed(&pc->driver)) {
     pn_connection_driver_write_done(&pc->driver, size);
   }
