@@ -105,6 +105,7 @@ type List []interface{}
 // Symbol is a string that is encoded as an AMQP symbol
 type Symbol string
 
+func (s Symbol) String() string   { return string(s) }
 func (s Symbol) GoString() string { return fmt.Sprintf("s\"%s\"", s) }
 
 // Binary is a string that is encoded as an AMQP binary.
@@ -112,6 +113,7 @@ func (s Symbol) GoString() string { return fmt.Sprintf("s\"%s\"", s) }
 // a map key, AMQP frequently uses binary types as map keys. It can convert to and from []byte
 type Binary string
 
+func (b Binary) String() string   { return string(b) }
 func (b Binary) GoString() string { return fmt.Sprintf("b\"%s\"", b) }
 
 // GoString for Map prints values with their types, useful for debugging.
@@ -192,3 +194,19 @@ func cPtr(b []byte) *C.char {
 func cLen(b []byte) C.size_t {
 	return C.size_t(len(b))
 }
+
+// Key is used as a map key for some AMQP "restricted" maps which are
+// allowed to have keys that are either symbol or ulong but no other type.
+//
+type Key struct {
+	value interface{}
+}
+
+func SymbolKey(v Symbol) Key { return Key{v} }
+func IntKey(v uint64) Key    { return Key{v} }
+func StringKey(v string) Key { return Key{Symbol(v)} }
+
+// Returns the value which must be Symbol, uint64 or nil
+func (k Key) Get() interface{} { return k.value }
+
+func (k Key) String() string { return fmt.Sprintf("%v", k.Get()) }

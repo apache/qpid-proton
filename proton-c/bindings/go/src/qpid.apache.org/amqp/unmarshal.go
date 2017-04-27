@@ -178,6 +178,8 @@ Types are converted as follows:
  |                           +------------------------+---------------------------------------------+
  |                           |list                    |List                                         |
  +---------------------------+------------------------+---------------------------------------------+
+ |Key                        |symbol, ulong                                                         |
+ +---------------------------+----------------------------------------------------------------------+
 
 The following Go types cannot be unmarshaled: uintptr, function, interface, channel.
 
@@ -430,6 +432,13 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 
 	case *interface{}:
 		getInterface(data, v)
+
+	case *Key:
+		if pnType == C.PN_ULONG || pnType == C.PN_SYMBOL || pnType == C.PN_STRING {
+			unmarshal(&v.value, data)
+		} else {
+			panic(newUnmarshalError(pnType, v))
+		}
 
 	default:
 		if reflect.TypeOf(v).Kind() != reflect.Ptr {

@@ -204,6 +204,8 @@ func marshal(v interface{}, data *C.pn_data_t) {
 			marshal(val, data)
 		}
 		C.pn_data_exit(data)
+	case Key:
+		marshal(v.Get(), data)
 	default:
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
