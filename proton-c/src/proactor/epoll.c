@@ -46,6 +46,7 @@
 #include <netinet/tcp.h>
 #include <sys/eventfd.h>
 #include <limits.h>
+#include <time.h>
 
 // TODO: replace timerfd per connection with global lightweight timer mechanism.
 // logging in general, listener events in particular
@@ -1755,3 +1756,8 @@ size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, si
   }
 }
 
+pn_millis_t pn_proactor_now(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec*1000 + t.tv_nsec/1000000;
+}

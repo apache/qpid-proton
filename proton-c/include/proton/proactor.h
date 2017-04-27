@@ -335,6 +335,16 @@ PNP_EXTERN const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_pro
 
 
 /**
+ * Get the real elapsed time since an arbitrary point in the past in milliseconds.
+ *
+ * This may be used as a portable way to get a timestamp for the current time. It is monotonically
+ * increasing and will never go backwards.
+ *
+ * @note Thread safe.
+ */
+PNP_EXTERN pn_millis_t pn_proactor_now(void);
+
+/**
  * @defgroup proactor_events Events
  *
  * **Experimental** - Events returned by pn_proactor_wait().

@@ -1294,3 +1294,7 @@ size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, si
     return 0;
   }
 }
+
+pn_millis_t pn_proactor_now(void) {
+    return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
+}
