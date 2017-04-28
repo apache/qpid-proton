@@ -324,6 +324,7 @@ set (qpid-proton-platform-all
   src/reactor/io/posix/selector.c
   src/proactor/libuv.c
   src/proactor/epoll.c
+  src/proactor/proactor.c
   )
 
 # platform specific library build:
@@ -488,7 +489,7 @@ if (PROACTOR STREQUAL "epoll") # OR (NOT PROACTOR AND NOT PROACTOR_OK))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
-    set (qpid-proton-proactor src/proactor/epoll.c)
+    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor.c)
     set (PROACTOR_LIBS "")
     # Skip COMPILE_LANGUAGE_FLAGS, uses post-c99 pthread APIs.
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES

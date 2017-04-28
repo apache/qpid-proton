@@ -136,7 +136,7 @@ static void work_init(work_t* w, pn_proactor_t* p, struct_type type) {
 /* A resolvable address */
 typedef struct addr_t {
   char host_port[PN_MAX_ADDR];
-  char *host, *port;            /* Point into addr after destructive pni_url_parse */
+  char *host, *port;            /* Point into addr after destructive pni_split_host_port */
   uv_getaddrinfo_t getaddrinfo; /* UV getaddrinfo request, contains list of addrinfo */
   struct addrinfo* addrinfo;    /* The current addrinfo being tried */
 } addr_t;

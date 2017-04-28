@@ -20,10 +20,12 @@
  */
 
 #include "../core/log_private.h"
-#include "../core/url-internal.h"
+#include "proactor-internal.h"
+
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
+#include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
@@ -419,14 +421,8 @@ static void psocket_init(psocket_t* ps, pn_proactor_t* p, bool is_conn, const ch
     port = AMQP_PORT;
   else if (port && strcmp(port, AMQPS_PORT_NAME) == 0)
     port = AMQPS_PORT;
-  /* Set to "\001" to indicate a NULL as opposed to an empty string "" */
-  strncpy(ps->host, host ? host : "\001", sizeof(ps->host));
-  strncpy(ps->port, port ? port : "\001", sizeof(ps->port));
-}
-
-/* Turn "\001" back to NULL */
-static inline const char* fixstr(const char* str) {
-  return str[0] == '\001' ? NULL : str;
+  strncpy(ps->host, host, sizeof(ps->host));
+  strncpy(ps->port, port, sizeof(ps->port));
 }
 
 typedef struct pconnection_t {
@@ -524,13 +520,13 @@ static void psocket_error(psocket_t *ps, int err, const char* what) {
     pn_connection_driver_t *driver = &as_pconnection(ps)->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
     pn_connection_driver_errorf(driver, COND_NAME, "%s %s:%s: %s",
-                                what, fixstr(ps->host), fixstr(ps->port),
+                                what, ps->host, ps->port,
                                 strerror(err));
     pn_connection_driver_close(driver);
   } else {
     pn_listener_t *l = as_listener(ps);
     pn_condition_format(l->condition, COND_NAME, "%s %s:%s: %s",
-                        what, fixstr(ps->host), fixstr(ps->port),
+                        what, ps->host, ps->port,
                         strerror(err));
     listener_begin_close(l);
   }
@@ -982,8 +978,8 @@ void pconnection_start(pconnection_t *pc) {
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   char *buf = strdup(addr);
   assert(buf); // TODO: memory safety
-  char *scheme, *user, *pass, *host, *port, *path;
-  pni_parse_url(buf, &scheme, &user, &pass, &host, &port, &path);
+  char *host = buf;
+  char *port = pni_split_host_port(buf);
   pconnection_t *pc = new_pconnection_t(p, c, false, host, port);
   assert(pc); // TODO: memory safety
   // TODO: check case of proactor shutting down
@@ -993,7 +989,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
 
   struct addrinfo *ai = NULL;
   int fd = -1;
-  if (!getaddrinfo(host, port, 0, &ai)) {
+  if (!getaddrinfo(*host ? host : NULL, *port ? port : NULL, 0, &ai)) {
     fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
     if (fd >= 0) {
       configure_socket(fd);
@@ -1081,8 +1077,8 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 {
   char *buf = strdup(addr);
   assert(buf);  // TODO:  memory safety
-  char *scheme, *user, *pass, *host, *port, *path;
-  pni_parse_url(buf, &scheme, &user, &pass, &host, &port, &path);
+  char *host = buf;
+  char *port = pni_split_host_port(buf);
   // TODO: check listener not already listening for this or another proactor
   lock(&l->context.mutex);
   l->context.proactor = p;;
@@ -1095,7 +1091,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 
   struct addrinfo *ai = NULL;
   int fd = -1;
-  if (!getaddrinfo(host, port, 0, &ai)) {
+  if (!getaddrinfo(*host ? host : NULL, *port ? port : NULL, 0, &ai)) {
     fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
     if (fd >= 0) {
       int yes = 1;
@@ -1727,29 +1723,31 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     wake_notify(&p->context);
 }
 
-const struct sockaddr_storage *pn_netaddr_sockaddr(const pn_netaddr_t *addr) {
-  assert(false);
+struct sockaddr *pn_netaddr_sockaddr(pn_netaddr_t *addr) {
   return NULL;
 }
 
-const struct pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
-  assert(false);
+size_t pn_netaddr_socklen(pn_netaddr_t *addr) {
+  return 0;
+}
+
+pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   return NULL;
 }
 
-const struct pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
-  assert(false);
+pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   return NULL;
 }
 
-size_t pn_netaddr_str(const struct pn_netaddr_t* addr, char *buf, size_t len) {
+int pn_netaddr_str(pn_netaddr_t* addr, char *buf, size_t len) {
   struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)sa, sizeof(*sa), host, sizeof(host), port, sizeof(port),
+  int err = getnameinfo((struct sockaddr *)sa, sizeof(*sa),
+                        host, sizeof(host), port, sizeof(port),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   if (!err) {
-    return snprintf(buf, len, "%s:%s", host, port); /* FIXME aconway 2017-03-29: ipv6 format? */
+    return snprintf(buf, len, "%s:%s", host, port);
   } else {
     if (buf) *buf = '\0';
     return 0;

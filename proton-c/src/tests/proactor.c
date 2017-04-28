@@ -508,7 +508,7 @@ static void test_errors(test_t *t) {
   c = pn_connection();
   pn_proactor_connect(client, c, port.host_port);
   if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
-    TEST_STR_IN(t, "connection refused", pn_condition_get_description(last_condition));
+    TEST_STR_IN(t, "refused", pn_condition_get_description(last_condition));
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
     sock_close(port.sock);
     PROACTOR_TEST_FREE(pts);
@@ -563,7 +563,8 @@ static void test_ipv4_ipv6(test_t *t) {
 #define EXPECT_FAIL(TP, HOST) do {                                      \
     pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
     TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));   \
-    TEST_STR_IN(t, "refused", pn_condition_get_description(last_condition)); \
+    if (TEST_CHECK(t, pn_condition_is_set(last_condition)))             \
+      TEST_STR_IN(t, "refused", pn_condition_get_description(last_condition)); \
     PROACTOR_TEST_DRAIN(pts);                                           \
   } while(0)
 
