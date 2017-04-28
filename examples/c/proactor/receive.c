@@ -32,7 +32,7 @@
 #include <stdlib.h>
 
 typedef struct app_data_t {
-  const char *connection_address;
+  const char *host, *port;
   const char *amqp_address;
   const char *container_id;
   int message_count;
@@ -170,14 +170,18 @@ void run(app_data_t *app) {
 
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
-  app.container_id = argv[0];   /* Should be unique */
-  app.connection_address = (argc > 1) ? argv[1] : "127.0.0.1:amqp";
-  app.amqp_address = (argc > 2) ? argv[2] : "example";
-  app.message_count = (argc > 3) ? atoi(argv[3]) : 10;
+  int i = 0;
+  app.container_id = argv[i++];   /* Should be unique */
+  app.host = (argc > 1) ? argv[i++] : "";
+  app.port = (argc > 1) ? argv[i++] : "amqp";
+  app.amqp_address = (argc > i) ? argv[i++] : "example";
+  app.message_count = (argc > i) ? atoi(argv[i++]) : 10;
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
-  pn_proactor_connect(app.proactor, pn_connection(), app.connection_address);
+  char addr[PN_MAX_ADDR];
+  pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
+  pn_proactor_connect(app.proactor, pn_connection(), addr);
   run(&app);
   pn_proactor_free(app.proactor);
 }

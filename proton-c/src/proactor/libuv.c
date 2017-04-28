@@ -20,13 +20,14 @@
  */
 
 #include "../core/log_private.h"
-#include "../core/url-internal.h"
+#include "proactor-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
 #include <proton/listener.h>
 #include <proton/message.h>
+#include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
@@ -132,11 +133,9 @@ static void work_init(work_t* w, pn_proactor_t* p, struct_type type) {
 
 /* ================ IO ================ */
 
-#define MAXADDR (NI_MAXHOST+NI_MAXSERV)
-
 /* A resolvable address */
 typedef struct addr_t {
-  char addr[MAXADDR];
+  char host_port[PN_MAX_ADDR];
   char *host, *port;            /* Point into addr after destructive pni_url_parse */
   uv_getaddrinfo_t getaddrinfo; /* UV getaddrinfo request, contains list of addrinfo */
   struct addrinfo* addrinfo;    /* The current addrinfo being tried */
@@ -152,6 +151,10 @@ typedef struct lsocket_t {
 PN_STRUCT_CLASSDEF(lsocket, CID_pn_listener_socket)
 
 typedef enum { W_NONE, W_PENDING, W_CLOSED } wake_state;
+
+struct pn_netaddr_t {
+  struct sockaddr_storage ss;
+};
 
 /* An incoming or outgoing connection. */
 typedef struct pconnection_t {
@@ -170,7 +173,7 @@ typedef struct pconnection_t {
 
   lsocket_t *lsocket;         /* Incoming connection only */
 
-  struct sockaddr_storage local, remote; /* Actual addresses */
+  struct pn_netaddr_t local, remote; /* Actual addresses */
   uv_timer_t timer;
   uv_write_t write;
   size_t writing;               /* size of pending write request, 0 if none pending */
@@ -277,9 +280,9 @@ static void work_start(work_t *w) {
 }
 
 static void parse_addr(addr_t *addr, const char *str) {
-  strncpy(addr->addr, str, sizeof(addr->addr));
-  char *scheme, *user, *pass, *path;
-  pni_parse_url(addr->addr, &scheme, &user, &pass, &addr->host, &addr->port, &path);
+  strncpy(addr->host_port, str, sizeof(addr->host_port));
+  addr->host = addr->host_port;
+  addr->port = pni_split_host_port(addr->host_port);
 }
 
 /* Make a pn_class for pconnection_t since it is attached to a pn_connection_t record */
@@ -313,12 +316,10 @@ static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool ser
   if (server) {
     pn_transport_set_server(pc->driver.transport);
   }
-  pc->addr.host = pc->addr.port = pc->addr.addr; /* Set host/port to "" by default */
   pn_record_t *r = pn_connection_attachments(pc->driver.connection);
   pn_record_def(r, PN_PROACTOR, &pconnection_class);
   pn_record_set(r, PN_PROACTOR, pc);
   pn_decref(pc);                /* Will be deleted when the connection is */
-  pc->addr.host = pc->addr.port = pc->addr.addr; /* Set host/port to "" by default */
   return pc;
 }
 
@@ -388,7 +389,8 @@ static void on_close_pconnection_final(uv_handle_t *h) {
 }
 
 static void uv_safe_close(uv_handle_t *h, uv_close_cb cb) {
-  if (!uv_is_closing(h)) {
+  /* Only close if h has been initialized and is not already closing */
+  if (h->type && !uv_is_closing(h)) {
     uv_close(h, cb);
   }
 }
@@ -1267,25 +1269,29 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   work_notify(&l->work);
 }
 
-const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr) {
-  return (const struct sockaddr_storage*)addr;
+struct sockaddr *pn_netaddr_sockaddr(pn_netaddr_t *na) {
+  return (struct sockaddr*)na;
 }
 
-const struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {
+size_t pn_netaddr_socklen(pn_netaddr_t *na) {
+  return sizeof(struct sockaddr_storage);
+}
+
+pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
-  return pc ? (pn_proactor_addr_t*)&pc->local : NULL;
+  return pc? &pc->local : NULL;
 }
 
-const struct pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t *t) {
+pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
-  return pc ? (pn_proactor_addr_t*)&pc->remote : NULL;
+  return pc ? &pc->remote : NULL;
 }
 
-size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, size_t len) {
-  struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
+int pn_netaddr_str(struct pn_netaddr_t* na, char *buf, size_t len) {
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)sa, sizeof(*sa), host, sizeof(host), port, sizeof(port),
+  int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
+                        host, sizeof(host), port, sizeof(port),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   if (!err) {
     return snprintf(buf, len, "%s:%s", host, port); /* FIXME aconway 2017-03-29: ipv6 format? */

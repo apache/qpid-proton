@@ -501,7 +501,7 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
   if (LIBUV_FOUND)
     set (PROACTOR_OK libuv)
-    set (qpid-proton-proactor src/proactor/libuv.c)
+    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99

@@ -35,8 +35,8 @@ class Broker(object):
 
     def __enter__(self):
         with TestPort() as port:
-            self.addr = "127.0.0.1:%s" % port
-            self.proc = self.test.proc(["broker", self.addr])
+            self.port = port
+            self.proc = self.test.proc(["broker", "", self.port])
             self.proc.wait_re("listening")
             return self
 
@@ -52,35 +52,34 @@ class CExampleTest(ExampleTestCase):
     def test_send_receive(self):
         """Send first then receive"""
         with Broker(self) as b:
-            s = self.proc(["send", b.addr])
+            s = self.proc(["send", "", b.port])
             self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
-            r = self.proc(["receive", b.addr])
+            r = self.proc(["receive", "", b.port])
             self.assertEqual(receive_expect(10), r.wait_out())
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
         with Broker(self) as b:
-            r = self.proc(["receive", b.addr]);
-            s = self.proc(["send", b.addr]);
+            r = self.proc(["receive", "", b.port]);
+            s = self.proc(["send", "", b.port]);
             self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
             self.assertEqual(receive_expect(10), r.wait_out())
 
     def test_send_direct(self):
         """Send to direct server"""
         with TestPort() as port:
-            addr = "127.0.0.1:%s" % port
-            d = self.proc(["direct", addr])
+            d = self.proc(["direct", "", port])
             d.wait_re("listening")
-            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", addr]).wait_out())
+            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", "", port]).wait_out())
             self.assertIn(receive_expect(10), d.wait_out())
 
     def test_receive_direct(self):
         """Receive from direct server"""
         with TestPort() as port:
             addr = "127.0.0.1:%s" % port
-            d = self.proc(["direct", addr])
+            d = self.proc(["direct", "", port])
             d.wait_re("listening")
-            self.assertEqual(receive_expect(10), self.proc(["receive", addr]).wait_out())
+            self.assertEqual(receive_expect(10), self.proc(["receive", "", port]).wait_out())
             self.assertIn("10 messages sent and acknowledged\n", d.wait_out())
 
 

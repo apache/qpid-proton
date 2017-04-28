@@ -23,6 +23,7 @@
 #include <proton/connection.h>
 #include <proton/event.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/ssl.h>
 #include <proton/transport.h>
@@ -521,7 +522,7 @@ static void test_ipv4_ipv6(test_t *t) {
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
 
   /* Listen on all interfaces for IPv6 only. If this fails, skip IPv6 tests */
-  test_port_t port6 = test_port("[::]");
+  test_port_t port6 = test_port("::");
   pn_listener_t *l6 = pn_listener();
   pn_proactor_listen(server, l6, port6.host_port, 4);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
@@ -573,12 +574,12 @@ static void test_ipv4_ipv6(test_t *t) {
   EXPECT_CONNECT(port, "");          /* local->all */
 
   if (has_ipv6) {
-    EXPECT_CONNECT(port6, "[::]"); /* v6->v6 */
+    EXPECT_CONNECT(port6, "::"); /* v6->v6 */
     EXPECT_CONNECT(port6, "");     /* local->v6 */
-    EXPECT_CONNECT(port, "[::1]"); /* v6->all */
+    EXPECT_CONNECT(port, "::1"); /* v6->all */
 
     EXPECT_FAIL(port6, "127.0.0.1"); /* fail v4->v6 */
-    EXPECT_FAIL(port4, "[::1]");     /* fail v6->v4 */
+    EXPECT_FAIL(port4, "::1");     /* fail v6->v4 */
   }
   PROACTOR_TEST_DRAIN(pts);
 
@@ -696,22 +697,37 @@ static void test_ssl(test_t *t) {
   PROACTOR_TEST_FREE(pts);
 }
 
+static void test_proactor_addr(test_t *t) {
+  /* Test the address formatter */
+  char addr[PN_MAX_ADDR];
+  pn_proactor_addr(addr, sizeof(addr), "foo", "bar");
+  TEST_STR_EQUAL(t, "foo:bar", addr);
+  pn_proactor_addr(addr, sizeof(addr), "foo", "");
+  TEST_STR_EQUAL(t, "foo:", addr);
+  pn_proactor_addr(addr, sizeof(addr), "foo", NULL);
+  TEST_STR_EQUAL(t, "foo:", addr);
+  pn_proactor_addr(addr, sizeof(addr), "", "bar");
+  TEST_STR_EQUAL(t, ":bar", addr);
+  pn_proactor_addr(addr, sizeof(addr), NULL, "bar");
+  TEST_STR_EQUAL(t, ":bar", addr);
+  pn_proactor_addr(addr, sizeof(addr), "1:2:3:4", "5");
+  TEST_STR_EQUAL(t, "1:2:3:4:5", addr);
+  pn_proactor_addr(addr, sizeof(addr), "1:2:3:4", "");
+  TEST_STR_EQUAL(t, "1:2:3:4:", addr);
+  pn_proactor_addr(addr, sizeof(addr), "1:2:3:4", NULL);
+  TEST_STR_EQUAL(t, "1:2:3:4:", addr);
+}
 
 /* Test pn_proactor_addr funtions */
 
 /* FIXME aconway 2017-03-30: windows will need winsock2.h etc.
-   These headers are *only* needed for test_addr and only for the getnameinfo part.
+   These headers are *only* needed for test_netaddr and only for the getnameinfo part.
    This is the only non-portable part of the proactor test suite.
    */
 #include <sys/socket.h>         /* For socket_storage */
 #include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
 
-static void test_addr(test_t *t) {
-  /* Make sure NULL addr gives empty string */
-  char str[1024] = "not-empty";
-  pn_proactor_addr_str(NULL, str, sizeof(str));
-  TEST_STR_EQUAL(t, "", str);
-
+static void test_netaddr(test_t *t) {
   proactor_test_t pts[] ={ { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
@@ -727,35 +743,35 @@ static void test_addr(test_t *t) {
   char cr[1024], cl[1024], sr[1024], sl[1024];
 
   pn_transport_t *ct = pn_connection_transport(c);
-  pn_proactor_addr_str(pn_proactor_addr_remote(ct), cr, sizeof(cr));
+  pn_netaddr_str(pn_netaddr_remote(ct), cr, sizeof(cr));
   TEST_STR_IN(t, test_port_use_host(&port, ""), cr); /* remote address has listening port */
 
   pn_connection_t *s = last_accepted; /* server side of the connection */
   pn_transport_t *st = pn_connection_transport(s);
   if (!TEST_CHECK(t, st)) return;
-  pn_proactor_addr_str(pn_proactor_addr_local(st), sl, sizeof(sl));
+  pn_netaddr_str(pn_netaddr_local(st), sl, sizeof(sl));
   TEST_STR_EQUAL(t, cr, sl);  /* client remote == server local */
 
-  pn_proactor_addr_str(pn_proactor_addr_local(ct), cl, sizeof(cl));
-  pn_proactor_addr_str(pn_proactor_addr_remote(st), sr, sizeof(sr));
+  pn_netaddr_str(pn_netaddr_local(ct), cl, sizeof(cl));
+  pn_netaddr_str(pn_netaddr_remote(st), sr, sizeof(sr));
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
 
   /* Examine as sockaddr */
-  const struct sockaddr_storage* addr = pn_proactor_addr_sockaddr(pn_proactor_addr_remote(ct));
-  TEST_CHECK(t, AF_INET == addr->ss_family);
+  pn_netaddr_t *na = pn_netaddr_remote(ct);
+  struct sockaddr *sa = pn_netaddr_sockaddr(na);
+  TEST_CHECK(t, AF_INET == sa->sa_family);
   char host[NI_MAXHOST] = "";
   char serv[NI_MAXSERV] = "";
-  int err = getnameinfo((struct sockaddr*)addr, sizeof(*addr),
-                        host, sizeof(host),
-                        serv, sizeof(serv),
+  int err = getnameinfo(sa, pn_netaddr_socklen(na),
+                        host, sizeof(host), serv, sizeof(serv),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   TEST_CHECK(t, 0 == err);
   TEST_STR_EQUAL(t, "127.0.0.1", host);
   TEST_STR_EQUAL(t, port.str, serv);
 
   /* Make sure you can use NULL, 0 to get length of address string without a crash */
-  size_t len = pn_proactor_addr_str(pn_proactor_addr_local(ct), NULL, 0);
-  TEST_CHECK(t, strlen(cl) == len);
+  size_t len = pn_netaddr_str(pn_netaddr_local(ct), NULL, 0);
+  TEST_CHECKF(t, strlen(cl) == len, "%d != %d", strlen(cl), len);
 
   sock_close(port.sock);
   PROACTOR_TEST_DRAIN(pts);
@@ -848,7 +864,8 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
   RUN_ARGV_TEST(failed, t, test_release_free(&t));
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
-  RUN_ARGV_TEST(failed, t, test_addr(&t));
+  RUN_ARGV_TEST(failed, t, test_proactor_addr(&t));
+  RUN_ARGV_TEST(failed, t, test_netaddr(&t));
   RUN_ARGV_TEST(failed, t, test_disconnect(&t));
   RUN_ARGV_TEST(failed, t, test_abort(&t));
   RUN_ARGV_TEST(failed, t, test_refuse(&t));

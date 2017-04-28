@@ -20,6 +20,7 @@
  * under the License.
  */
 
+#include <proton/condition.h>
 #include <proton/event.h>
 #include <proton/import_export.h>
 #include <proton/types.h>
@@ -65,6 +66,23 @@ extern "C" {
  */
 
 /**
+ * Size of buffer that can hold the largest connection or listening address.
+ */
+#define PN_MAX_ADDR 1060
+
+/**
+ * Format a host:port address string for pn_proactor_connect() or pn_proactor_listen()
+ *
+ * @param[out] addr address is copied to this buffer, with trailing '\0'
+ * @param[in] size  size of addr buffer
+ * @param[in] host network host name, DNS name or IP address
+ * @param[in] port network service name or decimal port number, e.g. "amqp" or "5672"
+ * @return the length of network address (excluding trailing '\0'), if >= size
+ * then the address was truncated
+ */
+PNP_EXTERN int pn_proactor_addr(char *addr, size_t size, const char *host, const char *port);
+
+/**
  * Create a proactor. Must be freed with pn_proactor_free()
  */
 PNP_EXTERN pn_proactor_t *pn_proactor(void);
@@ -80,42 +98,20 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  *
  * @note Thread safe.
  *
- * @param connection @p proactor *takes ownership* of @p connection and will
+ * @param[in] proactor the proactor object
+ *
+ * @param[in] connection @p proactor *takes ownership* of @p connection and will
  * automatically call pn_connection_free() after the final @ref
  * PN_TRANSPORT_CLOSED event is handled, or when pn_proactor_free() is
  * called. You can prevent the automatic free with
  * pn_proactor_release_connection()
  *
- * @param[in] addr the network address in the form "host:port" or as a URL
- * For a URL *only* the host and port fields are used, the rest is ignored.
- *
- * Three special cases are allowed:
- *
- * - "host": Connect to "host" on the standard AMQP port (5672).
- * - ":port": Connect to the local host on "port" using the default protocol.
- * - "": Connect to the local host on the AMQP port using the default protocol.
- *
- * @note The network address @p addr and AMQP address are different things. The
- * network address enables connection to a remote host, the AMQP address
- * identifies an AMQP node (such as a queue or topic) *after* you have
- * established the connection.
- * The special case ":port" connects to the local host via the default protocol.
- * The special case "" connects to the local host on the AMQP standard port.
- *
- * It is common to combine the two into a URL like this:
- *
- *     amqp[s]://user:pass@host:port/amqp_address
- *
- * The proactor will extract the host and port only. If you want to use other
- * fields (e.g. to set up security) you must call the relevant functions on @p
- * connection before pn_proactor_connect() and handle @ref PN_CONNECTION_BOUND
- * to set up the @ref transport.
- *
- * @note Thread safe.
- *
- * @param[in] proactor the proactor object
+ * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
+ * An empty host will connect to the local host via the default protocol.
+ * An empty port will connect to the standard AMQP port (5672).
  *
  * @param[in] connection @ref connection to be connected to @p addr.
+ *
  */
 PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 
@@ -131,14 +127,9 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
  * automatically call pn_listener_free() after the final PN_LISTENER_CLOSE event
  * is handled, or when pn_proactor_free() is called.
  *
- * @param[in] addr the network address in the form "host:port" or as a URL
- * For a URL *only* the host and port fields are used, the rest is ignored.
- *
- * Three special cases are allowed:
- *
- * - "host": Listen on the standard AMQP port (5672) on the interface and protocol identified by "host"
- * - ":port": Listen on "port", on all local interfaces, for all protocols.
- * - "": Listen on the standard AMQP port, on all local interfaces, for all protocols.
+ * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
+ * An empty host will listen for all protocols on all local interfaces.
+ * An empty port will listen on the standard AMQP port (5672).
 
  * @param[in] backlog of un-handled connection requests to allow before refusing
  * connections. If @p addr resolves to multiple interface/protocol combinations,
@@ -283,56 +274,6 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
  * @return the proactor or NULL if the connection does not belong to a proactor.
  */
 PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
-
-/**
- * Stores a network address in native format.
- */
-typedef struct pn_proactor_addr_t pn_proactor_addr_t;
-
-/**
- * Format a network address as a human-readable string in buf.
- *
- * @return the length of the full address string (including trailing NUL). The
- * string is copied to buf. If the address string is longer than len it is
- * truncated to len-1 bytes, but the full length is returned.
- *
- * If len == 0 the length of the address string is returned, buf is ignored.
- *
- * If @p addr is not a pointer to a valid address, buf is set to "" and 0 is returned.
- *
- * @note Thread safe.
- */
-PNP_EXTERN size_t pn_proactor_addr_str(const pn_proactor_addr_t* addr, char *buf, size_t len);
-
-/**
- * Get the local address of a transport.
- *
- * @return NULL if the address is not available. Address is immutable, returned
- * pointer is valid until @p transport is closed.
- *
- * @note Thread safe.
- */
-PNP_EXTERN const pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t* c);
-
-/**
- * Get the remote address of a transport.
- *
- * @return NULL if the address is not available. Address is immutable, returned
- * pointer is valid until @p transport is closed.
- *
- * @note Thread safe.
- */
-PNP_EXTERN const pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t* c);
-
-/**
- * If the proactor implementation uses `struct sockaddr` (for example on POSIX
- * or Windows sockets) return a pointer to a `struct sockaddr_storage`
- * containing the address info, otherwise return NULL.
- *
- * @note Thread safe.
- */
-PNP_EXTERN const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr);
-
 
 /**
  * Get the real elapsed time since an arbitrary point in the past in milliseconds.

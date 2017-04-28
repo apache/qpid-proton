@@ -401,9 +401,13 @@ int main(int argc, char **argv) {
   queues_init(&b.queues);
   b.container_id = argv[0];
   b.threads = 4;
-  const char *addr = (argc > 1) ? argv[1] : "127.0.0.1:amqp";
+  int i = 1;
+  const char *host = (argc > i) ? argv[i++] : "";
+  const char *port = (argc > i) ? argv[i++] : "amqp";
 
-  /* Listen on addr */
+  /* Listenf on addr */
+  char addr[PN_MAX_ADDR];
+  pn_proactor_addr(addr, sizeof(addr), host, port);
   pn_proactor_listen(b.proactor, pn_listener(), addr, 16);
 
   /* Start n-1 threads */

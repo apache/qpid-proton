@@ -1727,22 +1727,22 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     wake_notify(&p->context);
 }
 
-const struct sockaddr_storage *pn_proactor_addr_sockaddr(const pn_proactor_addr_t *addr) {
+const struct sockaddr_storage *pn_netaddr_sockaddr(const pn_netaddr_t *addr) {
   assert(false);
   return NULL;
 }
 
-const struct pn_proactor_addr_t *pn_proactor_addr_local(pn_transport_t *t) {
+const struct pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   assert(false);
   return NULL;
 }
 
-const struct pn_proactor_addr_t *pn_proactor_addr_remote(pn_transport_t *t) {
+const struct pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   assert(false);
   return NULL;
 }
 
-size_t pn_proactor_addr_str(const struct pn_proactor_addr_t* addr, char *buf, size_t len) {
+size_t pn_netaddr_str(const struct pn_netaddr_t* addr, char *buf, size_t len) {
   struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
