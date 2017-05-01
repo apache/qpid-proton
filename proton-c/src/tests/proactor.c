@@ -758,8 +758,8 @@ static void test_netaddr(test_t *t) {
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
 
   /* Examine as sockaddr */
-  pn_netaddr_t *na = pn_netaddr_remote(ct);
-  struct sockaddr *sa = pn_netaddr_sockaddr(na);
+  const pn_netaddr_t *na = pn_netaddr_remote(ct);
+  const struct sockaddr *sa = pn_netaddr_sockaddr(na);
   TEST_CHECK(t, AF_INET == sa->sa_family);
   char host[NI_MAXHOST] = "";
   char serv[NI_MAXSERV] = "";

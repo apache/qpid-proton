@@ -43,17 +43,17 @@ typedef struct pn_netaddr_t pn_netaddr_t;
  * @return the length of the string (excluding trailing '\0'), if >= size then
  * the address was truncated.
  */
-PNP_EXTERN int pn_netaddr_str(pn_netaddr_t *addr, char *buf, size_t size);
+PNP_EXTERN int pn_netaddr_str(const pn_netaddr_t *addr, char *buf, size_t size);
 
 /**
  * Get the local address of a transport. Return NULL if not available.
  */
-PNP_EXTERN pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
 
 /**
  * Get the remote address of a transport. Return NULL if not available.
  */
-PNP_EXTERN pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
 
 struct sockaddr;
 
@@ -61,13 +61,13 @@ struct sockaddr;
  * On POSIX or Windows, get the underlying `struct sockaddr`.
  * Return NULL if not available.
  */
-PNP_EXTERN struct sockaddr *pn_netaddr_sockaddr(pn_netaddr_t *na);
+PNP_EXTERN const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na);
 
 /**
  * On POSIX or Windows, get the size of the underlying `struct sockaddr`.
  * Return 0 if not available.
  */
-PNP_EXTERN size_t pn_netaddr_socklen(pn_netaddr_t *na);
+PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
 
 /**
  * @}

@@ -425,6 +425,10 @@ static void psocket_init(psocket_t* ps, pn_proactor_t* p, bool is_conn, const ch
   strncpy(ps->port, port, sizeof(ps->port));
 }
 
+struct pn_netaddr_t {
+  struct sockaddr_storage ss;
+};
+
 typedef struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
@@ -445,6 +449,7 @@ typedef struct pconnection_t {
   pn_event_t *cached_event;
   pn_event_batch_t batch;
   pn_connection_driver_t driver;
+  struct pn_netaddr_t local, remote; /* Actual addresses */
 } pconnection_t;
 
 struct pn_listener_t {
@@ -967,6 +972,13 @@ void pconnection_start(pconnection_t *pc) {
   int efd = pc->psocket.proactor->epollfd;
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
 
+  int fd = pc->psocket.sockfd;
+  socklen_t len = sizeof(pc->local);
+  getsockname(fd, (struct sockaddr*)&pc->local, &len);
+  len = sizeof(pc->remote);
+  getpeername(fd, (struct sockaddr*)&pc->remote, &len);
+
+  start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
   pc->read_closed = false;
   pc->write_closed = false;
   epoll_extended_t *ee = &pc->psocket.epoll_io;
@@ -1724,27 +1736,28 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     wake_notify(&p->context);
 }
 
-struct sockaddr *pn_netaddr_sockaddr(pn_netaddr_t *addr) {
-  return NULL;
+const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
+  return (struct sockaddr*)na;
 }
 
-size_t pn_netaddr_socklen(pn_netaddr_t *addr) {
-  return 0;
+size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
+  return sizeof(struct sockaddr_storage);
 }
 
-pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
-  return NULL;
+const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
+  pconnection_t *pc = get_pconnection(pn_transport_connection(t));
+  return pc? &pc->local : NULL;
 }
 
-pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
-  return NULL;
+const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
+  pconnection_t *pc = get_pconnection(pn_transport_connection(t));
+  return pc ? &pc->remote : NULL;
 }
 
-int pn_netaddr_str(pn_netaddr_t* addr, char *buf, size_t len) {
-  struct sockaddr_storage *sa = (struct sockaddr_storage*)addr;
+int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)sa, sizeof(*sa),
+  int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
                         host, sizeof(host), port, sizeof(port),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   if (!err) {

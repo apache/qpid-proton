@@ -1269,32 +1269,32 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   work_notify(&l->work);
 }
 
-struct sockaddr *pn_netaddr_sockaddr(pn_netaddr_t *na) {
+const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
   return (struct sockaddr*)na;
 }
 
-size_t pn_netaddr_socklen(pn_netaddr_t *na) {
+size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
   return sizeof(struct sockaddr_storage);
 }
 
-pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
+const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc? &pc->local : NULL;
 }
 
-pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
+const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc ? &pc->remote : NULL;
 }
 
-int pn_netaddr_str(struct pn_netaddr_t* na, char *buf, size_t len) {
+int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
   char host[NI_MAXHOST];
   char port[NI_MAXSERV];
   int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
                         host, sizeof(host), port, sizeof(port),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   if (!err) {
-    return snprintf(buf, len, "%s:%s", host, port); /* FIXME aconway 2017-03-29: ipv6 format? */
+    return snprintf(buf, len, "%s:%s", host, port);
   } else {
     if (buf) *buf = '\0';
     return 0;
