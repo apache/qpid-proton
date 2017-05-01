@@ -1104,6 +1104,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
             start_polling(&l->psocket.epoll_io, l->psocket.proactor->epollfd);  // TODO: check for error
             unlock(&l->context.mutex);
             if (notify) wake_notify(&l->context);
+            freeaddrinfo(ai);
             free(buf);
             return;
           }
@@ -1133,8 +1134,8 @@ void pn_listener_free(pn_listener_t *l) {
   // TODO: do we need a QPID DeletionManager equivalent to be safe from inbound connection (accept) epoll events?
   if (l) {
     if (l->collector) pn_collector_free(l->collector);
-    if (!l->condition) pn_condition_free(l->condition);
-    if (!l->attachments) pn_free(l->attachments);
+    if (l->condition) pn_condition_free(l->condition);
+    if (l->attachments) pn_free(l->attachments);
     lock(&l->context.mutex);
     bool can_free = proactor_remove(&l->psocket);
     unlock(&l->context.mutex);
