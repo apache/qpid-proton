@@ -347,16 +347,14 @@ static void test_abort(test_t *t) {
   pn_proactor_connect(client, pn_connection(), port.host_port);
   /* server transport closes */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  if (TEST_CHECK(t, last_condition) && TEST_CHECK(t, pn_condition_is_set(last_condition))) {
-    TEST_STR_EQUAL(t, "amqp:connection:framing-error", pn_condition_get_name(last_condition));
-    TEST_STR_IN(t, "abort", pn_condition_get_description(last_condition));
-  }
+  TEST_COND_NAME(t, "amqp:connection:framing-error",last_condition);
+  TEST_COND_DESC(t, "abort", last_condition);
+
   /* client transport closes */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* client */
-  if (TEST_CHECK(t, last_condition) && TEST_CHECK(t, pn_condition_is_set(last_condition))) {
-    TEST_STR_EQUAL(t, "amqp:connection:framing-error", pn_condition_get_name(last_condition));
-    TEST_STR_IN(t, "abort", pn_condition_get_description(last_condition));
-  }
+  TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
+  TEST_COND_DESC(t, "abort", last_condition);
+
   pn_listener_close(l);
   PROACTOR_TEST_DRAIN(pts);
 
@@ -415,9 +413,8 @@ static void test_refuse(test_t *t) {
 
   /* client transport closes */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* client */
-  if (TEST_CHECK(t, last_condition) && TEST_CHECK(t, pn_condition_is_set(last_condition))) {
-    TEST_STR_EQUAL(t, "amqp:connection:framing-error", pn_condition_get_name(last_condition));
-  }
+  TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
+
   pn_listener_close(l.listener);
   PROACTOR_TEST_DRAIN(pts);
 
@@ -551,15 +548,14 @@ static void test_ipv4_ipv6(test_t *t) {
 #define EXPECT_CONNECT(TP, HOST) do {                                   \
     pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
     TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));   \
-    TEST_CHECK(t, !pn_condition_is_set(last_condition));                 \
+    TEST_COND_EMPTY(t, last_condition);                                 \
     PROACTOR_TEST_DRAIN(pts);                                           \
   } while(0)
 
 #define EXPECT_FAIL(TP, HOST) do {                                      \
     pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
     TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));   \
-    if (TEST_CHECK(t, pn_condition_is_set(last_condition)))             \
-      TEST_STR_IN(t, "refused", pn_condition_get_description(last_condition)); \
+    TEST_COND_DESC(t, "refused", last_condition);                       \
     PROACTOR_TEST_DRAIN(pts);                                           \
   } while(0)
 
@@ -684,9 +680,10 @@ static void test_ssl(test_t *t) {
   pn_proactor_connect(client, c, port.host_port);
   /* Open ok at both ends */
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
-  TEST_CHECK(t, !pn_condition_is_set(last_condition));
+  TEST_COND_EMPTY(t, last_condition);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
-  TEST_CHECK(t, !pn_condition_is_set(last_condition));
+  TEST_COND_EMPTY(t, last_condition);
+
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
 

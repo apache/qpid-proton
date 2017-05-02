@@ -42,7 +42,7 @@ typedef struct test_t {
 */
 
 void test_vlogf_(test_t *t, const char *prefix, const char* expr,
-                        const char* file, int line, const char *fmt, va_list ap)
+                 const char* file, int line, const char *fmt, va_list ap)
 {
   fprintf(stderr, "%s:%d", file, line);
   if (prefix && *prefix) fprintf(stderr, ": %s", prefix);
@@ -57,7 +57,7 @@ void test_vlogf_(test_t *t, const char *prefix, const char* expr,
 }
 
 void test_errorf_(test_t *t, const char* expr,
-                         const char* file, int line, const char *fmt, ...) {
+                  const char* file, int line, const char *fmt, ...) {
   ++t->errors;
   va_list ap;
   va_start(ap, fmt);
@@ -66,7 +66,7 @@ void test_errorf_(test_t *t, const char* expr,
 }
 
 bool test_check_(test_t *t, bool expr, const char *sexpr,
-                        const char *file, int line, const char* fmt, ...) {
+                 const char *file, int line, const char* fmt, ...) {
   if (!expr) {
     ++t->errors;
     va_list ap;
@@ -78,7 +78,7 @@ bool test_check_(test_t *t, bool expr, const char *sexpr,
 }
 
 void test_logf_(test_t *t, const char *prefix, const char* expr,
-                       const char* file, int line, const char *fmt, ...) {
+                const char* file, int line, const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   test_vlogf_(t, prefix, expr, file, line, fmt, ap);
@@ -95,34 +95,38 @@ void assert_fail_(const char* expr, const char* file, int line, const char *fmt,
 }
 
 /* Unconditional assert (does not depend on NDEBUG) for tests. */
-#define TEST_ASSERT(expr) \
+#define TEST_ASSERT(expr)                                               \
   ((expr) ?  (void)0 : assert_fail_(#expr, __FILE__, __LINE__, NULL))
 
 /* Unconditional assert with printf-style message (does not depend on NDEBUG) for tests. */
-#define TEST_ASSERTF(expr, ...) \
+#define TEST_ASSERTF(expr, ...)                                         \
   ((expr) ?  (void)0 : assert_fail_(#expr, __FILE__, __LINE__, __VA_ARGS__))
 
 /* Like TEST_ASSERT but includes  errno string for err */
 /* TODO aconway 2017-02-16: not thread safe, replace with safe strerror_r or similar */
-#define TEST_ASSERT_ERRNO(expr, err) \
+#define TEST_ASSERT_ERRNO(expr, err)            \
   TEST_ASSERTF((expr), "%s", strerror(err))
 
 
 /* Print a message but don't mark the test as having an error */
-#define TEST_LOGF(TEST, ...) \
+#define TEST_LOGF(TEST, ...)                                            \
   test_logf_((TEST), "info", NULL, __FILE__, __LINE__, __VA_ARGS__)
 
 /* Print an error with printf-style message, increment TEST->errors */
-#define TEST_ERRORF(TEST, ...) \
+#define TEST_ERRORF(TEST, ...)                                  \
   test_errorf_((TEST), NULL, __FILE__, __LINE__, __VA_ARGS__)
 
-/* If EXPR is false, print and record an error for t  */
-#define TEST_CHECKF(TEST, EXPR, ...) \
+/* If EXPR is false, print and record an error for t including #EXPR  */
+#define TEST_CHECKF(TEST, EXPR, ...)                                    \
   test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, __VA_ARGS__)
 
 /* If EXPR is false, print and record an error for t including EXPR  */
-#define TEST_CHECK(TEST, EXPR) \
+#define TEST_CHECK(TEST, EXPR)                                  \
   test_check_((TEST), (EXPR), #EXPR, __FILE__, __LINE__, "")
+
+/* If EXPR is false, print and record an error for t NOT including #EXPR  */
+#define TEST_CHECKNF(TEST, EXPR, ...)                                   \
+  test_check_((TEST), (EXPR), NULL, __FILE__, __LINE__, __VA_ARGS__)
 
 bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, const char *file, int line) {
   return test_check_(t, want == got, NULL, file, line, "want %s got %s",
@@ -153,18 +157,18 @@ bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len,
   return want_len == got_len;
 }
 
-#define TEST_STR_EQUAL(TEST, WANT, GOT) \
+#define TEST_STR_EQUAL(TEST, WANT, GOT)                                 \
   test_check_((TEST), !strcmp((WANT), (GOT)), NULL, __FILE__, __LINE__, "want '%s', got '%s'", (WANT), (GOT))
 
 
-#define TEST_STR_IN(TEST, WANT, GOT) \
+#define TEST_STR_IN(TEST, WANT, GOT)                                    \
   test_check_((TEST), strstr((GOT), (WANT)), NULL, __FILE__, __LINE__, "'%s' not in '%s'", (WANT), (GOT))
 
-#define TEST_ETYPE_EQUAL(TEST, WANT, GOT) \
+#define TEST_ETYPE_EQUAL(TEST, WANT, GOT)                       \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 /* Compare arrays of pn_event_type_t */
-#define TEST_ETYPES_EQUAL(TEST, WANT, WLEN, GOT, GLEN)                       \
+#define TEST_ETYPES_EQUAL(TEST, WANT, WLEN, GOT, GLEN)                  \
   test_etypes_equal_((TEST), (WANT), (WLEN), (GOT), (GLEN), __FILE__, __LINE__)
 
 pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, const char *file, int line) {
@@ -182,35 +186,47 @@ pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, c
   return got;
 }
 
-#define TEST_EVENT_TYPE(TEST, WANT, GOT) \
+#define TEST_EVENT_TYPE(TEST, WANT, GOT)                        \
   test_event_type_((TEST), (WANT), (GOT), __FILE__, __LINE__)
+
+#define TEST_COND_EMPTY(TEST, C)                                        \
+  TEST_CHECKNF((TEST), (!(C) || !pn_condition_is_set(C)), "Unexpected condition - %s:%s", \
+              pn_condition_get_name(C), pn_condition_get_description(C))
+
+#define TEST_COND_DESC(TEST, WANT, C)                                   \
+  (TEST_CHECKNF(t, pn_condition_is_set((C)), "No condition, expected :%s", (WANT)) ? \
+   TEST_STR_IN(t, (WANT), pn_condition_get_description(C)) : 0);
+
+#define TEST_COND_NAME(TEST, WANT, C)                                   \
+  (TEST_CHECKNF(t, pn_condition_is_set((C)), "No condition, expected %s:", (WANT)) ? \
+   TEST_STR_EQUAL(t, (WANT), pn_condition_get_name(C)) : 0);
 
 /* T is name of a test_t variable, EXPR is the test expression (which should update T)
    FAILED is incremented if the test has errors
 */
-#define RUN_TEST(FAILED, T, EXPR) do {                          \
-    fprintf(stderr, "TEST: %s\n", #EXPR);                                \
-    fflush(stdout);                                             \
-    test_t T = { #EXPR, 0 };                                    \
-    (EXPR);                                                     \
-    if (T.errors) {                                             \
-      fprintf(stderr, "FAIL: %s (%d errors)\n", #EXPR, T.errors);        \
-      ++(FAILED);                                               \
-    }                                                           \
+#define RUN_TEST(FAILED, T, EXPR) do {                                  \
+    fprintf(stderr, "TEST: %s\n", #EXPR);                               \
+    fflush(stdout);                                                     \
+    test_t T = { #EXPR, 0 };                                            \
+    (EXPR);                                                             \
+    if (T.errors) {                                                     \
+      fprintf(stderr, "FAIL: %s (%d errors)\n", #EXPR, T.errors);       \
+      ++(FAILED);                                                       \
+    }                                                                   \
   } while(0)
 
 /* Like RUN_TEST but only if one of the argv strings is found in the test EXPR */
-#define RUN_ARGV_TEST(FAILED, T, EXPR) do {                             \
-    if (argc == 1) {                                                    \
-      RUN_TEST(FAILED, T, EXPR);                                        \
-    } else {                                                            \
-      for (int i = 1; i < argc; ++i) {                                  \
-        if (strstr(#EXPR, argv[i])) {                                   \
-          RUN_TEST(FAILED, T, EXPR);                                    \
-          break;                                                        \
-        }                                                               \
-      }                                                                 \
-    }                                                                   \
+#define RUN_ARGV_TEST(FAILED, T, EXPR) do {     \
+    if (argc == 1) {                            \
+      RUN_TEST(FAILED, T, EXPR);                \
+    } else {                                    \
+      for (int i = 1; i < argc; ++i) {          \
+        if (strstr(#EXPR, argv[i])) {           \
+          RUN_TEST(FAILED, T, EXPR);            \
+          break;                                \
+        }                                       \
+      }                                         \
+    }                                           \
   } while(0)
 
 /* Some very simple platform-secifics to acquire an unused socket */
