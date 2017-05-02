@@ -19,6 +19,8 @@
 
 #include "test_tools.h"
 #include "test_config.h"
+#include "../proactor/proactor-internal.h"
+
 #include <proton/condition.h>
 #include <proton/connection.h>
 #include <proton/event.h>
@@ -71,13 +73,6 @@ static void proactor_test_free(proactor_test_t *pts, size_t n) {
 
 #define TEST_LOG_EQUAL(T, A, PT) \
   TEST_ETYPES_EQUAL((T), (A), sizeof(A)/sizeof(*A), (PT).log, (PT).log_len)
-
-#if 0                           /* FIXME aconway 2017-03-31:  */
-/* Return the last event in the proactor_test's log or PN_EVENT_NONE if it is empty */
-static pn_event_type_t  proactor_test_last_event(proactor_test_t *pt) {
-  return pt->log_len ? pt->log[pt->log_len - 1] : PN_EVENT_NONE;
-}
-#endif
 
 /* Set this to a pn_condition() to save condition data */
 pn_condition_t *last_condition = NULL;
@@ -719,9 +714,48 @@ static void test_proactor_addr(test_t *t) {
   TEST_STR_EQUAL(t, "1:2:3:4:", addr);
 }
 
+static void test_parse_addr(test_t *t) {
+  char buf[1024];
+  const char *host, *port;
+
+  TEST_CHECK(t, 0 == pni_parse_addr("foo:bar", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "foo", host);
+  TEST_STR_EQUAL(t, "bar", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr("foo:", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "foo", host);
+  TEST_STR_EQUAL(t, "5672", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr(":bar", buf, sizeof(buf), &host, &port));
+  TEST_CHECKF(t, NULL == host, "expected null, got: %s", host);
+  TEST_STR_EQUAL(t, "bar", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr(":", buf, sizeof(buf), &host, &port));
+  TEST_CHECKF(t, NULL == host, "expected null, got: %s", host);
+  TEST_STR_EQUAL(t, "5672", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr(":amqps", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "5671", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr(":amqp", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "5672", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr("::1:2:3", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "::1:2", host);
+  TEST_STR_EQUAL(t, "3", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr(":::", buf, sizeof(buf), &host, &port));
+  TEST_STR_EQUAL(t, "::", host);
+  TEST_STR_EQUAL(t, "5672", port);
+
+  TEST_CHECK(t, 0 == pni_parse_addr("", buf, sizeof(buf), &host, &port));
+  TEST_CHECKF(t, NULL == host, "expected null, got: %s", host);
+  TEST_STR_EQUAL(t, "5672", port);
+}
+
 /* Test pn_proactor_addr funtions */
 
-/* FIXME aconway 2017-03-30: windows will need winsock2.h etc.
+/* Windows will need winsock2.h etc.
    These headers are *only* needed for test_netaddr and only for the getnameinfo part.
    This is the only non-portable part of the proactor test suite.
    */
@@ -866,6 +900,7 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_release_free(&t));
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
   RUN_ARGV_TEST(failed, t, test_proactor_addr(&t));
+  RUN_ARGV_TEST(failed, t, test_parse_addr(&t));
   RUN_ARGV_TEST(failed, t, test_netaddr(&t));
   RUN_ARGV_TEST(failed, t, test_disconnect(&t));
   RUN_ARGV_TEST(failed, t, test_abort(&t));

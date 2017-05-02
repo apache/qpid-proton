@@ -195,8 +195,6 @@ pn_timestamp_t pn_i_now2(void)
 const char *COND_NAME = "proactor";
 const char *AMQP_PORT = "5672";
 const char *AMQP_PORT_NAME = "amqp";
-const char *AMQPS_PORT = "5671";
-const char *AMQPS_PORT_NAME = "amqps";
 
 PN_HANDLE(PN_PROACTOR)
 
@@ -295,8 +293,8 @@ typedef struct psocket_t {
   epoll_extended_t epoll_io;
   bool is_conn;
   bool closing;
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
+  char addr_buf[PN_MAX_ADDR];
+  const char *host, *port;
 } psocket_t;
 
 struct pn_proactor_t {
@@ -402,7 +400,8 @@ static inline void wake_done(pcontext_t *ctx) {
 }
 
 
-static void psocket_init(psocket_t* ps, pn_proactor_t* p, bool is_conn, const char *host, const char *port) {
+static void psocket_init(psocket_t* ps, pn_proactor_t* p, bool is_conn, const char *addr)
+{
   ps->epoll_io.psocket = ps;
   ps->epoll_io.fd = -1;
   ps->epoll_io.type = is_conn ? PCONNECTION_IO : LISTENER_IO;
@@ -415,14 +414,7 @@ static void psocket_init(psocket_t* ps, pn_proactor_t* p, bool is_conn, const ch
   ps->is_conn = is_conn;
   ps->closing = false;
   ps->sockfd = -1;
-
-  /* For platforms that don't know about "amqp" and "amqps" service names. */
-  if (port && strcmp(port, AMQP_PORT_NAME) == 0)
-    port = AMQP_PORT;
-  else if (port && strcmp(port, AMQPS_PORT_NAME) == 0)
-    port = AMQPS_PORT;
-  strncpy(ps->host, host, sizeof(ps->host));
-  strncpy(ps->port, port, sizeof(ps->port));
+  pni_parse_addr(addr, ps->addr_buf, sizeof(ps->addr_buf), &ps->host, &ps->port);
 }
 
 struct pn_netaddr_t {
@@ -566,7 +558,8 @@ static const pn_class_t pconnection_class = PN_CLASS(pconnection);
 
 static void pconnection_tick(pconnection_t *pc);
 
-static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bool server, const char *host, const char *port) {
+static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bool server, const char *addr)
+{
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   if (!pc) return NULL;
   if (pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
@@ -577,7 +570,7 @@ static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bo
     abort();
   }
   pcontext_init(&pc->context, PCONNECTION, p, pc);
-  psocket_init(&pc->psocket, p,  true, host, port);
+  psocket_init(&pc->psocket, p,  true, addr);
   pc->new_events = 0;
   pc->wake_count = 0;
   pc->tick_pending = false;
@@ -973,10 +966,10 @@ void pconnection_start(pconnection_t *pc) {
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
 
   int fd = pc->psocket.sockfd;
-  socklen_t len = sizeof(pc->local);
-  getsockname(fd, (struct sockaddr*)&pc->local, &len);
-  len = sizeof(pc->remote);
-  getpeername(fd, (struct sockaddr*)&pc->remote, &len);
+  socklen_t len = sizeof(pc->local.ss);
+  getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
+  len = sizeof(pc->remote.ss);
+  getpeername(fd, (struct sockaddr*)&pc->remote.ss, &len);
 
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
   pc->read_closed = false;
@@ -988,11 +981,7 @@ void pconnection_start(pconnection_t *pc) {
 }
 
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
-  char *buf = strdup(addr);
-  assert(buf); // TODO: memory safety
-  char *host = buf;
-  char *port = pni_split_host_port(buf);
-  pconnection_t *pc = new_pconnection_t(p, c, false, host, port);
+  pconnection_t *pc = new_pconnection_t(p, c, false, addr);
   assert(pc); // TODO: memory safety
   // TODO: check case of proactor shutting down
   lock(&pc->context.mutex);
@@ -1001,7 +990,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
 
   struct addrinfo *ai = NULL;
   int fd = -1;
-  if (!getaddrinfo(*host ? host : NULL, *port ? port : NULL, 0, &ai)) {
+  if (!getaddrinfo(pc->psocket.host, pc->psocket.port, 0, &ai)) {
     fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
     if (fd >= 0) {
       configure_socket(fd);
@@ -1010,7 +999,6 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
         pconnection_start(pc);
         unlock(&pc->context.mutex);
         freeaddrinfo(ai);
-        free(buf);
         return;
       }
     }
@@ -1022,7 +1010,6 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   if (fd != -1) close (fd);
   unlock(&pc->context.mutex);
   if (notify) wake_notify(&pc->context);
-  free(buf);
   return;
 }
 
@@ -1087,14 +1074,10 @@ pn_listener_t *pn_listener() {
 
 void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, int backlog)
 {
-  char *buf = strdup(addr);
-  assert(buf);  // TODO:  memory safety
-  char *host = buf;
-  char *port = pni_split_host_port(buf);
   // TODO: check listener not already listening for this or another proactor
   lock(&l->context.mutex);
   l->context.proactor = p;;
-  psocket_init(&l->psocket, p, false, host, port);
+  psocket_init(&l->psocket, p, false, addr);
   l->backlog = backlog;
   proactor_add(&l->psocket);
   /* Always put an OPEN event for symmetry, even if we immediately close with err */
@@ -1103,7 +1086,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 
   struct addrinfo *ai = NULL;
   int fd = -1;
-  if (!getaddrinfo(*host ? host : NULL, *port ? port : NULL, 0, &ai)) {
+  if (!getaddrinfo(l->psocket.host, l->psocket.port, 0, &ai)) {
     fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
     if (fd >= 0) {
       int yes = 1;
@@ -1117,7 +1100,6 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
             unlock(&l->context.mutex);
             if (notify) wake_notify(&l->context);
             freeaddrinfo(ai);
-            free(buf);
             return;
           }
     }
@@ -1127,7 +1109,6 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   unlock(&l->context.mutex);
   if (notify) wake_notify(&l->context);
   if (ai) freeaddrinfo(ai);
-  free(buf);
   return;
 }
 
@@ -1282,7 +1263,7 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
 
 void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   // TODO: fuller sanity check on input args
-  pconnection_t *pc = new_pconnection_t(l->psocket.proactor, c, true, l->psocket.host, l->psocket.port);
+  pconnection_t *pc = new_pconnection_t(l->psocket.proactor, c, true, "");
   assert(pc);  // TODO: memory safety
   int err = 0;
 

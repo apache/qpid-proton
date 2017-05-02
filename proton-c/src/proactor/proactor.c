@@ -21,6 +21,7 @@
 /* Common platform-independent implementation for proactor libraries */
 
 #include "proactor-internal.h"
+#include <proton/error.h>
 #include <proton/proactor.h>
 
 #include <stdio.h>
@@ -28,18 +29,38 @@
 #include <string.h>
 
 
+static const char *AMQP_PORT = "5672";
+static const char *AMQP_PORT_NAME = "amqp";
+static const char *AMQPS_PORT = "5671";
+static const char *AMQPS_PORT_NAME = "amqps";
+
 int pn_proactor_addr(char *buf, size_t len, const char *host, const char *port) {
   return snprintf(buf, len, "%s:%s", host ? host : "", port ? port : "");
 }
 
-char* pni_split_host_port(char *host_port) {
-  char *port = strrchr(host_port, ':');
-  if (port) {
-    *port = '\0';
-    ++port;
-  } else {
-    port = host_port + strlen(host_port); /* Empty string, point to trailing \0 */
+int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port)
+{
+  size_t hplen = strlen(addr);
+  if (hplen >= len) {
+    return PN_OVERFLOW;
   }
-  return port;
+  memcpy(buf, addr, hplen+1);
+  char *p = strrchr(buf, ':');
+  if (p) {
+    *port = p + 1;
+    *p = '\0';
+    if (**port == '\0' || !strcmp(*port, AMQP_PORT_NAME)) {
+      *port = AMQP_PORT;
+    } else if (!strcmp(*port, AMQPS_PORT_NAME)) {
+      *port = AMQPS_PORT;
+    }
+  } else {
+    *port = AMQP_PORT;
+  }
+  if (*buf) {
+    *host = buf;
+  } else {
+    *host = NULL;
+  }
+  return 0;
 }
-

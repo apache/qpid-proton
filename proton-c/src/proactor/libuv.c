@@ -67,8 +67,6 @@
 
 const char *AMQP_PORT = "5672";
 const char *AMQP_PORT_NAME = "amqp";
-const char *AMQPS_PORT = "5671";
-const char *AMQPS_PORT_NAME = "amqps";
 
 PN_HANDLE(PN_PROACTOR)
 
@@ -135,8 +133,8 @@ static void work_init(work_t* w, pn_proactor_t* p, struct_type type) {
 
 /* A resolvable address */
 typedef struct addr_t {
-  char host_port[PN_MAX_ADDR];
-  char *host, *port;            /* Point into addr after destructive pni_split_host_port */
+  char addr_buf[PN_MAX_ADDR];
+  const char *host, *port;
   uv_getaddrinfo_t getaddrinfo; /* UV getaddrinfo request, contains list of addrinfo */
   struct addrinfo* addrinfo;    /* The current addrinfo being tried */
 } addr_t;
@@ -280,9 +278,7 @@ static void work_start(work_t *w) {
 }
 
 static void parse_addr(addr_t *addr, const char *str) {
-  strncpy(addr->host_port, str, sizeof(addr->host_port));
-  addr->host = addr->host_port;
-  addr->port = pni_split_host_port(addr->host_port);
+  pni_parse_addr(str, addr->addr_buf, sizeof(addr->addr_buf), &addr->host, &addr->port);
 }
 
 /* Make a pn_class for pconnection_t since it is attached to a pn_connection_t record */
@@ -508,10 +504,10 @@ static void on_connect_fail(uv_handle_t *handle) {
 
 static void pconnection_addresses(pconnection_t *pc) {
   int len;
-  len = sizeof(pc->local);
-  uv_tcp_getsockname(&pc->tcp, (struct sockaddr*)&pc->local, &len);
-  len = sizeof(pc->remote);
-  uv_tcp_getpeername(&pc->tcp, (struct sockaddr*)&pc->remote, &len);
+  len = sizeof(pc->local.ss);
+  uv_tcp_getsockname(&pc->tcp, (struct sockaddr*)&pc->local.ss, &len);
+  len = sizeof(pc->remote.ss);
+  uv_tcp_getpeername(&pc->tcp, (struct sockaddr*)&pc->remote.ss, &len);
 }
 
 /* Outgoing connection */
@@ -563,8 +559,7 @@ static int leader_resolve(pn_proactor_t *p, addr_t *addr, bool listen) {
   if (listen) {
     hints.ai_flags |= AI_PASSIVE | AI_ALL;
   }
-  int err = uv_getaddrinfo(&p->loop, &addr->getaddrinfo, NULL,
-                           *addr->host ? addr->host : NULL, addr->port, &hints);
+  int err = uv_getaddrinfo(&p->loop, &addr->getaddrinfo, NULL, addr->host, addr->port, &hints);
   addr->addrinfo = addr->getaddrinfo.addrinfo; /* Start with the first addrinfo */
   return err;
 }
@@ -1112,7 +1107,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   pconnection_t *pc = pconnection(p, c, false);
   assert(pc);                                  /* FIXME aconway 2017-03-31: memory safety */
-  pn_connection_open(pc->driver.connection); /* Auto-open */
+  pn_connection_open(pc->driver.connection);   /* Auto-open */
   parse_addr(&pc->addr, addr);
   work_start(&pc->work);
 }

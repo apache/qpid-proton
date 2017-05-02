@@ -20,18 +20,18 @@
  * under the License.
  */
 
+#include <proton/type_compat.h>
+#include <proton/import_export.h>
+
 /*
- * Given a "host:port" string, split it in-place like so:
+ * Parse a pn_proactor_addr string, copy data into buf as necessary.
+ * Set *host and *port to point to the host and port strings.
  *
- *     char *host = host_port;
- *     char *port = pn_split_host_port(host_port);
+ * If the port is empty, replace it with "5672", if it is "amqp" or "amqps"
+ * replace it with the numeric port value.
  *
- * Note this modifies the original host_port string by replacing the last ':'
- * character with '\0'.
- *
- * If there is no ':', the returned pointer is an empty string, not NULL.
- *
+ * @return 0 on success, PN_OVERFLOW if buf is too small.
  */
-char* pni_split_host_port(char *host_port);
+PNP_EXTERN int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port);
 
 #endif // PROACTOR_NETADDR_INTERNAL_H
