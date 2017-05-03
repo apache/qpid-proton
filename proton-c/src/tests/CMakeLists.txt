@@ -24,7 +24,8 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 if (ENABLE_VALGRIND AND VALGRIND_EXE)
   set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet
-                   --leak-check=full --trace-children=yes)
+    --leak-check=full --trace-children=yes
+    --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp)
 endif ()
 
 macro (pn_add_c_test test)
