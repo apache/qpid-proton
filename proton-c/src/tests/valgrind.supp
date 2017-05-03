@@ -74,10 +74,8 @@
    SSL does a number of uninitialized accesses (expected) 7
    Memcheck:Cond
    fun:ASN1_STRING_set
-   ...
-   fun:PEM_ASN1_read_bio
-   fun:SSL_CTX_use_certificate_chain_file
-   fun:pn_ssl_domain_set_credentials
+   fun:ASN1_mbstring_ncopy
+   fun:ASN1_mbstring_copy
 }
 
 {

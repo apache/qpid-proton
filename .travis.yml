@@ -50,7 +50,8 @@ install:
 
 # Build and install libuv 1.0 from source, trusty only has 0.10
 - PREFIX=$PWD/install
-- git clone -b v1.x https://github.com/libuv/libuv
+- git submodule add -b v1.x https://github.com/libuv/libuv
+- git submodule update --init
 - pushd libuv
 - sh autogen.sh
 - ./configure --prefix $PREFIX
@@ -63,6 +64,6 @@ before_script:
 - mkdir Build
 - cd Build
 - cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX
+
 script:
-- export VALGRIND_OPTS="--num-callers=32"
 - cmake --build . --target install && ctest -V
