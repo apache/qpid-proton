@@ -20,7 +20,7 @@
  */
 
 /* Enable POSIX features for pthread.h */
-#define _POSIX_C_SOURCE 200809L
+#define _GNU_SOURCE
 
 #include "../core/log_private.h"
 #include "proactor-internal.h"
@@ -90,7 +90,6 @@ static void pmutex_finalize(pthread_mutex_t *m) { pthread_mutex_destroy(m); }
 static inline void lock(pmutex *m) { pthread_mutex_lock(m); }
 static inline void unlock(pmutex *m) { pthread_mutex_unlock(m); }
 
-typedef struct psocket_t psocket_t;
 typedef enum {
   WAKE,   /* see if any work to do in proactor/psocket context */
   PCONNECTION_IO,
@@ -100,7 +99,7 @@ typedef enum {
 
 // Data to use with epoll.
 typedef struct epoll_extended_t {
-  psocket_t *psocket;  // pconnection, listener, or NULL -> proactor
+  struct psocket_t *psocket;  // pconnection, listener, or NULL -> proactor
   int fd;
   epoll_type_t type;   // io/timer/wakeup
   uint32_t wanted;     // events to poll for
@@ -120,7 +119,7 @@ typedef struct ptimer_t {
   int skip_count;
 } ptimer_t;
 
-static bool ptimer_init(ptimer_t *pt, psocket_t *ps) {
+static bool ptimer_init(ptimer_t *pt, struct psocket_t *ps) {
   pt->timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
   if (pt->timerfd < 0) return false;
   pmutex_init(&pt->mutex);
