@@ -946,8 +946,16 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
 
   pc->context.working = false;
   pc->hog_count = 0;
-  bool rearm = pconnection_rearm_check(pc);
+  if (pc->read_closed && pn_connection_driver_finished(&pc->driver)) {
+    pconnection_begin_close(pc);
+    if (pconnection_is_final(pc)) {
+      unlock(&pc->context.mutex);
+      pconnection_cleanup(pc);
+      return NULL;
+    }
+  }
 
+  bool rearm = pconnection_rearm_check(pc);
   unlock(&pc->context.mutex);
   if (rearm) pconnection_rearm(pc);
   return NULL;
@@ -1043,10 +1051,16 @@ void pn_connection_wake(pn_connection_t* c) {
 }
 
 void pn_proactor_release_connection(pn_connection_t *c) {
+  bool notify = false;
   pconnection_t *pc = get_pconnection(c);
   if (pc) {
+    lock(&pc->context.mutex);
     pn_connection_driver_release_connection(&pc->driver);
+    pconnection_begin_close(pc);
+    notify = wake(&pc->context);
+    unlock(&pc->context.mutex);
   }
+  if (notify) wake_notify(&pc->context);
 }
 
 // ========================================================================
@@ -1128,16 +1142,16 @@ static inline void listener_final_free(pn_listener_t *l) {
 void pn_listener_free(pn_listener_t *l) {
   // TODO: do we need a QPID DeletionManager equivalent to be safe from inbound connection (accept) epoll events?
   if (l) {
+    bool can_free = true;
     if (l->collector) pn_collector_free(l->collector);
     if (l->condition) pn_condition_free(l->condition);
     if (l->attachments) pn_free(l->attachments);
     lock(&l->context.mutex);
-    bool can_free = proactor_remove(&l->psocket);
+    if (l->context.proactor)
+      can_free = proactor_remove(&l->psocket);
     unlock(&l->context.mutex);
-    if (can_free) {
+    if (can_free)
       listener_final_free(l);
-      return;
-    } // else... proactor_disconnect logic has assumed ownership
   }
 }
 
