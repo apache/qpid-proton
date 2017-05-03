@@ -49,25 +49,17 @@ set_target_properties(${SWIG_MODULE_cproton_REAL_NAME}
 find_package(PythonInterp REQUIRED)
 
 if (CHECK_SYSINSTALL_PYTHON)
-  # Install to python_lib in prefix of PYTHON_EXECUTABLE (NOT the CMAKE_INSTALL PREFIX)
   execute_process(COMMAND ${PYTHON_EXECUTABLE}
     -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(True))"
     OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 else ()
-  # Install to python_lib location under CMAKE_INSTALL_PREFIX
-  execute_process(COMMAND
-    ${PYTHON_EXECUTABLE} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(prefix='${CMAKE_INSTALL_PREFIX}'))"
-    OUTPUT_VARIABLE PYTHON_SITEARCH_PACKAGES_DEFAULT
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set (PYTHON_SITEARCH_PACKAGES_DEFAULT ${BINDINGS_DIR}/python)
 endif ()
 
 if (NOT PYTHON_SITEARCH_PACKAGES)
   set (PYTHON_SITEARCH_PACKAGES ${PYTHON_SITEARCH_PACKAGES_DEFAULT})
 endif()
-
-# Symlink old non-standard install location to the actual install location
-install(CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink  ${PYTHON_SITEARCH_PACKAGES} ${CMAKE_INSTALL_PREFIX}/${BINDINGS_DIR}/python)")
 
 set (pysrc-generated cproton.py)
 set (pysrc
