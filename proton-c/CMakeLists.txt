@@ -415,6 +415,7 @@ set (qpid-proton-private-includes
   src/reactor/selectable.h
   src/platform/platform.h
   src/platform/platform_fmt.h
+  src/proactor/proactor-internal.h
   )
 
 set (qpid-proton-extra
@@ -455,6 +456,7 @@ set (qpid-proton-include
   include/proton/listener.h
   include/proton/log.h
   include/proton/message.h
+  include/proton/netaddr.h
   include/proton/object.h
   include/proton/proactor.h
   include/proton/sasl.h
