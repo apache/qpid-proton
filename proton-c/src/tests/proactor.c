@@ -345,15 +345,17 @@ static void test_abort(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   sock_close(port.sock);
   pn_proactor_connect(client, pn_connection(), port.host_port);
-  /* server transport closes */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_COND_NAME(t, "amqp:connection:framing-error",last_condition);
-  TEST_COND_DESC(t, "abort", last_condition);
 
+  /* server transport closes */
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
+    TEST_COND_NAME(t, "amqp:connection:framing-error",last_condition);
+    TEST_COND_DESC(t, "abort", last_condition);
+  }
   /* client transport closes */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* client */
-  TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
-  TEST_COND_DESC(t, "abort", last_condition);
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
+    TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
+    TEST_COND_DESC(t, "abort", last_condition);
+  }
 
   pn_listener_close(l);
   PROACTOR_TEST_DRAIN(pts);
@@ -847,6 +849,8 @@ static void test_disconnect(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   pn_proactor_disconnect(server, cond);
+  pn_condition_free(cond);
+
   int expect_tclose = 2, expect_lclose = 2;
   while (expect_tclose || expect_lclose) {
     pn_event_type_t et = PROACTOR_TEST_RUN(pts);
@@ -854,12 +858,12 @@ static void test_disconnect(test_t *t) {
      case PN_TRANSPORT_CLOSED:
       TEST_CHECK(t, --expect_tclose >= 0);
         TEST_STR_EQUAL(t, "test-name", pn_condition_get_name(last_condition));
-        TEST_STR_EQUAL(t, "test-description", pn_condition_get_description(last_condition));
+        TEST_STR_IN(t, "test-description", pn_condition_get_description(last_condition));
       break;
      case PN_LISTENER_CLOSE:
       TEST_CHECK(t, --expect_lclose >= 0);
       TEST_STR_EQUAL(t, "test-name", pn_condition_get_name(last_condition));
-      TEST_STR_EQUAL(t, "test-description", pn_condition_get_description(last_condition));
+      TEST_STR_IN(t, "test-description", pn_condition_get_description(last_condition));
       break;
      default:
       TEST_ERRORF(t, "%s unexpected: want %d TRANSPORT_CLOSED, %d LISTENER_CLOSE",
@@ -868,8 +872,7 @@ static void test_disconnect(test_t *t) {
       continue;
     }
   }
-
-  pn_condition_free(cond);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Make sure the proactors are still functional */
   test_port_t port3 = test_port(localhost);
@@ -881,7 +884,7 @@ static void test_disconnect(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   pn_proactor_disconnect(client, NULL);
 
-  PROACTOR_TEST_DRAIN(pts);     /* Drain will  */
+  PROACTOR_TEST_DRAIN(pts);
   PROACTOR_TEST_FREE(pts);
 }
 
