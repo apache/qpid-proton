@@ -21,7 +21,7 @@
 #
 # Sets the following variables:
 #
-#   Libuv_FOUND            - True if headers and requested libraries were found
+#   LIBUV_FOUND            - True if headers and requested libraries were found
 #   Libuv_INCLUDE_DIRS     - Libuv include directories
 #   Libuv_LIBRARIES        - Link these to use libuv.
 #
@@ -30,8 +30,17 @@
 #   LIBUV_INCLUDEDIR       - Preferred include directory e.g. <prefix>/include
 #   LIBUV_LIBRARYDIR       - Preferred library directory e.g. <prefix>/lib
 
-find_library(Libuv_LIBRARIES Names uv libuv HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_ROOT})
-find_path(Libuv_INCLUDE_DIRS NAMES uv.h HINTS ${LIBUV_INCLUDEDIR} ${LIBUV_ROOT} ${LIBUV_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include PATHS /usr/include)
+find_library(Libuv_LIBRARY NAMES uv libuv
+  HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_ROOT}/lib ${CMAKE_INSTALL_PREFIX}/lib)
+
+find_path(Libuv_INCLUDE_DIR NAMES uv.h
+  HINTS ${LIBUV_INCLUDEDIR} ${LIBUV_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include
+  PATHS /usr/include)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Libuv REQUIRED_VARS Libuv_LIBRARIES Libuv_INCLUDE_DIRS)
+find_package_handle_standard_args(Libuv REQUIRED_VARS Libuv_LIBRARY Libuv_INCLUDE_DIR)
+
+if (LIBUV_FOUND)
+  set(Libuv_INCLUDE_DIRS ${Libuv_INCLUDE_DIR})
+  set(Libuv_LIBRARIES ${Libuv_LIBRARY})
+endif ()

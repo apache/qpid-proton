@@ -19,6 +19,9 @@
  *
  */
 
+/* Enable POSIX features for pthread.h */
+#define _POSIX_C_SOURCE 200809L
+
 #include "../core/log_private.h"
 #include "proactor-internal.h"
 

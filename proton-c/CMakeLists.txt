@@ -322,9 +322,6 @@ set (qpid-proton-platform-all
   src/reactor/io/windows/selector.c
   src/reactor/io/posix/io.c
   src/reactor/io/posix/selector.c
-  src/proactor/libuv.c
-  src/proactor/epoll.c
-  src/proactor/proactor.c
   )
 
 # platform specific library build:
@@ -493,9 +490,8 @@ if (PROACTOR STREQUAL "epoll") # OR (NOT PROACTOR AND NOT PROACTOR_OK))
     set (PROACTOR_OK epoll)
     set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor.c)
     set (PROACTOR_LIBS "")
-    # Skip COMPILE_LANGUAGE_FLAGS, uses post-c99 pthread APIs.
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO}"
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
   endif()
 endif()
@@ -507,9 +503,9 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
     set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
-      # Skip COMPILE_LANGUAGE_FLAGS, libuv.h won't compile with --std=c99
-      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${LTO} "
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
+    include_directories(${Libuv_INCLUDE_DIRS})
   endif()
 endif()
 

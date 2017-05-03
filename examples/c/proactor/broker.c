@@ -61,7 +61,7 @@
 /* Simple thread-safe queue implementation */
 typedef struct queue_t {
   pthread_mutex_t lock;
-  char* name;
+  char name[256];
   VEC(pn_rwbytes_t) messages;   /* Messages on the queue_t */
   VEC(pn_connection_t*) waiting; /* Connections waiting to send messages from this queue */
   struct queue_t *next;            /* Next queue in chain */
@@ -70,7 +70,7 @@ typedef struct queue_t {
 
 static void queue_init(queue_t *q, const char* name, queue_t *next) {
   pthread_mutex_init(&q->lock, NULL);
-  q->name = strdup(name);
+  strncpy(q->name, name, sizeof(q->name));
   VEC_INIT(q->messages);
   VEC_INIT(q->waiting);
   q->next = next;
