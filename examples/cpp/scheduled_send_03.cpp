@@ -25,6 +25,7 @@
 #include <proton/connection.hpp>
 #include <proton/default_container.hpp>
 #include <proton/duration.hpp>
+#include <proton/event_loop.hpp>
 #include <proton/function.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -41,24 +42,42 @@
 class scheduled_sender : public proton::messaging_handler {
   private:
     std::string url;
-    proton::sender sender;
     proton::duration interval, timeout;
+    proton::event_loop *event_loop;
     bool ready, canceled;
 
-    struct tick_fn : public proton::void_function0 {
-        scheduled_sender& parent;
-        tick_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.tick(); }
+    struct cancel_fn : public proton::void_function0 {
+        scheduled_sender* parent;
+        proton::sender sender;
+        cancel_fn(): parent(0) {}
+        cancel_fn(scheduled_sender& ss, proton::sender& s) : parent(&ss), sender(s) {}
+        void operator()() { if (parent) parent->cancel(sender); }
     };
 
-    struct cancel_fn : public proton::void_function0 {
+    struct tick_fn : public proton::void_function0 {
+        scheduled_sender* parent;
+        proton::sender sender;
+        tick_fn(): parent(0) {}
+        tick_fn(scheduled_sender& ss, proton::sender& s) : parent(&ss), sender(s) {}
+        void operator()() { if (parent) parent->tick(sender); }
+    };
+
+    struct defer_cancel_fn : public proton::void_function0 {
         scheduled_sender& parent;
-        cancel_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.cancel(); }
+        defer_cancel_fn(scheduled_sender& ss) : parent(ss) {}
+        void operator()() { parent.event_loop->inject(parent.do_cancel); }
+    };
+
+    struct defer_tick_fn : public proton::void_function0 {
+        scheduled_sender& parent;
+        defer_tick_fn(scheduled_sender& ss) : parent(ss) {}
+        void operator()() { parent.event_loop->inject(parent.do_tick); }
     };
 
     tick_fn do_tick;
     cancel_fn do_cancel;
+    defer_tick_fn defer_tick;
+    defer_cancel_fn defer_cancel;
 
   public:
 
@@ -68,37 +87,44 @@ class scheduled_sender : public proton::messaging_handler {
         timeout(int(t*proton::duration::SECOND.milliseconds())), // Cancel after timeout.
         ready(true),            // Ready to send.
         canceled(false),         // Canceled.
-        do_tick(*this),
-        do_cancel(*this)
+        defer_tick(*this),
+        defer_cancel(*this)
     {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        sender = c.open_sender(url);
-        c.schedule(timeout, do_cancel); // Call this->cancel after timeout.
-        c.schedule(interval, do_tick); // Start regular ticks every interval.
+        c.open_sender(url);
     }
 
-    void cancel() {
+    void on_sender_open(proton::sender & s) OVERRIDE {
+        event_loop = &proton::make_thread_safe(s).get()->event_loop();
+
+        do_cancel = cancel_fn(*this, s);
+        do_tick = tick_fn(*this, s);
+        s.container().schedule(timeout, defer_cancel); // Call this->cancel after timeout.
+        s.container().schedule(interval, defer_tick); // Start regular ticks every interval.
+    }
+
+    void cancel(proton::sender& sender) {
         canceled = true;
         sender.connection().close();
     }
 
-    void tick() {
+    void tick(proton::sender& sender) {
         if (!canceled) {
-            sender.container().schedule(interval, do_tick); // Next tick
+            sender.container().schedule(interval, defer_tick); // Next tick
             if (sender.credit() > 0) // Only send if we have credit
-                send();
+                send(sender);
             else
                 ready = true; // Set the ready flag, send as soon as we get credit.
         }
     }
 
-    void on_sendable(proton::sender &) OVERRIDE {
+    void on_sendable(proton::sender &sender) OVERRIDE {
         if (ready)              // We have been ticked since the last send.
-            send();
+            send(sender);
     }
 
-    void send() {
+    void send(proton::sender& sender) {
         std::cout << "send" << std::endl;
         sender.send(proton::message("ping"));
         ready = false;

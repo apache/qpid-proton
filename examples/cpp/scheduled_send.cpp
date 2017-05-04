@@ -23,6 +23,7 @@
 
 #include <proton/container.hpp>
 #include <proton/default_container.hpp>
+#include <proton/event_loop.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender.hpp>
@@ -39,6 +40,7 @@ class scheduled_sender : public proton::messaging_handler {
     std::string url;
     proton::sender sender;
     proton::duration interval, timeout;
+    proton::event_loop* event_loop;
     bool ready, canceled;
 
   public:
@@ -51,12 +53,15 @@ class scheduled_sender : public proton::messaging_handler {
         canceled(false)         // Canceled.
     {}
 
+    // The awkward looking double lambda is necessary because the scheduled lambdas run in the container context
+    // and must arrange lambdas for send and close to happen in the connection context.
     void on_container_start(proton::container &c) OVERRIDE {
         sender = c.open_sender(url);
+        event_loop = &proton::make_thread_safe(sender).get()->event_loop();
         // Call this->cancel after timeout.
-        c.schedule(timeout, [this]() { this->cancel(); });
+        c.schedule(timeout, [this]() { this->event_loop->inject( [this]() { this->cancel(); }); });
          // Start regular ticks every interval.
-        c.schedule(interval, [this]() { this->tick(); });
+        c.schedule(interval, [this]() { this->event_loop->inject( [this]() { this->tick(); }); });
     }
 
     void cancel() {
@@ -67,7 +72,7 @@ class scheduled_sender : public proton::messaging_handler {
     void tick() {
         // Schedule the next tick unless we have been cancelled.
         if (!canceled)
-            sender.container().schedule(interval, [this]() { this->tick(); });
+            sender.container().schedule(interval, [this]() { this->event_loop->inject( [this]() { this->tick(); }); });
         if (sender.credit() > 0) // Only send if we have credit
             send();
         else
