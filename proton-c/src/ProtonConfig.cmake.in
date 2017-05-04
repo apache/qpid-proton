@@ -30,7 +30,8 @@ set (Proton_LIBRARIES     optimized @LIBDIR@/@PROTONLIB@ debug @LIBDIR@/@PROTONL
 set (ProtonCore_INCLUDE_DIRS  @INCLUDEDIR@)
 set (ProtonCore_LIBRARIES     optimized @LIBDIR@/@PROTONCORELIB@ debug @LIBDIR@/@PROTONCORELIBDEBUG@)
 
-set (ProtonProactor_INCLUDE_DIRS  @INCLUDEDIR@)
-set (ProtonProactor_LIBRARIES     optimized @LIBDIR@/@PROTONPROACTORLIB@ debug @LIBDIR@/@PROTONPROACTORLIBDEBUG@)
+set (ProtonProactor_INCLUDE_DIRS  @PROTONPROACTOR_INCLUDE_DIRS@)
+set (ProtonProactor_LIBRARIES     @PROTONPROACTOR_LIBRARIES@)
+set (ProtonProactor_FOUND         @HAS_PROACTOR@)
 
 set (Proton_FOUND True)

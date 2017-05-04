@@ -661,6 +661,9 @@ configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
 if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
+  # For ProtonConfig.in
+  set(PROTONPROACTOR_INCLUDE_DIRS ${INCLUDEDIR})
+  set(PROTONPROACTOR_LIBRARIES "optimized ${LIBDIR}/${PROTONPROACTORLIB} debug ${LIBDIR}/${PROTONPROACTORLIBDEBUG}")
 endif(HAS_PROACTOR)
 
 include(WriteBasicConfigVersionFile)
