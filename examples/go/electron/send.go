@@ -75,7 +75,7 @@ func main() {
 			c, err := container.Dial("tcp", url.Host)
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
-			addr := strings.TrimPrefix("/", url.Path)
+			addr := strings.TrimPrefix(url.Path, "/")
 			s, err := c.Sender(electron.Target(addr))
 			fatalIf(err)
 			// Loop sending messages.

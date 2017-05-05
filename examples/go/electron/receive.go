@@ -76,7 +76,7 @@ func main() {
 			c, err := container.Dial("tcp", url.Host)
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
-			addr := strings.TrimPrefix("/", url.Path)
+			addr := strings.TrimPrefix(url.Path, "/")
 			r, err := c.Receiver(electron.Source(addr))
 			fatalIf(err)
 			// Loop receiving messages and sending them to the main() goroutine
