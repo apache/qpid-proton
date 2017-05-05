@@ -608,8 +608,9 @@ if (MSVC)
 endif(MSVC)
 
 if (qpid-proton-proactor)
-  set(HAS_PROACTOR 1)
-  set(HAS_PROACTOR 1 PARENT_SCOPE) # Visible to examples
+  # Bizarre CMake variable setting
+  set(HAS_PROACTOR True)
+  set(HAS_PROACTOR ${HAS_PROACTOR} PARENT_SCOPE)
   add_library (
     qpid-proton-proactor SHARED ${qpid-proton-proactor})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
@@ -666,9 +667,6 @@ configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
 if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
-  # For ProtonConfig.in
-  set(PROTONPROACTOR_INCLUDE_DIRS ${INCLUDEDIR})
-  set(PROTONPROACTOR_LIBRARIES "optimized ${LIBDIR}/${PROTONPROACTORLIB} debug ${LIBDIR}/${PROTONPROACTORLIBDEBUG}")
 endif(HAS_PROACTOR)
 
 include(WriteBasicConfigVersionFile)

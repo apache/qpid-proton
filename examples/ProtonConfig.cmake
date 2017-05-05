@@ -28,8 +28,27 @@
 # tree build and installed in the appropriate place for cmake on that system.
 
 set (Proton_VERSION       ${PN_VERSION})
+
 set (Proton_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include)
 set (Proton_LIBRARIES     qpid-proton)
-set (ProtonCore_LIBRARIES qpid-proton-core)
-set (ProtonProactor_LIBRARIES qpid-proton-proactor)
 set (Proton_FOUND True)
+
+set (Proton_Core_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include)
+set (Proton_Core_LIBRARIES qpid-proton-core)
+set (Proton_Core_FOUND True)
+
+if (${HAS_PROACTOR})
+  set (Proton_Proactor_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include)
+  set (Proton_Proactor_LIBRARIES qpid-proton-proactor)
+  set (Proton_Proactor_FOUND True)
+endif()
+
+# Check for all required components
+foreach(comp ${Proton_FIND_COMPONENTS})
+  if(NOT Proton_${comp}_FOUND)
+    if(Proton_FIND_REQUIRED_${comp})
+      set(Proton_FOUND FALSE)
+      set(Proton_NOT_FOUND_MESSAGE "Didn't find required component ${comp}")
+    endif()
+  endif()
+endforeach()
