@@ -107,7 +107,7 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  * pn_proactor_release_connection()
  *
  * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
- * An empty host will connect to the local host via the default protocol.
+ * An empty host will connect to the local host via the default protocol (IPV6 or IPV4).
  * An empty port will connect to the standard AMQP port (5672).
  *
  * @param[in] connection @ref connection to be connected to @p addr.
@@ -128,7 +128,7 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
  * is handled, or when pn_proactor_free() is called.
  *
  * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
- * An empty host will listen for all protocols on all local interfaces.
+ * An empty host will listen for all protocols (IPV6 and IPV4) on all local interfaces.
  * An empty port will listen on the standard AMQP port (5672).
 
  * @param[in] backlog of un-handled connection requests to allow before refusing
