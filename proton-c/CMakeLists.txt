@@ -482,9 +482,7 @@ set (qpid-proton-include-extra
 set(PROACTOR "" CACHE STRING "Override default proactor, one of: epoll, libuv, none")
 string(TOLOWER "${PROACTOR}" PROACTOR)
 
-# FIXME aconway 2017-04-12: not enabling epoll by default, must use PROACTOR=epoll
-# When it is more stable, enable as default by uncommenting # OR (NOT PROACTOR...
-if (PROACTOR STREQUAL "epoll") # OR (NOT PROACTOR AND NOT PROACTOR_OK))
+if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
