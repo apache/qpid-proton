@@ -154,7 +154,14 @@ bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len,
       return false;
     }
   }
-  return want_len == got_len;
+  if (want_len != got_len) {
+    test_errorf_(t, NULL, file, line, "wanted %d events but got %d",
+                 want_len, got_len);
+    print_bad_etypes("  want: ", want, want_len, want_len);
+    print_bad_etypes("  got:  ", got, got_len, got_len);
+    return false;
+  }
+  return true;
 }
 
 #define TEST_STR_EQUAL(TEST, WANT, GOT)                                 \

@@ -358,7 +358,9 @@ static void test_abort(test_t *t) {
   }
 
   pn_listener_close(l);
-  PROACTOR_TEST_DRAIN(pts);
+
+  while (PROACTOR_TEST_RUN(pts) != PN_PROACTOR_INACTIVE) {}
+  while (PROACTOR_TEST_RUN(pts) != PN_PROACTOR_INACTIVE) {}
 
   /* Verify expected event sequences, no unexpected events */
   static const pn_event_type_t want_client[] = {
@@ -368,7 +370,8 @@ static void test_abort(test_t *t) {
     PN_TRANSPORT_TAIL_CLOSED,
     PN_TRANSPORT_ERROR,
     PN_TRANSPORT_HEAD_CLOSED,
-    PN_TRANSPORT_CLOSED
+    PN_TRANSPORT_CLOSED,
+    PN_PROACTOR_INACTIVE
   };
   TEST_LOG_EQUAL(t, want_client, pts[0]);
 
@@ -382,7 +385,8 @@ static void test_abort(test_t *t) {
     PN_TRANSPORT_ERROR,
     PN_TRANSPORT_HEAD_CLOSED,
     PN_TRANSPORT_CLOSED,
-    PN_LISTENER_CLOSE
+    PN_LISTENER_CLOSE,
+    PN_PROACTOR_INACTIVE
   };
   TEST_LOG_EQUAL(t, want_server, pts[1]);
 
@@ -418,7 +422,8 @@ static void test_refuse(test_t *t) {
   TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
 
   pn_listener_close(l.listener);
-  PROACTOR_TEST_DRAIN(pts);
+  while (PROACTOR_TEST_RUN(pts) != PN_PROACTOR_INACTIVE) {}
+  while (PROACTOR_TEST_RUN(pts) != PN_PROACTOR_INACTIVE) {}
 
   /* Verify expected event sequences, no unexpected events */
   static const pn_event_type_t want_client[] = {
@@ -428,7 +433,8 @@ static void test_refuse(test_t *t) {
     PN_TRANSPORT_TAIL_CLOSED,
     PN_TRANSPORT_ERROR,
     PN_TRANSPORT_HEAD_CLOSED,
-    PN_TRANSPORT_CLOSED
+    PN_TRANSPORT_CLOSED,
+    PN_PROACTOR_INACTIVE
   };
   TEST_LOG_EQUAL(t, want_client, pts[0]);
 
@@ -441,7 +447,8 @@ static void test_refuse(test_t *t) {
     PN_TRANSPORT_ERROR,
     PN_TRANSPORT_HEAD_CLOSED,
     PN_TRANSPORT_CLOSED,
-    PN_LISTENER_CLOSE
+    PN_LISTENER_CLOSE,
+    PN_PROACTOR_INACTIVE
   };
   TEST_LOG_EQUAL(t, want_server, pts[1]);
 
@@ -818,60 +825,43 @@ static void test_disconnect(test_t *t) {
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
 
-  test_port_t port = test_port(localhost);
-  pn_listener_t* l = pn_listener();
-  pn_proactor_listen(server, l, port.host_port, 4);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-  sock_close(port.sock);
+  /* Start two listeners */
+  proactor_test_listener_t l = proactor_test_listen(&pts[1], localhost);
+  proactor_test_listener_t l2 = proactor_test_listen(&pts[1], localhost);
 
-  test_port_t port2 = test_port(localhost);
-  pn_listener_t* l2 = pn_listener();
-  pn_proactor_listen(server, l2, port2.host_port, 4);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
-  sock_close(port2.sock);
-
-  /* We will disconnect one connection after it is remote-open */
-  pn_proactor_connect(client, pn_connection(), port.host_port);
+  /* Only wait for one connection to remote-open before disconnect */
+  pn_connection_t *c = pn_connection();
+  pn_proactor_connect(client, c, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
-  pn_proactor_connect(client, pn_connection(), port2.host_port);
+  pn_connection_t *c2 = pn_connection();
+  pn_proactor_connect(client, c2, l2.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  PROACTOR_TEST_DRAIN(pts);
 
+  /* Disconnect the client proactor */
   pn_condition_t *cond = pn_condition();
   pn_condition_set_name(cond, "test-name");
   pn_condition_set_description(cond, "test-description");
-
   pn_proactor_disconnect(client, cond);
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_STR_EQUAL(t, "test-name", pn_condition_get_name(last_condition));
-  /* Note: pn_transport adds "(connection aborted)" on client side if transport closed early. */
-  TEST_STR_EQUAL(t, "test-description (connection aborted)", pn_condition_get_description(last_condition));
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  /* Verify expected client side first */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, proactor_test_run(&pts[0], 1));
+  TEST_COND_NAME(t, "test-name", last_condition);
+  TEST_COND_DESC(t, "test-description", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, proactor_test_run(&pts[0], 1));
+  TEST_COND_NAME(t, "test-name", last_condition);
+  TEST_COND_DESC(t, "test-description", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, proactor_test_run(&pts[0], 1));
 
+  /* Now check server sees the disconnects */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+
+  /* Now disconnect the server end (the listeners) */
   pn_proactor_disconnect(server, cond);
   pn_condition_free(cond);
 
-  int expect_tclose = 2, expect_lclose = 2;
-  while (expect_tclose || expect_lclose) {
-    pn_event_type_t et = PROACTOR_TEST_RUN(pts);
-    switch (et) {
-     case PN_TRANSPORT_CLOSED:
-      TEST_CHECK(t, --expect_tclose >= 0);
-        TEST_STR_EQUAL(t, "test-name", pn_condition_get_name(last_condition));
-        TEST_STR_IN(t, "test-description", pn_condition_get_description(last_condition));
-      break;
-     case PN_LISTENER_CLOSE:
-      TEST_CHECK(t, --expect_lclose >= 0);
-      TEST_STR_EQUAL(t, "test-name", pn_condition_get_name(last_condition));
-      TEST_STR_IN(t, "test-description", pn_condition_get_description(last_condition));
-      break;
-     default:
-      TEST_ERRORF(t, "%s unexpected: want %d TRANSPORT_CLOSED, %d LISTENER_CLOSE",
-                  pn_event_type_name(et), expect_tclose, expect_lclose);
-      expect_lclose = expect_tclose = 0;
-      continue;
-    }
-  }
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Make sure the proactors are still functional */

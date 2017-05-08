@@ -742,7 +742,7 @@ static void on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
     if (nread != UV_EOF) { /* hangup */
       pconnection_set_error(pc, nread, "on read from");
     }
-    pn_connection_driver_read_close(&pc->driver);
+    pn_connection_driver_close(&pc->driver);
   }
   work_notify(&pc->work);
 }
