@@ -364,7 +364,8 @@ static bool wake(pcontext_t *ctx) {
 // part2: make OS call without lock held
 static inline void wake_notify(pcontext_t *ctx) {
   uint64_t increment = 1;
-  write(ctx->proactor->eventfd, &increment, sizeof(uint64_t));  // TODO: check for error
+  int err = write(ctx->proactor->eventfd, &increment, sizeof(uint64_t));
+  (void)err;  // TODO: check for error
 }
 
 // call with no locks
@@ -384,7 +385,8 @@ static pcontext_t *wake_pop_front(pn_proactor_t *p) {
        * Note that if the reads/writes happen out of order, the wake
        * mechanism will hang. */
       uint64_t ignored;
-      read(p->eventfd, &ignored, sizeof(uint64_t)); // TODO: check for error
+      int err = read(p->eventfd, &ignored, sizeof(uint64_t));
+      (void)err; // TODO: check for error
       p->wakes_in_progress = false;
     }
   }
@@ -885,7 +887,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
 
   if (!pconnection_rclosed(pc)) {
     pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(&pc->driver);
-    if (rbuf.size >= 0 && !pc->read_blocked) {
+    if (rbuf.size > 0 && !pc->read_blocked) {
       ssize_t n = read(pc->psocket.sockfd, rbuf.start, rbuf.size);
 
       if (n > 0) {
