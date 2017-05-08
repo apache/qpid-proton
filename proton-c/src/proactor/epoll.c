@@ -612,6 +612,9 @@ static inline bool pconnection_is_final(pconnection_t *pc) {
 }
 
 static void pconnection_final_free(pconnection_t *pc) {
+  if (pc->addrinfo) {
+    freeaddrinfo(pc->addrinfo);
+  }
   pn_incref(pc);                /* Make sure we don't do a circular free */
   pn_connection_driver_destroy(&pc->driver);
   pn_decref(pc);
@@ -988,8 +991,8 @@ void pconnection_connected_lh(pconnection_t *pc) {
     pc->connected = true;
     if (pc->addrinfo) {
       freeaddrinfo(pc->addrinfo);
+      pc->addrinfo = NULL;
     }
-    pc->addrinfo = NULL;
     pc->ai = NULL;
   }
 }
@@ -1031,6 +1034,8 @@ static void pconnection_maybe_connect_lh(pconnection_t *pc) {
       }
       /* connect failed immediately, go round the loop to try the next addr */
     }
+    freeaddrinfo(pc->addrinfo);
+    pc->addrinfo = NULL;
     /* If there was a previous attempted connection, let the poller discover the
        errno from its socket, otherwise set the current error. */
     if (pc->psocket.sockfd < 1) {
@@ -1177,7 +1182,9 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
       }
     }
   }
-  if (addrinfo) freeaddrinfo(addrinfo);
+  if (addrinfo) {
+    freeaddrinfo(addrinfo);
+  }
   /* Always put an OPEN event for symmetry, even if we immediately close with err */
   pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
   bool notify = wake(&l->context);
