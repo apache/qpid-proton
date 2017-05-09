@@ -634,7 +634,7 @@ static void pconnection_cleanup(pconnection_t *pc) {
 }
 
 // Call with lock held or from forced_shutdown
-void pconnection_begin_close(pconnection_t *pc) {
+static void pconnection_begin_close(pconnection_t *pc) {
   if (!pc->context.closing) {
     pc->context.closing = true;
     stop_polling(&pc->psocket.epoll_io, pc->psocket.proactor->epollfd);
@@ -736,7 +736,7 @@ static void pconnection_done(pconnection_t *pc) {
   pc->hog_count = 0;
   if (pconnection_has_event(pc) || pconnection_work_pending(pc)) {
     notify = wake(&pc->context);
-  } else if (pconnection_rclosed(pc) && pn_connection_driver_finished(&pc->driver)) {
+  } else if (pn_connection_driver_finished(&pc->driver)) {
     pconnection_begin_close(pc);
     if (pconnection_is_final(pc)) {
       unlock(&pc->context.mutex);
@@ -840,15 +840,14 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     unlock(&pc->context.mutex);
     return &pc->batch;
   }
-
+  bool closed = pconnection_rclosed(pc) && pconnection_wclosed(pc);
   if (pc->wake_count) {
-    waking = true;
+    waking = !closed;
     pc->wake_count = 0;
   }
   if (pc->tick_pending) {
     pc->tick_pending = false;
-    if (!(pconnection_rclosed(pc) && pconnection_wclosed(pc)))
-      tick_required = true;
+    tick_required = !closed;
   }
 
   if (pc->new_events) {
@@ -956,7 +955,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
 
   pc->context.working = false;
   pc->hog_count = 0;
-  if (pconnection_rclosed(pc) && pn_connection_driver_finished(&pc->driver)) {
+  if (pn_connection_driver_finished(&pc->driver)) {
     pconnection_begin_close(pc);
     if (pconnection_is_final(pc)) {
       unlock(&pc->context.mutex);

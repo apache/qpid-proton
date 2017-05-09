@@ -294,7 +294,7 @@ static pn_event_type_t open_wake_handler(test_t *t, pn_event_t *e) {
 
 /* Test waking up a connection that is idle */
 static void test_connection_wake(test_t *t) {
-  proactor_test_t pts[] =  { { open_wake_handler }, { common_handler } };
+  proactor_test_t pts[] =  { { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
   test_port_t port = test_port(localhost);          /* Hold a port */
@@ -310,8 +310,22 @@ static void test_connection_wake(test_t *t) {
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts)); /* Both ends */
   /* The pn_connection_t is still valid so wake is legal but a no-op */
-  pn_connection_wake(c);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_EVENT_NONE, PROACTOR_TEST_GET(pts)); /* No more wake */
+
+  /* Verify we don't get a wake after close even if they happen together */
+  pn_connection_t *c2 = pn_connection();
+  pn_proactor_connect(client, c2, port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  pn_connection_wake(c2);
+  pn_proactor_disconnect(client, NULL);
+  pn_connection_wake(c2);
+
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, proactor_test_run(&pts[0], 1));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, proactor_test_run(&pts[0], 1));
+  TEST_ETYPE_EQUAL(t, PN_EVENT_NONE, proactor_test_get(&pts[0], 1)); /* No late wake */
 
   PROACTOR_TEST_FREE(pts);
   /* The pn_connection_t is still valid so wake is legal but a no-op */
