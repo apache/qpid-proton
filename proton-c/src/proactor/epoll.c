@@ -304,7 +304,6 @@ struct pn_proactor_t {
   pn_collector_t *collector;
   pcontext_t *contexts;         /* in-use contexts for PN_PROACTOR_INACTIVE and cleanup */
   epoll_extended_t epoll_wake;
-  pn_event_t *cached_event;
   pn_event_batch_t batch;
   size_t interrupts;            /* total pending interrupts */
   size_t deferred_interrupts;   /* interrupts for current batch */
@@ -434,7 +433,6 @@ typedef struct pconnection_t {
   bool write_blocked;
   bool disconnected;
   int hog_count; // thread hogging limiter
-  pn_event_t *cached_event;
   pn_event_batch_t batch;
   pn_connection_driver_t driver;
   struct pn_netaddr_t local, remote; /* Actual addresses */
@@ -448,7 +446,6 @@ struct pn_listener_t {
   pcontext_t context;
   pn_condition_t *condition;
   pn_collector_t *collector;
-  pn_event_t *cached_event;
   pn_event_batch_t batch;
   pn_record_t *attachments;
   void *listener_context;
@@ -502,15 +499,15 @@ static inline pconnection_t *batch_pconnection(pn_event_batch_t *batch) {
 }
 
 static inline bool pconnection_has_event(pconnection_t *pc) {
-  return (pc->cached_event || (pc->cached_event = pn_connection_driver_next_event(&pc->driver)));
+  return pn_connection_driver_has_event(&pc->driver);
 }
 
 static inline bool listener_has_event(pn_listener_t *l) {
-  return (l->cached_event || (l->cached_event = pn_collector_next(l->collector)));
+  return pn_collector_peek(l->collector);
 }
 
 static inline bool proactor_has_event(pn_proactor_t *p) {
-  return (p->cached_event || (p->cached_event = pn_collector_next(p->collector)));
+  return pn_collector_peek(p->collector);
 }
 
 static pn_event_t *log_event(void* p, pn_event_t *e) {
@@ -590,7 +587,6 @@ static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bo
   pc->write_blocked = true;
   pc->disconnected = false;
   pc->hog_count = 0;;
-  pc->cached_event = NULL;
   pc->batch.next_event = pconnection_batch_next;
 
   if (server) {
@@ -651,27 +647,18 @@ static void pconnection_forced_shutdown(pconnection_t *pc) {
   pc->timer.pending_count = 0;
   pc->context.wake_ops = 0;
   pn_connection_t *c = pc->driver.connection;
-  pn_collector_t *col = pn_connection_collector(c);
-  if (pc->cached_event != NULL) {
-    pn_collector_pop(col);
-    pc->cached_event = NULL;
-  }
-  pn_collector_release(col);
+  pn_collector_release(pn_connection_collector(c));
   assert(pconnection_is_final(pc));
   pconnection_cleanup(pc);
 }
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
   pconnection_t *pc = batch_pconnection(batch);
-  pn_event_t *e = NULL;
-  if (pconnection_has_event(pc))
-    e = pc->cached_event;
-  else if (pc->hog_count < HOG_MAX) {
+  pn_event_t *e = pn_connection_driver_next_event(&pc->driver);
+  if (!e && pc->hog_count < HOG_MAX) {
     pconnection_process(pc, 0, false, true);  // top up
-    if (pconnection_has_event(pc))
-      e = pc->cached_event;
+    e = pn_connection_driver_next_event(&pc->driver);
   }
-  pc->cached_event = NULL;
   return e;
 }
 
@@ -1293,10 +1280,7 @@ static pn_event_batch_t *listener_process(psocket_t *ps, uint32_t events) {
 static pn_event_t *listener_batch_next(pn_event_batch_t *batch) {
   pn_listener_t *l = batch_listener(batch);
   lock(&l->context.mutex);
-  pn_event_t *e = NULL;
-  if (listener_has_event(l))
-    e = l->cached_event;
-  l->cached_event = NULL;
+  pn_event_t *e = pn_collector_next(l->collector);
   if (e && pn_event_type(e) == PN_LISTENER_CLOSE)
     l->close_dispatched = true;
   unlock(&l->context.mutex);
@@ -1504,13 +1488,10 @@ static bool proactor_update_batch(pn_proactor_t *p) {
 
 static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   pn_proactor_t *p = batch_proactor(batch);
-  pn_event_t *e = NULL;
   lock(&p->context.mutex);
   proactor_update_batch(p);
-  if (proactor_has_event(p))
-    e = p->cached_event;
+  pn_event_t *e = pn_collector_next(p->collector);
   unlock(&p->context.mutex);
-  p->cached_event = NULL;
   return log_event(p, e);
 }
 
