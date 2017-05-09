@@ -615,6 +615,13 @@ if (qpid-proton-proactor)
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PROACTOR_LIBS})
   list(APPEND LIB_TARGETS qpid-proton-proactor)
+  set_target_properties (
+    qpid-proton-proactor
+    PROPERTIES
+    VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
+    SOVERSION "${PN_LIB_SOMAJOR}"
+    LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
+    )
 endif()
 
 # Install executables and libraries
