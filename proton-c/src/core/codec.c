@@ -1328,7 +1328,7 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
     case PN_SYMBOL:
       {
         pn_bytes_t bytes = pn_data_get_bytes(data);
-        if (strlen(name) == bytes.size && !strncmp(name, bytes.start, bytes.size)) {
+        if (pn_bytes_equal(bytes, pn_bytes(strlen(name), name))) {
           return pn_data_next(data);
         }
       }

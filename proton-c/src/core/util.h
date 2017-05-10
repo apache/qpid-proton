@@ -44,6 +44,17 @@ char *pn_strndup(const char *src, size_t n);
 int pn_strcasecmp(const char* a, const char* b);
 int pn_strncasecmp(const char* a, const char* b, size_t len);
 
+static inline bool pn_bytes_equal(const pn_bytes_t a, const pn_bytes_t b) {
+  return (a.size == b.size && !memcmp(a.start, b.start, a.size));
+}
+
+static inline pn_bytes_t pn_string_bytes(pn_string_t *s) {
+  return pn_bytes(pn_string_size(s), pn_string_get(s));
+}
+
+/* Create a literal bytes value, e.g. PN_BYTES_LITERAL(foo) == pn_bytes(3, "foo") */
+#define PN_BYTES_LITERAL(X) (pn_bytes(sizeof(#X)-1, #X))
+
 #define DIE_IFR(EXPR, STRERR)                                           \
   do {                                                                  \
     int __code__ = (EXPR);                                              \

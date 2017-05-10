@@ -1277,7 +1277,7 @@ pn_link_t *pn_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
         // which is closed both locally and remotely, assume that is
         // no longer in use.
         !((link->endpoint.state & PN_LOCAL_CLOSED) && (link->endpoint.state & PN_REMOTE_CLOSED)) &&
-        !strncmp(name.start, pn_string_get(link->name), name.size))
+        pn_bytes_equal(name, pn_string_bytes(link->name)))
     {
       return link;
     }
@@ -1290,13 +1290,13 @@ static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
   if (!symbol.start)
     return PN_EXPIRE_WITH_SESSION;
 
-  if (!strncmp(symbol.start, "link-detach", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(link-detach)))
     return PN_EXPIRE_WITH_LINK;
-  if (!strncmp(symbol.start, "session-end", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(session-end)))
     return PN_EXPIRE_WITH_SESSION;
-  if (!strncmp(symbol.start, "connection-close", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(connection-close)))
     return PN_EXPIRE_WITH_CONNECTION;
-  if (!strncmp(symbol.start, "never", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(never)))
     return PN_EXPIRE_NEVER;
 
   return PN_EXPIRE_WITH_SESSION;
@@ -1307,9 +1307,9 @@ static pn_distribution_mode_t symbol2dist_mode(const pn_bytes_t symbol)
   if (!symbol.start)
     return PN_DIST_MODE_UNSPECIFIED;
 
-  if (!strncmp(symbol.start, "move", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(move)))
     return PN_DIST_MODE_MOVE;
-  if (!strncmp(symbol.start, "copy", symbol.size))
+  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(copy)))
     return PN_DIST_MODE_COPY;
 
   return PN_DIST_MODE_UNSPECIFIED;

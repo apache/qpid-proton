@@ -20,6 +20,7 @@
  */
 
 #include "scanner.h"
+#include "../core/util.h"
 
 #include "platform/platform.h"
 
@@ -217,12 +218,13 @@ static int pni_scanner_alpha_end(pn_scanner_t *scanner, const char *str, int sta
 static int pni_scanner_alpha(pn_scanner_t *scanner, const char *str)
 {
   int n = pni_scanner_alpha_end(scanner, str, 0);
+  pn_bytes_t b = pn_bytes(n, str);
   pn_token_type_t type;
-  if (!strncmp(str, "true", n)) {
+  if (pn_bytes_equal(b, PN_BYTES_LITERAL(true))) {
     type = PN_TOK_TRUE;
-  } else if (!strncmp(str, "false", n)) {
+  } else if (pn_bytes_equal(b, PN_BYTES_LITERAL(false))) {
     type = PN_TOK_FALSE;
-  } else if (!strncmp(str, "null", n)) {
+  } else if (pn_bytes_equal(b, PN_BYTES_LITERAL(null))) {
     type = PN_TOK_NULL;
   } else {
     type = PN_TOK_ID;

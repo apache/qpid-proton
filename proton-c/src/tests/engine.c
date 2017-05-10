@@ -294,12 +294,67 @@ int test_free_link(int argc, char **argv)
     return 0;
 }
 
+// regression test fo PROTON-1466 - confusion between links with prefix names
+static int test_link_name_prefix(int argc, char **argv)
+{
+    fprintf(stdout, "test_link_name_prefix\n");
+    pn_connection_t *c1 = pn_connection();
+    pn_transport_t  *t1 = pn_transport();
+    pn_transport_bind(t1, c1);
+
+    pn_connection_t *c2 = pn_connection();
+    pn_transport_t  *t2 = pn_transport();
+    pn_transport_set_server(t2);
+    pn_transport_bind(t2, c2);
+
+    pn_connection_open(c1);
+    pn_connection_open(c2);
+
+    pn_session_t *s1 = pn_session(c1);
+    pn_session_open(s1);
+
+    pn_link_t *l = pn_receiver(s1, "l");
+    pn_link_open(l);
+    pn_link_t *lll = pn_receiver(s1, "lll");
+    pn_link_open(lll);
+    pn_link_t *ll = pn_receiver(s1, "ll");
+    pn_link_open(ll);
+
+    while (pump(t1, t2)) {
+        process_endpoints(c1);
+        process_endpoints(c2);
+    }
+
+    // session and link should be up, c2 should have a receiver link:
+    assert(pn_session_state( s1 ) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(pn_link_state( l ) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(pn_link_state( lll ) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(pn_link_state( ll ) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+
+    pn_link_t *r = pn_link_head(c2, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(!strcmp(pn_link_name(r), "l"));
+    r = pn_link_next(r, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(!strcmp(pn_link_name(r), "lll"));
+    r = pn_link_next(r, (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE));
+    assert(!strcmp(pn_link_name(r), "ll"));
+
+    pn_transport_unbind(t1);
+    pn_transport_free(t1);
+    pn_connection_free(c1);
+
+    pn_transport_unbind(t2);
+    pn_transport_free(t2);
+    pn_connection_free(c2);
+
+    return 0;
+}
 
 typedef int (*test_ptr_t)(int argc, char **argv);
 
 test_ptr_t tests[] = {test_free_connection,
                       test_free_session,
                       test_free_link,
+                      test_link_name_prefix,
                       NULL};
 
 int main(int argc, char **argv)
