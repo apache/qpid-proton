@@ -23,6 +23,7 @@
 #include <proton/type_compat.h>
 #include <proton/condition.h>
 #include <proton/event.h>
+#include <proton/proactor.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -253,43 +254,13 @@ void sock_close(sock_t sock) { close(sock); }
 #endif
 
 
-/* Create a socket and bind(LOOPBACK:0) to get a free port.
-   Use SO_REUSEADDR so other processes can bind and listen on this port.
-   Close the returned fd when the other process is listening.
-   Asserts on error.
-*/
-sock_t sock_bind0(void) {
-  int sock =  socket(AF_INET, SOCK_STREAM, 0);
-  TEST_ASSERT_ERRNO(sock >= 0, errno);
-  int on = 1;
-  TEST_ASSERT_ERRNO(setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)) == 0, errno);
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addr.sin_port = 0;            /* bind to port 0 */
-  TEST_ASSERT_ERRNO(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0, errno);
-  return sock;
-}
-
-int sock_port(sock_t sock) {
-  struct sockaddr addr = {0};
-  socklen_t len = sizeof(addr);
-  TEST_ASSERT_ERRNO(getsockname(sock, &addr, &len) == 0, errno);
-  int port = -1;
-  switch (addr.sa_family) {
-   case AF_INET: port = ((struct sockaddr_in*)&addr)->sin_port; break;
-   case AF_INET6: port = ((struct sockaddr_in6*)&addr)->sin6_port; break;
-   default: TEST_ASSERTF(false, "unknown protocol type %d\n", addr.sa_family); break;
-  }
-  return ntohs(port);
-}
 
 /* Combines a sock_t with the int and char* versions of the port for convenience */
 typedef struct test_port_t {
   sock_t sock;
   int port;                     /* port as integer */
-  char str[256];                /* port as string */
-  char host_port[256];          /* host:port string */
+  char str[PN_MAX_ADDR];	/* port as string */
+  char host_port[PN_MAX_ADDR];	/* host:port string */
 } test_port_t;
 
 /* Modifies tp->host_port to use host, returns the new tp->host_port */
@@ -298,11 +269,27 @@ const char *test_port_use_host(test_port_t *tp, const char *host) {
   return tp->host_port;
 }
 
-/* Create a test_port_t  */
+/* Create a socket and bind(INADDR_LOOPBACK:0) to get a free port.
+   Use SO_REUSEADDR so other processes can bind and listen on this port.
+   Use host to create the host_port address string.
+*/
 test_port_t test_port(const char* host) {
   test_port_t tp = {0};
-  tp.sock = sock_bind0();
-  tp.port = sock_port(tp.sock);
+  tp.sock = socket(AF_INET, SOCK_STREAM, 0);
+  TEST_ASSERT_ERRNO(tp.sock >= 0, errno);
+  int on = 1;
+  int err = setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
+  TEST_ASSERT_ERRNO(!err, errno);
+  struct sockaddr_in addr = {0};
+  addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  addr.sin_port = 0;            /* bind to port 0 */
+  err = bind(tp.sock, (struct sockaddr*)&addr, sizeof(addr));
+  TEST_ASSERT_ERRNO(!err, errno);
+  socklen_t len = sizeof(addr);
+  err = getsockname(tp.sock, (struct sockaddr*)&addr, &len); /* Get the bound port */
+  TEST_ASSERT_ERRNO(!err, errno);
+  tp.port = addr.sin_port;
   snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
   test_port_use_host(&tp, host);
   return tp;
