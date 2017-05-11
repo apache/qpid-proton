@@ -34,8 +34,10 @@ class Broker(object):
         self.test = test
 
     def __enter__(self):
-        with TestPort() as port:
-            self.port = port
+        with TestPort() as tp:
+            self.port = tp.port
+            self.host = tp.host
+            self.addr = tp.addr
             self.proc = self.test.proc(["broker", "", self.port])
             self.proc.wait_re("listening")
             return self
@@ -53,34 +55,33 @@ class CExampleTest(ExampleTestCase):
         """Send first then receive"""
         with Broker(self) as b:
             s = self.proc(["send", "", b.port])
-            self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
+            self.assertEqual("10 messages sent and acknowledged\n", s.wait_exit())
             r = self.proc(["receive", "", b.port])
-            self.assertEqual(receive_expect(10), r.wait_out())
+            self.assertEqual(receive_expect(10), r.wait_exit())
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
         with Broker(self) as b:
             r = self.proc(["receive", "", b.port]);
             s = self.proc(["send", "", b.port]);
-            self.assertEqual("10 messages sent and acknowledged\n", s.wait_out())
-            self.assertEqual(receive_expect(10), r.wait_out())
+            self.assertEqual("10 messages sent and acknowledged\n", s.wait_exit())
+            self.assertEqual(receive_expect(10), r.wait_exit())
 
     def test_send_direct(self):
         """Send to direct server"""
-        with TestPort() as port:
-            d = self.proc(["direct", "", port])
+        with TestPort() as tp:
+            d = self.proc(["direct", "", tp.port])
             d.wait_re("listening")
-            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", "", port]).wait_out())
-            self.assertIn(receive_expect(10), d.wait_out())
+            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", "", tp.port]).wait_exit())
+            self.assertIn(receive_expect(10), d.wait_exit())
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        with TestPort() as port:
-            addr = "127.0.0.1:%s" % port
-            d = self.proc(["direct", "", port])
+        with TestPort() as tp:
+            d = self.proc(["direct", "", tp.port])
             d.wait_re("listening")
-            self.assertEqual(receive_expect(10), self.proc(["receive", "", port]).wait_out())
-            self.assertIn("10 messages sent and acknowledged\n", d.wait_out())
+            self.assertEqual(receive_expect(10), self.proc(["receive", "", tp.port]).wait_exit())
+            self.assertIn("10 messages sent and acknowledged\n", d.wait_exit())
 
 
 if __name__ == "__main__":

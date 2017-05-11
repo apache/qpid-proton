@@ -36,11 +36,12 @@ class TestPort(object):
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('', 0))
-        self.port = socket.getnameinfo(self.sock.getsockname(), 0)[1]
+        self.sock.bind(('127.0.0.1', 0)) # Testing exampless is local only
+        self.host, self.port = socket.getnameinfo(self.sock.getsockname(), 0)
+        self.addr = "%s:%s" % (self.host, self.port)
 
     def __enter__(self):
-        return self.port
+        return self
 
     def __exit__(self, *args):
         self.close()
@@ -57,32 +58,36 @@ class ProcError(Exception):
         else:
             out = ", no output)"
         super(Exception, self, ).__init__(
-            "%s %s, code=%s%s" % (proc.args, what, proc.returncode, out))
+            "%s %s, code=%s%s" % (proc.args, what, getattr(proc, 'returncode', 'noreturn'), out))
 
 class NotFoundError(ProcError):
     pass
 
 class Proc(Popen):
-    """A example process that stores its output, optionally run with valgrind."""
+    """A example process that stores its stdout and can scan it for a 'ready' pattern'"""
 
     if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
-        env_args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet", "--leak-check=full"]
+        vg_args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet", "--leak-check=full"]
     else:
-        env_args = []
+        vg_args = []
 
     @property
     def out(self):
         self._out.seek(0)
-        return self._out.read()
+        # Normalize line endings, os.tmpfile() opens in binary mode.
+        return self._out.read().replace('\r\n','\n').replace('\r','\n')
 
-    def __init__(self, args, **kwargs):
+    def __init__(self, args, skip_valgrind=False, **kwargs):
         """Start an example process"""
         args = list(args)
-        self.args = args
+        if skip_valgrind:
+            self.args = args
+        else:
+            self.args = self.vg_args + args
         self.kwargs = kwargs
         self._out = os.tmpfile()
         try:
-            Popen.__init__(self, self.env_args + self.args, stdout=self._out, stderr=STDOUT, **kwargs)
+            Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
         except OSError, e:
             if e.errno == errno.ENOENT:
                 raise NotFoundError(self, str(e))
@@ -98,7 +103,7 @@ class Proc(Popen):
             pass                # Already exited.
         return self.out
 
-    def wait_out(self, timeout=DEFAULT_TIMEOUT, expect=0):
+    def wait_exit(self, timeout=DEFAULT_TIMEOUT, expect=0):
         """Wait for process to exit, return output. Raise ProcError  on failure."""
         t = threading.Thread(target=self.wait)
         t.start()
@@ -124,29 +129,46 @@ class Proc(Popen):
             time.sleep(0.01)    # Not very efficient
         raise ProcError(self, "gave up waiting for '%s' after %ss" % (regexp, timeout))
 
-# Work-around older python unittest that lacks setUpClass.
-if hasattr(unittest.TestCase, 'setUpClass') and  hasattr(unittest.TestCase, 'tearDownClass'):
-    TestCase = unittest.TestCase
-else:
-    class TestCase(unittest.TestCase):
-        """
-        Roughly provides setUpClass and tearDownClass functionality for older python
-        versions in our test scenarios. If subclasses override setUp or tearDown
-        they *must* call the superclass.
-        """
+def _tc_missing(attr):
+    return not hasattr(unittest.TestCase, attr)
+
+class TestCase(unittest.TestCase):
+    """
+    Roughly provides setUpClass() and tearDownClass() and other features missing
+    in python 2.6. If subclasses override setUp() or tearDown() they *must*
+    call the superclass.
+    """
+
+    if _tc_missing('setUpClass') and _tc_missing('tearDownClass'):
+
+        @classmethod
+        def setUpClass(cls):
+            pass
+
+        @classmethod
+        def tearDownClass(cls):
+            pass
+
         def setUp(self):
-            if not hasattr(type(self), '_setup_class_count'):
-                type(self)._setup_class_count = len(
-                    inspect.getmembers(
-                        type(self),
-                        predicate=lambda(m): inspect.ismethod(m) and m.__name__.startswith('test_')))
-                type(self).setUpClass()
+            super(TestCase, self).setUp()
+            cls = type(self)
+            if not hasattr(cls, '_setup_class_count'): # First time
+                def is_test(m):
+                    return inspect.ismethod(m) and m.__name__.startswith('test_')
+                cls._setup_class_count = len(inspect.getmembers(cls, predicate=is_test))
+                cls.setUpClass()
 
         def tearDown(self):
             self.assertTrue(self._setup_class_count > 0)
             self._setup_class_count -=  1
             if self._setup_class_count == 0:
                 type(self).tearDownClass()
+            super(TestCase, self).tearDown()
+
+    if _tc_missing('assertIn'):
+
+        def assertIn(self, a, b):
+            self.assertTrue(a in b, "%r not in %r" % (a, b))
 
 class ExampleTestCase(TestCase):
     """TestCase that manages started processes"""
