@@ -210,6 +210,20 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         self.maxDiff = None
         self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
 
+    def test_scheduled_send_03(self):
+        # Output should be a bunch of "send" lines but can't guarantee exactly how many.
+        out = self.proc(["scheduled_send_03", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+        self.assertTrue(len(out) > 0);
+        self.assertEqual(["send"]*len(out), out)
+
+    def test_scheduled_send(self):
+        try:
+            out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+            self.assertTrue(len(out) > 0);
+            self.assertEqual(["send"]*len(out), out)
+        except ProcError:       # File not found, not a C++11 build.
+            pass
+
 
 class ContainerExampleSSLTest(BrokerTestCase):
     """Run the SSL container examples, verify they behave as expected."""
@@ -272,66 +286,6 @@ Hello World!
             out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()], skip_valgrind=True).wait_exit()
             expect_found = (out.find(expect) >= 0)
             self.assertEqual(expect_found, True)
-
-    def test_scheduled_send_03(self):
-        # Output should be a bunch of "send" lines but can't guarantee exactly how many.
-        out = self.proc(["scheduled_send_03", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
-        self.assertTrue(len(out) > 0);
-        self.assertEqual(["send"]*len(out), out)
-
-    def test_scheduled_send(self):
-        try:
-            out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
-            self.assertTrue(len(out) > 0);
-            self.assertEqual(["send"]*len(out), out)
-        except ProcError:       # File not found, not a C++11 build.
-            pass
-
-
-class EngineTestCase(BrokerTestCase):
-    """Run selected clients to test a connction_engine broker."""
-
-    def test_helloworld(self):
-        self.assertEqual('Hello World!\n',
-                         self.proc(["helloworld", self.addr]).wait_exit())
-
-    def test_simple_send_recv(self):
-        self.assertEqual("all messages confirmed\n",
-                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
-
-    def test_simple_recv_send(self):
-        # Start receiver first, then run sender"""
-        recv = self.proc(["simple_recv", "-a", self.addr])
-        self.assertEqual("all messages confirmed\n", self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
-
-
-    def test_simple_send_direct_recv(self):
-        with TestPort() as tp:
-            addr = "%s/examples" % tp.addr
-            recv = self.proc(["direct_recv", "-a", addr], "listening")
-            self.assertEqual("all messages confirmed\n",
-                             self.proc(["simple_send", "-a", addr]).wait_exit())
-            self.assertEqual(recv_expect("direct_recv", addr), recv.wait_exit())
-
-    def test_simple_recv_direct_send(self):
-        with TestPort() as tp:
-            addr = "%s/examples" % tp.addr
-            send = self.proc(["direct_send", "-a", tp.addr], "listening")
-            self.assertEqual(recv_expect("simple_recv", addr),
-                             self.proc(["simple_recv", "-a", addr]).wait_exit())
-            self.assertEqual("direct_send listening on %s\nall messages confirmed\n" % addr,
-                             send.wait_exit())
-
-    def test_request_response(self):
-        server = self.proc(["server", "-a", self.addr], "connected")
-        self.assertEqual(CLIENT_EXPECT,
-                         self.proc(["client", "-a", self.addr]).wait_exit())
-
-
-class MtBrokerTest(EngineTestCase):
-    broker_exe = "mt_broker"
 
 if __name__ == "__main__":
     unittest.main()
