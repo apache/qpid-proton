@@ -34,7 +34,7 @@
 /// with -D on the compile line.
 
 #ifndef PN_CPP_HAS_CPP11
-#if defined(__cplusplus) && __cplusplus >= 201100
+#if defined(__cplusplus) && __cplusplus >= 201103
 #define PN_CPP_HAS_CPP11 1
 #else
 #define PN_CPP_HAS_CPP11 0
