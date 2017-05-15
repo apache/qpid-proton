@@ -206,15 +206,11 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
-    /// Schedule a function to be called after the duration.  C++03
-    /// compatible, for C++11 use schedule(duration,
-    /// std::function<void()>)
-    PN_CPP_EXTERN void schedule(duration, void_function0&);
-
-#if PN_CPP_HAS_STD_FUNCTION
-    /// Schedule a function to be called after the duration
-    PN_CPP_EXTERN void schedule(duration, std::function<void()>);
-#endif
+    /// Schedule a piece of work to happen after the duration:
+    /// The piece of work can be created from a function object.
+    /// for C++11 and on use a std::function<void()> type; for
+    /// C++03 compatibility you can use void_function0&
+    PN_CPP_EXTERN void schedule(duration, work);
 
   private:
     class impl;

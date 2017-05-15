@@ -47,11 +47,7 @@ class container::impl::common_work_queue : public work_queue::impl {
   public:
     common_work_queue(): finished_(false) {}
 
-#if PN_CPP_HAS_STD_FUNCTION
-    typedef std::vector<std::function<void()> > jobs;
-#else
-    typedef std::vector<void_function0*> jobs;
-#endif
+    typedef std::vector<work> jobs;
 
     void run_all_jobs();
     void finished() { finished_ = true; }
@@ -60,100 +56,53 @@ class container::impl::common_work_queue : public work_queue::impl {
     bool finished_;
 };
 
-#if PN_CPP_HAS_STD_FUNCTION
 void container::impl::common_work_queue::run_all_jobs() {
-    decltype(jobs_) j;
-    {
-        std::swap(j, jobs_);
-    }
+    jobs j;
+    // Lock this operation for mt
+    std::swap(j, jobs_);
     // Run queued work, but ignore any exceptions
-    for (auto& f : j) try {
-        f();
+    for (jobs::iterator f = j.begin(); f != j.end(); ++f) try {
+        (*f)();
     } catch (...) {};
-}
-#else
-void container::impl::common_work_queue::run_all_jobs() {
-    // Run queued work, but ignore any exceptions
-    for (jobs::iterator f = jobs_.begin(); f != jobs_.end(); ++f) try {
-        (**f)();
-    } catch (...) {};
-    jobs_.clear();
     return;
 }
-#endif
 
 class container::impl::connection_work_queue : public common_work_queue {
   public:
     connection_work_queue(pn_connection_t* c): connection_(c) {}
 
-    bool inject(void_function0& f);
-#if PN_CPP_HAS_STD_FUNCTION
-    bool inject(std::function<void()> f);
-#endif
+    bool add(work f);
 
     pn_connection_t* connection_;
 };
 
-#if PN_CPP_HAS_STD_FUNCTION
-bool container::impl::connection_work_queue::inject(std::function<void()> f) {
+bool container::impl::connection_work_queue::add(work f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
-    jobs_.emplace_back(std::move(f));
+    jobs_.push_back(f);
     pn_connection_wake(connection_);
     return true;
 }
-
-bool container::impl::connection_work_queue::inject(proton::void_function0& f) {
-    return inject([&f]() { f(); });
-}
-#else
-bool container::impl::connection_work_queue::inject(proton::void_function0& f) {
-    // Note this is an unbounded work queue.
-    // A resource-safe implementation should be bounded.
-    if (finished_) return false;
-    jobs_.push_back(&f);
-    pn_connection_wake(connection_);
-    return true;
-}
-#endif
 
 class container::impl::container_work_queue : public common_work_queue {
   public:
     container_work_queue(container::impl& c): container_(c) {}
     ~container_work_queue() { container_.remove_work_queue(this); }
 
-    bool inject(void_function0& f);
-#if PN_CPP_HAS_STD_FUNCTION
-    bool inject(std::function<void()> f);
-#endif
+    bool add(work f);
 
     container::impl& container_;
 };
 
-#if PN_CPP_HAS_STD_FUNCTION
-bool container::impl::container_work_queue::inject(std::function<void()> f) {
+bool container::impl::container_work_queue::add(work f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
-    jobs_.emplace_back(std::move(f));
+    jobs_.push_back(f);
     pn_proactor_set_timeout(container_.proactor_, 0);
     return true;
 }
-
-bool container::impl::container_work_queue::inject(proton::void_function0& f) {
-    return inject([&f]() { f(); });
-}
-#else
-bool container::impl::container_work_queue::inject(proton::void_function0& f) {
-    // Note this is an unbounded work queue.
-    // A resource-safe implementation should be bounded.
-    if (finished_) return false;
-    jobs_.push_back(&f);
-    pn_proactor_set_timeout(container_.proactor_, 0);
-    return true;
-}
-#endif
 
 class work_queue::impl* container::impl::make_work_queue(container& c) {
     return c.impl_->add_work_queue();
@@ -277,32 +226,18 @@ proton::listener container::impl::listen(const std::string& addr, proton::listen
     return proton::listener(listener);
 }
 
-#if PN_CPP_HAS_STD_FUNCTION
-void container::impl::schedule(duration delay, void_function0& f) {
-    schedule(delay, [&f](){ f(); } );
-}
-
-void container::impl::schedule(duration delay, std::function<void()> f) {
-    // Set timeout
-    pn_proactor_set_timeout(proactor_, delay.milliseconds());
+void container::impl::schedule(duration delay, work f) {
+    timestamp now = timestamp::now();
 
     // Record timeout; Add callback to timeout sorted list
-    deferred_.emplace_back(scheduled{timestamp::now()+delay, f});
-    std::push_heap(deferred_.begin(), deferred_.end());
-}
-#else
-void container::impl::scheduled::task() {(*task_)();}
-
-void container::impl::schedule(duration delay, void_function0& f) {
-    // Set timeout
-    pn_proactor_set_timeout(proactor_, delay.milliseconds());
-
-    // Record timeout; Add callback to timeout sorted list
-    scheduled s = {timestamp::now()+delay, &f};
+    scheduled s = {now+delay, f};
     deferred_.push_back(s);
     std::push_heap(deferred_.begin(), deferred_.end());
+
+    // Set timeout for current head of timeout queue
+    scheduled* next = &deferred_.front();
+    pn_proactor_set_timeout(proactor_, (next->time-now).milliseconds());
 }
-#endif
 
 void container::impl::client_connection_options(const connection_options &opts) {
     client_connection_options_ = opts;
