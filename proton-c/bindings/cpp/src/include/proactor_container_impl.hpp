@@ -73,10 +73,7 @@ class container::impl {
     void run();
     void stop(const error_condition& err);
     void auto_stop(bool set);
-    void schedule(duration, void_function0&);
-#if PN_CPP_HAS_STD_FUNCTION
-    void schedule(duration, std::function<void()>);
-#endif
+    void schedule(duration, work);
     template <class T> static void set_handler(T s, messaging_handler* h);
     template <class T> static messaging_handler* get_handler(T s);
     static work_queue::impl* make_work_queue(container&);
@@ -101,12 +98,7 @@ class container::impl {
     void remove_work_queue(container_work_queue*);
     struct scheduled {
         timestamp time; // duration from epoch for task
-#if PN_CPP_HAS_STD_FUNCTION
-        std::function<void()>  task;
-#else
-        void_function0* task_;
-        void task();
-#endif
+        work task;
 
         // We want to get to get the *earliest* first so test is "reversed"
         bool operator < (const scheduled& r) { return  r.time < time; }
