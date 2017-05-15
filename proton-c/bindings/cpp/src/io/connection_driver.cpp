@@ -20,10 +20,10 @@
 #include "proton/io/connection_driver.hpp"
 
 #include "proton/container.hpp"
-#include "proton/event_loop.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/uuid.hpp"
+#include "proton/work_queue.hpp"
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"

@@ -25,10 +25,10 @@
 #include "./fwd.hpp"
 #include "./internal/config.hpp"
 #include "./connection.hpp"
-#include "./event_loop.hpp"
 #include "./function.hpp"
 #include "./internal/object.hpp"
 #include "./internal/type_traits.hpp"
+#include "./work_queue.hpp"
 
 #include <functional>
 
@@ -76,11 +76,11 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
 
     ~thread_safe() {
         if (ptr()) {
-            if (!!event_loop()) {
+            if (!!work_queue()) {
 #if PN_CPP_HAS_STD_BIND
-                event_loop().inject(std::bind(&decref, ptr()));
+                work_queue().add(std::bind(&decref, ptr()));
 #else
-                event_loop().inject(*new inject_decref(ptr()));
+                work_queue().add(*new inject_decref(ptr()));
 #endif
             } else {
                 decref(ptr());
@@ -88,8 +88,8 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
         }
     }
 
-    /// Get the event loop for this object.
-    class event_loop& event_loop() { return event_loop::get(ptr()); }
+    /// Get the work queue for this object.
+    class work_queue& work_queue() { return work_queue::get(ptr()); }
 
     /// Get the thread-unsafe proton object wrapped by this thread_safe<T>
     T unsafe() { return T(ptr()); }

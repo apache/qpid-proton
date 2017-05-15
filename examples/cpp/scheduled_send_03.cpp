@@ -25,13 +25,13 @@
 #include <proton/connection.hpp>
 #include <proton/default_container.hpp>
 #include <proton/duration.hpp>
-#include <proton/event_loop.hpp>
 #include <proton/function.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender.hpp>
 #include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
+#include <proton/work_queue.hpp>
 
 #include <iostream>
 
@@ -43,7 +43,7 @@ class scheduled_sender : public proton::messaging_handler {
   private:
     std::string url;
     proton::duration interval, timeout;
-    proton::event_loop *event_loop;
+    proton::work_queue *work_queue;
     bool ready, canceled;
 
     struct cancel_fn : public proton::void_function0 {
@@ -65,13 +65,13 @@ class scheduled_sender : public proton::messaging_handler {
     struct defer_cancel_fn : public proton::void_function0 {
         scheduled_sender& parent;
         defer_cancel_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.event_loop->inject(parent.do_cancel); }
+        void operator()() { parent.work_queue->add(parent.do_cancel); }
     };
 
     struct defer_tick_fn : public proton::void_function0 {
         scheduled_sender& parent;
         defer_tick_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.event_loop->inject(parent.do_tick); }
+        void operator()() { parent.work_queue->add(parent.do_tick); }
     };
 
     tick_fn do_tick;
@@ -96,7 +96,7 @@ class scheduled_sender : public proton::messaging_handler {
     }
 
     void on_sender_open(proton::sender & s) OVERRIDE {
-        event_loop = &proton::make_thread_safe(s).get()->event_loop();
+        work_queue = &proton::make_thread_safe(s).get()->work_queue();
 
         do_cancel = cancel_fn(*this, s);
         do_tick = tick_fn(*this, s);

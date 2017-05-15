@@ -40,7 +40,7 @@
 
 namespace proton {
 
-class event_loop;
+class work_queue;
 class proton_handler;
 
 namespace io {
