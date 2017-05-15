@@ -135,25 +135,25 @@ struct work3 : public proton::void_function0 {
 template <class T>
 void defer(T* t, void (T::*f)()) {
     work0<T>* w = new work0<T>(*t, f);
-    t->inject(*w);
+    t->add(*w);
 }
 
 template <class T, class A>
 void defer(T* t, void (T::*f)(A), A a) {
     work1<T, A>* w = new work1<T, A>(*t, f, a);
-    t->inject(*w);
+    t->add(*w);
 }
 
 template <class T, class A, class B>
 void defer(T* t, void (T::*f)(A, B), A a, B b) {
     work2<T, A, B>* w = new work2<T, A, B>(*t, f, a, b);
-    t->inject(*w);
+    t->add(*w);
 }
 
 template <class T, class A, class B, class C>
 void defer(T* t, void (T::*f)(A, B, C), A a, B b, C c) {
     work3<T, A, B, C>* w = new work3<T, A, B, C>(*t, f, a, b, c);
-    t->inject(*w);
+    t->add(*w);
 }
 
 class Queue;
@@ -162,18 +162,18 @@ class Sender {
     friend class connection_handler;
 
     proton::sender sender_;
-    proton::event_loop& event_loop_;
+    proton::work_queue& work_queue_;
     std::string queue_name_;
     Queue* queue_;
     int pending_credit_;
 
 public:
     Sender(proton::sender s) :
-        sender_(s), event_loop_(make_thread_safe(s).get()->event_loop()), queue_(0), pending_credit_(0)
+        sender_(s), work_queue_(make_thread_safe(s).get()->work_queue()), queue_(0), pending_credit_(0)
     {}
 
-    void inject(proton::void_function0& f) {
-        event_loop_.inject(f);
+    void add(proton::void_function0& f) {
+        work_queue_.add(f);
     }
 
 
@@ -190,7 +190,7 @@ public:
 
 // Queue - round robin subscriptions
 class Queue {
-    proton::event_loop event_loop_;
+    proton::work_queue work_queue_;
     const std::string name_;
     std::deque<proton::message> messages_;
     typedef std::map<Sender*, int> subscriptions; // With credit
@@ -225,11 +225,11 @@ class Queue {
 
 public:
     Queue(proton::container& c, const std::string& n) :
-        event_loop_(c), name_(n), current_(subscriptions_.end())
+        work_queue_(c), name_(n), current_(subscriptions_.end())
     {}
 
-    void inject(proton::void_function0& f) {
-        event_loop_.inject(f);
+    void add(proton::void_function0& f) {
+        work_queue_.add(f);
     }
 
     void queueMsg(proton::message m) {
@@ -272,7 +272,7 @@ class Receiver {
     friend class connection_handler;
 
     proton::receiver receiver_;
-    proton::event_loop& event_loop_;
+    proton::work_queue& work_queue_;
     Queue* queue_;
     std::deque<proton::message> messages_;
 
@@ -286,11 +286,11 @@ class Receiver {
 
 public:
     Receiver(proton::receiver r) :
-        receiver_(r), event_loop_(make_thread_safe(r).get()->event_loop()), queue_(0)
+        receiver_(r), work_queue_(make_thread_safe(r).get()->work_queue()), queue_(0)
     {}
 
-    void inject(proton::void_function0& f) {
-        event_loop_.inject(f);
+    void add(proton::void_function0& f) {
+        work_queue_.add(f);
     }
 
     void boundQueue(Queue* q, std::string qn) {
@@ -305,18 +305,18 @@ public:
 
 class QueueManager {
     proton::container& container_;
-    proton::event_loop event_loop_;
+    proton::work_queue work_queue_;
     typedef std::map<std::string, Queue*> queues;
     queues queues_;
     int next_id_; // Use to generate unique queue IDs.
 
 public:
     QueueManager(proton::container& c) :
-        container_(c), event_loop_(c), next_id_(0)
+        container_(c), work_queue_(c), next_id_(0)
     {}
 
-    void inject(proton::void_function0& f) {
-        event_loop_.inject(f);
+    void add(proton::void_function0& f) {
+        work_queue_.add(f);
     }
 
     template <class T>

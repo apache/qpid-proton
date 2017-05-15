@@ -22,7 +22,7 @@
  *
  */
 
-#include "proton/event_loop.hpp"
+#include "proton/work_queue.hpp"
 #include "proton/message.hpp"
 #include "proton/internal/pn_unique_ptr.hpp"
 
@@ -92,7 +92,7 @@ class connection_context : public context {
     messaging_handler* handler;
     internal::pn_unique_ptr<reconnect_timer> reconnect;
     listener_context* listener_context_;
-    event_loop event_loop_;
+    work_queue work_queue_;
 };
 
 class listener_context : public context {

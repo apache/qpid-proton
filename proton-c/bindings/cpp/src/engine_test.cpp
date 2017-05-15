@@ -252,7 +252,7 @@ void test_no_container() {
         FAIL("expected error");
     } catch (proton::error) {}
     ASSERT(make_thread_safe<connection>(e.connection()).get());
-    ASSERT(!make_thread_safe<connection>(e.connection()).get()->event_loop());
+    ASSERT(!make_thread_safe<connection>(e.connection()).get()->work_queue());
 }
 
 }

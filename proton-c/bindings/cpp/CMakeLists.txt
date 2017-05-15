@@ -44,7 +44,6 @@ set(qpid-proton-cpp-source
   src/endpoint.cpp
   src/error.cpp
   src/error_condition.cpp
-  src/event_loop.cpp
   src/handler.cpp
   src/io/connection_driver.cpp
   src/io/link_namer.cpp
@@ -77,6 +76,7 @@ set(qpid-proton-cpp-source
   src/url.cpp
   src/uuid.cpp
   src/value.cpp
+  src/work_queue.cpp
   )
 
 set_source_files_properties (

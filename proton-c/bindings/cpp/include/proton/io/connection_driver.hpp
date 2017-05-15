@@ -40,7 +40,7 @@
 
 namespace proton {
 
-class event_loop;
+class work_queue;
 class proton_handler;
 
 namespace io {
@@ -114,7 +114,7 @@ PN_CPP_CLASS_EXTERN connection_driver {
     PN_CPP_EXTERN connection_driver(proton::container&);
 #if PN_CPP_HAS_RVALUE_REFERENCES
     /// @copydoc connection_driver()
-    PN_CPP_EXTERN connection_driver(proton::container&, event_loop&& loop);
+    PN_CPP_EXTERN connection_driver(proton::container&, work_queue&& loop);
 #endif
 
     PN_CPP_EXTERN ~connection_driver();

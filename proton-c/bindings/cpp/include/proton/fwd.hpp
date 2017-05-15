@@ -31,7 +31,7 @@ class container;
 class delivery;
 class error_condition;
 class event;
-class event_loop;
+class work_queue;
 class message;
 class message_id;
 class messaging_handler;

@@ -20,10 +20,10 @@
 #include "proton/io/connection_driver.hpp"
 
 #include "proton/container.hpp"
-#include "proton/event_loop.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/uuid.hpp"
+#include "proton/work_queue.hpp"
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
@@ -56,11 +56,11 @@ connection_driver::connection_driver(class container& cont) : handler_(0), conta
 }
 
 #if PN_CPP_HAS_RVALUE_REFERENCES
-connection_driver::connection_driver(class container& cont, event_loop&& loop) : handler_(0), container_(&cont) {
+connection_driver::connection_driver(class container& cont, work_queue&& loop) : handler_(0), container_(&cont) {
     init();
     connection_context& ctx = connection_context::get(unwrap(connection()));
     ctx.container = container_;
-    ctx.event_loop_ = loop.impl_.get();
+    ctx.work_queue_ = loop.impl_.get();
 }
 #endif
 
