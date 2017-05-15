@@ -1,5 +1,5 @@
-#ifndef PROTON_EVENT_LOOP_HPP
-#define PROTON_EVENT_LOOP_HPP
+#ifndef PROTON_WORK_QUEUE_HPP
+#define PROTON_WORK_QUEUE_HPP
 
 /*
  *
@@ -41,18 +41,18 @@ namespace proton {
 /// The connection's @ref event_loop allows you to "inject" extra work from any thread,
 /// and have it executed in the same sequence.
 ///
-class PN_CPP_CLASS_EXTERN event_loop {
+class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond internal
     class impl;
-    event_loop& operator=(impl* i);
+    work_queue& operator=(impl* i);
     /// @endcond
 
   public:
     /// Create event_loop
-    PN_CPP_EXTERN event_loop();
-    PN_CPP_EXTERN event_loop(container&);
+    PN_CPP_EXTERN work_queue();
+    PN_CPP_EXTERN work_queue(container&);
 
-    PN_CPP_EXTERN ~event_loop();
+    PN_CPP_EXTERN ~work_queue();
 
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
     /// When using C++11 (or later) you can use event_loop in a bool context
@@ -68,17 +68,17 @@ class PN_CPP_CLASS_EXTERN event_loop {
     ///
     /// @return true if f() has or will be called, false if the event_loop is ended
     /// and f() cannot be injected.
-    PN_CPP_EXTERN bool inject(void_function0& f);
+    PN_CPP_EXTERN bool add(void_function0& f);
 
 #if PN_CPP_HAS_STD_FUNCTION
     /// @copydoc inject(void_function0&)
-    PN_CPP_EXTERN bool inject(std::function<void()> f);
+    PN_CPP_EXTERN bool add(std::function<void()> f);
 #endif
 
   private:
-    PN_CPP_EXTERN static event_loop& get(pn_connection_t*);
-    PN_CPP_EXTERN static event_loop& get(pn_session_t*);
-    PN_CPP_EXTERN static event_loop& get(pn_link_t*);
+    PN_CPP_EXTERN static work_queue& get(pn_connection_t*);
+    PN_CPP_EXTERN static work_queue& get(pn_session_t*);
+    PN_CPP_EXTERN static work_queue& get(pn_link_t*);
 
     internal::pn_unique_ptr<impl> impl_;
 
@@ -91,4 +91,4 @@ class PN_CPP_CLASS_EXTERN event_loop {
 
 } // proton
 
-#endif // PROTON_EVENT_LOOP_HPP
+#endif // PROTON_WORK_QUEUE_HPP

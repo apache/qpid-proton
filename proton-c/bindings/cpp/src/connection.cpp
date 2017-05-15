@@ -25,12 +25,12 @@
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/error.hpp"
-#include "proton/event_loop.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session.hpp"
 #include "proton/session_options.hpp"
 #include "proton/transport.hpp"
+#include "proton/work_queue.hpp"
 
 #include "contexts.hpp"
 #include "msg.hpp"

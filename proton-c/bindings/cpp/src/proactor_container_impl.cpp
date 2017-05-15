@@ -18,7 +18,7 @@
  */
 
 #include "proactor_container_impl.hpp"
-#include "proactor_event_loop_impl.hpp"
+#include "proactor_work_queue_impl.hpp"
 
 #include "proton/error_condition.hpp"
 #include "proton/function.hpp"
@@ -43,9 +43,9 @@
 
 namespace proton {
 
-class container::impl::common_event_loop : public event_loop::impl {
+class container::impl::common_work_queue : public work_queue::impl {
   public:
-    common_event_loop(): finished_(false) {}
+    common_work_queue(): finished_(false) {}
 
 #if PN_CPP_HAS_STD_FUNCTION
     typedef std::vector<std::function<void()> > jobs;
@@ -61,7 +61,7 @@ class container::impl::common_event_loop : public event_loop::impl {
 };
 
 #if PN_CPP_HAS_STD_FUNCTION
-void container::impl::common_event_loop::run_all_jobs() {
+void container::impl::common_work_queue::run_all_jobs() {
     decltype(jobs_) j;
     {
         std::swap(j, jobs_);
@@ -72,7 +72,7 @@ void container::impl::common_event_loop::run_all_jobs() {
     } catch (...) {};
 }
 #else
-void container::impl::common_event_loop::run_all_jobs() {
+void container::impl::common_work_queue::run_all_jobs() {
     // Run queued work, but ignore any exceptions
     for (jobs::iterator f = jobs_.begin(); f != jobs_.end(); ++f) try {
         (**f)();
@@ -82,9 +82,9 @@ void container::impl::common_event_loop::run_all_jobs() {
 }
 #endif
 
-class container::impl::connection_event_loop : public common_event_loop {
+class container::impl::connection_work_queue : public common_work_queue {
   public:
-    connection_event_loop(pn_connection_t* c): connection_(c) {}
+    connection_work_queue(pn_connection_t* c): connection_(c) {}
 
     bool inject(void_function0& f);
 #if PN_CPP_HAS_STD_FUNCTION
@@ -95,7 +95,7 @@ class container::impl::connection_event_loop : public common_event_loop {
 };
 
 #if PN_CPP_HAS_STD_FUNCTION
-bool container::impl::connection_event_loop::inject(std::function<void()> f) {
+bool container::impl::connection_work_queue::inject(std::function<void()> f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
@@ -104,11 +104,11 @@ bool container::impl::connection_event_loop::inject(std::function<void()> f) {
     return true;
 }
 
-bool container::impl::connection_event_loop::inject(proton::void_function0& f) {
+bool container::impl::connection_work_queue::inject(proton::void_function0& f) {
     return inject([&f]() { f(); });
 }
 #else
-bool container::impl::connection_event_loop::inject(proton::void_function0& f) {
+bool container::impl::connection_work_queue::inject(proton::void_function0& f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
@@ -118,10 +118,10 @@ bool container::impl::connection_event_loop::inject(proton::void_function0& f) {
 }
 #endif
 
-class container::impl::container_event_loop : public common_event_loop {
+class container::impl::container_work_queue : public common_work_queue {
   public:
-    container_event_loop(container::impl& c): container_(c) {}
-    ~container_event_loop() { container_.remove_event_loop(this); }
+    container_work_queue(container::impl& c): container_(c) {}
+    ~container_work_queue() { container_.remove_work_queue(this); }
 
     bool inject(void_function0& f);
 #if PN_CPP_HAS_STD_FUNCTION
@@ -132,7 +132,7 @@ class container::impl::container_event_loop : public common_event_loop {
 };
 
 #if PN_CPP_HAS_STD_FUNCTION
-bool container::impl::container_event_loop::inject(std::function<void()> f) {
+bool container::impl::container_work_queue::inject(std::function<void()> f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
@@ -141,11 +141,11 @@ bool container::impl::container_event_loop::inject(std::function<void()> f) {
     return true;
 }
 
-bool container::impl::container_event_loop::inject(proton::void_function0& f) {
+bool container::impl::container_work_queue::inject(proton::void_function0& f) {
     return inject([&f]() { f(); });
 }
 #else
-bool container::impl::container_event_loop::inject(proton::void_function0& f) {
+bool container::impl::container_work_queue::inject(proton::void_function0& f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return false;
@@ -155,8 +155,8 @@ bool container::impl::container_event_loop::inject(proton::void_function0& f) {
 }
 #endif
 
-class event_loop::impl* container::impl::make_event_loop(container& c) {
-    return c.impl_->add_event_loop();
+class work_queue::impl* container::impl::make_work_queue(container& c) {
+    return c.impl_->add_work_queue();
 }
 
 container::impl::impl(container& c, const std::string& id, messaging_handler* mh)
@@ -172,14 +172,14 @@ container::impl::~impl() {
     pn_proactor_free(proactor_);
 }
 
-container::impl::container_event_loop* container::impl::add_event_loop() {
-    container_event_loop* c = new container_event_loop(*this);
-    event_loops_.insert(c);
+container::impl::container_work_queue* container::impl::add_work_queue() {
+    container_work_queue* c = new container_work_queue(*this);
+    work_queues_.insert(c);
     return c;
 }
 
-void container::impl::remove_event_loop(container::impl::container_event_loop* l) {
-    event_loops_.erase(l);
+void container::impl::remove_work_queue(container::impl::container_work_queue* l) {
+    work_queues_.erase(l);
 }
 
 proton::connection container::impl::connect_common(
@@ -198,7 +198,7 @@ proton::connection container::impl::connect_common(
     connection_context& cc(connection_context::get(pnc));
     cc.container = &container_;
     cc.handler = mh;
-    cc.event_loop_ = new container::impl::connection_event_loop(pnc);
+    cc.work_queue_ = new container::impl::connection_work_queue(pnc);
 
     pn_connection_set_container(pnc, id_.c_str());
     pn_connection_set_hostname(pnc, url.host().c_str());
@@ -344,7 +344,7 @@ bool container::impl::handle(pn_event_t* event) {
     // If we have any pending connection work, do it now
     pn_connection_t* c = pn_event_connection(event);
     if (c) {
-        event_loop::impl* loop = connection_context::get(c).event_loop_.impl_.get();
+        work_queue::impl* loop = connection_context::get(c).work_queue_.impl_.get();
         loop->run_all_jobs();
     }
 
@@ -367,7 +367,7 @@ bool container::impl::handle(pn_event_t* event) {
         // Run every container event loop job
         // This is not at all efficient and single threads all these jobs, but it does correctly
         // serialise them
-        for (event_loops::iterator loop = event_loops_.begin(); loop!=event_loops_.end(); ++loop) {
+        for (work_queues::iterator loop = work_queues_.begin(); loop!=work_queues_.end(); ++loop) {
             (*loop)->run_all_jobs();
         }
         return false;
@@ -392,7 +392,7 @@ bool container::impl::handle(pn_event_t* event) {
         cc.container = &container_;
         cc.listener_context_ = &lc;
         cc.handler = opts.handler();
-        cc.event_loop_ = new container::impl::connection_event_loop(c);
+        cc.work_queue_ = new container::impl::connection_work_queue(c);
         pn_listener_accept(l, c);
         return false;
     }

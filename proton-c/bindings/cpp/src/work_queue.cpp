@@ -1,8 +1,4 @@
-#ifndef PROTON_CPP_EVENT_LOOP_IMPL_HPP
-#define PROTON_CPP_EVENT_LOOP_IMPL_HPP
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,25 +15,46 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 
-#include "proton/fwd.hpp"
-#include "proton/internal/config.hpp"
+#include "proton/work_queue.hpp"
+
+#include "contexts.hpp"
+#include "proactor_container_impl.hpp"
+#include "proactor_work_queue_impl.hpp"
+
+#include <proton/session.h>
+#include <proton/link.h>
 
 namespace proton {
 
-class event_loop::impl {
-  public:
-    virtual ~impl() {};
-    virtual bool inject(void_function0& f) = 0;
-#if PN_CPP_HAS_STD_FUNCTION
-    virtual bool inject(std::function<void()> f) = 0;
-#endif
-    virtual void run_all_jobs() = 0;
-    virtual void finished() = 0;
-};
+work_queue::work_queue() {}
+work_queue::work_queue(container& c) { *this = container::impl::make_work_queue(c); }
 
+work_queue::~work_queue() {}
+
+work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
+
+bool work_queue::add(void_function0& f) {
+    return impl_->inject(f);
 }
 
-#endif // PROTON_CPP_EVENT_LOOP_IMPL_HPP
+#if PN_CPP_HAS_STD_FUNCTION
+bool work_queue::add(std::function<void()> f) {
+    return impl_->inject(f);
+}
+#endif
+
+work_queue& work_queue::get(pn_connection_t* c) {
+    return connection_context::get(c).work_queue_;
+}
+
+work_queue& work_queue::get(pn_session_t* s) {
+    return get(pn_session_connection(s));
+}
+
+work_queue& work_queue::get(pn_link_t* l) {
+    return get(pn_link_session(l));
+}
+
+}
