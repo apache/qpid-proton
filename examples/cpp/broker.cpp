@@ -69,93 +69,6 @@
 // SendMsg(msg)   - From a Queue to a Connection (sender)
 // Unsubscribed() - From a Queue to a Connection (sender)
 
-// Utilities to make injecting member functions palatable in C++03
-template <class T>
-struct work0 : public proton::void_function0 {
-    T& holder_;
-    void (T::* fn_)();
-
-    work0(T& h, void (T::* a)()) :
-        holder_(h), fn_(a) {}
-
-    void operator()() OVERRIDE {
-        (holder_.*fn_)();
-        delete this;
-    }
-};
-
-template <class T, class A>
-struct work1 : public proton::void_function0 {
-    T& holder_;
-    void (T::* fn_)(A);
-    A a_;
-
-    work1(T& h, void (T::* t)(A), A a) :
-        holder_(h), fn_(t), a_(a) {}
-
-    void operator()() OVERRIDE {
-        (holder_.*fn_)(a_);
-        delete this;
-    }
-};
-
-template <class T, class A, class B>
-struct work2 : public proton::void_function0 {
-    T& holder_;
-    void (T::* fn_)(A, B);
-    A a_;
-    B b_;
-
-    work2(T& h, void (T::* t)(A, B), A a, B b) :
-        holder_(h), fn_(t), a_(a), b_(b) {}
-
-    void operator()() OVERRIDE {
-        (holder_.*fn_)(a_, b_);
-        delete this;
-    }
-};
-
-template <class T, class A, class B, class C>
-struct work3 : public proton::void_function0 {
-    T& holder_;
-    void (T::* fn_)(A, B, C);
-    A a_;
-    B b_;
-    C c_;
-
-    work3(T& h, void (T::* t)(A, B, C), A a, B b, C c) :
-        holder_(h), fn_(t), a_(a), b_(b), c_(c) {}
-
-    void operator()() OVERRIDE {
-        (holder_.*fn_)(a_, b_, c_);
-        delete this;
-    }
-};
-
-template <class T>
-void defer(T* t, void (T::*f)()) {
-    work0<T>* w = new work0<T>(*t, f);
-    t->add(*w);
-}
-
-template <class T, class A>
-void defer(T* t, void (T::*f)(A), A a) {
-    work1<T, A>* w = new work1<T, A>(*t, f, a);
-    t->add(*w);
-}
-
-template <class T, class A, class B>
-void defer(T* t, void (T::*f)(A, B), A a, B b) {
-    work2<T, A, B>* w = new work2<T, A, B>(*t, f, a, b);
-    t->add(*w);
-}
-
-template <class T, class A, class B, class C>
-void defer(T* t, void (T::*f)(A, B, C), A a, B b, C c) {
-    work3<T, A, B, C>* w = new work3<T, A, B, C>(*t, f, a, b, c);
-    t->add(*w);
-}
-
 class Queue;
 
 class Sender {
@@ -212,7 +125,7 @@ class Queue {
             std::cerr << "(" << current_->second << ") ";
             if (current_->second>0) {
                 std::cerr << current_->first << " ";
-                defer(current_->first, &Sender::sendMsg, messages_.front());
+                proton::defer(&Sender::sendMsg, current_->first, messages_.front());
                 messages_.pop_front();
                 --current_->second;
                 ++current_;
@@ -251,7 +164,7 @@ public:
         // If we're about to erase the current subscription move on
         if (current_ != subscriptions_.end() && current_->first==s) ++current_;
         subscriptions_.erase(s);
-        defer(s, &Sender::unsubscribed);
+        proton::defer(&Sender::unsubscribed, s);
     }
 };
 
@@ -260,10 +173,10 @@ void Sender::boundQueue(Queue* q, std::string qn) {
     queue_ = q;
     queue_name_ = qn;
 
-    defer(q, &Queue::subscribe, this);
+    proton::defer(&Queue::subscribe, q, this);
     sender_.open(proton::sender_options().source((proton::source_options().address(queue_name_))));
     if (pending_credit_>0) {
-        defer(queue_, &Queue::flow, this, pending_credit_);
+        proton::defer(&Queue::flow, queue_, this, pending_credit_);
     }
     std::cout << "sending from " << queue_name_ << std::endl;
 }
@@ -279,7 +192,7 @@ class Receiver {
     void queueMsgs() {
         std::cerr << "Receiver: " << this << " queueing " << messages_.size() << " msgs to: " << queue_ << "\n";
         while (!messages_.empty()) {
-            defer(queue_, &Queue::queueMsg, messages_.front());
+            proton::defer(&Queue::queueMsg, queue_, messages_.front());
             messages_.pop_front();
         }
     }
@@ -335,7 +248,7 @@ public:
         } else {
             q = i->second;
         }
-        defer(&connection, &T::boundQueue, q, qn);
+        proton::defer(&T::boundQueue, &connection, q, qn);
     }
 
     void findQueueSender(Sender* s, std::string qn) {
@@ -368,7 +281,7 @@ public:
         std::string qn = sender.source().dynamic() ? "" : sender.source().address();
         Sender* s = new Sender(sender);
         senders_[sender] = s;
-        defer(&queue_manager_, &QueueManager::findQueueSender, s, qn);
+        proton::defer(&QueueManager::findQueueSender, &queue_manager_, s, qn);
     }
 
     // We have credit to send a message.
@@ -376,7 +289,7 @@ public:
         Sender* s = senders_[sender];
 
         if (s->queue_) {
-            defer(s->queue_, &Queue::flow, s, sender.credit());
+            proton::defer(&Queue::flow, s->queue_, s, sender.credit());
         } else {
             s->pending_credit_ = sender.credit();
         }
@@ -396,7 +309,7 @@ public:
             }
             Receiver* r = new Receiver(receiver);
             receivers_[receiver] = r;
-            defer(&queue_manager_, &QueueManager::findQueueReceiver, r, qname);
+            proton::defer(&QueueManager::findQueueReceiver, &queue_manager_, r, qname);
         }
     }
 
@@ -416,7 +329,7 @@ public:
             if (i->first.session()==session) {
                 Sender* s = i->second;
                 if (s->queue_) {
-                    defer(s->queue_, &Queue::unsubscribe, s);
+                    proton::defer(&Queue::unsubscribe, s->queue_, s);
                 }
                 senders_.erase(i++);
             } else {
@@ -428,7 +341,7 @@ public:
     void on_sender_close(proton::sender &sender) OVERRIDE {
         Sender* s = senders_[sender];
         if (s->queue_) {
-            defer(s->queue_, &Queue::unsubscribe, s);
+            proton::defer(&Queue::unsubscribe, s->queue_, s);
         } else {
             // TODO: Is it possible to be closed before we get the queue allocated?
             // If so, we should have a way to mark the sender deleted, so we can delete
@@ -447,7 +360,7 @@ public:
         for (senders::iterator i = senders_.begin(); i != senders_.end(); ++i) {
             Sender* s = i->second;
             if (s->queue_) {
-                defer(s->queue_, &Queue::unsubscribe, s);
+                proton::defer(&Queue::unsubscribe, s->queue_, s);
             }
         }
         delete this;            // All done.
