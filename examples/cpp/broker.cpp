@@ -185,7 +185,7 @@ public:
         sender_(s), senders_(ss), work_queue_(s.work_queue()), queue_(0), pending_credit_(0)
     {}
 
-    void add(proton::void_function0& f) {
+    void add(proton::work f) {
         work_queue_.add(f);
     }
 
@@ -241,7 +241,7 @@ public:
         work_queue_(c), name_(n), current_(subscriptions_.end())
     {}
 
-    void add(proton::void_function0& f) {
+    void add(proton::work f) {
         work_queue_.add(f);
     }
 
@@ -333,7 +333,7 @@ public:
         receiver_(r), work_queue_(r.work_queue()), queue_(0)
     {}
 
-    void add(proton::void_function0& f) {
+    void add(proton::work f) {
         work_queue_.add(f);
     }
 
@@ -361,7 +361,7 @@ public:
         container_(c), work_queue_(c), next_id_(0)
     {}
 
-    void add(proton::void_function0& f) {
+    void add(proton::work f) {
         work_queue_.add(f);
     }
 

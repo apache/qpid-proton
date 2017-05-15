@@ -35,15 +35,9 @@ work_queue::~work_queue() {}
 
 work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
 
-bool work_queue::add(void_function0& f) {
-    return impl_->inject(f);
+bool work_queue::add(work f) {
+    return impl_->add(f);
 }
-
-#if PN_CPP_HAS_STD_FUNCTION
-bool work_queue::add(std::function<void()> f) {
-    return impl_->inject(f);
-}
-#endif
 
 work_queue& work_queue::get(pn_connection_t* c) {
     return connection_context::get(c).work_queue_;
