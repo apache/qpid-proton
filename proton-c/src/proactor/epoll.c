@@ -210,10 +210,10 @@ const char *AMQP_PORT_NAME = "amqp";
 PN_HANDLE(PN_PROACTOR)
 
 // The number of times a connection event batch may be replenished for
-// a thread between calls to wait().
-// TODO: consider some instrumentation to determine an optimal number
-// or perhaps switch to cpu time based limit.
-#define HOG_MAX 3
+// a thread between calls to wait().  Some testing shows that
+// increasing this value above 1 actually slows performance slightly
+// and increases latency.
+#define HOG_MAX 1
 
 /* pn_proactor_t and pn_listener_t are plain C structs with normal memory management.
    Class definitions are for identification as pn_event_t context only.
