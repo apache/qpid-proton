@@ -46,22 +46,22 @@ class hello_world_direct : public proton::messaging_handler {
         c.open_sender(url);
     }
 
+    // Send one message and close sender
     void on_sendable(proton::sender &s) OVERRIDE {
         proton::message m("Hello World!");
         s.send(m);
         s.close();
     }
 
+    // Receive one message and stop listener
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {
         std::cout << m.body() << std::endl;
+        listener.stop();
     }
 
+    // After receiving acknowledgement close connection
     void on_tracker_accept(proton::tracker &t) OVERRIDE {
         t.connection().close();
-    }
-
-    void on_connection_close(proton::connection&) OVERRIDE {
-        listener.stop();
     }
 };
 
