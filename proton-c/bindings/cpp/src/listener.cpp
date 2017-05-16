@@ -21,9 +21,11 @@
 
 #include <proton/listener.h>
 
+#include "contexts.hpp"
+
 namespace proton {
 
-listener::listener() : listener_(0) {}
+listener::listener(): listener_(0) {}
 listener::listener(pn_listener_t* l) : listener_(l) {}
 void listener::stop() { if (listener_) pn_listener_close(listener_); }
 

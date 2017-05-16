@@ -82,6 +82,8 @@ class context {
     static void *alloc(size_t n);
 };
 
+class listener_context;
+
 // Connection context used by all connections.
 class connection_context : public context {
   public:
@@ -95,9 +97,8 @@ class connection_context : public context {
 
     messaging_handler* handler;
     internal::pn_unique_ptr<reconnect_timer> reconnect;
-    pn_listener_t* listener;
+    listener_context* listener_context_;
     event_loop event_loop_;
-    bool outbound;
 };
 
 class listener_context : public context {

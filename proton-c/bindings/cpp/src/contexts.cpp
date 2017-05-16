@@ -66,7 +66,7 @@ void *context::alloc(size_t n) { return pn_object_new(&cpp_context_class, n); }
 pn_class_t* context::pn_class() { return &cpp_context_class; }
 
 connection_context::connection_context() :
-    container(0), default_session(0), link_gen(0), handler(0), listener(0), outbound(false)
+    container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
 {}
 
 connection_context& connection_context::get(pn_connection_t *c) {

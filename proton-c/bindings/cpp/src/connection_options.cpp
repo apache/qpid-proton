@@ -80,7 +80,7 @@ class connection_options::impl {
         bool uninit = c.uninitialized();
         if (!uninit) return;
 
-        bool outbound = connection_context::get(pnc).outbound;
+        bool outbound = !connection_context::get(pnc).listener_context_;
         if (reconnect.set && outbound)
             connection_context::get(pnc).reconnect.reset(new reconnect_timer(reconnect.value));
         if (container_id.set)
@@ -102,7 +102,7 @@ class connection_options::impl {
 
         // SSL
         connection_context& cc = connection_context::get(pnc);
-        bool outbound = cc.outbound;
+        bool outbound = !cc.listener_context_;
         if (outbound && ssl_client_options.set) {
             // A side effect of pn_ssl() is to set the ssl peer
             // hostname to the connection hostname, which has

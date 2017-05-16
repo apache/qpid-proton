@@ -125,7 +125,6 @@ proton::connection container::impl::connect_common(
     pn_connection_t *pnc = pn_connection();
     connection_context& cc(connection_context::get(pnc));
     cc.container = &container_;
-    cc.outbound = true;
     cc.handler = mh;
     cc.event_loop_ = new event_loop::impl(pnc);
 
@@ -188,18 +187,21 @@ pn_listener_t* container::impl::listen_common_lh(const std::string& addr) {
 }
 
 proton::listener container::impl::listen(const std::string& addr) {
-    return proton::listener(listen_common_lh(addr));
+    pn_listener_t* listener = listen_common_lh(addr);
+    return proton::listener(listener);
 }
 
 proton::listener container::impl::listen(const std::string& addr, const proton::connection_options& opts) {
     pn_listener_t* listener = listen_common_lh(addr);
-    listener_context::get(listener).connection_options_.reset(new connection_options(opts));
+    listener_context& lc=listener_context::get(listener);
+    lc.connection_options_.reset(new connection_options(opts));
     return proton::listener(listener);
 }
 
 proton::listener container::impl::listen(const std::string& addr, proton::listen_handler& lh) {
     pn_listener_t* listener = listen_common_lh(addr);
-    listener_context::get(listener).listen_handler_ = &lh;
+    listener_context& lc=listener_context::get(listener);
+    lc.listen_handler_ = &lh;
     return proton::listener(listener);
 }
 
@@ -306,8 +308,7 @@ bool container::impl::handle(pn_event_t* event) {
         // Handler applied separately
         connection_context& cc = connection_context::get(c);
         cc.container = &container_;
-        cc.outbound = false;
-        cc.listener = l;
+        cc.listener_context_ = &lc;
         cc.handler = opts.handler();
         cc.event_loop_ = new event_loop::impl(c);
         pn_listener_accept(l, c);
@@ -338,11 +339,10 @@ bool container::impl::handle(pn_event_t* event) {
         pn_connection_t* c = pn_event_connection(event);
         connection conn = make_wrapper(c);
         connection_context& cc = connection_context::get(c);
-        if (cc.outbound) {
-            client_connection_options_.apply_bound(conn);
+        if (cc.listener_context_) {
+            cc.listener_context_->connection_options_->apply_bound(conn);
         } else {
-            listener_context &lc = listener_context::get(cc.listener);
-            lc.connection_options_->apply_bound(conn);
+            client_connection_options_.apply_bound(conn);
         }
 
         return false;
