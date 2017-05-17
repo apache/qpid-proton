@@ -96,6 +96,39 @@ void release_pni_sasl_relay_t(pni_sasl_relay_t* instance)
     }
 }
 
+PN_HANDLE(REMOTE_SASL_CTXT)
+
+bool pn_is_authentication_service_connection(pn_connection_t* conn)
+{
+    if (conn) {
+        pn_record_t *r = pn_connection_attachments(conn);
+        return pn_record_has(r, REMOTE_SASL_CTXT);
+    } else {
+        return false;
+    }
+}
+
+pni_sasl_relay_t* get_sasl_relay_context(pn_connection_t* conn)
+{
+    if (conn) {
+        pn_record_t *r = pn_connection_attachments(conn);
+        if (pn_record_has(r, REMOTE_SASL_CTXT)) {
+            return (pni_sasl_relay_t*) pn_record_get(r, REMOTE_SASL_CTXT);
+        } else {
+            return NULL;
+        }
+    } else {
+        return NULL;
+    }
+}
+
+void set_sasl_relay_context(pn_connection_t* conn, pni_sasl_relay_t* context)
+{
+    pn_record_t *r = pn_connection_attachments(conn);
+    pn_record_def(r, REMOTE_SASL_CTXT, PN_VOID);
+    pn_record_set(r, REMOTE_SASL_CTXT, context);
+}
+
 bool remote_init_server(pn_transport_t* transport)
 {
     pn_connection_t* upstream = pn_transport_connection(transport);
@@ -103,6 +136,7 @@ bool remote_init_server(pn_transport_t* transport)
         if (transport->sasl->impl_context) {
             return true;
         }
+        pn_connection_open(upstream);
         pni_sasl_relay_t* impl = new_pni_sasl_relay_t();
         transport->sasl->impl_context = impl;
         impl->upstream = upstream;
@@ -110,10 +144,8 @@ bool remote_init_server(pn_transport_t* transport)
         if (!proactor) return false;
         impl->downstream = pn_connection();
         pn_connection_set_hostname(impl->downstream, pn_connection_get_hostname(upstream));
-        //do I need to explicitly set up sasl? if so how? need to handle connection_bound?
-        //for now just fake it with dummy user
-        pn_connection_set_user(impl->downstream, "dummy");
-        pn_connection_set_context(impl->downstream, transport->sasl->impl_context);//TODO: use record?
+        pn_connection_set_user(impl->downstream, "dummy");//force sasl
+        set_sasl_relay_context(impl->downstream, impl);
 
         pn_proactor_connect(proactor, impl->downstream, authentication_service_address);
         return true;
@@ -128,9 +160,15 @@ bool remote_init_client(pn_transport_t* transport)
     //service, need to use the same context as the server side of the
     //connection it is authenticating on behalf of
     pn_connection_t* conn = pn_transport_connection(transport);
-    transport->sasl->impl_context = pn_connection_get_context(conn);
-    ((pni_sasl_relay_t*) transport->sasl->impl_context)->refcount++;
-    return true;
+    pni_sasl_relay_t* impl = get_sasl_relay_context(conn);
+    if (impl) {
+        transport->sasl->impl_context = impl;
+        impl->refcount++;
+        return true;
+    } else {
+        return false;
+        //return pni_init_client(transport);
+    }
 }
 
 bool remote_free(pn_transport_t *transport)
@@ -180,11 +218,9 @@ bool remote_process_mechanisms(pn_transport_t *transport, const char *mechs)
 {
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
-        if (impl->upstream_state != DOWNSTREAM_MECHANISMS_RECEIVED) {
-            impl->mechlist = pn_strdup(mechs);
-            impl->upstream_state = DOWNSTREAM_MECHANISMS_RECEIVED;
-            pn_connection_wake(impl->upstream);
-        }
+        impl->mechlist = pn_strdup(mechs);
+        impl->upstream_state = DOWNSTREAM_MECHANISMS_RECEIVED;
+        pn_connection_wake(impl->upstream);
         return true;
     } else {
         return false;
@@ -195,7 +231,7 @@ bool remote_process_mechanisms(pn_transport_t *transport, const char *mechs)
 void remote_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
 {
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
-    if (impl && impl->upstream_state != DOWNSTREAM_CHALLENGE_RECEIVED) {
+    if (impl) {
         pni_copy_bytes(recv, &(impl->challenge));
         impl->upstream_state = DOWNSTREAM_CHALLENGE_RECEIVED;
         pn_connection_wake(impl->upstream);
@@ -207,11 +243,9 @@ bool remote_process_outcome(pn_transport_t *transport)
 {
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
-        if (impl->upstream_state != DOWNSTREAM_OUTCOME_RECEIVED) {
-            impl->outcome = transport->sasl->outcome;
-            impl->upstream_state = DOWNSTREAM_OUTCOME_RECEIVED;
-            pn_connection_wake(impl->upstream);
-        }
+        impl->outcome = transport->sasl->outcome;
+        impl->upstream_state = DOWNSTREAM_OUTCOME_RECEIVED;
+        pn_connection_wake(impl->upstream);
         return true;
     } else {
         return false;
