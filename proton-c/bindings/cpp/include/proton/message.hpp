@@ -321,13 +321,11 @@ class message {
 
     /// @cond INTERNAL
   private:
+    struct impl;
     pn_message_t *pn_msg() const;
+    struct impl& impl() const;
 
     mutable pn_message_t *pn_msg_;
-    mutable value body_;
-    mutable property_map application_properties_;
-    mutable annotation_map message_annotations_;
-    mutable annotation_map delivery_annotations_;
 
     /// Decode the message corresponding to a delivery from a link.
     void decode(proton::delivery);
