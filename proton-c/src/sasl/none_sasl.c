@@ -29,6 +29,8 @@ static const char PLAIN[] = "PLAIN";
 
 bool pni_init_server(pn_transport_t* transport)
 {
+  // Setup to send SASL mechanisms frame
+  pni_sasl_set_desired_state(transport, SASL_POSTED_MECHANISMS);
   return true;
 }
 
@@ -67,6 +69,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
       transport->sasl->bytes_out.start = empty;
       transport->sasl->bytes_out.size =  0;
     }
+    pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
     return true;
   }
 
@@ -98,6 +101,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
     free(memset(transport->sasl->password, 0, psize));
     transport->sasl->password = NULL;
 
+    pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
     return true;
   }
 
@@ -122,6 +126,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
       transport->sasl->bytes_out.start = anon;
       transport->sasl->bytes_out.size =  sizeof anon-1;
     }
+    pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
     return true;
   }
   return false;

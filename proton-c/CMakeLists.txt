@@ -486,7 +486,7 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
-    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c src/sasl/remote_sasl.c)
     set (PROACTOR_LIBS -lpthread)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -498,7 +498,7 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
   if (LIBUV_FOUND)
     set (PROACTOR_OK libuv)
-    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c src/sasl/remote_sasl.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"

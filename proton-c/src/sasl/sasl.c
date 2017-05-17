@@ -136,6 +136,85 @@ static void pni_emit(pn_transport_t *transport)
   }
 }
 
+static pni_sasl_implementation* implementation = 0;
+
+void pni_sasl_set_implementation(pni_sasl_implementation i)
+{
+  implementation = (pni_sasl_implementation*) malloc(sizeof(pni_sasl_implementation));
+  *implementation = i;
+}
+
+void pni_sasl_impl_free_(pn_transport_t *transport)
+{
+  if (implementation) {
+    implementation->free(transport);
+  } else {
+    pni_sasl_impl_free(transport);
+  }
+}
+
+int  pni_sasl_impl_list_mechs_(pn_transport_t *transport, char **mechlist)
+{
+  if (implementation) {
+      return implementation->get_mechs(transport, mechlist);
+  } else {
+      return pni_sasl_impl_list_mechs(transport, mechlist);
+  }
+}
+
+bool pni_init_server_(pn_transport_t *transport)
+{
+  if (implementation) {
+    return implementation->init_server(transport);
+  } else {
+    return pni_init_server(transport);
+  }
+}
+
+void pni_process_init_(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
+{
+  if (implementation) {
+    implementation->process_init(transport, mechanism, recv);
+  } else {
+    pni_process_init(transport, mechanism, recv);
+  }
+}
+
+void pni_process_response_(pn_transport_t *transport, const pn_bytes_t *recv)
+{
+  if (implementation) {
+      implementation->process_response(transport, recv);
+  } else {
+      pni_process_response(transport, recv);
+  }
+}
+
+bool pni_init_client_(pn_transport_t *transport)
+{
+  if (implementation) {
+    return implementation->init_client(transport);
+  } else {
+    return pni_init_client(transport);
+  }
+}
+bool pni_process_mechanisms_(pn_transport_t *transport, const char *mechs)
+{
+  if (implementation) {
+    return implementation->process_mechanisms(transport, mechs);
+  } else {
+    return pni_process_mechanisms(transport, mechs);
+  }
+}
+
+void pni_process_challenge_(pn_transport_t *transport, const pn_bytes_t *recv)
+{
+  if (implementation) {
+    implementation->process_challenge(transport, recv);
+  } else {
+    pni_process_challenge(transport, recv);
+  }
+}
+
 void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state)
 {
   pni_sasl_t *sasl = transport->sasl;
@@ -157,9 +236,10 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
     if (sasl->last_state==desired_state && desired_state==SASL_POSTED_CHALLENGE) {
       sasl->last_state = SASL_POSTED_MECHANISMS;
     }
+    bool changed = sasl->desired_state != desired_state;
     sasl->desired_state = desired_state;
     // Don't emit transport event on error as there will be a TRANSPORT_ERROR event
-    if (desired_state != SASL_ERROR) pni_emit(transport);
+    if (desired_state != SASL_ERROR && changed) pni_emit(transport);
   }
 }
 
@@ -182,7 +262,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       char *mechlist = NULL;
 
       int count = 0;
-      if (pni_sasl_impl_list_mechs(transport, &mechlist) > 0) {
+      if (pni_sasl_impl_list_mechs_(transport, &mechlist) > 0) {
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
 
@@ -192,16 +272,19 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       break;
     }
     case SASL_POSTED_RESPONSE:
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
-      pni_emit(transport);
+      if (sasl->last_state != SASL_POSTED_RESPONSE) {
+          pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
+          pni_emit(transport);
+      }
       break;
     case SASL_POSTED_CHALLENGE:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
+      } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
+          pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
+          pni_emit(transport);
       }
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
-      pni_emit(transport);
       break;
     case SASL_POSTED_OUTCOME:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
@@ -277,10 +360,7 @@ static void pni_sasl_start_server_if_needed(pn_transport_t *transport)
 {
   pni_sasl_t *sasl = transport->sasl;
   if (!sasl->client && sasl->desired_state<SASL_POSTED_MECHANISMS) {
-    if (!pni_init_server(transport)) return;
-
-    // Setup to send SASL mechanisms frame
-    pni_sasl_set_desired_state(transport, SASL_POSTED_MECHANISMS);
+    if (!pni_init_server_(transport)) return;
   }
 }
 
@@ -366,6 +446,9 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   pni_sasl_start_server_if_needed(transport);
 
+  if (implementation) {
+    implementation->prepare(transport);//allow impl to adjust sasl object on the right thread if needed
+  }
   pni_post_sasl_frame(transport);
 
   if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
@@ -520,7 +603,7 @@ void pn_sasl_free(pn_transport_t *transport)
 
       // CYRUS_SASL
       if (sasl->impl_context) {
-          pni_sasl_impl_free(transport);
+          pni_sasl_impl_free_(transport);
       }
       pn_buffer_free(sasl->decoded_buffer);
       pn_buffer_free(sasl->encoded_buffer);
@@ -620,7 +703,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   if (err) return err;
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
 
-  pni_process_init(transport, sasl->selected_mechanism, &recv);
+  pni_process_init_(transport, sasl->selected_mechanism, &recv);
 
   return 0;
 }
@@ -661,11 +744,9 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     pn_string_setn(mechs, symbol.start, symbol.size);
   }
 
-  if (pni_init_client(transport) &&
+  if (!(pni_init_client_(transport) &&
       pn_string_size(mechs) &&
-      pni_process_mechanisms(transport, pn_string_get(mechs))) {
-    pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
-  } else {
+      pni_process_mechanisms_(transport, pn_string_get(mechs)))) {
     sasl->outcome = PN_SASL_PERM;
     pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
   }
@@ -681,7 +762,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
-  pni_process_challenge(transport, &recv);
+  pni_process_challenge_(transport, &recv);
 
   return 0;
 }
@@ -693,7 +774,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
-  pni_process_response(transport, &recv);
+  pni_process_response_(transport, &recv);
 
   return 0;
 }
@@ -711,7 +792,10 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   transport->authenticated = authenticated;
   pni_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_OUTCOME_SUCCEED : SASL_RECVED_OUTCOME_FAIL);
 
+  if (implementation) {
+    implementation->process_outcome(transport);
+  }
+
   return 0;
 }
-
 

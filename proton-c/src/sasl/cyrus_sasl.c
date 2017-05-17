@@ -247,6 +247,7 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
         case SASL_OK:
         case SASL_CONTINUE:
           sasl->selected_mechanism = pn_strdup(mech_selected);
+          pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
           return true;
         case SASL_NOMECH:
         default:
@@ -350,7 +351,13 @@ bool pni_init_server(pn_transport_t* transport)
     }
   } while (false);
   cyrus_conn = (sasl_conn_t*) sasl->impl_context;
-  return pni_check_sasl_result(cyrus_conn, result, transport);
+  if (pni_check_sasl_result(cyrus_conn, result, transport)) {
+      // Setup to send SASL mechanisms frame
+      pni_sasl_set_desired_state(transport, SASL_POSTED_MECHANISMS);
+      return true;
+  } else {
+      return false;
+  }
 }
 
 static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, const pn_bytes_t *in)

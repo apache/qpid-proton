@@ -285,6 +285,8 @@ PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
  */
 PNP_EXTERN pn_millis_t pn_proactor_now(void);
 
+PNP_EXTERN void pn_use_remote_authentication_service(const char* address);
+
 /**
  * @defgroup proactor_events Events
  *

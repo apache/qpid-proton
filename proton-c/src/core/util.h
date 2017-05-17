@@ -39,7 +39,7 @@ void pn_print_data(const char *bytes, size_t size);
 bool pn_env_bool(const char *name);
 pn_timestamp_t pn_timestamp_min(pn_timestamp_t a, pn_timestamp_t b);
 
-char *pn_strdup(const char *src);
+PN_EXTERN char *pn_strdup(const char *src);
 char *pn_strndup(const char *src, size_t n);
 int pn_strcasecmp(const char* a, const char* b);
 int pn_strncasecmp(const char* a, const char* b, size_t len);

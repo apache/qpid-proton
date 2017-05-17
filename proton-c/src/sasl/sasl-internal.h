@@ -52,6 +52,27 @@ ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport);
 ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
 ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
 
+typedef bool (*pni_sasl_function)(pn_transport_t *transport);
+typedef void (*pni_sasl_challenge_response)(pn_transport_t *transport, const pn_bytes_t *recv);
+typedef void (*pni_sasl_init)(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
+typedef bool (*pni_sasl_set_mechanisms)(pn_transport_t *transport, const char *mechanism);
+typedef int (*pni_sasl_get_mechanisms)(pn_transport_t *transport, char **mechlist);
+
+typedef struct
+{
+    pni_sasl_function free;
+    pni_sasl_get_mechanisms get_mechs;
+    pni_sasl_function init_server;
+    pni_sasl_init process_init;
+    pni_sasl_challenge_response process_response;
+    pni_sasl_function init_client;
+    pni_sasl_set_mechanisms process_mechanisms;
+    pni_sasl_challenge_response process_challenge;
+    pni_sasl_function process_outcome;
+    pni_sasl_function prepare;
+} pni_sasl_implementation;
+
+PN_EXTERN void pni_sasl_set_implementation(pni_sasl_implementation);
 
 // Shared SASL API used by the actual SASL authenticators
 enum pni_sasl_state {
@@ -91,6 +112,6 @@ struct pni_sasl_t {
 // Shared Utility used by sasl implementations
 void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count);
 bool pni_included_mech(const char *included_mech_list, pn_bytes_t s);
-void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state);
+PN_EXTERN void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state);
 
 #endif /* sasl-internal.h */
