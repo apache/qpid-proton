@@ -27,7 +27,7 @@
 #include <proton/session.h>
 
 #include "messaging_adapter.hpp"
-#include "container_impl.hpp"
+#include "proactor_container_impl.hpp"
 #include "proton_bits.hpp"
 
 namespace proton {

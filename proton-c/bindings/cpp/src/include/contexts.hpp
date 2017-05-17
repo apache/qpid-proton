@@ -22,28 +22,22 @@
  *
  */
 
-#include "proton/connection.hpp"
-#include "proton/container.hpp"
-#include "proton/io/connection_driver.hpp"
-#include "proton/event_loop.hpp"
-#include "proton/listen_handler.hpp"
+#include "proton/work_queue.hpp"
 #include "proton/message.hpp"
 #include "proton/internal/pn_unique_ptr.hpp"
 
-#include "proton/io/link_namer.hpp"
-
-#include "proton_handler.hpp"
-
-struct pn_session_t;
-struct pn_event_t;
-struct pn_reactor_t;
 struct pn_record_t;
-struct pn_acceptor_t;
+struct pn_link_t;
+struct pn_session_t;
+struct pn_connection_t;
+struct pn_listener_t;
 
 namespace proton {
 
 class proton_handler;
-class reactor;
+class reconnect_timer;
+
+namespace io {class link_namer;}
 
 // Base class for C++ classes that are used as proton contexts.
 // Contexts are pn_objects managed by pn reference counts, the C++ value is allocated in-place.
@@ -82,51 +76,53 @@ class context {
     static void *alloc(size_t n);
 };
 
+class listener_context;
+
 // Connection context used by all connections.
 class connection_context : public context {
   public:
-    connection_context() : container(0), default_session(0), link_gen(0) {}
+    connection_context();
+    static connection_context& get(pn_connection_t *c);
 
     class container* container;
     pn_session_t *default_session; // Owned by connection.
     message event_message;      // re-used by messaging_adapter for performance.
     io::link_namer* link_gen;      // Link name generator.
 
-    internal::pn_unique_ptr<proton_handler> handler;
-    event_loop event_loop_;
-
-    static connection_context& get(pn_connection_t *c) { return ref<connection_context>(id(c)); }
-
-  protected:
-    static context::id id(pn_connection_t*);
-};
-
-void container_context(const reactor&, container&);
-
-class container_context {
-  public:
-    static void set(const reactor& r, container& c);
-    static container& get(pn_reactor_t*);
+    messaging_handler* handler;
+    internal::pn_unique_ptr<reconnect_timer> reconnect;
+    listener_context* listener_context_;
+    work_queue work_queue_;
 };
 
 class listener_context : public context {
   public:
-    static listener_context& get(pn_acceptor_t* c);
-    listener_context() : listen_handler_(0), ssl(false) {}
-    connection_options  get_options() { return listen_handler_->on_accept(); }
-    class listen_handler* listen_handler_;
-    bool ssl;
+    listener_context();
+    static listener_context& get(pn_listener_t* c);
+
+    listen_handler* listen_handler_;
+    internal::pn_unique_ptr<const connection_options> connection_options_;
 };
 
 class link_context : public context {
   public:
+    link_context() : handler(0), credit_window(10), pending_credit(0), auto_accept(true), auto_settle(true), draining(false) {}
     static link_context& get(pn_link_t* l);
-    link_context() : credit_window(10), auto_accept(true), auto_settle(true), draining(false), pending_credit(0) {}
+
+    messaging_handler* handler;
     int credit_window;
+    uint32_t pending_credit;
     bool auto_accept;
     bool auto_settle;
     bool draining;
-    uint32_t pending_credit;
+};
+
+class session_context : public context {
+  public:
+    session_context() : handler(0) {}
+    static session_context& get(pn_session_t* s);
+
+    messaging_handler* handler;
 };
 
 }

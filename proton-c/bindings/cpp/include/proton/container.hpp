@@ -73,12 +73,6 @@ class PN_CPP_CLASS_EXTERN container {
     /// Connect to `url` and send an open request to the remote peer.
     PN_CPP_EXTERN returned<connection> connect(const std::string& url);
 
-    /// @cond INTERNAL
-    /// Stop listening on url, must match the url string given to listen().
-    /// You can also use the proton::listener object returned by listen()
-    PN_CPP_EXTERN void stop_listening(const std::string& url);
-    /// @endcond
-
     /// Start listening on url.
     ///
     /// Calls to the @ref listen_handler are serialized for this listener,
@@ -212,15 +206,11 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
-    /// Schedule a function to be called after the duration.  C++03
-    /// compatible, for C++11 use schedule(duration,
-    /// std::function<void()>)
-    PN_CPP_EXTERN void schedule(duration, void_function0&);
-
-#if PN_CPP_HAS_STD_FUNCTION
-    /// Schedule a function to be called after the duration
-    PN_CPP_EXTERN void schedule(duration, std::function<void()>);
-#endif
+    /// Schedule a piece of work to happen after the duration:
+    /// The piece of work can be created from a function object.
+    /// for C++11 and on use a std::function<void()> type; for
+    /// C++03 compatibility you can use void_function0&
+    PN_CPP_EXTERN void schedule(duration, work);
 
   private:
     class impl;
@@ -230,6 +220,7 @@ class PN_CPP_CLASS_EXTERN container {
   friend class session_options;
   friend class receiver_options;
   friend class sender_options;
+  friend class work_queue;
 };
 
 } // proton

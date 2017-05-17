@@ -329,11 +329,7 @@ class message {
     mutable annotation_map message_annotations_;
     mutable annotation_map delivery_annotations_;
 
-    /// Decode the message corresponding to a delivery from a link.
-    void decode(proton::delivery);
-
   PN_CPP_EXTERN friend void swap(message&, message&);
-  friend class messaging_adapter;
     /// @endcond
 };
 

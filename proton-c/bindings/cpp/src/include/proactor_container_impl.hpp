@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_CONTAINERIMPL_H
-#define PROTON_CPP_CONTAINERIMPL_H
+#ifndef PROTON_CPP_PROACTOR_CONTAINERIMPL_H
+#define PROTON_CPP_PROACTOR_CONTAINERIMPL_H
 
 /*
  *
@@ -27,27 +27,27 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/duration.hpp"
-#include "proton/sender.hpp"
-#include "proton/sender_options.hpp"
+#include "proton/error_condition.hpp"
+#include "proton/messaging_handler.hpp"
 #include "proton/receiver.hpp"
 #include "proton/receiver_options.hpp"
+#include "proton/sender.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/work_queue.hpp"
 
-#include "messaging_adapter.hpp"
-#include "reactor.hpp"
 #include "proton_bits.hpp"
-#include "proton_handler.hpp"
 
 #include <list>
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
+
+struct pn_proactor_t;
+struct pn_listener_t;
+struct pn_event_t;
 
 namespace proton {
-
-class dispatch_helper;
-class connector;
-class acceptor;
-class url;
-class listen_handler;
 
 class container::impl {
   public:
@@ -59,8 +59,9 @@ class container::impl {
         const std::string&, const proton::sender_options &, const connection_options &);
     returned<receiver> open_receiver(
         const std::string&, const proton::receiver_options &, const connection_options &);
+    listener listen(const std::string&);
+    listener listen(const std::string&, const connection_options& lh);
     listener listen(const std::string&, listen_handler& lh);
-    void stop_listening(const std::string&);
     void client_connection_options(const connection_options &);
     connection_options client_connection_options() const { return client_connection_options_; }
     void server_connection_options(const connection_options &);
@@ -72,48 +73,62 @@ class container::impl {
     void run();
     void stop(const error_condition& err);
     void auto_stop(bool set);
-    void schedule(duration, void_function0&);
-#if PN_CPP_HAS_STD_FUNCTION
-    void schedule(duration, std::function<void()>);
-#endif
-
-    // non-interface functionality
-    class connector;
-
-    void configure_server_connection(connection &c);
-    static void schedule(impl& ci, int delay, proton_handler *h);
-    static void schedule(container& c, int delay, proton_handler *h);
+    void schedule(duration, work);
     template <class T> static void set_handler(T s, messaging_handler* h);
+    template <class T> static messaging_handler* get_handler(T s);
+    static work_queue::impl* make_work_queue(container&);
 
   private:
-    class handler_context;
-    class override_handler;
+    class common_work_queue;
+    class connection_work_queue;
+    class container_work_queue;
+    pn_listener_t* listen_common_lh(const std::string&);
+    connection connect_common(const std::string&, const connection_options&);
 
-    internal::pn_ptr<pn_handler_t> cpp_handler(proton_handler *h);
+    // Event loop to run in each container thread
+    static void thread(impl&);
+    bool handle(pn_event_t*);
+    void run_timer_jobs();
 
     container& container_;
-    reactor reactor_;
-    // Keep a list of all the handlers used by the container so they last as long as the container
-    std::list<internal::pn_unique_ptr<proton_handler> > handlers_;
+
+    typedef std::set<container_work_queue*> work_queues;
+    work_queues work_queues_;
+    container_work_queue* add_work_queue();
+    void remove_work_queue(container_work_queue*);
+    struct scheduled {
+        timestamp time; // duration from epoch for task
+        work task;
+
+        // We want to get to get the *earliest* first so test is "reversed"
+        bool operator < (const scheduled& r) { return  r.time < time; }
+    };
+    std::vector<scheduled> deferred_; // This vector is kept as a heap
+
+    pn_proactor_t* proactor_;
+    messaging_handler* handler_;
     std::string id_;
     connection_options client_connection_options_;
     connection_options server_connection_options_;
     proton::sender_options sender_options_;
     proton::receiver_options receiver_options_;
-    typedef std::map<std::string, acceptor> acceptors;
-    acceptors acceptors_;
+
+    proton::error_condition stop_err_;
     bool auto_stop_;
+    bool stopping_;
 };
 
 template <class T>
 void container::impl::set_handler(T s, messaging_handler* mh) {
-    pn_record_t *record = internal::get_attachments(unwrap(s));
-    proton_handler* h = new messaging_adapter(*mh);
-    impl* ci = s.container().impl_.get();
-    ci->handlers_.push_back(h);
-    pn_record_set_handler(record, ci->cpp_handler(h).get());
+    internal::set_messaging_handler(s, mh);
 }
+
+template <class T>
+messaging_handler* container::impl::get_handler(T s) {
+    return internal::get_messaging_handler(s);
+}
+
 
 }
 
-#endif  /*!PROTON_CPP_CONTAINERIMPL_H*/
+#endif  /*!PROTON_CPP_PROACTOR_CONTAINERIMPL_H*/

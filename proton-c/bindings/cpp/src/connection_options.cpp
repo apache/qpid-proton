@@ -18,6 +18,8 @@
  * under the License.
  *
  */
+#include "proton/fwd.hpp"
+#include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/reconnect_timer.hpp"
@@ -25,14 +27,13 @@
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
 
-#include "acceptor.hpp"
 #include "contexts.hpp"
-#include "connector.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
 
 #include <proton/connection.h>
+#include <proton/proactor.h>
 #include <proton/transport.h>
 
 namespace proton {
@@ -74,15 +75,14 @@ class connection_options::impl {
      */
     void apply_unbound(connection& c) {
         pn_connection_t *pnc = unwrap(c);
-        container::impl::connector *outbound = dynamic_cast<container::impl::connector*>(
-            connection_context::get(unwrap(c)).handler.get());
 
         // Only apply connection options if uninit.
         bool uninit = c.uninitialized();
         if (!uninit) return;
 
+        bool outbound = !connection_context::get(pnc).listener_context_;
         if (reconnect.set && outbound)
-            outbound->reconnect_timer(reconnect.value);
+            connection_context::get(pnc).reconnect.reset(new reconnect_timer(reconnect.value));
         if (container_id.set)
             pn_connection_set_container(pnc, container_id.value.c_str());
         if (virtual_host.set)
@@ -97,31 +97,23 @@ class connection_options::impl {
         // Transport options.  pnt is NULL between reconnect attempts
         // and if there is a pipelined open frame.
         pn_connection_t *pnc = unwrap(c);
-        container::impl::connector *outbound = dynamic_cast<container::impl::connector*>(
-            connection_context::get(unwrap(c)).handler.get());
-
         pn_transport_t *pnt = pn_connection_transport(pnc);
         if (!pnt) return;
 
         // SSL
-        if (outbound && outbound->address().scheme() == url::AMQPS) {
+        connection_context& cc = connection_context::get(pnc);
+        bool outbound = !cc.listener_context_;
+        if (outbound && ssl_client_options.set) {
             // A side effect of pn_ssl() is to set the ssl peer
             // hostname to the connection hostname, which has
             // already been adjusted for the virtual_host option.
             pn_ssl_t *ssl = pn_ssl(pnt);
             if (pn_ssl_init(ssl, ssl_client_options.value.pn_domain(), NULL))
                 throw error(MSG("client SSL/TLS initialization error"));
-        } else if (!outbound) {
-            // TODO aconway 2016-05-13: reactor only
-            pn_acceptor_t *pnp = pn_connection_acceptor(pnc);
-            if (pnp) {
-                listener_context &lc(listener_context::get(pnp));
-                if (lc.ssl) {
-                    pn_ssl_t *ssl = pn_ssl(pnt);
-                    if (pn_ssl_init(ssl, ssl_server_options.value.pn_domain(), NULL))
-                        throw error(MSG("server SSL/TLS initialization error"));
-                }
-            }
+        } else if (!outbound && ssl_server_options.set) {
+                pn_ssl_t *ssl = pn_ssl(pnt);
+                if (pn_ssl_init(ssl, ssl_server_options.value.pn_domain(), NULL))
+                    throw error(MSG("server SSL/TLS initialization error"));
         }
 
         // SASL
