@@ -20,6 +20,8 @@
  */
 
 #include "platform/platform_fmt.h"
+
+#include "max_align.h"
 #include "protocol.h"
 #include "util.h"
 
@@ -303,10 +305,10 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
 #define pn_message_hashcode NULL
 #define pn_message_compare NULL
 
-pn_message_t *pn_message()
+static pn_message_t *pni_message_new(size_t size)
 {
   static const pn_class_t clazz = PN_CLASS(pn_message);
-  pn_message_t *msg = (pn_message_t *) pn_class_new(&clazz, sizeof(pn_message_t));
+  pn_message_t *msg = (pn_message_t *) pn_class_new(&clazz, size);
   msg->durable = false;
   msg->priority = PN_DEFAULT_PRIORITY;
   msg->ttl = 0;
@@ -335,6 +337,24 @@ pn_message_t *pn_message()
 
   msg->error = pn_error();
   return msg;
+}
+
+pn_message_t *pn_message() {
+  return pni_message_new(sizeof(pn_message_t));
+}
+
+/* Maximally aligned message to make extra storage safe for any type */
+typedef union {
+  pn_message_t m;
+  pn_max_align_t a;
+}  pni_aligned_message_t;
+
+pn_message_t *pn_message_with_extra(size_t extra) {
+  return pni_message_new(sizeof(pni_aligned_message_t) + extra);
+}
+
+void *pn_message_get_extra(pn_message_t *m) {
+  return ((char*)m) + sizeof(pni_aligned_message_t);
 }
 
 void pn_message_free(pn_message_t *msg)
