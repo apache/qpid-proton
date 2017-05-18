@@ -100,7 +100,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// deferred and possibly in another thread.
     ///
     /// @return true if f() has or will be called, false if the event_loop is ended
-    /// and f() cannot be injected.
+    /// or f() cannot be injected for any other reason.
     PN_CPP_EXTERN bool add(work f);
 
   private:
@@ -120,10 +120,11 @@ class PN_CPP_CLASS_EXTERN work_queue {
 // Utilities to make injecting functions/member functions palatable in C++03
 // Lots of repetition to handle functions with up to 3 arguments
 #if !PN_CPP_HAS_CPP11
+template <class R>
 struct work0 : public proton::void_function0 {
-    void (* fn_)();
+    R (* fn_)();
 
-    work0(void (* f)()) :
+    work0(R (* f)()) :
         fn_(f) {}
 
     void operator()() {
@@ -132,12 +133,12 @@ struct work0 : public proton::void_function0 {
     }
 };
 
-template <class A>
+template <class R, class A>
 struct work1 : public proton::void_function0 {
-    void (* fn_)(A);
+    R (* fn_)(A);
     A a_;
 
-    work1(void (* t)(A), A a) :
+    work1(R (* t)(A), A a) :
         fn_(t), a_(a) {}
 
     void operator()() {
@@ -146,13 +147,13 @@ struct work1 : public proton::void_function0 {
     }
 };
 
-template <class A, class B>
+template <class R, class A, class B>
 struct work2 : public proton::void_function0 {
-    void (* fn_)(A, B);
+    R (* fn_)(A, B);
     A a_;
     B b_;
 
-    work2(void (* t)(A, B), A a, B b) :
+    work2(R (* t)(A, B), A a, B b) :
         fn_(t), a_(a), b_(b) {}
 
     void operator()() {
@@ -161,14 +162,14 @@ struct work2 : public proton::void_function0 {
     }
 };
 
-template <class A, class B, class C>
+template <class R, class A, class B, class C>
 struct work3 : public proton::void_function0 {
-    void (* fn_)(A, B, C);
+    R (* fn_)(A, B, C);
     A a_;
     B b_;
     C c_;
 
-    work3(void (* t)(A, B, C), A a, B b, C c) :
+    work3(R (* t)(A, B, C), A a, B b, C c) :
         fn_(t), a_(a), b_(b), c_(c) {}
 
     void operator()() {
@@ -177,12 +178,12 @@ struct work3 : public proton::void_function0 {
     }
 };
 
-template <class T>
+template <class R, class T>
 struct work_pmf0 : public proton::void_function0 {
     T& holder_;
-    void (T::* fn_)();
+    R (T::* fn_)();
 
-    work_pmf0(void (T::* a)(), T& h) :
+    work_pmf0(R (T::* a)(), T& h) :
         holder_(h), fn_(a) {}
 
     void operator()() {
@@ -191,13 +192,13 @@ struct work_pmf0 : public proton::void_function0 {
     }
 };
 
-template <class T, class A>
+template <class R, class T, class A>
 struct work_pmf1 : public proton::void_function0 {
     T& holder_;
-    void (T::* fn_)(A);
+    R (T::* fn_)(A);
     A a_;
 
-    work_pmf1(void (T::* t)(A), T& h, A a) :
+    work_pmf1(R (T::* t)(A), T& h, A a) :
         holder_(h), fn_(t), a_(a) {}
 
     void operator()() {
@@ -206,14 +207,14 @@ struct work_pmf1 : public proton::void_function0 {
     }
 };
 
-template <class T, class A, class B>
+template <class R, class T, class A, class B>
 struct work_pmf2 : public proton::void_function0 {
     T& holder_;
-    void (T::* fn_)(A, B);
+    R (T::* fn_)(A, B);
     A a_;
     B b_;
 
-    work_pmf2(void (T::* t)(A, B), T& h, A a, B b) :
+    work_pmf2(R (T::* t)(A, B), T& h, A a, B b) :
         holder_(h), fn_(t), a_(a), b_(b) {}
 
     void operator()() {
@@ -222,15 +223,15 @@ struct work_pmf2 : public proton::void_function0 {
     }
 };
 
-template <class T, class A, class B, class C>
+template <class R, class T, class A, class B, class C>
 struct work_pmf3 : public proton::void_function0 {
     T& holder_;
-    void (T::* fn_)(A, B, C);
+    R (T::* fn_)(A, B, C);
     A a_;
     B b_;
     C c_;
 
-    work_pmf3(void (T::* t)(A, B, C), T& h, A a, B b, C c) :
+    work_pmf3(R (T::* t)(A, B, C), T& h, A a, B b, C c) :
         holder_(h), fn_(t), a_(a), b_(b), c_(c) {}
 
     void operator()() {
@@ -239,91 +240,96 @@ struct work_pmf3 : public proton::void_function0 {
     }
 };
 
-/// This version of proton::defer defers calling an object's member function to the object's work queue
+/// make_work is the equivalent of C++11 std::bind for C++03
+/// It will bind both free functions and pointers to member functions
+template <class R, class T>
+void_function0& make_work(R (T::*f)(), T* t) {
+    return *new work_pmf0<R, T>(f, *t);
+}
+
+template <class R, class T, class A>
+void_function0& make_work(R (T::*f)(A), T* t, A a) {
+    return *new work_pmf1<R, T, A>(f, *t, a);
+}
+
+template <class R, class T, class A, class B>
+void_function0& make_work(R (T::*f)(A, B), T* t, A a, B b) {
+    return *new work_pmf2<R, T, A, B>(f, *t, a, b);
+}
+
+template <class R, class T, class A, class B, class C>
+void_function0& make_work(R (T::*f)(A, B, C), T* t, A a, B b, C c) {
+    return *new work_pmf3<R, T, A, B, C>(f, *t, a, b, c);
+}
+
+template <class R>
+void_function0& make_work(R (*f)()) {
+    return *new work0<R>(f);
+}
+
+template <class R, class A>
+void_function0& make_work(R (*f)(A), A a) {
+    return *new work1<R, A>(f, a);
+}
+
+template <class R, class A, class B>
+void_function0& make_work(R (*f)(A, B), A a, B b) {
+    return *new work2<R, A, B>(f, a, b);
+}
+
+template <class R, class A, class B, class C>
+void_function0& make_work(R (*f)(A, B, C), A a, B b, C c) {
+    return *new work3<R, A, B, C>(f, a, b, c);
+}
+
+namespace {
 template <class T>
-void defer(void (T::*f)(), T* t) {
-    work_pmf0<T>* w = new work_pmf0<T>(f, *t);
-    t->add(*w);
+bool defer_helper(T t, void_function0& w) {
+    bool r = t->add(w);
+    if (!r) delete &w;
+    return r;
+}
 }
 
-template <class T, class A>
-void defer(void (T::*f)(A), T* t, A a) {
-    work_pmf1<T, A>* w = new work_pmf1<T, A>(f, *t, a);
-    t->add(*w);
+/// defer is a convenience that is used for C++03 code to defer function calls
+/// to a work_queue
+template <class WQ, class F>
+bool defer(WQ wq, F f) {
+    return defer_helper(wq, make_work(f));
 }
 
-template <class T, class A, class B>
-void defer(void (T::*f)(A, B), T* t, A a, B b) {
-    work_pmf2<T, A, B>* w = new work_pmf2<T, A, B>(f, *t, a, b);
-    t->add(*w);
+template <class WQ, class F, class A>
+bool defer(WQ wq, F f, A a) {
+    return defer_helper(wq, make_work(f, a));
 }
 
-template <class T, class A, class B, class C>
-void defer(void (T::*f)(A, B, C), T* t, A a, B b, C c) {
-    work_pmf3<T, A, B, C>* w = new work_pmf3<T, A, B, C>(f, *t, a, b, c);
-    t->add(*w);
+template <class WQ, class F, class A, class B>
+bool defer(WQ wq, F f, A a, B b) {
+    return defer_helper(wq, make_work(f, a, b));
 }
 
-/// This version of proton::defer defers calling a member function to an arbitrary work queue
-template <class T, class U>
-void defer(U* wq, void (T::*f)(), T* t) {
-    work_pmf0<T>* w = new work_pmf0<T>(f, *t);
-    wq->add(*w);
+template <class WQ, class F, class A, class B, class C>
+bool defer(WQ wq, F f, A a, B b, C c) {
+    return defer_helper(wq, make_work(f, a, b, c));
 }
 
-template <class T, class U, class A>
-void defer(U* wq, void (T::*f)(A), T* t, A a) {
-    work_pmf1<T, A>* w = new work_pmf1<T, A>(f, *t, a);
-    wq->add(*w);
-}
-
-template <class T, class U, class A, class B>
-void defer(U* wq, void (T::*f)(A, B), T* t, A a, B b) {
-    work_pmf2<T, A, B>* w = new work_pmf2<T, A, B>(f, *t, a, b);
-    wq->add(*w);
-}
-
-template <class T, class U, class A, class B, class C>
-void defer(U* wq, void (T::*f)(A, B, C), T* t, A a, B b, C c) {
-    work_pmf3<T, A, B, C>* w = new work_pmf3<T, A, B, C>(f, *t, a, b, c);
-    wq->add(*w);
+template <class WQ, class F, class A, class B, class C, class D>
+bool defer(WQ wq, F f, A a, B b, C c, D d) {
+    return defer_helper(wq, make_work(f, a, b, c, d));
 }
 
 /// This version of proton::defer defers calling a free function to an arbitrary work queue
-template <class U>
-void defer(U* wq, void (*f)()) {
-    work0* w = new work0(f);
-    wq->add(*w);
-}
-
-template <class U, class A>
-void defer(U* wq, void (*f)(A), A a) {
-    work1<A>* w = new work1<A>(f, a);
-    wq->add(*w);
-}
-
-template <class U, class A, class B>
-void defer(U* wq, void (*f)(A, B), A a, B b) {
-    work2<A, B>* w = new work2<A, B>(f, a, b);
-    wq->add(*w);
-}
-
-template <class U, class A, class B, class C>
-void defer(U* wq, void (*f)(A, B, C), A a, B b, C c) {
-    work3<A, B, C>* w = new work3<A, B, C>(f, a, b, c);
-    wq->add(*w);
-}
 #else
 // The C++11 version is *much* simpler and even so more general!
-// These 2 definitions encompass everything in the C++03 section
-template <class T, class... Rest>
-void defer(void(T::*f)(Rest...), T* t, Rest... r) {
-    t->add(std::bind(f, t, r...));
+// These definitions encompass everything in the C++03 section
+template <class WQ, class... Rest>
+bool defer(WQ wq, Rest&&... r) {
+    return wq->add(std::bind(std::forward<Rest>(r)...));
 }
 
-template <class U, class... Rest>
-void defer(U* wq, Rest&&... r) {
-    wq->add(std::bind(std::forward<Rest>(r)...));
+template <class... Rest>
+work make_work(Rest&&... r) {
+    return std::bind(std::forward<Rest>(r)...);
 }
 #endif
 
