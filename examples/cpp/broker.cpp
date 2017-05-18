@@ -99,8 +99,8 @@ public:
         sender_(s), senders_(ss), work_queue_(s.work_queue()), queue_(0), pending_credit_(0)
     {}
 
-    void add(proton::work f) {
-        work_queue_.add(f);
+    bool add(proton::work f) {
+        return work_queue_.add(f);
     }
 
 
@@ -139,7 +139,7 @@ class Queue {
             DOUT(std::cerr << "(" << current_->second << ") ";);
             if (current_->second>0) {
                 DOUT(std::cerr << current_->first << " ";);
-                proton::defer(&Sender::sendMsg, current_->first, messages_.front());
+                proton::defer(current_->first, &Sender::sendMsg, current_->first, messages_.front());
                 messages_.pop_front();
                 --current_->second;
                 ++current_;
@@ -155,8 +155,8 @@ public:
         work_queue_(c), name_(n), current_(subscriptions_.end())
     {}
 
-    void add(proton::work f) {
-        work_queue_.add(f);
+    bool add(proton::work f) {
+        return work_queue_.add(f);
     }
 
     void queueMsg(proton::message m) {
@@ -178,14 +178,14 @@ public:
         // If we're about to erase the current subscription move on
         if (current_ != subscriptions_.end() && current_->first==s) ++current_;
         subscriptions_.erase(s);
-        proton::defer(&Sender::unsubscribed, s);
+        proton::defer(s, &Sender::unsubscribed, s);
     }
 };
 
 // We have credit to send a message.
 void Sender::on_sendable(proton::sender &sender) {
     if (queue_) {
-        proton::defer(&Queue::flow, queue_, this, sender.credit());
+        proton::defer(queue_, &Queue::flow, queue_, this, sender.credit());
     } else {
         pending_credit_ = sender.credit();
     }
@@ -193,7 +193,7 @@ void Sender::on_sendable(proton::sender &sender) {
 
 void Sender::on_sender_close(proton::sender &sender) {
     if (queue_) {
-        proton::defer(&Queue::unsubscribe, queue_, this);
+        proton::defer(queue_, &Queue::unsubscribe, queue_, this);
     } else {
         // TODO: Is it possible to be closed before we get the queue allocated?
         // If so, we should have a way to mark the sender deleted, so we can delete
@@ -207,12 +207,12 @@ void Sender::boundQueue(Queue* q, std::string qn) {
     queue_ = q;
     queue_name_ = qn;
 
-    proton::defer(&Queue::subscribe, q, this);
+    proton::defer(q, &Queue::subscribe, q, this);
     sender_.open(proton::sender_options()
         .source((proton::source_options().address(queue_name_)))
         .handler(*this));
     if (pending_credit_>0) {
-        proton::defer(&Queue::flow, queue_, this, pending_credit_);
+        proton::defer(queue_, &Queue::flow, queue_, this, pending_credit_);
     }
     std::cout << "sending from " << queue_name_ << std::endl;
 }
@@ -237,7 +237,7 @@ class Receiver : public proton::messaging_handler {
     void queueMsgs() {
         DOUT(std::cerr << "Receiver: " << this << " queueing " << messages_.size() << " msgs to: " << queue_ << "\n";);
         while (!messages_.empty()) {
-            proton::defer(&Queue::queueMsg, queue_, messages_.front());
+            proton::defer(queue_, &Queue::queueMsg, queue_, messages_.front());
             messages_.pop_front();
         }
     }
@@ -247,8 +247,8 @@ public:
         receiver_(r), work_queue_(r.work_queue()), queue_(0)
     {}
 
-    void add(proton::work f) {
-        work_queue_.add(f);
+    bool add(proton::work f) {
+        return work_queue_.add(f);
     }
 
     void boundQueue(Queue* q, std::string qn) {
@@ -275,8 +275,8 @@ public:
         container_(c), work_queue_(c), next_id_(0)
     {}
 
-    void add(proton::work f) {
-        work_queue_.add(f);
+    bool add(proton::work f) {
+        return work_queue_.add(f);
     }
 
     template <class T>
@@ -295,7 +295,7 @@ public:
         } else {
             q = i->second;
         }
-        proton::defer(&T::boundQueue, &connection, q, qn);
+        proton::defer(&connection, &T::boundQueue, &connection, q, qn);
     }
 
     void findQueueSender(Sender* s, std::string qn) {
@@ -325,7 +325,7 @@ public:
         std::string qn = sender.source().dynamic() ? "" : sender.source().address();
         Sender* s = new Sender(sender, senders_);
         senders_[sender] = s;
-        proton::defer(&QueueManager::findQueueSender, &queue_manager_, s, qn);
+        proton::defer(&queue_manager_, &QueueManager::findQueueSender, &queue_manager_, s, qn);
     }
 
     // A receiver receives messages from a publisher to a queue.
@@ -341,7 +341,7 @@ public:
                 DOUT(std::cerr << "ODD - trying to attach to a empty address\n";);
             }
             Receiver* r = new Receiver(receiver);
-            proton::defer(&QueueManager::findQueueReceiver, &queue_manager_, r, qname);
+            proton::defer(&queue_manager_, &QueueManager::findQueueReceiver, &queue_manager_, r, qname);
         }
     }
 
@@ -352,7 +352,7 @@ public:
             if (j == senders_.end()) continue;
             Sender* s = j->second;
             if (s->queue_) {
-                proton::defer(&Queue::unsubscribe, s->queue_, s);
+                proton::defer(s->queue_, &Queue::unsubscribe, s->queue_, s);
             }
             senders_.erase(j);
         }
@@ -370,7 +370,7 @@ public:
             if (j == senders_.end()) continue;
             Sender* s = j->second;
             if (s->queue_) {
-                proton::defer(&Queue::unsubscribe, s->queue_, s);
+                proton::defer(s->queue_, &Queue::unsubscribe, s->queue_, s);
             }
         }
         delete this;            // All done.

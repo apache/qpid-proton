@@ -36,6 +36,8 @@ work_queue::~work_queue() {}
 work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
 
 bool work_queue::add(work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return false;
     return impl_->add(f);
 }
 
