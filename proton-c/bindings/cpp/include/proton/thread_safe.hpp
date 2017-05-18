@@ -63,12 +63,6 @@ template <class T>
 class thread_safe : private internal::pn_ptr_base, private internal::endpoint_traits<T> {
     typedef typename T::pn_type pn_type;
 
-    struct inject_decref : public void_function0 {
-        pn_type* ptr_;
-        inject_decref(pn_type* p) : ptr_(p) {}
-        void operator()() PN_CPP_OVERRIDE { decref(ptr_); delete this; }
-    };
-
   public:
     /// @cond INTERNAL
     static void operator delete(void*) {}
@@ -76,15 +70,8 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
 
     ~thread_safe() {
         if (ptr()) {
-            if (!!work_queue()) {
-#if PN_CPP_HAS_STD_BIND
-                work_queue().add(std::bind(&decref, ptr()));
-#else
-                work_queue().add(*new inject_decref(ptr()));
-#endif
-            } else {
-                decref(ptr());
-            }
+            if (!!work_queue().impl_) defer(&work_queue(), &decref, (void*)ptr());
+            else decref(ptr());
         }
     }
 
