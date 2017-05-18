@@ -87,15 +87,6 @@ class PN_CPP_CLASS_EXTERN work_queue {
 
     PN_CPP_EXTERN ~work_queue();
 
-#if PN_CPP_HAS_EXPLICIT_CONVERSIONS
-    /// When using C++11 (or later) you can use work_queue in a bool context
-    /// to indicate if there is an event loop set.
-    PN_CPP_EXTERN explicit operator bool() const { return bool(impl_); }
-#endif
-
-    /// No event loop set.
-    PN_CPP_EXTERN bool operator !() const { return !impl_; }
-
     /// Add work to the work queue: f() will be called serialised with other work in the queue:
     /// deferred and possibly in another thread.
     ///
