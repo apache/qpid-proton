@@ -59,6 +59,9 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// container
     PN_CPP_EXTERN class container &container() const;
 
+    /// Get the work_queue for the connection.
+    PN_CPP_EXTERN class work_queue& work_queue() const;
+
     /// Get the transport for the connection.
     PN_CPP_EXTERN class transport transport() const;
 

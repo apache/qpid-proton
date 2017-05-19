@@ -182,7 +182,7 @@ class Sender : public proton::messaging_handler {
 
 public:
     Sender(proton::sender s, senders& ss) :
-        sender_(s), senders_(ss), work_queue_(make_thread_safe(s).get()->work_queue()), queue_(0), pending_credit_(0)
+        sender_(s), senders_(ss), work_queue_(s.work_queue()), queue_(0), pending_credit_(0)
     {}
 
     void add(proton::void_function0& f) {
@@ -330,7 +330,7 @@ class Receiver : public proton::messaging_handler {
 
 public:
     Receiver(proton::receiver r) :
-        receiver_(r), work_queue_(make_thread_safe(r).get()->work_queue()), queue_(0)
+        receiver_(r), work_queue_(r.work_queue()), queue_(0)
     {}
 
     void add(proton::void_function0& f) {

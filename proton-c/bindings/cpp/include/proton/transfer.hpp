@@ -61,6 +61,9 @@ class transfer : public internal::object<pn_delivery_t> {
     /// Return the connection for this transfer.
     PN_CPP_EXTERN class connection connection() const;
 
+    /// Get the work_queue for the transfer.
+    PN_CPP_EXTERN class work_queue& work_queue() const;
+
     /// Return the container for this transfer.
     PN_CPP_EXTERN class container &container() const;
 

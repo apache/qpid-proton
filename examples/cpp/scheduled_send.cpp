@@ -56,12 +56,16 @@ class scheduled_sender : public proton::messaging_handler {
     // The awkward looking double lambda is necessary because the scheduled lambdas run in the container context
     // and must arrange lambdas for send and close to happen in the connection context.
     void on_container_start(proton::container &c) OVERRIDE {
-        sender = c.open_sender(url);
-        work_queue = &proton::make_thread_safe(sender).get()->work_queue();
+        c.open_sender(url);
+    }
+
+    void on_sender_open(proton::sender &s) OVERRIDE {
+        sender = s;
+        work_queue = &s.work_queue();
         // Call this->cancel after timeout.
-        c.schedule(timeout, [this]() { this->work_queue->add( [this]() { this->cancel(); }); });
+        s.container().schedule(timeout, [this]() { this->work_queue->add( [this]() { this->cancel(); }); });
          // Start regular ticks every interval.
-        c.schedule(interval, [this]() { this->work_queue->add( [this]() { this->tick(); }); });
+        s.container().schedule(interval, [this]() { this->work_queue->add( [this]() { this->tick(); }); });
     }
 
     void cancel() {

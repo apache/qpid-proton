@@ -76,6 +76,10 @@ container& connection::container() const {
     return *c;
 }
 
+work_queue& connection::work_queue() const {
+    return connection_context::get(pn_object()).work_queue_;
+}
+
 session_range connection::sessions() const {
     return session_range(session_iterator(make_wrapper(pn_session_head(pn_object(), 0))));
 }

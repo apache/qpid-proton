@@ -54,6 +54,10 @@ container& session::container() const {
     return connection().container();
 }
 
+work_queue& session::work_queue() const {
+    return connection().work_queue();
+}
+
 connection session::connection() const {
     return make_wrapper(pn_session_connection(pn_object()));
 }

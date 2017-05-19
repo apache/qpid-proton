@@ -96,7 +96,7 @@ class scheduled_sender : public proton::messaging_handler {
     }
 
     void on_sender_open(proton::sender & s) OVERRIDE {
-        work_queue = &proton::make_thread_safe(s).get()->work_queue();
+        work_queue = &s.work_queue();
 
         do_cancel = cancel_fn(*this, s);
         do_tick = tick_fn(*this, s);
