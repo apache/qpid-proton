@@ -272,11 +272,16 @@ class proton_event
     {}
 
     pn_event_t* pn_event() const { return pn_event_; }
+
+    /** Return a reference to the container, throws proton::error if there is none. */
     class container& container() const {
         if (!container_)
             throw proton::error("event does not have a container");
         return *container_;
     }
+
+    /** Return a pointer to the container if there is one, NULL otherwise. */
+    class container* container_ptr() const { return container_; }
 
     /// Get type of event
     event_type type() const { return event_type(pn_event_type(pn_event_)); }

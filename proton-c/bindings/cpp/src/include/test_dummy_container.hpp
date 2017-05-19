@@ -28,7 +28,6 @@ namespace test {
 
 using namespace proton;
 
-
 class dummy_container : public standard_container {
   public:
     dummy_container(const std::string cid="") :

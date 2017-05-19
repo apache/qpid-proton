@@ -94,7 +94,7 @@ class terminus {
     PN_CPP_EXTERN value node_properties() const;
 
   protected:
-    pn_terminus_t *pn_object() { return object_; }
+    pn_terminus_t *pn_object() const { return object_; }
   private:
     pn_terminus_t* object_;
     pn_link_t* parent_;

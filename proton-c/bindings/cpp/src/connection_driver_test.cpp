@@ -19,16 +19,18 @@
 
 
 #include "test_bits.hpp"
-#include "test_dummy_container.hpp"
 #include "proton_bits.hpp"
 
-#include "proton/container.hpp"
-#include "proton/uuid.hpp"
 #include "proton/io/connection_driver.hpp"
 #include "proton/io/link_namer.hpp"
-#include "proton/messaging_handler.hpp"
-#include "proton/types_fwd.hpp"
 #include "proton/link.hpp"
+#include "proton/messaging_handler.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/sender_options.hpp"
+#include "proton/source_options.hpp"
+#include "proton/types_fwd.hpp"
+#include "proton/uuid.hpp"
+
 #include <deque>
 #include <algorithm>
 
@@ -41,18 +43,15 @@ using proton::io::connection_driver;
 using proton::io::const_buffer;
 using proton::io::mutable_buffer;
 
-using test::dummy_container;
-
 typedef std::deque<char> byte_stream;
 
 /// In memory connection_driver that reads and writes from byte_streams
-struct in_memory_engine : public connection_driver {
+struct in_memory_driver : public connection_driver {
 
     byte_stream& reads;
     byte_stream& writes;
 
-    in_memory_engine(byte_stream& rd, byte_stream& wr, class container& cont) :
-        connection_driver(cont), reads(rd), writes(wr) {}
+    in_memory_driver(byte_stream& rd, byte_stream& wr) : reads(rd), writes(wr) {}
 
     void do_read() {
         mutable_buffer rbuf = read_buffer();
@@ -83,16 +82,13 @@ struct in_memory_engine : public connection_driver {
     }
 };
 
-/// A pair of engines that talk to each other in-memory, simulating a connection.
-struct engine_pair {
-    dummy_container conta, contb;
+/// A pair of drivers that talk to each other in-memory, simulating a connection.
+struct driver_pair {
     byte_stream ab, ba;
-    in_memory_engine a, b;
+    in_memory_driver a, b;
 
-    engine_pair(const connection_options& oa, const connection_options& ob,
-                const std::string& name=""
-    ) :
-        conta(name+"a"), contb(name+"b"), a(ba, ab, conta), b(ab, ba, contb)
+    driver_pair(const connection_options& oa, const connection_options& ob)
+        : a(ba, ab), b(ab, ba)
     {
         a.connect(oa);
         b.accept(ob);
@@ -146,9 +142,9 @@ struct namer : public io::link_namer {
     std::string link_name() { return std::string(1, name++); }
 };
 
-void test_engine_container_link_id() {
+void test_driver_link_id() {
     record_handler ha, hb;
-    engine_pair e(ha, hb, "ids-");
+    driver_pair e(ha, hb);
     e.a.connect(ha);
     e.b.accept(hb);
 
@@ -159,9 +155,7 @@ void test_engine_container_link_id() {
     set_link_namer(ca, na);
     set_link_namer(cb, nb);
 
-    ASSERT_EQUAL("ids-a", e.a.connection().container_id());
     e.b.connection().open();
-    ASSERT_EQUAL("ids-b", e.b.connection().container_id());
 
     e.a.connection().open_sender("foo");
     while (ha.senders.empty() || hb.receivers.empty()) e.process();
@@ -183,7 +177,7 @@ void test_engine_container_link_id() {
 
 void test_endpoint_close() {
     record_handler ha, hb;
-    engine_pair e(ha, hb);
+    driver_pair e(ha, hb);
     e.a.connection().open_sender("x");
     e.a.connection().open_receiver("y");
     while (ha.senders.size()+ha.receivers.size() < 2 ||
@@ -213,24 +207,24 @@ void test_endpoint_close() {
     ASSERT_EQUAL("conn: bad connection", hb.connection_errors.front());
 }
 
-void test_engine_disconnected() {
-    // engine.disconnected() aborts the connection and calls the local on_transport_error()
+void test_driver_disconnected() {
+    // driver.disconnected() aborts the connection and calls the local on_transport_error()
     record_handler ha, hb;
-    engine_pair e(ha, hb, "disconnected");
+    driver_pair e(ha, hb);
     e.a.connect(ha);
     e.b.accept(hb);
     while (!e.a.connection().active() || !e.b.connection().active())
         e.process();
 
     // Close a with an error condition. The AMQP connection is still open.
-    e.a.disconnected(proton::error_condition("oops", "engine failure"));
+    e.a.disconnected(proton::error_condition("oops", "driver failure"));
     ASSERT(!e.a.dispatch());
     ASSERT(!e.a.connection().closed());
     ASSERT(e.a.connection().error().empty());
     ASSERT_EQUAL(0u, ha.connection_errors.size());
-    ASSERT_EQUAL("oops: engine failure", e.a.transport().error().what());
+    ASSERT_EQUAL("oops: driver failure", e.a.transport().error().what());
     ASSERT_EQUAL(1u, ha.transport_errors.size());
-    ASSERT_EQUAL("oops: engine failure", ha.transport_errors.front());
+    ASSERT_EQUAL("oops: driver failure", ha.transport_errors.front());
 
     // In a real app the IO code would detect the abort and do this:
     e.b.disconnected(proton::error_condition("broken", "it broke"));
@@ -246,23 +240,21 @@ void test_engine_disconnected() {
 }
 
 void test_no_container() {
-    // An engine with no container should throw, not crash.
+    // An driver with no container should throw, not crash.
     connection_driver e;
     try {
         e.connection().container();
         FAIL("expected error");
     } catch (proton::error) {}
-    ASSERT(make_thread_safe<connection>(e.connection()).get());
-    ASSERT(!make_thread_safe<connection>(e.connection()).get()->event_loop());
 }
 
 }
 
 int main(int, char**) {
     int failed = 0;
-    RUN_TEST(failed, test_engine_container_link_id());
+    RUN_TEST(failed, test_driver_link_id());
     RUN_TEST(failed, test_endpoint_close());
-    RUN_TEST(failed, test_engine_disconnected());
+    RUN_TEST(failed, test_driver_disconnected());
     RUN_TEST(failed, test_no_container());
     return failed;
 }

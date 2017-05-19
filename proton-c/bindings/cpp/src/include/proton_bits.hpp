@@ -124,7 +124,7 @@ template <class T>
 class factory {
 public:
     static T wrap(typename wrapped<T>::type* t) { return t; }
-    static typename wrapped<T>::type* unwrap(T t) { return t.pn_object(); }
+    static typename wrapped<T>::type* unwrap(const T& t) { return t.pn_object(); }
 };
 
 // Get attachments for various proton-c types
@@ -142,7 +142,7 @@ template <class U>
 U make_wrapper(typename internal::wrapped<U>::type* t) { return internal::factory<U>::wrap(t); }
 
 template <class T>
-typename internal::wrapped<T>::type* unwrap(T t) {return internal::factory<T>::unwrap(t); }
+typename internal::wrapped<T>::type* unwrap(const T& t) { return internal::factory<T>::unwrap(t); }
 
 }
 
