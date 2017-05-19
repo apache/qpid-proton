@@ -70,6 +70,10 @@ container& link::container() const {
     return connection().container();
 }
 
+work_queue& link::work_queue() const {
+    return connection().work_queue();
+}
+
 class connection link::connection() const {
     return make_wrapper(pn_session_connection(pn_link_session(pn_object())));
 }

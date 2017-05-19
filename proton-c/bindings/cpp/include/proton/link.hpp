@@ -78,6 +78,9 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// The container for this link.
     PN_CPP_EXTERN class container &container() const;
 
+    /// Get the work_queue for the link.
+    PN_CPP_EXTERN class work_queue& work_queue() const;
+
     /// The connection that owns this link.
     PN_CPP_EXTERN class connection connection() const;
 
