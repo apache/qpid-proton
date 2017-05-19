@@ -46,49 +46,13 @@ class scheduled_sender : public proton::messaging_handler {
     proton::work_queue *work_queue;
     bool ready, canceled;
 
-    struct cancel_fn : public proton::void_function0 {
-        scheduled_sender* parent;
-        proton::sender sender;
-        cancel_fn(): parent(0) {}
-        cancel_fn(scheduled_sender& ss, proton::sender& s) : parent(&ss), sender(s) {}
-        void operator()() { if (parent) parent->cancel(sender); }
-    };
-
-    struct tick_fn : public proton::void_function0 {
-        scheduled_sender* parent;
-        proton::sender sender;
-        tick_fn(): parent(0) {}
-        tick_fn(scheduled_sender& ss, proton::sender& s) : parent(&ss), sender(s) {}
-        void operator()() { if (parent) parent->tick(sender); }
-    };
-
-    struct defer_cancel_fn : public proton::void_function0 {
-        scheduled_sender& parent;
-        defer_cancel_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.work_queue->add(parent.do_cancel); }
-    };
-
-    struct defer_tick_fn : public proton::void_function0 {
-        scheduled_sender& parent;
-        defer_tick_fn(scheduled_sender& ss) : parent(ss) {}
-        void operator()() { parent.work_queue->add(parent.do_tick); }
-    };
-
-    tick_fn do_tick;
-    cancel_fn do_cancel;
-    defer_tick_fn defer_tick;
-    defer_cancel_fn defer_cancel;
-
   public:
-
     scheduled_sender(const std::string &s, double d, double t) :
         url(s),
         interval(int(d*proton::duration::SECOND.milliseconds())), // Send interval.
         timeout(int(t*proton::duration::SECOND.milliseconds())), // Cancel after timeout.
         ready(true),            // Ready to send.
-        canceled(false),         // Canceled.
-        defer_tick(*this),
-        defer_cancel(*this)
+        canceled(false)         // Canceled.
     {}
 
     void on_container_start(proton::container &c) OVERRIDE {
@@ -98,20 +62,18 @@ class scheduled_sender : public proton::messaging_handler {
     void on_sender_open(proton::sender & s) OVERRIDE {
         work_queue = &s.work_queue();
 
-        do_cancel = cancel_fn(*this, s);
-        do_tick = tick_fn(*this, s);
-        s.container().schedule(timeout, defer_cancel); // Call this->cancel after timeout.
-        s.container().schedule(interval, defer_tick); // Start regular ticks every interval.
+        proton::defer(work_queue, timeout, &scheduled_sender::cancel, this, s);
+        proton::defer(work_queue, interval, &scheduled_sender::tick, this, s);
     }
 
-    void cancel(proton::sender& sender) {
+    void cancel(proton::sender sender) {
         canceled = true;
         sender.connection().close();
     }
 
-    void tick(proton::sender& sender) {
+    void tick(proton::sender sender) {
         if (!canceled) {
-            sender.container().schedule(interval, defer_tick); // Next tick
+            proton::defer(work_queue, interval, &scheduled_sender::tick, this, sender); // Next tick
             if (sender.credit() > 0) // Only send if we have credit
                 send(sender);
             else

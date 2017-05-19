@@ -22,6 +22,7 @@
  *
  */
 
+#include "./duration.hpp"
 #include "./fwd.hpp"
 #include "./function.hpp"
 #include "./internal/config.hpp"
@@ -317,6 +318,31 @@ bool defer(WQ wq, F f, A a, B b, C c, D d) {
     return defer_helper(wq, make_work(f, a, b, c, d));
 }
 
+template <class WQ, class F>
+void defer(WQ wq, duration dn, F f) {
+    wq->schedule(dn, make_work(f));
+}
+
+template <class WQ, class F, class A>
+void defer(WQ wq, duration dn, F f, A a) {
+    wq->schedule(dn, make_work(f, a));
+}
+
+template <class WQ, class F, class A, class B>
+void defer(WQ wq, duration dn, F f, A a, B b) {
+    wq->schedule(dn, make_work(f, a, b));
+}
+
+template <class WQ, class F, class A, class B, class C>
+void defer(WQ wq, duration dn, F f, A a, B b, C c) {
+    wq->schedule(dn, make_work(f, a, b, c));
+}
+
+template <class WQ, class F, class A, class B, class C, class D>
+void defer(WQ wq, duration dn, F f, A a, B b, C c, D d) {
+    wq->schedule(dn, make_work(f, a, b, c, d));
+}
+
 /// This version of proton::defer defers calling a free function to an arbitrary work queue
 #else
 // The C++11 version is *much* simpler and even so more general!
@@ -324,6 +350,11 @@ bool defer(WQ wq, F f, A a, B b, C c, D d) {
 template <class WQ, class... Rest>
 bool defer(WQ wq, Rest&&... r) {
     return wq->add(std::bind(std::forward<Rest>(r)...));
+}
+
+template <class WQ, class... Rest>
+void defer(WQ wq, duration d, Rest&&... r) {
+    wq->schedule(d, std::bind(std::forward<Rest>(r)...));
 }
 
 template <class... Rest>
