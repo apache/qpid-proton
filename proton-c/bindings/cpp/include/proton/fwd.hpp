@@ -29,6 +29,7 @@ class connection;
 class connection_options;
 class container;
 class delivery;
+class duration;
 class error_condition;
 class event;
 class message;
