@@ -31,7 +31,7 @@ namespace proton {
 error_condition::error_condition(pn_condition_t* c) :
     name_(str(pn_condition_get_name(c))),
     description_(str(pn_condition_get_description(c))),
-    properties_(internal::value_ref(pn_condition_info(c)))
+    properties_(value(pn_condition_info(c)))
 {}
 
 

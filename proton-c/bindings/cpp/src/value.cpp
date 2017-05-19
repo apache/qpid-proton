@@ -34,6 +34,7 @@ using codec::encoder;
 using codec::start;
 
 value::value() {}
+value::value(pn_data_t *d) { data_ = make_wrapper(d); }
 value::value(const value& x) { *this = x; }
 #if PN_CPP_HAS_RVALUE_REFERENCES
 value::value(value&& x) { swap(*this, x); }
@@ -189,22 +190,12 @@ std::ostream& operator<<(std::ostream& o, const value& x) {
     return o << d;
 }
 
-namespace internal {
-value_ref::value_ref(pn_data_t* p) { refer(p); }
-value_ref::value_ref(const internal::data& d) { refer(d); }
-value_ref::value_ref(const value_base& v) { refer(v); }
-
-void value_ref::refer(pn_data_t* p) { data_ = make_wrapper(p); }
-void value_ref::refer(const internal::data& d) { data_ = d; }
-void value_ref::refer(const value_base& v) { data_ = v.data_; }
-
-void value_ref::reset() { refer(0); }
-} // namespace internal
-
 std::string to_string(const value& x) {
     std::ostringstream os;
     os << std::boolalpha << x;
     return os.str();
 }
+
+void value::reset(pn_data_t *d) { data_ = make_wrapper(d); }
 
 } // namespace proton

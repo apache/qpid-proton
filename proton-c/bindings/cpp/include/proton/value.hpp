@@ -42,7 +42,6 @@ class value_base {
     internal::data& data();
     internal::data data_;
 
-  friend class value_ref;
   friend class codec::encoder;
   friend class codec::decoder;
 };
@@ -116,40 +115,12 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// Complex types are printed in a non-standard human-readable format but
     /// that may change in future so should not be parsed.
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value&);
+
+    ///@cond INTERNAL - used to refer to existing pn_data_t* values as proton::value
+    value(pn_data_t* d);          // Refer to existing pn_data_t
+    void reset(pn_data_t* d = 0); // Refer to a new pn_data_t
+    ///@endcond
 };
-
-namespace internal {
-
-// value_ref is a `pn_data_t* p` that can be returned as a value& and used to modify
-// the underlying value in-place.
-//
-// Classes with a value_ref member can return it as a value& in accessor functions.
-// It can also be used to copy a pn_data_t* p to a proton::value via: value(value_ref(p));
-// None of the constructors make copies, they just refer to the same value.
-//
-class value_ref : public value {
-  public:
-    value_ref(pn_data_t* = 0);
-    value_ref(const internal::data&);
-    value_ref(const value_base&);
-
-    // Use refer() not operator= to avoid confusion with value op=
-    void refer(pn_data_t*);
-    void refer(const internal::data&);
-    void refer(const value_base&);
-
-    // Reset to refer to nothing, release existing references. Equivalent to refer(0).
-    void reset();
-
-    // Assignments to value_ref means assigning to the value.
-    template <class T> value_ref& operator=(const T& x) {
-        static_cast<value&>(*this) = x;
-        return *this;
-    }
-};
-
-}
-
 
 /// @copydoc scalar::get
 /// @related proton::value

@@ -70,7 +70,7 @@ void set_error_condition(const error_condition& e, pn_condition_t *c) {
     if (!e.description().empty()) {
         pn_condition_set_description(c, e.description().c_str());
     }
-    internal::value_ref(pn_condition_info(c)) = e.properties();
+    value(pn_condition_info(c)) = e.properties();
 }
 
 }

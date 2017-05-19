@@ -70,8 +70,10 @@ void swap(message& x, message& y) {
 }
 
 pn_message_t *message::pn_msg() const {
-    if (!pn_msg_) pn_msg_ = pn_message();
-    body_.refer(pn_message_body(pn_msg_));
+    if (!pn_msg_) {
+        pn_msg_ = pn_message();
+        body_.reset(pn_message_body(pn_msg_));
+    }
     return pn_msg_;
 }
 
@@ -144,7 +146,7 @@ std::string message::reply_to() const {
 }
 
 void message::correlation_id(const message_id& id) {
-    internal::value_ref(pn_message_correlation_id(pn_msg())) = id;
+    value(pn_message_correlation_id(pn_msg())) = id;
 }
 
 message_id message::correlation_id() const {
