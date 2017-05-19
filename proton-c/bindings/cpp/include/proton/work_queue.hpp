@@ -284,76 +284,76 @@ void_function0& make_work(R (*f)(A, B, C), A a, B b, C c) {
 
 namespace {
 template <class T>
-bool defer_helper(T t, void_function0& w) {
+bool schedule_work_helper(T t, void_function0& w) {
     bool r = t->add(w);
     if (!r) delete &w;
     return r;
 }
 }
 
-/// defer is a convenience that is used for C++03 code to defer function calls
+/// schedule_work is a convenience that is used for C++03 code to defer function calls
 /// to a work_queue
 template <class WQ, class F>
-bool defer(WQ wq, F f) {
-    return defer_helper(wq, make_work(f));
+bool schedule_work(WQ wq, F f) {
+    return schedule_work_helper(wq, make_work(f));
 }
 
 template <class WQ, class F, class A>
-bool defer(WQ wq, F f, A a) {
-    return defer_helper(wq, make_work(f, a));
+bool schedule_work(WQ wq, F f, A a) {
+    return schedule_work_helper(wq, make_work(f, a));
 }
 
 template <class WQ, class F, class A, class B>
-bool defer(WQ wq, F f, A a, B b) {
-    return defer_helper(wq, make_work(f, a, b));
+bool schedule_work(WQ wq, F f, A a, B b) {
+    return schedule_work_helper(wq, make_work(f, a, b));
 }
 
 template <class WQ, class F, class A, class B, class C>
-bool defer(WQ wq, F f, A a, B b, C c) {
-    return defer_helper(wq, make_work(f, a, b, c));
+bool schedule_work(WQ wq, F f, A a, B b, C c) {
+    return schedule_work_helper(wq, make_work(f, a, b, c));
 }
 
 template <class WQ, class F, class A, class B, class C, class D>
-bool defer(WQ wq, F f, A a, B b, C c, D d) {
-    return defer_helper(wq, make_work(f, a, b, c, d));
+bool schedule_work(WQ wq, F f, A a, B b, C c, D d) {
+    return schedule_work_helper(wq, make_work(f, a, b, c, d));
 }
 
 template <class WQ, class F>
-void defer(WQ wq, duration dn, F f) {
+void schedule_work(WQ wq, duration dn, F f) {
     wq->schedule(dn, make_work(f));
 }
 
 template <class WQ, class F, class A>
-void defer(WQ wq, duration dn, F f, A a) {
+void schedule_work(WQ wq, duration dn, F f, A a) {
     wq->schedule(dn, make_work(f, a));
 }
 
 template <class WQ, class F, class A, class B>
-void defer(WQ wq, duration dn, F f, A a, B b) {
+void schedule_work(WQ wq, duration dn, F f, A a, B b) {
     wq->schedule(dn, make_work(f, a, b));
 }
 
 template <class WQ, class F, class A, class B, class C>
-void defer(WQ wq, duration dn, F f, A a, B b, C c) {
+void schedule_work(WQ wq, duration dn, F f, A a, B b, C c) {
     wq->schedule(dn, make_work(f, a, b, c));
 }
 
 template <class WQ, class F, class A, class B, class C, class D>
-void defer(WQ wq, duration dn, F f, A a, B b, C c, D d) {
+void schedule_work(WQ wq, duration dn, F f, A a, B b, C c, D d) {
     wq->schedule(dn, make_work(f, a, b, c, d));
 }
 
-/// This version of proton::defer defers calling a free function to an arbitrary work queue
+/// This version of proton::schedule_work schedule_works calling a free function to an arbitrary work queue
 #else
 // The C++11 version is *much* simpler and even so more general!
 // These definitions encompass everything in the C++03 section
 template <class WQ, class... Rest>
-bool defer(WQ wq, Rest&&... r) {
+bool schedule_work(WQ wq, Rest&&... r) {
     return wq->add(std::bind(std::forward<Rest>(r)...));
 }
 
 template <class WQ, class... Rest>
-void defer(WQ wq, duration d, Rest&&... r) {
+void schedule_work(WQ wq, duration d, Rest&&... r) {
     wq->schedule(d, std::bind(std::forward<Rest>(r)...));
 }
 

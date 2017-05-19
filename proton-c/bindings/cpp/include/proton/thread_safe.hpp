@@ -70,7 +70,7 @@ class thread_safe : private internal::pn_ptr_base, private internal::endpoint_tr
 
     ~thread_safe() {
         if (ptr()) {
-            if (!!work_queue().impl_) defer(&work_queue(), &decref, (void*)ptr());
+            if (!!work_queue().impl_) schedule_work(&work_queue(), &decref, (void*)ptr());
             else decref(ptr());
         }
     }
