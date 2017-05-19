@@ -94,6 +94,14 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// or f() cannot be injected for any other reason.
     PN_CPP_EXTERN bool add(work f);
 
+    /// Add work to the work queue after duration: f() will be called after the duration
+    /// serialised with other work in the queue: possibly in another thread.
+    ///
+    /// The scheduled execution is "best effort" and it is possible that after the elapsed duration
+    /// the work will not be able to be injected into the serialised context - there will be no
+    /// indication of this.
+    PN_CPP_EXTERN void schedule(duration, work);
+
   private:
     PN_CPP_EXTERN static work_queue& get(pn_connection_t*);
     PN_CPP_EXTERN static work_queue& get(pn_session_t*);

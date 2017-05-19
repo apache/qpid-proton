@@ -19,6 +19,8 @@
 
 #include "proton/work_queue.hpp"
 
+#include "proton/duration.hpp"
+
 #include "contexts.hpp"
 #include "proactor_container_impl.hpp"
 #include "proactor_work_queue_impl.hpp"
@@ -39,6 +41,12 @@ bool work_queue::add(work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return false;
     return impl_->add(f);
+}
+
+void work_queue::schedule(duration d, work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return;
+    return impl_->schedule(d, f);
 }
 
 work_queue& work_queue::get(pn_connection_t* c) {

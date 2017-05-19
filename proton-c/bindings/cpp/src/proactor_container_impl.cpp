@@ -45,16 +45,25 @@ namespace proton {
 
 class container::impl::common_work_queue : public work_queue::impl {
   public:
-    common_work_queue(): finished_(false) {}
+    common_work_queue(container::impl& c): container_(c), finished_(false) {}
 
     typedef std::vector<work> jobs;
 
     void run_all_jobs();
     void finished() { finished_ = true; }
+    void schedule(duration, work);
 
+    container::impl& container_;
     jobs jobs_;
     bool finished_;
 };
+
+void container::impl::common_work_queue::schedule(duration d, work f) {
+    // Note this is an unbounded work queue.
+    // A resource-safe implementation should be bounded.
+    if (finished_) return;
+    container_.schedule(d, make_work(&work_queue::impl::add, (work_queue::impl*)this, f));
+}
 
 void container::impl::common_work_queue::run_all_jobs() {
     jobs j;
@@ -69,7 +78,7 @@ void container::impl::common_work_queue::run_all_jobs() {
 
 class container::impl::connection_work_queue : public common_work_queue {
   public:
-    connection_work_queue(pn_connection_t* c): connection_(c) {}
+    connection_work_queue(container::impl& ct, pn_connection_t* c): common_work_queue(ct), connection_(c) {}
 
     bool add(work f);
 
@@ -87,12 +96,10 @@ bool container::impl::connection_work_queue::add(work f) {
 
 class container::impl::container_work_queue : public common_work_queue {
   public:
-    container_work_queue(container::impl& c): container_(c) {}
+    container_work_queue(container::impl& c): common_work_queue(c) {}
     ~container_work_queue() { container_.remove_work_queue(this); }
 
     bool add(work f);
-
-    container::impl& container_;
 };
 
 bool container::impl::container_work_queue::add(work f) {
@@ -147,7 +154,7 @@ proton::connection container::impl::connect_common(
     connection_context& cc(connection_context::get(pnc));
     cc.container = &container_;
     cc.handler = mh;
-    cc.work_queue_ = new container::impl::connection_work_queue(pnc);
+    cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
 
     pn_connection_set_container(pnc, id_.c_str());
     pn_connection_set_hostname(pnc, url.host().c_str());
@@ -324,7 +331,7 @@ bool container::impl::handle(pn_event_t* event) {
         cc.container = &container_;
         cc.listener_context_ = &lc;
         cc.handler = opts.handler();
-        cc.work_queue_ = new container::impl::connection_work_queue(c);
+        cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
         pn_listener_accept(l, c);
         return false;
     }
