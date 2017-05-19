@@ -20,7 +20,9 @@
  */
 
 /* Enable POSIX features for uv.h */
+#ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
+#endif
 
 #include "../core/log_private.h"
 #include "proactor-internal.h"

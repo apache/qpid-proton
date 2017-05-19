@@ -20,7 +20,9 @@
  */
 
 /* Enable POSIX features for pthread.h */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include "../core/log_private.h"
 #include "proactor-internal.h"
