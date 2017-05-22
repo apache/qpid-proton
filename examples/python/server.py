@@ -19,6 +19,7 @@
 #
 
 from __future__ import print_function
+import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -41,8 +42,15 @@ class Server(MessagingHandler):
         self.server.send(Message(address=event.message.reply_to, body=event.message.body.upper(),
                             correlation_id=event.message.correlation_id))
 
+parser = optparse.OptionParser(usage="usage: %prog [options]")
+parser.add_option("-u", "--url", default="0.0.0.0:5672",
+                  help="broker/router url to connect to (default %default)")
+parser.add_option("-a", "--address", default="examples",
+                  help="address from which messages are received (default %default)")
+opts, args = parser.parse_args()
+
 try:
-    Container(Server("0.0.0.0:5672", "examples")).run()
+    Container(Server(opts.url, opts.address)).run()
 except KeyboardInterrupt: pass
 
 
