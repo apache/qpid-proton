@@ -23,6 +23,7 @@ import optparse
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+from urlparse import urlparse
 
 class Server(MessagingHandler):
     def __init__(self, url, address):
@@ -43,14 +44,14 @@ class Server(MessagingHandler):
                             correlation_id=event.message.correlation_id))
 
 parser = optparse.OptionParser(usage="usage: %prog [options]")
-parser.add_option("-u", "--url", default="0.0.0.0:5672",
-                  help="broker/router url to connect to (default %default)")
-parser.add_option("-a", "--address", default="examples",
+parser.add_option("-a", "--address", default="localhost:5672/examples",
                   help="address from which messages are received (default %default)")
 opts, args = parser.parse_args()
 
+parsedUrl = urlparse(opts.address)
+
 try:
-    Container(Server(opts.url, opts.address)).run()
+    Container(Server(parsedUrl.netloc, parsedUrl.path.strip("/"))).run()
 except KeyboardInterrupt: pass
 
 
