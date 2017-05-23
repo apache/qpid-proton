@@ -20,10 +20,9 @@
 
 from __future__ import print_function
 import optparse
-from proton import Message
+from proton import Message, Url
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from urlparse import urlparse
 
 class Server(MessagingHandler):
     def __init__(self, url, address):
@@ -48,10 +47,10 @@ parser.add_option("-a", "--address", default="localhost:5672/examples",
                   help="address from which messages are received (default %default)")
 opts, args = parser.parse_args()
 
-parsedUrl = urlparse(opts.address)
+url = Url(opts.address)
 
 try:
-    Container(Server(parsedUrl.netloc, parsedUrl.path.strip("/"))).run()
+    Container(Server(url, url.path)).run()
 except KeyboardInterrupt: pass
 
 
