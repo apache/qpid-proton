@@ -20,6 +20,9 @@
  * under the License.
  */
 
+/// @file
+/// Enable conversions between proton::value and std::forward_list
+
 #include "./encoder.hpp"
 #include "./decoder.hpp"
 

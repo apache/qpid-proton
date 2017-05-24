@@ -74,17 +74,17 @@ class message_id : public scalar_base {
 template <class T> T get(const message_id& x);
 /// @endcond
 
-/// Get the uint64_t value or throw conversion_error. @related message_id
+/// Get the uint64_t value or throw conversion_error. @relatedalso message_id
 template<> inline uint64_t get<uint64_t>(const message_id& x) { return internal::get<uint64_t>(x); }
-/// Get the @ref uuid value or throw conversion_error. @related message_id
+/// Get the @ref uuid value or throw conversion_error. @relatedalso message_id
 template<> inline uuid get<uuid>(const message_id& x) { return internal::get<uuid>(x); }
-/// Get the @ref binary value or throw conversion_error. @related message_id
+/// Get the @ref binary value or throw conversion_error. @relatedalso message_id
 template<> inline binary get<binary>(const message_id& x) { return internal::get<binary>(x); }
-/// Get the std::string value or throw conversion_error. @related message_id
+/// Get the std::string value or throw conversion_error. @relatedalso message_id
 template<> inline std::string get<std::string>(const message_id& x) { return internal::get<std::string>(x); }
 
 /// @copydoc scalar::coerce
-/// @related message_id
+/// @relatedalso message_id
 template<class T> T coerce(const message_id& x) { return internal::coerce<T>(x); }
 
 } // proton

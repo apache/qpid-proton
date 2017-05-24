@@ -65,18 +65,18 @@ template <class T> T get(const annotation_key& x);
 
 /// Get the uint64_t value or throw conversion_error.
 ///
-/// @related annotation_key
+/// @relatedalso annotation_key
 template<> inline uint64_t get<uint64_t>(const annotation_key& x) { return internal::get<uint64_t>(x); }
 
 /// Get the @ref symbol value or throw conversion_error.
 ///
-/// @related annotation_key
+/// @relatedalso annotation_key
 template<> inline symbol get<symbol>(const annotation_key& x) { return internal::get<symbol>(x); }
 
 /// Get the @ref binary value or throw conversion_error.
 ///
 /// @copydoc scalar::coerce
-/// @related annotation_key
+/// @relatedalso annotation_key
 template<class T> T coerce(const annotation_key& x) { return internal::coerce<T>(x); }
 
 } // proton

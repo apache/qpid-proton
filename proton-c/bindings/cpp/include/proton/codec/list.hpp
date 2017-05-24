@@ -22,6 +22,9 @@
  *
  */
 
+/// @file
+/// Enable conversions between proton::value and std::list
+
 #include "./encoder.hpp"
 #include "./decoder.hpp"
 

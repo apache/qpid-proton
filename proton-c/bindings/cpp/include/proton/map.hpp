@@ -41,10 +41,13 @@ class map_type_impl;
 template <class K, class T>
 class map;
 
+/// Decode from a proton::map
 template <class K, class T>
 PN_CPP_EXTERN proton::codec::decoder& operator>>(proton::codec::decoder& d, map<K,T>& m);
+/// Encode to a proton::map
 template <class K, class T>
 PN_CPP_EXTERN proton::codec::encoder& operator<<(proton::codec::encoder& e, const map<K,T>& m);
+/// Swap proton::map instances
 template <class K, class T>
 PN_CPP_EXTERN void swap(map<K,T>&, map<K,T>&);
 
@@ -53,7 +56,7 @@ PN_CPP_EXTERN void swap(map<K,T>&, map<K,T>&);
 ///
 /// Provides only basic get()/set() operations for convenience.  For more
 /// complicated use (iteration, preserving order etc.) you should convert to a
-/// standard C++ map type such as std::map. See @ref message_propreties.cpp
+/// standard C++ map type such as std::map. See @ref message_properties.cpp
 /// and @ref types_page.
 ///
 template <class K, class T>
@@ -63,19 +66,19 @@ class PN_CPP_CLASS_EXTERN map {
             public internal::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
 
  public:
-    /// Create an empty map value
+    /// @name Construct and assign
+    /// @{
     PN_CPP_EXTERN map();
-
     PN_CPP_EXTERN map(const map& cm);
     PN_CPP_EXTERN map& operator=(const map& cm);
 #if PN_CPP_HAS_RVALUE_REFERENCES
     PN_CPP_EXTERN map(map&&);
     PN_CPP_EXTERN map& operator=(map&&);
 #endif
-
+    ///@}
     PN_CPP_EXTERN ~map();
 
-    /// Type-safe assign from a compatible map type, e.g. std::map<K,T> - see @types_page
+    /// Type-safe assign from a compatible map, e.g. std::map<K,T> - see @ref types_page
     template <class M>
     typename assignable_map<M, map&>::type operator=(const M& x) { value(x); return *this;}
 

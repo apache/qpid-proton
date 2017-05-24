@@ -23,9 +23,7 @@
  */
 
 /// @file
-///
-/// Forward declarations for all the C++ types used by Proton to
-/// represent AMQP types.
+/// Forward declarations for all C++ types used by Proton to represent AMQP types.
 
 #include "./internal/config.hpp"
 

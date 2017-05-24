@@ -51,32 +51,32 @@ class scalar : public scalar_base {
 /// This will succeed if and only if x contains a uint64_t value.
 ///
 /// @throw conversion_error if contained value is not of type T.
-/// @related scalar
+/// @relatedalso scalar
 template<class T> T get(const scalar& s) { return internal::get<T>(s); }
 
 /// Coerce the contained value to type T. For example:
 ///
-///      uint64_t i = get<uint64_t>(x)
+///      uint64_t i = coerce<uint64_t>(x)
 ///
 /// This will succeed if x contains any numeric value, but may lose
 /// precision if it contains a float or double value.
 ///
 /// @throw conversion_error if the value cannot be converted to T
 /// according to `std::is_convertible`
-/// @related scalar
+/// @relatedalso scalar
 template<class T> T coerce(const scalar& x) { return internal::coerce<T>(x); }
 
 
 /// Coerce the contained value to type T. For example:
 ///
-///      uint64_t i = get<uint64_t>(x)
+///      uint64_t i = coerce<uint64_t>(x)
 ///
 /// This will succeed if x contains any numeric value, but may lose
 /// precision if it contains a float or double value.
 ///
 /// @throw conversion_error if the value cannot be converted to T
 /// according to `std::is_convertible`
-/// @related scalar
+/// @relatedalso scalar
 template<class T> T coerce(scalar& x) { return internal::coerce<T>(x); }
 
 } // proton

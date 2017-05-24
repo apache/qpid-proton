@@ -744,7 +744,7 @@ PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
  */
 PN_EXTERN int pn_message_data(pn_message_t *msg, pn_data_t *data);
 
-/** @cond INTERNAL @{ */
+/** @cond INTERNAL */
 
 /** Construct a message with extra storage */
 PN_EXTERN pn_message_t * pn_message_with_extra(size_t extra);
@@ -752,7 +752,7 @@ PN_EXTERN pn_message_t * pn_message_with_extra(size_t extra);
 /** Pointer to extra space allocated by pn_message_with_extra(). */
 PN_EXTERN void* pn_message_get_extra(pn_message_t *msg);
 
-/** @} */
+/** @endcond */
 
 
 /** @}

@@ -20,6 +20,9 @@
  * under the License.
  */
 
+/// @file
+/// Enable conversions between proton::value and std::deque
+
 #include "./encoder.hpp"
 #include "./decoder.hpp"
 

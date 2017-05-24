@@ -1,0 +1,52 @@
+/* List headers that lack their own @file marker so doxygen will link them properly.
+   Ideally the files themselves should have their own @file markup and comment,
+   if you update files that they can be removed from here.
+   */
+/// @file proton/annotation_key.hpp Key type for proton::message annotation maps.
+/// @file proton/binary.hpp Binary data type
+/// @file proton/byte_array.hpp
+/// @file proton/connection.hpp AMQP connection
+/// @file proton/connection_options.hpp Options to create a proton::connection
+/// @file proton/container.hpp AMQP container to manage connections and listeners
+/// @file proton/decimal.hpp Placeholder for the AMQP decimal data type.
+/// @file proton/delivery.hpp Delivery state of an AQMP messsage
+/// @file proton/delivery_mode.hpp Delivery mode of an AMQP message
+/// @file proton/duration.hpp Time duration data type
+/// @file proton/error_condition.hpp AMQP error condition
+/// @file proton/error.hpp Base exception type thrown by proton functions
+/// @file proton/event_loop.hpp
+/// @file proton/function.hpp
+/// @file proton/fwd.hpp
+/// @file proton/link.hpp
+/// @file proton/listener.hpp
+/// @file proton/listen_handler.hpp
+/// @file proton/map.hpp Template for AMQP property, annotation and filter maps.
+/// @file proton/message.hpp
+/// @file proton/message_id.hpp
+/// @file proton/messaging_handler.hpp
+/// @file proton/namespaces.hpp
+/// @file proton/receiver.hpp
+/// @file proton/receiver_options.hpp
+/// @file proton/reconnect_timer.hpp
+/// @file proton/sasl.hpp
+/// @file proton/scalar_base.hpp
+/// @file proton/scalar.hpp Run-time holder for any AMQP scalar value
+/// @file proton/sender.hpp
+/// @file proton/sender_options.hpp
+/// @file proton/session.hpp
+/// @file proton/session_options.hpp
+/// @file proton/source.hpp
+/// @file proton/source_options.hpp
+/// @file proton/ssl.hpp
+/// @file proton/symbol.hpp AMQP symbol (ASCII string) data type
+/// @file proton/target.hpp
+/// @file proton/target_options.hpp
+/// @file proton/terminus.hpp
+/// @file proton/thread_safe.hpp
+/// @file proton/timestamp.hpp
+/// @file proton/tracker.hpp
+/// @file proton/transfer.hpp
+/// @file proton/transport.hpp
+/// @file proton/url.hpp
+/// @file proton/uuid.hpp
+/// @file proton/value.hpp Run-time holder for any AMQP value

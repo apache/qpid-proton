@@ -115,35 +115,36 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// that may change in future so should not be parsed.
   friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const value&);
 
-    ///@cond INTERNAL - used to refer to existing pn_data_t* values as proton::value
+    ///@cond INTERNAL
+    /// Used to refer to existing pn_data_t* values as proton::value
     value(pn_data_t* d);          // Refer to existing pn_data_t
     void reset(pn_data_t* d = 0); // Refer to a new pn_data_t
     ///@endcond
 };
 
 /// @copydoc scalar::get
-/// @related proton::value
+/// @relatedalso proton::value
 template<class T> T get(const value& v) { T x; get(v, x); return x; }
 
 /// Like get(const value&) but assigns the value to a reference
 /// instead of returning it.  May be more efficient for complex values
 /// (arrays, maps, etc.)
 ///
-/// @related proton::value
+/// @relatedalso proton::value
 template<class T> void get(const value& v, T& x) { codec::decoder d(v, true); d >> x; }
 
-/// @related proton::value
+/// @relatedalso proton::value
 template<class T, class U> inline void get(const U& u, T& x) { const value v(u); get(v, x); }
 
 /// @copydoc scalar::coerce
-/// @related proton::value
+/// @relatedalso proton::value
 template<class T> T coerce(const value& v) { T x; coerce(v, x); return x; }
 
 /// Like coerce(const value&) but assigns the value to a reference
 /// instead of returning it.  May be more efficient for complex values
 /// (arrays, maps, etc.)
 ///
-/// @related proton::value
+/// @relatedalso proton::value
 template<class T> void coerce(const value& v, T& x) {
     codec::decoder d(v, false);
     if (type_id_is_scalar(v.type())) {
