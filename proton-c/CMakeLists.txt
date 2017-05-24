@@ -375,6 +375,8 @@ set (qpid-proton-core
   src/core/transport.c
   src/core/message.c
   src/core/url-internal.c
+
+  src/core/max_align.h
 )
 
 set (qpid-proton-include-generated
