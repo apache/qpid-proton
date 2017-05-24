@@ -29,7 +29,7 @@ add_definitions(${CXX_WARNING_FLAGS})
 set(qpid-proton-cpp-source
   src/binary.cpp
   src/byte_array.cpp
-  src/cached_map.cpp
+  src/map.cpp
   src/connection.cpp
   src/connection_options.cpp
   src/connector.cpp
@@ -176,6 +176,7 @@ add_cpp_test(connection_driver_test)
 add_cpp_test(thread_safe_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
+add_cpp_test(map_test)
 add_cpp_test(scalar_test)
 add_cpp_test(value_test)
 add_cpp_test(container_test)

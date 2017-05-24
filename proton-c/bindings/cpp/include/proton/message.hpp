@@ -27,8 +27,8 @@
 #include "./duration.hpp"
 #include "./timestamp.hpp"
 #include "./value.hpp"
+#include "./map.hpp"
 
-#include "./internal/cached_map.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
 #include <proton/type_compat.h>
@@ -48,11 +48,11 @@ class message {
   public:
     /// **Experimental** - A map of string keys and AMQP scalar
     /// values.
-    class property_map : public internal::cached_map<std::string, scalar> {};
+    typedef map<std::string, scalar> property_map;
 
     /// **Experimental** - A map of AMQP annotation keys and AMQP
     /// values.
-    class annotation_map : public internal::cached_map<annotation_key, value> {};
+    typedef map<annotation_key, value> annotation_map;
 
     /// Create an empty message.
     PN_CPP_EXTERN message();
@@ -243,7 +243,7 @@ class message {
     /// acquired, by other recipients.
 
     // XXX The triple-not in the last sentence above is confusing.
-    
+
     PN_CPP_EXTERN bool first_acquirer() const;
 
     /// Set the first acquirer flag.
@@ -287,33 +287,25 @@ class message {
 
     /// @}
 
-    /// @name Extended attributes
+    /// @name **Experimental** - Application properties
     /// @{
 
     /// **Experimental** - Get the application properties map.  It can
     /// be modified in place.
     PN_CPP_EXTERN property_map& properties();
 
-    /// **Experimental** - Get the application properties map.  It can
-    /// be modified in place.
+    /// **Experimental** - examine the application properties map.
     PN_CPP_EXTERN const property_map& properties() const;
 
-    /// **Experimental** - Get the message annotations map.  It can be
-    /// modified in place.
+    /// @name **Experimental** - Annotations
+    ///
+    /// Normally used by messaging infrastructure, not applications.
+    /// @{
     PN_CPP_EXTERN annotation_map& message_annotations();
-
-    /// **Experimental** - Get the message annotations map.  It can be
-    /// modified in place.
     PN_CPP_EXTERN const annotation_map& message_annotations() const;
 
-    /// **Experimental** - Get the delivery annotations map.  It can
-    /// be modified in place.
     PN_CPP_EXTERN annotation_map& delivery_annotations();
-
-    /// **Experimental** - Get the delivery annotations map.  It can
-    /// be modified in place.
     PN_CPP_EXTERN const annotation_map& delivery_annotations() const;
-
     /// @}
 
     /// Default priority assigned to new messages.

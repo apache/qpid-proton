@@ -72,7 +72,7 @@ class value : public internal::value_base, private internal::comparable<value> {
 #endif
     /// @}
 
-    /// Construct from any allowed type T.
+    /// Copy from any allowed type T.
     template <class T> value(const T& x, typename assignable<T>::type* = 0) { *this = x; }
 
     /// Assign from any allowed type T.
@@ -87,7 +87,6 @@ class value : public internal::value_base, private internal::comparable<value> {
 
     /// True if the value is null
     PN_CPP_EXTERN bool empty() const;
-
 
     /// Reset the value to null/empty
     PN_CPP_EXTERN void clear();

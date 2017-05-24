@@ -103,8 +103,7 @@ class source_options::impl {
           pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
         if (filters.set && !filters.value.empty()) {
             // Applied at most once via source_option.  No need to clear.
-            codec::encoder e(make_wrapper(pn_terminus_filter(unwrap(s))));
-            e << filters.value;
+            value(pn_terminus_filter(unwrap(s))) = filters.value;
         }
     }
 };

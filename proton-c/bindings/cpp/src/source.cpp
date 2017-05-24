@@ -30,11 +30,21 @@
 namespace proton {
 
 // Set parent_ non-null when the local terminus is authoritative and may need to be looked up.
-source::source(pn_terminus_t *t) : terminus(make_wrapper(t)) {}
+source::source(pn_terminus_t *t) : terminus(make_wrapper(t)),
+                                   filters_(pn_terminus_filter(object_))
+{}
 
-source::source(const sender& snd) : terminus(make_wrapper(pn_link_remote_source(unwrap(snd)))) { parent_ = unwrap(snd); }
+source::source(const sender& snd) :
+    terminus(make_wrapper(pn_link_remote_source(unwrap(snd)))),
+    filters_(pn_terminus_filter(object_))
+{
+    parent_ = unwrap(snd);
+}
 
-source::source(const receiver& rcv) : terminus(make_wrapper(pn_link_remote_source(unwrap(rcv)))) {}
+source::source(const receiver& rcv) :
+    terminus(make_wrapper(pn_link_remote_source(unwrap(rcv)))),
+    filters_(pn_terminus_filter(object_))
+{}
 
 std::string source::address() const {
     pn_terminus_t *authoritative = object_;
@@ -47,14 +57,8 @@ enum source::distribution_mode source::distribution_mode() const {
   return (enum distribution_mode)pn_terminus_get_distribution_mode(object_);
 }
 
-source::filter_map source::filters() const {
-    codec::decoder d(make_wrapper(pn_terminus_filter(object_)));
-    filter_map map;
-    if (!d.empty()) {
-        d.rewind();
-        d >> map;
-    }
-    return map;
+const source::filter_map& source::filters() const {
+    return filters_;
 }
 
 }

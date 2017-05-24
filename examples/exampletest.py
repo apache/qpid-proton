@@ -166,9 +166,12 @@ class TestCase(unittest.TestCase):
             super(TestCase, self).tearDown()
 
     if _tc_missing('assertIn'):
-
         def assertIn(self, a, b):
             self.assertTrue(a in b, "%r not in %r" % (a, b))
+
+    if _tc_missing('assertMultiLineEqual'):
+        def assertMultiLineEqual(self, a, b):
+            self.assertEqual(a, b)
 
 class ExampleTestCase(TestCase):
     """TestCase that manages started processes"""

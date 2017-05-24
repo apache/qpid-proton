@@ -21,6 +21,7 @@
 #include "test_bits.hpp"
 #include "proton_bits.hpp"
 
+#include "proton/container.hpp"
 #include "proton/io/connection_driver.hpp"
 #include "proton/io/link_namer.hpp"
 #include "proton/link.hpp"
@@ -248,10 +249,47 @@ void test_no_container() {
     } catch (proton::error) {}
 }
 
+void test_link_filters() {
+    // Propagation of link properties
+    record_handler ha, hb;
+    driver_pair e(ha, hb);
+
+    source_options opts;
+    source::filter_map f;
+    f.put("xx", "xxx");
+    ASSERT_EQUAL(1U, f.size());
+    e.a.connection().open_sender("x", sender_options().source(source_options().filters(f)));
+
+    f.clear();
+    f.put("yy", "yyy");
+    ASSERT_EQUAL(1U, f.size());
+    e.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f)));
+
+    while (ha.senders.size()+ha.receivers.size() < 2 ||
+           hb.senders.size()+hb.receivers.size() < 2)
+        e.process();
+
+    proton::sender ax = quick_pop(ha.senders);
+    proton::receiver ay = quick_pop(ha.receivers);
+    proton::receiver bx = quick_pop(hb.receivers);
+    proton::sender by = quick_pop(hb.senders);
+
+    // C++ binding only gives remote_source so only look at remote ends of links
+    f = by.source().filters();
+    ASSERT_EQUAL(1U, f.size());
+    ASSERT_EQUAL(value("yyy"), f.get("yy"));
+
+    f = bx.source().filters();
+    ASSERT_EQUAL(1U, f.size());
+    ASSERT_EQUAL(value("xxx"), bx.source().filters().get("xx"));
+}
+
+
 }
 
 int main(int, char**) {
     int failed = 0;
+    RUN_TEST(failed, test_link_filters());
     RUN_TEST(failed, test_driver_link_id());
     RUN_TEST(failed, test_endpoint_close());
     RUN_TEST(failed, test_driver_disconnected());

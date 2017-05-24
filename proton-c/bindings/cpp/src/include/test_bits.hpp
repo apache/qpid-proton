@@ -54,6 +54,7 @@ inline void assert_equalish(T want, T got, T delta, const std::string& what)
     test::assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
 #define ASSERT_EQUALISH(WANT, GOT, DELTA) \
     test::assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
+#define ASSERT_THROWS(WANT, EXPR) do { try { EXPR; FAIL("Expected " #WANT); } catch(const WANT&) {} } while(0)
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \

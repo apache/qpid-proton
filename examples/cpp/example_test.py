@@ -125,53 +125,53 @@ class ContainerExampleTest(BrokerTestCase):
     broker_exe = "broker"
 
     def test_helloworld(self):
-        self.assertEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
+        self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
 
     def test_helloworld_direct(self):
         with TestPort() as tp:
-            self.assertEqual('Hello World!\n', self.proc(["helloworld_direct", tp.addr]).wait_exit())
+            self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld_direct", tp.addr]).wait_exit())
 
     def test_simple_send_recv(self):
-        self.assertEqual("all messages confirmed\n",
+        self.assertMultiLineEqual("all messages confirmed\n",
                          self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
+        self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
 
     def test_simple_recv_send(self):
         # Start receiver first, then run sender"""
         recv = self.proc(["simple_recv", "-a", self.addr])
-        self.assertEqual("all messages confirmed\n",
+        self.assertMultiLineEqual("all messages confirmed\n",
                          self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
+        self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
 
 
     def test_simple_send_direct_recv(self):
         with TestPort() as tp:
             addr = "%s/examples" % tp.addr
             recv = self.proc(["direct_recv", "-a", addr], "listening")
-            self.assertEqual("all messages confirmed\n",
+            self.assertMultiLineEqual("all messages confirmed\n",
                              self.proc(["simple_send", "-a", addr]).wait_exit())
-            self.assertEqual(recv_expect("direct_recv", addr), recv.wait_exit())
+            self.assertMultiLineEqual(recv_expect("direct_recv", addr), recv.wait_exit())
 
     def test_simple_recv_direct_send(self):
         with TestPort() as tp:
             addr = "%s/examples" % tp.addr
             send = self.proc(["direct_send", "-a", addr], "listening")
-            self.assertEqual(recv_expect("simple_recv", addr),
+            self.assertMultiLineEqual(recv_expect("simple_recv", addr),
                              self.proc(["simple_recv", "-a", addr]).wait_exit())
-            self.assertEqual(
+            self.assertMultiLineEqual(
                 "direct_send listening on %s\nall messages confirmed\n" % addr,
                 send.wait_exit())
 
     def test_request_response(self):
         server = self.proc(["server", "-a", self.addr], "connected")
-        self.assertEqual(CLIENT_EXPECT,
+        self.assertMultiLineEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())
 
     def test_request_response_direct(self):
         with TestPort() as tp:
             addr = "%s/examples" % tp.addr
             server = self.proc(["server_direct", "-a", addr], "listening")
-            self.assertEqual(CLIENT_EXPECT,
+            self.assertMultiLineEqual(CLIENT_EXPECT,
                              self.proc(["client", "-a", addr]).wait_exit())
 
     def test_flow_control(self):
@@ -181,7 +181,7 @@ success: Example 3: drain without credit
 success: Exmaple 4: high/low watermark
 """
         with TestPort() as tp:
-            self.assertEqual(want, self.proc(["flow_control", "--address", tp.addr, "--quiet"]).wait_exit())
+            self.assertMultiLineEqual(want, self.proc(["flow_control", "--address", tp.addr, "--quiet"]).wait_exit())
 
     def test_encode_decode(self):
         want="""
@@ -208,7 +208,7 @@ list[int(42), boolean(0), symbol(x)]
 map{string(k1):int(42), symbol(k2):boolean(0)}
 """
         self.maxDiff = None
-        self.assertEqual(want, self.proc(["encode_decode"]).wait_exit())
+        self.assertMultiLineEqual(want, self.proc(["encode_decode"]).wait_exit())
 
     def test_scheduled_send_03(self):
         # Output should be a bunch of "send" lines but can't guarantee exactly how many.
@@ -223,6 +223,19 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
             self.assertEqual(["send"]*len(out), out)
         except ProcError:       # File not found, not a C++11 build.
             pass
+
+    def test_message_properties(self):
+        expect="""using put/get: short=123 string=foo symbol=sym
+using coerce: short(as long)=123
+props[short]=123
+props[string]=foo
+props[symbol]=sym
+short=42 string=bar
+expected conversion_error: "unexpected type, want: uint got: int"
+expected conversion_error: "unexpected type, want: uint got: string"
+"""
+        self.assertMultiLineEqual(expect, self.proc(["message_properties"]).wait_exit())
+
 
 
 class ContainerExampleSSLTest(BrokerTestCase):

@@ -147,8 +147,7 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     switch (s.type()) {
-      case NULL_TYPE: return o; // NULL is empty, doesn't print (like empty string)
-        // Print byte types as integer, not char.
+      case NULL_TYPE: return o << "<null>";
       case BYTE: return o << static_cast<int>(internal::get<int8_t>(s));
       case UBYTE: return o << static_cast<unsigned int>(internal::get<uint8_t>(s));
         // Other types printed using normal C++ operator <<

@@ -29,6 +29,9 @@
 namespace proton {
 namespace internal {
 
+template <class T> class pn_unique_ptr;
+template <class T> void swap(pn_unique_ptr<T>& x, pn_unique_ptr<T>& y);
+
 /// A simple unique ownership pointer, used as a return value from
 /// functions that transfer ownership to the caller.
 ///
@@ -55,6 +58,7 @@ template <class T> class pn_unique_ptr {
     explicit operator bool() const { return get(); }
 #endif
     bool operator !() const { return !get(); }
+    void swap(pn_unique_ptr& x) { std::swap(ptr_, x.ptr_); }
 
 #if PN_CPP_HAS_UNIQUE_PTR
     operator std::unique_ptr<T>() { T *p = ptr_; ptr_ = 0; return std::unique_ptr<T>(p); }
@@ -63,6 +67,8 @@ template <class T> class pn_unique_ptr {
   private:
     T* ptr_;
 };
+
+template <class T> void swap(pn_unique_ptr<T>& x, pn_unique_ptr<T>& y) { x.swap(y); }
 
 } // internal
 } // proton

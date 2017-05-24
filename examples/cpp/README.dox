@@ -50,6 +50,12 @@ on 127.0.0.1:5672. Simply prints out the body of received messages.
 
 */
 
+/** @example message_properties.cpp
+
+Shows how to set and examine message properties.
+
+*/
+
 /** @example direct_send.cpp
 
 Accepts an incoming connection and then sends like `simple_send`.  You can

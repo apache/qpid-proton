@@ -31,7 +31,6 @@ int main(int argc, char **argv) {
         m.properties().put("short", int16_t(123));
         m.properties().put("string", "foo");
         m.properties().put("symbol", proton::symbol("sym"));
-        m.properties().put("bool", true);
 
         // Examining properties using proton::get()
 
@@ -53,25 +52,26 @@ int main(int argc, char **argv) {
                   << " short=" << i
                   << " string=" << s
                   << " symbol=" << m.properties().get("symbol")
-                  << " bool=" << m.properties().get("bool")
                   << std::endl;
 
-        // Converting properties to a compatible type
+        // Converting properties to a convertible type
         std::cout << "using coerce:"
-                  << " short(as int)=" <<  proton::coerce<int>(m.properties().get("short"))
-                  << " bool(as int)=" << proton::coerce<int>(m.properties().get("bool"))
+                  << " short(as long)="
+                  << proton::coerce<long>(m.properties().get("short"))
                   << std::endl;
 
-        // Extract the properties map for more complex map operations.
-        proton::property_std_map props;
-        proton::get(m.properties().value(), props);
-        for (proton::property_std_map::iterator i = props.begin(); i != props.end(); ++i) {
+        // Extract the properties as a std::map for more complex map operations.
+        // You can use other map and sequence types to hold a map, see @ref types_page
+        typedef std::map<std::string, proton::scalar> property_map;
+        property_map props;
+        proton::get(m.properties(), props);
+        for (property_map::iterator i = props.begin(); i != props.end(); ++i) {
             std::cout << "props[" << i->first << "]=" << i->second << std::endl;
         }
         props["string"] = "bar";
         props["short"] = 42;
-        // Update the properties in the message from props
-        m.properties().value() = props;
+        // Update the properties in the message from the modified props map
+        m.properties() = props;
 
         std::cout << "short=" << m.properties().get("short")
                   << " string=" << m.properties().get("string")

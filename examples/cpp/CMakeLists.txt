@@ -41,6 +41,7 @@ foreach(example
     helloworld_direct
     simple_recv
     simple_send
+    message_properties
     scheduled_send_03
     direct_recv
     direct_send

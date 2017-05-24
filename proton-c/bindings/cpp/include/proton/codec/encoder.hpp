@@ -194,6 +194,19 @@ template <> struct is_encodable<value> : public true_type {};
 
 using is_encodable_impl::is_encodable;
 
+// Metafunction to test if a class looks like an encodable map from K to T.
+template <class M, class K, class T, class Enable = void>
+struct is_encodable_map : public internal::false_type {};
+
+template <class M, class K, class T> struct is_encodable_map<
+    M, K, T, typename internal::enable_if<
+                 internal::is_same<K, typename M::key_type>::value &&
+                 internal::is_same<T, typename M::mapped_type>::value &&
+                 is_encodable<M>::value
+                 >::type
+    > : public internal::true_type {};
+
+
 /// @endcond
 
 } // codec

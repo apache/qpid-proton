@@ -139,13 +139,15 @@ void test_message_maps() {
 
     m.properties().put("foo", 12);
     m.delivery_annotations().put("bar", "xyz");
-
     m.message_annotations().put(23, "23");
+
     ASSERT_EQUAL(m.properties().get("foo"), scalar(12));
     ASSERT_EQUAL(m.delivery_annotations().get("bar"), scalar("xyz"));
     ASSERT_EQUAL(m.message_annotations().get(23), scalar("23"));
 
     message m2(m);
+
+    ASSERT_EQUAL(m.properties().get("foo"), scalar(12)); // Decoding shouldn't change it
 
     ASSERT_EQUAL(m2.properties().get("foo"), scalar(12));
     ASSERT_EQUAL(m2.delivery_annotations().get("bar"), scalar("xyz"));
@@ -155,13 +157,14 @@ void test_message_maps() {
     m.delivery_annotations().put(24, 1000);
     m.message_annotations().erase(23);
 
-    m2 = m;
-    ASSERT_EQUAL(1u, m2.properties().size());
-    ASSERT_EQUAL(m2.properties().get("foo"), scalar("newfoo"));
-    ASSERT_EQUAL(2u, m2.delivery_annotations().size());
-    ASSERT_EQUAL(m2.delivery_annotations().get("bar"), scalar("xyz"));
-    ASSERT_EQUAL(m2.delivery_annotations().get(24), scalar(1000));
-    ASSERT(m2.message_annotations().empty());
+    message m3 = m;
+    size_t size = m3.properties().size();
+    ASSERT_EQUAL(1u, size);
+    ASSERT_EQUAL(m3.properties().get("foo"), scalar("newfoo"));
+    ASSERT_EQUAL(2u, m3.delivery_annotations().size());
+    ASSERT_EQUAL(m3.delivery_annotations().get("bar"), scalar("xyz"));
+    ASSERT_EQUAL(m3.delivery_annotations().get(24), scalar(1000));
+    ASSERT(m3.message_annotations().empty());
 }
 
 }
