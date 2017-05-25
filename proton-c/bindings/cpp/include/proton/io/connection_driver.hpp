@@ -176,6 +176,9 @@ PN_CPP_CLASS_EXTERN connection_driver {
     ///
     PN_CPP_EXTERN void disconnected(const error_condition& = error_condition());
 
+    /// There are events to be dispatched by dispatch()
+    PN_CPP_EXTERN bool has_events() const;
+
     /// Dispatch all available events and call the corresponding \ref messaging_handler methods.
     ///
     /// Returns true if the engine is still active, false if it is finished and

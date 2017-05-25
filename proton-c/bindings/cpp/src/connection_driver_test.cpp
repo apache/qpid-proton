@@ -46,13 +46,17 @@ using proton::io::mutable_buffer;
 
 typedef std::deque<char> byte_stream;
 
+static const int MAX_SPIN = 1000; // Give up after 1000 event-less dispatches
+
 /// In memory connection_driver that reads and writes from byte_streams
 struct in_memory_driver : public connection_driver {
 
     byte_stream& reads;
     byte_stream& writes;
+    int spinning;
 
-    in_memory_driver(byte_stream& rd, byte_stream& wr) : reads(rd), writes(wr) {}
+    in_memory_driver(byte_stream& rd, byte_stream& wr) :
+        reads(rd), writes(wr), spinning(0) {}
 
     void do_read() {
         mutable_buffer rbuf = read_buffer();
@@ -74,11 +78,19 @@ struct in_memory_driver : public connection_driver {
         }
     }
 
+    void check_idle() {
+        spinning = has_events() ? 0 : spinning+1;
+        if (spinning > MAX_SPIN)
+            throw test::error("no activity, interrupting test");
+    }
+
     void process() {
+        check_idle();
         if (!dispatch())
-            throw std::runtime_error("unexpected close: "+connection().error().what());
+            throw test::error("unexpected close: "+connection().error().what());
         do_read();
         do_write();
+        check_idle();
         dispatch();
     }
 };
@@ -145,50 +157,50 @@ struct namer : public io::link_namer {
 
 void test_driver_link_id() {
     record_handler ha, hb;
-    driver_pair e(ha, hb);
-    e.a.connect(ha);
-    e.b.accept(hb);
+    driver_pair d(ha, hb);
+    d.a.connect(ha);
+    d.b.accept(hb);
 
     namer na('x');
     namer nb('b');
-    connection ca = e.a.connection();
-    connection cb = e.b.connection();
+    connection ca = d.a.connection();
+    connection cb = d.b.connection();
     set_link_namer(ca, na);
     set_link_namer(cb, nb);
 
-    e.b.connection().open();
+    d.b.connection().open();
 
-    e.a.connection().open_sender("foo");
-    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    d.a.connection().open_sender("foo");
+    while (ha.senders.empty() || hb.receivers.empty()) d.process();
     sender s = quick_pop(ha.senders);
     ASSERT_EQUAL("x", s.name());
 
     ASSERT_EQUAL("x", quick_pop(hb.receivers).name());
 
-    e.a.connection().open_receiver("bar");
-    while (ha.receivers.empty() || hb.senders.empty()) e.process();
+    d.a.connection().open_receiver("bar");
+    while (ha.receivers.empty() || hb.senders.empty()) d.process();
     ASSERT_EQUAL("y", quick_pop(ha.receivers).name());
     ASSERT_EQUAL("y", quick_pop(hb.senders).name());
 
-    e.b.connection().open_receiver("");
-    while (ha.senders.empty() || hb.receivers.empty()) e.process();
+    d.b.connection().open_receiver("");
+    while (ha.senders.empty() || hb.receivers.empty()) d.process();
     ASSERT_EQUAL("b", quick_pop(ha.senders).name());
     ASSERT_EQUAL("b", quick_pop(hb.receivers).name());
 }
 
 void test_endpoint_close() {
     record_handler ha, hb;
-    driver_pair e(ha, hb);
-    e.a.connection().open_sender("x");
-    e.a.connection().open_receiver("y");
+    driver_pair d(ha, hb);
+    d.a.connection().open_sender("x");
+    d.a.connection().open_receiver("y");
     while (ha.senders.size()+ha.receivers.size() < 2 ||
-           hb.senders.size()+hb.receivers.size() < 2) e.process();
+           hb.senders.size()+hb.receivers.size() < 2) d.process();
     proton::link ax = quick_pop(ha.senders), ay = quick_pop(ha.receivers);
     proton::link bx = quick_pop(hb.receivers), by = quick_pop(hb.senders);
 
     // Close a link
     ax.close(proton::error_condition("err", "foo bar"));
-    while (!bx.closed()) e.process();
+    while (!bx.closed()) d.process();
     proton::error_condition c = bx.error();
     ASSERT_EQUAL("err", c.name());
     ASSERT_EQUAL("foo bar", c.description());
@@ -196,13 +208,13 @@ void test_endpoint_close() {
 
     // Close a link with an empty condition
     ay.close(proton::error_condition());
-    while (!by.closed()) e.process();
+    while (!by.closed()) d.process();
     ASSERT(by.error().empty());
 
     // Close a connection
-    connection ca = e.a.connection(), cb = e.b.connection();
+    connection ca = d.a.connection(), cb = d.b.connection();
     ca.close(proton::error_condition("conn", "bad connection"));
-    while (!cb.closed()) e.process();
+    while (!cb.closed()) d.process();
     ASSERT_EQUAL("conn: bad connection", cb.error().what());
     ASSERT_EQUAL(1u, hb.connection_errors.size());
     ASSERT_EQUAL("conn: bad connection", hb.connection_errors.front());
@@ -211,63 +223,74 @@ void test_endpoint_close() {
 void test_driver_disconnected() {
     // driver.disconnected() aborts the connection and calls the local on_transport_error()
     record_handler ha, hb;
-    driver_pair e(ha, hb);
-    e.a.connect(ha);
-    e.b.accept(hb);
-    while (!e.a.connection().active() || !e.b.connection().active())
-        e.process();
+    driver_pair d(ha, hb);
+    d.a.connect(ha);
+    d.b.accept(hb);
+    while (!d.a.connection().active() || !d.b.connection().active())
+        d.process();
 
     // Close a with an error condition. The AMQP connection is still open.
-    e.a.disconnected(proton::error_condition("oops", "driver failure"));
-    ASSERT(!e.a.dispatch());
-    ASSERT(!e.a.connection().closed());
-    ASSERT(e.a.connection().error().empty());
+    d.a.disconnected(proton::error_condition("oops", "driver failure"));
+    ASSERT(!d.a.dispatch());
+    ASSERT(!d.a.connection().closed());
+    ASSERT(d.a.connection().error().empty());
     ASSERT_EQUAL(0u, ha.connection_errors.size());
-    ASSERT_EQUAL("oops: driver failure", e.a.transport().error().what());
+    ASSERT_EQUAL("oops: driver failure", d.a.transport().error().what());
     ASSERT_EQUAL(1u, ha.transport_errors.size());
     ASSERT_EQUAL("oops: driver failure", ha.transport_errors.front());
 
     // In a real app the IO code would detect the abort and do this:
-    e.b.disconnected(proton::error_condition("broken", "it broke"));
-    ASSERT(!e.b.dispatch());
-    ASSERT(!e.b.connection().closed());
-    ASSERT(e.b.connection().error().empty());
+    d.b.disconnected(proton::error_condition("broken", "it broke"));
+    ASSERT(!d.b.dispatch());
+    ASSERT(!d.b.connection().closed());
+    ASSERT(d.b.connection().error().empty());
     ASSERT_EQUAL(0u, hb.connection_errors.size());
     // Proton-C adds (connection aborted) if transport closes too early,
     // and provides a default message if there is no user message.
-    ASSERT_EQUAL("broken: it broke (connection aborted)", e.b.transport().error().what());
+    ASSERT_EQUAL("broken: it broke (connection aborted)", d.b.transport().error().what());
     ASSERT_EQUAL(1u, hb.transport_errors.size());
     ASSERT_EQUAL("broken: it broke (connection aborted)", hb.transport_errors.front());
 }
 
 void test_no_container() {
     // An driver with no container should throw, not crash.
-    connection_driver e;
+    connection_driver d;
     try {
-        e.connection().container();
+        d.connection().container();
         FAIL("expected error");
     } catch (proton::error) {}
+}
+
+void test_spin_interrupt() {
+    // Check the test framework interrupts a spinning driver pair with nothing to do.
+    record_handler ha, hb;
+    driver_pair d(ha, hb);
+    try {
+        while (true)
+            d.process();
+        FAIL("expected exception");
+    } catch (test::error) {}
 }
 
 void test_link_filters() {
     // Propagation of link properties
     record_handler ha, hb;
-    driver_pair e(ha, hb);
+    driver_pair d(ha, hb);
 
     source_options opts;
     source::filter_map f;
     f.put("xx", "xxx");
     ASSERT_EQUAL(1U, f.size());
-    e.a.connection().open_sender("x", sender_options().source(source_options().filters(f)));
+    d.a.connection().open_sender("x", sender_options().source(source_options().filters(f)));
 
     f.clear();
     f.put("yy", "yyy");
     ASSERT_EQUAL(1U, f.size());
-    e.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f)));
+    d.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f)));
 
     while (ha.senders.size()+ha.receivers.size() < 2 ||
            hb.senders.size()+hb.receivers.size() < 2)
-        e.process();
+        d.process();
 
     proton::sender ax = quick_pop(ha.senders);
     proton::receiver ay = quick_pop(ha.receivers);
@@ -287,12 +310,13 @@ void test_link_filters() {
 
 }
 
-int main(int, char**) {
+int main(int argc, char** argv) {
     int failed = 0;
-    RUN_TEST(failed, test_link_filters());
-    RUN_TEST(failed, test_driver_link_id());
-    RUN_TEST(failed, test_endpoint_close());
-    RUN_TEST(failed, test_driver_disconnected());
-    RUN_TEST(failed, test_no_container());
+    RUN_ARGV_TEST(failed, test_link_filters());
+    RUN_ARGV_TEST(failed, test_driver_link_id());
+    RUN_ARGV_TEST(failed, test_endpoint_close());
+    RUN_ARGV_TEST(failed, test_driver_disconnected());
+    RUN_ARGV_TEST(failed, test_no_container());
+    RUN_ARGV_TEST(failed, test_spin_interrupt());
     return failed;
 }

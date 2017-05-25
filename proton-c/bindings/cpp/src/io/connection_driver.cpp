@@ -98,6 +98,10 @@ void connection_driver::accept(const connection_options& opts) {
     configure(all, true);
 }
 
+bool connection_driver::has_events() const {
+    return driver_.collector && pn_collector_peek(driver_.collector);
+}
+
 bool connection_driver::dispatch() {
     pn_event_t* c_event;
     while ((c_event = pn_connection_driver_next_event(&driver_)) != NULL) {
