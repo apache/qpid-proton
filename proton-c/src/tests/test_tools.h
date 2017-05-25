@@ -289,7 +289,7 @@ test_port_t test_port(const char* host) {
   socklen_t len = sizeof(addr);
   err = getsockname(tp.sock, (struct sockaddr*)&addr, &len); /* Get the bound port */
   TEST_ASSERT_ERRNO(!err, errno);
-  tp.port = addr.sin_port;
+  tp.port = ntohs(addr.sin_port);
   snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
   test_port_use_host(&tp, host);
   return tp;
