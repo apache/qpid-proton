@@ -24,6 +24,7 @@ package for that language:
     $ yum install swig          # Required for all bindings
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-rspec rubygem-simplecov # Ruby
+    $ yum install rubygem-test-unit  # Ruby on fedora >= 25
     $ yum install pphp-devel                                 # PHP
     $ yum install perl-devel                                 # Perl
 
