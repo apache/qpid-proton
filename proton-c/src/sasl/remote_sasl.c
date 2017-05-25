@@ -37,10 +37,10 @@ const int8_t DOWNSTREAM_MECHANISMS_RECEIVED = 3;
 const int8_t DOWNSTREAM_CHALLENGE_RECEIVED = 4;
 const int8_t DOWNSTREAM_OUTCOME_RECEIVED = 5;
 
-const char* authentication_service_address = NULL;
-
 typedef struct
 {
+    char* authentication_service_address;
+
     pn_connection_t* downstream;
     char* selected_mechanism;
     pni_owned_bytes_t response;
@@ -65,9 +65,10 @@ void pni_copy_bytes(const pn_bytes_t* from, pni_owned_bytes_t* to)
     memcpy(to->start, from->start, from->size);
 }
 
-pni_sasl_relay_t* new_pni_sasl_relay_t(void)
+pni_sasl_relay_t* new_pni_sasl_relay_t(const char* address)
 {
     pni_sasl_relay_t* instance = (pni_sasl_relay_t*) malloc(sizeof(pni_sasl_relay_t));
+    instance->authentication_service_address = pn_strdup(address);
     instance->selected_mechanism = 0;
     instance->response.start = 0;
     instance->response.size = 0;
@@ -82,6 +83,7 @@ pni_sasl_relay_t* new_pni_sasl_relay_t(void)
 
 void delete_pni_sasl_relay_t(pni_sasl_relay_t* instance)
 {
+    if (instance->authentication_service_address) free(instance->authentication_service_address);
     if (instance->mechlist) free(instance->mechlist);
     if (instance->selected_mechanism) free(instance->selected_mechanism);
     if (instance->response.start) free(instance->response.start);
@@ -132,13 +134,9 @@ void set_sasl_relay_context(pn_connection_t* conn, pni_sasl_relay_t* context)
 bool remote_init_server(pn_transport_t* transport)
 {
     pn_connection_t* upstream = pn_transport_connection(transport);
-    if (upstream) {
-        if (transport->sasl->impl_context) {
-            return true;
-        }
-        pn_connection_open(upstream);
-        pni_sasl_relay_t* impl = new_pni_sasl_relay_t();
-        transport->sasl->impl_context = impl;
+    if (upstream && transport->sasl->impl_context) {
+        pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
+        if (impl->upstream) return true;
         impl->upstream = upstream;
         pn_proactor_t* proactor = pn_connection_proactor(upstream);
         if (!proactor) return false;
@@ -147,7 +145,7 @@ bool remote_init_server(pn_transport_t* transport)
         pn_connection_set_user(impl->downstream, "dummy");//force sasl
         set_sasl_relay_context(impl->downstream, impl);
 
-        pn_proactor_connect(proactor, impl->downstream, authentication_service_address);
+        pn_proactor_connect(proactor, impl->downstream, impl->authentication_service_address);
         return true;
     } else {
         return false;
@@ -171,13 +169,10 @@ bool remote_init_client(pn_transport_t* transport)
     }
 }
 
-bool remote_free(pn_transport_t *transport)
+void remote_free(pn_transport_t *transport)
 {
     if (transport->sasl->impl_context) {
         release_pni_sasl_relay_t((pni_sasl_relay_t*) transport->sasl->impl_context);
-        return true;
-    } else {
-        return false;
     }
 }
 
@@ -287,11 +282,10 @@ void remote_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
     }
 }
 
-void pn_use_remote_authentication_service(const char* address)
+void set_remote_impl(pn_transport_t *transport, pni_sasl_relay_t* context)
 {
-    authentication_service_address = address;
     pni_sasl_implementation remote_impl;
-    remote_impl.free = &remote_free;
+    remote_impl.free_impl = &remote_free;
     remote_impl.get_mechs = &remote_get_mechs;
     remote_impl.init_server = &remote_init_server;
     remote_impl.process_init = &remote_process_init;
@@ -301,5 +295,24 @@ void pn_use_remote_authentication_service(const char* address)
     remote_impl.process_challenge = &remote_process_challenge;
     remote_impl.process_outcome = &remote_process_outcome;
     remote_impl.prepare = &remote_prepare;
-    pni_sasl_set_implementation(remote_impl);
+    pni_sasl_set_implementation(transport, remote_impl, context);
+}
+
+void pn_use_remote_authentication_service(pn_transport_t *transport, const char* address)
+{
+    pni_sasl_relay_t* context = new_pni_sasl_relay_t(address);
+    set_remote_impl(transport, context);
+}
+
+void pn_handle_authentication_service_connection_event(pn_event_t *e)
+{
+    pn_connection_t *conn = pn_event_connection(e);
+    if (pn_event_type(e) == PN_CONNECTION_BOUND) {
+        printf("Handling connection bound event for authentication service connection\n");
+        pni_sasl_relay_t* context = get_sasl_relay_context(conn);
+        context->refcount++;
+        set_remote_impl(pn_event_transport(e), context);
+    } else {
+        printf("Ignoring event for authentication service connection: %s\n", pn_event_type_name(pn_event_type(e)));
+    }
 }

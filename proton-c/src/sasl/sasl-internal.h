@@ -57,10 +57,10 @@ typedef void (*pni_sasl_challenge_response)(pn_transport_t *transport, const pn_
 typedef void (*pni_sasl_init)(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
 typedef bool (*pni_sasl_set_mechanisms)(pn_transport_t *transport, const char *mechanism);
 typedef int (*pni_sasl_get_mechanisms)(pn_transport_t *transport, char **mechlist);
+typedef void (*pni_sasl_free_function)(pn_transport_t *transport);
 
 typedef struct
 {
-    pni_sasl_function free;
     pni_sasl_get_mechanisms get_mechs;
     pni_sasl_function init_server;
     pni_sasl_init process_init;
@@ -70,9 +70,8 @@ typedef struct
     pni_sasl_challenge_response process_challenge;
     pni_sasl_function process_outcome;
     pni_sasl_function prepare;
+    pni_sasl_free_function free_impl;
 } pni_sasl_implementation;
-
-PN_EXTERN void pni_sasl_set_implementation(pni_sasl_implementation);
 
 // Shared SASL API used by the actual SASL authenticators
 enum pni_sasl_state {
@@ -89,6 +88,7 @@ enum pni_sasl_state {
 
 struct pni_sasl_t {
   void *impl_context;
+  pni_sasl_implementation* impl;
   char *selected_mechanism;
   char *included_mechanisms;
   const char *username;
@@ -113,5 +113,7 @@ struct pni_sasl_t {
 void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count);
 bool pni_included_mech(const char *included_mech_list, pn_bytes_t s);
 PN_EXTERN void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state);
+PN_EXTERN void pni_sasl_set_implementation(pn_transport_t *transport, pni_sasl_implementation impl, void* context);
+
 
 #endif /* sasl-internal.h */
