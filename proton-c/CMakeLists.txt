@@ -456,6 +456,7 @@ set (qpid-proton-include
   include/proton/netaddr.h
   include/proton/object.h
   include/proton/proactor.h
+  include/proton/remote_sasl.h
   include/proton/sasl.h
   include/proton/session.h
   include/proton/ssl.h
@@ -486,7 +487,7 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
-    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c src/sasl/remote_sasl.c)
+    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
     set (PROACTOR_LIBS -lpthread)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -498,7 +499,7 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
   if (LIBUV_FOUND)
     set (PROACTOR_OK libuv)
-    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c src/sasl/remote_sasl.c)
+    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -623,6 +624,18 @@ if (qpid-proton-proactor)
     SOVERSION "${PN_LIB_SOMAJOR}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
     )
+
+  add_library (qpid-proton-remotesasl SHARED src/sasl/remote_sasl.c)
+  target_link_libraries (qpid-proton-remotesasl LINK_PUBLIC qpid-proton-proactor)
+  target_link_libraries (qpid-proton-remotesasl LINK_PUBLIC qpid-proton-core)
+  list(APPEND LIB_TARGETS qpid-proton-remotesasl)
+  set_target_properties (
+    qpid-proton-remotesasl
+    PROPERTIES
+    VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
+    SOVERSION "${PN_LIB_SOMAJOR}"
+    LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
+    )
 endif()
 
 # Install executables and libraries
@@ -667,6 +680,7 @@ configure_lib(PROTONLIB qpid-proton)
 configure_lib(PROTONCORELIB qpid-proton-core)
 if(HAS_PROACTOR)
   configure_lib(PROTONPROACTORLIB qpid-proton-proactor)
+  configure_lib(PROTONREMOTESASLLIB qpid-proton-remotesasl)
 endif(HAS_PROACTOR)
 
 include(WriteBasicConfigVersionFile)

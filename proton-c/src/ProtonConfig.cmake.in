@@ -37,6 +37,7 @@ if (HAS_PROACTOR)
   set (Proton_Proactor_INCLUDE_DIRS  @INCLUDEDIR@)
   set (Proton_Proactor_LIBRARIES     optimized @LIBDIR@/@PROTONPROACTORLIB@ debug @LIBDIR@/@PROTONPROACTORLIBDEBUG@)
   set (Proton_Proactor_FOUND True)
+  set (Proton_Remote_SASL_LIBRARIES     optimized @LIBDIR@/@PROTONREMOTESASLLIB@ debug @LIBDIR@/@PROTONREMOTESASLLIBDEBUG@)
 endif()
 
 # Check for all required components

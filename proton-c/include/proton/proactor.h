@@ -285,10 +285,6 @@ PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
  */
 PNP_EXTERN pn_millis_t pn_proactor_now(void);
 
-PNP_EXTERN void pn_use_remote_authentication_service(pn_transport_t* transport, const char* address);
-PNP_EXTERN bool pn_is_authentication_service_connection(pn_connection_t* conn);
-PNP_EXTERN void pn_handle_authentication_service_connection_event(pn_event_t *e);
-
 /**
  * @defgroup proactor_events Events
  *

@@ -24,6 +24,7 @@
 #include "core/engine-internal.h"
 #include "core/util.h"
 #include "proton/proactor.h"
+#include "proton/remote_sasl.h"
 
 typedef struct
 {
