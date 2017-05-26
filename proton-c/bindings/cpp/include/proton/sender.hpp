@@ -25,6 +25,7 @@
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./link.hpp"
+#include "./tracker.hpp"
 
 struct pn_link_t;
 struct pn_session_t;

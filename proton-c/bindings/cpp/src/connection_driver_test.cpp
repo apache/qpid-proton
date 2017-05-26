@@ -25,8 +25,10 @@
 #include "proton/io/connection_driver.hpp"
 #include "proton/io/link_namer.hpp"
 #include "proton/link.hpp"
+#include "proton/message.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/receiver_options.hpp"
+#include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/source_options.hpp"
 #include "proton/types_fwd.hpp"
@@ -123,6 +125,7 @@ struct record_handler : public messaging_handler {
     std::deque<proton::sender> senders;
     std::deque<proton::session> sessions;
     std::deque<std::string> unhandled_errors, transport_errors, connection_errors;
+    std::deque<proton::message> messages;
 
     void on_receiver_open(receiver &l) PN_CPP_OVERRIDE {
         receivers.push_back(l);
@@ -146,6 +149,10 @@ struct record_handler : public messaging_handler {
 
     void on_error(const proton::error_condition& c) PN_CPP_OVERRIDE {
         unhandled_errors.push_back(c.what());
+    }
+
+    void on_message(proton::delivery&, proton::message& m) PN_CPP_OVERRIDE {
+        messages.push_back(m);
     }
 };
 
@@ -307,16 +314,36 @@ void test_link_filters() {
     ASSERT_EQUAL(value("xxx"), bx.source().filters().get("xx"));
 }
 
+void test_message() {
+    // Verify a message arrives intact
+    record_handler ha, hb;
+    driver_pair d(ha, hb);
+
+    proton::sender s = d.a.connection().open_sender("x");
+    proton::message m("barefoot");
+    m.properties().put("x", "y");
+    m.message_annotations().put("a", "b");
+    s.send(m);
+
+    while (hb.messages.size() == 0)
+        d.process();
+
+    proton::message m2 = quick_pop(hb.messages);
+    ASSERT_EQUAL(value("barefoot"), m2.body());
+    ASSERT_EQUAL(value("y"), m2.properties().get("x"));
+    ASSERT_EQUAL(value("b"), m2.message_annotations().get("a"));
+}
 
 }
 
 int main(int argc, char** argv) {
     int failed = 0;
-    RUN_ARGV_TEST(failed, test_link_filters());
     RUN_ARGV_TEST(failed, test_driver_link_id());
     RUN_ARGV_TEST(failed, test_endpoint_close());
     RUN_ARGV_TEST(failed, test_driver_disconnected());
     RUN_ARGV_TEST(failed, test_no_container());
     RUN_ARGV_TEST(failed, test_spin_interrupt());
+    RUN_ARGV_TEST(failed, test_message());
+    RUN_ARGV_TEST(failed, test_link_filters());
     return failed;
 }

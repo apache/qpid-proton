@@ -167,6 +167,18 @@ void test_message_maps() {
     ASSERT(m3.message_annotations().empty());
 }
 
+void test_message_reuse() {
+    message m1("one");
+    m1.properties().put("x", "y");
+
+    message m2("two");
+    m2.properties().put("a", "b");
+
+    m1.decode(m2.encode());     // Use m1 for a newly decoded message
+    ASSERT_EQUAL(value("two"), m1.body());
+    ASSERT_EQUAL(value("b"), m1.properties().get("a"));
+}
+
 }
 
 int main(int, char**) {
@@ -175,5 +187,6 @@ int main(int, char**) {
     RUN_TEST(failed, test_message_defaults());
     RUN_TEST(failed, test_message_body());
     RUN_TEST(failed, test_message_maps());
+    RUN_TEST(failed, test_message_reuse());
     return failed;
 }

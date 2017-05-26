@@ -115,9 +115,7 @@ class PN_CPP_CLASS_EXTERN map {
     mutable internal::pn_unique_ptr<map_type> map_;
     mutable proton::value value_;
 
-    void ensure() const;
-    const map_type& cache() const;
-    map_type& cache_update();
+    map_type& cache() const;
     proton::value& flush() const;
 
   friend PN_CPP_EXTERN proton::codec::decoder& operator>> <>(proton::codec::decoder&, map&);
