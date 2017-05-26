@@ -375,8 +375,6 @@ set (qpid-proton-core
   src/core/transport.c
   src/core/message.c
   src/core/url-internal.c
-
-  src/core/max_align.h
 )
 
 set (qpid-proton-include-generated
@@ -406,6 +404,7 @@ set (qpid-proton-private-includes
   src/core/dispatcher.h
   src/core/data.h
   src/core/decoder.h
+  src/core/max_align.h
   src/core/url-internal.h
   src/reactor/io/windows/iocp.h
   src/reactor/selector.h
