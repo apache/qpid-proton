@@ -700,12 +700,7 @@ static void pconnection_begin_close(pconnection_t *pc) {
   if (!pc->context.closing) {
     pc->context.closing = true;
     if (pc->current_arm != 0 && !pc->new_events) {
-      // Force io callback via hangup
-      if (pc->current_arm != (EPOLLIN | EPOLLOUT)) {
-        pc->current_arm = (EPOLLIN | EPOLLOUT);
-        pc->psocket.epoll_io.wanted = pc->current_arm;;
-        rearm(pc->psocket.proactor, &pc->psocket.epoll_io);
-      }
+      // Force io callback via an EPOLLHUP
       shutdown(pc->psocket.sockfd, SHUT_RDWR);
     }
 
