@@ -41,21 +41,27 @@
 #include <algorithm>
 #include <vector>
 
+#if PN_CPP_SUPPORTS_THREADS
+# include <thread>
+#endif
+
 namespace proton {
 
 class container::impl::common_work_queue : public work_queue::impl {
   public:
-    common_work_queue(container::impl& c): container_(c), finished_(false) {}
+    common_work_queue(container::impl& c): container_(c), finished_(false), running_(false) {}
 
     typedef std::vector<work> jobs;
 
     void run_all_jobs();
-    void finished() { finished_ = true; }
+    void finished() { GUARD(lock_); finished_ = true; }
     void schedule(duration, work);
 
+    MUTEX(lock_)
     container::impl& container_;
     jobs jobs_;
     bool finished_;
+    bool running_;
 };
 
 void container::impl::common_work_queue::schedule(duration d, work f) {
@@ -68,11 +74,22 @@ void container::impl::common_work_queue::schedule(duration d, work f) {
 void container::impl::common_work_queue::run_all_jobs() {
     jobs j;
     // Lock this operation for mt
-    std::swap(j, jobs_);
+    {
+        GUARD(lock_);
+        // Ensure that we never run work from this queue concurrently
+        if (running_) return;
+        running_ = true;
+        // But allow adding to the queue concurrently to running
+        std::swap(j, jobs_);
+    }
     // Run queued work, but ignore any exceptions
     for (jobs::iterator f = j.begin(); f != j.end(); ++f) try {
         (*f)();
     } catch (...) {};
+    {
+        GUARD(lock_);
+        running_ = false;
+    }
     return;
 }
 
@@ -88,6 +105,7 @@ class container::impl::connection_work_queue : public common_work_queue {
 bool container::impl::connection_work_queue::add(work f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
+    GUARD(lock_);
     if (finished_) return false;
     jobs_.push_back(f);
     pn_connection_wake(connection_);
@@ -105,6 +123,7 @@ class container::impl::container_work_queue : public common_work_queue {
 bool container::impl::container_work_queue::add(work f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
+    GUARD(lock_);
     if (finished_) return false;
     jobs_.push_back(f);
     pn_proactor_set_timeout(container_.proactor_, 0);
@@ -116,15 +135,11 @@ class work_queue::impl* container::impl::make_work_queue(container& c) {
 }
 
 container::impl::impl(container& c, const std::string& id, messaging_handler* mh)
-    : container_(c), proactor_(pn_proactor()), handler_(mh), id_(id),
+    : threads_(0), container_(c), proactor_(pn_proactor()), handler_(mh), id_(id),
       auto_stop_(true), stopping_(false)
 {}
 
 container::impl::~impl() {
-    try {
-        stop(error_condition("exception", "container shut-down"));
-        //wait();
-    } catch (...) {}
     pn_proactor_free(proactor_);
 }
 
@@ -178,6 +193,7 @@ proton::returned<proton::connection> container::impl::connect(
     const proton::connection_options& user_opts)
 {
     connection conn = connect_common(addr, user_opts);
+    GUARD(lock_);
     return make_thread_safe(conn);
 }
 
@@ -186,6 +202,7 @@ returned<sender> container::impl::open_sender(const std::string &url, const prot
     lopts.update(o1);
     connection conn = connect_common(url, o2);
 
+    GUARD(lock_);
     return make_thread_safe(conn.default_session().open_sender(proton::url(url).path(), lopts));
 }
 
@@ -194,6 +211,7 @@ returned<receiver> container::impl::open_receiver(const std::string &url, const 
     lopts.update(o1);
     connection conn = connect_common(url, o2);
 
+    GUARD(lock_);
     return make_thread_safe(
         conn.default_session().open_receiver(proton::url(url).path(), lopts));
 }
@@ -215,11 +233,13 @@ pn_listener_t* container::impl::listen_common_lh(const std::string& addr) {
 }
 
 proton::listener container::impl::listen(const std::string& addr) {
+    GUARD(lock_);
     pn_listener_t* listener = listen_common_lh(addr);
     return proton::listener(listener);
 }
 
 proton::listener container::impl::listen(const std::string& addr, const proton::connection_options& opts) {
+    GUARD(lock_);
     pn_listener_t* listener = listen_common_lh(addr);
     listener_context& lc=listener_context::get(listener);
     lc.connection_options_.reset(new connection_options(opts));
@@ -227,6 +247,7 @@ proton::listener container::impl::listen(const std::string& addr, const proton::
 }
 
 proton::listener container::impl::listen(const std::string& addr, proton::listen_handler& lh) {
+    GUARD(lock_);
     pn_listener_t* listener = listen_common_lh(addr);
     listener_context& lc=listener_context::get(listener);
     lc.listen_handler_ = &lh;
@@ -234,6 +255,7 @@ proton::listener container::impl::listen(const std::string& addr, proton::listen
 }
 
 void container::impl::schedule(duration delay, work f) {
+    GUARD(lock_);
     timestamp now = timestamp::now();
 
     // Record timeout; Add callback to timeout sorted list
@@ -247,18 +269,22 @@ void container::impl::schedule(duration delay, work f) {
 }
 
 void container::impl::client_connection_options(const connection_options &opts) {
+    GUARD(lock_);
     client_connection_options_ = opts;
 }
 
 void container::impl::server_connection_options(const connection_options &opts) {
+    GUARD(lock_);
     server_connection_options_ = opts;
 }
 
 void container::impl::sender_options(const proton::sender_options &opts) {
+    GUARD(lock_);
     sender_options_ = opts;
 }
 
 void container::impl::receiver_options(const proton::receiver_options &opts) {
+    GUARD(lock_);
     receiver_options_ = opts;
 }
 
@@ -294,13 +320,18 @@ bool container::impl::handle(pn_event_t* event) {
     switch (pn_event_type(event)) {
 
     case PN_PROACTOR_INACTIVE: /* listener and all connections closed */
-        return auto_stop_;
-
-    // We never interrupt the proactor so ignore
-    case PN_PROACTOR_INTERRUPT:
+        // If we're stopping interrupt all other threads still running
+        if (auto_stop_) pn_proactor_interrupt(proactor_);
         return false;
 
+    // We only interrupt to stop threads
+    case PN_PROACTOR_INTERRUPT:
+        // Interrupt any other threads still running
+        if (threads_>1) pn_proactor_interrupt(proactor_);
+        return true;
+
     case PN_PROACTOR_TIMEOUT: {
+        GUARD(lock_);
         // Can get an immediate timeout, if we have a container event loop inject
         if  ( deferred_.size()>0 ) {
             run_timer_jobs();
@@ -402,30 +433,78 @@ bool container::impl::handle(pn_event_t* event) {
     return false;
 }
 
-void container::impl::thread(container::impl& ci) {
-  bool finished = false;
-  do {
-    pn_event_batch_t *events = pn_proactor_wait(ci.proactor_);
-    pn_event_t *e;
-    while ((e = pn_event_batch_next(events))) {
-      finished = ci.handle(e) || finished;
-    }
-    pn_proactor_done(ci.proactor_, events);
-  } while(!finished);
+void container::impl::thread() {
+    ++threads_;
+    bool finished = false;
+    do {
+      pn_event_batch_t *events = pn_proactor_wait(proactor_);
+      pn_event_t *e;
+      try {
+        while ((e = pn_event_batch_next(events))) {
+          finished = handle(e);
+          if (finished) break;
+        }
+      } catch (proton::error& e) {
+        // If we caught an exception then shutdown the (other threads of the) container
+        disconnect_error_ = error_condition("exception", e.what());
+        if (!stopping_) stop(disconnect_error_);
+        finished = true;
+      } catch (...) {
+        // If we caught an exception then shutdown the (other threads of the) container
+        disconnect_error_ = error_condition("exception", "container shut-down by unknown exception");
+        if (!stopping_) stop(disconnect_error_);
+        finished = true;
+      }
+      pn_proactor_done(proactor_, events);
+    } while(!finished);
+    --threads_;
 }
 
-void container::impl::run() {
-    // Have to "manually" generate container events
+void container::impl::start_event() {
     if (handler_) handler_->on_container_start(container_);
-    thread(*this);
+}
+
+void container::impl::stop_event() {
     if (handler_) handler_->on_container_stop(container_);
 }
 
+void container::impl::run(int threads) {
+    // Have to "manually" generate container events
+    CALL_ONCE(start_once_, &impl::start_event, this);
+
+#if PN_CPP_SUPPORTS_THREADS
+    // Run handler threads
+    std::vector<std::thread> ts(threads-1);
+    if (threads>1) {
+      for (auto& t : ts) t = std::thread(&impl::thread, this);
+    }
+
+    thread();      // Use this thread too.
+
+    // Wait for the other threads to stop
+    if (threads>1) {
+      for (auto& t : ts) t.join();
+    }
+#else
+    // Run a single handler thread (As we have no threading API)
+    thread();
+#endif
+
+    if (threads_==0) CALL_ONCE(stop_once_, &impl::stop_event, this);
+
+    // Throw an exception if we disconnected the proactor because of an exception
+    if (!disconnect_error_.empty()) {
+      throw proton::error(disconnect_error_.description());
+    };
+}
+
 void container::impl::auto_stop(bool set) {
+    GUARD(lock_);
     auto_stop_ = set;
 }
 
 void container::impl::stop(const proton::error_condition& err) {
+    GUARD(lock_);
     auto_stop_ = true;
     stopping_ = true;
     pn_condition_t* error_condition = pn_condition();

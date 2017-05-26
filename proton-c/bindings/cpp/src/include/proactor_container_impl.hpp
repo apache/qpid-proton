@@ -43,6 +43,21 @@
 #include <string>
 #include <vector>
 
+#if PN_CPP_SUPPORTS_THREADS
+#include <atomic>
+#include <mutex>
+# define MUTEX(x) std::mutex x;
+# define GUARD(x) std::lock_guard<std::mutex> g(x)
+# define ONCE_FLAG(x) std::once_flag x;
+# define CALL_ONCE(x, ...) std::call_once(x, __VA_ARGS__)
+# define ATOMIC_INT(x) std::atomic<int> x;
+#else
+# define MUTEX(x)
+# define GUARD(x)
+# define ONCE_FLAG(x)
+# define CALL_ONCE(x, f, o) ((o)->*(f))()
+# define ATOMIC_INT(x) int x;
+#endif
 struct pn_proactor_t;
 struct pn_listener_t;
 struct pn_event_t;
@@ -70,7 +85,7 @@ class container::impl {
     class sender_options sender_options() const { return sender_options_; }
     void receiver_options(const proton::receiver_options&);
     class receiver_options receiver_options() const { return receiver_options_; }
-    void run();
+    void run(int threads);
     void stop(const error_condition& err);
     void auto_stop(bool set);
     void schedule(duration, work);
@@ -86,16 +101,23 @@ class container::impl {
     connection connect_common(const std::string&, const connection_options&);
 
     // Event loop to run in each container thread
-    static void thread(impl&);
+    void thread();
     bool handle(pn_event_t*);
     void run_timer_jobs();
 
+    ATOMIC_INT(threads_)
+    MUTEX(lock_)
+    ONCE_FLAG(start_once_)
+    ONCE_FLAG(stop_once_)
     container& container_;
 
     typedef std::set<container_work_queue*> work_queues;
     work_queues work_queues_;
     container_work_queue* add_work_queue();
     void remove_work_queue(container_work_queue*);
+    void start_event();
+    void stop_event();
+
     struct scheduled {
         timestamp time; // duration from epoch for task
         work task;
@@ -112,8 +134,8 @@ class container::impl {
     connection_options server_connection_options_;
     proton::sender_options sender_options_;
     proton::receiver_options receiver_options_;
+    error_condition disconnect_error_;
 
-    proton::error_condition stop_err_;
     bool auto_stop_;
     bool stopping_;
 };

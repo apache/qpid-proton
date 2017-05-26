@@ -29,10 +29,10 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
-#ifdef PN_CPP_HAS_STD_FUNCTION
-#include <functional>
-#endif
 #include <string>
+
+/// If the library can support multithreaded containers then PN_CPP_SUPPORTS_THREADS will be set.
+#define PN_CPP_SUPPORTS_THREADS PN_CPP_HAS_STD_THREAD && PN_CPP_HAS_STD_MUTEX && PN_CPP_HAS_STD_ATOMIC
 
 namespace proton {
 
@@ -55,6 +55,13 @@ class PN_CPP_CLASS_EXTERN container {
     /// Create a container.
     PN_CPP_EXTERN container(const std::string& id="");
 
+    /// Destroy a container.
+    /// Note that you may not delete a container from within any of the threads running
+    /// any of the container's messaging_handlers. Specifically if you delete the container
+    /// from within a handler you cause a deadlock or a crash.
+    ///
+    /// The only safe place to delete a container is after all of the threads running a container
+    /// have finished and all of the run functions have returned.
     PN_CPP_EXTERN ~container();
 
     /// Connect to `url` and send an open request to the remote peer.
@@ -95,8 +102,15 @@ class PN_CPP_CLASS_EXTERN container {
     /// Returns when the container stops.
     /// @see auto_stop() and stop().
     ///
-    /// With a multithreaded container, call run() in multiple threads to create a thread pool.
+    /// If you are using C++11 or later you may use a multithreaded container. In this case you may
+    /// call run() in multiple threads to create a thread pool. Or aternatively call run with an
+    /// integer parameter specifying the number of threads for the thread pool.
     PN_CPP_EXTERN void run();
+
+#if PN_CPP_SUPPORTS_THREADS
+    /// @copydoc run()
+    PN_CPP_EXTERN void run(int threads);
+#endif
 
     /// If true, stop the container when all active connections and listeners are closed.
     /// If false the container will keep running till stop() is called.

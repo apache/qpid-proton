@@ -81,7 +81,11 @@ returned<connection> container::connect(const std::string& url, const connection
 
 listener container::listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
 
-void container::run() { impl_->run(); }
+void container::run() { impl_->run(1); }
+
+#if PN_CPP_SUPPORTS_THREADS
+void container::run(int threads) { impl_->run(threads); }
+#endif
 
 void container::auto_stop(bool set) { impl_->auto_stop(set); }
 
