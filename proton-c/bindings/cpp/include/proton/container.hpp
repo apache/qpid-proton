@@ -34,6 +34,10 @@
 #endif
 #include <string>
 
+#ifdef PN_CPP_HAS_STD_FUNCTION
+#include <functional>
+#endif
+
 namespace proton {
 
 /// A top-level container of connections, sessions, senders, and
