@@ -44,10 +44,18 @@
 #include <map>
 #include <string>
 
+#if PN_CPP_SUPPORTS_THREADS
+#include <thread>
+#endif
+
 #include "fake_cpp11.hpp"
 
 // This is a simplified model for a message broker, that only allows for messages to go to a
 // single receiver.
+//
+// This broker is multithread safe and if compiled with C++11 with a multithreaded Proton
+// binding library will use as many threads as there are thread resources available (usually
+// cores)
 //
 // Queues are only created and never destroyed
 //
@@ -387,7 +395,12 @@ class broker {
     }
 
     void run() {
-        container_.run(/* std::thread::hardware_concurrency() */);
+#if PN_CPP_SUPPORTS_THREADS
+        std::cout << "starting " << std::thread::hardware_concurrency() << " listening threads\n";
+        container_.run(std::thread::hardware_concurrency());
+#else
+        container_.run();
+#endif
     }
 
   private:
