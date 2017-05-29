@@ -302,11 +302,13 @@ static void stop_polling(epoll_extended_t *ee, int epollfd) {
  * thread.  Conversely, a thread must never stop working without
  * checking if it has newly arrived work.
  *
- * External wake operations, like pn_connection_wake() and
- * pn_proactor_interrupt(), are built on top of the internal wake
- * mechanism.  The former coalesces multiple wakes until event
- * delivery, the latter does not.  The WAKEABLE implementation can be
- * modeled on whichever is more suited.
+ * External wake operations, like pn_connection_wake() and are built on top of
+ * the internal wake mechanism.  The former coalesces multiple wakes until event
+ * delivery, the latter does not.  The WAKEABLE implementation can be modeled on
+ * whichever is more suited.
+ *
+ * pn_proactor_interrupt() must be async-signal-safe so it has a dedicated
+ * eventfd to allow a lock-free pn_proactor_interrupt() implementation.
  */
 typedef enum {
   PROACTOR,
@@ -360,10 +362,10 @@ struct pn_proactor_t {
   pn_collector_t *collector;
   pcontext_t *contexts;         /* in-use contexts for PN_PROACTOR_INACTIVE and cleanup */
   epoll_extended_t epoll_wake;
+  epoll_extended_t epoll_interrupt;
   pn_event_batch_t batch;
-  size_t interrupts;            /* total pending interrupts */
-  size_t deferred_interrupts;   /* interrupts for current batch */
   size_t disconnects_pending;   /* unfinished proactor disconnects*/
+  bool interrupt;
   bool inactive;
   bool timer_expired;
   bool timer_cancelled;
@@ -375,6 +377,8 @@ struct pn_proactor_t {
   bool wakes_in_progress;
   pcontext_t *wake_list_first;
   pcontext_t *wake_list_last;
+  // Interrupts have a dedicated eventfd because they must be async-signal safe.
+  int interruptfd;
 };
 
 static void rearm(pn_proactor_t *p, epoll_extended_t *ee);
@@ -1470,6 +1474,16 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
 // proactor
 // ========================================================================
 
+/* Set up an epoll_extended_t to be used for wakeup or interrupts */
+static void epoll_wake_init(epoll_extended_t *ee, int eventfd, int epollfd) {
+  ee->psocket = NULL;
+  ee->fd = eventfd;
+  ee->type = WAKE;
+  ee->wanted = EPOLLIN;
+  ee->polling = false;
+  start_polling(ee, epollfd);  // TODO: check for error
+}
+
 pn_proactor_t *pn_proactor() {
   pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(*p));
   if (!p) return NULL;
@@ -1478,26 +1492,24 @@ pn_proactor_t *pn_proactor() {
   pmutex_init(&p->eventfd_mutex);
   ptimer_init(&p->timer, 0);
 
-  if ((p->epollfd = epoll_create(1)) >= 0)
+  if ((p->epollfd = epoll_create(1)) >= 0) {
     if ((p->eventfd = eventfd(0, EFD_NONBLOCK)) >= 0) {
-      if (p->timer.timerfd >= 0)
-        if ((p->collector = pn_collector()) != NULL) {
-          p->batch.next_event = &proactor_batch_next;
-          start_polling(&p->timer.epoll_io, p->epollfd);  // TODO: check for error
-          p->timer_armed = true;
-
-          p->epoll_wake.psocket = NULL;
-          p->epoll_wake.fd = p->eventfd;
-          p->epoll_wake.type = WAKE;
-          p->epoll_wake.wanted = EPOLLIN;
-          p->epoll_wake.polling = false;
-          start_polling(&p->epoll_wake, p->epollfd);  // TODO: check for error
-          return p;
-        }
+      if ((p->interruptfd = eventfd(0, EFD_NONBLOCK)) >= 0) {
+        if (p->timer.timerfd >= 0)
+          if ((p->collector = pn_collector()) != NULL) {
+            p->batch.next_event = &proactor_batch_next;
+            start_polling(&p->timer.epoll_io, p->epollfd);  // TODO: check for error
+            p->timer_armed = true;
+            epoll_wake_init(&p->epoll_wake, p->eventfd, p->epollfd);
+            epoll_wake_init(&p->epoll_interrupt, p->interruptfd, p->epollfd);
+            return p;
+          }
+      }
     }
-
+  }
   if (p->epollfd >= 0) close(p->epollfd);
   if (p->eventfd >= 0) close(p->eventfd);
+  if (p->interruptfd >= 0) close(p->eventfd);
   ptimer_finalize(&p->timer);
   if (p->collector) pn_free(p->collector);
   free (p);
@@ -1510,6 +1522,8 @@ void pn_proactor_free(pn_proactor_t *p) {
   p->epollfd = -1;
   close(p->eventfd);
   p->eventfd = -1;
+  close(p->interruptfd);
+  p->interruptfd = -1;
   ptimer_finalize(&p->timer);
   while (p->contexts) {
     pcontext_t *ctx = p->contexts;
@@ -1551,34 +1565,23 @@ static void proactor_add_event(pn_proactor_t *p, pn_event_type_t t) {
 static bool proactor_update_batch(pn_proactor_t *p) {
   if (proactor_has_event(p))
     return true;
-  if (p->deferred_interrupts > 0) {
-    // drain these first
-    --p->deferred_interrupts;
-    --p->interrupts;
-    proactor_add_event(p, PN_PROACTOR_INTERRUPT);
-    return true;
-  }
 
   if (p->timer_expired) {
     p->timer_expired = false;
     proactor_add_event(p, PN_PROACTOR_TIMEOUT);
     return true;
   }
-
-  int ec = 0;
-  if (p->interrupts > 0) {
-    --p->interrupts;
+  if (p->interrupt) {
+    p->interrupt = false;
     proactor_add_event(p, PN_PROACTOR_INTERRUPT);
-    ec++;
-    if (p->interrupts > 0)
-      p->deferred_interrupts = p->interrupts;
+    return true;
   }
-  if (p->inactive && ec == 0) {
+  if (p->inactive) {
     p->inactive = false;
-    ec++;
     proactor_add_event(p, PN_PROACTOR_INACTIVE);
+    return true;
   }
-  return ec > 0;
+  return false;
 }
 
 static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
@@ -1590,10 +1593,12 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   return log_event(p, e);
 }
 
-static pn_event_batch_t *proactor_process(pn_proactor_t *p, bool timeout) {
-  bool timer_fired = timeout && ptimer_callback(&p->timer) != 0;
+static pn_event_batch_t *proactor_process(pn_proactor_t *p, pn_event_type_t event) {
+  bool timer_fired = (event == PN_PROACTOR_TIMEOUT) && ptimer_callback(&p->timer) != 0;
   lock(&p->context.mutex);
-  if (timeout) {
+  if (event == PN_PROACTOR_INTERRUPT) {
+    p->interrupt = true;
+  } else if (event == PN_PROACTOR_TIMEOUT) {
     p->timer_armed = false;
     if (timer_fired && !p->timer_cancelled)
       p->timer_expired = true;
@@ -1667,17 +1672,20 @@ static bool proactor_remove(pcontext_t *ctx) {
   return can_free;
 }
 
-static pn_event_batch_t *process_inbound_wake(pn_proactor_t *p) {
+static pn_event_batch_t *process_inbound_wake(pn_proactor_t *p, epoll_extended_t *ee) {
+  if  (ee->fd == p->interruptfd) {        /* Interrupts have their own dedicated eventfd */
+    return proactor_process(p, PN_PROACTOR_INTERRUPT);
+  }
   pcontext_t *ctx = wake_pop_front(p);
   if (ctx) {
     switch (ctx->type) {
-    case PROACTOR:
-      return proactor_process(p, false);
-    case PCONNECTION:
+     case PROACTOR:
+      return proactor_process(p, PN_EVENT_NONE);
+     case PCONNECTION:
       return pconnection_process((pconnection_t *) ctx->owner, 0, false, false);
-    case LISTENER:
-     return listener_process(&((pn_listener_t *) ctx->owner)->psockets[0], 0);
-    default:
+     case LISTENER:
+      return listener_process(&((pn_listener_t *) ctx->owner)->psockets[0], 0);
+     default:
       assert(ctx->type == WAKEABLE); // TODO: implement or remove
     }
   }
@@ -1710,9 +1718,9 @@ static pn_event_batch_t *proactor_do_epoll(struct pn_proactor_t* p, bool can_blo
     epoll_extended_t *ee = (epoll_extended_t *) ev.data.ptr;
 
     if (ee->type == WAKE) {
-      batch = process_inbound_wake(p);
+      batch = process_inbound_wake(p, ee);
     } else if (ee->type == PROACTOR_TIMER) {
-      batch = proactor_process(p, true);
+      batch = proactor_process(p, PN_PROACTOR_TIMEOUT);
     } else {
       pconnection_t *pc = psocket_pconnection(ee->psocket);
       if (pc) {
@@ -1772,11 +1780,11 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
 }
 
 void pn_proactor_interrupt(pn_proactor_t *p) {
-  lock(&p->context.mutex);
-  ++p->interrupts;
-  bool notify = wake(&p->context);
-  unlock(&p->context.mutex);
-  if (notify) wake_notify(&p->context);
+  if (p->interruptfd == -1)
+    return;
+  uint64_t increment = 1;
+  if (write(p->interruptfd, &increment, sizeof(uint64_t)) != sizeof(uint64_t))
+    EPOLL_FATAL("setting eventfd", errno);
 }
 
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {

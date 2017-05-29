@@ -52,7 +52,7 @@
   libuv functions are thread unsafe, we use a"leader-worker-follower" model as follows:
 
   - At most one thread at a time is the "leader". The leader runs the UV loop till there
-  are events to process and then becomes a "worker"n
+  are events to process and then becomes a "worker"
 
   - Concurrent "worker" threads process events for separate connections or listeners.
   When they run out of work they become "followers"
@@ -227,10 +227,13 @@ struct pn_listener_t {
 typedef enum { TM_NONE, TM_REQUEST, TM_PENDING, TM_FIRED } timeout_state_t;
 
 struct pn_proactor_t {
+  /* Notification */
+  uv_async_t notify;
+  uv_async_t interrupt;
+
   /* Leader thread  */
   uv_cond_t cond;
   uv_loop_t loop;
-  uv_async_t async;
   uv_timer_t timer;
 
   /* Owner thread: proactor collector and batch can belong to leader or a worker */
@@ -241,7 +244,6 @@ struct pn_proactor_t {
   uv_mutex_t lock;
   work_queue_t worker_q;      /* ready for work, to be returned via pn_proactor_wait()  */
   work_queue_t leader_q;      /* waiting for attention by the leader thread */
-  size_t interrupt;           /* pending interrupts */
   timeout_state_t timeout_state;
   pn_millis_t timeout;
   size_t count;               /* connection/listener count for INACTIVE events */
@@ -250,12 +252,21 @@ struct pn_proactor_t {
   bool inactive;
   bool has_leader;
   bool batch_working;         /* batch is being processed in a worker thread */
+  bool need_interrupt;        /* Need a PN_PROACTOR_INTERRUPT event */
 };
 
 
 /* Notify the leader thread that there is something to do outside of uv_run() */
 static inline void notify(pn_proactor_t* p) {
-  uv_async_send(&p->async);
+  uv_async_send(&p->notify);
+}
+
+/* Set the interrupt flag in the leader thread to avoid race conditions. */
+void on_interrupt(uv_async_t *async) {
+  if (async->data) {
+    pn_proactor_t *p = (pn_proactor_t*)async->data;
+    p->need_interrupt = true;
+  }
 }
 
 /* Notify that this work item needs attention from the leader at the next opportunity */
@@ -814,8 +825,8 @@ static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
       p->inactive = false;
       return proactor_batch_lh(p, PN_PROACTOR_INACTIVE);
     }
-    if (p->interrupt > 0) {
-      --p->interrupt;
+    if (p->need_interrupt) {
+      p->need_interrupt = false;
       return proactor_batch_lh(p, PN_PROACTOR_INTERRUPT);
     }
     if (p->timeout_state == TM_FIRED) {
@@ -1072,10 +1083,12 @@ pn_proactor_t *pn_event_proactor(pn_event_t *e) {
 }
 
 void pn_proactor_interrupt(pn_proactor_t *p) {
-  uv_mutex_lock(&p->lock);
-  ++p->interrupt;
-  uv_mutex_unlock(&p->lock);
-  notify(p);
+  /* NOTE: pn_proactor_interrupt must be async-signal-safe so we cannot use
+     locks to update shared proactor state here. Instead we use a dedicated
+     uv_async, the on_interrupt() callback will set the interrupt flag in the
+     safety of the leader thread.
+   */
+  uv_async_send(&p->interrupt);
 }
 
 void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
@@ -1155,7 +1168,9 @@ pn_proactor_t *pn_proactor() {
   uv_loop_init(&p->loop);
   uv_mutex_init(&p->lock);
   uv_cond_init(&p->cond);
-  uv_async_init(&p->loop, &p->async, NULL);
+  uv_async_init(&p->loop, &p->notify, NULL);
+  uv_async_init(&p->loop, &p->interrupt, on_interrupt);
+  p->interrupt.data = p;
   uv_timer_init(&p->loop, &p->timer);
   p->timer.data = p;
   p->disconnect_cond = pn_condition();

@@ -196,12 +196,13 @@ PNP_EXTERN void pn_proactor_done(pn_proactor_t *proactor, pn_event_batch_t *even
 /**
  * Return a @ref PN_PROACTOR_INTERRUPT event as soon as possible.
  *
- * Exactly one @ref PN_PROACTOR_INTERRUPT event is generated for each call to
- * pn_proactor_interrupt().  If threads are blocked in pn_proactor_wait(), one
- * of them will be interrupted, otherwise the interrupt will be returned by a
- * future call to pn_proactor_wait(). Calling pn_proactor_interrupt().
+ * At least one PN_PROACTOR_INTERRUPT event will be returned after this call.
+ * Interrupts can be "coalesced" - if several pn_proactor_interrupt() calls
+ * happen close together, there may be only one PN_PROACTOR_INTERRUPT event that
+ * occurs after all of them.
  *
- * @note Thread safe
+ * @note Thread-safe and async-signal-safe: can be called in a signal handler.
+ * This is the only pn_proactor function that is async-signal-safe.
  */
 PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
 

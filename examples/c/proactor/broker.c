@@ -195,9 +195,8 @@ typedef struct broker_t {
 } broker_t;
 
 void broker_stop(broker_t *b) {
-  /* In this broker an interrupt stops a thread, stopping all threads stops the broker */
-  for (size_t i = 0; i < b->threads; ++i)
-    pn_proactor_interrupt(b->proactor);
+  /* Interrupt the proactor to stop the working threads. */
+  pn_proactor_interrupt(b->proactor);
 }
 
 /* Try to send if link is sender and has credit */
@@ -369,12 +368,13 @@ static void handle(broker_t* b, pn_event_t* e) {
 
  break;
 
-   case PN_PROACTOR_INACTIVE: /* listener and all connections closed */
+   case PN_PROACTOR_INACTIVE:   /* listener and all connections closed */
     broker_stop(b);
     break;
 
    case PN_PROACTOR_INTERRUPT:
     b->finished = true;
+    pn_proactor_interrupt(b->proactor); /* Pass along the interrupt to the other threads */
     break;
 
    default:
