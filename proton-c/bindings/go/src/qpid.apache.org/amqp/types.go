@@ -83,7 +83,7 @@ func (t C.pn_type_t) String() string {
 	case C.PN_MAP:
 		return "map"
 	default:
-		return "no-data"
+		return fmt.Sprintf("<bad-type %v>", int(t))
 	}
 }
 
@@ -210,3 +210,12 @@ func StringKey(v string) Key { return Key{Symbol(v)} }
 func (k Key) Get() interface{} { return k.value }
 
 func (k Key) String() string { return fmt.Sprintf("%v", k.Get()) }
+
+// Described represents an AMQP described type, which is really
+// just a pair of AMQP values - the first is treated as a "descriptor",
+// and is normally a string or ulong providing information about the type.
+// The second is the "value" and can be any AMQP value.
+type Described struct {
+	Descriptor interface{}
+	Value      interface{}
+}

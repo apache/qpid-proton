@@ -87,17 +87,16 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |List                                 |list, may have mixed types  values          |
  +-------------------------------------+--------------------------------------------+
+ |Described                            |described type                              |
+ +-------------------------------------+--------------------------------------------+
 
-The following Go types cannot be marshaled: uintptr, function, interface, channel
+The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct
 
-TODO
+TODO: Not yet implemented:
 
-Go types: array, slice, struct, complex64/128.
+Go types: struct, complex64/128.
 
-AMQP types: decimal32/64/128, char, timestamp, uuid, array, multi-section message bodies.
-
-Described types.
-
+AMQP types: decimal32/64/128, char, timestamp, uuid, array.
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	defer func() {
@@ -203,6 +202,12 @@ func marshal(v interface{}, data *C.pn_data_t) {
 			marshal(key, data)
 			marshal(val, data)
 		}
+		C.pn_data_exit(data)
+	case Described:
+		C.pn_data_put_described(data)
+		C.pn_data_enter(data)
+		marshal(v.Descriptor, data)
+		marshal(v.Value, data)
 		C.pn_data_exit(data)
 	case Key:
 		marshal(v.Get(), data)

@@ -23,6 +23,7 @@ message(STATUS "Found Go: ${GO_EXE} (${go_ver})")
 
 set(GO_BUILD_FLAGS "" CACHE STRING "Flags for 'go build'")
 set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
+set(GO_VET_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
 if (go_ver MATCHES "gccgo")
