@@ -571,7 +571,6 @@ void pn_sasl_free(pn_transport_t *transport)
   if (transport) {
     pni_sasl_t *sasl = transport->sasl;
     if (sasl) {
-      free(sasl->impl);
       free(sasl->selected_mechanism);
       free(sasl->included_mechanisms);
       free(sasl->password);
@@ -583,6 +582,7 @@ void pn_sasl_free(pn_transport_t *transport)
       if (sasl->impl_context) {
           pni_sasl_impl_free_(transport);
       }
+      free(sasl->impl);
       pn_buffer_free(sasl->decoded_buffer);
       pn_buffer_free(sasl->encoded_buffer);
       free(sasl);

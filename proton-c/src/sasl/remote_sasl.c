@@ -37,6 +37,7 @@ const int8_t UPSTREAM_RESPONSE_RECEIVED = 2;
 const int8_t DOWNSTREAM_MECHANISMS_RECEIVED = 3;
 const int8_t DOWNSTREAM_CHALLENGE_RECEIVED = 4;
 const int8_t DOWNSTREAM_OUTCOME_RECEIVED = 5;
+const int8_t DOWNSTREAM_CLOSED = 6;
 
 typedef struct
 {
@@ -46,14 +47,16 @@ typedef struct
     char* selected_mechanism;
     pni_owned_bytes_t response;
     int8_t downstream_state;
+    bool downstream_released;
 
     pn_connection_t* upstream;
     char* mechlist;
     pni_owned_bytes_t challenge;
     int8_t upstream_state;
+    bool upstream_released;
 
+    bool complete;
     pn_sasl_outcome_t outcome;
-    int refcount;
 } pni_sasl_relay_t;
 
 void pni_copy_bytes(const pn_bytes_t* from, pni_owned_bytes_t* to)
@@ -76,9 +79,13 @@ pni_sasl_relay_t* new_pni_sasl_relay_t(const char* address)
     instance->mechlist = 0;
     instance->challenge.start = 0;
     instance->challenge.size = 0;
-    instance->refcount = 1;
     instance->upstream_state = 0;
     instance->downstream_state = 0;
+    instance->upstream_released = false;
+    instance->downstream_released = false;
+    instance->complete = false;
+    instance->upstream = 0;
+    instance->downstream = 0;
     return instance;
 }
 
@@ -89,14 +96,11 @@ void delete_pni_sasl_relay_t(pni_sasl_relay_t* instance)
     if (instance->selected_mechanism) free(instance->selected_mechanism);
     if (instance->response.start) free(instance->response.start);
     if (instance->challenge.start) free(instance->challenge.start);
-    free(instance);
-}
-
-void release_pni_sasl_relay_t(pni_sasl_relay_t* instance)
-{
-    if (instance && --(instance->refcount) == 0) {
-        delete_pni_sasl_relay_t(instance);
+    if (instance->downstream) {
+        pn_connection_release(instance->downstream);
+        instance->downstream = 0;
     }
+    free(instance);
 }
 
 PN_HANDLE(REMOTE_SASL_CTXT)
@@ -162,18 +166,31 @@ bool remote_init_client(pn_transport_t* transport)
     pni_sasl_relay_t* impl = get_sasl_relay_context(conn);
     if (impl) {
         transport->sasl->impl_context = impl;
-        impl->refcount++;
         return true;
     } else {
         return false;
-        //return pni_init_client(transport);
     }
 }
 
 void remote_free(pn_transport_t *transport)
 {
-    if (transport->sasl->impl_context) {
-        release_pni_sasl_relay_t((pni_sasl_relay_t*) transport->sasl->impl_context);
+    pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
+    if (impl) {
+        if (transport->sasl->client) {
+            impl->downstream_released = true;
+            if (impl->upstream_released) {
+                delete_pni_sasl_relay_t(impl);
+            } else {
+                pn_connection_wake(impl->upstream);
+            }
+        } else {
+            impl->upstream_released = true;
+            if (impl->downstream_released) {
+                delete_pni_sasl_relay_t(impl);
+            } else {
+                pn_connection_wake(impl->downstream);
+            }
+        }
     }
 }
 
@@ -183,7 +200,7 @@ bool remote_prepare(pn_transport_t *transport)
     if (!impl) return false;
     if (transport->sasl->client) {
         if (impl->downstream_state == UPSTREAM_INIT_RECEIVED) {
-            transport->sasl->selected_mechanism = impl->selected_mechanism;
+            transport->sasl->selected_mechanism = pn_strdup(impl->selected_mechanism);
             transport->sasl->bytes_out.start = impl->response.start;
             transport->sasl->bytes_out.size = impl->response.size;
             pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
@@ -209,15 +226,40 @@ bool remote_prepare(pn_transport_t *transport)
     return true;
 }
 
+bool notify_upstream(pni_sasl_relay_t* impl, uint8_t state)
+{
+    if (!impl->upstream_released) {
+        impl->upstream_state = state;
+        pn_connection_wake(impl->upstream);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool notify_downstream(pni_sasl_relay_t* impl, uint8_t state)
+{
+    if (!impl->downstream_released) {
+        impl->downstream_state = state;
+        pn_connection_wake(impl->downstream);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 // Client / Downstream
 bool remote_process_mechanisms(pn_transport_t *transport, const char *mechs)
 {
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
         impl->mechlist = pn_strdup(mechs);
-        impl->upstream_state = DOWNSTREAM_MECHANISMS_RECEIVED;
-        pn_connection_wake(impl->upstream);
-        return true;
+        if (notify_upstream(impl, DOWNSTREAM_MECHANISMS_RECEIVED)) {
+            return true;
+        } else {
+            pni_sasl_set_desired_state(transport, SASL_ERROR);
+            return false;
+        }
     } else {
         return false;
     }
@@ -229,8 +271,9 @@ void remote_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
         pni_copy_bytes(recv, &(impl->challenge));
-        impl->upstream_state = DOWNSTREAM_CHALLENGE_RECEIVED;
-        pn_connection_wake(impl->upstream);
+        if (!notify_upstream(impl, DOWNSTREAM_CHALLENGE_RECEIVED)) {
+            pni_sasl_set_desired_state(transport, SASL_ERROR);
+        }
     }
 }
 
@@ -240,8 +283,13 @@ bool remote_process_outcome(pn_transport_t *transport)
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
         impl->outcome = transport->sasl->outcome;
-        impl->upstream_state = DOWNSTREAM_OUTCOME_RECEIVED;
-        pn_connection_wake(impl->upstream);
+        impl->complete = true;
+        if (notify_upstream(impl, DOWNSTREAM_OUTCOME_RECEIVED)) {
+            return true;
+        } else {
+            pni_sasl_set_desired_state(transport, SASL_ERROR);
+            return false;
+        }
         return true;
     } else {
         return false;
@@ -267,8 +315,9 @@ void remote_process_init(pn_transport_t *transport, const char *mechanism, const
     if (impl) {
         impl->selected_mechanism = pn_strdup(mechanism);
         pni_copy_bytes(recv, &(impl->response));
-        impl->downstream_state = UPSTREAM_INIT_RECEIVED;
-        pn_connection_wake(impl->downstream);
+        if (!notify_downstream(impl, UPSTREAM_INIT_RECEIVED)) {
+            pni_sasl_set_desired_state(transport, SASL_ERROR);
+        }
     }
 }
 
@@ -278,8 +327,9 @@ void remote_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
     pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
     if (impl) {
         pni_copy_bytes(recv, &(impl->response));
-        impl->downstream_state = UPSTREAM_RESPONSE_RECEIVED;
-        pn_connection_wake(impl->downstream);
+        if (!notify_downstream(impl, UPSTREAM_RESPONSE_RECEIVED)) {
+            pni_sasl_set_desired_state(transport, SASL_ERROR);
+        }
     }
 }
 
@@ -308,12 +358,25 @@ void pn_use_remote_authentication_service(pn_transport_t *transport, const char*
 void pn_handle_authentication_service_connection_event(pn_event_t *e)
 {
     pn_connection_t *conn = pn_event_connection(e);
+    pn_transport_t *transport = pn_event_transport(e);
     if (pn_event_type(e) == PN_CONNECTION_BOUND) {
-        printf("Handling connection bound event for authentication service connection\n");
+        pn_transport_logf(transport, "Handling connection bound event for authentication service connection");
         pni_sasl_relay_t* context = get_sasl_relay_context(conn);
-        context->refcount++;
         set_remote_impl(pn_event_transport(e), context);
+    } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_OPEN) {
+        pn_transport_logf(transport, "authentication against service complete; closing connection");
+        pn_connection_close(conn);
+    } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_CLOSE) {
+        pn_transport_logf(transport, "authentication service closed connection");
+        pn_connection_close(conn);
+        pn_transport_close_head(transport);
+    } else if (pn_event_type(e) == PN_TRANSPORT_CLOSED) {
+        pn_transport_logf(transport, "disconnected from authentication service");
+        pni_sasl_relay_t* impl = (pni_sasl_relay_t*) transport->sasl->impl_context;
+        if (!impl->complete) {
+            notify_upstream(impl, DOWNSTREAM_CLOSED);
+        }
     } else {
-        printf("Ignoring event for authentication service connection: %s\n", pn_event_type_name(pn_event_type(e)));
+        pn_transport_logf(transport, "Ignoring event for authentication service connection: %s", pn_event_type_name(pn_event_type(e)));
     }
 }
