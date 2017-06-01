@@ -184,4 +184,5 @@ int main(int argc, char **argv) {
   pn_proactor_connect(app.proactor, pn_connection(), addr);
   run(&app);
   pn_proactor_free(app.proactor);
+  return exit_code;
 }

@@ -245,7 +245,6 @@ pn_timestamp_t pn_i_now2(void)
 // Proactor common code
 // ========================================================================
 
-const char *COND_NAME = "proactor";
 const char *AMQP_PORT = "5672";
 const char *AMQP_PORT_NAME = "amqp";
 
@@ -586,13 +585,13 @@ static void psocket_error(psocket_t *ps, int err, const char* what) {
   if (!ps->listener) {
     pn_connection_driver_t *driver = &psocket_pconnection(ps)->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
-    pn_connection_driver_errorf(driver, COND_NAME, "%s %s:%s: %s",
+    pn_connection_driver_errorf(driver, PNI_IO_CONDITION, "%s %s:%s: %s",
                                 what, ps->host, ps->port,
                                 strerror(err));
     pn_connection_driver_close(driver);
   } else {
     pn_listener_t *l = psocket_listener(ps);
-    pn_condition_format(l->condition, COND_NAME, "%s %s:%s: %s",
+    pn_condition_format(l->condition, PNI_IO_CONDITION, "%s %s:%s: %s",
                         what, ps->host, ps->port,
                         strerror(err));
     listener_begin_close(l);

@@ -456,9 +456,8 @@ static void pconnection_set_error(pconnection_t *pc, int err, const char* what) 
   pn_connection_driver_t *driver = &pc->driver;
   pn_connection_driver_bind(driver); /* Make sure we are bound so errors will be reported */
   if (!pn_condition_is_set(pn_transport_condition(driver->transport))) {
-    pn_connection_driver_errorf(driver, uv_err_name(err), "%s %s:%s: %s",
-                                what, pc->addr.host, pc->addr.port,
-                                uv_strerror(err));
+    pni_proactor_set_cond(pn_transport_condition(driver->transport),
+                                what, pc->addr.host , pc->addr.port, uv_strerror(err));
   }
 }
 
@@ -473,9 +472,7 @@ static void pconnection_error(pconnection_t *pc, int err, const char* what) {
 static void listener_error_lh(pn_listener_t *l, int err, const char* what) {
   assert(err);
   if (!pn_condition_is_set(l->condition)) {
-    pn_condition_format(l->condition, uv_err_name(err), "%s %s:%s: %s",
-                        what, l->addr.host, l->addr.port,
-                        uv_strerror(err));
+    pni_proactor_set_cond(l->condition, what, l->addr.host, l->addr.port, uv_strerror(err));
   }
   listener_close_lh(l);
 }
@@ -659,11 +656,11 @@ static void leader_listen_lh(pn_listener_t *l) {
       err = 0;
     }
   }
-  /* Always put an OPEN event for symmetry, even if we immediately close with err */
-  pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
   if (err) {
     listener_error_lh(l, err, "listening on");
   }
+  /* Always put an OPEN event for symmetry, even if we have an error. */
+  pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
 }
 
 void pn_listener_free(pn_listener_t *l) {

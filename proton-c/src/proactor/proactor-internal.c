@@ -34,6 +34,8 @@ static const char *AMQP_PORT_NAME = "amqp";
 static const char *AMQPS_PORT = "5671";
 static const char *AMQPS_PORT_NAME = "amqps";
 
+const char *PNI_IO_CONDITION = "proton:io";
+
 int pn_proactor_addr(char *buf, size_t len, const char *host, const char *port) {
   return snprintf(buf, len, "%s:%s", host ? host : "", port ? port : "");
 }
@@ -63,4 +65,12 @@ int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, c
     *host = NULL;
   }
   return 0;
+}
+
+static inline const char *nonull(const char *str) { return str ? str : ""; }
+
+void pni_proactor_set_cond(
+  pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg)
+{
+  pn_condition_format(cond, PNI_IO_CONDITION, "%s - %s %s:%s", msg, what, nonull(host), nonull(port));
 }

@@ -22,8 +22,11 @@
 
 #include <proton/type_compat.h>
 #include <proton/import_export.h>
+#include <proton/condition.h>
 
-/*
+/* NOTE PNP_EXTERN is for use by proton-internal tests  */
+
+/**
  * Parse a pn_proactor_addr string, copy data into buf as necessary.
  * Set *host and *port to point to the host and port strings.
  *
@@ -33,5 +36,16 @@
  * @return 0 on success, PN_OVERFLOW if buf is too small.
  */
 PNP_EXTERN int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port);
+
+/**
+ * Condition name for error conditions related to proton-IO.
+ */
+extern const char *PNI_IO_CONDITION;
+
+/**
+ * Format a proactor error condition with message "<what> (<host>:<port>): <msg>"
+ */
+void pni_proactor_set_cond(
+  pn_condition_t *cond, const char *what, const char *msg, const char *host, const char *port);
 
 #endif // PROACTOR_NETADDR_INTERNAL_H
