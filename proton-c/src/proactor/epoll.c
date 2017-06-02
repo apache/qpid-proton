@@ -1674,6 +1674,7 @@ static bool proactor_remove(pcontext_t *ctx) {
 
 static pn_event_batch_t *process_inbound_wake(pn_proactor_t *p, epoll_extended_t *ee) {
   if  (ee->fd == p->interruptfd) {        /* Interrupts have their own dedicated eventfd */
+    rearm(p, &p->epoll_interrupt);
     return proactor_process(p, PN_PROACTOR_INTERRUPT);
   }
   pcontext_t *ctx = wake_pop_front(p);
