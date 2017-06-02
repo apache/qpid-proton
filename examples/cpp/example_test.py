@@ -21,7 +21,7 @@
 
 import unittest
 import os, sys, socket, time, re, inspect
-from exampletest import *
+from proctest import *
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT, call
 from copy import copy
@@ -82,7 +82,7 @@ def ensureCanTestExtendedSASL():
     raise Skipped("Can't Test Extended SASL: Couldn't create auth db")
 
 
-class BrokerTestCase(ExampleTestCase):
+class BrokerTestCase(ProcTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
     Subclasses must set `broker_exe` class variable with the name of the broker executable.

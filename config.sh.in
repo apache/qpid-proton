@@ -39,7 +39,7 @@ RUBY_BINDINGS=$PROTON_BINDINGS/ruby
 PERL_BINDINGS=$PROTON_BINDINGS/perl
 
 # Python
-COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python:$PROTON_HOME/examples
+COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python:$PROTON_HOME/tools/py
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 
 # PHP

@@ -29,8 +29,8 @@ macro(set_search_path result)  # args after result are directories or search pat
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
-# Some non-python examples use exampletest.py to drive their self-tests.
-set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_CURRENT_SOURCE_DIR}" "$ENV{PYTHON_PATH}")
+# Add the tools directory for the 'proctest' module
+set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/py" "$ENV{PYTHON_PATH}")
 set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
 
 add_subdirectory(c)

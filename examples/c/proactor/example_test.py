@@ -20,7 +20,7 @@
 # This is a test script to run the examples and verify that they behave as expected.
 
 import unittest, sys, time
-from exampletest import *
+from proctest import *
 
 def python_cmd(name):
     dir = os.path.dirname(__file__)
@@ -49,7 +49,7 @@ class Broker(object):
                 raise ProcError(b, "broker crash")
             b.kill()
 
-class CExampleTest(ExampleTestCase):
+class CExampleTest(ProcTestCase):
 
     def test_send_receive(self):
         """Send first then receive"""

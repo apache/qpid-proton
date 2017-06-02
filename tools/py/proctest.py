@@ -17,9 +17,11 @@
 # under the License
 #
 
-# A test library to make it easy to run unittest tests that start,
-# monitor, and report output from sub-processes. In particular
-# it helps with starting processes that listen on random ports.
+"""Unit test library to simplify tests that start, monitor, check and report
+output from sub-processes. Provides safe port allocation for processes that
+listen on a port. Allows executables to be run under a debugging tool like
+valgrind.
+"""
 
 import unittest
 import os, sys, socket, time, re, inspect, errno, threading
@@ -32,7 +34,10 @@ from os.path import dirname as dirname
 DEFAULT_TIMEOUT=10
 
 class TestPort(object):
-    """Get an unused port using bind(0) and SO_REUSEADDR and hold it till close()"""
+    """Get an unused port using bind(0) and SO_REUSEADDR and hold it till close()
+    Can be used as `with TestPort() as tp:` Provides tp.host, tp.port and tp.addr
+    (a "host:port" string)
+    """
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -50,21 +55,24 @@ class TestPort(object):
         self.sock.close()
 
 class ProcError(Exception):
-    """An exception that captures failed process output"""
+    """An exception that displays failed process output"""
     def __init__(self, proc, what="bad exit status"):
-        out = proc.out.strip()
-        if out:
-            out = "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^\n" % out
+        self.out = proc.out.strip()
+        if self.out:
+            msgtail = "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^\n" % self.out
         else:
-            out = ", no output)"
+            msgtail = ", no output"
         super(Exception, self, ).__init__(
-            "%s %s, code=%s%s" % (proc.args, what, getattr(proc, 'returncode', 'noreturn'), out))
+            "%s %s, code=%s%s" % (proc.args, what, getattr(proc, 'returncode', 'noreturn'), msgtail))
 
 class NotFoundError(ProcError):
     pass
 
 class Proc(Popen):
-    """A example process that stores its stdout and can scan it for a 'ready' pattern'"""
+    """Subclass of suprocess.Popen that stores its output and can scan it for a
+    'ready' pattern' Use self.out to access output (combined stdout and stderr).
+    You can't set the Popen stdout and stderr arguments, they will be overwritten.
+    """
 
     if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
         vg_args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet", "--leak-check=full"]
@@ -126,18 +134,36 @@ class Proc(Popen):
             match = re.search(regexp, self.out)
             if match:
                 return match
+            if self.poll() is not None:
+                raise ProcError(self, "process exited while waiting for '%s'" % (regexp))
             time.sleep(0.01)    # Not very efficient
         raise ProcError(self, "gave up waiting for '%s' after %ss" % (regexp, timeout))
 
 def _tc_missing(attr):
     return not hasattr(unittest.TestCase, attr)
 
-class TestCase(unittest.TestCase):
+class ProcTestCase(unittest.TestCase):
+    """TestCase that manages started processes
+
+    Also roughly provides setUpClass() and tearDownClass() and other features
+    missing in python 2.6. If subclasses override setUp() or tearDown() they
+    *must* call the superclass.
     """
-    Roughly provides setUpClass() and tearDownClass() and other features missing
-    in python 2.6. If subclasses override setUp() or tearDown() they *must*
-    call the superclass.
-    """
+
+    def setUp(self):
+        super(ProcTestCase, self).setUp()
+        self.procs = []
+
+    def tearDown(self):
+        for p in self.procs:
+            p.kill()
+        super(ProcTestCase, self).tearDown()
+
+    def proc(self, *args, **kwargs):
+        """Return a Proc() that will be automatically killed on teardown"""
+        p = Proc(*args, **kwargs)
+        self.procs.append(p)
+        return p
 
     if _tc_missing('setUpClass') and _tc_missing('tearDownClass'):
 
@@ -150,7 +176,7 @@ class TestCase(unittest.TestCase):
             pass
 
         def setUp(self):
-            super(TestCase, self).setUp()
+            super(ProcTestCase, self).setUp()
             cls = type(self)
             if not hasattr(cls, '_setup_class_count'): # First time
                 def is_test(m):
@@ -163,7 +189,7 @@ class TestCase(unittest.TestCase):
             self._setup_class_count -=  1
             if self._setup_class_count == 0:
                 type(self).tearDownClass()
-            super(TestCase, self).tearDown()
+            super(ProcTestCase, self).tearDown()
 
     if _tc_missing('assertIn'):
         def assertIn(self, a, b):
@@ -173,21 +199,6 @@ class TestCase(unittest.TestCase):
         def assertMultiLineEqual(self, a, b):
             self.assertEqual(a, b)
 
-class ExampleTestCase(TestCase):
-    """TestCase that manages started processes"""
-    def setUp(self):
-        super(ExampleTestCase, self).setUp()
-        self.procs = []
-
-    def tearDown(self):
-        for p in self.procs:
-            p.kill()
-        super(ExampleTestCase, self).tearDown()
-
-    def proc(self, *args, **kwargs):
-        p = Proc(*args, **kwargs)
-        self.procs.append(p)
-        return p
-
+from unittest import main
 if __name__ == "__main__":
-    unittest.main()
+    main()
