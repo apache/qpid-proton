@@ -185,6 +185,16 @@ static void ptimer_set(ptimer_t *pt, uint64_t t_millis) {
   unlock(&pt->mutex);
 }
 
+/* Read from a timer or event FD */
+static uint64_t read_uint64(int fd) {
+  uint64_t result = 0;
+  ssize_t n = read(fd, &result, sizeof(result));
+  if (n != sizeof(result) && !(n < 0 && errno == EAGAIN)) {
+    EPOLL_FATAL("timerfd or eventfd read error", errno);
+  }
+  return result;
+}
+
 // Callback bookkeeping. Return true if there is an expired timer.
 static bool ptimer_callback(ptimer_t *pt) {
   lock(&pt->mutex);
@@ -193,23 +203,13 @@ static bool ptimer_callback(ptimer_t *pt) {
     if (current.it_value.tv_nsec == 0 && current.it_value.tv_sec == 0)
       pt->timer_active = false;
   }
-  uint64_t u_exp_count = 0;
-  ssize_t l = read(pt->timerfd, &u_exp_count, sizeof(uint64_t));
-  if (l != sizeof(uint64_t)) {
-    if (l == -1) {
-      if (errno != EAGAIN) {
-        EPOLL_FATAL("timer read", errno);
-      }
-    }
-    else
-      EPOLL_FATAL("timer internal error", 0);
-  }
+  uint64_t u_exp_count = read_uint64(pt->timerfd);
   if (!pt->timer_active) {
     // Expiry counter just cleared, timer not set, timerfd not armed
     pt->in_doubt = false;
   }
   unlock(&pt->mutex);
-  return (l == sizeof(uint64_t)) && u_exp_count > 0;
+  return u_exp_count > 0;
 }
 
 // Return true if timerfd has and will have no pollable expiries in the current armed state
@@ -444,9 +444,7 @@ static pcontext_t *wake_pop_front(pn_proactor_t *p) {
        * Can the read system call be made without holding the lock?
        * Note that if the reads/writes happen out of order, the wake
        * mechanism will hang. */
-      uint64_t ignored;
-      int err = read(p->eventfd, &ignored, sizeof(uint64_t));
-      (void)err; // TODO: check for error
+      (void)read_uint64(p->eventfd);
       p->wakes_in_progress = false;
     }
   }
@@ -1673,6 +1671,7 @@ static bool proactor_remove(pcontext_t *ctx) {
 
 static pn_event_batch_t *process_inbound_wake(pn_proactor_t *p, epoll_extended_t *ee) {
   if  (ee->fd == p->interruptfd) {        /* Interrupts have their own dedicated eventfd */
+    (void)read_uint64(p->interruptfd);
     rearm(p, &p->epoll_interrupt);
     return proactor_process(p, PN_PROACTOR_INTERRUPT);
   }
