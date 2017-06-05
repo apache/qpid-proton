@@ -53,6 +53,18 @@ pn_add_c_test (c-reactor-tests reactor.c)
 pn_add_c_test (c-event-tests event.c)
 pn_add_c_test (c-data-tests data.c)
 pn_add_c_test (c-condition-tests condition.c)
+
 if(HAS_PROACTOR)
   pn_add_c_test (c-proactor-tests proactor.c)
+
+  if(WIN32)
+    set(path "$<TARGET_FILE_DIR:proactor-broker>;$<TARGET_FILE_DIR:qpid-proton>")
+  else(WIN32)
+    set(path "${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/examples/c/proactor:$ENV{PATH}")
+  endif(WIN32)
+  # Add the tools directory for the 'proctest' module
+  set_search_path(pypath "${CMAKE_SOURCE_DIR}/tools/py" "$ENV{PYTHON_PATH}")
+
+  add_test(NAME c-fdlimit-tests COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+  set_tests_properties(c-fdlimit-tests PROPERTIES ENVIRONMENT "PATH=${path};PYTHONPATH=${pypath}")
 endif(HAS_PROACTOR)

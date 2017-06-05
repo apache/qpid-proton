@@ -170,6 +170,16 @@ if (ENABLE_VALGRIND)
   endif ()
 endif (ENABLE_VALGRIND)
 
+# Set result to a native search path - used by examples and binding tests.
+# args after result are directories or search paths.
+macro(set_search_path result)
+  set(${result} ${ARGN})
+  if (UNIX)
+    string(REPLACE ";" ":" ${result} "${${result}}") # native search path separators.
+  endif()
+  file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
+endmacro()
+
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 

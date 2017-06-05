@@ -346,7 +346,6 @@ typedef enum {
    * Events of this type point to the @ref pn_listener_t.
    */
   PN_LISTENER_OPEN
-
 } pn_event_type_t;
 
 
