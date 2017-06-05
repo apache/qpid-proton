@@ -149,6 +149,7 @@ typedef struct lsocket_t {
   struct_type type;             /* Always T_LSOCKET */
   pn_listener_t *parent;
   uv_tcp_t tcp;
+  struct lsocket_t *next;
 } lsocket_t;
 
 PN_STRUCT_CLASSDEF(lsocket, CID_pn_listener_socket)
@@ -193,17 +194,13 @@ typedef enum {
   L_UNINIT,                     /**<< Not yet listening */
   L_LISTENING,                  /**<< Listening */
   L_CLOSE,                      /**<< Close requested  */
-  L_CLOSING,                    /**<< Socket close initiated, wait for close */
+  L_CLOSING,                    /**<< Socket close initiated, wait for all to close */
   L_CLOSED                      /**<< User saw PN_LISTENER_CLOSED, all done  */
 } listener_state;
 
 /* A listener */
 struct pn_listener_t {
   work_t work;                  /* Must be first to allow casting */
-
-  size_t nsockets;
-  lsocket_t *sockets;
-  lsocket_t prealloc[1];       /* Pre-allocated socket array, allocate larger if needed */
 
   /* Only used by owner thread */
   pn_event_batch_t batch;
@@ -213,6 +210,7 @@ struct pn_listener_t {
 
   /* Only used by leader */
   addr_t addr;
+  lsocket_t *lsockets;
 
   /* Locked for thread-safe access. uv_listen can't be stopped or cancelled so we can't
    * detach a listener from the UV loop to prevent concurrent access.
@@ -424,10 +422,15 @@ static void listener_close_lh(pn_listener_t* l) {
 static void on_close_lsocket(uv_handle_t *h) {
   lsocket_t* ls = (lsocket_t*)h->data;
   pn_listener_t *l = ls->parent;
-  uv_mutex_lock(&l->lock);
-  --l->nsockets;
-  listener_close_lh(l);
-  uv_mutex_unlock(&l->lock);
+  if (l) {
+    /* Remove from list */
+    lsocket_t **pp = &l->lsockets;
+    for (; *pp != ls; pp = &(*pp)->next)
+      ;
+    *pp = ls->next;
+    work_notify(&l->work);
+  }
+  free(ls);
 }
 
 static pconnection_t *get_pconnection(pn_connection_t* c) {
@@ -611,16 +614,27 @@ static bool leader_connect(pconnection_t *pc) {
   }
 }
 
-static int lsocket_init(lsocket_t *ls, pn_listener_t *l, struct addrinfo *ai) {
+static int lsocket(pn_listener_t *l, struct addrinfo *ai) {
+  lsocket_t *ls = (lsocket_t*)calloc(1, sizeof(lsocket_t));
   ls->type = T_LSOCKET;
-  ls->parent = l;
   ls->tcp.data = ls;
+  ls->parent = NULL;
+  ls->next = NULL;
   int err = uv_tcp_init(&l->work.proactor->loop, &ls->tcp);
-  if (!err) {
+  if (err) {
+    free(ls);                   /* Will never be closed */
+  } else {
     int flags = (ai->ai_family == AF_INET6) ? UV_TCP_IPV6ONLY : 0;
     err = uv_tcp_bind(&ls->tcp, ai->ai_addr, flags);
     if (!err) err = uv_listen((uv_stream_t*)&ls->tcp, l->backlog, on_connection);
-    if (err) uv_close((uv_handle_t*)&ls->tcp, NULL);
+    if (!err) {
+      /* Add to l->lsockets list */
+      ls->parent = l;
+      ls->next = l->lsockets;
+      l->lsockets = ls;
+    } else {
+      uv_close((uv_handle_t*)&ls->tcp, on_close_lsocket); /* Freed by on_close_lsocket */
+    }
   }
   return err;
 }
@@ -632,28 +646,18 @@ static void leader_listen_lh(pn_listener_t *l) {
   leader_inc(l->work.proactor);
   int err = leader_resolve(l->work.proactor, &l->addr, true);
   if (!err) {
-    /* Count addresses, allocate enough space */
-    size_t len = 0;
-    for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
-      ++len;
-    }
-    assert(len > 0);            /* Guaranteed by getaddrinfo() */
-    l->sockets = (len > ARRAY_LEN(l->prealloc)) ? (lsocket_t*)calloc(len, sizeof(lsocket_t)) : l->prealloc;
     /* Find the working addresses */
-    l->nsockets = 0;
-    int first_err = 0;
     for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
-      lsocket_t *ls = &l->sockets[l->nsockets];
-      int err2 = lsocket_init(ls, l, ai);
-      if (!err2) {
-        ++l->nsockets;                    /* Next socket */
-      } else if (!first_err) {
-        first_err = err2;
+      int err2 = lsocket(l, ai);
+      if (err2) {
+        err = err2;
       }
     }
     uv_freeaddrinfo(l->addr.getaddrinfo.addrinfo);
     l->addr.getaddrinfo.addrinfo = NULL;
-    if (l->nsockets == 0) err = first_err;
+    if (l->lsockets) {    /* Ignore errors if we got at least one good listening socket */
+      err = 0;
+    }
   }
   /* Always put an OPEN event for symmetry, even if we immediately close with err */
   pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
@@ -670,7 +674,11 @@ void pn_listener_free(pn_listener_t *l) {
     if (l->collector) pn_collector_free(l->collector);
     if (l->condition) pn_condition_free(l->condition);
     if (l->attachments) pn_free(l->attachments);
-    if (l->sockets && l->sockets != l->prealloc) free(l->sockets);
+    while (l->lsockets) {
+      lsocket_t *ls = l->lsockets;
+      l->lsockets = ls->next;
+      free(ls);
+    }
     assert(!l->accept.front);
     free(l);
   }
@@ -707,13 +715,13 @@ static bool leader_process_listener(pn_listener_t *l) {
 
    case L_CLOSE:                /* Close requested, start closing lsockets */
     l->state = L_CLOSING;
-    for (size_t i = 0; i < l->nsockets; ++i) {
-      uv_safe_close((uv_handle_t*)&l->sockets[i].tcp, on_close_lsocket);
+    for (lsocket_t *ls = l->lsockets; ls; ls = ls->next) {
+      uv_safe_close((uv_handle_t*)&ls->tcp, on_close_lsocket);
     }
     /* NOTE: Fall through in case we have 0 sockets - e.g. resolver error */
 
    case L_CLOSING:              /* Closing - can we send PN_LISTENER_CLOSE? */
-    if (l->nsockets == 0) {
+    if (!l->lsockets) {
       l->state = L_CLOSED;
       pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_CLOSE);
     }
@@ -940,9 +948,11 @@ static void on_proactor_disconnect(uv_handle_t* h, void* v) {
      }
      case T_LSOCKET: {
        pn_listener_t *l = ((lsocket_t*)h->data)->parent;
-       pn_condition_t *cond = l->work.proactor->disconnect_cond;
-       if (cond) {
-         pn_condition_copy(pn_listener_condition(l), cond);
+       if (l) {
+         pn_condition_t *cond = l->work.proactor->disconnect_cond;
+         if (cond) {
+           pn_condition_copy(pn_listener_condition(l), cond);
+         }
        }
        pn_listener_close(l);
        break;
@@ -995,7 +1005,7 @@ static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
     }
   }
   batch = get_batch_lh(p);      /* Check for work */
-  if (!batch) { /* No work, run the UV loop */
+  if (!batch) {                 /* No work, run the UV loop */
     uv_mutex_unlock(&p->lock);  /* Unlock to run UV loop */
     uv_run(&p->loop, mode);
     uv_mutex_lock(&p->lock);
@@ -1142,8 +1152,10 @@ static void on_proactor_free(uv_handle_t* h, void* v) {
   if (h->type == UV_TCP) {      /* Put the corresponding work item on the leader_q for cleanup */
     work_t *w = NULL;
     switch (*(struct_type*)h->data) {
-     case T_CONNECTION: w = (work_t*)h->data; break;
-     case T_LSOCKET: w = &((lsocket_t*)h->data)->parent->work; break;
+     case T_CONNECTION:
+      w = (work_t*)h->data; break;
+     case T_LSOCKET:
+      w = &((lsocket_t*)h->data)->parent->work; break;
      default: break;
     }
     if (w && w->next == work_unqueued) {
@@ -1317,5 +1329,5 @@ int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
 }
 
 pn_millis_t pn_proactor_now(void) {
-    return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
+  return uv_hrtime() / 1000000; // uv_hrtime returns time in nanoseconds
 }
