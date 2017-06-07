@@ -455,10 +455,8 @@ static inline void pconnection_bad_connect(pconnection_t *pc, int err) {
 static void pconnection_set_error(pconnection_t *pc, int err, const char* what) {
   pn_connection_driver_t *driver = &pc->driver;
   pn_connection_driver_bind(driver); /* Make sure we are bound so errors will be reported */
-  if (!pn_condition_is_set(pn_transport_condition(driver->transport))) {
-    pni_proactor_set_cond(pn_transport_condition(driver->transport),
-                                what, pc->addr.host , pc->addr.port, uv_strerror(err));
-  }
+  pni_proactor_set_cond(pn_transport_condition(driver->transport),
+                        what, pc->addr.host , pc->addr.port, uv_strerror(err));
 }
 
 /* Set the error condition and close the driver. */

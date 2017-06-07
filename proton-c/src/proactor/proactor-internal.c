@@ -72,5 +72,8 @@ static inline const char *nonull(const char *str) { return str ? str : ""; }
 void pni_proactor_set_cond(
   pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg)
 {
-  pn_condition_format(cond, PNI_IO_CONDITION, "%s - %s %s:%s", msg, what, nonull(host), nonull(port));
+  if (!pn_condition_is_set(cond)) { /* Preserve older error information */
+    pn_condition_format(cond, PNI_IO_CONDITION, "%s - %s %s:%s",
+                        msg, what, nonull(host), nonull(port));
+  }
 }

@@ -20,12 +20,14 @@
  */
 
 /* Enable POSIX features for pthread.h */
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE
 #endif
+/* Avoid GNU extensions, in particular the incompatible alternative strerror_r() */
+#undef _GNU_SOURCE
 
 #include "../core/log_private.h"
-#include "proactor-internal.h"
+#include "./proactor-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
@@ -66,12 +68,23 @@
 // looking for pending wakes before a kernel call to epoll_wait(), or there
 // could be several eventfds with random assignment of wakeables.
 
+
+typedef char strerrorbuf[1024];      /* used for pstrerror message buffer */
+
+/* Like strerror_r but provide a default message if strerror_r fails */
+static void pstrerror(int err, strerrorbuf msg) {
+  int e = strerror_r(err, msg, sizeof(strerrorbuf));
+  if (e) snprintf(msg, sizeof(strerrorbuf), "unknown error %d", err);
+}
+
 /* Internal error, no recovery */
-#define EPOLL_FATAL(EXPR, SYSERRNO)                                   \
-  do {                                                                \
-    fprintf(stderr, "epoll proactor failure in %s:%d: %s: %s\n",      \
-            __FILE__, __LINE__ , #EXPR, strerror(SYSERRNO));          \
-    abort();                                                          \
+#define EPOLL_FATAL(EXPR, SYSERRNO)                                     \
+  do {                                                                  \
+    strerrorbuf msg;                                                    \
+    pstrerror((SYSERRNO), msg);                                         \
+    fprintf(stderr, "epoll proactor failure in %s:%d: %s: %s\n",        \
+            __FILE__, __LINE__ , #EXPR, msg);                           \
+    abort();                                                            \
   } while (0)
 
 // ========================================================================
@@ -580,18 +593,16 @@ static pn_event_t *log_event(void* p, pn_event_t *e) {
 }
 
 static void psocket_error(psocket_t *ps, int err, const char* what) {
+  strerrorbuf msg;
+  pstrerror(err, msg);
   if (!ps->listener) {
     pn_connection_driver_t *driver = &psocket_pconnection(ps)->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
-    pn_connection_driver_errorf(driver, PNI_IO_CONDITION, "%s %s:%s: %s",
-                                what, ps->host, ps->port,
-                                strerror(err));
+    pni_proactor_set_cond(pn_transport_condition(driver->transport), what, ps->host, ps->port, msg);
     pn_connection_driver_close(driver);
   } else {
     pn_listener_t *l = psocket_listener(ps);
-    pn_condition_format(l->condition, PNI_IO_CONDITION, "%s %s:%s: %s",
-                        what, ps->host, ps->port,
-                        strerror(err));
+    pni_proactor_set_cond(l->condition, what, ps->host, ps->port, msg);
     listener_begin_close(l);
   }
 }
