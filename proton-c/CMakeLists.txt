@@ -107,11 +107,11 @@ endif(PN_WINAPI)
 
 # Link in SASL if present
 if (SASL_IMPL STREQUAL cyrus)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/cyrus_sasl.c)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_sasl.c)
   include_directories (${CYRUS_SASL_INCLUDE_DIR})
   set(SASL_LIB ${CYRUS_SASL_LIBRARY} -lpthread)
 elseif (SASL_IMPL STREQUAL none)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/none_sasl.c)
+  set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_stub.c)
 endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
@@ -334,8 +334,9 @@ set (qpid-proton-platform-io
 # for full source distribution:
 set (qpid-proton-layers-all
   src/sasl/sasl.c
+  src/sasl/default_sasl.c
   src/sasl/cyrus_sasl.c
-  src/sasl/none_sasl.c
+  src/sasl/cyrus_stub.c
   src/ssl/openssl.c
   src/ssl/schannel.c
   src/ssl/ssl_stub.c
@@ -458,6 +459,7 @@ set (qpid-proton-include
   include/proton/object.h
   include/proton/proactor.h
   include/proton/sasl.h
+  include/proton/sasl-plugin.h
   include/proton/session.h
   include/proton/ssl.h
   include/proton/terminus.h

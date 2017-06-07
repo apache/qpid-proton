@@ -18,14 +18,68 @@
  * under the License.
  *
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
-#include "core/config.h"
-#include "core/engine-internal.h"
-#include "sasl-internal.h"
-
+#include "proton/sasl.h"
+#include "proton/sasl-plugin.h"
+#include "proton/transport.h"
 
 #include <sasl/sasl.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <pthread.h>
+
+#ifndef CYRUS_SASL_MAX_BUFFSIZE
+# define CYRUS_SASL_MAX_BUFFSIZE (32768) /* bytes */
+#endif
+
+// SASL implementation entry points
+static void cyrus_sasl_prepare(pn_transport_t *transport);
+static void cyrus_sasl_free(pn_transport_t *transport);
+static const char *cyrus_sasl_list_mechs(pn_transport_t *transport);
+
+static bool cyrus_sasl_init_server(pn_transport_t *transport);
+static void cyrus_sasl_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
+static void cyrus_sasl_process_response(pn_transport_t *transport, const pn_bytes_t *recv);
+
+static bool cyrus_sasl_init_client(pn_transport_t *transport);
+static bool cyrus_sasl_process_mechanisms(pn_transport_t *transport, const char *mechs);
+static void cyrus_sasl_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
+static void cyrus_sasl_process_outcome(pn_transport_t *transport);
+
+static bool cyrus_sasl_can_encrypt(pn_transport_t *transport);
+static ssize_t cyrus_sasl_max_encrypt_size(pn_transport_t *transport);
+static ssize_t cyrus_sasl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+static ssize_t cyrus_sasl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+
+static const pnx_sasl_implementation sasl_impl = {
+    cyrus_sasl_free,
+
+    cyrus_sasl_list_mechs,
+
+    cyrus_sasl_init_server,
+    cyrus_sasl_init_client,
+
+    cyrus_sasl_prepare,
+
+    cyrus_sasl_process_init,
+    cyrus_sasl_process_response,
+
+    cyrus_sasl_process_mechanisms,
+    cyrus_sasl_process_challenge,
+    cyrus_sasl_process_outcome,
+
+    cyrus_sasl_can_encrypt,
+    cyrus_sasl_max_encrypt_size,
+    cyrus_sasl_encode,
+    cyrus_sasl_decode
+};
+
+extern const pnx_sasl_implementation * const cyrus_sasl_impl;
+const pnx_sasl_implementation * const cyrus_sasl_impl = &sasl_impl;
 
 // If the version of Cyrus SASL is too early for sasl_client_done()/sasl_server_done()
 // don't do any global clean up as it's not safe to use just sasl_done() for an
@@ -43,8 +97,7 @@ static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logg
     if (r==SASL_OK) return true;
 
     const char* err = conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL);
-    if (logger->trace & PN_TRACE_DRV)
-        pn_transport_logf(logger, "sasl error: %s", err);
+    pnx_sasl_logf(logger, "sasl error: %s", err);
     pn_condition_t* c = pn_transport_condition(logger);
     pn_condition_set_name(c, "proton:io:sasl_error");
     pn_condition_set_description(c, err);
@@ -52,7 +105,7 @@ static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logg
 }
 
 // Cyrus wrappers
-static void pni_cyrus_interact(pni_sasl_t *sasl, sasl_interact_t *interact)
+static void pni_cyrus_interact(pn_transport_t *transport, sasl_interact_t *interact)
 {
   for (sasl_interact_t *i = interact; i->id!=SASL_CB_LIST_END; i++) {
     switch (i->id) {
@@ -60,36 +113,34 @@ static void pni_cyrus_interact(pni_sasl_t *sasl, sasl_interact_t *interact)
       i->result = 0;
       i->len = 0;
       break;
-    case SASL_CB_AUTHNAME:
-      i->result = sasl->username;
-      i->len = strlen(sasl->username);
+    case SASL_CB_AUTHNAME: {
+      const char *username = pnx_sasl_get_username(transport);
+      i->result = username;
+      i->len = strlen(username);
       break;
-    case SASL_CB_PASS:
-      i->result = sasl->password;
-      i->len = strlen(sasl->password);
+    }
+    case SASL_CB_PASS: {
+      const char *password = pnx_sasl_get_password(transport);
+      i->result = password;
+      i->len = strlen(password);
       break;
+    }
     default:
       fprintf(stderr, "(%s): %s - %s\n", i->challenge, i->prompt, i->defresult);
     }
   }
 }
 
-int pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist)
+const char *cyrus_sasl_list_mechs(pn_transport_t *transport)
 {
-  pni_sasl_t *sasl = transport->sasl;
-  sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
-  int count = 0;
-  if (cyrus_conn) {
-    const char *result = NULL;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
+  if (!cyrus_conn) return NULL;
 
-    int r = sasl_listmech(cyrus_conn, NULL, "", " ", "", &result, NULL, &count);
-    if (pni_check_sasl_result(cyrus_conn, r, transport)) {
-      if (result && *result) {
-        *mechlist = pn_strdup(result);
-      }
-    }
-  }
-  return count;
+  int count = 0;
+  const char *result = NULL;
+  int r = sasl_listmech(cyrus_conn, NULL, "", " ", "", &result, NULL, &count);
+  pni_check_sasl_result(cyrus_conn, r, transport);
+  return result;
 }
 
 // Set up callbacks to use interact
@@ -115,6 +166,25 @@ static pthread_mutex_t pni_cyrus_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool pni_cyrus_client_started = false;
 static bool pni_cyrus_server_started = false;
 
+bool pn_sasl_extended(void)
+{
+  return true;
+}
+
+void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)
+{
+    if (!pni_cyrus_config_name) {
+      pni_cyrus_config_name = strdup(name);
+    }
+}
+
+void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
+{
+    if (!pni_cyrus_config_dir) {
+      pni_cyrus_config_dir = strdup(dir);
+    }
+}
+
 __attribute__((destructor))
 static void pni_cyrus_finish(void) {
   pthread_mutex_lock(&pni_cyrus_mutex);
@@ -131,6 +201,11 @@ static void pni_cyrus_client_once(void) {
   int result = SASL_OK;
   if (pni_cyrus_config_dir) {
     result = sasl_set_path(SASL_PATH_TYPE_CONFIG, pni_cyrus_config_dir);
+  } else {
+    char *config_dir = getenv("PN_SASL_CONFIG_PATH");
+    if (config_dir) {
+      result = sasl_set_path(SASL_PATH_TYPE_CONFIG, config_dir);
+    }
   }
   if (result==SASL_OK) {
     result = sasl_client_init(NULL);
@@ -146,6 +221,11 @@ static void pni_cyrus_server_once(void) {
   int result = SASL_OK;
   if (pni_cyrus_config_dir) {
     result = sasl_set_path(SASL_PATH_TYPE_CONFIG, pni_cyrus_config_dir);
+  } else {
+    char *config_dir = getenv("PN_SASL_CONFIG_PATH");
+    if (config_dir) {
+      result = sasl_set_path(SASL_PATH_TYPE_CONFIG, config_dir);
+    }
   }
   if (result==SASL_OK) {
     result = sasl_server_init(NULL, pni_cyrus_config_name ? pni_cyrus_config_name : default_config_name);
@@ -157,69 +237,67 @@ static void pni_cyrus_server_once(void) {
 
 static pthread_once_t pni_cyrus_client_init = PTHREAD_ONCE_INIT;
 static void pni_cyrus_client_start(void) {
-    pthread_once(&pni_cyrus_client_init, pni_cyrus_client_once);
+  pthread_once(&pni_cyrus_client_init, pni_cyrus_client_once);
 }
 static pthread_once_t pni_cyrus_server_init = PTHREAD_ONCE_INIT;
 static void pni_cyrus_server_start(void) {
   pthread_once(&pni_cyrus_server_init, pni_cyrus_server_once);
 }
 
-bool pni_init_client(pn_transport_t* transport) {
-  pni_sasl_t *sasl = transport->sasl;
+void cyrus_sasl_prepare(pn_transport_t* transport)
+{
+}
+
+bool cyrus_sasl_init_client(pn_transport_t* transport) {
   int result;
   sasl_conn_t *cyrus_conn = NULL;
   do {
-    // If pni_cyrus_config_dir already set then we already called pni_cyrus_client_start or pni_cyrus_server_start
-    // and the directory is already fixed - don't change
-    if (sasl->config_dir && !pni_cyrus_config_dir) {
-      pni_cyrus_config_dir = pn_strdup(sasl->config_dir);
-    }
-
     pni_cyrus_client_start();
     result = pni_cyrus_client_init_rc;
     if (result!=SASL_OK) break;
 
-    const sasl_callback_t *callbacks = sasl->username ? sasl->password ? pni_user_password_callbacks : pni_user_callbacks : NULL;
+    const sasl_callback_t *callbacks =
+      pnx_sasl_get_username(transport) ? pnx_sasl_get_password(transport) ? pni_user_password_callbacks : pni_user_callbacks : NULL;
     result = sasl_client_new(amqp_service,
-                             sasl->remote_fqdn,
+                             pnx_sasl_get_remote_fqdn(transport),
                              NULL, NULL,
                              callbacks, 0,
                              &cyrus_conn);
     if (result!=SASL_OK) break;
-    sasl->impl_context = cyrus_conn;
+    pnx_sasl_set_context(transport, cyrus_conn);
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
-      ( sasl->allow_insecure_mechs ? 0 : SASL_SEC_NOPLAINTEXT ) |
-      ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+      ( pnx_sasl_get_allow_insecure_mechs(transport) ? 0 : SASL_SEC_NOPLAINTEXT ) |
+      ( pnx_sasl_get_auth_required(transport) ? SASL_SEC_NOANONYMOUS : 0 ) ;
     secprops.min_ssf = 0;
     secprops.max_ssf = 2048;
-    secprops.maxbufsize = PN_SASL_MAX_BUFFSIZE;
+    secprops.maxbufsize = CYRUS_SASL_MAX_BUFFSIZE;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) break;
 
-    sasl_ssf_t ssf = sasl->external_ssf;
+    sasl_ssf_t ssf = pnx_sasl_get_external_ssf(transport);
     result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
     if (result!=SASL_OK) break;
 
-    const char *extid = sasl->external_auth;
+    const char *extid = pnx_sasl_get_external_username(transport);
     if (extid) {
       result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
     }
   } while (false);
-  cyrus_conn = (sasl_conn_t*) sasl->impl_context;
+  cyrus_conn = (sasl_conn_t*) pnx_sasl_get_context(transport);
   return pni_check_sasl_result(cyrus_conn, result, transport);
 }
 
-static int pni_wrap_client_start(pni_sasl_t *sasl, const char *mechs, const char **mechusing)
+static int pni_wrap_client_start(pn_transport_t *transport, const char *mechs, const char **mechusing)
 {
     int result;
     sasl_interact_t *client_interact=NULL;
     const char *out;
     unsigned outlen;
 
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     do {
 
         result = sasl_client_start(cyrus_conn,
@@ -228,25 +306,24 @@ static int pni_wrap_client_start(pni_sasl_t *sasl, const char *mechs, const char
                                    &out, &outlen,
                                    mechusing);
         if (result==SASL_INTERACT) {
-            pni_cyrus_interact(sasl, client_interact);
+            pni_cyrus_interact(transport, client_interact);
         }
     } while (result==SASL_INTERACT);
 
-    sasl->bytes_out.start = out;
-    sasl->bytes_out.size = outlen;
+    pnx_sasl_set_bytes_out(transport, pn_bytes(outlen, out));
     return result;
 }
 
-bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
+bool cyrus_sasl_process_mechanisms(pn_transport_t *transport, const char *mechs)
 {
-    pni_sasl_t *sasl = transport->sasl;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     const char *mech_selected;
-    int result = pni_wrap_client_start(sasl, mechs, &mech_selected);
+    int result = pni_wrap_client_start(transport, mechs, &mech_selected);
     switch (result) {
         case SASL_OK:
         case SASL_CONTINUE:
-          sasl->selected_mechanism = pn_strdup(mech_selected);
+          pnx_sasl_set_selected_mechanism(transport, mech_selected);
+          pnx_sasl_set_desired_state(transport, SASL_POSTED_INIT);
           return true;
         case SASL_NOMECH:
         default:
@@ -256,9 +333,9 @@ bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs)
 }
 
 
-static int pni_wrap_client_step(pni_sasl_t *sasl, const pn_bytes_t *in)
+static int pni_wrap_client_step(pn_transport_t *transport, const pn_bytes_t *in)
 {
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     sasl_interact_t *client_interact=NULL;
     const char *out;
     unsigned outlen;
@@ -271,94 +348,89 @@ static int pni_wrap_client_step(pni_sasl_t *sasl, const pn_bytes_t *in)
                                   &client_interact,
                                   &out, &outlen);
         if (result==SASL_INTERACT) {
-            pni_cyrus_interact(sasl, client_interact);
+            pni_cyrus_interact(transport, client_interact);
         }
     } while (result==SASL_INTERACT);
 
-    sasl->bytes_out.start = out;
-    sasl->bytes_out.size = outlen;
+    pnx_sasl_set_bytes_out(transport, pn_bytes(outlen, out));
     return result;
 }
 
-void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
+void cyrus_sasl_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
 {
-    pni_sasl_t *sasl = transport->sasl;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
-    int result = pni_wrap_client_step(sasl, recv);
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
+    int result = pni_wrap_client_step(transport, recv);
     switch (result) {
         case SASL_OK:
             // Authenticated
             // TODO: Documented that we need to call sasl_client_step() again to be sure!;
         case SASL_CONTINUE:
             // Need to send a response
-            pni_sasl_set_desired_state(transport, SASL_POSTED_RESPONSE);
+            pnx_sasl_set_desired_state(transport, SASL_POSTED_RESPONSE);
             break;
         default:
             pni_check_sasl_result(cyrus_conn, result, transport);
 
             // Failed somehow - equivalent to failing authentication
-            sasl->outcome = PN_SASL_AUTH;
-            pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
+            pnx_sasl_fail_authentication(transport);
+            pnx_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
             break;
     }
 }
 
-bool pni_init_server(pn_transport_t* transport)
+void cyrus_sasl_process_outcome(pn_transport_t* transport)
 {
-  pni_sasl_t *sasl = transport->sasl;
+}
+
+bool cyrus_sasl_init_server(pn_transport_t* transport)
+{
   int result;
   sasl_conn_t *cyrus_conn = NULL;
   do {
-    // If pni_cyrus_config_dir already set then we already called pni_cyrus_client_start or pni_cyrus_server_start
-    // and the directory is already fixed - don't change
-    if (sasl->config_dir && !pni_cyrus_config_dir) {
-      pni_cyrus_config_dir = pn_strdup(sasl->config_dir);
-    }
-
-    // If pni_cyrus_config_name already set then we already called pni_cyrus_server_start
-    // and the name is already fixed - don't change
-    if (sasl->config_name && !pni_cyrus_config_name) {
-      pni_cyrus_config_name = pn_strdup(sasl->config_name);
-    }
-
     pni_cyrus_server_start();
     result = pni_cyrus_server_init_rc;
     if (result!=SASL_OK) break;
 
     result = sasl_server_new(amqp_service, NULL, NULL, NULL, NULL, NULL, 0, &cyrus_conn);
     if (result!=SASL_OK) break;
-    sasl->impl_context = cyrus_conn;
+    pnx_sasl_set_context(transport, cyrus_conn);
 
     sasl_security_properties_t secprops = {0};
     secprops.security_flags =
-      ( sasl->allow_insecure_mechs ? 0 : SASL_SEC_NOPLAINTEXT ) |
-      ( transport->auth_required ? SASL_SEC_NOANONYMOUS : 0 ) ;
+      ( pnx_sasl_get_allow_insecure_mechs(transport) ? 0 : SASL_SEC_NOPLAINTEXT ) |
+      ( pnx_sasl_get_auth_required(transport) ? SASL_SEC_NOANONYMOUS : 0 ) ;
     secprops.min_ssf = 0;
     secprops.max_ssf = 2048;
-    secprops.maxbufsize = PN_SASL_MAX_BUFFSIZE;
+    secprops.maxbufsize = CYRUS_SASL_MAX_BUFFSIZE;
 
     result = sasl_setprop(cyrus_conn, SASL_SEC_PROPS, &secprops);
     if (result!=SASL_OK) break;
 
-    sasl_ssf_t ssf = sasl->external_ssf;
+    sasl_ssf_t ssf = pnx_sasl_get_external_ssf(transport);
     result = sasl_setprop(cyrus_conn, SASL_SSF_EXTERNAL, &ssf);
     if (result!=SASL_OK) break;
 
-    const char *extid = sasl->external_auth;
+    const char *extid = pnx_sasl_get_external_username(transport);
     if (extid) {
     result = sasl_setprop(cyrus_conn, SASL_AUTH_EXTERNAL, extid);
     }
   } while (false);
-  cyrus_conn = (sasl_conn_t*) sasl->impl_context;
-  return pni_check_sasl_result(cyrus_conn, result, transport);
+  cyrus_conn = (sasl_conn_t*) pnx_sasl_get_context(transport);
+  if (pni_check_sasl_result(cyrus_conn, result, transport)) {
+      // Setup to send SASL mechanisms frame
+      pnx_sasl_set_desired_state(transport, SASL_POSTED_MECHANISMS);
+      return true;
+  } else {
+      return false;
+  }
 }
 
-static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, const pn_bytes_t *in)
+static int pni_wrap_server_start(pn_transport_t *transport, const char *mech_selected, const pn_bytes_t *in)
 {
     int result;
     const char *out;
     unsigned outlen;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     const char *in_bytes = in->start;
     size_t in_size = in->size;
     // Interop hack for ANONYMOUS - some of the earlier versions of proton will send and no data
@@ -374,53 +446,48 @@ static int pni_wrap_server_start(pni_sasl_t *sasl, const char *mech_selected, co
                                in_bytes, in_size,
                                &out, &outlen);
 
-    sasl->bytes_out.start = out;
-    sasl->bytes_out.size = outlen;
+    pnx_sasl_set_bytes_out(transport, pn_bytes(outlen, out));
     return result;
 }
 
 static void pni_process_server_result(pn_transport_t *transport, int result)
 {
-    pni_sasl_t *sasl = transport->sasl;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     switch (result) {
-        case SASL_OK:
+        case SASL_OK: {
             // Authenticated
-            sasl->outcome = PN_SASL_OK;
-            transport->authenticated = true;
             // Get username from SASL
             const void* value;
             sasl_getprop(cyrus_conn, SASL_USERNAME, &value);
-            sasl->username = (const char*) value;
-            if (transport->trace & PN_TRACE_DRV)
-              pn_transport_logf(transport, "Authenticated user: %s with mechanism %s", sasl->username, sasl->selected_mechanism);
-            pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
+            pnx_sasl_succeed_authentication(transport, (const char*) value);
+            pnx_sasl_logf(transport, "Authenticated user: %s with mechanism %s",
+                          pnx_sasl_get_username(transport), pnx_sasl_get_selected_mechanism(transport));
+            pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
+        }
         case SASL_CONTINUE:
             // Need to send a challenge
-            pni_sasl_set_desired_state(transport, SASL_POSTED_CHALLENGE);
+            pnx_sasl_set_desired_state(transport, SASL_POSTED_CHALLENGE);
             break;
         default:
             pni_check_sasl_result(cyrus_conn, result, transport);
 
             // Failed to authenticate
-            sasl->outcome = PN_SASL_AUTH;
-            pni_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
+            pnx_sasl_fail_authentication(transport);
+            pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
     }
 }
 
-void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
+void cyrus_sasl_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
 {
-    pni_sasl_t *sasl = transport->sasl;
-
-    int result = pni_wrap_server_start(sasl, mechanism, recv);
+    int result = pni_wrap_server_start(transport, mechanism, recv);
     if (result==SASL_OK) {
         // We need to filter out a supplied mech in in the inclusion list
         // as the client could have used a mech that we support, but that
         // wasn't on the list we sent.
-        if (!pni_included_mech(sasl->included_mechanisms, pn_bytes(strlen(mechanism), mechanism))) {
-            sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+        if (!pnx_sasl_is_included_mech(transport, pn_bytes(strlen(mechanism), mechanism))) {
+            sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
             sasl_seterror(cyrus_conn, 0, "Client mechanism not in mechanism inclusion list.");
             result = SASL_FAIL;
         }
@@ -428,33 +495,31 @@ void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn
     pni_process_server_result(transport, result);
 }
 
-static int pni_wrap_server_step(pni_sasl_t *sasl, const pn_bytes_t *in)
+static int pni_wrap_server_step(pn_transport_t *transport, const pn_bytes_t *in)
 {
     int result;
     const char *out;
     unsigned outlen;
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     result = sasl_server_step(cyrus_conn,
                               in->start, in->size,
                               &out, &outlen);
 
-    sasl->bytes_out.start = out;
-    sasl->bytes_out.size = outlen;
+    pnx_sasl_set_bytes_out(transport, pn_bytes(outlen, out));
     return result;
 }
 
-void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
+void cyrus_sasl_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
 {
-    pni_sasl_t *sasl = transport->sasl;
-    int result = pni_wrap_server_step(sasl, recv);
+    int result = pni_wrap_server_step(transport, recv);
     pni_process_server_result(transport, result);
 }
 
-bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
+bool cyrus_sasl_can_encrypt(pn_transport_t *transport)
 {
-  if (!transport->sasl->impl_context) return false;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
+  if (!cyrus_conn) return false;
 
-  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
   // Get SSF to find out if we need to encrypt or not
   const void* value;
   int r = sasl_getprop(cyrus_conn, SASL_SSF, &value);
@@ -469,11 +534,11 @@ bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
   return false;
 }
 
-ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
+ssize_t cyrus_sasl_max_encrypt_size(pn_transport_t *transport)
 {
-  if (!transport->sasl->impl_context) return PN_ERR;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
+  if (!cyrus_conn) return PN_ERR;
 
-  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
   const void* value;
   int r = sasl_getprop(cyrus_conn, SASL_MAXOUTBUF, &value);
   if (r != SASL_OK) {
@@ -486,13 +551,13 @@ ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
     // GSSAPI plugin seems to return an incorrect value for the buffer size on the client
     // side, which is greater than the value returned on the server side. Actually using
     // the entire client side buffer will cause a server side error due to a buffer overrun.
-    (transport->sasl->client? 60 : 0);
+    (pnx_sasl_is_client(transport)? 60 : 0);
 }
 
-ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+ssize_t cyrus_sasl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
 {
   if ( in.size==0 ) return 0;
-  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
   const char *output;
   unsigned int outlen;
   int r = sasl_encode(cyrus_conn, in.start, in.size, &output, &outlen);
@@ -504,10 +569,10 @@ ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
   return PN_ERR;
 }
 
-ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+ssize_t cyrus_sasl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
 {
   if ( in.size==0 ) return 0;
-  sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+  sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
   const char *output;
   unsigned int outlen;
   int r = sasl_decode(cyrus_conn, in.start, in.size, &output, &outlen);
@@ -519,14 +584,9 @@ ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_
   return PN_ERR;
 }
 
-void pni_sasl_impl_free(pn_transport_t *transport)
+void cyrus_sasl_free(pn_transport_t *transport)
 {
-    sasl_conn_t *cyrus_conn = (sasl_conn_t*)transport->sasl->impl_context;
+    sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
     sasl_dispose(&cyrus_conn);
-    transport->sasl->impl_context = cyrus_conn;
-}
-
-bool pn_sasl_extended(void)
-{
-  return true;
+    pnx_sasl_set_context(transport, cyrus_conn);
 }

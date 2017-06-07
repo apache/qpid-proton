@@ -144,7 +144,7 @@ class Configure(build_ext):
                   'schannel.c',
                   'ssl_stub.c',
                   'cyrus_sasl.c',
-                  'none_sasl.c',
+                  'cyrus_stub.c',
                   'libuv.c']
         sources = filter(lambda x: os.path.basename(x) not in cfgdep, sources)
         sources = [os.path.join(proton_base, x) for x in sources]
@@ -190,9 +190,9 @@ class Configure(build_ext):
             libraries.append('sasl2')
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_sasl.c'))
         else:
-            sources.append(os.path.join(proton_src, 'sasl', 'none_sasl.c'))
             log.warn("Cyrus SASL not installed - only the ANONYMOUS and"
                      " PLAIN mechanisms will be supported!")
+            sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
 
         # Include proactor if libuv is available
         if cc.has_function('uv_tcp_init', includes=['uv.h'],

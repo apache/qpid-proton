@@ -32,6 +32,209 @@
 
 #include <assert.h>
 
+// Machinery to allow plugin SASL implementations
+// Change this to &default_sasl_impl when we change cyrus to opt in
+static const pnx_sasl_implementation *global_sasl_impl = NULL;
+
+//-----------------------------------------------------------------------------
+// pnx_sasl: API for SASL implementations to use
+
+void pnx_sasl_logf(pn_transport_t *logger, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    if (logger->trace & PN_TRACE_DRV)
+        pn_transport_vlogf(logger, fmt, ap);
+    va_end(ap);
+}
+
+void *pnx_sasl_get_context(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->impl_context : NULL;
+}
+
+void  pnx_sasl_set_context(pn_transport_t *transport, void *context)
+{
+  if (transport->sasl) transport->sasl->impl_context = context;
+}
+
+bool  pnx_sasl_is_client(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->client : false;
+}
+
+bool  pnx_sasl_is_transport_encrypted(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->external_ssf>0 : false;
+}
+
+bool  pnx_sasl_get_allow_insecure_mechs(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->allow_insecure_mechs : false;
+}
+
+bool  pnx_sasl_get_auth_required(pn_transport_t *transport)
+{
+  return transport->auth_required;
+}
+
+const char *pnx_sasl_get_username(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->username : NULL;
+}
+
+const char *pnx_sasl_get_external_username(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->external_auth : NULL;
+}
+
+int   pnx_sasl_get_external_ssf(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->external_ssf : 0;
+}
+
+const char *pnx_sasl_get_password(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->password : NULL;
+}
+
+void  pnx_sasl_clear_password(pn_transport_t *transport)
+{
+  if (transport->sasl) {
+    char *password = transport->sasl->password;
+    free(memset(password, 0, strlen(password)));
+    transport->sasl->password = NULL;
+  }
+}
+
+const char *pnx_sasl_get_remote_fqdn(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->remote_fqdn : NULL;
+}
+
+const char *pnx_sasl_get_selected_mechanism(pn_transport_t *transport)
+{
+  return transport->sasl ? transport->sasl->selected_mechanism : NULL;
+}
+
+void  pnx_sasl_set_bytes_out(pn_transport_t *transport, pn_bytes_t bytes)
+{
+  if (transport->sasl) {
+    transport->sasl->bytes_out = bytes;
+  }
+}
+
+void  pnx_sasl_set_selected_mechanism(pn_transport_t *transport, const char *mechanism)
+{
+  if (transport->sasl) {
+    transport->sasl->selected_mechanism = pn_strdup(mechanism);
+  }
+}
+
+void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username)
+{
+  if (transport->sasl) {
+    transport->sasl->username = username;
+    transport->sasl->outcome = PN_SASL_OK;
+    transport->authenticated = true;
+  }
+}
+
+void  pnx_sasl_fail_authentication(pn_transport_t *transport)
+{
+  if (transport->sasl) {
+    transport->sasl->outcome = PN_SASL_AUTH;
+  }
+}
+
+void pnx_sasl_set_implementation(pn_transport_t *transport, const pnx_sasl_implementation *i, void* context)
+{
+  transport->sasl->impl = i;
+  transport->sasl->impl_context = context;
+}
+
+void pnx_sasl_set_default_implementation(const pnx_sasl_implementation* impl)
+{
+  global_sasl_impl = impl;
+}
+
+
+//-----------------------------------------------------------------------------
+// pni_sasl_impl: Abstract the entry points to the SASL implementation (virtual function calls)
+
+static inline void pni_sasl_impl_free(pn_transport_t *transport)
+{
+  transport->sasl->impl->free(transport);
+}
+
+static inline const char *pni_sasl_impl_list_mechs(pn_transport_t *transport)
+{
+  return transport->sasl->impl->list_mechs(transport);
+}
+
+static inline bool pni_sasl_impl_init_server(pn_transport_t *transport)
+{
+  return transport->sasl->impl->init_server(transport);
+}
+
+static inline void pni_sasl_impl_prepare_write(pn_transport_t *transport)
+{
+  transport->sasl->impl->prepare_write(transport);
+}
+
+static inline void pni_sasl_impl_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
+{
+  transport->sasl->impl->process_init(transport, mechanism, recv);
+}
+
+static inline void pni_sasl_impl_process_response(pn_transport_t *transport, const pn_bytes_t *recv)
+{
+  transport->sasl->impl->process_response(transport, recv);
+}
+
+static inline bool pni_sasl_impl_init_client(pn_transport_t *transport)
+{
+  return transport->sasl->impl->init_client(transport);
+}
+
+static inline bool pni_sasl_impl_process_mechanisms(pn_transport_t *transport, const char *mechs)
+{
+  return transport->sasl->impl->process_mechanisms(transport, mechs);
+}
+
+static inline void pni_sasl_impl_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv)
+{
+  transport->sasl->impl->process_challenge(transport, recv);
+}
+
+static inline void pni_sasl_impl_process_outcome(pn_transport_t *transport)
+{
+  transport->sasl->impl->process_outcome(transport);
+}
+
+static inline bool pni_sasl_impl_can_encrypt(pn_transport_t *transport)
+{
+    return transport->sasl->impl->can_encrypt(transport);
+}
+
+static inline ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport)
+{
+    return transport->sasl->impl->max_encrypt_size(transport);
+}
+
+static inline ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+    return transport->sasl->impl->encode(transport, in, out);
+}
+
+static inline ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out)
+{
+    return transport->sasl->impl->decode(transport, in, out);
+}
+
+//-----------------------------------------------------------------------------
+// General SASL implementation
+
 static inline pni_sasl_t *get_sasl_internal(pn_sasl_t *sasl)
 {
   // The external pn_sasl_t is really a pointer to the internal pni_transport_t
@@ -89,7 +292,7 @@ const pn_io_layer_t sasl_encrypt_layer = {
 #define SASL_HEADER ("AMQP\x03\x01\x00\x00")
 #define SASL_HEADER_LEN 8
 
-static bool pni_sasl_is_server_state(enum pni_sasl_state state)
+static bool pni_sasl_is_server_state(enum pnx_sasl_state state)
 {
   return state==SASL_NONE
       || state==SASL_POSTED_MECHANISMS
@@ -98,7 +301,7 @@ static bool pni_sasl_is_server_state(enum pni_sasl_state state)
       || state==SASL_ERROR;
 }
 
-static bool pni_sasl_is_client_state(enum pni_sasl_state state)
+static bool pni_sasl_is_client_state(enum pnx_sasl_state state)
 {
   return state==SASL_NONE
       || state==SASL_POSTED_INIT
@@ -110,7 +313,7 @@ static bool pni_sasl_is_client_state(enum pni_sasl_state state)
 
 static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
 {
-  enum pni_sasl_state desired_state = sasl->desired_state;
+  enum pnx_sasl_state desired_state = sasl->desired_state;
   return desired_state==SASL_RECVED_OUTCOME_SUCCEED
       || desired_state==SASL_RECVED_OUTCOME_FAIL
       || desired_state==SASL_ERROR
@@ -119,8 +322,8 @@ static bool pni_sasl_is_final_input_state(pni_sasl_t *sasl)
 
 static bool pni_sasl_is_final_output_state(pni_sasl_t *sasl)
 {
-  enum pni_sasl_state last_state = sasl->last_state;
-  enum pni_sasl_state desired_state = sasl->desired_state;
+  enum pnx_sasl_state last_state = sasl->last_state;
+  enum pnx_sasl_state desired_state = sasl->desired_state;
   return (desired_state==SASL_RECVED_OUTCOME_SUCCEED && last_state>=SASL_POSTED_INIT)
       || last_state==SASL_RECVED_OUTCOME_SUCCEED
       || last_state==SASL_RECVED_OUTCOME_FAIL
@@ -136,7 +339,7 @@ static void pni_emit(pn_transport_t *transport)
   }
 }
 
-void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state)
+void pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state desired_state)
 {
   pni_sasl_t *sasl = transport->sasl;
   if (sasl->last_state > desired_state) {
@@ -157,9 +360,73 @@ void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state d
     if (sasl->last_state==desired_state && desired_state==SASL_POSTED_CHALLENGE) {
       sasl->last_state = SASL_POSTED_MECHANISMS;
     }
+    bool changed = sasl->desired_state != desired_state;
     sasl->desired_state = desired_state;
     // Don't emit transport event on error as there will be a TRANSPORT_ERROR event
-    if (desired_state != SASL_ERROR) pni_emit(transport);
+    if (desired_state != SASL_ERROR && changed) pni_emit(transport);
+  }
+}
+
+// Look for symbol in the mech include list - not particlarly efficient,
+// but probably not used enough to matter.
+//
+// Note that if there is no inclusion list then every mech is implicitly included.
+static bool pni_sasl_included_mech(const char *included_mech_list, pn_bytes_t s)
+{
+  if (!included_mech_list) return true;
+
+  const char * end_list = included_mech_list+strlen(included_mech_list);
+  size_t len = s.size;
+  const char *c = included_mech_list;
+  while (c!=NULL) {
+    // If there are not enough chars left in the list no matches
+    if ((ptrdiff_t)len > end_list-c) return false;
+
+    // Is word equal with a space or end of string afterwards?
+    if (pn_strncasecmp(c, s.start, len)==0 && (c[len]==' ' || c[len]==0) ) return true;
+
+    c = strchr(c, ' ');
+    c = c ? c+1 : NULL;
+  }
+  return false;
+}
+
+// Look for symbol in the mech include list - plugin API version
+//
+// Note that if there is no inclusion list then every mech is implicitly included.
+bool pnx_sasl_is_included_mech(pn_transport_t* transport, pn_bytes_t s)
+{
+  return pni_sasl_included_mech(transport->sasl->included_mechanisms, s);
+}
+
+// This takes a space separated list and zero terminates it in place
+// whilst adding pointers to the existing strings in a string array.
+// This means that you can't free the original storage until you have
+// finished with the resulting list.
+static void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count)
+{
+  char *start = mechlist;
+  char *end = start;
+
+  while (*end) {
+    if (*end == ' ') {
+      if (start != end) {
+        *end = '\0';
+        if (pni_sasl_included_mech(included_mechs, pn_bytes(end-start, start))) {
+          mechs[(*count)++] = start;
+        }
+      }
+      end++;
+      start = end;
+    } else {
+      end++;
+    }
+  }
+
+  if (start != end) {
+    if (pni_sasl_included_mech(included_mechs, pn_bytes(end-start, start))) {
+      mechs[(*count)++] = start;
+    }
   }
 }
 
@@ -168,7 +435,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
 {
   pni_sasl_t *sasl = transport->sasl;
   pn_bytes_t out = sasl->bytes_out;
-  enum pni_sasl_state desired_state = sasl->desired_state;
+  enum pnx_sasl_state desired_state = sasl->desired_state;
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
     case SASL_POSTED_INIT:
@@ -179,10 +446,10 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     case SASL_POSTED_MECHANISMS: {
       // TODO: Hardcoded limit of 16 mechanisms
       char *mechs[16];
-      char *mechlist = NULL;
+      char *mechlist = pn_strdup(pni_sasl_impl_list_mechs(transport));
 
       int count = 0;
-      if (pni_sasl_impl_list_mechs(transport, &mechlist) > 0) {
+      if (mechlist) {
         pni_split_mechs(mechlist, sasl->included_mechanisms, mechs, &count);
       }
 
@@ -192,16 +459,19 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       break;
     }
     case SASL_POSTED_RESPONSE:
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
-      pni_emit(transport);
+      if (sasl->last_state != SASL_POSTED_RESPONSE) {
+        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
+        pni_emit(transport);
+      }
       break;
     case SASL_POSTED_CHALLENGE:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
+      } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
+        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
+        pni_emit(transport);
       }
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
-      pni_emit(transport);
       break;
     case SASL_POSTED_OUTCOME:
       if (sasl->last_state < SASL_POSTED_MECHANISMS) {
@@ -212,7 +482,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       pni_emit(transport);
       if (sasl->outcome!=PN_SASL_OK) {
         pn_do_error(transport, "amqp:unauthorized-access", "Failed to authenticate client [mech=%s]",
-		    transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
+                    transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
         desired_state = SASL_ERROR;
       }
       break;
@@ -224,7 +494,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
       break;
     case SASL_RECVED_OUTCOME_FAIL:
       pn_do_error(transport, "amqp:unauthorized-access", "Authentication failed [mech=%s]",
-		  transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
+                  transport->sasl->selected_mechanism ? transport->sasl->selected_mechanism : "none");
       desired_state = SASL_ERROR;
       break;
     case SASL_ERROR:
@@ -240,7 +510,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
 static void pn_error_sasl(pn_transport_t* transport, unsigned int layer)
 {
   transport->close_sent = true;
-  pni_sasl_set_desired_state(transport, SASL_ERROR);
+  pnx_sasl_set_desired_state(transport, SASL_ERROR);
 }
 
 static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
@@ -277,10 +547,7 @@ static void pni_sasl_start_server_if_needed(pn_transport_t *transport)
 {
   pni_sasl_t *sasl = transport->sasl;
   if (!sasl->client && sasl->desired_state<SASL_POSTED_MECHANISMS) {
-    if (!pni_init_server(transport)) return;
-
-    // Setup to send SASL mechanisms frame
-    pni_sasl_set_desired_state(transport, SASL_POSTED_MECHANISMS);
+    pni_sasl_impl_init_server(transport);
   }
 }
 
@@ -366,6 +633,8 @@ static ssize_t pn_output_write_sasl(pn_transport_t* transport, unsigned int laye
 
   pni_sasl_start_server_if_needed(transport);
 
+  pni_sasl_impl_prepare_write(transport);
+
   pni_post_sasl_frame(transport);
 
   if (transport->available != 0 || !pni_sasl_is_final_output_state(sasl)) {
@@ -416,81 +685,23 @@ static ssize_t pn_output_write_sasl_encrypt(pn_transport_t* transport, unsigned 
   return size;
 }
 
-// Look for symbol in the mech include list - not particlarly efficient,
-// but probably not used enough to matter.
-//
-// Note that if there is no inclusion list then every mech is implicitly included.
-bool pni_included_mech(const char *included_mech_list, pn_bytes_t s)
-{
-  if (!included_mech_list) return true;
-
-  const char * end_list = included_mech_list+strlen(included_mech_list);
-  size_t len = s.size;
-  const char *c = included_mech_list;
-  while (c!=NULL) {
-    // If there are not enough chars left in the list no matches
-    if ((ptrdiff_t)len > end_list-c) return false;
-
-    // Is word equal with a space or end of string afterwards?
-    if (pn_strncasecmp(c, s.start, len)==0 && (c[len]==' ' || c[len]==0) ) return true;
-
-    c = strchr(c, ' ');
-    c = c ? c+1 : NULL;
-  }
-  return false;
-}
-
-// This takes a space separated list and zero terminates it in place
-// whilst adding pointers to the existing strings in a string array.
-// This means that you can't free the original storage until you have
-// finished with the resulting list.
-void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count)
-{
-  char *start = mechlist;
-  char *end = start;
-
-  while (*end) {
-    if (*end == ' ') {
-      if (start != end) {
-        *end = '\0';
-        if (pni_included_mech(included_mechs, pn_bytes(end-start, start))) {
-          mechs[(*count)++] = start;
-        }
-      }
-      end++;
-      start = end;
-    } else {
-      end++;
-    }
-  }
-
-  if (start != end) {
-    if (pni_included_mech(included_mechs, pn_bytes(end-start, start))) {
-      mechs[(*count)++] = start;
-    }
-  }
-}
-
 pn_sasl_t *pn_sasl(pn_transport_t *transport)
 {
   if (!transport->sasl) {
     pni_sasl_t *sasl = (pni_sasl_t *) malloc(sizeof(pni_sasl_t));
 
-    const char *sasl_config_path = getenv("PN_SASL_CONFIG_PATH");
-
     sasl->impl_context = NULL;
+    // Change this to just global_sasl_impl when we make cyrus opt in
+    sasl->impl = global_sasl_impl ? global_sasl_impl : cyrus_sasl_impl ? cyrus_sasl_impl : &default_sasl_impl;
     sasl->client = !transport->server;
     sasl->selected_mechanism = NULL;
     sasl->included_mechanisms = NULL;
     sasl->username = NULL;
     sasl->password = NULL;
-    sasl->config_name = NULL;
-    sasl->config_dir =  sasl_config_path ? pn_strdup(sasl_config_path) : NULL;
     sasl->remote_fqdn = NULL;
     sasl->external_auth = NULL;
     sasl->external_ssf = 0;
     sasl->outcome = PN_SASL_NONE;
-    sasl->impl_context = NULL;
     sasl->decoded_buffer = pn_buffer(0);
     sasl->encoded_buffer = pn_buffer(0);
     sasl->bytes_out.size = 0;
@@ -514,13 +725,10 @@ void pn_sasl_free(pn_transport_t *transport)
       free(sasl->selected_mechanism);
       free(sasl->included_mechanisms);
       free(sasl->password);
-      free(sasl->config_name);
-      free(sasl->config_dir);
       free(sasl->external_auth);
 
-      // CYRUS_SASL
       if (sasl->impl_context) {
-          pni_sasl_impl_free(transport);
+        pni_sasl_impl_free(transport);
       }
       pn_buffer_free(sasl->decoded_buffer);
       pn_buffer_free(sasl->encoded_buffer);
@@ -582,20 +790,6 @@ bool pn_sasl_get_allow_insecure_mechs(pn_sasl_t *sasl0)
     return sasl->allow_insecure_mechs;
 }
 
-void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)
-{
-    pni_sasl_t *sasl = get_sasl_internal(sasl0);
-    free(sasl->config_name);
-    sasl->config_name = pn_strdup(name);
-}
-
-void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
-{
-    pni_sasl_t *sasl = get_sasl_internal(sasl0);
-    free(sasl->config_dir);
-    sasl->config_dir = pn_strdup(dir);
-}
-
 void pn_sasl_done(pn_sasl_t *sasl0, pn_sasl_outcome_t outcome)
 {
   pni_sasl_t *sasl = get_sasl_internal(sasl0);
@@ -620,7 +814,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   if (err) return err;
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
 
-  pni_process_init(transport, sasl->selected_mechanism, &recv);
+  pni_sasl_impl_process_init(transport, sasl->selected_mechanism, &recv);
 
   return 0;
 }
@@ -643,7 +837,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     // Now keep checking for end of array and pull a symbol
     while(pn_data_next(args)) {
       pn_bytes_t s = pn_data_get_symbol(args);
-      if (pni_included_mech(transport->sasl->included_mechanisms, s)) {
+      if (pnx_sasl_is_included_mech(transport, s)) {
         pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
       }
     }
@@ -661,13 +855,11 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     pn_string_setn(mechs, symbol.start, symbol.size);
   }
 
-  if (pni_init_client(transport) &&
-      pn_string_size(mechs) &&
-      pni_process_mechanisms(transport, pn_string_get(mechs))) {
-    pni_sasl_set_desired_state(transport, SASL_POSTED_INIT);
-  } else {
+  if (!(pni_sasl_impl_init_client(transport) &&
+        pn_string_size(mechs) &&
+        pni_sasl_impl_process_mechanisms(transport, pn_string_get(mechs)))) {
     sasl->outcome = PN_SASL_PERM;
-    pni_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
+    pnx_sasl_set_desired_state(transport, SASL_RECVED_OUTCOME_FAIL);
   }
 
   pn_free(mechs);
@@ -681,7 +873,7 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
-  pni_process_challenge(transport, &recv);
+  pni_sasl_impl_process_challenge(transport, &recv);
 
   return 0;
 }
@@ -693,7 +885,7 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
 
-  pni_process_response(transport, &recv);
+  pni_sasl_impl_process_response(transport, &recv);
 
   return 0;
 }
@@ -709,9 +901,10 @@ int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channe
   sasl->outcome = (pn_sasl_outcome_t) outcome;
   bool authenticated = sasl->outcome==PN_SASL_OK;
   transport->authenticated = authenticated;
-  pni_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_OUTCOME_SUCCEED : SASL_RECVED_OUTCOME_FAIL);
+  pnx_sasl_set_desired_state(transport, authenticated ? SASL_RECVED_OUTCOME_SUCCEED : SASL_RECVED_OUTCOME_FAIL);
+
+  pni_sasl_impl_process_outcome(transport);
 
   return 0;
 }
-
 
