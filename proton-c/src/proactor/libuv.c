@@ -601,7 +601,7 @@ static bool leader_connect(pconnection_t *pc) {
   int err = pconnection_init(pc);
   if (!err) err = leader_resolve(pc->work.proactor, &pc->addr, false);
   if (err) {
-    pconnection_error(pc, err, "connect resolving");
+    pconnection_error(pc, err, "on connect resolving");
     return true;
   } else {
     try_connect(pc);

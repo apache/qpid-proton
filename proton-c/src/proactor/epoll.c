@@ -592,9 +592,7 @@ static pn_event_t *log_event(void* p, pn_event_t *e) {
   return e;
 }
 
-static void psocket_error(psocket_t *ps, int err, const char* what) {
-  strerrorbuf msg;
-  pstrerror(err, msg);
+static void psocket_error_str(psocket_t *ps, const char *msg, const char* what) {
   if (!ps->listener) {
     pn_connection_driver_t *driver = &psocket_pconnection(ps)->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
@@ -605,6 +603,16 @@ static void psocket_error(psocket_t *ps, int err, const char* what) {
     pni_proactor_set_cond(l->condition, what, ps->host, ps->port, msg);
     listener_begin_close(l);
   }
+}
+
+static void psocket_error(psocket_t *ps, int err, const char* what) {
+  strerrorbuf msg;
+  pstrerror(err, msg);
+  psocket_error_str(ps, msg, what);
+}
+
+static void psocket_gai_error(psocket_t *ps, int gai_err, const char* what) {
+  psocket_error_str(ps, gai_strerror(gai_err), what);
 }
 
 static void rearm(pn_proactor_t *p, epoll_extended_t *ee) {
@@ -991,7 +999,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       else if (errno == EWOULDBLOCK)
         pc->read_blocked = true;
       else if (!(errno == EAGAIN || errno == EINTR)) {
-        psocket_error(&pc->psocket, errno, pc->disconnected ? "Disconnected" : "on read from");
+        psocket_error(&pc->psocket, errno, pc->disconnected ? "disconnected" : "on read from");
       }
     }
   }
@@ -1145,12 +1153,13 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   pn_connection_open(pc->driver.connection); /* Auto-open */
 
   bool notify = false;
-  if (!pgetaddrinfo(pc->psocket.host, pc->psocket.port, 0, &pc->addrinfo)) {
+  int gai_error = pgetaddrinfo(pc->psocket.host, pc->psocket.port, 0, &pc->addrinfo);
+  if (!gai_error) {
     pc->ai = pc->addrinfo;
     pconnection_maybe_connect_lh(pc); /* Start connection attempts */
     notify = pc->disconnected;
   } else {
-    psocket_error(&pc->psocket, errno, "connect to ");
+    psocket_gai_error(&pc->psocket, gai_error, "connect to ");
     notify = wake(&pc->context);
   }
   unlock(&pc->context.mutex);
@@ -1233,7 +1242,8 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   pni_parse_addr(addr, addr_buf, PN_MAX_ADDR, &host, &port);
 
   struct addrinfo *addrinfo = NULL;
-  if (!pgetaddrinfo(host, port, AI_PASSIVE | AI_ALL, &addrinfo)) {
+  int gai_err = pgetaddrinfo(host, port, AI_PASSIVE | AI_ALL, &addrinfo);
+  if (!gai_err) {
     /* Count addresses, allocate enough space for sockets */
     size_t len = 0;
     for (struct addrinfo *ai = addrinfo; ai; ai = ai->ai_next) {
@@ -1273,10 +1283,13 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   bool notify = wake(&l->context);
 
   if (l->psockets_size == 0) { /* All failed, create dummy socket with an error */
-    int err = errno;
     l->psockets = (psocket_t*)calloc(sizeof(psocket_t), 1);
     psocket_init(l->psockets, p, l, addr);
-    psocket_error(l->psockets, err, "listen on");
+    if (gai_err) {
+      psocket_gai_error(l->psockets, gai_err, "listen on");
+    } else {
+      psocket_error(l->psockets, errno, "listen on");
+    }
   }
   proactor_add(&l->context);
   unlock(&l->context.mutex);
@@ -1453,8 +1466,7 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   }
 
   if (err) {
-    /* Error on one socket closes the entire listener */
-    psocket_error(&l->psockets[0], errno, "listener state on accept");
+    psocket_error(&l->psockets[0], errno, "listener accepting from");
     unlock(&l->context.mutex);
     return;
   }
@@ -1464,8 +1476,8 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   int newfd = accept(ps->sockfd, NULL, 0);
   if (newfd < 0) {
     err = errno;
-    psocket_error(&pc->psocket, err, "failed initialization on accept");
-    psocket_error(ps, err, "accept");
+    psocket_error(&pc->psocket, err, "accepting from");
+    psocket_error(ps, err, "accepting from");
   } else {
     lock(&pc->context.mutex);
     configure_socket(newfd);
