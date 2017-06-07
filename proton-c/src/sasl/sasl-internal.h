@@ -27,7 +27,10 @@
 
 #include "proton/types.h"
 #include "proton/sasl.h"
+#include "proton/sasl-plugin.h"
 
+extern const pnx_sasl_implementation default_sasl_impl;
+extern const pnx_sasl_implementation * const cyrus_sasl_impl;
 
 // SASL APIs used by transport code
 void pn_sasl_free(pn_transport_t *transport);
@@ -35,45 +38,13 @@ void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, con
 void pni_sasl_set_remote_hostname(pn_transport_t *transport, const char* fqdn);
 void pni_sasl_set_external_security(pn_transport_t *transport, int ssf, const char *authid);
 
-// Internal SASL authenticator interface
-void pni_sasl_impl_free(pn_transport_t *transport);
-int  pni_sasl_impl_list_mechs(pn_transport_t *transport, char **mechlist);
-bool pni_init_server(pn_transport_t *transport);
-void pni_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
-void pni_process_response(pn_transport_t *transport, const pn_bytes_t *recv);
-
-bool pni_init_client(pn_transport_t *transport);
-bool pni_process_mechanisms(pn_transport_t *transport, const char *mechs);
-void pni_process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
-
-// Internal SASL security layer interface
-bool pni_sasl_impl_can_encrypt(pn_transport_t *transport);
-ssize_t pni_sasl_impl_max_encrypt_size(pn_transport_t *transport);
-ssize_t pni_sasl_impl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
-ssize_t pni_sasl_impl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
-
-
-// Shared SASL API used by the actual SASL authenticators
-enum pni_sasl_state {
-  SASL_NONE,
-  SASL_POSTED_INIT,
-  SASL_POSTED_MECHANISMS,
-  SASL_POSTED_RESPONSE,
-  SASL_POSTED_CHALLENGE,
-  SASL_RECVED_OUTCOME_SUCCEED,
-  SASL_RECVED_OUTCOME_FAIL,
-  SASL_POSTED_OUTCOME,
-  SASL_ERROR
-};
-
 struct pni_sasl_t {
   void *impl_context;
+  const pnx_sasl_implementation* impl;
   char *selected_mechanism;
   char *included_mechanisms;
   const char *username;
   char *password;
-  char *config_name;
-  char *config_dir;
   const char *remote_fqdn;
   char *external_auth;
   int external_ssf;
@@ -82,15 +53,10 @@ struct pni_sasl_t {
   pn_buffer_t* encoded_buffer;
   pn_bytes_t bytes_out;
   pn_sasl_outcome_t outcome;
-  enum pni_sasl_state desired_state;
-  enum pni_sasl_state last_state;
+  enum pnx_sasl_state desired_state;
+  enum pnx_sasl_state last_state;
   bool allow_insecure_mechs;
   bool client;
 };
-
-// Shared Utility used by sasl implementations
-void pni_split_mechs(char *mechlist, const char* included_mechs, char *mechs[], int *count);
-bool pni_included_mech(const char *included_mech_list, pn_bytes_t s);
-void pni_sasl_set_desired_state(pn_transport_t *transport, enum pni_sasl_state desired_state);
 
 #endif /* sasl-internal.h */

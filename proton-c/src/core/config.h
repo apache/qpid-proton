@@ -25,8 +25,4 @@
 # define PN_TRANSPORT_INITIAL_FRAME_SIZE (512) /* bytes */
 #endif
 
-#ifndef PN_SASL_MAX_BUFFSIZE
-# define PN_SASL_MAX_BUFFSIZE (32768) /* bytes */
-#endif
-
 #endif /*  _PROTON_SRC_CONFIG_H */
