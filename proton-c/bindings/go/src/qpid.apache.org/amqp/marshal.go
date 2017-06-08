@@ -209,7 +209,7 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		marshal(v.Descriptor, data)
 		marshal(v.Value, data)
 		C.pn_data_exit(data)
-	case Key:
+	case AnnotationKey:
 		marshal(v.Get(), data)
 	default:
 		switch reflect.TypeOf(v).Kind() {

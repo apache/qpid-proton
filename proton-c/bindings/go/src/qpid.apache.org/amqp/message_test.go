@@ -55,9 +55,9 @@ func TestDefaultMessage(t *testing.T) {
 		{m.ReplyToGroupId(), ""},
 		{m.MessageId(), nil},
 		{m.CorrelationId(), nil},
-		{m.DeliveryAnnotations(), map[Key]interface{}{}},
-		{m.MessageAnnotations(), map[Key]interface{}{}},
-		{m.ApplicationProperties(), map[Key]interface{}{}},
+		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}{}},
+		{m.MessageAnnotations(), map[AnnotationKey]interface{}{}},
+		{m.ApplicationProperties(), map[string]interface{}{}},
 
 		// Deprecated
 		{m.Instructions(), map[string]interface{}{}},
@@ -91,9 +91,9 @@ func TestMessageRoundTrip(t *testing.T) {
 	m.SetReplyToGroupId("replytogroup")
 	m.SetMessageId("id")
 	m.SetCorrelationId("correlation")
-	m.SetDeliveryAnnotations(map[Key]interface{}{SymbolKey("instructions"): "foo"})
-	m.SetMessageAnnotations(map[Key]interface{}{SymbolKey("annotations"): "bar"})
-	m.SetApplicationProperties(map[Key]interface{}{SymbolKey("int"): int32(32), SymbolKey("bool"): true, IntKey(42): "42"})
+	m.SetDeliveryAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"})
+	m.SetMessageAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"})
+	m.SetApplicationProperties(map[string]interface{}{"int": int32(32), "bool": true})
 	m.Marshal("hello")
 
 	for _, data := range [][]interface{}{
@@ -113,9 +113,9 @@ func TestMessageRoundTrip(t *testing.T) {
 		{m.MessageId(), "id"},
 		{m.CorrelationId(), "correlation"},
 
-		{m.DeliveryAnnotations(), map[Key]interface{}{SymbolKey("instructions"): "foo"}},
-		{m.MessageAnnotations(), map[Key]interface{}{SymbolKey("annotations"): "bar"}},
-		{m.ApplicationProperties(), map[Key]interface{}{SymbolKey("int"): int32(32), SymbolKey("bool"): true, IntKey(42): "42"}},
+		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"}},
+		{m.MessageAnnotations(), map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"}},
+		{m.ApplicationProperties(), map[string]interface{}{"int": int32(32), "bool": true}},
 		{m.Body(), "hello"},
 
 		// Deprecated
@@ -129,16 +129,6 @@ func TestMessageRoundTrip(t *testing.T) {
 	if err := roundTrip(m); err != nil {
 		t.Error(err)
 	}
-
-	func() { // Expect a panic
-		defer func() {
-			if x, ok := recover().(*UnmarshalError); !ok {
-				t.Errorf("Expected UnmarshalError, got %#v", x)
-			}
-		}()
-		m.Properties()
-		t.Error("Expected panic")
-	}()
 }
 
 func TestDeprecated(t *testing.T) {
@@ -149,9 +139,9 @@ func TestDeprecated(t *testing.T) {
 	m.SetProperties(map[string]interface{}{"int": int32(32), "bool": true})
 
 	for _, data := range [][]interface{}{
-		{m.DeliveryAnnotations(), map[Key]interface{}{SymbolKey("instructions"): "foo"}},
-		{m.MessageAnnotations(), map[Key]interface{}{SymbolKey("annotations"): "bar"}},
-		{m.ApplicationProperties(), map[Key]interface{}{SymbolKey("int"): int32(32), SymbolKey("bool"): true}},
+		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"}},
+		{m.MessageAnnotations(), map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"}},
+		{m.ApplicationProperties(), map[string]interface{}{"int": int32(32), "bool": true}},
 
 		{m.Instructions(), map[string]interface{}{"instructions": "foo"}},
 		{m.Annotations(), map[string]interface{}{"annotations": "bar"}},

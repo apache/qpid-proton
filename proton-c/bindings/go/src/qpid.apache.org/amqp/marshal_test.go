@@ -24,11 +24,11 @@ import (
 )
 
 func TestSymbolKey(t *testing.T) {
-	bytes, err := Marshal(SymbolKey("foo"), nil)
+	bytes, err := Marshal(AnnotationKeySymbol("foo"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var k Key
+	var k AnnotationKey
 	if _, err := Unmarshal(bytes, &k); err != nil {
 		t.Error(err)
 	}
@@ -46,11 +46,11 @@ func TestSymbolKey(t *testing.T) {
 }
 
 func TestStringKey(t *testing.T) {
-	bytes, err := Marshal(StringKey("foo"), nil)
+	bytes, err := Marshal(AnnotationKeyString("foo"), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var k Key
+	var k AnnotationKey
 	if _, err := Unmarshal(bytes, &k); err != nil {
 		t.Error(err)
 	}
@@ -68,11 +68,11 @@ func TestStringKey(t *testing.T) {
 }
 
 func TestIntKey(t *testing.T) {
-	bytes, err := Marshal(IntKey(12345), nil)
+	bytes, err := Marshal(AnnotationKeyUint64(12345), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var k Key
+	var k AnnotationKey
 	if _, err := Unmarshal(bytes, &k); err != nil {
 		t.Error(err)
 	}

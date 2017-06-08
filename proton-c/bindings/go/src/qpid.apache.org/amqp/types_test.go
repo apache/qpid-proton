@@ -44,9 +44,9 @@ func checkUnmarshal(marshalled []byte, v interface{}) error {
 }
 
 func ExampleKey() {
-	var k Key = SymbolKey(Symbol("foo"))
+	var k AnnotationKey = AnnotationKeySymbol(Symbol("foo"))
 	fmt.Println(k.Get().(Symbol))
-	k = IntKey(42)
+	k = AnnotationKeyUint64(42)
 	fmt.Println(k.Get().(uint64))
 	// Output:
 	// foo

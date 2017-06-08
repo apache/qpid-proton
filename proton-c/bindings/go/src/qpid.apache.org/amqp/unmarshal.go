@@ -455,7 +455,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 	case *interface{}:
 		getInterface(data, v)
 
-	case *Key:
+	case *AnnotationKey:
 		if pnType == C.PN_ULONG || pnType == C.PN_SYMBOL || pnType == C.PN_STRING {
 			unmarshal(&v.value, data)
 		} else {

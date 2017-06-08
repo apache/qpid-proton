@@ -119,18 +119,18 @@ type Message interface {
 
 	// Property map set by the application to be carried with the message.
 	// Values must be simple types (not maps, lists or sequences)
-	ApplicationProperties() map[Key]interface{}
-	SetApplicationProperties(map[Key]interface{})
+	ApplicationProperties() map[string]interface{}
+	SetApplicationProperties(map[string]interface{})
 
 	// Per-delivery annotations to provide delivery instructions.
 	// May be added or removed by intermediaries during delivery.
-	DeliveryAnnotations() map[Key]interface{}
-	SetDeliveryAnnotations(map[Key]interface{})
+	DeliveryAnnotations() map[AnnotationKey]interface{}
+	SetDeliveryAnnotations(map[AnnotationKey]interface{})
 
 	// Message annotations added as part of the bare message at creation, usually
 	// by an AMQP library. See ApplicationProperties() for adding application data.
-	MessageAnnotations() map[Key]interface{}
-	SetMessageAnnotations(map[Key]interface{})
+	MessageAnnotations() map[AnnotationKey]interface{}
+	SetMessageAnnotations(map[AnnotationKey]interface{})
 
 	// Inferred indicates how the message content
 	// is encoded into AMQP sections. If inferred is true then binary and
@@ -245,21 +245,27 @@ func (m *message) GroupId() string        { return C.GoString(C.pn_message_get_g
 func (m *message) GroupSequence() int32   { return int32(C.pn_message_get_group_sequence(m.pn)) }
 func (m *message) ReplyToGroupId() string { return C.GoString(C.pn_message_get_reply_to_group_id(m.pn)) }
 
-func getAnnotations(data *C.pn_data_t) (v map[Key]interface{}) {
+func getAnnotations(data *C.pn_data_t) (v map[AnnotationKey]interface{}) {
 	C.pn_data_rewind(data)
 	C.pn_data_next(data)
 	unmarshal(&v, data)
 	return v
 }
 
-func (m *message) DeliveryAnnotations() map[Key]interface{} {
+func (m *message) DeliveryAnnotations() map[AnnotationKey]interface{} {
 	return getAnnotations(C.pn_message_instructions(m.pn))
 }
-func (m *message) MessageAnnotations() map[Key]interface{} {
+func (m *message) MessageAnnotations() map[AnnotationKey]interface{} {
 	return getAnnotations(C.pn_message_annotations(m.pn))
 }
-func (m *message) ApplicationProperties() map[Key]interface{} {
-	return getAnnotations(C.pn_message_properties(m.pn))
+
+func (m *message) ApplicationProperties() map[string]interface{} {
+	var v map[string]interface{}
+	data := C.pn_message_properties(m.pn)
+	C.pn_data_rewind(data)
+	C.pn_data_next(data)
+	unmarshal(&v, data)
+	return v
 }
 
 // ==== message set methods
@@ -314,13 +320,13 @@ func (m *message) SetReplyToGroupId(s string) {
 	C.msg_set_str(m.pn, C.CString(s), C.set_fn(C.pn_message_set_reply_to_group_id))
 }
 
-func (m *message) SetDeliveryAnnotations(v map[Key]interface{}) {
+func (m *message) SetDeliveryAnnotations(v map[AnnotationKey]interface{}) {
 	setData(v, C.pn_message_instructions(m.pn))
 }
-func (m *message) SetMessageAnnotations(v map[Key]interface{}) {
+func (m *message) SetMessageAnnotations(v map[AnnotationKey]interface{}) {
 	setData(v, C.pn_message_annotations(m.pn))
 }
-func (m *message) SetApplicationProperties(v map[Key]interface{}) {
+func (m *message) SetApplicationProperties(v map[string]interface{}) {
 	setData(v, C.pn_message_properties(m.pn))
 }
 
@@ -384,11 +390,11 @@ func (m *message) Properties() map[string]interface{} {
 	return oldGetAnnotations(C.pn_message_properties(m.pn))
 }
 
-// Convert old string-keyed annotations to a Key map
-func fixAnnotations(old map[string]interface{}) (annotations map[Key]interface{}) {
-	annotations = make(map[Key]interface{})
+// Convert old string-keyed annotations to an AnnotationKey map
+func fixAnnotations(old map[string]interface{}) (annotations map[AnnotationKey]interface{}) {
+	annotations = make(map[AnnotationKey]interface{})
 	for k, v := range old {
-		annotations[StringKey(k)] = v
+		annotations[AnnotationKeyString(k)] = v
 	}
 	return
 }

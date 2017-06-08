@@ -195,21 +195,21 @@ func cLen(b []byte) C.size_t {
 	return C.size_t(len(b))
 }
 
-// Key is used as a map key for some AMQP "restricted" maps which are
+// AnnotationKey is used as a map key for AMQP annotation maps which are
 // allowed to have keys that are either symbol or ulong but no other type.
 //
-type Key struct {
+type AnnotationKey struct {
 	value interface{}
 }
 
-func SymbolKey(v Symbol) Key { return Key{v} }
-func IntKey(v uint64) Key    { return Key{v} }
-func StringKey(v string) Key { return Key{Symbol(v)} }
+func AnnotationKeySymbol(v Symbol) AnnotationKey { return AnnotationKey{v} }
+func AnnotationKeyUint64(v uint64) AnnotationKey { return AnnotationKey{v} }
+func AnnotationKeyString(v string) AnnotationKey { return AnnotationKey{Symbol(v)} }
 
 // Returns the value which must be Symbol, uint64 or nil
-func (k Key) Get() interface{} { return k.value }
+func (k AnnotationKey) Get() interface{} { return k.value }
 
-func (k Key) String() string { return fmt.Sprintf("%v", k.Get()) }
+func (k AnnotationKey) String() string { return fmt.Sprintf("%v", k.Get()) }
 
 // Described represents an AMQP described type, which is really
 // just a pair of AMQP values - the first is treated as a "descriptor",
