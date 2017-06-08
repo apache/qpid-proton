@@ -8,7 +8,7 @@ cache:
 before_build:
 - mkdir BLD
 - cd BLD
-- cmake -G "Visual Studio 12" -DBUILD_PERL=no -DBUILD_JAVA=no ..
+- cmake -G "Visual Studio 12" -DBUILD_PERL=no ..
 - cd ..
 build:
   parallel: true
