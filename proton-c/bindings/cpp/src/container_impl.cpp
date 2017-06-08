@@ -161,7 +161,7 @@ container::impl::~impl() {
         close_acceptor(i->second);
 }
 
-// FIXME aconway 2016-06-07: this is not thread safe. It is sufficient for using
+// TODO aconway 2016-06-07: this is not thread safe. It is sufficient for using
 // default_container::schedule() inside a handler but not for inject() from
 // another thread.
 bool event_loop::impl::inject(void_function0& f) {

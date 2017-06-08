@@ -1129,7 +1129,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
 
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   pconnection_t *pc = pconnection(p, c, false);
-  assert(pc);                                  /* FIXME aconway 2017-03-31: memory safety */
+  assert(pc);                                  /* TODO aconway 2017-03-31: memory safety */
   pn_connection_open(pc->driver.connection);   /* Auto-open */
   parse_addr(&pc->addr, addr);
   work_start(&pc->work);

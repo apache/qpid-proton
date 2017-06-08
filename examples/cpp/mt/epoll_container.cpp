@@ -140,9 +140,9 @@ class epoll_container : public proton::io::container_impl_base {
         std::atomic<int> count_;
     };
 
-     // FIXME aconway 2016-06-07: Unfinished
-    void schedule(proton::duration, std::function<void()>) OVERRIDE { throw std::logic_error("FIXME"); }
-    void schedule(proton::duration, proton::void_function0&) OVERRIDE { throw std::logic_error("FIXME"); }
+     // TODO aconway 2016-06-07: Unfinished
+    void schedule(proton::duration, std::function<void()>) OVERRIDE { throw std::logic_error("not implemented"); }
+    void schedule(proton::duration, proton::void_function0&) OVERRIDE { throw std::logic_error("not implemented"); }
     atomic_link_namer link_namer;
 
   private:
