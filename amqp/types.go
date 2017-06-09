@@ -83,7 +83,7 @@ func (t C.pn_type_t) String() string {
 	case C.PN_MAP:
 		return "map"
 	default:
-		return "no-data"
+		return fmt.Sprintf("<bad-type %v>", int(t))
 	}
 }
 
@@ -105,6 +105,7 @@ type List []interface{}
 // Symbol is a string that is encoded as an AMQP symbol
 type Symbol string
 
+func (s Symbol) String() string   { return string(s) }
 func (s Symbol) GoString() string { return fmt.Sprintf("s\"%s\"", s) }
 
 // Binary is a string that is encoded as an AMQP binary.
@@ -112,6 +113,7 @@ func (s Symbol) GoString() string { return fmt.Sprintf("s\"%s\"", s) }
 // a map key, AMQP frequently uses binary types as map keys. It can convert to and from []byte
 type Binary string
 
+func (b Binary) String() string   { return string(b) }
 func (b Binary) GoString() string { return fmt.Sprintf("b\"%s\"", b) }
 
 // GoString for Map prints values with their types, useful for debugging.
@@ -191,4 +193,29 @@ func cPtr(b []byte) *C.char {
 
 func cLen(b []byte) C.size_t {
 	return C.size_t(len(b))
+}
+
+// AnnotationKey is used as a map key for AMQP annotation maps which are
+// allowed to have keys that are either symbol or ulong but no other type.
+//
+type AnnotationKey struct {
+	value interface{}
+}
+
+func AnnotationKeySymbol(v Symbol) AnnotationKey { return AnnotationKey{v} }
+func AnnotationKeyUint64(v uint64) AnnotationKey { return AnnotationKey{v} }
+func AnnotationKeyString(v string) AnnotationKey { return AnnotationKey{Symbol(v)} }
+
+// Returns the value which must be Symbol, uint64 or nil
+func (k AnnotationKey) Get() interface{} { return k.value }
+
+func (k AnnotationKey) String() string { return fmt.Sprintf("%v", k.Get()) }
+
+// Described represents an AMQP described type, which is really
+// just a pair of AMQP values - the first is treated as a "descriptor",
+// and is normally a string or ulong providing information about the type.
+// The second is the "value" and can be any AMQP value.
+type Described struct {
+	Descriptor interface{}
+	Value      interface{}
 }

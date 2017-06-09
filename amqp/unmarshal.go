@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"unsafe"
 )
 
@@ -44,14 +45,21 @@ type UnmarshalError struct {
 
 func (e UnmarshalError) Error() string { return e.s }
 
-func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
+func newUnmarshalErrorMsg(pnType C.pn_type_t, v interface{}, msg string) *UnmarshalError {
+	if len(msg) > 0 && !strings.HasPrefix(msg, ":") {
+		msg = ": " + msg
+	}
 	e := &UnmarshalError{AMQPType: C.pn_type_t(pnType).String(), GoType: reflect.TypeOf(v)}
 	if e.GoType.Kind() != reflect.Ptr {
-		e.s = fmt.Sprintf("cannot unmarshal to type %s, not a pointer", e.GoType)
+		e.s = fmt.Sprintf("cannot unmarshal to type %s, not a pointer%s", e.GoType, msg)
 	} else {
-		e.s = fmt.Sprintf("cannot unmarshal AMQP %s to %s", e.AMQPType, e.GoType)
+		e.s = fmt.Sprintf("cannot unmarshal AMQP %s to %s%s", e.AMQPType, e.GoType, msg)
 	}
 	return e
+}
+
+func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
+	return newUnmarshalErrorMsg(pnType, v, "")
 }
 
 func newUnmarshalErrorData(data *C.pn_data_t, v interface{}) *UnmarshalError {
@@ -130,66 +138,73 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 }
 
 /*
-Unmarshal decodes AMQP-encoded bytes and stores the result in the value pointed to by v.
+Unmarshal decodes AMQP-encoded bytes and stores the result in the Go value pointed to by v.
 Types are converted as follows:
 
- +---------------------------+----------------------------------------------------------------------+
- |To Go types                |From AMQP types                                                       |
- +===========================+======================================================================+
- |bool                       |bool                                                                  |
- +---------------------------+----------------------------------------------------------------------+
- |int, int8, int16,          |Equivalent or smaller signed integer type: byte, short, int, long.    |
- |int32, int64               |                                                                      |
- +---------------------------+----------------------------------------------------------------------+
- |uint, uint8, uint16,       |Equivalent or smaller unsigned integer type: ubyte, ushort, uint,     |
- |uint32, uint64 types       |ulong                                                                 |
- +---------------------------+----------------------------------------------------------------------+
- |float32, float64           |Equivalent or smaller float or double.                                |
- +---------------------------+----------------------------------------------------------------------+
- |string, []byte             |string, symbol or binary.                                             |
- +---------------------------+----------------------------------------------------------------------+
- |Symbol                     |symbol                                                                |
- +---------------------------+----------------------------------------------------------------------+
- |map[K]T                    |map, provided all keys and values can unmarshal to types K, T         |
- +---------------------------+----------------------------------------------------------------------+
- |Map                        |map, any AMQP map                                                     |
- +---------------------------+----------------------------------------------------------------------+
- |interface{}                |Any AMQP value can be unmarshaled to an interface{} as follows:       |
- |                           +------------------------+---------------------------------------------+
- |                           |AMQP Type               |Go Type in interface{}                       |
- |                           +========================+=============================================+
- |                           |bool                    |bool                                         |
- |                           +------------------------+---------------------------------------------+
- |                           |byte,short,int,long     |int8,int16,int32,int64                       |
- |                           +------------------------+---------------------------------------------+
- |                           |ubyte,ushort,uint,ulong |uint8,uint16,uint32,uint64                   |
- |                           +------------------------+---------------------------------------------+
- |                           |float, double           |float32, float64                             |
- |                           +------------------------+---------------------------------------------+
- |                           |string                  |string                                       |
- |                           +------------------------+---------------------------------------------+
- |                           |symbol                  |Symbol                                       |
- |                           +------------------------+---------------------------------------------+
- |                           |binary                  |Binary                                       |
- |                           +------------------------+---------------------------------------------+
- |                           |nulll                   |nil                                          |
- |                           +------------------------+---------------------------------------------+
- |                           |map                     |Map                                          |
- |                           +------------------------+---------------------------------------------+
- |                           |list                    |List                                         |
- +---------------------------+------------------------+---------------------------------------------+
+ +------------------------+-------------------------------------------------+
+ |To Go types             |From AMQP types                                  |
+ +========================+=================================================+
+ |bool                    |bool                                             |
+ +------------------------+-------------------------------------------------+
+ |int, int8, int16, int32,|Equivalent or smaller signed integer type: byte, |
+ |int64                   |short, int, long.                                |
+ +------------------------+-------------------------------------------------+
+ |uint, uint8, uint16,    |Equivalent or smaller unsigned integer type:     |
+ |uint32, uint64          |ubyte, ushort, uint, ulong                       |
+ +------------------------+-------------------------------------------------+
+ |float32, float64        |Equivalent or smaller float or double.           |
+ +------------------------+-------------------------------------------------+
+ |string, []byte          |string, symbol or binary.                        |
+ +------------------------+-------------------------------------------------+
+ |Symbol                  |symbol                                           |
+ +------------------------+-------------------------------------------------+
+ |map[K]T                 |map, provided all keys and values can unmarshal  |
+ |                        |to types K,T                                     |
+ +------------------------+-------------------------------------------------+
+ |Map                     |map, any AMQP map                                |
+ +------------------------+-------------------------------------------------+
+ |Described               |described type                                   |
+ +------------------------+-------------------------------------------------+
 
-The following Go types cannot be unmarshaled: uintptr, function, interface, channel.
+An AMQP described type can unmarshal into the corresponding plain type, discarding the descriptor.
+For example an AMQP described string can unmarshal into a plain go string.
+Unmarshal into the Described type preserves the descriptor.
 
-TODO
+Any AMQP type can unmarshal to an interface{}, the Go type used to unmarshal is chosen from the AMQP type as follows
 
-Go types: array, struct.
+ +------------------------+-------------------------------------------------+
+ |AMQP Type               |Go Type in interface{}                           |
+ +========================+=================================================+
+ |bool                    |bool                                             |
+ +------------------------+-------------------------------------------------+
+ |byte,short,int,long     |int8,int16,int32,int64                           |
+ +------------------------+-------------------------------------------------+
+ |ubyte,ushort,uint,ulong |uint8,uint16,uint32,uint64                       |
+ +------------------------+-------------------------------------------------+
+ |float, double           |float32, float64                                 |
+ +------------------------+-------------------------------------------------+
+ |string                  |string                                           |
+ +------------------------+-------------------------------------------------+
+ |symbol                  |Symbol                                           |
+ +------------------------+-------------------------------------------------+
+ |binary                  |Binary                                           |
+ +------------------------+-------------------------------------------------+
+ |null                    |nil                                              |
+ +------------------------+-------------------------------------------------+
+ |map                     |Map                                              |
+ +------------------------+-------------------------------------------------+
+ |list                    |List                                             |
+ +------------------------+-------------------------------------------------+
+ |described type          |Described                                        |
+ +--------------------------------------------------------------------------+
 
-AMQP types: decimal32/64/128, char (round trip), timestamp, uuid, array, multi-section message bodies.
+The following Go types cannot be unmarshaled: uintptr, function, interface, channel, array (use slice), struct
 
-AMQP maps with mixed/unhashable key types need an alternate representation.
+TODO: Not yet implemented:
 
-Described types.
+AMQP types: decimal32/64/128, char (round trip), timestamp, uuid.
+
+AMQP maps with mixed key types, or key types that are not legal Go map keys.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	defer recoverUnmarshal(&err)
@@ -206,6 +221,13 @@ func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 		unmarshal(v, data)
 	}
 	return n, nil
+}
+
+// Internal
+func UnmarshalUnsafe(pn_data unsafe.Pointer, v interface{}) (err error) {
+	defer recoverUnmarshal(&err)
+	unmarshal(v, (*C.pn_data_t)(pn_data))
+	return
 }
 
 // more reads more data when we can't parse a complete AMQP type
@@ -225,6 +247,15 @@ func (d *Decoder) more() error {
 // Unmarshal from data into value pointed at by v.
 func unmarshal(v interface{}, data *C.pn_data_t) {
 	pnType := C.pn_data_type(data)
+
+	// Check for PN_DESCRIBED first, as described types can unmarshal into any of the Go types.
+	// Interfaces are handled in the switch below, even for described types.
+	if _, isInterface := v.(*interface{}); !isInterface && bool(C.pn_data_is_described(data)) {
+		getDescribed(data, v)
+		return
+	}
+
+	// Unmarshal based on the target type
 	switch v := v.(type) {
 	case *bool:
 		switch pnType {
@@ -431,7 +462,14 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 	case *interface{}:
 		getInterface(data, v)
 
-	default:
+	case *AnnotationKey:
+		if pnType == C.PN_ULONG || pnType == C.PN_SYMBOL || pnType == C.PN_STRING {
+			unmarshal(&v.value, data)
+		} else {
+			panic(newUnmarshalError(pnType, v))
+		}
+
+	default: // This is not one of the fixed well-known types, reflect for map and slice types
 		if reflect.TypeOf(v).Kind() != reflect.Ptr {
 			panic(newUnmarshalError(pnType, v))
 		}
@@ -499,8 +537,18 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 		l := make(List, 0)
 		unmarshal(&l, data)
 		*v = l
-	default: // No data (-1 or NULL)
+	case C.PN_DESCRIBED:
+		d := Described{}
+		unmarshal(&d, data)
+		*v = d
+	case C.PN_NULL:
 		*v = nil
+	case C.PN_INVALID:
+		// Allow decoding from an empty data object to an interface, treat it like NULL.
+		// This happens when optional values or properties are omitted from a message.
+		*v = nil
+	default: // Don't know how to handle this
+		panic(newUnmarshalError(pnType, v))
 	}
 }
 
@@ -547,6 +595,29 @@ func getList(data *C.pn_data_t, v interface{}) {
 		C.pn_data_exit(data)
 	}
 	reflect.ValueOf(v).Elem().Set(listValue)
+}
+
+func getDescribed(data *C.pn_data_t, v interface{}) {
+	d, _ := v.(*Described)
+	pnType := C.pn_data_type(data)
+	if bool(C.pn_data_enter(data)) {
+		defer C.pn_data_exit(data)
+		if bool(C.pn_data_next(data)) {
+			if d != nil {
+				unmarshal(&d.Descriptor, data)
+			}
+			if bool(C.pn_data_next(data)) {
+				if d != nil {
+					unmarshal(&d.Value, data)
+				} else {
+					unmarshal(v, data)
+				}
+				return
+			}
+		}
+	}
+	// The pn_data cursor didn't move as expected
+	panic(newUnmarshalErrorMsg(pnType, v, "bad described value encoding"))
 }
 
 // decode from bytes.

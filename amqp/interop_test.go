@@ -24,7 +24,6 @@ package amqp
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -32,13 +31,6 @@ import (
 	"strings"
 	"testing"
 )
-
-func checkEqual(want interface{}, got interface{}) error {
-	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("%#v != %#v", want, got)
-	}
-	return nil
-}
 
 func getReader(t *testing.T, name string) (r io.Reader) {
 	dir := os.Getenv("PN_INTEROP_DIR")

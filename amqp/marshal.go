@@ -50,6 +50,16 @@ func dataMarshalError(v interface{}, data *C.pn_data_t) error {
 	return nil
 }
 
+func recoverMarshal(err *error) {
+	if r := recover(); r != nil {
+		if merr, ok := r.(*MarshalError); ok {
+			*err = merr
+		} else {
+			panic(r)
+		}
+	}
+}
+
 /*
 Marshal encodes a Go value as AMQP data in buffer.
 If buffer is nil, or is not large enough, a new buffer  is created.
@@ -87,29 +97,19 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |List                                 |list, may have mixed types  values          |
  +-------------------------------------+--------------------------------------------+
+ |Described                            |described type                              |
+ +-------------------------------------+--------------------------------------------+
 
-The following Go types cannot be marshaled: uintptr, function, interface, channel
+The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct
 
-TODO
+TODO: Not yet implemented:
 
-Go types: array, slice, struct, complex64/128.
+Go types: struct, complex64/128.
 
-AMQP types: decimal32/64/128, char, timestamp, uuid, array, multi-section message bodies.
-
-Described types.
-
+AMQP types: decimal32/64/128, char, timestamp, uuid, array.
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if merr, ok := r.(*MarshalError); ok {
-				err = merr
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
+	defer recoverMarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	marshal(v, data)
@@ -125,6 +125,13 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 		}
 	}
 	return encodeGrow(buffer, encode)
+}
+
+// Internal
+func MarshalUnsafe(v interface{}, pn_data unsafe.Pointer) (err error) {
+	defer recoverMarshal(&err)
+	marshal(v, (*C.pn_data_t)(pn_data))
+	return
 }
 
 const minEncode = 256
@@ -204,6 +211,14 @@ func marshal(v interface{}, data *C.pn_data_t) {
 			marshal(val, data)
 		}
 		C.pn_data_exit(data)
+	case Described:
+		C.pn_data_put_described(data)
+		C.pn_data_enter(data)
+		marshal(v.Descriptor, data)
+		marshal(v.Value, data)
+		C.pn_data_exit(data)
+	case AnnotationKey:
+		marshal(v.Get(), data)
 	default:
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
@@ -263,9 +278,4 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 		_, err = e.writer.Write(e.buffer)
 	}
 	return err
-}
-
-func replace(data *C.pn_data_t, v interface{}) {
-	C.pn_data_clear(data)
-	marshal(v, data)
 }
