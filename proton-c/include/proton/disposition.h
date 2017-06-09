@@ -105,6 +105,11 @@ typedef struct pn_disposition_t pn_disposition_t;
 PN_EXTERN uint64_t pn_disposition_type(pn_disposition_t *disposition);
 
 /**
+ * Name of a disposition type for logging and debugging: "received", "accepted" etc.
+ */
+PN_EXTERN const char *pn_disposition_type_name(uint64_t disposition_type);
+
+/**
  * Access the condition object associated with a disposition.
  *
  * The ::pn_condition_t object retrieved by this operation may be

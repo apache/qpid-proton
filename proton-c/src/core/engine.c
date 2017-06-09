@@ -2309,3 +2309,14 @@ pn_condition_t *pn_event_condition(pn_event_t *e) {
     return NULL;
   }
 }
+
+const char *pn_disposition_type_name(uint64_t d) {
+  switch(d) {
+   case PN_RECEIVED: return "received";
+   case PN_ACCEPTED: return "accepted";
+   case PN_REJECTED: return "rejected";
+   case PN_RELEASED: return "released";
+   case PN_MODIFIED: return "modified";
+   default: return "unknown";
+  }
+}
