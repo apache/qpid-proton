@@ -279,8 +279,12 @@ PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
 /**
  * Get the real elapsed time since an arbitrary point in the past in milliseconds.
  *
- * This may be used as a portable way to get a timestamp for the current time. It is monotonically
- * increasing and will never go backwards.
+ * This may be used as a portable way to get a process-local timestamp for the
+ * current time. It is monotonically increasing and will never go backwards.
+ *
+ * Note: this is not a suitable value for an AMQP timestamp to be sent as part
+ * of a message.  Such a timestamp should use the real time in milliseconds
+ * since the epoch.
  *
  * @note Thread safe.
  */
