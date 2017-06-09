@@ -50,6 +50,16 @@ func dataMarshalError(v interface{}, data *C.pn_data_t) error {
 	return nil
 }
 
+func recoverMarshal(err *error) {
+	if r := recover(); r != nil {
+		if merr, ok := r.(*MarshalError); ok {
+			*err = merr
+		} else {
+			panic(r)
+		}
+	}
+}
+
 /*
 Marshal encodes a Go value as AMQP data in buffer.
 If buffer is nil, or is not large enough, a new buffer  is created.
@@ -99,16 +109,7 @@ Go types: struct, complex64/128.
 AMQP types: decimal32/64/128, char, timestamp, uuid, array.
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			if merr, ok := r.(*MarshalError); ok {
-				err = merr
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
+	defer recoverMarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	marshal(v, data)
@@ -124,6 +125,13 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 		}
 	}
 	return encodeGrow(buffer, encode)
+}
+
+// Internal
+func MarshalUnsafe(v interface{}, pn_data unsafe.Pointer) (err error) {
+	defer recoverMarshal(&err)
+	marshal(v, (*C.pn_data_t)(pn_data))
+	return
 }
 
 const minEncode = 256
@@ -270,9 +278,4 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 		_, err = e.writer.Write(e.buffer)
 	}
 	return err
-}
-
-func replace(data *C.pn_data_t, v interface{}) {
-	C.pn_data_clear(data)
-	marshal(v, data)
 }

@@ -223,6 +223,13 @@ func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	return n, nil
 }
 
+// Internal
+func UnmarshalUnsafe(pn_data unsafe.Pointer, v interface{}) (err error) {
+	defer recoverUnmarshal(&err)
+	unmarshal(v, (*C.pn_data_t)(pn_data))
+	return
+}
+
 // more reads more data when we can't parse a complete AMQP type
 func (d *Decoder) more() error {
 	var readSize int64 = minDecode

@@ -22,6 +22,7 @@ package electron
 
 import (
 	"net"
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ func TestLinkSettings(t *testing.T) {
 	cConn, sConn := net.Pipe()
 	done := make(chan error)
 	settings := TerminusSettings{Durability: 1, Expiry: 2, Timeout: 42 * time.Second, Dynamic: true}
+	filterMap := map[amqp.Symbol]interface{}{"int": int32(33), "str": "hello"}
 	go func() { // Server
 		close(done)
 		defer sConn.Close()
@@ -48,6 +50,7 @@ func TestLinkSettings(t *testing.T) {
 				errorIf(t, checkEqual("two", ep.LinkName()))
 				errorIf(t, checkEqual("two.source", ep.Source()))
 				errorIf(t, checkEqual(TerminusSettings{Durability: proton.Deliveries, Expiry: proton.ExpireNever}, ep.SourceSettings()))
+				errorIf(t, checkEqual(filterMap, ep.Filter()))
 			}
 		}
 	}()
@@ -57,7 +60,7 @@ func TestLinkSettings(t *testing.T) {
 	fatalIf(t, err)
 	c.Sender(Source("one.source"), Target("one.target"), TargetSettings(settings))
 
-	c.Receiver(Source("two.source"), DurableSubscription("two"))
+	c.Receiver(Source("two.source"), DurableSubscription("two"), Filter(filterMap))
 	c.Close(nil)
 	<-done
 }

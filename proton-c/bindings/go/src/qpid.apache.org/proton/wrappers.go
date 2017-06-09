@@ -114,18 +114,37 @@ func (e Event) String() string         { return e.Type().String() }
 // functions) to let them inject functions back into the handlers goroutine.
 func (e Event) Injecter() Injecter { return e.injecter }
 
-// Data holds a pointer to decoded AMQP data.
-// Use amqp.marshal/unmarshal to access it as Go data types.
-//
+// Data is an intermediate form of decoded AMQP data.
 type Data struct{ pn *C.pn_data_t }
 
-func NewData(p unsafe.Pointer) Data { return Data{(*C.pn_data_t)(p)} }
+func (d Data) Free()                { C.pn_data_free(d.pn) }
+func (d Data) CPtr() unsafe.Pointer { return unsafe.Pointer(d.pn) }
+func (d Data) Clear()               { C.pn_data_clear(d.pn) }
+func (d Data) Rewind()              { C.pn_data_rewind(d.pn) }
+func (d Data) Next()                { C.pn_data_next(d.pn) }
+func (d Data) Error() error         { return PnError(C.pn_data_error(d.pn)) }
+func (d Data) Empty() bool          { return C.pn_data_size(d.pn) == 0 }
 
-func (d Data) Free()                   { C.pn_data_free(d.pn) }
-func (d Data) Pointer() unsafe.Pointer { return unsafe.Pointer(d.pn) }
-func (d Data) Clear()                  { C.pn_data_clear(d.pn) }
-func (d Data) Rewind()                 { C.pn_data_rewind(d.pn) }
-func (d Data) Error() error            { return PnError(C.pn_data_error(d.pn)) }
+func (d Data) String() string {
+	str := C.pn_string(C.CString(""))
+	defer C.pn_free(unsafe.Pointer(str))
+	C.pn_inspect(unsafe.Pointer(d.pn), str)
+	return C.GoString(C.pn_string_get(str))
+}
+
+// Unmarshal the value of d into value pointed at by ptr, see amqp.Unmarshal() for details
+func (d Data) Unmarshal(ptr interface{}) error {
+	d.Rewind()
+	d.Next()
+	err := amqp.UnmarshalUnsafe(d.CPtr(), ptr)
+	return err
+}
+
+// Marshal the value v into d, see amqp.Marshal() for details
+func (d Data) Marshal(v interface{}) error {
+	d.Clear()
+	return amqp.MarshalUnsafe(v, d.CPtr())
+}
 
 // State holds the state flags for an AMQP endpoint.
 type State byte

@@ -21,6 +21,7 @@ package electron
 
 import (
 	"fmt"
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
 	"time"
 )
@@ -51,6 +52,9 @@ type LinkSettings interface {
 
 	// Session containing the Link
 	Session() Session
+
+	// Filter for the link
+	Filter() map[amqp.Symbol]interface{}
 
 	// Advanced settings for the source
 	SourceSettings() TerminusSettings
@@ -116,6 +120,11 @@ func AtLeastOnce() LinkOption {
 	}
 }
 
+// Filter returns a LinkOption that sets a filter.
+func Filter(m map[amqp.Symbol]interface{}) LinkOption {
+	return func(l *linkSettings) { l.filter = m }
+}
+
 // SourceSettings returns a LinkOption that sets all the SourceSettings.
 // Note: it will override the source address set by a Source() option
 func SourceSettings(ts TerminusSettings) LinkOption {
@@ -161,6 +170,7 @@ type linkSettings struct {
 	rcvSettle      RcvSettleMode
 	capacity       int
 	prefetch       bool
+	filter         map[amqp.Symbol]interface{}
 	session        *session
 	pLink          proton.Link
 }
@@ -189,15 +199,16 @@ type link struct {
 	linkSettings
 }
 
-func (l *linkSettings) Source() string                   { return l.source }
-func (l *linkSettings) Target() string                   { return l.target }
-func (l *linkSettings) LinkName() string                 { return l.linkName }
-func (l *linkSettings) IsSender() bool                   { return l.isSender }
-func (l *linkSettings) IsReceiver() bool                 { return !l.isSender }
-func (l *linkSettings) SndSettle() SndSettleMode         { return l.sndSettle }
-func (l *linkSettings) RcvSettle() RcvSettleMode         { return l.rcvSettle }
-func (l *linkSettings) SourceSettings() TerminusSettings { return l.sourceSettings }
-func (l *linkSettings) TargetSettings() TerminusSettings { return l.targetSettings }
+func (l *linkSettings) Source() string                      { return l.source }
+func (l *linkSettings) Target() string                      { return l.target }
+func (l *linkSettings) LinkName() string                    { return l.linkName }
+func (l *linkSettings) IsSender() bool                      { return l.isSender }
+func (l *linkSettings) IsReceiver() bool                    { return !l.isSender }
+func (l *linkSettings) SndSettle() SndSettleMode            { return l.sndSettle }
+func (l *linkSettings) RcvSettle() RcvSettleMode            { return l.rcvSettle }
+func (l *linkSettings) Filter() map[amqp.Symbol]interface{} { return l.filter }
+func (l *linkSettings) SourceSettings() TerminusSettings    { return l.sourceSettings }
+func (l *linkSettings) TargetSettings() TerminusSettings    { return l.targetSettings }
 
 func (l *link) Session() Session       { return l.session }
 func (l *link) Connection() Connection { return l.session.Connection() }
@@ -227,6 +238,12 @@ func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSetti
 		return l, fmt.Errorf("cannot create link %s", l.pLink)
 	}
 	l.pLink.Source().SetAddress(l.source)
+
+	if len(l.filter) > 0 {
+		if err := l.pLink.Source().Filter().Marshal(l.filter); err != nil {
+			panic(err) // Shouldn't happen
+		}
+	}
 	l.pLink.Source().SetDurability(l.sourceSettings.Durability)
 	l.pLink.Source().SetExpiryPolicy(l.sourceSettings.Expiry)
 	l.pLink.Source().SetTimeout(l.sourceSettings.Timeout)
@@ -245,7 +262,7 @@ func makeLocalLink(sn *session, isSender bool, setting ...LinkOption) (linkSetti
 }
 
 func makeIncomingLinkSettings(pLink proton.Link, sn *session) linkSettings {
-	return linkSettings{
+	l := linkSettings{
 		isSender:       pLink.IsSender(),
 		source:         pLink.RemoteSource().Address(),
 		sourceSettings: makeTerminusSettings(pLink.RemoteSource()),
@@ -259,6 +276,11 @@ func makeIncomingLinkSettings(pLink proton.Link, sn *session) linkSettings {
 		pLink:          pLink,
 		session:        sn,
 	}
+	filter := l.pLink.RemoteSource().Filter()
+	if !filter.Empty() {
+		filter.Unmarshal(&l.filter) // TODO aconway 2017-06-08: ignoring errors
+	}
+	return l
 }
 
 // Not part of Link interface but use by Sender and Receiver.

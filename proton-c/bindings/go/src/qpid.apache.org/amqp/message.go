@@ -38,7 +38,6 @@ import (
 	"fmt"
 	"runtime"
 	"time"
-	"unsafe"
 )
 
 // Message is the interface to an AMQP message.
@@ -273,13 +272,6 @@ func (m *message) ApplicationProperties() map[string]interface{} {
 func setData(v interface{}, data *C.pn_data_t) {
 	C.pn_data_clear(data)
 	marshal(v, data)
-}
-
-func dataString(data *C.pn_data_t) string {
-	str := C.pn_string(C.CString(""))
-	defer C.pn_free(unsafe.Pointer(str))
-	C.pn_inspect(unsafe.Pointer(data), str)
-	return C.GoString(C.pn_string_get(str))
 }
 
 func (m *message) SetInferred(b bool)  { C.pn_message_set_inferred(m.pn, C.bool(b)) }
