@@ -889,7 +889,7 @@ static pconnection_t *get_pconnection(pn_connection_t* c) {
 
 // Return true unless error
 static bool pconnection_write(pconnection_t *pc, pn_bytes_t wbuf) {
-  ssize_t n = write(pc->psocket.sockfd, wbuf.start, wbuf.size);
+  ssize_t n = send(pc->psocket.sockfd, wbuf.start, wbuf.size, MSG_NOSIGNAL);
   if (n > 0) {
     pn_connection_driver_write_done(&pc->driver, n);
     if ((size_t) n < wbuf.size) pc->write_blocked = true;
