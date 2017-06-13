@@ -244,13 +244,13 @@ class ContainerExampleSSLTest(BrokerTestCase):
     broker_exe = "broker"
 
     def setUp(self):
-        if not SSL.present:
-            self.skip("SSL not available")
+        super(ContainerExampleSSLTest, self).setUp()
         self.vg_args = Proc.vg_args
         Proc.vg_args = []       # Disable
 
     def tearDown(self):
         Proc.vg_args = self.vg_args
+        super(ContainerExampleSSLTest, self).tearDown()
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
