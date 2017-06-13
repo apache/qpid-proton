@@ -41,7 +41,7 @@ namespace proton {
 ///   is called.
 /// - If `X` is closed with an error, then `on_X_error` is called,
 ///   followed by `on_X_close`. The error condition is also available
-///   in `on_X_close` from `X::condition()`.
+///   in `on_X_close` from `X::error()`.
 ///
 /// By default, if you do not implement `on_X_error`, it will call
 /// `on_error`.  If you do not implement `on_error` it will throw a
