@@ -85,9 +85,9 @@ class PN_CPP_CLASS_EXTERN map {
     /// Copy from a proton::value.
     /// @throw proton::conversion_error if x does not contain a compatible map.
     PN_CPP_EXTERN void value(const value& x);
-    /// Access as a proton::value
+    /// Access as a proton::value containing an AMQP map
     PN_CPP_EXTERN proton::value& value();
-    /// Access as a proton::value
+    /// Access as a proton::value containing an AMQP map
     PN_CPP_EXTERN const proton::value& value() const;
 
     /// Get the map entry for key k, return T() if no such entry
@@ -100,7 +100,7 @@ class PN_CPP_CLASS_EXTERN map {
     PN_CPP_EXTERN bool exists(const K& k) const;
     /// Number of map entries
     PN_CPP_EXTERN size_t size() const;
-    /// Clear the map value
+    /// Clear the map
     PN_CPP_EXTERN void clear();
     /// True if the map is empty
     PN_CPP_EXTERN bool empty() const;
@@ -108,7 +108,6 @@ class PN_CPP_CLASS_EXTERN map {
     ///@cond INTERNAL
     explicit map(pn_data_t*);
     void reset(pn_data_t*);
-    ///@endcond
 
  private:
     typedef map_type_impl<K,T> map_type;

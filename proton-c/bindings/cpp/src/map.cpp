@@ -32,9 +32,9 @@
 #include <string>
 
 // IMPLEMENTATION NOTES:
-// - if (map_.get()) then *map_ is the authority
-// - cache() ensures that *map_ is up to date
-// - flush() ensures value_ is up to date and map_ is reset
+// - if (map_.get()) then *map_ is the authority and value_ is empty()
+// - cache() ensures that *map_ is up to date and value_ is cleared.
+// - flush() ensures value_ is up to date and map_ is cleared.
 
 namespace proton {
 
@@ -49,7 +49,10 @@ template <class K, class T>
 map<K,T>::map(const map& x) { *this = x; }
 
 template <class K, class T>
-map<K,T>::map(pn_data_t *d) : value_(d) {}
+map<K,T>::map(pn_data_t *d) : value_(d) {
+    // NOTE: for internal use. Don't verify that the data is valid here as that
+    // would forcibly decode message maps immediately, we want to decode on-demand.
+}
 
 template <class K, class T>
 PN_CPP_EXTERN void swap(map<K,T>& x, map<K,T>& y) {
@@ -62,9 +65,7 @@ template <class K, class T>
 map<K,T>& map<K,T>::operator=(const map& x) {
     if (&x != this) {
         map_.reset(x.map_.get() ? new map_type(*x.map_) : 0);
-        if (!map_) {
-            value_ = x.value_;
-        }
+        value_ = x.value_;
     }
     return *this;
 }
@@ -93,18 +94,14 @@ typename map<K,T>::map_type& map<K,T>::cache() const {
     if (!map_) {
         map_.reset(new map_type);
         if (!value_.empty()) {
-            try {
-                proton::get(value_, *map_);
-            } catch (...) {     // Invalid value for the map, throw it away.
-                map_.reset();
-                value_.clear();
-                throw;
-            }
+            proton::get(value_, *map_);
+            value_.clear();
         }
     }
     return *map_;
 }
 
+// Make sure value_ is valid
 template <class K, class T>
 value& map<K,T>::flush() const {
     if (map_.get()) {
@@ -119,8 +116,14 @@ value& map<K,T>::flush() const {
 
 template <class K, class T>
 void map<K,T>::value(const proton::value& x) {
-    value_ = x;
-    cache();    // Validate the value by decoding to cache.
+    if (x.empty()) {
+        clear();
+    } else {
+        internal::pn_unique_ptr<map_type> tmp(new map_type);
+        proton::get(x, *tmp);  // Validate by decoding, may throw
+        map_.reset(tmp.release());
+        value_.clear();
+    }
 }
 
 template <class K, class T>

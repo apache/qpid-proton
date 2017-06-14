@@ -60,11 +60,11 @@ struct message::impl {
         instructions.clear();
     }
 
-    // Encode cached maps back to the underlying pn_data_t
+    // Encode cached maps to the pn_data_t, always used an empty() value for an empty map
     void flush() {
-        properties.value();
-        annotations.value();
-        instructions.value();
+        if (!properties.empty()) properties.value();
+        if (!annotations.empty()) annotations.value();
+        if (!instructions.empty()) instructions.value();
     }
 };
 
