@@ -139,11 +139,14 @@ void test_message_maps() {
 
     m.properties().put("foo", 12);
     m.delivery_annotations().put("bar", "xyz");
-    m.message_annotations().put(23, "23");
+    m.message_annotations().put(23, int8_t(42));
 
     ASSERT_EQUAL(m.properties().get("foo"), scalar(12));
     ASSERT_EQUAL(m.delivery_annotations().get("bar"), scalar("xyz"));
-    ASSERT_EQUAL(m.message_annotations().get(23), scalar("23"));
+
+    ASSERT_EQUAL(m.message_annotations().get(23), scalar(int8_t(42)));
+    ASSERT_EQUAL(proton::get<int8_t>(m.message_annotations().get(23)), 42);
+    ASSERT_EQUAL(m.message_annotations().get(23).get<int8_t>(), 42);
 
     message m2(m);
 
@@ -151,7 +154,7 @@ void test_message_maps() {
 
     ASSERT_EQUAL(m2.properties().get("foo"), scalar(12));
     ASSERT_EQUAL(m2.delivery_annotations().get("bar"), scalar("xyz"));
-    ASSERT_EQUAL(m2.message_annotations().get(23), scalar("23"));
+    ASSERT_EQUAL(m2.message_annotations().get(23), scalar(int8_t(42)));
 
     m.properties().put("foo","newfoo");
     m.delivery_annotations().put(24, 1000);
@@ -165,6 +168,18 @@ void test_message_maps() {
     ASSERT_EQUAL(m3.delivery_annotations().get("bar"), scalar("xyz"));
     ASSERT_EQUAL(m3.delivery_annotations().get(24), scalar(1000));
     ASSERT(m3.message_annotations().empty());
+
+    // PROTON-1498
+    message msg;
+    msg.message_annotations().put("x-opt-jms-msg-type", int8_t(1));
+
+    proton::message::annotation_map& am_ref = msg.message_annotations();
+    uint8_t t = am_ref.get(proton::symbol("x-opt-jms-msg-type")).get<int8_t>();
+    ASSERT_EQUAL(1, t);
+
+    proton::message::annotation_map am_val = msg.message_annotations();
+    t = am_val.get(proton::symbol("x-opt-jms-msg-type")).get<int8_t>();
+    ASSERT_EQUAL(1, t);
 }
 
 void test_message_reuse() {
