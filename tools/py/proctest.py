@@ -24,7 +24,7 @@ valgrind.
 """
 
 import unittest
-import os, sys, socket, time, re, inspect, errno, threading
+import os, sys, socket, time, re, inspect, errno, threading, tempfile
 from  random import randrange
 from subprocess import Popen, PIPE, STDOUT
 from copy import copy
@@ -93,7 +93,7 @@ class Proc(Popen):
         else:
             self.args = self.vg_args + args
         self.kwargs = kwargs
-        self._out = os.tmpfile()
+        self._out = tempfile.TemporaryFile()
         try:
             Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
         except OSError, e:
