@@ -27,8 +27,7 @@ class LimitedBroker(object):
     def __enter__(self):
         with TestPort() as tp:
             self.port = str(tp.port)
-            self.proc = self.test.proc(['prlimit', '-n%d' % self.fdlimit, 'broker', '', self.port],
-                                       skip_valgrind=True)
+            self.proc = self.test.proc(['prlimit', '-n%d' % self.fdlimit, 'broker', '', self.port])
             self.proc.wait_re("listening")
             return self
 
@@ -53,6 +52,10 @@ class FdLimitTest(ProcTestCase):
         if not has_prlimit:
             self.skipTest("prlimit not available")
         super(FdLimitTest, self).setUp()
+
+    def proc(self, *args, **kwargs):
+        """Skip valgrind for all processes started by this test"""
+        return super(FdLimitTest, self).proc(*args, skip_valgrind=True, **kwargs)
 
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""
