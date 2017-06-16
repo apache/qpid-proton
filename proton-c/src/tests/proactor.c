@@ -130,7 +130,6 @@ static pn_event_type_t proactor_test_run(proactor_test_t *pts, size_t n) {
   return e;
 }
 
-
 /* Drain and discard outstanding events from an array of proactors */
 static void proactor_test_drain(proactor_test_t *pts, size_t n) {
   while (proactor_test_get(pts, n))
@@ -467,17 +466,45 @@ static void test_inactive(test_t *t) {
   proactor_test_t pts[] =  { { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
+  /* Default test timeout will interfere with the test, cancel it */
+  pn_proactor_cancel_timeout(client);
+  pn_proactor_cancel_timeout(server);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+
+  /* Listen, connect, disconnect */
   proactor_test_listener_t l = proactor_test_listen(&pts[1], localhost);
   pn_connection_t *c = pn_connection();
   pn_proactor_connect(client, c, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
-  /* expect TRANSPORT_CLOSED from client and server, INACTIVE from client */
+  /* Expect TRANSPORT_CLOSED from client and server, INACTIVE from client */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
-  /* server won't be INACTIVE until listener is closed */
+
+  /* Immediate timer generates INACTIVE on client (no connections) */
+  pn_proactor_set_timeout(client, 0);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_TIMEOUT, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+
+  /* Connect, set-timer, disconnect */
+  pn_proactor_set_timeout(client, 1000000);
+  c = pn_connection();
+  pn_proactor_connect(client, c, l.port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, PROACTOR_TEST_RUN(pts));
+  pn_connection_wake(c);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, PROACTOR_TEST_RUN(pts));
+  /* Expect TRANSPORT_CLOSED from client and server */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
+  /* No INACTIVE till timer is cancelled */
+  TEST_CHECK(t, pn_proactor_get(server) == NULL);
+  pn_proactor_cancel_timeout(client);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
+
+  /* Server won't be INACTIVE until listener is closed */
   TEST_CHECK(t, pn_proactor_get(server) == NULL);
   pn_listener_close(l.listener);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));

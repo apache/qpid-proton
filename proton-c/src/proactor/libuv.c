@@ -240,17 +240,18 @@ struct pn_proactor_t {
 
   /* Protected by lock */
   uv_mutex_t lock;
-  work_queue_t worker_q;      /* ready for work, to be returned via pn_proactor_wait()  */
-  work_queue_t leader_q;      /* waiting for attention by the leader thread */
+  work_queue_t worker_q; /* ready for work, to be returned via pn_proactor_wait()  */
+  work_queue_t leader_q; /* waiting for attention by the leader thread */
   timeout_state_t timeout_state;
   pn_millis_t timeout;
-  size_t count;               /* connection/listener count for INACTIVE events */
+  size_t active;         /* connection/listener count for INACTIVE events */
   pn_condition_t *disconnect_cond; /* disconnect condition */
-  bool disconnect;            /* disconnect requested */
-  bool inactive;
-  bool has_leader;
-  bool batch_working;         /* batch is being processed in a worker thread */
-  bool need_interrupt;        /* Need a PN_PROACTOR_INTERRUPT event */
+
+  bool has_leader;             /* A thread is working as leader */
+  bool disconnect;             /* disconnect requested */
+  bool batch_working;          /* batch is being processed in a worker thread */
+  bool need_interrupt;         /* Need a PN_PROACTOR_INTERRUPT event */
+  bool need_inactive;          /* need INACTIVE event */
 };
 
 
@@ -360,19 +361,22 @@ static inline work_t *batch_work(pn_event_batch_t *batch) {
 }
 
 /* Total count of listener and connections for PN_PROACTOR_INACTIVE */
-static void leader_inc(pn_proactor_t *p) {
+static void add_active(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
-  ++p->count;
+  ++p->active;
   uv_mutex_unlock(&p->lock);
 }
 
-static void leader_dec(pn_proactor_t *p) {
-  uv_mutex_lock(&p->lock);
-  assert(p->count > 0);
-  if (--p->count == 0) {
-    p->inactive = true;
-    notify(p);
+static void remove_active_lh(pn_proactor_t *p) {
+  assert(p->active > 0);
+  if (--p->active == 0) {
+    p->need_inactive = true;
   }
+}
+
+static void remove_active(pn_proactor_t *p) {
+  uv_mutex_lock(&p->lock);
+  remove_active_lh(p);
   uv_mutex_unlock(&p->lock);
 }
 
@@ -394,7 +398,7 @@ static void on_close_pconnection_final(uv_handle_t *h) {
      will be valid, but no-ops.
   */
   pconnection_t *pc = (pconnection_t*)h->data;
-  leader_dec(pc->work.proactor);
+  remove_active(pc->work.proactor);
   pconnection_free(pc);
 }
 
@@ -495,7 +499,7 @@ static int pconnection_init(pconnection_t *pc) {
     }
   }
   if (!err) {
-    leader_inc(pc->work.proactor);
+    add_active(pc->work.proactor);
   } else {
     pconnection_error(pc, err, "initialization");
   }
@@ -638,7 +642,7 @@ static int lsocket(pn_listener_t *l, struct addrinfo *ai) {
 
 /* Listen on all available addresses */
 static void leader_listen_lh(pn_listener_t *l) {
-  leader_inc(l->work.proactor);
+  add_active(l->work.proactor);
   int err = leader_resolve(l->work.proactor, &l->addr, true);
   if (!err) {
     /* Find the working addresses */
@@ -724,7 +728,7 @@ static bool leader_process_listener(pn_listener_t *l) {
 
    case L_CLOSED:              /* Closed, has LISTENER_CLOSE has been processed? */
     if (!pn_collector_peek(l->collector)) {
-      leader_dec(l->work.proactor);
+      remove_active(l->work.proactor);
       closed = true;
     }
   }
@@ -824,8 +828,8 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
 /* Return the next event batch or NULL if no events are available */
 static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
   if (!p->batch_working) {       /* Can generate proactor events */
-    if (p->inactive) {
-      p->inactive = false;
+    if (p->need_inactive) {
+      p->need_inactive = false;
       return proactor_batch_lh(p, PN_PROACTOR_INACTIVE);
     }
     if (p->need_interrupt) {
@@ -834,6 +838,7 @@ static pn_event_batch_t *get_batch_lh(pn_proactor_t *p) {
     }
     if (p->timeout_state == TM_FIRED) {
       p->timeout_state = TM_NONE;
+      remove_active_lh(p);
       return proactor_batch_lh(p, PN_PROACTOR_TIMEOUT);
     }
   }
@@ -1114,6 +1119,7 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   uv_mutex_lock(&p->lock);
   p->timeout = t;
   p->timeout_state = TM_REQUEST;
+  ++p->active;
   uv_mutex_unlock(&p->lock);
   notify(p);
 }
@@ -1122,6 +1128,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
   if (p->timeout_state != TM_NONE) {
     p->timeout_state = TM_NONE;
+    remove_active_lh(p);
     notify(p);
   }
   uv_mutex_unlock(&p->lock);
