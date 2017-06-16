@@ -334,8 +334,10 @@ typedef enum {
   PN_PROACTOR_TIMEOUT,
 
   /**
-   * The proactor is inactive. All listeners and connections are closed and
-   * their events processed, the timeout is expired.
+   * The proactor has become inactive: all listeners and connections were closed
+   * and the timeout (if set) expired or was cancelled. There will be no
+   * further events unless new listeners or connections are opened, or a new
+   * timeout is set (possibly in other threads in a multi-threaded program.)
    *
    * Events of this type point to the @ref pn_proactor_t.
    */
