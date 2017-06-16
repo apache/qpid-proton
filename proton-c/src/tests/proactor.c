@@ -497,35 +497,35 @@ static void test_errors(test_t *t) {
   pn_connection_t *c = pn_connection();
   pn_proactor_connect(client, c, "127.0.0.1:xxx");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_STR_IN(t, "xxx", pn_condition_get_description(last_condition));
+  TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(server, l, "127.0.0.1:xxx", 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  TEST_STR_IN(t, "xxx", pn_condition_get_description(last_condition));
+  TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Invalid connect/listen host name */
   c = pn_connection();
   pn_proactor_connect(client, c, "nosuch.example.com:");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts));
-  TEST_STR_IN(t, "nosuch", pn_condition_get_description(last_condition));
+  TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   l = pn_listener();
   pn_proactor_listen(server, l, "nosuch.example.com:", 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, PROACTOR_TEST_RUN(pts));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, PROACTOR_TEST_RUN(pts));
-  TEST_STR_IN(t, "nosuch", pn_condition_get_description(last_condition));
+  TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Connect with no listener */
   c = pn_connection();
   pn_proactor_connect(client, c, port.host_port);
   if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, PROACTOR_TEST_RUN(pts))) {
-    TEST_STR_IN(t, "refused", pn_condition_get_description(last_condition));
+    TEST_COND_DESC(t, "refused", last_condition);
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
     sock_close(port.sock);
     PROACTOR_TEST_FREE(pts);
