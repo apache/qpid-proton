@@ -33,8 +33,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static pn_millis_t timeout = 7*1000; /* timeout for hanging tests */
-
 static const char *localhost = ""; /* host for connect/listen */
 
 typedef pn_event_type_t (*test_handler_fn)(test_t *, pn_event_t*);
@@ -57,7 +55,6 @@ static void proactor_test_init(proactor_test_t *pts, size_t n, test_t *t) {
     if (!pt->t) pt->t = t;
     if (!pt->proactor) pt->proactor = pn_proactor();
     pt->log_len = 0;
-    pn_proactor_set_timeout(pt->proactor, timeout);
   }
 }
 
@@ -175,14 +172,17 @@ static void test_interrupt_timeout(test_t *t) {
   /* Set an immediate timeout */
   pn_proactor_set_timeout(p, 0);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_TIMEOUT, wait_next(p));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, wait_next(p)); /* Inactive because timeout expired */
 
   /* Set a (very short) timeout */
-  pn_proactor_set_timeout(p, 10);
+  pn_proactor_set_timeout(p, 1);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_TIMEOUT, wait_next(p));
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, wait_next(p));
 
   /* Set and cancel a timeout, make sure we don't get the timeout event */
-  pn_proactor_set_timeout(p, 10);
+  pn_proactor_set_timeout(p, 10000000);
   pn_proactor_cancel_timeout(p);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, wait_next(p));
   TEST_CHECK(t, pn_proactor_get(p) == NULL); /* idle */
 
   pn_proactor_free(p);
@@ -466,11 +466,6 @@ static void test_inactive(test_t *t) {
   proactor_test_t pts[] =  { { open_wake_handler }, { listen_handler } };
   PROACTOR_TEST_INIT(pts, t);
   pn_proactor_t *client = pts[0].proactor, *server = pts[1].proactor;
-  /* Default test timeout will interfere with the test, cancel it */
-  pn_proactor_cancel_timeout(client);
-  pn_proactor_cancel_timeout(server);
-  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
-  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, PROACTOR_TEST_RUN(pts));
 
   /* Listen, connect, disconnect */
   proactor_test_listener_t l = proactor_test_listen(&pts[1], localhost);

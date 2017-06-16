@@ -376,11 +376,12 @@ struct pn_proactor_t {
   epoll_extended_t epoll_interrupt;
   pn_event_batch_t batch;
   size_t disconnects_pending;   /* unfinished proactor disconnects*/
-  bool interrupt;
-  bool inactive;
-  bool timer_expired;
-  bool timer_cancelled;
-  bool timer_armed;
+  // need_xxx flags indicate we should generate PN_PROACTOR_XXX on the next update_batch()
+  bool need_interrupt;
+  bool need_inactive;
+  bool need_timeout;
+  bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
+  bool timer_armed; /* timer is armed in epoll */
   bool shutting_down;
   // wake subsystem
   int eventfd;
@@ -1192,6 +1193,19 @@ static int pgetaddrinfo(const char *host, const char *port, int flags, struct ad
   return getaddrinfo(host, port, &hints, res);
 }
 
+static inline bool is_inactive(pn_proactor_t *p) {
+  return (!p->contexts && !p->disconnects_pending && !p->timeout_set && !p->shutting_down);
+}
+
+/* If inactive set need_inactive and return true if the proactor needs a wakeup */
+static bool wait_if_inactive(pn_proactor_t *p) {
+  if (is_inactive(p)) {
+    p->need_inactive = true;
+    return wake(&p->context);
+  }
+  return false;
+}
+
 void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
   pconnection_t *pc = new_pconnection_t(p, c, false, addr);
   assert(pc); // TODO: memory safety
@@ -1201,6 +1215,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   pn_connection_open(pc->driver.connection); /* Auto-open */
 
   bool notify = false;
+  bool notify_proactor = false;
 
   if (pc->disconnected) {
     notify = wake(&pc->context);    /* Error during initialization */
@@ -1214,10 +1229,13 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
     } else {
       psocket_gai_error(&pc->psocket, gai_error, "connect to ");
       notify = wake(&pc->context);
+      notify_proactor = wait_if_inactive(p);
     }
   }
+  /* We need to issue INACTIVE on immediate failure */
   unlock(&pc->context.mutex);
   if (notify) wake_notify(&pc->context);
+  if (notify_proactor) wake_notify(&p->context);
 }
 
 static void pconnection_tick(pconnection_t *pc) {
@@ -1638,18 +1656,20 @@ static bool proactor_update_batch(pn_proactor_t *p) {
   if (proactor_has_event(p))
     return true;
 
-  if (p->timer_expired) {
-    p->timer_expired = false;
+  if (p->need_timeout) {
+    p->need_timeout = false;
+    p->timeout_set = false;
     proactor_add_event(p, PN_PROACTOR_TIMEOUT);
+    p->need_inactive = is_inactive(p);
     return true;
   }
-  if (p->interrupt) {
-    p->interrupt = false;
+  if (p->need_interrupt) {
+    p->need_interrupt = false;
     proactor_add_event(p, PN_PROACTOR_INTERRUPT);
     return true;
   }
-  if (p->inactive) {
-    p->inactive = false;
+  if (p->need_inactive) {
+    p->need_inactive = false;
     proactor_add_event(p, PN_PROACTOR_INACTIVE);
     return true;
   }
@@ -1669,11 +1689,12 @@ static pn_event_batch_t *proactor_process(pn_proactor_t *p, pn_event_type_t even
   bool timer_fired = (event == PN_PROACTOR_TIMEOUT) && ptimer_callback(&p->timer) != 0;
   lock(&p->context.mutex);
   if (event == PN_PROACTOR_INTERRUPT) {
-    p->interrupt = true;
+    p->need_interrupt = true;
   } else if (event == PN_PROACTOR_TIMEOUT) {
     p->timer_armed = false;
-    if (timer_fired && !p->timer_cancelled)
-      p->timer_expired = true;
+    if (timer_fired && p->timeout_set) {
+      p->need_timeout = true;
+    }
   } else {
     wake_done(&p->context);
   }
@@ -1708,15 +1729,11 @@ static void proactor_add(pcontext_t *ctx) {
 static bool proactor_remove(pcontext_t *ctx) {
   pn_proactor_t *p = ctx->proactor;
   lock(&p->context.mutex);
-  bool notify = false;
   bool can_free = true;
   if (ctx->disconnecting) {
     // No longer on contexts list
     if (--ctx->disconnect_ops == 0) {
-      if (--p->disconnects_pending == 0 && !p->contexts) {
-        p->inactive = true;
-        notify = wake(&p->context);
-      }
+      --p->disconnects_pending;
     }
     else                  // procator_disconnect() still processing
       can_free = false;   // this psocket
@@ -1731,14 +1748,11 @@ static bool proactor_remove(pcontext_t *ctx) {
       if (p->contexts)
         p->contexts->prev = NULL;
     }
-    if (ctx->next)
+    if (ctx->next) {
       ctx->next->prev = ctx->prev;
-
-    if (!p->contexts && !p->disconnects_pending && !p->shutting_down) {
-      p->inactive = true;
-      notify = wake(&p->context);
     }
   }
+  bool notify = wait_if_inactive(p);
   unlock(&p->context.mutex);
   if (notify) wake_notify(&p->context);
   return can_free;
@@ -1846,7 +1860,8 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     if (proactor_has_event(p))
       notify = wake(&p->context);
     unlock(&p->context.mutex);
-    if (notify) wake_notify(&p->context);
+    if (notify)
+      wake_notify(&p->context);
     if (rearm_timer)
       rearm(p, &p->timer.epoll_io);
     return;
@@ -1864,10 +1879,10 @@ void pn_proactor_interrupt(pn_proactor_t *p) {
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   bool notify = false;
   lock(&p->context.mutex);
-  p->timer_cancelled = false;
+  p->timeout_set = true;
   if (t == 0) {
     ptimer_set(&p->timer, 0);
-    p->timer_expired = true;
+    p->need_timeout = true;
     notify = wake(&p->context);
   } else {
     ptimer_set(&p->timer, t);
@@ -1878,10 +1893,12 @@ void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
 
 void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   lock(&p->context.mutex);
-  p->timer_cancelled = true;  // stays cancelled until next set_timeout()
-  p->timer_expired = false;
+  p->timeout_set = false;
+  p->need_timeout = false;
   ptimer_set(&p->timer, 0);
+  bool notify = wait_if_inactive(p);
   unlock(&p->context.mutex);
+  if (notify) wake_notify(&p->context);
 }
 
 pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
@@ -1951,10 +1968,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     if (--ctx->disconnect_ops == 0) {
       do_free = true;
       ctx_notify = false;
-      if (--p->disconnects_pending == 0 && !p->contexts) {
-        p->inactive = true;
-        notify = wake(&p->context);
-      }
+      notify = wait_if_inactive(p);
     } else {
       // If initiating the close, wake the pcontext to do the free.
       if (ctx_notify)
