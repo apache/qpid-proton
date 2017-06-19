@@ -1198,7 +1198,7 @@ static inline bool is_inactive(pn_proactor_t *p) {
 }
 
 /* If inactive set need_inactive and return true if the proactor needs a wakeup */
-static bool wait_if_inactive(pn_proactor_t *p) {
+static bool wake_if_inactive(pn_proactor_t *p) {
   if (is_inactive(p)) {
     p->need_inactive = true;
     return wake(&p->context);
@@ -1229,7 +1229,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
     } else {
       psocket_gai_error(&pc->psocket, gai_error, "connect to ");
       notify = wake(&pc->context);
-      notify_proactor = wait_if_inactive(p);
+      notify_proactor = wake_if_inactive(p);
     }
   }
   /* We need to issue INACTIVE on immediate failure */
@@ -1752,7 +1752,7 @@ static bool proactor_remove(pcontext_t *ctx) {
       ctx->next->prev = ctx->prev;
     }
   }
-  bool notify = wait_if_inactive(p);
+  bool notify = wake_if_inactive(p);
   unlock(&p->context.mutex);
   if (notify) wake_notify(&p->context);
   return can_free;
@@ -1896,7 +1896,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   p->timeout_set = false;
   p->need_timeout = false;
   ptimer_set(&p->timer, 0);
-  bool notify = wait_if_inactive(p);
+  bool notify = wake_if_inactive(p);
   unlock(&p->context.mutex);
   if (notify) wake_notify(&p->context);
 }
@@ -1968,7 +1968,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     if (--ctx->disconnect_ops == 0) {
       do_free = true;
       ctx_notify = false;
-      notify = wait_if_inactive(p);
+      notify = wake_if_inactive(p);
     } else {
       // If initiating the close, wake the pcontext to do the free.
       if (ctx_notify)
