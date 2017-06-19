@@ -158,7 +158,6 @@ typedef struct ptimer_t {
 
 static bool ptimer_init(ptimer_t *pt, struct psocket_t *ps) {
   pt->timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
-  if (pt->timerfd < 0) return false;
   pmutex_init(&pt->mutex);
   pt->timer_active = false;
   pt->in_doubt = false;
@@ -169,7 +168,7 @@ static bool ptimer_init(ptimer_t *pt, struct psocket_t *ps) {
   pt->epoll_io.type = type;
   pt->epoll_io.wanted = EPOLLIN;
   pt->epoll_io.polling = false;
-  return true;
+  return (pt->timerfd >= 0);
 }
 
 // Call with ptimer lock held
@@ -695,6 +694,7 @@ static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bo
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   if (!pc) return NULL;
   if (pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
+    free(pc);
     return NULL;
   }
   pcontext_init(&pc->context, PCONNECTION, p, pc);
@@ -1008,7 +1008,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     return NULL;
   }
 
-  if (!pc->timer_armed && !pc->timer.shutting_down) {
+  if (!pc->timer_armed && !pc->timer.shutting_down && pc->timer.timerfd >= 0) {
     pc->timer_armed = true;  // about to rearm outside the lock
     timer_unarmed = true;    // so we remember
   }

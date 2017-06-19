@@ -34,7 +34,7 @@ class LimitedBroker(object):
     def __exit__(self, *args):
         b = getattr(self, "proc")
         if b:
-            if b.poll() !=  None: # Broker crashed
+            if b.poll() not in [1, None]: # Broker crashed or got expected connection error
                 raise ProcError(b, "broker crash")
             b.kill()
 
