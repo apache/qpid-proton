@@ -53,6 +53,7 @@ pn_add_c_test (c-reactor-tests reactor.c)
 pn_add_c_test (c-event-tests event.c)
 pn_add_c_test (c-data-tests data.c)
 pn_add_c_test (c-condition-tests condition.c)
+pn_add_c_test (c-connection-driver-tests connection_driver.c)
 
 if(HAS_PROACTOR)
   pn_add_c_test (c-proactor-tests proactor.c)

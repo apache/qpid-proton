@@ -20,10 +20,15 @@
  * under the License.
  */
 
-#include <proton/type_compat.h>
 #include <proton/condition.h>
+#include <proton/connection_driver.h>
+#include <proton/delivery.h>
 #include <proton/event.h>
+#include <proton/link.h>
+#include <proton/message.h>
 #include <proton/proactor.h>
+#include <proton/transport.h>
+#include <proton/type_compat.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -41,7 +46,6 @@ typedef struct test_t {
 /* Internal, use macros. Print error message and increase the t->errors count.
    All output from test marcros goes to stderr so it interleaves with PN_TRACE logs.
 */
-
 void test_vlogf_(test_t *t, const char *prefix, const char* expr,
                  const char* file, int line, const char *fmt, va_list ap)
 {
@@ -55,6 +59,14 @@ void test_vlogf_(test_t *t, const char *prefix, const char* expr,
   if (t) fprintf(stderr, " [%s]", t->name);
   fprintf(stderr, "\n");
   fflush(stdout);
+}
+
+void test_logf_(test_t *t, const char *prefix, const char* expr,
+                const char* file, int line, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  test_vlogf_(t, prefix, expr, file, line, fmt, ap);
+  va_end(ap);
 }
 
 void test_errorf_(test_t *t, const char* expr,
@@ -72,18 +84,10 @@ bool test_check_(test_t *t, bool expr, const char *sexpr,
     ++t->errors;
     va_list ap;
     va_start(ap, fmt);
-    test_vlogf_(t, "error: check failed", sexpr, file, line, fmt, ap);
+    test_vlogf_(t, "check failed", sexpr, file, line, fmt, ap);
     va_end(ap);
   }
   return expr;
-}
-
-void test_logf_(test_t *t, const char *prefix, const char* expr,
-                const char* file, int line, const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  test_vlogf_(t, prefix, expr, file, line, fmt, ap);
-  va_end(ap);
 }
 
 /* Call via TEST_ASSERT macros */
@@ -135,36 +139,6 @@ bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, con
                      pn_event_type_name(got));
 }
 
-void print_bad_etypes(const char* prefix, const pn_event_type_t* seq, size_t len, size_t bad) {
-  fprintf(stderr, "%s", prefix);
-  for (size_t i = 0; i < len; ++i) {
-    fprintf(stderr, (i == bad) ? ">>>>%s" : "%s", pn_event_type_name(seq[i]));
-    if (i < len-1) fprintf(stderr, ", ");
-  }
-  if (bad > len) fprintf(stderr, " >>>>");
-  fprintf(stderr, "\n");
-}
-
-bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len, const pn_event_type_t* got, size_t got_len, const char *file, int line) {
-  size_t len = want_len < got_len ? want_len : got_len;
-  for (size_t i = 0; i < len; ++i) {
-    if (want[i] != got[i]) {
-      test_errorf_(t, NULL, file, line, "event sequences don't match:");
-      print_bad_etypes("  want: ", want, want_len, i);
-      print_bad_etypes("  got:  ", got, got_len, i);
-      return false;
-    }
-  }
-  if (want_len != got_len) {
-    test_errorf_(t, NULL, file, line, "wanted %d events but got %d",
-                 want_len, got_len);
-    print_bad_etypes("  want: ", want, want_len, want_len);
-    print_bad_etypes("  got:  ", got, got_len, got_len);
-    return false;
-  }
-  return true;
-}
-
 #define TEST_STR_EQUAL(TEST, WANT, GOT)                                 \
   test_check_((TEST), !strcmp((WANT), (GOT)), NULL, __FILE__, __LINE__, "want '%s', got '%s'", (WANT), (GOT))
 
@@ -174,28 +148,6 @@ bool test_etypes_equal_(test_t *t, const pn_event_type_t* want, size_t want_len,
 
 #define TEST_ETYPE_EQUAL(TEST, WANT, GOT)                       \
   test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
-
-/* Compare arrays of pn_event_type_t */
-#define TEST_ETYPES_EQUAL(TEST, WANT, WLEN, GOT, GLEN)                  \
-  test_etypes_equal_((TEST), (WANT), (WLEN), (GOT), (GLEN), __FILE__, __LINE__)
-
-pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, const char *file, int line) {
-  test_check_(t, want == pn_event_type(got), NULL, file, line, "want %s got %s",
-              pn_event_type_name(want),
-              pn_event_type_name(pn_event_type(got)));
-  if (want != pn_event_type(got)) {
-    pn_condition_t *cond = pn_event_condition(got);
-    if (cond && pn_condition_is_set(cond)) {
-      test_errorf_(t, NULL, file, line, "condition: %s:%s",
-                   pn_condition_get_name(cond), pn_condition_get_description(cond));
-    }
-    return NULL;
-  }
-  return got;
-}
-
-#define TEST_EVENT_TYPE(TEST, WANT, GOT)                        \
-  test_event_type_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 #define TEST_COND_EMPTY(TEST, C)                                        \
   TEST_CHECKNF((TEST), (!(C) || !pn_condition_is_set(C)), "Unexpected condition - %s:%s", \
@@ -237,62 +189,44 @@ pn_event_t *test_event_type_(test_t *t, pn_event_type_t want, pn_event_t *got, c
     }                                           \
   } while(0)
 
-/* Some very simple platform-secifics to acquire an unused socket */
-#if defined(WIN32)
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-typedef SOCKET sock_t;
-void sock_close(sock_t sock) { closesocket(sock); }
-
-#else  /* POSIX */
-
-typedef int sock_t;
-# include <netinet/in.h>
-# include <unistd.h>
-void sock_close(sock_t sock) { close(sock); }
-#endif
-
-
-
-/* Combines a sock_t with the int and char* versions of the port for convenience */
-typedef struct test_port_t {
-  sock_t sock;
-  int port;                     /* port as integer */
-  char str[PN_MAX_ADDR];	/* port as string */
-  char host_port[PN_MAX_ADDR];	/* host:port string */
-} test_port_t;
-
-/* Modifies tp->host_port to use host, returns the new tp->host_port */
-const char *test_port_use_host(test_port_t *tp, const char *host) {
-  snprintf(tp->host_port, sizeof(tp->host_port), "%s:%d", host, tp->port);
-  return tp->host_port;
+/* Ensure buf has at least size bytes, use realloc if need be */
+void rwbytes_ensure(pn_rwbytes_t *buf, size_t size) {
+  if (buf->size < size) {
+    buf->start = (char*)realloc(buf->start, size);
+    buf->size = size;
+  }
 }
 
-/* Create a socket and bind(INADDR_LOOPBACK:0) to get a free port.
-   Use SO_REUSEADDR so other processes can bind and listen on this port.
-   Use host to create the host_port address string.
-*/
-test_port_t test_port(const char* host) {
-  test_port_t tp = {0};
-  tp.sock = socket(AF_INET, SOCK_STREAM, 0);
-  TEST_ASSERT_ERRNO(tp.sock >= 0, errno);
-  int on = 1;
-  int err = setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
-  TEST_ASSERT_ERRNO(!err, errno);
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addr.sin_port = 0;            /* bind to port 0 */
-  err = bind(tp.sock, (struct sockaddr*)&addr, sizeof(addr));
-  TEST_ASSERT_ERRNO(!err, errno);
-  socklen_t len = sizeof(addr);
-  err = getsockname(tp.sock, (struct sockaddr*)&addr, &len); /* Get the bound port */
-  TEST_ASSERT_ERRNO(!err, errno);
-  tp.port = ntohs(addr.sin_port);
-  snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
-  test_port_use_host(&tp, host);
-  return tp;
+static const size_t BUF_MIN = 1024;
+
+/* Encode message m into buffer buf, return the size.
+ * The buffer is expanded using realloc() if needed.
+ */
+size_t message_encode(pn_message_t* m, pn_rwbytes_t *buf) {
+  int err = 0;
+  rwbytes_ensure(buf, BUF_MIN);
+  size_t size = buf->size;
+  while ((err = pn_message_encode(m, buf->start, &size)) != 0) {
+    if (err == PN_OVERFLOW) {
+      rwbytes_ensure(buf, buf->size * 2);
+      size = buf->size;
+    } else {
+      TEST_ASSERTF(err == 0, "encoding: %s %s", pn_code(err), pn_error_text(pn_message_error(m)));
+    }
+  }
+  return size;
+}
+
+/* Decode message from delivery d into message m.
+ * Use buf to hold intermediate message data, expand with realloc() if needed.
+ */
+void message_decode(pn_message_t *m, pn_delivery_t *d, pn_rwbytes_t *buf) {
+  pn_link_t *l = pn_delivery_link(d);
+  ssize_t size = pn_delivery_pending(d);
+  rwbytes_ensure(buf, size);
+  TEST_ASSERT(size == pn_link_recv(l, buf->start, size));
+  pn_message_clear(m);
+  TEST_ASSERTF(!pn_message_decode(m, buf->start, size), "decode: %s", pn_error_text(pn_message_error(m)));
 }
 
 #endif // TESTS_TEST_TOOLS_H
