@@ -8,7 +8,7 @@ cache:
 before_build:
 - mkdir BLD
 - cd BLD
-- cmake -G "Visual Studio 12" -DBUILD_PERL=no ..
+- cmake -G "Visual Studio 12" -DBUILD_PERL=no  %QPID_PROTON_CMAKE_ARGS% ..
 - cd ..
 build:
   parallel: true
@@ -16,5 +16,5 @@ build:
 test_script:
 - cd BLD
 - cmake --build . --target install --config %CONFIGURATION%
-- ctest -V -C %CONFIGURATION%
+- ctest -V -C %CONFIGURATION% %QPID_PROTON_CTEST_ARGS%
 - cd ..

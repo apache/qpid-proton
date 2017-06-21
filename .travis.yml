@@ -63,7 +63,7 @@ before_script:
 - export PATH=${HOME}/.local/bin:${PATH}
 - mkdir Build
 - cd Build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX ${QPID_PROTON_CMAKE_ARGS}
 
 script:
-- cmake --build . --target install && ctest -V
+- cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
