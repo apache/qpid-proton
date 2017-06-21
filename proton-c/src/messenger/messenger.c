@@ -36,6 +36,7 @@
 
 #include "core/log_private.h"
 #include "core/util.h"
+#include "core/url-internal.h"
 #include "platform/platform.h" // pn_i_getpid, pn_i_now, pni_snprintf
 #include "platform/platform_fmt.h"
 #include "store.h"

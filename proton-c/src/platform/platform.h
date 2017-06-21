@@ -87,7 +87,4 @@ int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 #endif
 #endif
 
-// Low level pretty rubbish URL parser
-void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
-
 #endif /* platform.h */
