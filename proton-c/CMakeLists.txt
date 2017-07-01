@@ -482,7 +482,7 @@ set (qpid-proton-include-extra
 # The default is the first one that passes its build test, in order listed below.
 # "none" disables the proactor even if a default is available.
 #
-set(PROACTOR "" CACHE STRING "Override default proactor, one of: epoll, libuv, none")
+set(PROACTOR "" CACHE STRING "Override default proactor, one of: epoll, libuv, iocp, none")
 string(TOLOWER "${PROACTOR}" PROACTOR)
 
 if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
@@ -495,6 +495,18 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
   endif()
+endif()
+
+if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
+  if(WIN32 AND NOT CYGWIN)
+    message(WARNING "Windows IOCP proactor will be built as a prototype but does not yet pass tests")
+    set (PROACTOR_OK iocp)
+    set (qpid-proton-proactor src/proactor/win_iocp.c src/proactor/proactor-internal.c)
+    set_source_files_properties (${qpid-proton-proactor} PROPERTIES
+      COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
+      COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
+      )
+  endif(WIN32 AND NOT CYGWIN)
 endif()
 
 if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
@@ -617,7 +629,7 @@ if (qpid-proton-proactor)
   add_library (
     qpid-proton-proactor SHARED ${qpid-proton-proactor})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
-  target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PROACTOR_LIBS})
+  target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   list(APPEND LIB_TARGETS qpid-proton-proactor)
   set_target_properties (
     qpid-proton-proactor

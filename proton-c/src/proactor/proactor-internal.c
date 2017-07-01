@@ -36,9 +36,15 @@ static const char *AMQPS_PORT_NAME = "amqps";
 
 const char *PNI_IO_CONDITION = "proton:io";
 
+#ifndef _WIN32
+/*
+ * Common implementation for C99-friendly compilers.  Windows is
+ * not and implements its own.
+ */
 int pn_proactor_addr(char *buf, size_t len, const char *host, const char *port) {
   return snprintf(buf, len, "%s:%s", host ? host : "", port ? port : "");
 }
+#endif
 
 int pni_parse_addr(const char *addr, char *buf, size_t len, const char **host, const char **port)
 {

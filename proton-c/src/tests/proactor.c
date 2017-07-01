@@ -17,11 +17,11 @@
  * under the License.
  */
 
+#include "../platform/platform.h"
 #include "test_tools.h"
 #include "test_handler.h"
 #include "test_config.h"
 #include "../proactor/proactor-internal.h"
-#include "../platform/platform.h"
 
 #include <proton/condition.h>
 #include <proton/connection.h>
@@ -39,12 +39,27 @@
 static const char *localhost = ""; /* host for connect/listen */
 
 /* Some very simple platform-secifics to acquire an unused socket */
-#if defined(WIN32)
+#if defined(_WIN32)
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
 typedef SOCKET sock_t;
 void sock_close(sock_t sock) { closesocket(sock); }
+// pni_snprintf not exported.  We can live with a simplified version
+// for this test's limited use. Abort if that assumption is wrong.
+#define pni_snprintf pnitst_snprintf
+static int pnitst_snprintf(char *buf, size_t count, const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  int n = _vsnprintf(buf, count, fmt, ap);
+  va_end(ap);
+  if (count == 0 || n < 0) {
+    perror("proton internal failure on Windows test snprintf");
+    abort();
+  }
+  // Windows and C99 are in agreement.
+  return n;
+}
 
 #else  /* POSIX */
 
@@ -818,8 +833,10 @@ static void test_parse_addr(test_t *t) {
    These headers are *only* needed for test_netaddr and only for the getnameinfo part.
    This is the only non-portable part of the proactor test suite.
    */
+#if !defined(_WIN32)
 #include <sys/socket.h>         /* For socket_storage */
 #include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
+#endif
 
 static void test_netaddr(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_wake_handler), test_proactor(t, listen_handler) };

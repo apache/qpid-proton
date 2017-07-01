@@ -25,6 +25,10 @@
 #include <stdio.h>
 
 // [v]snprintf on Windows only matches C99 when no errors or overflow.
+// Note: [v]snprintf behavior changed in VS2015 to be C99 compliant.
+// vsnprintf_s is unchanged.  This platform code can go away some day.
+
+
 int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap) {
   if (fmt == NULL)
     return -1;
