@@ -26,7 +26,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/url.hpp>
 
 #include <iostream>
@@ -66,8 +65,7 @@ class selected_recv : public proton::messaging_handler {
     void on_container_start(proton::container &c) OVERRIDE {
         proton::source_options opts;
         set_filter(opts, "colour = 'green'");
-        proton::connection conn = c.connect(url);
-        conn.open_receiver(url.path(), proton::receiver_options().source(opts));
+        c.open_receiver(url, proton::receiver_options().source(opts));
     }
 
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {

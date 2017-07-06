@@ -32,7 +32,6 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
-#include "proton/thread_safe.hpp"
 #include "proton/tracker.hpp"
 #include "proton/value.hpp"
 

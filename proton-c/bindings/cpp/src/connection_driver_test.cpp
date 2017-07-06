@@ -31,7 +31,6 @@
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/source_options.hpp"
-#include "proton/thread_safe.hpp"
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"
 

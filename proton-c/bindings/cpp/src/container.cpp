@@ -25,7 +25,6 @@
 #include "proton/error_condition.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
-#include "proton/thread_safe.hpp"
 
 #include "proactor_container_impl.hpp"
 
@@ -37,32 +36,32 @@ container::container(const std::string& id) :
     impl_(new impl(*this, id)) {}
 container::~container() {}
 
-returned<connection> container::connect(const std::string &url) {
-    return connect(url, connection_options());
+void container::connect(const std::string &url) {
+    connect(url, connection_options());
 }
 
-returned<sender> container::open_sender(const std::string &url) {
-    return open_sender(url, proton::sender_options(), connection_options());
+void container::open_sender(const std::string &url) {
+    open_sender(url, proton::sender_options(), connection_options());
 }
 
-returned<sender> container::open_sender(const std::string &url, const proton::sender_options &lo) {
-    return open_sender(url, lo, connection_options());
+void container::open_sender(const std::string &url, const proton::sender_options &lo) {
+    open_sender(url, lo, connection_options());
 }
 
-returned<sender> container::open_sender(const std::string &url, const proton::connection_options &co) {
-    return open_sender(url, sender_options(), co);
+void container::open_sender(const std::string &url, const proton::connection_options &co) {
+    open_sender(url, sender_options(), co);
 }
 
-returned<receiver> container::open_receiver(const std::string &url) {
-    return open_receiver(url, proton::receiver_options(), connection_options());
+void container::open_receiver(const std::string &url) {
+    open_receiver(url, proton::receiver_options(), connection_options());
 }
 
-returned<receiver> container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
-    return open_receiver(url, lo, connection_options());
+void container::open_receiver(const std::string &url, const proton::receiver_options &lo) {
+    open_receiver(url, lo, connection_options());
 }
 
-returned<receiver> container::open_receiver(const std::string &url, const proton::connection_options &co) {
-    return open_receiver(url, receiver_options(), co);
+void container::open_receiver(const std::string &url, const proton::connection_options &co) {
+    open_receiver(url, receiver_options(), co);
 }
 
 listener container::listen(const std::string& url, const connection_options& opts) {
@@ -75,8 +74,8 @@ listener container::listen(const std::string &url) {
 
 void container::stop() { stop(error_condition()); }
 
-returned<connection> container::connect(const std::string& url, const connection_options& opts) {
-    return impl_->connect(url, opts);
+void container::connect(const std::string& url, const connection_options& opts) {
+    impl_->connect(url, opts);
 }
 
 listener container::listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
@@ -91,18 +90,18 @@ void container::auto_stop(bool set) { impl_->auto_stop(set); }
 
 void container::stop(const error_condition& err) { impl_->stop(err); }
 
-returned<sender> container::open_sender(
+void container::open_sender(
     const std::string &url,
     const class sender_options &o,
     const connection_options &c) {
-    return impl_->open_sender(url, o, c);
+    impl_->open_sender(url, o, c);
 }
 
-returned<receiver> container::open_receiver(
+void container::open_receiver(
     const std::string&url,
     const class receiver_options &o,
     const connection_options &c) {
-    return impl_->open_receiver(url, o, c);
+    impl_->open_receiver(url, o, c);
 }
 
 std::string container::id() const { return impl_->id(); }

@@ -35,9 +35,9 @@
 #include <proton/source_options.hpp>
 #include <proton/target.hpp>
 #include <proton/target_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transport.hpp>
+#include <proton/work_queue.hpp>
 
 #include <deque>
 #include <iostream>

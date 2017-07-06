@@ -64,8 +64,6 @@ class connection_driver;
 }
 
 template <class T> class returned;
-template <class T> class thread_safe;
-
 }
 
 #endif // PROTON_FWD_HPP

@@ -75,10 +75,10 @@ class PN_CPP_CLASS_EXTERN container {
     /// The handler in the composed options is used to call
     /// proton::messaging_handler::on_connection_open() when the remote peer's
     /// open response is received.
-    PN_CPP_EXTERN returned<connection> connect(const std::string& url, const connection_options &);
+    PN_CPP_EXTERN void connect(const std::string& url, const connection_options &);
 
     /// Connect to `url` and send an open request to the remote peer.
-    PN_CPP_EXTERN returned<connection> connect(const std::string& url);
+    PN_CPP_EXTERN void connect(const std::string& url);
 
     /// Start listening on url.
     ///
@@ -134,55 +134,55 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN void stop();
 
     /// Open a connection and sender for `url`.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url);
+    PN_CPP_EXTERN void open_sender(const std::string &url);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied sender options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const proton::sender_options &o);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const proton::sender_options &o);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const connection_options &c);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const connection_options &c);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied sender or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const proton::sender_options &o,
-                                         const connection_options &c);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const proton::sender_options &o,
+                                   const connection_options &c);
 
     /// Open a connection and receiver for `url`.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url);
+    PN_CPP_EXTERN void open_receiver(const std::string&url);
 
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const proton::receiver_options &o);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const proton::receiver_options &o);
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const connection_options &c);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const connection_options &c);
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const proton::receiver_options &o,
-                                             const connection_options &c);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const proton::receiver_options &o,
+                                     const connection_options &c);
 
     /// A unique identifier for the container.
     PN_CPP_EXTERN std::string id() const;

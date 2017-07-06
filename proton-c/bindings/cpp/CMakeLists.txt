@@ -169,7 +169,6 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(connection_driver_test)
-add_cpp_test(thread_safe_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(map_test)

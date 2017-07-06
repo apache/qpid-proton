@@ -27,7 +27,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/url.hpp>
 
 #include <iostream>
@@ -44,9 +43,8 @@ class browser : public proton::messaging_handler {
     browser(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        proton::connection conn = c.connect(url);
         source_options browsing = source_options().distribution_mode(proton::source::COPY);
-        conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
+        c.open_receiver(url, proton::receiver_options().source(browsing));
     }
 
     void on_message(proton::delivery &, proton::message &m) OVERRIDE {

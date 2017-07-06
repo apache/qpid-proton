@@ -99,7 +99,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// @cond INTERNAL
   friend class internal::factory<session>;
   friend class session_iterator;
-  friend class thread_safe<session>;
     /// @endcond
 };
 

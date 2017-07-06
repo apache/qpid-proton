@@ -26,7 +26,6 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
-#include "proton/thread_safe.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -74,7 +73,7 @@ class test_handler : public proton::messaging_handler {
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         int port = listen_on_random_port(c, listener);
-        proton::connection conn = c.connect(host + ":" + int2string(port), opts);
+        c.connect(host + ":" + int2string(port), opts);
     }
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {

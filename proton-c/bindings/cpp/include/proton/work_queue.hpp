@@ -113,7 +113,6 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
   friend class container;
   friend class io::connection_driver;
-  template <class T> friend class thread_safe;
     /// @endcond
 };
 
