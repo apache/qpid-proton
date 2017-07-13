@@ -50,10 +50,11 @@ ssl_certificate platform_certificate(const std::string &base_name, const std::st
 std::string find_CN(const std::string &);
 
 namespace {
-    std::string verify_full("full");  // Normal verification
-    std::string verify_noname("noname"); // Skip matching host name against the certificate
-    std::string verify_fail("fail");  // Force name mismatch failure
+    const std::string verify_full("full");  // Normal verification
+    const std::string verify_noname("noname"); // Skip matching host name against the certificate
+    const std::string verify_fail("fail");  // Force name mismatch failure
     std::string verify(verify_full);  // Default for example
+    bool verify_failed(false);
     std::string cert_directory;
 
     class example_cert_error : public std::runtime_error
@@ -137,8 +138,10 @@ class hello_world_direct : public proton::messaging_handler {
 
     void on_transport_error(proton::transport &t) OVERRIDE {
         std::string err = t.error().what();
-        if (err.find("certificate"))
+        if (err.find("certificate")) {
+            verify_failed = true;
             throw example_cert_error(err);
+        }
     }
 
     void on_sendable(proton::sender &s) OVERRIDE {
@@ -179,13 +182,15 @@ int main(int argc, char **argv) {
         hello_world_direct hwd(address);
         proton::default_container(hwd).run();
         return 0;
-    } catch (const example_cert_error& ce) {
-        if (verify == verify_fail) {
-            std::cout << "Expected failure of connection with wrong peer name: " << ce.what() << std::endl;
-            return 0;
-        }
-        std::cerr << "unexpected internal certificate failure: " << ce.what() << std::endl;
     } catch (const std::exception& e) {
+        if (verify_failed) {
+            if (verify == verify_fail) {
+                std::cout << "Expected failure of connection with wrong peer name: " << e.what() << std::endl;
+                return 0;
+            } else {
+                std::cerr << "unexpected internal certificate failure: ";
+            }
+        }
         std::cerr << e.what() << std::endl;
     }
     return 1;
