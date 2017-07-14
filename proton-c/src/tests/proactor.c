@@ -62,10 +62,11 @@ static int pnitst_snprintf(char *buf, size_t count, const char *fmt, ...) {
 }
 
 #else  /* POSIX */
-
-typedef int sock_t;
+# include <sys/types.h>
+# include <sys/socket.h>
 # include <netinet/in.h>
 # include <unistd.h>
+typedef int sock_t;
 void sock_close(sock_t sock) { close(sock); }
 #endif
 
