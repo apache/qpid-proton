@@ -224,7 +224,7 @@ module Qpid::Proton
     # * priority - the priority value
     #
     def priority=(priority)
-      raise TypeError.new("invalid priority: #{priority}") if priority.nil? || !([Float, Fixnum].include?(priority.class))
+      raise TypeError.new("invalid priority: #{priority}") if not priority.is_a?(Numeric)
       raise RangeError.new("priority out of range: #{priority}") if ((priority > 255) || (priority < 0))
       Cproton.pn_message_set_priority(@impl, priority.floor)
     end
@@ -242,8 +242,8 @@ module Qpid::Proton
     # * time - the time in milliseconds
     #
     def ttl=(time)
-      raise TypeError.new("invalid ttl: #{time}") if time.nil? || !([Float, Fixnum].include?(time.class))
-      raise RangeError.new("time out of range: #{time}") if ((time < 0))
+      raise TypeError.new("invalid ttl: #{time}") if not time.is_a?(Numeric)
+      raise RangeError.new("ttl out of range: #{time}") if ((time.to_i < 0))
       Cproton.pn_message_set_ttl(@impl, time.floor)
     end
 
@@ -275,9 +275,8 @@ module Qpid::Proton
     # * count - the delivery count
     #
     def delivery_count=(count)
-      raise ::ArgumentError.new("invalid count: #{count}") if count.nil? || !([Float, Fixnum].include?(count.class))
+      raise ::ArgumentError.new("invalid count: #{count}") if not count.is_a?(Numeric)
       raise RangeError.new("count out of range: #{count}") if count < 0
-
       Cproton.pn_message_set_delivery_count(@impl, count.floor)
     end
 

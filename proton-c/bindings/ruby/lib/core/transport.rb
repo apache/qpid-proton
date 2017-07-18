@@ -89,37 +89,37 @@ module Qpid::Proton
 
     # @!attribute channel_max
     #
-    # @return [Fixnum] The maximum allowed channel.
+    # @return [Integer] The maximum allowed channel.
     #
     proton_accessor :channel_max
 
     # @!attribute [r] remote_channel_max
     #
-    # @return [Fixnum] The maximum allowed channel of a transport's remote peer.
+    # @return [Integer] The maximum allowed channel of a transport's remote peer.
     #
     proton_caller :remote_channel_max
 
     # @!attribute max_frame_size
     #
-    # @return [Fixnum] The maximum frame size.
+    # @return [Integer] The maximum frame size.
     #
     proton_accessor :max_frame_size
 
     # @!attribute [r] remote_max_frame_size
     #
-    # @return [Fixnum] The maximum frame size of the transport's remote peer.
+    # @return [Integer] The maximum frame size of the transport's remote peer.
     #
     proton_reader :remote_max_frame_size
 
     # @!attribute idle_timeout
     #
-    # @return [Fixnum] The idle timeout.
+    # @return [Integer] The idle timeout.
     #
     proton_accessor :idle_timeout
 
     # @!attribute [r] remote_idle_timeout
     #
-    # @return [Fixnum] The idle timeout for the transport's remote peer.
+    # @return [Integer] The idle timeout for the transport's remote peer.
     #
     proton_accessor :remote_idle_timeout
 
@@ -135,7 +135,7 @@ module Qpid::Proton
     # Calls to #process may alter the value of this value. See #process for
     # more details
     #
-    # @return [Fixnum] The amount of free space for input following the
+    # @return [Integer] The amount of free space for input following the
     # transport's tail pointer.
     #
     proton_caller :capacity
@@ -170,7 +170,7 @@ module Qpid::Proton
     #
     # Calls to #pop may alter the value of this pointer as well.
     #
-    # @return [Fixnum] The number of pending output bytes following the header
+    # @return [Integer] The number of pending output bytes following the header
     # pointer.
     #
     # @raise [TransportError] If any error other than an end of stream occurs.
@@ -188,13 +188,13 @@ module Qpid::Proton
 
     # @!attribute [r] frames_output
     #
-    # @return [Fixnum] The number of frames output by a transport.
+    # @return [Integer] The number of frames output by a transport.
     #
     proton_reader :frames_output
 
     # @!attribute [r] frames_input
     #
-    # @return [Fixnum] The number of frames input by a transport.
+    # @return [Integer] The number of frames input by a transport.
     #
     proton_reader :frames_input
 
@@ -218,7 +218,7 @@ module Qpid::Proton
 
     # Creates a new transport instance.
     #
-    # @param mode [Fixnum] The transport mode, either CLIENT or SERVER
+    # @param mode [Integer] The transport mode, either CLIENT or SERVER
     # @param impl [pn_transport_t] Should not be used.
     #
     # @raise [TransportError] If the mode is invalid.
@@ -268,7 +268,7 @@ module Qpid::Proton
 
     # Updates the transports trace flags.
     #
-    # @param level [Fixnum] The trace level.
+    # @param level [Integer] The trace level.
     #
     # @see TRACE_OFF
     # @see TRACE_RAW
@@ -302,7 +302,7 @@ module Qpid::Proton
     #
     # @param data [String] The bytes to be pushed.
     #
-    # @return [Fixnum] The number of bytes pushed.
+    # @return [Integer] The number of bytes pushed.
     #
     def push(data)
       Cproton.pn_transport_push(@impl, data, data.length)
@@ -315,7 +315,7 @@ module Qpid::Proton
     # pointer. It may also change the value for #tail, as well as the amount of
     # free space reported by #capacity.
     #
-    # @param size [Fixnum] The number of bytes to process.
+    # @param size [Integer] The number of bytes to process.
     #
     # @raise [TransportError] If an error occurs.
     #
@@ -335,7 +335,7 @@ module Qpid::Proton
 
     # Returns the specified number of bytes from the transport's buffers.
     #
-    # @param size [Fixnum] The number of bytes to return.
+    # @param size [Integer] The number of bytes to return.
     #
     # @return [String] The data peeked.
     #
@@ -351,7 +351,7 @@ module Qpid::Proton
     # Removes the specified number of bytes from the pending output queue
     # following the transport's head pointer.
     #
-    # @param size [Fixnum] The number of bytes to remove.
+    # @param size [Integer] The number of bytes to remove.
     #
     def pop(size)
       Cproton.pn_transport_pop(@impl, size)
@@ -378,7 +378,7 @@ module Qpid::Proton
     #
     # @param now [Time] The timestamp.
     #
-    # @return [Fixnum] If non-zero, the expiration time of the next pending
+    # @return [Integer] If non-zero, the expiration time of the next pending
     #   timer event for the transport. The caller must invoke #tick again at
     #   least once at or before this deadline occurs.
     #

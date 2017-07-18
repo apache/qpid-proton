@@ -41,7 +41,7 @@ module Qpid::Proton
     # negotatied frame size of the transport, it will be rounded up to one full
     # frame.
     #
-    # @return [Fixnum] The incoing capacity of the session, measured in bytes.
+    # @return [Integer] The incoing capacity of the session, measured in bytes.
     #
     proton_accessor :incoming_capacity
 
@@ -50,13 +50,13 @@ module Qpid::Proton
 
     # @!attribute [r] outgoing_bytes
     #
-    # @return [Fixnum] The number of outgoing bytes currently being buffered.
+    # @return [Integer] The number of outgoing bytes currently being buffered.
     #
     proton_caller :outgoing_bytes
 
     # @!attribute [r] incoming_bytes
     #
-    # @return [Fixnum] The number of incomign bytes currently being buffered.
+    # @return [Integer] The number of incomign bytes currently being buffered.
     #
     proton_caller :incoming_bytes
 
@@ -71,7 +71,7 @@ module Qpid::Proton
 
     # @!attribute [r] state
     #
-    # @return [Fixnum] The endpoint state.
+    # @return [Integer] The endpoint state.
     #
     proton_caller :state
 
@@ -104,7 +104,7 @@ module Qpid::Proton
     # When uses with Connection#session_head an application can access all of
     # the session son the connection that match the given state.
     #
-    # @param state_mask [Fixnum] The state mask to match.
+    # @param state_mask [Integer] The state mask to match.
     #
     # @return [Session, nil] The next session if one matches, or nil.
     #

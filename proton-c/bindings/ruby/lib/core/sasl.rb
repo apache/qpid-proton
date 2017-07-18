@@ -73,7 +73,7 @@ module Qpid::Proton
 
     # Returns the outcome of the SASL negotiation.
     #
-    # @return [Fixnum] The outcome.
+    # @return [Integer] The outcome.
     #
     def outcome
       outcome = Cprotn.pn_sasl_outcome(@impl)
@@ -83,7 +83,7 @@ module Qpid::Proton
 
     # Set the condition of the SASL negotiation.
     #
-    # @param outcome [Fixnum] The outcome.
+    # @param outcome [Integer] The outcome.
     #
     def done(outcome)
       Cproton.pn_sasl_done(@impl, outcome)

@@ -58,7 +58,7 @@ module Qpid::Proton::Handler
     # is specified.
     #
     # @param delivery [Qpid::Proton::Delivery] The delivery.
-    # @param state [Fixnum] The delivery state.
+    # @param state [Integer] The delivery state.
     #
     def settle(delivery, state = nil)
       delivery.update(state) unless state.nil?

@@ -89,7 +89,7 @@ module Qpid::Proton::Reactor
 
     # Returns the timeout period.
     #
-    # @return [Fixnum] The timeout period, in seconds.
+    # @return [Integer] The timeout period, in seconds.
     #
     def timeout
       millis_to_timeout(Cproton.pn_reactor_get_timeout(@impl))
@@ -97,7 +97,7 @@ module Qpid::Proton::Reactor
 
     # Sets the timeout period.
     #
-    # @param timeout [Fixnum] The timeout, in seconds.
+    # @param timeout [Integer] The timeout, in seconds.
     #
     def timeout=(timeout)
       Cproton.pn_reactor_set_timeout(@impl, timeout_to_millis(timeout))

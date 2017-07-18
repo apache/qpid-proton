@@ -224,7 +224,7 @@ module Qpid::Proton
     # @see Endpoint#LOCAL_CLOSED
     # @see Endpoint#LOCAL_MASK
     #
-    # @return [Fixnum] The state flags.
+    # @return [Integer] The state flags.
     #
     def state
       Cproton.pn_connection_state(@impl)
@@ -248,7 +248,7 @@ module Qpid::Proton
     # remote flags, then a match occurs if a*any* of the local or remote flags
     # are set, respectively.
     #
-    # @param mask [Fixnum] The state mask to be matched.
+    # @param mask [Integer] The state mask to be matched.
     #
     # @return [Session] The first matching session, or nil if none matched.
     #
@@ -272,7 +272,7 @@ module Qpid::Proton
     # then a match occurs if *any* of the local ore remote flags are set,
     # respectively.
     #
-    # @param mask [Fixnum] The state mask to be matched.
+    # @param mask [Integer] The state mask to be matched.
     #
     # @return [Link] The first matching link, or nil if none matched.
     #
@@ -307,7 +307,7 @@ module Qpid::Proton
 
     # Returns the code for a connection error.
     #
-    # @return [Fixnum] The error code.
+    # @return [Integer] The error code.
     #
     def error
       Cproton.pn_error_code(Cproton.pn_connection_error(@impl))

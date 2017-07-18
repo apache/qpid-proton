@@ -694,7 +694,7 @@ module Qpid::Proton::Messenger
     end
 
     def valid_window?(window)
-      !window.nil? && [Float, Fixnum].include?(window.class)
+      !window.nil? && window.is_a?(Numeric)
     end
 
   end

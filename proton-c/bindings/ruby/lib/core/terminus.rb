@@ -73,7 +73,7 @@ module Qpid::Proton
 
     # @!attribute type
     #
-    # @return [Fixnum] The terminus type.
+    # @return [Integer] The terminus type.
     #
     # @see SOURCE
     # @see TARGET
@@ -89,7 +89,7 @@ module Qpid::Proton
 
     # @!attribute durability
     #
-    # @return [Fixnum] The durability mode of the terminus.
+    # @return [Integer] The durability mode of the terminus.
     #
     # @see NONDURABLE
     # @see CONFIGURATION
@@ -99,7 +99,7 @@ module Qpid::Proton
 
     # @!attribute expiry_policy
     #
-    # @return [Fixnum] The expiry policy.
+    # @return [Integer] The expiry policy.
     #
     # @see EXPIRE_WITH_LINK
     # @see EXPIRE_WITH_SESSION
@@ -110,7 +110,7 @@ module Qpid::Proton
 
     # @!attribute timeout
     #
-    # @return [Fixnum] The timeout period.
+    # @return [Integer] The timeout period.
     #
     proton_accessor :timeout
 
@@ -122,7 +122,7 @@ module Qpid::Proton
 
     # @!attribute distribution_mode
     #
-    # @return [Fixnum] The distribution mode.
+    # @return [Integer] The distribution mode.
     #
     # @see DIST_MODE_UNSPECIFIED
     # @see DIST_MODE_COPY

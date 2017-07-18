@@ -123,7 +123,7 @@ module Qpid::Proton
     # call returns. SSL instances created before invoking this method will use
     # the domain's previous setting.
     #
-    # @param verify_mode [Fixnum] The level of validation to apply to the peer.
+    # @param verify_mode [Integer] The level of validation to apply to the peer.
     # @param trusted_CAs [String] The path to a database of trusted CAs that
     #   the server will advertise to the peer client if the server has been
     #   configured to verify its peer.

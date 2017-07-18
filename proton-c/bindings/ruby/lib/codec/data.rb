@@ -82,13 +82,12 @@ module Qpid::Proton::Codec
 
     # Creates a new instance with the specified capacity.
     #
-    # @param capacity [Fixnum, Object] The initial capacity or content.
+    # @param capacity [Integer, Object] The initial capacity or content.
     #
     def initialize(capacity = 16)
-      if (!capacity.nil?) &&
-         (capacity.is_a?(Fixnum) ||
-          capacity.is_a?(Bignum))
-        @data = Cproton.pn_data(capacity)
+      # TODO aconway 2017-08-11: error prone, confusion between capacity and Integer content.
+      if capacity.is_a?(Integer)
+        @data = Cproton.pn_data(capacity.to_i)
         @free = true
       else
         @data = capacity
@@ -165,7 +164,7 @@ module Qpid::Proton::Codec
 
     # Returns the numeric type code of the current node.
     #
-    # @return [Fixnum] The current node type.
+    # @return [Integer] The current node type.
     # @return [nil] If there is no current node.
     #
     def type_code
@@ -175,7 +174,7 @@ module Qpid::Proton::Codec
 
     # Return the type object for the current node
     #
-    # @param [Fixnum] The object type.
+    # @param [Integer] The object type.
     #
     # @see #type_code
     #
@@ -319,7 +318,7 @@ module Qpid::Proton::Codec
     # is the descriptor and may be of any type.
     #
     # @param described [Boolean] True if the array is described.
-    # @param element_type [Fixnum] The AMQP type for each element of the array.
+    # @param element_type [Integer] The AMQP type for each element of the array.
     #
     # @example
     #
@@ -489,7 +488,7 @@ module Qpid::Proton::Codec
 
     # Puts an unsigned byte value.
     #
-    # @param value [Fixnum] The unsigned byte value.
+    # @param value [Integer] The unsigned byte value.
     #
     def ubyte=(value)
       check(Cproton.pn_data_put_ubyte(@data, value))
@@ -498,7 +497,7 @@ module Qpid::Proton::Codec
     # If the current node is an unsigned byte, returns its value. Otherwise,
     # it returns 0.
     #
-    # @return [Fixnum] The unsigned byte value.
+    # @return [Integer] The unsigned byte value.
     #
     def ubyte
       Cproton.pn_data_get_ubyte(@data)
@@ -506,7 +505,7 @@ module Qpid::Proton::Codec
 
     # Puts a byte value.
     #
-    # @param value [Fixnum] The byte value.
+    # @param value [Integer] The byte value.
     #
     def byte=(value)
       check(Cproton.pn_data_put_byte(@data, value))
@@ -515,7 +514,7 @@ module Qpid::Proton::Codec
     # If the current node is an byte, returns its value. Otherwise,
     # it returns 0.
     #
-    # @return [Fixnum] The byte value.
+    # @return [Integer] The byte value.
     #
     def byte
       Cproton.pn_data_get_byte(@data)
@@ -523,7 +522,7 @@ module Qpid::Proton::Codec
 
     # Puts an unsigned short value.
     #
-    # @param value [Fixnum] The unsigned short value
+    # @param value [Integer] The unsigned short value
     #
     def ushort=(value)
       check(Cproton.pn_data_put_ushort(@data, value))
@@ -532,7 +531,7 @@ module Qpid::Proton::Codec
     # If the current node is an unsigned short, returns its value. Otherwise,
     # it returns 0.
     #
-    # @return [Fixnum] The unsigned short value.
+    # @return [Integer] The unsigned short value.
     #
     def ushort
       Cproton.pn_data_get_ushort(@data)
@@ -540,7 +539,7 @@ module Qpid::Proton::Codec
 
     # Puts a short value.
     #
-    # @param value [Fixnum] The short value.
+    # @param value [Integer] The short value.
     #
     def short=(value)
       check(Cproton.pn_data_put_short(@data, value))
@@ -549,7 +548,7 @@ module Qpid::Proton::Codec
     # If the current node is a short, returns its value. Otherwise,
     # returns a 0.
     #
-    # @return [Fixnum] The short value.
+    # @return [Integer] The short value.
     #
     def short
       Cproton.pn_data_get_short(@data)
@@ -557,7 +556,7 @@ module Qpid::Proton::Codec
 
     # Puts an unsigned integer value.
     #
-    # @param value [Fixnum] the unsigned integer value
+    # @param value [Integer] the unsigned integer value
     #
     def uint=(value)
       raise TypeError if value.nil?
@@ -568,7 +567,7 @@ module Qpid::Proton::Codec
     # If the current node is an unsigned int, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The unsigned integer value.
+    # @return [Integer] The unsigned integer value.
     #
     def uint
       Cproton.pn_data_get_uint(@data)
@@ -586,7 +585,7 @@ module Qpid::Proton::Codec
     # If the current node is an integer, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The integer value.
+    # @return [Integer] The integer value.
     #
     def int
       Cproton.pn_data_get_int(@data)
@@ -594,7 +593,7 @@ module Qpid::Proton::Codec
 
     # Puts a character value.
     #
-    # @param value [Fixnum] The character value.
+    # @param value [Integer] The character value.
     #
     def char=(value)
       check(Cproton.pn_data_put_char(@data, value))
@@ -603,7 +602,7 @@ module Qpid::Proton::Codec
     # If the current node is a character, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The character value.
+    # @return [Integer] The character value.
     #
     def char
       Cproton.pn_data_get_char(@data)
@@ -611,7 +610,7 @@ module Qpid::Proton::Codec
 
     # Puts an unsigned long value.
     #
-    # @param value [Fixnum] The unsigned long value.
+    # @param value [Integer] The unsigned long value.
     #
     def ulong=(value)
       raise TypeError if value.nil?
@@ -622,7 +621,7 @@ module Qpid::Proton::Codec
     # If the current node is an unsigned long, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The unsigned long value.
+    # @return [Integer] The unsigned long value.
     #
     def ulong
       Cproton.pn_data_get_ulong(@data)
@@ -630,7 +629,7 @@ module Qpid::Proton::Codec
 
     # Puts a long value.
     #
-    # @param value [Fixnum] The long value.
+    # @param value [Integer] The long value.
     #
     def long=(value)
       check(Cproton.pn_data_put_long(@data, value))
@@ -638,14 +637,14 @@ module Qpid::Proton::Codec
 
     # If the current node is a long, returns its value. Otherwise, returns 0.
     #
-    # @return [Fixnum] The long value.
+    # @return [Integer] The long value.
     def long
       Cproton.pn_data_get_long(@data)
     end
 
     # Puts a timestamp value.
     #
-    # @param value [Fixnum] The timestamp value.
+    # @param value [Integer] The timestamp value.
     #
     def timestamp=(value)
       value = value.to_i if (!value.nil? && value.is_a?(Time))
@@ -655,7 +654,7 @@ module Qpid::Proton::Codec
     # If the current node is a timestamp, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The timestamp value.
+    # @return [Integer] The timestamp value.
     #
     def timestamp
       Cproton.pn_data_get_timestamp(@data)
@@ -697,7 +696,7 @@ module Qpid::Proton::Codec
 
     # Puts a decimal32 value.
     #
-    # @param value [Fixnum] The decimal32 value.
+    # @param value [Integer] The decimal32 value.
     #
     def decimal32=(value)
       check(Cproton.pn_data_put_decimal32(@data, value))
@@ -706,7 +705,7 @@ module Qpid::Proton::Codec
     # If the current node is a decimal32, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The decimal32 value.
+    # @return [Integer] The decimal32 value.
     #
     def decimal32
       Cproton.pn_data_get_decimal32(@data)
@@ -714,7 +713,7 @@ module Qpid::Proton::Codec
 
     # Puts a decimal64 value.
     #
-    # @param value [Fixnum] The decimal64 value.
+    # @param value [Integer] The decimal64 value.
     #
     def decimal64=(value)
       check(Cproton.pn_data_put_decimal64(@data, value))
@@ -723,7 +722,7 @@ module Qpid::Proton::Codec
     # If the current node is a decimal64, returns its value. Otherwise,
     # it returns 0.
     #
-    # @return [Fixnum] The decimal64 value.
+    # @return [Integer] The decimal64 value.
     #
     def decimal64
       Cproton.pn_data_get_decimal64(@data)
@@ -731,7 +730,7 @@ module Qpid::Proton::Codec
 
     # Puts a decimal128 value.
     #
-    # @param value [Fixnum] The decimal128 value.
+    # @param value [Integer] The decimal128 value.
     #
     def decimal128=(value)
       raise TypeError, "invalid decimal128 value: #{value}" if value.nil?
@@ -744,7 +743,7 @@ module Qpid::Proton::Codec
     # If the current node is a decimal128, returns its value. Otherwise,
     # returns 0.
     #
-    # @return [Fixnum] The decimal128 value.
+    # @return [Integer] The decimal128 value.
     #
     def decimal128
       value = ""

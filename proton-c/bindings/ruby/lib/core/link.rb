@@ -113,7 +113,7 @@ module Qpid::Proton
     # the link until enough credit is obtained from the receiver to send them
     # over the wire. In this case the balance reported will go negative.
     #
-    # @return [Fixnum] The credit balance.
+    # @return [Integer] The credit balance.
     #
     # @see #flow
     #
@@ -130,7 +130,7 @@ module Qpid::Proton
     # @see #queued
     # @see #credit
     #
-    # @return [Fixnum] The remove view of the credit.
+    # @return [Integer] The remove view of the credit.
     #
     proton_caller :remote_credit
 
@@ -142,7 +142,7 @@ module Qpid::Proton
     # deliveries that might be able to be sent if sufficient credit were issued
     # by the receiving link endpoint.
     #
-    # @return [Fixnum] The available deliveries hint.
+    # @return [Integer] The available deliveries hint.
     #
     # @see Sender#offered
     #
@@ -156,7 +156,7 @@ module Qpid::Proton
     # be insufficient credit to send them to the receiver, or they simply may
     # not have yet had a chance to be written to the wire.
     #
-    # @return [Fixnum] The number of queued deliveries.
+    # @return [Integer] The number of queued deliveries.
     #
     # @see #credit
     #
@@ -203,7 +203,7 @@ module Qpid::Proton
     # When invoked on a Receiver, this operation will return and reset the
     # number of credits the sender has released back to it.
     #
-    # @return [Fixnum] The number of credits drained.
+    # @return [Integer] The number of credits drained.
     #
     proton_caller :drained
 
@@ -243,7 +243,7 @@ module Qpid::Proton
 
     # Returns the next link that matches the given state mask.
     #
-    # @param state_mask [Fixnum] The state mask.
+    # @param state_mask [Integer] The state mask.
     #
     # @return [Sender, Receiver] The next link.
     #
@@ -328,7 +328,7 @@ module Qpid::Proton
 
     # Sets the local sender settle mode.
     #
-    # @param mode [Fixnum] The settle mode.
+    # @param mode [Integer] The settle mode.
     #
     # @see #SND_UNSETTLED
     # @see #SND_SETTLED
@@ -340,7 +340,7 @@ module Qpid::Proton
 
     # Returns the local sender settle mode.
     #
-    # @return [Fixnum] The local sender settle mode.
+    # @return [Integer] The local sender settle mode.
     #
     # @see #snd_settle_mode
     #
@@ -350,7 +350,7 @@ module Qpid::Proton
 
     # Sets the local receiver settle mode.
     #
-    # @param mode [Fixnum] The settle mode.
+    # @param mode [Integer] The settle mode.
     #
     # @see #RCV_FIRST
     # @see #RCV_SECOND
@@ -361,7 +361,7 @@ module Qpid::Proton
 
     # Returns the local receiver settle mode.
     #
-    # @return [Fixnum] The local receiver settle mode.
+    # @return [Integer] The local receiver settle mode.
     #
     def rcv_settle_mode
       Cproton.pn_link_rcv_settle_mode(@impl)

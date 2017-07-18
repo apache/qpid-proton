@@ -29,7 +29,7 @@ module Qpid::Proton::Handler
 
     # Creates a new instance.
     #
-    # @param [Fixnum] prefetch
+    # @param [Integer] prefetch
     # @param [Boolean] auto_accept
     # @param [Boolean] auto_settle
     # @param [Boolean] peer_close_is_error

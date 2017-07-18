@@ -58,7 +58,7 @@ module Qpid::Proton
 
     # Grants credit for incoming deliveries.
     #
-    # @param n [Fixnum] The amount to increment the link credit.
+    # @param n [Integer] The amount to increment the link credit.
     #
     def flow(n)
       Cproton.pn_link_flow(@impl, n)
@@ -74,9 +74,9 @@ module Qpid::Proton
     # #receive until nil is returned, or verify that #partial? is false and
     # Delivery#pending is 0.
     #
-    # @param limit [Fixnum] The maximum bytes to receive.
+    # @param limit [Integer] The maximum bytes to receive.
     #
-    # @return [Fixnum, nil] The number of bytes received, or nil if the end of
+    # @return [Integer, nil] The number of bytes received, or nil if the end of
     # the stream was reached.t
     #
     # @see Deliver#pending To see how much buffer space is needed.

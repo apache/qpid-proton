@@ -104,7 +104,7 @@ module Qpid::Proton
 
     # @!attribute [r] pending
     #
-    # @return [Fixnum] Return the amount of pending message data for the
+    # @return [Integer] Return the amount of pending message data for the
     # delivery.
     #
     proton_caller :pending

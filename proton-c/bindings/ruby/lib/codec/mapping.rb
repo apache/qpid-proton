@@ -34,7 +34,7 @@ module Qpid::Proton::Codec
     #
     # * code    - the AMQP code for this type
     # * name    - the AMQP name for this type
-    # * klasses - the Ruby classes for this type
+    # * klasses - native Ruby classes that are mapped to this AMQP type
     # * getter  - overrides the get method for the type
     def initialize(code, name, klasses = nil, getter = nil)
 
@@ -77,7 +77,7 @@ module Qpid::Proton::Codec
     end
 
     def self.for_class(klass) # :nodoc:
-      @@by_class[klass]
+      klass and (@@by_class[klass] or self.for_class(klass.superclass))
     end
 
     def self.for_code(code)
@@ -96,7 +96,7 @@ module Qpid::Proton::Codec
   INT        = Mapping.new(Cproton::PN_INT, "int")
   CHAR       = Mapping.new(Cproton::PN_CHAR, "char")
   ULONG      = Mapping.new(Cproton::PN_ULONG, "ulong")
-  LONG       = Mapping.new(Cproton::PN_LONG, "long", RUBY_VERSION < "2.4" ? [Fixnum, Bignum] : [Integer])
+  LONG       = Mapping.new(Cproton::PN_LONG, "long", [Integer])
   TIMESTAMP  = Mapping.new(Cproton::PN_TIMESTAMP, "timestamp", [Date, Time])
   FLOAT      = Mapping.new(Cproton::PN_FLOAT, "float")
   DOUBLE     = Mapping.new(Cproton::PN_DOUBLE, "double", [Float])

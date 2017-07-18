@@ -33,7 +33,7 @@ module Qpid::Proton
 
     # Signals the availability of deliveries.
     #
-    # @param n [Fixnum] The number of deliveries potentially available.
+    # @param n [Integer] The number of deliveries potentially available.
     #
     def offered(n)
       Cproton.pn_link_offered(@impl, n)
@@ -44,7 +44,7 @@ module Qpid::Proton
     # @param object [Object] The content to send.
     # @param tag [Object] The tag
     #
-    # @return [Fixnum] The number of bytes sent.
+    # @return [Integer] The number of bytes sent.
     #
     def send(object, tag = nil)
       if object.respond_to? :proton_send
@@ -58,7 +58,7 @@ module Qpid::Proton
     #
     # @param bytes [Array] The bytes to send.
     #
-    # @return n [Fixnum] The number of bytes sent.
+    # @return n [Integer] The number of bytes sent.
     #
     def stream(bytes)
       Cproton.pn_link_send(@impl, bytes)

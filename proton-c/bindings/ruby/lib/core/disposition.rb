@@ -62,13 +62,13 @@ module Qpid::Proton
 
     # @!attribute section_number
     #
-    # @return [Fixnum] The section number of the disposition.
+    # @return [Integer] The section number of the disposition.
     #
     proton_accessor :section_number
 
     # @!attribute section_offset
     #
-    #  @return [Fixnum] The section offset of the disposition.
+    #  @return [Integer] The section offset of the disposition.
     #
     proton_accessor :section_offset
 
