@@ -96,7 +96,7 @@ module Qpid::Proton::Codec
   INT        = Mapping.new(Cproton::PN_INT, "int")
   CHAR       = Mapping.new(Cproton::PN_CHAR, "char")
   ULONG      = Mapping.new(Cproton::PN_ULONG, "ulong")
-  LONG       = Mapping.new(Cproton::PN_LONG, "long", [Fixnum, Bignum])
+  LONG       = Mapping.new(Cproton::PN_LONG, "long", RUBY_VERSION < "2.4" ? [Fixnum, Bignum] : [Integer])
   TIMESTAMP  = Mapping.new(Cproton::PN_TIMESTAMP, "timestamp", [Date, Time])
   FLOAT      = Mapping.new(Cproton::PN_FLOAT, "float")
   DOUBLE     = Mapping.new(Cproton::PN_DOUBLE, "double", [Float])
