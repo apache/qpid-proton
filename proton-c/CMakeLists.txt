@@ -640,10 +640,14 @@ if (qpid-proton-proactor)
     )
 endif()
 
+if (NOT BIN_INSTALL_DIR)
+  set(BIN_INSTALL_DIR "bin")
+endif(NOT BIN_INSTALL_DIR)
+
 # Install executables and libraries
 install(TARGETS qpid-proton qpid-proton-core ${LIB_TARGETS}
   EXPORT  proton
-  RUNTIME DESTINATION bin
+  RUNTIME DESTINATION ${BIN_INSTALL_DIR}
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 

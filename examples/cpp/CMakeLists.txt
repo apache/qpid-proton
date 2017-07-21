@@ -26,12 +26,13 @@ add_definitions(${CXX_WARNING_FLAGS})
 # Add a test with the correct environment to find test executables and valgrind.
 macro(add_cpp_test name)
   if(WIN32)
-    set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>;$<TARGET_FILE_DIR:qpid-proton-cpp>")
+    set(test_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY};$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>;$<TARGET_FILE_DIR:qpid-proton-cpp>")
   else(WIN32)
-    set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
+    set(test_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}:$ENV{PATH}")
   endif(WIN32)
   set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV})
   add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} -- ${ARGN})
+      #WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endmacro()
 
 # Single-threaded examples that work on C++03
