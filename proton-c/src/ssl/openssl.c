@@ -51,7 +51,6 @@
 #include <fcntl.h>
 #include <assert.h>
 
-
 /** @file
  * SSL/TLS support API.
  *
@@ -60,7 +59,6 @@
 
 static int ssl_initialized;
 static int ssl_ex_data_index;
-static int ssl_session_ex_data_index;
 
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
@@ -416,40 +414,55 @@ static DH *get_dh2048(void)
 }
 
 typedef struct {
-  const char *id;
+  char *id;
   SSL_SESSION *session;
-} ssl_cache_visit_data;
+} ssl_cache_data;
 
-static void SSL_SESSION_cache_visitor(SSL_SESSION *session, ssl_cache_visit_data *data)
-{
-  const char *cached_id = (const char*)SSL_SESSION_get_ex_data(session, ssl_session_ex_data_index);
-  if (!cached_id) return;
-  
-  if ( strcmp(cached_id, data->id)==0 ) {
-    data->session = session;
+#define SSL_CACHE_SIZE 4
+static int ssl_cache_ptr = 0;
+static ssl_cache_data ssl_cache[SSL_CACHE_SIZE];
+
+static void ssn_init(void) {
+  ssl_cache_data s = {NULL, NULL};
+  for (int i=0; i<SSL_CACHE_SIZE; i++) {
+    ssl_cache[i] = s;
   }
 }
 
-static void SSL_SESSION_visit_caster(void *s, void * d) {
-    SSL_SESSION_cache_visitor((SSL_SESSION*) s, (ssl_cache_visit_data*) d);
+static void ssn_restore(pn_transport_t *transport, pni_ssl_t *ssl) {
+  if (!ssl->session_id) return;
+  for (int i = ssl_cache_ptr;;) {
+    i = (i==0) ? SSL_CACHE_SIZE-1 : i-1;
+    if (ssl_cache[i].id == NULL) return;
+    if (strcmp(ssl_cache[i].id, ssl->session_id) == 0) {
+      ssl_log( transport, "Restoring previous session id=%s", ssl->session_id );
+      int rc = SSL_set_session( ssl->ssl, ssl_cache[i].session );
+      if (rc != 1) {
+        ssl_log( transport, "Session restore failed, id=%s", ssl->session_id );
+      }
+      return;
+    }
+    if (i == ssl_cache_ptr) return;
+  }
 }
 
-static SSL_SESSION *ssn_cache_find( pn_ssl_domain_t *domain, const char *id )
-{
-  if (!id) return NULL;
+static void ssn_save(pn_transport_t *transport, pni_ssl_t *ssl) {
+  if (ssl->session_id) {
+    // Attach the session id to the session before we close the connection
+    // So that if we find it in the cache later we can figure out the session id
+    SSL_SESSION *session = SSL_get1_session( ssl->ssl );
+    if (session) {
+      ssl_log(transport, "Saving SSL session as %s", ssl->session_id );
+      // If we're overwriting a value, need to free it
+      free(ssl_cache[ssl_cache_ptr].id);
+      if (ssl_cache[ssl_cache_ptr].session) SSL_SESSION_free(ssl_cache[ssl_cache_ptr].session);
 
-  ssl_cache_visit_data visitor = {id, NULL};
-  lh_SSL_SESSION_doall_arg(SSL_CTX_sessions(domain->ctx), &SSL_SESSION_visit_caster, ssl_cache_visit_data, &visitor);
-  return visitor.session;
-}
-
-// Set up/tear down ssl session ex data
-int ssl_session_ex_data_init(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
-  return CRYPTO_set_ex_data(ad, idx, NULL);
-}
-
-void ssl_session_ex_data_fini(void *parent, void *ptr, CRYPTO_EX_DATA *ad, int idx, long argl, void *argp) {
-  free(CRYPTO_get_ex_data(ad, idx));
+      char *id = pn_strdup( ssl->session_id );
+      ssl_cache_data s = {id, session};
+      ssl_cache[ssl_cache_ptr++] = s;
+      if (ssl_cache_ptr==SSL_CACHE_SIZE) ssl_cache_ptr = 0;
+    }
+  }
 }
 
 /** Public API - visible to application code */
@@ -468,8 +481,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     OpenSSL_add_all_algorithms();
     ssl_ex_data_index = SSL_get_ex_new_index( 0, (void *) "org.apache.qpid.proton.ssl",
                                               NULL, NULL, NULL);
-    ssl_session_ex_data_index = SSL_SESSION_get_ex_new_index(0, (void *)"ssl session data",
-                                                             &ssl_session_ex_data_init, NULL, &ssl_session_ex_data_fini);
+    ssn_init();
   }
 
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
@@ -857,16 +869,7 @@ static int start_ssl_shutdown(pn_transport_t *transport)
   pni_ssl_t *ssl = transport->ssl;
   if (!ssl->ssl_shutdown) {
     ssl_log(transport, "Shutting down SSL connection...");
-    if (ssl->session_id) {
-      // Attach the session id to the session before we close the connection
-      // So that if we find it in the cache later we can figure out the session id
-      char *id = pn_strdup( ssl->session_id ); 
-      SSL_SESSION *session = SSL_get_session( ssl->ssl );
-      if (session) {
-        ssl_log(transport, "Saving SSL session as %s", ssl->session_id );
-        SSL_SESSION_set_ex_data(session, ssl_session_ex_data_index, id);
-      }
-    }
+    ssn_save(transport, ssl);
     ssl->ssl_shutdown = true;
     BIO_ssl_shutdown( ssl->bio_ssl );
   }
@@ -1167,16 +1170,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
 #endif
 
   // restore session, if available
-  if (ssl->session_id) {
-    SSL_SESSION *ssn = ssn_cache_find( ssl->domain, ssl->session_id );
-    if (ssn) {
-      ssl_log( transport, "Restoring previous session id=%s", ssl->session_id );
-      int rc = SSL_set_session( ssl->ssl, ssn );
-      if (rc != 1) {
-        ssl_log( transport, "Session restore failed, id=%s", ssl->session_id );
-      }
-    }
-  }
+  ssn_restore(transport, ssl);
 
   // now layer a BIO over the SSL socket
   ssl->bio_ssl = BIO_new(BIO_f_ssl());
