@@ -28,7 +28,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 
 #include <iostream>
@@ -50,7 +49,11 @@ class client : public proton::messaging_handler {
     client(const std::string &u, const std::vector<std::string>& r) : url(u), requests(r) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        sender = c.open_sender(url);
+        c.open_sender(url);
+    }
+
+    void on_sender_open(proton::sender &s) OVERRIDE {
+        sender = s;
         // Create a receiver requesting a dynamically created queue
         // for the message source.
         receiver_options opts = receiver_options().source(source_options().dynamic(true));

@@ -29,10 +29,10 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
-#ifdef PN_CPP_HAS_STD_FUNCTION
-#include <functional>
-#endif
 #include <string>
+
+/// If the library can support multithreaded containers then PN_CPP_SUPPORTS_THREADS will be set.
+#define PN_CPP_SUPPORTS_THREADS PN_CPP_HAS_STD_THREAD && PN_CPP_HAS_STD_MUTEX && PN_CPP_HAS_STD_ATOMIC
 
 namespace proton {
 
@@ -55,6 +55,13 @@ class PN_CPP_CLASS_EXTERN container {
     /// Create a container.
     PN_CPP_EXTERN container(const std::string& id="");
 
+    /// Destroy a container.
+    /// Note that you may not delete a container from within any of the threads running
+    /// any of the container's messaging_handlers. Specifically if you delete the container
+    /// from within a handler you cause a deadlock or a crash.
+    ///
+    /// The only safe place to delete a container is after all of the threads running a container
+    /// have finished and all of the run functions have returned.
     PN_CPP_EXTERN ~container();
 
     /// Connect to `url` and send an open request to the remote peer.
@@ -68,16 +75,10 @@ class PN_CPP_CLASS_EXTERN container {
     /// The handler in the composed options is used to call
     /// proton::messaging_handler::on_connection_open() when the remote peer's
     /// open response is received.
-    PN_CPP_EXTERN returned<connection> connect(const std::string& url, const connection_options &);
+    PN_CPP_EXTERN void connect(const std::string& url, const connection_options &);
 
     /// Connect to `url` and send an open request to the remote peer.
-    PN_CPP_EXTERN returned<connection> connect(const std::string& url);
-
-    /// @cond INTERNAL
-    /// Stop listening on url, must match the url string given to listen().
-    /// You can also use the proton::listener object returned by listen()
-    PN_CPP_EXTERN void stop_listening(const std::string& url);
-    /// @endcond
+    PN_CPP_EXTERN void connect(const std::string& url);
 
     /// Start listening on url.
     ///
@@ -101,8 +102,15 @@ class PN_CPP_CLASS_EXTERN container {
     /// Returns when the container stops.
     /// @see auto_stop() and stop().
     ///
-    /// With a multithreaded container, call run() in multiple threads to create a thread pool.
+    /// If you are using C++11 or later you may use a multithreaded container. In this case you may
+    /// call run() in multiple threads to create a thread pool. Or aternatively call run with an
+    /// integer parameter specifying the number of threads for the thread pool.
     PN_CPP_EXTERN void run();
+
+#if PN_CPP_SUPPORTS_THREADS
+    /// @copydoc run()
+    PN_CPP_EXTERN void run(int threads);
+#endif
 
     /// If true, stop the container when all active connections and listeners are closed.
     /// If false the container will keep running till stop() is called.
@@ -126,55 +134,55 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN void stop();
 
     /// Open a connection and sender for `url`.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url);
+    PN_CPP_EXTERN void open_sender(const std::string &url);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied sender options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const proton::sender_options &o);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const proton::sender_options &o);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const connection_options &c);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const connection_options &c);
 
     /// Open a connection and sender for `url`.
     ///
     /// Supplied sender or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<sender> open_sender(const std::string &url,
-                                         const proton::sender_options &o,
-                                         const connection_options &c);
+    PN_CPP_EXTERN void open_sender(const std::string &url,
+                                   const proton::sender_options &o,
+                                   const connection_options &c);
 
     /// Open a connection and receiver for `url`.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url);
+    PN_CPP_EXTERN void open_receiver(const std::string&url);
 
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver options will override the container's
     /// template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const proton::receiver_options &o);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const proton::receiver_options &o);
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const connection_options &c);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const connection_options &c);
 
     /// Open a connection and receiver for `url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
-    PN_CPP_EXTERN returned<receiver> open_receiver(const std::string&url,
-                                             const proton::receiver_options &o,
-                                             const connection_options &c);
+    PN_CPP_EXTERN void open_receiver(const std::string&url,
+                                     const proton::receiver_options &o,
+                                     const connection_options &c);
 
     /// A unique identifier for the container.
     PN_CPP_EXTERN std::string id() const;
@@ -212,15 +220,11 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
-    /// Schedule a function to be called after the duration.  C++03
-    /// compatible, for C++11 use schedule(duration,
-    /// std::function<void()>)
-    PN_CPP_EXTERN void schedule(duration, void_function0&);
-
-#if PN_CPP_HAS_STD_FUNCTION
-    /// Schedule a function to be called after the duration
-    PN_CPP_EXTERN void schedule(duration, std::function<void()>);
-#endif
+    /// Schedule a piece of work to happen after the duration:
+    /// The piece of work can be created from a function object.
+    /// for C++11 and on use a std::function<void()> type; for
+    /// C++03 compatibility you can use void_function0&
+    PN_CPP_EXTERN void schedule(duration, work);
 
   private:
     class impl;
@@ -230,6 +234,7 @@ class PN_CPP_CLASS_EXTERN container {
   friend class session_options;
   friend class receiver_options;
   friend class sender_options;
+  friend class work_queue;
 };
 
 } // proton

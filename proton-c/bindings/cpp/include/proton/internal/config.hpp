@@ -95,6 +95,18 @@
 #define PN_CPP_HAS_CHRONO PN_CPP_HAS_CPP11
 #endif
 
+#ifndef PN_CPP_HAS_STD_MUTEX
+#define PN_CPP_HAS_STD_MUTEX PN_CPP_HAS_CPP11
+#endif
+
+#ifndef PN_CPP_HAS_STD_ATOMIC
+#define PN_CPP_HAS_STD_ATOMIC PN_CPP_HAS_CPP11
+#endif
+
+#ifndef PN_CPP_HAS_STD_THREAD
+#define PN_CPP_HAS_STD_THREAD PN_CPP_HAS_CPP11
+#endif
+
 #endif // PROTON_INTERNAL_CONFIG_HPP
 
 /// @endcond

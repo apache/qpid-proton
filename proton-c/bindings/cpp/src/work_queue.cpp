@@ -17,40 +17,47 @@
  * under the License.
  */
 
-#include "proton/event_loop.hpp"
+#include "proton/work_queue.hpp"
+
+#include "proton/duration.hpp"
 
 #include "contexts.hpp"
-#include "event_loop_impl.hpp"
+#include "proactor_container_impl.hpp"
+#include "proactor_work_queue_impl.hpp"
 
 #include <proton/session.h>
 #include <proton/link.h>
 
 namespace proton {
 
-event_loop::event_loop() {}
-event_loop::~event_loop() {}
+work_queue::work_queue() {}
+work_queue::work_queue(container& c) { *this = container::impl::make_work_queue(c); }
 
-event_loop& event_loop::operator=(impl* i) { impl_.reset(i); return *this; }
+work_queue::~work_queue() {}
 
-bool event_loop::inject(void_function0& f) {
-    return impl_->inject(f);
+work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
+
+bool work_queue::add(work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return false;
+    return impl_->add(f);
 }
 
-#if PN_CPP_HAS_STD_FUNCTION
-bool event_loop::inject(std::function<void()> f) {
-    return impl_->inject(f);
-}
-#endif
-
-event_loop& event_loop::get(pn_connection_t* c) {
-    return connection_context::get(c).event_loop_;
+void work_queue::schedule(duration d, work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return;
+    return impl_->schedule(d, f);
 }
 
-event_loop& event_loop::get(pn_session_t* s) {
+work_queue& work_queue::get(pn_connection_t* c) {
+    return connection_context::get(c).work_queue_;
+}
+
+work_queue& work_queue::get(pn_session_t* s) {
     return get(pn_session_connection(s));
 }
 
-event_loop& event_loop::get(pn_link_t* l) {
+work_queue& work_queue::get(pn_link_t* l) {
     return get(pn_link_session(l));
 }
 

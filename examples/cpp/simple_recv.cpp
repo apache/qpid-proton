@@ -30,7 +30,6 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/value.hpp>
 
 #include <iostream>
@@ -43,7 +42,6 @@ class simple_recv : public proton::messaging_handler {
     std::string url;
     std::string user;
     std::string password;
-    proton::receiver receiver;
     int expected;
     int received;
 
@@ -55,7 +53,7 @@ class simple_recv : public proton::messaging_handler {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
-        receiver = c.open_receiver(url, co);
+        c.open_receiver(url, co);
         std::cout << "simple_recv listening on " << url << std::endl;
     }
 

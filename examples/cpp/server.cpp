@@ -27,7 +27,6 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/url.hpp>
 
@@ -49,9 +48,7 @@ class server : public proton::messaging_handler {
     server(const std::string &u) : url(u) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        connection = c.connect(url);
-        connection.open_receiver(url.path());
-
+        c.open_receiver(url);
         std::cout << "server connected to " << url << std::endl;
     }
 

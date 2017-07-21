@@ -24,6 +24,8 @@
 #include <string>
 #include <iosfwd>
 
+#include "contexts.hpp"
+
 /**@file
  *
  * Assorted internal proton utilities.
@@ -65,6 +67,7 @@ class terminus;
 class source;
 class target;
 class reactor;
+class messaging_handler;
 
 std::string error_str(long code);
 
@@ -99,11 +102,9 @@ template <> struct wrapped<transfer> { typedef pn_delivery_t type; };
 template <> struct wrapped<tracker> { typedef pn_delivery_t type; };
 template <> struct wrapped<delivery> { typedef pn_delivery_t type; };
 template <> struct wrapped<error_condition> { typedef pn_condition_t type; };
-template <> struct wrapped<acceptor> { typedef pn_acceptor_t type; }; // TODO aconway 2016-05-13: reactor only
 template <> struct wrapped<terminus> { typedef pn_terminus_t type; };
 template <> struct wrapped<source> { typedef pn_terminus_t type; };
 template <> struct wrapped<target> { typedef pn_terminus_t type; };
-template <> struct wrapped<reactor> { typedef pn_reactor_t type; };
 
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_data_t> { typedef internal::data type; };
@@ -115,9 +116,7 @@ template <> struct wrapper<pn_session_t> { typedef session type; };
 template <> struct wrapper<pn_link_t> { typedef link type; };
 template <> struct wrapper<pn_delivery_t> { typedef transfer type; };
 template <> struct wrapper<pn_condition_t> { typedef error_condition type; };
-template <> struct wrapper<pn_acceptor_t> { typedef acceptor type; };
 template <> struct wrapper<pn_terminus_t> { typedef terminus type; };
-template <> struct wrapper<pn_reactor_t> { typedef reactor type; };
 
 // Factory for wrapper types
 template <class T>
@@ -127,12 +126,19 @@ public:
     static typename wrapped<T>::type* unwrap(const T& t) { return t.pn_object(); }
 };
 
-// Get attachments for various proton-c types
-template <class T>
-inline pn_record_t* get_attachments(T*);
+template <class T> struct context {};
+template <> struct context<link> {typedef link_context type; };
+template <> struct context<receiver> {typedef link_context type; };
+template <> struct context<sender> {typedef link_context type; };
+template <> struct context<session> {typedef session_context type; };
+template <> struct context<connection> {typedef connection_context type; };
 
-template <> inline pn_record_t* get_attachments(pn_session_t* s) { return pn_session_attachments(s); }
-template <> inline pn_record_t* get_attachments(pn_link_t* l) { return pn_link_attachments(l); }
+template <class T>
+inline void set_messaging_handler(T t, messaging_handler* mh) { context<T>::type::get(factory<T>::unwrap(t)).handler = mh; }
+
+template <class T>
+inline messaging_handler* get_messaging_handler(T* t) { return context<typename internal::wrapper<T>::type>::type::get(t).handler; }
+
 }
 
 template <class T>

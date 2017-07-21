@@ -19,16 +19,16 @@
 
 #include "proton/io/connection_driver.hpp"
 
-#include "proton/event_loop.hpp"
+#include "proton/container.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/uuid.hpp"
+#include "proton/work_queue.hpp"
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "msg.hpp"
 #include "proton_bits.hpp"
-#include "proton_event.hpp"
 
 #include <proton/connection.h>
 #include <proton/transport.h>
@@ -47,22 +47,11 @@ void connection_driver::init() {
     }
 }
 
-connection_driver::connection_driver() : handler_(0), container_(0) { init(); }
+connection_driver::connection_driver() : handler_(0) { init(); }
 
-connection_driver::connection_driver(class container& cont) : handler_(0), container_(&cont) {
+connection_driver::connection_driver(const std::string& id) : container_id_(id), handler_(0) {
     init();
-    connection_context& ctx = connection_context::get(unwrap(connection()));
-    ctx.container = container_;
 }
-
-#if PN_CPP_HAS_RVALUE_REFERENCES
-connection_driver::connection_driver(class container& cont, event_loop&& loop) : handler_(0), container_(&cont) {
-    init();
-    connection_context& ctx = connection_context::get(unwrap(connection()));
-    ctx.container = container_;
-    ctx.event_loop_ = loop.impl_.get();
-}
-#endif
 
 connection_driver::~connection_driver() {
     pn_connection_driver_destroy(&driver_);
@@ -79,10 +68,7 @@ void connection_driver::configure(const connection_options& opts, bool server) {
 
 void connection_driver::connect(const connection_options& opts) {
     connection_options all;
-    if (container_) {
-        all.container_id(container_->id());
-        all.update(container_->client_connection_options());
-    }
+    all.container_id(container_id_);
     all.update(opts);
     configure(all, false);
     connection().open();
@@ -90,10 +76,7 @@ void connection_driver::connect(const connection_options& opts) {
 
 void connection_driver::accept(const connection_options& opts) {
     connection_options all;
-    if (container_) {
-        all.container_id(container_->id());
-        all.update(container_->server_connection_options());
-    }
+    all.container_id(container_id_);
     all.update(opts);
     configure(all, true);
 }
@@ -105,11 +88,9 @@ bool connection_driver::has_events() const {
 bool connection_driver::dispatch() {
     pn_event_t* c_event;
     while ((c_event = pn_connection_driver_next_event(&driver_)) != NULL) {
-        proton_event cpp_event(c_event, container_);
         try {
             if (handler_ != 0) {
-                messaging_adapter adapter(*handler_);
-                cpp_event.dispatch(adapter);
+                messaging_adapter::dispatch(*handler_, c_event);
             }
         } catch (const std::exception& e) {
             pn_condition_t *cond = pn_transport_condition(driver_.transport);
@@ -161,10 +142,6 @@ proton::connection connection_driver::connection() const {
 
 proton::transport connection_driver::transport() const {
     return make_wrapper(driver_.transport);
-}
-
-proton::container* connection_driver::container() const {
-    return container_;
 }
 
 }}

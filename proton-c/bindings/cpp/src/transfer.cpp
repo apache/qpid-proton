@@ -36,6 +36,8 @@ namespace proton {
 session transfer::session() const { return make_wrapper(pn_link_session(pn_delivery_link(pn_object()))); }
 connection transfer::connection() const { return make_wrapper(pn_session_connection(pn_link_session(pn_delivery_link(pn_object())))); }
 container& transfer::container() const { return connection().container(); }
+work_queue& transfer::work_queue() const { return connection().work_queue(); }
+
 
 bool transfer::settled() const { return pn_delivery_settled(pn_object()); }
 

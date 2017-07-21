@@ -28,7 +28,6 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/types.hpp>
 
@@ -42,7 +41,6 @@ class simple_send : public proton::messaging_handler {
     std::string url;
     std::string user;
     std::string password;
-    proton::sender sender;
     int sent;
     int confirmed;
     int total;
@@ -55,7 +53,7 @@ class simple_send : public proton::messaging_handler {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
-        sender = c.open_sender(url, co);
+        c.open_sender(url, co);
     }
 
     void on_sendable(proton::sender &s) OVERRIDE {

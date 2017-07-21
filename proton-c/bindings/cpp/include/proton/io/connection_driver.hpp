@@ -40,7 +40,7 @@
 
 namespace proton {
 
-class event_loop;
+class work_queue;
 class proton_handler;
 
 namespace io {
@@ -94,28 +94,11 @@ struct const_buffer {
 class
 PN_CPP_CLASS_EXTERN connection_driver {
   public:
-    /// An engine that is not associated with a proton::container or
-    /// proton::event_loop.
-    ///
-    /// Accessing the container or event_loop for this connection in
-    /// a proton::messaging_handler will throw a proton::error exception.
-    ///
+    /// An engine without a container id.
     PN_CPP_EXTERN connection_driver();
 
-    /// Create a connection driver associated with a proton::container and
-    /// optional event_loop. If the event_loop is not provided attempts to use
-    /// it will throw proton::error.
-    ///
-    /// Takes ownership of the event_loop. Note the proton::connection created
-    /// by this connection_driver can outlive the connection_driver itself if
-    /// the user pins it in memory using the proton::thread_safe<> template.
-    /// The event_loop is deleted when, and only when, the proton::connection is.
-    ///
-    PN_CPP_EXTERN connection_driver(proton::container&);
-#if PN_CPP_HAS_RVALUE_REFERENCES
-    /// @copydoc connection_driver()
-    PN_CPP_EXTERN connection_driver(proton::container&, event_loop&& loop);
-#endif
+    /// Create a connection driver associated with a container id.
+    PN_CPP_EXTERN connection_driver(const std::string&);
 
     PN_CPP_EXTERN ~connection_driver();
 
@@ -193,7 +176,6 @@ PN_CPP_CLASS_EXTERN connection_driver {
     PN_CPP_EXTERN bool dispatch();
 
     /// Get the AMQP connection associated with this connection_driver.
-    /// The event_loop is availabe via proton::thread_safe<connection>(connection())
     PN_CPP_EXTERN proton::connection connection() const;
 
     /// Get the transport associated with this connection_driver.
@@ -207,8 +189,8 @@ PN_CPP_CLASS_EXTERN connection_driver {
     connection_driver(const connection_driver&);
     connection_driver& operator=(const connection_driver&);
 
+    std::string container_id_;
     messaging_handler* handler_;
-    proton::container* container_;
     pn_connection_driver_t driver_;
 };
 

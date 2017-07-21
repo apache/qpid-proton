@@ -24,7 +24,7 @@
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
 
-#include "container_impl.hpp"
+#include "proactor_container_impl.hpp"
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
 #include "proton_bits.hpp"

@@ -1,7 +1,8 @@
-#ifndef MT_MT_CONTROLLER_HPP
-#define MT_MT_CONTROLLER_HPP
+#ifndef PROTON_CPP_EVENT_LOOP_IMPL_HPP
+#define PROTON_CPP_EVENT_LOOP_IMPL_HPP
 
 /*
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,12 +19,22 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
  */
 
-#include <proton/default_container.hpp>
-#include <memory>
+#include "proton/fwd.hpp"
 
-// Defined in whichever MT container implementation we are linked with.
-std::unique_ptr<proton::container> make_mt_container(const std::string& id);
+namespace proton {
 
-#endif // MT_MT_DEFAULT_CONTAINER.HPP
+class work_queue::impl {
+  public:
+    virtual ~impl() {};
+    virtual bool add(work f) = 0;
+    virtual void schedule(duration, work) = 0;
+    virtual void run_all_jobs() = 0;
+    virtual void finished() = 0;
+};
+
+}
+
+#endif // PROTON_CPP_EVENT_LOOP_IMPL_HPP

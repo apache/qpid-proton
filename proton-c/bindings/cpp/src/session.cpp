@@ -21,6 +21,7 @@
 #include "proton/session.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/io/link_namer.hpp"
 #include "proton/receiver_options.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/session_options.hpp"
@@ -51,6 +52,10 @@ void session::close()
 
 container& session::container() const {
     return connection().container();
+}
+
+work_queue& session::work_queue() const {
+    return connection().work_queue();
 }
 
 connection session::connection() const {

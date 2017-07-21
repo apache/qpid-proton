@@ -18,12 +18,15 @@
  */
 
 #include "proton/listener.hpp"
-#include "proton/container.hpp"
+
+#include <proton/listener.h>
+
+#include "contexts.hpp"
 
 namespace proton {
 
-listener::listener() : container_(0) {}
-listener::listener(container& c, const std::string& u) : url_(u), container_(&c) {}
-void listener::stop() { if (container_) container_->stop_listening(url_); }
+listener::listener(): listener_(0) {}
+listener::listener(pn_listener_t* l) : listener_(l) {}
+void listener::stop() { if (listener_) pn_listener_close(listener_); }
 
 }

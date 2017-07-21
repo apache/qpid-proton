@@ -20,29 +20,16 @@
 #include "proton/timestamp.hpp"
 
 #include "proton/internal/config.hpp"
+#include <proton/proactor.h>
 #include <proton/types.h>
 
 #include <iostream>
 
-#if PN_CPP_HAS_CHRONO
-#include <chrono>
-#else
-#include <time.h>
-#endif
-
 namespace proton {
 
-#if PN_CPP_HAS_CHRONO
 timestamp timestamp::now() {
-    using namespace std::chrono;
-    return timestamp( duration_cast<std::chrono::milliseconds>(system_clock::now().time_since_epoch()).count() );
+    return timestamp( pn_proactor_now() );
 }
-#else
-// Fallback with low (seconds) precision
-timestamp timestamp::now() {
-    return timestamp( time(0)*1000 );
-}
-#endif
 
 std::ostream& operator<<(std::ostream& o, timestamp ts) { return o << ts.milliseconds(); }
 
