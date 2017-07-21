@@ -1118,8 +1118,9 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
 void pn_proactor_set_timeout(pn_proactor_t *p, pn_millis_t t) {
   uv_mutex_lock(&p->lock);
   p->timeout = t;
+  // This timeout *replaces* any existing timeout
+  if (p->timeout_state == TM_NONE) ++p->active;
   p->timeout_state = TM_REQUEST;
-  ++p->active;
   uv_mutex_unlock(&p->lock);
   notify(p);
 }
