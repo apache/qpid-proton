@@ -105,13 +105,18 @@ elseif (SASL_IMPL STREQUAL none)
 endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
-if(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro" )
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
+if (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt")
 endif()
 
-if(CMAKE_C_COMPILER_ID STREQUAL "SunPro" )
+if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt")
 endif()
+
+# Set linker's extra flags for Solaris (used by SunStudio and GCC without discrimination)
+if (CMAKE_HOST_SOLARIS)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lsocket")
+endif(CMAKE_HOST_SOLARIS)
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
