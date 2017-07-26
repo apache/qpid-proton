@@ -1330,8 +1330,8 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
     const EVP_MD  *digest = EVP_get_digestbyname(digest_name);
 
     pni_ssl_t *ssl = get_ssl_internal(ssl0);
-
     X509 *cert = get_peer_certificate(ssl);
+    if (!cert) return PN_ERR;
 
     if(cert) {
         unsigned int len;
@@ -1392,6 +1392,7 @@ const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subje
 
     pni_ssl_t *ssl = get_ssl_internal(ssl0);
     X509 *cert = get_peer_certificate(ssl);
+    if (!cert) return NULL;
 
     X509_NAME *subject_name = X509_get_subject_name(cert);
 
