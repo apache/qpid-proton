@@ -2,7 +2,7 @@
 
 require 'qpid_proton.rb'
 
-messenger = Qpid::Proton::Messenger.new()
+messenger = Qpid::Proton::Messenger::Messenger.new
 messenger.outgoing_window = 10
 message = Qpid::Proton::Message.new()
 
