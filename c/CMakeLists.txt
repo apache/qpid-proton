@@ -106,11 +106,11 @@ endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
 if (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt -D_REENTRANT")
 endif()
 
 if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt -D_REENTRANT")
 endif()
 
 # Set linker's extra flags for Solaris (used by SunStudio and GCC without discrimination)
