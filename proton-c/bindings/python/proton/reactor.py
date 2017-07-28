@@ -84,20 +84,33 @@ class Reactor(Wrapper):
     def __init__(self, *handlers, **kwargs):
         Wrapper.__init__(self, kwargs.get("impl", pn_reactor), pn_reactor_attachments)
         for h in handlers:
-            self.handler.add(h)
+            self.handler.add(h, on_error=self.on_error_delegate())
 
     def _init(self):
         self.errors = []
+
+    # on_error relay handler tied to underlying C reactor.  Use when the
+    # error will always be generated from a callback from this reactor.
+    # Needed to prevent reference cycles and be compatible with wrappers.
+    class ErrorDelegate(object):
+      def __init__(self, reactor):
+        self.reactor_impl = reactor._impl
+      def on_error(self, info):
+        ractor = Reactor.wrap(self.reactor_impl)
+        ractor.on_error(info)
+
+    def on_error_delegate(self):
+        return Reactor.ErrorDelegate(self).on_error
 
     def on_error(self, info):
         self.errors.append(info)
         self.yield_()
 
     def _get_global(self):
-        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error)
+        return WrappedHandler.wrap(pn_reactor_get_global_handler(self._impl), self.on_error_delegate())
 
     def _set_global(self, handler):
-        impl = _chandler(handler, self.on_error)
+        impl = _chandler(handler, self.on_error_delegate())
         pn_reactor_set_global_handler(self._impl, impl)
         pn_decref(impl)
 
@@ -118,10 +131,10 @@ class Reactor(Wrapper):
         return pn_reactor_mark(self._impl)
 
     def _get_handler(self):
-        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error)
+        return WrappedHandler.wrap(pn_reactor_get_handler(self._impl), self.on_error_delegate())
 
     def _set_handler(self, handler):
-        impl = _chandler(handler, self.on_error)
+        impl = _chandler(handler, self.on_error_delegate())
         pn_reactor_set_handler(self._impl, impl)
         pn_decref(impl)
 
@@ -164,13 +177,13 @@ class Reactor(Wrapper):
         self._check_errors()
 
     def schedule(self, delay, task):
-        impl = _chandler(task, self.on_error)
+        impl = _chandler(task, self.on_error_delegate())
         task = Task.wrap(pn_reactor_schedule(self._impl, secs2millis(delay), impl))
         pn_decref(impl)
         return task
 
     def acceptor(self, host, port, handler=None):
-        impl = _chandler(handler, self.on_error)
+        impl = _chandler(handler, self.on_error_delegate())
         aimpl = pn_reactor_acceptor(self._impl, unicode2utf8(host), str(port), impl)
         pn_decref(impl)
         if aimpl:
@@ -181,7 +194,7 @@ class Reactor(Wrapper):
     def connection(self, handler=None):
         """Deprecated: use connection_to_host() instead
         """
-        impl = _chandler(handler, self.on_error)
+        impl = _chandler(handler, self.on_error_delegate())
         result = Connection.wrap(pn_reactor_connection(self._impl, impl))
         if impl: pn_decref(impl)
         return result
@@ -215,7 +228,7 @@ class Reactor(Wrapper):
         return utf82unicode(_url)
 
     def selectable(self, handler=None):
-        impl = _chandler(handler, self.on_error)
+        impl = _chandler(handler, self.on_error_delegate())
         result = Selectable.wrap(pn_reactor_selectable(self._impl))
         if impl:
             record = pn_selectable_attachments(result._impl)

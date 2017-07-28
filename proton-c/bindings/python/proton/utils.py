@@ -137,10 +137,10 @@ class BlockingReceiver(BlockingLink):
     def __del__(self):
         self.fetcher = None
         # The next line causes a core dump if the Proton-C reactor finalizes
-        # first.  The self.container reference prevents reactor finalization
-        # until after it is set to None.
-        self.link.handler = None
-        self.container = None
+        # first.  The self.container reference prevents out of order reactor
+        # finalization. It may not be set if exception in BlockingLink.__init__
+        if hasattr(self, "container"):
+            self.link.handler = None  # implicit call to reactor
 
     def receive(self, timeout=False):
         if not self.fetcher:
@@ -208,9 +208,16 @@ class BlockingConnection(Handler):
         self.container.timeout = self.timeout
         self.container.start()
         self.url = Url(url).defaults()
-        self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False, heartbeat=heartbeat, **kwargs)
-        self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
-                  msg="Opening connection")
+        self.conn = None
+        failed = True
+        try:
+            self.conn = self.container.connect(url=self.url, handler=self, ssl_domain=ssl_domain, reconnect=False, heartbeat=heartbeat, **kwargs)
+            self.wait(lambda: not (self.conn.state & Endpoint.REMOTE_UNINIT),
+                      msg="Opening connection")
+            failed = False
+        finally:
+            if failed and self.conn:
+                self.close()
 
     def create_sender(self, address, handler=None, name=None, options=None):
         return BlockingSender(self, self.container.create_sender(self.conn, address, name=name, handler=handler, options=options))

@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import heapq, logging, os, re, socket, time, types
+import heapq, logging, os, re, socket, time, types, weakref
 
 from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
 from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
@@ -390,9 +390,9 @@ class MessagingHandler(Handler, Acking):
         self.handlers = []
         if prefetch:
             self.handlers.append(CFlowController(prefetch))
-        self.handlers.append(EndpointStateHandler(peer_close_is_error, self))
-        self.handlers.append(IncomingMessageHandler(auto_accept, self))
-        self.handlers.append(OutgoingMessageHandler(auto_settle, self))
+        self.handlers.append(EndpointStateHandler(peer_close_is_error, weakref.proxy(self)))
+        self.handlers.append(IncomingMessageHandler(auto_accept, weakref.proxy(self)))
+        self.handlers.append(OutgoingMessageHandler(auto_settle, weakref.proxy(self)))
         self.fatal_conditions = ["amqp:unauthorized-access"]
 
     def on_transport_error(self, event):

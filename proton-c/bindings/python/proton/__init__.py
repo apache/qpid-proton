@@ -2324,7 +2324,7 @@ class Endpoint(object):
     from . import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
-      on_error = ractor.on_error
+      on_error = ractor.on_error_delegate()
     else:
       on_error = None
     record = self._get_attachments()
@@ -2334,7 +2334,7 @@ class Endpoint(object):
     from . import reactor
     ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
     if ractor:
-      on_error = ractor.on_error
+      on_error = ractor.on_error_delegate()
     else:
       on_error = None
     impl = _chandler(handler, on_error)
@@ -4110,9 +4110,10 @@ class WrappedHandler(Wrapper):
     else:
       on_error(info)
 
-  def add(self, handler):
+  def add(self, handler, on_error=None):
     if handler is None: return
-    impl = _chandler(handler, self._on_error)
+    if on_error is None: on_error = self._on_error
+    impl = _chandler(handler, on_error)
     pn_handler_add(self._impl, impl)
     pn_decref(impl)
 
