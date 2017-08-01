@@ -17,14 +17,44 @@
 # under the License.
 #
 
-include(cpp.cmake) # Compiler checks
+# This effectively checks for cmake version 3.1 or later
+if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
+  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_EXTENSIONS OFF)
+# AStitcher 20170804: Disabled for present - work on this when Windows C++ works
+#  cmake_minimum_required(VERSION 3.1)
+#  include(WriteCompilerDetectionHeader)
+#  write_compiler_detection_header(
+#    FILE cpp_features.h
+#    PREFIX PN
+#    COMPILERS GNU Clang MSVC SunPro
+#    FEATURES ${CMAKE_CXX_COMPILE_FEATURES}
+#    ALLOW_UNKNOWN_COMPILERS)
+  if (MSVC)  # Compiler feature checks only needed for Visual Studio in this case
+    include(cpp.cmake)
+  endif()
+else ()
+  include(CheckCXXCompilerFlag)
+  # These flags work with GCC/Clang/SunPro compilers
+  check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
+  check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
+  if (ACCEPTS_CXX11)
+    set(CXX_STANDARD "-std=c++11")
+  elseif(ACCEPTS_CXX0X)
+    set(CXX_STANDARD "-std=c++0x")
+    include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
+  else()
+    include(cpp.cmake) # Compiler checks needed as we have no idea whats going on here!
+  endif()
+endif ()
+
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
 
-add_definitions(${CXX_WARNING_FLAGS})
+add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS})
 
 set(qpid-proton-cpp-source
   src/binary.cpp
