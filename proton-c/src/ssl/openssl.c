@@ -72,6 +72,9 @@ struct pn_ssl_domain_t {
   char *trusted_CAs;
 
   int   ref_count;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+  int default_seclevel;
+#endif
   pn_ssl_mode_t mode;
   pn_ssl_verify_mode_t verify_mode;
 
@@ -524,6 +527,9 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   // Mitigate the CRIME vulnerability
   SSL_CTX_set_options(domain->ctx, SSL_OP_NO_COMPRESSION);
 #endif
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+    domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
+#endif
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
   if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_ANONYMOUS )) {
@@ -647,6 +653,10 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   case PN_SSL_VERIFY_PEER:
   case PN_SSL_VERIFY_PEER_NAME:
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+    SSL_CTX_set_security_level(domain->ctx, domain->default_seclevel);
+#endif
+
     if (!domain->has_ca_db) {
       pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured.\n"
                  "       Use pn_ssl_domain_set_trusted_ca_db()");
@@ -685,6 +695,10 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     break;
 
   case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
+#if OPENSSL_VERSION_NUMBER >= 0x10100000
+    // Must use lowest OpenSSL security level to enable anonymous ciphers.
+    SSL_CTX_set_security_level(domain->ctx, 0);
+#endif
     SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_NONE, NULL );
     break;
 
