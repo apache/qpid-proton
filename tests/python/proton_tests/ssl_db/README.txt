@@ -33,7 +33,7 @@ The following bash script can be used to create these certificates (requires key
 rm -f *.pem *.pkcs12
 
 # Create a self-signed certificate for the CA, and a private key to sign certificate requests:
-keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -genkey -dname "O=Trust Me Inc.,CN=Trusted.CA.com" -validity 99999
+keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -genkey -dname "O=Trust Me Inc.,CN=Trusted.CA.com" -validity 99999 -ext bc:c=ca:true,pathlen:0 -ext ku:c=digitalSignature,keyCertSign -ext ExtendedkeyUsage=serverAuth,clientAuth
 openssl pkcs12 -nokeys -passin pass:ca-password -in ca.pkcs12 -passout pass:ca-password -out ca-certificate.pem
 
 # Create a certificate request for the server certificate.  Use the CA's certificate to sign it:
@@ -49,10 +49,10 @@ keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -
 openssl pkcs12 -nocerts -passin pass:client-password -in client.pkcs12 -passout pass:client-password -out client-private-key.pem
 
 # Create another client certificate with a different subject line
-keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate1 -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1,C=US,ST=ST,L=City,OU=Dev" -validity 99999
-keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate1 -keypass client-password -certreq -file client-request1.pem
+keytool -storetype pkcs12 -keystore client1.pkcs12 -storepass client-password -alias client-certificate1 -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1,C=US,ST=ST,L=City,OU=Dev" -validity 99999
+keytool -storetype pkcs12 -keystore client1.pkcs12 -storepass client-password -alias client-certificate1 -keypass client-password -certreq -file client-request1.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile client-request1.pem -outfile client-certificate1.pem
-openssl pkcs12 -nocerts -passin pass:client-password -in client.pkcs12 -passout pass:client-password -out client-private-key1.pem
+openssl pkcs12 -nocerts -passin pass:client-password -in client1.pkcs12 -passout pass:client-password -out client-private-key1.pem
 
 # Create a "bad" certificate - not signed by a trusted authority
 keytool -storetype pkcs12 -keystore bad-server.pkcs12 -storepass server-password -alias bad-server -keypass server-password -genkey -dname "O=Not Trusted Inc,CN=127.0.0.1" -validity 99999
@@ -60,10 +60,10 @@ openssl pkcs12 -nocerts -passin pass:server-password -in bad-server.pkcs12 -pass
 openssl pkcs12 -nokeys  -passin pass:server-password -in bad-server.pkcs12 -passout pass:server-password -out bad-server-certificate.pem
 
 # Create a server certificate with several alternate names, including a wildcarded common name:
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -genkeypair -dname "O=Server,CN=*.prefix*.domain.com" -validity 99999
-keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -certreq -file server-wc-request.pem
+keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -genkeypair -dname "O=Server,CN=*.prefix*.domain.com" -validity 99999
+keytool -ext san=dns:alternate.name.one.com,dns:another.name.com -storetype pkcs12 -keystore server-wc.pkcs12 -storepass server-password -alias server-wc-certificate -keypass server-password -certreq -file server-wc-request.pem
 keytool -ext san=dns:alternate.name.one.com,dns:another.name.com  -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-wc-request.pem -outfile server-wc-certificate.pem
-openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
+openssl pkcs12 -nocerts -passin pass:server-password -in server-wc.pkcs12 -passout pass:server-password -out server-wc-private-key.pem
 
 # Create pkcs12 versions of the above certificates (for Windows SChannel)
 # The CA certificate store/DB is created without public keys.
