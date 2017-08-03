@@ -19,8 +19,10 @@
 
 os: linux
 sudo: false
-language: python
-python: 2.7
+language: cpp
+compiler:
+- gcc
+- clang
 
 addons:
   apt:
@@ -39,8 +41,8 @@ addons:
     - golang
 
 install:
-- pip install --upgrade pip
-- pip install tox
+- pip install --user --upgrade pip
+- pip install --user tox
 - gem install rspec
 - gem install simplecov || true
 - gem install minitest
