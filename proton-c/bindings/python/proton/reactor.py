@@ -864,6 +864,11 @@ class Container(Reactor):
                     if hasattr(event.delivery, "transaction"):
                         event.transaction = event.delivery.transaction
                         event.delivery.transaction.handle_outcome(event)
+
+                def on_unhandled(self, method, event):
+                    if handler:
+                        event.dispatch(handler)
+
             context._txn_ctrl = self.create_sender(context, None, name='txn-ctrl', handler=InternalTransactionHandler())
             context._txn_ctrl.target.type = Terminus.COORDINATOR
             context._txn_ctrl.target.capabilities.put_object(symbol(u'amqp:local-transactions'))
