@@ -54,20 +54,12 @@ list(APPEND SWIG_MODULE_cproton_perl_EXTRA_DEPS
     ${PROTON_HEADERS}
 )
 swig_add_module(cproton_perl perl perl.i)
+set_target_properties(cproton_perl PROPERTIES PREFIX "")
 swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
-if ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.so
         DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
-        COMPONENT Perl
-        )
-else()
-  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libcproton_perl.so
-        RENAME cproton_perl.so
-        DESTINATION ${PERL_VENDORARCH_DIR}/auto/cproton_perl
-        COMPONENT Perl
-        )
-endif ((${CMAKE_MAJOR_VERSION} EQUAL 2) AND (${CMAKE_MINOR_VERSION} LESS 8))
+        COMPONENT Perl)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/cproton_perl.pm
         DESTINATION ${PERL_VENDORARCH_DIR}
