@@ -57,7 +57,7 @@ include_directories("${NODE_ROOT_DIR}/deps/uv/include")
 set(CMAKE_CXX_CREATE_SHARED_MODULE ${CMAKE_CXX_CREATE_SHARED_LIBRARY})
 set(CMAKE_SWIG_FLAGS "-node;-I${CMAKE_CURRENT_SOURCE_DIR}/../../include")
 set_source_files_properties(javascript.i PROPERTIES CPLUSPLUS ON)
-swig_add_module(cproton javascript javascript.i)
+swig_add_library(cproton LANGUAGE javascript SOURCES javascript.i)
 set_target_properties (cproton PROPERTIES LINKER_LANGUAGE CXX)
 list(APPEND SWIG_MODULE_cproton_javascript_EXTRA_DEPS
   ${CMAKE_CURRENT_SOURCE_DIR}/../../proton-c/include/proton/cproton.i

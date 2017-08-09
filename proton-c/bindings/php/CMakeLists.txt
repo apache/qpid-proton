@@ -34,7 +34,7 @@ list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
-swig_add_module(cproton php ${CMAKE_CURRENT_SOURCE_DIR}/php.i)
+swig_add_library(cproton LANGUAGE php SOURCES php.i)
 set_source_files_properties(${swig_generated_file_fullname} PROPERTIES COMPILE_FLAGS "${PHP_INCLUDES}")
 swig_link_libraries(cproton ${BINDING_DEPS})
 # PHP modules must be linked with unresolved symbols as they are presumably satisfied only when loaded by php itself

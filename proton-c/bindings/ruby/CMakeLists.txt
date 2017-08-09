@@ -26,7 +26,7 @@ list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
 )
 
 include_directories (${RUBY_INCLUDE_PATH})
-swig_add_module(cproton-ruby ruby ruby.i)
+swig_add_library(cproton-ruby LANGUAGE ruby SOURCES ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 
 # set a compiler macro to relay the Ruby version to the extension.

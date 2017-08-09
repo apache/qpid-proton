@@ -53,7 +53,7 @@ list(APPEND SWIG_MODULE_cproton_perl_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
-swig_add_module(cproton_perl perl perl.i)
+swig_add_library(cproton_perl LANGUAGE perl SOURCES perl.i)
 set_target_properties(cproton_perl PROPERTIES PREFIX "")
 swig_link_libraries(cproton_perl ${BINDING_DEPS} ${PERL_LIBRARY})
 
