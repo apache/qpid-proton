@@ -130,6 +130,7 @@ const char *pn_code(int code)
   case PN_ARG_ERR: return "PN_ARG_ERR";
   case PN_TIMEOUT: return "PN_TIMEOUT";
   case PN_INTR: return "PN_INTR";
+  case PN_INPROGRESS: return "PN_INPROGRESS";
   case PN_OUT_OF_MEMORY: return "PN_OUT_OF_MEMORY";
   default: return "<unknown>";
   }
