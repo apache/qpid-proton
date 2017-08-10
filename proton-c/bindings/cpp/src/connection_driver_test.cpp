@@ -32,6 +32,7 @@
 #include "proton/sender_options.hpp"
 #include "proton/source_options.hpp"
 #include "proton/thread_safe.hpp"
+#include "proton/transport.hpp"
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"
 
@@ -87,14 +88,17 @@ struct in_memory_driver : public connection_driver {
             throw test::error("no activity, interrupting test");
     }
 
-    void process() {
+    timestamp process(timestamp t = timestamp()) {
         check_idle();
         if (!dispatch())
             throw test::error("unexpected close: "+connection().error().what());
+        timestamp next_tick;
+        if (t!=timestamp()) next_tick = tick(t);
         do_read();
         do_write();
         check_idle();
         dispatch();
+        return next_tick;
     }
 };
 
@@ -115,12 +119,43 @@ struct driver_pair {
     void process() { a.process(); b.process(); }
 };
 
-template <class S> typename S::value_type quick_pop(S& s) {
-    ASSERT(!s.empty());
-    typename S::value_type x = s.front();
-    s.pop_front();
-    return x;
-}
+/// A pair of drivers that talk to each other in-memory, simulating a connection.
+/// This version also simulates the passage of time
+struct timed_driver_pair {
+    duration timeout;
+    byte_stream ab, ba;
+    in_memory_driver a, b;
+    timestamp now;
+
+    timed_driver_pair(duration t, const connection_options& oa0, const connection_options& ob0,
+                const std::string& name=""
+    ) :
+        timeout(t),
+        a(ba, ab, name+"a"), b(ab, ba, name+"b"),
+        now(100100100)
+    {
+        connection_options oa(oa0);
+        connection_options ob(ob0);
+        a.connect(oa.idle_timeout(t));
+        b.accept(ob.idle_timeout(t));
+    }
+
+    void process_untimed() { a.process(); b.process(); }
+    void process_timed_succeed() {
+        timestamp anow = now + timeout - duration(100);
+        timestamp bnow = now + timeout - duration(100);
+        a.process(anow);
+        b.process(bnow);
+        now = std::max(anow, bnow);
+    }
+    void process_timed_fail() {
+        timestamp anow = now + timeout + timeout + duration(100);
+        timestamp bnow = now + timeout + timeout + duration(100);
+        a.process(anow);
+        b.process(bnow);
+        now = std::max(anow, bnow);
+    }
+};
 
 /// A handler that records incoming endpoints, errors etc.
 struct record_handler : public messaging_handler {
@@ -161,6 +196,13 @@ struct record_handler : public messaging_handler {
         messages.push_back(m);
     }
 };
+
+template <class S> typename S::value_type quick_pop(S& s) {
+    ASSERT(!s.empty());
+    typename S::value_type x = s.front();
+    s.pop_front();
+    return x;
+}
 
 struct namer : public io::link_namer {
     char name;
@@ -340,6 +382,52 @@ void test_message() {
     ASSERT_EQUAL(value("b"), m2.message_annotations().get("a"));
 }
 
+void test_message_timeout_succeed() {
+    // Verify a message arrives intact
+    record_handler ha, hb;
+    timed_driver_pair d(duration(2000), ha, hb);
+
+    proton::sender s = d.a.connection().open_sender("x");
+    d.process_timed_succeed();
+    proton::message m("barefoot_timed_succeed");
+    m.properties().put("x", "y");
+    m.message_annotations().put("a", "b");
+    s.send(m);
+
+    while (hb.messages.size() == 0)
+        d.process_timed_succeed();
+
+    proton::message m2 = quick_pop(hb.messages);
+    ASSERT_EQUAL(value("barefoot_timed_succeed"), m2.body());
+    ASSERT_EQUAL(value("y"), m2.properties().get("x"));
+    ASSERT_EQUAL(value("b"), m2.message_annotations().get("a"));
+}
+
+void test_message_timeout_fail() {
+    // Verify a message arrives intact
+    record_handler ha, hb;
+    timed_driver_pair d(duration(2000), ha, hb);
+
+    proton::sender s = d.a.connection().open_sender("x");
+    d.process_timed_fail();
+    proton::message m("barefoot_timed_fail");
+    m.properties().put("x", "y");
+    m.message_annotations().put("a", "b");
+    s.send(m);
+
+    d.process_timed_fail();
+
+    ASSERT_THROWS(test::error,
+        while (hb.messages.size() == 0) {
+            d.process_timed_fail();
+        }
+    );
+
+    ASSERT_EQUAL(1u, hb.transport_errors.size());
+    ASSERT_EQUAL("amqp:resource-limit-exceeded: local-idle-timeout expired", d.b.transport().error().what());
+    ASSERT_EQUAL(1u, ha.connection_errors.size());
+    ASSERT_EQUAL("amqp:resource-limit-exceeded: local-idle-timeout expired", d.a.connection().error().what());
+}
 }
 
 int main(int argc, char** argv) {
@@ -349,7 +437,9 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_driver_disconnected());
     RUN_ARGV_TEST(failed, test_no_container());
     RUN_ARGV_TEST(failed, test_spin_interrupt());
-    RUN_ARGV_TEST(failed, test_message());
     RUN_ARGV_TEST(failed, test_link_filters());
+    RUN_ARGV_TEST(failed, test_message());
+    RUN_ARGV_TEST(failed, test_message_timeout_succeed());
+    RUN_ARGV_TEST(failed, test_message_timeout_fail());
     return failed;
 }

@@ -56,6 +56,7 @@ inline bool operator==(timestamp x, timestamp y) { return x.milliseconds() == y.
 inline bool operator<(timestamp x, timestamp y) { return x.milliseconds() < y.milliseconds(); }
 
 inline timestamp operator+(timestamp ts, duration d) { return timestamp(ts.milliseconds() + d.milliseconds()); }
+inline timestamp operator-(timestamp ts, duration d) { return timestamp(ts.milliseconds() - d.milliseconds()); }
 inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.milliseconds() - t1.milliseconds()); }
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
 /// @}

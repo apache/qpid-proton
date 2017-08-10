@@ -22,20 +22,14 @@
  *
  */
 
-#include "../internal/config.hpp"
-#include "../connection.hpp"
 #include "../connection_options.hpp"
-#include "../error.hpp"
 #include "../error_condition.hpp"
-#include "../internal/export.hpp"
-#include "../internal/pn_unique_ptr.hpp"
-#include "../transport.hpp"
-#include "../types.hpp"
+#include "../fwd.hpp"
+#include "../internal/config.hpp"
+#include "../types_fwd.hpp"
 
 #include <proton/connection_driver.h>
 
-#include <cstddef>
-#include <utility>
 #include <string>
 
 namespace proton {
@@ -144,6 +138,15 @@ PN_CPP_CLASS_EXTERN connection_driver {
     /// Indicate that the write side of the transport has closed and no more data can be written.
     /// Note that there may still be events to dispatch() or data to read.
     PN_CPP_EXTERN void write_close();
+
+    /// Indicate that time has passed
+    ///
+    /// @return the expiration time of the next unexpired timer. You must arrange to call tick()
+    /// no later than this expiration time. In practice this will mean calling tick() every time
+    /// there is anything read or written, and if nothing is read or written then as soon as possible
+    /// after the returned timestamp (so you will probably need to set a platform specific timeout to
+    /// know when this occurs).
+    PN_CPP_EXTERN timestamp tick(timestamp now);
 
     /// Inform the engine that the transport been disconnected unexpectedly,
     /// without completing the AMQP connection close sequence.

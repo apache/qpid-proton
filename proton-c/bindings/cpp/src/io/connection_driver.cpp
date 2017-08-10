@@ -19,9 +19,11 @@
 
 #include "proton/io/connection_driver.hpp"
 
+#include "proton/connection.hpp"
 #include "proton/container.hpp"
 #include "proton/error.hpp"
 #include "proton/messaging_handler.hpp"
+#include "proton/transport.hpp"
 #include "proton/uuid.hpp"
 #include "proton/work_queue.hpp"
 
@@ -126,6 +128,10 @@ void connection_driver::write_done(size_t n) {
 
 void connection_driver::write_close() {
     pn_connection_driver_write_close(&driver_);
+}
+
+timestamp connection_driver::tick(timestamp now) {
+    return timestamp(pn_transport_tick(driver_.transport, now.milliseconds()));
 }
 
 void connection_driver::disconnected(const proton::error_condition& err) {
