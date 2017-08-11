@@ -119,7 +119,7 @@ module Qpid::Proton::Handler
     end
 
     def on_connection_opened(event)
-      Qpid::Proton::Event.dispatch(@delegate, :on_session_opened, event) if !@delegate.nil?
+      Qpid::Proton::Event.dispatch(@delegate, :on_connection_opened, event) if !@delegate.nil?
     end
 
     def on_session_opened(event)

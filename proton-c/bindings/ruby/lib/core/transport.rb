@@ -386,6 +386,8 @@ module Qpid::Proton
       Cproton.pn_transport_tick(@impl, now)
     end
 
+    # Create, or return existing, SSL object for the transport.
+    # @return [SASL] the SASL object
     def sasl
       SASL.new(self)
     end

@@ -180,9 +180,9 @@ void pn_sasl_config_name(pn_sasl_t *sasl0, const char *name)
 
 void pn_sasl_config_path(pn_sasl_t *sasl0, const char *dir)
 {
-    if (!pni_cyrus_config_dir) {
-      pni_cyrus_config_dir = strdup(dir);
-    }
+  if (!pni_cyrus_config_dir) {
+    pni_cyrus_config_dir = strdup(dir);
+  }
 }
 
 __attribute__((destructor))

@@ -19,7 +19,7 @@
 
 module Qpid::Proton
 
-  # A Connection option has at most one Qpid::Proton::Transport instance.
+  # A Connection has at most one Qpid::Proton::Transport instance.
   #
   class Connection < Endpoint
 
@@ -34,6 +34,19 @@ module Qpid::Proton
     # @return [String] The AMQP hostname for the connection.
     #
     proton_accessor :hostname
+
+    # @!attribute user
+    #   The user name for authentication.
+    #
+    #   A client sets authentication data with the :user and :password options
+    #   to {Container#connect}. On a server this returns the authenticated name
+    #   from the client. It makes no sense to set this on the server side.
+    #
+    #   @return [String] the user name
+    proton_accessor :user
+
+    # @private
+    proton_writer :password
 
     # @private
     proton_reader :attachments

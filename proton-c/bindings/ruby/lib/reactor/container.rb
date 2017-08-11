@@ -19,7 +19,7 @@
 
 module Qpid::Proton::Reactor
 
-  # @private
+  private
   class InternalTransactionHandler < Qpid::Proton::Handler::OutgoingMessageHandler
 
     def initialize
@@ -35,7 +35,7 @@ module Qpid::Proton::Reactor
 
   end
 
-
+  public
   # A representation of the AMQP concept of a container which, loosely
   # speaking, is something that establishes links to or from another
   # container on which messages are transferred.
@@ -74,42 +74,49 @@ module Qpid::Proton::Reactor
       end
     end
 
-    # Initiates the establishment of an AMQP connection.
+    # TODO aconway 2017-08-17: fill out options
+
+    # Connects to a remote AMQP endpoint and sends an AMQP "open" frame.
     #
-    # @param options [Hash] A hash of named arguments.
+    # @param url [#to_url] Connect to URL host:port.
+    #   If URL has user:password use them for authentication.
     #
-    def connect(options = {})
-      conn = self.connection(options[:handler])
+    # @option opts [String] :user user name for authentication if not given by URL
+    # @option opts [String] :password password for authentication if not given by URL
+    #
+    # @option opts [Numeric] :idle_timeout seconds before closing an idle connection
+    #
+    # @option opts [Boolean] :sasl_enabled Enable or disable SASL.
+    #
+    # @option opts [Boolean] :sasl_allow_insecure_mechs Allow mechanisms that disclose clear text
+    #   passwords, even over an insecure connection. By default, such mechanisms are only allowed
+    #   when SSL is enabled.
+    #
+    # @option opts [String] :sasl_allowed_mechs the allowed SASL mechanisms for use on the connection.
+    #
+    # @param url [Hash] *deprecated* if url is a Hash and opts is unspecified, treat it as opts.
+    # @option opts [#to_url] :url *deprecated* use the url parameter
+    # @option opts [Enumerable<#to_url>] :urls *deprecated* use the url parameter
+    # @option opts [#to_url] :address *deprecated* use the url parameter
+    # @option opts [#to_url] :heartbeat *deprecated* alias for :idle_timeout, but in milliseconds
+    # @return [Connection] the new connection
+    #
+    def connect(url, opts = {})
+      # Backwards compatible with old connect(options)
+      if url.is_a? Hash and opts.empty?
+        opts = url
+        url = nil
+      end
+      conn = self.connection(opts[:handler])
       conn.container = self.container_id || generate_uuid
-      connector = Connector.new(conn)
-      conn.overrides = connector
-      if !options[:url].nil?
-        connector.address = URLs.new([options[:url]])
-      elsif !options[:urls].nil?
-        connector.address = URLs.new(options[:urls])
-      elsif !options[:address].nil?
-        connector.address = URLs.new([Qpid::Proton::URL.new(options[:address])])
-      else
-        raise ::ArgumentError.new("either :url or :urls or :address required")
-      end
-
-      connector.heartbeat = options[:heartbeat] if !options[:heartbeat].nil?
-      if !options[:reconnect].nil?
-        connector.reconnect = options[:reconnect]
-      else
-        connector.reconnect = Backoff.new()
-      end
-
-      connector.ssl_domain = SessionPerConnection.new # TODO seems this should be configurable
-
-      conn.open
-
+      connector = Connector.new(conn, url, opts)
       return conn
     end
 
+    private
     def _session(context)
       if context.is_a?(Qpid::Proton::URL)
-        return self._session(self.connect(:url => context))
+        return _session(self.connect(:url => context))
       elsif context.is_a?(Qpid::Proton::Session)
         return context
       elsif context.is_a?(Qpid::Proton::Connection)
@@ -123,6 +130,7 @@ module Qpid::Proton::Reactor
       end
     end
 
+    public
     # Initiates the establishment of a link over which messages can be sent.
     #
     # @param context [String, URL] The context.
@@ -146,7 +154,7 @@ module Qpid::Proton::Reactor
         target = context.path
       end
 
-      session = self._session(context)
+      session = _session(context)
 
       sender = session.sender(opts[:name] ||
                               id(session.connection.container,
@@ -155,7 +163,7 @@ module Qpid::Proton::Reactor
         sender.target.address = target if target
         sender.handler = opts[:handler] if !opts[:handler].nil?
         sender.tag_generator = opts[:tag_generator] if !opts[:tag_gnenerator].nil?
-        self._apply_link_options(opts[:options], sender)
+        _apply_link_options(opts[:options], sender)
         sender.open
         return sender
     end
@@ -192,7 +200,7 @@ module Qpid::Proton::Reactor
         source = context.path
       end
 
-      session = self._session(context)
+      session = _session(context)
 
       receiver = session.receiver(opts[:name] ||
                                   id(session.connection.container,
@@ -201,7 +209,7 @@ module Qpid::Proton::Reactor
       receiver.source.dynamic = true if opts.has_key?(:dynamic) && opts[:dynamic]
       receiver.target.address = opts[:target] if !opts[:target].nil?
       receiver.handler = opts[:handler] if !opts[:handler].nil?
-      self._apply_link_options(opts[:options], receiver)
+      _apply_link_options(opts[:options], receiver)
       receiver.open
       return receiver
     end
@@ -236,6 +244,7 @@ module Qpid::Proton::Reactor
       return acceptor
     end
 
+    private
     def do_work(timeout = nil)
       self.timeout = timeout unless timeout.nil?
       self.process

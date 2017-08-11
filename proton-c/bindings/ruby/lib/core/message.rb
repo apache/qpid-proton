@@ -129,13 +129,13 @@ module Qpid::Proton
     end
 
     # Creates a new +Message+ instance.
-    def initialize
+    def initialize(body = nil)
       @impl = Cproton.pn_message
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
       @properties = {}
       @instructions = {}
       @annotations = {}
-      @body = nil
+      self.body = body unless body.nil?
     end
 
     def to_s

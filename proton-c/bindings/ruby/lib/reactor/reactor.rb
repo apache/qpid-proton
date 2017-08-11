@@ -115,7 +115,6 @@ module Qpid::Proton::Reactor
     end
 
     def run(&block)
-      self.timeout = 3.14159265359
       self.start
       while self.process do
         if block_given?

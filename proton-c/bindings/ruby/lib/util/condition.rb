@@ -21,6 +21,8 @@ module Qpid::Proton::Util
 
   class Condition
 
+    attr_reader :name, :description, :info
+
     def initialize(name, description = nil, info = nil)
       @name = name
       @description = description

@@ -22,7 +22,12 @@ module Qpid::Proton::Reactor
   class URLs
 
     def initialize(values)
-      @values = [values].flatten
+      @values = values
+      if @values.is_a? Enumerable
+        @values = @values.map { |u| u.to_url }
+      else
+        @values = [values.to_url]
+      end
       @iter = @values.each
     end
 

@@ -28,19 +28,7 @@ module Qpid::Proton
   # The peer acting as the SASL server must provide authentication against the
   # received credentials.
   #
-  # @example
-  #   # SCENARIO: the remote endpoint has not initialized their connection
-  #   #           then the local endpoint, acting as a SASL server, decides
-  #   #           to allow an anonymous connection.
-  #   #
-  #   #           The SASL layer locally assumes the role of server and then
-  #   #           enables anonymous authentication for the remote endpoint.
-  #   #
-  #   sasl = @transport.sasl
-  #   sasl.server
-  #   sasl.mechanisms("ANONYMOUS")
-  #   sasl.done(Qpid::Proton::SASL::OK)
-  #
+  # @note Do not instantiate directly, use {Transport#sasl} to create a SASL object.
   class SASL
 
     # Negotation has not completed.
@@ -50,45 +38,89 @@ module Qpid::Proton
     # Authentication failed due to bad credentials.
     AUTH = Cproton::PN_SASL_AUTH
 
-    # Constructs a new instance for the given transport.
-    #
-    # @param transport [Transport] The transport.
-    #
-    # @private A SASL should be fetched only from its Transport
-    #
+    private
+
+    include Util::SwigHelper
+    PROTON_METHOD_PREFIX = "pn_sasl"
+
+    public
+
+    # @private
+    # @note Do not instantiate directly, use {Transport#sasl} to create a SASL object.
     def initialize(transport)
       @impl = Cproton.pn_sasl(transport.impl)
     end
 
-    # Sets the acceptable SASL mechanisms.
-    #
-    # @param mechanisms [String] The space-delimited set of mechanisms.
-    #
-    # @example Use anonymous SASL authentication.
-    #  @sasl.mechanisms("GSSAPI CRAM-MD5 PLAIN")
-    #
-    def mechanisms(mechanisms)
-      Cproton.pn_sasl_mechanisms(@impl, mechanisms)
+    # @!attribute allow_insecure_mechs
+    #   @return [Bool] true if clear text authentication is allowed on insecure connections.
+    proton_accessor :allow_insecure_mechs
+
+    # @!attribute user [r]
+    #   @return [String] the authenticated user name
+    proton_reader :user
+
+    # Set the mechanisms allowed for SASL negotation
+    # @param mechanisms [String] space-delimited list of allowed mechanisms
+    def allowed_mechs=(mechanisms)
+      Cproton.pn_sasl_allowed_mechs(@impl, mechanisms)
     end
 
-    # Returns the outcome of the SASL negotiation.
-    #
-    # @return [Integer] The outcome.
-    #
-    def outcome
-      outcome = Cprotn.pn_sasl_outcome(@impl)
-      return nil if outcome == NONE
-      outcome
+    # @deprecated use {#allowed_mechs=}
+    def mechanisms(m)
+      self.allowed_mechs = m
     end
 
-    # Set the condition of the SASL negotiation.
+    # True if extended SASL negotiation is supported
     #
-    # @param outcome [Integer] The outcome.
+    # All implementations of Proton support ANONYMOUS and EXTERNAL on both
+    # client and server sides and PLAIN on the client side.
     #
-    def done(outcome)
-      Cproton.pn_sasl_done(@impl, outcome)
+    # Extended SASL implememtations use an external library (Cyrus SASL)
+    # to support other mechanisms.
+    #
+    # @return [Bool] true if extended SASL negotiation is supported
+    def self.extended?()
+      Cproton.pn_sasl_extended()
     end
 
+    # Set the sasl configuration path
+    #
+    # This is used to tell SASL where to look for the configuration file.
+    # In the current implementation it can be a colon separated list of directories.
+    #
+    # The environment variable PN_SASL_CONFIG_PATH can also be used to set this path,
+    # but if both methods are used then this pn_sasl_config_path() will take precedence.
+    #
+    # If not set the underlying implementation default will be used.
+    #
+    # @param path the configuration path
+    #
+    def self.config_path=(path)
+      Cproton.pn_sasl_config_path(nil, path)
+      path
+    end
+
+    # @deprecated use {config_path=}
+    def self.config_path(path)
+      self.config_path = path
+    end
+
+    # Set the configuration file name, without extension
+    #
+    # The name with an a ".conf" extension will be searched for in the
+    # configuration path.  If not set, it defaults to "proton-server" or
+    # "proton-client" for a server (incoming) or client (outgoing) connection
+    # respectively.
+    #
+    # @param name the configuration file name without extension
+    #
+    def self.config_name=(name)
+      Cproton.pn_sasl_config_name(nil, name)
+    end
+
+    # @deprecated use {config_name=}
+    def self.config_name(name)
+      self.config_name = name
+    end
   end
-
 end

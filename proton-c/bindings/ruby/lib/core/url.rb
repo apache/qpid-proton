@@ -28,11 +28,13 @@ module Qpid::Proton
     attr_reader :port
     attr_reader :path
 
+    # Parse a string, return a new URL
+    # @param url [#to_s] the URL string
     def initialize(url = nil, options = {})
       options[:defaults] = true
 
       if url
-        @url = Cproton.pn_url_parse(url)
+        @url = Cproton.pn_url_parse(url.to_s)
         if @url.nil?
           raise ::ArgumentError.new("invalid url: #{url}")
         end
@@ -64,6 +66,11 @@ module Qpid::Proton
       "#{@scheme}://#{@username.nil? ? '' : @username}#{@password.nil? ? '' : '@' + @password + ':'}#{@host}:#{@port}/#{@path}"
     end
 
+    # Return self
+    def to_url()
+      self
+    end
+
     private
 
     def defaults
@@ -71,7 +78,12 @@ module Qpid::Proton
       @host = @host || "0.0.0.0"
       @port = @port || 5672
     end
-
   end
+end
 
+class String
+  # Convert this string to a URL
+  def to_url()
+    return URL.new(self)
+  end
 end

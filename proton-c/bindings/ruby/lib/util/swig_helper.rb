@@ -86,7 +86,7 @@ module Qpid::Proton::Util
         proton_method = "#{self::PROTON_METHOD_PREFIX}_#{name}"
         # drop the trailing '?' if this is a property method
         proton_method = proton_method[0..-2] if proton_method.end_with? "?"
-        create_wrapper_method(name, proton_method)
+        create_wrapper_method(name, proton_method, options[:arg])
       end
 
       def proton_writer(name, options = {})
