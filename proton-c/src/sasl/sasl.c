@@ -439,8 +439,8 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
   while (sasl->desired_state > sasl->last_state) {
     switch (desired_state) {
     case SASL_POSTED_INIT:
-      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[sz]", SASL_INIT, sasl->selected_mechanism,
-                    out.size, out.start);
+      pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[szS]", SASL_INIT, sasl->selected_mechanism,
+                    out.size, out.start, sasl->local_fqdn);
       pni_emit(transport);
       break;
     case SASL_POSTED_MECHANISMS: {
@@ -699,6 +699,7 @@ pn_sasl_t *pn_sasl(pn_transport_t *transport)
     sasl->username = NULL;
     sasl->password = NULL;
     sasl->remote_fqdn = NULL;
+    sasl->local_fqdn = NULL;
     sasl->external_auth = NULL;
     sasl->external_ssf = 0;
     sasl->outcome = PN_SASL_NONE;
@@ -726,6 +727,7 @@ void pn_sasl_free(pn_transport_t *transport)
       free(sasl->included_mechanisms);
       free(sasl->password);
       free(sasl->external_auth);
+      free(sasl->local_fqdn);
 
       if (sasl->impl_context) {
         pni_sasl_impl_free(transport);
@@ -741,6 +743,12 @@ void pni_sasl_set_remote_hostname(pn_transport_t * transport, const char * fqdn)
 {
   pni_sasl_t *sasl = transport->sasl;
   sasl->remote_fqdn = fqdn;
+}
+
+void pnx_sasl_set_local_hostname(pn_transport_t * transport, const char * fqdn)
+{
+  pni_sasl_t *sasl = transport->sasl;
+  sasl->local_fqdn = pn_strdup(fqdn);
 }
 
 void pni_sasl_set_user_password(pn_transport_t *transport, const char *user, const char *password)

@@ -125,6 +125,7 @@ PN_EXTERN const char *pnx_sasl_get_selected_mechanism(pn_transport_t *transport)
 PN_EXTERN void  pnx_sasl_set_bytes_out(pn_transport_t *transport, pn_bytes_t bytes);
 PN_EXTERN void  pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state desired_state);
 PN_EXTERN void  pnx_sasl_set_selected_mechanism(pn_transport_t *transport, const char *mechanism);
+PN_EXTERN void  pnx_sasl_set_local_hostname(pn_transport_t * transport, const char * fqdn);
 PN_EXTERN void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *username);
 PN_EXTERN void  pnx_sasl_fail_authentication(pn_transport_t *transport);
 
