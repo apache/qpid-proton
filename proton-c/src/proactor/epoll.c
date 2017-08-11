@@ -516,6 +516,7 @@ typedef struct pconnection_t {
   struct pn_netaddr_t local, remote; /* Actual addresses */
   struct addrinfo *addrinfo;         /* Resolved address list */
   struct addrinfo *ai;               /* Current connect address */
+  pmutex rearm_mutex;                /* protects pconnection_rearm from out of order arming*/
 } pconnection_t;
 
 struct pn_listener_t {
@@ -727,6 +728,7 @@ static pconnection_t *new_pconnection_t(pn_proactor_t *p, pn_connection_t *c, bo
     psocket_error(&pc->psocket, errno, "timer setup");
     pc->disconnected = true;    /* Already failed */
   }
+  pmutex_init(&pc->rearm_mutex);
 
   pn_decref(pc);                /* Will be deleted when the connection is */
   return pc;
@@ -742,6 +744,7 @@ static void pconnection_final_free(pconnection_t *pc) {
   if (pc->addrinfo) {
     freeaddrinfo(pc->addrinfo);
   }
+  pmutex_finalize(&pc->rearm_mutex);
   pn_condition_free(pc->disconnect_condition);
   pn_incref(pc);                /* Make sure we don't do a circular free */
   pn_connection_driver_destroy(&pc->driver);
@@ -847,14 +850,16 @@ static bool pconnection_rearm_check(pconnection_t *pc) {
   }
   if (!wanted_now || pc->current_arm == wanted_now) return false;
 
+  lock(&pc->rearm_mutex);      /* unlocked in pconnection_rearm... */
   pc->psocket.epoll_io.wanted = wanted_now;
   pc->current_arm = wanted_now;
-  return true;
+  return true;                     /* ... so caller MUST call pconnection_rearm */
 }
 
 /* Call without lock */
 static inline void pconnection_rearm(pconnection_t *pc) {
   rearm(pc->psocket.proactor, &pc->psocket.epoll_io);
+  unlock(&pc->rearm_mutex);
 }
 
 static inline bool pconnection_work_pending(pconnection_t *pc) {
