@@ -108,10 +108,11 @@ class connection_options {
     /// This will override any user name that is specified in the url
     /// used for container::connect.
     /// It will be ignored if the connection is created by container::listen as
-    /// a listening connection has no user name.
+    /// a listening connection's identity is provided by the remote client.
     PN_CPP_EXTERN connection_options& user(const std::string& user);
 
     /// Set the password used to authenticate the connection
+    /// It will be ignored if the connection is created by container::listen.
     PN_CPP_EXTERN connection_options& password(const std::string& pass);
 
     /// @cond INTERNAL
