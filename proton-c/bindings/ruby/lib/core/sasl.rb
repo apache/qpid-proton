@@ -50,6 +50,18 @@ module Qpid::Proton
     # Authentication failed due to bad credentials.
     AUTH = Cproton::PN_SASL_AUTH
 
+    # @private
+    include Util::SwigHelper
+
+    # @private
+    PROTON_METHOD_PREFIX = "pn_sasl"
+
+    # @!attribute allow_insecure_mechs
+    #
+    # @return [Boolean] Attribute to allow use of clear text authentication.
+    #
+    proton_accessor :allow_insecure_mechs
+
     # Constructs a new instance for the given transport.
     #
     # @param transport [Transport] The transport.
