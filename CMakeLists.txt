@@ -155,6 +155,18 @@ endforeach()
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
+option(ENABLE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
+if (ENABLE_SANITIZERS)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined -g -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined -g -fno-omit-frame-pointer")
+endif (ENABLE_SANITIZERS)
+
+option(ENABLE_TSAN "Compile with Thread Sanitizer (TSan); incompatible with Valgrind" OFF)
+if (ENABLE_TSAN)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread -g -fno-omit-frame-pointer")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -g -fno-omit-frame-pointer")
+endif (ENABLE_TSAN)
+
 # Check for valgrind here so tests under proton-c/ and examples/ can use it.
 find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
 mark_as_advanced (VALGRIND_EXE)
@@ -165,6 +177,8 @@ if (ENABLE_VALGRIND)
     message(STATUS "Can't locate the valgrind command; no run-time error detection")
   elseif (CMAKE_BUILD_TYPE MATCHES "Coverage")
     message(STATUS "Building for coverage analysis; no run-time error detection")
+  elseif (ENABLE_SANITIZERS OR ENABLE_TSAN)
+    message(STATUS "Building with sanitizers; Valgrind is disabled")
   else ()
     set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
   endif ()
