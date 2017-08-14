@@ -440,6 +440,9 @@ static int pni_wrap_server_start(pn_transport_t *transport, const char *mech_sel
     if (!in_bytes && strcmp(mech_selected, "ANONYMOUS")==0) {
         in_bytes = "";
         in_size = 0;
+    } else if (in_bytes && strcmp(mech_selected, "CRAM-MD5")==0) {
+        in_bytes = 0;
+        in_size = 0;
     }
     result = sasl_server_start(cyrus_conn,
                                mech_selected,

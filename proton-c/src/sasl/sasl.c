@@ -460,7 +460,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
     }
     case SASL_POSTED_RESPONSE:
       if (sasl->last_state != SASL_POSTED_RESPONSE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_RESPONSE, out.size, out.start);
+        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_RESPONSE, out.size, out.start);
         pni_emit(transport);
       }
       break;
@@ -469,7 +469,7 @@ static void pni_post_sasl_frame(pn_transport_t *transport)
         desired_state = SASL_POSTED_MECHANISMS;
         continue;
       } else if (sasl->last_state != SASL_POSTED_CHALLENGE) {
-        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[z]", SASL_CHALLENGE, out.size, out.start);
+        pn_post_frame(transport, SASL_FRAME_TYPE, 0, "DL[Z]", SASL_CHALLENGE, out.size, out.start);
         pni_emit(transport);
       }
       break;

@@ -529,6 +529,14 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case 'd':
       err = pn_data_put_double(data, va_arg(ap, double));
       break;
+    case 'Z':
+      {
+	// For maximum portability, caller must pass these as two separate args, not a single struct
+        size_t size = va_arg(ap, size_t);
+        char *start = va_arg(ap, char *);
+        err = pn_data_put_binary(data, pn_bytes(size, start));
+      }
+      break;
     case 'z':
       {
 	// For maximum portability, caller must pass these as two separate args, not a single struct
