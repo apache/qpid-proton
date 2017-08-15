@@ -23,6 +23,7 @@ from proton import Collector, Connection, Delivery, Described, Endpoint, Event, 
 from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
 from select import select
 
+log = logging.getLogger("proton")
 
 class OutgoingMessageHandler(Handler):
     """
@@ -231,9 +232,9 @@ class EndpointStateHandler(Handler):
     @classmethod
     def print_error(cls, endpoint, endpoint_type):
         if endpoint.remote_condition:
-            logging.error(endpoint.remote_condition.description or endpoint.remote_condition.name)
+            log.error(endpoint.remote_condition.description or endpoint.remote_condition.name)
         elif cls.is_local_open(endpoint) and cls.is_remote_closed(endpoint):
-            logging.error("%s closed by peer" % endpoint_type)
+            log.error("%s closed by peer" % endpoint_type)
 
     def on_link_remote_close(self, event):
         if event.link.remote_condition:
@@ -403,9 +404,9 @@ class MessagingHandler(Handler, Acking):
         """
         if event.transport.condition:
             if event.transport.condition.info:
-                logging.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
+                log.error("%s: %s: %s" % (event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
             else:
-                logging.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description))
+                log.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description))
             if event.transport.condition.name in self.fatal_conditions:
                 event.connection.close()
         else:

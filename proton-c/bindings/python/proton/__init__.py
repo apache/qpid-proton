@@ -35,7 +35,10 @@ from cproton import *
 from .wrapper import Wrapper
 from proton import _compat
 
-import weakref, socket, sys, threading
+import logging, weakref, socket, sys, threading
+
+log = logging.getLogger("proton")
+log.addHandler(logging.NullHandler())
 
 try:
   import uuid
@@ -4064,17 +4067,17 @@ class WrappedHandlersChildSurrogate:
         delegate = self.delegate()
         if delegate:
             dispatch(delegate, method, event)
-    
+
 
 class WrappedHandlersProperty(object):
     def __get__(self, obj, clazz):
         if obj is None:
             return None
         return self.surrogate(obj).handlers
-    
+
     def __set__(self, obj, value):
         self.surrogate(obj).handlers = value
-        
+
     def surrogate(self, obj):
         key = "_surrogate"
         objdict = obj.__dict__
@@ -4085,7 +4088,7 @@ class WrappedHandlersProperty(object):
         return surrogate
 
 class WrappedHandler(Wrapper):
-    
+
   handlers = WrappedHandlersProperty()
 
   @classmethod
@@ -4096,7 +4099,7 @@ class WrappedHandler(Wrapper):
       handler = cls(impl)
       handler.__dict__["on_error"] = on_error
       return handler
-  
+
   def __init__(self, impl_or_constructor):
     Wrapper.__init__(self, impl_or_constructor)
     if list(self.__class__.__mro__).index(WrappedHandler) > 1:
