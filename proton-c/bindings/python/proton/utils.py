@@ -200,6 +200,11 @@ class ConnectionClosed(ConnectionException):
 class BlockingConnection(Handler):
     """
     A synchronous style connection wrapper.
+
+    This object's implementation uses OS resources.  To ensure they
+    are released when the object is no longer in use, make sure that
+    object operations are enclosed in a try block and that close() is
+    always executed on exit.
     """
     def __init__(self, url, timeout=None, container=None, ssl_domain=None, heartbeat=None, **kwargs):
         self.disconnected = False
