@@ -29,3 +29,20 @@ add_subdirectory(go)
 if (BUILD_CPP)
   add_subdirectory(cpp)
 endif()
+
+install(DIRECTORY c cpp go javascript perl php
+        DESTINATION ${PROTON_SHARE}/examples)
+
+install(DIRECTORY python
+        DESTINATION ${PROTON_SHARE}/examples
+        PATTERN "*.py"
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ
+                    WORLD_EXECUTE WORLD_READ)
+
+install(DIRECTORY ruby
+        DESTINATION ${PROTON_SHARE}/examples
+        PATTERN "*.rb"
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ
+                    WORLD_EXECUTE WORLD_READ)

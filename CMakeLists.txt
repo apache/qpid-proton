@@ -186,11 +186,6 @@ add_subdirectory(examples)
 install (FILES LICENSE README.md
          DESTINATION ${PROTON_SHARE})
 
-install (DIRECTORY examples
-         DESTINATION ${PROTON_SHARE}
-         REGEX "/examples/CMakeLists.txt$" EXCLUDE
-         PATTERN "*Config.cmake" EXCLUDE)
-
 # Generate test environment settings
 configure_file(${CMAKE_SOURCE_DIR}/config.sh.in
                ${CMAKE_BINARY_DIR}/config.sh @ONLY)
