@@ -37,8 +37,23 @@ from proton import _compat
 
 import logging, weakref, socket, sys, threading
 
+try:
+  handler = logging.NullHandler()
+except AttributeError:
+  class NullHandler(logging.Handler):
+    def handle(self, record):
+        pass
+
+    def emit(self, record):
+        pass
+
+    def createLock(self):
+        self.lock = None
+
+  handler = NullHandler()
+
 log = logging.getLogger("proton")
-log.addHandler(logging.NullHandler())
+log.addHandler(handler)
 
 try:
   import uuid
