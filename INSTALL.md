@@ -4,6 +4,27 @@ Installing Qpid Proton
 The CMake build system can build the entire codebase, including proton-c,
 and all its language bindings.
 
+Dependencies
+------------
+
+Cross-platform dependencies
+
+  - CMake 2.8.7+
+  - Swig 1.3+ (for the bindings)
+  - Python 2.6+ or 3 (for the Python binding)
+  - Ruby (for the Ruby binding)
+
+Linux dependencies
+
+  - GNU Make 3.81+
+  - GCC 4.4+
+  - Cyrus SASL 2.1+ (for SASL support)
+  - OpenSSL 1.0+ (for SSL support)
+
+Windows dependencies
+
+  - Visual Studio 2005 or newer (regular or C++ Express)
+
 CMake (Linux)
 -------------
 
@@ -26,7 +47,7 @@ language.
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-rspec rubygem-simplecov # Ruby
     $ yum install rubygem-test-unit                          # Ruby on Fedora >= 25
-    $ yum install pphp-devel                                 # PHP
+    $ yum install php-devel                                  # PHP
     $ yum install perl-devel                                 # Perl
 
     # Dependencies needed for Python docs
@@ -89,7 +110,7 @@ The following packages must be installed:
 
 Additional packages are required for the language bindings:
 
-  - swig (www.swig.org)
+  - Swig (www.swig.org)
   - Development headers and libraries for the language of choice
 
 Notes:
