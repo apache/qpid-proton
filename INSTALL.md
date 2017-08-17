@@ -1,5 +1,5 @@
-Qpid Proton Install Information
-===============================
+Installing Qpid Proton
+======================
 
 The CMake build system can build the entire codebase, including proton-c,
 and all its language bindings.
@@ -7,38 +7,39 @@ and all its language bindings.
 CMake (Linux)
 -------------
 
-The following prerequisites are required to do a full build on RPM based systems (RHEL, Fedora etc.).
-If you do not wish to build a given language binding you can omit the devel
-package for that language:
+The following prerequisites are required to do a full build on
+RPM-based systems (RHEL, Fedora, etc.).  If you do not wish to build a
+given language binding you can omit the devel package for that
+language.
 
-    # required dependencies
-    $ yum install gcc cmake libuuid-devel
+    # Required dependencies
+    $ yum install gcc make cmake libuuid-devel
 
-    # dependencies needed for ssl support
+    # Dependencies needed for SSL support
     $ yum install openssl-devel
 
-    # dependencies needed for Cyrus SASL support
+    # Dependencies needed for Cyrus SASL support
     $ yum install cyrus-sasl-devel
 
-    # dependencies needed for bindings
-    $ yum install swig          # Required for all bindings
+    # Dependencies needed for bindings
+    $ yum install swig                                       # Required for all bindings
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-rspec rubygem-simplecov # Ruby
-    $ yum install rubygem-test-unit  # Ruby on fedora >= 25
+    $ yum install rubygem-test-unit                          # Ruby on Fedora >= 25
     $ yum install pphp-devel                                 # PHP
     $ yum install perl-devel                                 # Perl
 
-    # dependencies needed for python docs
+    # Dependencies needed for Python docs
     $ yum install epydoc
 
-The following prerequisites are required to do a full build on Debian based systems (Ubuntu). 
-If you do not wish to build a given language binding you can omit the dev
-package for that language:
+The following prerequisites are required to do a full build on
+Debian-based systems (Ubuntu).  If you do not wish to build a given
+language binding you can omit the dev package for that language.
 
     # Required dependencies 
     $ apt-get install gcc cmake cmake-curses-gui uuid-dev
 
-    # dependencies needed for ssl support
+    # Dependencies needed for SSL support
     $ apt-get install libssl-dev
 
     # dependencies needed for Cyrus SASL support
@@ -50,12 +51,12 @@ package for that language:
     # dependencies needed for python docs
     $ apt-get install python-epydoc
 
-From the directory where you found this README file:
+From the directory where you found this `INSTALL.md` file:
 
     $ mkdir build
     $ cd build
 
-    # Set the install prefix. You may need to adjust depending on your
+    # Set the install prefix. You may need to adjust it depending on your
     # system.
     $ cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON
 
@@ -67,19 +68,8 @@ From the directory where you found this README file:
     $ make install
 
 When make install completes, all installed files are listed in the
-install_manifest.txt file. The contents of this file may be used to
+`install_manifest.txt` file. The contents of this file may be used to
 uninstall.
-
-Note: When SYSINSTALL_BINDINGS is enabled (ON), the
-CMAKE_INSTALL_PREFIX does not affect the location for where the
-language bindings (Python, Perl, PHP, Ruby) are installed. For those
-elements, the location is determined by the language interpreter
-itself; i.e., each interpreter is queried for the proper location for
-extensions. If you want to constrain where the Proton code is
-installed, set SYSINSTALL_BINDINGS to OFF. This will install all
-bindings to a common location under ${CMAKE_INSTALL_PREFIX}. When
-installed like this, each user will need to manually configure their
-interpreters with the respective binding location.
 
 CMake (Windows)
 ---------------
@@ -97,18 +87,18 @@ The following packages must be installed:
   - Python (www.python.org)
   - CMake (www.cmake.org)
 
-Additional packages are required for the language bindings
+Additional packages are required for the language bindings:
 
   - swig (www.swig.org)
-  - development headers and libraries for the language of choice
+  - Development headers and libraries for the language of choice
 
 Notes:
 
-  - be sure to install relevant Microsoft Service Packs and updates
-  - python.exe, cmake.exe and swig.exe  _must_ all be added to your PATH
+  - Be sure to install relevant Microsoft Service Packs and updates
+  - python.exe, cmake.exe and swig.exe _must_ all be added to your PATH
 
 To generate the Visual Studio project files, from the directory where you found
-this README file:
+this `INSTALL.md` file:
 
     > mkdir build
     > cd build
@@ -121,32 +111,33 @@ If CMake doesn't guess things correctly, useful additional arguments are:
 
 Refer to the CMake documentation for more information.
 
-Build and install from a command prompt (using msbuild)
+Build and install from a command prompt (using msbuild):
+
     > cmake --build . --target install --config RelWithDebInfo
 
-Loading the ALL_BUILD project into Visual Studio
+Loading the `ALL_BUILD` project into Visual Studio:
 
   1. Run the Microsoft Visual Studio IDE
-  2. From within the IDE, open the ALL_BUILD project file or proton
-     solution file - it should be in the 'build' directory you created
+  2. From within the IDE, open the `ALL_BUILD` project file or Proton
+     solution file - it should be in the `build` directory you created
      above.
   3. Select the appropriate configuration. RelWithDebInfo works best
      with the included CMake/CTest scripts
 
-Note that if you wish to build debug version of proton for use with
-swig bindings on Windows, you must have the appropriate debug target
+Note that if you wish to build debug version of Proton for use with
+Swig bindings on Windows, you must have the appropriate debug target
 libraries to link against.
 
-Other platforms
+Other Platforms
 ---------------
 
 Proton can use the http://libuv.org IO library on any platform where
 it is available. Install the libuv library and header files and adapt
 the instructions for building on Linux.
 
-The libuv library is not required on Linux or Windows but if you wish
+The libuv library is not required on Linux or Windows, but if you wish
 you can use it instead of the default native IO by running cmake with
-`-Dproactor=libuv`
+`-Dproactor=libuv`.
 
 Installing Language Bindings
 ----------------------------
@@ -154,23 +145,30 @@ Installing Language Bindings
 Most dynamic languages provide a way for asking where to install
 libraries in order to place them in a default search path.
 
-When SYSINSTALL_BINDINGS is disabled (OFF), Proton installs all
+When `SYSINSTALL_BINDINGS` is enabled (`ON`), the
+`CMAKE_INSTALL_PREFIX` does not affect the location for where the
+language bindings (Python, Perl, PHP, Ruby) are installed. For those
+elements, the location is determined by the language interpreter
+itself; that is, each interpreter is queried for the proper location
+for extensions.
+
+When `SYSINSTALL_BINDINGS` is disabled (`OFF`), Proton installs all
 dynamic language bindings into a central, default location:
 
     BINDINGS=${CMAKE_INSTALL_PREFIX}/${LIB_INSTALL_DIR}/proton/bindings
 
 In order to use these bindings, you'll need to configure your
-interpreter to load the bindings from the appropriate directory:
+interpreter to load the bindings from the appropriate directory.
 
- * Perl   - Add ${BINDINGS}/perl to PERL5LIB
- * PHP    - Set the PHPRC envvar to point to ${BINDINGS}/php/proton.ini
- * Python - Add ${BINDINGS}/python to PYTHONPATH
- * Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
+  - Perl   - Add ${BINDINGS}/perl to PERL5LIB
+  - PHP    - Set the PHPRC envvar to point to ${BINDINGS}/php/proton.ini
+  - Python - Add ${BINDINGS}/python to PYTHONPATH
+  - Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
 
 You can configure the build to install a specific binding to the
 location specified by the system interpreter with the
 SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of PERL,
-PHP, PYTHON, or RUBY.:
+PHP, PYTHON, or RUBY.
 
     $ cmake .. -DSYSINSTALL_PHP=ON
 
@@ -179,7 +177,6 @@ Disabling Language Bindings
 
 To disable any given language bindings, you can use the
 BUILD_[LANGUAGE] option where [LANGUAGE] is one of PERL, PHP,
-PYTHON or RUBY, e.g.:
+PYTHON or RUBY, for example:
 
     $ cmake .. -DBUILD_PHP=OFF
-
