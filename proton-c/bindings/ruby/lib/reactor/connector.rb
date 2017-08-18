@@ -31,6 +31,8 @@ module Qpid::Proton::Reactor
       @heartbeat = nil
       @reconnect = nil
       @ssl_domain = nil
+      @allow_insecure_mechs = true
+      @sasl_enabled = true
     end
 
     def on_connection_local_open(event)
@@ -77,19 +79,19 @@ module Qpid::Proton::Reactor
       connection.hostname = "#{url.host}:#{url.port}"
 
       transport = Qpid::Proton::Transport.new
+      if @sasl_enabled
+        sasl = transport.sasl
+        sasl.allow_insecure_mechs = true
+        connection.user = url.username unless url.username.nil?
+        connection.password = url.password unless url.password.nil?
+      end
+
       transport.bind(connection)
       if !@heartbeat.nil?
         transport.idle_timeout = @heartbeat
       elsif (url.scheme == "amqps") && !@ssl_domain.nil?
         @ssl = Qpid::Proton::SSL.new(transport, @ssl_domain)
         @ss.peer_hostname = url.host
-      elsif !url.username.nil?
-        sasl = transport.sasl
-        if url.username == "anonymous"
-          sasl.mechanisms("ANONYMOUS")
-        else
-          sasl.plain(url.username, url.password)
-        end
       end
     end
 

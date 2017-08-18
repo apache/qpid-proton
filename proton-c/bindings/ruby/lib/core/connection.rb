@@ -35,6 +35,18 @@ module Qpid::Proton
     #
     proton_accessor :hostname
 
+    # @!attribute user
+    #
+    # @return [String] The AMQP user for the connection.
+    #
+    proton_accessor :user
+
+    # @!attribute password
+    #
+    # @return [String] The AMQP password for the connection.
+    #
+    proton_writer   :password
+
     # @private
     proton_reader :attachments
 
