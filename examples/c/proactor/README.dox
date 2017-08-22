@@ -1,7 +1,7 @@
 /**
  * @example send.c
  *
- * Send a fixed number of messages to the "example" node.
+ * Send a fixed number of messages to the "examples" node.
  * Can be used with @ref broker.c, @ref direct.c or an external AMQP broker.
  *
  * @example receive.c

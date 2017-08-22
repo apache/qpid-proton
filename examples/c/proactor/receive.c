@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
   app.container_id = argv[i++];   /* Should be unique */
   app.host = (argc > 1) ? argv[i++] : "";
   app.port = (argc > 1) ? argv[i++] : "amqp";
-  app.amqp_address = (argc > i) ? argv[i++] : "example";
+  app.amqp_address = (argc > i) ? argv[i++] : "examples";
   app.message_count = (argc > i) ? atoi(argv[i++]) : 10;
 
   /* Create the proactor and connect */
