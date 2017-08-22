@@ -11,8 +11,8 @@ Cross-platform dependencies
 
   - CMake 2.8.7+
   - Swig 1.3+ (for the bindings)
-  - Python 2.6+ or 3 (for the Python binding)
-  - Ruby (for the Ruby binding)
+  - Python 2.6+ (for the Python binding)
+  - Ruby 1.9+ (for the Ruby binding)
 
 Linux dependencies
 
