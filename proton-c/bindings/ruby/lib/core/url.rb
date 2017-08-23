@@ -84,6 +84,6 @@ end
 class String
   # Convert this string to a URL
   def to_url()
-    return URL.new(self)
+    return Qpid::Proton::URL.new(self)
   end
 end
