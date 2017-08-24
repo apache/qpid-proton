@@ -57,6 +57,7 @@ set(qpid-proton-cpp-source
   src/receiver.cpp
   src/receiver_options.cpp
   src/reconnect_timer.cpp
+  src/returned.cpp
   src/sasl.cpp
   src/scalar_base.cpp
   src/sender.cpp
@@ -169,7 +170,6 @@ endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
 add_cpp_test(connection_driver_test)
-add_cpp_test(thread_safe_test)
 add_cpp_test(interop_test ${CMAKE_SOURCE_DIR}/tests)
 add_cpp_test(message_test)
 add_cpp_test(map_test)

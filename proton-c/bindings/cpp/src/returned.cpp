@@ -1,8 +1,4 @@
-#ifndef PROTON_FWD_HPP
-#define PROTON_FWD_HPP
-
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,51 +15,27 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
+
+#include "proton_bits.hpp"
+
+#include <proton/returned.hpp>
+#include <proton/connection.hpp>
+#include <proton/sender.hpp>
+#include <proton/receiver.hpp>
 
 namespace proton {
 
-class annotation_key;
-class connection;
-class connection_options;
-class container;
-class delivery;
-class duration;
-class error_condition;
-class event;
-class message;
-class message_id;
-class messaging_handler;
-class listen_handler;
-class listener;
-class receiver;
-class receiver_iterator;
-class receiver_options;
-class reconnect_timer;
-class sasl;
-class sender;
-class sender_iterator;
-class sender_options;
-class session;
-class session_options;
-class source_options;
-class ssl;
-class target_options;
-class tracker;
-class transport;
-class url;
-class void_function0;
-class work;
-class work_queue;
+template <class T> returned<T>::returned(const T& t) : ptr_(unwrap(t)) {}
 
-namespace io {
-
-class connection_driver;
-
+template <class T> returned<T>::operator T() const {
+    return internal::factory<T>::wrap(ptr_);
 }
 
-template <class T> class returned;
-}
+// Explicit instantiations for allowed types
 
-#endif // PROTON_FWD_HPP
+template class PN_CPP_CLASS_EXTERN returned<connection>;
+template class PN_CPP_CLASS_EXTERN returned<sender>;
+template class PN_CPP_CLASS_EXTERN returned<receiver>;
+
+}

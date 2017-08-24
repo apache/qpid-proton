@@ -22,6 +22,7 @@
 #include "proton_bits.hpp"
 
 #include "proton/container.hpp"
+#include "proton/connection.hpp"
 #include "proton/io/connection_driver.hpp"
 #include "proton/io/link_namer.hpp"
 #include "proton/link.hpp"
@@ -31,7 +32,6 @@
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
 #include "proton/source_options.hpp"
-#include "proton/thread_safe.hpp"
 #include "proton/transport.hpp"
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"

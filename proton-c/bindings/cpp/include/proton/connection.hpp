@@ -109,10 +109,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
                                          const receiver_options &);
 
-    /// @copydoc container::sender_options
+    /// @see proton::container::sender_options()
     PN_CPP_EXTERN class sender_options sender_options() const;
 
-    /// @copydoc container::receiver_options
+    /// @see container::receiver_options()
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
     /// Return all sessions on this connection.
@@ -142,7 +142,6 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @cond INTERNAL
   friend class internal::factory<connection>;
   friend class container;
-  friend class proton::thread_safe<connection>;
     /// @endcond
 };
 

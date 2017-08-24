@@ -124,6 +124,7 @@ class factory {
 public:
     static T wrap(typename wrapped<T>::type* t) { return t; }
     static typename wrapped<T>::type* unwrap(const T& t) { return t.pn_object(); }
+    static returned<T> make_returned(const T& t) { return returned<T>(t); }
 };
 
 template <class T> struct context {};
@@ -149,6 +150,11 @@ U make_wrapper(typename internal::wrapped<U>::type* t) { return internal::factor
 
 template <class T>
 typename internal::wrapped<T>::type* unwrap(const T& t) { return internal::factory<T>::unwrap(t); }
+
+template <class T>
+returned<T> make_returned(const T& t) {
+    return internal::factory<T>::make_returned(t);
+}
 
 }
 

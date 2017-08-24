@@ -14,7 +14,6 @@
 /// @file proton/duration.hpp Time duration data type
 /// @file proton/error_condition.hpp AMQP error condition
 /// @file proton/error.hpp Base exception type thrown by proton functions
-/// @file proton/event_loop.hpp
 /// @file proton/function.hpp
 /// @file proton/fwd.hpp
 /// @file proton/link.hpp
@@ -42,7 +41,6 @@
 /// @file proton/target.hpp
 /// @file proton/target_options.hpp
 /// @file proton/terminus.hpp
-/// @file proton/thread_safe.hpp
 /// @file proton/timestamp.hpp
 /// @file proton/tracker.hpp
 /// @file proton/transfer.hpp

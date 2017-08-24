@@ -30,7 +30,6 @@
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/value.hpp>
 
 #include <iostream>

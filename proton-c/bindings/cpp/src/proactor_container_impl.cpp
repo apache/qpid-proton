@@ -24,7 +24,6 @@
 #include "proton/function.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
-#include "proton/thread_safe.hpp"
 #include "proton/url.hpp"
 
 #include "proton/connection.h"
@@ -188,13 +187,13 @@ proton::connection container::impl::connect_common(
     return conn;
 }
 
-proton::returned<proton::connection> container::impl::connect(
+returned<proton::connection> container::impl::connect(
     const std::string& addr,
     const proton::connection_options& user_opts)
 {
     connection conn = connect_common(addr, user_opts);
     GUARD(lock_);
-    return make_thread_safe(conn);
+    return make_returned(conn);
 }
 
 returned<sender> container::impl::open_sender(const std::string &url, const proton::sender_options &o1, const connection_options &o2) {
@@ -203,7 +202,7 @@ returned<sender> container::impl::open_sender(const std::string &url, const prot
     connection conn = connect_common(url, o2);
 
     GUARD(lock_);
-    return make_thread_safe(conn.default_session().open_sender(proton::url(url).path(), lopts));
+    return make_returned(conn.default_session().open_sender(proton::url(url).path(), lopts));
 }
 
 returned<receiver> container::impl::open_receiver(const std::string &url, const proton::receiver_options &o1, const connection_options &o2) {
@@ -212,7 +211,7 @@ returned<receiver> container::impl::open_receiver(const std::string &url, const 
     connection conn = connect_common(url, o2);
 
     GUARD(lock_);
-    return make_thread_safe(
+    return make_returned(
         conn.default_session().open_receiver(proton::url(url).path(), lopts));
 }
 

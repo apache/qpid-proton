@@ -76,12 +76,11 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// @cond INTERNAL
   friend class internal::factory<receiver>;
   friend class receiver_iterator;
-  friend class thread_safe<receiver>;
     /// @endcond
 };
 
 /// @cond INTERNAL
-    
+
 /// An iterator of receivers.
 class receiver_iterator : public internal::iter_base<receiver, receiver_iterator> {
     explicit receiver_iterator(receiver r, pn_session_t* s = 0) :

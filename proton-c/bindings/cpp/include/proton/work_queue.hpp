@@ -40,10 +40,10 @@ namespace proton {
 /// **Experimental** - A work queue for serial execution.
 ///
 /// Event handler functions associated with a single proton::connection are called in sequence.
-/// The connection's @ref work_queue allows you to "inject" extra @ref work from any thread,
+/// The connection's proton::work_queue allows you to "inject" extra @ref work from any thread,
 /// and have it executed in the same sequence.
 ///
-/// You may also create arbitrary @ref work_queue objects backed by a @ref container that allow
+/// You may also create arbitrary proton::work_queue objects backed by a @ref container that allow
 /// other objects to have their own serialised work queues that can have work injected safely
 /// from other threads. The @ref container ensures that the work is correctly serialised.
 ///
@@ -113,7 +113,6 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
   friend class container;
   friend class io::connection_driver;
-  template <class T> friend class thread_safe;
     /// @endcond
 };
 
@@ -347,6 +346,7 @@ void schedule_work(WQ wq, duration dn, F f, A a, B b, C c, D d) {
 #else
 // The C++11 version is *much* simpler and even so more general!
 // These definitions encompass everything in the C++03 section
+
 template <class WQ, class... Rest>
 bool schedule_work(WQ wq, Rest&&... r) {
     return wq->add(std::bind(std::forward<Rest>(r)...));

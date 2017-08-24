@@ -26,7 +26,6 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
-#include "proton/thread_safe.hpp"
 
 #include <cstdlib>
 #include <ctime>

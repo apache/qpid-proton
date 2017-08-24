@@ -94,9 +94,9 @@ Done. No more messages.
 #include <proton/sender.hpp>
 #include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/url.hpp>
+#include <proton/work_queue.hpp>
 
 #include <iostream>
 #include <sstream>

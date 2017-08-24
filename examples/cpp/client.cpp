@@ -28,7 +28,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 
 #include <iostream>

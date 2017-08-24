@@ -25,7 +25,6 @@
 #include "proton/error_condition.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
-#include "proton/thread_safe.hpp"
 
 #include "proactor_container_impl.hpp"
 

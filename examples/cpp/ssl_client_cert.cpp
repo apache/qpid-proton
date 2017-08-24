@@ -28,7 +28,6 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/sasl.hpp>
 #include <proton/ssl.hpp>
-#include <proton/thread_safe.hpp>
 #include <proton/tracker.hpp>
 #include <proton/transport.hpp>
 

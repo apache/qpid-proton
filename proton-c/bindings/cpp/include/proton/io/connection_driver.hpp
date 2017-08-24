@@ -179,7 +179,6 @@ PN_CPP_CLASS_EXTERN connection_driver {
     PN_CPP_EXTERN bool dispatch();
 
     /// Get the AMQP connection associated with this connection_driver.
-    /// The event_loop is availabe via proton::thread_safe<connection>(connection())
     PN_CPP_EXTERN proton::connection connection() const;
 
     /// Get the transport associated with this connection_driver.
