@@ -39,26 +39,17 @@ def _call_pkg_config(args):
     return None
 
 
-
-def pkg_config_version_installed(package, version=None, atleast=None):
-    """Check if version of a package is is installed
+def pkg_config_installed(package):
+    """Check if a package is installed
 
     This function returns True/False depending on whether
-    the package is found and is the correct version.
+    the package is found.
 
-    :param version: The exact version of the package required
-    :param atleast: True if installed package is at least this version
+    :param package: name of the package, may include version constraints
+    compatible with pkg-config --exists syntax. e.g.:
+    "openssl >= 1.0.0 openssl < 1.1.0"
     """
-
-    if version is None and atleast is None:
-        log.fatal('package version string required')
-    elif version and atleast:
-        log.fatal('Specify either version or atleast, not both')
-
-    check = 'exact' if version else 'atleast'
-    p = _call_pkg_config(['--%s-version=%s' % (check,
-                                               version or atleast),
-                          package])
+    p = _call_pkg_config(['--exists', package])
     if p:
         out,err = p.communicate()
         if p.returncode:
