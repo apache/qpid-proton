@@ -23,6 +23,7 @@
  */
 
 #include "./fwd.hpp"
+#include "./thread_safe.hpp"
 #include "./types_fwd.hpp"
 
 #include "./internal/config.hpp"

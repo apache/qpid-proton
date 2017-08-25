@@ -108,40 +108,11 @@ alternatives.
 
 */
 
-/** @example broker.hpp
-
-Common logic for a simple "mini broker" that creates creates queues
-automatically when a client tries to send or subscribe. This file contains
-the `queue` class that queues messages and the `broker_handler` class
-that manages queues and links and transfers messages to/from clients.
-
-*/
-
 /** @example broker.cpp
 
-A simple, single-threaded broker using the `proton::container`. You can use this
-to run other examples that reqiure an intermediary, or you can use any AMQP 1.0
-broker. This broker creates queues automatically when a client tries to send or
-subscribe.
-
-*/
-
-/** @example mt/epoll_container.cpp
-
-An example implementation of the proton::container API that shows how
-to use the proton::io::connection_driver SPI to adapt the proton API
-to native IO, in this case using a multithreaded Linux epoll poller as
-the implementation.
-
-__Requires C++11__
-
-*/
-
-/** @example mt/broker.cpp
-
-A multithreaded broker, that will work on any multi-threaded container. See @ref mt/epoll_container.cpp for an example of a multi-threaded container.
-
-__Requires C++11__
+A broker using the `proton::container`. You can use this to run other examples
+that reqiure an intermediary, or you can use any AMQP 1.0 broker. This broker
+creates queues automatically when a client tries to send or subscribe.
 
 */
 
@@ -165,5 +136,15 @@ using std::function if you have C++11.
 
 A working example for accessing Service Bus session-enabled queues.
 Also provides some general notes on Service Bus usage.
+
+*/
+
+/** @example send_recv_mt.cpp
+
+A multi-threaded sender and receiver.
+
+__Requires C++11__
+
+*/
 
 */

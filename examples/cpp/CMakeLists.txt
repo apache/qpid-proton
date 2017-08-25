@@ -60,9 +60,11 @@ foreach(example
 endforeach()
 
 if(HAS_CPP11)
-  # Single-threaded examples that require C++11
+  # Examples that require C++11
   foreach(example
-      scheduled_send)
+      scheduled_send
+      send_recv_mt
+      )
     add_executable(${example} ${example}.cpp)
   endforeach()
 endif()

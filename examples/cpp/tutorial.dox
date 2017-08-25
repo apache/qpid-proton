@@ -21,11 +21,10 @@ The examples below show how to implement handlers for clients and
 servers and how to run them using the `proton::default_container`, a
 portable, easy-to-use way to build single-threaded clients or servers.
 
-Some of the examples require an AMQP *broker* that can receive, store,
-and send messages. @ref broker.hpp and @ref broker.cpp define a simple
-example broker. If run without arguments, it listens on
-`0.0.0.0:5672`, the standard AMQP port on all network interfaces. To
-use a different port or network interface:
+Some of the examples require an AMQP *broker* that can receive, store, and send
+messages. @ref broker.cpp define a simple example broker. If run without
+arguments, it listens on `0.0.0.0:5672`, the standard AMQP port on all network
+interfaces. To use a different port or network interface:
 
     broker -a <host>:<port>
 

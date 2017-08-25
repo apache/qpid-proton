@@ -16,12 +16,5 @@ The connection driver is deliberately very simple and low level. It
 performs no IO of its own, no thread-related locking, and is written
 in simple C++98-compatible code.
 
-The connection dirver can be used standalone as an AMQP translator, or
-you can implement the following two interfaces to provide a complete
-implementation of the Proton API that can run any Proton application:
 
- - `proton::container` lets the user initiate or listen for connections.
- - `proton::event_loop` lets the user serialize work with respect to a
-   connection.
 
-@see @ref mt/epoll\_container.cpp for an example.
