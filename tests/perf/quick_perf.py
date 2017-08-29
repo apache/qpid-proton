@@ -61,11 +61,10 @@ except:
 
 
 # Use Proton-C reactor-recv as a relatively fast loopback "broker" for these tests
-server = Proc(["reactor-recv", "-X", "listening", "-a", linkaddr, "-c", str(mcount), "-R"], ready="listening", 
-              skip_valgrind=True, timeout=300)
+server = Proc(["reactor-recv", "-X", "listening", "-a", linkaddr, "-c", str(mcount), "-R"], ready="listening", valgrind=False, timeout=300)
 try:
     start = time.time()
-    client = Proc(perf_target, skip_valgrind=True, timeout=300)
+    client = Proc(perf_target, valgrind=False, timeout=300)
     print client.wait_exit()
     server.wait_exit()
     end = time.time()

@@ -1,4 +1,4 @@
-#
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -58,12 +58,18 @@ class ProcError(Exception):
     """An exception that displays failed process output"""
     def __init__(self, proc, what="bad exit status"):
         self.out = proc.out.strip()
+        returncode = getattr(proc, 'returncode') # Can be missing in some cases
+        if returncode == proc.valgrind_exit:
+            self.out = \
+            "\n==NOTE== valgrind options set for speed, for more detail run command with" \
+            "\n==NOTE== e.g. --leak-check=full --history-level=full --num-callers=40" \
+            + self.out
+        msg = "%s (exit=%s) command:\n%s" % (what, returncode, " ".join(proc.args))
         if self.out:
-            msgtail = "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^\n" % self.out
+            msg += "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^" % self.out
         else:
-            msgtail = ", no output"
-        super(Exception, self, ).__init__(
-            "%s %s, code=%s%s" % (proc.args, what, getattr(proc, 'returncode', 'noreturn'), msgtail))
+            msg += "\n<<no output>>"
+        super(ProcError, self, ).__init__(msg)
 
 class NotFoundError(ProcError):
     pass
@@ -73,11 +79,7 @@ class Proc(Popen):
     'ready' pattern' Use self.out to access output (combined stdout and stderr).
     You can't set the Popen stdout and stderr arguments, they will be overwritten.
     """
-
-    if "VALGRIND" in os.environ and os.environ["VALGRIND"]:
-        vg_args = [os.environ["VALGRIND"], "--error-exitcode=42", "--quiet", "--leak-check=full"]
-    else:
-        vg_args = []
+    valgrind_exit = 42          # Special exit code for valgrind errors
 
     @property
     def out(self):
@@ -85,18 +87,23 @@ class Proc(Popen):
         # Normalize line endings, os.tmpfile() opens in binary mode.
         return self._out.read().replace('\r\n','\n').replace('\r','\n')
 
-    def __init__(self, args, skip_valgrind=False, **kwargs):
+    def __init__(self, args, valgrind=True, helgrind=False, **kwargs):
         """Start an example process"""
-        args = list(args)
-        if skip_valgrind:
-            self.args = args
-        else:
-            self.args = self.vg_args + args
+        self.args = list(args)
         self.kwargs = kwargs
         self._out = tempfile.TemporaryFile()
+        valgrind_exe = valgrind and os.getenv("VALGRIND")
+        if valgrind_exe:
+            # run valgrind for speed, not for detailed information
+            vg = [valgrind_exe, "--quiet", "--num-callers=2",
+                  "--error-exitcode=%s" % self.valgrind_exit]
+            if helgrind:
+                vg += ["--tool=helgrind", "--history-level=none"]
+            else:
+                vg += ["--tool=memcheck", "--leak-check=full",  "--leak-resolution=low"]
+            self.args = vg + self.args
+            self._out.flush()
         try:
-            if (os.getenv("PROCTEST_VERBOSE")):
-                sys.stderr.write("\nstart proc: %s\n" % self.args)
             Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
         except OSError, e:
             if e.errno == errno.ENOENT:
@@ -161,9 +168,16 @@ class ProcTestCase(unittest.TestCase):
             p.kill()
         super(ProcTestCase, self).tearDown()
 
+    # Default value for valgrind= in proc() function if not explicitly set.
+    # Override by setting a "valgrind" member in subclass or instance.
+    valgrind=True
+
     def proc(self, *args, **kwargs):
         """Return a Proc() that will be automatically killed on teardown"""
-        p = Proc(*args, **kwargs)
+        if 'valgrind' in kwargs:
+            p = Proc(*args, **kwargs)
+        else:
+            p = Proc(*args, valgrind=self.valgrind, **kwargs)
         self.procs.append(p)
         return p
 
@@ -200,6 +214,26 @@ class ProcTestCase(unittest.TestCase):
     if _tc_missing('assertMultiLineEqual'):
         def assertMultiLineEqual(self, a, b):
             self.assertEqual(a, b)
+
+def find_file(filename, path):
+    """
+    Find filename in path. Path is a list of directory names or OS path strings
+    separated with os.pathsep. return absolute path to the file or None
+
+    """
+    dirs = reduce((lambda x,y: x+y), (p.split(os.pathsep) for p in path))
+    for d in dirs:
+        if os.path.exists(os.path.join(d, filename)):
+            return os.path.abspath(os.path.join(d, filename))
+    return None
+
+def find_exes(*filenames):
+    """
+    True if all filenames in the list are found on the system PATH.
+    """
+    for f in filenames:
+        if not find_file(f, os.getenv('PATH')): return False
+    return True
 
 from unittest import main
 if __name__ == "__main__":

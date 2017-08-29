@@ -55,7 +55,7 @@ class FdLimitTest(ProcTestCase):
 
     def proc(self, *args, **kwargs):
         """Skip valgrind for all processes started by this test"""
-        return super(FdLimitTest, self).proc(*args, skip_valgrind=True, **kwargs)
+        return super(FdLimitTest, self).proc(*args, valgrind=False, **kwargs)
 
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""

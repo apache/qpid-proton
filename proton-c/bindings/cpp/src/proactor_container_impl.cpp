@@ -187,6 +187,16 @@ pn_connection_t* container::impl::make_connection_lh(
     return pnc;                 // 1 refcount from pn_connection()
 }
 
+// Takes ownership of pnc
+//
+// NOTE: After the call to start_connecton() pnc is active in a proactor thread,
+// and may even have been freed already. It is undefined to use pnc (or any
+// object belonging to it) except in appropriate handlers.
+//
+// SUBTLE NOTE: There must not be any proton::object wrappers in scope when
+// start_connecton() is called. The wrapper destructor will call pn_decref()
+// after start_connecton() which is undefined!
+//
 void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     char caddr[PN_MAX_ADDR];
     pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
@@ -261,10 +271,13 @@ returned<connection> container::impl::connect(
     const std::string& addr,
     const proton::connection_options& user_opts)
 {
-    GUARD(lock_);
     proton::url url(addr);
-    pn_connection_t *pnc = make_connection_lh(url, user_opts);
-    start_connection(url, pnc);
+    pn_connection_t* pnc = 0;
+    {
+        GUARD(lock_);
+        pnc = make_connection_lh(url, user_opts);
+    }
+    start_connection(url, pnc); // See comment on start_connection
     return make_returned<proton::connection>(pnc);
 }
 
@@ -280,8 +293,8 @@ returned<sender> container::impl::open_sender(const std::string &urlstr, const p
         pnc = make_connection_lh(url, o2);
         connection conn(make_wrapper(pnc));
         pnl = unwrap(conn.default_session().open_sender(url.path(), lopts));
-    }                                   // There must be no refcounting after here
-    start_connection(url, pnc);         // Takes ownership of pnc
+    }
+    start_connection(url, pnc); // See comment on start_connection
     return make_returned<sender>(pnl);  // Unsafe returned pointer
 }
 
@@ -296,8 +309,8 @@ returned<receiver> container::impl::open_receiver(const std::string &urlstr, con
         pnc = make_connection_lh(url, o2);
         connection conn(make_wrapper(pnc));
         pnl = unwrap(conn.default_session().open_receiver(url.path(), lopts));
-    }                                   // There must be no refcounting after here
-    start_connection(url, pnc);
+    }
+    start_connection(url, pnc); // See comment on start_connection
     return make_returned<receiver>(pnl);
 }
 
