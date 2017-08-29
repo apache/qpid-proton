@@ -152,9 +152,9 @@ void container::impl::remove_work_queue(container::impl::container_work_queue* l
     work_queues_.erase(l);
 }
 
-proton::connection container::impl::connect_common(
-    const std::string& addr,
-    const proton::connection_options& user_opts)
+pn_connection_t* container::impl::make_connection_lh(
+    const url& url,
+    const connection_options& user_opts)
 {
     if (stopping_)
         throw proton::error("container is stopping");
@@ -163,7 +163,6 @@ proton::connection container::impl::connect_common(
     opts.update(user_opts);
     messaging_handler* mh = opts.handler();
 
-    proton::url url(addr);
     pn_connection_t *pnc = pn_connection();
     connection_context& cc(connection_context::get(pnc));
     cc.container = &container_;
@@ -177,42 +176,58 @@ proton::connection container::impl::connect_common(
     if (!url.password().empty())
         pn_connection_set_password(pnc, url.password().c_str());
 
-    connection conn = make_wrapper(pnc);
-    conn.open(opts);
-    // Figure out correct string len then create connection address
-    int len = pn_proactor_addr(0, 0, url.host().c_str(), url.port().c_str());
-    std::vector<char> caddr(len+1);
-    pn_proactor_addr(&caddr[0], len+1, url.host().c_str(), url.port().c_str());
-    pn_proactor_connect(proactor_, pnc, &caddr[0]);
-    return conn;
+    make_wrapper(pnc).open(opts);
+    return pnc;                 // 1 refcount from pn_connection()
 }
 
-returned<proton::connection> container::impl::connect(
+void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
+    char caddr[PN_MAX_ADDR];
+    pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
+    pn_proactor_connect(proactor_, pnc, caddr); // Takes ownership of pnc
+}
+
+returned<connection> container::impl::connect(
     const std::string& addr,
     const proton::connection_options& user_opts)
 {
-    connection conn = connect_common(addr, user_opts);
     GUARD(lock_);
-    return make_returned(conn);
+    proton::url url(addr);
+    pn_connection_t *pnc = make_connection_lh(url, user_opts);
+    start_connection(url, pnc);
+    return make_returned<proton::connection>(pnc);
 }
 
-returned<sender> container::impl::open_sender(const std::string &url, const proton::sender_options &o1, const connection_options &o2) {
-    proton::sender_options lopts(sender_options_);
-    lopts.update(o1);
-    connection conn = connect_common(url, o2);
-
-    GUARD(lock_);
-    return make_returned(conn.default_session().open_sender(proton::url(url).path(), lopts));
+returned<sender> container::impl::open_sender(const std::string &urlstr, const proton::sender_options &o1, const connection_options &o2)
+{
+    proton::url url(urlstr);
+    pn_link_t* pnl = 0;
+    pn_connection_t* pnc = 0;
+    {
+        GUARD(lock_);
+        proton::sender_options lopts(sender_options_);
+        lopts.update(o1);
+        pnc = make_connection_lh(url, o2);
+        connection conn(make_wrapper(pnc));
+        pnl = unwrap(conn.default_session().open_sender(url.path(), lopts));
+    }                                   // There must be no refcounting after here
+    start_connection(url, pnc);         // Takes ownership of pnc
+    return make_returned<sender>(pnl);  // Unsafe returned pointer
 }
 
-returned<receiver> container::impl::open_receiver(const std::string &url, const proton::receiver_options &o1, const connection_options &o2) {
-    proton::receiver_options lopts(receiver_options_);
-    lopts.update(o1);
-    connection conn = connect_common(url, o2);
-
-    GUARD(lock_);
-    return make_returned(
-        conn.default_session().open_receiver(proton::url(url).path(), lopts));
+returned<receiver> container::impl::open_receiver(const std::string &urlstr, const proton::receiver_options &o1, const connection_options &o2) {
+    proton::url url(urlstr);
+    pn_link_t* pnl = 0;
+    pn_connection_t* pnc = 0;
+    {
+        GUARD(lock_);
+        proton::receiver_options lopts(receiver_options_);
+        lopts.update(o1);
+        pnc = make_connection_lh(url, o2);
+        connection conn(make_wrapper(pnc));
+        pnl = unwrap(conn.default_session().open_receiver(url.path(), lopts));
+    }                                   // There must be no refcounting after here
+    start_connection(url, pnc);
+    return make_returned<receiver>(pnl);
 }
 
 pn_listener_t* container::impl::listen_common_lh(const std::string& addr) {

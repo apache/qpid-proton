@@ -95,6 +95,8 @@ class Proc(Popen):
         self.kwargs = kwargs
         self._out = tempfile.TemporaryFile()
         try:
+            if (os.getenv("PROCTEST_VERBOSE")):
+                sys.stderr.write("\nstart proc: %s\n" % self.args)
             Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
         except OSError, e:
             if e.errno == errno.ENOENT:

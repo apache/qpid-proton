@@ -36,7 +36,7 @@
 namespace proton {
 
 namespace internal {
-template <class T> class factory;
+class returned_factory;
 }
 
 /// Return type for container functions
@@ -51,13 +51,20 @@ template <class T>
 class PN_CPP_CLASS_EXTERN returned
 {
   public:
-    PN_CPP_EXTERN returned(const T&);
+    /// Copy operator required to return a value
+    /// @note thread safe
+    PN_CPP_EXTERN returned(const returned<T>&);
+
+    /// Convert to the proton::object
+    ///
+    /// @note **Thread unsafe** do not use in a multi-threaded application.
     PN_CPP_EXTERN operator T() const;
 
   private:
     typename T::pn_type* ptr_;
-    returned& operator=(const returned&);
-    template <class U> friend class internal::factory;
+    returned(typename T::pn_type*);
+    returned& operator=(const returned&); // Not defined
+  friend class internal::returned_factory;
 };
 
 } // proton

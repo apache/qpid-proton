@@ -47,6 +47,10 @@
 #include <string>
 #include <thread>
 
+// Lock output from threads to avoid scramblin
+std::mutex out_lock;
+#define OUT(x) do { std::lock_guard<std::mutex> l(out_lock); x; } while (false)
+
 // Handler for a single thread-safe sending and receiving connection.
 class client : public proton::messaging_handler {
     // Invariant
@@ -64,7 +68,7 @@ class client : public proton::messaging_handler {
     std::condition_variable messages_ready_;
 
   public:
-    client(const std::string& url, const std::string& address) : url_(url), address_(address) {}
+    client(const std::string& url, const std::string& address) : url_(url), address_(address), work_queue_(0) {}
 
     // Thread safe
     void send(const proton::message& msg) {
@@ -112,25 +116,21 @@ class client : public proton::messaging_handler {
     }
 
     void on_sender_open(proton::sender& s) override {
-        {
-            // sender_ and work_queue_ must be set atomically
-            std::lock_guard<std::mutex> l(lock_);
-            sender_ = s;
-            work_queue_ = &s.work_queue();
-        }
+        // sender_ and work_queue_ must be set atomically
+        std::lock_guard<std::mutex> l(lock_);
+        sender_ = s;
+        work_queue_ = &s.work_queue();
         sender_ready_.notify_all();
     }
 
     void on_message(proton::delivery& dlv, proton::message& msg) override {
-        {
-            std::lock_guard<std::mutex> l(lock_);
-            messages_.push(msg);
-        }
+        std::lock_guard<std::mutex> l(lock_);
+        messages_.push(msg);
         messages_ready_.notify_all();
     }
 
     void on_error(const proton::error_condition& e) override {
-        std::cerr << "unexpected error: " << e << std::endl;
+        OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
@@ -157,7 +157,7 @@ int main(int argc, const char** argv) {
                 for (int i = 0; i < n_messages; ++i) {
                     proton::message msg(std::to_string(i + 1));
                     cl.send(msg);
-                    std::cout << "sent: " << msg.body() << std::endl;
+                    OUT(std::cout << "sent: " << msg.body() << std::endl);
                 }
             });
 
@@ -165,7 +165,7 @@ int main(int argc, const char** argv) {
         std::thread receiver([&]() {
                 for (int i = 0; i < n_messages; ++i) {
                     auto msg = cl.receive();
-                    std::cout << "received: " << msg.body() << std::endl;
+                    OUT(std::cout << " received: " << msg.body() << std::endl);
                     ++received;
                 }
             });
@@ -174,7 +174,7 @@ int main(int argc, const char** argv) {
         receiver.join();
         cl.close();
         container_thread.join();
-        std::cout << "received " << received << " messages" << std::endl;
+        std::cout << received << " messages sent and received" << std::endl;
 
         return 0;
     } catch (const std::exception& e) {

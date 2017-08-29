@@ -56,6 +56,10 @@
 #include <string>
 #include <thread>
 
+// Lock output from threads to avoid scramblin
+std::mutex out_lock;
+#define OUT(x) do { std::lock_guard<std::mutex> l(out_lock); x; } while (false)
+
 // A thread-safe sending connection that blocks sending threads when there
 // is no AMQP credit to send messages.
 class sender : private proton::messaging_handler {
@@ -127,7 +131,7 @@ class sender : private proton::messaging_handler {
     }
 
     void on_error(const proton::error_condition& e) override {
-        std::cerr << "unexpected error: " << e << std::endl;
+        OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
@@ -202,7 +206,7 @@ class receiver : private proton::messaging_handler {
     }
 
     void on_error(const proton::error_condition& e) override {
-        std::cerr << "unexpected error: " << e << std::endl;
+        OUT(std::cerr << "unexpected error: " << e << std::endl);
         exit(1);
     }
 };
@@ -210,28 +214,31 @@ class receiver : private proton::messaging_handler {
 // ==== Example code using the sender and receiver
 
 // Send n messages
-void send_thread(sender& s, int n, bool print) {
+void send_thread(sender& s, int n) {
     auto id = std::this_thread::get_id();
     for (int i = 0; i < n; ++i) {
         std::ostringstream ss;
         ss << std::this_thread::get_id() << ":" << i;
         s.send(proton::message(ss.str()));
-        if (print) std::cout << "received: " << ss.str() << std::endl;
+        OUT(std::cout << id << " received: " << ss.str() << std::endl);
     }
-    std::cout << id << " sent " << n << std::endl;
+    OUT(std::cout << id << " sent " << n << std::endl);
 }
 
 // Receive messages till atomic remaining count is 0.
 // remaining is shared among all receiving threads
-void receive_thread(receiver& r, std::atomic_int& remaining, bool print) {
+void receive_thread(receiver& r, std::atomic_int& remaining) {
     auto id = std::this_thread::get_id();
     int n = 0;
+    // atomically check and decrement remaining *before* receiving.
+    // If it is 0 or less then return, as there are no more
+    // messages to receive so calling r.receive() would block forever.
     while (remaining-- > 0) {
         auto m = r.receive();
         ++n;
-        if (print) std::cout << id << "received: " << m.body() << std::endl;
+        OUT(std::cout << id << " received: " << m.body() << std::endl);
     }
-    std::cout << id << " received " << n << " messages" << std::endl;
+    OUT(std::cout << id << " received " << n << " messages" << std::endl);
 }
 
 int main(int argc, const char **argv) {
@@ -250,10 +257,10 @@ int main(int argc, const char **argv) {
         const char *address = argv[2];
         int n_messages = atoi(argv[3]);
         int n_threads = atoi(argv[4]);
+        int count = n_messages * n_threads;
 
         // Total messages to be received, multiple receiver threads will decrement this.
-        std::atomic_int remaining(n_messages * n_threads);
-        bool print = remaining < 1000; // Don't print for long runs, dominates run time
+        std::atomic_int remaining(count);
 
         // Run the proton container
         proton::container container;
@@ -267,17 +274,19 @@ int main(int argc, const char **argv) {
         // Starting receivers first gives all receivers a chance to compete for messages.
         std::vector<std::thread> threads;
         for (int i = 0; i < n_threads; ++i)
-            threads.push_back(std::thread([&]() { receive_thread(recv, remaining, print); }));
+            threads.push_back(std::thread([&]() { receive_thread(recv, remaining); }));
         for (int i = 0; i < n_threads; ++i)
-            threads.push_back(std::thread([&]() { send_thread(send, n_messages, print); }));
+            threads.push_back(std::thread([&]() { send_thread(send, n_messages); }));
 
         // Wait for threads to finish
         for (auto& t : threads)
             t.join();
         send.close();
         recv.close();
-
         container_thread.join();
+        if (remaining > 0)
+            throw std::runtime_error("not all messages were received");
+        std::cout << count << " messages sent and received" << std::endl;
 
         return 0;
     } catch (const std::exception& e) {

@@ -28,13 +28,13 @@
 
 namespace proton {
 
-template <class T> PN_CPP_EXTERN returned<T>::returned(const T& t) : ptr_(unwrap(t)) {}
-
-//template <class T> PN_CPP_EXTERN returned<T>::returned(const returned<T>& x) : ptr_(x.ptr_) {}
+template <class T> PN_CPP_EXTERN returned<T>::returned(const returned<T>& x) : ptr_(x.ptr_) {}
 
 template <class T> PN_CPP_EXTERN returned<T>::operator T() const {
     return internal::factory<T>::wrap(ptr_);
 }
+
+template <class T> returned<T>::returned(typename T::pn_type* p) : ptr_(p) {}
 
 // Explicit instantiations for allowed types
 

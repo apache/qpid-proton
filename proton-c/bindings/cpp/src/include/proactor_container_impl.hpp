@@ -98,7 +98,8 @@ class container::impl {
     class connection_work_queue;
     class container_work_queue;
     pn_listener_t* listen_common_lh(const std::string&);
-    connection connect_common(const std::string&, const connection_options&);
+    pn_connection_t* make_connection_lh(const url& url, const connection_options&);
+    void start_connection(const url& url, pn_connection_t* c);
 
     // Event loop to run in each container thread
     void thread();

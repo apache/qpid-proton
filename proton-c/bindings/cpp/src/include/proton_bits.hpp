@@ -124,7 +124,6 @@ class factory {
 public:
     static T wrap(typename wrapped<T>::type* t) { return t; }
     static typename wrapped<T>::type* unwrap(const T& t) { return t.pn_object(); }
-    static returned<T> make_returned(const T& t) { return returned<T>(t); }
 };
 
 template <class T> struct context {};
@@ -140,7 +139,14 @@ inline void set_messaging_handler(T t, messaging_handler* mh) { context<T>::type
 template <class T>
 inline messaging_handler* get_messaging_handler(T* t) { return context<typename internal::wrapper<T>::type>::type::get(t).handler; }
 
-}
+class returned_factory {
+  public:
+    template <class T> static returned<T> make(typename internal::wrapped<T>::type* pn) {
+        return returned<T>(pn);
+    }
+};
+
+} // namespace internal
 
 template <class T>
 typename internal::wrapper<T>::type make_wrapper(T* t) { return internal::factory<typename internal::wrapper<T>::type>::wrap(t); }
@@ -151,9 +157,8 @@ U make_wrapper(typename internal::wrapped<U>::type* t) { return internal::factor
 template <class T>
 typename internal::wrapped<T>::type* unwrap(const T& t) { return internal::factory<T>::unwrap(t); }
 
-template <class T>
-returned<T> make_returned(const T& t) {
-    return internal::factory<T>::make_returned(t);
+template <class T> returned<T> make_returned(typename internal::wrapped<T>::type* pn) {
+    return internal::returned_factory::make<T>(pn);
 }
 
 }
