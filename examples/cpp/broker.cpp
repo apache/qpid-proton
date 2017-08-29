@@ -128,7 +128,6 @@ class Queue {
     proton::work_queue work_queue_;
     const std::string name_;
     std::deque<proton::message> messages_;
-    // FIXME aconway 2017-08-22: thread unsafe Sender*
     typedef std::map<Sender*, int> subscriptions; // With credit
     subscriptions subscriptions_;
     subscriptions::iterator current_;
