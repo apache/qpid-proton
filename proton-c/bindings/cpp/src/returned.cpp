@@ -19,6 +19,8 @@
 
 #include "proton_bits.hpp"
 
+#include <proton/internal/export.hpp>
+
 #include <proton/returned.hpp>
 #include <proton/connection.hpp>
 #include <proton/sender.hpp>
@@ -26,9 +28,11 @@
 
 namespace proton {
 
-template <class T> returned<T>::returned(const T& t) : ptr_(unwrap(t)) {}
+template <class T> PN_CPP_EXTERN returned<T>::returned(const T& t) : ptr_(unwrap(t)) {}
 
-template <class T> returned<T>::operator T() const {
+//template <class T> PN_CPP_EXTERN returned<T>::returned(const returned<T>& x) : ptr_(x.ptr_) {}
+
+template <class T> PN_CPP_EXTERN returned<T>::operator T() const {
     return internal::factory<T>::wrap(ptr_);
 }
 

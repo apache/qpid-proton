@@ -22,10 +22,13 @@
  *
  */
 
+#include "./internal/export.hpp"
 #include "./internal/object.hpp"
+
 #include "./connection.hpp"
 #include "./receiver.hpp"
 #include "./sender.hpp"
+
 
 /// @file
 /// Return type for container functions
@@ -45,14 +48,14 @@ template <class T> class factory;
 /// can access the value in @ref messaging_handler functions.
 ///
 template <class T>
-class returned
+class PN_CPP_CLASS_EXTERN returned
 {
   public:
-    operator T() const;
+    PN_CPP_EXTERN returned(const T&);
+    PN_CPP_EXTERN operator T() const;
 
   private:
     typename T::pn_type* ptr_;
-    returned(const T&);
     returned& operator=(const returned&);
     template <class U> friend class internal::factory;
 };
