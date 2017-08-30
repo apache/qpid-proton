@@ -218,9 +218,9 @@ void send_thread(sender& s, int n) {
     auto id = std::this_thread::get_id();
     for (int i = 0; i < n; ++i) {
         std::ostringstream ss;
-        ss << std::this_thread::get_id() << ":" << i;
+        ss << std::this_thread::get_id() << "-" << i;
         s.send(proton::message(ss.str()));
-        OUT(std::cout << id << " received: " << ss.str() << std::endl);
+        OUT(std::cout << id << " sent \"" << ss.str() << '"' << std::endl);
     }
     OUT(std::cout << id << " sent " << n << std::endl);
 }
@@ -236,7 +236,7 @@ void receive_thread(receiver& r, std::atomic_int& remaining) {
     while (remaining-- > 0) {
         auto m = r.receive();
         ++n;
-        OUT(std::cout << id << " received: " << m.body() << std::endl);
+        OUT(std::cout << id << " received \"" << m.body() << '"' << std::endl);
     }
     OUT(std::cout << id << " received " << n << " messages" << std::endl);
 }

@@ -157,7 +157,7 @@ int main(int argc, const char** argv) {
                 for (int i = 0; i < n_messages; ++i) {
                     proton::message msg(std::to_string(i + 1));
                     cl.send(msg);
-                    OUT(std::cout << "sent: " << msg.body() << std::endl);
+                    OUT(std::cout << "sent \"" << msg.body() << '"' << std::endl);
                 }
             });
 
@@ -165,7 +165,7 @@ int main(int argc, const char** argv) {
         std::thread receiver([&]() {
                 for (int i = 0; i < n_messages; ++i) {
                     auto msg = cl.receive();
-                    OUT(std::cout << " received: " << msg.body() << std::endl);
+                    OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
                     ++received;
                 }
             });
