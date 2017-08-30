@@ -33,7 +33,8 @@ namespace proton {
 
 /// Options for creating a target node for a sender or receiver.
 ///
-/// Options can be "chained" (see proton::connection_options).
+/// Options can be "chained".  For more information see @ref
+/// proton::connection_options.
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.

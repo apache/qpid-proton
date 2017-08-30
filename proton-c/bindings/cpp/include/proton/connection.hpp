@@ -57,7 +57,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     ///
     /// @throw proton::error if this connection is not managed by a
     /// container
-    PN_CPP_EXTERN class container &container() const;
+    PN_CPP_EXTERN class container& container() const;
 
     /// Get the work_queue for the connection.
     PN_CPP_EXTERN class work_queue& work_queue() const;
@@ -81,7 +81,7 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN void open();
 
     /// @copydoc open
-    PN_CPP_EXTERN void open(const connection_options &);
+    PN_CPP_EXTERN void open(const connection_options&);
 
     PN_CPP_EXTERN void close();
     PN_CPP_EXTERN void close(const error_condition&);
@@ -90,24 +90,24 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN session open_session();
 
     /// @copydoc open_session
-    PN_CPP_EXTERN session open_session(const session_options &);
+    PN_CPP_EXTERN session open_session(const session_options&);
 
     /// Get the default session.  A default session is created on the
     /// first call and reused for the lifetime of the connection.
     PN_CPP_EXTERN session default_session();
 
     /// Open a sender for `addr` on default_session().
-    PN_CPP_EXTERN sender open_sender(const std::string &addr);
+    PN_CPP_EXTERN sender open_sender(const std::string& addr);
 
     /// @copydoc open_sender
-    PN_CPP_EXTERN sender open_sender(const std::string &addr, const sender_options &);
+    PN_CPP_EXTERN sender open_sender(const std::string& addr, const sender_options&);
 
     /// Open a receiver for `addr` on default_session().
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr);
+    PN_CPP_EXTERN receiver open_receiver(const std::string& addr);
 
     /// @copydoc open_receiver
-    PN_CPP_EXTERN receiver open_receiver(const std::string &addr,
-                                         const receiver_options &);
+    PN_CPP_EXTERN receiver open_receiver(const std::string& addr,
+                                         const receiver_options&);
 
     /// @see proton::container::sender_options()
     PN_CPP_EXTERN class sender_options sender_options() const;
@@ -124,17 +124,18 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Return all senders on this connection.
     PN_CPP_EXTERN sender_range senders() const;
 
-    /// Get the maximum frame size.
+    /// Get the maximum frame size allowed by the remote peer.
     ///
     /// @see @ref connection_options::max_frame_size
     PN_CPP_EXTERN uint32_t max_frame_size() const;
 
-    /// Get the maximum number of open sessions.
+    /// Get the maximum number of open sessions allowed by the remote
+    /// peer.
     ///
     /// @see @ref connection_options::max_sessions
     PN_CPP_EXTERN uint16_t max_sessions() const;
 
-    /// Get the idle timeout.
+    /// Get the idle timeout set by the remote peer.
     ///
     /// @see @ref connection_options::idle_timeout
     PN_CPP_EXTERN uint32_t idle_timeout() const;

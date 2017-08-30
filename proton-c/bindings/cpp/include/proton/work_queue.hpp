@@ -37,31 +37,27 @@ struct pn_link_t;
 
 namespace proton {
 
-/// **Experimental** - A work queue for serial execution.
-///
-/// Event handler functions associated with a single proton::connection are called in sequence.
-/// The connection's proton::work_queue allows you to "inject" extra @ref work from any thread,
-/// and have it executed in the same sequence.
-///
-/// You may also create arbitrary proton::work_queue objects backed by a @ref container that allow
-/// other objects to have their own serialised work queues that can have work injected safely
-/// from other threads. The @ref container ensures that the work is correctly serialised.
-///
-/// The @ref work class represents the work to be queued and can be created from a function
-/// that takes no parameters and returns no value.
-///
-
+/// **Experimental** - Work to be queued on a @ref work_queue.  It can
+/// be created from a function that takes no parameters and returns no
+/// value.
 class work {
   public:
 #if PN_CPP_HAS_STD_FUNCTION
+    /// **Experimental**
     work(void_function0& f): item_( [&f]() { f(); }) {}
+
+    /// **Experimental** - Construct a unit of work from a
+    /// std::function.
     template <class T>
     work(T f): item_(f) {}
 
+    /// **Experimental**
     void operator()() { item_(); }
 #else
+    /// **Experimetnal**
     work(void_function0& f): item_(&f) {}
 
+    /// **Experimetnal**
     void operator()() { (*item_)(); }
 #endif
     ~work() {}
@@ -75,28 +71,48 @@ class work {
 #endif
 };
 
+/// **Experimental** - A work queue for serial execution.
+///
+/// Event handler functions associated with a single
+/// proton::connection are called in sequence.  The connection's
+/// proton::work_queue allows you to "inject" extra @ref work from any
+/// thread, and have it executed in the same sequence.
+///
+/// You may also create arbitrary proton::work_queue objects backed by
+/// a @ref container that allow other objects to have their own
+/// serialised work queues that can have work injected safely from
+/// other threads. The @ref container ensures that the work is
+/// correctly serialised.
+///
+/// The @ref work class represents the work to be queued and can be
+/// created from a function that takes no parameters and returns no
+/// value.
 class PN_CPP_CLASS_EXTERN work_queue {
-    /// @cond internal
+    /// @cond INTERNAL
     class impl;
     work_queue& operator=(impl* i);
     /// @endcond
 
   public:
-    /// Create work_queue
+    /// **Experimental** - Create a work_queue.
     PN_CPP_EXTERN work_queue();
+
+    /// **Experimental** - Create a work_queue backed by `container`.
     PN_CPP_EXTERN work_queue(container&);
 
     PN_CPP_EXTERN ~work_queue();
 
-    /// Add work to the work queue: f() will be called serialised with other work in the queue:
-    /// deferred and possibly in another thread.
+    /// **Experimental** - Add work to the work queue: f() will be
+    /// called serialised with other work in the queue: deferred and
+    /// possibly in another thread.
     ///
     /// @return true if f() has or will be called, false if the event_loop is ended
     /// or f() cannot be injected for any other reason.
     PN_CPP_EXTERN bool add(work f);
 
-    /// Add work to the work queue after duration: f() will be called after the duration
-    /// serialised with other work in the queue: possibly in another thread.
+    /// **Experimental** - Add work to the work queue after duration:
+    /// f() will be called after the duration serialised with other
+    /// work in the queue: possibly in another thread.
     ///
     /// The scheduled execution is "best effort" and it is possible that after the elapsed duration
     /// the work will not be able to be injected into the serialised context - there will be no
@@ -347,20 +363,24 @@ void schedule_work(WQ wq, duration dn, F f, A a, B b, C c, D d) {
 // The C++11 version is *much* simpler and even so more general!
 // These definitions encompass everything in the C++03 section
 
+/// **Experimental**
 template <class WQ, class... Rest>
 bool schedule_work(WQ wq, Rest&&... r) {
     return wq->add(std::bind(std::forward<Rest>(r)...));
 }
 
+/// **Experimental**
 template <class WQ, class... Rest>
 void schedule_work(WQ wq, duration d, Rest&&... r) {
     wq->schedule(d, std::bind(std::forward<Rest>(r)...));
 }
 
+/// **Experimental**
 template <class... Rest>
 work make_work(Rest&&... r) {
     return std::bind(std::forward<Rest>(r)...);
 }
+
 #endif
 
 } // proton

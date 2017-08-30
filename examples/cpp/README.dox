@@ -7,16 +7,8 @@
 //
 // then open proton-c/bindings/cpp/docs/html/tutorial.html in your browser.
 
-// DEVELOPER NOTE: if you add or modify examples, please add/update a short
+// DEVELOPER NOTE: If you add or modify examples, please add/update a short
 // description below and (if appropriate) extend/update tutorial.dox.
-
-/** example sub directory
-
-The example sub-directory has utilities classes to make the example simpler,
-these classes are not directly related to the use of proton so are in a separate
-`example` directory and namespace.
-
-*/
 
 /** @example helloworld.cpp
 
@@ -139,12 +131,18 @@ Also provides some general notes on Service Bus usage.
 
 */
 
-/** @example send_recv_mt.cpp
+/** @example multithreaded_client.cpp
 
-A multi-threaded sender and receiver.
+A multithreaded sender and receiver.
 
 __Requires C++11__
 
 */
+
+/** @example multithreaded_client_flow_control.cpp
+
+A multithreaded sender and receiver enhanced for flow control.
+
+__Requires C++11__
 
 */
