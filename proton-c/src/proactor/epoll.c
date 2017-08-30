@@ -381,6 +381,7 @@ struct pn_proactor_t {
   bool need_inactive;
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
+  bool timeout_processed;  /* timout event dispatched in the most recent event batch */
   bool timer_armed; /* timer is armed in epoll */
   bool shutting_down;
   // wake subsystem
@@ -1700,7 +1701,6 @@ static bool proactor_update_batch(pn_proactor_t *p) {
     p->need_timeout = false;
     p->timeout_set = false;
     proactor_add_event(p, PN_PROACTOR_TIMEOUT);
-    p->need_inactive = is_inactive(p);
     return true;
   }
   if (p->need_interrupt) {
@@ -1721,6 +1721,8 @@ static pn_event_t *proactor_batch_next(pn_event_batch_t *batch) {
   lock(&p->context.mutex);
   proactor_update_batch(p);
   pn_event_t *e = pn_collector_next(p->collector);
+  if (e && pn_event_type(e) == PN_PROACTOR_TIMEOUT)
+    p->timeout_processed = true;
   unlock(&p->context.mutex);
   return log_event(p, e);
 }
@@ -1896,9 +1898,15 @@ void pn_proactor_done(pn_proactor_t *p, pn_event_batch_t *batch) {
     bool rearm_timer = !p->timer_armed && !p->shutting_down;
     p->timer_armed = true;
     p->context.working = false;
+    if (p->timeout_processed) {
+      p->timeout_processed = false;
+      if (wake_if_inactive(p))
+        notify = true;
+    }
     proactor_update_batch(p);
     if (proactor_has_event(p))
-      notify = wake(&p->context);
+      if (wake(&p->context))
+        notify = true;
     unlock(&p->context.mutex);
     if (notify)
       wake_notify(&p->context);
