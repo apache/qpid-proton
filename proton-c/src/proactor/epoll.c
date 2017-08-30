@@ -813,6 +813,7 @@ static void pconnection_forced_shutdown(pconnection_t *pc) {
 
 static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
   pconnection_t *pc = batch_pconnection(batch);
+  if (!pc->bound) return NULL;
   pn_event_t *e = pn_connection_driver_next_event(&pc->driver);
   if (!e) {
     write_flush(pc);  // May generate transport event
