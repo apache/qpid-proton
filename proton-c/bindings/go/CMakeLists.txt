@@ -63,6 +63,7 @@ add_custom_target(go-build ALL
 
 add_test(
   NAME go-test COMMAND ${GO_TEST} qpid.apache.org/...
+  DEPENDS qpid-proton-core
   WORKING_DIRECTORY $ENV{PWD})
 
 # Make available to examples/go/CMakeLists

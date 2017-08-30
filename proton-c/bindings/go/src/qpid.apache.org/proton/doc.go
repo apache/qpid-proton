@@ -60,7 +60,7 @@ applications.
 */
 package proton
 
-// #cgo LDFLAGS: -lqpid-proton
+// #cgo LDFLAGS: -lqpid-proton-core
 import "C"
 
 // This file is just for the package comment.
