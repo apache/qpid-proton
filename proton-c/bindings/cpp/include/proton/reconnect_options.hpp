@@ -28,6 +28,7 @@
 #include "./source.hpp"
 
 #include <string>
+#include <vector>
 
 namespace proton {
 
@@ -67,8 +68,8 @@ class reconnect_options {
     /// Maximum reconnect attempts (default 0, meaning no limit)
     PN_CPP_EXTERN reconnect_options& max_attempts(int);
 
-    /// TODO: failover_urls
-
+    /// Alternative connection urls used for failover
+    PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& urls);
 
   private:
     class impl;

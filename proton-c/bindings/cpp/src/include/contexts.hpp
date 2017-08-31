@@ -106,6 +106,7 @@ class reconnect_context {
     internal::pn_unique_ptr<const connection_options> connection_options_;
     duration delay_;
     int retries_;
+    int current_url_;
 };
 
 class listener_context : public context {

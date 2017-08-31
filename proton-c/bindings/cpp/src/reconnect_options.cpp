@@ -39,5 +39,6 @@ reconnect_options& reconnect_options::delay(duration d) { impl_->delay = d; retu
 reconnect_options& reconnect_options::delay_multiplier(float f) { impl_->delay_multiplier = f; return *this; }
 reconnect_options& reconnect_options::max_delay(duration d) { impl_->max_delay = d; return *this; }
 reconnect_options& reconnect_options::max_attempts(int i) { impl_->max_attempts = i; return *this; }
+reconnect_options& reconnect_options::failover_urls(const std::vector<std::string>& urls) { impl_->failover_urls = urls; return *this; }
 
 } // namespace proton

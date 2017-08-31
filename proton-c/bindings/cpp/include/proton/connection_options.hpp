@@ -149,7 +149,6 @@ class connection_options {
     /// **Experimental** - Options for reconnect on outgoing connections.
     PN_CPP_EXTERN connection_options& reconnect(reconnect_options &);
 
-    
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);

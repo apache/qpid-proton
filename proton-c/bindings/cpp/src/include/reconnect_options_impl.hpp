@@ -24,6 +24,9 @@
 
 #include "proton/duration.hpp"
 
+#include <string>
+#include <vector>
+
 namespace proton {
 
 class reconnect_options::impl {
@@ -34,6 +37,7 @@ class reconnect_options::impl {
     float    delay_multiplier;
     duration max_delay;
     int      max_attempts;
+    std::vector<std::string> failover_urls;
 };
 
 }

@@ -46,6 +46,13 @@
 # include <thread>
 #endif
 
+#if PN_CPP_HAS_RANDOM
+# include <random>
+#endif
+
+// XXXX: Debug
+//#include <iostream>
+
 namespace proton {
 
 class container::impl::common_work_queue : public work_queue::impl {
@@ -179,8 +186,8 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.container = &container_;
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
-
     cc.connected_address_ = url;
+
     setup_connection_lh(url, pnc);
     make_wrapper(pnc).open(opts);
 
@@ -205,23 +212,51 @@ void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
 
 void container::impl::reconnect(pn_connection_t* pnc) {
     connection_context& cc = connection_context::get(pnc);
-    reconnect_context* rc = cc.reconnect_context_.get();
+    reconnect_context& rc = *cc.reconnect_context_.get();
+    const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
 
     // Figure out next connection url to try
-    const proton::url url(cc.connected_address_);
+    // rc.current_url_ == -1 means try the url specified in connect, not a failover url
+    const proton::url url(rc.current_url_==-1 ? cc.connected_address_ : roi.failover_urls[rc.current_url_]);
 
-    cc.connected_address_ = url;
+    // XXXX Debug:
+    //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << "\n";
+
     setup_connection_lh(url, pnc);
-    { // Scope required to keep temporary destructor from doing pn_decref() after start_connection()
-        make_wrapper(pnc).open(*rc->connection_options_);
+    make_wrapper(pnc).open(*rc.connection_options_);
+    start_connection(url, pnc);
+
+    // Did we go through all the urls?
+    if (rc.current_url_==int(roi.failover_urls.size())-1) {
+        rc.current_url_ = -1;
+        ++rc.retries_;
+    } else {
+        ++rc.current_url_;
     }
-    start_connection(cc.connected_address_, pnc);
-    rc->retries_++;
+}
+
+namespace {
+#if PN_CPP_HAS_RANDOM && PN_CPP_HAS_THREAD_LOCAL
+duration random_between(duration min, duration max)
+{
+    static thread_local std::default_random_engine gen;
+    std::uniform_int_distribution<duration::numeric_type> dist{min.milliseconds(), max.milliseconds()};
+    return duration(dist(gen));
+}
+#else
+duration random_between(duration, duration max)
+{
+    return max;
+}
+#endif
 }
 
 duration container::impl::next_delay(reconnect_context& rc) {
     // If we've not retried before do it immediately
     if (rc.retries_==0) return duration(0);
+
+    // If we haven't tried all failover urls yet this round do it immediately
+    if (rc.current_url_!=-1) return duration(0);
 
     const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
     if (rc.retries_==1) {
@@ -229,14 +264,18 @@ duration container::impl::next_delay(reconnect_context& rc) {
     } else {
         rc.delay_ = std::min(roi.max_delay, rc.delay_ * roi.delay_multiplier);
     }
-    return rc.delay_;
+    return random_between(roi.delay, rc.delay_);
 }
 
 void container::impl::reset_reconnect(pn_connection_t* pnc) {
     connection_context& cc = connection_context::get(pnc);
     reconnect_context* rc = cc.reconnect_context_.get();
 
-    if (rc) rc->retries_ = 0;
+    if (!rc) return;
+
+    rc->delay_ = 0;
+    rc->retries_ = 0;
+    rc->current_url_ = -1;
 }
 
 bool container::impl::setup_reconnect(pn_connection_t* pnc) {
