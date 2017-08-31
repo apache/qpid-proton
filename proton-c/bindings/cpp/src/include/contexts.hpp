@@ -35,7 +35,7 @@ struct pn_listener_t;
 namespace proton {
 
 class proton_handler;
-class reconnect_timer;
+class connector;
 
 namespace io {class link_namer;}
 
@@ -77,6 +77,7 @@ class context {
 };
 
 class listener_context;
+class reconnect_context;
 
 // Connection context used by all connections.
 class connection_context : public context {
@@ -90,9 +91,21 @@ class connection_context : public context {
     io::link_namer* link_gen;      // Link name generator.
 
     messaging_handler* handler;
-    internal::pn_unique_ptr<reconnect_timer> reconnect;
+    std::string connected_address_;
+    internal::pn_unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
+};
+
+// This is not a context object on its own, but an optional part of connection
+class reconnect_context {
+  public:
+    reconnect_context(const reconnect_options& ro, const connection_options& co);
+
+    internal::pn_unique_ptr<const reconnect_options> reconnect_options_;
+    internal::pn_unique_ptr<const connection_options> connection_options_;
+    duration delay_;
+    int retries_;
 };
 
 class listener_context : public context {

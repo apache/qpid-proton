@@ -1,5 +1,5 @@
-#ifndef PROTON_FWD_HPP
-#define PROTON_FWD_HPP
+#ifndef PROTON_CPP_RECONNECT_OPTIONSIMPL_H
+#define PROTON_CPP_RECONNECT_OPTIONSIMPL_H
 
 /*
  *
@@ -22,48 +22,20 @@
  *
  */
 
+#include "proton/duration.hpp"
+
 namespace proton {
 
-class annotation_key;
-class connection;
-class connection_options;
-class container;
-class delivery;
-class duration;
-class error_condition;
-class event;
-class message;
-class message_id;
-class messaging_handler;
-class listen_handler;
-class listener;
-class receiver;
-class receiver_iterator;
-class receiver_options;
-class reconnect_options;
-class sasl;
-class sender;
-class sender_iterator;
-class sender_options;
-class session;
-class session_options;
-class source_options;
-class ssl;
-class target_options;
-class tracker;
-class transport;
-class url;
-class void_function0;
-class work;
-class work_queue;
+class reconnect_options::impl {
+  public:
+    impl() : delay(10), delay_multiplier(2.0), max_delay(duration::FOREVER), max_attempts(0) {}
 
-namespace io {
-
-class connection_driver;
+    duration delay;
+    float    delay_multiplier;
+    duration max_delay;
+    int      max_attempts;
+};
 
 }
 
-template <class T> class returned;
-}
-
-#endif // PROTON_FWD_HPP
+#endif  /*!PROTON_CPP_RECONNECT_OPTIONSIMPL_H*/

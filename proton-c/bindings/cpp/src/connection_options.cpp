@@ -18,11 +18,12 @@
  * under the License.
  *
  */
-#include "proton/fwd.hpp"
-#include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
+
+#include "proton/connection.hpp"
+#include "proton/fwd.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/reconnect_timer.hpp"
+#include "proton/reconnect_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/ssl.hpp"
 #include "proton/sasl.hpp"
@@ -57,7 +58,7 @@ class connection_options::impl {
     option<std::string> virtual_host;
     option<std::string> user;
     option<std::string> password;
-    option<reconnect_timer> reconnect;
+    option<reconnect_options> reconnect;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
     option<bool> sasl_enabled;
@@ -73,16 +74,15 @@ class connection_options::impl {
      * transport options (set once per transport over the life of the
      * connection).
      */
-    void apply_unbound(connection& c) {
+    void apply_unbound(connection& c, const connection_options& co) {
         pn_connection_t *pnc = unwrap(c);
 
         // Only apply connection options if uninit.
         bool uninit = c.uninitialized();
         if (!uninit) return;
 
-        bool outbound = !connection_context::get(pnc).listener_context_;
-        if (reconnect.set && outbound)
-            connection_context::get(pnc).reconnect.reset(new reconnect_timer(reconnect.value));
+        if (reconnect.set)
+            connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value, co));
         if (container_id.set)
             pn_connection_set_container(pnc, container_id.value.c_str());
         if (virtual_host.set)
@@ -187,7 +187,7 @@ connection_options& connection_options::container_id(const std::string &id) { im
 connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
 connection_options& connection_options::user(const std::string &user) { impl_->user = user; return *this; }
 connection_options& connection_options::password(const std::string &password) { impl_->password = password; return *this; }
-connection_options& connection_options::reconnect(const reconnect_timer &rc) { impl_->reconnect = rc; return *this; }
+connection_options& connection_options::reconnect(reconnect_options &r) { impl_->reconnect = r; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
@@ -196,7 +196,7 @@ connection_options& connection_options::sasl_allowed_mechs(const std::string &s)
 connection_options& connection_options::sasl_config_name(const std::string &n) { impl_->sasl_config_name = n; return *this; }
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
-void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c); }
+void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c, *this); }
 void connection_options::apply_bound(connection& c) const { impl_->apply_bound(c); }
 messaging_handler* connection_options::handler() const { return impl_->handler.value; }
 } // namespace proton

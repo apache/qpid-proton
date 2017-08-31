@@ -56,7 +56,7 @@ set(qpid-proton-cpp-source
   src/proton_bits.cpp
   src/receiver.cpp
   src/receiver_options.cpp
-  src/reconnect_timer.cpp
+  src/reconnect_options.cpp
   src/returned.cpp
   src/sasl.cpp
   src/scalar_base.cpp

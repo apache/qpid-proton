@@ -64,6 +64,10 @@ struct pn_event_t;
 
 namespace proton {
 
+namespace internal {
+class connector;
+}
+
 class container::impl {
   public:
     impl(container& c, const std::string& id, messaging_handler* = 0);
@@ -99,7 +103,12 @@ class container::impl {
     class container_work_queue;
     pn_listener_t* listen_common_lh(const std::string&);
     pn_connection_t* make_connection_lh(const url& url, const connection_options&);
+    void setup_connection_lh(const url& url, pn_connection_t *pnc);
     void start_connection(const url& url, pn_connection_t* c);
+    void reconnect(pn_connection_t* pnc);
+    duration next_delay(reconnect_context& rc);
+    bool setup_reconnect(pn_connection_t* pnc);
+    void reset_reconnect(pn_connection_t* pnc);
 
     // Event loop to run in each container thread
     void thread();
@@ -136,9 +145,11 @@ class container::impl {
     proton::sender_options sender_options_;
     proton::receiver_options receiver_options_;
     error_condition disconnect_error_;
+    int retries_;
 
     bool auto_stop_;
     bool stopping_;
+    friend class connector;
 };
 
 template <class T>

@@ -24,6 +24,7 @@
 #include "proton/function.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
+#include "proton/reconnect_options.hpp"
 #include "proton/url.hpp"
 
 #include "proton/connection.h"
@@ -33,6 +34,7 @@
 
 #include "contexts.hpp"
 #include "messaging_adapter.hpp"
+#include "reconnect_options_impl.hpp"
 #include "proton_bits.hpp"
 
 #include <assert.h>
@@ -152,6 +154,15 @@ void container::impl::remove_work_queue(container::impl::container_work_queue* l
     work_queues_.erase(l);
 }
 
+void container::impl::setup_connection_lh(const url& url, pn_connection_t *pnc) {
+    pn_connection_set_container(pnc, id_.c_str());
+    pn_connection_set_hostname(pnc, url.host().c_str());
+    if (!url.user().empty())
+        pn_connection_set_user(pnc, url.user().c_str());
+    if (!url.password().empty())
+        pn_connection_set_password(pnc, url.password().c_str());
+}
+
 pn_connection_t* container::impl::make_connection_lh(
     const url& url,
     const connection_options& user_opts)
@@ -169,14 +180,10 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
 
-    pn_connection_set_container(pnc, id_.c_str());
-    pn_connection_set_hostname(pnc, url.host().c_str());
-    if (!url.user().empty())
-        pn_connection_set_user(pnc, url.user().c_str());
-    if (!url.password().empty())
-        pn_connection_set_password(pnc, url.password().c_str());
-
+    cc.connected_address_ = url;
+    setup_connection_lh(url, pnc);
     make_wrapper(pnc).open(opts);
+
     return pnc;                 // 1 refcount from pn_connection()
 }
 
@@ -184,6 +191,70 @@ void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     char caddr[PN_MAX_ADDR];
     pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
     pn_proactor_connect(proactor_, pnc, caddr); // Takes ownership of pnc
+}
+
+void container::impl::reconnect(pn_connection_t* pnc) {
+    connection_context& cc = connection_context::get(pnc);
+    reconnect_context* rc = cc.reconnect_context_.get();
+
+    // Figure out next connection url to try
+    const proton::url url(cc.connected_address_);
+
+    cc.connected_address_ = url;
+    setup_connection_lh(url, pnc);
+    make_wrapper(pnc).open(*rc->connection_options_);
+    start_connection(cc.connected_address_, pnc);
+    rc->retries_++;
+}
+
+duration container::impl::next_delay(reconnect_context& rc) {
+    // If we've not retried before do it immediately
+    if (rc.retries_==0) return duration(0);
+
+    const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
+    if (rc.retries_==1) {
+        rc.delay_ = roi.delay;
+    } else {
+        rc.delay_ = std::min(roi.max_delay, rc.delay_ * roi.delay_multiplier);
+    }
+    return rc.delay_;
+}
+
+void container::impl::reset_reconnect(pn_connection_t* pnc) {
+    connection_context& cc = connection_context::get(pnc);
+    reconnect_context* rc = cc.reconnect_context_.get();
+
+    if (rc) rc->retries_ = 0;
+}
+
+bool container::impl::setup_reconnect(pn_connection_t* pnc) {
+    connection_context& cc = connection_context::get(pnc);
+    reconnect_context* rc = cc.reconnect_context_.get();
+
+    // If reconnect not enabled just fail
+    if (!rc) return false;
+
+    const reconnect_options::impl& roi = *rc->reconnect_options_->impl_;
+
+    // If too many reconnect attempts just fail
+    if ( roi.max_attempts != 0 && rc->retries_ >= roi.max_attempts) {
+        pn_transport_t* t = pn_connection_transport(pnc);
+        pn_condition_t* condition = pn_transport_condition(t);
+        pn_condition_format(condition, "proton:io", "Too many reconnect attempts (%d)", rc->retries_);
+        return false;
+    }
+
+    // Recover connection from proactor
+    pn_proactor_release_connection(pnc);
+
+    // Figure out delay till next reconnect
+    duration delay = next_delay(*rc);
+
+    // Schedule reconnect - can do this on container work queue as no one can have the connection
+    // now anyway
+    schedule(delay, make_work(&container::impl::reconnect, this, pnc));
+
+    return true;
 }
 
 returned<connection> container::impl::connect(
@@ -416,6 +487,21 @@ bool container::impl::handle(pn_event_t* event) {
         }
 
         return false;
+    }
+    case PN_CONNECTION_REMOTE_OPEN: {
+        // This is the only event that we get indicating that the connection succeeded so
+        // it's the only place to reset the reconnection logic.
+        //
+        // Just note we have a connection then process normally
+        pn_connection_t* c = pn_event_connection(event);
+        reset_reconnect(c);
+        break;
+    }
+    case PN_TRANSPORT_CLOSED: {
+        // If reconnect is turned on then handle closed on error here with reconnect attempt
+        pn_connection_t* c = pn_event_connection(event);
+        pn_transport_t* t = pn_event_transport(event);
+        if (pn_condition_is_set(pn_transport_condition(t)) && setup_reconnect(c)) return false;
     }
     default:
         break;

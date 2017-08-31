@@ -20,18 +20,19 @@
  */
 
 #include "contexts.hpp"
+
 #include "msg.hpp"
 #include "proton_bits.hpp"
 
 #include "proton/connection_options.hpp"
 #include "proton/error.hpp"
+#include "proton/reconnect_options.hpp"
 
 #include <proton/connection.h>
 #include <proton/object.h>
 #include <proton/link.h>
 #include <proton/listener.h>
 #include <proton/message.h>
-#include "proton/reconnect_timer.hpp"
 #include <proton/session.h>
 
 #include <typeinfo>
@@ -68,6 +69,10 @@ pn_class_t* context::pn_class() { return &cpp_context_class; }
 
 connection_context::connection_context() :
     container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
+{}
+
+reconnect_context::reconnect_context(const reconnect_options& ro, const connection_options& co) :
+    reconnect_options_(new reconnect_options(ro)), connection_options_(new connection_options(co)), retries_(0)
 {}
 
 listener_context::listener_context() : listen_handler_(0) {}

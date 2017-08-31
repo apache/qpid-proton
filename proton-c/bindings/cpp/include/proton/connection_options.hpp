@@ -22,12 +22,12 @@
  *
  */
 
+#include "./duration.hpp"
 #include "./fwd.hpp"
-#include "./types_fwd.hpp"
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
-#include "./duration.hpp"
+#include "./types_fwd.hpp"
 
 #include <proton/type_compat.h>
 
@@ -123,13 +123,6 @@ class connection_options {
     /// container::listen.
     PN_CPP_EXTERN connection_options& password(const std::string&);
 
-    /// @cond INTERNAL
-    // XXX settle questions about reconnect_timer - consider simply
-    // reconnect_options and making reconnect_timer internal
-    /// **Experimental**
-    PN_CPP_EXTERN connection_options& reconnect(const reconnect_timer&);
-    /// @endcond
-
     /// Set SSL client options.
     PN_CPP_EXTERN connection_options& ssl_client_options(const class ssl_client_options&);
 
@@ -152,6 +145,11 @@ class connection_options {
 
     /// **Unsettled API** - Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
+
+    /// **Experimental** - Options for reconnect on outgoing connections.
+    PN_CPP_EXTERN connection_options& reconnect(reconnect_options &);
+
+    
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
