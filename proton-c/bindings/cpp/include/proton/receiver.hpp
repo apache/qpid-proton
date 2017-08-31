@@ -63,7 +63,7 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// the drain completes.
     PN_CPP_EXTERN void add_credit(uint32_t);
 
-    /// **Experimental** - Commence a drain cycle.  If there is
+    /// **Unsettled API** - Commence a drain cycle.  If there is
     /// positive credit, a request is sent to the sender to
     /// immediately use up all of the existing credit balance by
     /// sending messages that are immediately available and releasing

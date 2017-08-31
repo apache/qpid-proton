@@ -26,18 +26,18 @@
 
 namespace proton {
 
-/// A std::string that represents the AMQP symbol type.
+/// A `std::string` that represents the AMQP symbol type.
 ///
-/// A symbol can only contain 7-bit ASCII characters.
+/// A symbol can contain only 7-bit ASCII characters.
 class symbol : public std::string {
   public:
-    /// Construct from a std::string.
+    /// Construct from a `std::string`.
     symbol(const std::string& s=std::string()) : std::string(s) {}
 
     /// Construct from a C string.
     symbol(const char* s) : std::string(s) {}
 
-    /// Construct from any sequence of char.
+    /// Construct from any sequence of `char`.
     template<class Iter> symbol(Iter start, Iter finish) : std::string(start, finish) {}
 };
 

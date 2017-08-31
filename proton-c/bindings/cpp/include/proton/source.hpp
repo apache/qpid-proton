@@ -40,7 +40,7 @@ namespace proton {
 /// @see proton::sender, proton::receiver, proton::target
 class source : public terminus {
   public:
-    /// **Experimental** - A map of AMQP symbol keys and filter
+    /// **Unsettled API** - A map of AMQP symbol keys and filter
     /// specifiers.
     typedef map<symbol, value> filter_map;
 
@@ -68,7 +68,7 @@ class source : public terminus {
     /// Get the distribution mode.
     PN_CPP_EXTERN enum distribution_mode distribution_mode() const;
 
-    /// **Experimental** - Obtain the set of message filters.
+    /// **Unsettled API** - Obtain the set of message filters.
     PN_CPP_EXTERN const filter_map& filters() const;
 
   private:

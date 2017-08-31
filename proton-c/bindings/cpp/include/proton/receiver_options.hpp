@@ -62,42 +62,46 @@ class receiver_options {
     /// Copy options.
     PN_CPP_EXTERN receiver_options& operator=(const receiver_options&);
 
-    /// Merge with another option set
+    /// Merge with another option set.
     PN_CPP_EXTERN void update(const receiver_options& other);
 
-    /// Set a messaging_handler for receiver events only.
-    /// The handler is no longer in use when messaging_handler::on_receiver_close() is called.
+    /// Set a messaging_handler for receiver events only.  The handler
+    /// is no longer in use when
+    /// messaging_handler::on_receiver_close() is called.
     PN_CPP_EXTERN receiver_options& handler(class messaging_handler&);
 
-    /// Set the delivery mode on the receiver.
+    /// Set the delivery mode on the receiver.  The default is
+    /// delivery_mode::AT_LEAST_ONCE.
     PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);
 
-    /// Automatically accept inbound messages that aren't otherwise
-    /// released, rejected, or modified (default is true).
+    /// Enable or disable automatic acceptance of messages that aren't
+    /// otherwise released, rejected, or modified.  It is enabled by
+    /// default.
     PN_CPP_EXTERN receiver_options& auto_accept(bool);
 
-    /// Automatically settle messages (default is true).
+    /// Enable or disable automatic settlement of messages.  It is
+    /// enabled by default.
     PN_CPP_EXTERN receiver_options& auto_settle(bool);
 
     /// Options for the source node of the receiver.
-    PN_CPP_EXTERN receiver_options& source(source_options &);
+    PN_CPP_EXTERN receiver_options& source(source_options&);
 
     /// Options for the target node of the receiver.
-    PN_CPP_EXTERN receiver_options& target(target_options &);
+    PN_CPP_EXTERN receiver_options& target(target_options&);
 
-    /// Set automated flow control to pre-fetch this many messages
-    /// (default is 10).  Set to zero to disable automatic credit
-    /// replenishing.
-    PN_CPP_EXTERN receiver_options& credit_window(int);
+    /// Automatically replenish credit for flow control up to `count`
+    /// messages.  The default is 10.  Set to zero to disable
+    /// automatic replenishment.
+    PN_CPP_EXTERN receiver_options& credit_window(int count);
 
-    /// @cond INTERNAL
   private:
     void apply(receiver &) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
-    friend class receiver;
+    /// @cond INTERNAL
+  friend class receiver;
     /// @endcond
 };
 

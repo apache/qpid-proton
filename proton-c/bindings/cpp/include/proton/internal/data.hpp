@@ -78,7 +78,7 @@ class data : public object<pn_data_t> {
 };
 /// @endcond
 
-/// **Experimental** - Save and restore codec state
+/// **Unsettled API** - Save and restore codec state
 ///
 /// A state_guard saves the state and restores it in the destructor
 /// unless cancel() is called.

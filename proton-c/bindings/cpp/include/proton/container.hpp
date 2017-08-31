@@ -124,7 +124,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// auto_stop is set by default when a new container is created.
     PN_CPP_EXTERN void auto_stop(bool);
 
-    /// **Experimental** - Stop the container with an error_condition
+    /// **Unsettled API** - Stop the container with an error_condition
     /// err.
     ///
     ///  - Abort all open connections and listeners.
@@ -133,7 +133,7 @@ class PN_CPP_CLASS_EXTERN container {
     ///  - run() will return in all threads.
     PN_CPP_EXTERN void stop(const error_condition& err);
 
-    /// **Experimental** - Stop the container with an empty error
+    /// **Unsettled API** - Stop the container with an empty error
     /// condition.
     ///
     /// @see stop(const error_condition&)

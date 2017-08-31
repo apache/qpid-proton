@@ -27,7 +27,7 @@
 namespace proton {
 
 // XXX Discuss more
-/// **Experimental** - A handler for incoming connections.
+/// **Unsettled API** - A handler for incoming connections.
 ///
 /// Implement this interface and pass to proton::container::listen()
 /// to be notified of new connections.

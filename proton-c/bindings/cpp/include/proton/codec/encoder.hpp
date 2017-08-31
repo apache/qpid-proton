@@ -38,7 +38,7 @@ class value_base;
 
 namespace codec {
 
-/// **Experimental** - Stream-like encoder from C++ values to AMQP
+/// **Unsettled API** - Stream-like encoder from C++ values to AMQP
 /// bytes.
 ///
 /// For internal use only.

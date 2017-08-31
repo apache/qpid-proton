@@ -86,26 +86,26 @@ class connection_options {
     /// Set the maximum frame size.  It is unlimited by default.
     PN_CPP_EXTERN connection_options& max_frame_size(uint32_t max);
 
-    /// Set the maximum number of open sessions.  The default value is 32767.
+    /// Set the maximum number of open sessions.  The default is 32767.
     PN_CPP_EXTERN connection_options& max_sessions(uint16_t max);
 
-    /// Set the idle timeout.  By default, none is set.
+    /// Set the idle timeout.  The default is no timeout.
     ///
-    /// If set, the local peer will disconnect if it does not receive
-    /// AMQP frames before the timeout expires.  This serves as
-    /// "heartbeating", a way to detect dead peers even in the
+    /// If set, the local peer will disconnect if it receives no AMQP
+    /// frames for an interval longer than `duration`.  Also known as
+    /// "heartbeating", this is a way to detect dead peers even in the
     /// presence of a live TCP connection.
     PN_CPP_EXTERN connection_options& idle_timeout(duration);
 
     /// Set the container ID.
     PN_CPP_EXTERN connection_options& container_id(const std::string& id);
 
-    /// Set the virtual host name for the connection. If making a
-    /// client connection by SSL/TLS, this name is also used for
-    /// certificate verification and Server Name Indication.  For
-    /// client connections, it defaults to the host name used to set
-    /// up the connection.  For server connections, it is not set by
-    /// default.
+    /// Set the virtual host name for the connection. For client
+    /// connections, it defaults to the host name used to set up the
+    /// connection.  For server connections, it is unset by default.
+    ///
+    /// If making a client connection by SSL/TLS, this name is also
+    /// used for certificate verification and Server Name Indication.
     PN_CPP_EXTERN connection_options& virtual_host(const std::string& name);
 
     /// Set the user name used to authenticate the connection.  It is
@@ -117,8 +117,7 @@ class connection_options {
     /// connection's identity is provided by the remote client.
     PN_CPP_EXTERN connection_options& user(const std::string&);
 
-    /// Set the password used to authenticate the connection.  It has
-    /// no default value.
+    /// Set the password used to authenticate the connection.
     ///
     /// This value is ignored if the connection is created by
     /// container::listen.
@@ -140,7 +139,7 @@ class connection_options {
     /// Enable or disable SASL.
     PN_CPP_EXTERN connection_options& sasl_enabled(bool);
 
-    /// Force the enabling of SASL mechanisms that disclose clear text
+    /// Force the enabling of SASL mechanisms that disclose cleartext
     /// passwords over the connection.  By default, such mechanisms
     /// are disabled.
     PN_CPP_EXTERN connection_options& sasl_allow_insecure_mechs(bool);
@@ -148,10 +147,10 @@ class connection_options {
     /// Specify the allowed mechanisms for use on the connection.
     PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string&);
 
-    /// **Experimental** - Set the SASL configuration name.
+    /// **Unsettled API** - Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string&);
 
-    /// **Experimental** - Set the SASL configuration path.
+    /// **Unsettled API** - Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
 
     /// Update option values from values set in other.

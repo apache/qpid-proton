@@ -34,7 +34,6 @@ namespace proton {
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
-// XXX Does this need the CLASS_EXTERN stuff? - Add just for consistency
 class session_options {
   public:
     /// Create an empty set of options.
@@ -51,8 +50,9 @@ class session_options {
     /// Set a messaging_handler for the session.
     PN_CPP_EXTERN session_options& handler(class messaging_handler &);
 
-    /// @cond INTERNAL
     // Other useful session configuration TBD.
+
+    /// @cond INTERNAL
   private:
     void apply(session&) const;
 

@@ -23,7 +23,7 @@
 /// The main Proton namespace.
 namespace proton {
 
-/// **Experimental** - AMQP data encoding and decoding.
+/// **Unsettled API** - AMQP data encoding and decoding.
 ///
 /// You can use these classes on an experimental basis to create your
 /// own AMQP encodings for C++ types, but they may change in the
@@ -32,7 +32,7 @@ namespace proton {
 namespace codec {
 }
 
-/// **Experimental** - An SPI for multithreaded network IO.
+/// **Unsettled API** - An SPI for multithreaded network IO.
 namespace io {
 }
 

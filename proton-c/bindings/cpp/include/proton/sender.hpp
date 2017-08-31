@@ -60,7 +60,7 @@ PN_CPP_CLASS_EXTERN sender : public link {
     /// Get the target node.
     PN_CPP_EXTERN class target target() const;
 
-    /// **Experimental** - Return all unused credit to the receiver in
+    /// **Unsettled API** - Return all unused credit to the receiver in
     /// response to a drain request.  Has no effect unless there has
     /// been a drain request and there is remaining credit to use or
     /// return.

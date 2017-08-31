@@ -46,11 +46,11 @@ namespace proton {
 /// message.
 class message {
   public:
-    /// **Experimental** - A map of string keys and AMQP scalar
+    /// **Unsettled API** - A map of string keys and AMQP scalar
     /// values.
     typedef map<std::string, scalar> property_map;
 
-    /// **Experimental** - A map of AMQP annotation keys and AMQP
+    /// **Unsettled API** - A map of AMQP annotation keys and AMQP
     /// values.
     typedef map<annotation_key, value> annotation_map;
 
@@ -287,17 +287,17 @@ class message {
 
     /// @}
 
-    /// @name **Experimental** - Application properties
+    /// @name **Unsettled API** - Application properties
     /// @{
 
-    /// **Experimental** - Get the application properties map.  It can
+    /// **Unsettled API** - Get the application properties map.  It can
     /// be modified in place.
     PN_CPP_EXTERN property_map& properties();
 
-    /// **Experimental** - examine the application properties map.
+    /// **Unsettled API** - examine the application properties map.
     PN_CPP_EXTERN const property_map& properties() const;
 
-    /// @name **Experimental** - Annotations
+    /// @name **Unsettled API** - Annotations
     ///
     /// Normally used by messaging infrastructure, not applications.
     /// @{

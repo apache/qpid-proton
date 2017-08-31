@@ -70,7 +70,7 @@ class url {
     /// @cond INTERNAL
     /// XXX I want to understand why this is important to keep.
     ///
-    /// **Experimental** - Parse `url_str` as an AMQP URL. If
+    /// **Unsettled API** - Parse `url_str` as an AMQP URL. If
     /// `defaults` is true, fill in defaults for missing values.
     /// Otherwise, return an empty string for missing values.
     ///

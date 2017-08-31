@@ -92,7 +92,7 @@ class ssl {
     /// @endcond
 };
 
-/// **Experimental** - An SSL certificate.
+/// **Unsettled API** - An SSL certificate.
 class ssl_certificate {
   public:
     /// Create an SSL certificate.
@@ -141,7 +141,7 @@ class ssl_domain {
 
 }
 
-/// **Experimental** - SSL configuration for inbound connections.
+/// **Unsettled API** - SSL configuration for inbound connections.
 class ssl_server_options : private internal::ssl_domain {
   public:
     /// Server SSL options based on the supplied X.509 certificate
@@ -168,7 +168,7 @@ class ssl_server_options : private internal::ssl_domain {
     /// @endcond
 };
 
-/// **Experimental** - SSL configuration for outbound connections.
+/// **Unsettled API** - SSL configuration for outbound connections.
 class ssl_client_options : private internal::ssl_domain {
   public:
     /// Create SSL client options (no client certificate).

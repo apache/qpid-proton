@@ -64,7 +64,7 @@ PN_CPP_CLASS_EXTERN link : public internal::object<pn_link_t> , public endpoint 
     /// Credit available on the link.
     PN_CPP_EXTERN int credit() const;
 
-    /// **Experimental** - True for a receiver if a drain cycle has
+    /// **Unsettled API** - True for a receiver if a drain cycle has
     /// been started and the corresponding `on_receiver_drain_finish`
     /// event is still pending.  True for a sender if the receiver has
     /// requested a drain of credit and the sender has unused credit.

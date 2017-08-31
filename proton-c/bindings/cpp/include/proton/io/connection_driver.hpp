@@ -39,7 +39,7 @@ class proton_handler;
 
 namespace io {
 
-/// **Experimental** - Pointer to a mutable memory region with a size.
+/// **Unsettled API** - Pointer to a mutable memory region with a size.
 struct mutable_buffer {
     char* data;                 ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.
@@ -48,7 +48,7 @@ struct mutable_buffer {
     mutable_buffer(char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// **Experimental** - Pointer to a const memory region with a size.
+/// **Unsettled API** - Pointer to a const memory region with a size.
 struct const_buffer {
     const char* data;           ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.
@@ -57,7 +57,7 @@ struct const_buffer {
     const_buffer(const char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// **Experimental** - An AMQP driver for a single connection.
+/// **Unsettled API** - An AMQP driver for a single connection.
 ///
 /// io::connection_driver manages a single proton::connection and dispatches
 /// events to a proton::messaging_handler. It does no IO of its own, but allows you to

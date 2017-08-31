@@ -1,5 +1,5 @@
-#ifndef PROTON_CPP_MAP_H
-#define PROTON_CPP_MAP_H
+#ifndef PROTON_MAP_HPP
+#define PROTON_MAP_HPP
 
 /*
  *
@@ -23,8 +23,7 @@
  */
 
 #include "./value.hpp"
-
-#include "internal/pn_unique_ptr.hpp"
+#include "./internal/pn_unique_ptr.hpp"
 
 #include <cstddef>
 
@@ -51,14 +50,16 @@ PN_CPP_EXTERN proton::codec::encoder& operator<<(proton::codec::encoder& e, cons
 template <class K, class T>
 PN_CPP_EXTERN void swap(map<K,T>&, map<K,T>&);
 
-/// Used to access standard AMQP property, annotation and filter maps attached
-/// to proton::message and proton::source.
+/// A collection of key-value pairs.
 ///
-/// Provides only basic get()/set() operations for convenience.  For more
-/// complicated use (iteration, preserving order etc.) you should convert to a
-/// standard C++ map type such as std::map. See @ref message_properties.cpp
-/// and @ref types_page.
+/// Used to access standard AMQP property, annotation, and filter maps
+/// attached to proton::message and proton::source.
 ///
+/// This class provides only basic get() and put() operations for
+/// convenience.  For more complicated uses (iteration, preserving
+/// order, and so on), convert the value to a standard C++ map type
+/// such as `std::map`. See @ref message_properties.cpp and @ref
+/// types_page.
 template <class K, class T>
 class PN_CPP_CLASS_EXTERN map {
     template <class M, class U=void>
@@ -66,50 +67,69 @@ class PN_CPP_CLASS_EXTERN map {
             public internal::enable_if<codec::is_encodable_map<M,K,T>::value, U> {};
 
  public:
-    /// @name Construct and assign
-    /// @{
+    /// Construct an empty map.
     PN_CPP_EXTERN map();
-    PN_CPP_EXTERN map(const map& cm);
-    PN_CPP_EXTERN map& operator=(const map& cm);
+
+    /// Copy a map.
+    PN_CPP_EXTERN map(const map&);
+
+    /// Copy a map.
+    PN_CPP_EXTERN map& operator=(const map&);
+
 #if PN_CPP_HAS_RVALUE_REFERENCES
+    /// Move a map.
     PN_CPP_EXTERN map(map&&);
+
+    /// Move a map.
     PN_CPP_EXTERN map& operator=(map&&);
 #endif
-    ///@}
     PN_CPP_EXTERN ~map();
 
-    /// Type-safe assign from a compatible map, e.g. std::map<K,T> - see @ref types_page
+    /// Type-safe assign from a compatible map, for instance
+    /// `std::map<K,T>`. See @ref types_page.
     template <class M>
-    typename assignable_map<M, map&>::type operator=(const M& x) { value(x); return *this;}
+    typename assignable_map<M, map&>::type operator=(const M& x) { value(x); return *this; }
 
     /// Copy from a proton::value.
-    /// @throw proton::conversion_error if x does not contain a compatible map.
+    ///
+    /// @throw proton::conversion_error if `x` does not contain a
+    /// compatible map.
     PN_CPP_EXTERN void value(const value& x);
-    /// Access as a proton::value containing an AMQP map
+
+    /// Access as a proton::value containing an AMQP map.
     PN_CPP_EXTERN proton::value& value();
-    /// Access as a proton::value containing an AMQP map
+
+    /// Access as a proton::value containing an AMQP map.
     PN_CPP_EXTERN const proton::value& value() const;
 
-    /// Get the map entry for key k, return T() if no such entry
+    /// Get the map entry for key `k`.  Return `T()` if there is no
+    /// such entry.
     PN_CPP_EXTERN T get(const K& k) const;
-    /// Put a map entry for key k.
+
+    /// Put a map entry for key `k`.
     PN_CPP_EXTERN void put(const K& k, const T& v);
-    /// Erase the map entry at k
+
+    /// Erase the map entry at `k`.
     PN_CPP_EXTERN size_t erase(const K& k);
-    /// True if there is a map entry for k
+
+    /// True if the map has an entry for `k`.
     PN_CPP_EXTERN bool exists(const K& k) const;
-    /// Number of map entries
+
+    /// Get the number of map entries.
     PN_CPP_EXTERN size_t size() const;
-    /// Clear the map
+
+    /// Remove all map entries.
     PN_CPP_EXTERN void clear();
-    /// True if the map is empty
+
+    /// True if the map has no entries.
     PN_CPP_EXTERN bool empty() const;
 
-    ///@cond INTERNAL
+    /// @cond INTERNAL
     explicit map(pn_data_t*);
     void reset(pn_data_t*);
+    /// @endcond
 
- private:
+  private:
     typedef map_type_impl<K,T> map_type;
     mutable internal::pn_unique_ptr<map_type> map_;
     mutable proton::value value_;
@@ -117,12 +137,13 @@ class PN_CPP_CLASS_EXTERN map {
     map_type& cache() const;
     proton::value& flush() const;
 
+    /// @cond INTERNAL
   friend PN_CPP_EXTERN proton::codec::decoder& operator>> <>(proton::codec::decoder&, map&);
   friend PN_CPP_EXTERN proton::codec::encoder& operator<< <>(proton::codec::encoder&, const map&);
   friend PN_CPP_EXTERN void swap<>(map&, map&);
-  /// @endcond
+    /// @endcond
 };
 
-} // namespace proton
+} // proton
 
-#endif // PROTON_CPP_MAP_H
+#endif // PROTON_MAP_HPP

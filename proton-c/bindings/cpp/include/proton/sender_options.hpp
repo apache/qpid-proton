@@ -43,14 +43,13 @@ namespace proton {
 ///
 /// @code
 /// sender_options opts;
-/// opts.browsing(true);
+/// opts.delivery_mode(delivery_mode::AT_MOST_ONCE);
 /// l1 = container.open_sender(url1, opts.handler(h1));
 /// c2 = container.open_receiver(url2, opts.handler(h2));
 /// @endcode
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
-// XXX opts.browsing is not a good example here
 class sender_options {
   public:
     /// Create an empty set of options.
@@ -80,19 +79,19 @@ class sender_options {
     PN_CPP_EXTERN sender_options& auto_settle(bool);
 
     /// Options for the source node of the sender.
-    PN_CPP_EXTERN sender_options& source(const source_options &);
+    PN_CPP_EXTERN sender_options& source(const source_options&);
 
     /// Options for the receiver node of the receiver.
-    PN_CPP_EXTERN sender_options& target(const target_options &);
+    PN_CPP_EXTERN sender_options& target(const target_options&);
 
-    /// @cond INTERNAL
   private:
     void apply(sender&) const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
-    friend class sender;
+    /// @cond INTERNAL
+  friend class sender;
     /// @endcond
 };
 

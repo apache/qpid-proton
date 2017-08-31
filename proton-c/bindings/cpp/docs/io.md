@@ -1,6 +1,6 @@
 # IO integration {#io_page}
 
-**Experimental** - The `proton::io` interfaces are new and remain
+**Unsettled API** - The `proton::io` interfaces are new and remain
 subject to change.
 
 The `proton::io` namespace contains a service provider interface (SPI)

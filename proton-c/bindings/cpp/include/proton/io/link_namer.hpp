@@ -31,7 +31,7 @@ class connection;
 
 namespace io {
 
-/// **Experimental** - Generate default link names that are unique
+/// **Unsettled API** - Generate default link names that are unique
 /// within a container.  base_container provides a default
 /// implementation.
 class link_namer {
@@ -42,7 +42,7 @@ class link_namer {
     virtual std::string link_name() = 0;
 };
 
-/// *Experimental* - Set the link_namer to use on a connection.
+/// **Unsettled API** - Set the link_namer to use on a connection.
 PN_CPP_EXTERN void set_link_namer(connection&, link_namer&);
 
 } // io

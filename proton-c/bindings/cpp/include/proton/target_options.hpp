@@ -51,20 +51,25 @@ class target_options {
     /// Copy options.
     PN_CPP_EXTERN target_options& operator=(const target_options&);
 
-    /// Set the address for the target.  Ignored if dynamic is true.
+    /// Set the address for the target.  It is unset by default.  The
+    /// address is ignored if dynamic() is true.
     PN_CPP_EXTERN target_options& address(const std::string& addr);
 
-    /// Request a dynamically created node to be created by the peer.
-    /// Any specified target address is ignored.
+    /// Request that a node be dynamically created by the remote peer.
+    /// The default is false.  Any specified target address() is
+    /// ignored.
     PN_CPP_EXTERN target_options& dynamic(bool);
 
-    /// Control the persistence of target state.
+    /// Control the persistence of the target node.  The default is
+    /// target::NONDURABLE, meaning non-persistent.
     PN_CPP_EXTERN target_options& durability_mode(enum target::durability_mode);
 
-    /// The expiry period after which the target is discarded.
+    /// The expiry period after which the target is discarded.  The
+    /// default is no timeout.
     PN_CPP_EXTERN target_options& timeout(duration);
 
-    /// Control when the clock for expiration begins.
+    /// Control when the clock for expiration begins.  The default is
+    /// target::LINK_CLOSE.
     PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
   private:

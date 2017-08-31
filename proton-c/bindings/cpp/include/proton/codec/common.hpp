@@ -27,7 +27,7 @@
 namespace proton {
 namespace codec {
 
-/// **Experimental** - Start encoding a complex type.
+/// **Unsettled API** - Start encoding a complex type.
 struct start {
     /// @cond INTERNAL
     /// XXX Document
@@ -50,7 +50,7 @@ struct start {
     /// @endcond
 };
 
-/// **Experimental** - Finish inserting or extracting a complex type.
+/// **Unsettled API** - Finish inserting or extracting a complex type.
 struct finish {};
 
 } // codec

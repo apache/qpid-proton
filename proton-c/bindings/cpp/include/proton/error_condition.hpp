@@ -50,7 +50,7 @@ class error_condition {
     /// Create an error condition with a name and description.
     PN_CPP_EXTERN error_condition(std::string name, std::string description);
 
-    /// **Experimental** - Create an error condition with name,
+    /// **Unsettled API** - Create an error condition with name,
     /// description, and informational properties.
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 

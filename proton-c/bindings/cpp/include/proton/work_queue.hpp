@@ -37,21 +37,21 @@ struct pn_link_t;
 
 namespace proton {
 
-/// **Experimental** - Work to be queued on a @ref work_queue.  It can
+/// **Unsettled API** - Work to be queued on a @ref work_queue.  It can
 /// be created from a function that takes no parameters and returns no
 /// value.
 class work {
   public:
 #if PN_CPP_HAS_STD_FUNCTION
-    /// **Experimental**
+    /// **Unsettled API**
     work(void_function0& f): item_( [&f]() { f(); }) {}
 
-    /// **Experimental** - Construct a unit of work from a
+    /// **Unsettled API** - Construct a unit of work from a
     /// std::function.
     template <class T>
     work(T f): item_(f) {}
 
-    /// **Experimental**
+    /// **Unsettled API**
     void operator()() { item_(); }
 #else
     /// **Experimetnal**
@@ -71,7 +71,7 @@ class work {
 #endif
 };
 
-/// **Experimental** - A work queue for serial execution.
+/// **Unsettled API** - A work queue for serial execution.
 ///
 /// Event handler functions associated with a single
 /// proton::connection are called in sequence.  The connection's
@@ -94,15 +94,15 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @endcond
 
   public:
-    /// **Experimental** - Create a work_queue.
+    /// **Unsettled API** - Create a work_queue.
     PN_CPP_EXTERN work_queue();
 
-    /// **Experimental** - Create a work_queue backed by `container`.
+    /// **Unsettled API** - Create a work_queue backed by `container`.
     PN_CPP_EXTERN work_queue(container&);
 
     PN_CPP_EXTERN ~work_queue();
 
-    /// **Experimental** - Add work to the work queue: f() will be
+    /// **Unsettled API** - Add work to the work queue: f() will be
     /// called serialised with other work in the queue: deferred and
     /// possibly in another thread.
     ///
@@ -110,7 +110,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// or f() cannot be injected for any other reason.
     PN_CPP_EXTERN bool add(work f);
 
-    /// **Experimental** - Add work to the work queue after duration:
+    /// **Unsettled API** - Add work to the work queue after duration:
     /// f() will be called after the duration serialised with other
     /// work in the queue: possibly in another thread.
     ///
@@ -363,19 +363,19 @@ void schedule_work(WQ wq, duration dn, F f, A a, B b, C c, D d) {
 // The C++11 version is *much* simpler and even so more general!
 // These definitions encompass everything in the C++03 section
 
-/// **Experimental**
+/// **Unsettled API**
 template <class WQ, class... Rest>
 bool schedule_work(WQ wq, Rest&&... r) {
     return wq->add(std::bind(std::forward<Rest>(r)...));
 }
 
-/// **Experimental**
+/// **Unsettled API**
 template <class WQ, class... Rest>
 void schedule_work(WQ wq, duration d, Rest&&... r) {
     wq->schedule(d, std::bind(std::forward<Rest>(r)...));
 }
 
-/// **Experimental**
+/// **Unsettled API**
 template <class... Rest>
 work make_work(Rest&&... r) {
     return std::bind(std::forward<Rest>(r)...);
