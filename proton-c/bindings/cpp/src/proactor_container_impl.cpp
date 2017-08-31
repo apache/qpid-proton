@@ -212,7 +212,9 @@ void container::impl::reconnect(pn_connection_t* pnc) {
 
     cc.connected_address_ = url;
     setup_connection_lh(url, pnc);
-    make_wrapper(pnc).open(*rc->connection_options_);
+    { // Scope required to keep temporary destructor from doing pn_decref() after start_connection()
+        make_wrapper(pnc).open(*rc->connection_options_);
+    }
     start_connection(cc.connected_address_, pnc);
     rc->retries_++;
 }
