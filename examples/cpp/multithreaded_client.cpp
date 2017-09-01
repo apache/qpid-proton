@@ -18,7 +18,7 @@
  */
 
 //
-// C++11 only
+// C++11 or greater
 //
 // A multi-threaded client that calls proton::container::run() in one thread, sends
 // messages in another and receives messages in a third.

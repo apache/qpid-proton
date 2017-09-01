@@ -26,7 +26,6 @@
 /// @file proton/namespaces.hpp
 /// @file proton/receiver.hpp
 /// @file proton/receiver_options.hpp
-/// @file proton/reconnect_timer.hpp
 /// @file proton/sasl.hpp
 /// @file proton/scalar_base.hpp
 /// @file proton/scalar.hpp Run-time holder for any AMQP scalar value

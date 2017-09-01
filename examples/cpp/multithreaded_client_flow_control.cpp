@@ -17,7 +17,8 @@
  * under the License.
  */
 
-// C++11 only
+//
+// C++11 or greater
 //
 // A multi-threaded client that sends and receives messages from multiple AMQP
 // addresses.
