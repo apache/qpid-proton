@@ -22,7 +22,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/error_condition.hpp>
 #include <proton/function.hpp>

@@ -112,7 +112,7 @@ different types of application. All of them use the same
 `proton::messaging_handler` subclasses so code can be re-used if you
 change your approach.
 
-### %proton::default_container - Easy single-threaded applications
+### %proton::container - Easy single-threaded applications
 
 `proton::container` is the top-level object in a proton application.
 Use proton::container::connect() and proton::container::listen() to
@@ -120,7 +120,7 @@ create connections. The container polls multiple connections and calls
 protocol events on your `proton::messaging_handler` subclasses.
 
 The default container implementation is created using
-`proton::default_container`.
+`proton::container`.
 
 You can implement your own container to integrate proton with any IO
 provider using the `proton::io::connection_driver`.

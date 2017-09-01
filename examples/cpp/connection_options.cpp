@@ -22,7 +22,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/transport.hpp>
 
@@ -65,7 +64,7 @@ int main(int argc, char **argv) {
     try {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
         main_handler handler(url);
-        proton::default_container container(handler);
+        proton::container container(handler);
         // Global connection options for future connections on container.
         container.client_connection_options(connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
         container.run();

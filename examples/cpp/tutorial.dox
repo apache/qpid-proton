@@ -18,7 +18,7 @@ functions that react to various AMQP events (connections opening and
 closing, messages being delivered, and so on).
 
 The examples below show how to implement handlers for clients and
-servers and how to run them using the `proton::default_container`, a
+servers and how to run them using the `proton::container`, a
 portable, easy-to-use way to build single-threaded clients or servers.
 
 Some of the examples require an AMQP *broker* that can receive, store, and send
@@ -53,7 +53,7 @@ and then receiving the same message back. In a realistic system the
 sender and receiver would normally be in different processes. The
 complete example is @ref helloworld.cpp
 
-We will include the following classes: `proton::default_container` (an
+We will include the following classes: `proton::container` (an
 implementation of `proton::container`) runs an event loop which
 dispatches events to a `proton::messaging_handler`. This allows a
 *reactive* style of programming which is well suited to messaging
@@ -100,8 +100,8 @@ The message body is a `proton::value`, see the documentation for more on how to
 extract the message body as type-safe C++ values.
 
 Our `main` function creates an instance of the `hello_world` handler
-and a `proton::default_container` using that handler. Calling
-`proton::container::run` sets things in motion and returns when we
+and a `proton::container` using that handler. Calling
+`proton::container::run()` sets things in motion and returns when we
 close the connection as there is nothing further to do. It may throw
 an exception, which will be a subclass of `proton::error`. That in
 turn is a subclass of `std::exception`.

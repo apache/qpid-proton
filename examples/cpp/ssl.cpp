@@ -24,7 +24,6 @@
 #include <proton/connection_options.hpp>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/error_condition.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
@@ -179,7 +178,7 @@ int main(int argc, char **argv) {
             throw std::runtime_error("bad verify argument: " + verify);
 
         hello_world_direct hwd(address);
-        proton::default_container(hwd).run();
+        proton::container(hwd).run();
         return 0;
     } catch (const std::exception& e) {
         if (verify_failed) {

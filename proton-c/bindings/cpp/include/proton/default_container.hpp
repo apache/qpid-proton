@@ -25,6 +25,7 @@
 namespace proton {
 
 /// @cond INTERNAL
+/// default_container no longer exists as a separate class. Use `container`.
 typedef class container default_container;
 /// @endcond
 

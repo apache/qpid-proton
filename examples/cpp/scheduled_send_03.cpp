@@ -23,7 +23,6 @@
 
 #include <proton/container.hpp>
 #include <proton/connection.hpp>
-#include <proton/default_container.hpp>
 #include <proton/duration.hpp>
 #include <proton/function.hpp>
 #include <proton/message.hpp>
@@ -107,7 +106,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         scheduled_sender h(address, interval, timeout);
-        proton::default_container(h).run();
+        proton::container(h).run();
         return 0;
     } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

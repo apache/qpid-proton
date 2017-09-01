@@ -21,7 +21,6 @@
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -65,7 +64,7 @@ int main(int argc, char **argv) {
         std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
 
         hello_world hw(url);
-        proton::default_container(hw).run();
+        proton::container(hw).run();
 
         return 0;
     } catch (const std::exception& e) {

@@ -22,7 +22,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -142,7 +141,7 @@ int main(int argc, char **argv) {
         else cert_directory = "ssl_certs/";
 
         hello_world_direct hwd(url);
-        proton::default_container(hwd).run();
+        proton::container(hwd).run();
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

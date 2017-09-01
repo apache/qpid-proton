@@ -24,7 +24,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
@@ -237,7 +236,7 @@ int main(int argc, char **argv) {
             verbose = false;
 
         flow_control fc(address);
-        proton::default_container(fc).run();
+        proton::container(fc).run();
 
         return 0;
     } catch (const std::exception& e) {

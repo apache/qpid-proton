@@ -23,7 +23,6 @@
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
@@ -90,7 +89,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         server srv(address);
-        proton::default_container(srv).run();
+        proton::container(srv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

@@ -23,7 +23,6 @@
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
@@ -82,7 +81,7 @@ int main(int argc, char **argv) {
         opts.parse();
 
         direct_recv recv(address, message_count);
-        proton::default_container(recv).run();
+        proton::container(recv).run();
 
         return 0;
     } catch (const example::bad_option& e) {

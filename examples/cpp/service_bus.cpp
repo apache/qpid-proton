@@ -85,7 +85,6 @@ Done. No more messages.
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/function.hpp>
 #include <proton/message.hpp>
@@ -325,7 +324,7 @@ int main(int argc, char **argv) {
         std::string connection_string("amqps://" + sb_key_name + ":" + sb_key + "@" + sb_namespace);
 
         sequence seq(connection_string, sb_entity);
-        proton::default_container(seq).run();
+        proton::container(seq).run();
         return 0;
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;

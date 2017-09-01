@@ -22,7 +22,6 @@
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
-#include "proton/default_container.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
@@ -93,7 +92,7 @@ int test_container_vhost() {
     proton::connection_options opts;
     opts.virtual_host(std::string("a.b.c"));
     test_handler th(std::string("127.0.0.1"), opts);
-    proton::default_container(th).run();
+    proton::container(th).run();
     ASSERT_EQUAL(th.peer_vhost, std::string("a.b.c"));
     return 0;
 }
@@ -101,7 +100,7 @@ int test_container_vhost() {
 int test_container_default_vhost() {
     proton::connection_options opts;
     test_handler th(std::string("127.0.0.1"), opts);
-    proton::default_container(th).run();
+    proton::container(th).run();
     ASSERT_EQUAL(th.peer_vhost, std::string("127.0.0.1"));
     return 0;
 }
@@ -114,7 +113,7 @@ int test_container_no_vhost() {
     proton::connection_options opts;
     opts.virtual_host(std::string(""));
     test_handler th(std::string("127.0.0.1"), opts);
-    proton::default_container(th).run();
+    proton::container(th).run();
     ASSERT_EQUAL(th.peer_vhost, std::string(""));
     return 0;
 }
@@ -135,7 +134,7 @@ int test_container_bad_address() {
     // Listen on a bad address, check for leaks
     // Regression test for https://issues.apache.org/jira/browse/PROTON-1217
 
-    proton::default_container c;
+    proton::container c;
     // Default fixed-option listener. Valgrind for leaks.
     try { c.listen("999.666.999.666:0"); } catch (const proton::error&) {}
     c.run();
@@ -191,7 +190,7 @@ public:
 
 int test_container_stop() {
     stop_tester t;
-    proton::default_container(t).run();
+    proton::container(t).run();
     ASSERT(t.state==5);
     return 0;
 }

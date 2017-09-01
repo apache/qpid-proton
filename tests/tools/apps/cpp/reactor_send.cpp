@@ -25,7 +25,6 @@
 #include "proton/codec/decoder.hpp"
 #include "proton/connection.hpp"
 #include "proton/container.hpp"
-#include "proton/default_container.hpp"
 #include "proton/delivery.hpp"
 #include "proton/message.hpp"
 #include "proton/message_id.hpp"
@@ -123,7 +122,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
         reactor_send send(address, message_count, message_size, replying);
-        proton::default_container(send).run();
+        proton::container(send).run();
         return 0;
     } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;

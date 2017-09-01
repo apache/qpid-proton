@@ -22,7 +22,6 @@
 #include "options.hpp"
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -97,7 +96,7 @@ int main(int argc, char **argv) {
         requests.push_back("And the mome raths outgrabe.");
 
         client c(url, requests);
-        proton::default_container(c).run();
+        proton::container(c).run();
 
         return 0;
     } catch (const example::bad_option& e) {
