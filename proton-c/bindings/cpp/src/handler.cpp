@@ -85,6 +85,7 @@ void messaging_handler::on_tracker_settle(tracker &) {}
 void messaging_handler::on_delivery_settle(delivery &) {}
 void messaging_handler::on_sender_drain_start(sender &) {}
 void messaging_handler::on_receiver_drain_finish(receiver &) {}
+void messaging_handler::on_connection_wake(connection&) {}
 
 void messaging_handler::on_error(const error_condition& c) { throw proton::error(c.what()); }
 

@@ -296,6 +296,11 @@ void on_transport_closed(messaging_handler& handler, pn_event_t* event) {
     handler.on_transport_close(t);
 }
 
+void on_connection_wake(messaging_handler& handler, pn_event_t* event) {
+    connection c(make_wrapper(pn_event_connection(event)));
+    handler.on_connection_wake(c);
+}
+
 }
 
 void messaging_adapter::dispatch(messaging_handler& handler, pn_event_t* event)
@@ -320,6 +325,8 @@ void messaging_adapter::dispatch(messaging_handler& handler, pn_event_t* event)
       case PN_DELIVERY: on_delivery(handler, event); break;
 
       case PN_TRANSPORT_CLOSED: on_transport_closed(handler, event); break;
+
+      case PN_CONNECTION_WAKE: on_connection_wake(handler, event); break;
 
       // Ignore everything else
       default: break;

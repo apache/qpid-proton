@@ -40,6 +40,7 @@
 #include <proton/session.h>
 #include <proton/transport.h>
 #include <proton/object.h>
+#include <proton/proactor.h>
 
 namespace proton {
 
@@ -172,6 +173,10 @@ uint16_t connection::max_sessions() const {
 
 uint32_t connection::idle_timeout() const {
     return pn_transport_get_remote_idle_timeout(pn_connection_transport(pn_object()));
+}
+
+void connection::wake() const {
+    pn_connection_wake(pn_object());
 }
 
 }

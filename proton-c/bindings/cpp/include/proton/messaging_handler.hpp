@@ -146,10 +146,26 @@ PN_CPP_CLASS_EXTERN messaging_handler {
     /// **Unsettled API** - The receiving peer has requested a drain of
     /// remaining credit.
     PN_CPP_EXTERN virtual void on_sender_drain_start(sender &s);
-    
+
     /// **Unsettled API** - The credit outstanding at the time of the
     /// call to receiver::drain has been consumed or returned.
     PN_CPP_EXTERN virtual void on_receiver_drain_finish(receiver &r);
+
+    /// **Unsettled API** - an event that can be triggered from another thread.
+    ///
+    /// on_connection_wake() can be triggered by any thread calling connection::wake()
+    /// It is used to notify the application's @ref messaging_handler instance
+    /// that something needs attention.
+    ///
+    /// The application handler and the triggering thread must use some form of
+    /// thread-safe state or communication to tell the handler what it needs to do.
+    ///
+    /// @note spurious calls to on_connection_wake() can occur without any
+    /// application call to connection::wake()
+    ///
+    /// @see work_queue provides an easier way execute code safely in the
+    /// handler thread.
+    PN_CPP_EXTERN virtual void on_connection_wake(connection&);
 
     /// Fallback error handling.
     PN_CPP_EXTERN virtual void on_error(const error_condition &c);

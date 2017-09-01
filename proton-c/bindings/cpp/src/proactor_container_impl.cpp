@@ -482,10 +482,6 @@ bool container::impl::handle(pn_event_t* event) {
         }
         return false;
     }
-    // If the event was just connection wake then there isn't anything more to do
-    case PN_CONNECTION_WAKE:
-        return false;
-
     // Connection driver will bind a new transport to the connection at this point
     case PN_CONNECTION_INIT:
         return false;
@@ -559,7 +555,7 @@ void container::impl::thread() {
           finished = handle(e);
           if (finished) break;
         }
-      } catch (proton::error& e) {
+      } catch (const std::exception& e) {
         // If we caught an exception then shutdown the (other threads of the) container
         disconnect_error_ = error_condition("exception", e.what());
         if (!stopping_) stop(disconnect_error_);
