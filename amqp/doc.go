@@ -32,7 +32,7 @@ AMQP 1.0 is an open standard for inter-operable message exchange, see <http://ww
 */
 package amqp
 
-// #cgo LDFLAGS: -lqpid-proton
+// #cgo LDFLAGS: -lqpid-proton-core
 import "C"
 
 // This file is just for the package comment.
