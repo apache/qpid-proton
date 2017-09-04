@@ -136,7 +136,7 @@ class hello_world_direct : public proton::messaging_handler {
 
     void on_transport_error(proton::transport &t) OVERRIDE {
         std::string err = t.error().what();
-        if (err.find("certificate")) {
+        if (err.find("certificate") != std::string::npos) {
             verify_failed = true;
             throw example_cert_error(err);
         }

@@ -46,6 +46,6 @@ extern const char *PNI_IO_CONDITION;
  * Format a proactor error condition with message "<what> (<host>:<port>): <msg>"
  */
 void pni_proactor_set_cond(
-  pn_condition_t *cond, const char *what, const char *msg, const char *host, const char *port);
+  pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg);
 
 #endif // PROACTOR_NETADDR_INTERNAL_H

@@ -1178,8 +1178,11 @@ static void work_free(work_t *w) {
 pn_proactor_t *pn_proactor() {
   pn_proactor_t *p = (pn_proactor_t*)calloc(1, sizeof(pn_proactor_t));
   p->collector = pn_collector();
+  if (!p->collector) {
+    free(p);
+    return NULL;
+  }
   p->batch.next_event = &proactor_batch_next;
-  if (!p->collector) return NULL;
   uv_loop_init(&p->loop);
   uv_mutex_init(&p->lock);
   uv_cond_init(&p->cond);
