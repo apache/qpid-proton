@@ -87,6 +87,7 @@ void test_etypes_expect_(test_t *t, pn_event_type_t *etypes, size_t size, const 
     }
     fprintf(stderr, "\n");
   }
+  va_end(ap);
 }
 
 #define TEST_HANDLER_EXPECT(TH, ...) do {                               \
