@@ -2269,7 +2269,7 @@ int pn_condition_copy(pn_condition_t *dest, pn_condition_t *src) {
   assert(src);
   int err = 0;
   if (src != dest) {
-    int err = pn_string_copy(dest->name, src->name);
+    err = pn_string_copy(dest->name, src->name);
     if (!err) err = pn_string_copy(dest->description, src->description);
     if (!err) err = pn_data_copy(dest->info, src->info);
   }

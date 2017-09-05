@@ -103,13 +103,13 @@ static void event_handler(pn_handler_t *handler,
         if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
             // A full message has arrived
             if (!quiet) {
-                static char buffer[MAX_SIZE];
                 ssize_t len;
                 pn_bytes_t bytes;
                 bool found = false;
 
                 // try to decode the message body
                 if (pn_delivery_pending(dlv) < MAX_SIZE) {
+                    static char buffer[MAX_SIZE];
                     // read in the raw data
                     len = pn_link_recv(pn_delivery_link(dlv), buffer, MAX_SIZE);
                     if (len > 0) {

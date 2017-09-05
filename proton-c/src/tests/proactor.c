@@ -729,7 +729,7 @@ static pn_event_type_t ssl_handler(test_handler_t *th, pn_event_t *e) {
    }
 
    case PN_CONNECTION_REMOTE_OPEN: {
-     if (pn_connection_state(c) | PN_LOCAL_ACTIVE) {
+     if (pn_connection_state(c) & PN_LOCAL_ACTIVE) {
        /* Outgoing connection is complete, close it */
        pn_connection_close(c);
      } else {

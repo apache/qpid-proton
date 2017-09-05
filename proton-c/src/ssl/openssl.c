@@ -789,7 +789,7 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   const SSL_CIPHER *c;
 
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
-  *buffer = '\0';
+  if (buffer && size) *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_name(c);
     if (v) {
@@ -805,7 +805,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   const SSL_CIPHER *c;
 
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
-  *buffer = '\0';
+  if (buffer && size) *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_version(c);
     if (v) {
