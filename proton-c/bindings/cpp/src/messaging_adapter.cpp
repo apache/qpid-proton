@@ -47,7 +47,6 @@
 #include <proton/transport.h>
 
 #include <assert.h>
-#include <string.h>
 
 namespace proton {
 
@@ -222,19 +221,8 @@ void on_session_remote_close(messaging_handler& handler, pn_event_t* event) {
 
 void on_connection_remote_close(messaging_handler& handler, pn_event_t* event) {
     pn_connection_t *conn = pn_event_connection(event);
-    pn_condition_t *cond = pn_connection_remote_condition(conn);
-
-    // If we got a close with a condition of amqp:connection:forced then treat this
-    // the same as just having the transport closed by the peer without sending any
-    // events. This allows reconnection to happen transparently in this case
-    if (pn_condition_is_set(cond)
-        && !strcmp(pn_condition_get_name(cond),"amqp:connection:forced")) {
-        pn_connection_close(conn);
-        return;
-    }
-
     connection c(make_wrapper(conn));
-    if (pn_condition_is_set(cond)) {
+    if (pn_condition_is_set(pn_connection_remote_condition(conn))) {
         handler.on_connection_error(c);
     }
     handler.on_connection_close(c);

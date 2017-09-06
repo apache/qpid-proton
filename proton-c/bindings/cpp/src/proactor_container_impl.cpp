@@ -38,6 +38,7 @@
 #include "proton_bits.hpp"
 
 #include <assert.h>
+#include <string.h>
 
 #include <algorithm>
 #include <vector>
@@ -546,6 +547,23 @@ bool container::impl::handle(pn_event_t* event) {
         pn_connection_t* c = pn_event_connection(event);
         reset_reconnect(c);
         break;
+    }
+    case PN_CONNECTION_REMOTE_CLOSE: {
+        pn_connection_t *c = pn_event_connection(event);
+        pn_condition_t *cc = pn_connection_remote_condition(c);
+
+        // If we got a close with a condition of amqp:connection:forced then don't send
+        // any close/error events now. Just set the error condition on the transport and
+        // close the connection - This should act as though a transport error occurred
+        if (pn_condition_is_set(cc)
+            && !strcmp(pn_condition_get_name(cc), "amqp:connection:forced")) {
+            pn_transport_t* t = pn_event_transport(event);
+            pn_condition_t* tc = pn_transport_condition(t);
+            pn_condition_copy(tc, cc);
+            pn_connection_close(c);
+            return false;
+        }
+
     }
     case PN_TRANSPORT_CLOSED: {
         // If reconnect is turned on then handle closed on error here with reconnect attempt
