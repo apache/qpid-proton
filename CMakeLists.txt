@@ -170,6 +170,18 @@ if (ENABLE_VALGRIND)
   endif ()
 endif (ENABLE_VALGRIND)
 
+# Options to enable sanitizing compile flags. Compile flags are set in proton-c/CMakeLists.txt
+option(ENABLE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
+option(ENABLE_TSAN "Compile with Thread Sanitizer (TSan); incompatible with Valgrind" OFF)
+if (ENABLE_SANITIZERS OR ENABLE_TSAN)
+  set(DISABLE ENABLE_VALGRIND ENABLE_UNDEFINED_ERROR BUILD_GO)
+  message(STATUS "Building with sanitizers; disables ${DISABLE}")
+  foreach(d ${DISABLE})
+    set(${d} OFF CACHE BOOL "Disabled to run sanitizers" FORCE)
+  endforeach()
+  unset(VALGRIND_ENV)
+endif()
+
 # Set result to a native search path - used by examples and binding tests.
 # args after result are directories or search paths.
 macro(set_search_path result)
