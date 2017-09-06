@@ -229,6 +229,7 @@ void on_connection_remote_close(messaging_handler& handler, pn_event_t* event) {
     // events. This allows reconnection to happen transparently in this case
     if (pn_condition_is_set(cond)
         && !strcmp(pn_condition_get_name(cond),"amqp:connection:forced")) {
+        pn_connection_close(conn);
         return;
     }
 
