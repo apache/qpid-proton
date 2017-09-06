@@ -59,11 +59,6 @@ class ProcError(Exception):
     def __init__(self, proc, what="bad exit status"):
         self.out = proc.out.strip()
         returncode = getattr(proc, 'returncode') # Can be missing in some cases
-        if returncode == proc.valgrind_exit:
-            self.out = \
-            "\n==NOTE== valgrind options set for speed, for more detail run command with" \
-            "\n==NOTE== e.g. --leak-check=full --history-level=full --num-callers=40" \
-            + self.out
         msg = "%s (exit=%s) command:\n%s" % (what, returncode, " ".join(proc.args))
         if self.out:
             msg += "\nvvvvvvvvvvvvvvvv\n%s\n^^^^^^^^^^^^^^^^" % self.out
@@ -95,12 +90,11 @@ class Proc(Popen):
         valgrind_exe = valgrind and os.getenv("VALGRIND")
         if valgrind_exe:
             # run valgrind for speed, not for detailed information
-            vg = [valgrind_exe, "--quiet", "--num-callers=2",
-                  "--error-exitcode=%s" % self.valgrind_exit]
+            vg = [valgrind_exe, "--quiet", "--error-exitcode=%s" % self.valgrind_exit]
             if helgrind:
-                vg += ["--tool=helgrind", "--history-level=none"]
+                vg += ["--tool=helgrind"]
             else:
-                vg += ["--tool=memcheck", "--leak-check=full",  "--leak-resolution=low"]
+                vg += ["--tool=memcheck", "--leak-check=full"]
             self.args = vg + self.args
         if os.getenv("PROCTEST_VERBOSE"):
             sys.stderr.write("\n== running == "+" ".join(self.args)+"\n")
