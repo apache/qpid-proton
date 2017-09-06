@@ -94,7 +94,8 @@ size_t pn_write_frame(char *bytes, size_t available, pn_frame_t frame)
     bytes[5] = frame.type;
     pn_i_write16(&bytes[6], frame.channel);
 
-    memmove(bytes + AMQP_HEADER_SIZE, frame.extended, frame.ex_size);
+    if (frame.extended)
+      memmove(bytes + AMQP_HEADER_SIZE, frame.extended, frame.ex_size);
     memmove(bytes + 4*doff, frame.payload, frame.size);
     return size;
   } else {
