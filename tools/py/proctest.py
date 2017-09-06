@@ -102,7 +102,8 @@ class Proc(Popen):
             else:
                 vg += ["--tool=memcheck", "--leak-check=full",  "--leak-resolution=low"]
             self.args = vg + self.args
-            self._out.flush()
+        if os.getenv("PROCTEST_VERBOSE"):
+            sys.stderr.write("\n== running == "+" ".join(self.args)+"\n")
         try:
             Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
         except OSError, e:
