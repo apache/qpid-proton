@@ -147,8 +147,8 @@ template<class T> T coerce(const value& v) { T x; coerce(v, x); return x; }
 /// @relatedalso proton::value
 template<class T> void coerce(const value& v, T& x) {
     codec::decoder d(v, false);
+    scalar s;
     if (type_id_is_scalar(v.type())) {
-        scalar s;
         d >> s;
         x = internal::coerce<T>(s);
     } else {
