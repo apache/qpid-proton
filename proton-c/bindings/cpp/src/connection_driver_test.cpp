@@ -20,11 +20,11 @@
 
 #include "test_bits.hpp"
 #include "proton_bits.hpp"
+#include "link_namer.hpp"
 
 #include "proton/container.hpp"
 #include "proton/connection.hpp"
 #include "proton/io/connection_driver.hpp"
-#include "proton/io/link_namer.hpp"
 #include "proton/link.hpp"
 #include "proton/message.hpp"
 #include "proton/messaging_handler.hpp"

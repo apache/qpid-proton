@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "proton/io/link_namer.hpp"
+#include "link_namer.hpp"
 
 #include "proton/connection.hpp"
 
