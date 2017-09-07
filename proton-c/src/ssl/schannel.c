@@ -978,7 +978,7 @@ static void client_handshake_init(pn_transport_t *transport)
   pni_ssl_t *ssl = transport->ssl;
   // Tell SChannel to create the first handshake token (ClientHello)
   // and place it in sc_outbuf
-  SEC_CHAR *host = const_cast<SEC_CHAR *>(ssl->peer_hostname);
+  SEC_CHAR *host = (SEC_CHAR *)(ssl->peer_hostname);
   ULONG ctxt_requested = ISC_REQ_STREAM | ISC_REQ_USE_SUPPLIED_CREDS | ISC_REQ_EXTENDED_ERROR;
   ULONG ctxt_attrs;
 
@@ -1013,7 +1013,7 @@ static void client_handshake_init(pn_transport_t *transport)
 static void client_handshake( pn_transport_t* transport) {
   pni_ssl_t *ssl = transport->ssl;
   // Feed SChannel ongoing responses from the server until the handshake is complete.
-  SEC_CHAR *host = const_cast<SEC_CHAR *>(ssl->peer_hostname);
+  SEC_CHAR *host = (SEC_CHAR *)(ssl->peer_hostname);
   ULONG ctxt_requested = ISC_REQ_STREAM | ISC_REQ_USE_SUPPLIED_CREDS;
   ULONG ctxt_attrs;
   size_t max = 0;
