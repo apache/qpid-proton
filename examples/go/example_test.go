@@ -153,7 +153,7 @@ func runExampleWant(t *testing.T, want string, prog string, args ...string) erro
 
 func exampleArgs(args ...string) []string {
 	for i := 0; i < *connections; i++ {
-		args = append(args, fmt.Sprintf("%s/%s%d", testBroker.addr, "q", i))
+		args = append(args, fmt.Sprintf("amqp://%s/%s%d", testBroker.addr, "q", i))
 	}
 	return args
 }
