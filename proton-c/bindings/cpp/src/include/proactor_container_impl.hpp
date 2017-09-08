@@ -145,7 +145,6 @@ class container::impl {
     proton::sender_options sender_options_;
     proton::receiver_options receiver_options_;
     error_condition disconnect_error_;
-    int retries_;
 
     bool auto_stop_;
     bool stopping_;

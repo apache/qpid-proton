@@ -563,7 +563,7 @@ bool container::impl::handle(pn_event_t* event) {
             pn_connection_close(c);
             return false;
         }
-
+        break;
     }
     case PN_TRANSPORT_CLOSED: {
         // If reconnect is turned on then handle closed on error here with reconnect attempt
