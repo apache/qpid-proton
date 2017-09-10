@@ -80,7 +80,11 @@
 #endif
 
 #ifndef PN_CPP_HAS_THREAD_LOCAL
+#if defined(__APPLE_CPP__) || defined(__APPLE_CC__)
+#define PN_CPP_HAS_THREAD_LOCAL 0
+#else
 #define PN_CPP_HAS_THREAD_LOCAL PN_CPP_HAS_CPP11
+#endif
 #endif
 
 #ifndef PN_CPP_HAS_VARIADIC_TEMPLATES

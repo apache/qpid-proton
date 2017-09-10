@@ -67,6 +67,9 @@ if (CYRUSSASL_FOUND AND Threads_FOUND)
 else ()
   set (sasl_impl none)
 endif ()
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set (sasl_impl none)
+endif ()
 set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SASL support. Valid values: ${sasl_providers}")
 
 configure_file (
@@ -123,6 +126,10 @@ endif()
 
 if(CMAKE_C_COMPILER_ID STREQUAL "SunPro" )
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt")
+endif()
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 endif()
 
 # Link in openssl if present
