@@ -111,7 +111,7 @@ Enter **non-blocking mode**!
 When working in non-blocking mode you set a flag on your messenger to put it into non-blocking mode.
 
 ```
-messenger = Qpid::Proton::Messenger.new
+messenger = Qpid::Proton::Messenger::Messenger.new
 messenger.passive = true
 ```
 
