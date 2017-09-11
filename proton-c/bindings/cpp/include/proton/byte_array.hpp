@@ -29,6 +29,9 @@
 #include <algorithm>
 #include <iterator>
 
+/// @file
+/// @copybrief proton::byte_array
+
 namespace proton {
 
 namespace internal {

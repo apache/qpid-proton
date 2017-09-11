@@ -34,6 +34,9 @@
 #include <vector>
 #include <string>
 
+/// @file
+/// @copybrief proton::connection_options
+
 struct pn_connection_t;
 
 namespace proton {
@@ -64,7 +67,7 @@ class connection_options {
     /// Create an empty set of options.
     PN_CPP_EXTERN connection_options();
 
-    /// Shorthand for connection_options().handler(h)
+    /// Shorthand for `connection_options().handler(h)`.
     PN_CPP_EXTERN connection_options(class messaging_handler& h);
 
     /// Copy options.
@@ -112,15 +115,16 @@ class connection_options {
     /// unset by default.
     ///
     /// This value overrides any user name that is specified in the
-    /// URL used for container::connect.  It is ignored if the
-    /// connection is created by container::listen because a listening
-    /// connection's identity is provided by the remote client.
+    /// URL used for `container::connect`.  It is ignored if the
+    /// connection is created by `container::listen` because a
+    /// listening connection's identity is provided by the remote
+    /// client.
     PN_CPP_EXTERN connection_options& user(const std::string&);
 
     /// Set the password used to authenticate the connection.
     ///
     /// This value is ignored if the connection is created by
-    /// container::listen.
+    /// `container::listen`.
     PN_CPP_EXTERN connection_options& password(const std::string&);
 
     /// Set SSL client options.
@@ -146,9 +150,8 @@ class connection_options {
     /// **Unsettled API** - Set the SASL configuration path.
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
 
-    /// **Experimental** - Options for reconnect on outgoing connections.
+    /// **Unsettled API** - Set reconnect and failover options.
     PN_CPP_EXTERN connection_options& reconnect(reconnect_options &);
-
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);

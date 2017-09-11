@@ -28,36 +28,37 @@
 
 #include <iosfwd>
 
-namespace proton {
-
-/// @name AMQP decimal types.
+/// @file
+///
+/// AMQP decimal types.
 ///
 /// AMQP uses the standard IEEE 754-2008 encoding for decimal types.
 ///
-/// This library does not provide support for decimal arithmetic but it does
-/// provide access to the byte representation of decimal values. You can pass
-/// these values uninterpreted via AMQP, or you can use a library that supports
-/// IEEE 754-2008 and make a byte-wise copy between the real decimal values and
-/// proton::decimal values.
-///
-/// @{
+/// This library does not provide support for decimal arithmetic, but
+/// it does provide access to the byte representation of decimal
+/// values. You can pass these values uninterpreted via AMQP, or you
+/// can use a library that supports IEEE 754-2008 and make a byte-wise
+/// copy between the real decimal values and `proton::decimal` values.
 
-/// 32-bit decimal floating point.
+namespace proton {
+
+/// A 32-bit decimal floating-point value.
 class decimal32 : public byte_array<4> {};
 
-/// 64-bit decimal floating point.
+/// A 64-bit decimal floating-point value.
 class decimal64 : public byte_array<8> {};
 
-/// 128-bit decimal floating point.
+/// A 128-bit decimal floating-point value.
 class decimal128 : public byte_array<16> {};
-/// @}
 
-/// Print decimal values
-/// @{
+/// Print a 32-bit decimal value.    
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal32&);
+
+/// Print a 64-bit decimal value.    
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal64&);
+
+/// Print a 128-bit decimal value.    
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const decimal128&);
-/// @}
 
 } // proton
 

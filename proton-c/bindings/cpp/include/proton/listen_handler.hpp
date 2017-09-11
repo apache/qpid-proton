@@ -24,6 +24,9 @@
 
 #include "./fwd.hpp"
 
+/// @file
+/// @copybrief proton::listen_handler
+
 namespace proton {
 
 // XXX Discuss more

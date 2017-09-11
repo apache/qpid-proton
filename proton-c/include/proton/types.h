@@ -32,88 +32,100 @@
  * @copybrief types
  *
  * @defgroup core Core
- * @brief Core protocol entities and event handling
+ * @brief Core protocol entities and event handling.
  *
  * @defgroup connection Connection
- * @brief A channel for communication between two peers on a network
+ * @brief A connection to a remote AMQP peer.
  * @ingroup core
  *
  * @defgroup session Session
- * @brief A container of links
+ * @brief A container of links.
  * @ingroup core
  *
  * @defgroup link Link
- * @brief A channel for transferring messages
+ * @brief A channel for transferring messages.
  * @ingroup core
  *
  * @defgroup terminus Terminus
- * @brief A source or target for messages
+ * @brief A source or target for messages.
  * @ingroup core
  *
  * @defgroup message Message
- * @brief A mutable holder of application content
+ * @brief A mutable holder of application content.
  * @ingroup core
  *
  * @defgroup delivery Delivery
- * @brief A message transfer
+ * @brief A message transfer.
  * @ingroup core
  *
  * @defgroup condition Condition
- * @brief An endpoint error state
+ * @brief An endpoint error state.
  * @ingroup core
  *
  * @defgroup event Event
- * @brief Protocol and transport events
+ * @brief Protocol and transport events.
  * @ingroup core
  *
  * @defgroup transport Transport
- * @brief A network channel supporting an AMQP connection
+ * @brief A network channel supporting an AMQP connection.
  * @ingroup core
  *
  * @defgroup sasl SASL
- * @brief SASL secure transport layer
+ * @brief SASL secure transport layer.
  * @ingroup core
  *
  * @defgroup ssl SSL
- * @brief SSL secure transport layer
+ * @brief SSL secure transport layer.
  * @ingroup core
  *
  * @defgroup error Error
- * @brief A Proton API error
+ * @brief A Proton API error.
  * @ingroup core
  *
  * @defgroup types Types
- * @brief AMQP and API data types
+ * @brief AMQP and API data types.
  *
  * @defgroup amqp_types AMQP data types
- * @brief AMQP data types
+ * @brief AMQP data types.
  * @ingroup types
  *
  * @defgroup api_types API data types
- * @brief Additional data types used in the API
+ * @brief Additional data types used in the API.
  * @ingroup types
  *
  * @defgroup codec Codec
- * @brief AMQP data encoding and decoding
+ * @brief AMQP data encoding and decoding.
  *
  * @defgroup data Data
- * @brief A data structure for AMQP data
+ * @brief A data structure for AMQP data.
  * @ingroup codec
  *
+ * @defgroup io IO
+ * @brief **Unsettled API** - Interfaces for IO integration.
+ *
  * @defgroup proactor Proactor
- * @brief **Experimental** - Multithreaded IO
+ * @brief **Unsettled API** - An API for multithreaded IO.
+ * @ingroup io
+ *
+ * @defgroup proactor_events Proactor events
+ * @brief **Unsettled API** - Events used by the proactor.
+ * @ingroup io
+ *
+ * @defgroup listener Listener
+ * @brief **Unsettled API** - A listener for incoming connections.
  * @ingroup io
  *
  * @defgroup connection_driver Connection driver
- * @brief **Experimental** - Low-level IO integration
+ * @brief **Unsettled API** - An API for low-level IO integration.
+ * @ingroup io
  *
  * @defgroup messenger Messenger
  * @deprecated
- * @brief **Deprecated** - The Messenger API
+ * @brief **Deprecated** - The Messenger API.
  *
  * @defgroup url URL
  * @deprecated
- * @brief **Deprecated** - A URL parser
+ * @brief **Deprecated** - A URL parser.
  */
 
 #ifdef __cplusplus
@@ -403,13 +415,14 @@ typedef struct pn_delivery_t pn_delivery_t;
 typedef struct pn_collector_t pn_collector_t;
 
 /**
- * A listener accepts connections.
+ * A listener for incoming connections.
+ *
  * @ingroup listener
  */
 typedef struct pn_listener_t pn_listener_t;
 
 /**
- * An AMQP Transport object.
+ * A network channel supporting an AMQP connection.
  *
  * A pn_transport_t encapsulates the transport related state of all
  * AMQP endpoint objects associated with a physical network connection
@@ -417,11 +430,12 @@ typedef struct pn_listener_t pn_listener_t;
  *
  * @ingroup transport
  */
-
 typedef struct pn_transport_t pn_transport_t;
 
 /**
- * The proactor, see pn_proactor()
+ * A harness for multithreaded IO.
+ *
+ * @ingroup proactor
  */
 typedef struct pn_proactor_t pn_proactor_t;
 

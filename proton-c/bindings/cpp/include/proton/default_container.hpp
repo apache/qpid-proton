@@ -22,12 +22,13 @@
  *
  */
 
+/// @file
+/// @copybrief proton::default_container
+
 namespace proton {
 
-/// @cond INTERNAL
-/// default_container no longer exists as a separate class. Use `container`.
+/// **Deprecated** - Use `proton::container`.
 typedef class container default_container;
-/// @endcond
 
 } // proton
 

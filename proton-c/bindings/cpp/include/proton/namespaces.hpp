@@ -20,19 +20,17 @@
  * under the License.
  */
 
+/// @file
+/// Namespace declarations.
+
 /// The main Proton namespace.
 namespace proton {
 
 /// **Unsettled API** - AMQP data encoding and decoding.
-///
-/// You can use these classes on an experimental basis to create your
-/// own AMQP encodings for C++ types, but they may change in the
-/// future. For examples of use see the built-in encodings, for
-/// example in proton/vector.hpp or proton/map.hpp
 namespace codec {
 }
 
-/// **Unsettled API** - An SPI for multithreaded network IO.
+/// **Unsettled API** - Interfaces for IO integration.
 namespace io {
 }
 

@@ -23,7 +23,7 @@
  */
 
 /// @file
-/// Enable conversions between proton::value and std::map
+/// **Unsettled API** - Enable conversions between `proton::value` and `std::map`.
 
 #include "./encoder.hpp"
 #include "./decoder.hpp"

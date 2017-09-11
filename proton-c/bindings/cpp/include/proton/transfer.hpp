@@ -28,6 +28,9 @@
 
 #include <proton/disposition.h>
 
+/// @file
+/// @copybrief proton::transfer
+
 struct pn_delivery_t;
 
 namespace proton {

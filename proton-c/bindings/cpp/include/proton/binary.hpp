@@ -31,6 +31,9 @@
 #include <string>
 #include <vector>
 
+/// @file
+/// @copybrief proton::binary
+
 namespace proton {
 
 /// Arbitrary binary data.

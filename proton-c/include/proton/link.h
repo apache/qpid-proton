@@ -647,7 +647,7 @@ PN_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
 PN_EXTERN bool pn_link_draining(pn_link_t *receiver);
 
 /**
- * **Experimental** - Get the maximum message size for a link.
+ * **Unsettled API** - Get the maximum message size for a link.
  *
  * A zero maximum message size means the size is unlimited.
  *
@@ -657,7 +657,7 @@ PN_EXTERN bool pn_link_draining(pn_link_t *receiver);
 PN_EXTERN uint64_t pn_link_max_message_size(pn_link_t *link);
 
 /**
- * **Experimental** - Set the maximum message size for a link.
+ * **Unsettled API** - Set the maximum message size for a link.
  *
  * A zero maximum message size means the size is unlimited.
  *
@@ -667,7 +667,7 @@ PN_EXTERN uint64_t pn_link_max_message_size(pn_link_t *link);
 PN_EXTERN void pn_link_set_max_message_size(pn_link_t *link, uint64_t size);
 
 /**
- * **Experimental** - Get the remote view of the maximum message size for a link.
+ * **Unsettled API** - Get the remote view of the maximum message size for a link.
  *
  * A zero maximum message size means the size is unlimited.
  *

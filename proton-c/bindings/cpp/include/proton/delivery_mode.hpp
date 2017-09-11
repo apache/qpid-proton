@@ -22,6 +22,9 @@
  *
  */
 
+/// @file
+/// @copybrief proton::delivery_mode
+
 namespace proton {
 
 /// The message delivery policy to establish when opening a link.

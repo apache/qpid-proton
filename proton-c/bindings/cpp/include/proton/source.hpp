@@ -31,6 +31,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::source
+
 struct pn_terminus_t;
 
 namespace proton {

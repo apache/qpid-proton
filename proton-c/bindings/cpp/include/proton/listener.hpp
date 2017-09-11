@@ -22,6 +22,9 @@
 
 #include "./internal/export.hpp"
 
+/// @file
+/// @copybrief proton::listener
+
 struct pn_listener_t;
 
 namespace proton {

@@ -26,6 +26,9 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 
+/// @file
+/// @copybrief proton::session_options
+
 namespace proton {
 
 /// Options for creating a session.

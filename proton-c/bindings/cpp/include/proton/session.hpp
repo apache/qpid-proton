@@ -30,6 +30,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::session
+
 struct pn_session_t;
 
 namespace proton {

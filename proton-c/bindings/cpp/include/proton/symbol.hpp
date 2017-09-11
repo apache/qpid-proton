@@ -24,9 +24,12 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::symbol
+
 namespace proton {
 
-/// A `std::string` that represents the AMQP symbol type.
+/// A string that represents the AMQP symbol type.
 ///
 /// A symbol can contain only 7-bit ASCII characters.
 class symbol : public std::string {

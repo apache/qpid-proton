@@ -30,20 +30,24 @@
 #include <string>
 #include <vector>
 
+/// @file
+/// @copybrief proton::reconnect_options
+
 namespace proton {
 
-/// **Experimental** - Options that determine a series of delays to
-/// coordinate reconnection attempts.  They may be open ended or
-/// limited in time.  They may be evenly spaced or increasing at an
-/// exponential rate.
+/// **Unsettled API** - Options for reconnect and failover after
+/// connection loss.
 ///
-/// Options can be "chained" (@see proton::connection_options).
+/// These options determine a series of delays to coordinate
+/// reconnection attempts.  They may be open-ended or limited in time.
+/// They may be evenly spaced or increasing at an exponential rate.
+///
+/// Options can be "chained". See @ref proton::connection_options.
 ///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
 class reconnect_options {
   public:
-
     /// Create an empty set of options.
     PN_CPP_EXTERN reconnect_options();
 
@@ -55,21 +59,25 @@ class reconnect_options {
     /// Copy options.
     PN_CPP_EXTERN reconnect_options& operator=(const reconnect_options&);
 
-    /// Base value for recurring delay (default is 10 milliseconds).
+    /// The base value for recurring delays.  The default is 10
+    /// milliseconds.
     PN_CPP_EXTERN reconnect_options& delay(duration);
 
-    /// Scaling multiplier for successive reconnect delays (default is 2.0)
+    /// The scaling multiplier for successive reconnect delays.  The
+    /// default is 2.0.
     PN_CPP_EXTERN reconnect_options& delay_multiplier(float);
 
-    /// Maximum delay between successive connect attempts (default
-    /// duration::FOREVER, i.e. no limit)
+    /// The maximum delay between successive connect attempts.  The
+    /// default duration::FOREVER, meaning no limit.
     PN_CPP_EXTERN reconnect_options& max_delay(duration);
 
-    /// Maximum reconnect attempts (default 0, meaning no limit)
+    /// The maximum number of reconnect attempts.  The default is 0,
+    /// meaning no limit.
     PN_CPP_EXTERN reconnect_options& max_attempts(int);
 
-    /// Alternative connection urls used for failover
-    PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& urls);
+    /// Alternative connection URLs used for failover.  There are none
+    /// by default.
+    PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& conn_urls);
 
   private:
     class impl;
@@ -77,7 +85,7 @@ class reconnect_options {
 
     /// @cond INTERNAL
   friend class container;
-      /// @endcond
+    /// @endcond
 };
 
 } // proton

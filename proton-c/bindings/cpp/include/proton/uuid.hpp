@@ -28,6 +28,9 @@
 #include <string>
 #include <iosfwd>
 
+/// @file
+/// @copybrief proton::uuid
+
 namespace proton {
 
 /// A 16-byte universally unique identifier.

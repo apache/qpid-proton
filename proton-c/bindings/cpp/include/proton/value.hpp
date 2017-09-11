@@ -32,6 +32,9 @@
 
 #include <iosfwd>
 
+/// @file
+/// @copybrief proton::value
+
 namespace proton {
 
 namespace internal {

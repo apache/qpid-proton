@@ -32,6 +32,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::io::connection_driver
+
 namespace proton {
 
 class work_queue;
@@ -39,7 +42,8 @@ class proton_handler;
 
 namespace io {
 
-/// **Unsettled API** - Pointer to a mutable memory region with a size.
+/// **Unsettled API** - A pointer to a mutable memory region with a
+/// size.
 struct mutable_buffer {
     char* data;                 ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.
@@ -48,7 +52,8 @@ struct mutable_buffer {
     mutable_buffer(char* data_=0, size_t size_=0) : data(data_), size(size_) {}
 };
 
-/// **Unsettled API** - Pointer to a const memory region with a size.
+/// **Unsettled API** - A pointer to an immutable memory region with a
+/// size.
 struct const_buffer {
     const char* data;           ///< Beginning of the buffered data.
     size_t size;                ///< Number of bytes in the buffer.

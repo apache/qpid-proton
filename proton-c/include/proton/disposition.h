@@ -34,14 +34,16 @@ extern "C" {
 /**
  * @file
  *
- * Delivery state
+ * @copybrief delivery
  *
  * @addtogroup delivery
  * @{
  */
 
 /**
- * Dispositions record the current state and/or final outcome of a
+ * A delivery state.
+ *
+ * Dispositions record the current state or final outcome of a
  * transfer. Every delivery contains both a local and remote
  * disposition. The local disposition holds the local state of the
  * delivery, and the remote disposition holds the last known remote

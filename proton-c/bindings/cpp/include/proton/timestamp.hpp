@@ -24,6 +24,9 @@
 
 #include <proton/type_compat.h>
 
+/// @file
+/// @copybrief proton::timestamp
+
 namespace proton {
 
 /// A 64-bit timestamp in milliseconds since the Unix epoch.
@@ -31,19 +34,19 @@ namespace proton {
 /// The dawn of the Unix epoch was 00:00:00 (UTC), 1 January 1970.
 class timestamp : private internal::comparable<timestamp> {
   public:
-    /// A numeric type holding a milliseconds value.
+    /// A numeric type holding a value in milliseconds.
     typedef int64_t numeric_type;
 
     /// The current wall-clock time.
     PN_CPP_EXTERN static timestamp now();
 
-    /// Construct from milliseconds.
+    /// Construct from a value in milliseconds.
     explicit timestamp(numeric_type ms = 0) : ms_(ms) {}
 
-    /// Assign from milliseconds.
+    /// Assign a value in milliseconds.
     timestamp& operator=(numeric_type ms) { ms_ = ms; return *this; }
 
-    /// Get milliseconds.
+    /// Get the value in milliseconds.
     numeric_type milliseconds() const { return ms_; }
 
   private:
@@ -61,7 +64,7 @@ inline duration operator-(timestamp t0, timestamp t1) { return duration(t0.milli
 inline timestamp operator+(duration d, timestamp ts) { return ts + d; }
 /// @}
 
-/// Printable format.
+/// Print a timestamp.
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, timestamp);
 
 } // proton

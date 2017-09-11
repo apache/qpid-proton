@@ -32,6 +32,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::connection
+
 struct pn_connection_t;
 
 namespace proton {
@@ -140,22 +143,24 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// @see @ref connection_options::idle_timeout
     PN_CPP_EXTERN uint32_t idle_timeout() const;
 
-    /// **Unsettled API** - trigger an event from another thread
+    /// **Unsettled API** - Trigger an event from another thread.
     ///
-    /// wake() can be called from any thread. The proton library will call
-    /// messaging_handler::on_connection_wake() as soon as possible in the correct
-    /// event handling thread.
+    /// `wake()` can be called from any thread. The Proton library
+    /// will call `messaging_handler::on_connection_wake()` as soon as
+    /// possible in the correct event-handling thread.
     ///
     /// @note
-    /// * Thread safe: this is the *only* @ref connection function that can be
-    ///   called from outside the handler thread.
-    /// * Multiple calls to wake() may be coalesced into a single call to
-    ///   messaging_handler::on_connection_wake() that occurs after all of them.
-    /// * Spurious messaging_handler::on_connection_wake() calls can occur even if the application
-    ///   does not call wake()
     ///
-    /// @see work_queue provides an easier way execute code safely in the
-    /// event handler thread.
+    /// * Thread-safe: This is the *only* @ref connection function
+    ///   that can be called from outside the handler thread.
+    /// * Multiple calls to `wake()` may be coalesced into a single
+    ///   call to `messaging_handler::on_connection_wake()` that
+    ///   occurs after all of them.
+    /// * Spurious `messaging_handler::on_connection_wake()` calls can
+    ///   occur even if the application does not call `wake()`.
+    ///
+    /// The @ref work_queue interface provides an easier way execute
+    /// code safely in the event-handler thread.
     PN_CPP_EXTERN void wake() const;
 
     /// @cond INTERNAL

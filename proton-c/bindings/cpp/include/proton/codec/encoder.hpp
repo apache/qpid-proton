@@ -29,6 +29,9 @@
 
 #include <proton/type_compat.h>
 
+/// @file
+/// @copybrief proton::codec::encoder
+
 namespace proton {
 class scalar_base;
 
@@ -38,7 +41,7 @@ class value_base;
 
 namespace codec {
 
-/// **Unsettled API** - Stream-like encoder from C++ values to AMQP
+/// **Unsettled API** - A stream-like encoder from C++ values to AMQP
 /// bytes.
 ///
 /// For internal use only.

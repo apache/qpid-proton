@@ -21,7 +21,7 @@
  */
 
 /// @file
-/// Enable conversions between proton::value and std::forward_list
+/// **Unsettled API** - Enable conversions between `proton::value` and `std::forward_list`.
 
 #include "./encoder.hpp"
 #include "./decoder.hpp"

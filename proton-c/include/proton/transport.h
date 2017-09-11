@@ -67,42 +67,45 @@ typedef void (*pn_tracer_t)(pn_transport_t *transport, const char *message);
 #define PN_TRACE_OFF (0)
 
 /**
- * Log raw binary data into/out of the transport.
+ * Log raw binary data going in and out of the transport.
  */
 #define PN_TRACE_RAW (1)
 
 /**
- * Log frames into/out of the transport.
+ * Log protocol frames going in and out of the transport.
  */
 #define PN_TRACE_FRM (2)
 
 /**
- * Log driver related events, e.g. initialization, end of stream, etc.
+ * Log driver-related events.  For example, initialization, end of
+ * stream, and so on.
  */
 #define PN_TRACE_DRV (4)
 
 /**
- * Log events
+ * Log events.
  */
 #define PN_TRACE_EVT (8)
 
 /**
  * Factory for creating a transport.
+ *
  * A transport is used by a connection to interface with the network.
  * There can only be one connection associated with a transport. See
  * pn_transport_bind().
  *
- * Initially a transport is configured to be a client transport. Use pn_transport_set_server()
- * to configure the transport as a server transport.
+ * Initially a transport is configured to be a client transport. Use
+ * pn_transport_set_server() to configure the transport as a server
+ * transport.
  *
  * A client transport initiates outgoing connections.
  *
- * A client transport must be configured with the protocol layers to use and cannot
- * configure itself automatically.
+ * A client transport must be configured with the protocol layers to
+ * use and cannot configure itself automatically.
  *
- * A server transport accepts incoming connections. It can automatically
- * configure itself to include the various protocol layers depending on
- * the incoming protocol headers.
+ * A server transport accepts incoming connections. It can
+ * automatically configure itself to include the various protocol
+ * layers depending on the incoming protocol headers.
  *
  * @return pointer to new transport
  */

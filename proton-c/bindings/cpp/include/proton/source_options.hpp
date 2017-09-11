@@ -29,6 +29,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::source_options
+
 namespace proton {
 
 /// Options for creating a source node for a sender or receiver.

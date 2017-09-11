@@ -27,6 +27,9 @@
 
 #include <proton/type_compat.h>
 
+/// @file
+/// @copybrief proton::annotation_key
+
 namespace proton {
 
 /// A key for use with AMQP annotation maps.

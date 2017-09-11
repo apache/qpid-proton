@@ -29,9 +29,8 @@
 #include "./receiver.hpp"
 #include "./sender.hpp"
 
-
 /// @file
-/// Return type for container functions
+/// @copybrief proton::returned
 
 namespace proton {
 
@@ -39,25 +38,26 @@ namespace internal {
 class returned_factory;
 }
 
-/// Return type for container functions
+/// A return type for container methods.
 ///
-/// @note returned value is *thread-unsafe*.
-/// A single-threaded application can assign the returned<T> value to a plain T.
-/// A multi-threaded application *must* ignore the returned value, as it may already
-/// be invalid by the time the function returns. Multi-threaded applications
-/// can access the value in @ref messaging_handler functions.
+/// @note A `returned` value is *thread-unsafe*.  A single-threaded
+/// application can assign the `returned<T>` value to a plain `T`.  A
+/// multithreaded application *must* ignore the returned value because
+/// it may already be invalid by the time the function
+/// returns. Multithreaded applications can safely access the value
+/// inside @ref messaging_handler functions.
 ///
 template <class T>
 class PN_CPP_CLASS_EXTERN returned
 {
   public:
     /// Copy operator required to return a value
-    /// @note thread safe
+    /// @note Thread-safe
     PN_CPP_EXTERN returned(const returned<T>&);
 
     /// Convert to the proton::object
     ///
-    /// @note **Thread unsafe** do not use in a multi-threaded application.
+    /// @note **Thread-unsafe** - Do not use in a multithreaded application.
     PN_CPP_EXTERN operator T() const;
 
   private:

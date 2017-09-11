@@ -27,6 +27,9 @@
 #include "./link.hpp"
 #include "./tracker.hpp"
 
+/// @file
+/// @copybrief proton::sender
+
 struct pn_link_t;
 struct pn_session_t;
 

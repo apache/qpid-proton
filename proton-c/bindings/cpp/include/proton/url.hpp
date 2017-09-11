@@ -30,8 +30,13 @@
 #include <iosfwd>
 #include <string>
 
+/// @file
+/// @copybrief proton::url
+
 namespace proton {
 
+/// **Deprecated**
+///
 /// An error encountered during URL parsing.
 struct
 PN_CPP_CLASS_EXTERN url_error : public error {
@@ -41,6 +46,8 @@ PN_CPP_CLASS_EXTERN url_error : public error {
     /// @endcond
 };
 
+/// **Deprecated**
+///
 /// A URL parser.
 ///
 ///  Proton URLs take the form

@@ -23,7 +23,7 @@
  */
 
 /// @file
-/// Enable conversions between proton::value and std::list
+/// **Unsettled API** - Enable conversions between `proton::value` and `std::list`.
 
 #include "./encoder.hpp"
 #include "./decoder.hpp"

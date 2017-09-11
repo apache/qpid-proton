@@ -40,6 +40,9 @@
 #include <string>
 #include <typeinfo>
 
+/// @file
+/// @copybrief proton::scalar_base
+
 namespace proton {
 
 class scalar_base;
@@ -53,7 +56,7 @@ namespace internal {
 template<class T> T get(const scalar_base& s);
 }
 
-/// Base class for scalar types.
+/// The base class for scalar types.
 class scalar_base : private internal::comparable<scalar_base> {
   public:
     /// AMQP type of data stored in the scalar

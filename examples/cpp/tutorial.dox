@@ -6,11 +6,10 @@
 
 /**
 
-@page tutorial Tutorial
+@page tutorial_page Tutorial
 
-This is a brief tutorial that will walk you through the fundamentals
-of building messaging applications in incremental steps. There are
-further examples, in addition the ones mentioned in the tutorial.
+This is a brief guide to to the fundamentals of building messaging
+applications using Qpid Proton C++.
 
 Proton provides an "event-driven" programming model, where you
 implement a subclass of `proton::messaging_handler` and override
@@ -18,13 +17,14 @@ functions that react to various AMQP events (connections opening and
 closing, messages being delivered, and so on).
 
 The examples below show how to implement handlers for clients and
-servers and how to run them using the `proton::container`, a
-portable, easy-to-use way to build single-threaded clients or servers.
+servers and how to run them using the `proton::container`, a portable,
+easy-to-use way to build single-threaded clients or servers.
 
-Some of the examples require an AMQP *broker* that can receive, store, and send
-messages. @ref broker.cpp define a simple example broker. If run without
-arguments, it listens on `0.0.0.0:5672`, the standard AMQP port on all network
-interfaces. To use a different port or network interface:
+Some of the examples require an AMQP *broker* that can receive, store,
+and send messages. @ref broker.cpp defines a simple example broker. If
+run without arguments, it listens on `0.0.0.0:5672`, the standard AMQP
+port on all network interfaces. To use a different port or network
+interface, use the `-a` option.
 
     broker -a <host>:<port>
 
@@ -39,24 +39,22 @@ examples take an option `-a URL`. A URL looks like this:
 
 It usually defaults to `127.0.0.1:5672/examples`, but you can change
 this if your broker is on a different host or port, or you want to use
-a different queue or topic name (the ADDRESS part of the URL). URL
-details are at `proton::url`.
+a different queue or topic name (the ADDRESS part of the URL).
 
 Hello World!
 ------------
 
 \dontinclude helloworld.cpp
 
-Tradition dictates that we start with Hello World! This example
-demonstrates sending and receiving by sending a message to a broker
-and then receiving the same message back. In a realistic system the
-sender and receiver would normally be in different processes. The
-complete example is @ref helloworld.cpp
+Tradition dictates that we start with Hello World! This example sends
+a message to a broker and then receives the same message back. In a
+realistic system the sender and receiver would normally be in
+different processes. The complete example is @ref helloworld.cpp
 
-We will include the following classes: `proton::container` (an
-implementation of `proton::container`) runs an event loop which
-dispatches events to a `proton::messaging_handler`. This allows a
-*reactive* style of programming which is well suited to messaging
+We will include the following classes. `proton::container` runs an
+event loop which dispatches events to a
+`proton::messaging_handler`. This allows a *reactive* style of
+programming which is well suited to messaging
 applications. `proton::connection` and `proton::delivery` are AMQP
 entities used in the handler functions.  `proton::url` is a simple
 parser for the URL format mentioned above.
@@ -91,20 +89,20 @@ calls to `proton::messaging_handler::on_sendable()`.
 
 `proton::messaging_handler::on_message()` is called when a message is
 received. We just print the body of the message and close the
-connection, as we only want one message
+connection, as we only want one message.
 
 \skip on_message
 \until }
 
-The message body is a `proton::value`, see the documentation for more on how to
-extract the message body as type-safe C++ values.
+The message body is a `proton::value`.  See @ref types_page for more
+on how to extract the message body as type-safe C++ values.
 
 Our `main` function creates an instance of the `hello_world` handler
 and a `proton::container` using that handler. Calling
 `proton::container::run()` sets things in motion and returns when we
-close the connection as there is nothing further to do. It may throw
-an exception, which will be a subclass of `proton::error`. That in
-turn is a subclass of `std::exception`.
+close the connection. It may throw an exception, which will be a
+subclass of `proton::error`. That in turn is a subclass of
+`std::exception`.
 
 \skip main
 \until }
@@ -116,9 +114,9 @@ Hello World, direct!
 
 \dontinclude helloworld_direct.cpp
 
-Though often used in conjunction with a broker, AMQP does not
-*require* this. It also allows senders and receivers to communicate
-directly if desired.
+Though often used in conjunction with a broker, AMQP does not require
+this. It also allows senders and receivers to communicate directly if
+desired.
 
 We will modify our example to send a message directly to itself. This
 is a bit contrived but illustrates both sides of the direct send and
@@ -131,9 +129,9 @@ invoking the `proton::container::listen()` method on the container.
 \skip on_container_start
 \until }
 
-As we only need then to initiate one link, the sender, we can do that
-by passing in a url rather than an existing connection, and the
-connection will also be automatically established for us.
+Since we only need to initiate one link, the sender, we can do that by
+passing in a URL rather than an existing connection.  The connection
+will also be automatically established for us.
 
 We send the message in response to the
 `proton::messaging_handler::on_sendable()` callback and print the
@@ -155,7 +153,7 @@ the peer. We are notified of that event through the
 
 Then, once the connection has been closed, of which we are notified
 through the `proton::messaging_handler::on_connection_close()`
-callback, we stop accepting incoming connections.  A that point there
+callback, we stop accepting incoming connections.  At that point there
 is no work to be done, the event loop exits, and the
 `proton::container::run()` method returns.
 
@@ -164,8 +162,8 @@ is no work to be done, the event loop exits, and the
 
 So now we have our example working without a broker involved!
 
-Note that for this example we pick an "unusual" port 8888 since we are talking
-to ourselves rather than a broker.
+Note that for this example we pick an "unusual" port 8888 since we are
+talking to ourselves rather than a broker.
 
 \skipline url =
 

@@ -540,7 +540,7 @@ PN_EXTERN pn_record_t *pn_event_attachments(pn_event_t *event);
 PN_EXTERN struct pn_condition_t *pn_event_condition(pn_event_t *event);
 
 /**
- * **Experimental** - A batch of events that must be handled in sequence.
+ * **Unsettled API** - A batch of events that must be handled in sequence.
  * Call pn_event_batch_next() in a loop until it returns NULL to extract
  * the events.
  */
@@ -552,7 +552,7 @@ typedef struct pn_event_batch_t pn_event_batch_t;
  */
 
 /**
- * **Experimental** - Remove the next event from the batch and return
+ * **Unsettled API** - Remove the next event from the batch and return
  *  it. NULL means the batch is empty. The returned event pointer is
  *  valid until pn_event_batch_next() is called again on the same
  *  batch.

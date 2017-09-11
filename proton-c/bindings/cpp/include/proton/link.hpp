@@ -29,6 +29,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::link
+
 struct pn_link_t;
 
 namespace proton {

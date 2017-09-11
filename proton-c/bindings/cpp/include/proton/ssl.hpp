@@ -28,6 +28,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::ssl
+
 namespace proton {
 
 namespace internal {

@@ -31,6 +31,9 @@
 
 #include <utility>
 
+/// @file
+/// @copybrief proton::codec::decoder
+
 namespace proton {
 
 class annotation_key;
@@ -44,7 +47,7 @@ class value_base;
 
 namespace codec {
 
-/// **Unsettled API** - Stream-like decoder from AMQP bytes to C++
+/// **Unsettled API** - A stream-like decoder from AMQP bytes to C++
 /// values.
 ///
 /// For internal use only.

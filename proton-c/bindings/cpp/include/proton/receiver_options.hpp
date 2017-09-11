@@ -27,6 +27,9 @@
 #include "./internal/pn_unique_ptr.hpp"
 #include "./delivery_mode.hpp"
 
+/// @file
+/// @copybrief proton::receiver_options
+
 namespace proton {
 
 /// Options for creating a receiver.

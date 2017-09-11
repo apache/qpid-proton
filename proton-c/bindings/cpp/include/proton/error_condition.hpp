@@ -29,6 +29,9 @@
 #include <string>
 #include <iosfwd>
 
+/// @file
+/// @copybrief proton::error_condition
+
 struct pn_condition_t;
 
 namespace proton {

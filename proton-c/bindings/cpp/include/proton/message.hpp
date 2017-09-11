@@ -36,6 +36,9 @@
 #include <string>
 #include <vector>
 
+/// @file
+/// @copybrief proton::message
+
 struct pn_message_t;
 
 namespace proton {
@@ -87,26 +90,26 @@ class message {
     ///
     /// The message ID uniquely identifies a message within a
     /// messaging system.
-    PN_CPP_EXTERN void id(const message_id& id);
+    PN_CPP_EXTERN void id(const message_id&);
 
     /// Get the message ID.
     PN_CPP_EXTERN message_id id() const;
 
     /// Set the user name or ID.
-    PN_CPP_EXTERN void user(const std::string &user);
+    PN_CPP_EXTERN void user(const std::string&);
 
     /// Get the user name or ID.
     PN_CPP_EXTERN std::string user() const;
 
     /// Encode entire message into a byte vector, growing it if
     /// necessary.
-    PN_CPP_EXTERN void encode(std::vector<char> &bytes) const;
+    PN_CPP_EXTERN void encode(std::vector<char>&) const;
 
     /// Return encoded message as a byte vector.
     PN_CPP_EXTERN std::vector<char> encode() const;
 
     /// Decode from string data into the message.
-    PN_CPP_EXTERN void decode(const std::vector<char> &bytes);
+    PN_CPP_EXTERN void decode(const std::vector<char>&);
 
     /// @}
 
@@ -114,19 +117,19 @@ class message {
     /// @{
 
     /// Set the destination address.
-    PN_CPP_EXTERN void to(const std::string &addr);
+    PN_CPP_EXTERN void to(const std::string&);
 
     /// Get the destination address.
     PN_CPP_EXTERN std::string to() const;
 
     /// @cond INTERNAL
     /// These are aliases for to()
-    PN_CPP_EXTERN void address(const std::string &addr);
+    PN_CPP_EXTERN void address(const std::string&);
     PN_CPP_EXTERN std::string address() const;
     /// @endcond
 
     /// Set the address for replies.
-    PN_CPP_EXTERN void reply_to(const std::string &addr);
+    PN_CPP_EXTERN void reply_to(const std::string&);
 
     /// Get the address for replies.
     PN_CPP_EXTERN std::string reply_to() const;
@@ -152,31 +155,31 @@ class message {
     PN_CPP_EXTERN value& body();
 
     /// Set the subject.
-    PN_CPP_EXTERN void subject(const std::string &s);
+    PN_CPP_EXTERN void subject(const std::string&);
 
     /// Get the subject.
     PN_CPP_EXTERN std::string subject() const;
 
     /// Set the content type of the body.
-    PN_CPP_EXTERN void content_type(const std::string &s);
+    PN_CPP_EXTERN void content_type(const std::string&);
 
     /// Get the content type of the body.
     PN_CPP_EXTERN std::string content_type() const;
 
     /// Set the content encoding of the body.
-    PN_CPP_EXTERN void content_encoding(const std::string &s);
+    PN_CPP_EXTERN void content_encoding(const std::string&);
 
     /// Get the content encoding of the body.
     PN_CPP_EXTERN std::string content_encoding() const;
 
     /// Set the expiration time.
-    PN_CPP_EXTERN void expiry_time(timestamp t);
+    PN_CPP_EXTERN void expiry_time(timestamp);
 
     /// Get the expiration time.
     PN_CPP_EXTERN timestamp expiry_time() const;
 
     /// Set the creation time.
-    PN_CPP_EXTERN void creation_time(timestamp t);
+    PN_CPP_EXTERN void creation_time(timestamp);
 
     /// Get the creation time.
     PN_CPP_EXTERN timestamp creation_time() const;
@@ -264,13 +267,13 @@ class message {
     /// @{
 
     /// Set the message group ID.
-    PN_CPP_EXTERN void group_id(const std::string &s);
+    PN_CPP_EXTERN void group_id(const std::string&);
 
     /// Get the message group ID.
     PN_CPP_EXTERN std::string group_id() const;
 
     /// Set the reply-to group ID.
-    PN_CPP_EXTERN void reply_to_group_id(const std::string &s);
+    PN_CPP_EXTERN void reply_to_group_id(const std::string&);
 
     /// Get the reply-to group ID.
     PN_CPP_EXTERN std::string reply_to_group_id() const;
@@ -314,10 +317,10 @@ class message {
     /// @cond INTERNAL
   private:
     struct impl;
-    pn_message_t *pn_msg() const;
+    pn_message_t* pn_msg() const;
     struct impl& impl() const;
 
-    mutable pn_message_t *pn_msg_;
+    mutable pn_message_t* pn_msg_;
 
   PN_CPP_EXTERN friend void swap(message&, message&);
     /// @endcond

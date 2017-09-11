@@ -27,6 +27,9 @@
 
 #include <cstddef>
 
+/// @file
+/// @copybrief proton::map
+
 namespace proton {
 
 namespace codec {

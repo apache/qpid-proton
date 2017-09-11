@@ -25,20 +25,20 @@
 
 /**
  * @file
- * Use to examine the network address of proactor connections.
+ *
+ * @copybrief pn_netaddr_t
  *
  * @addtogroup proactor
- *
  * @{
  */
 
 /**
- * Network address of a proactor transport.
+ * **Unsettled API** - The network address of a proactor transport.
  */
 typedef struct pn_netaddr_t pn_netaddr_t;
 
 /**
- * Format a network address as a human-readable string in buf.
+ * Format a network address as a human-readable string in `buf`.
  *
  * @return the length of the string (excluding trailing '\0'), if >= size then
  * the address was truncated.
@@ -46,7 +46,7 @@ typedef struct pn_netaddr_t pn_netaddr_t;
 PNP_EXTERN int pn_netaddr_str(const pn_netaddr_t *addr, char *buf, size_t size);
 
 /**
- * Get the local address of a transport. Return NULL if not available.
+ * Get the local address of a transport. Return `NULL` if not available.
  */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
 

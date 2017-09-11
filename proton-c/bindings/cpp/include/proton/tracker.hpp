@@ -25,6 +25,9 @@
 #include "./internal/export.hpp"
 #include "./transfer.hpp"
 
+/// @file
+/// @copybrief proton::tracker
+
 struct pn_delivery_t;
 
 namespace proton {

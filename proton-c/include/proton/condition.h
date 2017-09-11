@@ -41,7 +41,7 @@ extern "C" {
  */
 
 /**
- * An AMQP Condition object. Conditions hold exceptional information
+ * An AMQP Condition object. Conditions hold exception information
  * pertaining to the closing of an AMQP endpoint such as a Connection,
  * Session, or Link. Conditions also hold similar information
  * pertaining to deliveries that have reached terminal states.

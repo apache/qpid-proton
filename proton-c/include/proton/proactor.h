@@ -31,38 +31,41 @@ extern "C" {
 
 /**
  * @file
- * @copydoc proactor
  *
- * @addtogroup proactor Proactor
- *
- * The proactor associates an abstract AMQP protocol @ref connection with a
- * concrete IO @ref transport implementation for outgoing and incoming
- * connections. pn_proactor_wait() returns @ref proactor_events to application
- * threads for handling.
- *
- * The @ref pn_proactor* functions are thread-safe, but to handle @ref proactor_events you
- * must also use the @ref core APIs which are not. @ref core objects associated
- * with different connections can be used concurrently, but objects associated
- * with a single connection cannot.
- *
- * The proactor *serializes* @ref proactor_events for each connection - it never returns
- * @ref proactor_events for the same connection concurrently in different
- * threads. Event-handling code can safely use any @ref core object obtained
- * from the current event. You can attach application data to @ref core objects
- * (for example with pn_connection_attachments()).
- *
- * pn_connection_wake() allows any thread to "wake up" a connection. It causes
- * pn_proactor_wait() to return a @ref PN_CONNECTION_WAKE event that is
- * serialized with the connection's other @ref proactor_events. You can use this to implement
- * communication between different connections, or from non-proactor threads.
- *
- * Serialization and pn_connection_wake() simplify building applications with a
- * shared thread pool, which serialize work per connection. Many other
- * variations are possible, but you are responsible for any additional
- * synchronization needed.
+ * @copybrief proactor
  *
  * @addtogroup proactor
  * @{
+ *
+ * The proactor associates an abstract AMQP protocol @ref connection
+ * with a concrete IO @ref transport implementation for outgoing and
+ * incoming connections. pn_proactor_wait() returns @ref
+ * proactor_events to application threads for handling.
+ *
+ * The `pn_proactor*` functions are thread-safe, but to handle @ref
+ * proactor_events you must also use the @ref core APIs, which are
+ * not. @ref core objects associated with different connections can be
+ * used concurrently, but objects associated with a single connection
+ * can only be used from their own thread.
+ *
+ * The proactor *serializes* @ref proactor_events for each connection
+ * - it never returns @ref proactor_events for the same connection
+ * concurrently in different threads. Event-handling code can safely
+ * use any @ref core object obtained from the current event. You can
+ * attach application data to @ref core objects (for example with
+ * pn_connection_attachments()).
+ *
+ * pn_connection_wake() allows any thread to "wake up" a
+ * connection. It causes pn_proactor_wait() to return a @ref
+ * PN_CONNECTION_WAKE event that is serialized with the connection's
+ * other @ref proactor_events. You can use this to implement
+ * communication between different connections, or from non-proactor
+ * threads.
+ *
+ * Serialization and pn_connection_wake() simplify building
+ * applications with a shared thread pool, which serialize work per
+ * connection. Many other variations are possible, but you are
+ * responsible for any additional synchronization needed.
  */
 
 /**
@@ -96,7 +99,7 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  * Bind @p connection to a new @ref transport connected to @p addr.
  * Errors are returned as  @ref PN_TRANSPORT_CLOSED events by pn_proactor_wait().
  *
- * @note Thread safe.
+ * @note Thread-safe
  *
  * @param[in] proactor the proactor object
  *
@@ -119,7 +122,7 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
  * Start listening for incoming connections.
  * Errors are returned as @ref proactor_events by pn_proactor_wait().
  *
- * @note Thread safe.
+ * @note Thread-safe
  *
  * @param[in] proactor the proactor object
  *
@@ -151,7 +154,7 @@ PNP_EXTERN void pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *liste
  * Note the proactor remains active, connections and listeners created after a call to
  * pn_proactor_disconnect() are not affected by it.
  *
- * @note Thread safe.
+ * @note Thread-safe
  *
  * @param proactor the proactor
  *
@@ -171,7 +174,7 @@ PNP_EXTERN void pn_proactor_disconnect(pn_proactor_t *proactor, pn_condition_t *
  *
  * pn_proactor_get() is a non-blocking version of this call.
  *
- * @note Thread Safe.
+ * @note Thread-safe
  *
  * @return a non-empty batch of events that must be processed in sequence.
  *
@@ -182,7 +185,7 @@ PNP_EXTERN pn_event_batch_t *pn_proactor_wait(pn_proactor_t *proactor);
  * Return @ref proactor_events if any are available immediately.  If not, return NULL.
  * If the return value is not NULL, the behavior is the same as pn_proactor_wait()
  *
- * @note Thread Safe.
+ * @note Thread-safe
  */
 PNP_EXTERN pn_event_batch_t *pn_proactor_get(pn_proactor_t *proactor);
 
@@ -218,7 +221,7 @@ PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
  * is delivered will cancel the previous timeout and deliver an event only after
  * the new timeout.
  *
- * @note Thread safe
+ * @note Thread-safe
  */
 PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t timeout);
 
@@ -226,7 +229,7 @@ PNP_EXTERN void pn_proactor_set_timeout(pn_proactor_t *proactor, pn_millis_t tim
  * Cancel the pending timeout set by pn_proactor_set_timeout(). Does nothing
  * if no timeout is set.
  *
- * @note Thread safe
+ * @note Thread-safe
  */
 PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
 
@@ -239,11 +242,12 @@ PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
  * call pn_connection_free(), either directly or indirectly by re-using @p
  * connection in another call to pn_proactor_connect() or pn_proactor_listen().
  *
- * @note **NOT** thread safe, call from connection event handler.
+ * @note **Not thread-safe**.  Call this function from a connection
+ * event handler.
  *
  * @note If @p connection does not belong to a proactor, this call does nothing.
  *
- * @note This has nothing to do with pn_connection_release()
+ * @note This has nothing to do with pn_connection_release().
  */
 PNP_EXTERN void pn_proactor_release_connection(pn_connection_t *connection);
 
@@ -257,14 +261,14 @@ PNP_EXTERN void pn_proactor_release_connection(pn_connection_t *connection);
  *
  * @note If @p connection does not belong to a proactor, this call does nothing.
  *
- * @note Thread safe
+ * @note Thread-safe
  */
 PNP_EXTERN void pn_connection_wake(pn_connection_t *connection);
 
 /**
  * Return the proactor associated with a connection.
  *
- * @note Not Thread safe.
+ * @note **Not thread-safe**
  *
  * @return the proactor or NULL if the connection does not belong to a proactor.
  */
@@ -273,7 +277,7 @@ PNP_EXTERN pn_proactor_t *pn_connection_proactor(pn_connection_t *connection);
 /**
  * Return the proactor associated with an event.
  *
- * @note Not Thread safe.
+ * @note **Not thread-safe**
  *
  * @return the proactor or NULL if the connection does not belong to a proactor.
  */
@@ -289,16 +293,21 @@ PNP_EXTERN pn_proactor_t *pn_event_proactor(pn_event_t *event);
  * of a message.  Such a timestamp should use the real time in milliseconds
  * since the epoch.
  *
- * @note Thread safe.
+ * @note Thread-safe
  */
 PNP_EXTERN pn_millis_t pn_proactor_now(void);
 
 /**
- * @defgroup proactor_events Events
+ * @}
+ */
+
+/**
+ * pn_proactor_wait() returns a subset of the event types defined by
+ * @ref pn_event_type_t.  The PN_REACTOR_\*, PN_SELECTABLE_\*, and
+ * PN_\*_FINAL events are not returned.
  *
- * **Experimental** - Events returned by pn_proactor_wait().
- * pn_proactor_wait() returns a subset of the event types defined by @ref pn_event_type_t.
- * The PN_REACTOR_..., PN_SELECTABLE_... and PN_..._FINAL events are not returned.
+ * @addtogroup proactor_events
+ * @{
  *
  * Enumeration | Brief description, see @ref pn_event_type_t for more
  * :-- | :--
@@ -340,7 +349,6 @@ PNP_EXTERN pn_millis_t pn_proactor_now(void);
  * @ref PN_PROACTOR_INACTIVE | @copybrief PN_PROACTOR_INACTIVE
  * @ref PN_CONNECTION_WAKE | @copybrief PN_CONNECTION_WAKE
  *
- * @}
  * @}
  */
 

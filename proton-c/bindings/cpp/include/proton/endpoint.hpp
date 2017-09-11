@@ -27,6 +27,9 @@
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 
+/// @file
+/// @copybrief proton::endpoint
+
 namespace proton {
 
 /// The base class for session, connection, and link.

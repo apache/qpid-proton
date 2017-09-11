@@ -28,6 +28,9 @@
 #include <stdexcept>
 #include <string>
 
+/// @file
+/// @copybrief proton::error
+
 namespace proton {
 
 /// The base Proton error.

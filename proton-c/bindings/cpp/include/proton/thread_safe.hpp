@@ -20,7 +20,7 @@
  * under the License.
  */
 
-// DEPRECATED: This file is no longer used and will be removed,
-// you should not include it in your code.
+/// @file
+/// **Deprecated**
 
 #endif // PROTON_THREAD_SAFE_HPP

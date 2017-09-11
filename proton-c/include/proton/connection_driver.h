@@ -25,6 +25,9 @@
  *
  * @copybrief connection_driver
  *
+ * @addtogroup connection_driver
+ * @{
+ *
  * Associate a @ref connection and @ref transport with AMQP byte
  * streams from any source.
  *
@@ -32,22 +35,22 @@
  * - generate ::pn_event_t events for your application to handle
  * - encode resulting AMQP output bytes for some output byte stream
  *
- * The pn_connection_driver_() functions provide a simplified API and
+ * The `pn_connection_driver_*` functions provide a simplified API and
  * extra logic to use ::pn_connection_t and ::pn_transport_t as a
  * unit.  You can also access them directly for features that do not
- * have pn_connection_driver_() functions.
+ * have `pn_connection_driver_*` functions.
  *
- * The driver buffers events and data, you should run it until
+ * The driver buffers events and data.  You should run it until
  * pn_connection_driver_finished() is true, to ensure all reading,
- * writing and event handling (including ERROR and FINAL events) is
- * finished.
+ * writing, and event handling (including `ERROR` and `FINAL` events)
+ * is finished.
  *
  * ## Error handling
  *
- * The pn_connection_driver_*() functions do not return an error
- * code. IO errors set the transport condition and are returned as a
- * PN_TRANSPORT_ERROR. The integration code can set errors using
- * pn_connection_driver_errorf().
+ * The `pn_connection_driver_*` functions do not return an error
+ * code. IO errors are set on the transport condition and are returned
+ * as a `PN_TRANSPORT_ERROR`. The integration code can set errors
+ * using pn_connection_driver_errorf().
  *
  * ## IO patterns
  *
@@ -57,7 +60,7 @@
  * all available events before calling
  * pn_connection_driver_read_buffer() and check that `size` is
  * non-zero before starting a blocking or asynchronous read call. A
- * `read` started while there are unprocessed CLOSE events in the
+ * `read` started while there are unprocessed `CLOSE` events in the
  * buffer may never complete.
  *
  * AMQP is a full-duplex, asynchronous protocol. The "read" and
@@ -66,12 +69,9 @@
  * ## Thread safety
  *
  * The @ref connection_driver types are not thread safe, but each
- * connection and its associated types forms an independent
+ * connection and its associated types form an independent
  * unit. Different connections can be processed concurrently by
  * different threads.
- *
- * @addtogroup connection_driver
- * @{
  */
 
 #include <proton/import_export.h>
@@ -112,8 +112,9 @@ typedef struct pn_connection_driver_t {
  */
 PN_EXTERN int pn_connection_driver_init(pn_connection_driver_t*, pn_connection_t*, pn_transport_t*);
 
-/** Force binding of the transport.
- * This happens automatically after the PN_CONNECTION_INIT is processed.
+/**
+ * Force binding of the transport.  This happens automatically after
+ * the PN_CONNECTION_INIT is processed.
  *
  * @return PN_STATE_ERR if the transport is already bound.
  */
@@ -264,7 +265,6 @@ PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batc
  * IO. Alisas for PN_TRANSPORT_TAIL_CLOSED
  */
 #define PN_TRANSPORT_READ_CLOSED PN_TRANSPORT_TAIL_CLOSED
-
 
 /**
  * @}

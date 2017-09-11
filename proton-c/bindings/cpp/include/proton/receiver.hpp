@@ -31,6 +31,9 @@
 struct pn_link_t;
 struct pn_session_t;
 
+/// @file
+/// @copybrief proton::receiver
+
 namespace proton {
 
 /// A channel for receiving messages.

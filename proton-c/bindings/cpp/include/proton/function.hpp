@@ -20,9 +20,16 @@
  * under the License.
  */
 
+/// @file
+/// **Deprecated** - Use `proton::work`.
+
+/// @cond INTERNAL
+
 namespace proton {
 
-/// A C++03 compatible void no-argument callback function object.
+/// **Deprecated** - Use `proton::work`.
+///
+/// A C++03-compatible void no-argument callback function object.
 ///
 /// Used by container::schedule() and event_loop::inject().  In C++11
 /// you can use std::bind, std::function or a void-no-argument lambda
@@ -39,6 +46,8 @@ class void_function0 {
     virtual void operator()() = 0;
 };
 
-}
+} // proton
+
+/// @endcond
 
 #endif // PROTON_FUNCTION_HPP

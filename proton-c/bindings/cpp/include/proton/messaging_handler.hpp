@@ -25,8 +25,10 @@
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 
-namespace proton {
+/// @file
+/// @copybrief proton::messaging_handler
 
+namespace proton {
 
 /// A handler for Proton messaging events.
 ///

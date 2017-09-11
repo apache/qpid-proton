@@ -23,8 +23,7 @@
  */
 
 /// @file
-///
-/// Type-identifiers for AMQP types.
+/// Type IDs for AMQP data types.
 
 #include "./internal/export.hpp"
 
@@ -73,7 +72,7 @@ PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, type_id);
 /// the names of the types.
 PN_CPP_EXTERN void assert_type_equal(type_id want, type_id got);
 
-/// @name Test the properties of a type_id.
+/// @name Functions to test the properties of a type ID
 /// @{
 inline bool type_id_is_signed_int(type_id t) { return t == BYTE || t == SHORT || t == INT || t == LONG; }
 inline bool type_id_is_unsigned_int(type_id t) { return t == UBYTE || t == USHORT || t == UINT || t == ULONG; }

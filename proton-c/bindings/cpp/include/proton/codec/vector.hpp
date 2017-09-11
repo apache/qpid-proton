@@ -23,7 +23,7 @@
  */
 
 /// @file
-/// Enable conversions between proton::value and std::vector
+/// **Unsettled API** - Enable conversions between `proton::value` and `std::vector`.
 
 #include "./encoder.hpp"
 #include "./decoder.hpp"

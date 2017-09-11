@@ -29,6 +29,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::terminus
+
 struct pn_link_t;
 struct pn_terminus_t;
 

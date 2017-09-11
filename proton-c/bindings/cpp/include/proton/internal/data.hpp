@@ -34,13 +34,13 @@ class value;
 namespace internal {
 
 /// @cond INTERNAL
-/// Wrapper for a proton data object.
+/// A wrapper for a proton data object.
 class data : public object<pn_data_t> {
-    /// Wrap an existing proton-C data object.
+    /// Wrap an existing Proton-C data object.
     data(pn_data_t* d) : internal::object<pn_data_t>(d) {}
 
   public:
-    /// Create an empty data.
+    /// Create an empty data object.
     data() : internal::object<pn_data_t>(0) {}
 
     /// Create a new data object.
@@ -78,10 +78,10 @@ class data : public object<pn_data_t> {
 };
 /// @endcond
 
-/// **Unsettled API** - Save and restore codec state
+/// **Unsettled API** - Save and restore codec state.
 ///
-/// A state_guard saves the state and restores it in the destructor
-/// unless cancel() is called.
+/// A state guard saves the state and restores it in the destructor
+/// unless `cancel()` is called.
 struct state_guard {
     /// @cond INTERNAL
     data& data_;

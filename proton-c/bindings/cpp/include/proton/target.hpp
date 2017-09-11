@@ -28,6 +28,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::target
+
 struct pn_terminus_t;
 
 namespace proton {

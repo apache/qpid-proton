@@ -35,11 +35,15 @@ struct pn_connection_t;
 struct pn_session_t;
 struct pn_link_t;
 
+/// @file
+/// @copybrief proton::work_queue
+
 namespace proton {
 
-/// **Unsettled API** - Work to be queued on a @ref work_queue.  It can
-/// be created from a function that takes no parameters and returns no
-/// value.
+/// **Unsettled API** - A work item for a @ref work_queue "work queue".
+///
+/// It can be created from a function that takes no parameters and
+/// returns no value.
 class work {
   public:
 #if PN_CPP_HAS_STD_FUNCTION
@@ -71,21 +75,21 @@ class work {
 #endif
 };
 
-/// **Unsettled API** - A work queue for serial execution.
+/// **Unsettled API** - A context for thread-safe execution of work.
 ///
-/// Event handler functions associated with a single
-/// proton::connection are called in sequence.  The connection's
-/// proton::work_queue allows you to "inject" extra @ref work from any
-/// thread, and have it executed in the same sequence.
+/// Event-handler functions associated with a single
+/// `proton::connection` are called in sequence.  The connection's
+/// `proton::work_queue` allows you to "inject" extra @ref work from
+/// any thread and have it executed in the same sequence.
 ///
-/// You may also create arbitrary proton::work_queue objects backed by
-/// a @ref container that allow other objects to have their own
+/// You may also create arbitrary `proton::work_queue` objects backed
+/// by a @ref container that allow other objects to have their own
 /// serialised work queues that can have work injected safely from
 /// other threads. The @ref container ensures that the work is
 /// correctly serialised.
 ///
-/// The @ref work class represents the work to be queued and can be
-/// created from a function that takes no parameters and returns no
+/// The `proton::work` class represents the work to be queued and can
+/// be created from a function that takes no parameters and returns no
 /// value.
 class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
@@ -94,30 +98,33 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @endcond
 
   public:
-    /// **Unsettled API** - Create a work_queue.
+    /// **Unsettled API** - Create a work queue.
     PN_CPP_EXTERN work_queue();
 
-    /// **Unsettled API** - Create a work_queue backed by `container`.
+    /// **Unsettled API** - Create a work queue backed by a container.
     PN_CPP_EXTERN work_queue(container&);
 
     PN_CPP_EXTERN ~work_queue();
 
-    /// **Unsettled API** - Add work to the work queue: f() will be
-    /// called serialised with other work in the queue: deferred and
-    /// possibly in another thread.
-    ///
-    /// @return true if f() has or will be called, false if the event_loop is ended
-    /// or f() cannot be injected for any other reason.
-    PN_CPP_EXTERN bool add(work f);
+    /// **Unsettled API** - Add work `fn` to the work queue.
 
-    /// **Unsettled API** - Add work to the work queue after duration:
-    /// f() will be called after the duration serialised with other
-    /// work in the queue: possibly in another thread.
+    /// Work `fn` will be called serially with other work in the queue.
+    /// The work may be deferred and executed in another thread.
     ///
-    /// The scheduled execution is "best effort" and it is possible that after the elapsed duration
-    /// the work will not be able to be injected into the serialised context - there will be no
-    /// indication of this.
-    PN_CPP_EXTERN void schedule(duration, work);
+    /// @return true if `fn` has been or will be called; false if the
+    /// event loops is ended or `fn` cannot be injected for any other
+    /// reason.
+    PN_CPP_EXTERN bool add(work fn);
+
+    /// **Unsettled API** - Add work `fn` to the work queue after a
+    /// duration.
+    ///
+    /// Scheduled execution is "best effort". It may not be possible
+    /// to inject the work after the elapsed duration.  There will be
+    /// no indication of this.
+    ///
+    /// @copydetails add()
+    PN_CPP_EXTERN void schedule(duration, work fn);
 
   private:
     PN_CPP_EXTERN static work_queue& get(pn_connection_t*);

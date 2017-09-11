@@ -24,6 +24,9 @@
 
 #include <proton/type_compat.h>
 
+/// @file
+/// @copybrief proton::scalar
+
 namespace proton {
 
 /// A holder for an instance of any scalar AMQP type.

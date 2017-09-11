@@ -30,6 +30,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::sasl
+
 namespace proton {
 
 /// SASL information.

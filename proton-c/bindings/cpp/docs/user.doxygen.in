@@ -37,42 +37,47 @@ HIDE_COMPOUND_REFERENCE = YES
 HIDE_SCOPE_NAMES        = YES
 MAX_INITIALIZER_LINES   = 0
 ALPHABETICAL_INDEX      = NO
+SORT_MEMBER_DOCS        = NO
 
 # Redefine protected as private and strip out the PN_CPP_EXTERN macro
 
-ENABLE_PREPROCESSING = YES
-MACRO_EXPANSION = YES
-EXPAND_ONLY_PREDEF = YES
-PREDEFINED = protected=private PN_CPP_EXTERN= PN_CPP_OVERRIDE= PN_CPP_HAS_CPP11=1 PN_CPP_HAS_SHARED_PTR=1 PN_CPP_HAS_UNIQUE_PTR=1 PN_CPP_HAS_LONG_LONG=1 PN_CPP_HAS_NULLPTR=1 PN_CPP_HAS_RVALUE_REFERENCES=1 PN_CPP_HAS_OVERRIDE=override PN_CPP_HAS_EXPLICIT_CONVERSIONS=1 PN_CPP_HAS_DEFAULTED_FUNCTIONS=1 PN_CPP_HAS_DELETED_FUNCTIONS=1 PN_CPP_HAS_STD_FUNCTION=1 PN_CPP_HAS_CHRONO=1
-EXCLUDE_SYMBOLS = internal internal::*
+ENABLE_PREPROCESSING    = YES
+MACRO_EXPANSION         = YES
+EXPAND_ONLY_PREDEF      = YES
+PREDEFINED              = protected=private PN_CPP_EXTERN= PN_CPP_OVERRIDE= PN_CPP_HAS_CPP11=1 PN_CPP_HAS_SHARED_PTR=1 PN_CPP_HAS_UNIQUE_PTR=1 PN_CPP_HAS_LONG_LONG=1 PN_CPP_HAS_NULLPTR=1 PN_CPP_HAS_RVALUE_REFERENCES=1 PN_CPP_HAS_OVERRIDE=override PN_CPP_HAS_EXPLICIT_CONVERSIONS=1 PN_CPP_HAS_DEFAULTED_FUNCTIONS=1 PN_CPP_HAS_DELETED_FUNCTIONS=1 PN_CPP_HAS_STD_FUNCTION=1 PN_CPP_HAS_CHRONO=1
+EXCLUDE_SYMBOLS         = internal internal::*
 
 # Configuration options related to warning and progress messages
 
-QUIET                  = YES
-WARNINGS               = YES
+QUIET                   = YES
+WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT = @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/docs @CMAKE_SOURCE_DIR@/examples/cpp
-FILE_PATTERNS          = *.hpp *.md *.dox
-EXCLUDE_PATTERNS       = @CMAKE_SOURCE_DIR@/examples/*.?pp  # Don't parse example sources, only *.dox
-FULL_PATH_NAMES        = YES
-RECURSIVE              = YES
-STRIP_FROM_PATH        = @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include
-EXAMPLE_PATH           = @CMAKE_SOURCE_DIR@/examples/cpp
-EXAMPLE_RECURSIVE      = YES
+INPUT                   = @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include \
+                          @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/docs \
+                          @CMAKE_SOURCE_DIR@/examples/cpp
+FILE_PATTERNS           = *.hpp *.md *.dox
+EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/examples/*.?pp \
+                          @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include/proton/internal/*.hpp
+FULL_PATH_NAMES         = YES
+RECURSIVE               = YES
+STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/proton-c/bindings/cpp/include
+EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples/cpp
+EXAMPLE_RECURSIVE       = YES
 
 # View and list options
 
+DISABLE_INDEX           = YES
 GENERATE_TREEVIEW       = YES
 GENERATE_TODOLIST       = NO
 GENERATE_TESTLIST       = NO
 GENERATE_BUGLIST        = NO
-GENERATE_DEPRECATEDLIST = YES
+GENERATE_DEPRECATEDLIST = NO
 
 # Configuration options related to the output format
 
-GENERATE_HTML          = YES
-HTML_OUTPUT            = html
-HTML_FILE_EXTENSION    = .html
-GENERATE_LATEX         = NO
+GENERATE_HTML           = YES
+HTML_OUTPUT             = html
+HTML_FILE_EXTENSION     = .html
+GENERATE_LATEX          = NO

@@ -24,6 +24,9 @@
 
 #include "../type_id.hpp"
 
+/// @file
+/// **Unsettled API** - Shared codec functions.
+
 namespace proton {
 namespace codec {
 

@@ -52,7 +52,6 @@ extern "C" {
 /**
  * The local @link pn_state_t endpoint state @endlink is active.
  */
-
 #define PN_LOCAL_ACTIVE (2)
 
 /**

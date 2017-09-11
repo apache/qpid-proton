@@ -30,18 +30,15 @@ extern "C" {
 
 /**
  * @file
- * @copydoc listener
  *
- * @defgroup listener Listener
- * @ingroup proactor
+ * @copybrief listener
  *
- * **Experimental** - A listener for incoming connections for the @ref proactor.
- *
- * @note Thread safety: Listener has the same thread-safety rules as a @ref core
- * object; calls to a single listener must be serialized with the exception of
- * pn_listener_close()
- *
+ * @addtogroup listener
  * @{
+ *
+ * @note Thread safety: Listener has the same thread-safety rules as a
+ * @ref core object.  Calls to a single listener must be serialized
+ * with the exception of pn_listener_close().
  */
 
 /**
@@ -77,14 +74,15 @@ PNP_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
 /**
  * @deprecated
  *
- * Get the application context that is associated with a listener.
+ * **Deprecated** - Get the application context that is associated
+ * with a listener.
  */
 PNP_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
 
 /**
  * @deprecated
  *
- * Set a new application context for a listener.
+ * **Deprecated** - Set a new application context for a listener.
  */
 PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 

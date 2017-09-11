@@ -29,6 +29,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::target_options
+
 namespace proton {
 
 /// Options for creating a target node for a sender or receiver.

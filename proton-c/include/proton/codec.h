@@ -45,7 +45,6 @@ extern "C" {
  * @ingroup amqp_types
  */
 typedef enum {
-
   /**
    * The NULL AMQP type.
    */
@@ -570,7 +569,7 @@ PN_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size
  * ::pn_data_exit() may be used to return to the current level in the
  * tree and put more values.
  *
- *   @code
+ * @code
  *   pn_data_t *data = pn_data(0);
  *   ...
  *   pn_data_put_list(data);
@@ -580,7 +579,7 @@ PN_EXTERN ssize_t pn_data_decode(pn_data_t *data, const char *bytes, size_t size
  *   pn_data_put_int(data, 3);
  *   pn_data_exit(data);
  *   ...
- *   @endcode
+ * @endcode
  *
  * @param data a pn_data_t object
  * @return zero on success or an error code on failure
@@ -591,7 +590,7 @@ PN_EXTERN int pn_data_put_list(pn_data_t *data);
  * Puts an empty map value into a pn_data_t. Elements may be filled by
  * entering the map node and putting alternating key value pairs.
  *
- *   @code
+ * @code
  *   pn_data_t *data = pn_data(0);
  *   ...
  *   pn_data_put_map(data);
@@ -600,7 +599,7 @@ PN_EXTERN int pn_data_put_list(pn_data_t *data);
  *   pn_data_put_string(data, pn_bytes(5, "value"));
  *   pn_data_exit(data);
  *   ...
- *   @endcode
+ * @endcode
  *
  * @param data a pn_data_t object
  * @return zero on success or an error code on failure

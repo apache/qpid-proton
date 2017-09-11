@@ -22,6 +22,9 @@
  *
  */
 
+/// @file
+/// Forward declarations.
+
 namespace proton {
 
 class annotation_key;

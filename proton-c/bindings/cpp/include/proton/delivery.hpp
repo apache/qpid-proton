@@ -27,6 +27,9 @@
 #include "./internal/object.hpp"
 #include "./transfer.hpp"
 
+/// @file
+/// @copybrief proton::delivery
+
 namespace proton {
 
 /// A received message.

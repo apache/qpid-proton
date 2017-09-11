@@ -30,6 +30,9 @@
 
 #include <string>
 
+/// @file
+/// @copybrief proton::message_id
+
 namespace proton {
 
 /// An AMQP message ID.

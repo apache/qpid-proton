@@ -26,6 +26,9 @@
 #include "./internal/export.hpp"
 #include "./internal/object.hpp"
 
+/// @file
+/// @copybrief proton::transport
+
 struct pn_transport_t;
 
 namespace proton {
