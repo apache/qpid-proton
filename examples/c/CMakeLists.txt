@@ -17,16 +17,33 @@
 # under the License.
 #
 
-find_package(Proton REQUIRED)
+find_package(Proton REQUIRED Core Proactor)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+
 include(CheckCCompilerFlag)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${Proton_INCLUDE_DIRS})
 
-if(Proton_Proactor_FOUND)
-  if(WIN32)
-    message(STATUS "Windows IOCP proactor examples temporarily disabled for build")
-  else(WIN32)
-    add_subdirectory(proactor)
-  endif(WIN32)
+add_definitions(${COMPILE_LANGUAGE_FLAGS} ${COMPILE_WARNING_FLAGS} ${WERROR} ${COMPILE_PLATFORM_FLAGS} ${LINK_TIME_OPTIMIZATION})
+
+# Add a test with the correct environment to find test executables and valgrind.
+if(WIN32)
+  set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>")
+else()
+  set(test_path "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
 endif()
-add_subdirectory(messenger)
-add_subdirectory(reactor)
+
+if(WIN32)
+  message(STATUS "Windows IOCP proactor examples temporarily disabled for build")
+else()
+  foreach (name broker send receive direct)
+    add_executable(c-${name} ${name}.c)
+    target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    set_target_properties(c-${name} PROPERTIES OUTPUT_NAME ${name})
+  endforeach()
+endif()
+
+set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
+
+add_test(c-example-tests ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)

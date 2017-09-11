@@ -1,5 +1,5 @@
-#ifndef _PROTON_EXAMPLES_C_PROACTOR_THREADS_H
-#define _PROTON_EXAMPLES_C_PROACTOR_THREADS_H
+#ifndef _PROTON_EXAMPLES_C_THREADS_H
+#define _PROTON_EXAMPLES_C_THREADS_H 1
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -46,4 +46,4 @@
 
 #endif
 
-#endif
+#endif /* thread.h */
