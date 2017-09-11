@@ -807,58 +807,6 @@ if (BUILD_PYTHON)
 
 endif (BUILD_PYTHON)
 
-find_program(RUBY_EXE "ruby")
-if (RUBY_EXE AND BUILD_RUBY)
-  set (rb_root "${pn_test_root}/ruby")
-  set (rb_src "${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby")
-  set (rb_lib "${rb_src}/lib")
-  set (rb_tests "${rb_src}/tests")
-  set (rb_bin "${CMAKE_CURRENT_BINARY_DIR}/bindings/ruby")
-  set (rb_bld "$<TARGET_FILE_DIR:qpid-proton>")
-  set (rb_path $ENV{PATH} ${rb_bin} ${rb_bld})
-  set (rb_rubylib ${rb_root} ${rb_src} ${rb_bin} ${rb_bld} ${rb_lib} ${rb_tests})
-  to_native_path("${rb_path}" rb_path)
-  to_native_path("${rb_rubylib}" rb_rubylib)
-
-  # ruby example tests have no dependencies other than standard ruby.
-  add_test(NAME ruby-example-test
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby
-    COMMAND ${env_py} -- "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-    ${RUBY_EXE} example_test.rb -v)
-
-  # TODO aconway 2017-08-16: move test cmake code to ruby/tests directory
-  add_test(NAME ruby-container-test
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/proton-c/bindings/ruby
-    COMMAND ${env_py} -- "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-    ${RUBY_EXE} ${rb_tests}/test_container.rb -v)
-
-  # ruby unit tests:  tests/ruby/proton-test
-  # only enable the tests if the Ruby gem dependencies were found
-  if (DEFAULT_RUBY_TESTING)
-    add_test (NAME ruby-unit-test
-              COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-                      "${rb_root}/proton-test")
-
-    # ruby spec tests
-    find_program(RSPEC_EXE rspec)
-    if (RSPEC_EXE)
-      add_test (NAME ruby-spec-test
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bindings/ruby
-                COMMAND ${env_py} "PATH=${rb_path}" "RUBYLIB=${rb_rubylib}"
-                        ${RSPEC_EXE})
-
-    else(RSPEC_EXE)
-      message (STATUS "Cannot find rspec, skipping rspec tests")
-    endif(RSPEC_EXE)
-  else (DEFAULT_RUBY_TESTING)
-    message(STATUS "Skipping Ruby tests: missing dependencies")
-  endif (DEFAULT_RUBY_TESTING)
-else (RUBY_EXE)
-  message (STATUS "Cannot find ruby, skipping ruby tests")
-endif()
-
-mark_as_advanced (RUBY_EXE RSPEC_EXE)
-
 if (BUILD_JAVASCRIPT)
   add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
   add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)

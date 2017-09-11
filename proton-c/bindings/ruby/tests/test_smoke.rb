@@ -1,9 +1,10 @@
 #!/usr/bin/env ruby
 
-require 'test/unit'
+require 'minitest/autorun'
+require 'minitest/unit'
 require 'qpid_proton'
 
-class SmokeTest < Test::Unit::TestCase
+class SmokeTest < MiniTest::Test
 
   Messenger = Qpid::Proton::Messenger::Messenger
   Message = Qpid::Proton::Message

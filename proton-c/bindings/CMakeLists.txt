@@ -76,37 +76,9 @@ if(SWIG_FOUND)
   endif (PYTHONLIBS_FOUND)
 
   # Prerequisites for Ruby:
-  find_program(GEM_EXE "gem")
-  mark_as_advanced(GEM_EXE)
-  macro(CheckRubyGem varname gemname)
-    execute_process(COMMAND ${GEM_EXE} list --local ${gemname}
-      OUTPUT_VARIABLE CHECK_OUTPUT)
-
-    set (${varname} OFF)
-
-    if (CHECK_OUTPUT MATCHES "${gemname}[ ]+\(.*\)")
-      message(STATUS "Found Ruby gem: ${gemname}")
-      set (${varname} ON)
-    else()
-      message(STATUS "Missing Ruby gem dependency: ${gemname}")
-      set (${varname} OFF)
-    endif()
-  endmacro()
-
   find_package(Ruby)
   if (RUBY_FOUND)
     set (DEFAULT_RUBY ON)
-
-    CheckRubyGem("HAS_RUBY_GEM_RSPEC"     "rspec")
-    CheckRubyGem("HAS_RUBY_GEM_SIMPLECOV" "simplecov")
-
-    if (HAS_RUBY_GEM_RSPEC AND HAS_RUBY_GEM_SIMPLECOV)
-      set (DEFAULT_RUBY_TESTING ON CACHE INTERNAL "")
-    else()
-      message(STATUS "Skipping Ruby bindings due to missing dependencies...")
-      set (DEFAULT_RUBY_TESTING OFF CACHE INTERNAL "")
-      set (DEFAULT_RUBY OFF)
-    endif (HAS_RUBY_GEM_RSPEC AND HAS_RUBY_GEM_SIMPLECOV)
   endif (RUBY_FOUND)
 
   # Prerequites for PHP:

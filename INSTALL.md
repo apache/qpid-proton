@@ -45,8 +45,7 @@ language.
     # Dependencies needed for bindings
     $ yum install swig                                       # Required for all bindings
     $ yum install python-devel                               # Python
-    $ yum install ruby-devel rubygem-rspec rubygem-simplecov # Ruby
-    $ yum install rubygem-test-unit                          # Ruby on Fedora >= 25
+    $ yum install ruby-devel rubygem-minitest                # Ruby
     $ yum install php-devel                                  # PHP
     $ yum install perl-devel                                 # Perl
 

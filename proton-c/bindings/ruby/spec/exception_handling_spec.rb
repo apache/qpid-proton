@@ -17,6 +17,8 @@
 # under the License.
 #
 
+require "spec_helper"
+
 module Qpid
 
   module Proton
@@ -36,57 +38,55 @@ module Qpid
       end
 
       it "does not raise an error on a zero code" do
-        expect {
-          @handler.check_for_error(0)
-        }.to_not raise_error
+        @handler.check_for_error(0)
       end
 
       it "raises EOS on PN_EOS" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::EOS)
-        }.to raise_error(Qpid::Proton::EOSError)
+        }.must_raise(Qpid::Proton::EOSError)
       end
 
       it "raises Error on PN_ERR" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::ERROR)
-        }.to raise_error(Qpid::Proton::ProtonError)
+        }.must_raise(Qpid::Proton::ProtonError)
       end
 
       it "raises Overflow on PN_OVERFLOW" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::OVERFLOW)
-        }.to raise_error(Qpid::Proton::OverflowError)
+        }.must_raise(Qpid::Proton::OverflowError)
       end
 
       it "raises Underflow on PN_UNDERFLOW" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::UNDERFLOW)
-        }.to raise_error(Qpid::Proton::UnderflowError)
+        }.must_raise(Qpid::Proton::UnderflowError)
       end
 
       it "raises Argument on PN_ARG_ERR" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::ARGUMENT)
-        }.to raise_error(Qpid::Proton::ArgumentError)
+        }.must_raise(Qpid::Proton::ArgumentError)
       end
 
       it "raises Timeout on PN_TIMEOUT" do
         expect {
           @handler.check_for_error(Qpid::Proton::Error::TIMEOUT)
-        }.to raise_error(Qpid::Proton::TimeoutError)
+        }.must_raise(Qpid::Proton::TimeoutError)
       end
 
       it "raises an Ruby ArgumentError on a nil code" do
         expect {
           @handler.check_for_error(nil)
-        }.to raise_error(::ArgumentError)
+        }.must_raise(::ArgumentError)
       end
 
       it "raises a Ruby ArgumentError on an unknown value" do
         expect {
           @handler.check_for_error("farkle")
-        }.to raise_error(::ArgumentError)
+        }.must_raise(::ArgumentError)
       end
 
     end

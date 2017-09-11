@@ -43,8 +43,6 @@ addons:
 install:
 - pip install --user --upgrade pip
 - pip install --user tox
-- gem install rspec
-- gem install simplecov || true
 - gem install minitest
 
 before_script:

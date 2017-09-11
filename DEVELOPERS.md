@@ -71,10 +71,10 @@ To run the tests, cd into your build directory and use the following commands:
 Additional packages required for testing the language bindings:
 
     # ruby dependencies
-    $ yum install rubygem-minitest rubygem-rspec rubygem-simplecov
+    $ yum install rubygem-minitest
 
     # alternatively ruby depedencies on non-RPM based systems
-    $ gem install minitest rspec simplecov
+    $ gem install minitest
 
 Mailing list
 ------------

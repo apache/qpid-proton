@@ -17,14 +17,10 @@
 # under the License.
 #
 
-if (NOT DEFAULT_RUBY_TESTING)
-  message(FATAL_ERROR "Ruby bindings cannot be tested while missing dependencies")
-endif (NOT DEFAULT_RUBY_TESTING)
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
-
 include_directories (${RUBY_INCLUDE_PATH})
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES ruby.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
@@ -64,33 +60,38 @@ if (NOT RUBY_ARCHLIB_DIR)
   set (RUBY_ARCHLIB_DIR ${RUBY_ARCHLIB_DIR_DEFAULT})
 endif()
 
-install(TARGETS cproton-ruby
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(FILES lib/qpid_proton.rb
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/codec
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/core
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/event
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/handler
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/messenger
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/reactor
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/types
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
-install(DIRECTORY lib/util
-        DESTINATION ${RUBY_ARCHLIB_DIR}
-        COMPONENT Ruby)
+install(TARGETS cproton-ruby DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
+install(DIRECTORY lib DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
+
+#### Tests
+
+set(src "${CMAKE_CURRENT_SOURCE_DIR}")
+set(bin "${CMAKE_CURRENT_BINARY_DIR}")
+set(bld "$<TARGET_FILE_DIR:qpid-proton>")
+
+to_native_path("$ENV{RUBYLIB};${src}/lib;${src}/tests;${src}/spec;${bin};${bld}" RUBYLIB)
+to_native_path("$ENV{PATH};${bin};${bld}" PATH)
+
+execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
+  RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
+if (result EQUAL 0)  # Have minitest
+
+  macro(add_ruby_test name file)
+    add_test(
+      NAME ${name}
+      ${ARGN}
+      COMMAND ${RUBY_EXECUTABLE} ${file} -v)
+    set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB}")
+  endmacro()
+
+  add_ruby_test(ruby-example-test example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
+
+  file(GLOB TESTS tests/test_*.rb)
+  file(GLOB SPECS spec/*_spec.rb)
+  foreach(t ${TESTS} ${SPECS})
+    add_ruby_test("ruby-${t}" ${t})
+  endforeach()
+else()
+  # No minitest
+  message(WARNING "ruby tests will not run, minitest is not installed")
+endif()

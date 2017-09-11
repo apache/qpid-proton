@@ -17,7 +17,7 @@
 # under the License.
 #++
 
-# Tools for tests
+# Tools for tests. Only minitest is used.
 
 require 'minitest/autorun'
 require 'qpid_proton'
@@ -55,6 +55,19 @@ class TestPort
 end
 
 class TestError < Exception; end
+
+def wait_port(port, timeout=5)
+  deadline = Time.now + timeout
+  begin  # Wait for the port to be connectible
+    TCPSocket.open("", $port).close
+  rescue Errno::ECONNREFUSED
+    if Time.now > deadline then
+      raise TestError("timed out waiting for port #{port}")
+    end
+    sleep(0.1)
+    retry
+  end
+end
 
 # Handler that creates its own container to run itself, and records some common
 # events that are checked by tests

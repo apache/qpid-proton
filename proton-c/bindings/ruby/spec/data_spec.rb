@@ -17,6 +17,7 @@
 # under the License.
 #
 
+
 require "spec_helper"
 
 module Qpid
@@ -30,144 +31,144 @@ module Qpid
       end
 
       it "can be initialized" do
-        expect(@data).not_to be_nil
+        expect(@data).wont_be_nil
       end
 
       it "can hold a null" do
         @data.null
-        expect(@data.null?).to eq(true)
+        expect(@data.null?).must_equal(true)
       end
 
       it "can hold a true boolean" do
         @data.bool = true
-        expect(@data.bool).to eq(true)
+        expect(@data.bool).must_equal(true)
       end
 
       it "can hold a false boolean" do
         @data.bool = false
-        expect(@data.bool).to eq(false)
+        expect(@data.bool).must_equal(false)
       end
 
       it "raises an error on a negative ubyte" do
         expect {
           @data.ubyte = (0 - (rand(127) + 1))
-        }.to raise_error(RangeError)
+        }.must_raise(RangeError)
       end
 
       it "raises an error on a null ubyte" do
         expect {
           @data.ubyte = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold an unsigned byte" do
         value = rand(255)
         @data.ubyte = value
-        expect(@data.ubyte).to eq(value)
+        expect(@data.ubyte).must_equal(value)
       end
 
       it "can hold a byte" do
         value = rand(128)
         @data.byte = value
-        expect(@data.byte).to eq(value)
+        expect(@data.byte).must_equal(value)
       end
 
       it "can hold a negative byte" do
         value = 0 - (rand(126) + 1)
         @data.byte = value
-        expect(@data.byte).to eq(value)
+        expect(@data.byte).must_equal(value)
       end
 
       it "raises an error on a negative ushort" do
         expect {
           @data.ushort = (0 - (rand(65535) + 1))
-        }.to raise_error(RangeError)
+        }.must_raise(RangeError)
       end
 
       it "raises an error on a nil ushort" do
         expect {
           @data.ushort = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a zero unsigned short" do
         @data.ushort = 0
-        expect(@data.ushort).to eq(0)
+        expect(@data.ushort).must_equal(0)
       end
 
       it "can hold an unsigned short" do
         value = rand(2**15) + 1
         @data.ushort = value
-        expect(@data.ushort).to eq(value)
+        expect(@data.ushort).must_equal(value)
       end
 
       it "raises an error on a nil short" do
         expect {
           @data.short = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a short" do
         value = rand(2**15) + 1
         @data.short = value
-        expect(@data.short).to eq(value)
+        expect(@data.short).must_equal(value)
       end
 
       it "can hold a zero short" do
         @data.short = 0
-        expect(@data.short).to eq(0)
+        expect(@data.short).must_equal(0)
       end
 
       it "can hold a negative short" do
         value = (0 - (rand(2**15) + 1))
         @data.short = value
-        expect(@data.short).to eq(value)
+        expect(@data.short).must_equal(value)
       end
 
       it "raises an error on a nil uint" do
         expect {
           @data.uint = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "raises an error on a negative uint" do
         expect {
           @data.uint = (0 - (rand(2**32) + 1))
-        }.to raise_error(RangeError)
+        }.must_raise(RangeError)
       end
 
       it "can hold an unsigned integer" do
         value = rand(2**32) + 1
         @data.uint = value
-        expect(@data.uint).to eq(value)
+        expect(@data.uint).must_equal(value)
       end
 
       it "can hold a zero unsigned integer" do
         @data.uint = 0
-        expect(@data.uint).to eq(0)
+        expect(@data.uint).must_equal(0)
       end
 
       it "raise an error on a null integer" do
         expect {
           @data.int = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold an integer" do
         value = rand(2**31) + 1
         @data.int = value
-        expect(@data.int).to eq(value)
+        expect(@data.int).must_equal(value)
       end
 
       it "can hold zero as an integer" do
         @data.int = 0
-        expect(@data.int).to eq(0)
+        expect(@data.int).must_equal(0)
       end
 
       it "raises an error on a null character" do
         expect {
           @data.char = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a character" do
@@ -175,223 +176,223 @@ module Qpid
         index = rand(source.length)
         value = source[index,1].bytes.to_a[0]
         @data.char = value
-        expect(@data.char).to eq(value)
+        expect(@data.char).must_equal(value)
       end
 
       it "raises an error on a null ulong" do
         expect {
           @data.ulong = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "raises an error on a negative ulong" do
         expect {
           @data.ulong = (0 - (rand(2**63) + 1))
-        }.to raise_error(RangeError)
+        }.must_raise(RangeError)
       end
 
       it "can have a zero unsigned long" do
         @data.ulong = 0
-        expect(@data.ulong).to eq(0)
+        expect(@data.ulong).must_equal(0)
       end
 
       it "can hold an unsigned long" do
         value = rand(2**63) + 1
         @data.ulong = value
-        expect(@data.ulong).to eq(value)
+        expect(@data.ulong).must_equal(value)
       end
 
       it "raises an error on a null long" do
         expect {
           @data.long = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can have a zero long" do
         @data.long = 0
-        expect(@data.long).to eq(0)
+        expect(@data.long).must_equal(0)
       end
 
       it "can hold a long" do
         value = rand(2**63) + 1
         @data.long = value
-        expect(@data.long).to eq(value)
+        expect(@data.long).must_equal(value)
       end
 
       it "raise an error on a null timestamp" do
         expect {
           @data.timestamp = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can handle a negative timestamp" do
         last_year = Time.now - (60*60*24*365)
         @data.timestamp = last_year
-        expect(@data.timestamp).to eq(last_year.to_i)
+        expect(@data.timestamp).must_equal(last_year.to_i)
       end
 
       it "can handle a zero timestamp" do
         @data.timestamp = 0
-        expect(@data.timestamp).to eq(0)
+        expect(@data.timestamp).must_equal(0)
       end
 
       it "can hold a timestamp" do
         next_year = Time.now + (60*60*24*365)
         @data.timestamp = next_year
-        expect(@data.timestamp).to eq(next_year.to_i)
+        expect(@data.timestamp).must_equal(next_year.to_i)
       end
 
       it "raises an error on a null float" do
         expect {
           @data.float = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a negative float" do
         value = 0.0 - (1.0 + rand(2.0**15)).to_f
         @data.float = value
-        expect(@data.float).to eq(value)
+        expect(@data.float).must_equal(value)
       end
 
       it "can hold a zero float" do
         @data.float = 0.0
-        expect(@data.float).to eq(0.0)
+        expect(@data.float).must_equal(0.0)
       end
 
       it "can hold a float" do
         value = (1.0 + rand(2.0**15)).to_f
         @data.float = value
-        expect(@data.float).to eq(value)
+        expect(@data.float).must_equal(value)
       end
 
       it "raise an error on a null double" do
         expect {
           @data.double = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a negative double" do
         value = 0.0 - (1.0 + rand(2.0**31)).to_f
         @data.double = value
-        expect(@data.double).to eq(value)
+        expect(@data.double).must_equal(value)
       end
 
       it "can hold a zero double" do
         @data.double = 0.0
-        expect(@data.double).to eq(0.0)
+        expect(@data.double).must_equal(0.0)
       end
 
       it "can hold a double" do
         value = (1.0 + rand(2.0**31)).to_f
         @data.double = value
-        expect(@data.double).to eq(value)
+        expect(@data.double).must_equal(value)
       end
 
       it "raises an error on a null decimal32" do
         expect {
           @data.decimal32 = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a zero decimal32" do
         @data.decimal32 = 0
-        expect(@data.decimal32).to eq(0)
+        expect(@data.decimal32).must_equal(0)
       end
 
       it "can hold a decimal32" do
         value = 1 + rand(2**31)
         @data.decimal32 = value
-        expect(@data.decimal32).to eq(value)
+        expect(@data.decimal32).must_equal(value)
       end
 
       it "raises an error on a null decimal64" do
         expect {
           @data.decimal64 = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a zero decimal64" do
         @data.decimal64 = 0
-        expect(@data.decimal64).to eq(0)
+        expect(@data.decimal64).must_equal(0)
       end
 
       it "can hold a decimal64" do
         value = 1 + rand(2**63)
         @data.decimal64 = value
-        expect(@data.decimal64).to eq(value)
+        expect(@data.decimal64).must_equal(value)
       end
 
       it "raises an error on a null decimal128" do
         expect {
           @data.decimal128 = nil
-        }.to raise_error(TypeError)
+        }.must_raise(TypeError)
       end
 
       it "can hold a zero decimal128" do
         @data.decimal128 = 0
-        expect(@data.decimal128).to eq(0)
+        expect(@data.decimal128).must_equal(0)
       end
 
       it "can hold a decimal128" do
         value = rand(2**127)
         @data.decimal128 = value
-        expect(@data.decimal128).to eq(value)
+        expect(@data.decimal128).must_equal(value)
       end
 
       it "raises an error on a null UUID" do
         expect {
           @data.uuid = nil
-        }.to raise_error(::ArgumentError)
+        }.must_raise(::ArgumentError)
       end
 
       it "raises an error on a malformed UUID" do
         expect {
           @data.uuid = random_string(36)
-        }.to raise_error(::ArgumentError)
+        }.must_raise(::ArgumentError)
       end
 
       it "can set a UUID from an integer value" do
         @data.uuid = 336307859334295828133695192821923655679
-        expect(@data.uuid).to eq("fd0289a5-8eec-4a08-9283-81d02c9d2fff")
+        expect(@data.uuid).must_equal("fd0289a5-8eec-4a08-9283-81d02c9d2fff")
       end
 
       it "can hold a UUID" do
         value = "fd0289a5-8eec-4a08-9283-81d02c9d2fff"
         @data.uuid = value
-        expect(@data.uuid).to eq(value)
+        expect(@data.uuid).must_equal(value)
       end
 
       it "can hold a null binary" do
         @data.binary = nil
-        expect(@data.binary).to eq("")
+        expect(@data.binary).must_equal("")
       end
 
       it "can hold a binary" do
         value = random_string(128)
         @data.binary = value
-        expect(@data.binary).to eq(value)
+        expect(@data.binary).must_equal(value)
       end
 
       it "can hold a null string" do
         @data.string = nil
-        expect(@data.string).to eq("")
+        expect(@data.string).must_equal("")
       end
 
       it "can hold a string" do
         value = random_string(128)
         @data.string = value
-        expect(@data.string).to eq(value)
+        expect(@data.string).must_equal(value)
       end
 
       it "can hold a null symbol" do
         @data.symbol = nil
-        expect(@data.symbol).to eq("")
+        expect(@data.symbol).must_equal("")
       end
 
       it "can hold a symbol" do
         value = random_string(128)
         @data.symbol = value
-        expect(@data.symbol).to eq(value)
+        expect(@data.symbol).must_equal(value)
       end
 
       it "can hold a described value" do
@@ -403,12 +404,12 @@ module Qpid
         @data.string = value
         @data.exit
 
-        expect(@data.described?).to eq(true)
+        expect(@data.described?).must_equal(true)
         @data.enter
         @data.next
-        expect(@data.symbol).to eq(name)
+        expect(@data.symbol).must_equal(name)
         @data.next
-        expect(@data.string).to eq(value)
+        expect(@data.string).must_equal(value)
       end
 
       it "raises an error when setting the wrong type in an array"
@@ -424,7 +425,7 @@ module Qpid
         @data.enter
         values.each do |value|
           @data.next
-          expect(@data.int).to eq(value)
+          expect(@data.int).must_equal(value)
         end
       end
 
@@ -438,13 +439,13 @@ module Qpid
         values.each { |value| @data.string = value }
         @data.exit
 
-        expect(@data.array).to match_array([values.size, true, Qpid::Proton::Codec::STRING])
+        expect(@data.array).must_equal([values.size, true, Qpid::Proton::Codec::STRING])
         @data.enter
         @data.next
-        expect(@data.symbol).to eq(descriptor)
+        expect(@data.symbol).must_equal(descriptor)
         values.each do |value|
           @data.next
-          expect(@data.string).to eq(value)
+          expect(@data.string).must_equal(value)
         end
       end
 
@@ -459,7 +460,7 @@ module Qpid
         @data.enter
         values.each do |value|
           @data.next
-          expect(@data.string).to eq(value)
+          expect(@data.string).must_equal(value)
         end
       end
 
@@ -480,9 +481,9 @@ module Qpid
         @data.enter
         keys.each do |key|
           @data.next
-          expect(@data.string).to eq(key)
+          expect(@data.string).must_equal(key)
           @data.next
-          expect(@data.string).to eq(values[key])
+          expect(@data.string).must_equal(values[key])
         end
       end
 

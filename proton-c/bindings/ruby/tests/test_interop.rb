@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
-require 'test/unit'
+require 'minitest/autorun'
+require 'minitest/unit'
 require 'qpid_proton'
 
 if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
@@ -12,7 +13,7 @@ if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
   end
 end
 
-class InteropTest < Test::Unit::TestCase
+class InteropTest < MiniTest::Test
   Data = Qpid::Proton::Codec::Data
   Message = Qpid::Proton::Message
 
@@ -23,11 +24,8 @@ class InteropTest < Test::Unit::TestCase
 
   # Walk up the directory tree to find the tests directory.
   def get_data(name)
-    path = File.absolute_path(__FILE__)
-    while path and File.basename(path) != "tests" do path = File.dirname(path); end
-    path = File.join(path,"interop")
-    raise "Can't find test/interop directory from #{__FILE__}" unless File.directory?(path)
-    path = File.join(path,"#{name}.amqp")
+    path = File.join(File.dirname(__FILE__), "../../../../tests/interop/#{name}.amqp")
+    raise "Can't find test/interop directory from #{__FILE__}" unless File.exists?(path)
     File.open(path, "rb") { |f| f.read }
   end
 

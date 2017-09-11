@@ -17,7 +17,7 @@
 # under the License.
 #
 
-require "spec_helper"
+require 'spec_helper'         #FIXME aconway 2017-09-11:
 
 describe "The extended array type" do
 
@@ -32,28 +32,26 @@ describe "The extended array type" do
   it "can be created like a normal array" do
     value = []
 
-    expect(value).to respond_to(:proton_put)
-    expect(value).to respond_to(:proton_array_header)
-    expect(value.class).to respond_to(:proton_get)
-    expect(value).to respond_to :proton_described?
+    expect(value).respond_to?(:proton_put)
+    expect(value).respond_to?(:proton_array_header)
+    expect(value.class).respond_to?(:proton_get)
+    expect(value).respond_to? :proton_described?
   end
 
   it "raises an error when putting into a nil Data object" do
-    expect {
-      @list.proton_put(nil)
-    }.to raise_error
+    expect { @list.proton_put(nil) }.must_raise
   end
 
   it "raises an error when getting from a nil Data object" do
     expect {
       Array.proton_get(nil)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "raises an error when the data object is empty" do
     expect {
       Array.proton_get(@data)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "raises an error when the current object is not a list" do
@@ -62,23 +60,23 @@ describe "The extended array type" do
 
     expect {
       Array.proton_get(@data)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "does not have an array header when it's a simple list" do
-    expect(@list.proton_described?).to eq(false)
+    assert !@list.proton_described?
   end
 
   it "can be put into a Data object as a list" do
     @list.proton_put(@data)
     result = Array.proton_get(@data)
-    expect(result).to match_array(@list)
-    expect(result.proton_array_header).to eq(nil)
+    expect(result).must_equal(@list)
+    expect(result.proton_array_header) == (nil)
   end
 
   it "has an array header when it's an AMQP array" do
-    expect(@undescribed.proton_array_header).not_to be_nil
-    expect(@described.proton_array_header).not_to be_nil
+    expect(@undescribed.proton_array_header).wont_be_nil
+    expect(@described.proton_array_header).wont_be_nil
   end
 
   it "raises an error when the elements of an Array are dissimilar and is put into a Data object" do
@@ -88,27 +86,26 @@ describe "The extended array type" do
 
     expect {
       value.proton_put(@data)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "can be put into a Data object as an undescribed array" do
     @undescribed.proton_put(@data)
     result = Array.proton_get(@data)
-    be_close_array(@undescribed, result)
-
-    expect(result.proton_array_header).not_to be_nil
-    expect(result.proton_array_header).to eq(@undescribed.proton_array_header)
-    expect(result.proton_array_header.described?).to eq(false)
+    expect(@undescribed).must_equal(result)
+    expect(result.proton_array_header).wont_be_nil
+    expect(result.proton_array_header).must_equal(@undescribed.proton_array_header)
+    assert !result.proton_array_header.described?
   end
 
   it "can be put into a Data object as a described array" do
     @described.proton_put(@data)
     result = Array.proton_get(@data)
-    be_close_array(@described, result)
+    expect(@described) == result
 
-    expect(result.proton_array_header).not_to be_nil
-    expect(result.proton_array_header).to eq(@described.proton_array_header)
-    expect(result.proton_array_header.described?).to eq(true)
+    expect(result.proton_array_header).wont_be_nil
+    expect(result.proton_array_header).must_equal(@described.proton_array_header)
+    expect(result.proton_array_header.described?).must_equal(true)
   end
 
 end

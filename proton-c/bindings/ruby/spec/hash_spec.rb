@@ -29,20 +29,20 @@ describe "The extended hash type" do
   it "raises an error when put into a nil Data instance" do
     expect {
       @hash.proton_data_put(nil)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "can be put into an instance of Data" do
     @hash.proton_data_put(@data)
     result = Hash.proton_data_get(@data)
-    expect(result.keys).to match_array(@hash.keys)
-    expect(result.values).to match_array(@hash.values)
+    expect(result.keys).must_equal(@hash.keys)
+    expect(result.values).must_equal(@hash.values)
   end
 
   it "raises an error when retrieved from a nil Data instance" do
     expect {
       Hash.proton_data_get(nil)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
   it "raises an error when trying to get what is not a Hash" do
@@ -51,7 +51,7 @@ describe "The extended hash type" do
 
     expect {
       Hash.proton_data_get(@data)
-    }.to raise_error(TypeError)
+    }.must_raise(TypeError)
   end
 
 end

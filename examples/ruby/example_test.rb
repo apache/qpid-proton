@@ -18,13 +18,11 @@
 # under the License.
 #
 
-require 'test/unit'
 require 'qpid_proton'
 require 'socket'
+require 'test_tools'
 
-$port = Random.new.rand(10000) + 10000
-
-class ExampleTest < Test::Unit::TestCase
+class ExampleTest < MiniTest::Test
 
   def run_script(script, port)
     assert File.exist? script
@@ -68,23 +66,14 @@ EOS
   end
 end
 
-begin
-  broker = spawn("#{RbConfig.ruby} reactor/broker.rb -a :#{$port}")
-  # Wait for the broker to be listening.
-  while true
-    begin
-      s = TCPSocket.open "", $port
-      puts "Broker ready at #{$port}"
-      s.close
-      break
-    rescue Errno::ECONNREFUSED
-      puts "Retry connection to #{$port}"
-      sleep(0.1)
-    end
-  end
+# Start the broker before all tests
+TestPort.new do |tp|
+  $port = tp.port
+  $broker = spawn("#{RbConfig.ruby} reactor/broker.rb -a :#{$port}")
+  wait_port($port)
+end
 
-  Test::Unit::AutoRunner.run
-
-ensure
-  Process.kill :TERM, broker if broker
+# Kill the broker after all tests
+MiniTest.after_run do
+  Process.kill(:TERM, $broker) if $broker
 end

@@ -18,6 +18,7 @@
 #++
 
 require 'test_tools'
+require 'minitest/unit'
 
 Message = Qpid::Proton::Message
 SASL = Qpid::Proton::SASL
