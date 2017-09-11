@@ -18,7 +18,10 @@
 #
 
 module Qpid::Proton::Messenger
+  warn "[DEPRECATION] `Qpid::Proton::Messenger` is deprecated, use `Qpid::Proton::Container`"
 
+  # @deprecated Please use {Qpid::Proton::Container} instead.
+  #
   # The +Messenger+ class defines a high level interface for
   # sending and receiving Messages. Every Messenger contains
   # a single logical queue of incoming messages and a single
@@ -37,7 +40,7 @@ module Qpid::Proton::Messenger
   #
   # The put method copies its Message to the outgoing queue, and may
   # send queued messages if it can do so without blocking.  The send
-  # method blocks until it has sent the requested number of messages,
+  # method blocks until it has sent the requested number of 
   # or until a timeout interrupts the attempt.
   #
   # Similarly, the recv method receives messages into the incoming
