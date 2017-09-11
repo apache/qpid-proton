@@ -28,9 +28,9 @@ add_definitions(${COMPILE_LANGUAGE_FLAGS} ${COMPILE_WARNING_FLAGS} ${WERROR} ${C
 
 # Add a test with the correct environment to find test executables and valgrind.
 if(WIN32)
-  set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>")
+  set(test_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY};$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>")
 else(WIN32)
-  set(test_path "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
+  set(test_path "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}:$ENV{PATH}")
 endif(WIN32)
 
 foreach(name broker send receive direct)
@@ -41,4 +41,5 @@ endforeach()
 
 set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
 
-add_test(c-example-proactor ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+add_test(NAME c-example-proactor COMMAND ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+    #WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

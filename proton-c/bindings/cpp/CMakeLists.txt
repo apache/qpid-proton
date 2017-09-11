@@ -100,10 +100,13 @@ set_target_properties (
   )
 
 ## Install
+if (NOT BIN_INSTALL_DIR)
+  set(BIN_INSTALL_DIR "bin")
+endif(NOT BIN_INSTALL_DIR)
 
 install(TARGETS qpid-proton-cpp
   EXPORT  proton-cpp
-  RUNTIME DESTINATION bin
+  RUNTIME DESTINATION ${BIN_INSTALL_DIR}
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
@@ -129,11 +132,11 @@ install (FILES
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 
 if (DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
-set(PROTONCPPLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_IMPORT_LIBRARY_SUFFIX})
-set(PROTONCPPLIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
+  set(PROTONCPPLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_IMPORT_LIBRARY_SUFFIX})
+  set(PROTONCPPLIBDEBUG ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_IMPORT_LIBRARY_SUFFIX})
 else ()
-set(PROTONCPPLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_SHARED_LIBRARY_SUFFIX})
-set(PROTONCPPLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set(PROTONCPPLIB ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_SHARED_LIBRARY_SUFFIX})
+  set(PROTONCPPLIBDEBUG ${CMAKE_SHARED_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_DEBUG_POSTFIX}${CMAKE_SHARED_LIBRARY_SUFFIX})
 endif ()
 
 include(WriteBasicConfigVersionFile)
@@ -155,6 +158,10 @@ if (ENABLE_VALGRIND AND VALGRIND_EXE)
   set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet --leak-check=full --trace-children=yes)
 endif ()
 
+if (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif (NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+
 macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
   target_link_libraries (${test} qpid-proton-cpp)
@@ -164,7 +171,7 @@ macro(add_cpp_test test)
       "PATH=$<TARGET_FILE_DIR:qpid-proton>"
       $<TARGET_FILE:${test}> ${ARGN})
   else ()
-    add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
+    add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${test} ${ARGN})
   endif ()
 endmacro(add_cpp_test)
 
