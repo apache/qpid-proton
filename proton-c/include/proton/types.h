@@ -121,11 +121,11 @@
  *
  * @defgroup messenger Messenger
  * @deprecated
- * @brief **Deprecated** - The Messenger API.
+ * @brief **Deprecated** - Use the @ref proactor API or Qpid Proton C++.
  *
  * @defgroup url URL
  * @deprecated
- * @brief **Deprecated** - A URL parser.
+ * @brief **Deprecated** - Use a third-party URL library.
  */
 
 #ifdef __cplusplus

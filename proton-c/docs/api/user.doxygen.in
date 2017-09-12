@@ -40,37 +40,38 @@ SORT_MEMBER_DOCS        = NO
 # Redefine protected as private and strip out the PN_EXTERN and
 # PNX_EXTERN macros
 
-ENABLE_PREPROCESSING = YES
-MACRO_EXPANSION = YES
-EXPAND_ONLY_PREDEF = YES
-PREDEFINED = PN_EXTERN= PNX_EXTERN=
+ENABLE_PREPROCESSING    = YES
+MACRO_EXPANSION         = YES
+EXPAND_ONLY_PREDEF      = YES
+PREDEFINED              = PN_EXTERN= PNX_EXTERN=
 
 # Configuration options related to warning and progress messages
 
-QUIET                  = YES
-WARNINGS               = YES
+QUIET                   = YES
+WARNINGS                = YES
 
 # Configuration options related to the input files
 
 INPUT = @CMAKE_SOURCE_DIR@/proton-c/include @CMAKE_SOURCE_DIR@/proton-c/docs @CMAKE_SOURCE_DIR@/examples/c
-FILE_PATTERNS          = *.h *.md *.dox
-EXCLUDE_PATTERNS       = */examples/*.c \
-                         */examples/*.h \
-                         */include/proton/cid.h \
-                         */include/proton/engine.h \
-                         */include/proton/handlers.h \
-                         */include/proton/import_export.h \
-                         */include/proton/log.h \
-                         */include/proton/object.h \
-                         */include/proton/parser.h \
-                         */include/proton/reactor.h \
-                         */include/proton/selectable.h \
-                         */include/proton/type_compat.h
-FULL_PATH_NAMES        = YES
-RECURSIVE              = YES
-STRIP_FROM_PATH        = @CMAKE_SOURCE_DIR@/proton-c/include
-EXAMPLE_PATH           = @CMAKE_SOURCE_DIR@/examples/c
-EXAMPLE_RECURSIVE      = YES
+FILE_PATTERNS           = *.h *.md *.dox
+EXCLUDE_PATTERNS        = */examples/*.c \
+                          */examples/*.h \
+                          */include/proton/cid.h \
+                          */include/proton/engine.h \
+                          */include/proton/handlers.h \
+                          */include/proton/import_export.h \
+                          */include/proton/log.h \
+                          */include/proton/object.h \
+                          */include/proton/parser.h \
+                          */include/proton/reactor.h \
+                          */include/proton/sasl-plugin.h \
+                          */include/proton/selectable.h \
+                          */include/proton/type_compat.h
+FULL_PATH_NAMES         = YES
+RECURSIVE               = YES
+STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/proton-c/include
+EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples/c
+EXAMPLE_RECURSIVE       = YES
 
 # View and list options
 
@@ -84,7 +85,7 @@ IGNORE_PREFIX           = pn_ PN_
 
 # Configuration options related to the output format
 
-GENERATE_HTML          = YES
-HTML_OUTPUT            = html
-HTML_FILE_EXTENSION    = .html
-GENERATE_LATEX         = NO
+GENERATE_HTML           = YES
+HTML_OUTPUT             = html
+HTML_FILE_EXTENSION     = .html
+GENERATE_LATEX          = NO

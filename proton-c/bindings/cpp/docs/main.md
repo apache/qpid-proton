@@ -45,3 +45,24 @@ Proton may require changes to your application source code.
 
 Elements marked **Deprecated** are slated for removal in a future
 release.
+
+Sections labeled **Thread safety** describe when and where it is safe
+to call functions or access data across threads.
+
+Sections called **C++ versions** discuss features the API that depend
+on particular versions of C++ such as C++11.
+
+## URLs
+
+The API uses URLs to identify three different kinds of resources.  All
+URL argument names are suffixed with `_url`.
+
+Connection URLs (`conn_url` in argument lists) specify a target for
+outgoing network connections.  The path part of the URL is ignored.
+
+Address URLs (`addr_url`) extend the connection URL to reference an
+AMQP node such as a queue or topic.  The path of the URL, minus the
+leading slash, is treated as the AMQP address of the node.
+
+Listener URLs (`listen_url`) specify a local network address and port
+for accepting incoming TCP connections.

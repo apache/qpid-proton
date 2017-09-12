@@ -21,6 +21,8 @@
  */
 
 /// @file
-/// **Deprecated**
+///
+/// **Deprecated** - Container method return values are safe to
+/// use only inside handlers.
 
 #endif // PROTON_THREAD_SAFE_HPP

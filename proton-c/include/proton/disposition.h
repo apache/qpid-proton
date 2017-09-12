@@ -34,7 +34,7 @@ extern "C" {
 /**
  * @file
  *
- * @copybrief delivery
+ * @copybrief pn_disposition_t
  *
  * @addtogroup delivery
  * @{

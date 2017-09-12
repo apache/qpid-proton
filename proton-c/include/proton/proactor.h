@@ -42,7 +42,7 @@ extern "C" {
  * incoming connections. pn_proactor_wait() returns @ref
  * proactor_events to application threads for handling.
  *
- * The `pn_proactor*` functions are thread-safe, but to handle @ref
+ * The `pn_proactor_*` functions are thread-safe, but to handle @ref
  * proactor_events you must also use the @ref core APIs, which are
  * not. @ref core objects associated with different connections can be
  * used concurrently, but objects associated with a single connection

@@ -30,6 +30,8 @@
 extern "C" {
 #endif
 
+/// @cond INTERNAL
+
 // Internal SASL authenticator interface: These are the entry points to a SASL implementations
 //
 // Free up all data structures allocated by the SASL implementation
@@ -131,6 +133,8 @@ PN_EXTERN void  pnx_sasl_fail_authentication(pn_transport_t *transport);
 
 PN_EXTERN void  pnx_sasl_set_implementation(pn_transport_t *transport, const pnx_sasl_implementation *impl, void *context);
 PN_EXTERN void  pnx_sasl_set_default_implementation(const pnx_sasl_implementation *impl);
+
+/// @endcond
 
 #ifdef __cplusplus
 }

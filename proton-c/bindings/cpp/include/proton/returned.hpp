@@ -40,16 +40,15 @@ class returned_factory;
 
 /// A return type for container methods.
 ///
-/// @note A `returned` value is *thread-unsafe*.  A single-threaded
-/// application can assign the `returned<T>` value to a plain `T`.  A
-/// multithreaded application *must* ignore the returned value because
-/// it may already be invalid by the time the function
-/// returns. Multithreaded applications can safely access the value
-/// inside @ref messaging_handler functions.
-///
+/// **Thread safety** - Container method return values are
+/// *thread-unsafe*.  A single-threaded application can safely assign
+/// the `returned<T>` value to a plain `T`.  A multithreaded
+/// application *must* ignore the returned value because it may
+/// already be invalid by the time the function returns.
+/// Multithreaded applications can safely access the value inside @ref
+/// messaging_handler functions.
 template <class T>
-class PN_CPP_CLASS_EXTERN returned
-{
+class PN_CPP_CLASS_EXTERN returned {
   public:
     /// Copy operator required to return a value
     /// @note Thread-safe

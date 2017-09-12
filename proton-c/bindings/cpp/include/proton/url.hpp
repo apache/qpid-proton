@@ -35,7 +35,7 @@
 
 namespace proton {
 
-/// **Deprecated**
+/// **Deprecated** - Use a third-party URL library.
 ///
 /// An error encountered during URL parsing.
 struct
@@ -46,7 +46,7 @@ PN_CPP_CLASS_EXTERN url_error : public error {
     /// @endcond
 };
 
-/// **Deprecated**
+/// **Deprecated** - Use a third-party URL library.
 ///
 /// A URL parser.
 ///

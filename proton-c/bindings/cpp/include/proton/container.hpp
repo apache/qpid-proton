@@ -35,127 +35,138 @@
 /// @file
 /// @copybrief proton::container
 
-/// If the library can support multithreaded containers, then
-/// PN_CPP_SUPPORTS_THREADS will be set.
+/// @cond INTERNAL
+/// True if the library can support multithreaded containers.
 #define PN_CPP_SUPPORTS_THREADS PN_CPP_HAS_STD_THREAD && PN_CPP_HAS_STD_MUTEX && PN_CPP_HAS_STD_ATOMIC
+/// @endcond
 
 namespace proton {
 
-/// A top-level container of connections, sessions, senders, and
-/// receivers.
+/// A top-level container of connections, sessions, and links.
 ///
 /// A container gives a unique identity to each communicating peer. It
 /// is often a process-level object.
 ///
-/// It serves as an entry point to the API, allowing connections,
+/// It also serves as an entry point to the API, allowing connections,
 /// senders, and receivers to be established. It can be supplied with
 /// an event handler in order to intercept important messaging events,
 /// such as newly received messages or newly issued credit for sending
 /// messages.
 class PN_CPP_CLASS_EXTERN container {
   public:
-    /// Create a container.
-    PN_CPP_EXTERN container(messaging_handler&, const std::string& id="");
+    /// Create a container with a handler for messaging events.
+    ///
+    /// The optional `id` parameter sets the container's unique
+    /// identity.
+    PN_CPP_EXTERN container(messaging_handler& handler, const std::string& id="");
 
     /// Create a container.
+    ///
+    /// @copydetails container()
     PN_CPP_EXTERN container(const std::string& id="");
 
     /// Destroy a container.
     ///
-    /// It is unsafe to delete a container from within any of the
-    /// threads running a messaging_handler.  Deleting the container
-    /// from within a handler will cause a deadlock or a crash.  The
-    /// only safe place to delete a container is after all of the
-    /// threads running a container have finished and all of the run
-    /// functions have returned.
+    /// **Thread safety** - It is unsafe to delete a container from
+    /// within any of the threads running a `messaging_handler`.
+    /// Deleting the container from within a handler will cause a
+    /// deadlock or crash.  The only safe place to delete a container
+    /// is after all of the threads running a container have finished
+    /// and all of the `run()` functions have returned.
     PN_CPP_EXTERN ~container();
 
-    /// Connect to `conn_url` and send an open request to the remote peer.
+    /// Connect to `conn_url` and send an open request to the remote
+    /// peer.
     ///
-    /// Options are applied to the connection as follows.  Values in
-    /// later options override earlier ones.
+    /// Options are applied to the connection as follows.
     ///
     ///  1. client_connection_options()
     ///  2. Options passed to connect()
     ///
-    /// The handler in the composed options is used to call
-    /// messaging_handler::on_connection_open() when the open response
-    /// is received from the remote peer.
-    ///
-    /// @return returned<connection>
+    /// Values in later options override earlier ones.  The handler in
+    /// the composed options is used to call
+    /// `messaging_handler::on_connection_open()` when the open
+    /// response is received from the remote peer.
     ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<connection> connect(const std::string& conn_url,
-                                               const connection_options&);
+                                               const connection_options& conn_opts);
 
-    /// Connect to `conn_url` and send an open request to the remote peer.
-    ///
-    /// @return returned<connection>
+    /// @copybrief connect()
     ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<connection> connect(const std::string& conn_url);
 
-    /// Start listening on `listen_url`.
+    /// Listen for new connections on `listen_url`.
     ///
-    /// Calls to the @ref listen_handler are serialized for this listener,
-    /// but handlers attached to separate listeners may be called concurrently.
+    /// **Thread safety** - Calls to `listen_handler` methods
+    /// are serialized for this listener, but handlers attached to
+    /// separate listeners can be safely called concurrently.
+    PN_CPP_EXTERN listener listen(const std::string& listen_url,
+                                  listen_handler& handler);
+
+    /// @copybrief listen
     ///
-    /// @return listener Lets you stop listening
+    /// Use a fixed set of options for all accepted connections.  See
+    /// listen(const std::string&, listen_handler&).
     PN_CPP_EXTERN listener listen(const std::string& listen_url,
-                                  listen_handler&);
+                                  const connection_options& conn_opts);
 
-    /// Listen with a fixed set of options for all accepted
-    /// connections.  See listen(const std::string&, listen_handler&).
-    PN_CPP_EXTERN listener listen(const std::string& listen_url,
-                                  const connection_options&);
-
-    /// Start listening on `listen_url`.
+    /// @copybrief listen
     ///
     /// New connections will use the handler from
-    /// server_connection_options().
+    /// `server_connection_options()`.
     PN_CPP_EXTERN listener listen(const std::string& listen_url);
 
-    /// Run the container in this thread.  The call returns when the
-    /// container stops.
+    /// Run the container in the current thread.
     ///
-    /// @see auto_stop() and stop().
+    /// The call returns when the container stops. See `auto_stop()`
+    /// and `stop()`.
     ///
-    /// If you are using C++11 or later you can use a multithreaded
-    /// container. In this case you can call run() in multiple threads
-    /// to create a thread pool.  Alternatively, you can call run with
-    /// an integer parameter specifying the number of threads for the
-    /// thread pool.
+    /// **C++ versions** - With C++11 or later, you can call `run()`
+    /// in multiple threads to create a thread pool.  See also
+    /// `run(int count)`.
     PN_CPP_EXTERN void run();
 
 #if PN_CPP_SUPPORTS_THREADS
-    /// @copydoc run()
-    PN_CPP_EXTERN void run(int threads);
+    /// Run the container with a pool of `count` threads.
+    ///
+    /// **C++ versions** - Available with C++11 or later.
+    ///
+    /// The call returns when the container stops. See `auto_stop()`
+    /// and `stop()`.
+    PN_CPP_EXTERN void run(int count);
 #endif
 
     /// Enable or disable automatic container stop.  It is enabled by
     /// default.
     ///
-    /// If true, stop the container when all active connections and
-    /// listeners are closed.  If false, the container will keep
-    /// running till stop() is called.
-    PN_CPP_EXTERN void auto_stop(bool);
+    /// If true, the container stops when all active connections and
+    /// listeners are closed.  If false, the container keeps running
+    /// until `stop()` is called.
+    PN_CPP_EXTERN void auto_stop(bool enabled);
 
-    /// Stop the container with an error_condition.
+    /// Stop the container with error condition `err`.
     ///
-    ///  - Abort all open connections and listeners.
-    ///  - Process final handler events and injected functions
-    ///  - If `!err.empty()`, handlers will receive on_transport_error
-    ///  - run() will return in all threads.
-    PN_CPP_EXTERN void stop(const error_condition&);
+    /// @copydetails stop()
+    PN_CPP_EXTERN void stop(const error_condition& err);
 
     /// Stop the container with an empty error condition.
     ///
-    /// @see stop(const error_condition&)
+    /// This function initiates shutdown and immediately returns.  The
+    /// shutdown process has the following steps.
+    ///
+    ///  - Abort all open connections and listeners.
+    ///  - Process final handler events and queued work.
+    ///  - If `!err.empty()`, fire `messaging_handler::on_transport_error`.
+    ///
+    /// When the process is complete, `run()` returns in all threads.
+    ///
+    /// **Thread safety** - It is safe to call this method across
+    /// threads.
     PN_CPP_EXTERN void stop();
 
     /// Open a connection and sender for `addr_url`.
-    ///
-    /// @return returned<sender>
     ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url);
@@ -165,38 +176,30 @@ class PN_CPP_CLASS_EXTERN container {
     /// Supplied sender options will override the container's
     /// template options.
     ///
-    /// @return returned<sender>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const proton::sender_options&);
+                                               const proton::sender_options& snd_opts);
 
     /// Open a connection and sender for `addr_url`.
     ///
     /// Supplied connection options will override the
     /// container's template options.
     ///
-    /// @return returned<sender>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const connection_options&);
+                                               const connection_options& conn_opts);
 
     /// Open a connection and sender for `addr_url`.
     ///
     /// Supplied sender or connection options will override the
     /// container's template options.
     ///
-    /// @return returned<sender>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<sender> open_sender(const std::string& addr_url,
-                                               const proton::sender_options&,
-                                               const connection_options&);
+                                               const proton::sender_options& snd_opts,
+                                               const connection_options& conn_opts);
 
     /// Open a connection and receiver for `addr_url`.
-    ///
-    /// @return returned<receiver>
     ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url);
@@ -207,75 +210,71 @@ class PN_CPP_CLASS_EXTERN container {
     /// Supplied receiver options will override the container's
     /// template options.
     ///
-    /// @return returned<receiver>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const proton::receiver_options&);
+                                                   const proton::receiver_options& rcv_opts);
 
     /// Open a connection and receiver for `addr_url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
     ///
-    /// @return returned<receiver>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const connection_options&);
+                                                   const connection_options& conn_opts);
 
     /// Open a connection and receiver for `addr_url`.
     ///
     /// Supplied receiver or connection options will override the
     /// container's template options.
     ///
-    /// @return returned<receiver>
-    ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<receiver> open_receiver(const std::string& addr_url,
-                                                   const proton::receiver_options&,
-                                                   const connection_options&);
+                                                   const proton::receiver_options& rcv_opts,
+                                                   const connection_options& conn_opts);
 
     /// A unique identifier for the container.
     PN_CPP_EXTERN std::string id() const;
 
-    /// Connection options that will be to outgoing connections. These
-    /// are applied first and overriden by options provided in
-    /// connect() and messaging_handler::on_connection_open().
-    PN_CPP_EXTERN void client_connection_options(const connection_options&);
+    /// Connection options applied to outgoing connections. These are
+    /// applied first and then overriden by any options provided in
+    /// `connect()` or `messaging_handler::on_connection_open()`.
+    PN_CPP_EXTERN void client_connection_options(const connection_options& conn_opts);
 
     /// @copydoc client_connection_options
     PN_CPP_EXTERN connection_options client_connection_options() const;
 
-    /// Connection options that will be applied to incoming
-    /// connections. These are applied first and overridden by options
-    /// provided in listen(), listen_handler::on_accept() and
-    /// messaging_handler::on_connection_open().
-    PN_CPP_EXTERN void server_connection_options(const connection_options&);
+    /// Connection options applied to incoming connections. These are
+    /// applied first and then overridden by any options provided in
+    /// `listen()`, `listen_handler::on_accept()`, or
+    /// `messaging_handler::on_connection_open()`.
+    PN_CPP_EXTERN void server_connection_options(const connection_options& conn_opts);
 
     /// @copydoc server_connection_options
     PN_CPP_EXTERN connection_options server_connection_options() const;
 
     /// Sender options applied to senders created by this
-    /// container. They are applied before messaging_handler::on_sender_open()
-    /// and can be overridden.
-    PN_CPP_EXTERN void sender_options(const class sender_options&);
+    /// container. They are applied before
+    /// `messaging_handler::on_sender_open()` and can be overridden.
+    PN_CPP_EXTERN void sender_options(const class sender_options& snd_opts);
 
     /// @copydoc sender_options
     PN_CPP_EXTERN class sender_options sender_options() const;
 
     /// Receiver options applied to receivers created by this
-    /// container. They are applied before messaging_handler::on_receiver_open()
-    /// and can be overridden.
-    PN_CPP_EXTERN void receiver_options(const class receiver_options&);
+    /// container. They are applied before
+    /// `messaging_handler::on_receiver_open()` and can be overridden.
+    PN_CPP_EXTERN void receiver_options(const class receiver_options& rcv_opts);
 
     /// @copydoc receiver_options
     PN_CPP_EXTERN class receiver_options receiver_options() const;
 
-    /// Schedule a piece of work to happen after a duration.  The
-    /// piece of work can be created from a function object.  For
-    /// C++11 and on use a `std::function<void()>` type.
-    PN_CPP_EXTERN void schedule(duration, work);
+    /// Schedule `fn` for execution after a duration.  The piece of
+    /// work can be created from a function object.
+    ///
+    /// **C++ versions** - With C++11 and later, use a
+    /// `std::function<void()>` type for the `fn` parameter.
+    PN_CPP_EXTERN void schedule(duration dur, work fn);
 
   private:
     class impl;
