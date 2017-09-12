@@ -188,6 +188,7 @@ pn_connection_t* container::impl::make_connection_lh(
     cc.handler = mh;
     cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, pnc);
     cc.connected_address_ = url;
+    cc.connection_options_.reset(new connection_options(opts));
 
     setup_connection_lh(url, pnc);
     make_wrapper(pnc).open(opts);
@@ -224,7 +225,7 @@ void container::impl::reconnect(pn_connection_t* pnc) {
     //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << "\n";
 
     setup_connection_lh(url, pnc);
-    make_wrapper(pnc).open(*rc.connection_options_);
+    make_wrapper(pnc).open(*cc.connection_options_);
     start_connection(url, pnc);
 
     // Did we go through all the urls?
@@ -534,7 +535,7 @@ bool container::impl::handle(pn_event_t* event) {
         if (cc.listener_context_) {
             cc.listener_context_->connection_options_->apply_bound(conn);
         } else {
-            client_connection_options_.apply_bound(conn);
+            cc.connection_options_->apply_bound(conn);
         }
 
         return false;

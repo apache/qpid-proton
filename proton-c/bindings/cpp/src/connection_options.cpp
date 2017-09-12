@@ -74,7 +74,7 @@ class connection_options::impl {
      * transport options (set once per transport over the life of the
      * connection).
      */
-    void apply_unbound(connection& c, const connection_options& co) {
+    void apply_unbound(connection& c) {
         pn_connection_t *pnc = unwrap(c);
 
         // Only apply connection options if uninit.
@@ -82,7 +82,7 @@ class connection_options::impl {
         if (!uninit) return;
 
         if (reconnect.set)
-            connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value, co));
+            connection_context::get(pnc).reconnect_context_.reset(new reconnect_context(reconnect.value));
         if (container_id.set)
             pn_connection_set_container(pnc, container_id.value.c_str());
         if (virtual_host.set)
@@ -116,10 +116,10 @@ class connection_options::impl {
                     throw error(MSG("server SSL/TLS initialization error"));
         }
 
-        // SASL
+        // SASL - skip entirely if explicitly disabled
         if (!sasl_enabled.set || sasl_enabled.value) {
             if (sasl_enabled.set)  // Explicitly set, not just default behaviour.
-                pn_sasl(pnt);          // Force a sasl instance.  Lazily create one otherwise.
+                pn_sasl(pnt);      // Force a sasl instance.  Lazily create one otherwise.
             if (sasl_allow_insecure_mechs.set)
                 pn_sasl_set_allow_insecure_mechs(pn_sasl(pnt), sasl_allow_insecure_mechs.value);
             if (sasl_allowed_mechs.set)
@@ -196,7 +196,7 @@ connection_options& connection_options::sasl_allowed_mechs(const std::string &s)
 connection_options& connection_options::sasl_config_name(const std::string &n) { impl_->sasl_config_name = n; return *this; }
 connection_options& connection_options::sasl_config_path(const std::string &p) { impl_->sasl_config_path = p; return *this; }
 
-void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c, *this); }
+void connection_options::apply_unbound(connection& c) const { impl_->apply_unbound(c); }
 void connection_options::apply_bound(connection& c) const { impl_->apply_bound(c); }
 messaging_handler* connection_options::handler() const { return impl_->handler.value; }
 } // namespace proton

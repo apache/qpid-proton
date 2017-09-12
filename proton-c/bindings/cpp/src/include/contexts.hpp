@@ -92,6 +92,7 @@ class connection_context : public context {
 
     messaging_handler* handler;
     std::string connected_address_;
+    internal::pn_unique_ptr<connection_options> connection_options_;
     internal::pn_unique_ptr<reconnect_context> reconnect_context_;
     listener_context* listener_context_;
     work_queue work_queue_;
@@ -100,10 +101,9 @@ class connection_context : public context {
 // This is not a context object on its own, but an optional part of connection
 class reconnect_context {
   public:
-    reconnect_context(const reconnect_options& ro, const connection_options& co);
+    reconnect_context(const reconnect_options& ro);
 
     internal::pn_unique_ptr<const reconnect_options> reconnect_options_;
-    internal::pn_unique_ptr<const connection_options> connection_options_;
     duration delay_;
     int retries_;
     int current_url_;

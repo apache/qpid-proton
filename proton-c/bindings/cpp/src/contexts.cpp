@@ -71,9 +71,8 @@ connection_context::connection_context() :
     container(0), default_session(0), link_gen(0), handler(0), listener_context_(0)
 {}
 
-reconnect_context::reconnect_context(const reconnect_options& ro, const connection_options& co) :
-    reconnect_options_(new reconnect_options(ro)), connection_options_(new connection_options(co)),
-    retries_(0), current_url_(-1)
+reconnect_context::reconnect_context(const reconnect_options& ro) :
+    reconnect_options_(new reconnect_options(ro)), retries_(0), current_url_(-1)
 {}
 
 listener_context::listener_context() : listen_handler_(0) {}
