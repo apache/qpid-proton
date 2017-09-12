@@ -139,9 +139,11 @@ bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, con
                      pn_event_type_name(got));
 }
 
+#define TEST_INT_EQUAL(TEST, WANT, GOT)                                 \
+  test_check_((TEST), (int)(WANT) == (int)(GOT), NULL, __FILE__, __LINE__, "want %d, got %d", (int)(WANT), (int)(GOT))
+
 #define TEST_STR_EQUAL(TEST, WANT, GOT)                                 \
   test_check_((TEST), !strcmp((WANT), (GOT)), NULL, __FILE__, __LINE__, "want '%s', got '%s'", (WANT), (GOT))
-
 
 #define TEST_STR_IN(TEST, WANT, GOT)                                    \
   test_check_((TEST), strstr((GOT), (WANT)), NULL, __FILE__, __LINE__, "'%s' not in '%s'", (WANT), (GOT))

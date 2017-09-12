@@ -74,6 +74,11 @@ static void decode_message(pn_delivery_t *dlv) {
         pn_free(s);
       }
       pn_message_free(m);
+    } else if (len < 0) {
+      fprintf(stderr, "decode_message: %s\n", pn_code(len));
+      exit_code = 1;
+    } else {
+      fprintf(stderr, "decode_message: no data\n");
     }
   }
 }
@@ -160,7 +165,7 @@ void run(app_data_t *app) {
   do {
     pn_event_batch_t *events = pn_proactor_wait(app->proactor);
     for (pn_event_t *e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
-      if (!handle(app, e)) {
+      if (!handle(app, e) || exit_code != 0) {
         return;
       }
     }

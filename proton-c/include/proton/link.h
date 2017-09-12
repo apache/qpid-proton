@@ -586,8 +586,6 @@ PN_EXTERN void pn_link_offered(pn_link_t *sender, int credit);
  */
 PN_EXTERN ssize_t pn_link_send(pn_link_t *sender, const char *bytes, size_t n);
 
-//PN_EXTERN void pn_link_abort(pn_sender_t *sender);
-
 /**
  * Grant credit for incoming deliveries on a receiver.
  *
@@ -625,8 +623,9 @@ PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
  * the network, so just because there is no data to read does not
  * imply the message is complete. To ensure the entirety of the
  * message data has been read, either invoke ::pn_link_recv until
- * PN_EOS is returned, or verify that ::pn_delivery_partial is false,
- * and ::pn_delivery_pending is 0.
+ * PN_EOS is returned, or verify that
+ *
+ *     (!pn_delivery_partial(d) && !pn_delivery_aborted(d) && pn_delivery_pending(d)==0)
  *
  * @param[in] receiver a receiving link object
  * @param[in] bytes a pointer to an empty buffer

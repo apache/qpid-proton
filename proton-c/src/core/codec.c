@@ -567,6 +567,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       }
       break;
     case 'D':
+      /* The next 2 args are the descriptor, value for a described value. */
       err = pn_data_put_described(data);
       pn_data_enter(data);
       break;
@@ -611,6 +612,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         return pn_error_format(data->error, PN_ERR, "exit failed");
       break;
     case '?':
+     /* Consumes 2 args: bool, value. Insert null if bool is false else value */
       if (!va_arg(ap, int)) {
         err = pn_data_put_null(data);
         if (err) return err;

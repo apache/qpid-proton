@@ -338,6 +338,7 @@ struct pn_delivery_t {
   bool tpwork;
   bool done;
   bool referenced;
+  bool aborted;
 };
 
 #define PN_SET_LOCAL(OLD, NEW)                                          \

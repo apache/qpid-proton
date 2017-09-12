@@ -174,10 +174,29 @@ PN_EXTERN size_t pn_delivery_pending(pn_delivery_t *delivery);
 /**
  * Check if a delivery only has partial message data.
  *
+ * Note a partial message may be pn_delivery_aborted() which means the message
+ * is incomplete but the rest of the message will never be delivered.
+ *
  * @param[in] delivery a delivery object
  * @return true if the delivery only contains part of a message, false otherwise
  */
 PN_EXTERN bool pn_delivery_partial(pn_delivery_t *delivery);
+
+/**
+ * On the receiving side, check if the delivery has been aborted.
+ *
+ * Aborting a delivery means the sender cannot complete the message. It  will not
+ * send any more data and the data received so far should be discarded by the receiver.
+ * An aborted deliver is settled by the sender.
+ *
+ * Calling pn_link_recv() when the current delivery on the link is aborted will
+ * return a PN_STATE error code.
+ *
+ * @see pn_delivery_abort()
+ * @param[in] delivery a delivery object
+ * @return true if the delivery has been aborted, false otherwise
+ */
+PN_EXTERN bool pn_delivery_aborted(pn_delivery_t *delivery); /* FIXME aconway 2017-09-11:  */
 
 /**
  * Check if a delivery is writable.
@@ -240,6 +259,20 @@ PN_EXTERN void pn_delivery_clear(pn_delivery_t *delivery);
  * @return true if delivery is the current delivery for its link.
  */
 PN_EXTERN bool pn_delivery_current(pn_delivery_t *delivery);
+
+/**
+ * On the sending side, abort a delivery.
+ *
+ * Aborting a delivery means the sender cannot complete the message. It  will not
+ * send any more data and the data received so far should be discarded by the receiver.
+ *
+ * The aborted messages is also settled, and can never be used again.
+ *
+ * @see pn_delivery_aborted()
+ *
+ * @param[in] delivery a delivery object
+ */
+PN_EXTERN void pn_delivery_abort(pn_delivery_t *delivery);
 
 /**
  * Settle a delivery.

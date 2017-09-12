@@ -1904,7 +1904,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
   if (!receiver) return PN_ARG_ERR;
 
   pn_delivery_t *delivery = receiver->current;
-  if (delivery) {
+  if (delivery && !delivery->aborted) {
     size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
     pn_buffer_trim(delivery->bytes, size, 0);
     if (size) {
@@ -2052,6 +2052,17 @@ size_t pn_delivery_pending(pn_delivery_t *delivery)
 bool pn_delivery_partial(pn_delivery_t *delivery)
 {
   return !delivery->done;
+}
+
+void pn_delivery_abort(pn_delivery_t *delivery) {
+  if (!delivery->aborted) {
+    delivery->aborted = true;
+    pn_delivery_settle(delivery);
+  }
+}
+
+bool pn_delivery_aborted(pn_delivery_t *delivery) {
+  return delivery->aborted;
 }
 
 pn_condition_t *pn_connection_condition(pn_connection_t *connection)

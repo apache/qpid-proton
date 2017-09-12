@@ -974,7 +974,10 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                         bool more,
                                         pn_sequence_t frame_limit,
                                         uint64_t code,
-                                        pn_data_t* state)
+                                        pn_data_t* state,
+                                        bool resume,
+                                        bool aborted,
+                                        bool batchable)
 {
   bool more_flag = more;
   int framecount = 0;
@@ -984,10 +987,11 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
  compute_performatives:
   pn_data_clear(transport->output_args);
-  int err = pn_data_fill(transport->output_args, "DL[IIzIoon?DLC]", TRANSFER,
+  int err = pn_data_fill(transport->output_args, "DL[IIzIoon?DLCooo]", TRANSFER,
                          handle, id, tag->size, tag->start,
                          message_format,
-                         settled, more_flag, (bool)code, code, state);
+                         settled, more_flag, (bool)code, code, state,
+                         resume, aborted, batchable);
   if (err) {
     pn_transport_logf(transport,
                       "error posting transfer frame: %s: %s", pn_code(err),
@@ -1481,10 +1485,12 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   bool settled;
   bool more;
   bool has_type;
+  bool resume, aborted, batchable;
   uint64_t type;
   pn_data_clear(transport->disp_data);
-  int err = pn_data_scan(args, "D.[I?Iz.oo.D?LC]", &handle, &id_present, &id, &tag,
-                         &settled, &more, &has_type, &type, transport->disp_data);
+  int err = pn_data_scan(args, "D.[I?Iz.oo.D?LCooo]", &handle, &id_present, &id, &tag,
+                         &settled, &more, &has_type, &type, transport->disp_data,
+                         &resume, &aborted, &batchable);
   if (err) return err;
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
@@ -1534,19 +1540,26 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       pn_work_update(transport->connection, delivery);
     }
   }
+  delivery->aborted = aborted;
+  if (aborted) {
+    delivery->remote.settled = true;
+    delivery->done = true;
+    delivery->updated = true;
+    pn_buffer_clear(delivery->bytes);
+    pn_work_update(transport->connection, delivery);
+  } else {
+    pn_buffer_append(delivery->bytes, payload->start, payload->size);
+    ssn->incoming_bytes += payload->size;
+    delivery->done = !more;
 
-  pn_buffer_append(delivery->bytes, payload->start, payload->size);
-  ssn->incoming_bytes += payload->size;
-  delivery->done = !more;
+    ssn->state.incoming_transfer_count++;
+    ssn->state.incoming_window--;
 
-  ssn->state.incoming_transfer_count++;
-  ssn->state.incoming_window--;
-
-  // XXX: need better policy for when to refresh window
-  if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
-    pni_post_flow(transport, ssn, link);
+    // XXX: need better policy for when to refresh window
+    if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
+      pni_post_flow(transport, ssn, link);
+    }
   }
-
   pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
   return 0;
 }
@@ -2168,14 +2181,19 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
       pn_data_clear(transport->disp_data);
       PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
       int count = pni_post_amqp_transfer_frame(transport,
-                                              ssn_state->local_channel,
-                                              link_state->local_handle,
-                                              state->id, &bytes, &tag,
-                                              0, // message-format
-                                              delivery->local.settled,
-                                              !delivery->done,
-                                              ssn_state->remote_incoming_window,
-                                              delivery->local.type, transport->disp_data);
+                                               ssn_state->local_channel,
+                                               link_state->local_handle,
+                                               state->id, &bytes, &tag,
+                                               0, // message-format
+                                               delivery->local.settled,
+                                               !delivery->done,
+                                               ssn_state->remote_incoming_window,
+                                               delivery->local.type,
+                                               transport->disp_data,
+                                               false, /* Resume */
+                                               delivery->aborted,
+                                               false /* Batchable */
+      );
       if (count < 0) return count;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;

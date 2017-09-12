@@ -36,7 +36,7 @@ typedef struct test_handler_t {
   test_t *t;
   test_handler_fn f;
   pn_event_type_t log[MAX_EVENT_LOG]; /* Log of event types */
-  size_t log_size;                     /* Number of events in the log */
+  size_t log_size;                    /* Number of events in the log */
   void *context;                      /* Test-specific context */
 } test_handler_t;
 
@@ -101,11 +101,11 @@ typedef struct test_connection_driver_t {
   pn_connection_driver_t driver;
 } test_connection_driver_t;
 
-void test_connection_driver_init(test_connection_driver_t *d, test_t *t, test_handler_fn f,
-                                 pn_connection_t *connection, pn_transport_t *transport)
+void test_connection_driver_init(test_connection_driver_t *d, test_t *t, test_handler_fn f, void* context)
 {
   test_handler_init(&d->handler, t, f);
-  pn_connection_driver_init(&d->driver, connection, transport);
+  d->handler.context = context;
+  pn_connection_driver_init(&d->driver, NULL, NULL);
 }
 
 void test_connection_driver_destroy(test_connection_driver_t *d) {

@@ -27,6 +27,7 @@
 #include <proton/session.h>
 #include <proton/link.h>
 
+/* Place for handlers to save link and delivery pointers */
 struct context {
   pn_link_t *link;
   pn_delivery_t *delivery;
@@ -53,6 +54,7 @@ static pn_event_type_t open_handler(test_handler_t *th, pn_event_t *e) {
   return PN_EVENT_NONE;
 }
 
+/* Handler that returns control on PN_DELIVERY */
 static pn_event_type_t delivery_handler(test_handler_t *th, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_DELIVERY: {
@@ -68,10 +70,9 @@ static pn_event_type_t delivery_handler(test_handler_t *th, pn_event_t *e) {
 /* Blow-by-blow event verification of a single message transfer */
 static void test_message_transfer(test_t *t) {
   test_connection_driver_t client, server;
-  test_connection_driver_init(&client, t, open_handler, NULL, NULL);
-  test_connection_driver_init(&server, t, delivery_handler, NULL, NULL);
-  struct context server_ctx;
-  server.handler.context = &server_ctx;
+  struct context server_ctx = {0};
+  test_connection_driver_init(&client, t, open_handler, NULL);
+  test_connection_driver_init(&server, t, delivery_handler, &server_ctx);
   pn_transport_set_server(server.driver.transport);
 
   pn_connection_open(client.driver.connection);
@@ -138,24 +139,40 @@ static void test_message_transfer(test_t *t) {
   test_connection_driver_destroy(&server);
 }
 
+/* Handler that opens a connection and sender link */
+pn_event_type_t send_client_handler(test_handler_t *th, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+   case PN_CONNECTION_LOCAL_OPEN:
+    pn_connection_open(pn_event_connection(e));
+    pn_session_t *ssn = pn_session(pn_event_connection(e));
+    pn_session_open(ssn);
+    pn_link_t *snd = pn_sender(ssn, "x");
+    pn_link_open(snd);
+    break;
+   case PN_LINK_REMOTE_OPEN: {
+    struct context *ctx = (struct context*) th->context;
+    if (ctx) ctx->link = pn_event_link(e);
+    return PN_LINK_REMOTE_OPEN;
+   }
+   default:
+    break;
+  }
+  return PN_EVENT_NONE;
+}
+
 /* Send a message in pieces, ensure each can be received before the next is sent */
 static void test_message_stream(test_t *t) {
   /* Set up the link, give credit, start the delivery */
   test_connection_driver_t client, server;
-  test_connection_driver_init(&client, t, open_handler, NULL, NULL);
-  test_connection_driver_init(&server, t, delivery_handler, NULL, NULL);
-  struct context server_ctx;
-  server.handler.context = &server_ctx;
+  struct context server_ctx = {0}, client_ctx = {0};
+  test_connection_driver_init(&client, t, send_client_handler, &client_ctx);
+  test_connection_driver_init(&server, t, delivery_handler, &server_ctx);
   pn_transport_set_server(server.driver.transport);
 
   pn_connection_open(client.driver.connection);
-  pn_session_t *ssn = pn_session(client.driver.connection);
-  pn_session_open(ssn);
-  pn_link_t *snd = pn_sender(ssn, "x");
-  pn_link_open(snd);
   test_connection_drivers_run(&client, &server);
   pn_link_t *rcv = server_ctx.link;
-  TEST_CHECK(t, rcv);
+  pn_link_t *snd = client_ctx.link;
   pn_link_flow(rcv, 1);
   test_connection_drivers_run(&client, &server);
   test_handler_keep(&client.handler, 1);
@@ -200,9 +217,78 @@ static void test_message_stream(test_t *t) {
   test_connection_driver_destroy(&server);
 }
 
+// Test aborting a message mid stream.
+static void test_message_abort(test_t *t) {
+  /* Set up the link, give credit, start the delivery */
+  test_connection_driver_t client, server;
+  struct context server_ctx = {0}, client_ctx = {0};
+  test_connection_driver_init(&client, t, send_client_handler, &client_ctx);
+  test_connection_driver_init(&server, t, delivery_handler, &server_ctx);
+  pn_transport_set_server(server.driver.transport);
+  pn_connection_open(client.driver.connection);
+
+  test_connection_drivers_run(&client, &server);
+  pn_link_t *rcv = server_ctx.link;
+  pn_link_t *snd = client_ctx.link;
+  pn_link_flow(rcv, 1);
+  test_connection_drivers_run(&client, &server);
+
+  /* Encode a large (not very) message to send in chunks, and abort */
+  pn_message_t *m = pn_message();
+  char body[1024] = { 0 };
+  pn_data_put_binary(pn_message_body(m), pn_bytes(sizeof(body), body));
+  pn_rwbytes_t buf = { 0 };
+  ssize_t size = message_encode(m, &buf);
+  (void)size;
+
+  /* Send 3 chunks, then abort */
+  static const ssize_t CHUNK = 100;
+  pn_delivery(snd, pn_dtag("x", 1));
+  pn_rwbytes_t buf2 = { 0 };
+  ssize_t received = 0;
+  for (ssize_t i = 0; i < CHUNK*3; i += CHUNK) {
+    /* Send a chunk */
+    ssize_t c = (i+CHUNK < size) ? CHUNK : size - i;
+    TEST_CHECK(t, c == pn_link_send(snd, buf.start + i, c));
+    TEST_CHECK(t, &server == test_connection_drivers_run(&client, &server));
+    test_handler_keep(&server.handler, 1);
+    TEST_HANDLER_EXPECT(&server.handler, PN_DELIVERY, 0);
+    /* Receive a chunk */
+    pn_delivery_t *dlv = server_ctx.delivery;
+    pn_link_t *l = pn_delivery_link(dlv);
+    ssize_t dsize = pn_delivery_pending(dlv);
+    rwbytes_ensure(&buf2, received+dsize);
+    TEST_ASSERT(dsize == pn_link_recv(l, buf2.start + received, dsize));
+    received += dsize;
+  }
+  /* Now abort the message on the sender*/
+  pn_delivery_t *d = pn_link_current(snd);
+  pn_delivery_abort(d);
+  TEST_CHECK(t, pn_link_current(snd) != d);
+  TEST_CHECK(t, &server == test_connection_drivers_run(&client, &server));
+  TEST_HANDLER_EXPECT(&server.handler, PN_DELIVERY, 0);
+  /* And verify we see it aborted on the receiver */
+  d = pn_link_current(rcv);
+  TEST_CHECK(t, pn_delivery_aborted(d));
+  /* Aborted implies settled, !partial, pending == 0, pn_link_recv returns error */
+  TEST_CHECK(t, pn_delivery_settled(d));
+  TEST_CHECK(t, !pn_delivery_partial(d));
+  TEST_INT_EQUAL(t, 0, pn_delivery_pending(d));
+  char b[16];
+  TEST_INT_EQUAL(t, PN_STATE_ERR, pn_link_recv(rcv, b, sizeof(b)));
+
+  pn_message_free(m);
+  free(buf.start);
+  free(buf2.start);
+  test_connection_driver_destroy(&client);
+  test_connection_driver_destroy(&server);
+}
+
+
 int main(int argc, char **argv) {
   int failed = 0;
   RUN_ARGV_TEST(failed, t, test_message_transfer(&t));
   RUN_ARGV_TEST(failed, t, test_message_stream(&t));
+  RUN_ARGV_TEST(failed, t, test_message_abort(&t));
   return failed;
 }

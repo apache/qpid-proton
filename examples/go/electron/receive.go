@@ -87,7 +87,7 @@ func main() {
 				} else if err == electron.Closed {
 					return
 				} else {
-					log.Fatal("receive error %v: %v", urlStr, err)
+					log.Fatalf("receive error %v: %v", urlStr, err)
 				}
 			}
 		}(urlStr)
