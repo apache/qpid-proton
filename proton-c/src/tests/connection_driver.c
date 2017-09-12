@@ -142,12 +142,13 @@ static void test_message_transfer(test_t *t) {
 /* Handler that opens a connection and sender link */
 pn_event_type_t send_client_handler(test_handler_t *th, pn_event_t *e) {
   switch (pn_event_type(e)) {
-   case PN_CONNECTION_LOCAL_OPEN:
+   case PN_CONNECTION_LOCAL_OPEN: {
     pn_connection_open(pn_event_connection(e));
     pn_session_t *ssn = pn_session(pn_event_connection(e));
     pn_session_open(ssn);
     pn_link_t *snd = pn_sender(ssn, "x");
     pn_link_open(snd);
+   }
     break;
    case PN_LINK_REMOTE_OPEN: {
     struct context *ctx = (struct context*) th->context;
