@@ -28,7 +28,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -262,9 +261,6 @@ var dir = flag.String("dir", "electron", "Directory containing example sources o
 var expected int
 
 func TestMain(m *testing.M) {
-	if out, err := exec.Command("go", "install", "qpid.apache.org/...").CombinedOutput(); err != nil {
-		log.Fatalf("go install failed: %s\n%s", err, out)
-	}
 	expected = (*count) * (*connections)
 	rand.Seed(time.Now().UTC().UnixNano())
 	testBroker = &broker{} // Broker is started on-demand by tests.
