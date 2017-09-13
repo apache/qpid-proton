@@ -196,7 +196,7 @@ PN_EXTERN bool pn_delivery_partial(pn_delivery_t *delivery);
  * @param[in] delivery a delivery object
  * @return true if the delivery has been aborted, false otherwise
  */
-PN_EXTERN bool pn_delivery_aborted(pn_delivery_t *delivery); /* FIXME aconway 2017-09-11:  */
+PN_EXTERN bool pn_delivery_aborted(pn_delivery_t *delivery);
 
 /**
  * Check if a delivery is writable.
