@@ -191,7 +191,7 @@ PN_EXTERN void pn_connection_driver_write_close(pn_connection_driver_t *);
 PN_EXTERN bool pn_connection_driver_write_closed(pn_connection_driver_t *);
 
 /**
- * Close both sides side.
+ * Close both sides.
  */
 PN_EXTERN void pn_connection_driver_close(pn_connection_driver_t * c);
 

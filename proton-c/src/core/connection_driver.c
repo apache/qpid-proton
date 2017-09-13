@@ -34,9 +34,19 @@ static pn_event_t *batch_next(pn_event_batch_t *batch) {
   pn_connection_driver_t *d =
     (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch));
   pn_event_t *handled = pn_collector_prev(d->collector);
-  if (handled && pn_event_type(handled) == PN_CONNECTION_INIT) {
-      pn_transport_bind(d->transport, d->connection); /* Init event handled, auto-bind */
+  if (handled) {
+    switch (pn_event_type(handled)) {
+     case PN_CONNECTION_INIT:   /* Auto-bind after the INIT event is handled */
+      pn_transport_bind(d->transport, d->connection);
+      break;
+     case PN_TRANSPORT_CLOSED:  /* No more events after TRANSPORT_CLOSED  */
+      if (d->collector) pn_collector_release(d->collector);
+      break;
+     default:
+      break;
+    }
   }
+  /* Log the next event that will be processed */
   pn_event_t *next = pn_collector_next(d->collector);
   if (next && d->transport->trace & PN_TRACE_EVT) {
     pn_string_clear(d->transport->scratch);

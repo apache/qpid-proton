@@ -604,9 +604,40 @@ static void test_errors(test_t *t) {
   if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
     TEST_COND_DESC(t, "refused", last_condition);
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
-    sock_close(port.sock);
-    TEST_PROACTORS_DESTROY(tps);
   }
+
+  sock_close(port.sock);
+  TEST_PROACTORS_DESTROY(tps);
+}
+
+/* Closing the connection during PN_TRANSPORT_ERROR should be a no-op
+ * Regression test for: https://issues.apache.org/jira/browse/PROTON-1586
+ */
+static pn_event_type_t transport_close_connection_handler(test_handler_t *th, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+   case PN_TRANSPORT_ERROR:
+    pn_connection_close(pn_event_connection(e));
+    break;
+   default:
+    return open_wake_handler(th, e);
+  }
+  return PN_EVENT_NONE;
+}
+
+/* Closing the connection during PN_TRANSPORT_ERROR due to connection failure should be a no-op
+ * Regression test for: https://issues.apache.org/jira/browse/PROTON-1586
+ */
+static void test_proton_1586(test_t *t) {
+  test_proactor_t tps[] =  { test_proactor(t, transport_close_connection_handler) };
+  pn_proactor_connect(tps[0].proactor, pn_connection(), ":yyy");
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_COND_DESC(t, ":yyy", last_condition);
+  test_handler_keep(&tps[0].handler, 0); /* Clear events */
+  /* There should be no events generated after PN_TRANSPORT_CLOSED */
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
+  TEST_HANDLER_EXPECT(&tps[0].handler,PN_PROACTOR_INACTIVE, 0);
+
+  TEST_PROACTORS_DESTROY(tps);
 }
 
 /* Test that we can control listen/select on ipv6/v4 and listen on both by default */
@@ -1062,6 +1093,7 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_inactive(&t));
   RUN_ARGV_TEST(failed, t, test_interrupt_timeout(&t));
   RUN_ARGV_TEST(failed, t, test_errors(&t));
+  RUN_ARGV_TEST(failed, t, test_proton_1586(&t));
   RUN_ARGV_TEST(failed, t, test_client_server(&t));
   RUN_ARGV_TEST(failed, t, test_connection_wake(&t));
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));

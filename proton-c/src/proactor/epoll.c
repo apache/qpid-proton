@@ -970,7 +970,7 @@ static void pconnection_maybe_connect_lh(pconnection_t *pc);
  */
 static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events, bool timeout, bool topup) {
   bool inbound_wake = !(events | timeout | topup);
-  bool timer_unarmed = false;
+  bool rearm_timer = false;
   bool timer_fired = false;
   bool waking = false;
   bool tick_required = false;
@@ -978,7 +978,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   // Don't touch data exclusive to working thread (yet).
 
   if (timeout) {
-    timer_unarmed = true;
+    rearm_timer = true;
     timer_fired = ptimer_callback(&pc->timer) != 0;
   }
   lock(&pc->context.mutex);
@@ -996,7 +996,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     inbound_wake = false;
   }
 
-  if (timer_unarmed)
+  if (rearm_timer)
     pc->timer_armed = false;
 
   if (topup) {
@@ -1062,18 +1062,9 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
     return NULL;
   }
 
-  if (!pc->timer_armed && !pc->timer.shutting_down && pc->timer.timerfd >= 0) {
-    pc->timer_armed = true;  // about to rearm outside the lock
-    timer_unarmed = true;    // so we remember
-  }
-
   unlock(&pc->context.mutex);
   pc->hog_count++; // working context doing work
 
-  if (timer_unarmed) {
-    rearm(pc->psocket.proactor, &pc->timer.epoll_io);
-    timer_unarmed = false;
-  }
   if (waking) {
     pn_connection_t *c = pc->driver.connection;
     pn_collector_put(pn_connection_collector(c), PN_OBJECT, c, PN_CONNECTION_WAKE);
@@ -1143,10 +1134,19 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       return NULL;
     }
   }
+  bool rearm_pc = pconnection_rearm_check(pc);
 
-  bool rearm = pconnection_rearm_check(pc);
+  if (!pc->timer_armed && !pc->timer.shutting_down && pc->timer.timerfd >= 0) {
+    pc->timer_armed = true;  // about to rearm outside the lock
+    rearm_timer = true;      // so we remember
+  }
   unlock(&pc->context.mutex);
-  if (rearm) pconnection_rearm(pc);
+
+  if (rearm_timer) {
+    rearm(pc->psocket.proactor, &pc->timer.epoll_io);
+  }
+  if (rearm_pc) pconnection_rearm(pc);
+
   return NULL;
 }
 
@@ -1244,7 +1244,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, false, addr);
-  if (err) {
+  if (err) {    /* TODO aconway 2017-09-13: errors must be reported as events */
     pn_logf("pn_proactor_connect failure: %s", err);
     return;
   }
