@@ -73,6 +73,7 @@
 const char *AMQP_PORT = "5672";
 const char *AMQP_PORT_NAME = "amqp";
 
+/* Record id for proactor attachments to pn_connection_t */
 PN_HANDLE(PN_PROACTOR)
 
 /* pn_proactor_t and pn_listener_t are plain C structs with normal memory management.
@@ -296,28 +297,8 @@ static void parse_addr(addr_t *addr, const char *str) {
   pni_parse_addr(str, addr->addr_buf, sizeof(addr->addr_buf), &addr->host, &addr->port);
 }
 
-/* Make a pn_class for pconnection_t since it is attached to a pn_connection_t record */
-#define CID_pconnection CID_pn_object
-#define pconnection_inspect NULL
-#define pconnection_initialize NULL
-#define pconnection_hashcode NULL
-#define pconnection_compare NULL
-
-static void pconnection_finalize(void *vp_pconnection) {
-  pconnection_t *pc = (pconnection_t*)vp_pconnection;
-  uv_mutex_destroy(&pc->lock);   /* Only the lock is left to clean up */
-}
-
-
-static const pn_class_t pconnection_class = PN_CLASS(pconnection);
-
 static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool server) {
-  /* pconnection_t is a pn_class instance so we can attach it to the pn_connection_t and
-     it will be finalized when the pn_connection_t is freed.
-  */
-  pconnection_t *pc =
-    (pconnection_t *) pn_class_new(&pconnection_class, sizeof(pconnection_t));
-
+  pconnection_t *pc = (pconnection_t*)calloc(1, sizeof(*pc));
   if (!pc || pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
     return NULL;
   }
@@ -328,10 +309,20 @@ static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool ser
     pn_transport_set_server(pc->driver.transport);
   }
   pn_record_t *r = pn_connection_attachments(pc->driver.connection);
-  pn_record_def(r, PN_PROACTOR, &pconnection_class);
+  pn_record_def(r, PN_PROACTOR, PN_VOID);
   pn_record_set(r, PN_PROACTOR, pc);
-  pn_decref(pc);                /* Will be deleted when the connection is */
   return pc;
+}
+
+static void pconnection_free(pconnection_t *pc) {
+  pn_connection_t *c = pc->driver.connection;
+  if (c) pn_record_set(pn_connection_attachments(c), PN_PROACTOR, NULL);
+  pn_connection_driver_destroy(&pc->driver);
+  if (pc->addr.getaddrinfo.addrinfo) {
+    uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Interrupted after resolve */
+  }
+  uv_mutex_destroy(&pc->lock);
+  free(pc);
 }
 
 static pn_event_t *listener_batch_next(pn_event_batch_t *batch);
@@ -378,16 +369,6 @@ static void remove_active(pn_proactor_t *p) {
   uv_mutex_lock(&p->lock);
   remove_active_lh(p);
   uv_mutex_unlock(&p->lock);
-}
-
-static void pconnection_free(pconnection_t *pc) {
-  if (pc->addr.getaddrinfo.addrinfo) {
-    uv_freeaddrinfo(pc->addr.getaddrinfo.addrinfo); /* Interrupted after resolve */
-  }
-  pn_incref(pc);                /* Make sure we don't do a circular free */
-  pn_connection_driver_destroy(&pc->driver);
-  pn_decref(pc);
-  /* Now pc is freed iff the connection is, otherwise remains till the pn_connection_t is freed. */
 }
 
 /* Final close event for for a pconnection_t, disconnects from proactor */
@@ -1241,6 +1222,8 @@ void pn_connection_wake(pn_connection_t* c) {
 void pn_proactor_release_connection(pn_connection_t *c) {
   pconnection_t *pc = get_pconnection(c);
   if (pc) {
+    pn_record_t *r = pn_connection_attachments(c);
+    pn_record_set(r, PN_PROACTOR, NULL); /* Clear the reference from the connection */
     pn_connection_driver_release_connection(&pc->driver);
   }
 }
