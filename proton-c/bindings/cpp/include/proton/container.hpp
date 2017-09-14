@@ -54,25 +54,31 @@ namespace proton {
 /// messages.
 class PN_CPP_CLASS_EXTERN container {
   public:
-    /// Create a container with a handler for messaging events.
+    /// Create a container with a global handler for messaging events.
     ///
-    /// The optional `id` parameter sets the container's unique
-    /// identity.
+    /// **Thread safety** - in a multi-threaded container this handler will be
+    /// called concurrently. You can use locks to make that safe, or use a
+    /// separate handler for each connection.  See @ref mt_page.
+    ///
+    /// @param handler global handler, called for events on all connections
+    /// managed by the container.
+    ///
+    /// @param id sets the container's unique identity.
     PN_CPP_EXTERN container(messaging_handler& handler, const std::string& id="");
 
     /// Create a container.
-    ///
-    /// @copydetails container()
+    /// @param id sets the container's unique identity.
     PN_CPP_EXTERN container(const std::string& id="");
 
     /// Destroy a container.
     ///
-    /// **Thread safety** - It is unsafe to delete a container from
-    /// within any of the threads running a `messaging_handler`.
-    /// Deleting the container from within a handler will cause a
-    /// deadlock or crash.  The only safe place to delete a container
-    /// is after all of the threads running a container have finished
-    /// and all of the `run()` functions have returned.
+    /// A container must not be destroyed while a call to run() is in progress,
+    /// in particular it must not be destroyed from a @ref messaging_handler
+    /// callback.
+    ///
+    /// **Thread safety** - in a multi-threaded application, run() must return
+    /// in all threads that call it before destroying the container.
+    ///
     PN_CPP_EXTERN ~container();
 
     /// Connect to `conn_url` and send an open request to the remote
@@ -99,6 +105,9 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Listen for new connections on `listen_url`.
     ///
+    /// listen_handler::on_accept is called for each incoming connection to determine
+    /// the @ref connection_options to use, including the @ref messaging_handler.
+    ///
     /// **Thread safety** - Calls to `listen_handler` methods
     /// are serialized for this listener, but handlers attached to
     /// separate listeners can be safely called concurrently.
@@ -109,13 +118,18 @@ class PN_CPP_CLASS_EXTERN container {
     ///
     /// Use a fixed set of options for all accepted connections.  See
     /// listen(const std::string&, listen_handler&).
+    ///
+    /// **Thread safety** - for multi-threaded applications we recommend using a
+    /// @ref listen_handler to create a new @ref messaging_handler for each connection.
+    /// See listen(const std::string&, listen_handler&) and @ref mt_page
     PN_CPP_EXTERN listener listen(const std::string& listen_url,
                                   const connection_options& conn_opts);
 
     /// @copybrief listen
     ///
     /// New connections will use the handler from
-    /// `server_connection_options()`.
+    /// `server_connection_options()`. See listen(const std::string&, const
+    /// connection_options&);
     PN_CPP_EXTERN listener listen(const std::string& listen_url);
 
     /// Run the container in the current thread.
@@ -129,7 +143,7 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN void run();
 
 #if PN_CPP_SUPPORTS_THREADS
-    /// Run the container with a pool of `count` threads.
+    /// Run the container with a pool of `count` threads, including the current thread.
     ///
     /// **C++ versions** - Available with C++11 or later.
     ///

@@ -64,5 +64,6 @@ Address URLs (`addr_url`) extend the connection URL to reference an
 AMQP node such as a queue or topic.  The path of the URL, minus the
 leading slash, is treated as the AMQP address of the node.
 
-Listener URLs (`listen_url`) specify a local network address and port
-for accepting incoming TCP connections.
+Listener URLs (`listen_url`) specify a local network address and port for
+accepting incoming TCP connections.  The path part of the URL is ignored.
+The host part may be empty, meaning "listen on all available interfaces".

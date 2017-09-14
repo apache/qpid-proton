@@ -20,9 +20,6 @@
  * under the License.
  */
 
-/// @file
-///
-/// **Deprecated** - Container method return values are safe to
-/// use only inside handlers.
+// Removed. Place-holder for for #include compatibility.
 
 #endif // PROTON_THREAD_SAFE_HPP

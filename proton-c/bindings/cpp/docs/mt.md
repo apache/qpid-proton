@@ -4,22 +4,31 @@ Full multithreading support is available with C++11 and later. Limited
 multithreading is possible with older versions of C++.  See the last
 section of this page for more information.
 
+The `proton::container` handles multiple connections concurrently in a thread
+pool, created using `proton::container::run()`. As AMQP events occur on a
+connection the container calls `proton::messaging_handler` event callbacks.  The
+calls for each connection are *serialized* - callbacks for the same connection
+are never made concurrently.
+
+
+You assign a handler to a connection in `proton::container::connect()` or
+`proton::listen_handler::on_accept()` with
+`proton::connection_options::handler()`.  We recommend you create a separate
+handler for each connection.  That means the handler doesn't need locks or other
+synchronization to protect it against concurrent use by proton threads.
+(If you use the handler concurrently from non-proton threads then you will need
+synchronization.)
+
+The examples @ref multithreaded_client.cpp and @ref
+multithreaded_client_flow_control.cpp illustrate these points.
+
+
 ## Thread-safety rules
 
-`proton::message` is a value type with the same threading constraints
-as a standard C++ built-in type.  It cannot be concurrently modified.
-
-The `proton::container` is thread-safe *with C++11 or greater*. It has
-the following capabilities.
-
- * Application threads can open (or listen for) new connections at any
-   time.
-
- * It manages worker threads to process connections.
-
- * It handles network IO and calls the relevant
-   `proton::messaging_handler` event callbacks to execute application
-   code.
+The `proton::container` is thread-safe *with C++11 or greater*.  An application
+thread can open (or listen for) new connections at any time. The container uses
+threads that call proton::container::run() to handle network IO, and call
+user-defined `proton::messaging_handler` callbacks.
 
 The `proton::container` ensures that calls to event callbacks for each
 connection instance are *serialized* (not called concurrently), but
@@ -40,6 +49,9 @@ thread-safe and are subject to the following rules.
 
 3. You can store Proton objects in member variables for use in a later
    callback, provided you respect rule two.
+
+`proton::message` is a value type with the same threading constraints
+as a standard C++ built-in type.  It cannot be concurrently modified.
 
 ## Work queues
 
