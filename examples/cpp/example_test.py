@@ -58,15 +58,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     createdSASLDb = True
 
 # Globally initialize Cyrus SASL configuration
-#if SASL.extended():
 _cyrusSetup('sasl_conf')
-
-def ensureCanTestExtendedSASL():
-#  if not SASL.extended():
-#    raise Skipped('Extended SASL not supported')
-  if not createdSASLDb:
-    raise Skipped("Can't Test Extended SASL: Couldn't create auth db")
-
 
 class BrokerTestCase(ProcTestCase):
     """
