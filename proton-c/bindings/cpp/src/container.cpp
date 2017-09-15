@@ -106,7 +106,10 @@ returned<receiver> container::open_receiver(
 
 std::string container::id() const { return impl_->id(); }
 
-void container::schedule(duration d, work f) { return impl_->schedule(d, f); }
+void container::schedule(duration d, v03::work f) { return impl_->schedule(d, f); }
+#if PN_CPP_HAS_STD_FUNCTION
+void container::schedule(duration d, v11::work f) { return impl_->schedule(d, f); }
+#endif
 
 void container::client_connection_options(const connection_options& c) { impl_->client_connection_options(c); }
 connection_options container::client_connection_options() const { return impl_->client_connection_options(); }

@@ -44,9 +44,27 @@ namespace proton {
 ///
 /// It can be created from a function that takes no parameters and
 /// returns no value.
+namespace v03 {
 class work {
   public:
+    /// **Experimental**
+    work(void_function0& f): item_(&f) {}
+
+    /// **Experimental**
+    void operator()() { (*item_)(); }
+
+    ~work() {}
+
+
+  private:
+    void_function0* item_;
+};
+}
+
 #if PN_CPP_HAS_STD_FUNCTION
+namespace v11 {
+class work {
+  public:
     /// **Unsettled API**
     work(void_function0& f): item_( [&f]() { f(); }) {}
 
@@ -57,23 +75,20 @@ class work {
 
     /// **Unsettled API**
     void operator()() { item_(); }
-#else
-    /// **Experimetnal**
-    work(void_function0& f): item_(&f) {}
 
-    /// **Experimetnal**
-    void operator()() { (*item_)(); }
-#endif
     ~work() {}
 
-
   private:
-#if PN_CPP_HAS_STD_FUNCTION
     std::function<void()> item_;
-#else
-    void_function0* item_;
-#endif
 };
+}
+#endif
+
+#if PN_CPP_HAS_STD_FUNCTION
+using v11::work;
+#else
+using v03::work;
+#endif
 
 /// **Unsettled API** - A context for thread-safe execution of work.
 ///
@@ -116,6 +131,14 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// reason.
     PN_CPP_EXTERN bool add(work fn);
 
+    /// @cond INTERNAL
+    /// This is a hack to ensure that the C++03 version is declared
+    /// only during the compilation of the library
+#if PN_CPP_HAS_STD_FUNCTION && defined(qpid_proton_cpp_EXPORTS)
+    PN_CPP_EXTERN bool add(v03::work fn);
+#endif
+    /// @endcond
+
     /// **Unsettled API** - Add work `fn` to the work queue after a
     /// duration.
     ///
@@ -125,6 +148,14 @@ class PN_CPP_CLASS_EXTERN work_queue {
     ///
     /// @copydetails add()
     PN_CPP_EXTERN void schedule(duration, work fn);
+
+    /// @cond INTERNAL
+    /// This is a hack to ensure that the C++03 version is declared
+    /// only during the compilation of the library
+#if PN_CPP_HAS_STD_FUNCTION && defined(qpid_proton_cpp_EXPORTS)
+    PN_CPP_EXTERN void schedule(duration, v03::work fn);
+#endif
+    /// @endcond
 
   private:
     PN_CPP_EXTERN static work_queue& get(pn_connection_t*);

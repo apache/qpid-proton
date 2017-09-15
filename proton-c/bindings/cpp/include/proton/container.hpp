@@ -290,6 +290,14 @@ class PN_CPP_CLASS_EXTERN container {
     /// `std::function<void()>` type for the `fn` parameter.
     PN_CPP_EXTERN void schedule(duration dur, work fn);
 
+    /// @cond INTERNAL
+    /// This is a hack to ensure that the C++03 version is declared
+    /// only during the compilation of the library
+#if PN_CPP_HAS_STD_FUNCTION && defined(qpid_proton_cpp_EXPORTS)
+    PN_CPP_EXTERN void schedule(duration dur, v03::work fn);
+#endif
+    /// @endcond
+
   private:
     class impl;
     internal::pn_unique_ptr<impl> impl_;

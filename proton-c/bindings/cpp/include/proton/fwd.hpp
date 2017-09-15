@@ -25,6 +25,8 @@
 /// @file
 /// Forward declarations.
 
+#include "./internal/config.hpp"
+
 namespace proton {
 
 class annotation_key;
@@ -57,8 +59,18 @@ class tracker;
 class transport;
 class url;
 class void_function0;
-class work;
 class work_queue;
+
+namespace v03 { class work; }
+#if PN_CPP_HAS_STD_FUNCTION
+namespace v11 { class work; }
+#endif
+
+#if PN_CPP_HAS_STD_FUNCTION
+using v11::work;
+#else
+using v03::work;
+#endif
 
 namespace io {
 

@@ -37,17 +37,33 @@ work_queue::~work_queue() {}
 
 work_queue& work_queue::operator=(impl* i) { impl_.reset(i); return *this; }
 
-bool work_queue::add(work f) {
+bool work_queue::add(v03::work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return false;
     return impl_->add(f);
 }
 
-void work_queue::schedule(duration d, work f) {
+#if PN_CPP_HAS_STD_FUNCTION
+bool work_queue::add(v11::work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return false;
+    return impl_->add(f);
+}
+#endif
+
+void work_queue::schedule(duration d, v03::work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return;
     return impl_->schedule(d, f);
 }
+
+#if PN_CPP_HAS_STD_FUNCTION
+void work_queue::schedule(duration d, v11::work f) {
+    // If we have no actual work queue, then can't defer
+    if (!impl_) return;
+    return impl_->schedule(d, f);
+}
+#endif
 
 work_queue& work_queue::get(pn_connection_t* c) {
     return connection_context::get(c).work_queue_;
