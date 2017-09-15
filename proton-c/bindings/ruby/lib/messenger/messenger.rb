@@ -18,6 +18,7 @@
 #
 
 module Qpid::Proton::Messenger
+  # @deprecated use {Qpid::Proton::Container}
   #
   # The +Messenger+ class defines a high level interface for
   # sending and receiving Messages. Every Messenger contains
@@ -72,6 +73,7 @@ module Qpid::Proton::Messenger
     # * name - the name (def. nil)
     #
     def initialize(name = nil)
+      warn "[DEPRECATION] `Qpid::Proton::Messenger` is deprecated, use `Qpid::Proton::Container`"
       @impl = Cproton.pn_messenger(name)
       @selectables = {}
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))

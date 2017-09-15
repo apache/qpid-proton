@@ -559,6 +559,21 @@ elseif (PROACTOR AND NOT PROACTOR STREQUAL "none")
   message(FATAL_ERROR "Cannot build the ${PROACTOR} proactor")
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # No change needed for windows already use correct separator
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Just change ';'->':'
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    string (REGEX REPLACE ";" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+
 # note: process bindings after the source lists have been defined so
 # the bindings can reference them
 add_subdirectory(bindings)

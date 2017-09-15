@@ -20,24 +20,35 @@
 require 'qpid_proton'
 require 'optparse'
 
-require_relative '../lib/send_and_receive'
+class DirectReceive < Qpid::Proton::Handler::MessagingHandler
+
+  def initialize(url, expected)
+    super()
+    @url = url
+    @expected = expected
+    @received = 0
+  end
+
+  def on_start(event)
+    @acceptor = event.container.listen(@url)
+  end
+
+  def on_message(event)
+    if @expected.zero? || (@received < @expected)
+      puts "Received: #{event.message.body}"
+      @received = @received + 1
+      if @received == @expected
+        event.connection.close
+        @acceptor.close
+      end
+    end
+  end
+end
 
 options = {
   :address => "localhost:5672/examples",
   :messages => 100,
 }
-
-class SimpleSend < ExampleSend
-
-  def initialize(url, messages)
-    super(url, messages)
-  end
-
-  def on_start(event)
-    @acceptor = event.container.listen(url)
-  end
-
-end
 
 OptionParser.new do |opts|
   opts.banner = "Usage: simple_send.rb [options]"
@@ -52,8 +63,4 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-begin
-  Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages])).run
-rescue Interrupt => error
-  puts "ERROR: #{error}"
-end
+Qpid::Proton::Reactor::Container.new(DirectReceive.new(options[:address], options[:messages])).run

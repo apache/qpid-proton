@@ -20,21 +20,27 @@
 require 'qpid_proton'
 require 'optparse'
 
-require_relative '../lib/send_and_receive'
+class Receiver < Qpid::Proton::Handler::MessagingHandler
 
-class DirectReceive < ExampleReceive
-
-  def initialize(url, expected)
-    super
+  def initialize(url, count)
+    super()
+    @url = url
+    @expected = count
+    @received = 0
   end
 
   def on_start(event)
-    @acceptor = event.container.listen(self.url)
+    event.container.create_receiver(@url)
   end
 
   def on_message(event)
-    super(event)
-    @acceptor.close if self.finished?
+    if @expected.zero? || (@received < @expected)
+      puts "Received: #{event.message.body}"
+      @received = @received + 1
+      if @received == @expected
+        event.connection.close
+      end
+    end
   end
 
 end
@@ -57,4 +63,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-Qpid::Proton::Reactor::Container.new(DirectReceive.new(options[:address], options[:messages])).run
+begin
+  Qpid::Proton::Reactor::Container.new(Receiver.new(options[:address], options[:messages])).run
+rescue Interrupt
+end

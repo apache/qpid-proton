@@ -49,8 +49,10 @@ language.
     $ yum install php-devel                                  # PHP
     $ yum install perl-devel                                 # Perl
 
-    # Dependencies needed for Python docs
-    $ yum install epydoc
+    # Dependencies needed to generate documentation
+    $ yum install epydoc                                     # Python
+    $ yum install rubygem-yard                               # Ruby
+    $ yum install doxygen                                    # C, C++
 
 The following prerequisites are required to do a full build on
 Debian-based systems (Ubuntu).  If you do not wish to build a given

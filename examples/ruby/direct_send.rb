@@ -20,24 +20,41 @@
 require 'qpid_proton'
 require 'optparse'
 
-require_relative '../lib/send_and_receive'
-
-class Receiver < ExampleReceive
-
-  def initialize(url, count)
-    super(url, count)
-  end
-
-  def on_start(event)
-    event.container.create_receiver(@url)
-  end
-
-end
-
 options = {
   :address => "localhost:5672/examples",
   :messages => 100,
 }
+
+class SimpleSend < Qpid::Proton::Handler::MessagingHandler
+
+  def initialize(url, expected)
+    super()
+    @url = url
+    @sent = 0
+    @confirmed = 0
+    @expected = expected
+  end
+
+  def on_start(event)
+    @acceptor = event.container.listen(@url)
+  end
+
+  def on_sendable(event)
+    while event.sender.credit > 0 && @sent < @expected
+      msg = Qpid::Proton::Message.new("sequence #{@sent}", { :id => @sent } )
+      event.sender.send(msg)
+      @sent = @sent + 1
+    end
+  end
+
+  def on_accepted(event)
+    @confirmed = @confirmed + 1
+    if @confirmed == @expected
+      puts "All #{@expected} messages confirmed!"
+      event.connection.close
+    end
+  end
+end
 
 OptionParser.new do |opts|
   opts.banner = "Usage: simple_send.rb [options]"
@@ -53,6 +70,7 @@ OptionParser.new do |opts|
 end.parse!
 
 begin
-  Qpid::Proton::Reactor::Container.new(Receiver.new(options[:address], options[:messages])).run
-rescue Interrupt
+  Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages])).run
+rescue Interrupt => error
+  puts "ERROR: #{error}"
 end

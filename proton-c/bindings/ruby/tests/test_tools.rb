@@ -35,7 +35,7 @@ def wait_port(port, timeout=5)
     TCPSocket.open("", $port).close
   rescue Errno::ECONNREFUSED
     if Time.now > deadline then
-      raise TestError("timed out waiting for port #{port}")
+      raise TestError, "timed out waiting for port #{port}"
     end
     sleep(0.1)
     retry
@@ -113,15 +113,15 @@ end
 class TestServer < TestHandler
   def initialize
     super
-    @port = TCPServer.open(0) do |s| s.addr[1]; end # find an unused port
+    @server = TCPServer.open(0)
   end
 
   def host() ""; end
-  def port() @port; end
+  def port() @server.addr[1]; end
   def addr() "#{host}:#{port}"; end
 
   def on_start(e)
     super
-    @listener = e.container.listen(addr)
+    @listener = e.container.listen_io(@server)
   end
 end

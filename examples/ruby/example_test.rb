@@ -25,12 +25,10 @@ require 'socket'
 class ExampleTest < MiniTest::Test
 
   def run_script(script, port)
-    assert File.exist? script
     cmd = [RbConfig.ruby, script]
     cmd += ["-a", ":#{port}/examples"] if port
     return IO.popen(cmd)
   end
-
 
   def assert_output(script, want, port=nil)
     out = run_script(script, port)
@@ -38,13 +36,42 @@ class ExampleTest < MiniTest::Test
   end
 
   def test_helloworld
-    assert_output("reactor/helloworld.rb", "Hello world!", $port)
+    assert_output("helloworld.rb", "Hello world!", $port)
   end
 
   def test_send_recv
-    assert_output("reactor/simple_send.rb", "All 100 messages confirmed!", $port)
+    assert_output("simple_send.rb", "All 100 messages confirmed!", $port)
     want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output("reactor/simple_recv.rb", want.strip, $port)
+    assert_output("simple_recv.rb", want.strip, $port)
+  end
+
+  def test_direct_recv
+    TestPort.new do |tp|
+      p = run_script("direct_recv.rb", tp.port)
+      wait_port tp.port
+      assert_output("simple_send.rb", "All 100 messages confirmed!", tp.port)
+      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+      assert_equal(want.strip, p.read.strip)
+    end
+  end
+
+  def test_direct_send
+    TestPort.new do |tp|
+      p = run_script("direct_send.rb", tp.port)
+      wait_port tp.port
+      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+      assert_output("simple_recv.rb", want.strip, $port)
+      assert_equal("All 100 messages confirmed!", p.read.strip)
+    end
+  end
+
+  def test_direct_send
+    TestPort.start_wait do |port|
+      p = run_script("direct_recv.rb", port)
+      assert_output("simple_send.rb", "All 100 messages confirmed!", port)
+      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+      assert_equal(want.strip, p.read.strip)
+    end
   end
 
   def test_client_server
@@ -58,8 +85,8 @@ class ExampleTest < MiniTest::Test
 -> And the mome raths outgrabe.
 <- AND THE MOME RATHS OUTGRABE.
 EOS
-    srv = run_script("reactor/server.rb", $port)
-    assert_output("reactor/client.rb", want.strip, $port)
+    srv = run_script("server.rb", $port)
+    assert_output("client.rb", want.strip, $port)
 
   ensure
     Process.kill :TERM, srv.pid if srv

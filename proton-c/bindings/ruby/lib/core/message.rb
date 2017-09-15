@@ -129,13 +129,21 @@ module Qpid::Proton
     end
 
     # Creates a new +Message+ instance.
-    def initialize(body = nil)
+    # @param body the body of the message, equivalent to calling m.body=(body)
+    # @param set [Hash] additional settings, equivalent to m.key=value for each key=>value in settings
+    def initialize(body = nil, settings={})
       @impl = Cproton.pn_message
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
       @properties = {}
       @instructions = {}
       @annotations = {}
       self.body = body unless body.nil?
+      if !settings.nil? then
+        settings.each do |k, v|
+          setter = (k.to_s+"=").to_sym()
+          self.send setter, v
+        end
+      end
     end
 
     def to_s

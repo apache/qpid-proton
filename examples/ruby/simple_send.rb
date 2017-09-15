@@ -20,21 +20,39 @@
 require 'qpid_proton'
 require 'optparse'
 
-require_relative '../lib/send_and_receive'
-
 options = {
   :address => "localhost:5672/examples",
   :messages => 100,
 }
 
-class SimpleSend < ExampleSend
+class SimpleSend < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, messages)
-    super(url, messages)
+  def initialize(url, expected)
+    super()
+    @url = url
+    @sent = 0
+    @confirmed = 0
+    @expected = expected
   end
 
   def on_start(event)
-    event.container.create_sender(url)
+    event.container.create_sender(@url)
+  end
+
+  def on_sendable(event)
+    while event.sender.credit > 0 && @sent < @expected
+      msg = Qpid::Proton::Message.new("sequence #{@sent}", { :id => @sent } )
+      event.sender.send(msg)
+      @sent = @sent + 1
+    end
+  end
+
+  def on_accepted(event)
+    @confirmed = @confirmed + 1
+    if @confirmed == @expected
+      puts "All #{@expected} messages confirmed!"
+      event.connection.close
+    end
   end
 
 end
