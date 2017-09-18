@@ -230,23 +230,6 @@ def find_exes(*filenames):
         if not find_file(f, os.getenv('PATH')): return False
     return True
 
-#### Skip decorators missing in python 2.6
-
-def skip(func, reason):
-    def skipper():
-        print("skipped %s: %s", func, reason)
-    return skipper
-
-def skipIf(func, cond, reason):
-    if cond: return skip(func, reason)
-    else: return func
-
-def skipUnless(func, cond, reason):
-    return skipIf(func, not cond, reason)
-
-if not hasattr(unittest, 'skip'): unittest.skip = skip
-if not hasattr(unittest, 'skipIf'): unittest.skip = skipIf
-if not hasattr(unittest, 'skipUnless'): unittest.skip = skipUnless
 
 from unittest import main
 if __name__ == "__main__":

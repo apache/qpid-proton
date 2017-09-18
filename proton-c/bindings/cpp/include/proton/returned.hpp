@@ -51,7 +51,6 @@ template <class T>
 class PN_CPP_CLASS_EXTERN returned {
   public:
     /// Copy operator required to return a value
-    /// @note Thread-safe
     PN_CPP_EXTERN returned(const returned<T>&);
 
     /// Convert to the proton::object
