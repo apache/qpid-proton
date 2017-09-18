@@ -23,6 +23,8 @@
  */
 
 #include "./internal/export.hpp"
+#include "./internal/config.hpp"
+
 
 #include <proton/ssl.h>
 
@@ -33,20 +35,19 @@
 
 namespace proton {
 
-namespace internal {
-template <class T> class factory;
-}
-
 /// SSL information.
 class ssl {
     /// @cond INTERNAL
     ssl(pn_ssl_t* s) : object_(s) {}
     /// @endcond
 
-  public:
-    /// Create an empty ssl object.
-    ssl() : object_(0) {}
+#if PN_CPP_HAS_DELETED_FUNCTIONS
+    ssl() = delete;
+#else
+    ssl();
+#endif
 
+  public:
     /// Determines the level of peer validation.
     enum verify_mode {
         /// Require peer to provide a valid identifying certificate
@@ -88,10 +89,10 @@ class ssl {
     /// @endcond
 
   private:
-    pn_ssl_t* object_;
+    pn_ssl_t* const object_;
 
     /// @cond INTERNAL
-  friend class internal::factory<ssl>;
+  friend class transport;
     /// @endcond
 };
 

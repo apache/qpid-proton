@@ -91,8 +91,6 @@ namespace internal {
 template <class T> struct wrapped {};
 template <> struct wrapped<internal::data> { typedef pn_data_t type; };
 template <> struct wrapped<transport> { typedef pn_transport_t type; };
-template <> struct wrapped<sasl> { typedef pn_sasl_t type; };
-template <> struct wrapped<ssl> { typedef pn_ssl_t type; };
 template <> struct wrapped<connection> { typedef pn_connection_t type; };
 template <> struct wrapped<session> { typedef pn_session_t type; };
 template <> struct wrapped<link> { typedef pn_link_t type; };
@@ -109,8 +107,6 @@ template <> struct wrapped<target> { typedef pn_terminus_t type; };
 template <class T> struct wrapper {};
 template <> struct wrapper<pn_data_t> { typedef internal::data type; };
 template <> struct wrapper<pn_transport_t> { typedef transport type; };
-template <> struct wrapper<pn_sasl_t> { typedef sasl type; };
-template <> struct wrapper<pn_ssl_t> { typedef ssl type; };
 template <> struct wrapper<pn_connection_t> { typedef connection type; };
 template <> struct wrapper<pn_session_t> { typedef session type; };
 template <> struct wrapper<pn_link_t> { typedef link type; };

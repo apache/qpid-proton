@@ -39,11 +39,11 @@ connection transport::connection() const {
 }
 
 class ssl transport::ssl() const {
-    return make_wrapper(pn_ssl(pn_object()));
+    return pn_ssl(pn_object());
 }
 
 class sasl transport::sasl() const {
-    return make_wrapper(pn_sasl(pn_object()));
+    return pn_sasl(pn_object());
 }
 
 error_condition transport::error() const {
