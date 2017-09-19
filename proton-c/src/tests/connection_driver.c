@@ -240,7 +240,6 @@ static void test_message_abort(test_t *t) {
   pn_data_put_binary(pn_message_body(m), pn_bytes(sizeof(body), body));
   pn_rwbytes_t buf = { 0 };
   ssize_t size = message_encode(m, &buf);
-  (void)size;
 
   /* Send 3 chunks, then abort */
   static const ssize_t CHUNK = 100;
