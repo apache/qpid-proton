@@ -1053,7 +1053,18 @@ typedef unsigned long int uintptr_t;
   pn_selectable_t *pn_cast_pn_selectable(void *x) { return (pn_selectable_t *) x; }
 %}
 
-%include "proton/url.h"
+/* Connection driver */
+%{
+#include <proton/connection_driver.h>
+%}
+/* Don't wrap the pn_connection_driver_t struct, just the functions */
+%ignore pn_connection_driver_t;
+%ignore pn_connection_driver_verrorf;
+%ignore pn_connection_driver_logf;
+%ignore pn_connection_driver_vlogf;
+%include "proton/connection_driver.h"
 
+
+%include "proton/url.h"
 %include "proton/reactor.h"
 %include "proton/handlers.h"

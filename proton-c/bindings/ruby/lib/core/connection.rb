@@ -196,7 +196,7 @@ module Qpid::Proton
     # Open the local end of the connection.
     #
     # @option options [String] :container_id Unique AMQP container ID, defaults to a UUID
-    # @option [String] :link_prefix Prefix for generated link names, default is container_id
+    # @option options [String] :link_prefix Prefix for generated link names, default is container_id
     #
     def open(options={})
       object_to_data(@offered_capabilities, Cproton.pn_connection_offered_capabilities(@impl))

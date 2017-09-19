@@ -82,6 +82,12 @@ module Qpid::Proton
       self.connection.transport
     end
 
+    # @return [Bool] true if endpoint has sent and received a CLOSE frame
+    def closed?() check_state(LOCAL_CLOSED | REMOTE_CLOSED); end
+
+    # @return [Bool] true if endpoint has sent and received an OPEN frame
+    def open?() check_state(LOCAL_ACTIVE | REMOTE_ACTIVE); end
+
     def local_uninit?
       check_state(LOCAL_UNINIT)
     end
@@ -104,10 +110,6 @@ module Qpid::Proton
 
     def remote_closed?
       check_state(REMOTE_CLOSED)
-    end
-
-    def check_state(state_mask)
-      !(self.state & state_mask).zero?
     end
 
     def handler
@@ -134,6 +136,10 @@ module Qpid::Proton
       Cproton.pn_record_set_handler(record, impl)
       Cproton.pn_decref(impl)
     end
+
+    private
+
+    def check_state(mask) (self.state & mask) == mask; end
 
   end
 

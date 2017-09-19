@@ -27,7 +27,7 @@ list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${PROTON_HEADERS}
 )
 include_directories (${RUBY_INCLUDE_PATH})
-swig_add_library(cproton-ruby LANGUAGE ruby SOURCES ruby.i)
+swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 
 # set a compiler macro to relay the Ruby version to the extension.
@@ -55,11 +55,11 @@ if (GEM_EXE)
   add_custom_command(
     OUTPUT ${bin}/qpid_proton-${PN_VERSION}.gem
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}/gem
-    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
+    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/cprotonRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/gem/qpid_proton-${PN_VERSION}.gem ${bin}
     WORKING_DIRECTORY ${bin}/gem
-    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby ${bin}/rubyRUBY_wrap.c
+    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby ${bin}/cprotonRUBY_wrap.c
     )
 
   add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )

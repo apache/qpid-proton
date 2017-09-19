@@ -19,15 +19,16 @@
 %module cproton
 
 %{
+#include <proton/connection_driver.h>
 #include <proton/engine.h>
+#include <proton/handlers.h>
 #include <proton/message.h>
-#include <proton/sasl.h>
 #include <proton/messenger.h>
+#include <proton/reactor.h>
+#include <proton/sasl.h>
 #include <proton/ssl.h>
 #include <proton/types.h>
 #include <proton/url.h>
-#include <proton/reactor.h>
-#include <proton/handlers.h>
 %}
 
 /*
@@ -46,7 +47,7 @@ Keep preprocessor directives and macro expansions in the normal header section.
 
 %{
 #if !defined(RSTRING_LEN)
-#  define RSTRING_LEN(x) (RSTRING(X)->len)
+#  define RSTRING_LEN(x) (RSTRING(x)->len)
 #  define RSTRING_PTR(x) (RSTRING(x)->ptr)
 #endif
 %}
@@ -633,6 +634,42 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
     rhy->handler_key = ruby_key;
 
     return chandler;
+  }
+
+
+  /* Helpers for working with pn_connection_driver_t */
+
+  size_t pni_connection_driver_read_size(pn_connection_driver_t* d) {
+    return pn_connection_driver_read_buffer(d).size;
+  }
+
+  size_t pni_connection_driver_write_size(pn_connection_driver_t* d) {
+    return pn_connection_driver_write_buffer(d).size;
+  }
+
+  pn_connection_t *pni_connection_driver_connection(pn_connection_driver_t* d) {
+    return d->connection;
+  }
+
+  pn_transport_t *pni_connection_driver_transport(pn_connection_driver_t* d) {
+    return d->transport;
+  }
+
+  size_t pni_connection_driver_read_copy(pn_connection_driver_t* d, char *STRING, size_t LENGTH ) {
+    pn_rwbytes_t rbuf = pn_connection_driver_read_buffer(d);
+    size_t n = LENGTH < rbuf.size ? LENGTH : rbuf.size;
+    memcpy(rbuf.start, STRING, n);
+    pn_connection_driver_read_done(d, n);
+    return n;
+  }
+
+  pn_connection_driver_t *pni_connection_driver() {
+    pn_connection_driver_t *d = (pn_connection_driver_t*)malloc(sizeof(*d));
+    if (pn_connection_driver_init(d, NULL, NULL) != 0) {
+      free(d);
+      return NULL;
+    }
+    return d;
   }
 
 %}
