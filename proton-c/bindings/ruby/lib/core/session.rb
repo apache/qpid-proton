@@ -120,40 +120,42 @@ module Qpid::Proton
       Connection.wrap(Cproton.pn_session_connection(@impl))
     end
 
-    # Constructs a new sender.
-    #
-    # Each sender between two AMQP containers must be uniquely named. Note that
-    # this uniqueness cannot be enforced at the library level, so some
-    # consideration should be taken in choosing link names.
-    #
-    # @param name [String] The link name.
-    #
-    # @return [Sender, nil] The sender, or nil if an error occurred.
-    #
-    def sender(name)
-      Sender.new(Cproton.pn_sender(@impl, name))
+    # @deprecated use {#open_sender}
+    def sender(name) Sender.new(Cproton.pn_sender(@impl, name)); end
+
+    # @deprecated use {#open_receiver}
+    def receiver(name) Receiver.new(Cproton.pn_receiver(@impl, name)); end
+
+    # TODO aconway 2016-01-04: doc options or target param
+    def open_receiver(options = {})
+      options = { :source => options } if options.is_a? String
+      receiver = Receiver.new Cproton.pn_receiver(@impl, options[:name] || connection.link_name)
+      receiver.source.address ||= options[:source]
+      receiver.target.address ||= options[:target]
+      receiver.source.dynamic = true if options[:dynamic]
+      receiver.handler = options[:handler] if !options[:handler].nil?
+      receiver.open
+      return receiver
     end
 
-    # Constructs a new receiver.
-    #
-    # Each receiver between two AMQP containers must be uniquely named. Note
-    # that this uniqueness cannot be enforced at the library level, so some
-    # consideration should be taken in choosing link names.
-    #
-    # @param name [String] The link name.
-    #
-    # @return [Receiver, nil] The receiver, or nil if an error occurred.
-    #
-    def receiver(name)
-      Receiver.new(Cproton.pn_receiver(@impl, name))
+    # TODO aconway 2016-01-04: doc options or target param
+    def open_sender(options = {})
+      options = { :target => options } if options.is_a? String
+      sender = Sender.new Cproton.pn_sender(@impl, options[:name] || connection.link_name)
+      sender.target.address ||= options[:target]
+      sender.source.address ||= options[:source]
+      sender.target.dynamic = true if options[:dynamic]
+      sender.handler = options[:handler] if !options[:handler].nil?
+      sender.open
+      return sender
     end
 
-    # @private
+    private
+
     def _local_condition
       Cproton.pn_session_condition(@impl)
     end
 
-    # @private
     def _remote_condition # :nodoc:
       Cproton.pn_session_remote_condition(@impl)
     end

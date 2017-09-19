@@ -19,15 +19,14 @@
 
 module Qpid::Proton
 
-  # A Connection has at most one Qpid::Proton::Transport instance.
-  #
+  # An AMQP connection.
   class Connection < Endpoint
 
-    # @private
+    protected
+    PROTON_METHOD_PREFIX = "pn_connection"
     include Util::SwigHelper
 
-    # @private
-    PROTON_METHOD_PREFIX = "pn_connection"
+    public
 
     # @!attribute hostname
     #
@@ -45,8 +44,6 @@ module Qpid::Proton
     proton_writer :password
 
     # @private
-    proton_reader :attachments
-
     attr_accessor :overrides
     attr_accessor :session_policy
 
@@ -127,14 +124,9 @@ module Qpid::Proton
       @collector = collector
     end
 
-    # Get the AMQP container name advertised by the remote connection
-    # endpoint.
+    # Get the AMQP container name advertised by the remote connection.
     #
     # This will return nil until the REMOTE_ACTIVE state is reached.
-    #
-    # Any non-nil container returned by this operation will be valid
-    # until the connection is unbound from a transport, or freed,
-    # whichever happens sooner.
     #
     # @return [String] The remote connection's AMQP container name.
     #
@@ -144,11 +136,8 @@ module Qpid::Proton
       Cproton.pn_connection_remote_container(@impl)
     end
 
-    def container=(name)
-      Cproton.pn_connection_set_container(@impl, name)
-    end
-
-    def container
+    # AMQP container ID string for the local end of the connection.
+    def container_id
       Cproton.pn_connection_get_container(@impl)
     end
 
@@ -204,16 +193,26 @@ module Qpid::Proton
       data_to_object(Cproton.pn_connection_remote_properites(@impl))
     end
 
-    # Opens the connection.
+    # Open the local end of the connection.
     #
-    def open
-      object_to_data(@offered_capabilities,
-                     Cproton.pn_connection_offered_capabilities(@impl))
-      object_to_data(@desired_capabilities,
-                     Cproton.pn_connection_desired_capabilities(@impl))
-      object_to_data(@properties,
-                     Cproton.pn_connection_properties(@impl))
+    # @option options [String] :container_id Unique AMQP container ID, defaults to a UUID
+    # @option [String] :link_prefix Prefix for generated link names, default is container_id
+    #
+    def open(options={})
+      object_to_data(@offered_capabilities, Cproton.pn_connection_offered_capabilities(@impl))
+      object_to_data(@desired_capabilities, Cproton.pn_connection_desired_capabilities(@impl))
+      object_to_data(@properties, Cproton.pn_connection_properties(@impl))
+      cid = options[:container_id] || SecureRandom.uuid
+      Cproton.pn_connection_set_container(@impl, cid)
+      @link_prefix = options[:link_prefix] || cid
+      @link_prefix = SecureRandom.uuid if !@link_prefix || @link_prefix.empty?
+      @link_count = 0
       Cproton.pn_connection_open(@impl)
+    end
+
+    # @private Generate a unique link name, internal use only.
+    def link_name()
+      @link_prefix + "/" +  (@link_count += 1).to_s(16)
     end
 
     # Closes the connection.
@@ -239,13 +238,29 @@ module Qpid::Proton
       Cproton.pn_connection_state(@impl)
     end
 
-    # Returns the session for this connection.
+    # Returns the default session for this connection.
     #
     # @return [Session] The session.
     #
-    def session
-      @session ||= Session.wrap(Cproton.pn_session(@impl))
+    def default_session
+      @session ||= open_session
     end
+
+    # @deprecated use #default_session()
+    alias_method :session, :default_session
+
+    # Open a new session on this connection.
+    def open_session
+      s = Session.wrap(Cproton.pn_session(@impl))
+      s.open
+      return s
+    end
+
+    # Open a sender on the default_session
+    def open_sender(*args, &block) default_session.open_sender(*args, &block) end
+
+    # Open a  on the default_session
+    def open_receiver(*args, &block) default_session.open_receiver(*args, &block) end
 
     # Returns the first session from the connection that matches the specified
     # state mask.
@@ -322,16 +337,16 @@ module Qpid::Proton
       Cproton.pn_error_code(Cproton.pn_connection_error(@impl))
     end
 
-    # @private
+    protected
+
     def _local_condition
       Cproton.pn_connection_condition(@impl)
     end
 
-    # @private
     def _remote_condition
       Cproton.pn_connection_remote_condition(@impl)
     end
 
+    proton_reader :attachments
   end
-
 end

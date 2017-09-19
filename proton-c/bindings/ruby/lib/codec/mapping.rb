@@ -105,11 +105,18 @@ module Qpid::Proton::Codec
   DECIMAL128 = Mapping.new(Cproton::PN_DECIMAL128, "decimal128")
   UUID       = Mapping.new(Cproton::PN_UUID, "uuid")
   BINARY     = Mapping.new(Cproton::PN_BINARY, "binary")
-  STRING     = Mapping.new(Cproton::PN_STRING, "string", [String, Symbol,
+  STRING     = Mapping.new(Cproton::PN_STRING, "string", [::String,
                                                           Qpid::Proton::Types::UTFString,
                                                           Qpid::Proton::Types::BinaryString])
+  SYMBOL     = Mapping.new(Cproton::PN_SYMBOL, "symbol", [::Symbol])
+  DESCRIBED  = Mapping.new(Cproton::PN_DESCRIBED, "described", [Qpid::Proton::Types::Described], "get_described")
+  ARRAY      = Mapping.new(Cproton::PN_ARRAY, "array", nil, "get_array")
+  LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array], "get_array")
+  MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
 
-  # @private
+
+  private
+
   class << STRING
     def put(data, value)
       # if we have a symbol then convert it to a string
@@ -134,17 +141,9 @@ module Qpid::Proton::Codec
 
       data.string = value if isutf
       data.binary = value if !isutf
-
     end
   end
 
-  SYMBOL     = Mapping.new(Cproton::PN_SYMBOL, "symbol")
-  DESCRIBED  = Mapping.new(Cproton::PN_DESCRIBED, "described", [Qpid::Proton::Types::Described], "get_described")
-  ARRAY      = Mapping.new(Cproton::PN_ARRAY, "array", nil, "get_array")
-  LIST       = Mapping.new(Cproton::PN_LIST, "list", [::Array], "get_array")
-  MAP        = Mapping.new(Cproton::PN_MAP, "map", [::Hash], "get_map")
-
-  # @private
   class << MAP
     def put(data, map, options = {})
       data.put_map
@@ -162,6 +161,16 @@ module Qpid::Proton::Codec
           Mapping.for_class(value.class).put(data, value)
         end
       end
+      data.exit
+    end
+  end
+
+  class << DESCRIBED
+    def put(data, described)
+      data.put_described
+      data.enter
+      data.object = described.descriptor
+      data.object = described.value
       data.exit
     end
   end

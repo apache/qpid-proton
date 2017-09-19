@@ -47,19 +47,18 @@ module Qpid::Proton::Reactor
 
     include Qpid::Proton::Util::Reactor
 
-    include Qpid::Proton::Util::UUID
-
     attr_accessor :container_id
     attr_accessor :global_handler
 
-    def initialize(handlers, options = {})
-      super(handlers, options)
+    def initialize(handlers, opts = {})
+      super(handlers, opts)
 
       # only do the following if we're creating a new instance
-      if !options.has_key?(:impl)
+      if !opts.has_key?(:impl)
+        @container_id = String.new(opts[:container_id] || SecureRandom.uuid).freeze
         @ssl = SSLConfig.new
-        if options[:global_handler]
-          self.global_handler = GlobalOverrides.new(options[:global_handler])
+        if opts[:global_handler]
+          self.global_handler = GlobalOverrides.new(opts[:global_handler])
         else
           # very ugly, but using self.global_handler doesn't work in the constructor
           ghandler = Reactor.instance_method(:global_handler).bind(self).call
@@ -67,7 +66,6 @@ module Qpid::Proton::Reactor
           Reactor.instance_method(:global_handler=).bind(self).call(ghandler)
         end
         @trigger = nil
-        @container_id = generate_uuid
       end
     end
 
@@ -95,71 +93,40 @@ module Qpid::Proton::Reactor
     # @return [Connection] the new connection
     #
     def connect(url, opts = {})
-      # Backwards compatible with old connect(options)
+      # Backwards compatible with old connect(opts)
       if url.is_a? Hash and opts.empty?
         opts = url
         url = nil
       end
       conn = self.connection(opts[:handler])
-      conn.container = self.container_id || generate_uuid
       connector = Connector.new(conn, url, opts)
       return conn
     end
 
-    private
-    def _session(context)
-      if context.is_a?(Qpid::Proton::URL)
-        return _session(self.connect(:url => context))
-      elsif context.is_a?(Qpid::Proton::Session)
-        return context
-      elsif context.is_a?(Qpid::Proton::Connection)
-        if context.session_policy?
-          return context.session_policy.session(context)
-        else
-          return self.create_session(context)
-        end
-      else
-        return context.session
-      end
-    end
-
-    public
     # Initiates the establishment of a link over which messages can be sent.
     #
     # @param context [String, URL] The context.
-    # @param opts [Hash] Additional options.
-    # @option opts [String, Qpid::Proton::URL] The target address.
-    # @option opts [String] :source The source address.
-    # @option opts [Boolean] :dynamic
-    # @option opts [Object] :handler
-    # @option opts [Object] :tag_generator The tag generator.
-    # @option opts [Hash] :options Addtional link options
+    # @param opts [Hash] Additional opts.
+    # @param opts [String] :target The target address.
+    # @param opts [String] :source The source address.
+    # @param opts [Boolean] :dynamic
+    # @param opts [Object] :handler
     #
     # @return [Sender] The sender.
     #
-    def create_sender(context, opts = {})
+    def open_sender(context, opts = {})
       if context.is_a?(::String)
         context = Qpid::Proton::URL.new(context)
       end
-
-      target = opts[:target]
-      if context.is_a?(Qpid::Proton::URL) && target.nil?
-        target = context.path
+      if context.is_a?(Qpid::Proton::URL)
+        opts[:target] ||= context.path
       end
 
-      session = _session(context)
-
-      sender = session.sender(opts[:name] ||
-                              id(session.connection.container,
-                                target, opts[:source]))
-        sender.source.address = opts[:source] if !opts[:source].nil?
-        sender.target.address = target if target
-        sender.handler = opts[:handler] if !opts[:handler].nil?
-        sender.tag_generator = opts[:tag_generator] if !opts[:tag_gnenerator].nil?
-        _apply_link_options(opts[:options], sender)
-        sender.open
-        return sender
+      return _session(context).open_sender(opts)
     end
+
+    # @deprecated use @{#open_sender}
+    alias_method :create_sender, :open_sender
 
     # Initiates the establishment of a link over which messages can be received.
     #
@@ -172,40 +139,28 @@ module Qpid::Proton::Reactor
     #
     # The name will be generated for the link if one is not specified.
     #
-    # @param context [Connection, URL, String] The connection or the address.
-    # @param opts [Hash] Additional otpions.
-    # @option opts [String, Qpid::Proton::URL] The source address.
+    # @param context [Connection, URL, String] The connection or the connection address.
+    # @param opts [Hash] Additional opts.
+    # @option opts [String] :source The source address.
     # @option opts [String] :target The target address
     # @option opts [String] :name The link name.
     # @option opts [Boolean] :dynamic
     # @option opts [Object] :handler
-    # @option opts [Hash] :options Additional link options.
     #
-    # @return [Receiver
+    # @return [Receiver]
     #
-    def create_receiver(context, opts = {})
+    def open_receiver(context, opts = {})
       if context.is_a?(::String)
         context = Qpid::Proton::URL.new(context)
       end
-
-      source = opts[:source]
-      if context.is_a?(Qpid::Proton::URL) && source.nil?
-        source = context.path
+      if context.is_a?(Qpid::Proton::URL)
+        opts[:source] ||= context.path
       end
-
-      session = _session(context)
-
-      receiver = session.receiver(opts[:name] ||
-                                  id(session.connection.container,
-                                      source, opts[:target]))
-      receiver.source.address = source if source
-      receiver.source.dynamic = true if opts.has_key?(:dynamic) && opts[:dynamic]
-      receiver.target.address = opts[:target] if !opts[:target].nil?
-      receiver.handler = opts[:handler] if !opts[:handler].nil?
-      _apply_link_options(opts[:options], receiver)
-      receiver.open
-      return receiver
+      return _session(context).open_receiver(opts)
     end
+
+    # @deprecated use @{#open_sender}
+    alias_method :create_receiver, :open_receiver
 
     def declare_transaction(context, handler = nil, settle_before_discharge = false)
       if context.respond_to? :txn_ctl && !context.__send__(:txn_ctl).nil?
@@ -239,26 +194,25 @@ module Qpid::Proton::Reactor
 
     private
 
-    def id(container, remote, local)
-      if !local.nil? && !remote.nil?
-        "#{container}-#{remote}-#{local}"
-      elsif !local.nil?
-        "#{container}-#{local}"
-      elsif !remote.nil?
-        "#{container}-#{remote}"
+    def _session(context)
+      if context.is_a?(Qpid::Proton::URL)
+        return _session(self.connect(:url => context))
+      elsif context.is_a?(Qpid::Proton::Session)
+        return context
+      elsif context.is_a?(Qpid::Proton::Connection)
+        return context.default_session
       else
-        "#{container}-#{generate_uuid}"
+        return context.session
       end
     end
 
-    def _apply_link_options(options, link)
-      if !options.nil? && !options.empty?
-        if !options.is_a?(::List)
-          options = [Options].flatten
-        end
+    def do_work(timeout = nil)
+      self.timeout = timeout unless timeout.nil?
+      self.process
+    end
 
-        options.each {|option| o.apply(link) if o.test(link)}
-      end
+    def _apply_link_opts(opts, link)
+      opts.each {|o| o.apply(link) if o.test(link)}
     end
 
     def to_s

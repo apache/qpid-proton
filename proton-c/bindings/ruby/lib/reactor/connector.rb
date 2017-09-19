@@ -21,10 +21,10 @@ module Qpid::Proton::Reactor
 
   class Connector < Qpid::Proton::BaseHandler
 
-    def initialize(connection, url, opts)
-      @connection, @opts = connection, opts
+    def initialize(connection, url, options)
+      @connection, @options = connection, options
       @urls = URLs.new(url) if url
-      opts.each do |k,v|
+      options.each do |k,v|
         case k
         when :url, :urls, :address
           @urls = URLs.new(v) unless @urls
@@ -80,7 +80,7 @@ module Qpid::Proton::Reactor
     def connect(connection)
       url = @urls.next
       transport = Qpid::Proton::Transport.new
-      @opts.each do |k,v|
+      @options.each do |k,v|
         case k
         when :user
           connection.user = v

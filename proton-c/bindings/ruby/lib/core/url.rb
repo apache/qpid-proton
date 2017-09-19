@@ -30,9 +30,7 @@ module Qpid::Proton
 
     # Parse a string, return a new URL
     # @param url [#to_s] the URL string
-    def initialize(url = nil, options = {})
-      options[:defaults] = true
-
+    def initialize(url = nil)
       if url
         @url = Cproton.pn_url_parse(url.to_s)
         if @url.nil?

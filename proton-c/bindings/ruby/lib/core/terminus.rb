@@ -157,7 +157,7 @@ module Qpid::Proton
     # @return [Data] The terminus properties.
     #
     def properties
-      Data.new(Cproton.pn_terminus_properties(@impl))
+      Codec::Data.new(Cproton.pn_terminus_properties(@impl))
     end
 
     # Access and modify the AMQP capabilities data for the Terminus.
@@ -172,7 +172,7 @@ module Qpid::Proton
     # @return [Data] The terminus capabilities.
     #
     def capabilities
-      Data.new(Cproton.pn_terminus_capabilities(@impl))
+      Codec::Data.new(Cproton.pn_terminus_capabilities(@impl))
     end
 
     # Access and modify the AMQP outcomes for the Terminus.
@@ -187,7 +187,7 @@ module Qpid::Proton
     # @return [Data] The terminus outcomes.
     #
     def outcomes
-      Data.new(Cproton.pn_terminus_outcomes(@impl))
+      Codec::Data.new(Cproton.pn_terminus_outcomes(@impl))
     end
 
     # Access and modify the AMQP filter set for the Terminus.
@@ -202,7 +202,7 @@ module Qpid::Proton
     # @return [Data] The terminus filter.
     #
     def filter
-      Data.new(Cproton.pn_terminus_filter(@impl))
+      Codec::Data.new(Cproton.pn_terminus_filter(@impl))
     end
 
     # Copy another Terminus into this instance.

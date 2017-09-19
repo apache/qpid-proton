@@ -849,10 +849,10 @@ module Qpid::Proton::Codec
 
     # Puts a symbolic value.
     #
-    # @param value [String] The symbolic string value.
+    # @param value [String|Symbol] The symbolic string value.
     #
     def symbol=(value)
-      check(Cproton.pn_data_put_symbol(@data, value))
+      check(Cproton.pn_data_put_symbol(@data, value.to_s))
     end
 
     # If the current node is a symbol, returns its value. Otherwise, it

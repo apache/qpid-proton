@@ -252,6 +252,16 @@ module Qpid::Proton
       condition_to_object Cproton.pn_transport_condition(@impl)
     end
 
+    # Set the condition of the transport.
+    #
+    # Setting a non-empty condition before closing the transport will cause a
+    # TRANSPORT_ERROR event.
+    #
+    # @param c [Condition] The condition to set
+    def condition=(c)
+      object_to_condition c, Cproton.pn_transport_condition(@impl)
+    end
+
     # Binds to the given connection.
     #
     # @param connection [Connection] The connection.

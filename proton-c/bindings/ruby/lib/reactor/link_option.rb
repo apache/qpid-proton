@@ -64,9 +64,9 @@ module Qpid::Proton::Reactor
 
     def apply(link)
       if link.receiver?
-        link.source.properties.dict = @properties
+        link.source.properties.object = @properties
       else
-        link.target.properties.dict = @properties
+        link.target.properties.object = @properties
       end
     end
   end
@@ -77,14 +77,9 @@ module Qpid::Proton::Reactor
     end
 
     def apply(receiver)
-      receiver.source.filter.dict = @filter_set
+      receiver.source.filter.object = @filter_set
     end
-  end
 
-  #class Selector < Filter
-  #  def initialize(value, name = 'selector')
-  #
-  #  end
-  #end
+  end
 
 end

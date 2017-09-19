@@ -21,8 +21,10 @@ module Qpid::Proton::Reactor
 
   class Backoff
 
-    def initialize
-      @delay = 0
+    def initialize min_ = 0, max_ = 3
+      @min = min_ > 0 ? min_ : 0.1
+      @max = [max_, min_].max
+      reset
     end
 
     def reset
@@ -31,11 +33,9 @@ module Qpid::Proton::Reactor
 
     def next
       current = @delay
-      current = 0.1 if current.zero?
-      @delay = [10, 2 * current].min
+      @delay = @delay.zero? ? @min : [@max, 2 * @delay].min
       return current
     end
-
   end
 
 end

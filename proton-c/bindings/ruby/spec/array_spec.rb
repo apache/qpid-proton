@@ -39,7 +39,7 @@ describe "The extended array type" do
   end
 
   it "raises an error when putting into a nil Data object" do
-    expect { @list.proton_put(nil) }.must_raise
+    expect { @list.proton_put(nil) }.must_raise(TypeError)
   end
 
   it "raises an error when getting from a nil Data object" do

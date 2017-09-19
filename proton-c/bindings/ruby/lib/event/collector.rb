@@ -112,7 +112,7 @@ module Qpid::Proton::Event
     # @return [nil] if it was elided
     #
     def put(context, event_type)
-      Cproton.pn_collector_put(@impl, Cproton.pn_rb2void(context), event_type.type_code)
+      Cproton.pn_collector_put(@impl, Cproton.pn_class(context.impl), context.impl, event_type.number)
     end
 
     # Access the head event.
