@@ -33,29 +33,29 @@ from string import Template
 createdSASLDb = False
 
 def _cyrusSetup(conf_dir):
-    """Write out simple SASL config.tests
-    """
-    saslpasswd = os.getenv('SASLPASSWD') or find_file('saslpasswd2', os.getenv('PATH'))
-    if saslpasswd:
-        t = Template("""sasldb_path: ${db}
+  """Write out simple SASL config.tests
+  """
+  saslpasswd = os.getenv('SASLPASSWD') or find_file('saslpasswd2', os.getenv('PATH'))
+  if saslpasswd:
+    t = Template("""sasldb_path: ${db}
 mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 """)
-        abs_conf_dir = os.path.abspath(conf_dir)
-        call(args=['rm','-rf',abs_conf_dir])
-        os.mkdir(abs_conf_dir)
-        db = os.path.join(abs_conf_dir,'proton.sasldb')
-        conf = os.path.join(abs_conf_dir,'proton-server.conf')
-        f = open(conf, 'w')
-        f.write(t.substitute(db=db))
-        f.close()
+    abs_conf_dir = os.path.abspath(conf_dir)
+    call(args=['rm','-rf',abs_conf_dir])
+    os.mkdir(abs_conf_dir)
+    db = os.path.join(abs_conf_dir,'proton.sasldb')
+    conf = os.path.join(abs_conf_dir,'proton-server.conf')
+    f = open(conf, 'w')
+    f.write(t.substitute(db=db))
+    f.close()
 
-        cmd_template = Template("echo password | ${saslpasswd} -c -p -f ${db} -u proton user")
-        cmd = cmd_template.substitute(db=db, saslpasswd=saslpasswd)
-        call(args=cmd, shell=True)
+    cmd_template = Template("echo password | ${saslpasswd} -c -p -f ${db} -u proton user")
+    cmd = cmd_template.substitute(db=db, saslpasswd=saslpasswd)
+    call(args=cmd, shell=True)
 
-        os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
-        global createdSASLDb
-        createdSASLDb = True
+    os.environ['PN_SASL_CONFIG_PATH'] = abs_conf_dir
+    global createdSASLDb
+    createdSASLDb = True
 
 # Globally initialize Cyrus SASL configuration
 _cyrusSetup('sasl_conf')
@@ -110,14 +110,14 @@ class ContainerExampleTest(BrokerTestCase):
 
     def test_simple_send_recv(self):
         self.assertMultiLineEqual("all messages confirmed\n",
-                                  self.proc(["simple_send", "-a", self.addr]).wait_exit())
+                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
         self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
 
     def test_simple_recv_send(self):
         # Start receiver first, then run sender"""
         recv = self.proc(["simple_recv", "-a", self.addr])
         self.assertMultiLineEqual("all messages confirmed\n",
-                                  self.proc(["simple_send", "-a", self.addr]).wait_exit())
+                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
         self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
 
 
@@ -127,7 +127,7 @@ class ContainerExampleTest(BrokerTestCase):
             recv = self.proc(["direct_recv", "-a", addr])
             recv.wait_re("listening")
             self.assertMultiLineEqual("all messages confirmed\n",
-                                      self.proc(["simple_send", "-a", addr]).wait_exit())
+                             self.proc(["simple_send", "-a", addr]).wait_exit())
             self.assertMultiLineEqual(recv_expect("direct_recv", addr), recv.wait_exit())
 
     def test_simple_recv_direct_send(self):
@@ -136,7 +136,7 @@ class ContainerExampleTest(BrokerTestCase):
             send = self.proc(["direct_send", "-a", addr])
             send.wait_re("listening")
             self.assertMultiLineEqual(recv_expect("simple_recv", addr),
-                                      self.proc(["simple_recv", "-a", addr]).wait_exit())
+                             self.proc(["simple_recv", "-a", addr]).wait_exit())
             self.assertMultiLineEqual(
                 "direct_send listening on %s\nall messages confirmed\n" % addr,
                 send.wait_exit())
@@ -145,7 +145,7 @@ class ContainerExampleTest(BrokerTestCase):
         server = self.proc(["server", "-a", self.addr])
         server.wait_re("connected")
         self.assertMultiLineEqual(CLIENT_EXPECT,
-                                  self.proc(["client", "-a", self.addr]).wait_exit())
+                         self.proc(["client", "-a", self.addr]).wait_exit())
 
     def test_request_response_direct(self):
         with TestPort() as tp:
@@ -153,7 +153,7 @@ class ContainerExampleTest(BrokerTestCase):
             server = self.proc(["server_direct", "-a", addr])
             server.wait_re("listening")
             self.assertMultiLineEqual(CLIENT_EXPECT,
-                                      self.proc(["client", "-a", addr]).wait_exit())
+                             self.proc(["client", "-a", addr]).wait_exit())
 
     def test_flow_control(self):
         want="""success: Example 1: simple credit
@@ -197,13 +197,11 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         self.assertTrue(len(out) > 0);
         self.assertEqual(["send"]*len(out), out)
 
+    @unittest.skipUnless(find_exes('scheduled_send'), "not a  C++11 build")
     def test_scheduled_send(self):
-        try:
-            out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
-            self.assertTrue(len(out) > 0);
-            self.assertEqual(["send"]*len(out), out)
-        except NotFoundError:
-          sys.stderr.write("SKIP: executable not found, not a C++11 build\n") 
+        out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
+        self.assertTrue(len(out) > 0);
+        self.assertEqual(["send"]*len(out), out)
 
     def test_message_properties(self):
         expect="""using put/get: short=123 string=foo symbol=sym
@@ -217,21 +215,17 @@ expected conversion_error: "unexpected type, want: uint got: string"
 """
         self.assertMultiLineEqual(expect, self.proc(["message_properties"]).wait_exit())
 
+    @unittest.skipUnless(find_exes('multithreaded_client'), "not a  C++11 build")
     def test_multithreaded_client(self):
-        try:
-            got = self.proc(["multithreaded_client", self.addr, "examples", "10"], helgrind=True).wait_exit()
-            self.maxDiff = None
-            self.assertRegexpMatches(got, "10 messages sent and received");
-        except NotFoundError:
-          sys.stderr.write("SKIP: executable not found, not a C++11 build\n") 
+        got = self.proc(["multithreaded_client", self.addr, "examples", "10"], helgrind=True).wait_exit()
+        self.maxDiff = None
+        self.assertRegexpMatches(got, "10 messages sent and received");
 
+    @unittest.skipUnless(find_exes('multithreaded_client_flow_control'), "not a  C++11 build")
     def test_multithreaded_client_flow_control(self):
-        try:
-            got = self.proc(["multithreaded_client_flow_control", self.addr, "examples", "10", "2"], helgrind=True).wait_exit()
-            self.maxDiff = None
-            self.assertRegexpMatches(got, "20 messages sent and received");
-        except NotFoundError:
-          sys.stderr.write("SKIP: executable not found, not a C++11 build\n") 
+        got = self.proc(["multithreaded_client_flow_control", self.addr, "examples", "10", "2"], helgrind=True).wait_exit()
+        self.maxDiff = None
+        self.assertRegexpMatches(got, "20 messages sent and received");
 
 class ContainerExampleSSLTest(BrokerTestCase):
     """Run the SSL container examples, verify they behave as expected."""

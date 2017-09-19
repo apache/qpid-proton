@@ -194,12 +194,15 @@ class ProcTestCase(unittest.TestCase):
                     return inspect.ismethod(m) and m.__name__.startswith('test_')
                 cls._setup_class_count = len(inspect.getmembers(cls, predicate=is_test))
                 cls.setUpClass()
+            self.procs = []
 
         def tearDown(self):
             self.assertTrue(self._setup_class_count > 0)
             self._setup_class_count -=  1
             if self._setup_class_count == 0:
                 type(self).tearDownClass()
+            for p in self.procs:
+                p.kill()
             super(ProcTestCase, self).tearDown()
 
     if _tc_missing('assertIn'):
@@ -230,6 +233,32 @@ def find_exes(*filenames):
         if not find_file(f, os.getenv('PATH')): return False
     return True
 
+#### Skip decorators missing in python 2.6
+
+def _id(obj):
+    return obj
+
+from functools import wraps
+
+def skip(reason):
+    def decorator(test):
+       @wraps(test)
+       def skipper(*args, **kwargs):
+           print("skipped %s: %s" % (test.__name__, reason))
+       return skipper
+    return decorator
+
+def skipIf(cond, reason):
+    if cond: return skip(reason)
+    else: return _id
+
+def skipUnless(cond, reason):
+    if not cond: return skip(reason)
+    else: return _id
+
+if not hasattr(unittest, 'skip'): unittest.skip = skip
+if not hasattr(unittest, 'skipIf'): unittest.skipIf = skipIf
+if not hasattr(unittest, 'skipUnless'): unittest.skipUnless = skipUnless
 
 from unittest import main
 if __name__ == "__main__":
