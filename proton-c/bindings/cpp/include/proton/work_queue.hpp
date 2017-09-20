@@ -94,7 +94,7 @@ using v03::work;
 ///
 /// Event-handler functions associated with a single
 /// `proton::connection` are called in sequence.  The connection's
-/// `proton::work_queue` allows you to "inject" extra @ref work from
+/// `proton::work_queue` allows you to "inject" extra work from
 /// any thread and have it executed in the same sequence.
 ///
 /// You may also create arbitrary `proton::work_queue` objects backed
