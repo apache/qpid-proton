@@ -630,7 +630,10 @@ PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
  * @param[in] receiver a receiving link object
  * @param[in] bytes a pointer to an empty buffer
  * @param[in] n the buffer capacity
- * @return the number of bytes received, PN_EOS, or an error code
+ * @return The number of bytes received, or an error code:
+ *   - ::PN_EOS: The message has been completely received
+ *   - ::PN_STATE_ERR: The link has no current delivery
+ *   - ::PN_ABORTED: See pn_delivery_aborted()
  */
 PN_EXTERN ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n);
 

@@ -632,7 +632,7 @@ static void test_proton_1586(test_t *t) {
   pn_proactor_connect(tps[0].proactor, pn_connection(), ":yyy");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, ":yyy", last_condition);
-  test_handler_keep(&tps[0].handler, 0); /* Clear events */
+  test_handler_clear(&tps[0].handler, 0); /* Clear events */
   /* There should be no events generated after PN_TRANSPORT_CLOSED */
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
   TEST_HANDLER_EXPECT(&tps[0].handler,PN_PROACTOR_INACTIVE, 0);

@@ -1555,6 +1555,7 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
   delivery->tpwork = false;
   pn_buffer_clear(delivery->bytes);
   delivery->done = false;
+  delivery->aborted = false;
   pn_record_clear(delivery->context);
 
   // begin delivery state
@@ -1917,7 +1918,7 @@ ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
       return delivery->done ? PN_EOS : 0;
     }
   } else {
-    return PN_STATE_ERR;
+    return delivery ? PN_ABORTED : PN_STATE_ERR;
   }
 }
 
@@ -2046,6 +2047,11 @@ bool pn_delivery_readable(pn_delivery_t *delivery)
 
 size_t pn_delivery_pending(pn_delivery_t *delivery)
 {
+  /* Aborted deliveries: for old clients that don't check pn_delivery_aborted(),
+     return 1 rather than 0. This will force them to call pn_link_recv() and get
+     the PN_ABORTED error return code.
+  */
+  if (delivery->aborted) return 1;
   return pn_buffer_size(delivery->bytes);
 }
 
@@ -2055,10 +2061,11 @@ bool pn_delivery_partial(pn_delivery_t *delivery)
 }
 
 void pn_delivery_abort(pn_delivery_t *delivery) {
-  if (!delivery->aborted) {
-    delivery->aborted = true;
-    pn_delivery_settle(delivery);
-  }
+  delivery->aborted = true;
+  /* Discard any data, aborted frames are always empty */
+  delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
+  pn_buffer_clear(delivery->bytes);
+  pn_delivery_settle(delivery);
 }
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {

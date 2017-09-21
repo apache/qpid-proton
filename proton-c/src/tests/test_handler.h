@@ -53,7 +53,7 @@ void test_handler_log(test_handler_t *th, pn_event_t *e) {
 }
 
 /* Keep at most n events in the handler's log, remove old events if necessary */
-void test_handler_keep(test_handler_t *th, size_t n) {
+void test_handler_clear(test_handler_t *th, size_t n) {
   if (n == 0) {
     th->log_size = 0;
   } else if (n < th->log_size) {
@@ -92,7 +92,13 @@ void test_etypes_expect_(test_t *t, pn_event_type_t *etypes, size_t size, const 
 
 #define TEST_HANDLER_EXPECT(TH, ...) do {                               \
     test_etypes_expect_((TH)->t, (TH)->log, (TH)->log_size, __FILE__, __LINE__, __VA_ARGS__); \
-    test_handler_keep((TH), 0);                                         \
+    test_handler_clear((TH), 0);                                         \
+  } while(0)
+
+#define TEST_HANDLER_EXPECT_LAST(TH, ETYPE) do {                        \
+    test_handler_clear((TH), 1);                                        \
+    test_etypes_expect_((TH)->t, (TH)->log, (TH)->log_size, __FILE__, __LINE__, ETYPE, 0); \
+    test_handler_clear((TH), 0);                                         \
   } while(0)
 
 /* A pn_connection_driver_t with a test_handler */

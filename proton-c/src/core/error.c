@@ -132,6 +132,7 @@ const char *pn_code(int code)
   case PN_INTR: return "PN_INTR";
   case PN_INPROGRESS: return "PN_INPROGRESS";
   case PN_OUT_OF_MEMORY: return "PN_OUT_OF_MEMORY";
+  case PN_ABORTED: return "PN_ABORTED";
   default: return "<unknown>";
   }
 }

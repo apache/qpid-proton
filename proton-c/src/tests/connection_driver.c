@@ -114,7 +114,7 @@ static void test_message_transfer(test_t *t) {
   ssize_t size = message_encode(m, &buf);
   pn_message_free(m);
   pn_delivery(snd, pn_dtag("x", 1));
-  TEST_CHECK(t, size == pn_link_send(snd, buf.start, size));
+  TEST_INT_EQUAL(t, size, pn_link_send(snd, buf.start, size));
   TEST_CHECK(t, pn_link_advance(snd));
   test_connection_drivers_run(&client, &server);
   TEST_HANDLER_EXPECT(&server.handler, PN_TRANSPORT, PN_DELIVERY, 0);
@@ -148,8 +148,8 @@ pn_event_type_t send_client_handler(test_handler_t *th, pn_event_t *e) {
     pn_session_open(ssn);
     pn_link_t *snd = pn_sender(ssn, "x");
     pn_link_open(snd);
-   }
     break;
+   }
    case PN_LINK_REMOTE_OPEN: {
     struct context *ctx = (struct context*) th->context;
     if (ctx) ctx->link = pn_event_link(e);
@@ -176,10 +176,8 @@ static void test_message_stream(test_t *t) {
   pn_link_t *snd = client_ctx.link;
   pn_link_flow(rcv, 1);
   test_connection_drivers_run(&client, &server);
-  test_handler_keep(&client.handler, 1);
-  TEST_HANDLER_EXPECT(&client.handler, PN_LINK_FLOW, 0);
-  test_handler_keep(&server.handler, 1);
-  TEST_HANDLER_EXPECT(&server.handler, PN_TRANSPORT, 0);
+  TEST_HANDLER_EXPECT_LAST(&client.handler, PN_LINK_FLOW);
+  TEST_HANDLER_EXPECT_LAST(&server.handler, PN_TRANSPORT);
 
   /* Encode a large (not very) message to send in chunks */
   pn_message_t *m = pn_message();
@@ -197,8 +195,8 @@ static void test_message_stream(test_t *t) {
     /* Send a chunk */
     ssize_t c = (i+CHUNK < size) ? CHUNK : size - i;
     TEST_CHECK(t, c == pn_link_send(snd, buf.start + i, c));
-    TEST_CHECK(t, &server == test_connection_drivers_run(&client, &server));
-    TEST_HANDLER_EXPECT(&server.handler, PN_DELIVERY, 0);
+    test_connection_drivers_run(&client, &server);
+    TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
     /* Receive a chunk */
     pn_delivery_t *dlv = server_ctx.delivery;
     pn_link_t *l = pn_delivery_link(dlv);
@@ -218,7 +216,7 @@ static void test_message_stream(test_t *t) {
   test_connection_driver_destroy(&server);
 }
 
-// Test aborting a message mid stream.
+// Test aborting a delivery
 static void test_message_abort(test_t *t) {
   /* Set up the link, give credit, start the delivery */
   test_connection_driver_t client, server;
@@ -231,55 +229,54 @@ static void test_message_abort(test_t *t) {
   test_connection_drivers_run(&client, &server);
   pn_link_t *rcv = server_ctx.link;
   pn_link_t *snd = client_ctx.link;
+  char data[100] = {0};          /* Dummy data to send. */
+  char rbuf[sizeof(data)] = {0}; /* Read buffer for incoming data. */
+
+  /* Send 2 frames with data */
   pn_link_flow(rcv, 1);
   test_connection_drivers_run(&client, &server);
-
-  /* Encode a large (not very) message to send in chunks, and abort */
-  pn_message_t *m = pn_message();
-  char body[1024] = { 0 };
-  pn_data_put_binary(pn_message_body(m), pn_bytes(sizeof(body), body));
-  pn_rwbytes_t buf = { 0 };
-  ssize_t size = message_encode(m, &buf);
-
-  /* Send 3 chunks, then abort */
-  static const ssize_t CHUNK = 100;
-  pn_delivery(snd, pn_dtag("x", 1));
-  pn_rwbytes_t buf2 = { 0 };
-  ssize_t received = 0;
-  for (ssize_t i = 0; i < CHUNK*3; i += CHUNK) {
-    /* Send a chunk */
-    ssize_t c = (i+CHUNK < size) ? CHUNK : size - i;
-    TEST_CHECK(t, c == pn_link_send(snd, buf.start + i, c));
-    TEST_CHECK(t, &server == test_connection_drivers_run(&client, &server));
-    test_handler_keep(&server.handler, 1);
-    TEST_HANDLER_EXPECT(&server.handler, PN_DELIVERY, 0);
-    /* Receive a chunk */
-    pn_delivery_t *dlv = server_ctx.delivery;
-    pn_link_t *l = pn_delivery_link(dlv);
-    ssize_t dsize = pn_delivery_pending(dlv);
-    rwbytes_ensure(&buf2, received+dsize);
-    TEST_ASSERT(dsize == pn_link_recv(l, buf2.start + received, dsize));
-    received += dsize;
+  pn_delivery_t *sd = pn_delivery(snd, pn_dtag("1", 1)); /* Sender delivery */
+  for (size_t i = 0; i < 2; ++i) {
+    TEST_INT_EQUAL(t, sizeof(data), pn_link_send(snd, data, sizeof(data)));
+    test_connection_drivers_run(&client, &server);
+    TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
+    pn_delivery_t *rd = server_ctx.delivery;
+    TEST_CHECK(t, !pn_delivery_aborted(rd));
+    TEST_CHECK(t, pn_delivery_partial(rd));
+    TEST_INT_EQUAL(t, sizeof(data), pn_delivery_pending(rd));
+    TEST_INT_EQUAL(t, sizeof(rbuf), pn_link_recv(pn_delivery_link(rd), rbuf, sizeof(rbuf)));
+    TEST_INT_EQUAL(t, 0, pn_link_recv(pn_delivery_link(rd), rbuf, sizeof(rbuf)));
   }
-  /* Now abort the message on the sender*/
-  pn_delivery_t *d = pn_link_current(snd);
-  pn_delivery_abort(d);
-  TEST_CHECK(t, pn_link_current(snd) != d);
-  TEST_CHECK(t, &server == test_connection_drivers_run(&client, &server));
-  TEST_HANDLER_EXPECT(&server.handler, PN_DELIVERY, 0);
-  /* And verify we see it aborted on the receiver */
-  d = pn_link_current(rcv);
-  TEST_CHECK(t, pn_delivery_aborted(d));
-  /* Aborted implies settled, !partial, pending == 0, pn_link_recv returns error */
-  TEST_CHECK(t, pn_delivery_settled(d));
-  TEST_CHECK(t, !pn_delivery_partial(d));
-  TEST_INT_EQUAL(t, 0, pn_delivery_pending(d));
-  char b[16];
-  TEST_INT_EQUAL(t, PN_STATE_ERR, pn_link_recv(rcv, b, sizeof(b)));
+  /* Abort the delivery */
+  pn_delivery_abort(sd);
+  TEST_CHECK(t, pn_link_current(snd) != sd); /* Settled */
+  test_connection_drivers_run(&client, &server);
+  TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
+  /* Receive the aborted frame, should be empty */
+  pn_delivery_t *rd = server_ctx.delivery;
+  TEST_CHECK(t, pn_delivery_aborted(rd));
+  TEST_CHECK(t, !pn_delivery_partial(rd)); /* Aborted deliveries are never partial */
+  TEST_CHECK(t, pn_delivery_settled(rd)); /* Aborted deliveries are always settled */
+  TEST_INT_EQUAL(t, 1, pn_delivery_pending(rd));
+  TEST_INT_EQUAL(t, PN_ABORTED, pn_link_recv(pn_delivery_link(rd), rbuf, sizeof(rbuf)));
 
-  pn_message_free(m);
-  free(buf.start);
-  free(buf2.start);
+  /* Send a single aborted frame, with data. */
+  pn_link_flow(rcv, 1);
+  test_connection_drivers_run(&client, &server);
+  sd = pn_delivery(snd, pn_dtag("x", 1));
+  TEST_INT_EQUAL(t, sizeof(data), pn_link_send(snd, data, sizeof(data)));
+  pn_delivery_abort(sd);                     /* Abort after send creates an aborted frame with data */
+  TEST_CHECK(t, pn_link_current(snd) != sd); /* Settled */
+  test_connection_drivers_run(&client, &server);
+  TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
+  /* Receive the aborted frame */
+  rd = server_ctx.delivery;
+  TEST_CHECK(t, pn_delivery_aborted(rd));
+  TEST_CHECK(t, !pn_delivery_partial(rd)); /* Aborted deliveries are never partial */
+  TEST_CHECK(t, pn_delivery_settled(rd)); /* Aborted deliveries are always settled */
+  TEST_INT_EQUAL(t, 1, pn_delivery_pending(rd)); /* Has no data */
+  TEST_INT_EQUAL(t, PN_ABORTED, pn_link_recv(pn_delivery_link(rd), rbuf, sizeof(rbuf)));
+
   test_connection_driver_destroy(&client);
   test_connection_driver_destroy(&server);
 }

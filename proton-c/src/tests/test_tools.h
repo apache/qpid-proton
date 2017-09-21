@@ -138,18 +138,20 @@ bool test_etype_equal_(test_t *t, pn_event_type_t want, pn_event_type_t got, con
                      pn_event_type_name(want),
                      pn_event_type_name(got));
 }
+#define TEST_ETYPE_EQUAL(TEST, WANT, GOT) test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
-#define TEST_INT_EQUAL(TEST, WANT, GOT)                                 \
-  test_check_((TEST), (int)(WANT) == (int)(GOT), NULL, __FILE__, __LINE__, "want %d, got %d", (int)(WANT), (int)(GOT))
+bool test_int_equal_(test_t *t, int want, int got, const char *file, int line) {
+  return test_check_(t, want == got, NULL, file, line, "want %d, got %d", want, got);
+}
+#define TEST_INT_EQUAL(TEST, WANT, GOT) test_int_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
-#define TEST_STR_EQUAL(TEST, WANT, GOT)                                 \
-  test_check_((TEST), !strcmp((WANT), (GOT)), NULL, __FILE__, __LINE__, "want '%s', got '%s'", (WANT), (GOT))
+bool test_str_equal_(test_t *t, const char* want, const char* got, const char *file, int line) {
+  return test_check_(t, !strcmp(want, got), NULL, file, line, "want '%s', got '%s'", want, got);
+}
+#define TEST_STR_EQUAL(TEST, WANT, GOT) test_str_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 #define TEST_STR_IN(TEST, WANT, GOT)                                    \
   test_check_((TEST), strstr((GOT), (WANT)), NULL, __FILE__, __LINE__, "'%s' not in '%s'", (WANT), (GOT))
-
-#define TEST_ETYPE_EQUAL(TEST, WANT, GOT)                       \
-  test_etype_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
 #define TEST_COND_EMPTY(TEST, C)                                        \
   TEST_CHECKNF((TEST), (!(C) || !pn_condition_is_set(C)), "Unexpected condition - %s:%s", \
