@@ -40,6 +40,7 @@ typedef struct app_data_t {
   pn_proactor_t *proactor;
   int received;
   bool finished;
+  pn_rwbytes_t receiving;       /* Partially received message */
 } app_data_t;
 
 static const int BATCH = 1000; /* Batch size for unlimited receive */
@@ -55,31 +56,20 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   }
 }
 
-#define MAX_SIZE 1024
-
-static void decode_message(pn_delivery_t *dlv) {
-  static char buffer[MAX_SIZE];
-  ssize_t len;
-  // try to decode the message body
-  if (pn_delivery_pending(dlv) < MAX_SIZE) {
-    // read in the raw data
-    len = pn_link_recv(pn_delivery_link(dlv), buffer, MAX_SIZE);
-    if (len > 0) {
-      // decode it into a proton message
-      pn_message_t *m = pn_message();
-      if (PN_OK == pn_message_decode(m, buffer, len)) {
-        pn_string_t *s = pn_string(NULL);
-        pn_inspect(pn_message_body(m), s);
-        printf("%s\n", pn_string_get(s));
-        pn_free(s);
-      }
-      pn_message_free(m);
-    } else if (len < 0) {
-      fprintf(stderr, "decode_message: %s\n", pn_code(len));
-      exit_code = 1;
-    } else {
-      fprintf(stderr, "decode_message: no data\n");
-    }
+static void decode_message(pn_rwbytes_t data) {
+  pn_message_t *m = pn_message();
+  int err = pn_message_decode(m, data.start, data.size);
+  if (!err) {
+    /* Print the decoded message */
+    pn_string_t *s = pn_string(NULL);
+    pn_inspect(pn_message_body(m), s);
+    printf("%s\n", pn_string_get(s));
+    pn_free(s);
+    pn_message_free(m);
+    free(data.start);
+  } else {
+    fprintf(stderr, "decode_message: %s\n", pn_code(err));
+    exit_code = 1;
   }
 }
 
@@ -102,28 +92,40 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
    case PN_DELIVERY: {
      /* A message has been received */
-     pn_link_t *link = NULL;
-     pn_delivery_t *dlv = pn_event_delivery(event);
-     if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
-       link = pn_delivery_link(dlv);
-       decode_message(dlv);
+     pn_delivery_t *d = pn_event_delivery(event);
+     pn_link_t *r = pn_delivery_link(d);
+     if (!pn_delivery_readable(d)) break;
+     for (size_t p = pn_delivery_pending(d); p > 0; p = pn_delivery_pending(d)) {
+       /* Append data to the receving buffer */
+       app->receiving.size += p;
+       app->receiving.start = (char*)realloc(app->receiving.start, app->receiving.size);
+       int recv = pn_link_recv(r, app->receiving.start + app->receiving.size - p, p);
+       if (recv < 0 && recv != PN_EOS) {
+         fprintf(stderr, "PN_DELIVERY: pn_link_recv error %s\n", pn_code(recv));
+         exit_code = 1;
+         break;
+       }
+     }
+     if (!pn_delivery_partial(d)) {
+       decode_message(app->receiving);
+       app->receiving = pn_rwbytes_null;
        /* Accept the delivery */
-       pn_delivery_update(dlv, PN_ACCEPTED);
+       pn_delivery_update(d, PN_ACCEPTED);
        /* done with the delivery, move to the next and free it */
-       pn_link_advance(link);
-       pn_delivery_settle(dlv);  /* dlv is now freed */
+       pn_link_advance(r);
+       pn_delivery_settle(d);  /* d is now freed */
 
        if (app->message_count == 0) {
          /* receive forever - see if more credit is needed */
-         if (pn_link_credit(link) < BATCH/2) {
+         if (pn_link_credit(r) < BATCH/2) {
            /* Grant enough credit to bring it up to BATCH: */
-           pn_link_flow(link, BATCH - pn_link_credit(link));
+           pn_link_flow(r, BATCH - pn_link_credit(r));
          }
        } else if (++app->received >= app->message_count) {
          /* done receiving, close the endpoints */
          printf("%d messages received\n", app->received);
-         pn_session_t *ssn = pn_link_session(link);
-         pn_link_close(link);
+         pn_session_t *ssn = pn_link_session(r);
+         pn_link_close(r);
          pn_session_close(ssn);
          pn_connection_close(pn_session_connection(ssn));
        }

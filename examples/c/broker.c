@@ -192,6 +192,7 @@ typedef struct broker_t {
   const char *container_id;     /* AMQP container-id */
   queues_t queues;
   bool finished;
+  pn_rwbytes_t receiving;       /* Partially received message data */
 } broker_t;
 
 void broker_stop(broker_t *b) {
@@ -245,13 +246,10 @@ static void session_unsub(broker_t *b, pn_session_t *ssn) {
   }
 }
 
-static int exit_code = 0;
-
 static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
-    exit_code = 1;              /* Remeber there was an unexpected error */
   }
 }
 
@@ -319,15 +317,22 @@ static void handle(broker_t* b, pn_event_t* e) {
    case PN_DELIVERY: {
      pn_delivery_t *d = pn_event_delivery(e);
      pn_link_t *r = pn_delivery_link(d);
-     if (pn_link_is_receiver(r) &&
-         pn_delivery_readable(d) && !pn_delivery_partial(d))
-     {
-       size_t size = pn_delivery_pending(d);
+     if (!pn_delivery_readable(d)) break;
+     for (size_t p = pn_delivery_pending(d); p > 0; p = pn_delivery_pending(d)) {
+       /* Append data to the reeving buffer */
+       b->receiving.size += p;
+       b->receiving.start = (char*)realloc(b->receiving.start, b->receiving.size);
+       int recv = pn_link_recv(r, b->receiving.start + b->receiving.size - p, p);
+       if (recv < 0 && recv != PN_EOS) {
+         fprintf(stderr, "PN_DELIVERY: pn_link_recv error %s\n", pn_code(recv));
+         break;
+       }
+     }
+     if (!pn_delivery_partial(d)) {
        /* The broker does not decode the message, just forwards it. */
-       pn_rwbytes_t m = { size, (char*)malloc(size) };
-       pn_link_recv(r, m.start, m.size);
        const char *qname = pn_terminus_get_address(pn_link_target(r));
-       queue_receive(b->proactor, queues_get(&b->queues, qname), m);
+       queue_receive(b->proactor, queues_get(&b->queues, qname), b->receiving);
+       b->receiving = pn_rwbytes_null;
        pn_delivery_update(d, PN_ACCEPTED);
        pn_delivery_settle(d);
        pn_link_flow(r, WINDOW - pn_link_credit(r));
@@ -419,5 +424,5 @@ int main(int argc, char **argv) {
   }
   pn_proactor_free(b.proactor);
   free(threads);
-  return exit_code;
+  return 0;
 }

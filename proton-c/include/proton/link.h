@@ -632,6 +632,8 @@ PN_EXTERN void pn_link_set_drain(pn_link_t *receiver, bool drain);
  * @param[in] n the buffer capacity
  * @return The number of bytes received, or an error code:
  *   - ::PN_EOS: The message has been completely received
+ *   - 0: No data available now.
+ *     If pn_delivery_partial() there will be further ::PN_DELIVERY events with more data.
  *   - ::PN_STATE_ERR: The link has no current delivery
  *   - ::PN_ABORTED: See pn_delivery_aborted()
  */

@@ -242,7 +242,7 @@ typedef struct pn_rwbytes_t {
  */
 PN_EXTERN pn_rwbytes_t pn_rwbytes(size_t size, char *start);
 
-static const pn_bytes_t pn_rwbytes_null = { 0, NULL };
+static const pn_rwbytes_t pn_rwbytes_null = { 0, NULL };
 
 /**
  * Holds the state flags for an AMQP endpoint.
