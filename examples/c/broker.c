@@ -399,9 +399,8 @@ int main(int argc, char **argv) {
   queues_init(&b.queues);
   b.container_id = argv[0];
   b.threads = 4;
-  int i = 1;
-  const char *host = (argc > i) ? argv[i++] : "";
-  const char *port = (argc > i) ? argv[i++] : "amqp";
+  const char *host = (argc > 1) ? argv[1] : "";
+  const char *port = (argc > 2) ? argv[2] : "amqp";
 
   /* Listen on addr */
   char addr[PN_MAX_ADDR];

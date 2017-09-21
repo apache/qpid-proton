@@ -175,12 +175,11 @@ void run(app_data_t *app) {
 
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
-  int i = 0;
-  app.container_id = argv[i++];   /* Should be unique */
-  app.host = (argc > 1) ? argv[i++] : "";
-  app.port = (argc > 1) ? argv[i++] : "amqp";
-  app.amqp_address = (argc > i) ? argv[i++] : "examples";
-  app.message_count = (argc > i) ? atoi(argv[i++]) : 10;
+  app.container_id = argv[0];   /* Should be unique */
+  app.host = (argc > 1) ? argv[1] : "";
+  app.port = (argc > 2) ? argv[2] : "amqp";
+  app.amqp_address = (argc > 3) ? argv[3] : "examples";
+  app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
