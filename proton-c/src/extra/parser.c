@@ -19,7 +19,7 @@
  *
  */
 
-#include <proton/parser.h>
+#include "parser.h"
 
 #include "platform/platform.h"
 #include "scanner.h"

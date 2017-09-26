@@ -490,7 +490,6 @@ set (qpid-proton-include
 set (qpid-proton-include-extra
   include/proton/handlers.h
   include/proton/messenger.h
-  include/proton/parser.h
   include/proton/reactor.h
   include/proton/selectable.h
   include/proton/url.h
