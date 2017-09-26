@@ -404,7 +404,6 @@ set (qpid-proton-include-generated
   )
 
 set (qpid-proton-private-includes
-  src/extra/scanner.h
   src/messenger/store.h
   src/messenger/subscription.h
   src/messenger/messenger.h
@@ -437,8 +436,6 @@ set (qpid-proton-private-includes
   )
 
 set (qpid-proton-extra
-  src/extra/parser.c
-  src/extra/scanner.c
   src/extra/url.c
 
   src/reactor/reactor.c
