@@ -30,7 +30,7 @@ if (BUILD_CPP)
   add_subdirectory(cpp)
 endif()
 
-install(DIRECTORY c cpp go javascript perl php
+install(DIRECTORY c cpp go
         DESTINATION ${PROTON_SHARE}/examples)
 
 install(DIRECTORY python
