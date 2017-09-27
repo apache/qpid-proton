@@ -206,7 +206,7 @@ static int ssl_failed(pn_transport_t *transport)
   // fake a shutdown so the i/o processing code will close properly
   SSL_set_shutdown(ssl->ssl, SSL_SENT_SHUTDOWN|SSL_RECEIVED_SHUTDOWN);
   // try to grab the first SSL error to add to the failure log
-  char buf[128] = "Unknown error.";
+  char buf[256] = "Unknown error";
   unsigned long ssl_err = ERR_get_error();
   if (ssl_err) {
     ERR_error_string_n( ssl_err, buf, sizeof(buf) );
@@ -909,6 +909,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
 
   do {
     work_pending = false;
+    ERR_clear_error();
 
     // Write to network bio as much as possible, consuming bytes/available
 
@@ -1058,6 +1059,8 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 
   do {
     work_pending = false;
+    ERR_clear_error();
+
     // first, get any pending application output, if possible
 
     if (!ssl->app_output_closed && ssl->out_count < ssl->out_size) {
