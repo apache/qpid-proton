@@ -62,7 +62,6 @@ EXCLUDE_PATTERNS        = */examples/*.c \
                           */include/proton/import_export.h \
                           */include/proton/log.h \
                           */include/proton/object.h \
-                          */include/proton/parser.h \
                           */include/proton/reactor.h \
                           */include/proton/sasl-plugin.h \
                           */include/proton/selectable.h \

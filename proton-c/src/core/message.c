@@ -29,7 +29,6 @@
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
-#include <proton/parser.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
