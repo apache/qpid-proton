@@ -41,7 +41,7 @@ typedef struct app_data_t {
 
   pn_proactor_t *proactor;
   pn_listener_t *listener;
-  pn_rwbytes_t message_buffer;
+  pn_rwbytes_t msgin, msgout;   /* Buffers for incoming/outgoing messages */
 
   /* Sender values */
   int sent;
@@ -56,11 +56,20 @@ static const int BATCH = 1000; /* Batch size for unlimited receive */
 
 static int exit_code = 0;
 
-static void check_condition(pn_event_t *e, pn_condition_t *cond) {
+/* Close the connection and the listener so so we will get a
+ * PN_PROACTOR_INACTIVE event and exit, once all outstanding events
+ * are processed.
+ */
+static void close_all(pn_connection_t *c, app_data_t *app) {
+  if (c) pn_connection_close(c);
+  if (app->listener) pn_listener_close(app->listener);
+}
+
+static void check_condition(pn_event_t *e, pn_condition_t *cond, app_data_t *app) {
   if (pn_condition_is_set(cond)) {
     fprintf(stderr, "%s: %s: %s\n", pn_event_type_name(pn_event_type(e)),
             pn_condition_get_name(cond), pn_condition_get_description(cond));
-    pn_connection_close(pn_event_connection(e));
+    close_all(pn_event_connection(e), app);
     exit_code = 1;
   }
 }
@@ -78,18 +87,18 @@ static pn_bytes_t encode_message(app_data_t* app) {
   pn_data_exit(body);
 
   /* encode the message, expanding the encode buffer as needed */
-  if (app->message_buffer.start == NULL) {
+  if (app->msgout.start == NULL) {
     static const size_t initial_size = 128;
-    app->message_buffer = pn_rwbytes(initial_size, (char*)malloc(initial_size));
+    app->msgout = pn_rwbytes(initial_size, (char*)malloc(initial_size));
   }
-  /* app->message_buffer is the total buffer space available. */
+  /* app->msgout is the total buffer space available. */
   /* mbuf wil point at just the portion used by the encoded message */
-  pn_rwbytes_t mbuf = pn_rwbytes(app->message_buffer.size, app->message_buffer.start);
+  pn_rwbytes_t mbuf = pn_rwbytes(app->msgout.size, app->msgout.start);
   int status = 0;
   while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
-    app->message_buffer.size *= 2;
-    app->message_buffer.start = (char*)realloc(app->message_buffer.start, app->message_buffer.size);
-    mbuf.size = app->message_buffer.size;
+    app->msgout.size *= 2;
+    app->msgout.start = (char*)realloc(app->msgout.start, app->msgout.size);
+    mbuf.size = app->msgout.size;
   }
   if (status != 0) {
     fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
@@ -99,26 +108,21 @@ static pn_bytes_t encode_message(app_data_t* app) {
   return pn_bytes(mbuf.size, mbuf.start);
 }
 
-#define MAX_SIZE 1024
-
-static void decode_message(pn_delivery_t *dlv) {
-  static char buffer[MAX_SIZE];
-  ssize_t len;
-  // try to decode the message body
-  if (pn_delivery_pending(dlv) < MAX_SIZE) {
-    // read in the raw data
-    len = pn_link_recv(pn_delivery_link(dlv), buffer, MAX_SIZE);
-    if (len > 0) {
-      // decode it into a proton message
-      pn_message_t *m = pn_message();
-      if (PN_OK == pn_message_decode(m, buffer, len)) {
-        pn_string_t *s = pn_string(NULL);
-        pn_inspect(pn_message_body(m), s);
-        printf("%s\n", pn_string_get(s));
-        pn_free(s);
-      }
-      pn_message_free(m);
-    }
+static void decode_message(pn_rwbytes_t data) {
+  pn_message_t *m = pn_message();
+  int err = pn_message_decode(m, data.start, data.size);
+  if (!err) {
+    /* Print the decoded message */
+    pn_string_t *s = pn_string(NULL);
+    pn_inspect(pn_message_body(m), s);
+    printf("%s\n", pn_string_get(s));
+    fflush(stdout);
+    pn_free(s);
+    pn_message_free(m);
+    free(data.start);
+  } else {
+    fprintf(stderr, "decode_message: %s\n", pn_code(err));
+    exit_code = 1;
   }
 }
 
@@ -132,36 +136,37 @@ static void handle_receive(app_data_t* app, pn_event_t* event) {
      pn_link_flow(l, app->message_count ? app->message_count : BATCH);
    } break;
 
-   case PN_DELIVERY: {
-     /* A message has been received */
-     pn_link_t *link = NULL;
-     pn_delivery_t *dlv = pn_event_delivery(event);
-     if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
-       link = pn_delivery_link(dlv);
-       decode_message(dlv);
-       /* Accept the delivery */
-       pn_delivery_update(dlv, PN_ACCEPTED);
-       /* done with the delivery, move to the next and free it */
-       pn_link_advance(link);
-       pn_delivery_settle(dlv);  /* dlv is now freed */
-
-       if (app->message_count == 0) {
-         /* receive forever - see if more credit is needed */
-         if (pn_link_credit(link) < BATCH/2) {
-           /* Grant enough credit to bring it up to BATCH: */
-           pn_link_flow(link, BATCH - pn_link_credit(link));
+   case PN_DELIVERY: {          /* Incoming message data */
+     pn_delivery_t *d = pn_event_delivery(event);
+     if (pn_delivery_readable(d)) {
+       pn_link_t *l = pn_delivery_link(d);
+       size_t size = pn_delivery_pending(d);
+       pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
+       m->size += size;
+       m->start = (char*)realloc(m->start, m->size);
+       int err = pn_link_recv(l, m->start, m->size);
+       if (err < 0 && err != PN_EOS) {
+         fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
+         pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
+         m->size = 0;           /* forget the data we accumulated */
+       } else if (!pn_delivery_partial(d)) { /* Message is complete */
+         decode_message(*m);
+         *m = pn_rwbytes_null;
+         pn_delivery_update(d, PN_ACCEPTED);
+         pn_delivery_settle(d);  /* settle and free d */
+         if (app->message_count == 0) {
+           /* receive forever - see if more credit is needed */
+           if (pn_link_credit(l) < BATCH/2) {
+             pn_link_flow(l, BATCH - pn_link_credit(l));
+           }
+         } else if (++app->received >= app->message_count) {
+           printf("%d messages received\n", app->received);
+           close_all(pn_event_connection(event), app);
          }
-       } else if (++app->received >= app->message_count) {
-         /* done receiving, close the endpoints */
-         printf("%d messages received\n", app->received);
-         pn_session_t *ssn = pn_link_session(link);
-         pn_link_close(link);
-         pn_session_close(ssn);
-         pn_connection_close(pn_session_connection(ssn));
        }
      }
-   } break;
-
+     break;
+   }
    default:
     break;
   }
@@ -197,8 +202,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
      if (pn_delivery_remote_state(d) == PN_ACCEPTED) {
        if (++app->acknowledged == app->message_count) {
          printf("%d messages sent and acknowledged\n", app->acknowledged);
-         pn_connection_close(pn_event_connection(event));
-         /* Continue handling events till we receive TRANSPORT_CLOSED */
+         close_all(pn_event_connection(event), app);
        }
      }
    } break;
@@ -244,24 +248,25 @@ static bool handle(app_data_t* app, pn_event_t* event) {
    }
 
    case PN_TRANSPORT_CLOSED:
-    check_condition(event, pn_transport_condition(pn_event_transport(event)));
-    pn_listener_close(app->listener); /* Finished */
+    check_condition(event, pn_transport_condition(pn_event_transport(event)), app);
     break;
 
    case PN_CONNECTION_REMOTE_CLOSE:
-    check_condition(event, pn_connection_remote_condition(pn_event_connection(event)));
-    pn_connection_close(pn_event_connection(event));
+    check_condition(event, pn_connection_remote_condition(pn_event_connection(event)), app);
+    pn_connection_close(pn_event_connection(event)); /* Return the close */
     break;
 
    case PN_SESSION_REMOTE_CLOSE:
-    check_condition(event, pn_session_remote_condition(pn_event_session(event)));
-    pn_connection_close(pn_event_connection(event));
+    check_condition(event, pn_session_remote_condition(pn_event_session(event)), app);
+    pn_session_close(pn_event_session(event)); /* Return the close */
+    pn_session_free(pn_event_session(event));
     break;
 
    case PN_LINK_REMOTE_CLOSE:
    case PN_LINK_REMOTE_DETACH:
-    check_condition(event, pn_link_remote_condition(pn_event_link(event)));
-    pn_connection_close(pn_event_connection(event));
+    check_condition(event, pn_link_remote_condition(pn_event_link(event)), app);
+    pn_link_close(pn_event_link(event)); /* Return the close */
+    pn_link_free(pn_event_link(event));
     break;
 
    case PN_PROACTOR_TIMEOUT:
@@ -270,7 +275,8 @@ static bool handle(app_data_t* app, pn_event_t* event) {
     break;
 
    case PN_LISTENER_CLOSE:
-    check_condition(event, pn_listener_condition(pn_event_listener(event)));
+    app->listener = NULL;        /* Listener is closed */
+    check_condition(event, pn_listener_condition(pn_event_listener(event)), app);
     break;
 
    case PN_PROACTOR_INACTIVE:
@@ -306,12 +312,11 @@ void run(app_data_t *app) {
 
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
-  int i = 0;
-  app.container_id = argv[i++];   /* Should be unique */
-  app.host = (argc > 1) ? argv[i++] : "";
-  app.port = (argc > 1) ? argv[i++] : "amqp";
-  app.amqp_address = (argc > i) ? argv[i++] : "examples";
-  app.message_count = (argc > i) ? atoi(argv[i++]) : 10;
+  app.container_id = argv[0];   /* Should be unique */
+  app.host = (argc > 1) ? argv[1] : "";
+  app.port = (argc > 2) ? argv[2] : "amqp";
+  app.amqp_address = (argc > 3) ? argv[3] : "examples";
+  app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
@@ -321,6 +326,7 @@ int main(int argc, char **argv) {
   pn_proactor_listen(app.proactor, app.listener, addr, 16);
   run(&app);
   pn_proactor_free(app.proactor);
-  free(app.message_buffer.start);
+  free(app.msgout.start);
+  free(app.msgin.start);
   return exit_code;
 }

@@ -327,27 +327,25 @@ static void handle(broker_t* b, pn_event_t* e) {
    }
    case PN_DELIVERY: {          /* Incoming message data */
      pn_delivery_t *d = pn_event_delivery(e);
-     pn_link_t *l = pn_delivery_link(d);
-     if (!pn_delivery_readable(d)) break;
-     pn_rwbytes_t *m = message_buffer(l);
-     for (size_t p = pn_delivery_pending(d); p > 0; p = pn_delivery_pending(d)) {
-       /* Append data to the reeving buffer */
-       m->size += p;
+     if (pn_delivery_readable(d)) {
+       pn_link_t *l = pn_delivery_link(d);
+       size_t size = pn_delivery_pending(d);
+       pn_rwbytes_t* m = message_buffer(l); /* Append data to incoming message buffer */
+       m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       int recv = pn_link_recv(l, m->start + m->size - p, p);
-       if (recv < 0 && recv != PN_EOS) {
-         fprintf(stderr, "PN_DELIVERY: pn_link_recv error %s\n", pn_code(recv));
-         break;
+       int err = pn_link_recv(l, m->start, m->size);
+       if (err < 0 && err != PN_EOS) {
+         fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
+         pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
+         m->size = 0;           /* forget the data we accumulated */
+       } else if (!pn_delivery_partial(d)) { /* Message is complete */
+         const char *qname = pn_terminus_get_address(pn_link_target(l));
+         queue_receive(b->proactor, queues_get(&b->queues, qname), *m);
+         *m = pn_rwbytes_null;  /* Reset the buffer for the next message*/
+         pn_delivery_update(d, PN_ACCEPTED);
+         pn_delivery_settle(d);
+         pn_link_flow(l, WINDOW - pn_link_credit(l));
        }
-     }
-     if (!pn_delivery_partial(d)) {
-       /* The broker does not decode the message, just forwards it. */
-       const char *qname = pn_terminus_get_address(pn_link_target(l));
-       queue_receive(b->proactor, queues_get(&b->queues, qname), *m);
-       *m = pn_rwbytes_null;
-       pn_delivery_update(d, PN_ACCEPTED);
-       pn_delivery_settle(d);
-       pn_link_flow(l, WINDOW - pn_link_credit(l));
      }
      break;
    }

@@ -26,8 +26,13 @@ def python_cmd(name):
     dir = os.path.dirname(__file__)
     return [sys.executable, os.path.join(dir, "..", "..", "python", name)]
 
-def receive_expect(n):
-    return ''.join('{"sequence"=%s}\n'%i for i in xrange(1, n+1)) + "%s messages received\n"%n
+def receive_expect_messages(n=10): return ''.join(['{"sequence"=%s}\n'%i for i in xrange(1, n+1)])
+def receive_expect_total(n=10): return "%s messages received\n"%n
+def receive_expect(n=10): return receive_expect_messages(n)+receive_expect_total(n)
+
+def send_expect(n=10): return "%s messages sent and acknowledged\n" % n
+def send_abort_expect(n=10): return "%s messages started and aborted\n" % n
+
 
 class Broker(object):
     def __init__(self, test):
@@ -51,38 +56,64 @@ class Broker(object):
 
 class CExampleTest(ProcTestCase):
 
+    def runex(self, name, port, *args):
+        """Run an example with standard arugments, return output"""
+        return self.proc([name, "", port, "examples"] + list(args)).wait_exit()
+
     def test_send_receive(self):
         """Send first then receive"""
         with Broker(self) as b:
-            s = self.proc(["send", "", b.port])
-            self.assertEqual("10 messages sent and acknowledged\n", s.wait_exit())
-            r = self.proc(["receive", "", b.port])
-            self.assertEqual(receive_expect(10), r.wait_exit())
+            self.assertEqual(send_expect(), self.runex("send", b.port))
+            self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
 
     def test_receive_send(self):
         """Start receiving  first, then send."""
         with Broker(self) as b:
-            r = self.proc(["receive", "", b.port]);
-            s = self.proc(["send", "", b.port]);
-            self.assertEqual("10 messages sent and acknowledged\n", s.wait_exit())
-            self.assertEqual(receive_expect(10), r.wait_exit())
+            self.assertEqual(send_expect(), self.runex("send", b.port))
+            self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
 
     def test_send_direct(self):
         """Send to direct server"""
         with TestPort() as tp:
             d = self.proc(["direct", "", tp.port])
             d.wait_re("listening")
-            self.assertEqual("10 messages sent and acknowledged\n", self.proc(["send", "", tp.port]).wait_exit())
-            self.assertIn(receive_expect(10), d.wait_exit())
+            self.assertEqual(send_expect(), self.runex("send", tp.port))
+            self.assertMultiLineEqual("listening\n"+receive_expect(), d.wait_exit())
 
     def test_receive_direct(self):
         """Receive from direct server"""
         with TestPort() as tp:
             d = self.proc(["direct", "", tp.port])
             d.wait_re("listening")
-            self.assertEqual(receive_expect(10), self.proc(["receive", "", tp.port]).wait_exit())
-            self.assertIn("10 messages sent and acknowledged\n", d.wait_exit())
+            self.assertMultiLineEqual(receive_expect(), self.runex("receive", tp.port))
+            self.assertEqual("listening\n10 messages sent and acknowledged\n", d.wait_exit())
 
+    def test_send_abort_broker(self):
+        """Sending aborted messages to a broker"""
+        with Broker(self) as b:
+            self.assertEqual(send_expect(), self.runex("send", b.port))
+            self.assertEqual(send_abort_expect(), self.runex("send-abort", b.port))
+            b.proc.wait_re("PN_DELIVERY error: PN_ABORTED\n"*10)
+            self.assertEqual(send_expect(), self.runex("send", b.port))
+            expect = receive_expect_messages(10)+receive_expect_messages(10)+receive_expect_total(20)
+            self.assertMultiLineEqual(expect, self.runex("receive", b.port, "20"))
+
+    def test_send_abort_direct(self):
+        """Send aborted messages to the direct server"""
+        with TestPort() as tp:
+            d = self.proc(["direct", "", tp.port, "examples", "20"])
+            expect = "listening\n"
+            d.wait_re(expect)
+            self.assertEqual(send_expect(), self.runex("send", tp.port))
+            expect += receive_expect_messages()
+            d.wait_re(expect)
+            self.assertEqual(send_abort_expect(), self.runex("send-abort", tp.port))
+            expect += "PN_DELIVERY error: PN_ABORTED\n"*10
+            d.wait_re(expect)
+            self.assertEqual(send_expect(), self.runex("send", tp.port))
+            expect += receive_expect_messages()+receive_expect_total(20)
+            self.maxDiff = None
+            self.assertMultiLineEqual(expect, d.wait_exit())
 
 if __name__ == "__main__":
     unittest.main()
