@@ -193,7 +193,7 @@ template <class V> void scalar_test_group(int& failed) {
     RUN_TEST(failed, (simple_integral_test<V, unsigned short>()));
     RUN_TEST(failed, (simple_integral_test<V, unsigned int>()));
     RUN_TEST(failed, (simple_integral_test<V, unsigned long>()));
-#if PN_CPP_HAS_LONG_LONG
+#if PN_CPP_HAS_LONG_LONG_TYPE
     RUN_TEST(failed, (simple_integral_test<V, long long>()));
     RUN_TEST(failed, (simple_integral_test<V, unsigned long long>()));
 #endif

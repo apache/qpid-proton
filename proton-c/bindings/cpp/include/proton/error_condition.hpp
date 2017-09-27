@@ -57,11 +57,11 @@ class error_condition {
     /// description, and informational properties.
     PN_CPP_EXTERN error_condition(std::string name, std::string description, proton::value properties);
 
-#if PN_CPP_HAS_DEFAULTED_FUNCTIONS
+#if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
     /// @cond INTERNAL
     error_condition(const error_condition&) = default;
-    error_condition(error_condition&&) = default;
     error_condition& operator=(const error_condition&) = default;
+    error_condition(error_condition&&) = default;
     error_condition& operator=(error_condition&&) = default;
     /// @endcond
 #endif

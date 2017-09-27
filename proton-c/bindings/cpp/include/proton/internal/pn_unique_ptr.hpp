@@ -60,7 +60,7 @@ template <class T> class pn_unique_ptr {
     bool operator !() const { return !get(); }
     void swap(pn_unique_ptr& x) { std::swap(ptr_, x.ptr_); }
 
-#if PN_CPP_HAS_UNIQUE_PTR
+#if PN_CPP_HAS_STD_UNIQUE_PTR
     operator std::unique_ptr<T>() { T *p = ptr_; ptr_ = 0; return std::unique_ptr<T>(p); }
 #endif
 

@@ -62,11 +62,9 @@ class void_function0;
 class work_queue;
 
 namespace v03 { class work; }
-#if PN_CPP_HAS_STD_FUNCTION
-namespace v11 { class work; }
-#endif
 
-#if PN_CPP_HAS_STD_FUNCTION
+#if PN_CPP_HAS_LAMBDAS
+namespace v11 { class work; }
 using v11::work;
 #else
 using v03::work;

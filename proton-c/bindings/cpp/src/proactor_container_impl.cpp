@@ -47,7 +47,7 @@
 # include <thread>
 #endif
 
-#if PN_CPP_HAS_RANDOM
+#if PN_CPP_HAS_HEADER_RANDOM
 # include <random>
 #endif
 
@@ -240,7 +240,7 @@ void container::impl::reconnect(pn_connection_t* pnc) {
 }
 
 namespace {
-#if PN_CPP_HAS_RANDOM && PN_CPP_HAS_THREAD_LOCAL
+#if PN_CPP_HAS_HEADER_RANDOM && PN_CPP_HAS_THREAD_LOCAL
 duration random_between(duration min, duration max)
 {
     static thread_local std::default_random_engine gen;
