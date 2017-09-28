@@ -18,9 +18,6 @@
 #
 
 module Qpid::Proton::Messenger
-  warn "[DEPRECATION] `Qpid::Proton::Messenger` is deprecated, use `Qpid::Proton::Container`"
-
-  # @deprecated Please use {Qpid::Proton::Container} instead.
   #
   # The +Messenger+ class defines a high level interface for
   # sending and receiving Messages. Every Messenger contains

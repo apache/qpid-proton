@@ -38,10 +38,6 @@ module Qpid::Proton
     # @!attribute user
     #   The user name for authentication.
     #
-    #   A client sets authentication data with the :user and :password options
-    #   to {Container#connect}. On a server this returns the authenticated name
-    #   from the client. It makes no sense to set this on the server side.
-    #
     #   @return [String] the user name
     proton_accessor :user
 

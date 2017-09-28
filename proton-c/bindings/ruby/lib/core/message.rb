@@ -407,24 +407,12 @@ module Qpid::Proton
       Cproton.pn_message_get_content_type(@impl)
     end
 
-    # Sets the message content.
-    #
-    # *WARNING:* This method has been deprecated. Please use #body= instead to
-    # set the content of a message.
-    #
-    # ==== Options
-    #
-    # * content - the content
-    #
+    # @deprecated use {#body=}
     def content=(content)
       Cproton.pn_message_load(@impl, content)
     end
 
-    # Returns the message content.
-    #
-    # *WARNING:* This method has been deprecated. Please use #body instead to
-    # retrieve the content of a message.
-    #
+    # @deprecated use {#body}
     def content
       size = 16
       loop do

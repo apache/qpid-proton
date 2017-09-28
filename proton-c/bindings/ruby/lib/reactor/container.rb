@@ -43,9 +43,6 @@ module Qpid::Proton::Reactor
   # This is an extension to the Reactor classthat adds convenience methods
   # for creating instances of Qpid::Proton::Connection, Qpid::Proton::Sender
   # and Qpid::Proton::Receiver.
-  #
-  # @example
-  #
   class Container < Reactor
 
     include Qpid::Proton::Util::Reactor
@@ -74,31 +71,27 @@ module Qpid::Proton::Reactor
       end
     end
 
-    # TODO aconway 2017-08-17: fill out options
-
-    # Connects to a remote AMQP endpoint and sends an AMQP "open" frame.
+    # Initiate an AMQP connection.
     #
-    # @param url [#to_url] Connect to URL host:port.
-    #   If URL has user:password use them for authentication.
+    # @param url [String] Connect to URL host:port, using user:password@ if present
+    # @param opts [Hash] Named options
+    #   For backwards compatibility, can be called with a single parameter opts.
     #
+    # @option opts [String] :url Connect to URL host:port using user:password@ if present.
     # @option opts [String] :user user name for authentication if not given by URL
     # @option opts [String] :password password for authentication if not given by URL
-    #
-    # @option opts [Numeric] :idle_timeout seconds before closing an idle connection
-    #
+    # @option opts [Numeric] :idle_timeout seconds before closing an idle connection,
+    #   can be a fractional value.
     # @option opts [Boolean] :sasl_enabled Enable or disable SASL.
-    #
     # @option opts [Boolean] :sasl_allow_insecure_mechs Allow mechanisms that disclose clear text
     #   passwords, even over an insecure connection. By default, such mechanisms are only allowed
     #   when SSL is enabled.
-    #
     # @option opts [String] :sasl_allowed_mechs the allowed SASL mechanisms for use on the connection.
     #
-    # @param url [Hash] *deprecated* if url is a Hash and opts is unspecified, treat it as opts.
-    # @option opts [#to_url] :url *deprecated* use the url parameter
-    # @option opts [Enumerable<#to_url>] :urls *deprecated* use the url parameter
-    # @option opts [#to_url] :address *deprecated* use the url parameter
-    # @option opts [#to_url] :heartbeat *deprecated* alias for :idle_timeout, but in milliseconds
+    # @option opts [String] :address *deprecated* use the :url option
+    # @option opts [Numeric] :heartbeat milliseconds before closing an idle connection.
+    #   *deprecated* use :idle_timeout => heartbeat/1000 
+    #
     # @return [Connection] the new connection
     #
     def connect(url, opts = {})
@@ -135,12 +128,12 @@ module Qpid::Proton::Reactor
     #
     # @param context [String, URL] The context.
     # @param opts [Hash] Additional options.
-    # @param opts [String, Qpid::Proton::URL] The target address.
-    # @param opts [String] :source The source address.
-    # @param opts [Boolean] :dynamic
-    # @param opts [Object] :handler
-    # @param opts [Object] :tag_generator The tag generator.
-    # @param opts [Hash] :options Addtional link options
+    # @option opts [String, Qpid::Proton::URL] The target address.
+    # @option opts [String] :source The source address.
+    # @option opts [Boolean] :dynamic
+    # @option opts [Object] :handler
+    # @option opts [Object] :tag_generator The tag generator.
+    # @option opts [Hash] :options Addtional link options
     #
     # @return [Sender] The sender.
     #

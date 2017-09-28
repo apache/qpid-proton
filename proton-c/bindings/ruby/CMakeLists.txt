@@ -38,6 +38,29 @@ set_target_properties(cproton-ruby
     OUTPUT_NAME "cproton"
     LINK_FLAGS "${CATCH_UNDEFINED}" )
 
+##  Make a gem
+
+file(GLOB_RECURSE RUBY_SRC RELATIVE . *.rb *.rdoc)
+
+find_program(GEM_EXE gem DOC "Program to build and install ruby gem packages")
+mark_as_advanced(GEM_EXE)
+if (GEM_EXE)
+  configure_file(qpid_proton.gemspec.in qpid_proton.gemspec)
+  add_custom_command(
+    OUTPUT ${bin}/qpid_proton-${PN_VERSION}.gem
+    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}/rubyRUBY_wrap.c
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/lib ${bin}/lib
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/ext ${bin}/ext
+    COMMAND ${CMAKE_COMMAND} -E copy ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}
+    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/ext/cproton/cproton.c
+    COMMAND ${GEM_EXE} build qpid_proton.gemspec
+    WORKING_DIRECTORY ${bin})
+
+  add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )
+endif ()
+
+## CMake-based install
+
 if (CHECK_SYSINSTALL_RUBY)
   execute_process(COMMAND ${RUBY_EXECUTABLE}
     -r rbconfig -e "print RbConfig::CONFIG['vendorarchdir'] || ''"
@@ -94,4 +117,23 @@ if (result EQUAL 0)  # Have minitest
 else()
   # No minitest
   message(WARNING "ruby tests will not run, minitest is not installed")
+endif()
+
+## Documentation
+
+find_program(YARD_EXE "yard")
+if (YARD_EXE)
+  add_custom_command(
+    OUTPUT ${bin}/doc
+    WORKING_DIRECTORY ${src}
+    COMMAND ${YARD_EXE} -q -o ${bin}/doc -b ${bin}/.yardoc --no-private -r README.rdoc
+    DEPENDS ${RUBY_SRC}
+    )
+  add_custom_target(docs-ruby DEPENDS ${bin}/doc)
+  add_dependencies (docs docs-ruby)
+  install(DIRECTORY "${bin}/doc/"
+    DESTINATION "${PROTON_SHARE}/docs/api-ruby"
+    COMPONENT documentation
+    OPTIONAL)
+  set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES doc)
 endif()

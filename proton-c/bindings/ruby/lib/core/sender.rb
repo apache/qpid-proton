@@ -58,7 +58,7 @@ module Qpid::Proton
     #
     # @param bytes [Array] The bytes to send.
     #
-    # @return n [Integer] The number of bytes sent.
+    # @return [Integer] The number of bytes sent.
     #
     def stream(bytes)
       Cproton.pn_link_send(@impl, bytes)

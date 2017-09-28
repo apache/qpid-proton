@@ -21,8 +21,6 @@ module Qpid::Proton::Handler
 
   # A general purpose handler that simplifies processing events.
   #
-  # @example
-  #
   class MessagingHandler < Qpid::Proton::BaseHandler
 
     attr_reader :handlers

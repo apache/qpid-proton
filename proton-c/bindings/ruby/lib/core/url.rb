@@ -66,11 +66,6 @@ module Qpid::Proton
       "#{@scheme}://#{@username.nil? ? '' : @username}#{@password.nil? ? '' : '@' + @password + ':'}#{@host}:#{@port}/#{@path}"
     end
 
-    # Return self
-    def to_url()
-      self
-    end
-
     private
 
     def defaults
@@ -78,12 +73,5 @@ module Qpid::Proton
       @host = @host || "0.0.0.0"
       @port = @port || 5672
     end
-  end
-end
-
-class String
-  # Convert this string to a URL
-  def to_url()
-    return Qpid::Proton::URL.new(self)
   end
 end

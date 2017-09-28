@@ -172,10 +172,7 @@ module Qpid::Proton::Codec
       return (dtype == -1) ? nil : dtype
     end
 
-    # Return the type object for the current node
-    #
-    # @param [Integer] The object type.
-    #
+    # @return [Integer] The type object for the current node.
     # @see #type_code
     #
     def type

@@ -25,7 +25,7 @@ module Qpid::Proton::Util
     # Convenience method to receive messages from a delivery.
     #
     # @param delivery [Qpid::Proton::Delivery] The delivery.
-    # @param message [Qpid::Proton::Message] The message to use.
+    # @param msg [Qpid::Proton::Message] The message to use.
     #
     # @return [Qpid::Proton::Message] the message
     #

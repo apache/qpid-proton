@@ -24,9 +24,9 @@ module Qpid::Proton::Reactor
     def initialize(values)
       @values = values
       if @values.is_a? Enumerable
-        @values = @values.map { |u| u.to_url }
+        @values = @values.map { |u| Qpid::Proton::URL.new(u) }
       else
-        @values = [values.to_url]
+        @values = [Qpid::Proton::URL.new(values)]
       end
       @iter = @values.each
     end
