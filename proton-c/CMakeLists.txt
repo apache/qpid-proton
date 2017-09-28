@@ -329,6 +329,21 @@ pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
 pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
 pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
 
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # No change needed for windows already use correct separator
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Just change ';'->':'
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    string (REGEX REPLACE ";" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
+
 add_subdirectory(docs/api)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
@@ -716,21 +731,6 @@ install (FILES
 # c tests:
 
 add_subdirectory(src/tests)
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # No change needed for windows already use correct separator
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # Just change ';'->':'
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    string (REGEX REPLACE ";" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)

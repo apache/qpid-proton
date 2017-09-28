@@ -102,15 +102,20 @@ if(SWIG_FOUND)
 
 endif()
 
-# Shouldn't need to modify below here when adding new language binding
+
+set(BUILD_ONLY "${BINDINGS}" CACHE STRING
+  "Only bindings in this list are built by default. Explicit BUILD_XXX=ON settings take precendence")
+
 foreach(BINDING ${BINDINGS})
   string(TOUPPER ${BINDING} UBINDING)
-  # Check whether default was overridden
-  if (NOBUILD_${UBINDING})
-    set ("DEFAULT_${UBINDING}" OFF)
-  endif ()
+  list(FIND BUILD_ONLY ${BINDING} N)
+  if("NOBUILD_${UBINDING}" OR ( N EQUAL -1 ) ) # Over-ridden or not on the BUILD_ONLY list
+    set("DEFAULT_${UBINDING}" OFF)
+  endif()
   option("BUILD_${UBINDING}" "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
   if (BUILD_${UBINDING})
     add_subdirectory(${BINDING})
   endif ()
 endforeach(BINDING)
+
+unset(BUILD_ONLY)               # Only relevant to set initial defaults.
