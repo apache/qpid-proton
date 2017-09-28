@@ -71,6 +71,8 @@ struct pn_ssl_domain_t {
   // settings used for all connections
   char *trusted_CAs;
 
+  char *ciphers;
+
   int   ref_count;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
   int default_seclevel;
@@ -561,6 +563,7 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
     if (domain->ctx) SSL_CTX_free(domain->ctx);
     if (domain->keyfile_pw) free(domain->keyfile_pw);
     if (domain->trusted_CAs) free(domain->trusted_CAs);
+    if (domain->ciphers) free(domain->ciphers);
     free(domain);
   }
 }
@@ -600,11 +603,22 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
   // bug in older versions of OpenSSL: servers may request client cert even if anonymous
   // cipher was negotiated.  TLSv1 will reject such a request.  Hack: once a cert is
   // configured, allow only authenticated ciphers.
-  if (!SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_AUTHENTICATE )) {
+  if (!domain->ciphers && !SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_AUTHENTICATE )) {
       ssl_log_error("Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
       return -6;
   }
 
+  return 0;
+}
+
+int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
+{
+  if (!SSL_CTX_set_cipher_list(domain->ctx, ciphers)) {
+    ssl_log_error("Failed to set cipher list to %s", ciphers);
+    return -6;
+  }
+  if (domain->ciphers) free(domain->ciphers);
+  domain->ciphers = pn_strdup(ciphers);
   return 0;
 }
 

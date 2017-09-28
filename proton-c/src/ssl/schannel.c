@@ -573,6 +573,11 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   return 0;
 }
 
+int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
+{
+  return -1;
+}
+
 const pn_io_layer_t ssl_layer = {
     process_input_ssl,
     process_output_ssl,

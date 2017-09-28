@@ -227,6 +227,18 @@ PN_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
                                                     const char *trusted_CAs);
 
 /**
+ * Configure the list of permitted ciphers
+ *
+ * @note The syntax of the permitted list is undefined and will depend on the
+ * underlying SSL implementation.
+ *
+ * @param[in] domain the ssl domain to configure.
+ * @param[in] ciphers string representing the cipher list
+ * @return 0 on success
+ */
+PN_EXTERN int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers);
+
+/**
  * Permit a server to accept connection requests from non-SSL clients.
  *
  * This configures the server to "sniff" the incoming client data stream, and dynamically
