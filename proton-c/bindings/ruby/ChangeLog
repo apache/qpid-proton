@@ -1,36 +1,185 @@
-Version 0.7:
-	* PROTON-452: Exposed Messenger interrupt method.
-	* PROTON-454: Add route method to Messenger.
-	* PROTON-455: Add rewrite method to Messenger.
-	* PROTON-456: Add password property to Messenger.
 
-Version 0.6:
-	* PROTON-427: Removed the flag argument from Messenger.settle.
+version 0.17.0:
+
+version 0.16.0:
+	* PROTON-1350 PROTON-1351: Introduce proton-c core library - Created new core proton library qpid-proton-core which only contains   protocol processsing and no IO. - Rearranged source tree to separate core protocol code and io/reactor/extra code - Rearranged code so that compiler dependent code is isolated and platform (OS)   dependent code is isolated
+
+version 0.15.0:
+	* PROTON-1282: Seg Fault in Ruby Messenger pn_messenger_free
+
+version 0.14.0:
+
+version 0.13.1:
+
+version 0.13.0:
+
+version 0.12.2:
+
+version 0.12.1:
+
+version 0.12.0:
+	* PROTON-1059: ruby binding broken in 0.11 release and on master
+	* PROTON-949: fix proton build with ccache swig
+
+version 0.11.1:
+	* PROTON-1059: ruby binding broken in 0.11 release and on master
+
+version 0.11.0:
+	* PROTON-949: fix proton build with ccache swig
+
+version 0.10:
+	* PROTON-904: No longer need to include libuuid header
+	* PROTON-781: Update CMake to install new Ruby packages.
+	* PROTON-781: Added the set of LinkOption classes to Ruby.
+	* PROTON-781: Added support for reactors to the Ruby Endpoint class.
+	* PROTON-781: Added Container to the Ruby reactive APIs.
+	* PROTON-781: Added SessionPerConnection to the Ruby reactive APIs.
+	* PROTON-781: Added Backoff to the Ruby reactive APIs.
+	* PROTON-781: Added Connector to the Ruby reactive APIs.
+	* PROTON-781: Added URLs to the Ruby reactive APIs.
+	* PROTON-781: Added the URL class to the Ruby core APIs.
+	* PROTON-781: Added Reactor and Task to the ClassWrapper
+	* PROTON-781: Added the Reactor mixin to the Ruby reactive APIs.
+	* PROTON-781: Added the Handler mixin to the Ruby reactive APIs.
+	* PROTON-781: Added the Timeout mixin to the Ruby APIs.
+	* PROTON-781: Added GlobalOverrides to the Ruby reactive APIs.
+	* PROTON-781: Added SSLConfig to the Ruby reactive APIs.
+	* PROTON-781: Added reactor support to the Ruby Event class.
+	* PROTON-781: Added the Reactor class to the Ruby reactor APIs.
+	* PROTON-781: Added Acceptor to the Ruby reactive APIs.
+	* PROTON-781: Added the Task class to the Ruby reactor APIs.
+	* PROTON-781: Added MessagingHandler to the Ruby reactive APIs.
+	* PROTON-781: Added OutgoingMessageHandler to the Ruby reactive APIs.
+	* PROTON-781: Added IncomingMessageHandler to the Ruby reactive APIs.
+	* PROTON-781: Added the BaseHandler class to the Ruby reactive APIs.
+	* PROTON-781: Added the CFlowController class to the Ruby reactive APIs.
+	* PROTON-781: Added EndpointStateHandler to the Ruby reactive APIs.
+	* PROTON-781: Added the Acking mixin to the Ruby reactive APIs.
+	* PROTON-781: Refactored the Ruby Selectable class.
+	* PROTON-781: Repackaged the Ruby Selectable class to Qpid::Proton.
+	* PROTON-781: Deleted the Ruby Filter mixin.
+	* PROTON-781: Added the WrappedHandler class to the Ruby reactor APIs.
+	* PROTON-799: Update CMake INSTALL for 81a5449
+	* PROTON-914: Fix for getting the SSL peer hostname in Ruby.
+	* PROTON-898: Update Ruby bindings to use pn_selectable_get_fd
+	* PROTON-799: Test for the Wrapper and rbkey system
+	* PROTON-799: Adjusted the Ruby error macro
+	* PROTON-799: Added yardopts
+	* PROTON-799: Added the Event classes to the Ruby engine APIs.
+	* PROTON-799: Added the ClassWrapper mixin for the Ruby engine APIs.
+	* PROTON-799: Added the Transport class to the Ruby engine APIs.
+	* PROTON-799: Added the SSL classes to the Ruby engine APIs.
+	* PROTON-799: Added the SASL class to the Ruby engine APIs.
+	* PROTON-799: Added the SASLError and TransportError errors to Ruby.
+	* PROTON-799: Added the Connection class to the Ruby engine APIs.
+	* PROTON-799: Added the Receiver class to the Ruby engine APIs.
+	* PROTON-799: Added the Sender class to the Ruby engine APIs.
+	* PROTON-799: Added the Link class to the Ruby engine APIs.
+	* PROTON-799: Added the Delivery class to the Ruby engine APIs.
+	* PROTON-799: Added the Disposition class to the Ruby engine APIs.
+	* PROTON-799: Added the Terminus class to the Ruby engine APIs.
+	* PROTON-799: Added the Session class to the Ruby engine APIs.
+	* PROTON-799: Added the Endpoint class to the Ruby engine APIs.
+	* PROTON-799: Added the Wrapper mixin to the Ruby engine APIs.
+	* PROTON-799: Added the Condition class to the Ruby engine APIs.
+	* PROTON-799: Added the UUID mixin for the Ruby reactive APIs.
+	* PROTON-799: Created a utility module for the Ruby Engine APIs.
+	* PROTON-799: Added the Collector class to the Ruby engine APIs.
+	* PROTON-799: Added the pn_rbkey_t type to the Ruby APIs.
+	* PROTON-799: Created a wrapper helper module for Ruby bindings.
+	* PROTON-799: Added a constants value mixin to the Ruby bindings.
+	* PROTON-799: Added the object/object= methods to Ruby Data class
+	* PROTON-799: Updated the Ruby namespaces.
+	* PROTON-799: Rearranged Ruby library.
+	* PROTON-883: Fixed using a pointer value as a size - It's not clear to me how the warning message this caused went ignored - It's also not clear to me why this error passed the tests without   crashing, probably the ruby tests need improving.
+	* PROTON-883: Wrap pn_transport_peek for Ruby.
+	* PROTON-873: Replaced send with __send__ in Ruby Mapping class
+
+version 0.9.1:
+
+version 0.9:
+	* PROTON-822: removed some references I missed in my prior purge of deprecated message cruft
+	* PROTON-822: removed deprecated message save/load as it has been deprecated for a while now and was also the cause of a valgrind error
+	* PROTON-775: Ensure that annotation keys in Ruby are encoded as symbols.
+	* PROTON-737: add missing PN_STATE_ERR error to ruby
+	* PROTON-765: Fix Ruby's support for 64-bit values on 32-bit systems
+	* PROTON-755: Changed how the Data rspec test sets a single random character.
+	* PROTON-755: Add SecureRandom for use by Ruby 1.8 tests
+	* PROTON-755: Updated rspec tests to use the newer expect syntax
+	* PROTON-752: Release the GIL on blocking calls in Ruby.
+	* PROTON-736: Tweaked how Ruby 1.8 determines if a string is UTF-8
+	* PROTON-752: Provide a non-blocking means to receive messages in Ruby.
+	* PROTON-747: Around wrappers for Ruby Messenger methods that raise errors
+	* PROTON-736: Replace missed force_encoding with encode
+	* PROTON-743: Provide a means to clear errors in a Ruby Messenger.
+	* PROTON-746: Fix encoding a Ruby symbol into a message body.
+	* PROTON-736: Default Ruby 1.8 encoding to be binary unless explicit
+	* PROTON-736: Created the UTFString and BinaryString classes for Ruby.
+	* PROTON-739: Add TTL to Ruby Messenger subscribe method.
+	* PROTON-736: Only encode Ruby strings as UTF-8 if it says it's UTF-8
+	* PROTON-736: Ruby Message does not return all content.
+
+version 0.8:
+	* PROTON-693: Python Url class to wrap C function pni_parse_url
+	* PROTON-651: remove the extraineous 'PN_' if under the proton namespace.
+	* PROTON-651: added version constants for python, php, and ruby bindings
+	* PROTON-615: Fix binding dependencies
+	* PROTON-549: fixed warnings from ruby binding
+	* PROTON-531: Removed Selectable.killable? from Ruby bindings
+	* PROTON-531: Created the Selectable class for Ruby.
+	* PROTON-531: Expose the passive mode in Ruby bindings.
+
+version 0.7:
+	* PROTON-550: Fail build if Ruby is enabled but missing dependencies.
+	* PROTON-551: Fixed a typo in the Ruby Messenger blocking call.
+	* PROTON-538: more readme fixes and install tweaks
+	* PROTON-538: fixed install to not use irregular paths, marked a lot of noisy variables as advanced, removed extra level of caching from cmake variables that had confusing effects, updated the readme to match what the build actually does
+	* PROTON-445: Dynamic languages honor CMAKE_INSTALL_PREFIX
+
+version 0.6:
+	* PROTON-482: Fix the Ruby install directory.
+	* PROTON-479: Fixed typo in status
+	* PROTON-479: Added PENDING status to Ruby Trackers
+	* PROTON-260   Improve API rdoc comments for Ruby.
+	* PROTON-464: Install Ruby bindings to install prefix if specified.
+	* PROTON-456: Added password property to Ruby Messenger class.
+	* PROTON-455: Added rewrite method to Ruby Messenger class.
+	* PROTON-454: Added the route method to Ruby's Messenger class.
+	* PROTON-452: Expose the Messenger interrupt method in Ruby.
+	* PROTON-450: Use random ports for Ruby Rspec tests.
+	* PROTON-448: Backing out the Ruby data change.
+	* PROTON-448: Added missed ChangeLog entry
+	* PROTON-448: Added support for Data encode/decode to Ruby Swig.
+	* PROTON-431: Fixed the Ruby spec tests.
+	* PROTON-273: Removed the content Rspec test for Ruby.
+	* PROTON-427: Removed the flag argument from Messenger.settle
 
 version 0.5:
-	* Duck typed the Array class to work with Qpid::Proton::Data.
-	* Duck typed the Hash class to work with Qpid::Proton::Data.
-	* Fixed broken Rspec tests due to changes in under Proton C.
-	  - Messenger.receive can accept a negative maximum
-	  - When testing bad subscribe attempts, tests now use a random string.
-	* Fixed encoding decimal128 values.
-	* Added properties field to Qpid::Proton::Message.
-	* Hashes are now automatically encoded into Data objects.
-	* Fixed encoding Time objects.
-	* Added instructions field to Qpid::Proton::Message.
-	* Added annotations field to Qpid::Proton::Message.
-	* Fixed encoding Symbol objects.
-	* Added body field to Qpid::Proton::Message.
+	* PROTON-406: Fix installing the Ruby bindings.
+	* PROTON-399: Ruby bindings now install with the rest of Proton.
+	* PROTON-369: Add the properties= method to Ruby Message.
+	* PROTON-380: Added the body property to Ruby Message class.
+	* PROTON-379: Added annotations property to Ruby Message class.
+	* PROTON-381: Fixed encoding a Ruby symbol into a Data object.
+	* PROTON-378: Add instructions property to Ruby Message class.
+	* PROTON-369: Ruby Message.clear clears out properties
+	* PROTON-377: Ruby automatically encodes an instance of Time.
+	* PROTON-376: Fix how a ::hash is automatically added to Data in Ruby
+	* PROTON-369: Add properties field to Qpid:Proton::Message
+	* PROTON-341: Update the Ruby interop tests.
+	* PROTON-322: Extend the Ruby Hash class to work with the Data class.
+	* PROTON-322: Extended the Ruby Array class to work with the Data class.
+	* PROTON-306: Fixes to the Ruby list helper type for Data.
+	* PROTON-304: Removed accept mode from the Ruby bindings.
+	* PROTON-227: Added missing elements to the Rdoc for qpid::proton::Data
+	* PROTON-215: Added ruby interop test.
+	* PROTON-227: Created the Data class for the Ruby bindings.
 
 version 0.4:
-	* No language-specific features developed in this release.
 
 version 0.3:
-	* No language-specific features developed in this release.
-	* Dropped the Rakefile in favor of packaging with a gemspec.
-	* Removed the qpid_proton/version.rb file as unused.
+	* PROTON-188: applied modified patch
 
 version 0.2:
-	* First implementation of the stable APIs on top of swig.
-	* Wrote the Rspec tests to test the new APIs.
-	* Added SimpleCov support to monitor Rspec test coverage.
+
+version 0.1:

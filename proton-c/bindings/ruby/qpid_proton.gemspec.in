@@ -1,16 +1,13 @@
-# -*- encoding: utf-8 -*-
+# -- encoding: utf-8 --
 lib = File.expand_path('lib/', __FILE__)
 $:.unshift lib unless $:.include?(lib)
 
-# Generate the Swig wrapper
-system "swig -ruby -I/usr/include -o ext/cproton/cproton.c ruby.i"
-
 Gem::Specification.new do |s|
   s.name        = "qpid_proton"
-  s.version     = "0.3"
+  s.version     = "@PN_VERSION@"
   s.licenses    = ['Apache-2.0']
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["Darryl L. Pierce"]
+  s.authors     = ["Darryl L. Pierce", "Alan Conway"]
   s.email       = ["proton@qpid.apache.org"]
   s.homepage    = "http://qpid.apache.org/proton"
   s.summary     = "Ruby language bindings for the Qpid Proton messaging framework"
@@ -31,6 +28,5 @@ EOF
                 "lib/**/*.rb",
                 ]
   s.require_path = 'lib'
-  s.add_runtime_dependency "json"
+  s.add_runtime_dependency "json", "~> 0"
 end
-

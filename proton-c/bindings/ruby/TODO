@@ -1,14 +1,8 @@
 Proton Ruby bindings TODO List
 ========================================================================
 
-Beyond this simple laundry list, you can find the list of bugs and
-enhacements to be fixed by going to Apache Proton JIRA instance:
+You can find the list of bugs and enhacements to be fixed at:
 
-    https://issues.apache.org/jira/browse/PROTON
+  https://issues.apache.org/jira/issues/?jql=project%20%3D%20PROTON%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)%20AND%20component%20%3D%20ruby-binding
 
-Fixes & Improvements
-========================================================================
-* Fix the data mangling that occurs at specific lengths.
-* Find a better way to map between nil/empty strings for pn_atom_t.
-* Fill out the remaining tests for Qpid::Proton::Messenger
 

@@ -17,6 +17,11 @@
 # under the License.
 #
 
+set(src "${CMAKE_CURRENT_SOURCE_DIR}")
+set(bin "${CMAKE_CURRENT_BINARY_DIR}")
+
+## Build the swig library
+
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
     ${PROTON_HEADERS}
@@ -45,15 +50,14 @@ file(GLOB_RECURSE RUBY_SRC RELATIVE . *.rb *.rdoc)
 find_program(GEM_EXE gem DOC "Program to build and install ruby gem packages")
 mark_as_advanced(GEM_EXE)
 if (GEM_EXE)
-  configure_file(qpid_proton.gemspec.in qpid_proton.gemspec)
+  # Copy source and generated files to the build tree so we can build the gem in one place
+  configure_file(${src}/qpid_proton.gemspec.in ${bin}/qpid_proton.gemspec)
   add_custom_command(
     OUTPUT ${bin}/qpid_proton-${PN_VERSION}.gem
-    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}/rubyRUBY_wrap.c
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/lib ${bin}/lib
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/ext ${bin}/ext
-    COMMAND ${CMAKE_COMMAND} -E copy ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
+    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}/rubyRUBY_wrap.c
     WORKING_DIRECTORY ${bin})
 
   add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )
@@ -86,10 +90,8 @@ endif()
 install(TARGETS cproton-ruby DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 install(DIRECTORY lib DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 
-#### Tests
+## Tests
 
-set(src "${CMAKE_CURRENT_SOURCE_DIR}")
-set(bin "${CMAKE_CURRENT_BINARY_DIR}")
 set(bld "$<TARGET_FILE_DIR:qpid-proton>")
 
 to_native_path("$ENV{RUBYLIB};${src}/lib;${src}/tests;${src}/spec;${bin};${bld}" RUBYLIB)
