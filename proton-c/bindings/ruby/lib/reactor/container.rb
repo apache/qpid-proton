@@ -238,10 +238,6 @@ module Qpid::Proton::Reactor
     end
 
     private
-    def do_work(timeout = nil)
-      self.timeout = timeout unless timeout.nil?
-      self.process
-    end
 
     def id(container, remote, local)
       if !local.nil? && !remote.nil?

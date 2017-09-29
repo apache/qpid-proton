@@ -17,7 +17,7 @@
 # under the License.
 #
 
-require 'spec_helper'         #FIXME aconway 2017-09-11:
+require 'spec_helper'
 
 describe "The extended array type" do
 
