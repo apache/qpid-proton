@@ -25,6 +25,7 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
+#include "proton/work_queue.hpp"
 
 #include <cstdlib>
 #include <ctime>
@@ -206,6 +207,41 @@ int test_container_stop() {
     return 0;
 }
 
+
+struct hang_tester : public proton::messaging_handler {
+    proton::listener listener;
+    int port;
+    bool done;
+
+    hang_tester() : done(false) {}
+
+    void connect(proton::container* c) {
+        c->connect("localhost:"+ int2string(port));
+    }
+
+    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+        port = listen_on_random_port(c, listener);
+        schedule_work(&c, proton::duration(250), &hang_tester::connect, this, &c);
+    }
+
+    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+        c.close();
+    }
+
+    void on_connection_close(proton::connection& c) PN_CPP_OVERRIDE {
+        if (!done) {
+            done = true;
+            listener.stop();
+        }
+    }
+};
+
+int test_container_schedule_nohang() {
+    hang_tester t;
+    proton::container(t).run();
+    return 0;
+}
+
 }
 
 int main(int, char**) {
@@ -216,6 +252,7 @@ int main(int, char**) {
     RUN_TEST(failed, test_container_no_vhost());
     RUN_TEST(failed, test_container_bad_address());
     RUN_TEST(failed, test_container_stop());
+    RUN_TEST(failed, test_container_schedule_nohang());
     return failed;
 }
 

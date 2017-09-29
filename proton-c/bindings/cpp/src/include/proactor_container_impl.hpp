@@ -116,17 +116,19 @@ class container::impl {
     void run_timer_jobs();
 
     ATOMIC_INT(threads_)
+    container& container_;
     MUTEX(lock_)
+
     ONCE_FLAG(start_once_)
     ONCE_FLAG(stop_once_)
-    container& container_;
+    void start_event();
+    void stop_event();
 
     typedef std::set<container_work_queue*> work_queues;
     work_queues work_queues_;
+    MUTEX(work_queues_lock_)
     container_work_queue* add_work_queue();
     void remove_work_queue(container_work_queue*);
-    void start_event();
-    void stop_event();
 
     struct scheduled {
         timestamp time; // duration from epoch for task
@@ -136,6 +138,7 @@ class container::impl {
         bool operator < (const scheduled& r) const { return  r.time < time; }
     };
     std::vector<scheduled> deferred_; // This vector is kept as a heap
+    MUTEX(deferred_lock_)
 
     pn_proactor_t* proactor_;
     messaging_handler* handler_;

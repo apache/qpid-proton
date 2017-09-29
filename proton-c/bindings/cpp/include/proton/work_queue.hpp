@@ -47,10 +47,13 @@ namespace proton {
 namespace v03 {
 class work {
   public:
-    /// **Experimental**
+    /// **Unsettled API**
     work(void_function0& f): item_(&f) {}
 
-    /// **Experimental**
+    /// **Unsettled API**
+    work() {}
+
+    /// **Unsettled API**
     void operator()() { (*item_)(); }
 
     ~work() {}
@@ -67,6 +70,9 @@ class work {
   public:
     /// **Unsettled API**
     work(void_function0& f): item_( [&f]() { f(); }) {}
+
+    /// **Unsettled API**
+    work() {}
 
     /// **Unsettled API** - Construct a unit of work from a
     /// std::function.

@@ -154,11 +154,13 @@ container::impl::~impl() {
 
 container::impl::container_work_queue* container::impl::add_work_queue() {
     container_work_queue* c = new container_work_queue(*this);
+    GUARD(work_queues_lock_);
     work_queues_.insert(c);
     return c;
 }
 
 void container::impl::remove_work_queue(container::impl::container_work_queue* l) {
+    GUARD(work_queues_lock_);
     work_queues_.erase(l);
 }
 
@@ -396,7 +398,7 @@ proton::listener container::impl::listen(const std::string& addr, proton::listen
 }
 
 void container::impl::schedule(duration delay, work f) {
-    GUARD(lock_);
+    GUARD(deferred_lock_);
     timestamp now = timestamp::now();
 
     // Record timeout; Add callback to timeout sorted list
@@ -430,22 +432,28 @@ void container::impl::receiver_options(const proton::receiver_options &opts) {
 }
 
 void container::impl::run_timer_jobs() {
-    // Check head of timer queue
     timestamp now = timestamp::now();
-    scheduled* next = &deferred_.front();
 
-    // So every scheduled element that has past run and remove head
-    while ( next->time<=now ) {
-        next->task();
-        std::pop_heap(deferred_.begin(), deferred_.end());
-        deferred_.pop_back();
-        // If there are no more scheduled items finish now
-        if  ( deferred_.size()==0 ) return;
-        next = &deferred_.front();
-    };
+    // Check head of timer queue
+    for (;;) {
+        work task;
+        {
+            GUARD(deferred_lock_);
+            if  ( deferred_.size()==0 ) return;
 
-    // To get here we know we must have at least one more thing scheduled
-    pn_proactor_set_timeout(proactor_, (next->time-now).milliseconds());
+            timestamp next_time = deferred_.front().time;
+
+            if (next_time>now) {
+                pn_proactor_set_timeout(proactor_, (next_time-now).milliseconds());
+                return;
+            }
+
+            task = deferred_.front().task;
+            std::pop_heap(deferred_.begin(), deferred_.end());
+            deferred_.pop_back();
+        }
+        task();
+    }
 }
 
 bool container::impl::handle(pn_event_t* event) {
@@ -453,8 +461,8 @@ bool container::impl::handle(pn_event_t* event) {
     // If we have any pending connection work, do it now
     pn_connection_t* c = pn_event_connection(event);
     if (c) {
-        work_queue::impl* loop = connection_context::get(c).work_queue_.impl_.get();
-        loop->run_all_jobs();
+        work_queue::impl* queue = connection_context::get(c).work_queue_.impl_.get();
+        queue->run_all_jobs();
     }
 
     // Process events that shouldn't be sent to messaging_handler
@@ -472,17 +480,19 @@ bool container::impl::handle(pn_event_t* event) {
         return true;
 
     case PN_PROACTOR_TIMEOUT: {
-        GUARD(lock_);
         // Can get an immediate timeout, if we have a container event loop inject
-        if  ( deferred_.size()>0 ) {
-            run_timer_jobs();
-        }
+        run_timer_jobs();
 
         // Run every container event loop job
         // This is not at all efficient and single threads all these jobs, but it does correctly
         // serialise them
-        for (work_queues::iterator loop = work_queues_.begin(); loop!=work_queues_.end(); ++loop) {
-            (*loop)->run_all_jobs();
+        work_queues queues;
+        {
+            GUARD(work_queues_lock_);
+            queues = work_queues_;
+        }
+        for (work_queues::iterator queue = queues.begin(); queue!=queues.end(); ++queue) {
+            (*queue)->run_all_jobs();
         }
         return false;
     }
