@@ -101,20 +101,21 @@ execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
 
-  macro(add_ruby_test name file)
+  macro(add_ruby_test file)
+    get_filename_component(name ${file} NAME_WE)
+    string(REPLACE "_" "-" name "ruby-${name}")
     add_test(
       NAME ${name}
-      ${ARGN}
-      COMMAND ${RUBY_EXECUTABLE} ${file} -v)
+      COMMAND ${RUBY_EXECUTABLE} ${file} -v
+      ${ARGN})
     set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB}")
   endmacro()
-
-  add_ruby_test(ruby-example-test example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
+  add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
 
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})
-    add_ruby_test("ruby-${t}" ${t})
+    add_ruby_test(${t})
   endforeach()
 else()
   # No minitest
