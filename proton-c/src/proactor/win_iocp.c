@@ -64,6 +64,7 @@
  */
 
 // TODO: make all code C++ or all C90-ish
+//       change INACTIVE to be from begin_close instead of zombie reap, to be more like Posix
 //       make the global write lock window much smaller
 //       2 exclusive write buffers per connection
 //       make the zombie processing thread safe
@@ -1515,7 +1516,7 @@ void pni_iocp_initialize(void *obj)
   iocp->completion_port = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
   assert(iocp->completion_port != NULL);
   iocp->zombie_list = pn_list(PN_OBJECT, 0);
-  iocp->iocp_trace = true;
+  iocp->iocp_trace = false;
 }
 
 void pni_iocp_finalize(void *obj)
@@ -1563,6 +1564,7 @@ class csguard {
     LPCRITICAL_SECTION cs_;
     bool set_;
 };
+
 
 // Get string from error status
 std::string errno_str2(DWORD status) {
@@ -1813,7 +1815,7 @@ void do_complete(iocp_result_t *result) {
   switch (result->type) {
 
   case IOCP_ACCEPT:
-    /* accept is now processed inline to do in parallel except on teardown */
+    /* accept is now processed inline to do in parallel, except on teardown */
     assert(iocpd->closing);
     complete_accept((accept_result_t *) result, result->status);  // free's result and retires new_sock
     break;
@@ -1897,7 +1899,7 @@ VOID CALLBACK reap_check_cb(PVOID arg, BOOLEAN /* ignored*/ );
 class reaper {
   public:
     reaper(pn_proactor_t *p, CRITICAL_SECTION *wlock, iocp_t *iocp)
-      : iocp_(iocp), global_wlock_(wlock), timer_(NULL) {
+      : iocp_(iocp), global_wlock_(wlock), timer_(NULL), running(true) {
       InitializeCriticalSectionAndSpinCount(&lock_, 4000);
       timer_queue_ = CreateTimerQueue();
       if (!timer_queue_) {
@@ -1948,6 +1950,7 @@ class reaper {
 
     // Called when all competing threads have terminated except our own reap_check timer.
     void final_shutdown() {
+        running = false;
         DeleteTimerQueueEx(timer_queue_, INVALID_HANDLE_VALUE);
         // No pending or active timers from thread pool remain.  Truly single threaded now.
         pn_free((void *) iocp_); // calls pni_iocp_finalize(); cleans up all sockets, completions, completion port.
@@ -1965,13 +1968,14 @@ class reaper {
   private:
     void reap_timer() {
         // Call with lock
-        if (timer_)
+        if (timer_ || !running)
             return;
         pn_timestamp_t now = pn_i_now2();
         pni_zombie_check(iocp_, now);
         pn_timestamp_t zd = pni_zombie_deadline(iocp_);
-        if (zd && zd > now) {
-            if (!CreateTimerQueueTimer(&timer_, timer_queue_, reap_check_cb, this, zd - now,
+        if (zd) {
+            DWORD tm = (zd > now) ? zd - now : 1;
+            if (!CreateTimerQueueTimer(&timer_, timer_queue_, reap_check_cb, this, tm,
                                        0, WT_EXECUTEONLYONCE)) {
                 perror("CreateTimerQueueTimer");
                 abort();
@@ -1984,6 +1988,7 @@ class reaper {
     CRITICAL_SECTION *global_wlock_;
     HANDLE timer_queue_;
     HANDLE timer_;
+    bool running;
 };
 
 VOID CALLBACK reap_check_cb(PVOID arg, BOOLEAN /* ignored*/ ) {
@@ -2033,24 +2038,26 @@ static pn_event_t *log_event(void* p, pn_event_t *e) {
   return e;
 }
 
-static void psocket_error(psocket_t *ps, int err, const char* what) {
+static void psocket_error_str(psocket_t *ps, const char *msg, const char* what) {
   if (ps->is_reaper)
     return;
   if (!ps->listener) {
     pn_connection_driver_t *driver = &as_pconnection_t(ps)->driver;
     pn_connection_driver_bind(driver); /* Bind so errors will be reported */
-    pn_connection_driver_errorf(driver, COND_NAME, "%s %s:%s: %s",
-                                what, ps->host, ps->port,
-                                errno_str2(err).c_str());
+    pni_proactor_set_cond(pn_transport_condition(driver->transport), what, ps->host, ps->port, msg);
     pn_connection_driver_close(driver);
   } else {
     pn_listener_t *l = as_listener(ps);
-    pn_condition_format(l->condition, COND_NAME, "%s %s:%s: %s",
-                        what, ps->host, ps->port,
-                        errno_str2(err).c_str());
+    pni_proactor_set_cond(l->condition, what, ps->host, ps->port, msg);
     listener_begin_close(l);
   }
 }
+
+static void psocket_error(psocket_t *ps, int err, const char* what) {
+  psocket_error_str(ps, errno_str2(err).c_str(), what);
+}
+
+
 
 // ========================================================================
 // pconnection
@@ -2167,6 +2174,17 @@ pn_proactor_t *pn_event_proactor(pn_event_t *e) {
   if (c) return pn_connection_proactor(pn_event_connection(e));
   return NULL;
 }
+
+// Call after successful accept
+static void set_sock_names(pconnection_t *pc) {
+  // This works.  Note possible use of GetAcceptExSockaddrs()
+  pn_socket_t sock = pc->psocket.iocpd->socket;
+  socklen_t len = sizeof(pc->local.ss);
+  getsockname(sock, (struct sockaddr*)&pc->local.ss, &len);
+  len = sizeof(pc->remote.ss);
+  getpeername(sock, (struct sockaddr*)&pc->remote.ss, &len);
+}
+
 
 // Call with lock held when closing and transitioning away from working context
 static inline bool pconnection_can_free(pconnection_t *pc) {
@@ -2632,6 +2650,8 @@ static bool connect_step(pconnection_t *pc) {
           if (success || WSAGetLastError() == ERROR_IO_PENDING) {
             iocpd->ops_in_progress++;
             iocpd->active_completer = &pc->psocket;
+            // getpeername unreliable for outgoing connections, but we know it at this point
+            memcpy(&pc->remote.ss, ai->ai_addr, ai->ai_addrlen);
             return true;  // logic resumes at connect_step_done()
           }
           pn_free(result);
@@ -2660,6 +2680,8 @@ static void connect_step_done(pconnection_t *pc, connect_result_t *result) {
     pc->psocket.iocpd->write_closed = false;
     pc->psocket.iocpd->read_closed = false;
     if (pc->addrinfo) {
+      socklen_t len = sizeof(pc->local.ss);
+      getsockname(pc->psocket.iocpd->socket, (struct sockaddr*)&pc->local.ss, &len);
       freeaddrinfo(pc->addrinfo);
       pc->addrinfo = NULL;
     }
@@ -2671,6 +2693,7 @@ static void connect_step_done(pconnection_t *pc, connect_result_t *result) {
     // Connect failed, no IO started, i.e. no pending iocpd based events
     pc->context.proactor->reaper->fast_reap(iocpd);
     pc->psocket.iocpd = NULL;
+    memset(&pc->remote.ss, 0, sizeof(pc->remote.ss));
     // Is there a next connection target in the addrinfo to try?
     if (pc->ai && connect_step(pc)) {
       // Trying the next addrinfo possibility.  Will return here.
@@ -2700,7 +2723,6 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   if (!pgetaddrinfo(pc->psocket.host, pc->psocket.port, 0, &pc->addrinfo)) {
     pc->ai = pc->addrinfo;
     if (connect_step(pc)) {
-      g.release();
       return;
     }
   }
@@ -3153,6 +3175,7 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
       iocpdesc_t *conn_iocpd = accept_result->new_sock;
       pc->psocket.iocpd = conn_iocpd;
       conn_iocpd->active_completer =&pc->psocket;
+      set_sock_names(pc);
       pni_iocpdesc_start(conn_iocpd);
     }
 
@@ -3287,7 +3310,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   {
     csguard g(&p->context.cslock);
     // Move the whole contexts list into a disconnecting state
-    pcontext_t *disconnecting_pcontexts = p->contexts;
+    disconnecting_pcontexts = p->contexts;
     p->contexts = NULL;
     // First pass: mark each pcontext as disconnecting and update global pending count.
     pcontext_t *ctx = disconnecting_pcontexts;
@@ -3331,7 +3354,6 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
         }
       }
     } else {
-
       assert(l);
       if (!ctx->closing) {
         if (cond) {

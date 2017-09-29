@@ -73,10 +73,12 @@ endif()
 
 add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
+# windows exclusion only for 0.18 beta 
+if (NOT WIN32)
 if (NOT SSL_IMPL STREQUAL none)
 add_cpp_test(cpp-example-container-ssl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleSSLTest)
 endif()
-
+endif()
 
 
 

@@ -529,7 +529,6 @@ endif()
 
 if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if(WIN32 AND NOT CYGWIN)
-    message(WARNING "Windows IOCP proactor will be built as a prototype but does not yet pass tests")
     set (PROACTOR_OK iocp)
     set (qpid-proton-proactor src/proactor/win_iocp.c src/proactor/proactor-internal.c)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES

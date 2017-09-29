@@ -22,23 +22,46 @@
 /* EXAMPLE USE ONLY. Simulate the subset of POSIX threads used by examples for windows */
 
 #ifdef _WIN32
-
 #include <windows.h>
-#include <time.h>
-#define _WIN32_WINNT 0x500 /* WINBASE.H - Enable SignalObjectAndWait */
 #include <process.h>
-#include <windows.h>
 
-#define pthread_function DWORD WINAPI
-#define pthread_function_return DWORD
-#define pthread_t HANDLE
-#define pthread_create(thhandle,attr,thfunc,tharg) (int)((*thhandle=(HANDLE)_beginthreadex(NULL,0,(DWORD WINAPI(*)())thfunc,tharg,0,NULL))==NULL)
-#define pthread_join(thread, result) ((WaitForSingleObject((thread),INFINITE)!=WAIT_OBJECT_0) || !CloseHandle(thread))
-#define pthread_mutex_T HANDLE
-#define pthread_mutex_init(pobject,pattr) (*pobject=CreateMutex(NULL,FALSE,NULL))
-#define pthread_mutex_destroy(pobject) CloseHandle(*pobject)
-#define pthread_mutex_lock(pobject) WaitForSingleObject(*pobject,INFINITE)
-#define pthread_mutex_unlock(pobject) ReleaseMutex(*pobject)
+typedef struct {
+  HANDLE handle;
+  void *(*func)(void *);
+  void *arg;
+} pthread_t;
+
+static unsigned __stdcall pthread_run(void *thr0) {
+  pthread_t *t = (pthread_t *) thr0;
+  t->func(t->arg);
+  return 0;
+}
+
+static int pthread_create(pthread_t *t, void *unused, void *(*f)(void *), void *arg) {
+  t->handle = 0;
+  t->func = f;
+  t->arg = arg;
+  HANDLE th = (HANDLE) _beginthreadex(0, 0, &pthread_run, t, 0, 0);
+  if (th) {
+    t->handle = th;
+    return 0;
+  }
+  return -1;
+}
+
+static int pthread_join(pthread_t t, void **unused) {
+  if (t.handle) {
+    WaitForSingleObject(t.handle, INFINITE);
+    CloseHandle(t.handle);
+  }
+  return 0;
+}
+
+typedef CRITICAL_SECTION pthread_mutex_t;
+#define pthread_mutex_init(m, unused) InitializeCriticalSectionAndSpinCount(m, 4000)
+#define pthread_mutex_destroy(m) DeleteCriticalSection(m)
+#define pthread_mutex_lock(m) EnterCriticalSection(m)
+#define pthread_mutex_unlock(m) LeaveCriticalSection(m)
 
 #else
 
@@ -46,4 +69,4 @@
 
 #endif
 
-#endif /* thread.h */
+#endif  /* thread.h */

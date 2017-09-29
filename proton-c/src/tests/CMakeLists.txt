@@ -56,11 +56,7 @@ pn_add_c_test (c-condition-tests condition.c)
 pn_add_c_test (c-connection-driver-tests connection_driver.c)
 
 if(HAS_PROACTOR)
-  if(WIN32)
-    message(STATUS "Windows IOCP proactor tests temporarily suspended")
-  else(WIN32)
-    pn_add_c_test (c-proactor-tests proactor.c)
-  endif(WIN32)
+  pn_add_c_test (c-proactor-tests proactor.c)
 
   if(WIN32)
     # set(path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton>")

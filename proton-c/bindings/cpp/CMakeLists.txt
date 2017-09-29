@@ -207,4 +207,7 @@ add_cpp_test(scalar_test)
 add_cpp_test(value_test)
 add_cpp_test(container_test)
 add_cpp_test(url_test)
-add_cpp_test(reconnect_test)
+# windows exclusion only for 0.18 beta
+if(NOT WIN32)
+  add_cpp_test(reconnect_test)
+endif()

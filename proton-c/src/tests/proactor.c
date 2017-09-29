@@ -216,9 +216,14 @@ typedef struct test_listener_t {
 
 test_listener_t test_listen(test_proactor_t *tp, const char *host) {
   test_listener_t l = { test_port(host), pn_listener() };
+#if defined(_WIN32)
+   sock_close(l.port.sock);  // small chance another process will steal the port in Windows
+#endif
   pn_proactor_listen(tp->proactor, l.listener, l.port.host_port, 4);
   TEST_ETYPE_EQUAL(tp->handler.t, PN_LISTENER_OPEN, test_proactors_run(tp, 1));
+#if !defined(_WIN32)
   sock_close(l.port.sock);
+#endif
   return l;
 }
 
@@ -686,7 +691,9 @@ static void test_ipv4_ipv6(test_t *t) {
   EXPECT_CONNECT(l.port, "");          /* local->all */
 
   if (has_ipv6) {
+#if !defined(_WIN32)
     EXPECT_CONNECT(l6.port, "::"); /* v6->v6 */
+#endif
     EXPECT_CONNECT(l6.port, "");     /* local->v6 */
     EXPECT_CONNECT(l.port, "::1"); /* v6->all */
 
@@ -1098,7 +1105,9 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_connection_wake(&t));
   RUN_ARGV_TEST(failed, t, test_ipv4_ipv6(&t));
   RUN_ARGV_TEST(failed, t, test_release_free(&t));
+#if !defined(_WIN32)
   RUN_ARGV_TEST(failed, t, test_ssl(&t));
+#endif
   RUN_ARGV_TEST(failed, t, test_proactor_addr(&t));
   RUN_ARGV_TEST(failed, t, test_parse_addr(&t));
   RUN_ARGV_TEST(failed, t, test_netaddr(&t));
