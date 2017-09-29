@@ -79,6 +79,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
     app->message_buffer.size *= 2;
     app->message_buffer.start = (char*)realloc(app->message_buffer.start, app->message_buffer.size);
     mbuf.size = app->message_buffer.size;
+    mbuf.start = app->message_buffer.start;
   }
   if (status != 0) {
     fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
