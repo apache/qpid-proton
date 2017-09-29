@@ -1545,7 +1545,8 @@ pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag)
 
   // begin delivery state
   delivery->state.init = false;
-  delivery->state.sent = false;
+  delivery->state.sending = false; /* True if we have sent at least 1 frame */
+  delivery->state.sent = false;    /* True if we have sent the entire delivery */
   // end delivery state
 
   if (!link->current)
@@ -1728,9 +1729,16 @@ pn_delivery_t *pn_link_current(pn_link_t *link)
 static void pni_advance_sender(pn_link_t *link)
 {
   link->current->done = true;
-  link->queued++;
-  link->credit--;
-  link->session->outgoing_deliveries++;
+  /* Skip accounting if the link is aborted and has not sent any frames.
+     A delivery that was aborted before sending the first frame was not accounted
+     for in pni_process_tpwork_sender() so we don't need to account for it being sent here.
+  */
+  bool skip = link->current->aborted && !link->current->state.sending;
+  if (!skip) {
+    link->queued++;
+    link->credit--;
+    link->session->outgoing_deliveries++;
+  }
   pni_add_tpwork(link->current);
   link->current = link->current->unsettled_next;
 }
@@ -1888,24 +1896,22 @@ int pn_link_drained(pn_link_t *link)
 ssize_t pn_link_recv(pn_link_t *receiver, char *bytes, size_t n)
 {
   if (!receiver) return PN_ARG_ERR;
-
   pn_delivery_t *delivery = receiver->current;
-  if (delivery && !delivery->aborted) {
-    size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
-    pn_buffer_trim(delivery->bytes, size, 0);
-    if (size) {
-      receiver->session->incoming_bytes -= size;
-      if (!receiver->session->state.incoming_window) {
-        pni_add_tpwork(delivery);
-      }
-      return size;
-    } else {
-      return delivery->done ? PN_EOS : 0;
+  if (!delivery) return PN_STATE_ERR;
+  if (delivery->aborted) return PN_ABORTED;
+  size_t size = pn_buffer_get(delivery->bytes, 0, n, bytes);
+  pn_buffer_trim(delivery->bytes, size, 0);
+  if (size) {
+    receiver->session->incoming_bytes -= size;
+    if (!receiver->session->state.incoming_window) {
+      pni_add_tpwork(delivery);
     }
+    return size;
   } else {
-    return delivery ? PN_ABORTED : PN_STATE_ERR;
+    return delivery->done ? PN_EOS : 0;
   }
 }
+
 
 void pn_link_flow(pn_link_t *receiver, int credit)
 {
@@ -2032,7 +2038,7 @@ bool pn_delivery_readable(pn_delivery_t *delivery)
 
 size_t pn_delivery_pending(pn_delivery_t *delivery)
 {
-  /* Aborted deliveries: for old clients that don't check pn_delivery_aborted(),
+  /* Aborted deliveries: for clients that don't check pn_delivery_aborted(),
      return 1 rather than 0. This will force them to call pn_link_recv() and get
      the PN_ABORTED error return code.
   */
@@ -2046,11 +2052,10 @@ bool pn_delivery_partial(pn_delivery_t *delivery)
 }
 
 void pn_delivery_abort(pn_delivery_t *delivery) {
-  delivery->aborted = true;
-  /* Discard any data, aborted frames are always empty */
-  delivery->link->session->outgoing_bytes -= pn_buffer_size(delivery->bytes);
-  pn_buffer_clear(delivery->bytes);
-  pn_delivery_settle(delivery);
+  if (!delivery->local.settled) { /* Can't abort a settled delivery */
+    delivery->aborted = true;
+    pn_delivery_settle(delivery);
+  }
 }
 
 bool pn_delivery_aborted(pn_delivery_t *delivery) {

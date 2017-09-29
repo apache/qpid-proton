@@ -113,6 +113,7 @@ void pn_delivery_map_del(pn_delivery_map_t *db, pn_delivery_t *delivery)
 {
   if (delivery->state.init) {
     delivery->state.init = false;
+    delivery->state.sending = false;
     delivery->state.sent = false;
     pn_hash_del(db->deliveries, pni_sequence_make_hash(delivery->state.id) );
   }
@@ -1541,25 +1542,24 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
       pn_work_update(transport->connection, delivery);
     }
   }
-  delivery->aborted = aborted;
-  if (aborted) {
+
+  pn_buffer_append(delivery->bytes, payload->start, payload->size);
+  ssn->incoming_bytes += payload->size;
+  delivery->done = !more;
+
+  ssn->state.incoming_transfer_count++;
+  ssn->state.incoming_window--;
+
+  // XXX: need better policy for when to refresh window
+  if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
+    pni_post_flow(transport, ssn, link);
+  }
+
+  if ((delivery->aborted = aborted)) {
     delivery->remote.settled = true;
     delivery->done = true;
     delivery->updated = true;
-    pn_buffer_clear(delivery->bytes);
     pn_work_update(transport->connection, delivery);
-  } else {
-    pn_buffer_append(delivery->bytes, payload->start, payload->size);
-    ssn->incoming_bytes += payload->size;
-    delivery->done = !more;
-
-    ssn->state.incoming_transfer_count++;
-    ssn->state.incoming_window--;
-
-    // XXX: need better policy for when to refresh window
-    if (!ssn->state.incoming_window && (int32_t) link->state.local_handle >= 0) {
-      pni_post_flow(transport, ssn, link);
-    }
   }
   pn_collector_put(transport->connection->collector, PN_OBJECT, delivery, PN_DELIVERY);
   return 0;
@@ -2163,18 +2163,20 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
 
 static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery, bool *settle)
 {
+  pn_link_t *link = delivery->link;
+  pn_delivery_state_t *state = &delivery->state;
   if (delivery->aborted && !delivery->state.sending) {
-    // Aborted delivery with no data yet sent, drop it.
+    // Aborted delivery with no data yet sent, drop it and issue a FLOW as we may have credit.
     *settle = true;
+    state->sent = true;
+    pn_collector_put(transport->connection->collector, PN_OBJECT, link, PN_LINK_FLOW);
     return 0;
   }
   *settle = false;
-  pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = &link->session->state;
   pn_link_state_t *link_state = &link->state;
   bool xfr_posted = false;
   if ((int16_t) ssn_state->local_channel >= 0 && (int32_t) link_state->local_handle >= 0) {
-    pn_delivery_state_t *state = &delivery->state;
     if (!state->sent && (delivery->done || pn_buffer_size(delivery->bytes) > 0) &&
         ssn_state->remote_incoming_window > 0 && link_state->link_credit > 0) {
       if (!state->init) {
@@ -2201,7 +2203,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
                                                false /* Batchable */
       );
       if (count < 0) return count;
-      if (count > 0) delivery->state.sending = true;
+      state->sending = true;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;
@@ -2221,7 +2223,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
     }
   }
 
-  pn_delivery_state_t *state = delivery->state.init ? &delivery->state : NULL;
+  if (!state->init) state = NULL;
   if ((int16_t) ssn_state->local_channel >= 0 && !delivery->remote.settled
       && state && state->sent && !xfr_posted) {
     int err = pni_post_disp(transport, delivery);

@@ -37,7 +37,14 @@ typedef struct test_handler_t {
   test_handler_fn f;
   pn_event_type_t log[MAX_EVENT_LOG]; /* Log of event types */
   size_t log_size;                    /* Number of events in the log */
-  void *context;                      /* Test-specific context */
+  void *context;                      /* Generic test context */
+  /* Specific context slots for proton objects commonly used by handlers  */
+  pn_connection_t *connection;
+  pn_session_t *session;
+  pn_link_t *link;
+  pn_link_t *sender;
+  pn_link_t *receiver;
+  pn_delivery_t *delivery;
 } test_handler_t;
 
 void test_handler_init(test_handler_t *th, test_t *t, test_handler_fn f) {

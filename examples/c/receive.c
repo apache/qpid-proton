@@ -95,18 +95,21 @@ static bool handle(app_data_t* app, pn_event_t* event) {
    case PN_DELIVERY: {
      /* A message has been received */
      pn_delivery_t *d = pn_event_delivery(event);
-     int err;
      if (pn_delivery_readable(d)) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       err = pn_link_recv(l, m->start, m->size);
-       if (err < 0 && err != PN_EOS) {
-         fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
+       int recv = pn_link_recv(l, m->start, m->size);
+       if (recv == PN_ABORTED) {
+         fprintf(stderr, "Message aborted\n");
+         m->size = 0;           /* Forget the data we accumulated */
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
-         m->size = 0;           /* forget the data we accumulated */
+         pn_link_flow(l, 1);    /* Replace credit for aborted message */
+       } else if (recv < 0 && recv != PN_EOS) {        /* Unexpected error */
+         pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code(recv));
+         pn_link_close(l);               /* Unexpected error, close the link */
        } else if (!pn_delivery_partial(d)) { /* Message is complete */
          decode_message(*m);
          *m = pn_rwbytes_null;  /* Reset the buffer for the next message*/

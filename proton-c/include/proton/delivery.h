@@ -185,23 +185,16 @@ PN_EXTERN bool pn_delivery_partial(pn_delivery_t *delivery);
 /**
  * Check if a received delivery has been aborted.
  *
- * An aborted delivery means the sender cannot complete the message and the
- * receiver should discard any data already received. There is nothing further
- * to be done with the delivery: it is pn_delivery_settled() and pn_link_recv()
- * returns ::PN_ABORTED.
+ * An aborted delivery means the sender cannot complete this message and the
+ * receiver should discard any data already received. The link remains open for
+ * future messages.
  *
- * For backward compatibility with code that does not check pn_delivery_aborted(),
- * the following are true of an aborted delivery:
+ * You must still call pn_delivery_settle() to free local resources. An aborted
+ * delivery consumes a credit, use pn_link_flow() to issue new credit as for a
+ * successful delivery.
  *
- * - pn_delivery_partial() is false - old code will not wait forever for more data
- *
- * - pn_delivery_pending() returns 1, not 0 - old code that checks for completion with
- *
- *       if (pn_delivery_pending(d)==0 && !pn_delivery_partial(d))
- *
- *   will not mistake this for successful completion, and will call pn_link_recv()
- *
- * - pn_link_recv() returns ::PN_ABORTED - old code will know there is some kind of error.
+ * Calling pn_link_recv() when the current delivery is aborted returns
+ * ::PN_ABORTED.
  *
  * @see pn_delivery_abort()
  * @param[in] delivery a delivery object
@@ -274,12 +267,13 @@ PN_EXTERN bool pn_delivery_current(pn_delivery_t *delivery);
 /**
  * Abort a delivery being sent.
  *
- * Aborting means the sender cannot complete the delivery. It will not send any
- * more data and all data received so far should be discarded by the receiver.
+ * Aborting means the sender cannot complete this message. It will not send any
+ * more data, and data sent so far should be discarded by the receiver.  The
+ * link remains open for future messages.
  *
  * If some data has already been sent on the network, an AMQP "aborted" frame
  * will be sent to inform the peer. If no data has yet been sent, the delivery
- * will simply be dropped.
+ * will simply be forgotten.
  *
  * The delivery will be freed, and cannot be used after the call.
  *

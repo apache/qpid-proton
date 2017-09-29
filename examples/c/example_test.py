@@ -26,13 +26,14 @@ def python_cmd(name):
     dir = os.path.dirname(__file__)
     return [sys.executable, os.path.join(dir, "..", "..", "python", name)]
 
-def receive_expect_messages(n=10): return ''.join(['{"sequence"=%s}\n'%i for i in xrange(1, n+1)])
-def receive_expect_total(n=10): return "%s messages received\n"%n
-def receive_expect(n=10): return receive_expect_messages(n)+receive_expect_total(n)
+MESSAGES=10
 
-def send_expect(n=10): return "%s messages sent and acknowledged\n" % n
-def send_abort_expect(n=10): return "%s messages started and aborted\n" % n
+def receive_expect_messages(n=MESSAGES): return ''.join(['{"sequence"=%s}\n'%i for i in xrange(1, n+1)])
+def receive_expect_total(n=MESSAGES): return "%s messages received\n"%n
+def receive_expect(n=MESSAGES): return receive_expect_messages(n)+receive_expect_total(n)
 
+def send_expect(n=MESSAGES): return "%s messages sent and acknowledged\n" % n
+def send_abort_expect(n=MESSAGES): return "%s messages started and aborted\n" % n
 
 class Broker(object):
     def __init__(self, test):
@@ -56,9 +57,9 @@ class Broker(object):
 
 class CExampleTest(ProcTestCase):
 
-    def runex(self, name, port, *args):
+    def runex(self, name, port, messages=MESSAGES):
         """Run an example with standard arugments, return output"""
-        return self.proc([name, "", port, "examples"] + list(args)).wait_exit()
+        return self.proc([name, "", str(port), "xtest", str(messages)]).wait_exit()
 
     def test_send_receive(self):
         """Send first then receive"""
@@ -93,9 +94,9 @@ class CExampleTest(ProcTestCase):
         with Broker(self) as b:
             self.assertEqual(send_expect(), self.runex("send", b.port))
             self.assertEqual(send_abort_expect(), self.runex("send-abort", b.port))
-            b.proc.wait_re("PN_DELIVERY error: PN_ABORTED\n"*10)
+            b.proc.wait_re("Message aborted\n"*MESSAGES)
             self.assertEqual(send_expect(), self.runex("send", b.port))
-            expect = receive_expect_messages(10)+receive_expect_messages(10)+receive_expect_total(20)
+            expect = receive_expect_messages(MESSAGES)+receive_expect_messages(MESSAGES)+receive_expect_total(20)
             self.assertMultiLineEqual(expect, self.runex("receive", b.port, "20"))
 
     def test_send_abort_direct(self):
@@ -108,7 +109,7 @@ class CExampleTest(ProcTestCase):
             expect += receive_expect_messages()
             d.wait_re(expect)
             self.assertEqual(send_abort_expect(), self.runex("send-abort", tp.port))
-            expect += "PN_DELIVERY error: PN_ABORTED\n"*10
+            expect += "Message aborted\n"*MESSAGES
             d.wait_re(expect)
             self.assertEqual(send_expect(), self.runex("send", tp.port))
             expect += receive_expect_messages()+receive_expect_total(20)

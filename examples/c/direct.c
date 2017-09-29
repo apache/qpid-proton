@@ -129,7 +129,7 @@ static void decode_message(pn_rwbytes_t data) {
 }
 
 /* This function handles events when we are acting as the receiver */
-static void handle_receive(app_data_t* app, pn_event_t* event) {
+static void handle_receive(app_data_t *app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
    case PN_LINK_REMOTE_OPEN: {
@@ -144,14 +144,17 @@ static void handle_receive(app_data_t* app, pn_event_t* event) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
-       int err;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       err = pn_link_recv(l, m->start, m->size);
-       if (err < 0 && err != PN_EOS) {
-         fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
+       int recv = pn_link_recv(l, m->start, m->size);
+       if (recv == PN_ABORTED) {
+         fprintf(stderr, "Message aborted\n");
+         m->size = 0;           /* Forget the data we accumulated */
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
-         m->size = 0;           /* forget the data we accumulated */
+         pn_link_flow(l, 1);    /* Replace credit for aborted message */
+       } else if (recv < 0 && recv != PN_EOS) {        /* Unexpected error */
+         pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code(recv));
+         pn_link_close(l);               /* Unexpected error, close the link */
        } else if (!pn_delivery_partial(d)) { /* Message is complete */
          decode_message(*m);
          *m = pn_rwbytes_null;

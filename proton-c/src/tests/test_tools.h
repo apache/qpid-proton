@@ -36,6 +36,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Handy way to make pn_bytes: PN_BYTES_LITERAL(FOO) => pn_bytes("FOO",3) */
+#define PN_BYTES_LITERAL(X) (pn_bytes(sizeof(#X)-1, #X))
+
 /* A struct to collect the results of a test, created by RUN_TEST macro. */
 typedef struct test_t {
   const char* name;

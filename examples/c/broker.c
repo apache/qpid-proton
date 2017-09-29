@@ -262,7 +262,7 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
   }
 }
 
-const int WINDOW=10;            /* Incoming credit window */
+const int WINDOW=5; /* Very small incoming credit window, to show flow control in action */
 
 static void handle(broker_t* b, pn_event_t* e) {
   pn_connection_t *c = pn_event_connection(e);
@@ -338,14 +338,17 @@ static void handle(broker_t* b, pn_event_t* e) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = message_buffer(l); /* Append data to incoming message buffer */
-       int err;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       err = pn_link_recv(l, m->start, m->size);
-       if (err < 0 && err != PN_EOS) {
-         fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
+       int recv = pn_link_recv(l, m->start, m->size);
+       if (recv == PN_ABORTED) { /*  */
+         fprintf(stderr, "Message aborted\n");
+         m->size = 0;           /* Forget the data we accumulated */
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
-         m->size = 0;           /* forget the data we accumulated */
+         pn_link_flow(l, WINDOW - pn_link_credit(l)); /* Replace credit for the aborted message */
+       } else if (recv < 0 && recv != PN_EOS) {        /* Unexpected error */
+         pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code(recv));
+         pn_link_close(l);               /* Unexpected error, close the link */
        } else if (!pn_delivery_partial(d)) { /* Message is complete */
          const char *qname = pn_terminus_get_address(pn_link_target(l));
          queue_receive(b->proactor, queues_get(&b->queues, qname), *m);
@@ -387,9 +390,7 @@ static void handle(broker_t* b, pn_event_t* e) {
     broker_stop(b);
     break;
 
- break;
-
-   case PN_PROACTOR_INACTIVE:   /* listener and all connections closed */
+    case PN_PROACTOR_INACTIVE:   /* listener and all connections closed */
     broker_stop(b);
     break;
 
