@@ -25,6 +25,7 @@
 #include "proton/error_condition.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/listener.hpp"
+#include "proton/uuid.hpp"
 
 #include "proactor_container_impl.hpp"
 
@@ -32,8 +33,12 @@ namespace proton {
 
 container::container(messaging_handler& h, const std::string& id) :
     impl_(new impl(*this, id, &h)) {}
+container::container(messaging_handler& h) :
+    impl_(new impl(*this, uuid::random().str(), &h)) {}
 container::container(const std::string& id) :
     impl_(new impl(*this, id)) {}
+container::container() :
+    impl_(new impl(*this, uuid::random().str())) {}
 container::~container() {}
 
 returned<connection> container::connect(const std::string &url) {

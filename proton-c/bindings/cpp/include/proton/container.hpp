@@ -64,11 +64,26 @@ class PN_CPP_CLASS_EXTERN container {
     /// managed by the container.
     ///
     /// @param id sets the container's unique identity.
-    PN_CPP_EXTERN container(messaging_handler& handler, const std::string& id="");
+    PN_CPP_EXTERN container(messaging_handler& handler, const std::string& id);
+
+    /// Create a container with a global handler for messaging events.
+    ///
+    /// **Thread safety** - in a multi-threaded container this handler will be
+    /// called concurrently. You can use locks to make that safe, or use a
+    /// separate handler for each connection.  See @ref mt_page.
+    ///
+    /// @param handler global handler, called for events on all connections
+    /// managed by the container.
+    PN_CPP_EXTERN container(messaging_handler& handler);
 
     /// Create a container.
     /// @param id sets the container's unique identity.
-    PN_CPP_EXTERN container(const std::string& id="");
+    PN_CPP_EXTERN container(const std::string& id);
+
+    /// Create a container.
+    ///
+    /// This will create a default random identity
+    PN_CPP_EXTERN container();
 
     /// Destroy a container.
     ///

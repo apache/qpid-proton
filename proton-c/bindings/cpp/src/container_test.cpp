@@ -64,6 +64,7 @@ class test_handler : public proton::messaging_handler {
     bool done;
 
     std::string peer_vhost;
+    std::string peer_container_id;
     proton::listener listener;
 
     test_handler(const std::string h, const proton::connection_options& c_opts)
@@ -78,6 +79,8 @@ class test_handler : public proton::messaging_handler {
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         if (peer_vhost.empty() && !c.virtual_host().empty())
             peer_vhost = c.virtual_host();
+        if (peer_container_id.empty() && !c.container_id().empty())
+            peer_container_id = c.container_id();
         if (!closing) c.close();
         closing = true;
     }
@@ -87,6 +90,14 @@ class test_handler : public proton::messaging_handler {
         done = true;
     }
 };
+
+int test_container_default_container_id() {
+    proton::connection_options opts;
+    test_handler th(std::string("127.0.0.1"), opts);
+    proton::container(th).run();
+    ASSERT(!th.peer_container_id.empty());
+    return 0;
+}
 
 int test_container_vhost() {
     proton::connection_options opts;
@@ -199,6 +210,7 @@ int test_container_stop() {
 
 int main(int, char**) {
     int failed = 0;
+    RUN_TEST(failed, test_container_default_container_id());
     RUN_TEST(failed, test_container_vhost());
     RUN_TEST(failed, test_container_default_vhost());
     RUN_TEST(failed, test_container_no_vhost());
