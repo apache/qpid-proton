@@ -58,6 +58,7 @@ struct pn_endpoint_t {
 
 typedef struct {
   pn_sequence_t id;
+  bool sending;
   bool sent;
   bool init;
 } pn_delivery_state_t;

@@ -96,6 +96,7 @@ static pn_delivery_t *pni_delivery_map_get(pn_delivery_map_t *db, pn_sequence_t 
 static void pn_delivery_state_init(pn_delivery_state_t *ds, pn_delivery_t *delivery, pn_sequence_t id)
 {
   ds->id = id;
+  ds->sending = false;
   ds->sent = false;
   ds->init = true;
 }
@@ -2162,6 +2163,11 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
 
 static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *delivery, bool *settle)
 {
+  if (delivery->aborted && !delivery->state.sending) {
+    // Aborted delivery with no data yet sent, drop it.
+    *settle = true;
+    return 0;
+  }
   *settle = false;
   pn_link_t *link = delivery->link;
   pn_session_state_t *ssn_state = &link->session->state;
@@ -2195,6 +2201,7 @@ static int pni_process_tpwork_sender(pn_transport_t *transport, pn_delivery_t *d
                                                false /* Batchable */
       );
       if (count < 0) return count;
+      if (count > 0) delivery->state.sending = true;
       xfr_posted = true;
       ssn_state->outgoing_transfer_count += count;
       ssn_state->remote_incoming_window -= count;

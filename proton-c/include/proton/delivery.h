@@ -277,11 +277,11 @@ PN_EXTERN bool pn_delivery_current(pn_delivery_t *delivery);
  * Aborting means the sender cannot complete the delivery. It will not send any
  * more data and all data received so far should be discarded by the receiver.
  *
- * The aborted delivery is automatically settled, and can never be used again.
+ * If some data has already been sent on the network, an AMQP "aborted" frame
+ * will be sent to inform the peer. If no data has yet been sent, the delivery
+ * will simply be dropped.
  *
- * @note You should only use pn_delivery_abort() if you are "streaming" messages
- * in multiple parts and you need to abort after part of the message has been sent
- * with pn_link_send()
+ * The delivery will be freed, and cannot be used after the call.
  *
  * @see pn_delivery_aborted()
  *
