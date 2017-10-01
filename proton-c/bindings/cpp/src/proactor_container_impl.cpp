@@ -224,7 +224,7 @@ void container::impl::reconnect(pn_connection_t* pnc) {
     const proton::url url(rc.current_url_==-1 ? cc.connected_address_ : roi.failover_urls[rc.current_url_]);
 
     // XXXX Debug:
-    //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << "\n";
+    //std::cout << "Retries: " << rc.retries_ << " Delay: " << rc.delay_ << " Trying: " << url << std::endl;
 
     setup_connection_lh(url, pnc);
     make_wrapper(pnc).open(*cc.connection_options_);

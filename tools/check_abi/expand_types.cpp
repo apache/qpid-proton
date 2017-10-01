@@ -32,7 +32,7 @@ void print_type(const char* type, const char* mangled_type)
   char* demangled_type =
     abi::__cxa_demangle(mangled_type, 0, 0, &status);
   if (demangled_type) {
-    std::cout << "s/" << type << "/" << demangled_type << "/g\n";
+    std::cout << "s/" << type << "/" << demangled_type << "/g" << std::endl;
   } 
   ::free(demangled_type);
 }

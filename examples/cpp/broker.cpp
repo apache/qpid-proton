@@ -113,11 +113,11 @@ public:
 
     void boundQueue(Queue* q, std::string qn);
     void sendMsg(proton::message m) {
-        DOUT(std::cerr << "Sender:   " << this << " sending\n";);
+        DOUT(std::cerr << "Sender:   " << this << " sending" << std::endl;);
         sender_.send(m);
     }
     void unsubscribed() {
-        DOUT(std::cerr << "Sender:   " << this << " deleting\n";);
+        DOUT(std::cerr << "Sender:   " << this << " deleting" << std::endl;);
         delete this;
     }
 };
@@ -154,7 +154,7 @@ class Queue {
                 ++outOfCredit;
             }
         }
-        DOUT(std::cerr << "\n";);
+        DOUT(std::cerr << std::endl;);
     }
 
 public:
@@ -167,21 +167,21 @@ public:
     }
 
     void queueMsg(proton::message m) {
-        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") queueMsg\n";);
+        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") queueMsg" << std::endl;);
         messages_.push_back(m);
         tryToSend();
     }
     void flow(Sender* s, int c) {
-        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") flow: " << c << " to " << s << "\n";);
+        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") flow: " << c << " to " << s << std::endl;);
         subscriptions_[s] = c;
         tryToSend();
     }
     void subscribe(Sender* s) {
-        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") subscribe Sender: " << s << "\n";);
+        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") subscribe Sender: " << s << std::endl;);
         subscriptions_[s] = 0;
     }
     void unsubscribe(Sender* s) {
-        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") unsubscribe Sender: " << s << "\n";);
+        DOUT(std::cerr << "Queue:    " << this << "(" << name_ << ") unsubscribe Sender: " << s << std::endl;);
         // If we're about to erase the current subscription move on
         if (current_ != subscriptions_.end() && current_->first==s) ++current_;
         subscriptions_.erase(s);
@@ -210,7 +210,7 @@ void Sender::on_sender_close(proton::sender &sender) {
 }
 
 void Sender::boundQueue(Queue* q, std::string qn) {
-    DOUT(std::cerr << "Sender:   " << this << " bound to Queue: " << q <<"(" << qn << ")\n";);
+    DOUT(std::cerr << "Sender:   " << this << " bound to Queue: " << q <<"(" << qn << ")" << std::endl;);
     queue_ = q;
     queue_name_ = qn;
 
@@ -242,7 +242,7 @@ class Receiver : public proton::messaging_handler {
     }
 
     void queueMsgs() {
-        DOUT(std::cerr << "Receiver: " << this << " queueing " << messages_.size() << " msgs to: " << queue_ << "\n";);
+        DOUT(std::cerr << "Receiver: " << this << " queueing " << messages_.size() << " msgs to: " << queue_ << std::endl;);
         while (!messages_.empty()) {
             proton::schedule_work(queue_, &Queue::queueMsg, queue_, messages_.front());
             messages_.pop_front();
@@ -259,7 +259,7 @@ public:
     }
 
     void boundQueue(Queue* q, std::string qn) {
-        DOUT(std::cerr << "Receiver: " << this << " bound to Queue: " << q << "(" << qn << ")\n";);
+        DOUT(std::cerr << "Receiver: " << this << " bound to Queue: " << q << "(" << qn << ")" << std::endl;);
         queue_ = q;
         receiver_.open(proton::receiver_options()
             .source((proton::source_options().address(qn)))
@@ -345,7 +345,7 @@ public:
                 proton::error_condition("shutdown", "stop broker"));
         } else {
             if (qname.empty()) {
-                DOUT(std::cerr << "ODD - trying to attach to a empty address\n";);
+                DOUT(std::cerr << "ODD - trying to attach to a empty address" << std::endl;);
             }
             Receiver* r = new Receiver(receiver);
             proton::schedule_work(&queue_manager_, &QueueManager::findQueueReceiver, &queue_manager_, r, qname);
@@ -395,7 +395,7 @@ class broker {
 
     void run() {
 #if PN_CPP_SUPPORTS_THREADS
-        std::cout << "starting " << std::thread::hardware_concurrency() << " listening threads\n";
+        std::cout << "starting " << std::thread::hardware_concurrency() << " listening threads" << std::endl;
         container_.run(std::thread::hardware_concurrency());
 #else
         container_.run();
