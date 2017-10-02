@@ -120,7 +120,13 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
 
 /**
  * Start listening for incoming connections.
- * Errors are returned as @ref proactor_events by pn_proactor_wait().
+ *
+ * pn_proactor_wait() will return a @ref PN_LISTENER_OPEN event when the
+ * listener is ready to accept connections, or if the listen operation fails.
+ * If the listen operation failed, then pn_listener_condition() will be set.
+ *
+ * When the listener is closed by pn_listener_close(), or because of an error, a
+ * PN_LISTENER_CLOSE event will be returned and pn_listener_condition() will be set.
  *
  * @note Thread-safe
  *
@@ -133,7 +139,7 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
  * @param[in] addr the "host:port" network address, constructed by pn_proactor_addr()
  * An empty host will listen for all protocols (IPV6 and IPV4) on all local interfaces.
  * An empty port will listen on the standard AMQP port (5672).
-
+ *
  * @param[in] backlog of un-handled connection requests to allow before refusing
  * connections. If @p addr resolves to multiple interface/protocol combinations,
  * the backlog applies to each separately.
