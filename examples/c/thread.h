@@ -38,12 +38,10 @@ static unsigned __stdcall pthread_run(void *thr0) {
 }
 
 static int pthread_create(pthread_t *t, void *unused, void *(*f)(void *), void *arg) {
-  t->handle = 0;
   t->func = f;
   t->arg = arg;
-  HANDLE th = (HANDLE) _beginthreadex(0, 0, &pthread_run, t, 0, 0);
-  if (th) {
-    t->handle = th;
+  t->handle =  (HANDLE) _beginthreadex(0, 0, &pthread_run, t, 0, 0);
+  if (t->handle) {
     return 0;
   }
   return -1;

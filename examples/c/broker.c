@@ -34,9 +34,9 @@
 
 #define VEC_INIT(V)                             \
   do {                                          \
+    void **vp = (void**)&V.data;                \
     V.len = 0;                                  \
     V.cap = 16;                                 \
-    void **vp = (void**)&V.data;                \
     *vp = malloc(V.cap * sizeof(*V.data));      \
   } while(0)
 
@@ -45,8 +45,8 @@
 #define VEC_PUSH(V, X)                                  \
   do {                                                  \
     if (V.len == V.cap) {                               \
-      V.cap *= 2;                                       \
       void **vp = (void**)&V.data;                      \
+      V.cap *= 2;                                       \
       *vp = realloc(V.data, V.cap * sizeof(*V.data));   \
     }                                                   \
     V.data[V.len++] = X;                                \
@@ -78,12 +78,13 @@ static void queue_init(queue_t *q, const char* name, queue_t *next) {
 }
 
 static void queue_destroy(queue_t *q) {
+  size_t i;
   pthread_mutex_destroy(&q->lock);
   free(q->name);
-  for (size_t i = 0; i < q->messages.len; ++i)
+  for (i = 0; i < q->messages.len; ++i)
     free(q->messages.data[i].start);
   VEC_FINAL(q->messages);
-  for (size_t i = 0; i < q->waiting.len; ++i)
+  for (i = 0; i < q->waiting.len; ++i)
     pn_decref(q->waiting.data[i]);
   VEC_FINAL(q->waiting);
 }
@@ -144,7 +145,8 @@ static void queue_receive(pn_proactor_t *d, queue_t *q, pn_rwbytes_t m) {
   pthread_mutex_lock(&q->lock);
   VEC_PUSH(q->messages, m);
   if (q->messages.len == 1) { /* Was empty, notify waiting connections */
-    for (size_t i = 0; i < q->waiting.len; ++i) {
+    size_t i;
+    for (i = 0; i < q->waiting.len; ++i) {
       pn_connection_t *c = q->waiting.data[i];
       set_check_queues(c, true);
       pn_connection_wake(c); /* Wake the connection */
@@ -167,7 +169,8 @@ void queues_init(queues_t *qs) {
 }
 
 void queues_destroy(queues_t *qs) {
-  for (queue_t *q = qs->queues; q; q = q->next) {
+  queue_t *q;
+  for (q = qs->queues; q; q = q->next) {
     queue_destroy(q);
     free(q);
   }
@@ -176,8 +179,8 @@ void queues_destroy(queues_t *qs) {
 
 /** Get or create the named queue. */
 queue_t* queues_get(queues_t *qs, const char* name) {
-  pthread_mutex_lock(&qs->lock);
   queue_t *q;
+  pthread_mutex_lock(&qs->lock);
   for (q = qs->queues; q && strcmp(q->name, name) != 0; q = q->next)
     ;
   if (!q) {
@@ -213,8 +216,9 @@ static void link_send(broker_t *b, pn_link_t *s) {
 }
 
 static void queue_unsub(queue_t *q, pn_connection_t *c) {
+  size_t i;
   pthread_mutex_lock(&q->lock);
-  for (size_t i = 0; i < q->waiting.len; ++i) {
+  for (i = 0; i < q->waiting.len; ++i) {
     if (q->waiting.data[i] == c){
       q->waiting.data[i] = q->waiting.data[0]; /* save old [0] */
       VEC_POP(q->waiting);
@@ -237,13 +241,15 @@ static void link_unsub(broker_t *b, pn_link_t *s) {
 
 /* Called in connection's event loop when a connection is woken for messages.*/
 static void connection_unsub(broker_t *b, pn_connection_t *c) {
-  for (pn_link_t *l = pn_link_head(c, 0); l != NULL; l = pn_link_next(l, 0))
+  pn_link_t *l;
+  for (l = pn_link_head(c, 0); l != NULL; l = pn_link_next(l, 0))
     link_unsub(b, l);
 }
 
 static void session_unsub(broker_t *b, pn_session_t *ssn) {
   pn_connection_t *c = pn_session_connection(ssn);
-  for (pn_link_t *l = pn_link_head(c, 0); l != NULL; l = pn_link_next(l, 0)) {
+  pn_link_t *l;
+  for (l = pn_link_head(c, 0); l != NULL; l = pn_link_next(l, 0)) {
     if (pn_link_session(l) == ssn)
       link_unsub(b, l);
   }
@@ -289,9 +295,10 @@ static void handle(broker_t* b, pn_event_t* e) {
    }
    case PN_CONNECTION_WAKE: {
      if (get_check_queues(c)) {
-       set_check_queues(c, false);
        int flags = PN_LOCAL_ACTIVE&PN_REMOTE_ACTIVE;
-       for (pn_link_t *l = pn_link_head(c, flags); l != NULL; l = pn_link_next(l, flags))
+       pn_link_t *l;
+       set_check_queues(c, false);
+       for (l = pn_link_head(c, flags); l != NULL; l = pn_link_next(l, flags))
          link_send(b, l);
      }
      break;
@@ -331,9 +338,10 @@ static void handle(broker_t* b, pn_event_t* e) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = message_buffer(l); /* Append data to incoming message buffer */
+       int err;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       int err = pn_link_recv(l, m->start, m->size);
+       err = pn_link_recv(l, m->start, m->size);
        if (err < 0 && err != PN_EOS) {
          fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
@@ -409,30 +417,36 @@ static void* broker_thread(void *void_broker) {
 }
 
 int main(int argc, char **argv) {
+  const char *host = (argc > 1) ? argv[1] : "";
+  const char *port = (argc > 2) ? argv[2] : "amqp";
+
   broker_t b = {0};
   b.proactor = pn_proactor();
   queues_init(&b.queues);
   b.container_id = argv[0];
   b.threads = 4;
-  const char *host = (argc > 1) ? argv[1] : "";
-  const char *port = (argc > 2) ? argv[2] : "amqp";
 
+  {
   /* Listen on addr */
   char addr[PN_MAX_ADDR];
   pn_proactor_addr(addr, sizeof(addr), host, port);
   pn_proactor_listen(b.proactor, pn_listener(), addr, 16);
+  }
 
+  {
   /* Start n-1 threads */
   pthread_t* threads = (pthread_t*)calloc(sizeof(pthread_t), b.threads);
-  for (size_t i = 0; i < b.threads-1; ++i) {
+  size_t i;
+  for (i = 0; i < b.threads-1; ++i) {
     pthread_create(&threads[i], NULL, broker_thread, &b);
   }
   broker_thread(&b);            /* Use the main thread too. */
   /* Join the other threads */
-  for (size_t i = 0; i < b.threads-1; ++i) {
+  for (i = 0; i < b.threads-1; ++i) {
     pthread_join(threads[i], NULL);
   }
   pn_proactor_free(b.proactor);
   free(threads);
   return 0;
+  }
 }

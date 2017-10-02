@@ -58,8 +58,8 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 static pn_bytes_t encode_message(app_data_t* app) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
   pn_data_t* body = pn_message_body(message);
+  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
@@ -73,6 +73,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   }
   /* app->message_buffer is the total buffer space available. */
   /* mbuf wil point at just the portion used by the encoded message */
+  {
   pn_rwbytes_t mbuf = pn_rwbytes(app->message_buffer.size, app->message_buffer.start);
   int status = 0;
   while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
@@ -86,6 +87,7 @@ static pn_bytes_t encode_message(app_data_t* app) {
   }
   pn_message_free(message);
   return pn_bytes(mbuf.size, mbuf.start);
+  }
 }
 
 /* Returns true to continue, false if finished */
@@ -94,14 +96,16 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
    case PN_CONNECTION_INIT: {
      pn_connection_t* c = pn_event_connection(event);
+     pn_session_t* s = pn_session(pn_event_connection(event));
      pn_connection_set_container(c, app->container_id);
      pn_connection_open(c);
-     pn_session_t* s = pn_session(pn_event_connection(event));
      pn_session_open(s);
+     {
      pn_link_t* l = pn_sender(s, "my_sender");
      pn_terminus_set_address(pn_link_target(l), app->amqp_address);
      pn_link_open(l);
      break;
+     }
    }
 
    case PN_LINK_FLOW: {
@@ -111,8 +115,10 @@ static bool handle(app_data_t* app, pn_event_t* event) {
        ++app->sent;
        // Use sent counter as unique delivery tag.
        pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
+       {
        pn_bytes_t msgbuf = encode_message(app);
        pn_link_send(sender, msgbuf.start, msgbuf.size);
+       }
        pn_link_advance(sender);
      }
      break;
@@ -167,7 +173,8 @@ void run(app_data_t *app) {
   /* Loop and handle events */
   do {
     pn_event_batch_t *events = pn_proactor_wait(app->proactor);
-    for (pn_event_t *e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
+    pn_event_t *e;
+    for (e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
       if (!handle(app, e)) {
         return;
       }
@@ -178,6 +185,8 @@ void run(app_data_t *app) {
 
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
+  char addr[PN_MAX_ADDR];
+
   app.container_id = argv[0];   /* Should be unique */
   app.host = (argc > 1) ? argv[1] : "";
   app.port = (argc > 2) ? argv[2] : "amqp";
@@ -185,7 +194,6 @@ int main(int argc, char **argv) {
   app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
 
   app.proactor = pn_proactor();
-  char addr[PN_MAX_ADDR];
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
   pn_proactor_connect(app.proactor, pn_connection(), addr);
   run(&app);

@@ -79,27 +79,30 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
    case PN_CONNECTION_INIT: {
      pn_connection_t* c = pn_event_connection(event);
+     pn_session_t* s = pn_session(c);
      pn_connection_set_container(c, app->container_id);
      pn_connection_open(c);
-     pn_session_t* s = pn_session(c);
      pn_session_open(s);
+     {
      pn_link_t* l = pn_receiver(s, "my_receiver");
      pn_terminus_set_address(pn_link_source(l), app->amqp_address);
      pn_link_open(l);
      /* cannot receive without granting credit: */
      pn_link_flow(l, app->message_count ? app->message_count : BATCH);
+     }
    } break;
 
    case PN_DELIVERY: {
      /* A message has been received */
      pn_delivery_t *d = pn_event_delivery(event);
+     int err;
      if (pn_delivery_readable(d)) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       int err = pn_link_recv(l, m->start, m->size);
+       err = pn_link_recv(l, m->start, m->size);
        if (err < 0 && err != PN_EOS) {
          fprintf(stderr, "PN_DELIVERY error: %s\n", pn_code(err));
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
@@ -117,8 +120,8 @@ static bool handle(app_data_t* app, pn_event_t* event) {
              pn_link_flow(l, BATCH - pn_link_credit(l));
            }
          } else if (++app->received >= app->message_count) {
-           printf("%d messages received\n", app->received);
            pn_session_t *ssn = pn_link_session(l);
+           printf("%d messages received\n", app->received);
            pn_link_close(l);
            pn_session_close(ssn);
            pn_connection_close(pn_session_connection(ssn));
@@ -162,7 +165,8 @@ void run(app_data_t *app) {
   /* Loop and handle events */
   do {
     pn_event_batch_t *events = pn_proactor_wait(app->proactor);
-    for (pn_event_t *e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
+    pn_event_t *e;
+    for (e = pn_event_batch_next(events); e; e = pn_event_batch_next(events)) {
       if (!handle(app, e) || exit_code != 0) {
         return;
       }
@@ -173,6 +177,8 @@ void run(app_data_t *app) {
 
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
+  char addr[PN_MAX_ADDR];
+
   app.container_id = argv[0];   /* Should be unique */
   app.host = (argc > 1) ? argv[1] : "";
   app.port = (argc > 2) ? argv[2] : "amqp";
@@ -181,7 +187,6 @@ int main(int argc, char **argv) {
 
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
-  char addr[PN_MAX_ADDR];
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
   pn_proactor_connect(app.proactor, pn_connection(), addr);
   run(&app);
