@@ -246,11 +246,11 @@ int main(int argc, const char **argv) {
     try {
         if (argc != 5) {
             std::cerr <<
-                "Usage: " << argv[0] << " MESSAGE-COUNT THREAD-COUNT URL" << std::endl <<
-                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'" << std::endl <<
-                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'" << std::endl <<
-                "MESSAGE-COUNT: number of messages to send" << std::endl <<
-                "THREAD-COUNT: number of sender/receiver thread pairs" << std::endl;
+                "Usage: " << argv[0] << " MESSAGE-COUNT THREAD-COUNT URL\n"
+                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'\n"
+                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
+                "MESSAGE-COUNT: number of messages to send\n"
+                "THREAD-COUNT: number of sender/receiver thread pairs\n";
             return 1;
         }
 

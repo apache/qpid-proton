@@ -120,11 +120,11 @@ int main(int argc, const char** argv) {
     try {
         if (argc < 4) {
             std ::cerr <<
-                "Usage: " << argv[0] << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT FAILOVER-URL..." << std::endl <<
-                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'" << std::endl <<
-                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'" << std::endl <<
-                "MESSAGE-COUNT: number of messages to receive" << std::endl <<
-                "FAILOVER_URL...: zero or more failover urls" << std::endl;
+                "Usage: " << argv[0] << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT FAILOVER-URL...\n"
+                "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'\n"
+                "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
+                "MESSAGE-COUNT: number of messages to receive\n"
+                "FAILOVER_URL...: zero or more failover urls\n";
             return 1;
         }
         const char *url = argv[1];
