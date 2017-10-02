@@ -2402,10 +2402,10 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, iocp_result_t *r
         if (!pconnection_write(pc, wbuf))
           open = false;
       }
-
-      if (topup)
-        return NULL;  // regardless if new events made available
     }
+
+    if (topup)
+      return NULL;  // regardless if new events made available
   }
 }
 
