@@ -4,10 +4,24 @@ These packages provide [Go](http://golang.org) support for sending and receiving
 AMQP messages in client or server applications. Reference documentation is
 available at: <http://godoc.org/?q=qpid.apache.org>
 
-They require the [proton-C library](http://qpid.apache.org/proton) to be installed.
-On many platforms it is avaialable pre-packaged, for example on Fedora
+They require the
+[proton-C library and header files](http://qpid.apache.org/proton) to be
+installed.  On many platforms it is avaialable pre-packaged, for example on
+Fedora
 
-    yum install qpid-proton-c-devel
+    dnf install qpid-proton-c-devel
+
+If you built proton from source, you can set environment variables to find the
+built libraries and headers as follows:
+
+    source <build-directory>/config.sh
+
+If you have installed the library and headers in non-standard directories, then
+add them to the following environment variables:
+
+    LD_LIBRARY_PATH  # directory containing the library
+    LIBRARY_PATH     # directory containing the library
+    C_INCLUDE_PATH   # directory containing the proton/ subdirectory with header files
 
 There are 3 packages:
 
