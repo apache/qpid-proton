@@ -26,44 +26,39 @@
  * @cond INTERNAL
  */
 
-//
-// Compiler specific mechanisms for managing the import and export of
-// symbols between shared objects.
-//
-// PN_EXPORT         - Export declaration
-// PN_IMPORT         - Import declaration
-//
+/*
+  Compiler specific mechanisms for managing the import and export of
+  symbols between shared objects. 
+  PN_EXPORT         - Export declaration 
+  PN_IMPORT         - Import declaration
+*/
 
 #if defined(WIN32) && !defined(PROTON_DECLARE_STATIC)
-  //
-  // Import and Export definitions for Windows:
-  //
+/* Import and Export definitions for Windows: */
 #  define PN_EXPORT __declspec(dllexport)
 #  define PN_IMPORT __declspec(dllimport)
 #else
-  //
-  // Non-Windows (Linux, etc.) definitions:
-  //
+/* Non-Windows (Linux, etc.) definitions */
 #  define PN_EXPORT __attribute ((visibility ("default")))
 #  define PN_IMPORT
 #endif
 
 
-// For core proton library symbols
+/* For core proton library symbols */
 #if defined(qpid_proton_core_EXPORTS) || defined(qpid_proton_EXPORTS)
 #  define PN_EXTERN PN_EXPORT
 #else
 #  define PN_EXTERN PN_IMPORT
 #endif
 
-// For proactor proton symbols
+/* For proactor proton symbols */
 #if defined(qpid_proton_proactor_EXPORTS) || defined(qpid_proton_EXPORTS)
 #  define PNP_EXTERN PN_EXPORT
 #else
 #  define PNP_EXTERN PN_IMPORT
 #endif
 
-// For extra proton symbols
+/* For extra proton symbols */
 #if defined(qpid_proton_EXPORTS)
 #  define PNX_EXTERN PN_EXPORT
 #else

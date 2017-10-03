@@ -113,7 +113,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      pn_link_t *sender = pn_event_link(event);
      while (pn_link_credit(sender) > 0 && app->sent < app->message_count) {
        ++app->sent;
-       // Use sent counter as unique delivery tag.
+       /* Use sent counter as unique delivery tag. */
        pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
        {
        pn_bytes_t msgbuf = encode_message(app);

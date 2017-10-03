@@ -25,7 +25,7 @@ include(CheckCCompilerFlag)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${Proton_INCLUDE_DIRS})
 
-add_definitions(${COMPILE_LANGUAGE_FLAGS} ${COMPILE_WARNING_FLAGS} ${WERROR} ${COMPILE_PLATFORM_FLAGS} ${LINK_TIME_OPTIMIZATION})
+add_definitions(${C_EXAMPLE_FLAGS})
 
 # Add a test with the correct environment to find test executables and valgrind.
 if(WIN32)
@@ -37,7 +37,9 @@ endif()
 foreach (name broker send receive direct send-abort)
   add_executable(c-${name} ${name}.c)
   target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-  set_target_properties(c-${name} PROPERTIES OUTPUT_NAME ${name})
+  set_target_properties(c-${name} PROPERTIES
+    OUTPUT_NAME ${name}
+    LINK_FLAGS "${C_EXAMPLE_FLAGS}")
 endforeach()
 
 set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})

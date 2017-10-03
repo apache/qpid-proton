@@ -109,10 +109,10 @@ set(BUILD_ONLY "${BINDINGS}" CACHE STRING
 foreach(BINDING ${BINDINGS})
   string(TOUPPER ${BINDING} UBINDING)
   list(FIND BUILD_ONLY ${BINDING} N)
-  if("NOBUILD_${UBINDING}" OR ( N EQUAL -1 ) ) # Over-ridden or not on the BUILD_ONLY list
-    set("DEFAULT_${UBINDING}" OFF)
+  if(NOBUILD_${UBINDING} OR ( N EQUAL -1 ) ) # Over-ridden or not on the BUILD_ONLY list
+    set(DEFAULT_${UBINDING} OFF)
   endif()
-  option("BUILD_${UBINDING}" "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
+  option(BUILD_${UBINDING} "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
   if (BUILD_${UBINDING})
     add_subdirectory(${BINDING})
   endif ()

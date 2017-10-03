@@ -73,4 +73,4 @@ PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
  * @}
  */
 
-#endif // PROTON_NETADDR_H
+#endif /* PROTON_NETADDR_H */

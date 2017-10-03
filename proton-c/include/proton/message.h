@@ -138,7 +138,9 @@ PN_EXTERN bool           pn_message_is_inferred(pn_message_t *msg);
  */
 PN_EXTERN int            pn_message_set_inferred(pn_message_t *msg, bool inferred);
 
-// standard message headers and properties
+/**@group standard message headers and properties
+ *@{
+ */
 
 /**
  * Get the durable flag for a message.
@@ -696,6 +698,8 @@ PN_EXTERN pn_data_t *pn_message_annotations(pn_message_t *msg);
  * @return a pointer to the message properties
  */
 PN_EXTERN pn_data_t *pn_message_properties(pn_message_t *msg);
+
+/**@}*/
 
 /**
  * Get/set the body of a message.

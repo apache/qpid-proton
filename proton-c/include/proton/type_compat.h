@@ -26,12 +26,12 @@
  * @cond INTERNAL
  */
 
-// Get Boolean
+/* Get Boolean */
 #if !defined(__cplusplus) && !defined(__bool_true_false_are_defined)
 # if __STDC_VERSION__ >= 199901L || __GNUC__ >= 3 || _MSC_VER >=1800
 #  include <stdbool.h>
 # else
-// Need to get bool/true/false manually
+/* Need to get bool/true/false manually */
 #  if _MSC_VER
 #   define bool char
 #   define false 0
@@ -52,7 +52,7 @@
  *  PN_INCLUDE_STDINT/PN_NOINCLUDE_STDINT : include (or not) stdint.h
  */
 
-// Honor positive overrides
+/* Honor positive overrides */
 #if defined(PN_DEFINE_STDINT)
 # define PNI_DEFINE_STDINT
 #endif
@@ -63,9 +63,9 @@
 # define PNI_DEFINE_SSIZE_T
 #endif
 
-// Determinine default action
+/* Determinine default action */
 #ifndef _MSC_VER
-// Not Windows and not using Visual Studio
+/* Not Windows and not using Visual Studio */
 
 /* MBED_BUILD_TIMESTAMP is used to detect whether Proton is being built on www.mbed.org with
 the ARM compiler. In that case ssize_t needs to be defined in this file. */
@@ -79,29 +79,29 @@ the ARM compiler. In that case ssize_t needs to be defined in this file. */
 #  define PNI_INCLUDE_STDINT
 # endif
 #else
-// all versions of Visual Studio
+/* all versions of Visual Studio */
 # ifndef PNI_DEFINE_SSIZE_T
-// ssize_t def is needed, unless third party definition interferes, e.g. python/swig
+/* ssize_t def is needed, unless third party definition interferes, e.g. python/swig */
 #  ifndef Py_CONFIG_H
 #   define PNI_DEFINE_SSIZE_T
 #  endif
 # endif
 
 # if (_MSC_VER < 1600)
-// VS 2008 and earlier
+/* VS 2008 and earlier */
 #  ifndef PNI_DEFINE_STDINT
 #   define PNI_DEFINE_STDINT
 #  endif
 # else
-// VS 2010 and newer
+/* VS 2010 and newer */
 #  ifndef PNI_INCLUDE_STDINT
 #   define PNI_INCLUDE_STDINT
 #  endif
 
-# endif // (_MSC_VER < 1600)
-#endif //_MSC_VER
+# endif /* (_MSC_VER < 1600) */
+#endif /*_MSC_VER */
 
-// Honor negative overrides
+/* Honor negative overrides */
 #ifdef PN_NODEFINE_SSIZE_T
 # undef PNI_DEFINE_SSIZE_T
 #endif
@@ -123,7 +123,7 @@ typedef SSIZE_T ssize_t;
 # else
 typedef intptr_t ssize_t;
 # endif
-#endif // PNI_DEFINE_SSIZE_T
+#endif /* PNI_DEFINE_SSIZE_T */
 
 #ifdef PNI_DEFINE_STDINT
 # ifdef _MSC_VER
@@ -138,11 +138,10 @@ typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 
-# else // _MSC_VER
+# else /* _MSC_VER */
 #  error stdint.h definitions not kown
 # endif
-#endif // PNI_DEFINE_SSIZE_T
-
+#endif /* PNI_DEFINE_SSIZE_T */
 /**
  * @endcond
  */

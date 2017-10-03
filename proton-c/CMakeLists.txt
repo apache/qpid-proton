@@ -294,13 +294,17 @@ if (SANITIZE_FLAGS)
   endif()
 endif()
 
-# Make flags visible to examples.
-set(CXX_WARNING_FLAGS "${CXX_WARNING_FLAGS}" PARENT_SCOPE)
-set(COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS}" PARENT_SCOPE)
-set(COMPILE_LANGUAGE_FLAGS "${COMPILE_LANGUAGE_FLAGS}" PARENT_SCOPE)
-set(LINK_TIME_OPTIMIZATION "${LTO}" PARENT_SCOPE)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}" PARENT_SCOPE)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" PARENT_SCOPE)
+# Flags used to build examples for self-test.
+# The examples must be self-contained and build even if these are not set.
+if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCC)
+  # Ensure that examples build with c90, to deal with older c++03-as-c compilers.
+  set(C_EXAMPLE_FLAGS "-std=c90 -pedantic")
+endif()
+set(C_EXAMPLE_FLAGS "${C_EXAMPLE_FLAGS} ${COMPILE_WARNING_FLAGS} ${CMAKE_C_FLAGS}")
+set(CXX_EXAMPLE_FLAGS ${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS})
+# Set example flags in parent scope so example/CMakefile can read them.
+set(C_EXAMPLE_FLAGS ${C_EXAMPLE_FLAGS} PARENT_SCOPE)
+set(CXX_EXAMPLE_FLAGS ${CXX_EXAMPLE_FLAGS} PARENT_SCOPE)
 
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")

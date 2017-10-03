@@ -65,8 +65,8 @@ struct pn_class_t {
   int (*inspect)(void *, pn_string_t *);
 };
 
-// Hack alert: Declare these as arrays so we can treat the name
-// of the single object as the address
+/* Hack alert: Declare these as arrays so we can treat the name of the single
+   object as the address */
 PN_EXTERN extern const pn_class_t PN_OBJECT[];
 PN_EXTERN extern const pn_class_t PN_VOID[];
 PN_EXTERN extern const pn_class_t PN_WEAKREF[];

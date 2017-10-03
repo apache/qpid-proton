@@ -30,41 +30,43 @@
 extern "C" {
 #endif
 
-/// @cond INTERNAL
+/** @cond INTERNAL */
 
-// Internal SASL authenticator interface: These are the entry points to a SASL implementations
-//
-// Free up all data structures allocated by the SASL implementation
-// void free(pn_transport_t *transport);
-//
-// Return space separated list of supported mechanisms (client and server)
-// If the returned string is dynamically allocated by the SASL implemetation
-// it must stay valid until the free entry point is called.
-// const char *list_mechs(pn_transport_t *transport);
-//
-// Initialise for either client or server (can't call both for a
-// given transport/connection):
-// bool init_server(pn_transport_t *transport);
-// bool init_client(pn_transport_t *transport);
-//
-// Writing:
-// void prepare_write(pn_transport_t *transport);
-//
-// Reading:
-// Server side (process server SASL messages):
-// void process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
-// void process_response(pn_transport_t *transport, const pn_bytes_t *recv);
-//
-// Client side (process client SASL messages)
-// bool process_mechanisms(pn_transport_t *transport, const char *mechs);
-// void process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
-// void process_outcome(pn_transport_t *transport);
+/*
+  Internal SASL authenticator interface: These are the entry points to a SASL implementations
 
-// Security layer interface (active after SASL succeeds)
-// bool    can_encrypt(pn_transport_t *transport);
-// ssize_t max_encrypt_size(pn_transport_t *transport);
-// ssize_t encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
-// ssize_t decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+  Free up all data structures allocated by the SASL implementation
+  void free(pn_transport_t *transport);
+
+  Return space separated list of supported mechanisms (client and server)
+  If the returned string is dynamically allocated by the SASL implemetation
+  it must stay valid until the free entry point is called.
+  const char *list_mechs(pn_transport_t *transport);
+
+  Initialise for either client or server (can't call both for a
+  given transport/connection):
+  bool init_server(pn_transport_t *transport);
+  bool init_client(pn_transport_t *transport);
+
+  Writing:
+  void prepare_write(pn_transport_t *transport);
+
+  Reading:
+  Server side (process server SASL messages):
+  void process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv);
+  void process_response(pn_transport_t *transport, const pn_bytes_t *recv);
+
+  Client side (process client SASL messages)
+  bool process_mechanisms(pn_transport_t *transport, const char *mechs);
+  void process_challenge(pn_transport_t *transport, const pn_bytes_t *recv);
+  void process_outcome(pn_transport_t *transport);
+
+  Security layer interface (active after SASL succeeds)
+  bool    can_encrypt(pn_transport_t *transport);
+  ssize_t max_encrypt_size(pn_transport_t *transport);
+  ssize_t encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+  ssize_t decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *out);
+*/
 
 typedef struct pnx_sasl_implementation
 {
@@ -91,7 +93,7 @@ typedef struct pnx_sasl_implementation
 
 } pnx_sasl_implementation;
 
-// Shared SASL API used by the actual SASL authenticators
+/* Shared SASL API used by the actual SASL authenticators */
 enum pnx_sasl_state {
   SASL_NONE,
   SASL_POSTED_INIT,
@@ -104,7 +106,7 @@ enum pnx_sasl_state {
   SASL_ERROR
 };
 
-// APIs used by sasl implementations
+/* APIs used by sasl implementations */
 PN_EXTERN void  pnx_sasl_logf(pn_transport_t *transport, const char *format, ...);
 
 PN_EXTERN void *pnx_sasl_get_context(pn_transport_t *transport);
@@ -134,7 +136,7 @@ PN_EXTERN void  pnx_sasl_fail_authentication(pn_transport_t *transport);
 PN_EXTERN void  pnx_sasl_set_implementation(pn_transport_t *transport, const pnx_sasl_implementation *impl, void *context);
 PN_EXTERN void  pnx_sasl_set_default_implementation(const pnx_sasl_implementation *impl);
 
-/// @endcond
+/** @endcond */
 
 #ifdef __cplusplus
 }

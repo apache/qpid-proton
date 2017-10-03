@@ -77,11 +77,8 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 static pn_bytes_t encode_message(app_data_t* app) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
-  char data[MSG_SIZE + 11];
-  size_t i;
+  char data[MSG_SIZE + 11] = {0};
   pn_data_t* body;
-  for (i=0; i<MSG_SIZE; i+=10) 
-      sprintf(&data[i], "<%09zu", i);
   pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
   body = pn_message_body(message);
   pn_data_enter(body);
@@ -136,16 +133,16 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      while (app->in_progress || (pn_link_credit(sender) > 0 && app->sent < app->message_count)) {
         if (!app->in_progress) {
           pn_bytes_t msgbuf = encode_message(app);
-          // Use sent counter as unique delivery tag.
+          /* Use sent counter as unique delivery tag. */
           pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
-          pn_link_send(sender, msgbuf.start, msgbuf.size - HOLDBACK); // Send some part of message
+          pn_link_send(sender, msgbuf.start, msgbuf.size - HOLDBACK); /* Send some part of message */
           app->in_progress = true;
-          // Return from this link flow event and abort the message on next,
+          /* Return from this link flow event and abort the message on next, */
           break;
         } else {
           pn_delivery_t * pnd = pn_link_current(sender);
           pn_delivery_abort(pnd);
-          // aborted delivery is presettled and never ack'd.
+          /* aborted delivery is presettled and never ack'd. */
           if (++app->aborted == app->message_count) {
             printf("%d messages started and aborted\n", app->aborted);
             pn_connection_close(pn_event_connection(event));
