@@ -298,7 +298,7 @@ endif()
 # The examples must be self-contained and build even if these are not set.
 if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCC)
   # Ensure that examples build with c90, to deal with older c++03-as-c compilers.
-  set(C_EXAMPLE_FLAGS "-std=c90 -pedantic")
+  set(C_EXAMPLE_FLAGS "-std=iso9899:1990 -pedantic")
 endif()
 
 # Set example flags in parent scope so example/CMakefile can read them.
