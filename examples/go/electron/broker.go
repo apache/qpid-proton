@@ -41,12 +41,13 @@ import (
 func usage() {
 	fmt.Fprintf(os.Stderr, `
 Usage: %s
-A simple broker-like demo. Queues are created automatically for sender or receiver addrsses.
+A simple message broker.
+Queues are created automatically for sender or receiver addresses.
 `, os.Args[0])
 	flag.PrintDefaults()
 }
 
-var addr = flag.String("addr", ":amqp", "Listening address")
+var addr = flag.String("addr", ":amqp", "Network address to listen on, in the form \"host:port\"")
 var credit = flag.Int("credit", 100, "Receiver credit window")
 var qsize = flag.Int("qsize", 1000, "Max queue size")
 var debug = flag.Bool("debug", false, "Print detailed debug output")

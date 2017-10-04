@@ -33,12 +33,13 @@ import (
 // Usage and command-line flags
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: %s url [url ...]
-Receive messages from all the listed URLs concurrently and print them.
+Receive messages from all URLs concurrently and print them.
+URLs are of the form "amqp://<host>:<port>/<amqp-address>"
 `, os.Args[0])
 	flag.PrintDefaults()
 }
 
-var count = flag.Uint64("count", 1, "Stop after receiving this many messages.")
+var count = flag.Uint64("count", 1, "Stop after receiving this many messages in total")
 var debug = flag.Bool("debug", false, "Print detailed debug output")
 var debugf = func(format string, data ...interface{}) {} // Default no debugging output
 

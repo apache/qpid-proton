@@ -33,12 +33,13 @@ import (
 // Usage and command-line flags
 func usage() {
 	fmt.Fprintf(os.Stderr, `Usage: %s url [url ...]
-Send messages to each URL concurrently with body "<url-path>-<n>" where n is the message number.
+Send messages to each URL concurrently.
+URLs are of the form "amqp://<host>:<port>/<amqp-address>"
 `, os.Args[0])
 	flag.PrintDefaults()
 }
 
-var count = flag.Int64("count", 1, "Send this may messages per address.")
+var count = flag.Int64("count", 1, "Send this may messages to each address.")
 var debug = flag.Bool("debug", false, "Print detailed debug output")
 var Debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
