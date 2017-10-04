@@ -37,7 +37,7 @@
 
 /// @cond INTERNAL
 /// True if the library can support multithreaded containers.
-#define PN_CPP_SUPPORTS_THREADS PN_CPP_HAS_STD_THREAD && PN_CPP_HAS_STD_MUTEX && PN_CPP_HAS_STD_ATOMIC
+#define PN_CPP_SUPPORTS_THREADS PN_CPP_HAS_STD_THREAD && PN_CPP_HAS_STD_MUTEX
 /// @endcond
 
 namespace proton {

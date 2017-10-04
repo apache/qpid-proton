@@ -44,20 +44,18 @@
 #include <vector>
 
 #if PN_CPP_SUPPORTS_THREADS
-#include <atomic>
 #include <mutex>
 # define MUTEX(x) std::mutex x;
 # define GUARD(x) std::lock_guard<std::mutex> g(x)
 # define ONCE_FLAG(x) std::once_flag x;
 # define CALL_ONCE(x, ...) std::call_once(x, __VA_ARGS__)
-# define ATOMIC_INT(x) std::atomic<int> x;
 #else
 # define MUTEX(x)
 # define GUARD(x)
 # define ONCE_FLAG(x)
 # define CALL_ONCE(x, f, o) ((o)->*(f))()
-# define ATOMIC_INT(x) int x;
 #endif
+
 struct pn_proactor_t;
 struct pn_listener_t;
 struct pn_event_t;
@@ -115,7 +113,7 @@ class container::impl {
     bool handle(pn_event_t*);
     void run_timer_jobs();
 
-    ATOMIC_INT(threads_)
+    int threads_;
     container& container_;
     MUTEX(lock_)
 

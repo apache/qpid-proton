@@ -474,10 +474,12 @@ bool container::impl::handle(pn_event_t* event) {
         return false;
 
     // We only interrupt to stop threads
-    case PN_PROACTOR_INTERRUPT:
+    case PN_PROACTOR_INTERRUPT: {
         // Interrupt any other threads still running
+        GUARD(lock_);
         if (threads_>1) pn_proactor_interrupt(proactor_);
         return true;
+    }
 
     case PN_PROACTOR_TIMEOUT: {
         // Can get an immediate timeout, if we have a container event loop inject
@@ -613,7 +615,10 @@ bool container::impl::handle(pn_event_t* event) {
 }
 
 void container::impl::thread() {
-    ++threads_;
+    {
+        GUARD(lock_);
+        ++threads_;
+    }
     bool finished = false;
     do {
       pn_event_batch_t *events = pn_proactor_wait(proactor_);
@@ -636,7 +641,10 @@ void container::impl::thread() {
       }
       pn_proactor_done(proactor_, events);
     } while(!finished);
-    --threads_;
+    {
+        GUARD(lock_);
+        --threads_;
+    }
 }
 
 void container::impl::start_event() {
@@ -669,7 +677,12 @@ void container::impl::run(int threads) {
     thread();
 #endif
 
-    if (threads_==0) CALL_ONCE(stop_once_, &impl::stop_event, this);
+    bool last = false;
+    {
+        GUARD(lock_);
+        last =  threads_==0;
+    }
+    if (last) CALL_ONCE(stop_once_, &impl::stop_event, this);
 
     // Throw an exception if we disconnected the proactor because of an exception
     if (!disconnect_error_.empty()) {
