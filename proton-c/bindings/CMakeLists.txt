@@ -103,13 +103,21 @@ if(SWIG_FOUND)
 endif()
 
 
-set(BUILD_ONLY "${BINDINGS}" CACHE STRING
-  "Only bindings in this list are built by default. Explicit BUILD_XXX=ON settings take precendence")
+# To kick-start a build with just a few bindings enabled by default, e.g. ruby and go:
+#
+#     cmake -DBUILD_BINDINGS=ruby;go
+#
+# This is only used when CMakeCache.txt is first created, after that set the normal
+# BUILD_XXX variables to enable/disable bindings.
+#
+if (NOT DEFINED BUILD_BINDINGS)
+  set(BUILD_BINDINGS "${BINDINGS}")
+endif()
 
 foreach(BINDING ${BINDINGS})
   string(TOUPPER ${BINDING} UBINDING)
-  list(FIND BUILD_ONLY ${BINDING} N)
-  if(NOBUILD_${UBINDING} OR ( N EQUAL -1 ) ) # Over-ridden or not on the BUILD_ONLY list
+  list(FIND BUILD_BINDINGS ${BINDING} N)
+  if(NOBUILD_${UBINDING} OR ( N EQUAL -1 ) ) # Over-ridden or not on the BUILD_BINDINGS list
     set(DEFAULT_${UBINDING} OFF)
   endif()
   option(BUILD_${UBINDING} "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
@@ -118,4 +126,4 @@ foreach(BINDING ${BINDINGS})
   endif ()
 endforeach(BINDING)
 
-unset(BUILD_ONLY)               # Only relevant to set initial defaults.
+unset(BUILD_BINDINGS CACHE) # Remove from cache, only relevant when creating the initial cache.

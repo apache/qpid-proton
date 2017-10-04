@@ -9,7 +9,7 @@ You can build clients and servers using this library.
 
 If you have the complete proton sources, you can build and install locally with:
 
-    cmake -DBUILD_ONLY=ruby && make install
+    cmake -DBUILD_BINDINGS=ruby && make install
 
 The cmake build also produces a Ruby Gem file at:
 
