@@ -17,9 +17,16 @@
 # under the License.
 #
 
+set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
+
 # This effectively checks for cmake version 3.1 or later
 if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
-  set(CMAKE_CXX_STANDARD 11)
+  if (BUILD_CPP_03)
+    set(STD 98)
+  else ()
+    set(STD 11)
+  endif ()
+  set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
 # AStitcher 20170804: Disabled for present - work on this when Windows C++ works
 #  cmake_minimum_required(VERSION 3.1)
@@ -34,20 +41,23 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
     include(cpp.cmake)
   endif()
 else ()
-  include(CheckCXXCompilerFlag)
-  # These flags work with GCC/Clang/SunPro compilers
-  check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
-  check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
-  if (ACCEPTS_CXX11)
-    set(CXX_STANDARD "-std=c++11")
-  elseif(ACCEPTS_CXX0X)
-    set(CXX_STANDARD "-std=c++0x")
-    include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
-  else()
-    include(cpp.cmake) # Compiler checks needed as we have no idea whats going on here!
+  if (BUILD_CPP_03)
+    set(CXX_STANDARD "-std=c++98")
+  else ()
+    include(CheckCXXCompilerFlag)
+    # These flags work with GCC/Clang/SunPro compilers
+    check_cxx_compiler_flag("-std=c++11" ACCEPTS_CXX11)
+    check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
+    if (ACCEPTS_CXX11)
+      set(CXX_STANDARD "-std=c++11")
+    elseif(ACCEPTS_CXX0X)
+      set(CXX_STANDARD "-std=c++0x")
+      include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
+    else()
+      include(cpp.cmake) # Compiler checks needed as we have no idea whats going on here!
+    endif()
   endif()
 endif ()
-
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
