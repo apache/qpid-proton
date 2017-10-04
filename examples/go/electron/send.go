@@ -39,7 +39,7 @@ URLs are of the form "amqp://<host>:<port>/<amqp-address>"
 	flag.PrintDefaults()
 }
 
-var count = flag.Int64("count", 1, "Send this may messages to each address.")
+var count = flag.Int64("count", 1, "Send this many messages to each address.")
 var debug = flag.Bool("debug", false, "Print detailed debug output")
 var Debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
