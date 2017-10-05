@@ -1710,6 +1710,7 @@ typedef struct pconnection_t {
   int wake_count;
   int hog_count; // thread hogging limiter
   bool server;                /* accept, not connect */
+  bool started;
   bool connecting;
   bool tick_pending;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
@@ -2109,7 +2110,7 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
   return NULL;
 }
 
-// Either stops a timer before firing or returns after the callback has 
+// Either stops a timer before firing or returns after the callback has
 // completed (in the threadpool thread).  Never "in doubt".
 static bool stop_timer(HANDLE tqueue, HANDLE *timer) {
   if (!*timer) return true;
@@ -2225,6 +2226,8 @@ static bool pconnection_cleanup(pconnection_t *pc) {
 static inline bool pconnection_work_pending(pconnection_t *pc) {
   if (pc->completion_queue->size() || pc->wake_count || pc->tick_pending || pc->queued_disconnect)
     return true;
+  if (!pc->started)
+    return false;
   pn_bytes_t wbuf = pn_connection_driver_write_buffer(&pc->driver);
   return (wbuf.size > 0 && (pc->psocket.iocpd->events & PN_WRITABLE));
 }
@@ -2274,7 +2277,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, iocp_result_t *r
             return NULL;
           pc->context.working = true;
         }
-        open = !pc->connecting && !pc->context.closing;
+        open = pc->started && !pc->connecting && !pc->context.closing;
       }
       else {
         // Just re-acquired lock after processing IO and engine work
@@ -2341,9 +2344,11 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, iocp_result_t *r
         }
         else if (is_connect_result(result)) {
           connect_step_done(pc, (connect_result_t *) result);
-          open = pc->psocket.iocpd && (pc->psocket.iocpd->events & PN_WRITABLE);
-          if (open)
+          if (pc->psocket.iocpd && (pc->psocket.iocpd->events & PN_WRITABLE)) {
             pc->connecting = false;
+            if (pc->started)
+              open = true;
+          }
         }
         else do_complete(result);
       }
@@ -2417,6 +2422,8 @@ static pn_event_t *pconnection_batch_next(pn_event_batch_t *batch) {
     pconnection_process(pc, NULL, true);  // top up
     e = pn_connection_driver_next_event(&pc->driver);
   }
+  if (e && !pc->started && pn_event_type(e) == PN_CONNECTION_BOUND)
+    pc->started = true; // SSL will be set up on return and safe to do IO with correct transport layers
   return e;
 }
 
@@ -2766,6 +2773,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
 
   struct addrinfo *addrinfo = NULL;
   int gai_err = pgetaddrinfo(host, port, AI_PASSIVE | AI_ALL, &addrinfo);
+  int wsa_err = 0;
   if (!gai_err) {
     /* Count addresses, allocate enough space for sockets */
     size_t len = 0;
@@ -2778,24 +2786,25 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     l->psockets_size = 0;
     /* Find working listen addresses */
     for (struct addrinfo *ai = addrinfo; ai; ai = ai->ai_next) {
+      // Note fd destructor can clear WSAGetLastError()
       unique_socket fd(::socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol));
       if (fd != INVALID_SOCKET) {
         bool yes = 1;
-        if (!::setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (const char *) &yes, sizeof(yes)))
-          if (!::bind(fd, ai->ai_addr, ai->ai_addrlen))
-            if (!::listen(fd, backlog)) {
-              iocpdesc_t *iocpd = pni_iocpdesc_create(p->iocp, fd);
-              if (iocpd) {
-                fd.release();
-                psocket_t *ps = &l->psockets[l->psockets_size++];
-                psocket_init(ps, l, false, addr);
-                ps->iocpd = iocpd;
-                iocpd->is_mp = true;
-                iocpd->active_completer = ps;
-                pni_iocpdesc_start(ps->iocpd);
-              }
+        if (!::bind(fd, ai->ai_addr, ai->ai_addrlen))
+          if (!::listen(fd, backlog)) {
+            iocpdesc_t *iocpd = pni_iocpdesc_create(p->iocp, fd);
+            if (iocpd) {
+              fd.release();
+              psocket_t *ps = &l->psockets[l->psockets_size++];
+              psocket_init(ps, l, false, addr);
+              ps->iocpd = iocpd;
+              iocpd->is_mp = true;
+              iocpd->active_completer = ps;
+              pni_iocpdesc_start(ps->iocpd);
             }
+          }
       }
+      wsa_err = WSAGetLastError();  // save it
     }
   }
   if (addrinfo) {
@@ -2810,7 +2819,7 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     if (gai_err) {
       psocket_error(l->psockets, gai_err, "listen on");
     } else {
-      psocket_error(l->psockets, WSAGetLastError(), "listen on");
+      psocket_error(l->psockets, wsa_err, "listen on");
     }
   }
   wakeup(l->psockets);
@@ -3176,6 +3185,7 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
       pc->psocket.iocpd = conn_iocpd;
       conn_iocpd->active_completer =&pc->psocket;
       set_sock_names(pc);
+      pc->started = true;
       pni_iocpdesc_start(conn_iocpd);
     }
 
