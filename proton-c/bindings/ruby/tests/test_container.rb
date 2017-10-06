@@ -26,78 +26,73 @@ URL = Qpid::Proton::URL
 
 class ContainerTest < Minitest::Test
 
-  # Send n messages
-  class SendMessageClient < TestHandler
-    attr_reader :accepted
+  def test_simple()
 
-    def initialize(url, link_name, body)
-      super()
-      @url, @link_name, @message = url, link_name, Message.new(body)
-    end
+    hc = Class.new(TestServer) do
+      attr_reader :accepted
 
-    def on_start(event)
-      event.container.create_sender(@url, {:name => @link_name})
-    end
+      def on_start(event)
+        super
+        event.container.create_sender("amqp://#{addr}", {:name => "testlink"})
+      end
 
-    def on_sendable(event)
-      if event.sender.credit > 0
-        event.sender.send(@message)
+      def on_sendable(event)
+        if @sent.nil? && event.sender.credit > 0
+          event.sender.send(Message.new("testmessage"))
+          @sent = true
+        end
+      end
+
+      def on_accepted(event)
+        @accepted = event
+        event.container.stop
       end
     end
-
-    def on_accepted(event)
-      @accepted = event
-      event.connection.close
-    end
+    h = hc.new
+    Container.new(h).run
+    assert_instance_of(Qpid::Proton::Event::Event, h.accepted)
+    assert_equal "testlink", h.links.first.name
+    assert_equal "testmessage", h.messages.first.body
   end
-
-  def test_simple()
-    TestServer.new.run do |s|
-      lname = "test-link"
-      body = "hello"
-      c = SendMessageClient.new(s.addr, lname, body).run
-      assert_instance_of(Qpid::Proton::Event::Event, c.accepted)
-      assert_equal(lname, s.links.pop(true).name)
-      assert_equal(body, s.messages.pop(true).body)
-    end
-  end
-
 end
 
 class ContainerSASLTest < Minitest::Test
 
-  # Connect to URL using mechanisms and insecure to configure the transport
-  class SASLClient < TestHandler
+  # Handler for test client/server that sets up server and client SASL options
+  class SASLHandler < TestServer
 
-    def initialize(url, opts={})
+    attr_accessor :url
+
+    def initialize(opts={}, mechanisms=nil, insecure=nil, realm=nil)
       super()
-      @url, @opts = url, opts
+      @opts, @mechanisms, @insecure, @realm = opts, mechanisms, insecure, realm
     end
 
-    def on_start(event)
-      event.container.connect(@url, @opts)
-    end
-
-    def on_connection_opened(event)
+    def on_start(e)
       super
-      event.container.stop
-    end
-  end
-
-  # Server with SASL settings
-  class SASLServer < TestServer
-    def initialize(mechanisms=nil, insecure=nil, realm=nil)
-      super()
-      @mechanisms, @insecure, @realm = mechanisms, insecure, realm
+      @client = e.container.connect(@url || "amqp://#{addr}", @opts)
     end
 
-    def on_connection_bound(event)
-      sasl = event.transport.sasl
-      sasl.allow_insecure_mechs = @insecure unless @insecure.nil?
-      sasl.allowed_mechs = @mechanisms unless @mechanisms.nil?
-      # TODO aconway 2017-08-16: need `sasl.realm(@realm)` here for non-default realms.
-      # That reqiures pn_sasl_set_realm() at the C layer - the realm should
-      # be passed to cyrus_sasl_init_server()
+    def on_connection_bound(e)
+      if e.connection != @client # Incoming server connection
+        @listener.close
+        sasl = e.transport.sasl
+        sasl.allow_insecure_mechs = @insecure unless @insecure.nil?
+        sasl.allowed_mechs = @mechanisms unless @mechanisms.nil?
+        # TODO aconway 2017-08-16: need `sasl.realm(@realm)` here for non-default realms.
+        # That reqiures pn_sasl_set_realm() at the C layer - the realm should
+        # be passed to cyrus_sasl_init_server()
+      end
+    end
+
+    attr_reader :auth_user
+    def on_connection_opened(e)
+      super
+      if e.connection == @client
+        e.connection.close
+      else
+        @auth_user = e.transport.sasl.user
+      end
     end
   end
 
@@ -119,7 +114,7 @@ class ContainerSASLTest < Minitest::Test
           f.write("
 sasldb_path: #{database}
 mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
-")
+                  ")
         end
         # Tell proton library to use the new configuration
         SASL.config_path(conf_dir)
@@ -140,62 +135,36 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   end
 
   def test_sasl_anonymous()
-    SASLServer.new("ANONYMOUS").run do |s|
-      c = SASLClient.new(s.addr, {:sasl_allowed_mechs => "ANONYMOUS"}).run
-      refute_empty(c.connections)
-      refute_empty(s.connections)
-      assert_nil(s.connections.pop(true).user)
-    end
+    s = SASLHandler.new({:sasl_allowed_mechs => "ANONYMOUS"}, "ANONYMOUS")
+    Container.new(s).run
+    assert_nil(s.connections[0].user)
   end
 
   def test_sasl_plain_url()
     # Use default realm with URL, should authenticate with "default_password"
-    SASLServer.new("PLAIN", true).run do |s|
-      c = SASLClient.new("amqp://user:default_password@#{s.addr}",
-                         {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}).run
-      refute_empty(c.connections)
-      refute_empty(s.connections)
-      sc = s.connections.pop(true)
-      assert_equal("user", sc.transport.sasl.user)
-    end
+    s = SASLHandler.new({:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}, "PLAIN", true)
+    s.url = ("amqp://user:default_password@#{s.addr}")
+    Container.new(s).run
+    assert_equal(2, s.connections.size)
+    assert_equal("user", s.auth_user)
   end
 
   def test_sasl_plain_options()
     # Use default realm with connection options, should authenticate with "default_password"
-    SASLServer.new("PLAIN", true).run do |s|
-      c = SASLClient.new(s.addr,
-                         {:user => "user", :password => "default_password",
-                          :sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}).run
-      refute_empty(c.connections)
-      refute_empty(s.connections)
-      sc = s.connections.pop(true)
-      assert_equal("user", sc.transport.sasl.user)
-    end
-  end
-
-  # Test disabled, see on_connection_bound - missing realm support in proton C.
-  def TODO_test_sasl_plain_realm()
-    # Use the non-default proton realm on the server, should authenticate with "password"
-    SASLServer.new("PLAIN", true, "proton").run do |s|
-      c = SASLClient.new("amqp://user:password@#{s.addr}",
-                         {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}).run
-      refute_empty(c.connections)
-      refute_empty(s.connections)
-      sc = s.connections.pop(true)
-      assert_equal("user", sc.transport.sasl.user)
-    end
+    opts = {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true,
+            :user => 'user', :password => 'default_password' }
+    s = SASLHandler.new(opts, "PLAIN", true)
+    Container.new(s).run
+    assert_equal(2, s.connections.size)
+    assert_equal("user", s.auth_user)
   end
 
   # Ensure we don't allow PLAIN if allow_insecure_mechs = true is not explicitly set
   def test_disallow_insecure()
     # Don't set allow_insecure_mechs, but try to use PLAIN
-    SASLServer.new("PLAIN", nil).run(true) do |s|
-      begin
-        SASLClient.new("amqp://user:password@#{s.addr}",
-                       {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}).run
-      rescue TestError => e
-        assert_match(/PN_TRANSPORT_ERROR.*unauthorized-access/, e.to_s)
-      end
-    end
+    s = SASLHandler.new({:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}, "PLAIN")
+    s.url = "amqp://user:password@#{s.addr}"
+    e = assert_raises(TestError) { Container.new(s).run }
+    assert_match(/PN_TRANSPORT_ERROR.*unauthorized-access/, e.to_s)
   end
 end
