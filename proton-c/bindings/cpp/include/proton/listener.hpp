@@ -38,6 +38,9 @@ class PN_CPP_CLASS_EXTERN listener {
   public:
     /// Create an empty listener.
     PN_CPP_EXTERN listener();
+    PN_CPP_EXTERN listener(const listener&);
+    PN_CPP_EXTERN ~listener();
+    PN_CPP_EXTERN listener& operator=(const listener&);
 
     /// Stop listening on the address provided to the call to
     /// container::listen that returned this listener.

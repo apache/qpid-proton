@@ -52,15 +52,7 @@ namespace {
     const std::string verify_noname("noname"); // Skip matching host name against the certificate
     const std::string verify_fail("fail");  // Force name mismatch failure
     std::string verify(verify_full);  // Default for example
-    bool verify_failed(false);
     std::string cert_directory;
-
-    class example_cert_error : public std::runtime_error
-    {
-    public:
-        explicit example_cert_error(const std::string& s) : std::runtime_error(s) {}
-    };
-
 }
 
 
@@ -136,9 +128,11 @@ class hello_world_direct : public proton::messaging_handler {
 
     void on_transport_error(proton::transport &t) OVERRIDE {
         std::string err = t.error().what();
-        if (err.find("certificate") != std::string::npos) {
-            verify_failed = true;
-            throw example_cert_error(err);
+        if (verify == verify_fail && err.find("certificate") != std::string::npos) {
+            std::cout << "Expected failure of connection with wrong peer name: " << err
+                      << std::endl;
+        } else {
+            std::cout << "Unexpected transport error: " << err << std::endl;
         }
     }
 
@@ -181,14 +175,6 @@ int main(int argc, char **argv) {
         proton::container(hwd).run();
         return 0;
     } catch (const std::exception& e) {
-        if (verify_failed) {
-            if (verify == verify_fail) {
-                std::cout << "Expected failure of connection with wrong peer name: " << e.what() << std::endl;
-                return 0;
-            } else {
-                std::cerr << "unexpected internal certificate failure: ";
-            }
-        }
         std::cerr << e.what() << std::endl;
     }
     return 1;

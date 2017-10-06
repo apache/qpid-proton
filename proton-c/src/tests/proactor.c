@@ -185,7 +185,7 @@ static pn_event_type_t test_proactors_run(test_proactor_t *tps, size_t n) {
   return e;
 }
 
-/* Run an array of proactors till a handler returns an event. */
+/* Run an array of proactors till a handler returns the desired event. */
 void test_proactors_run_until(test_proactor_t *tps, size_t n, pn_event_type_t want) {
   while (test_proactors_get(tps, n) != want)
          ;
@@ -324,17 +324,19 @@ static pn_event_type_t common_handler(test_handler_t *th, pn_event_t *e) {
   }
 }
 
-/* Like common_handler but does not auto-close the listener after one accept */
+/* Like common_handler but does not auto-close the listener after one accept,
+   and returns on LISTENER_CLOSE
+*/
 static pn_event_type_t listen_handler(test_handler_t *th, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_LISTENER_ACCEPT:
     /* No automatic listener close/free for tests that accept multiple connections */
     last_accepted = pn_connection();
     pn_listener_accept(pn_event_listener(e), last_accepted);
+    /* No automatic close */
     return PN_EVENT_NONE;
 
    case PN_LISTENER_CLOSE:
-    /* No automatic free */
     return PN_LISTENER_CLOSE;
 
    default:
@@ -747,60 +749,111 @@ static void test_release_free(test_t *t) {
   pn_connection_free(pn_connection());
 }
 
-/* TODO aconway 2017-03-27: need windows version with .p12 certs */
-#define CERTFILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl_certs/" NAME ".pem"
+#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl_certs/" NAME
+#define SSL_PW "tserverpw"
+/* Windows vs. OpenSSL certificates */
+#if defined(_WIN32)
+#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
+#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
+  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
 
-static pn_event_type_t ssl_handler(test_handler_t *th, pn_event_t *e) {
-  pn_connection_t *c = pn_event_connection(e);
+#else
+#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
+#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
+  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
+#endif
+
+static pn_event_type_t ssl_handler(test_handler_t *h, pn_event_t *e) {
   switch (pn_event_type(e)) {
 
-   case PN_CONNECTION_BOUND: {
-     bool incoming = (pn_connection_state(c) & PN_LOCAL_UNINIT);
-     pn_ssl_domain_t *ssld = pn_ssl_domain(incoming ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT);
-     TEST_CHECK(th->t, 0 == pn_ssl_domain_set_credentials(
-                  ssld, CERTFILE("tserver-certificate"), CERTFILE("tserver-private-key"), "tserverpw"));
-     TEST_CHECK(th->t, 0 == pn_ssl_init(pn_ssl(pn_event_transport(e)), ssld, NULL));
-     pn_ssl_domain_free(ssld);
-     return PN_EVENT_NONE;
-   }
+   case PN_CONNECTION_BOUND:
+    TEST_CHECK(h->t, 0 == pn_ssl_init(pn_ssl(pn_event_transport(e)), h->ssl_domain, NULL));
+    return PN_EVENT_NONE;
 
    case PN_CONNECTION_REMOTE_OPEN: {
-     if (pn_connection_state(c) & PN_LOCAL_ACTIVE) {
-       /* Outgoing connection is complete, close it */
-       pn_connection_close(c);
-     } else {
-       /* Incoming connection, check for SSL */
-       pn_ssl_t *ssl = pn_ssl(pn_event_transport(e));
-       TEST_CHECK(th->t, ssl);
-       TEST_CHECK(th->t, pn_ssl_get_protocol_name(ssl, NULL, 0));
-       pn_connection_open(c);      /* Return the open (no-op if already open) */
-     }
-    return PN_CONNECTION_REMOTE_OPEN;
+     pn_ssl_t *ssl = pn_ssl(pn_event_transport(e));
+     TEST_CHECK(h->t, ssl);
+     TEST_CHECK(h->t, pn_ssl_get_protocol_name(ssl, NULL, 0));
+     return PN_CONNECTION_REMOTE_OPEN;
    }
-
    default:
-    return common_handler(th, e);
+    return PN_EVENT_NONE;
   }
 }
 
-/* Establish an SSL connection between proactors*/
+static pn_event_type_t ssl_server_handler(test_handler_t *h, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+   case PN_CONNECTION_BOUND:
+   case PN_CONNECTION_REMOTE_OPEN: {
+     pn_event_type_t et = ssl_handler(h, e);
+     pn_connection_open(pn_event_connection(e));
+     return et;
+   }
+   default:
+    return listen_handler(h, e);
+  }
+}
+
+static pn_event_type_t ssl_client_handler(test_handler_t *h, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+   case PN_CONNECTION_BOUND:
+   case PN_CONNECTION_REMOTE_OPEN: {
+     pn_event_type_t et = ssl_handler(h, e);
+     pn_connection_close(pn_event_connection(e));
+     return et;
+   }
+    break;
+   default:
+    return common_handler(h, e);
+  }
+}
+
+/* Test various SSL connections between proactors*/
 static void test_ssl(test_t *t) {
   if (!pn_ssl_present()) {
     TEST_LOGF(t, "Skip SSL test, no support");
     return;
   }
 
-  test_proactor_t tps[] ={ test_proactor(t, ssl_handler), test_proactor(t, ssl_handler) };
-  pn_proactor_t *client = tps[0].proactor;
-  test_listener_t l = test_listen(&tps[1], localhost);
-  pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, l.port.host_port);
+  test_proactor_t tps[] ={ test_proactor(t, ssl_client_handler), test_proactor(t, ssl_server_handler) };
+  test_proactor_t *client = &tps[0], *server = &tps[1];
+  pn_ssl_domain_t *cd = client->handler.ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+  pn_ssl_domain_t *sd =  server->handler.ssl_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
+  TEST_CHECK(t, 0 == SET_CREDENTIALS(sd, "tserver"));
+  test_listener_t l = test_listen(server, localhost);
+
+  /* Basic SSL connection */
+  pn_proactor_connect(client->proactor, pn_connection(), l.port.host_port);
   /* Open ok at both ends */
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
+  TEST_PROACTORS_DRAIN(tps);
 
+  /* Verify peer with good hostname */
+  TEST_INT_EQUAL(t, 0, pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")));
+  TEST_INT_EQUAL(t, 0, pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL));
+  pn_connection_t *c = pn_connection();
+  pn_connection_set_hostname(c, "test_server");
+  pn_proactor_connect(client->proactor, c, l.port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
+  TEST_COND_EMPTY(t, last_condition);
+  TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
+  TEST_COND_EMPTY(t, last_condition);
+  TEST_PROACTORS_DRAIN(tps);
+
+  /* Verify peer with bad hostname */
+  c = pn_connection();
+  pn_connection_set_hostname(c, "wrongname");
+  pn_proactor_connect(client->proactor, c, l.port.host_port);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_COND_NAME(t, "amqp:connection:framing-error",  last_condition);
+  TEST_COND_DESC(t, "SSL",  last_condition);
+  TEST_PROACTORS_DRAIN(tps);
+
+  pn_ssl_domain_free(cd);
+  pn_ssl_domain_free(sd);
   TEST_PROACTORS_DESTROY(tps);
 }
 

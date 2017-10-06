@@ -21,6 +21,7 @@
  */
 
 #include "test_tools.h"
+#include <proton/ssl.h>
 
 /* C event handlers for tests */
 
@@ -45,6 +46,7 @@ typedef struct test_handler_t {
   pn_link_t *sender;
   pn_link_t *receiver;
   pn_delivery_t *delivery;
+  pn_ssl_domain_t *ssl_domain;
 } test_handler_t;
 
 void test_handler_init(test_handler_t *th, test_t *t, test_handler_fn f) {
