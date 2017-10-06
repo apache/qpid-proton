@@ -575,7 +575,6 @@ static void test_inactive(test_t *t) {
 static void test_errors(test_t *t) {
   test_proactor_t tps[] =  { test_proactor(t, open_wake_handler), test_proactor(t, listen_handler) };
   pn_proactor_t *client = tps[0].proactor, *server = tps[1].proactor;
-  test_port_t port = test_port(localhost);          /* Hold a port */
 
   /* Invalid connect/listen service name */
   pn_connection_t *c = pn_connection();
@@ -584,8 +583,7 @@ static void test_errors(test_t *t) {
   TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
-  pn_listener_t *l = pn_listener();
-  pn_proactor_listen(server, l, "127.0.0.1:xxx", 1);
+  pn_proactor_listen(server, pn_listener(), "127.0.0.1:xxx", 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "xxx", last_condition);
@@ -598,11 +596,23 @@ static void test_errors(test_t *t) {
   TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
-  l = pn_listener();
-  pn_proactor_listen(server, l, "nosuch.example.com:", 1);
+  pn_proactor_listen(server, pn_listener(), "nosuch.example.com:", 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "nosuch", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
+
+  /* Listen on a port already in use */
+  test_port_t port = test_port(localhost);
+  pn_listener_t *l = pn_listener();
+  pn_proactor_listen(server, l, port.host_port, 1);
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
+  pn_proactor_listen(server, pn_listener(), port.host_port, 1); /* Busy */
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
+  TEST_COND_NAME(t, "proton:io", last_condition);
+  pn_listener_close(l);
+  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   /* Connect with no listener */

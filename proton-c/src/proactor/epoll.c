@@ -1406,7 +1406,8 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   bool notify = wake(&l->context);
 
   if (l->psockets_size == 0) { /* All failed, create dummy socket with an error */
-    l->psockets = (psocket_t*)calloc(sizeof(psocket_t), 1);
+    l->psockets = (psocket_t*)realloc(l->psockets, sizeof(psocket_t));
+    memset(l->psockets, 0, sizeof(psocket_t));
     psocket_init(l->psockets, p, l, addr);
     if (gai_err) {
       psocket_gai_error(l->psockets, gai_err, "listen on");
