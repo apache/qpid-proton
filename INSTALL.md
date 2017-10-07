@@ -40,7 +40,7 @@ language.
     $ yum install openssl-devel
 
     # Dependencies needed for Cyrus SASL support
-    $ yum install cyrus-sasl-devel
+    $ yum install cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-md5
 
     # Dependencies needed for bindings
     $ yum install swig                                       # Required for all bindings
