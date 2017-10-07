@@ -783,7 +783,9 @@ static pn_event_type_t ssl_handler(test_handler_t *h, pn_event_t *e) {
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_ssl_t *ssl = pn_ssl(pn_event_transport(e));
      TEST_CHECK(h->t, ssl);
-     TEST_CHECK(h->t, pn_ssl_get_protocol_name(ssl, NULL, 0));
+     char protocol[256];
+     TEST_CHECK(h->t, pn_ssl_get_protocol_name(ssl, protocol, sizeof(protocol)));
+     TEST_STR_IN(h->t, "TLS", protocol);
      return PN_CONNECTION_REMOTE_OPEN;
    }
    default:
@@ -794,6 +796,7 @@ static pn_event_type_t ssl_handler(test_handler_t *h, pn_event_t *e) {
 static pn_event_type_t ssl_server_handler(test_handler_t *h, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_CONNECTION_BOUND:
+    return ssl_handler(h, e);
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_event_type_t et = ssl_handler(h, e);
      pn_connection_open(pn_event_connection(e));
@@ -807,6 +810,7 @@ static pn_event_type_t ssl_server_handler(test_handler_t *h, pn_event_t *e) {
 static pn_event_type_t ssl_client_handler(test_handler_t *h, pn_event_t *e) {
   switch (pn_event_type(e)) {
    case PN_CONNECTION_BOUND:
+    return ssl_handler(h, e);
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_event_type_t et = ssl_handler(h, e);
      pn_connection_close(pn_event_connection(e));
@@ -839,7 +843,8 @@ static void test_ssl(test_t *t) {
   TEST_COND_EMPTY(t, last_condition);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
-  TEST_PROACTORS_DRAIN(tps);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
 
   /* Verify peer with good hostname */
   TEST_INT_EQUAL(t, 0, pn_ssl_domain_set_trusted_ca_db(cd, CERTIFICATE("tserver")));
@@ -851,7 +856,8 @@ static void test_ssl(test_t *t) {
   TEST_COND_EMPTY(t, last_condition);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
-  TEST_PROACTORS_DRAIN(tps);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
 
   /* Verify peer with bad hostname */
   c = pn_connection();
