@@ -156,7 +156,10 @@ class IncomingMessageHandler(Handler, Acking):
     def on_delivery(self, event):
         dlv = event.delivery
         if not dlv.link.is_receiver: return
-        if dlv.readable and not dlv.partial:
+        if dlv.aborted:
+            self.on_aborted(event)
+            dlv.settle()
+        elif dlv.readable and not dlv.partial:
             event.message = recv_msg(dlv)
             if event.link.state & Endpoint.LOCAL_CLOSED:
                 if self.auto_accept:
@@ -191,6 +194,10 @@ class IncomingMessageHandler(Handler, Acking):
     def on_settled(self, event):
         if self.delegate != None:
             dispatch(self.delegate, 'on_settled', event)
+
+    def on_aborted(self, event):
+        if self.delegate != None:
+            dispatch(self.delegate, 'on_aborted', event)
 
 class EndpointStateHandler(Handler):
     """
