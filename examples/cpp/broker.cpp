@@ -146,7 +146,7 @@ class Queue {
             DOUT(std::cerr << "(" << current_->second << ") ";);
             if (current_->second>0) {
                 DOUT(std::cerr << current_->first << " ";);
-                proton::schedule_work(current_->first, &Sender::sendMsg, current_->first, messages_.front());
+                current_->first->add(make_work(&Sender::sendMsg, current_->first, messages_.front()));
                 messages_.pop_front();
                 --current_->second;
                 ++current_;
@@ -185,14 +185,14 @@ public:
         // If we're about to erase the current subscription move on
         if (current_ != subscriptions_.end() && current_->first==s) ++current_;
         subscriptions_.erase(s);
-        proton::schedule_work(s, &Sender::unsubscribed, s);
+        s->add(make_work(&Sender::unsubscribed, s));
     }
 };
 
 // We have credit to send a message.
 void Sender::on_sendable(proton::sender &sender) {
     if (queue_) {
-        proton::schedule_work(queue_, &Queue::flow, queue_, this, sender.credit());
+        queue_->add(make_work(&Queue::flow, queue_, this, sender.credit()));
     } else {
         pending_credit_ = sender.credit();
     }
@@ -200,7 +200,7 @@ void Sender::on_sendable(proton::sender &sender) {
 
 void Sender::on_sender_close(proton::sender &sender) {
     if (queue_) {
-        proton::schedule_work(queue_, &Queue::unsubscribe, queue_, this);
+        queue_->add(make_work(&Queue::unsubscribe, queue_, this));
     } else {
         // TODO: Is it possible to be closed before we get the queue allocated?
         // If so, we should have a way to mark the sender deleted, so we can delete
@@ -214,12 +214,12 @@ void Sender::boundQueue(Queue* q, std::string qn) {
     queue_ = q;
     queue_name_ = qn;
 
-    proton::schedule_work(q, &Queue::subscribe, q, this);
+    q->add(make_work(&Queue::subscribe, q, this));
     sender_.open(proton::sender_options()
         .source((proton::source_options().address(queue_name_)))
         .handler(*this));
     if (pending_credit_>0) {
-        proton::schedule_work(queue_, &Queue::flow, queue_, this, pending_credit_);
+        queue_->add(make_work(&Queue::flow, queue_, this, pending_credit_));
     }
     std::cout << "sending from " << queue_name_ << std::endl;
 }
@@ -244,7 +244,7 @@ class Receiver : public proton::messaging_handler {
     void queueMsgs() {
         DOUT(std::cerr << "Receiver: " << this << " queueing " << messages_.size() << " msgs to: " << queue_ << "\n";);
         while (!messages_.empty()) {
-            proton::schedule_work(queue_, &Queue::queueMsg, queue_, messages_.front());
+            queue_->add(make_work(&Queue::queueMsg, queue_, messages_.front()));
             messages_.pop_front();
         }
     }
@@ -302,7 +302,7 @@ public:
         } else {
             q = i->second;
         }
-        proton::schedule_work(&connection, &T::boundQueue, &connection, q, qn);
+        connection.add(make_work(&T::boundQueue, &connection, q, qn));
     }
 
     void findQueueSender(Sender* s, std::string qn) {
@@ -332,7 +332,7 @@ public:
         std::string qn = sender.source().dynamic() ? "" : sender.source().address();
         Sender* s = new Sender(sender, senders_);
         senders_[sender] = s;
-        proton::schedule_work(&queue_manager_, &QueueManager::findQueueSender, &queue_manager_, s, qn);
+        queue_manager_.add(make_work(&QueueManager::findQueueSender, &queue_manager_, s, qn));
     }
 
     // A receiver receives messages from a publisher to a queue.
@@ -348,7 +348,7 @@ public:
                 DOUT(std::cerr << "ODD - trying to attach to a empty address\n";);
             }
             Receiver* r = new Receiver(receiver);
-            proton::schedule_work(&queue_manager_, &QueueManager::findQueueReceiver, &queue_manager_, r, qname);
+            queue_manager_.add(make_work(&QueueManager::findQueueReceiver, &queue_manager_, r, qname));
         }
     }
 
@@ -359,7 +359,7 @@ public:
             if (j == senders_.end()) continue;
             Sender* s = j->second;
             if (s->queue_) {
-                proton::schedule_work(s->queue_, &Queue::unsubscribe, s->queue_, s);
+                s->queue_->add(make_work(&Queue::unsubscribe, s->queue_, s));
             }
             senders_.erase(j);
         }
@@ -377,7 +377,7 @@ public:
             if (j == senders_.end()) continue;
             Sender* s = j->second;
             if (s->queue_) {
-                proton::schedule_work(s->queue_, &Queue::unsubscribe, s->queue_, s);
+                s->queue_->add(make_work(&Queue::unsubscribe, s->queue_, s));
             }
         }
         delete this;            // All done.

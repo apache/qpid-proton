@@ -221,7 +221,7 @@ struct hang_tester : public proton::messaging_handler {
 
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
         port = listen_on_random_port(c, listener);
-        schedule_work(&c, proton::duration(250), &hang_tester::connect, this, &c);
+        c.schedule(proton::duration(250), make_work(&hang_tester::connect, this, &c));
     }
 
     void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {

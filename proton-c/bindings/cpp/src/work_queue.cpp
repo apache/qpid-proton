@@ -51,6 +51,10 @@ bool work_queue::add(v11::work f) {
 }
 #endif
 
+bool work_queue::add(void_function0& f) {
+    return add(make_work(&void_function0::operator(), &f));
+}
+
 void work_queue::schedule(duration d, v03::work f) {
     // If we have no actual work queue, then can't defer
     if (!impl_) return;
@@ -64,6 +68,10 @@ void work_queue::schedule(duration d, v11::work f) {
     return impl_->schedule(d, f);
 }
 #endif
+
+void work_queue::schedule(duration d, void_function0& f) {
+    schedule(d, make_work(&void_function0::operator(), &f));
+}
 
 work_queue& work_queue::get(pn_connection_t* c) {
     return connection_context::get(c).work_queue_;

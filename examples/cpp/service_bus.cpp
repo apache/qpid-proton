@@ -129,20 +129,9 @@ class session_receiver : public proton::messaging_handler {
     proton::container *container;
     proton::receiver receiver;
 
-
-    struct process_timeout_fn : public proton::void_function0 {
-        session_receiver& parent;
-        process_timeout_fn(session_receiver& sr) : parent(sr) {}
-        void operator()() { parent.process_timeout(); }
-    };
-
-    process_timeout_fn do_process_timeout;
-
-
   public:
     session_receiver(const std::string &c, const std::string &e,
-                     const char *sid) : connection_url(c), entity(e), message_count(0), closed(false), read_timeout(5000),
-                                               last_read(0), container(0), do_process_timeout(*this) {
+                     const char *sid) : connection_url(c), entity(e), message_count(0), closed(false), read_timeout(5000), last_read(0), container(0) {
         if (sid)
             session_identifier = std::string(sid);
         // session_identifier is now either empty/null or an AMQP string type.
@@ -172,7 +161,7 @@ class session_receiver : public proton::messaging_handler {
         // identifier if none was specified).
         last_read = proton::timestamp::now();
         // Call this->process_timeout after read_timeout.
-        container->schedule(read_timeout, do_process_timeout);
+        container->schedule(read_timeout, make_work(&session_receiver::process_timeout, this));
     }
 
     void on_receiver_open(proton::receiver &r) OVERRIDE {
@@ -202,7 +191,7 @@ class session_receiver : public proton::messaging_handler {
                 std::cout << "Done. No more messages." << std::endl;
         } else {
             proton::duration next = deadline - now;
-            container->schedule(next, do_process_timeout);
+            container->schedule(next, make_work(&session_receiver::process_timeout, this));
         }
     }
 };
