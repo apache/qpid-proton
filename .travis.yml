@@ -39,10 +39,11 @@ addons:
     - python3-dev
     - php5
     - golang
+    - lcov
 
 install:
 - pip install --user --upgrade pip
-- pip install --user tox
+- pip install --user coverage tox
 - gem install minitest
 
 before_script:
@@ -52,3 +53,14 @@ before_script:
 
 script:
 - cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
+
+after_success:
+- |
+    if [[ ${CC} = gcc ]]; then
+      mkdir ../build_coverage
+      cd ../build_coverage
+      cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DENABLE_VALGRIND=OFF -DCMAKE_BUILD_TYPE=Coverage ${QPID_PROTON_CMAKE_ARGS}
+      cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
+      ../bin/record-coverage.sh . ..
+      bash <(curl -s https://codecov.io/bash)
+    fi
