@@ -63,7 +63,7 @@ class work_queue;
 
 namespace v03 { class work; }
 
-#if PN_CPP_HAS_LAMBDAS
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 namespace v11 { class work; }
 using v11::work;
 #else
