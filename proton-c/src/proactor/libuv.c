@@ -641,9 +641,9 @@ static void leader_listen_lh(pn_listener_t *l) {
   }
   if (err) {
     listener_error_lh(l, err, "listening on");
+  } else {
+    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
   }
-  /* Always put an OPEN event for symmetry, even if we have an error. */
-  pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
 }
 
 void pn_listener_free(pn_listener_t *l) {

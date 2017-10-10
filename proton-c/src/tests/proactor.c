@@ -584,7 +584,6 @@ static void test_errors(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   pn_proactor_listen(server, pn_listener(), "127.0.0.1:xxx", 1);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
@@ -597,7 +596,6 @@ static void test_errors(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   pn_proactor_listen(server, pn_listener(), "nosuch.example.com:", 1);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
@@ -608,7 +606,6 @@ static void test_errors(test_t *t) {
   pn_proactor_listen(server, l, port.host_port, 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   pn_proactor_listen(server, pn_listener(), port.host_port, 1); /* Busy */
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_COND_NAME(t, "proton:io", last_condition);
   pn_listener_close(l);

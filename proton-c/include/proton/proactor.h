@@ -122,11 +122,12 @@ PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *co
  * Start listening for incoming connections.
  *
  * pn_proactor_wait() will return a @ref PN_LISTENER_OPEN event when the
- * listener is ready to accept connections, or if the listen operation fails.
- * If the listen operation failed, then pn_listener_condition() will be set.
+ * listener is ready to accept connections, or a PN_LISTENER_CLOSE if the listen
+ * operation fails. If the listen failed, pn_listener_condition() will be set.
  *
  * When the listener is closed by pn_listener_close(), or because of an error, a
- * PN_LISTENER_CLOSE event will be returned and pn_listener_condition() will be set.
+ * PN_LISTENER_CLOSE event will be returned and pn_listener_condition() will be set
+ * for an error.
  *
  * @note Thread-safe
  *

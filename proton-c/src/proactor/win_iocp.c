@@ -2810,9 +2810,6 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
   if (addrinfo) {
     freeaddrinfo(addrinfo);
   }
-  /* Always put an OPEN event for symmetry, even if we immediately close with err */
-  pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
-
   if (l->psockets_size == 0) { /* All failed, create dummy socket with an error */
     l->psockets = (psocket_t*)calloc(sizeof(psocket_t), 1);
     psocket_init(l->psockets, l, false, addr);
@@ -2821,6 +2818,8 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     } else {
       psocket_error(l->psockets, wsa_err, "listen on");
     }
+  } else {
+    pn_collector_put(l->collector, pn_listener__class(), l, PN_LISTENER_OPEN);
   }
   wakeup(l->psockets);
 }
