@@ -77,7 +77,7 @@ void container::impl::common_work_queue::schedule(duration d, work f) {
     // Note this is an unbounded work queue.
     // A resource-safe implementation should be bounded.
     if (finished_) return;
-    container_.schedule(d, make_work(&work_queue::impl::add, (work_queue::impl*)this, f));
+    container_.schedule(d, make_work(&work_queue::impl::add_void, (work_queue::impl*)this, f));
 }
 
 void container::impl::common_work_queue::run_all_jobs() {

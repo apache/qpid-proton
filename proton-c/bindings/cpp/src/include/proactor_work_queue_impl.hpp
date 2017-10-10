@@ -30,6 +30,7 @@ class work_queue::impl {
   public:
     virtual ~impl() {};
     virtual bool add(work f) = 0;
+    void add_void(work f) { add(f); }
     virtual void schedule(duration, work) = 0;
     virtual void run_all_jobs() = 0;
     virtual void finished() = 0;
