@@ -64,7 +64,7 @@ class work {
 };
 }
 
-#if PN_CPP_HAS_LAMBDAS
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 namespace v11 {
 class work {
   public:
@@ -90,7 +90,7 @@ class work {
 }
 #endif
 
-#if PN_CPP_HAS_LAMBDAS
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 using v11::work;
 #else
 using v03::work;
@@ -140,7 +140,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
     /// This is a hack to ensure that the C++03 version is declared
     /// only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && defined(qpid_proton_cpp_EXPORTS)
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN bool add(v03::work fn);
 #endif
     /// @endcond
@@ -158,7 +158,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @cond INTERNAL
     /// This is a hack to ensure that the C++03 version is declared
     /// only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && defined(qpid_proton_cpp_EXPORTS)
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN void schedule(duration, v03::work fn);
 #endif
     /// @endcond
@@ -178,7 +178,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
 
 // Utilities to make injecting functions/member functions palatable in C++03
 // Lots of repetition to handle functions with up to 3 arguments
-#if !PN_CPP_HAS_LAMBDAS
+#if !PN_CPP_HAS_LAMBDAS || !PN_CPP_HAS_VARIADIC_TEMPLATES
 template <class R>
 struct work0 : public proton::void_function0 {
     R (* fn_)();

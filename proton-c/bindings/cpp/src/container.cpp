@@ -112,7 +112,7 @@ returned<receiver> container::open_receiver(
 std::string container::id() const { return impl_->id(); }
 
 void container::schedule(duration d, v03::work f) { return impl_->schedule(d, f); }
-#if PN_CPP_HAS_LAMBDAS
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 void container::schedule(duration d, v11::work f) { return impl_->schedule(d, f); }
 #endif
 

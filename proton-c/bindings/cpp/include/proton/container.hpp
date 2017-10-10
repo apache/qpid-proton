@@ -308,7 +308,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// @cond INTERNAL
     /// This is a hack to ensure that the C++03 version is declared
     /// only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && defined(qpid_proton_cpp_EXPORTS)
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN void schedule(duration dur, v03::work fn);
 #endif
     /// @endcond
