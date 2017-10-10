@@ -120,12 +120,16 @@ class PN_CPP_CLASS_EXTERN container {
 
     /// Listen for new connections on `listen_url`.
     ///
-    /// listen_handler::on_accept is called for each incoming connection to determine
+    /// If the listener opens successfully, listen_handler::on_open() is called.
+    /// If it fails to open, listen_handler::on_error() then listen_handler::close()
+    /// are called.
+    ///
+    /// listen_handler::on_accept() is called for each incoming connection to determine
     /// the @ref connection_options to use, including the @ref messaging_handler.
     ///
-    /// **Thread safety** - Calls to `listen_handler` methods
-    /// are serialized for this listener, but handlers attached to
-    /// separate listeners can be safely called concurrently.
+    /// **Thread safety** - Calls to `listen_handler` methods are serialized for
+    /// this listener, but handlers attached to separate listeners may be called
+    /// concurrently.
     PN_CPP_EXTERN listener listen(const std::string& listen_url,
                                   listen_handler& handler);
 

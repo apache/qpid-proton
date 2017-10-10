@@ -498,9 +498,15 @@ bool container::impl::handle(pn_event_t* event) {
         }
         return false;
     }
-    case PN_LISTENER_OPEN:
+    case PN_LISTENER_OPEN: {
+        pn_listener_t* l = pn_event_listener(event);
+        listener_context &lc(listener_context::get(l));
+        if (lc.listen_handler_) {
+            listener lstnr(l);
+            lc.listen_handler_->on_open(lstnr);
+        }
         return false;
-
+    }
     case PN_LISTENER_ACCEPT: {
         pn_listener_t* l = pn_event_listener(event);
         pn_connection_t* c = pn_connection();

@@ -35,20 +35,21 @@
 
 namespace {
 
-static std::string int2string(int n) {
-    std::ostringstream strm;
-    strm << n;
-    return strm.str();
+static std::string make_url(const std::string host, int port) {
+    std::ostringstream url;
+    url << "amqp://" << host << ":" << port;
+    return url.str();
 }
 
-int listen_on_random_port(proton::container& c, proton::listener& l) {
-    int port;
+int listen_on_random_port(proton::container& c, proton::listener& l, proton::listen_handler* lh=0) {
+    int port = 0;
     // I'm going to hell for this:
     std::srand((unsigned int)time(0));
     while (true) {
         port = 20000 + (std::rand() % 30000);
+        std::string url = make_url("", port);
         try {
-            l = c.listen("0.0.0.0:" + int2string(port));
+            l = lh ? c.listen(url, *lh) : c.listen(url);
             break;
         } catch (...) {
             // keep trying
@@ -56,6 +57,31 @@ int listen_on_random_port(proton::container& c, proton::listener& l) {
     }
     return port;
 }
+
+struct test_listen_handler : public proton::listen_handler {
+    bool on_open_, on_accept_, on_close_;
+    std::string on_error_;
+    test_listen_handler() : on_open_(false), on_accept_(false), on_close_(false) {}
+    proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE {
+        on_accept_ = true;
+        return proton::connection_options();
+    }
+    void on_open(proton::listener&) PN_CPP_OVERRIDE {
+        on_open_ = true;
+        ASSERT(!on_accept_);
+        ASSERT(on_error_.empty());
+        ASSERT(!on_close_);
+    }
+    void on_close(proton::listener&) PN_CPP_OVERRIDE {
+        on_close_ = true;
+        ASSERT(on_open_ || on_error_.size());
+    }
+
+    void on_error(proton::listener&, const std::string& e) PN_CPP_OVERRIDE {
+        on_error_ = e;
+        ASSERT(!on_close_);
+    }
+};
 
 class test_handler : public proton::messaging_handler {
   public:
@@ -67,17 +93,21 @@ class test_handler : public proton::messaging_handler {
     std::string peer_vhost;
     std::string peer_container_id;
     proton::listener listener;
+    test_listen_handler listen_handler;
 
     test_handler(const std::string h, const proton::connection_options& c_opts)
         : host(h), opts(c_opts), closing(false), done(false)
     {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
-        int port = listen_on_random_port(c, listener);
-        proton::connection conn = c.connect(host + ":" + int2string(port), opts);
+        int port = listen_on_random_port(c, listener, &listen_handler);
+        proton::connection conn = c.connect(make_url(host, port), opts);
     }
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
+        ASSERT(listen_handler.on_open_);
+        ASSERT(!listen_handler.on_close_);
+        ASSERT(listen_handler.on_error_.empty());
         if (peer_vhost.empty() && !c.virtual_host().empty())
             peer_vhost = c.virtual_host();
         if (peer_container_id.empty() && !c.container_id().empty())
@@ -94,26 +124,28 @@ class test_handler : public proton::messaging_handler {
 
 int test_container_default_container_id() {
     proton::connection_options opts;
-    test_handler th(std::string("127.0.0.1"), opts);
+    test_handler th("", opts);
     proton::container(th).run();
     ASSERT(!th.peer_container_id.empty());
+    ASSERT(th.listen_handler.on_error_.empty());
+    ASSERT(th.listen_handler.on_close_);
     return 0;
 }
 
 int test_container_vhost() {
     proton::connection_options opts;
-    opts.virtual_host(std::string("a.b.c"));
-    test_handler th(std::string("127.0.0.1"), opts);
+    opts.virtual_host("a.b.c");
+    test_handler th("", opts);
     proton::container(th).run();
-    ASSERT_EQUAL(th.peer_vhost, std::string("a.b.c"));
+    ASSERT_EQUAL(th.peer_vhost, "a.b.c");
     return 0;
 }
 
 int test_container_default_vhost() {
     proton::connection_options opts;
-    test_handler th(std::string("127.0.0.1"), opts);
+    test_handler th("127.0.0.1", opts);
     proton::container(th).run();
-    ASSERT_EQUAL(th.peer_vhost, std::string("127.0.0.1"));
+    ASSERT_EQUAL(th.peer_vhost, "127.0.0.1");
     return 0;
 }
 
@@ -123,24 +155,12 @@ int test_container_no_vhost() {
     // Sadly whether or not a 'hostname' field was received cannot be
     // determined from here, so just exercise the code
     proton::connection_options opts;
-    opts.virtual_host(std::string(""));
-    test_handler th(std::string("127.0.0.1"), opts);
+    opts.virtual_host("");
+    test_handler th("127.0.0.1", opts);
     proton::container(th).run();
-    ASSERT_EQUAL(th.peer_vhost, std::string(""));
+    ASSERT_EQUAL(th.peer_vhost, "");
     return 0;
 }
-
-struct test_listener : public proton::listen_handler {
-    bool on_accept_, on_close_;
-    std::string on_error_;
-    test_listener() : on_accept_(false), on_close_(false) {}
-    proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE {
-        on_accept_ = true;
-        return proton::connection_options();
-    }
-    void on_close(proton::listener&) PN_CPP_OVERRIDE { on_close_ = true; }
-    void on_error(proton::listener&, const std::string& e) PN_CPP_OVERRIDE { on_error_ = e; }
-};
 
 int test_container_bad_address() {
     // Listen on a bad address, check for leaks
@@ -151,10 +171,11 @@ int test_container_bad_address() {
     try { c.listen("999.666.999.666:0"); } catch (const proton::error&) {}
     c.run();
     // Dummy listener.
-    test_listener l;
-    test_handler h2(std::string("999.999.999.666"), proton::connection_options());
+    test_listen_handler l;
+    test_handler h2("999.999.999.666", proton::connection_options());
     try { c.listen("999.666.999.666:0", l); } catch (const proton::error&) {}
     c.run();
+    ASSERT(!l.on_open_);
     ASSERT(!l.on_accept_);
     ASSERT(l.on_close_);
     ASSERT(!l.on_error_.empty());
@@ -168,7 +189,7 @@ class stop_tester : public proton::messaging_handler {
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
         ASSERT(state==0);
         int port = listen_on_random_port(c, listener);
-        c.connect("127.0.0.1:" + int2string(port));
+        c.connect(make_url("", port));
         c.auto_stop(false);
         state = 1;
     }
@@ -216,7 +237,7 @@ struct hang_tester : public proton::messaging_handler {
     hang_tester() : done(false) {}
 
     void connect(proton::container* c) {
-        c->connect("localhost:"+ int2string(port));
+        c->connect(make_url("", port));
     }
 
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {

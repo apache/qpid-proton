@@ -38,6 +38,9 @@ class listen_handler {
   public:
     virtual ~listen_handler() {}
 
+    /// Called when the listener is opened successfully.
+    virtual void on_open(listener&) {}
+
     /// Called for each accepted connection.
     ///
     /// Returns connection_options to apply, including a proton::messaging_handler for
