@@ -3275,6 +3275,19 @@ class Delivery(Wrapper):
     pn_delivery_settle(self._impl)
 
   @property
+  def aborted(self):
+    """Returns true if the delivery has been aborted."""
+    return pn_delivery_aborted(self._impl)
+
+  def abort(self):
+    """
+    Aborts the delivery.  This indicates the application wishes to
+    invalidate any data that may have already been sent on this delivery.
+    The delivery cannot be aborted after it has been completely delivered.
+    """
+    pn_delivery_abort(self._impl)
+
+  @property
   def work_next(self):
     return Delivery.wrap(pn_work_next(self._impl))
 
