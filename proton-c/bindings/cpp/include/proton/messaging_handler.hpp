@@ -80,7 +80,7 @@ PN_CPP_CLASS_EXTERN messaging_handler {
 
     /// The underlying network transport is open
     PN_CPP_EXTERN virtual void on_transport_open(transport &t);
-    
+
     /// The underlying network transport has closed.
     PN_CPP_EXTERN virtual void on_transport_close(transport &t);
 

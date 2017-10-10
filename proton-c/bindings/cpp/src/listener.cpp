@@ -17,7 +17,9 @@
  * under the License.
  */
 
+#include "proton/connection_options.hpp"
 #include "proton/listener.hpp"
+#include "proton/listen_handler.hpp"
 
 #include <proton/listener.h>
 
@@ -32,7 +34,12 @@ listener::listener(const listener& l) : listener_(l.listener_) {}
 listener::~listener() {}
 listener& listener::operator=(const listener& l) { listener_ = l.listener_; return *this; }
 
-// FIXME aconway 2017-10-06: should be a no-op if already closed
+// FIXME aconway 2017-10-06: should be a no-op if already closed - there is a race here.
 void listener::stop() { if (listener_) pn_listener_close(listener_); }
 
+listen_handler::~listen_handler() {}
+void listen_handler::on_open(listener&) {}
+connection_options listen_handler::on_accept(listener&) { return connection_options(); }
+void listen_handler::on_error(listener&, const std::string&) {}
+void listen_handler::on_close(listener&) {}
 }

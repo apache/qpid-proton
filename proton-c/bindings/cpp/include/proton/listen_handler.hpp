@@ -23,6 +23,8 @@
  */
 
 #include "./fwd.hpp"
+#include "./internal/export.hpp"
+#include <string>
 
 /// @file
 /// @copybrief proton::listen_handler
@@ -34,12 +36,12 @@ namespace proton {
 ///
 /// Implement this interface and pass to proton::container::listen()
 /// to be notified of new connections.
-class listen_handler {
+class PN_CPP_CLASS_EXTERN listen_handler {
   public:
-    virtual ~listen_handler() {}
+    PN_CPP_EXTERN virtual ~listen_handler();
 
     /// Called when the listener is opened successfully.
-    virtual void on_open(listener&) {}
+    PN_CPP_EXTERN virtual void on_open(listener&);
 
     /// Called for each accepted connection.
     ///
@@ -47,14 +49,14 @@ class listen_handler {
     /// the connection.  messaging_handler::on_connection_open() will be called with
     /// the proton::connection, it can call connection::open() to accept or
     /// connection::close() to reject the connection.
-    virtual connection_options on_accept(listener&)= 0;
+    PN_CPP_EXTERN virtual connection_options on_accept(listener&)= 0;
 
     /// Called if there is a listening error, with an error message.
     /// close() will also be called.
-    virtual void on_error(listener&, const std::string&) {}
+    PN_CPP_EXTERN virtual void on_error(listener&, const std::string&);
 
     /// Called when this listen_handler is no longer needed, and can be deleted.
-    virtual void on_close(listener&) {}
+    PN_CPP_EXTERN virtual void on_close(listener&);
 };
 
 } // proton
