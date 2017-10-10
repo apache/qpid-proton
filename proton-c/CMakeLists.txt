@@ -744,13 +744,17 @@ if (BUILD_PYTHON)
   to_native_path ("${py_pythonpath}" py_pythonpath)
   to_native_path ("${py_path}" py_path)
 
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    set (python_coverage_options -m coverage run)
+  endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
+
   add_test (NAME python-test
             COMMAND ${env_py}
               "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
               "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
               "SASLPASSWD=${SASLPASSWD_EXE}"
               ${VALGRIND_ENV}
-              ${PYTHON_EXECUTABLE} "${py_root}/proton-test")
+              ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
   # Eventually, we'll get rid of this check when other
