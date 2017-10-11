@@ -48,6 +48,7 @@ language.
     $ yum install ruby-devel rubygem-minitest                # Ruby
     $ yum install php-devel                                  # PHP
     $ yum install perl-devel                                 # Perl
+    $ yum install gcc-c++                                    # C++ (swig not required)
 
     # Dependencies needed for Python docs
     $ yum install epydoc
@@ -66,7 +67,7 @@ language binding you can omit the dev package for that language.
     $ apt-get install libsasl2-2 libsasl2-dev
 
     # dependencies needed for bindings
-    $ apt-get install swig python-dev ruby-dev libperl-dev
+    $ apt-get install swig python-dev ruby-dev libperl-dev g++
 
     # dependencies needed for python docs
     $ apt-get install python-epydoc
