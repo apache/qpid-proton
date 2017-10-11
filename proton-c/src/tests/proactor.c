@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "../platform/platform.h"
+#include "test_port.h"
 #include "test_tools.h"
 #include "test_handler.h"
 #include "test_config.h"
@@ -37,78 +37,6 @@
 #include <string.h>
 
 static const char *localhost = ""; /* host for connect/listen */
-
-/* Some very simple platform-secifics to acquire an unused socket */
-#if defined(_WIN32)
-
-#include <winsock2.h>
-#include <ws2tcpip.h>
-typedef SOCKET sock_t;
-void sock_close(sock_t sock) { closesocket(sock); }
-// pni_snprintf not exported.  We can live with a simplified version
-// for this test's limited use. Abort if that assumption is wrong.
-#define pni_snprintf pnitst_snprintf
-static int pnitst_snprintf(char *buf, size_t count, const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  int n = _vsnprintf(buf, count, fmt, ap);
-  va_end(ap);
-  if (count == 0 || n < 0) {
-    perror("proton internal failure on Windows test snprintf");
-    abort();
-  }
-  // Windows and C99 are in agreement.
-  return n;
-}
-
-#else  /* POSIX */
-# include <sys/types.h>
-# include <sys/socket.h>
-# include <netinet/in.h>
-# include <unistd.h>
-typedef int sock_t;
-void sock_close(sock_t sock) { close(sock); }
-#endif
-
-/* Combines a sock_t with the int and char* versions of the port for convenience */
-typedef struct test_port_t {
-  sock_t sock;
-  int port;                     /* port as integer */
-  char str[PN_MAX_ADDR];	/* port as string */
-  char host_port[PN_MAX_ADDR];	/* host:port string */
-} test_port_t;
-
-/* Modifies tp->host_port to use host, returns the new tp->host_port */
-const char *test_port_use_host(test_port_t *tp, const char *host) {
-  pni_snprintf(tp->host_port, sizeof(tp->host_port), "%s:%d", host, tp->port);
-  return tp->host_port;
-}
-
-/* Create a socket and bind(INADDR_LOOPBACK:0) to get a free port.
-   Use SO_REUSEADDR so other processes can bind and listen on this port.
-   Use host to create the host_port address string.
-*/
-test_port_t test_port(const char* host) {
-  test_port_t tp = {0};
-  tp.sock = socket(AF_INET, SOCK_STREAM, 0);
-  TEST_ASSERT_ERRNO(tp.sock >= 0, errno);
-  int on = 1;
-  int err = setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on));
-  TEST_ASSERT_ERRNO(!err, errno);
-  struct sockaddr_in addr = {0};
-  addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  addr.sin_port = 0;            /* bind to port 0 */
-  err = bind(tp.sock, (struct sockaddr*)&addr, sizeof(addr));
-  TEST_ASSERT_ERRNO(!err, errno);
-  socklen_t len = sizeof(addr);
-  err = getsockname(tp.sock, (struct sockaddr*)&addr, &len); /* Get the bound port */
-  TEST_ASSERT_ERRNO(!err, errno);
-  tp.port = ntohs(addr.sin_port);
-  pni_snprintf(tp.str, sizeof(tp.str), "%d", tp.port);
-  test_port_use_host(&tp, host);
-  return tp;
-}
 
 #define ARRAYLEN(A) (sizeof(A)/sizeof((A)[0]))
 
@@ -216,14 +144,9 @@ typedef struct test_listener_t {
 
 test_listener_t test_listen(test_proactor_t *tp, const char *host) {
   test_listener_t l = { test_port(host), pn_listener() };
-#if defined(_WIN32)
-   sock_close(l.port.sock);  // small chance another process will steal the port in Windows
-#endif
   pn_proactor_listen(tp->proactor, l.listener, l.port.host_port, 4);
   TEST_ETYPE_EQUAL(tp->handler.t, PN_LISTENER_OPEN, test_proactors_run(tp, 1));
-#if !defined(_WIN32)
-  sock_close(l.port.sock);
-#endif
+  test_port_close(&l.port);
   return l;
 }
 
@@ -620,7 +543,7 @@ static void test_errors(test_t *t) {
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
   }
 
-  sock_close(port.sock);
+  test_port_close(&port);
   TEST_PROACTORS_DESTROY(tps);
 }
 
@@ -932,15 +855,6 @@ static void test_parse_addr(test_t *t) {
 
 /* Test pn_proactor_addr funtions */
 
-/* Windows will need winsock2.h etc.
-   These headers are *only* needed for test_netaddr and only for the getnameinfo part.
-   This is the only non-portable part of the proactor test suite.
-   */
-#if !defined(_WIN32)
-#include <sys/socket.h>         /* For socket_storage */
-#include <netdb.h>              /* For NI_MAXHOST/NI_MAXSERV */
-#endif
-
 static void test_netaddr(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_wake_handler), test_proactor(t, listen_handler) };
   pn_proactor_t *client = tps[0].proactor;
@@ -975,8 +889,8 @@ static void test_netaddr(test_t *t) {
   const pn_netaddr_t *na = pn_netaddr_remote(ct);
   const struct sockaddr *sa = pn_netaddr_sockaddr(na);
   TEST_CHECK(t, AF_INET == sa->sa_family);
-  char host[NI_MAXHOST] = "";
-  char serv[NI_MAXSERV] = "";
+  char host[TEST_PORT_MAX_STR] = "";
+  char serv[TEST_PORT_MAX_STR] = "";
   int err = getnameinfo(sa, pn_netaddr_socklen(na),
                         host, sizeof(host), serv, sizeof(serv),
                         NI_NUMERICHOST | NI_NUMERICSERV);
