@@ -703,7 +703,7 @@ static void test_ipv4_ipv6(test_t *t) {
   EXPECT_CONNECT(l.port, "");          /* local->all */
 
   if (has_ipv6) {
-    EXPECT_CONNECT(l6.port, "::"); /* v6->v6 */
+    EXPECT_CONNECT(l6.port, "::1"); /* v6->v6 */
     EXPECT_CONNECT(l6.port, "");     /* local->v6 */
     EXPECT_CONNECT(l.port, "::1"); /* v6->all */
 

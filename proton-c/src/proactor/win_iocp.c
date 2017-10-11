@@ -2727,19 +2727,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
   proactor_add(&pc->context);
   pn_connection_open(pc->driver.connection); /* Auto-open */
 
-  const char *host = pc->psocket.host;
-  if (host) {
-    static const char *ipv4loopback = "127.0.0.1";
-    static const char *ipv6loopback = "::1";
-    // Convert "0.0.0.0" or "::" to loopback on Windows for outgoing sockets.
-    // This approximates posix behavior for the unspecified address.
-    if (!strcmp("0.0.0.0", host))
-      host = ipv4loopback;
-    else if (!strcmp("::", host))
-      host = ipv6loopback;
-  }
-
-  if (!pgetaddrinfo(host, pc->psocket.port, 0, &pc->addrinfo)) {
+  if (!pgetaddrinfo(pc->psocket.host, pc->psocket.port, 0, &pc->addrinfo)) {
     pc->ai = pc->addrinfo;
     if (connect_step(pc)) {
       return;
