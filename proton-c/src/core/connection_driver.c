@@ -166,14 +166,6 @@ void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, co
   va_end(ap);
 }
 
-void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg) {
-  pn_transport_log(d->transport, msg);
-}
-
-void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap) {
-  pn_transport_vlogf(d->transport, fmt, ap);
-}
-
 pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch) {
   return (batch->next_event == batch_next) ?
     (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch)) :
