@@ -412,7 +412,6 @@ set (qpid-proton-core
   src/core/autodetect.c
   src/core/transport.c
   src/core/message.c
-  src/core/url-internal.c
 )
 
 set (qpid-proton-include-generated
@@ -442,7 +441,7 @@ set (qpid-proton-private-includes
   src/core/data.h
   src/core/decoder.h
   src/core/max_align.h
-  src/core/url-internal.h
+  src/core/message-internal.h
   src/reactor/io/windows/iocp.h
   src/reactor/selector.h
   src/reactor/io.h

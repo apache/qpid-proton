@@ -27,6 +27,7 @@
 #include <proton/object.h>
 #include <proton/sasl.h>
 #include <proton/session.h>
+#include <proton/url.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -36,7 +37,6 @@
 
 #include "core/log_private.h"
 #include "core/util.h"
-#include "core/url-internal.h"
 #include "platform/platform.h" // pn_i_getpid, pn_i_now, pni_snprintf
 #include "platform/platform_fmt.h"
 #include "store.h"
@@ -1587,6 +1587,8 @@ int pn_messenger_stop(pn_messenger_t *messenger)
 
   return pn_messenger_sync(messenger, pn_messenger_stopped);
 }
+
+void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
 
 static void pni_parse(pn_address_t *address)
 {

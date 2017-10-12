@@ -218,7 +218,7 @@ PN_EXTERN bool pn_connection_driver_has_event(pn_connection_driver_t *);
 PN_EXTERN bool pn_connection_driver_finished(pn_connection_driver_t *);
 
 /**
- * Set IO error information.
+ * Set transport error.
  *
  * The name and formatted description are set on the transport condition, and
  * returned as a PN_TRANSPORT_ERROR event from pn_connection_driver_next_event().
@@ -229,24 +229,9 @@ PN_EXTERN bool pn_connection_driver_finished(pn_connection_driver_t *);
 PN_EXTERN void pn_connection_driver_errorf(pn_connection_driver_t *d, const char *name, const char *fmt, ...);
 
 /**
- * Set IO error information via a va_list, see pn_connection_driver_errorf()
+ * Set transport error via a va_list, see pn_connection_driver_errorf()
  */
 PN_EXTERN void pn_connection_driver_verrorf(pn_connection_driver_t *d, const char *name, const char *fmt, va_list);
-
-/**
- * Log a string message using the connection's transport log.
- */
-PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg);
-
-/**
- * Log a printf formatted message using the connection's transport log.
- */
-PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
-
-/**
- * Log a printf formatted message using the connection's transport log.
- */
-PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
 
 /**
  * If batch is part of a connection_driver, return the connection_driver address,

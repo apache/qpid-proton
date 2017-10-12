@@ -30,24 +30,24 @@
 /** Log a printf style message */
 #define pn_logf(...)                            \
     do {                                        \
-        if (pn_log_enabled())                   \
-            pn_logf_impl(__VA_ARGS__);          \
+        if (pni_log_enabled())                   \
+            pni_logf_impl(__VA_ARGS__);          \
     } while(0)
 
 /** va_list version of pn_logf */
 #define pn_vlogf(fmt, ap)                       \
     do {                                        \
-        if (pn_log_enabled())                   \
-            pn_vlogf_impl(fmt, ap);             \
+        if (pni_log_enabled())                   \
+            pni_vlogf_impl(fmt, ap);             \
     } while(0)
 
 /** Return true if logging is enabled. */
-PN_EXTERN bool pn_log_enabled(void);
+PN_EXTERN bool pni_log_enabled(void);
 
 /**@internal*/
-PN_EXTERN void pn_logf_impl(const char* fmt, ...);
+PN_EXTERN void pni_logf_impl(const char* fmt, ...);
 /**@internal*/
-PN_EXTERN void pn_vlogf_impl(const char *fmt, va_list ap);
+PN_EXTERN void pni_vlogf_impl(const char *fmt, va_list ap);
 
 
 

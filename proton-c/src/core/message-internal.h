@@ -1,5 +1,6 @@
-#ifndef CORE_URL_INTERNAL_H
-#define CORE_URL_INTERNAL_H
+#ifndef CORE_MESSAGE_INTERNAL_H
+#define CORE_MESSAGE_INTERNAL_H
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,14 +20,24 @@
  * under the License.
  */
 
-#include <proton/import_export.h>
+#include <proton/message.h>
 
-/**@file Simple URL parser for internal use only */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/** Parse a URL in-place. The field pointers scheme, user and so on are made to point to the
- * decoded fields, which are stored in the same memory as the original URL.
- * You must not try to use url as the URL string, but you are still responsible for freeing it.
- */
-PN_EXTERN void pni_parse_url(char *url, char **scheme, char **user, char **pass, char **host, char **port, char **path);
+/** @cond INTERNAL */
 
-#endif  /*!CORE_URL_INTERNAL_H*/
+/** Construct a message with extra storage */
+PN_EXTERN pn_message_t * pni_message_with_extra(size_t extra);
+
+/** Pointer to extra space allocated by pn_message_with_extra(). */
+PN_EXTERN void* pni_message_get_extra(pn_message_t *msg);
+
+/** @endcond */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif // CORE_MESSAGE_INTERNAL_H

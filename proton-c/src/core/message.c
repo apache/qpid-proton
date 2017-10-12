@@ -22,10 +22,10 @@
 #include "platform/platform_fmt.h"
 
 #include "max_align.h"
+#include "message-internal.h"
 #include "protocol.h"
 #include "util.h"
 
-#include <proton/message.h>
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
@@ -348,11 +348,11 @@ typedef union {
   pn_max_align_t a;
 }  pni_aligned_message_t;
 
-pn_message_t *pn_message_with_extra(size_t extra) {
+pn_message_t *pni_message_with_extra(size_t extra) {
   return pni_message_new(sizeof(pni_aligned_message_t) + extra);
 }
 
-void *pn_message_get_extra(pn_message_t *m) {
+void *pni_message_get_extra(pn_message_t *m) {
   return ((char*)m) + sizeof(pni_aligned_message_t);
 }
 

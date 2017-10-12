@@ -32,8 +32,8 @@
 #include "proton_bits.hpp"
 #include "types_internal.hpp"
 
-#include <proton/delivery.h>
-#include <proton/message.h>
+#include "core/message-internal.h"
+#include "proton/delivery.h"
 
 #include <string>
 #include <algorithm>
@@ -94,15 +94,15 @@ void swap(message& x, message& y) {
 
 pn_message_t *message::pn_msg() const {
     if (!pn_msg_) {
-        pn_msg_ = pn_message_with_extra(sizeof(struct message::impl));
+        pn_msg_ = pni_message_with_extra(sizeof(struct message::impl));
         // Construct impl in extra storage allocated with pn_msg_
-        new (pn_message_get_extra(pn_msg_)) struct message::impl(pn_msg_);
+        new (pni_message_get_extra(pn_msg_)) struct message::impl(pn_msg_);
     }
     return pn_msg_;
 }
 
 struct message::impl& message::impl() const {
-    return *(struct message::impl*)pn_message_get_extra(pn_msg());
+    return *(struct message::impl*)pni_message_get_extra(pn_msg());
 }
 
 message& message::operator=(const message& m) {
