@@ -40,12 +40,6 @@ class TxRecv(MessagingHandler, TransactionHandler):
         self.container.declare_transaction(self.conn, handler=self)
         self.transaction = None
 
-    def on_link_opened(self, event):
-        # NOTE: a transactional client opens an internal sender link for transaction commands,
-        # which we want to ignore.
-        if event.receiver:
-            event.receiver.drain_mode = True
-
     def on_message(self, event):
         print(event.message.body)
         self.transaction.accept(event.delivery)
