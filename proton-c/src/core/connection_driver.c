@@ -33,6 +33,7 @@ struct driver_batch {
 static pn_event_t *batch_next(pn_event_batch_t *batch) {
   pn_connection_driver_t *d =
     (pn_connection_driver_t*)((char*)batch - offsetof(pn_connection_driver_t, batch));
+  if (!d->collector) return NULL;
   pn_event_t *handled = pn_collector_prev(d->collector);
   if (handled) {
     switch (pn_event_type(handled)) {
@@ -40,7 +41,7 @@ static pn_event_t *batch_next(pn_event_batch_t *batch) {
       pn_transport_bind(d->transport, d->connection);
       break;
      case PN_TRANSPORT_CLOSED:  /* No more events after TRANSPORT_CLOSED  */
-      if (d->collector) pn_collector_release(d->collector);
+      pn_collector_release(d->collector);
       break;
      default:
       break;

@@ -198,7 +198,7 @@ bool test_str_equal_(test_t *t, const char* want, const char* got, const char *f
 
 /* Ensure buf has at least size bytes, use realloc if need be */
 void rwbytes_ensure(pn_rwbytes_t *buf, size_t size) {
-  if (buf->size < size) {
+  if (buf->start == NULL || buf->size < size) {
     buf->start = (char*)realloc(buf->start, size);
     buf->size = size;
   }

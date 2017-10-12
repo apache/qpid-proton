@@ -806,7 +806,7 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   if (buffer && size) *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_name(c);
-    if (v) {
+    if (buffer && v) {
       pni_snprintf( buffer, size, "%s", v );
       return true;
     }
@@ -822,7 +822,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
   if (buffer && size) *buffer = '\0';
   if (ssl->ssl && (c = SSL_get_current_cipher( ssl->ssl ))) {
     const char *v = SSL_CIPHER_get_version(c);
-    if (v) {
+    if (buffer && v) {
       pni_snprintf( buffer, size, "%s", v );
       return true;
     }
@@ -1373,7 +1373,6 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
 
     pni_ssl_t *ssl = get_ssl_internal(ssl0);
     X509 *cert = get_peer_certificate(ssl);
-    if (!cert) return PN_ERR;
 
     if(cert) {
         unsigned int len;

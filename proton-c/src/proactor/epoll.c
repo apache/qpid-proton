@@ -1153,10 +1153,10 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
 static void configure_socket(int sock) {
   int flags = fcntl(sock, F_GETFL);
   flags |= O_NONBLOCK;
-  fcntl(sock, F_SETFL, flags);
+  (void)fcntl(sock, F_SETFL, flags); // TODO: check for error
 
   int tcp_nodelay = 1;
-  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay));
+  (void)setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (void*) &tcp_nodelay, sizeof(tcp_nodelay));
 }
 
 /* Called with context.lock held */
@@ -1177,9 +1177,9 @@ static void pconnection_start(pconnection_t *pc) {
 
   int fd = pc->psocket.sockfd;
   socklen_t len = sizeof(pc->local.ss);
-  getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
+  (void)getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
   len = sizeof(pc->remote.ss);
-  getpeername(fd, (struct sockaddr*)&pc->remote.ss, &len);
+  (void)getpeername(fd, (struct sockaddr*)&pc->remote.ss, &len); /* Ignore error, leave ss null */
 
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
   epoll_extended_t *ee = &pc->psocket.epoll_io;
@@ -1203,6 +1203,8 @@ static void pconnection_maybe_connect_lh(pconnection_t *pc) {
           pc->psocket.sockfd = fd;
           pconnection_start(pc);
           return;               /* Async connection started */
+        } else {
+          close(fd);
         }
       }
       /* connect failed immediately, go round the loop to try the next addr */
@@ -1395,6 +1397,8 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
         ps->epoll_io.wanted = EPOLLIN;
         ps->epoll_io.polling = false;
         start_polling(&ps->epoll_io, ps->proactor->epollfd);  // TODO: check for error
+      } else {
+        close(fd);
       }
     }
   }
@@ -1654,7 +1658,7 @@ pn_proactor_t *pn_proactor() {
   }
   if (p->epollfd >= 0) close(p->epollfd);
   if (p->eventfd >= 0) close(p->eventfd);
-  if (p->interruptfd >= 0) close(p->eventfd);
+  if (p->interruptfd >= 0) close(p->interruptfd);
   ptimer_finalize(&p->timer);
   if (p->collector) pn_free(p->collector);
   free (p);
@@ -1990,7 +1994,7 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
 
   // Second pass: different locking, close the pcontexts, free them if !disconnect_ops
   bool notify = false;
-  for (ctx = disconnecting_pcontexts; ctx; ctx = ctx ? ctx->next : NULL) {
+  for (ctx = disconnecting_pcontexts; ctx; ctx = ctx->next) {
     bool do_free = false;
     bool ctx_notify = true;
     pmutex *ctx_mutex = NULL;

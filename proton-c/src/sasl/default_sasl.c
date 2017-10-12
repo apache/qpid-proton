@@ -159,7 +159,7 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
       pnx_sasl_is_included_mech(transport, pn_bytes(9, found))) {
     pnx_sasl_set_selected_mechanism(transport, ANONYMOUS);
     if (username) {
-      size_t size = strlen(username);
+      size_t size = strlen(username+1);
       char *iresp = (char *) malloc(size);
       if (!iresp) return false;
 

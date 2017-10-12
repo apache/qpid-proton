@@ -70,7 +70,7 @@ typedef struct queue_t {
 
 static void queue_init(queue_t *q, const char* name, queue_t *next) {
   pthread_mutex_init(&q->lock, NULL);
-  strncpy(q->name, name, sizeof(q->name));
+  strncpy(q->name, name, sizeof(q->name)-1);
   VEC_INIT(q->messages);
   VEC_INIT(q->waiting);
   q->next = next;
@@ -80,7 +80,6 @@ static void queue_init(queue_t *q, const char* name, queue_t *next) {
 static void queue_destroy(queue_t *q) {
   size_t i;
   pthread_mutex_destroy(&q->lock);
-  free(q->name);
   for (i = 0; i < q->messages.len; ++i)
     free(q->messages.data[i].start);
   VEC_FINAL(q->messages);
@@ -169,8 +168,9 @@ void queues_init(queues_t *qs) {
 }
 
 void queues_destroy(queues_t *qs) {
-  queue_t *q;
-  for (q = qs->queues; q; q = q->next) {
+  while (qs->queues) {
+    queue_t *q = qs->queues;
+    qs->queues = qs->queues->next;
     queue_destroy(q);
     free(q);
   }

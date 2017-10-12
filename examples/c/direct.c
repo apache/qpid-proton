@@ -245,6 +245,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      pn_transport_t *t = pn_event_transport(event);
      pn_transport_require_auth(t, false);
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
+     break;
    }
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_connection_open(pn_event_connection(event)); /* Complete the open */

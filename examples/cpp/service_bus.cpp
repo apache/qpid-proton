@@ -263,7 +263,8 @@ class sequence : public proton::messaging_handler {
   public:
     static sequence *the_sequence;
 
-    sequence (const std::string &c, const std::string &e) : sequence_no(0),
+    sequence (const std::string &c, const std::string &e) :
+        container(0), sequence_no(0),
         snd(c, e), rcv_red(c, e, "red"), rcv_green(c, e, "green"), rcv_null(c, e, NULL) {
         the_sequence = this;
     }
