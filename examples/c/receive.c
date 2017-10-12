@@ -109,6 +109,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
          m->size = 0;           /* Forget the data we accumulated */
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
          pn_link_flow(l, 1);    /* Replace credit for aborted message */
+         *m = pn_rwbytes_null;  /* Reset the buffer for the next message*/
        } else if (recv < 0 && recv != PN_EOS) {        /* Unexpected error */
          pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code(recv));
          pn_link_close(l);               /* Unexpected error, close the link */
