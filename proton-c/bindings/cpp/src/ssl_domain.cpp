@@ -28,6 +28,7 @@ namespace proton {
 
 /// TODO: This whole class isn't really needed as pn_ssl_domain_t is already refcounted, with shared ownership for all pn_ssl_t objects
 /// that hold one
+/// cjansen: but note it is not a PN_CLASS object and two pn_ssl_domain_free() from the app will cause a free while still in use.
 class ssl_domain_impl {
   public:
     ssl_domain_impl(bool is_server) : refcount_(1), pn_domain_(pn_ssl_domain(is_server ? PN_SSL_MODE_SERVER : PN_SSL_MODE_CLIENT)) {
@@ -56,6 +57,7 @@ ssl_domain::ssl_domain(const ssl_domain &x) : impl_(x.impl_), server_type_(x.ser
 }
 
 ssl_domain& internal::ssl_domain::operator=(const ssl_domain&x) {
+    if (&x == this) return *this;
     if (impl_) impl_->decref();
     impl_ = x.impl_;
     server_type_ = x.server_type_;
