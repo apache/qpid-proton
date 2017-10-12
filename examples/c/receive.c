@@ -100,9 +100,10 @@ static bool handle(app_data_t* app, pn_event_t* event) {
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
        int recv;
+       size_t oldsize = m->size;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
-       recv = pn_link_recv(l, m->start, m->size);
+       recv = pn_link_recv(l, m->start + oldsize, m->size);
        if (recv == PN_ABORTED) {
          fprintf(stderr, "Message aborted\n");
          m->size = 0;           /* Forget the data we accumulated */
