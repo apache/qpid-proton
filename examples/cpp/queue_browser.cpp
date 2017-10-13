@@ -26,38 +26,40 @@
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
-#include <proton/url.hpp>
 
 #include <iostream>
 
 #include "fake_cpp11.hpp"
 
-using proton::source_options;
-
-class browser : public proton::messaging_handler {
-  private:
-    proton::url url;
+class queue_browser : public proton::messaging_handler {
+    std::string conn_url_;
+    std::string addr_;
 
   public:
-    browser(const std::string& u) : url(u) {}
+    queue_browser(const std::string& u, const std::string& a) :
+        conn_url_(u), addr_(a) {}
 
-    void on_container_start(proton::container &c) OVERRIDE {
-        proton::connection conn = c.connect(url);
-        source_options browsing = source_options().distribution_mode(proton::source::COPY);
-        conn.open_receiver(url.path(), proton::receiver_options().source(browsing));
+    void on_container_start(proton::container& c) OVERRIDE {
+        proton::receiver_options ropts;
+        proton::source_options sopts;
+        ropts.source(sopts.distribution_mode(proton::source::COPY));
+
+        proton::connection conn = c.connect(conn_url_);
+        conn.open_receiver(addr_, ropts);
     }
 
-    void on_message(proton::delivery &, proton::message &m) OVERRIDE {
+    void on_message(proton::delivery&, proton::message& m) OVERRIDE {
         std::cout << m.body() << std::endl;
     }
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     try {
-        std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
+        std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
+        std::string addr = argc > 2 ? argv[2] : "examples";
 
-        browser b(url);
-        proton::container(b).run();
+        queue_browser qb(conn_url, addr);
+        proton::container(qb).run();
 
         return 0;
     } catch (const std::exception& e) {

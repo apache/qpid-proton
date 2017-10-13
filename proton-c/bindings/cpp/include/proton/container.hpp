@@ -309,12 +309,12 @@ class PN_CPP_CLASS_EXTERN container {
     /// `std::function<void()>` type for the `fn` parameter.
     PN_CPP_EXTERN void schedule(duration dur, work fn);
 
-    /// @deprecated
-    PN_CPP_EXTERN void schedule(duration dur, void_function0& fn);
+    /// **Deprecated** - Use `container::schedule(duration, work)`.
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, work)'") void schedule(duration dur, void_function0& fn);
 
     /// @cond INTERNAL
-    /// This is a hack to ensure that the C++03 version is declared
-    /// only during the compilation of the library
+    // This is a hack to ensure that the C++03 version is declared
+    // only during the compilation of the library
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN void schedule(duration dur, v03::work fn);
 #endif

@@ -55,7 +55,6 @@ foreach(example
     flow_control
     ssl
     ssl_client_cert
-    service_bus
     encode_decode)
   add_executable(${example} ${example}.cpp)
   set_target_properties(${example} PROPERTIES LINK_FLAGS "${CXX_EXAMPLE_FLAGS}")
@@ -65,6 +64,7 @@ if(HAS_CPP11)
   # Examples that require C++11
   foreach(example
       scheduled_send
+      service_bus
       multithreaded_client
       multithreaded_client_flow_control
       )

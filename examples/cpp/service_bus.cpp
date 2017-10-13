@@ -86,7 +86,6 @@ Done. No more messages.
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
-#include <proton/function.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/receiver_options.hpp>
@@ -94,7 +93,6 @@ Done. No more messages.
 #include <proton/sender_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
-#include <proton/url.hpp>
 #include <proton/work_queue.hpp>
 
 #include <iostream>
@@ -161,7 +159,7 @@ class session_receiver : public proton::messaging_handler {
         // identifier if none was specified).
         last_read = proton::timestamp::now();
         // Call this->process_timeout after read_timeout.
-        container->schedule(read_timeout, make_work(&session_receiver::process_timeout, this));
+        container->schedule(read_timeout, [this]() { this->process_timeout(); });
     }
 
     void on_receiver_open(proton::receiver &r) OVERRIDE {
@@ -191,7 +189,7 @@ class session_receiver : public proton::messaging_handler {
                 std::cout << "Done. No more messages." << std::endl;
         } else {
             proton::duration next = deadline - now;
-            container->schedule(next, make_work(&session_receiver::process_timeout, this));
+            container->schedule(next, [this]() { this->process_timeout(); });
         }
     }
 };

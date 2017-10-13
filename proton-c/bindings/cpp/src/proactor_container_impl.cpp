@@ -21,12 +21,10 @@
 #include "proactor_work_queue_impl.hpp"
 
 #include "proton/error_condition.hpp"
-#include "proton/function.hpp"
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/reconnect_options.hpp"
 #include "proton/url.hpp"
-
 #include "proton/connection.h"
 #include "proton/listener.h"
 #include "proton/proactor.h"

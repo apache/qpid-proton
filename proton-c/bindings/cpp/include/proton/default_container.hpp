@@ -28,7 +28,7 @@
 namespace proton {
 
 /// **Deprecated** - Use `proton::container`.
-typedef class container default_container;
+typedef class container PN_CPP_DEPRECATED("Use 'proton::container'") default_container;
 
 } // proton
 

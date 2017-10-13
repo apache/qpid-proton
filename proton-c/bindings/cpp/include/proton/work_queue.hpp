@@ -340,7 +340,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     PN_CPP_EXTERN ~work_queue();
 
     /// **Unsettled API** - Add work `fn` to the work queue.
-
+    ///
     /// Work `fn` will be called serially with other work in the queue.
     /// The work may be deferred and executed in another thread.
     ///
@@ -349,12 +349,12 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// reason.
     PN_CPP_EXTERN bool add(work fn);
 
-    /// @deprecated
-    PN_CPP_EXTERN bool add(void_function0& fn);
+    /// **Deprecated** - Use `add(work)`.
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::add(work)'") bool add(void_function0& fn);
 
     /// @cond INTERNAL
-    /// This is a hack to ensure that the C++03 version is declared
-    /// only during the compilation of the library
+    // This is a hack to ensure that the C++03 version is declared
+    // only during the compilation of the library
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN bool add(v03::work fn);
 #endif
@@ -370,12 +370,12 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// @copydetails add()
     PN_CPP_EXTERN void schedule(duration, work fn);
 
-    /// @deprecated
-    PN_CPP_EXTERN void schedule(duration, void_function0& fn);
+    /// **Deprecated** - Use `schedule(duration, work)`.
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::schedule(duration, work)'") void schedule(duration, void_function0& fn);
 
     /// @cond INTERNAL
-    /// This is a hack to ensure that the C++03 version is declared
-    /// only during the compilation of the library
+    // This is a hack to ensure that the C++03 version is declared
+    // only during the compilation of the library
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
     PN_CPP_EXTERN void schedule(duration, v03::work fn);
 #endif

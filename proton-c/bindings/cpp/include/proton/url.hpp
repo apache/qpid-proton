@@ -38,7 +38,9 @@ namespace proton {
 /// **Deprecated** - Use a third-party URL library.
 ///
 /// An error encountered during URL parsing.
+
 struct
+PN_CPP_DEPRECATED("Use a third-party URL library")
 PN_CPP_CLASS_EXTERN url_error : public error {
     /// @cond INTERNAL
     /// Construct a URL error with a message.
@@ -60,7 +62,7 @@ PN_CPP_CLASS_EXTERN url_error : public error {
 ///
 /// - Path is normally used as a link source or target address.  On a
 ///   broker it typically corresponds to a queue or topic name.
-class url {
+class PN_CPP_DEPRECATED("Use a third-party URL library") url {
   public:
     static const std::string AMQP;     ///< "amqp" prefix
     static const std::string AMQPS;    ///< "amqps" prefix

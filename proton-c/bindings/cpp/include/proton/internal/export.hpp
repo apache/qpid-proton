@@ -42,9 +42,9 @@
   //
   // Non-Windows (Linux, etc.) definitions:
   //
-#  define PN_CPP_EXPORT __attribute ((visibility ("default")))
+#  define PN_CPP_EXPORT __attribute__((visibility("default")))
 #  define PN_CPP_IMPORT
-#  define PN_CPP_CLASS_EXPORT __attribute ((visibility ("default")))
+#  define PN_CPP_CLASS_EXPORT __attribute__((visibility("default")))
 #  define PN_CPP_CLASS_IMPORT
 #endif
 
@@ -55,6 +55,18 @@
 #else
 #  define PN_CPP_EXTERN PN_CPP_IMPORT
 #  define PN_CPP_CLASS_EXTERN PN_CPP_CLASS_IMPORT
+#endif
+
+#if defined(PN_CPP_USE_DEPRECATED_API)
+#  define PN_CPP_DEPRECATED(message)
+#else
+#  if defined(PN_COMPILER_CXX_ATTRIBUTE_DEPRECATED) && PN_COMPILER_CXX_ATTRIBUTE_DEPRECATED
+#    define PN_CPP_DEPRECATED(message) [[deprecated(message)]]
+#  elif defined(WIN32)
+#    define PN_CPP_DEPRECATED(message) __declspec(deprecated(message))
+#  else
+#    define PN_CPP_DEPRECATED(message) __attribute__((deprecated(message)))
+#  endif
 #endif
 
 /// @endcond

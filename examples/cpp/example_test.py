@@ -142,7 +142,7 @@ class ContainerExampleTest(BrokerTestCase):
                 send.wait_exit())
 
     def test_request_response(self):
-        server = self.proc(["server", "-a", self.addr])
+        server = self.proc(["server", self.addr, "example"]) # self.addr has the connection info
         server.wait_re("connected")
         self.assertMultiLineEqual(CLIENT_EXPECT,
                          self.proc(["client", "-a", self.addr]).wait_exit())

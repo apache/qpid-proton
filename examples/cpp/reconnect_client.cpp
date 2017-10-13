@@ -24,7 +24,6 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
-#include <proton/default_container.hpp>
 #include <proton/delivery.hpp>
 #include <proton/link.hpp>
 #include <proton/message.hpp>
@@ -133,7 +132,7 @@ int main(int argc, const char** argv) {
         std::vector<std::string> failovers(&argv[4], &argv[argc]);
 
         reconnect_client client(url, address, message_count, failovers);
-        proton::default_container(client).run();
+        proton::container(client).run();
 
         return 0;
     } catch (const std::exception& e) {

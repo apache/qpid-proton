@@ -19,12 +19,13 @@
  *
  */
 
+#define PN_CPP_USE_DEPRECATED_API 1
+
 #include "options.hpp"
 
 #include <proton/container.hpp>
 #include <proton/connection.hpp>
 #include <proton/duration.hpp>
-#include <proton/function.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/sender.hpp>

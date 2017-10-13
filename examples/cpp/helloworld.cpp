@@ -25,26 +25,26 @@
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/tracker.hpp>
-#include <proton/url.hpp>
 
 #include <iostream>
 
 #include "fake_cpp11.hpp"
 
 class hello_world : public proton::messaging_handler {
-  private:
-    proton::url url;
+    std::string conn_url_;
+    std::string addr_;
 
   public:
-    hello_world(const std::string& u) : url(u) {}
+    hello_world(const std::string& u, const std::string& a) :
+        conn_url_(u), addr_(a) {}
 
     void on_container_start(proton::container& c) OVERRIDE {
-        c.connect(url);
+        c.connect(conn_url_);
     }
 
     void on_connection_open(proton::connection& c) OVERRIDE {
-        c.open_receiver(url.path());
-        c.open_sender(url.path());
+        c.open_receiver(addr_);
+        c.open_sender(addr_);
     }
 
     void on_sendable(proton::sender &s) OVERRIDE {
@@ -61,9 +61,10 @@ class hello_world : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     try {
-        std::string url = argc > 1 ? argv[1] : "127.0.0.1:5672/examples";
+        std::string conn_url = argc > 1 ? argv[1] : "//127.0.0.1:5672";
+        std::string addr = argc > 2 ? argv[2] : "examples";
 
-        hello_world hw(url);
+        hello_world hw(conn_url, addr);
         proton::container(hw).run();
 
         return 0;

@@ -94,13 +94,9 @@ class value : public internal::value_base, private internal::comparable<value> {
     /// Reset the value to null/empty
     PN_CPP_EXTERN void clear();
 
-    /// @cond INTERNAL (deprecated)
-    template<class T> void get(T &t) const;
-    template<class T> T get() const;
-    PN_CPP_EXTERN int64_t as_int() const;
-    PN_CPP_EXTERN uint64_t as_uint() const;
-    PN_CPP_EXTERN double as_double() const;
-    PN_CPP_EXTERN std::string as_string() const;
+    /// @cond INTERNAL
+    template<class T> PN_CPP_DEPRECATED("Use 'proton::get'") void get(T &t) const;
+    template<class T> PN_CPP_DEPRECATED("Use 'proton::get'") T get() const;
     /// @endcond
 
     /// swap values
@@ -170,10 +166,6 @@ PN_CPP_EXTERN std::string to_string(const value& x);
 /// @cond INTERNAL
 template<class T> void value::get(T &x) const { x = proton::get<T>(*this); }
 template<class T> T value::get() const { return proton::get<T>(*this); }
-inline int64_t value::as_int() const { return proton::coerce<int64_t>(*this); }
-inline uint64_t value::as_uint() const { return proton::coerce<uint64_t>(*this); }
-inline double value::as_double() const { return proton::coerce<double>(*this); }
-inline std::string value::as_string() const { return proton::coerce<std::string>(*this); }
 /// @endcond
 
 } // proton
