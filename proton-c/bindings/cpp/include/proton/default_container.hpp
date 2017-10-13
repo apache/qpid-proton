@@ -22,6 +22,8 @@
  *
  */
 
+#include "./internal/export.hpp"
+
 /// @file
 /// @copybrief proton::default_container
 
