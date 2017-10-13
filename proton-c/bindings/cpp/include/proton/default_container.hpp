@@ -25,7 +25,7 @@
 #include "./internal/export.hpp"
 
 /// @file
-/// @copybrief proton::default_container
+/// **Deprecated** - Use the API in `container.hpp`.
 
 namespace proton {
 

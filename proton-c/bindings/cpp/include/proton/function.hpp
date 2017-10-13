@@ -21,7 +21,7 @@
  */
 
 /// @file
-/// @copybrief void_function0
+/// **Deprecated** - Use the API in `work_queue.hpp`.
 
 /// @cond INTERNAL
 

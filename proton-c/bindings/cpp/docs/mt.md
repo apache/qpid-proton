@@ -4,38 +4,37 @@ Full multithreading support is available with C++11 and later. Limited
 multithreading is possible with older versions of C++.  See the last
 section of this page for more information.
 
-The `proton::container` handles multiple connections concurrently in a thread
-pool, created using `proton::container::run()`. As AMQP events occur on a
-connection the container calls `proton::messaging_handler` event callbacks.  The
-calls for each connection are *serialized* - callbacks for the same connection
-are never made concurrently.
+`proton::container` handles multiple connections concurrently in a
+thread pool, created using `proton::container::run()`. As AMQP events
+occur on a connection the container calls `proton::messaging_handler`
+event callbacks.  The calls for each connection are *serialized* -
+callbacks for the same connection are never made concurrently.
 
-
-You assign a handler to a connection in `proton::container::connect()` or
-`proton::listen_handler::on_accept()` with
-`proton::connection_options::handler()`.  We recommend you create a separate
-handler for each connection.  That means the handler doesn't need locks or other
-synchronization to protect it against concurrent use by proton threads.
-(If you use the handler concurrently from non-proton threads then you will need
-synchronization.)
+You assign a handler to a connection in `proton::container::connect()`
+or `proton::listen_handler::on_accept()` with
+`proton::connection_options::handler()`.  We recommend you create a
+separate handler for each connection.  That means the handler doesn't
+need locks or other synchronization to protect it against concurrent
+use by Proton threads.  If you use the handler concurrently from
+non-Proton threads then you will need synchronization.
 
 The examples @ref multithreaded_client.cpp and @ref
 multithreaded_client_flow_control.cpp illustrate these points.
 
-
 ## Thread-safety rules
 
-The `proton::container` is thread-safe *with C++11 or greater*.  An application
-thread can open (or listen for) new connections at any time. The container uses
-threads that call proton::container::run() to handle network IO, and call
-user-defined `proton::messaging_handler` callbacks.
+`proton::container` is thread-safe *with C++11 or greater*.  An
+application thread can open (or listen for) new connections at any
+time. The container uses threads that call `proton::container::run()`
+to handle network IO and call user-defined `proton::messaging_handler`
+callbacks.
 
-The `proton::container` ensures that calls to event callbacks for each
+`proton::container` ensures that calls to event callbacks for each
 connection instance are *serialized* (not called concurrently), but
 callbacks for different connections can be safely executed in
 parallel.
 
-The `proton::connection` and related objects (`proton::session`,
+`proton::connection` and related objects (`proton::session`,
 `proton::sender`, `proton::receiver`, `proton::delivery`) are *not*
 thread-safe and are subject to the following rules.
 

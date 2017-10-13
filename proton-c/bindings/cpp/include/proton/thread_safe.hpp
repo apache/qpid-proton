@@ -20,6 +20,9 @@
  * under the License.
  */
 
+/// @file
+/// **Deprecated** - No longer used.
+
 // Removed. Place-holder for for #include compatibility.
 
 #endif // PROTON_THREAD_SAFE_HPP

@@ -49,12 +49,10 @@ namespace proton {
 /// message.
 class message {
   public:
-    /// **Unsettled API** - A map of string keys and AMQP scalar
-    /// values.
+    /// A map of string keys and AMQP scalar values.
     typedef map<std::string, scalar> property_map;
 
-    /// **Unsettled API** - A map of AMQP annotation keys and AMQP
-    /// values.
+    /// A map of AMQP annotation keys and AMQP values.
     typedef map<annotation_key, value> annotation_map;
 
     /// Create an empty message.
@@ -290,25 +288,30 @@ class message {
 
     /// @}
 
-    /// @name **Unsettled API** - Application properties
+    /// @name Extended attributes
     /// @{
 
-    /// **Unsettled API** - Get the application properties map.  It can
+    /// Get the application properties map.  It can
     /// be modified in place.
     PN_CPP_EXTERN property_map& properties();
 
-    /// **Unsettled API** - examine the application properties map.
+    /// Examine the application properties map.
     PN_CPP_EXTERN const property_map& properties() const;
 
-    /// @name **Unsettled API** - Annotations
-    ///
-    /// Normally used by messaging infrastructure, not applications.
-    /// @{
+    /// Get the message annotations map.  It can
+    /// be modified in place.
     PN_CPP_EXTERN annotation_map& message_annotations();
+
+    /// Examine the meessage annotations map.
     PN_CPP_EXTERN const annotation_map& message_annotations() const;
 
+    /// Get the delivery annotations map.  It can
+    /// be modified in place.
     PN_CPP_EXTERN annotation_map& delivery_annotations();
+
+    /// Examine the delivery annotations map.
     PN_CPP_EXTERN const annotation_map& delivery_annotations() const;
+
     /// @}
 
     /// Default priority assigned to new messages.

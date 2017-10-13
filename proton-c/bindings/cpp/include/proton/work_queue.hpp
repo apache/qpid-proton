@@ -44,13 +44,10 @@ struct pn_link_t;
 
 namespace proton {
 
-/// **Unsettled API** - A work item for a @ref work_queue "work queue".
-///
-/// It can be created from a function that takes no parameters and
-/// returns no value.
+/// @cond INTERNAL
+
 namespace v03 {
 
-/// @cond INTERNAL
 struct invocable {
     invocable() {}
     virtual ~invocable() {}
@@ -78,18 +75,19 @@ struct invocable_wrapper {
 
     invocable* wrapped_;
 };
-/// @endcond
 
+/// **Unsettled API** - A work item for a @ref work_queue "work queue".
+///
+/// It can be created from a function that takes no parameters and
+/// returns no value.
 class work {
   public:
-    /// **Unsettled API**
+    /// Create a work item.
     work() {}
 
-    /// @cond INTERNAL
     work(const invocable& i): item_(i) {}
-    /// @endcond
 
-    /// **Unsettled API**
+    /// Invoke the work item.
     void operator()() { item_(); }
 
     ~work() {}
@@ -98,9 +96,9 @@ class work {
     invocable_wrapper item_;
 };
 
-/// @cond INTERNAL
 // Utilities to make work from functions/member functions (C++03 version)
 // Lots of repetition to handle functions/member functions with up to 3 arguments
+
 template <class R>
 struct work0 : public invocable_cloner<work0<R> > {
     R (* fn_)();
@@ -212,10 +210,9 @@ struct work_pmf3 : public invocable_cloner<work_pmf3<R,T,A,B,C> > {
         (holder_.*fn_)(a_, b_, c_);
     }
 };
-/// @endcond
 
-/// make_work is the equivalent of C++11 std::bind for C++03
-/// It will bind both free functions and pointers to member functions
+/// `make_work` is the equivalent of C++11 `std::bind` for C++03.  It
+/// will bind both free functions and pointers to member functions.
 template <class R, class T>
 work make_work(R (T::*f)(), T* t) {
     return work_pmf0<R, T>(f, *t);
@@ -256,20 +253,22 @@ work make_work(R (*f)(A, B, C), A a, B b, C c) {
     return work3<R, A, B, C>(f, a, b, c);
 }
 
-}
+} // v03
 
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
+
 namespace v11 {
+
 class work {
   public:
     /// **Unsettled API**
     work() {}
 
     /// **Unsettled API**
+    ///
     /// Construct a unit of work from anything
     /// function-like that takes no arguments and returns
     /// no result.
-    ///
     template <class T,
         // Make sure we don't match the copy or move constructors
         class = typename std::enable_if<!std::is_same<typename std::decay<T>::type,work>::value>::type
@@ -277,6 +276,7 @@ class work {
     work(T&& f): item_(std::forward<T>(f)) {}
 
     /// **Unsettled API**
+    ///
     /// Execute the piece of work
     void operator()() { item_(); }
 
@@ -286,17 +286,19 @@ class work {
     std::function<void()> item_;
 };
 
-/// **Unsettled API**
+/// **Unsettled API** - Make a unit of work.
+///
 /// Make a unit of work from either a function or a member function
 /// and an object pointer.
 ///
-/// This C++11 version is just a wrapper for std::bind
+/// **C++ versions** - This C++11 version is just a wrapper for
+/// `std::bind`.
 template <class... Rest>
 work make_work(Rest&&... r) {
     return std::bind(std::forward<Rest>(r)...);
 }
 
-}
+} // v11
 
 using v11::work;
 using v11::make_work;
@@ -307,6 +309,8 @@ using v03::work;
 using v03::make_work;
 
 #endif
+
+/// @endcond
 
 /// **Unsettled API** - A context for thread-safe execution of work.
 ///

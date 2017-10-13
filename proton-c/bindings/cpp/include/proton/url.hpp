@@ -31,7 +31,7 @@
 #include <string>
 
 /// @file
-/// @copybrief proton::url
+/// **Deprecated** - Use a third-party URL library.
 
 namespace proton {
 

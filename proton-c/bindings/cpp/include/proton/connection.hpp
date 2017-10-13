@@ -145,22 +145,22 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
 
     /// **Unsettled API** - Trigger an event from another thread.
     ///
-    /// `wake()` can be called from any thread. The Proton library
+    /// This method can be called from any thread. The Proton library
     /// will call `messaging_handler::on_connection_wake()` as soon as
     /// possible in the correct event-handling thread.
     ///
-    /// @note
+    /// **Thread-safety** - This is the *only* `proton::connection`
+    /// function that can be called from outside the handler thread.
     ///
-    /// * Thread-safe: This is the *only* @ref connection function
-    ///   that can be called from outside the handler thread.
-    /// * Multiple calls to `wake()` may be coalesced into a single
-    ///   call to `messaging_handler::on_connection_wake()` that
-    ///   occurs after all of them.
-    /// * Spurious `messaging_handler::on_connection_wake()` calls can
-    ///   occur even if the application does not call `wake()`.
+    /// @note Spurious `messaging_handler::on_connection_wake()` calls
+    /// can occur even if the application does not call `wake()`.
     ///
-    /// The @ref work_queue interface provides an easier way execute
-    /// code safely in the event-handler thread.
+    /// @note Multiple calls to `wake()` may be coalesced into a
+    /// single call to `messaging_handler::on_connection_wake()` that
+    /// occurs after all of them.
+    ///
+    /// The `proton::work_queue` interface provides an easier way
+    /// execute code safely in the event-handler thread.
     PN_CPP_EXTERN void wake() const;
 
     /// @cond INTERNAL
