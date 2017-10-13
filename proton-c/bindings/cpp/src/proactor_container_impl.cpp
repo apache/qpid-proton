@@ -406,7 +406,8 @@ void container::impl::schedule(duration delay, work f) {
 
     // Set timeout for current head of timeout queue
     scheduled* next = &deferred_.front();
-    pn_proactor_set_timeout(proactor_, (next->time-now).milliseconds());
+    pn_millis_t timeout_ms = (now < next->time) ? (next->time-now).milliseconds() : 0;
+    pn_proactor_set_timeout(proactor_, timeout_ms);
 }
 
 void container::impl::client_connection_options(const connection_options &opts) {
