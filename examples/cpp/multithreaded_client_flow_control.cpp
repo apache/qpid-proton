@@ -261,7 +261,8 @@ int main(int argc, const char **argv) {
         int count = n_messages * n_threads;
 
         // Total messages to be received, multiple receiver threads will decrement this.
-        std::atomic_int remaining(count);
+        std::atomic_int remaining;
+        remaining.store(count);
 
         // Run the proton container
         proton::container container;
