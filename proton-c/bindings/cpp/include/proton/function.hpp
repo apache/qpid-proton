@@ -39,7 +39,7 @@ namespace proton {
 /// subclasses do not have to be heap allocated.  Once passed, the
 /// instance must not be deleted until its `operator()` is called or
 /// the container has stopped.
-class PN_CPP_DEPRECATED("Use 'proton::work'") void_function0 {
+class void_function0 {
   public:
     virtual ~void_function0() {}
     /// Override the call operator with your code.
