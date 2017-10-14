@@ -184,8 +184,8 @@ add_library(
 set_target_properties(
   qpid-proton-bitcode
   PROPERTIES
-  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
-  SOVERSION "${PN_LIB_SOMAJOR}"
+  VERSION   "${PN_LIB_LEGACY_VERSION}"
+  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
 target_link_libraries(qpid-proton-bitcode)
