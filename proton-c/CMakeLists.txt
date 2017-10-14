@@ -20,7 +20,7 @@
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 
-include(soversion.cmake)
+include(versions.cmake)
 
 add_custom_target(docs)
 add_custom_target(doc DEPENDS docs)
@@ -608,8 +608,8 @@ target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIM
 set_target_properties (
   qpid-proton-core
   PROPERTIES
-  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
-  SOVERSION "${PN_LIB_SOMAJOR}"
+  VERSION   "${PN_LIB_CORE_VERSION}"
+  SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
@@ -643,8 +643,8 @@ target_link_libraries (qpid-proton LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LI
 set_target_properties (
   qpid-proton
   PROPERTIES
-  VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
-  SOVERSION "${PN_LIB_SOMAJOR}"
+  VERSION   "${PN_LIB_LEGACY_VERSION}"
+  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
@@ -665,8 +665,8 @@ if (qpid-proton-proactor)
   set_target_properties (
     qpid-proton-proactor
     PROPERTIES
-    VERSION   "${PN_LIB_SOMAJOR}.${PN_LIB_SOMINOR}"
-    SOVERSION "${PN_LIB_SOMAJOR}"
+    VERSION   "${PN_LIB_PROACTOR_VERSION}"
+    SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
     )
 endif()
