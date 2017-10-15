@@ -19,8 +19,6 @@
  *
  */
 
-#define PN_CPP_USE_DEPRECATED_API 1
-
 #include "options.hpp"
 
 #include <proton/container.hpp>
