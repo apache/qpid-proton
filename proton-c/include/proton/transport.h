@@ -215,7 +215,7 @@ PN_EXTERN bool pn_transport_is_encrypted(pn_transport_t *transport);
 PN_EXTERN pn_condition_t *pn_transport_condition(pn_transport_t *transport);
 
 /**
- * @deprecated
+ * **Deprecated**
  */
 PN_EXTERN pn_error_t *pn_transport_error(pn_transport_t *transport);
 
@@ -271,7 +271,7 @@ PN_EXTERN void pn_transport_set_tracer(pn_transport_t *transport, pn_tracer_t tr
 PN_EXTERN pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_transport_attachments().
  *
  * Get the application context that is associated with a transport object.
  *
@@ -284,7 +284,7 @@ PN_EXTERN pn_tracer_t pn_transport_get_tracer(pn_transport_t *transport);
 PN_EXTERN void *pn_transport_get_context(pn_transport_t *transport);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_transport_attachments().
  *
  * Set a new application context for a transport object.
  *
@@ -458,12 +458,12 @@ PN_EXTERN void pn_transport_set_idle_timeout(pn_transport_t *transport, pn_milli
 PN_EXTERN pn_millis_t pn_transport_get_remote_idle_timeout(pn_transport_t *transport);
 
 /**
- * @deprecated
+ * **Deprecated**
  */
 PN_EXTERN ssize_t pn_transport_input(pn_transport_t *transport, const char *bytes, size_t available);
 
 /**
- * @deprecated
+ * **Deprecated**
  */
 PN_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, size_t size);
 

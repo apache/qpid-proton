@@ -38,8 +38,6 @@ extern "C" {
  *
  * @copybrief messenger
  *
- * @deprecated
- *
  * @addtogroup messenger
  * @{
  */

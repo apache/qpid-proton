@@ -120,11 +120,9 @@
  * @ingroup io
  *
  * @defgroup messenger Messenger
- * @deprecated
  * @brief **Deprecated** - Use the @ref proactor API or Qpid Proton C++.
  *
  * @defgroup url URL
- * @deprecated
  * @brief **Deprecated** - Use a third-party URL library.
  */
 
