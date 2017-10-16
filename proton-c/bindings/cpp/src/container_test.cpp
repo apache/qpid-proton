@@ -19,9 +19,7 @@
 
 
 #include "test_bits.hpp"
-extern "C" {
-#include "../../../../src/tests/test_port.h"
-}
+#include "test_port.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
@@ -39,23 +37,6 @@ extern "C" {
 
 namespace {
 
-std::string make_url(const std::string& host, int port) {
-    std::ostringstream url;
-    url << "amqp://" << host << ":" << port;
-    return url.str();
-}
-
-// C++ Wrapper for C test port.
-// Binds to a port with REUSEADDR set so that the port is protected from
-// other processes and can safely be used for listening.
-class listen_port {
-    ::test_port_t tp;
-  public:
-    listen_port() { tp = ::test_port(""); } // NOTE: assign tp, don't initialize - Windows.
-    ~listen_port() { ::test_port_close(&tp); }
-    int port() const { return tp.port; }
-    std::string url(const std::string& host="") const { return make_url(host, tp.port); }
-};
 
 struct test_listen_handler : public proton::listen_handler {
     bool on_open_, on_accept_, on_close_;
@@ -91,7 +72,7 @@ class test_handler : public proton::messaging_handler {
 
     std::string peer_vhost;
     std::string peer_container_id;
-    listen_port port;
+    test_port port;
     proton::listener listener;
     test_listen_handler listen_handler;
 
@@ -183,7 +164,7 @@ int test_container_bad_address() {
 }
 
 class stop_tester : public proton::messaging_handler {
-    listen_port port;
+    test_port port;
     proton::listener listener;
 
     // Set up a listener which would block forever
@@ -232,7 +213,7 @@ int test_container_stop() {
 
 struct hang_tester : public proton::messaging_handler {
     proton::listener listener;
-    listen_port port;
+    test_port port;
     bool done;
 
     hang_tester() : done(false) {}

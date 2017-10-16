@@ -104,9 +104,9 @@ test_port_t test_port(const char* host) {
   test_port_t tp = {0};
   tp.sock = socket(AF_INET, SOCK_STREAM, 0);
   check_err(tp.sock < 0, "socket");
-  int on = 1;
 #ifndef _WIN32
-  check_err(setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)), "setsockopt");
+  int on = 1;
+  check_err(setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)), "setsockopt");;;
 #endif
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
