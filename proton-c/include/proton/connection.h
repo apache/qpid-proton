@@ -118,7 +118,7 @@ PN_EXTERN void pn_connection_free(pn_connection_t *connection);
 PN_EXTERN void pn_connection_release(pn_connection_t *connection);
 
 /**
- * @deprecated
+ * **Deprecated**
  *
  * Get additional error information associated with the connection.
  *
@@ -158,11 +158,11 @@ PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t
 /**
  * Get the collector set with pn_connection_collect()
  * @return NULL if pn_connection_collect() has not been called.
-*/
+ */
 PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_connection_attachments().
  *
  * Get the application context that is associated with a connection
  * object.
@@ -176,7 +176,7 @@ PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_connection_attachments().
  *
  * Set a new application context for a connection object.
  *

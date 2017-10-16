@@ -98,7 +98,7 @@ typedef struct pn_connection_driver_t {
  * Set connection and transport to the provided values, or create a new
  * @ref pn_connection_t or @ref pn_transport_t if either is NULL.
  * The provided values belong to the connection driver and will be freed by
- * pn_connection_driver_destroy()
+ * pn_connection_driver_destroy().
  *
  * The transport is bound automatically after the PN_CONNECTION_INIT has been is
  * handled by the application. It can be bound earlier with
@@ -106,7 +106,7 @@ typedef struct pn_connection_driver_t {
  *
  * The following functions must be called before the transport is
  * bound to have effect: pn_connection_set_username(), pn_connection_set_password(),
- * pn_transport_set_server()
+ * pn_transport_set_server().
  *
  * @return PN_OUT_OF_MEMORY if any allocation fails.
  */
@@ -251,11 +251,19 @@ PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batc
  */
 #define PN_TRANSPORT_READ_CLOSED PN_TRANSPORT_TAIL_CLOSED
 
-/**@deprecated Use pn_transport_log() */
+/**
+ * **Deprecated** - Use pn_transport_log().
+ */
 PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg);
-/**@deprecated Use pn_transport_logf() */
+
+/**
+ * **Deprecated** - Use pn_transport_logf().
+ */
 PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
-/**@deprecated Use pn_transport_vlogf() */
+
+/**
+ * **Deprecated** - Use pn_transport_vlogf().
+ */
 PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
 
 /**
