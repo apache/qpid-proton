@@ -61,13 +61,13 @@ class url;
 class void_function0;
 class work_queue;
 
-namespace v03 { class work; }
+namespace internal { namespace v03 { class work; } }
 
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
-namespace v11 { class work; }
-using v11::work;
+namespace internal { namespace v11 { class work; } }
+using internal::v11::work;
 #else
-using v03::work;
+using internal::v03::work;
 #endif
 
 namespace io {

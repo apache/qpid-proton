@@ -46,7 +46,7 @@ namespace proton {
 
 /// @cond INTERNAL
 
-namespace v03 {
+namespace internal { namespace v03 {
 
 struct invocable {
     invocable() {}
@@ -253,11 +253,11 @@ work make_work(R (*f)(A, B, C), A a, B b, C c) {
     return work3<R, A, B, C>(f, a, b, c);
 }
 
-} // v03
+} } // internal::v03
 
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
 
-namespace v11 {
+namespace internal { namespace v11 {
 
 class work {
   public:
@@ -298,15 +298,15 @@ work make_work(Rest&&... r) {
     return std::bind(std::forward<Rest>(r)...);
 }
 
-} // v11
+} } // internal::v11
 
-using v11::work;
-using v11::make_work;
+using internal::v11::work;
+using internal::v11::make_work;
 
 #else
 
-using v03::work;
-using v03::make_work;
+using internal::v03::work;
+using internal::v03::make_work;
 
 #endif
 
@@ -360,7 +360,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     // This is a hack to ensure that the C++03 version is declared
     // only during the compilation of the library
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
-    PN_CPP_EXTERN bool add(v03::work fn);
+    PN_CPP_EXTERN bool add(internal::v03::work fn);
 #endif
     /// @endcond
 
@@ -381,7 +381,7 @@ class PN_CPP_CLASS_EXTERN work_queue {
     // This is a hack to ensure that the C++03 version is declared
     // only during the compilation of the library
 #if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
-    PN_CPP_EXTERN void schedule(duration, v03::work fn);
+    PN_CPP_EXTERN void schedule(duration, internal::v03::work fn);
 #endif
     /// @endcond
 
