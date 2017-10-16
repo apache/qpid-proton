@@ -34,7 +34,7 @@ else()
   set(test_path "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
 endif()
 
-foreach (name broker send receive direct send-abort)
+foreach (name broker send receive direct send-abort send-ssl)
   add_executable(c-${name} ${name}.c)
   target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   set_target_properties(c-${name} PROPERTIES

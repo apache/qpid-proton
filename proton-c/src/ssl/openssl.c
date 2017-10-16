@@ -57,10 +57,9 @@
  * This file contains an OpenSSL-based implemention of the SSL/TLS API.
  */
 
-static int ssl_initialized;
-static int ssl_ex_data_index;
-
 typedef struct pn_ssl_session_t pn_ssl_session_t;
+
+static int ssl_ex_data_index;
 
 struct pn_ssl_domain_t {
 
@@ -119,14 +118,14 @@ struct pni_ssl_t {
 
 static inline pn_transport_t *get_transport_internal(pn_ssl_t *ssl)
 {
-    // The external pn_sasl_t is really a pointer to the internal pni_transport_t
-    return ((pn_transport_t *)ssl);
+  // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+  return ((pn_transport_t *)ssl);
 }
 
 static inline pni_ssl_t *get_ssl_internal(pn_ssl_t *ssl)
 {
-    // The external pn_sasl_t is really a pointer to the internal pni_transport_t
-    return ssl ? ((pn_transport_t *)ssl)->ssl : NULL;
+  // The external pn_sasl_t is really a pointer to the internal pni_transport_t
+  return ssl ? ((pn_transport_t *)ssl)->ssl : NULL;
 }
 
 // define two sets of allowable ciphers: those that require authentication, and those
@@ -265,8 +264,8 @@ static bool match_dns_pattern( const char *hostname,
       int suffix_len = strlen(suffix);
       if (prefix_len && pn_strncasecmp( prefix, slabel, prefix_len )) return false;
       if (suffix_len && pn_strncasecmp( suffix,
-                                     slabel + (strlen(slabel) - suffix_len),
-                                     suffix_len )) return false;
+                                        slabel + (strlen(slabel) - suffix_len),
+                                        suffix_len )) return false;
     }
   }
 
@@ -348,7 +347,7 @@ static int verify_callback(int preverify_ok, X509_STORE_CTX *ctx)
 
   if (!matched) {
     ssl_log(transport, "Error: no name matching %s found in peer cert - rejecting handshake.",
-          ssl->peer_hostname);
+            ssl->peer_hostname);
     preverify_ok = 0;
 #ifdef X509_V_ERR_APPLICATION_VERIFICATION
     X509_STORE_CTX_set_error( ctx, X509_V_ERR_APPLICATION_VERIFICATION );
@@ -477,18 +476,14 @@ bool pn_ssl_present(void)
   return true;
 }
 
+static bool ensure_initialized(void);
+
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
-  if (!ssl_initialized) {
-    ssl_initialized = 1;
-    SSL_library_init();
-    SSL_load_error_strings();
-    OpenSSL_add_all_algorithms();
-    ssl_ex_data_index = SSL_get_ex_new_index( 0, (void *) "org.apache.qpid.proton.ssl",
-                                              NULL, NULL, NULL);
-    ssn_init();
+  if (!ensure_initialized()) {
+      ssl_log_error("Unable to initialize OpenSSL library");
+      return NULL;
   }
-
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
 
@@ -499,7 +494,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   // known vulnerable ones.  This should allow us to use the latest version
   // of the TLS standard that the installed library supports.
   switch(mode) {
-  case PN_SSL_MODE_CLIENT:
+   case PN_SSL_MODE_CLIENT:
     domain->ctx = SSL_CTX_new(SSLv23_client_method()); // and TLSv1+
     SSL_CTX_set_session_cache_mode(domain->ctx, SSL_SESS_CACHE_CLIENT);
     if (!domain->ctx) {
@@ -509,7 +504,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     }
     break;
 
-  case PN_SSL_MODE_SERVER:
+   case PN_SSL_MODE_SERVER:
     domain->ctx = SSL_CTX_new(SSLv23_server_method()); // and TLSv1+
     if (!domain->ctx) {
       ssl_log_error("Unable to initialize OpenSSL context.");
@@ -518,7 +513,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     }
     break;
 
-  default:
+   default:
     pn_transport_logf(NULL, "Invalid value for pn_ssl_mode_t: %d", mode);
     free(domain);
     return NULL;
@@ -530,7 +525,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   SSL_CTX_set_options(domain->ctx, SSL_OP_NO_COMPRESSION);
 #endif
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
-    domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
+  domain->default_seclevel = SSL_CTX_get_security_level(domain->ctx);
 #endif
 
   // by default, allow anonymous ciphers so certificates are not required 'out of the box'
@@ -570,9 +565,9 @@ void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 
 
 int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
-                               const char *certificate_file,
-                               const char *private_key_file,
-                               const char *password)
+                                   const char *certificate_file,
+                                   const char *private_key_file,
+                                   const char *password)
 {
   if (!domain || !domain->ctx) return -1;
 
@@ -594,7 +589,7 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
 
   if (SSL_CTX_check_private_key(domain->ctx) != 1) {
     ssl_log_error("The key file %s is not consistent with the certificate %s",
-                   private_key_file, certificate_file);
+                  private_key_file, certificate_file);
     return -5;
   }
 
@@ -604,8 +599,8 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
   // cipher was negotiated.  TLSv1 will reject such a request.  Hack: once a cert is
   // configured, allow only authenticated ciphers.
   if (!domain->ciphers && !SSL_CTX_set_cipher_list( domain->ctx, CIPHERS_AUTHENTICATE )) {
-      ssl_log_error("Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
-      return -6;
+    ssl_log_error("Failed to set cipher list to %s", CIPHERS_AUTHENTICATE);
+    return -6;
   }
 
   return 0;
@@ -664,8 +659,8 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   if (!domain) return -1;
 
   switch (mode) {
-  case PN_SSL_VERIFY_PEER:
-  case PN_SSL_VERIFY_PEER_NAME:
+   case PN_SSL_VERIFY_PEER:
+   case PN_SSL_VERIFY_PEER_NAME:
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
     SSL_CTX_set_security_level(domain->ctx, domain->default_seclevel);
@@ -673,7 +668,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 
     if (!domain->has_ca_db) {
       pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured.\n"
-                 "       Use pn_ssl_domain_set_trusted_ca_db()");
+                        "       Use pn_ssl_domain_set_trusted_ca_db()");
       return -1;
     }
 
@@ -686,7 +681,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       }
       if (!domain->has_certificate) {
         pn_transport_logf(NULL, "Error: Server cannot verify peer without configuring a certificate.\n"
-                   "       Use pn_ssl_domain_set_credentials()");
+                          "       Use pn_ssl_domain_set_credentials()");
       }
 
       if (domain->trusted_CAs) free(domain->trusted_CAs);
@@ -708,7 +703,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 #endif
     break;
 
-  case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
+   case PN_SSL_ANONYMOUS_PEER:   // hippie free love mode... :)
 #if OPENSSL_VERSION_NUMBER >= 0x10100000
     // Must use lowest OpenSSL security level to enable anonymous ciphers.
     SSL_CTX_set_security_level(domain->ctx, 0);
@@ -716,7 +711,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     SSL_CTX_set_verify( domain->ctx, SSL_VERIFY_NONE, NULL );
     break;
 
-  default:
+   default:
     pn_transport_logf(NULL, "Invalid peer authentication mode given." );
     return -1;
   }
@@ -726,35 +721,35 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 }
 
 const pn_io_layer_t ssl_layer = {
-    process_input_ssl,
-    process_output_ssl,
-    handle_error_ssl,
-    NULL,
-    buffered_output
+  process_input_ssl,
+  process_output_ssl,
+  handle_error_ssl,
+  NULL,
+  buffered_output
 };
 
 const pn_io_layer_t ssl_input_closed_layer = {
-    process_input_done,
-    process_output_ssl,
-    handle_error_ssl,
-    NULL,
-    buffered_output
+  process_input_done,
+  process_output_ssl,
+  handle_error_ssl,
+  NULL,
+  buffered_output
 };
 
 const pn_io_layer_t ssl_output_closed_layer = {
-    process_input_ssl,
-    process_output_done,
-    handle_error_ssl,
-    NULL,
-    buffered_output
+  process_input_ssl,
+  process_output_done,
+  handle_error_ssl,
+  NULL,
+  buffered_output
 };
 
 const pn_io_layer_t ssl_closed_layer = {
-    process_input_done,
-    process_output_done,
-    handle_error_ssl,
-    NULL,
-    buffered_output
+  process_input_done,
+  process_output_done,
+  handle_error_ssl,
+  NULL,
+  buffered_output
 };
 
 int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
@@ -886,9 +881,9 @@ pn_ssl_t *pn_ssl(pn_transport_t *transport)
 
 static int keyfile_pw_cb(char *buf, int size, int rwflag, void *userdata)
 {
-    strncpy(buf, (char *)userdata, size);   // @todo: un-obfuscate me!!!
-    buf[size - 1] = '\0';
-    return(strlen(buf));
+  strncpy(buf, (char *)userdata, size);   // @todo: un-obfuscate me!!!
+  buf[size - 1] = '\0';
+  return(strlen(buf));
 }
 
 
@@ -958,13 +953,13 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
         if (!BIO_should_retry(ssl->bio_ssl)) {
           int reason = SSL_get_error( ssl->ssl, read );
           switch (reason) {
-          case SSL_ERROR_ZERO_RETURN:
+           case SSL_ERROR_ZERO_RETURN:
             // SSL closed cleanly
             ssl_log(transport, "SSL connection has closed");
             start_ssl_shutdown(transport);  // KAG: not sure - this may not be necessary
             ssl->ssl_closed = true;
             break;
-          default:
+           default:
             // unexpected error
             return (ssize_t)ssl_failed(transport);
           }
@@ -994,7 +989,7 @@ static ssize_t process_input_ssl( pn_transport_t *transport, unsigned int layer,
           ssl_log( transport, "Application consumed %d bytes from peer", (int) consumed );
         } else if (consumed < 0) {
           ssl_log(transport, "Application layer closed its input, error=%d (discarding %d bytes)",
-               (int) consumed, (int)ssl->in_count);
+                  (int) consumed, (int)ssl->in_count);
           ssl->in_count = 0;    // discard any pending input
           ssl->app_input_closed = consumed;
           if (ssl->app_output_closed && ssl->out_count == 0) {
@@ -1086,7 +1081,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
       } else {
         if (app_bytes < 0) {
           ssl_log(transport, "Application layer closed its output, error=%d (%d bytes pending send)",
-               (int) app_bytes, (int) ssl->out_count);
+                  (int) app_bytes, (int) ssl->out_count);
           ssl->app_output_closed = app_bytes;
         }
       }
@@ -1107,14 +1102,14 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
           if (!BIO_should_retry(ssl->bio_ssl)) {
             int reason = SSL_get_error( ssl->ssl, wrote );
             switch (reason) {
-            case SSL_ERROR_ZERO_RETURN:
+             case SSL_ERROR_ZERO_RETURN:
               // SSL closed cleanly
               ssl_log(transport, "SSL connection has closed");
               start_ssl_shutdown(transport); // KAG: not sure - this may not be necessary
               ssl->out_count = 0;      // can no longer write to socket, so erase app output data
               ssl->ssl_closed = true;
               break;
-            default:
+             default:
               // unexpected error
               return (ssize_t)ssl_failed(transport);
             }
@@ -1236,7 +1231,7 @@ static void release_ssl_socket(pni_ssl_t *ssl)
 {
   if (ssl->bio_ssl) BIO_free(ssl->bio_ssl);
   if (ssl->ssl) {
-      SSL_free(ssl->ssl);       // will free bio_ssl_io
+    SSL_free(ssl->ssl);       // will free bio_ssl_io
   } else {
     if (ssl->bio_ssl_io) BIO_free(ssl->bio_ssl_io);
   }
@@ -1254,9 +1249,9 @@ pn_ssl_resume_status_t pn_ssl_resume_status(pn_ssl_t *ssl0)
   pni_ssl_t *ssl = get_ssl_internal(ssl0);
   if (!ssl || !ssl->ssl) return PN_SSL_RESUME_UNKNOWN;
   switch (SSL_session_reused( ssl->ssl )) {
-  case 0: return PN_SSL_RESUME_NEW;
-  case 1: return PN_SSL_RESUME_REUSED;
-  default: break;
+   case 0: return PN_SSL_RESUME_NEW;
+   case 1: return PN_SSL_RESUME_REUSED;
+   default: break;
   }
   return PN_SSL_RESUME_UNKNOWN;
 }
@@ -1332,124 +1327,124 @@ const char* pn_ssl_get_remote_subject(pn_ssl_t *ssl0)
 
 int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t fingerprint_length, pn_ssl_hash_alg hash_alg)
 {
-    const char *digest_name = NULL;
-    size_t min_required_length;
+  const char *digest_name = NULL;
+  size_t min_required_length;
 
-    // old versions of python expect fingerprint to contain a valid string on
-    // return from this function
-    fingerprint[0] = 0;
+  // old versions of python expect fingerprint to contain a valid string on
+  // return from this function
+  fingerprint[0] = 0;
 
-    // Assign the correct digest_name value based on the enum values.
-    switch (hash_alg) {
-        case PN_SSL_SHA1 :
-            min_required_length = 41; // 40 hex characters + 1 '\0' character
-            digest_name = "sha1";
-            break;
-        case PN_SSL_SHA256 :
-            min_required_length = 65; // 64 hex characters + 1 '\0' character
-            digest_name = "sha256";
-            break;
-        case PN_SSL_SHA512 :
-            min_required_length = 129; // 128 hex characters + 1 '\0' character
-            digest_name = "sha512";
-            break;
-        case PN_SSL_MD5 :
-            min_required_length = 33; // 32 hex characters + 1 '\0' character
-            digest_name = "md5";
-            break;
-        default:
-            ssl_log_error("Unknown or unhandled hash algorithm %i \n", hash_alg);
-            return PN_ERR;
+  // Assign the correct digest_name value based on the enum values.
+  switch (hash_alg) {
+   case PN_SSL_SHA1 :
+    min_required_length = 41; // 40 hex characters + 1 '\0' character
+    digest_name = "sha1";
+    break;
+   case PN_SSL_SHA256 :
+    min_required_length = 65; // 64 hex characters + 1 '\0' character
+    digest_name = "sha256";
+    break;
+   case PN_SSL_SHA512 :
+    min_required_length = 129; // 128 hex characters + 1 '\0' character
+    digest_name = "sha512";
+    break;
+   case PN_SSL_MD5 :
+    min_required_length = 33; // 32 hex characters + 1 '\0' character
+    digest_name = "md5";
+    break;
+   default:
+    ssl_log_error("Unknown or unhandled hash algorithm %i \n", hash_alg);
+    return PN_ERR;
 
+  }
+
+  if(fingerprint_length < min_required_length) {
+    ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be %i or above for %s digest\n",
+                  fingerprint_length, min_required_length, digest_name);
+    return PN_ERR;
+  }
+
+  const EVP_MD  *digest = EVP_get_digestbyname(digest_name);
+
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  X509 *cert = get_peer_certificate(ssl);
+
+  if(cert) {
+    unsigned int len;
+
+    unsigned char bytes[64]; // sha512 uses 64 octets, we will use that as the maximum.
+
+    if (X509_digest(cert, digest, bytes, &len) != 1) {
+      ssl_log_error("Failed to extract X509 digest\n");
+      return PN_ERR;
     }
 
-    if(fingerprint_length < min_required_length) {
-        ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be %i or above for %s digest\n",
-            fingerprint_length, min_required_length, digest_name);
-        return PN_ERR;
+    char *cursor = fingerprint;
+
+    for (size_t i=0; i<len ; i++) {
+      cursor +=  pni_snprintf((char *)cursor, fingerprint_length, "%02x", bytes[i]);
+      fingerprint_length = fingerprint_length - 2;
     }
 
-    const EVP_MD  *digest = EVP_get_digestbyname(digest_name);
+    return PN_OK;
+  }
+  else {
+    ssl_log_error("No certificate is available yet \n");
+    return PN_ERR;
+  }
 
-    pni_ssl_t *ssl = get_ssl_internal(ssl0);
-    X509 *cert = get_peer_certificate(ssl);
-
-    if(cert) {
-        unsigned int len;
-
-        unsigned char bytes[64]; // sha512 uses 64 octets, we will use that as the maximum.
-
-        if (X509_digest(cert, digest, bytes, &len) != 1) {
-            ssl_log_error("Failed to extract X509 digest\n");
-            return PN_ERR;
-       }
-
-        char *cursor = fingerprint;
-
-        for (size_t i=0; i<len ; i++) {
-            cursor +=  pni_snprintf((char *)cursor, fingerprint_length, "%02x", bytes[i]);
-            fingerprint_length = fingerprint_length - 2;
-        }
-
-        return PN_OK;
-    }
-    else {
-        ssl_log_error("No certificate is available yet \n");
-        return PN_ERR;
-    }
-
-    return 0;
+  return 0;
 }
 
 
 const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subject_subfield field)
 {
-    int openssl_field = 0;
+  int openssl_field = 0;
 
-    // Assign openssl internal representations of field values to openssl_field
-    switch (field) {
-        case PN_SSL_CERT_SUBJECT_COUNTRY_NAME :
-            openssl_field = NID_countryName;
-            break;
-        case PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE :
-            openssl_field = NID_stateOrProvinceName;
-            break;
-        case PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY :
-            openssl_field = NID_localityName;
-            break;
-        case PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME :
-            openssl_field = NID_organizationName;
-            break;
-        case PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT :
-            openssl_field = NID_organizationalUnitName;
-            break;
-        case PN_SSL_CERT_SUBJECT_COMMON_NAME :
-            openssl_field = NID_commonName;
-            break;
-        default:
-            ssl_log_error("Unknown or unhandled certificate subject subfield %i \n", field);
-            return NULL;
-    }
-
-    pni_ssl_t *ssl = get_ssl_internal(ssl0);
-    X509 *cert = get_peer_certificate(ssl);
-    if (!cert) return NULL;
-
-    X509_NAME *subject_name = X509_get_subject_name(cert);
-
-    // TODO (gmurthy) - A server side cert subject field can have more than one common name like this - Subject: CN=www.domain1.com, CN=www.domain2.com, see https://bugzilla.mozilla.org/show_bug.cgi?id=380656
-    // For now, we will only return the first common name if there is more than one common name in the cert
-    int index = X509_NAME_get_index_by_NID(subject_name, openssl_field, -1);
-
-    if (index > -1) {
-        X509_NAME_ENTRY *ne = X509_NAME_get_entry(subject_name, index);
-        if(ne) {
-            ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
-            return (char *) name_asn1->data;
-        }
-    }
-
+  // Assign openssl internal representations of field values to openssl_field
+  switch (field) {
+   case PN_SSL_CERT_SUBJECT_COUNTRY_NAME :
+    openssl_field = NID_countryName;
+    break;
+   case PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE :
+    openssl_field = NID_stateOrProvinceName;
+    break;
+   case PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY :
+    openssl_field = NID_localityName;
+    break;
+   case PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME :
+    openssl_field = NID_organizationName;
+    break;
+   case PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT :
+    openssl_field = NID_organizationalUnitName;
+    break;
+   case PN_SSL_CERT_SUBJECT_COMMON_NAME :
+    openssl_field = NID_commonName;
+    break;
+   default:
+    ssl_log_error("Unknown or unhandled certificate subject subfield %i \n", field);
     return NULL;
+  }
+
+  pni_ssl_t *ssl = get_ssl_internal(ssl0);
+  X509 *cert = get_peer_certificate(ssl);
+  if (!cert) return NULL;
+
+  X509_NAME *subject_name = X509_get_subject_name(cert);
+
+  // TODO (gmurthy) - A server side cert subject field can have more than one common name like this - Subject: CN=www.domain1.com, CN=www.domain2.com, see https://bugzilla.mozilla.org/show_bug.cgi?id=380656
+  // For now, we will only return the first common name if there is more than one common name in the cert
+  int index = X509_NAME_get_index_by_NID(subject_name, openssl_field, -1);
+
+  if (index > -1) {
+    X509_NAME_ENTRY *ne = X509_NAME_get_entry(subject_name, index);
+    if(ne) {
+      ASN1_STRING *name_asn1 = X509_NAME_ENTRY_get_data(ne);
+      return (char *) name_asn1->data;
+    }
+  }
+
+  return NULL;
 }
 
 static ssize_t process_input_done(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t len)
@@ -1474,3 +1469,88 @@ static size_t buffered_output(pn_transport_t *transport)
   }
   return count;
 }
+
+
+/* Thread-safe locking and initialization for POSIX and Windows */
+
+static bool init_ok = false;
+
+#ifdef _WIN32
+
+typedef CRITICAL_SECTION pni_mutex_t;
+static inline void pni_mutex_init(pni_mutex_t *m) { InitializeCriticalSection(m); }
+static inline void pni_mutex_lock(pni_mutex_t *m) { EnterCriticalSection(m); }
+static inline void pni_mutex_unlock(pni_mutex_t *m) { LeaveCriticalSection(m); }
+static inline unsigned long id_callback(void) { return (unsigned long)GetCurrentThreadId(); }
+INIT_ONCE initialize_once = INIT_ONCE_STATIC_INIT;
+static inline bool ensure_initialized(void) {
+  void* dummy;
+  InitOnceExecuteOnce(&initialize_once, &initialize, NULL, &dummy);
+  return init_ok;
+}
+
+#else  /* POSIX */
+
+#include <pthread.h>
+
+static void initialize(void);
+
+typedef pthread_mutex_t pni_mutex_t;
+static inline int pni_mutex_init(pni_mutex_t *m) { return pthread_mutex_init(m, NULL); }
+static inline int pni_mutex_lock(pni_mutex_t *m) { return pthread_mutex_lock(m); }
+static inline int pni_mutex_unlock(pni_mutex_t *m) { return pthread_mutex_unlock(m); }
+static inline unsigned long id_callback(void) { return (unsigned long)pthread_self(); }
+static pthread_once_t initialize_once = PTHREAD_ONCE_INIT;
+static inline bool ensure_initialized(void) {
+  pthread_once(&initialize_once, &initialize);
+  return init_ok;
+}
+
+#endif
+
+static pni_mutex_t *locks = NULL;     /* Lock array for openssl */
+
+/* Callback function for openssl locking */
+static void locking_callback(int mode, int n, const char *file, int line) {
+  if(mode & CRYPTO_LOCK)
+    pni_mutex_lock(&locks[n]);
+  else
+    pni_mutex_unlock(&locks[n]);
+}
+
+static void initialize(void) {
+  int i;
+  SSL_library_init();
+  SSL_load_error_strings();
+  OpenSSL_add_all_algorithms();
+  ssl_ex_data_index = SSL_get_ex_new_index( 0, (void *) "org.apache.qpid.proton.ssl",
+                                            NULL, NULL, NULL);
+  ssn_init();
+  locks = (pni_mutex_t*)malloc(CRYPTO_num_locks() * sizeof(pni_mutex_t));
+  if (!locks) return;
+  for(i = 0;  i < CRYPTO_num_locks();  i++)
+    pni_mutex_init(&locks[i]);
+  CRYPTO_set_id_callback(&id_callback);
+  CRYPTO_set_locking_callback(&locking_callback);
+  /* In recent versions of openssl, the set_callback functions are no-op macros,
+     so we need to take steps to stop the compiler complaining about unused functions. */
+  (void)&id_callback;
+  (void)&locking_callback;
+  init_ok = true;
+}
+
+/* TODO aconway 2017-10-16: There is no opportunity to clean up the locks as proton has no
+   final shut-down call. If it did, we should call this: */
+/*
+static void shutdown(void) {
+  CRYPTO_set_id_callback(NULL);
+  CRYPTO_set_locking_callback(NULL);
+  if(locks)  {
+    int i;
+    for(i = 0;  i < CRYPTO_num_locks();  i++)
+      pni_mutex_destroy(&locks[i]);
+    free(locks);
+    locks = NULL;
+  }
+}
+*/

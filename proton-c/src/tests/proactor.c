@@ -686,7 +686,6 @@ static void test_release_free(test_t *t) {
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
   pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
-
 #else
 #  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
 #  define SET_CREDENTIALS(DOMAIN, NAME)                                 \

@@ -23,11 +23,26 @@
 #include <proton/listener.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
+#include <proton/ssl.h>
 #include <proton/transport.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* The ssl_certs subdir must be in the current directory for an ssl-enabled broker */
+#define SSL_FILE(NAME) "ssl_certs/" NAME
+#define SSL_PW "tserverpw"
+/* Windows vs. OpenSSL certificates */
+#if defined(_WIN32)
+#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.p12")
+#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
+  pn_ssl_domain_set_credentials(DOMAIN, SSL_FILE(NAME "-full.p12"), "", SSL_PW)
+#else
+#  define CERTIFICATE(NAME) SSL_FILE(NAME "-certificate.pem")
+#  define SET_CREDENTIALS(DOMAIN, NAME)                                 \
+  pn_ssl_domain_set_credentials(DOMAIN, CERTIFICATE(NAME), SSL_FILE(NAME "-private-key.pem"), SSL_PW)
+#endif
 
 /* Simple re-sizable vector that acts as a queue */
 #define VEC(T) struct { T* data; size_t len, cap; }
@@ -199,6 +214,7 @@ typedef struct broker_t {
   const char *container_id;     /* AMQP container-id */
   queues_t queues;
   bool finished;
+  pn_ssl_domain_t *ssl_domain;
 } broker_t;
 
 void broker_stop(broker_t *b) {
@@ -283,10 +299,15 @@ static void handle(broker_t* b, pn_event_t* e) {
      break;
 
    case PN_CONNECTION_BOUND: {
-     /* Turn off security */
+     /* Allow anonymous connections by SASL */
      pn_transport_t *t = pn_connection_transport(c);
      pn_transport_require_auth(t, false);
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
+     /* Accept SSL connections if possible, but also plain connections.
+        See the call to pn_ssl_domain_allow_unsecured_client() in main() */
+     if (b->ssl_domain) {
+       pn_ssl_init(pn_ssl(pn_event_transport(e)), b->ssl_domain, NULL);
+     }
      break;
    }
    case PN_CONNECTION_REMOTE_OPEN: {
@@ -427,7 +448,9 @@ int main(int argc, char **argv) {
   queues_init(&b.queues);
   b.container_id = argv[0];
   b.threads = 4;
-
+  b.ssl_domain = pn_ssl_domain(PN_SSL_MODE_SERVER);
+  SET_CREDENTIALS(b.ssl_domain, "tserver");
+  pn_ssl_domain_allow_unsecured_client(b.ssl_domain); /* Allow SSL and plain connections */
   {
   /* Listen on addr */
   char addr[PN_MAX_ADDR];
@@ -449,6 +472,7 @@ int main(int argc, char **argv) {
   }
   pn_proactor_free(b.proactor);
   free(threads);
+  pn_ssl_domain_free(b.ssl_domain);
   return 0;
   }
 }
