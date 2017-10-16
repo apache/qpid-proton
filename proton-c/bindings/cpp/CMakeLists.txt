@@ -16,6 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+enable_language(CXX)
 
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
 
@@ -60,16 +61,14 @@ else ()
 endif ()
 
 # Make these CACHE INTERNAL so they will be set for the C++ examples
-set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS}  ${CXX_STANDARD}" CACHE INTERNAL "")
-set(CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD} CACHE INTERNAL "")
-set(CMAKE_CXX_EXTENSIONS ${CMAKE_CXX_EXTENSIONS} CACHE INTERNAL "")
+set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
 
-add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS} -DPN_CPP_USE_DEPRECATED_API=1)
+add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS} "-DPN_CPP_USE_DEPRECATED_API=1")
 
 set(qpid-proton-cpp-source
   src/binary.cpp

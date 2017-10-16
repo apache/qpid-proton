@@ -16,12 +16,26 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+enable_language(CXX)
 
 find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
 add_definitions(${CXX_EXAMPLE_FLAGS})
+
+set (BUILD_CPP_03 OFF CACHE BOOL "Compile as C++03 even when C++11 is available")
+# This effectively checks for cmake version 3.1 or later
+if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
+  if (BUILD_CPP_03 OR MSVC)
+    set(STD 98)
+  else ()
+    set(STD 11)
+    set(HAS_CPP11 ON)
+  endif ()
+  set(CMAKE_CXX_STANDARD ${STD})
+  set(CMAKE_CXX_EXTENSIONS OFF)
+endif()
 
 # Add a test with the correct environment to find test executables and valgrind.
 macro(add_cpp_test name)
@@ -57,7 +71,6 @@ foreach(example
     ssl_client_cert
     encode_decode)
   add_executable(${example} ${example}.cpp)
-  set_target_properties(${example} PROPERTIES LINK_FLAGS "${CXX_EXAMPLE_FLAGS}")
 endforeach()
 
 if(HAS_CPP11)
@@ -69,7 +82,6 @@ if(HAS_CPP11)
       multithreaded_client_flow_control
       )
     add_executable(${example} ${example}.cpp)
-    set_target_properties(${example} PROPERTIES LINK_FLAGS "${CXX_EXAMPLE_FLAGS}")
   endforeach()
 endif()
 
