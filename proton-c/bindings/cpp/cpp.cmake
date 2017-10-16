@@ -63,6 +63,7 @@ macro(cxx_compile_checks)
     cxx_test("#include <thread>\nstd::thread t; int main(int, char**) { return 0; }" STD_THREAD)
     cxx_test("#include <mutex>\nstd::mutex m; int main(int, char**) { return 0; }" STD_MUTEX)
     cxx_test("#include <atomic>\nstd::atomic<int> a; int main(int, char**) { return 0; }" STD_ATOMIC)
+    unset(CMAKE_REQUIRED_FLAGS) # Don't contaminate later C tests with C++ flags
   endif()
 endmacro()
 
