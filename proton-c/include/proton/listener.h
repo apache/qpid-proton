@@ -71,19 +71,8 @@ PNP_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
  * @cond INTERNAL
  */
 
-/**
- * @deprecated
- *
- * **Deprecated** - Get the application context that is associated
- * with a listener.
- */
 PNP_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
 
-/**
- * @deprecated
- *
- * **Deprecated** - Set a new application context for a listener.
- */
 PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 
 /**

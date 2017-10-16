@@ -30,7 +30,6 @@ extern "C" {
  * @file
  *
  * @copybrief url
- * @deprecated
  *
  * @addtogroup url
  * @{

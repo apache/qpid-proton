@@ -67,7 +67,7 @@ PN_EXTERN pn_session_t *pn_session(pn_connection_t *connection);
 PN_EXTERN void pn_session_free(pn_session_t *session);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_session_attachments().
  *
  * Get the application context that is associated with a session
  * object.
@@ -81,7 +81,7 @@ PN_EXTERN void pn_session_free(pn_session_t *session);
 PN_EXTERN void *pn_session_get_context(pn_session_t *session);
 
 /**
- * @deprecated
+ * **Deprecated** - Use ::pn_session_attachments().
  *
  * Set a new application context for a session object.
  *
@@ -110,7 +110,7 @@ PN_EXTERN pn_record_t *pn_session_attachments(pn_session_t *session);
 PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
 
 /**
- * @deprecated
+ * **Deprecated**
  *
  * Get additional error information associated with the session.
  *
