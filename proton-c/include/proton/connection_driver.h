@@ -251,6 +251,13 @@ PN_EXTERN pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batc
  */
 #define PN_TRANSPORT_READ_CLOSED PN_TRANSPORT_TAIL_CLOSED
 
+/**@deprecated Use pn_transport_log() */
+PN_EXTERN void pn_connection_driver_log(pn_connection_driver_t *d, const char *msg);
+/**@deprecated Use pn_transport_logf() */
+PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *fmt, ...);
+/**@deprecated Use pn_transport_vlogf() */
+PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
+
 /**
  * @}
  */
