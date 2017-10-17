@@ -666,16 +666,18 @@ void container::impl::run(int threads) {
 
 #if PN_CPP_SUPPORTS_THREADS
     // Run handler threads
-    std::vector<std::thread> ts(threads-1);
-    if (threads>1) {
-      for (auto& t : ts) t = std::thread(&impl::thread, this);
+    typedef std::vector<std::thread*> vt; // pointer vector to work around failures in older compilers
+    vt ts(threads-1);
+    for (vt::iterator i = ts.begin(); i != ts.end(); ++i) {
+        *i = new std::thread(&impl::thread, this);
     }
 
     thread();      // Use this thread too.
 
     // Wait for the other threads to stop
-    if (threads>1) {
-      for (auto& t : ts) t.join();
+    for (vt::iterator i = ts.begin(); i != ts.end(); ++i) {
+        (*i)->join();
+        delete *i;
     }
 #else
     // Run a single handler thread (As we have no threading API)

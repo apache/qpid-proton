@@ -64,6 +64,8 @@
 #    define PN_CPP_DEPRECATED(message) [[deprecated(message)]]
 #  elif defined(WIN32)
 #    define PN_CPP_DEPRECATED(message) __declspec(deprecated(message))
+#  elif (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500
+#    define PN_CPP_DEPRECATED(message) __attribute__((deprecated))
 #  else
 #    define PN_CPP_DEPRECATED(message) __attribute__((deprecated(message)))
 #  endif

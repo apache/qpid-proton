@@ -67,7 +67,15 @@ struct invocable_cloner : invocable {
 struct invocable_wrapper {
     invocable_wrapper(): wrapped_(0) {}
     invocable_wrapper(const invocable_wrapper& w): wrapped_(&w.wrapped_->clone()) {}
-    invocable_wrapper& operator=(invocable_wrapper& that) {std::swap(wrapped_, that.wrapped_); return *this; }
+    invocable_wrapper& operator=(const invocable_wrapper& that) {
+        invocable_wrapper newthis(that);
+        std::swap(wrapped_, newthis.wrapped_);
+        return *this;
+    }
+#if PN_CPP_HAS_RVALUE_REFERENCES
+    invocable_wrapper(invocable_wrapper&& w): wrapped_(w.wrapped_) {}
+    invocable_wrapper& operator=(invocable_wrapper&& that) {delete wrapped_; wrapped_ = that.wrapped_; return *this; }
+#endif
     ~invocable_wrapper() { delete wrapped_; }
 
     invocable_wrapper(const invocable& i): wrapped_(&i.clone()) {}
