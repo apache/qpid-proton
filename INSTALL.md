@@ -34,7 +34,7 @@ given language binding you can omit the devel package for that
 language.
 
     # Required dependencies
-    $ yum install gcc make cmake libuuid-devel
+    $ yum install gcc gcc-c++ make cmake libuuid-devel
 
     # Dependencies needed for SSL support
     $ yum install openssl-devel
@@ -48,7 +48,6 @@ language.
     $ yum install ruby-devel rubygem-minitest                # Ruby
     $ yum install php-devel                                  # PHP
     $ yum install perl-devel                                 # Perl
-    $ yum install gcc-c++                                    # C++ (swig not required)
 
     # Dependencies needed for Python docs
     $ yum install epydoc
@@ -58,7 +57,7 @@ Debian-based systems (Ubuntu).  If you do not wish to build a given
 language binding you can omit the dev package for that language.
 
     # Required dependencies 
-    $ apt-get install gcc cmake cmake-curses-gui uuid-dev
+    $ apt-get install gcc g++ cmake cmake-curses-gui uuid-dev
 
     # Dependencies needed for SSL support
     $ apt-get install libssl-dev
@@ -67,7 +66,7 @@ language binding you can omit the dev package for that language.
     $ apt-get install libsasl2-2 libsasl2-dev
 
     # dependencies needed for bindings
-    $ apt-get install swig python-dev ruby-dev libperl-dev g++
+    $ apt-get install swig python-dev ruby-dev libperl-dev
 
     # dependencies needed for python docs
     $ apt-get install python-epydoc

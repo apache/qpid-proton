@@ -18,7 +18,8 @@
 #
 cmake_minimum_required (VERSION 2.8.7)
 
-project (Proton C)
+# project defaults to C and C++ languages
+project (Proton)
 
 # Enable testing
 enable_testing()
@@ -34,9 +35,6 @@ if (MSVC)
 endif (MSVC)
 
 option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
-if (BUILD_WITH_CXX)
-  enable_language(CXX)
-endif()
 
 if (CMAKE_CONFIGURATION_TYPES)
   # There is no single "build type"...
