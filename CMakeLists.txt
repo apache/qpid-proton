@@ -192,8 +192,6 @@ macro(set_search_path result)
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
-# Include C++ compiler definition needed by bindings/cpp and examples/cpp
-include(${CMAKE_CURRENT_SOURCE_DIR}/proton-c/bindings/cpp/cpp.cmake)
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 

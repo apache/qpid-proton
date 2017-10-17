@@ -17,6 +17,15 @@
 # under the License.
 #
 
+# NOTE: The examples and their build files are self-contained, and installed
+# stand-alone independent of the library build tree. They must build and work in
+# this mode.
+#
+# For self-test purposes, the library and binding CMake files can provide extra
+# settings in <LANGUAGE>_EXAMPLE_* variables - for example to enable extra error
+# checking or ensure compiler consistency with the library build. However, the
+# examples must also build correctly stand-alone, with none of those variables set.
+
 set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 

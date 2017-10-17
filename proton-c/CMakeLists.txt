@@ -294,16 +294,12 @@ if (SANITIZE_FLAGS)
   endif()
 endif()
 
-# Flags used to build examples for self-test.
-# The examples must be self-contained and build even if these are not set.
+# Flags for example self-test build, CACHE INTERNAL for visibility
+set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${CMAKE_C_FLAGS}" CACHE INTERNAL "")
 if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCC)
   # Ensure that examples build with c90, to deal with older c++03-as-c compilers.
-  set(C_EXAMPLE_FLAGS "-std=iso9899:1990 -pedantic")
+  set(C_EXAMPLE_FLAGS "${C_EXAMPLE_FLAGS} -std=iso9899:1990 -pedantic")
 endif()
-
-# Set example flags in parent scope so example/CMakefile can read them.
-set(C_EXAMPLE_FLAGS "${C_EXAMPLE_FLAGS} ${COMPILE_WARNING_FLAGS} ${CMAKE_C_FLAGS}" PARENT_SCOPE)
-set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS}" PARENT_SCOPE)
 
 if (MSVC)
     set(CMAKE_DEBUG_POSTFIX "d")
