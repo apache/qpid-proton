@@ -41,6 +41,8 @@
 #include <Ws2tcpip.h>
 #endif
 
+/* FIXME aconway 2017-10-13: need to define a mutex_t type with lock/unlock functions
+   using pthreads or window critical section as appropriate */
 
 #include <openssl/ssl.h>
 #include <openssl/dh.h>
@@ -62,7 +64,9 @@ static int ssl_ex_data_index;
 
 typedef struct pn_ssl_session_t pn_ssl_session_t;
 
+/* FIXME aconway 2017-10-13: Needs to be made thread safe, shared by multiple pn_ssl_t */
 struct pn_ssl_domain_t {
+  mutex_t lock;                 /* FIXME aconway 2017-10-13: add a lock */
 
   SSL_CTX       *ctx;
 
@@ -85,7 +89,15 @@ struct pn_ssl_domain_t {
   bool allow_unsecured;
 };
 
+/* FIXME aconway 2017-10-13: never used concurrently by the proactor.
 
+   By my reading of the doc and code, OpenSSL internal locking will take care of
+   hidden shared structures in the library provided we don't use any public
+   OpenSSL objects concurrently. Use of pn_ssl_t, pni_ssl_t and all other
+   per-transport objects is serialized by the proactor. We only need to lock
+   transport-shared *proton* state (and any OpenSSL objects it includes)
+   i.e. the contents of pn_ssl_domain_t.
+*/
 struct pni_ssl_t {
   pn_ssl_domain_t  *domain;
   const char    *session_id;
@@ -146,6 +158,7 @@ static void release_ssl_socket( pni_ssl_t * );
 static size_t buffered_output( pn_transport_t *transport );
 static X509 *get_peer_certificate(pni_ssl_t *ssl);
 
+/* FIXME aconway 2017-10-13: per-transport, no need to lock */
 static void ssl_vlog(pn_transport_t *transport, const char *fmt, va_list ap)
 {
   if (transport) {
@@ -176,6 +189,7 @@ static void ssl_log_flush(pn_transport_t* transport)
   }
 }
 
+/* FIXME aconway 2017-10-13: NOT per-transport, need a global PODmutex or similar */
 // log an error and dump the SSL error stack
 static void ssl_log_error(const char *fmt, ...)
 {
@@ -192,12 +206,15 @@ static void ssl_log_error(const char *fmt, ...)
 static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
 {
   if (PN_TRACE_RAW & transport->trace) {
+    /* FIXME aconway 2017-10-13: why are we dumping direct to stderr here?
+       Should be logging to transport, in which case this is per-transport. */
     fprintf(stderr, "SSL decrypted data: \"");
     pn_fprint_data( stderr, data, len );
     fprintf(stderr, "\"\n");
   }
 }
 
+/* FIXME aconway 2017-10-13: per-transport */
 // unrecoverable SSL failure occured, notify transport and generate error code.
 static int ssl_failed(pn_transport_t *transport)
 {
@@ -218,6 +235,7 @@ static int ssl_failed(pn_transport_t *transport)
   return PN_EOS;
 }
 
+/* FIXME aconway 2017-10-13: pure function, already thread-safe */
 /* match the DNS name pattern from the peer certificate against our configured peer
    hostname */
 static bool match_dns_pattern( const char *hostname,
@@ -272,6 +290,10 @@ static bool match_dns_pattern( const char *hostname,
 
   return plen == slen;
 }
+
+/* FIXME aconway 2017-10-13: Probably needs locking.
+   Associated with a domain but called by what thread? Careful of lock-order deadlock.
+*/
 
 // Certificate chain verification callback: return 1 if verified,
 // 0 if remote cannot be verified (fail handshake).
@@ -427,6 +449,9 @@ typedef struct {
 static int ssl_cache_ptr = 0;
 static ssl_cache_data ssl_cache[SSL_CACHE_SIZE];
 
+/* FIXME aconway 2017-10-13: need to set lock/unlock callbacks for older openssl.
+   Newer versions (>= 1.1) have built-in locking - need to work with both (RHEL6)
+*/
 static void ssn_init(void) {
   ssl_cache_data s = {NULL, NULL};
   for (int i=0; i<SSL_CACHE_SIZE; i++) {
@@ -434,6 +459,7 @@ static void ssn_init(void) {
   }
 }
 
+/* FIXME aconway 2017-10-13: per-transport */
 static void ssn_restore(pn_transport_t *transport, pni_ssl_t *ssl) {
   if (!ssl->session_id) return;
   for (int i = ssl_cache_ptr;;) {
@@ -451,6 +477,7 @@ static void ssn_restore(pn_transport_t *transport, pni_ssl_t *ssl) {
   }
 }
 
+/* FIXME aconway 2017-10-13: per-transport */
 static void ssn_save(pn_transport_t *transport, pni_ssl_t *ssl) {
   if (ssl->session_id) {
     // Attach the session id to the session before we close the connection
@@ -479,6 +506,7 @@ bool pn_ssl_present(void)
 
 pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 {
+  /* FIXME aconway 2017-10-13: use pthread_once or POD locks for one-time init */
   if (!ssl_initialized) {
     ssl_initialized = 1;
     SSL_library_init();
@@ -492,6 +520,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
   pn_ssl_domain_t *domain = (pn_ssl_domain_t *) calloc(1, sizeof(pn_ssl_domain_t));
   if (!domain) return NULL;
 
+  /* FIXME aconway 2017-10-13: initialize domain->lock */
   domain->ref_count = 1;
   domain->mode = mode;
 
@@ -558,12 +587,15 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
 
 void pn_ssl_domain_free( pn_ssl_domain_t *domain )
 {
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
+
   if (--domain->ref_count == 0) {
 
     if (domain->ctx) SSL_CTX_free(domain->ctx);
     if (domain->keyfile_pw) free(domain->keyfile_pw);
     if (domain->trusted_CAs) free(domain->trusted_CAs);
     if (domain->ciphers) free(domain->ciphers);
+    /* FIXME aconway 2017-10-13: destroy domain->lock */
     free(domain);
   }
 }
@@ -574,6 +606,7 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
                                const char *private_key_file,
                                const char *password)
 {
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
   if (!domain || !domain->ctx) return -1;
 
   if (SSL_CTX_use_certificate_chain_file(domain->ctx, certificate_file) != 1) {
@@ -613,6 +646,7 @@ int pn_ssl_domain_set_credentials( pn_ssl_domain_t *domain,
 
 int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
 {
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
   if (!SSL_CTX_set_cipher_list(domain->ctx, ciphers)) {
     ssl_log_error("Failed to set cipher list to %s", ciphers);
     return -6;
@@ -627,6 +661,7 @@ int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                     const char *certificate_db)
 {
   if (!domain) return -1;
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
 
   // certificates can be either a file or a directory, which determines how it is passed
   // to SSL_CTX_load_verify_locations()
@@ -663,6 +698,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 {
   if (!domain) return -1;
 
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
   switch (mode) {
   case PN_SSL_VERIFY_PEER:
   case PN_SSL_VERIFY_PEER_NAME:
@@ -677,6 +713,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
       return -1;
     }
 
+    /* FIXME aconway 2017-10-13: domain->mode is invariant, no need to lock */
     if (domain->mode == PN_SSL_MODE_SERVER) {
       // openssl requires that server connections supply a list of trusted CAs which is
       // sent to the client
@@ -763,6 +800,8 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
   pni_ssl_t *ssl = transport->ssl;
   if (!ssl || !domain || ssl->domain) return -1;
 
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
+
   ssl->domain = domain;
   domain->ref_count++;
   if (session_id && domain->mode == PN_SSL_MODE_CLIENT)
@@ -779,6 +818,7 @@ int pn_ssl_init(pn_ssl_t *ssl0, pn_ssl_domain_t *domain, const char *session_id)
 int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 {
   if (!domain) return -1;
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
   if (domain->mode != PN_SSL_MODE_SERVER) {
     pn_transport_logf(NULL, "Cannot permit unsecured clients - not a server.");
     return -1;
@@ -1185,6 +1225,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
   if (ssl->ssl) return 0;
   if (!ssl->domain) return -1;
 
+  /* FIXME aconway 2017-10-13: guard with domain->lock */
   ssl->ssl = SSL_new(ssl->domain->ctx);
   if (!ssl->ssl) {
     pn_transport_logf(transport, "SSL socket setup failure." );
