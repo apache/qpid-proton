@@ -38,8 +38,7 @@ foreach (name broker send receive direct send-abort send-ssl)
   add_executable(c-${name} ${name}.c)
   target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   set_target_properties(c-${name} PROPERTIES
-    OUTPUT_NAME ${name}
-    LINK_FLAGS "${C_EXAMPLE_FLAGS}")
+    OUTPUT_NAME ${name})
 endforeach()
 
 set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
