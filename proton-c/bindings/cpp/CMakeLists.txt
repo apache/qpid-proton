@@ -62,6 +62,7 @@ endif ()
 
 # Make these CACHE INTERNAL so they will be set for the C++ examples
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
+set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"

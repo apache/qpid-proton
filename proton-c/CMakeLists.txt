@@ -296,6 +296,8 @@ endif()
 
 # Flags for example self-test build, CACHE INTERNAL for visibility
 set(C_EXAMPLE_FLAGS "${COMPILE_WARNING_FLAGS} ${CMAKE_C_FLAGS}" CACHE INTERNAL "")
+set(C_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
+
 if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCC)
   # Ensure that examples build with c90, to deal with older c++03-as-c compilers.
   set(C_EXAMPLE_FLAGS "${C_EXAMPLE_FLAGS} -std=iso9899:1990 -pedantic")
