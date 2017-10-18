@@ -83,11 +83,17 @@ type Connection interface {
 	WaitTimeout(time.Duration) error
 
 	// Incoming returns a channel for incoming endpoints opened by the remote peer.
-	// See the Incoming interface for more.
+	// See the Incoming interface for more detail.
 	//
-	// Not receiving from Incoming() and calling Accept/Reject will block the
-	// electron event loop. You should run a loop to handle the types that
-	// interest you in a switch{} and and Accept() all others.
+	// Note: this channel will first return an *IncomingConnection for the
+	// connection itself which allows you to look at security information and
+	// decide whether to Accept() or Reject() the connection. Then it will return
+	// *IncomingSession, *IncomingSender and *IncomingReceiver as they are opened
+	// by the remote end.
+	//
+	// Note 2: you must receiving from Incoming() and call Accept/Reject to avoid
+	// blocking electron event loop. Normally you would run a loop in a goroutine
+	// to handle incoming types that interest and Accept() those that don't.
 	Incoming() <-chan Incoming
 }
 
@@ -387,8 +393,9 @@ func globalSASLInit(eng *proton.Engine) {
 }
 
 // Dial is shorthand for using net.Dial() then NewConnection()
-func Dial(network, addr string, opts ...ConnectionOption) (c Connection, err error) {
-	conn, err := net.Dial(network, addr)
+// See net.Dial() for the meaning of the network, address arguments.
+func Dial(network, address string, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := net.Dial(network, address)
 	if err == nil {
 		c, err = NewConnection(conn, opts...)
 	}
@@ -396,8 +403,9 @@ func Dial(network, addr string, opts ...ConnectionOption) (c Connection, err err
 }
 
 // DialWithDialer is shorthand for using dialer.Dial() then NewConnection()
-func DialWithDialer(dialer *net.Dialer, network, addr string, opts ...ConnectionOption) (c Connection, err error) {
-	conn, err := dialer.Dial(network, addr)
+// See net.Dial() for the meaning of the network, address arguments.
+func DialWithDialer(dialer *net.Dialer, network, address string, opts ...ConnectionOption) (c Connection, err error) {
+	conn, err := dialer.Dial(network, address)
 	if err == nil {
 		c, err = NewConnection(conn, opts...)
 	}

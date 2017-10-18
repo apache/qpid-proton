@@ -73,7 +73,7 @@ func main() {
 			defer wait.Done() // Notify main() when this goroutine is done.
 			url, err := amqp.ParseURL(urlStr)
 			fatalIf(err)
-			c, err := container.Dial("tcp", url.Host)
+			c, err := container.Dial("tcp", url.Host) // NOTE: Dial takes just the Host part of the URL
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
 			addr := strings.TrimPrefix(url.Path, "/")
