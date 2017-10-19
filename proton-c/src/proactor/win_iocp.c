@@ -3185,6 +3185,7 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
       conn_iocpd->active_completer =&pc->psocket;
       set_sock_names(pc);
       pc->started = true;
+      csguard g(&pc->context.cslock);
       pni_iocpdesc_start(conn_iocpd);
     }
 
