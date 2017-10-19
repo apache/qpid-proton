@@ -31,10 +31,9 @@ if (EMSCRIPTEN_FOUND)
   set (DEFAULT_JAVASCRIPT ON)
 endif (EMSCRIPTEN_FOUND)
 
-# It is impossible to easily test for the presence of a C++ compiler! so set this on by default
-# That is because the OPTIONAL attribute to enable_language() does nothing (as of CMake 3.9.1)
-# so if C++ is not present the build will fail anyway!
-set (DEFAULT_CPP ON)
+if (CMAKE_CXX_COMPILER)
+  set (DEFAULT_CPP ON)
+endif()
 
 # Prerequisites for Go
 find_program(GO_EXE go)

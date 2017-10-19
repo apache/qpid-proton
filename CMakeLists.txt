@@ -18,8 +18,7 @@
 #
 cmake_minimum_required (VERSION 2.8.7)
 
-# project defaults to C and C++ languages
-project (Proton)
+project (Proton C)
 
 # Enable testing
 enable_testing()
@@ -28,13 +27,21 @@ include (CTest)
 # Pull in local cmake modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
 
+include (CheckLanguage)
+check_language(CXX)
+if (CMAKE_CXX_COMPILER)
+  enable_language(CXX)
+endif()
+
 # TODO - Should change this test to take account of recent MSVC that does support C99
 if (MSVC)
   # No C99 capability, use C++
   set(DEFAULT_BUILD_WITH_CXX ON)
 endif (MSVC)
 
-option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
+if (CMAKE_CXX_COMPILER)
+  option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
+endif()
 
 if (CMAKE_CONFIGURATION_TYPES)
   # There is no single "build type"...
