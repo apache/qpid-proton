@@ -21,11 +21,10 @@ find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-include(CheckCCompilerFlag)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${Proton_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_definitions(${C_EXAMPLE_FLAGS})
+include_directories(${Proton_INCLUDE_DIRS})
+add_definitions(${Proton_DEFINITIONS})
 
 # Add a test with the correct environment to find test executables and valgrind.
 if(WIN32)
@@ -38,8 +37,7 @@ foreach (name broker send receive direct send-abort send-ssl)
   add_executable(c-${name} ${name}.c)
   target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
   set_target_properties(c-${name} PROPERTIES
-    OUTPUT_NAME ${name}
-    LINK_FLAGS "${C_EXAMPLE_LINK_FLAGS}")
+    OUTPUT_NAME ${name})
 endforeach()
 
 set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})

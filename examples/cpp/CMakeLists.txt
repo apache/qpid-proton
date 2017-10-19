@@ -22,7 +22,7 @@ find_package(ProtonCpp REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
-add_definitions(${CXX_EXAMPLE_FLAGS})
+add_definitions(${ProtonCpp_DEFINITIONS})
 
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile as C++03 even when C++11 is available")
 # This effectively checks for cmake version 3.1 or later
@@ -71,7 +71,6 @@ foreach(example
     ssl_client_cert
     encode_decode)
   add_executable(${example} ${example}.cpp)
-  set_target_properties(${example} PROPERTIES LINK_FLAGS "${CXX_EXAMPLE_LINK_FLAGS}")
 endforeach()
 
 if(HAS_CPP11)
@@ -83,7 +82,6 @@ if(HAS_CPP11)
       multithreaded_client_flow_control
       )
     add_executable(${example} ${example}.cpp)
-    set_target_properties(${example} PROPERTIES LINK_FLAGS "${CXX_EXAMPLE_LINK_FLAGS}")
   endforeach()
 endif()
 
