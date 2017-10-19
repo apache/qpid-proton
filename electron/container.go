@@ -43,7 +43,8 @@ type Container interface {
 
 	// Dial is shorthand for
 	//     conn, err := net.Dial(); c, err := Connection(conn, opts...)
-	Dial(network string, addr string, opts ...ConnectionOption) (Connection, error)
+	// See net.Dial() for the meaning of the network, address arguments.
+	Dial(network string, address string, opts ...ConnectionOption) (Connection, error)
 
 	// Accept is shorthand for:
 	//     conn, err := l.Accept(); c, err := Connection(conn, append(opts, Server()...)
