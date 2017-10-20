@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+cmake_minimum_required (VERSION 2.8.7)
+
 enable_language(CXX)
 
 find_package(ProtonCpp REQUIRED)
