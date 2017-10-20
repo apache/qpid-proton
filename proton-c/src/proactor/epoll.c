@@ -129,7 +129,7 @@ typedef struct epoll_extended_t {
   pmutex barrier_mutex;
 } epoll_extended_t;
 
-/* epoll_ctl()/epoll_wake() do not form a memory barrier, so cached memory
+/* epoll_ctl()/epoll_wait() do not form a memory barrier, so cached memory
    writes to struct epoll_extended_t in the EPOLL_ADD thread might not be
    visible to epoll_wait() thread. This function creates a memory barrier,
    called before epoll_ctl() and after epoll_wait()
@@ -1267,7 +1267,7 @@ void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr)
       pn_connection_open(pc->driver.connection); /* Auto-open */
       pc->ai = pc->addrinfo;
       pconnection_maybe_connect_lh(pc); /* Start connection attempts */
-      notify = pc->disconnected;
+      if (pc->disconnected) notify = wake(&pc->context);
     } else {
       psocket_gai_error(&pc->psocket, gai_error, "connect to ");
       notify = wake(&pc->context);
