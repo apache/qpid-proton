@@ -22,17 +22,8 @@ find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
-
 include_directories(${Proton_INCLUDE_DIRS})
 add_definitions(${Proton_DEFINITIONS})
-
-# Add a test with the correct environment to find test executables and valgrind.
-if(WIN32)
-  set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>")
-else()
-  set(test_path "${CMAKE_CURRENT_BINARY_DIR}:$ENV{PATH}")
-endif()
 
 foreach (name broker send receive direct send-abort send-ssl)
   add_executable(c-${name} ${name}.c)
@@ -41,9 +32,20 @@ foreach (name broker send receive direct send-abort send-ssl)
     OUTPUT_NAME ${name})
 endforeach()
 
-set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
+
+# Add a test to run all examples
 
 # windows exclusion only for 0.18 beta
 if(NOT WIN32)
-add_test(c-example-tests ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+
+# Make correct environment to find test executables and valgrind.
+if(WIN32)
+  set(test_path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton-core>;$<TARGET_FILE_DIR:qpid-proton-proactor>")
+else()
+  set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+endif()
+set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
+
+add_test(NAME c-example-tests COMMAND ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
+
 endif()

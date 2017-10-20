@@ -39,17 +39,6 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-# Add a test with the correct environment to find test executables and valgrind.
-macro(add_cpp_test name)
-  if(WIN32)
-    set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>;$<TARGET_FILE_DIR:qpid-proton-cpp>")
-  else(WIN32)
-    set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
-  endif(WIN32)
-  set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV})
-  add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} -- ${ARGN})
-endmacro()
-
 # Single-threaded examples that work on C++03
 foreach(example
     broker
@@ -86,6 +75,17 @@ if(HAS_CPP11)
     add_executable(${example} ${example}.cpp)
   endforeach()
 endif()
+
+# Add a test with the correct environment to find test executables and valgrind.
+macro(add_cpp_test name)
+  if(WIN32)
+    set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>;$<TARGET_FILE_DIR:qpid-proton-cpp>")
+  else(WIN32)
+    set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
+  endif(WIN32)
+  set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV})
+  add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} -- ${ARGN})
+endmacro()
 
 add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
