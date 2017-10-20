@@ -59,7 +59,7 @@ func checkEqual(want interface{}, got interface{}) error {
 
 // Start a server, return listening addr and channel for incoming Connections.
 func newServer(t *testing.T, cont Container, opts ...ConnectionOption) (net.Addr, <-chan Connection) {
-	listener, err := net.Listen("tcp", "")
+	listener, err := net.Listen("tcp4", "") // For systems with ipv6 disabled
 	fatalIf(t, err)
 	addr := listener.Addr()
 	ch := make(chan Connection)
