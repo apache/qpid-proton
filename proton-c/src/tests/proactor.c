@@ -142,10 +142,12 @@ typedef struct test_listener_t {
   pn_listener_t *listener;
 } test_listener_t;
 
+/* Return a listening test_listener_t, raise errors if not successful */
 test_listener_t test_listen(test_proactor_t *tp, const char *host) {
   test_listener_t l = { test_port(host), pn_listener() };
   pn_proactor_listen(tp->proactor, l.listener, l.port.host_port, 4);
   TEST_ETYPE_EQUAL(tp->handler.t, PN_LISTENER_OPEN, test_proactors_run(tp, 1));
+  TEST_COND_EMPTY(tp->handler.t, last_condition);
   test_port_close(&l.port);
   return l;
 }
@@ -507,7 +509,8 @@ static void test_errors(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   pn_proactor_listen(server, pn_listener(), "127.0.0.1:xxx", 1);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
+  TEST_PROACTORS_RUN(tps);
+  TEST_HANDLER_EXPECT(&tps[1].handler, PN_LISTENER_CLOSE, 0); /* CLOSE only, no OPEN */
   TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
@@ -518,8 +521,10 @@ static void test_errors(test_t *t) {
   TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
+  test_handler_clear(&tps[1].handler, 0);
   pn_proactor_listen(server, pn_listener(), "nosuch.example.com:", 1);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
+  TEST_PROACTORS_RUN(tps);
+  TEST_HANDLER_EXPECT(&tps[1].handler, PN_LISTENER_CLOSE, 0); /* CLOSE only, no OPEN */
   TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
@@ -528,8 +533,10 @@ static void test_errors(test_t *t) {
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(server, l, port.host_port, 1);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_OPEN, TEST_PROACTORS_RUN(tps));
+  test_handler_clear(&tps[1].handler, 0);
   pn_proactor_listen(server, pn_listener(), port.host_port, 1); /* Busy */
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
+  TEST_PROACTORS_RUN(tps);
+  TEST_HANDLER_EXPECT(&tps[1].handler, PN_LISTENER_CLOSE, 0); /* CLOSE only, no OPEN */
   TEST_COND_NAME(t, "proton:io", last_condition);
   pn_listener_close(l);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
@@ -580,26 +587,14 @@ static void test_proton_1586(test_t *t) {
 /* Test that we can control listen/select on ipv6/v4 and listen on both by default */
 static void test_ipv4_ipv6(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_close_handler), test_proactor(t, listen_handler) };
-  pn_proactor_t *client = tps[0].proactor;
-
-  /* Listen on all interfaces for IPv6 only. If this fails, skip IPv6 tests */
-  test_listener_t l6 = test_listen(&tps[1], "::");
-  pn_event_type_t e = TEST_PROACTORS_GET(tps);
-  bool has_ipv6 = (e != PN_LISTENER_CLOSE);
-  if (!has_ipv6) {
-    TEST_LOGF(t, "skip IPv6 tests: %s", pn_condition_get_description(last_condition));
-  }
-  TEST_PROACTORS_DRAIN(tps);
+  pn_proactor_t *client = tps[0].proactor, *server = tps[1].proactor;
 
   /* Listen on all interfaces for IPv4 only. */
   test_listener_t l4 = test_listen(&tps[1], "0.0.0.0");
-  TEST_CHECKF(t, TEST_PROACTORS_GET(tps) != PN_LISTENER_CLOSE, "listener error: %s", pn_condition_get_description(last_condition));
   TEST_PROACTORS_DRAIN(tps);
 
   /* Empty address listens on both IPv4 and IPv6 on all interfaces */
   test_listener_t l = test_listen(&tps[1], "");
-  e = TEST_PROACTORS_GET(tps);
-  TEST_CHECKF(t, TEST_PROACTORS_GET(tps) != PN_LISTENER_CLOSE, "listener error: %s",  pn_condition_get_description(last_condition));
   TEST_PROACTORS_DRAIN(tps);
 
 #define EXPECT_CONNECT(TP, HOST) do {                                   \
@@ -622,25 +617,37 @@ static void test_ipv4_ipv6(test_t *t) {
   EXPECT_CONNECT(l.port, "127.0.0.1"); /* v4->all */
   EXPECT_CONNECT(l.port, "");          /* local->all */
 
-  if (has_ipv6) {
+  /* Listen on ipv6 loopback, if it fails skip ipv6 tests.
+
+     NOTE: Don't use the unspecified address "::" here - ipv6-disabled platforms
+     may allow listening on "::" without complaining. However they won't have a
+     local ipv6 loopback configured, so "::1" will force an error.
+  */
+  TEST_PROACTORS_DRAIN(tps);
+  test_listener_t l6 = { test_port("::1"), pn_listener() };
+  pn_proactor_listen(server, l6.listener, l6.port.host_port, 4);
+  pn_event_type_t e = TEST_PROACTORS_RUN(tps);
+  if (e == PN_LISTENER_OPEN && !pn_condition_is_set(last_condition)) {
+    TEST_PROACTORS_DRAIN(tps);
+
     EXPECT_CONNECT(l6.port, "::1"); /* v6->v6 */
-    EXPECT_CONNECT(l6.port, "");     /* local->v6 */
-    EXPECT_CONNECT(l.port, "::1"); /* v6->all */
+    EXPECT_CONNECT(l6.port, "");    /* local->v6 */
+    EXPECT_CONNECT(l.port, "::1");  /* v6->all */
 
     EXPECT_FAIL(l6.port, "127.0.0.1"); /* fail v4->v6 */
     EXPECT_FAIL(l4.port, "::1");     /* fail v6->v4 */
-  }
-  TEST_PROACTORS_DRAIN(tps);
 
+    pn_listener_close(l6.listener);
+  } else  {
+    const char *d = pn_condition_get_description(last_condition);
+    TEST_LOGF(t, "skip IPv6 tests: %s %s", pn_event_type_name(e), d ? d : "no condition");
+  }
+
+  TEST_PROACTORS_DRAIN(tps);
   pn_listener_close(l.listener);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   pn_listener_close(l4.listener);
   TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
-  if (has_ipv6) {
-    pn_listener_close(l6.listener);
-    TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
-  }
-
   TEST_PROACTORS_DESTROY(tps);
 }
 
