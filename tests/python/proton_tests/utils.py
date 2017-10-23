@@ -22,7 +22,7 @@ from threading import Thread, Event
 from unittest import TestCase
 from proton_tests.common import Test, free_tcp_port
 from copy import copy
-from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol, ConnectionException
+from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol, ConnectionException, ProtonException
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
@@ -53,7 +53,7 @@ class EchoServer(MessagingHandler, Thread):
         self.acceptor = event.container.listen(self.url)
         self.container = event.container
         self.event.set()
-        
+
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
@@ -89,14 +89,14 @@ class ConnPropertiesServer(EchoServer):
 
      def on_connection_opening(self, event):
         conn = event.connection
-                   
+
         if conn.remote_properties == CONNECTION_PROPERTIES:
             self.properties_received = True
         if conn.remote_offered_capabilities == OFFERED_CAPABILITIES:
             self.offered_capabilities_received = True
         if conn.remote_desired_capabilities == DESIRED_CAPABILITIES:
             self.desired_capabilities_received = True
-        
+
 class SyncRequestResponseTest(Test):
     """Test SyncRequestResponse"""
 
@@ -135,7 +135,7 @@ class SyncRequestResponseTest(Test):
         self.assertEquals(server.desired_capabilities_received, True)
 
     def test_allowed_mechs_external(self):
-        # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used. 
+        # All this test does it make sure that if we pass allowed_mechs to BlockingConnection, it is actually used.
         port = free_tcp_port()
         server = ConnPropertiesServer(Url(host="127.0.0.1", port=port), timeout=self.timeout)
         server.start()
@@ -162,3 +162,33 @@ class SyncRequestResponseTest(Test):
         self.assertEquals(server.offered_capabilities_received, True)
         self.assertEquals(server.desired_capabilities_received, True)
 
+class OutOfFdsTest(Test):
+
+    def test_out_of_fds(self):
+        """Create BlockingConnections until we run out of FDs, make sure we get an exception
+        and not a crash"""
+
+        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()), self.timeout)
+        server.start()
+        server.wait()
+
+        # Use up all the FDs
+        dummy = os.tmpfile()
+        fds = []
+        try:
+            while True: fds.append(os.dup(dummy.fileno()));
+        except OSError, e:
+            pass
+
+        for i in [0, 1]:        # Check the odd and even case
+            try:
+                BlockingConnection(server.url)
+                fail("Expected ProtonException")
+            except ProtonException, e:
+                pass
+            os.close(fds.pop())
+
+        for f in fds: os.close(f)
+        c = BlockingConnection(server.url, timeout=self.timeout)
+        c.close()
+        server.join(timeout=self.timeout)
