@@ -71,7 +71,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   make_directory(coverage_results)
   add_custom_target(coverage
     WORKING_DIRECTORY ./coverage_results
-    CgOMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
