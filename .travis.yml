@@ -59,7 +59,7 @@ after_success:
     if [[ ${CC} = gcc ]]; then
       mkdir ../build_coverage
       cd ../build_coverage
-      cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DENABLE_VALGRIND=OFF -DCMAKE_BUILD_TYPE=Coverage ${QPID_PROTON_CMAKE_ARGS}
+      cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DCMAKE_BUILD_TYPE=Coverage ${QPID_PROTON_CMAKE_ARGS}
       cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
       ../bin/record-coverage.sh . ..
       bash <(curl -s https://codecov.io/bash)
