@@ -245,17 +245,31 @@ int test_container_schedule_nohang() {
     return 0;
 }
 
+class immediate_stop_tester : public proton::messaging_handler {
+public:
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        c.stop();
+    }
+};
+
+int test_container_immediate_stop() {
+    immediate_stop_tester t;
+    proton::container(t).run();  // will hang
+    return 0;
 }
 
-int main(int, char**) {
+} // namespace
+
+int main(int argc, char** argv) {
     int failed = 0;
-    RUN_TEST(failed, test_container_default_container_id());
-    RUN_TEST(failed, test_container_vhost());
-    RUN_TEST(failed, test_container_default_vhost());
-    RUN_TEST(failed, test_container_no_vhost());
-    RUN_TEST(failed, test_container_bad_address());
-    RUN_TEST(failed, test_container_stop());
-    RUN_TEST(failed, test_container_schedule_nohang());
+    RUN_ARGV_TEST(failed, test_container_default_container_id());
+    RUN_ARGV_TEST(failed, test_container_vhost());
+    RUN_ARGV_TEST(failed, test_container_default_vhost());
+    RUN_ARGV_TEST(failed, test_container_no_vhost());
+    RUN_ARGV_TEST(failed, test_container_bad_address());
+    RUN_ARGV_TEST(failed, test_container_stop());
+    RUN_ARGV_TEST(failed, test_container_schedule_nohang());
+    RUN_ARGV_TEST(failed, test_container_immediate_stop());
     return failed;
 }
 

@@ -455,6 +455,7 @@ void container::impl::run_timer_jobs() {
     }
 }
 
+// Return true if this thread is finished
 bool container::impl::handle(pn_event_t* event) {
 
     // If we have any pending connection work, do it now
@@ -620,32 +621,38 @@ bool container::impl::handle(pn_event_t* event) {
 }
 
 void container::impl::thread() {
+    bool finished;
     {
         GUARD(lock_);
         ++threads_;
+        finished = stopping_;
     }
-    bool finished = false;
-    do {
-      pn_event_batch_t *events = pn_proactor_wait(proactor_);
-      pn_event_t *e;
-      try {
-        while ((e = pn_event_batch_next(events))) {
-          finished = handle(e);
-          if (finished) break;
+    while (!finished) {
+        pn_event_batch_t *events = pn_proactor_wait(proactor_);
+        pn_event_t *e;
+        const char *what = 0;
+        try {
+            while ((e = pn_event_batch_next(events))) {
+                finished = handle(e);
+                if (finished) break;
+            }
+        } catch (const std::exception& e) {
+            // If we caught an exception then shutdown the (other threads of the) container
+            what = e.what();
+        } catch (...) {
+            what = "container shut-down by unknown exception";
         }
-      } catch (const std::exception& e) {
-        // If we caught an exception then shutdown the (other threads of the) container
-        disconnect_error_ = error_condition("exception", e.what());
-        if (!stopping_) stop(disconnect_error_);
-        finished = true;
-      } catch (...) {
-        // If we caught an exception then shutdown the (other threads of the) container
-        disconnect_error_ = error_condition("exception", "container shut-down by unknown exception");
-        if (!stopping_) stop(disconnect_error_);
-        finished = true;
-      }
-      pn_proactor_done(proactor_, events);
-    } while(!finished);
+        pn_proactor_done(proactor_, events);
+        if (what) {
+            finished = true;
+            error_condition error("exception", what);
+            {
+                GUARD(lock_);
+                disconnect_error_ = error;
+            }
+            stop(error);
+        }
+    }
     {
         GUARD(lock_);
         --threads_;
@@ -692,8 +699,9 @@ void container::impl::run(int threads) {
     if (last) CALL_ONCE(stop_once_, &impl::stop_event, this);
 
     // Throw an exception if we disconnected the proactor because of an exception
-    if (!disconnect_error_.empty()) {
-      throw proton::error(disconnect_error_.description());
+    {
+        GUARD(lock_);
+        if (!disconnect_error_.empty()) throw proton::error(disconnect_error_.description());
     };
 }
 
@@ -703,9 +711,12 @@ void container::impl::auto_stop(bool set) {
 }
 
 void container::impl::stop(const proton::error_condition& err) {
-    GUARD(lock_);
-    auto_stop_ = true;
-    stopping_ = true;
+    {
+        GUARD(lock_);
+        if (stopping_) return;  // Already stopping
+        auto_stop_ = true;
+        stopping_ = true;
+    }
     pn_condition_t* error_condition = pn_condition();
     set_error_condition(err, error_condition);
     pn_proactor_disconnect(proactor_, error_condition);
