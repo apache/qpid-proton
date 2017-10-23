@@ -35,17 +35,12 @@ endforeach()
 
 # Add a test to run all examples
 
-# windows exclusion only for 0.18 beta
-if(NOT WIN32)
-
 # Make correct environment to find test executables and valgrind.
 if(WIN32)
   set(test_path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton-core>;$<TARGET_FILE_DIR:qpid-proton-proactor>")
 else()
   set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
 endif()
-set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV})
 
-add_test(NAME c-example-tests COMMAND ${run_env} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
-
-endif()
+set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV})
+add_test(NAME c-example-tests COMMAND ${run_env} "PATH=${test_path}"  ${VALGRIND_ENV} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v)
