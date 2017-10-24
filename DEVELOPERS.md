@@ -76,6 +76,15 @@ Additional packages required for testing the language bindings:
     # alternatively ruby depedencies on non-RPM based systems
     $ gem install minitest
 
+To run coverage reporting:
+
+    # install coverage tools
+    $ dnf install lcov
+    $ pip install coverage
+
+    $ cmake -DCMAKE_BUILD_TYPE=Coverage && make && ctest && make coverage
+    # Then browse to {CMAKE_BUILD_DIR}/coverage_results/html/index.html
+
 Mailing list
 ------------
 
