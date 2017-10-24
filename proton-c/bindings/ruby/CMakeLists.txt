@@ -57,7 +57,7 @@ if (GEM_EXE)
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
-    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog ${bin}/rubyRUBY_wrap.c
+    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby
     WORKING_DIRECTORY ${bin})
 
   add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )
