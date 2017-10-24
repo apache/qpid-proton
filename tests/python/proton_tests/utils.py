@@ -161,34 +161,3 @@ class SyncRequestResponseTest(Test):
         self.assertEquals(server.properties_received, True)
         self.assertEquals(server.offered_capabilities_received, True)
         self.assertEquals(server.desired_capabilities_received, True)
-
-class OutOfFdsTest(Test):
-
-    def test_out_of_fds(self):
-        """Create BlockingConnections until we run out of FDs, make sure we get an exception
-        and not a crash"""
-
-        server = EchoServer(Url(host="127.0.0.1", port=free_tcp_port()), self.timeout)
-        server.start()
-        server.wait()
-
-        # Use up all the FDs
-        dummy = os.tmpfile()
-        fds = []
-        try:
-            while True: fds.append(os.dup(dummy.fileno()));
-        except OSError, e:
-            pass
-
-        for i in [0, 1]:        # Check the odd and even case
-            try:
-                BlockingConnection(server.url)
-                fail("Expected ProtonException")
-            except ProtonException, e:
-                pass
-            os.close(fds.pop())
-
-        for f in fds: os.close(f)
-        c = BlockingConnection(server.url, timeout=self.timeout)
-        c.close()
-        server.join(timeout=self.timeout)
