@@ -395,7 +395,7 @@ struct pn_proactor_t {
   bool need_inactive;
   bool need_timeout;
   bool timeout_set; /* timeout has been set by user and not yet cancelled or generated event */
-  bool timeout_processed;  /* timout event dispatched in the most recent event batch */
+  bool timeout_processed;  /* timeout event dispatched in the most recent event batch */
   bool timer_armed; /* timer is armed in epoll */
   bool shutting_down;
   // wake subsystem
@@ -519,7 +519,7 @@ typedef struct pconnection_t {
   bool timer_armed;
   bool queued_disconnect;     /* deferred from pn_proactor_disconnect() */
   pn_condition_t *disconnect_condition;
-  ptimer_t timer;  // TODO: review one timerfd per connectoin
+  ptimer_t timer;  // TODO: review one timerfd per connection
   // Following values only changed by (sole) working context:
   uint32_t current_arm;  // active epoll io events
   bool connected;
@@ -547,7 +547,7 @@ struct pn_listener_t {
   void *listener_context;
   size_t backlog;
   int accepted_fd;              /* fd accepted but not yet handled by pn_listener_accept() */
-  psocket_t *accepted;          /* psocket from which we accpeted accepted_fd */
+  psocket_t *accepted;          /* psocket from which we accepted accepted_fd */
   bool close_dispatched;
   bool armed;
   pn_listener_t *overflow;       /* Next overflowed listener */
@@ -901,7 +901,7 @@ static inline bool pconnection_work_pending(pconnection_t *pc) {
 static void pconnection_done(pconnection_t *pc) {
   bool notify = false;
   lock(&pc->context.mutex);
-  pc->context.working = false;  // So we can wake() ourself if necessary.  We remain the defacto
+  pc->context.working = false;  // So we can wake() ourself if necessary.  We remain the de facto
                                 // working context while the lock is held.
   pc->hog_count = 0;
   if (pconnection_has_event(pc) || pconnection_work_pending(pc)) {

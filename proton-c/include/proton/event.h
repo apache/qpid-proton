@@ -344,7 +344,7 @@ typedef enum {
   PN_PROACTOR_INACTIVE,
 
   /**
-   * The listener is listeneing.
+   * The listener is listening.
    * Events of this type point to the @ref pn_listener_t.
    */
   PN_LISTENER_OPEN
@@ -562,7 +562,7 @@ PN_EXTERN pn_event_t *pn_event_batch_next(pn_event_batch_t *batch);
 /**
  * @cond INTERNAL
  *
- * pn_event_batch_next() can be re-implemented for different behaviors in different contextxs.
+ * pn_event_batch_next() can be re-implemented for different behaviors in different contexts.
  */
 struct pn_event_batch_t {
   pn_event_t *(*next_event)(pn_event_batch_t *batch);

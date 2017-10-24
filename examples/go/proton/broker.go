@@ -24,7 +24,7 @@ under the License.
 // messages to queues or subscribe to receive messages from them.
 //
 
-// TODO: show how to handle acknowledgedments from receivers and put rejected or
+// TODO: show how to handle acknowledgements from receivers and put rejected or
 // un-acknowledged messages back on their queues.
 
 package main
@@ -44,7 +44,7 @@ import (
 func usage() {
 	fmt.Fprintf(os.Stderr, `
 Usage: %s
-A simple broker-like demo. Queues are created automatically for sender or receiver addrsses.
+A simple broker-like demo. Queues are created automatically for sender or receiver addresses.
 `, os.Args[0])
 	flag.PrintDefaults()
 }

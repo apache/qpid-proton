@@ -80,7 +80,7 @@ module Qpid::Proton
     # for the current outgoing delivery and move on to the next outgoing
     # delivery (if any).
     #
-    # For receiving links, this operatoin is used to finish accessing message
+    # For receiving links, this operation is used to finish accessing message
     # data from the current incoming delivery and move on to the next incoming
     # delivery (if any).
     #
@@ -232,7 +232,7 @@ module Qpid::Proton
     # Returns additional error information.
     #
     # Whenever a link operation fails (i.e., returns an error code) additional
-    # error details can be obtained from this method. Ther error object that is
+    # error details can be obtained from this method. The error object that is
     # returned may also be used to clear the error condition.
     #
     # @return [Error] The error.

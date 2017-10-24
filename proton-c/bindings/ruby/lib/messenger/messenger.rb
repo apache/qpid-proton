@@ -32,7 +32,7 @@ module Qpid::Proton::Messenger
   #
   # === Sending & Receiving Messages
   #
-  # The Messenger class works in conjuction with the Message class. The
+  # The Messenger class works in conjunction with the Message class. The
   # Message class is a mutable holder of message content.
   #
   # The put method copies its Message to the outgoing queue, and may
@@ -149,8 +149,8 @@ module Qpid::Proton::Messenger
     # Turns passive mode on or off.
     #
     # When set to passive mode, Messenger will not attempt to perform I/O
-    # operations internally. In this mode it is necesssary to use the
-    # Selectable type to drive any I/O needed to perform requestioned
+    # operations internally. In this mode it is necessary to use the
+    # Selectable type to drive any I/O needed to perform requested
     # actions.
     #
     # In this mode Messenger will never block.
@@ -291,7 +291,7 @@ module Qpid::Proton::Messenger
       Cproton.pn_messenger_set_trusted_certificates(@impl,certificates)
     end
 
-    # The path to the databse of trusted certificates.
+    # The path to the database of trusted certificates.
     #
     def trusted_certificates
       Cproton.pn_messenger_get_trusted_certificates(@impl)
@@ -470,7 +470,7 @@ module Qpid::Proton::Messenger
     #
     # ==== Examples
     #
-    #   # route messages sent to foo to the destionaty amqp://foo.com
+    #   # route messages sent to foo to the destination amqp://foo.com
     #   messenger.route("foo", "amqp://foo.com")
     #
     #   # any message to foobar will be routed to amqp://foo.com/bar

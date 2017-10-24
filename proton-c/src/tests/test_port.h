@@ -20,7 +20,7 @@
  * under the License.
  */
 
-/* Some simple platform-secifics to acquire an unused socket */
+/* Some simple platform-specifics to acquire an unused socket */
 
 #include <stdio.h>
 #include <stdlib.h>

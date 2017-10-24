@@ -20,7 +20,7 @@
 module Qpid::Proton::Event
 
   # Manages the association between an Event and the method which should
-  # process on the context object associated with an occurance of the event.
+  # process on the context object associated with an occurrence of the event.
   #
   # Each type is identified by a unique #type value.
   #
@@ -35,7 +35,7 @@ module Qpid::Proton::Event
   #   ENCRYPTED_RECV = 10000 # the unique constant value for the event
   #
   #   # create a new event type which, when it occurs, invokes a method
-  #   # named :on_encrypted_data when a handler is notified of its occurrance
+  #   # named :on_encrypted_data when a handler is notified of its occurrence
   #   Qpid::Proton::Event::ENCRYPTED_RECV =
   #     Qpid::Proton::Event::EventType.new(ENCRYPTED_RECV, :on_encrypted_data)
   #

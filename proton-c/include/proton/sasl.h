@@ -80,7 +80,7 @@ PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
  * All implementations of Proton support ANONYMOUS and EXTERNAL on both
  * client and server sides and PLAIN on the client side.
  *
- * Extended SASL implememtations use an external library (Cyrus SASL)
+ * Extended SASL implementations use an external library (Cyrus SASL)
  * to support other mechanisms beyond these basic ones.
  *
  * @return true if we support extended SASL negotiation, false if we only support basic negotiation.

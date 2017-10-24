@@ -294,10 +294,10 @@ PN_EXTERN void pn_connection_set_container(pn_connection_t *connection, const ch
  * Set the authentication username for a client connection
  *
  * It is necessary to set the username and password before binding the connection
- * to a trasnport and it isn't allowed to change them after the binding.
+ * to a transport and it isn't allowed to change them after the binding.
  *
  * If not set then no authentication will be negotiated unless the client
- * sasl layer is explicitly created (this would be for sometting like Kerberos
+ * sasl layer is explicitly created (this would be for something like Kerberos
  * where the credentials are implicit in the environment, or to explicitly use
  * the ANONYMOUS SASL mechanism)
  *
@@ -310,7 +310,7 @@ PN_EXTERN void pn_connection_set_user(pn_connection_t *connection, const char *u
  * Set the authentication password for a client connection
  *
  * It is necessary to set the username and password before binding the connection
- * to a trasnport and it isn't allowed to change them after the binding.
+ * to a transport and it isn't allowed to change them after the binding.
  *
  * Note that the password is write only and has no accessor as the underlying
  * implementation should be zeroing the password after use to avoid the password
@@ -393,7 +393,7 @@ PN_EXTERN const char *pn_connection_remote_hostname(pn_connection_t *connection)
  *
  * This operation will return a pointer to a ::pn_data_t object that
  * is valid until the connection object is freed. Any data contained
- * by the ::pn_data_t object will be sent as the offered capabilites
+ * by the ::pn_data_t object will be sent as the offered capabilities
  * for the parent connection object. Note that this MUST take the form
  * of an array of symbols to be valid.
  *
@@ -411,7 +411,7 @@ PN_EXTERN pn_data_t *pn_connection_offered_capabilities(pn_connection_t *connect
  *
  * This operation will return a pointer to a ::pn_data_t object that
  * is valid until the connection object is freed. Any data contained
- * by the ::pn_data_t object will be sent as the desired capabilites
+ * by the ::pn_data_t object will be sent as the desired capabilities
  * for the parent connection object. Note that this MUST take the form
  * of an array of symbols to be valid.
  *
@@ -441,7 +441,7 @@ PN_EXTERN pn_data_t *pn_connection_desired_capabilities(pn_connection_t *connect
 PN_EXTERN pn_data_t *pn_connection_properties(pn_connection_t *connection);
 
 /**
- * Access the AMQP offered capabilites supplied by the remote
+ * Access the AMQP offered capabilities supplied by the remote
  * connection endpoint.
  *
  * This operation will return a pointer to a ::pn_data_t object that
@@ -455,7 +455,7 @@ PN_EXTERN pn_data_t *pn_connection_properties(pn_connection_t *connection);
 PN_EXTERN pn_data_t *pn_connection_remote_offered_capabilities(pn_connection_t *connection);
 
 /**
- * Access the AMQP desired capabilites supplied by the remote
+ * Access the AMQP desired capabilities supplied by the remote
  * connection endpoint.
  *
  * This operation will return a pointer to a ::pn_data_t object that

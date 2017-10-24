@@ -165,7 +165,7 @@ module Qpid::Proton
       Cproton.pn_connection_remote_hostname(@impl)
     end
 
-    # Get the AMQP offered capabilities suppolied by the remote connection
+    # Get the AMQP offered capabilities supplied by the remote connection
     # endpoint.
     #
     # This object returned is valid until the connection is freed. The Data
@@ -191,7 +191,7 @@ module Qpid::Proton
       data_to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
     end
 
-    # Get the AMQP connection properties supplie by the remote connection
+    # Get the AMQP connection properties supplied by the remote connection
     # endpoint.
     #
     # The object returned is valid until the connection is freed. The Data
@@ -201,7 +201,7 @@ module Qpid::Proton
     # @return [Data] The remote properties.
     #
     def remote_properties
-      data_to_object(Cproton.pn_connection_remote_properites(@impl))
+      data_to_object(Cproton.pn_connection_remote_properties(@impl))
     end
 
     # Opens the connection.
@@ -300,7 +300,7 @@ module Qpid::Proton
     # operations.
     #
     # A readable delivery indicates message data is waiting to be read. A
-    # A writable delivery indcates that message data may be sent. An updated
+    # A writable delivery indicates that message data may be sent. An updated
     # delivery indicates that the delivery's disposition has changed.
     #
     # A delivery will never be *both* readable and writable, but it may be

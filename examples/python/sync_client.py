@@ -20,7 +20,7 @@
 
 """
 Demonstrates the client side of the synchronous request-response pattern
-(also known as RPC or Remote Procecure Call) using proton.
+(also known as RPC or Remote Procedure Call) using proton.
 
 """
 from __future__ import print_function, unicode_literals

@@ -31,7 +31,7 @@ module Qpid::Proton
   # @note Do not instantiate directly, use {Transport#sasl} to create a SASL object.
   class SASL
 
-    # Negotation has not completed.
+    # Negotiation has not completed.
     NONE = Cproton::PN_SASL_NONE
     # Authentication succeeded.
     OK = Cproton::PN_SASL_OK
@@ -59,7 +59,7 @@ module Qpid::Proton
     #   @return [String] the authenticated user name
     proton_reader :user
 
-    # Set the mechanisms allowed for SASL negotation
+    # Set the mechanisms allowed for SASL negotiation
     # @param mechanisms [String] space-delimited list of allowed mechanisms
     def allowed_mechs=(mechanisms)
       Cproton.pn_sasl_allowed_mechs(@impl, mechanisms)
@@ -75,7 +75,7 @@ module Qpid::Proton
     # All implementations of Proton support ANONYMOUS and EXTERNAL on both
     # client and server sides and PLAIN on the client side.
     #
-    # Extended SASL implememtations use an external library (Cyrus SASL)
+    # Extended SASL implementations use an external library (Cyrus SASL)
     # to support other mechanisms.
     #
     # @return [Bool] true if extended SASL negotiation is supported

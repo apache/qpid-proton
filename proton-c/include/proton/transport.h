@@ -180,7 +180,7 @@ PN_EXTERN bool pn_transport_is_authenticated(pn_transport_t *transport);
  *
  * There are several ways within the AMQP protocol suite to get encrypted connections:
  * - Use TLS
- * - Use a SASL with a mechanism that supports saecurity layers
+ * - Use a SASL with a mechanism that supports security layers
  *
  * The default if this option is not set is to allow unencrypted connections.
  *
@@ -204,7 +204,7 @@ PN_EXTERN bool pn_transport_is_encrypted(pn_transport_t *transport);
  * Get additional information about the condition of the transport.
  *
  * When a PN_TRANSPORT_ERROR event occurs, this operation can be used
- * to access the details of the error condtion.
+ * to access the details of the error condition.
  *
  * The pointer returned by this operation is valid until the
  * transport object is freed.
@@ -364,7 +364,7 @@ PN_EXTERN uint16_t pn_transport_get_channel_max(pn_transport_t *transport);
  * Set the maximum allowed channel number for a transport.
  * Note that this is the maximum channel number allowed, giving a
  * valid channel number range of [0..channel_max]. Therefore the
- * maximum number of simultaineously active channels will be
+ * maximum number of simultaneously active channels will be
  * channel_max plus 1.
  * You can call this function more than once to raise and lower
  * the limit your application imposes on max channels for this
@@ -474,7 +474,7 @@ PN_EXTERN ssize_t pn_transport_output(pn_transport_t *transport, char *bytes, si
  * If the engine is in an exceptional state such as encountering an
  * error condition or reaching the end of stream state, a negative
  * value will be returned indicating the condition. If an error is
- * indicated, futher details can be obtained from
+ * indicated, further details can be obtained from
  * ::pn_transport_error. Calls to ::pn_transport_process may alter the
  * value of this pointer. See ::pn_transport_process for details.
  *
@@ -487,7 +487,7 @@ PN_EXTERN ssize_t pn_transport_capacity(pn_transport_t *transport);
  * Get the transport's tail pointer.
  *
  * The amount of free space following this pointer is reported by
- * ::pn_transport_capacity. Calls to ::pn_transport_process may alther
+ * ::pn_transport_capacity. Calls to ::pn_transport_process may alter
  * the value of this pointer. See ::pn_transport_process for details.
  *
  * @param[in] transport the transport
@@ -498,10 +498,10 @@ PN_EXTERN char *pn_transport_tail(pn_transport_t *transport);
 /**
  * Pushes the supplied bytes into the tail of the transport.
  *
- * This is equivalent to copying @c size bytes afther the tail pointer
+ * This is equivalent to copying @c size bytes after the tail pointer
  * and then calling ::pn_transport_process with an argument of @c
  * size. Only some of the bytes will be copied if there is
- * insufficienty capacity available. Use ::pn_transport_capacity to
+ * insufficient capacity available. Use ::pn_transport_capacity to
  * determine how much capacity the transport has.
  *
  * @param[in] transport the transport

@@ -27,7 +27,7 @@ from .common import pump, Skipped
 from proton._compat import str2bin
 
 def _sslCertpath(file):
-    """ Return the full path to the certificate,keyfile, etc.
+    """ Return the full path to the certificate, keyfile, etc.
     """
     if os.name=="nt":
         if file.find("private-key")!=-1:
@@ -353,7 +353,7 @@ class SASLMechTest(Test):
     _testSaslMech(self, 'PLAIN')
 
 # SCRAM not supported before Cyrus SASL 2.1.26
-# so not universal and hance need a test for support
+# so not universal and hence need a test for support
 # to keep it in tests.
 #  def testSCRAMSHA1(self):
 #    common.ensureCanTestExtendedSASL()

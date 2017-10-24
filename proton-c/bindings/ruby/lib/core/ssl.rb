@@ -23,7 +23,7 @@ module Qpid::Proton
   #
   # A Transport may be configured ot use SLL for encryption and/or
   # authentication. A Transport can be configured as either the SSL
-  # client or the server. An SSL client is the party that proctively
+  # client or the server. An SSL client is the party that proactively
   # establishes a connection to an SSL server. An SSL server is the
   # party that accepts a connection request from the remote SSL client.
   #
@@ -53,7 +53,7 @@ module Qpid::Proton
   #
   class SSL
 
-    # Session resume state is unkonnwn or not supported.
+    # Session resume state is unknown or not supported.
     RESUME_UNKNOWN = Cproton::PN_SSL_RESUME_UNKNOWN
     # Session renegotiated and not resumed.
     RESUME_NEW = Cproton::PN_SSL_RESUME_NEW
@@ -126,25 +126,25 @@ module Qpid::Proton
     end
 
     # Returns the name of the SSL protocol that is currently active, or
-    # returns nil if SSL is nota ctive. Not that the protocol may change over
-    # time due to renegotation.
+    # returns nil if SSL is not active. Not that the protocol may change over
+    # time due to renegotiation.
     #
     # @return [String, nil] The protocol name.
     #
     def protocol_name
       rc, name = Cproton.pn_ssl_get_protocol_name(@impl, 128)
-      retur name if rc
+      return name if rc
       nil
     end
 
     # Checks whether or not the state has resumed.
     #
     # Used for client session resume. When called on an active session, it
-    # indicates wehther the state has been resumed from a previous session.
+    # indicates weather the state has been resumed from a previous session.
     #
     # *NOTE:* This is a best-effort service - there is no guarantee that the
     # remote server will accept the resumed parameters. The remote server may
-    # choose to ignore these parameters, and request a renegotation instead.
+    # choose to ignore these parameters, and request a renegotiation instead.
     #
     def resume_status
       Cproton.pn_ssl_resume_status(@impl)

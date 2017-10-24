@@ -206,7 +206,7 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
    }
 
    case PN_DELIVERY: {
-     /* We received acknowledgedment from the peer that a message was delivered. */
+     /* We received acknowledgement from the peer that a message was delivered. */
      pn_delivery_t* d = pn_event_delivery(event);
      if (pn_delivery_remote_state(d) == PN_ACCEPTED) {
        if (++app->acknowledged == app->message_count) {

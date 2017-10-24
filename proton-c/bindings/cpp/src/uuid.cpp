@@ -85,7 +85,7 @@ uuid uuid::random() {
     return bytes;
 }
 
-/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hypens)
+/// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric and 4 hyphens)
 std::ostream& operator<<(std::ostream& o, const uuid& u) {
     ios_guard restore_flags(o);
     o << std::hex << std::setfill('0');

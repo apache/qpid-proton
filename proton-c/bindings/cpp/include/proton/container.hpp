@@ -270,7 +270,7 @@ class PN_CPP_CLASS_EXTERN container {
     PN_CPP_EXTERN std::string id() const;
 
     /// Connection options applied to outgoing connections. These are
-    /// applied first and then overriden by any options provided in
+    /// applied first and then overridden by any options provided in
     /// `connect()` or `messaging_handler::on_connection_open()`.
     PN_CPP_EXTERN void client_connection_options(const connection_options& conn_opts);
 

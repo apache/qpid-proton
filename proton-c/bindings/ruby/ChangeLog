@@ -2,7 +2,7 @@
 version 0.17.0:
 
 version 0.16.0:
-	* PROTON-1350 PROTON-1351: Introduce proton-c core library - Created new core proton library qpid-proton-core which only contains   protocol processsing and no IO. - Rearranged source tree to separate core protocol code and io/reactor/extra code - Rearranged code so that compiler dependent code is isolated and platform (OS)   dependent code is isolated
+	* PROTON-1350 PROTON-1351: Introduce proton-c core library - Created new core proton library qpid-proton-core which only contains   protocol processing and no IO. - Rearranged source tree to separate core protocol code and io/reactor/extra code - Rearranged code so that compiler dependent code is isolated and platform (OS)   dependent code is isolated
 
 version 0.15.0:
 	* PROTON-1282: Seg Fault in Ruby Messenger pn_messenger_free
@@ -121,7 +121,7 @@ version 0.9:
 
 version 0.8:
 	* PROTON-693: Python Url class to wrap C function pni_parse_url
-	* PROTON-651: remove the extraineous 'PN_' if under the proton namespace.
+	* PROTON-651: remove the extraneous 'PN_' if under the proton namespace.
 	* PROTON-651: added version constants for python, php, and ruby bindings
 	* PROTON-615: Fix binding dependencies
 	* PROTON-549: fixed warnings from ruby binding

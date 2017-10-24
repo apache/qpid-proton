@@ -28,7 +28,7 @@ module Qpid::Proton::Handler
   #
   # A XXX_opening method will be called when the remote peer has requested
   # an open that was not initiated locally. By default this will simply open
-  # locally, which then trigtgers the XXX_opened called.
+  # locally, which then triggers the XXX_opened called.
   #
   # The same applies to close.
   #
@@ -164,7 +164,7 @@ module Qpid::Proton::Handler
         Qpid::Proton::Event.dispatch(@delegate, :on_link_error, event)
       else
         self.log_error(event.link, "link")
-        event.conneciton.close
+        event.connection.close
       end
     end
 

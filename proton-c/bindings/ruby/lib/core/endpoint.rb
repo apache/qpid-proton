@@ -39,7 +39,7 @@ module Qpid::Proton
     # The local connection is closed.
     LOCAL_CLOSED = Cproton::PN_LOCAL_CLOSED
 
-    # The remote connection is unitialized.
+    # The remote connection is uninitialized.
     REMOTE_UNINIT = Cproton::PN_REMOTE_UNINIT
     # The remote connection is active.
     REMOTE_ACTIVE = Cproton::PN_REMOTE_ACTIVE

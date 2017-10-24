@@ -103,7 +103,7 @@ alternatives.
 /** @example broker.cpp
 
 A broker using the `proton::container`. You can use this to run other examples
-that reqiure an intermediary, or you can use any AMQP 1.0 broker. This broker
+that require an intermediary, or you can use any AMQP 1.0 broker. This broker
 creates queues automatically when a client tries to send or subscribe.
 
 */

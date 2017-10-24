@@ -47,7 +47,7 @@
 #include <string>
 #include <thread>
 
-// Lock output from threads to avoid scramblin
+// Lock output from threads to avoid scrambling
 std::mutex out_lock;
 #define OUT(x) do { std::lock_guard<std::mutex> l(out_lock); x; } while (false)
 
@@ -100,7 +100,7 @@ class client : public proton::messaging_handler {
         return work_queue_;
     }
 
-    // == messaging_handler overrides, only called in proton hander thread
+    // == messaging_handler overrides, only called in proton handler thread
 
     // Note: this example creates a connection when the container starts.
     // To create connections after the container has started, use

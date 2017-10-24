@@ -272,7 +272,7 @@ class DataTest(Test):
 
   def testFloat(self):
     # we have to use a special comparison here because python
-    # internaly only uses doubles and converting between floats and
+    # internally only uses doubles and converting between floats and
     # doubles is imprecise
     self._test("float", 0, 1, 2, 3, 0.1, 0.2, 0.3, -1, -2, -3, -0.1, -0.2, -0.3,
                eq=lambda x, y: x - y < 0.000001)

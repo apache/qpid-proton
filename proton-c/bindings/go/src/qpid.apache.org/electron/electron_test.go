@@ -151,7 +151,7 @@ func TestClientSendServerReceive(t *testing.T) {
 				}
 			}()
 
-			// Server recieve
+			// Server receive
 			rm, err := r[i].Receive()
 			if err != nil {
 				t.Fatal(err)

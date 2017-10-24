@@ -74,7 +74,7 @@ PNX_EXTERN pn_error_t *pn_reactor_error(pn_reactor_t *reactor);
 /**
  * Create an outgoing connection that will be managed by the reactor.
  *
- * The reator's pn_iohandler will create a socket connection to the host
+ * The reactor's pn_iohandler will create a socket connection to the host
  * once the connection is opened.
  *
  * @param[in] reactor the reactor that will own the connection.

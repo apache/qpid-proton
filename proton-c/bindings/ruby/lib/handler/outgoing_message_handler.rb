@@ -76,7 +76,7 @@ module Qpid::Proton::Handler
 
     # Called when the remote peer releases an outgoing message.
     #
-    # Note that this may be in resposnse to either the REELAASE or MODIFIED
+    # Note that this may be in response to either the RELEASE or MODIFIED
     # state as defined by the AMQP specification.
     #
     # @param event [Qpid::Proton::Event::Event] The event.

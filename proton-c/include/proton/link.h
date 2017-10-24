@@ -476,7 +476,7 @@ typedef enum {
                            initially unsettled. */
   PN_SND_SETTLED = 1, /**< The sender will send all deliveries settled
                          to the receiver. */
-  PN_SND_MIXED = 2 /**< The sender may send a mixure of settled and
+  PN_SND_MIXED = 2 /**< The sender may send a mixture of settled and
                       unsettled deliveries. */
 } pn_snd_settle_mode_t;
 

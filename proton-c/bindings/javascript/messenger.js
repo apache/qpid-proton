@@ -63,7 +63,7 @@
  * Sending & Receiving Messages
  * ============================
  * </pre>
- * The {@link proton.Messenger} class works in conjuction with the {@link proton.Message} class.
+ * The {@link proton.Messenger} class works in conjunction with the {@link proton.Message} class.
  * The {@link proton.Message} class is a mutable holder of message content.
  * <p>
  * The put method copies its Message to the outgoing queue, and may
@@ -141,7 +141,7 @@ var _Messenger_ = Module['Messenger'].prototype;
 
 // We use the dot notation rather than associative array form for protected
 // methods so they are visible to this "package", but the Closure compiler will
-// minify and obfuscate names, effectively making a defacto "protected" method.
+// minify and obfuscate names, effectively making a de facto "protected" method.
 
 /**
  * This helper method checks the supplied error code, converts it into an
@@ -319,7 +319,7 @@ _Messenger_['isBlocking'] = function() {
  * by the Messenger. Call the stop method before destroying the Messenger.
  * <p>
  * N.B. This method has to be called explicitly in JavaScript as we can't
- * intercept finalisers, so we need to remember to free before removing refs.
+ * intercept finalizers, so we need to remember to free before removing refs.
  * @method free
  * @memberof! proton.Messenger#
  */

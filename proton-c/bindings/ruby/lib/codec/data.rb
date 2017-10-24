@@ -349,7 +349,7 @@ module Qpid::Proton::Codec
     #
     # @example
     #
-    #   # get the details of thecurrent array
+    #   # get the details of the current array
     #   count, described, array_type = @data.array
     #
     #   # enter the node
@@ -771,7 +771,7 @@ module Qpid::Proton::Codec
       raise ::ArgumentError, "invalid uuid: #{value}" if value.nil?
 
       # if the uuid that was submitted was numeric value, then translated
-      # it into a hex string, otherwise assume it was a string represtation
+      # it into a hex string, otherwise assume it was a string representation
       # and attempt to decode it
       if value.is_a? Numeric
         value = "%032x" % value
@@ -803,7 +803,7 @@ module Qpid::Proton::Codec
     # Puts a binary value.
     #
     # A binary string is encoded as an ASCII 8-bit string value. This is in
-    # contranst to other strings, which are treated as UTF-8 encoded.
+    # contrast to other strings, which are treated as UTF-8 encoded.
     #
     # @param value [String] An arbitrary string value.
     #

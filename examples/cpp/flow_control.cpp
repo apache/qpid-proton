@@ -163,7 +163,7 @@ class flow_receiver : public proton::messaging_handler {
                 return;
             }
 
-            verify(received == 25 && r.credit() == 0, "Exmaple 4: high/low watermark");
+            verify(received == 25 && r.credit() == 0, "Example 4: high/low watermark");
             r.connection().close();
             break;
 

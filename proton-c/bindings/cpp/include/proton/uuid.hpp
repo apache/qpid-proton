@@ -52,12 +52,12 @@ class uuid : public byte_array<16> {
     PN_CPP_EXTERN static uuid random();
 
     /// UUID standard string format: 8-4-4-4-12 (36 chars, 32
-    /// alphanumeric chars and 4 hypens).
+    /// alphanumeric chars and 4 hyphens).
     PN_CPP_EXTERN std::string str()  const;
 };
 
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric chars
-/// and 4 hypens).
+/// and 4 hyphens).
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
 
 } // proton

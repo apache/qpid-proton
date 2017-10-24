@@ -87,7 +87,7 @@ module Qpid::Proton
     # @!attribute [r] updated?
     #
     # A delivery is considered updated whenever the peer communicates a new
-    # disposition for the dlievery. Once a delivery becomes updated, it will
+    # disposition for the delivery. Once a delivery becomes updated, it will
     # remain so until cleared.
     #
     # @return [Boolean] Returns if a delivery is updated.

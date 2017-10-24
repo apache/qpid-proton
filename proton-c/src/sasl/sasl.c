@@ -367,7 +367,7 @@ void pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state d
   }
 }
 
-// Look for symbol in the mech include list - not particlarly efficient,
+// Look for symbol in the mech include list - not particularly efficient,
 // but probably not used enough to matter.
 //
 // Note that if there is no inclusion list then every mech is implicitly included.

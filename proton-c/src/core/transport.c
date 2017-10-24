@@ -338,7 +338,7 @@ ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int lay
     }
     if (transport->encryption_required && !pn_transport_is_encrypted(transport)) {
       pn_do_error(transport, "amqp:connection:policy-error",
-                  "Client connection unencryted - forbidden");
+                  "Client connection unencrypted - forbidden");
       pn_set_error_layer(transport);
       return 8;
     }

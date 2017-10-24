@@ -35,7 +35,7 @@ import (
 // Equivalent to !d.isNil && d.Readable() && !d.Partial()
 func (d Delivery) HasMessage() bool { return !d.IsNil() && d.Readable() && !d.Partial() }
 
-// Message decodes the message containined in a delivery.
+// Message decodes the message contained in a delivery.
 //
 // Must be called in the correct link context with this delivery as the current message,
 // handling an MMessage event is always a safe context to call this function.
@@ -75,7 +75,7 @@ func (link Link) Send(m amqp.Message) (Delivery, error) {
 	delivery := link.Delivery(nextTag())
 	bytes, err := m.Encode(nil)
 	if err != nil {
-		return Delivery{}, fmt.Errorf("cannot send mesage %s", err)
+		return Delivery{}, fmt.Errorf("cannot send message %s", err)
 	}
 	result := link.SendBytes(bytes)
 	link.Advance()

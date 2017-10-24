@@ -177,7 +177,7 @@ module Qpid::Proton::Handler
     # Called when the remote peer releases an outgoing message.
     #
     # Note that this may be in response to either the RELEASE or
-    # MODIFIED state as defined by the AMPQ specification.
+    # MODIFIED state as defined by the AMQP specification.
     #
     # This method needs to be overridden.
     #

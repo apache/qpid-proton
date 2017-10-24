@@ -520,7 +520,7 @@ if (typeof process === 'object' && typeof require === 'function') {
     
         assert(data.format() === this.data.format());
     
-        // Deserialise from the copied Data instance into a new JavaScript Object.
+        // Deserialize from the copied Data instance into a new JavaScript Object.
         data.rewind();
         assert(data.next());
         var copy = data.getObject();

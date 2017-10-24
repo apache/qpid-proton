@@ -118,7 +118,7 @@ messages and the sender link for available credit.
 [electron/broker.go](electron/broker.go) does not need any "upside-down"
 event-driven code, it is implemented as straightforward loops. The broker is a
 loop listening for connections. Each connection is a loop accepting for incoming
-sender or recdiver links. Each receiving link is a loop that receives a message
+sender or receiver links. Each receiving link is a loop that receives a message
 and pushes it to a queue.  Each sending link is a loop that pops a message from
 a queue and sends it.
 

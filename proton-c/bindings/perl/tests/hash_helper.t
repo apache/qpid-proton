@@ -34,7 +34,7 @@ my $result;
 # raises an error when getting a hash from a null data object
 #=============================================================================
 dies_ok(sub {qpid::proton::get_map_from(undef);},
-        "Raises an error when getting a hash froma  null data object");
+        "Raises an error when getting a hash from a null data object");
 
 
 #=============================================================================
