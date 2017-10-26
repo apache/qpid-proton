@@ -1,4 +1,4 @@
-# /usr/bin/bash
+#! /usr/bin/env bash
 
 # This script collates coverage data already present from running instrumented code.
 #

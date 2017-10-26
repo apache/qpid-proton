@@ -23,7 +23,13 @@ language: cpp
 compiler:
 - gcc
 - clang
-
+env:
+- QPID_PROTON_CMAKE_ARGS=
+- QPID_PROTON_CMAKE_ARGS=-DCMAKE_BUILD_TYPE=Coverage
+matrix:
+  exclude:
+  - compiler: clang
+    env: QPID_PROTON_CMAKE_ARGS=-DCMAKE_BUILD_TYPE=Coverage
 addons:
   apt:
     packages:
@@ -56,11 +62,6 @@ script:
 
 after_success:
 - |
-    if [[ ${CC} = gcc ]]; then
-      mkdir ../build_coverage
-      cd ../build_coverage
-      cmake .. -DCMAKE_INSTALL_PREFIX=$PWD/install -DCMAKE_BUILD_TYPE=Coverage ${QPID_PROTON_CMAKE_ARGS}
-      cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
-      make coverage
+    if [[ -d coverage_results ]]; then
       bash <(curl -s https://codecov.io/bash)
     fi
