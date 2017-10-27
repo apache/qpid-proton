@@ -16,6 +16,7 @@
 # specific language governing permissions and limitations
 # under the License
 #
+from __future__ import print_function
 
 from proctest import *
 
@@ -42,7 +43,7 @@ class LimitedBroker(object):
 try:
     Proc(["prlimit"]).wait_exit()
 except:
-    print "Skipping test: prlimit not available"
+    print("Skipping test: prlimit not available")
     sys.exit(0)
 
 class FdLimitTest(ProcTestCase):
@@ -58,7 +59,7 @@ class FdLimitTest(ProcTestCase):
         with LimitedBroker(self, fdlimit) as b:
             receivers = []
             # Start enough receivers to use all FDs, make sure the broker logs an error
-            for i in xrange(fdlimit+1):
+            for i in range(fdlimit+1):
                 receivers.append(self.proc(["receive", "", b.port, str(i)]))
 
             # Note: libuv silently swallows EMFILE/ENFILE errors so there is no error reporting.

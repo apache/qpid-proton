@@ -79,14 +79,13 @@ class Proc(Popen):
     @property
     def out(self):
         self._out.seek(0)
-        # Normalize line endings, os.tmpfile() opens in binary mode.
-        return self._out.read().replace('\r\n','\n').replace('\r','\n')
+        return self._out.read()
 
     def __init__(self, args, valgrind=True, helgrind=False, **kwargs):
         """Start an example process"""
         self.args = list(args)
         self.kwargs = kwargs
-        self._out = tempfile.TemporaryFile()
+        self._out = tempfile.TemporaryFile(mode='w+')
         valgrind_exe = valgrind and os.getenv("VALGRIND")
         if valgrind_exe:
             # run valgrind for speed, not for detailed information
@@ -100,11 +99,11 @@ class Proc(Popen):
             sys.stderr.write("\n== running == "+" ".join(self.args)+"\n")
         try:
             Popen.__init__(self, self.args, stdout=self._out, stderr=STDOUT, **kwargs)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.ENOENT:
                 raise NotFoundError(self, str(e))
             raise ProcError(self, str(e))
-        except Exception, e:
+        except Exception as e:
             raise ProcError(self, str(e))
 
     def kill(self):
@@ -212,6 +211,8 @@ class ProcTestCase(unittest.TestCase):
     if _tc_missing('assertMultiLineEqual'):
         def assertMultiLineEqual(self, a, b):
             self.assertEqual(a, b)
+
+from functools import reduce
 
 def find_file(filename, path):
     """

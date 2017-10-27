@@ -28,7 +28,7 @@ def python_cmd(name):
 
 MESSAGES=10
 
-def receive_expect_messages(n=MESSAGES): return ''.join(['{"sequence"=%s}\n'%i for i in xrange(1, n+1)])
+def receive_expect_messages(n=MESSAGES): return ''.join(['{"sequence"=%s}\n'%i for i in range(1, n+1)])
 def receive_expect_total(n=MESSAGES): return "%s messages received\n"%n
 def receive_expect(n=MESSAGES): return receive_expect_messages(n)+receive_expect_total(n)
 
