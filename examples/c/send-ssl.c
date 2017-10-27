@@ -153,6 +153,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      if (pn_delivery_remote_state(d) == PN_ACCEPTED) {
        if (++app->acknowledged == app->message_count) {
          printf("%d messages sent and acknowledged\n", app->acknowledged);
+         fflush(stdout);
          pn_connection_close(pn_event_connection(event));
          /* Continue handling events till we receive TRANSPORT_CLOSED */
        }

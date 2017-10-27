@@ -177,7 +177,7 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
   char *fn = name_len ? (char *) malloc(name_len + 1) : 0;
   while (tmpctx = CertEnumCertificatesInStore(cert_store, tmpctx)) {
     cert_count++;
-    if (cert_name) {
+    if (cert_name && *cert_name) {
       DWORD len = CertGetNameString(tmpctx, CERT_NAME_FRIENDLY_DISPLAY_TYPE,
                                     0, NULL, NULL, 0);
       if (len != name_len + 1)
