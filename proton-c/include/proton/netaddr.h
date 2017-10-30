@@ -23,6 +23,10 @@
 #include <proton/import_export.h>
 #include <proton/types.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @file
  *
@@ -72,5 +76,9 @@ PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
 /**
  * @}
  */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* PROTON_NETADDR_H */
