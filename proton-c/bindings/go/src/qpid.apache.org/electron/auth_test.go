@@ -57,6 +57,9 @@ func TestAuthAnonymous(t *testing.T) {
 }
 
 func TestAuthPlain(t *testing.T) {
+	if !SASLExtended() {
+		t.Skip()
+	}
 	fatalIf(t, configureSASL())
 	got, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("xxx"))},
@@ -66,6 +69,9 @@ func TestAuthPlain(t *testing.T) {
 }
 
 func TestAuthBadPass(t *testing.T) {
+	if !SASLExtended() {
+		t.Skip()
+	}
 	fatalIf(t, configureSASL())
 	_, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("yyy"))},
@@ -76,6 +82,9 @@ func TestAuthBadPass(t *testing.T) {
 }
 
 func TestAuthBadUser(t *testing.T) {
+	if !SASLExtended() {
+		t.Skip()
+	}
 	fatalIf(t, configureSASL())
 	_, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("foo@bar"), Password([]byte("yyy"))},
