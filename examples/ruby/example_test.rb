@@ -18,9 +18,9 @@
 # under the License.
 #
 
+require 'minitest/autorun'
 require 'qpid_proton'
 require 'socket'
-require 'test_tools'
 
 class ExampleTest < MiniTest::Test
 
@@ -66,11 +66,17 @@ EOS
   end
 end
 
-# Start the broker before all tests
-TestPort.new do |tp|
-  $port = tp.port
-  $broker = spawn("#{RbConfig.ruby} reactor/broker.rb -a :#{$port}")
-  wait_port($port)
+# Start the broker before all tests.
+$port = TCPServer.open(0) do |s| s.addr[1]; end # find an unused port
+$broker = spawn("#{RbConfig.ruby} reactor/broker.rb -a :#{$port}")
+
+# Wait for the broker to be listening
+deadline = Time.now + 5
+begin
+  TCPSocket.open("", $port).close
+rescue Errno::ECONNREFUSED
+  retry if Time.now < deadline
+  raise
 end
 
 # Kill the broker after all tests

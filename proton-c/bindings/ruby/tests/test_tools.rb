@@ -27,31 +27,6 @@ require 'socket'
 Container = Qpid::Proton::Reactor::Container
 MessagingHandler = Qpid::Proton::Handler::MessagingHandler
 
-# Bind an unused local port using bind(0) and SO_REUSEADDR and hold it till close()
-# Provides #host, #port and #addr ("host:port") as strings
-class TestPort
-  attr_reader :host, :port, :addr
-
-  # With block, execute block passing self then close
-  # Note host must be the local host, but you can pass '::1' instead for ipv6
-  def initialize(host='127.0.0.1')
-    @sock = Socket.new(:INET, :STREAM)
-    @sock.setsockopt(Socket::SOL_SOCKET, Socket::SO_REUSEADDR, true)
-    @sock.bind(Socket.sockaddr_in(0, host))
-    @host, @port = @sock.connect_address.ip_unpack
-    @addr = "#{@host}:#{@port}"
-    if block_given?
-      begin
-        yield self
-      ensure
-        close
-      end
-    end
-  end
-
-  def close() @sock.close(); end
-end
-
 class TestError < Exception; end
 
 def wait_port(port, timeout=5)
@@ -134,16 +109,16 @@ class TestHandler < MessagingHandler
   end
 end
 
-# A TestHandler that listens on a TestPort
+# A TestHandler that listens on a random port
 class TestServer < TestHandler
   def initialize
     super
-    @tp = TestPort.new
+    @port = TCPServer.open(0) do |s| s.addr[1]; end # find an unused port
   end
 
-  def host() @tp.host;  end
-  def port() @tp.port;  end
-  def addr() @tp.addr;  end
+  def host() ""; end
+  def port() @port; end
+  def addr() "#{host}:#{port}"; end
 
   def on_start(e)
     super
