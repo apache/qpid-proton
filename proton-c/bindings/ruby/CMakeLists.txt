@@ -119,7 +119,7 @@ if (result EQUAL 0)  # Have minitest
   endforeach()
 else()
   # No minitest
-  message(WARNING "ruby tests will not run, minitest is not installed")
+  message(STATUS "Ruby tests will not run, minitest is not installed")
 endif()
 
 ## Documentation
