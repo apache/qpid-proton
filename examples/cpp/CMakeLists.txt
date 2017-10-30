@@ -21,6 +21,8 @@ cmake_minimum_required (VERSION 2.8.7)
 enable_language(CXX)
 
 find_package(ProtonCpp REQUIRED)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
@@ -68,12 +70,19 @@ if(HAS_CPP11)
   # Examples that require C++11
   foreach(example
       scheduled_send
-      service_bus
-      multithreaded_client
-      multithreaded_client_flow_control
-      )
+      service_bus)
     add_executable(${example} ${example}.cpp)
   endforeach()
+
+  # Examples that use threads directly
+  if (Threads_FOUND)
+    foreach(example
+        multithreaded_client
+        multithreaded_client_flow_control)
+      add_executable(${example} ${example}.cpp)
+      target_link_libraries(${example} ${CMAKE_THREAD_LIBS_INIT})
+    endforeach()
+  endif()
 endif()
 
 # Add a test with the correct environment to find test executables and valgrind.
