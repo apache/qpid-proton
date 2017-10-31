@@ -48,6 +48,7 @@ class scheduled_sender : public proton::messaging_handler {
         url(s),
         interval(int(d*proton::duration::SECOND.milliseconds())), // Send interval.
         timeout(int(t*proton::duration::SECOND.milliseconds())), // Cancel after timeout.
+        work_queue(0),
         ready(true),            // Ready to send.
         canceled(false)         // Canceled.
     {}

@@ -1382,23 +1382,24 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     for (struct addrinfo *ai = addrinfo; ai; ai = ai->ai_next) {
       int fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
       static int on = 1;
-      if ((fd >= 0) &&
-          !setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) &&
-          /* We listen to v4/v6 on separate sockets, don't let v6 listen for v4 */
-          (ai->ai_family != AF_INET6 ||
-           !setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on))) &&
-          !bind(fd, ai->ai_addr, ai->ai_addrlen) &&
-          !listen(fd, backlog))
-      {
-        psocket_t *ps = &l->psockets[l->psockets_size++];
-        psocket_init(ps, p, l, addr);
-        ps->sockfd = fd;
-        ps->epoll_io.fd = fd;
-        ps->epoll_io.wanted = EPOLLIN;
-        ps->epoll_io.polling = false;
-        start_polling(&ps->epoll_io, ps->proactor->epollfd);  // TODO: check for error
-      } else {
-        close(fd);
+      if (fd >= 0) {
+        if (!setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) &&
+            /* We listen to v4/v6 on separate sockets, don't let v6 listen for v4 */
+            (ai->ai_family != AF_INET6 ||
+             !setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on))) &&
+            !bind(fd, ai->ai_addr, ai->ai_addrlen) &&
+            !listen(fd, backlog))
+        {
+          psocket_t *ps = &l->psockets[l->psockets_size++];
+          psocket_init(ps, p, l, addr);
+          ps->sockfd = fd;
+          ps->epoll_io.fd = fd;
+          ps->epoll_io.wanted = EPOLLIN;
+          ps->epoll_io.polling = false;
+          start_polling(&ps->epoll_io, ps->proactor->epollfd);  // TODO: check for error
+        } else {
+          close(fd);
+        }
       }
     }
   }
