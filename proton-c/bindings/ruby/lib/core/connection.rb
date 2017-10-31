@@ -23,21 +23,17 @@ module Qpid::Proton
   class Connection < Endpoint
 
     protected
-    PROTON_METHOD_PREFIX = "pn_connection"
     include Util::SwigHelper
+    PROTON_METHOD_PREFIX = "pn_connection"
 
     public
 
     # @!attribute hostname
-    #
-    # @return [String] The AMQP hostname for the connection.
-    #
+    #   @return [String] The AMQP hostname for the connection.
     proton_accessor :hostname
 
     # @!attribute user
-    #   The user name for authentication.
-    #
-    #   @return [String] the user name
+    #   @return [String] User name used for authentication (outgoing connection) or the authenticated user name (incoming connection)
     proton_accessor :user
 
     # @private
@@ -45,6 +41,7 @@ module Qpid::Proton
 
     # @private
     attr_accessor :overrides
+    # @private
     attr_accessor :session_policy
 
     # @private
@@ -68,12 +65,11 @@ module Qpid::Proton
     def initialize(impl = Cproton.pn_connection)
       super()
       @impl = impl
-      @offered_capabilities = nil
-      @desired_capabilities = nil
-      @properties = nil
       @overrides = nil
       @collector = nil
       @session_policy = nil
+      @link_count = 0
+      @link_prefix = ""
       self.class.store_instance(self, :pn_connection_attachments)
     end
 
@@ -195,18 +191,34 @@ module Qpid::Proton
 
     # Open the local end of the connection.
     #
-    # @option options [String] :container_id Unique AMQP container ID, defaults to a UUID
-    # @option options [String] :link_prefix Prefix for generated link names, default is container_id
+    # @option opts [MessagingHandler] :handler handler for events related to this connection.
+    # @option opts [String] :user user-name for authentication.
+    # @option opts [String] :password password for authentication.
+    # @option opts [Numeric] :idle_timeout seconds before closing an idle connection
+    # @option opts [Boolean] :sasl_enabled Enable or disable SASL.
+    # @option opts [Boolean] :sasl_allow_insecure_mechs Allow mechanisms that disclose clear text
+    #   passwords, even over an insecure connection.
+    # @option opts [String] :sasl_allowed_mechs the allowed SASL mechanisms for use on the connection.
+    # @option opts [String] :container_id AMQP container ID, normally provided by {Container}
     #
-    def open(options={})
-      object_to_data(@offered_capabilities, Cproton.pn_connection_offered_capabilities(@impl))
-      object_to_data(@desired_capabilities, Cproton.pn_connection_desired_capabilities(@impl))
-      object_to_data(@properties, Cproton.pn_connection_properties(@impl))
-      cid = options[:container_id] || SecureRandom.uuid
-      Cproton.pn_connection_set_container(@impl, cid)
-      @link_prefix = options[:link_prefix] || cid
-      @link_prefix = SecureRandom.uuid if !@link_prefix || @link_prefix.empty?
-      @link_count = 0
+    def open(opts={})
+      return if local_active?
+      apply opts
+      Cproton.pn_connection_open(@impl)
+    end
+
+    # @private
+    def apply opts
+      # NOTE: Only connection options are set here. Transport options are set
+      # with {Transport#apply} from the connection_driver (or in
+      # on_connection_bound if not using a connection_driver)
+      Cproton.pn_connection_set_container(@impl, opts[:container_id] || SecureRandom.uuid)
+      Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
+      Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
+      @link_prefix = opts[:link_prefix] || container_id
+      object_to_data(opts[:offered_capabilities], Cproton.pn_connection_offered_capabilities(@impl))
+      object_to_data(opts[:desired_capabilities], Cproton.pn_connection_desired_capabilities(@impl))
+      object_to_data(opts[:properties], Cproton.pn_connection_properties(@impl))
       Cproton.pn_connection_open(@impl)
     end
 
@@ -220,8 +232,11 @@ module Qpid::Proton
     # Once this operation has completed, the #LOCAL_CLOSED state flag will be
     # set.
     #
-    def close
-      self._update_condition
+    def close(error = nil)
+      if error
+        @condition = Condition.make error
+        self._update_condition
+      end
       Cproton.pn_connection_close(@impl)
     end
 
@@ -257,10 +272,10 @@ module Qpid::Proton
     end
 
     # Open a sender on the default_session
-    def open_sender(*args, &block) default_session.open_sender(*args, &block) end
+    def open_sender(opts = {}) default_session.open_sender(opts) end
 
     # Open a  on the default_session
-    def open_receiver(*args, &block) default_session.open_receiver(*args, &block) end
+    def open_receiver(opts = {}) default_session.open_receiver(opts) end
 
     # Returns the first session from the connection that matches the specified
     # state mask.

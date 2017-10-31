@@ -22,15 +22,16 @@ require 'optparse'
 
 class DirectReceive < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, expected)
+  def initialize(url, address, count)
     super()
     @url = url
-    @expected = expected
+    @address = address
+    @expected = count
     @received = 0
   end
 
   def on_start(event)
-    @acceptor = event.container.listen(@url)
+    event.container.listen(@url)
   end
 
   def on_message(event)
@@ -38,29 +39,17 @@ class DirectReceive < Qpid::Proton::Handler::MessagingHandler
       puts "Received: #{event.message.body}"
       @received = @received + 1
       if @received == @expected
-        event.connection.close
-        @acceptor.close
+        event.container.stop
       end
     end
   end
 end
 
-options = {
-  :address => "localhost:5672/examples",
-  :messages => 100,
-}
+unless (2..3).include? ARGV.size
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS [COUNT]
+Listen on URL and receive COUNT messages from ADDRESS"
+  return 1
+end
+url, address, count = ARGV
+Qpid::Proton::Container.new(DirectReceive.new(url, address, count || 10)).run
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: simple_send.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-  opts.on("-m", "--messages=COUNT", "The number of messages to send (def. #{options[:messages]}",
-    OptionParser::DecimalInteger) do |messages|
-    options[:messages] = messages
-  end
-end.parse!
-
-Qpid::Proton::Reactor::Container.new(DirectReceive.new(options[:address], options[:messages])).run

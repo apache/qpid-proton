@@ -51,6 +51,7 @@ module Qpid::Proton::Reactor
     end
 
     def initialize(handlers, options = {})
+      deprecated(self.class, "Qpid::Proton::Container")
       @impl = options[:impl]
       if @impl.nil?
         @impl = Cproton.pn_reactor

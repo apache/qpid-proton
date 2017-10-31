@@ -24,7 +24,8 @@ require 'qpid_proton'
 require 'thread'
 require 'socket'
 
-Container = Qpid::Proton::Reactor::Container
+Container = Qpid::Proton::Container
+ListenHandler = Qpid::Proton::Listener
 MessagingHandler = Qpid::Proton::Handler::MessagingHandler
 
 class TestError < Exception; end
@@ -44,6 +45,7 @@ end
 
 # Handler that records some common events that are checked by tests
 class TestHandler < MessagingHandler
+  # TODO aconway 2017-10-28: make on_error stuff part of the default handler.
 
   attr_reader :errors, :connections, :sessions, :links, :messages
 
@@ -67,7 +69,7 @@ class TestHandler < MessagingHandler
 
   # TODO aconway 2017-08-15: implement in MessagingHandler
   def on_error(event, endpoint)
-    @errors.push "#{event.type}: #{endpoint.condition.name}: #{endpoint.condition.description}"
+    @errors.push "#{event.type}: #{endpoint.condition.inspect}"
     raise_errors if @raise_errors
   end
 
@@ -76,7 +78,7 @@ class TestHandler < MessagingHandler
   end
 
   def on_connection_error(event)
-    on_error(event, event.condition)
+    on_error(event, event.connection)
   end
 
   def on_session_error(event)
@@ -87,21 +89,20 @@ class TestHandler < MessagingHandler
     on_error(event, event.link)
   end
 
-  def on_opened(queue, endpoint)
+  def endpoint_opened(queue, endpoint)
     queue.push(endpoint)
-    endpoint.open
   end
 
   def on_connection_opened(event)
-    on_opened(@connections, event.connection)
+    endpoint_opened(@connections, event.connection)
   end
 
   def on_session_opened(event)
-    on_opened(@sessions, event.session)
+    endpoint_opened(@sessions, event.session)
   end
 
   def on_link_opened(event)
-    on_opened(@links, event.link)
+    endpoint_opened(@links, event.link)
   end
 
   def on_message(event)
@@ -109,19 +110,10 @@ class TestHandler < MessagingHandler
   end
 end
 
-# A TestHandler that listens on a random port
-class TestServer < TestHandler
-  def initialize
-    super
-    @server = TCPServer.open(0)
-  end
-
-  def host() ""; end
-  def port() @server.addr[1]; end
-  def addr() "#{host}:#{port}"; end
-
-  def on_start(e)
-    super
-    @listener = e.container.listen_io(@server)
-  end
+# ListenHandler that closes the Listener after first accept
+class ListenOnceHandler < ListenHandler
+  def initialize(opts={}) @opts=opts; end
+  def on_error(l, e)  raise TestError, e; end
+  def on_accept(l) l.close; return @opts; end
+  attr_reader :opts
 end

@@ -39,11 +39,11 @@ class ConnectionDriverTest < Minitest::Test
       def on_message(event) @message = event.message; event.connection.close; end
     end
 
-    sender = ConnectionDriver.new(@sockets[0], send_class.new)
+    sender = ConnectionDriver.new(@sockets[0], {:handler => send_class.new})
     sender.connection.open();
     sender.connection.open_sender()
 
-    receiver = ConnectionDriver.new(@sockets[1], recv_class.new)
+    receiver = ConnectionDriver.new(@sockets[1], {:handler => recv_class.new})
     drivers = [sender, receiver]
     until drivers.all? { |d| d.finished? }
       rd = drivers.select {|d| d.can_read? }
@@ -60,7 +60,7 @@ class ConnectionDriverTest < Minitest::Test
     idle_class = Class.new(MessagingHandler) do
       def on_connection_bound(event) event.transport.idle_timeout = 10; end
     end
-    drivers = [ConnectionDriver.new(@sockets[0], idle_class.new), ConnectionDriver.new(@sockets[1])]
+    drivers = [ConnectionDriver.new(@sockets[0], {:handler => idle_class.new}), ConnectionDriver.new(@sockets[1])]
     drivers[0].connection.open()
     now = Time.now
     drivers.each { |d| d.process(true, true, now) } until drivers[0].connection.open?

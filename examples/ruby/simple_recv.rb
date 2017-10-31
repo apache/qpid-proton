@@ -20,17 +20,19 @@
 require 'qpid_proton'
 require 'optparse'
 
-class Receiver < Qpid::Proton::Handler::MessagingHandler
+class SimpleReceive < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, count)
+  def initialize(url, address, count)
     super()
     @url = url
+    @address = address
     @expected = count
     @received = 0
   end
 
   def on_start(event)
-    event.container.create_receiver(@url)
+    c = event.container.connect(@url)
+    c.open_receiver(@address)
   end
 
   def on_message(event)
@@ -42,28 +44,14 @@ class Receiver < Qpid::Proton::Handler::MessagingHandler
       end
     end
   end
-
 end
 
-options = {
-  :address => "localhost:5672/examples",
-  :messages => 100,
-}
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: simple_send.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-  opts.on("-m", "--messages=COUNT", "The number of messages to send (def. #{options[:messages]}",
-    OptionParser::DecimalInteger) do |messages|
-    options[:messages] = messages
-  end
-end.parse!
-
-begin
-  Qpid::Proton::Reactor::Container.new(Receiver.new(options[:address], options[:messages])).run
-rescue Interrupt
+unless (2..3).include? ARGV.size
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS [COUNT]}
+Connect to URL and receive COUNT messages from ADDRESS"
+  return 1
 end
+url, address, count = ARGV
+
+Qpid::Proton::Container.new(SimpleReceive.new(url, address, count || 10)).run
+

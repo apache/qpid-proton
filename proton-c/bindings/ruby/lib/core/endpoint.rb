@@ -69,6 +69,9 @@ module Qpid::Proton
       object_to_condition(@condition, self._local_condition)
     end
 
+    def condition
+      condition_to_object(_local_condition) || remote_condition; end
+
     # @private
     def remote_condition
       condition_to_object(self._remote_condition)
@@ -81,6 +84,10 @@ module Qpid::Proton
     def transport
       self.connection.transport
     end
+
+    # @private
+    # @return [Bool] true if {#state} has all the bits of `mask` set
+    def check_state(mask) (self.state & mask) == mask; end
 
     # @return [Bool] true if endpoint has sent and received a CLOSE frame
     def closed?() check_state(LOCAL_CLOSED | REMOTE_CLOSED); end
@@ -136,10 +143,6 @@ module Qpid::Proton
       Cproton.pn_record_set_handler(record, impl)
       Cproton.pn_decref(impl)
     end
-
-    private
-
-    def check_state(mask) (self.state & mask) == mask; end
 
   end
 

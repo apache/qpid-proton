@@ -22,35 +22,31 @@ require 'optparse'
 
 class Server < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url)
+  def initialize(url, address)
     super()
-    @url = Qpid::Proton::URL.new url
-    @address = @url.path
+    @url = url
+    @address = address
     @senders = {}
   end
 
   def on_start(event)
-    @container = event.container
-    @conn = @container.connect(:url => @url)
-    @receiver = @container.create_receiver(@conn, :source => @address)
+    c = event.container.connect(@url)
+    c.open_receiver(@address)
     @relay = nil
   end
 
   def on_connection_opened(event)
     if event.connection.remote_offered_capabilities &&
-      event.connection.remote_offered_capabilities.contain?("ANONYMOUS-RELAY")
-      @relay = @container.create_sender(@conn, nil)
+        event.connection.remote_offered_capabilities.contain?("ANONYMOUS-RELAY")
+      @relay = event.connection.open_sender({:target => nil})
     end
   end
 
   def on_message(event)
     msg = event.message
+    return unless msg.reply_to  # Not a request message
     puts "<- #{msg.body}"
-    sender = @relay || @senders[msg.reply_to]
-    if sender.nil?
-      sender = @container.create_sender(@conn, :target => msg.reply_to)
-      @senders[msg.reply_to] = sender
-    end
+    sender = @relay || (@senders[msg.reply_to] ||= event.connection.open_sender(msg.reply_to))
     reply = Qpid::Proton::Message.new
     reply.address = msg.reply_to
     reply.body = msg.body.upcase
@@ -64,13 +60,10 @@ class Server < Qpid::Proton::Handler::MessagingHandler
   end
 end
 
-options = {
-  :address => "localhost:5672/examples",
-}
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: server.rb [options]"
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") { |address| options[:address] = address }
-end.parse!
-
-Qpid::Proton::Reactor::Container.new(Server.new(options[:address])).run()
+if ARGV.size != 2
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS
+Server listening on URL, reply to messages to ADDRESS"
+  return 1
+end
+url, address = ARGV
+Qpid::Proton::Container.new(Server.new(url, address)).run

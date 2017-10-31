@@ -210,7 +210,7 @@ module Qpid::Proton
           Cproton.pn_handler_dispatch(handler.impl, @impl, type.number)
         else
           result = Qpid::Proton::Event.dispatch(handler, type.method, self)
-          if (result != "DELEGATED") && handler.respond_to?(:handlers)
+          if (result != "DELEGATED") && handler.respond_to?(:handlers) && handler.handlers
             handler.handlers.each do |hndlr|
               self.dispatch(hndlr)
             end
@@ -228,9 +228,10 @@ module Qpid::Proton
       end
 
       def container
-        impl = Cproton.pn_event_reactor(@impl)
-        Qpid::Proton::Util::ClassWrapper::WRAPPERS["pn_reactor"].call(impl)
+        @container || Util::ClassWrapper::WRAPPERS["pn_reactor"].call(Cproton.pn_event_reactor(@impl))
       end
+
+      def container=(c); @container = c; end
 
       # Returns the transport for this event.
       #

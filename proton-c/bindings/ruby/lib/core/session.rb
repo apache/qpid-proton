@@ -126,7 +126,7 @@ module Qpid::Proton
     # @deprecated use {#open_receiver}
     def receiver(name) Receiver.new(Cproton.pn_receiver(@impl, name)); end
 
-    # TODO aconway 2016-01-04: doc options or target param
+    # TODO aconway 2016-01-04: doc options or target param, move option handling to Link.
     def open_receiver(options = {})
       options = { :source => options } if options.is_a? String
       receiver = Receiver.new Cproton.pn_receiver(@impl, options[:name] || connection.link_name)

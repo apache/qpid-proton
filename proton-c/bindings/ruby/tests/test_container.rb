@@ -19,63 +19,137 @@
 
 require 'test_tools'
 require 'minitest/unit'
+require 'socket'
 
 Message = Qpid::Proton::Message
 SASL = Qpid::Proton::SASL
-URL = Qpid::Proton::URL
+Disposition = Qpid::Proton::Disposition
+
+# Container that listens on a random port
+class TestContainer < Container
+
+  def initialize(opts = {}, lopts = {})
+    super opts
+    @server = TCPServer.open(0)
+    @listener = listen_io(@server, ListenOnceHandler.new(lopts))
+  end
+
+  def port() @server.addr[1]; end
+  def url() "amqp://:#{port}"; end
+end
 
 class ContainerTest < Minitest::Test
 
   def test_simple()
-
-    hc = Class.new(TestServer) do
-      attr_reader :accepted
-
-      def on_start(event)
-        super
-        event.container.create_sender("amqp://#{addr}", {:name => "testlink"})
+    sh = Class.new(MessagingHandler) do
+      attr_reader :accepted, :sent
+      def on_sendable(e)
+        e.link.send Message.new("foo") unless @sent
+        @sent = true
       end
 
-      def on_sendable(event)
-        if @sent.nil? && event.sender.credit > 0
-          event.sender.send(Message.new("testmessage"))
-          @sent = true
-        end
+      def on_accepted(e)
+        @accepted = true
+        e.connection.close
+      end
+    end.new
+
+    rh = Class.new(MessagingHandler) do
+      attr_reader :message, :link
+      def on_link_opening(e)
+        @link = e.link
+        e.link.open
+        e.link.flow(1)
       end
 
-      def on_accepted(event)
-        @accepted = event
-        event.container.stop
+      def on_message(e)
+        @message = e.message;
+        e.delivery.update Disposition::ACCEPTED
+        e.delivery.settle
       end
-    end
-    h = hc.new
-    Container.new(h).run
-    assert_instance_of(Qpid::Proton::Event::Event, h.accepted)
-    assert_equal "testlink", h.links.first.name
-    assert_equal "testmessage", h.messages.first.body
+    end.new
+
+    c = TestContainer.new({:id => __method__.to_s, :handler => rh})
+    c.connect(c.url, {:handler => sh}).open_sender({:name => "testlink"})
+    c.run
+
+    assert sh.accepted
+    assert_equal "testlink", rh.link.name
+    assert_equal "foo", rh.message.body
+    assert_equal "test_simple", rh.link.connection.container_id
   end
+
+  class CloseOnOpenHandler < TestHandler
+    def on_connection_opened(e) e.connection.close; end
+    def on_connection_closing(e) e.connection.close; end
+  end
+
+  def test_auto_stop
+    c1 = Container.new "#{__method__}1"
+    c2 = Container.new "#{__method__}2"
+
+    # A listener and a connection
+    t1 = 3.times.collect { Thread.new { c1.run } }
+    l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
+    c1.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
+    t1.each { |t| assert t.join(1) }
+
+    # Connect between different containers, c2 has only a connection
+    t1 = Thread.new { c1.run }
+    l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
+    t2 = Thread.new {c2.run }
+    c2.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
+    assert t2.join(1)
+    assert t1.join(1)
+  end
+
+  def test_auto_stop_listener_only
+    c1 = Container.new "#{__method__}1"
+    # Listener only, external close
+    t1 = Thread.new { c1.run }
+    l = c1.listen_io(TCPServer.new(0))
+    l.close
+    assert t1.join(1)
+  end
+
+  def test_stop
+    c = Container.new __method__
+    c.auto_stop = false
+    l = c.listen_io(TCPServer.new(0))
+    c.connect("amqp://:#{l.to_io.addr[1]}")
+    threads = 5.times.collect { Thread.new { c.run } }
+    assert_nil threads[0].join(0.001)
+    c.stop
+    threads.each { |t| assert t.join(1) }
+    assert c.auto_stop          # Set by stop
+
+    # Stop an empty container
+    threads = 5.times.collect { Thread.new { c.run } }
+    assert_nil threads[0].join(0.001)
+    c.stop
+    threads.each { |t| assert t.join(1) }
+  end
+
 end
+
 
 class ContainerSASLTest < Minitest::Test
 
   # Handler for test client/server that sets up server and client SASL options
-  class SASLHandler < TestServer
+  class SASLHandler < TestHandler
 
-    attr_accessor :url
-
-    def initialize(opts={}, mechanisms=nil, insecure=nil, realm=nil)
+    def initialize(url="amqp://", opts={}, mechanisms=nil, insecure=nil, realm=nil)
       super()
-      @opts, @mechanisms, @insecure, @realm = opts, mechanisms, insecure, realm
+      @url, @opts, @mechanisms, @insecure, @realm = url, opts, mechanisms, insecure, realm
     end
 
     def on_start(e)
       super
-      @client = e.container.connect(@url || "amqp://#{addr}", @opts)
+      @client = e.container.connect("#{@url}:#{e.container.port}", @opts)
     end
 
     def on_connection_bound(e)
       if e.connection != @client # Incoming server connection
-        @listener.close
         sasl = e.transport.sasl
         sasl.allow_insecure_mechs = @insecure unless @insecure.nil?
         sasl.allowed_mechs = @mechanisms unless @mechanisms.nil?
@@ -86,6 +160,7 @@ class ContainerSASLTest < Minitest::Test
     end
 
     attr_reader :auth_user
+
     def on_connection_opened(e)
       super
       if e.connection == @client
@@ -135,26 +210,28 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   end
 
   def test_sasl_anonymous()
-    s = SASLHandler.new({:sasl_allowed_mechs => "ANONYMOUS"}, "ANONYMOUS")
-    Container.new(s).run
+    s = SASLHandler.new("amqp://",  {:sasl_allowed_mechs => "ANONYMOUS"})
+    TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "ANONYMOUS"}).run
     assert_nil(s.connections[0].user)
   end
 
   def test_sasl_plain_url()
+    skip unless SASL.extended?
     # Use default realm with URL, should authenticate with "default_password"
-    s = SASLHandler.new({:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}, "PLAIN", true)
-    s.url = ("amqp://user:default_password@#{s.addr}")
-    Container.new(s).run
+    opts = {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}
+    s = SASLHandler.new("amqp://user:default_password@",  opts)
+    TestContainer.new({:id => __method__.to_s, :handler => s}, opts).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end
 
   def test_sasl_plain_options()
+    skip unless SASL.extended?
     # Use default realm with connection options, should authenticate with "default_password"
     opts = {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true,
             :user => 'user', :password => 'default_password' }
-    s = SASLHandler.new(opts, "PLAIN", true)
-    Container.new(s).run
+    s = SASLHandler.new("amqp://", opts)
+    TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true}).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end
@@ -162,9 +239,9 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   # Ensure we don't allow PLAIN if allow_insecure_mechs = true is not explicitly set
   def test_disallow_insecure()
     # Don't set allow_insecure_mechs, but try to use PLAIN
-    s = SASLHandler.new({:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}, "PLAIN")
-    s.url = "amqp://user:password@#{s.addr}"
-    e = assert_raises(TestError) { Container.new(s).run }
+    s = SASLHandler.new("amqp://user:password@", {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true})
+    e = assert_raises(TestError) { TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "PLAIN"}).run }
     assert_match(/PN_TRANSPORT_ERROR.*unauthorized-access/, e.to_s)
   end
 end
+

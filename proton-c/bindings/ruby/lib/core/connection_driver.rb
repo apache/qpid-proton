@@ -36,23 +36,30 @@ module Qpid
       #
       # @param io [#read_nonblock, #write_nonblock] An {IO} or {IO}-like object that responds
       #   to #read_nonblock and #write_nonblock.
-      # @param handler [MessagingHandler] The handler to be invoked for AMQP events
-      #
-      def initialize io, handler=nil
+      # @param opts [Hash] See {Connection#open} - transport options are set here,
+      # remaining options
+      # @pram server [Bool] If true create a server (incoming) connection
+      def initialize(io, opts = {}, server=false)
         @impl = Cproton.pni_connection_driver or raise RuntimeError, "cannot create connection driver"
         @io = io
-        @handler = handler || Handler::MessagingHandler.new # Default handler for default behaviour
-        @rbuf = ""                                          # String to re-use as read buffer
+        @handler = opts[:handler] || Handler::MessagingHandler.new # Default handler if missing
+        @rbuf = ""              # String to re-use as read buffer
+        connection.apply opts
+        transport.set_server if server
+        transport.apply opts
       end
 
-      # @return [MessagingHandler]
       attr_reader :handler
 
       # @return [Connection]
-      def connection() Connection.wrap(Cproton.pni_connection_driver_connection(@impl)); end
+      def connection()
+        @connection ||= Connection.wrap(Cproton.pni_connection_driver_connection(@impl))
+      end
 
       # @return [Transport]
-      def transport() Transport.wrap(Cproton.pni_connection_driver_transport(@impl)); end
+      def transport()
+        @transport ||= Transport.wrap(Cproton.pni_connection_driver_transport(@impl))
+      end
 
       # @return [IO] Allows ConnectionDriver to be passed directly to {IO#select}
       def to_io() @io; end
@@ -63,21 +70,15 @@ module Qpid
       # @return [Bool] True if the driver has data to write
       def can_write?() Cproton.pni_connection_driver_write_size(@impl) > 0; end
 
-      # True if read and write sides of the IO are closed. Note this does not imply
-      # {#finished?} since there may still be events to dispatch.
-      def closed?
-        Cproton.pn_connection_driver_read_closed(@impl) &&
-          Cproton.pn_connection_driver_read_closed(@impl)
-      end
-
-      # True if the ConnectionDriver has nothing left to do: {#closed?} and
-      # there are no more events to dispatch.
+      # True if the ConnectionDriver has nothing left to do: both sides of the
+      # transport are closed and there are no events to dispatch.
       def finished?() Cproton.pn_connection_driver_finished(@impl); end
 
       # Dispatch available events, call the relevant on_* methods on the {#handler}.
       def dispatch(extra_handlers = nil)
         extra_handlers ||= []
         while event = Event::Event.wrap(Cproton.pn_connection_driver_next_event(@impl))
+          pre_dispatch(event)
           event.dispatch(@handler)
           extra_handlers.each { |h| event.dispatch h }
         end
@@ -90,13 +91,12 @@ module Qpid
         return if size <= 0
         @io.read_nonblock(size, @rbuf) # Use the same string rbuf for reading each time
         Cproton.pni_connection_driver_read_copy(@impl, @rbuf) unless @rbuf.empty?
-        rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::EINTR
-          # Try again later.
-        rescue EOFError         # EOF is not an error
-          Cproton.pn_connection_driver_read_close(@impl)
-        rescue IOError => e     # IOError is passed to the transport
-          error "read: #{e}"
-          Cproton.pn_connection_driver_read_close(@impl)
+      rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::EINTR
+        # Try again later.
+      rescue EOFError         # EOF is not an error
+        close_read
+      rescue IOError, SystemCallError => e     #  is passed to the transport
+        close e
       end
 
       # Write to IO without blocking.
@@ -106,9 +106,8 @@ module Qpid
         Cproton.pn_connection_driver_write_done(@impl, n) if n > 0
       rescue Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::EINTR
         # Try again later.
-      rescue IOError => e
-        error "write: #{e}"
-        Cproton.pn_connection_driver_write_close(@impl)
+      rescue IOError, SystemCallError => e
+        close e
       end
 
       # Generate timed events and IO, for example idle-timeout and heart-beat events.
@@ -142,41 +141,37 @@ module Qpid
         return next_tick
       end
 
-      # Close the read side of the IO with optional error.
-      # @param e [#to_s] Non-nil error will call {#handler}.on_transport_error on next {#dispatch}
-      def close_read(e=nil)
-          @io.close_read
-          error(e)
-          Cproton.pn_connection_driver_read_close(@impl)
+      # Close the read side of the transport
+      def close_read
+        return if Cproton.pn_connection_driver_read_closed(@impl)
+        Cproton.pn_connection_driver_read_close(@impl)
+        @io.close_read
       end
 
-      # Close the write side of the IO with optional error
-      # @param e [#to_s] Non-nil error will call {#handler}.on_transport_error on next {#dispatch}
-      def close_write(e=nil)
-          @io.close_write
-          error(e)
-          Cproton.pn_connection_driver_write_close(@impl)
+      # Close the write side of the transport
+      def close_write
+        return if Cproton.pn_connection_driver_write_closed(@impl)
+        Cproton.pn_connection_driver_write_close(@impl)
+        @io.close_write
       end
 
       # Close both sides of the IO with optional error
-      # @param e [#to_s] Non-nil error will call {#handler}.on_transport_error on next {#dispatch}
-      def close(e=nil)
-        if !closed?
-          close_read(e)
-          close_write(e)
+      # @param error [Condition] If non-nil pass to {#handler}.on_transport_error on next {#dispatch}
+      # Note `error` can be any value accepted by [Condition##make]
+      def close(error=nil)
+        if error
+          cond = Condition.make(error, "proton:io")
+          Cproton.pn_connection_driver_errorf(@impl, cond.name, "%s", cond.description)
         end
+        close_read
+        close_write
       end
 
-      def to_s
-        transport = Cproton.pni_connection_driver_tranport(@impl)
-        return "#<#{self.class.name}[#{transport}]:#{@io}>"
-      end
+      protected
 
-      private
+      # Override in subclass to add event context
+      def pre_dispatch(event) event; end
 
-      def error(e)
-        Cproton.pn_connection_driver_errorf(@impl, "proton:io", "%s", e.to_s) if e
-      end
     end
   end
 end

@@ -20,23 +20,20 @@
 require 'qpid_proton'
 require 'optparse'
 
-options = {
-  :address => "localhost:5672/examples",
-  :messages => 100,
-}
-
 class SimpleSend < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, expected)
+  def initialize(url, address, expected)
     super()
     @url = url
+    @address = address
     @sent = 0
     @confirmed = 0
     @expected = expected
   end
 
   def on_start(event)
-    event.container.create_sender(@url)
+    c = event.container.connect(@url)
+    c.open_sender(@address)
   end
 
   def on_sendable(event)
@@ -54,20 +51,12 @@ class SimpleSend < Qpid::Proton::Handler::MessagingHandler
       event.connection.close
     end
   end
-
 end
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: simple_send.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-  opts.on("-m", "--messages=COUNT", "The number of messages to send (def. #{options[:messages]}",
-    OptionParser::DecimalInteger) do |messages|
-    options[:messages] = messages
-  end
-end.parse!
-
-Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages])).run
+unless (2..3).include? ARGV.size
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS [COUNT]}
+Connect to URL and send COUNT messages to ADDRESS"
+  return 1
+end
+url, address, count = ARGV
+Qpid::Proton::Container.new(SimpleSend.new(url, address, count || 10)).run

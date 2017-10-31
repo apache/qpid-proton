@@ -84,11 +84,11 @@ module Qpid::Proton::Handler
     end
 
     def on_connection_remote_open(event)
-      if !(event.connection.state & Qpid::Proton::Endpoint::LOCAL_ACTIVE).zero?
+      if event.connection.local_active?
         self.on_connection_opened(event)
       elsif event.connection.local_uninit?
         self.on_connection_opening(event)
-        event.connection.open
+        event.connection.open unless event.connection.local_active?
       end
     end
 
@@ -110,7 +110,7 @@ module Qpid::Proton::Handler
     end
 
     def on_link_remote_open(event)
-      if !(event.link.state & Qpid::Proton::Endpoint::LOCAL_ACTIVE).zero?
+      if event.link.local_active?
         self.on_link_opened(event)
       elsif event.link.local_uninit?
         self.on_link_opening(event)

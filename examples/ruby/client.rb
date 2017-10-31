@@ -22,15 +22,17 @@ require 'optparse'
 
 class Client < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(url, requests)
+  def initialize(url, address, requests)
     super()
     @url = url
+    @address = address
     @requests = requests
   end
 
   def on_start(event)
-    @sender = event.container.create_sender(@url)
-    @receiver = event.container.create_receiver(@sender.connection, :dynamic => true)
+    c = event.container.connect(@url)
+    @sender = c.open_sender(@address)
+    @receiver = c.open_receiver({:dynamic => true})
   end
 
   def next_request
@@ -70,13 +72,10 @@ REQUESTS = ["Twas brillig, and the slithy toves",
             "All mimsy were the borogroves,",
             "And the mome raths outgrabe."]
 
-options = {
-  :address => "localhost:5672/examples",
-}
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: client.rb [options]"
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") { |address| options[:address] = address }
-end.parse!
-
-Qpid::Proton::Reactor::Container.new(Client.new(options[:address], REQUESTS)).run
+if ARGV.size != 2
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS
+Connect to URL and send messages to ADDRESS"
+  return 1
+end
+url, address = ARGV
+Qpid::Proton::Container.new(Client.new(url, address, REQUESTS)).run

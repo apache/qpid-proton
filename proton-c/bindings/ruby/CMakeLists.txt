@@ -45,7 +45,7 @@ set_target_properties(cproton-ruby
 
 ##  Make a gem
 
-file(GLOB_RECURSE RUBY_SRC RELATIVE . *.rb *.rdoc)
+file(GLOB_RECURSE RUBY_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.rb *.rdoc)
 
 find_program(GEM_EXE gem DOC "Program to build and install ruby gem packages")
 mark_as_advanced(GEM_EXE)
@@ -133,7 +133,7 @@ if (YARD_EXE)
   add_custom_command(
     OUTPUT ${bin}/doc
     WORKING_DIRECTORY ${src}
-    COMMAND ${YARD_EXE} -q -o ${bin}/doc -b ${bin}/.yardoc --no-private -r README.rdoc
+    COMMAND ${YARD_EXE} -q -o ${bin}/doc -b ${bin}/.yardoc --no-progress --no-private -r README.rdoc
     DEPENDS ${RUBY_SRC}
     )
   add_custom_target(docs-ruby DEPENDS ${bin}/doc)

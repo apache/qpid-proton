@@ -20,22 +20,19 @@
 require 'qpid_proton'
 require 'optparse'
 
-options = {
-  :address => "localhost:5672/examples",
-}
-
 class HelloWorldDirect < Qpid::Proton::Handler::MessagingHandler
 
   include Qpid::Proton::Util::Wrapper
 
-  def initialize(url)
+  def initialize(url, address)
     super()
-    @url = url
+    @url, @address = url, address
   end
 
   def on_start(event)
-    @acceptor = event.container.listen(@url)
-    event.container.create_sender(@url)
+    event.container.listen(@url)
+    c = event.container.connect(@url) # Connect to self!
+    c.open_sender(@address)
   end
 
   def on_sendable(event)
@@ -50,25 +47,14 @@ class HelloWorldDirect < Qpid::Proton::Handler::MessagingHandler
   end
 
   def on_accepted(event)
-    event.connection.close
+    event.container.stop
   end
-
-  def on_connection_closed(event)
-    @acceptor.close
-  end
-
 end
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: helloworld_direct.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-end.parse!
-
-begin
-  Qpid::Proton::Reactor::Container.new(HelloWorldDirect.new(options[:address])).run
-rescue Interrupt => error
+if ARGV.size != 2
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS
+Listen on and connect to URL (connect to self), send a message to ADDRESS and receive it back"
+  return 1
 end
+url, address = ARGV
+Qpid::Proton::Container.new(HelloWorldDirect.new(url, address)).run

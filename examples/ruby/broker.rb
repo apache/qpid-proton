@@ -21,11 +21,7 @@ require 'qpid_proton'
 require 'optparse'
 require 'pathname'
 
-def debug(text)
-  print "[#{Time.now.strftime('%s')}] #{text}\n" if $options[:debug]
-end
-
-class Exchange
+class MessageQueue
 
   def initialize(dynamic = false)
     @dynamic = dynamic
@@ -34,30 +30,22 @@ class Exchange
   end
 
   def subscribe(consumer)
-    debug("subscribing #{consumer}")
     @consumers << (consumer)
-    debug(" there are #{@consumers.size} consumers")
   end
 
   def unsubscribe(consumer)
-    debug("unsubscribing #{consumer}")
     if @consumers.include?(consumer)
       @consumers.delete(consumer)
-    else
-      debug(" consumer doesn't exist")
     end
-    debug("  there are #{@consumers.size} consumers")
     @consumers.empty? && (@dynamic || @queue.empty?)
   end
 
   def publish(message)
-    debug("queueing message: #{message.body}")
     @queue << message
     self.dispatch
   end
 
   def dispatch(consumer = nil)
-    debug("dispatching: consumer=#{consumer}")
     if consumer
       c = [consumer]
     else
@@ -69,10 +57,8 @@ class Exchange
   end
 
   def deliver_to(consumers)
-    debug("delivering to #{consumers.size} consumer(s)")
     result = false
     consumers.each do |consumer|
-      debug(" current consumer=#{consumer} credit=#{consumer.credit}")
       if consumer.credit > 0 && !@queue.empty?
         consumer.send(@queue.pop(true))
         result = true
@@ -92,32 +78,23 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
   end
 
   def on_start(event)
-    debug("on_start event")
     @acceptor = event.container.listen(@url)
     print "Listening on #{@url}\n"
   end
 
   def queue(address)
-    debug("fetching queue for #{address}: (there are #{@queues.size} queues)")
     unless @queues.has_key?(address)
-      debug(" creating new queue")
-      @queues[address] = Exchange.new
-    else
-      debug(" using existing queue")
+      @queues[address] = MessageQueue.new
     end
-    result = @queues[address]
-    debug(" returning #{result}")
-    return result
+    @queues[address]
   end
 
   def on_link_opening(event)
-    debug("processing on_link_opening")
-    debug("link is#{event.link.sender? ? '' : ' not'} a sender")
     if event.link.sender?
       if event.link.remote_source.dynamic?
         address = SecureRandom.uuid
         event.link.source.address = address
-        q = Exchange.new(true)
+        q = MessageQueue.new(true)
         @queues[address] = q
         q.subscribe(event.link)
       elsif event.link.remote_source.address
@@ -130,7 +107,6 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
   end
 
   def unsubscribe(link)
-    debug("unsubscribing #{link.source.address}")
     if @queues.has_key?(link.source.address)
       if @queues[link.source.address].unsubscribe(link)
         @queues.delete(link.source.address)
@@ -159,40 +135,21 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
   end
 
   def on_sendable(event)
-    debug("on_sendable event")
     q = self.queue(event.link.source.address)
-    debug(" dispatching #{event.message} to #{q}")
     q.dispatch(event.link)
   end
 
   def on_message(event)
-    debug("on_message event")
     q = self.queue(event.link.target.address)
-    debug(" dispatching #{event.message} to #{q}")
     q.publish(event.message)
   end
 
 end
 
-$options = {
-  :address => "localhost:5672",
-  :debug => false
-}
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: #{Pathname.new(__FILE__).basename} [$options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{$options[:address]}).") do |address|
-    $options[:address] = address
-  end
-
-  opts.on("-d", "--debug", "Enable debugging output (def. #{$options[:debug]})") do
-    $options[:debug] = true
-  end
-
-end.parse!
-
-begin
-  Qpid::Proton::Reactor::Container.new(Broker.new($options[:address])).run
-rescue Interrupt
+if ARGV.size != 1
+  STDERR.puts "Usage: #{__FILE__} URL
+Start an example broker listening on URL"
+  return 1
 end
+url, = ARGV
+Qpid::Proton::Container.new(Broker.new(url)).run

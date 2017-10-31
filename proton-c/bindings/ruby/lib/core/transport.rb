@@ -77,11 +77,6 @@ module Qpid::Proton
     TRACE_DRV = Cproton::PN_TRACE_DRV
 
     # @private
-    CLIENT = 1
-    # @private
-    SERVER = 2
-
-    # @private
     include Util::SwigHelper
 
     # @private
@@ -213,25 +208,18 @@ module Qpid::Proton
     def self.wrap(impl)
       return nil if impl.nil?
 
-      self.fetch_instance(impl, :pn_transport_attachments) || Transport.new(nil, impl)
+      self.fetch_instance(impl, :pn_transport_attachments) || Transport.new(impl)
     end
 
     # Creates a new transport instance.
-    #
-    # @param mode [Integer] The transport mode, either CLIENT or SERVER
-    # @param impl [pn_transport_t] Should not be used.
-    #
-    # @raise [TransportError] If the mode is invalid.
-    #
-    def initialize(mode = nil, impl = Cproton.pn_transport)
+    def initialize(impl = Cproton.pn_transport)
       @impl = impl
-      if mode == SERVER
-        Cproton.pn_transport_set_server(@impl)
-      elsif (!mode.nil? && mode != CLIENT)
-        raise TransportError.new("cannot create transport for mode: #{mode}")
-      end
       self.class.store_instance(self, :pn_transport_attachments)
     end
+
+    # Set server mode for this tranport - enables protocol detection
+    # and server-side authentication for incoming connections
+    def set_server() Cproton.pn_transport_set_server(@impl); end
 
     # Returns whether the transport has any buffered data.
     #
@@ -418,6 +406,12 @@ module Qpid::Proton
       !@ssl.nil?
     end
 
+    # @private
+    def apply opts
+      if opts[:sasl_enabled] != false # SASL is not disabled.
+        sasl.allow_insecure_mechs = opts[:sasl_allow_insecure_mechs] if opts[:sasl_allow_insecure_mechs]
+        sasl.allowed_mechs = opts[:sasl_allowed_mechs] if opts[:sasl_allowed_mechs]
+      end
+    end
   end
-
 end

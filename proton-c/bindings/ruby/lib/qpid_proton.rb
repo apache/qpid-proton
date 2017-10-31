@@ -27,6 +27,9 @@ else
   require "securerandom"
 end
 
+DEPRECATION = "[DEPRECATION]"
+def deprecated(old, new) warn "#{DEPRECATION} #{old} is deprecated, use #{new}"; end
+
 # Exception classes
 require "core/exceptions"
 
@@ -61,6 +64,7 @@ require "event/collector"
 
 # Main Proton classes
 require "core/selectable"
+require "core/uri"
 require "core/message"
 require "core/endpoint"
 require "core/session"
@@ -108,6 +112,10 @@ require "reactor/backoff"
 require "reactor/session_per_connection"
 require "reactor/container"
 require "reactor/link_option"
+
+# Core classes that depend on handlers and events
+require "core/container"
+require "core/connection_driver"
 
 module Qpid::Proton
   # @private

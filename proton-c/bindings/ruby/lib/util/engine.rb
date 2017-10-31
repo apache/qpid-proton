@@ -70,8 +70,8 @@ module Qpid::Proton::Util
       unless object.nil?
         Cproton.pn_condition_set_name(condition, object.name)
         Cproton.pn_condition_set_description(condition, object.description)
-        info = Data.new(Cproton.pn_condition_info(condition))
-        if object.info?
+        if !object.info.nil?
+          info = Data.new(Cproton.pn_condition_info(condition))
           info.object = object.info
         end
       end

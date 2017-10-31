@@ -23,6 +23,7 @@ module Qpid::Proton
 
     attr_reader :scheme
     attr_reader :username
+    alias :user :username
     attr_reader :password
     attr_reader :host
     attr_reader :port
@@ -60,9 +61,13 @@ module Qpid::Proton
       Cproton.pn_url_get_port(@url).to_i
     end
 
+    # @return [String] Convert to string
     def to_s
       "#{@scheme}://#{@username.nil? ? '' : @username}#{@password.nil? ? '' : '@' + @password + ':'}#{@host}:#{@port}/#{@path}"
     end
+
+    # @return [String] Allow implicit conversion by {String#try_convert}
+    alias :to_str :to_s
 
     private
 

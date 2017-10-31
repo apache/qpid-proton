@@ -17,7 +17,7 @@
 # under the License.
 #++
 
-module Qpid::Proton::Util
+module Qpid::Proton
 
   class Condition
 
@@ -29,19 +29,40 @@ module Qpid::Proton::Util
       @info = info
     end
 
-    # @private
-    def to_s
-      "Condition(#{@name}, #{@description}, #{@info})"
-    end
+    def to_s() "#{@name}: #{@description
+    def to_s() "#{@name}: #{@description}"; end
+}"; end
 
-    # @private
+    def inspect() "#{self.class.name}(#{@name.inspect}, #{@description.inspect}, #{@info.inspect})"; end
+
     def ==(other)
-      ((other.class = self.class) &&
+      ((other.is_a? Condition) &&
        (other.name == self.name) && 
        (other.description == self.description) &&
        (other.info == self.info))
     end
 
+    # Make a condition.
+    # @param obj the object to turn into a condition
+    # @param default_name condition name to use if obj does not imply a name
+    # @return
+    # - when Condition return obj unchanged
+    # - when Exception return Condition(obj.class.name, obj.to_s)
+    # - when nil then nil
+    # - else return Condition(default_name, obj.to_s)
+    # If objey
+    def self.make(obj, default_name="proton")
+      case obj
+      when Condition then obj
+      when Exception then Condition.new(obj.class.name, obj.to_s)
+      when nil then nil
+      else Condition.new(default_name, obj.to_s)
+      end
+    end
+
   end
 
+  module Util                   #TODO aconway 2017-10-28: backwards compat
+    Condition = Qpid::Proton::Condition
+  end
 end

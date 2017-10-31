@@ -20,23 +20,19 @@
 require 'qpid_proton'
 require 'optparse'
 
-options = {
-  :address => "localhost:5672/examples",
-  :messages => 100,
-}
+class DirectSend < Qpid::Proton::Handler::MessagingHandler
 
-class SimpleSend < Qpid::Proton::Handler::MessagingHandler
-
-  def initialize(url, expected)
+  def initialize(url, address, expected)
     super()
     @url = url
+    @address = address
     @sent = 0
     @confirmed = 0
     @expected = expected
   end
 
   def on_start(event)
-    @acceptor = event.container.listen(@url)
+*co    event.container.listen(@url)
   end
 
   def on_sendable(event)
@@ -51,26 +47,15 @@ class SimpleSend < Qpid::Proton::Handler::MessagingHandler
     @confirmed = @confirmed + 1
     if @confirmed == @expected
       puts "All #{@expected} messages confirmed!"
-      event.connection.close
+      event.container.stop
     end
   end
 end
 
-OptionParser.new do |opts|
-  opts.banner = "Usage: simple_send.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-  opts.on("-m", "--messages=COUNT", "The number of messages to send (def. #{options[:messages]}",
-    OptionParser::DecimalInteger) do |messages|
-    options[:messages] = messages
-  end
-end.parse!
-
-begin
-  Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages])).run
-rescue Interrupt => error
-  puts "ERROR: #{error}"
+unless (2..3).include? ARGV.size
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS [COUNT]
+Listen on URL and send COUNT messages to ADDRESS"
+  return 1
 end
+url, address, count = ARGV
+Qpid::Proton::Container.new(DirectSend.new(url, address, count || 10)).run

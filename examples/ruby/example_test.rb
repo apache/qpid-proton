@@ -1,4 +1,4 @@
-#!/usr/bin/enc ruby
+#!/usr/bin/env ruby
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -22,56 +22,36 @@ require 'minitest/autorun'
 require 'qpid_proton'
 require 'socket'
 
+# Wait for the broker to be listening
+def wait_for(url, timeout = 5)
+  deadline = Time.now + 5
+  begin
+    TCPSocket.open("", URI(url).port).close
+  rescue Errno::ECONNREFUSED
+    retry if Time.now < deadline
+    raise
+  end
+end
+
+# URL with an unused port
+def test_url()
+  "amqp://:#{TCPServer.open(0) { |s| s.addr[1] }}"
+end
+
+
 class ExampleTest < MiniTest::Test
 
-  def run_script(script, port)
-    cmd = [RbConfig.ruby, script]
-    cmd += ["-a", ":#{port}/examples"] if port
-    return IO.popen(cmd)
+  def run_script(*args)
+    return IO.popen([ RbConfig.ruby ] + args.map { |a| a.to_s })
   end
 
-  def assert_output(script, want, port=nil)
-    out = run_script(script, port)
-    assert_equal want, out.read.strip
+  def assert_output(want, *args)
+    out = run_script(*args)
+    assert_equal(want, out.read.strip)
   end
 
   def test_helloworld
-    assert_output("helloworld.rb", "Hello world!", $port)
-  end
-
-  def test_send_recv
-    assert_output("simple_send.rb", "All 100 messages confirmed!", $port)
-    want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output("simple_recv.rb", want.strip, $port)
-  end
-
-  def test_direct_recv
-    TestPort.new do |tp|
-      p = run_script("direct_recv.rb", tp.port)
-      wait_port tp.port
-      assert_output("simple_send.rb", "All 100 messages confirmed!", tp.port)
-      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-      assert_equal(want.strip, p.read.strip)
-    end
-  end
-
-  def test_direct_send
-    TestPort.new do |tp|
-      p = run_script("direct_send.rb", tp.port)
-      wait_port tp.port
-      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-      assert_output("simple_recv.rb", want.strip, $port)
-      assert_equal("All 100 messages confirmed!", p.read.strip)
-    end
-  end
-
-  def test_direct_send
-    TestPort.start_wait do |port|
-      p = run_script("direct_recv.rb", port)
-      assert_output("simple_send.rb", "All 100 messages confirmed!", port)
-      want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-      assert_equal(want.strip, p.read.strip)
-    end
+    assert_output("Hello world!", "helloworld.rb", $url, __method__)
   end
 
   def test_client_server
@@ -85,28 +65,57 @@ class ExampleTest < MiniTest::Test
 -> And the mome raths outgrabe.
 <- AND THE MOME RATHS OUTGRABE.
 EOS
-    srv = run_script("server.rb", $port)
-    assert_output("client.rb", want.strip, $port)
-
+    server = run_script("server.rb", $url, __method__)
+    assert_output(want.strip, "client.rb", $url, __method__)
   ensure
-    Process.kill :TERM, srv.pid if srv
+    Process.kill :TERM, server.pid if server
+  end
+
+  def test_send_recv
+    assert_output("All 10 messages confirmed!", "simple_send.rb", $url, __method__)
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_output(want.strip, "simple_recv.rb", $url, __method__)
+  end
+
+  def test_helloworld_direct
+    url = test_url
+    assert_output("Hello world!", "helloworld_direct.rb", url, __method__)
+  end
+
+  def test_direct_recv
+    url = test_url
+    p = run_script("direct_recv.rb", url, __method__)
+    wait_for url
+    assert_output("All 10 messages confirmed!", "simple_send.rb", url, __method__)
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_equal(want.strip, p.read.strip)
+  end
+
+  def test_direct_send
+    url = test_url
+    p = run_script("direct_send.rb", url, __method__)
+    wait_for url
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_output(want.strip, "simple_recv.rb", url, __method__)
+    assert_equal("All 10 messages confirmed!", p.read.strip)
+  end
+
+  def test_direct_send
+    url = test_url
+    p = run_script("direct_recv.rb", url, __method__)
+    wait_for url
+    assert_output("All 10 messages confirmed!", "simple_send.rb", url, __method__)
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_equal(want.strip, p.read.strip)
   end
 end
 
 # Start the broker before all tests.
-$port = TCPServer.open(0) do |s| s.addr[1]; end # find an unused port
-$broker = spawn("#{RbConfig.ruby} reactor/broker.rb -a :#{$port}")
-
-# Wait for the broker to be listening
-deadline = Time.now + 5
-begin
-  TCPSocket.open("", $port).close
-rescue Errno::ECONNREFUSED
-  retry if Time.now < deadline
-  raise
-end
+$url = test_url
+$broker = IO.popen([RbConfig.ruby, 'broker.rb', $url])
+wait_for $url
 
 # Kill the broker after all tests
 MiniTest.after_run do
-  Process.kill(:TERM, $broker) if $broker
+  Process.kill(:TERM, $broker.pid) if $broker
 end

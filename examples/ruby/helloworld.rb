@@ -22,16 +22,15 @@ require 'optparse'
 
 class HelloWorld < Qpid::Proton::Handler::MessagingHandler
 
-  def initialize(server, address)
+  def initialize(url, address)
     super()
-    @server = server
-    @address = address
+    @url, @address = url, address
   end
 
   def on_start(event)
-    conn = event.container.connect(:address => @server)
-    event.container.create_sender(conn, :target => @address)
-    event.container.create_receiver(conn, :source => @address)
+    conn = event.container.connect(@url)
+    conn.open_sender(@address)
+    conn.open_receiver(@address)
   end
 
   def on_sendable(event)
@@ -51,23 +50,10 @@ class HelloWorld < Qpid::Proton::Handler::MessagingHandler
   end
 end
 
-options = {
-  :address => "localhost:5672",
-  :queue => "examples"
-}
-
-OptionParser.new do |opts|
-  opts.banner = "Usage: helloworld_direct.rb [options]"
-
-  opts.on("-a", "--address=ADDRESS", "Send messages to ADDRESS (def. #{options[:address]}).") do |address|
-    options[:address] = address
-  end
-
-  opts.on("-q", "--queue=QUEUE", "Send messages to QUEUE (def. #{options[:queue]})") do |queue|
-    options[:queue] = queue
-  end
-
-end.parse!
-
-hw = HelloWorld.new(options[:address], "examples")
-Qpid::Proton::Reactor::Container.new(hw).run
+if ARGV.size != 2
+  STDERR.puts "Usage: #{__FILE__} URL ADDRESS
+Connect to URL, send a message to ADDRESS and receive it back"
+  return 1
+end
+url, address = ARGV
+Qpid::Proton::Container.new(HelloWorld.new(url, address)).run
