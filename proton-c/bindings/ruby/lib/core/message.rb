@@ -203,7 +203,7 @@ module Qpid::Proton
 
     # Returns the durable property.
     #
-    # The durable property indicates that the emessage should be held durably
+    # The durable property indicates that the message should be held durably
     # by any intermediaries taking responsibility for the message.
     #
     # ==== Examples

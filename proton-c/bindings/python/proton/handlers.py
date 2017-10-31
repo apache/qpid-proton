@@ -88,7 +88,7 @@ class OutgoingMessageHandler(Handler):
     def on_settled(self, event):
         """
         Called when the remote peer has settled the outgoing
-        message. This is the point at which it shouod never be
+        message. This is the point at which it should never be
         retransmitted.
         """
         if self.delegate != None:
@@ -184,7 +184,7 @@ class IncomingMessageHandler(Handler, Acking):
         """
         Called when a message is received. The message itself can be
         obtained as a property on the event. For the purpose of
-        refering to this message in further actions (e.g. if
+        referring to this message in further actions (e.g. if
         explicitly accepting it, the ``delivery`` should be used, also
         obtainable via a property on the event.
         """
@@ -518,7 +518,7 @@ class MessagingHandler(Handler, Acking):
     def on_settled(self, event):
         """
         Called when the remote peer has settled the outgoing
-        message. This is the point at which it shouod never be
+        message. This is the point at which it should never be
         retransmitted.
         """
         pass
@@ -526,7 +526,7 @@ class MessagingHandler(Handler, Acking):
         """
         Called when a message is received. The message itself can be
         obtained as a property on the event. For the purpose of
-        refering to this message in further actions (e.g. if
+        referring to this message in further actions (e.g. if
         explicitly accepting it, the ``delivery`` should be used, also
         obtainable via a property on the event.
         """

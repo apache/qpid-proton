@@ -91,7 +91,7 @@ module Qpid::Proton::Event
     # Releases the collector.
     #
     # Once in a released state, a collector will drain any internally queued
-    # events, shrink its memory footprint to a minimu, and discard any newly
+    # events, shrink its memory footprint to a minimum, and discard any newly
     # created events.
     #
     def release

@@ -91,7 +91,7 @@ func newReceiver(ls linkSettings) *receiver {
 	return r
 }
 
-// Call in proton gorotine. Max additional credit we can request.
+// Call in proton goroutine. Max additional credit we can request.
 func (r *receiver) maxFlow() int { return cap(r.buffer) - len(r.buffer) - r.pLink.Credit() }
 
 func (r *receiver) flow(credit int) {

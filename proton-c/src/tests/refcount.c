@@ -234,7 +234,7 @@ static void test_decref_order(int *indexes, void **objects) {
     }
     for (int j = i+1; j < 4; j++) {
       // everything we haven't decreffed yet should have a refcount of
-      // 2 unless it has a descendent that has not been decrefed (or
+      // 2 unless it has a descendant that has not been decrefed (or
       // it has no child) in which case it should have a refcount of 1
       int idx = indexes[j];
       void *obj = objects[idx];

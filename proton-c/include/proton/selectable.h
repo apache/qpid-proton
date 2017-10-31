@@ -203,7 +203,7 @@ PNX_EXTERN void pn_selectable_expired(pn_selectable_t *selectable);
  * Check if a selectable is registered.
  *
  * This flag is set via ::pn_selectable_set_registered() and can be
- * used for tracking whether a given selectable has been registerd
+ * used for tracking whether a given selectable has been registered
  * with an external event loop.
  *
  * @param[in] selectable
@@ -255,7 +255,7 @@ PNX_EXTERN void pn_selectable_free(pn_selectable_t *selectable);
  * Configure a selectable with a set of callbacks that emit readable,
  * writable, and expired events into the supplied collector.
  *
- * @param[in] selectable a selectable objet
+ * @param[in] selectable a selectable object
  * @param[in] collector a collector object
  */
 PNX_EXTERN void pn_selectable_collect(pn_selectable_t *selectable, pn_collector_t *collector);

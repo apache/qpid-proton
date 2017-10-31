@@ -47,7 +47,7 @@ typedef struct test_t {
 } test_t;
 
 /* Internal, use macros. Print error message and increase the t->errors count.
-   All output from test marcros goes to stderr so it interleaves with PN_TRACE logs.
+   All output from test macros goes to stderr so it interleaves with PN_TRACE logs.
 */
 void test_vlogf_(test_t *t, const char *prefix, const char* expr,
                  const char* file, int line, const char *fmt, va_list ap)

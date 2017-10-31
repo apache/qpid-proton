@@ -38,10 +38,10 @@ module Qpid::Proton
     #
     # The incoming capacity of a session determines how much incoming message
     # data the session will buffer. Note that if this value is less than the
-    # negotatied frame size of the transport, it will be rounded up to one full
+    # negotiated frame size of the transport, it will be rounded up to one full
     # frame.
     #
-    # @return [Integer] The incoing capacity of the session, measured in bytes.
+    # @return [Integer] The incoming capacity of the session, measured in bytes.
     #
     proton_accessor :incoming_capacity
 
@@ -56,14 +56,14 @@ module Qpid::Proton
 
     # @!attribute [r] incoming_bytes
     #
-    # @return [Integer] The number of incomign bytes currently being buffered.
+    # @return [Integer] The number of incoming bytes currently being buffered.
     #
     proton_caller :incoming_bytes
 
     # @!method open
     # Opens the session.
     #
-    # Once this operaton has completed, the state flag is updated.
+    # Once this operation has completed, the state flag is updated.
     #
     # @see LOCAL_ACTIVE
     #

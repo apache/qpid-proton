@@ -38,7 +38,7 @@ qpid-proton requires installed to make this setup work.
 
 From the Python side, this scripts overrides 1 command - build_ext - and it adds a
 new one. The latter - Configure - is called from the former to setup/discover what's
-in the system. The rest of the comands and steps are done normally without any kind
+in the system. The rest of the commands and steps are done normally without any kind
 of monkey patching.
 """
 

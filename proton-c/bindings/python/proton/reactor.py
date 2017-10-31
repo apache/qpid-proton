@@ -203,7 +203,7 @@ class Reactor(Wrapper):
 
     def connection_to_host(self, host, port, handler=None):
         """Create an outgoing Connection that will be managed by the reactor.
-        The reator's pn_iohandler will create a socket connection to the host
+        The reactor's pn_iohandler will create a socket connection to the host
         once the connection is opened.
         """
         conn = self.connection(handler)
@@ -274,7 +274,7 @@ class EventInjector(object):
     def close(self):
         """
         Request that this EventInjector be closed. Existing events
-        will be dispctahed on the reactors event dispactch thread,
+        will be dispatched on the reactors event dispatch thread,
         then this will be removed from the set of interest.
         """
         self._closed = True
@@ -665,7 +665,7 @@ class SSLConfig(object):
 
 class Container(Reactor):
     """A representation of the AMQP concept of a 'container', which
-       lossely speaking is something that establishes links to or from
+       loosely speaking is something that establishes links to or from
        another container, over which messages are transfered. This is
        an extension to the Reactor class that adds convenience methods
        for creating connections and sender- or receiver- links.
@@ -707,7 +707,7 @@ class Container(Reactor):
         socket is alive.
 
         @param ssl_domain: SSL configuration in the form of an
-        instance of proton.SSLdomain.
+        instance of proton.SSLDomain.
 
         @param handler: a connection scoped handler that will be
         called to process any events in the scope of this connection
@@ -790,7 +790,7 @@ class Container(Reactor):
         specified as the second argument (or as a keyword
         argument). The source address can also be specified if
         desired. (2) Alternatively a URL can be passed as the first
-        argument. In this case a new connection will be establised on
+        argument. In this case a new connection will be established on
         which the link will be attached. If a path is specified and
         the target is not, then the path of the URL is used as the
         target address.
@@ -831,7 +831,7 @@ class Container(Reactor):
         specified as the second argument (or as a keyword
         argument). The target address can also be specified if
         desired. (2) Alternatively a URL can be passed as the first
-        argument. In this case a new connection will be establised on
+        argument. In this case a new connection will be established on
         which the link will be attached. If a path is specified and
         the source is not, then the path of the URL is used as the
         target address.

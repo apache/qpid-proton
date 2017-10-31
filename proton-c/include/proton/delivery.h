@@ -324,8 +324,8 @@ PN_EXTERN bool pn_delivery_buffered(pn_delivery_t *delivery);
  * operations. A readable delivery indicates message data is waiting
  * to be read. A writable delivery indicates that message data may be
  * sent. An updated delivery indicates that the delivery's disposition
- * has changed. A delivery will never be both readable and writible,
- * but it may be both readable and updated or both writiable and
+ * has changed. A delivery will never be both readable and writable,
+ * but it may be both readable and updated or both writable and
  * updated.
  *
  * @param[in] connection the connection

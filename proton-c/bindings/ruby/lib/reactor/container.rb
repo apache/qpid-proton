@@ -40,7 +40,7 @@ module Qpid::Proton::Reactor
   # speaking, is something that establishes links to or from another
   # container on which messages are transferred.
   #
-  # This is an extension to the Reactor classthat adds convenience methods
+  # This is an extension to the Reactor class that adds convenience methods
   # for creating instances of Qpid::Proton::Connection, Qpid::Proton::Sender
   # and Qpid::Proton::Receiver.
   class Container < Reactor
@@ -133,7 +133,7 @@ module Qpid::Proton::Reactor
     # @option opts [Boolean] :dynamic
     # @option opts [Object] :handler
     # @option opts [Object] :tag_generator The tag generator.
-    # @option opts [Hash] :options Addtional link options
+    # @option opts [Hash] :options Additional link options
     #
     # @return [Sender] The sender.
     #
@@ -155,7 +155,7 @@ module Qpid::Proton::Reactor
         sender.source.address = opts[:source] if !opts[:source].nil?
         sender.target.address = target if target
         sender.handler = opts[:handler] if !opts[:handler].nil?
-        sender.tag_generator = opts[:tag_generator] if !opts[:tag_gnenerator].nil?
+        sender.tag_generator = opts[:tag_generator] if !opts[:tag_generator].nil?
         _apply_link_options(opts[:options], sender)
         sender.open
         return sender
@@ -173,7 +173,7 @@ module Qpid::Proton::Reactor
     # The name will be generated for the link if one is not specified.
     #
     # @param context [Connection, URL, String] The connection or the address.
-    # @param opts [Hash] Additional otpions.
+    # @param opts [Hash] Additional options.
     # @option opts [String, Qpid::Proton::URL] The source address.
     # @option opts [String] :target The target address
     # @option opts [String] :name The link name.

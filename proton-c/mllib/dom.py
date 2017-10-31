@@ -65,7 +65,7 @@ class Component:
 class DispatchError(Exception):
 
   def __init__(self, scope, f):
-    msg = "no such attribtue"
+    msg = "no such attribute"
 
 class Dispatcher:
 

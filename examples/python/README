@@ -16,7 +16,7 @@ helloworld.py
 Basic example that connects to an intermediary on localhost:5672,
 establishes a subscription from the 'examples' node on that
 intermediary, then creates a sending link to the same node and sends
-one message. On receving the message back via the subcription, the
+one message. On receiving the message back via the subscription, the
 connection is closed.
 
 helloworld_blocking.py
@@ -79,7 +79,7 @@ db_ctrl.py
 
 A utility for setting up the database tables for the two examples
 above. Takes two arguments, the action to perform and the name of the
-database on which to perfom it. The database used by db_send.py is
+database on which to perform it. The database used by db_send.py is
 src_db, that by db_recv.py is dst_db. The valid actions are 'init',
 which creates the table, 'list' which displays the contents and
 'insert' which inserts records from standard-in and is used to

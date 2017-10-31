@@ -267,7 +267,7 @@ var (
 func event(out io.Writer) {
 	event_h := readHeader("event")
 
-	// Event is implented by hand in wrappers.go
+	// Event is implemented by hand in wrappers.go
 
 	// Get all the pn_event_type_t enum values
 	var etypes []eventType

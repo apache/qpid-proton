@@ -19,7 +19,7 @@
 
 #
 # Stop cmake build if pn_i_xxx substitute functions aren't used for
-# the dangererous non-complying [v]snprintf family.  A source of
+# the dangerous non-complying [v]snprintf family.  A source of
 # painful bug-hunting.
 #
 # Each obj must be checked instead of just the dll since Visual Studio

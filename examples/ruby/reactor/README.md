@@ -69,7 +69,7 @@ There are four example applications that demonstrate how to send and receive mes
  * **direct_send.rb** - sends messages directly to a receiver and listens for responses itself, and
  * **direct_recv.rb** - receives messages directly.
 
- Simple send and direct send may, at first, seem to be so similar that you wonder why they're not just the same applciation. And I know for me I was wonder as I wrote the list above why there were two examples. The reason is that **simple_send.rb** uses the intermediary transfer responses to the messages it sends, while **direct_send.rb** uses an *Acceptor* to listen for an process responses.
+ Simple send and direct send may, at first, seem to be so similar that you wonder why they're not just the same application. And I know for me I was wonder as I wrote the list above why there were two examples. The reason is that **simple_send.rb** uses the intermediary transfer responses to the messages it sends, while **direct_send.rb** uses an *Acceptor* to listen for an process responses.
 
  You can use the examples in the follow ways:
 
@@ -100,4 +100,4 @@ The broker application demonstrates a new set of reactor events:
  * **on_link_opening** - Fired when a remote link is opened but the local end is not yet open. From this event the broker grabs the address and subscribes the link to an exchange for that address.
  * **on_link_closing** - Fired when a remote link is closed but the local end is still open. From this event the broker grabs the address and unsubscribes the link from that exchange.
  * **on_connection_closing** - Fired when a remote connection is closed but the local end is still open.
- * **on_disconnected** - Fired when the protocol transport has closed. The broker removes all links for the disconnected connection, avoiding workign with endpoints that are now gone.
+ * **on_disconnected** - Fired when the protocol transport has closed. The broker removes all links for the disconnected connection, avoiding working with endpoints that are now gone.

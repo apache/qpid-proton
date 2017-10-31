@@ -23,7 +23,7 @@ module Qpid::Proton::Handler
   #
   module Acking
 
-    # Accept the receivered message.
+    # Accept the received message.
     #
     # @param delivery [Qpid::Proton::Delivery] The delivery.
     #

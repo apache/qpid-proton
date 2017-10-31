@@ -58,7 +58,7 @@ class Broker(object):
 class CExampleTest(ProcTestCase):
 
     def runex(self, name, port, messages=MESSAGES):
-        """Run an example with standard arugments, return output"""
+        """Run an example with standard arguments, return output"""
         return self.proc([name, "", str(port), "xtest", str(messages)]).wait_exit()
 
     def test_send_receive(self):

@@ -37,7 +37,7 @@ module Qpid::Proton
     VERIFY_PEER = Cproton::PN_SSL_VERIFY_PEER
     # Do no require a certificate nor a cipher authorization.
     ANONYMOUS_PEER = Cproton::PN_SSL_ANONYMOUS_PEER
-    # Require a valid certficate and matching name.
+    # Require a valid certificate and matching name.
     VERIFY_PEER_NAME = Cproton::PN_SSL_VERIFY_PEER_NAME
 
     # @private
@@ -59,9 +59,9 @@ module Qpid::Proton
 
     # Set the certificate that identifies the local node to the remote.
     #
-    # This certificate establishes the identity for thelocal node for all SSL
+    # This certificate establishes the identity for the local node for all SSL
     # sessions created from this domain. It will be sent to the remote if the
-    # remote needs to verify the dientify of this node. This may be used for
+    # remote needs to verify the identify of this node. This may be used for
     # both SSL servers and SSL clients (if client authentication is required by
     # the server).
     #
@@ -75,8 +75,8 @@ module Qpid::Proton
     # @param key_file [String] An option key to access the identifying
     #  certificate. For OpenSSL users, this is an optional PEM file containing
     #  the private key used to sign the certificate. For Windows SChannel users,
-    #  this is the friendly name of the self-identifying certficate if there are
-    #  multiple certfificates in the store.
+    #  this is the friendly name of the self-identifying certificate if there are
+    #  multiple certificates in the store.
     # @param password [String] The password used to sign the key, or *nil* if
     #  the key is not protected.
     #
@@ -99,7 +99,7 @@ module Qpid::Proton
     # call returns. SSL objects created before invoking this method will use the
     # domain's previous setting.
     #
-    # @param certificate_db [String] The filename for the databse of trusted
+    # @param certificate_db [String] The filename for the database of trusted
     #   CAs, used to authenticate the peer.
     #
     # @raise [SSLError] If an error occurs.
@@ -110,14 +110,14 @@ module Qpid::Proton
 
     # Configures the level of verification used on the peer certificate.
     #
-    # This method congtrols how the peer's certificate is validated, if at all.
+    # This method controls how the peer's certificate is validated, if at all.
     # By default, neither servers nor clients attempt to verify their peers
-    # (*ANONYMOUS_PEER*). Once certficates and trusted CAs are configured, peer
+    # (*ANONYMOUS_PEER*). Once certificates and trusted CAs are configured, peer
     # verification can be enabled.
     #
     # *NOTE:* In order to verify a peer, a trusted CA must be configured.
     #
-    # *NOTE:* Servers must provide their own certficate when verifying a peer.
+    # *NOTE:* Servers must provide their own certificate when verifying a peer.
     #
     # *NOTE:* This setting affects only those SSL instances created after this
     # call returns. SSL instances created before invoking this method will use
@@ -141,7 +141,7 @@ module Qpid::Proton
 
     # Permit a server to accept connection requests from non-SSL clients.
     #
-    # This configures the server to "sniff" the incomfing client data stream and
+    # This configures the server to "sniff" the incoming client data stream and
     # dynamically determine whether SSL/TLS is being used. This option is
     # disabled by default: only clients using SSL/TLS are accepted by default.
     #

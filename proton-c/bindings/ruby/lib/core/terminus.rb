@@ -22,7 +22,7 @@ module Qpid::Proton
   # Represents an endpoint for an AMQP connection..
   #
   # An AMQP terminus acts as either a source or a target for messages,
-  # but never as both. Every Link is associated iwth both a source and
+  # but never as both. Every Link is associated with both a source and
   # a target Terminus that is negotiated during link establishment.
   #
   # A terminus is composed of an AMQP address along with a number of
@@ -42,7 +42,7 @@ module Qpid::Proton
 
     # The terminus is orphaned when the parent link is closed.
     EXPIRE_WITH_LINK = Cproton::PN_EXPIRE_WITH_LINK
-    # The terminus is orphaned whent he parent sessio is closed.
+    # The terminus is orphaned when the parent session is closed.
     EXPIRE_WITH_SESSION = Cproton::PN_EXPIRE_WITH_SESSION
     # The terminus is orphaned when the parent connection is closed.
     EXPIRE_WITH_CONNECTION = Cproton::PN_EXPIRE_WITH_CONNECTION
@@ -177,7 +177,7 @@ module Qpid::Proton
 
     # Access and modify the AMQP outcomes for the Terminus.
     #
-    # This operaiton will return an instance of Data that is valid until the
+    # This operation will return an instance of Data that is valid until the
     # Terminus is freed due to its parent being freed. Any data contained in
     # the object will be sent as the AMQP properties for the parent Terminus
     # instance.

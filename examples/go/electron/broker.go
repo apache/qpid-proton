@@ -111,7 +111,7 @@ func (b *broker) run() error {
 	}
 }
 
-// State for a broker connectoin
+// State for a broker connection
 type connection struct {
 	broker     *broker
 	connection electron.Connection

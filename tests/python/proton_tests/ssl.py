@@ -571,7 +571,7 @@ class SslTest(common.Test):
         self._pump( client, server )
 
     def test_multiple_sessions(self):
-        """ Test multiple simultaineous active SSL sessions with bi-directional
+        """ Test multiple simultaneous active SSL sessions with bi-directional
         certificate verification, shared across two domains.
         """
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
@@ -789,7 +789,7 @@ class SslTest(common.Test):
         self.tearDown()
 
         # Pass: ensure that the hostname supplied by the connection is used if
-        # none has been specified for the SSL instanace
+        # none has been specified for the SSL instance
         self.setUp()
         self.server_domain.set_credentials(self._testpath("server-certificate.pem"),
                                     self._testpath("server-private-key.pem"),

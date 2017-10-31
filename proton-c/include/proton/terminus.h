@@ -85,7 +85,7 @@ typedef enum {
  * Expiry policy of an AMQP terminus.
  *
  * An orphaned terminus can only exist for the timeout configured by
- * ::pn_terminus_set_timeout. The expiry policy determins when a
+ * ::pn_terminus_set_timeout. The expiry policy determines when a
  * terminus is considered orphaned, i.e. when the expiry timer starts
  * counting down.
  */

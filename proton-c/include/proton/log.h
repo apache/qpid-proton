@@ -45,7 +45,7 @@ typedef void (*pn_logger_t)(const char *message);
 /**
  * Enable/disable global logging.
  *
- * By default, logging is enabled by envionment variable PN_TRACE_LOG.
+ * By default, logging is enabled by environment variable PN_TRACE_LOG.
  * Calling this function overrides the environment setting.
  */
 PN_EXTERN void pn_log_enable(bool enabled);
@@ -55,7 +55,7 @@ PN_EXTERN void pn_log_enable(bool enabled);
  *
  * By default a logger that prints to stderr is installed.
  *  
- * @param logger is called with each log messsage if logging is enabled.
+ * @param logger is called with each log message if logging is enabled.
  * Passing 0 disables logging regardless of pn_log_enable() or environment settings.
  */
 PN_EXTERN void pn_log_logger(pn_logger_t logger);

@@ -35,7 +35,7 @@ if not hasattr(gc, "garbage"):
 # future test areas
 #  + different permutations of setup
 #   - creating deliveries and calling input/output before opening the session/link
-#  + shrinking output_size down to something small? should the enginge buffer?
+#  + shrinking output_size down to something small? should the engine buffer?
 #  + resuming
 #    - locally and remotely created deliveries with the same tag
 
@@ -1170,7 +1170,7 @@ class MaxFrameTransferTest(Test):
 
   def testBigMessage(self):
     """
-    Test transfering a big message.
+    Test transferring a big message.
     """
     self.snd, self.rcv = self.link("test-link")
     self.c1 = self.snd.session.connection

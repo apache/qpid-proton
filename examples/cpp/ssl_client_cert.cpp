@@ -96,7 +96,7 @@ class hello_world_direct : public proton::messaging_handler {
         // Configure client.
         ssl_certificate client_cert = platform_certificate("tclient", "tclientpw");
         std::string server_CA = platform_CA("tserver");
-        // Since the test certifcate's credentials are unlikely to match this host's name, downgrade the verification
+        // Since the test certificate's credentials are unlikely to match this host's name, downgrade the verification
         // from VERIFY_PEER_NAME to VERIFY_PEER.
         ssl_client_options ssl_cli(client_cert, server_CA, proton::ssl::VERIFY_PEER);
         connection_options client_opts;

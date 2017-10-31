@@ -64,7 +64,7 @@ func main() {
 	wait.Add(len(urls)) // Wait for one goroutine per URL.
 
 	container := electron.NewContainer(fmt.Sprintf("send[%v]", os.Getpid()))
-	connections := make(chan electron.Connection, len(urls)) // Connctions to close on exit
+	connections := make(chan electron.Connection, len(urls)) // Connections to close on exit
 
 	// Start a goroutine for each URL to send messages.
 	for _, urlStr := range urls {

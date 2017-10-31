@@ -58,7 +58,7 @@ dies_ok(sub {$message->set_ttl(0 - $ttl)}, 'TTL cannot be negative');
 $message->set_ttl(0);
 ok($message->get_ttl() == 0, 'TTL can be zero');
 $message->set_ttl($ttl);
-ok($message->get_ttl() == $ttl, 'TTL can be postive');
+ok($message->get_ttl() == $ttl, 'TTL can be positive');
 
 # first acquirer
 $message->set_first_acquirer(1);
@@ -76,7 +76,7 @@ dies_ok(sub {$message->set_delivery_count(0 - $delivery_count)},
 $message->set_delivery_count(0);
 ok($message->get_delivery_count() == 0, 'Delivery count can be zero');
 $message->set_delivery_count($delivery_count);
-ok ($message->get_delivery_count() == $delivery_count, 'Delivery count can be postiive');
+ok ($message->get_delivery_count() == $delivery_count, 'Delivery count can be positive');
 
 # message id
 my $message_id = random_string(16);

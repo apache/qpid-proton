@@ -30,7 +30,7 @@ qpid::proton::Data
 The B<Data> class provides an interface for decoding, extract, creating and
 encoding arbitrary AMQP data. A B<Data> object contains a tree of AMQP values.
 Leaf nodes in this tree correspond to scalars in the AMQP type system such as
-B<INT> or B<STRING>. Integerior nodes in this tree correspond to compound values
+B<INT> or B<STRING>. Interior nodes in this tree correspond to compound values
 in the AMQP type system such as B<LIST>, B<MAP>, B<ARRAY> or B<DESCRIBED>. The
 root node of the tree is the B<Data> object itself and can have an arbitrary
 number of children.
@@ -41,8 +41,8 @@ and/or added by using the B<next>, B<prev>, B<enter> and B<exit> methods to
 navigate to the desired location in the tree and using the supplied variety of
 mutator and accessor methods to access or add a value of the desired type.
 
-The mutator methods will always add a vlaue I<after> the current node in the
-tree. If the current node has a next sibling the mutaor method will overwrite
+The mutator methods will always add a value I<after> the current node in the
+tree. If the current node has a next sibling the mutator method will overwrite
 the value on this node. If there is no current node or the current node has no
 next sibling then one will be added. The accessor methods always set the
 add/modified node to the current node. The accessor methods read the value of

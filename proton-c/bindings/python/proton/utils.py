@@ -336,7 +336,7 @@ class AtomicCount(object):
 
 class SyncRequestResponse(IncomingMessageHandler):
     """
-    Implementation of the synchronous request-responce (aka RPC) pattern.
+    Implementation of the synchronous request-response (aka RPC) pattern.
     @ivar address: Address for all requests, may be None.
     @ivar connection: Connection for requests and responses.
     """
@@ -351,7 +351,7 @@ class SyncRequestResponse(IncomingMessageHandler):
         @param connection: A L{BlockingConnection}
         @param address: Address for all requests.
             If not specified, each request must have the address property set.
-            Sucessive messages may have different addresses.
+            Successive messages may have different addresses.
         """
         super(SyncRequestResponse, self).__init__()
         self.connection = connection

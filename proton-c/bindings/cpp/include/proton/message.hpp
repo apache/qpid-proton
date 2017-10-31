@@ -302,7 +302,7 @@ class message {
     /// be modified in place.
     PN_CPP_EXTERN annotation_map& message_annotations();
 
-    /// Examine the meessage annotations map.
+    /// Examine the message annotations map.
     PN_CPP_EXTERN const annotation_map& message_annotations() const;
 
     /// Get the delivery annotations map.  It can

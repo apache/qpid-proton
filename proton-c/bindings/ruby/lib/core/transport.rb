@@ -25,7 +25,7 @@ module Qpid::Proton
   #
   # == Client And Server Mode
   #
-  # Initially, a transport is configured to be a client tranpsort. It can be
+  # Initially, a transport is configured to be a client transport. It can be
   # configured to act as a server when it is created.
   #
   # A client transport initiates outgoing connections.
@@ -129,7 +129,7 @@ module Qpid::Proton
     # condition or reaching the end of stream state, a negative value will
     # be returned indicating the condition.
     #
-    # If an error is indicated, further deteails can be obtained from
+    # If an error is indicated, further details can be obtained from
     # #error.
     #
     # Calls to #process may alter the value of this value. See #process for
@@ -142,7 +142,7 @@ module Qpid::Proton
 
     # @!attribute [r] head
     #
-    # This referneces queued output data. It reports the bytes of output data.
+    # This references queued output data. It reports the bytes of output data.
     #
     # Calls to #pop may alter this attribute, and any data it references.
     #
@@ -163,7 +163,7 @@ module Qpid::Proton
     # @!attribute [r] pending
     #
     # If the ending is in an exceptional state, such as encountering an error
-    # condition or reachign the end of the stream state, a negative value will
+    # condition or reaching the end of the stream state, a negative value will
     # be returned indicating the condition.
     #
     # If an error is indicated, further details can be obtained from #error.
@@ -182,7 +182,7 @@ module Qpid::Proton
     # A transport is defined to be closed when both the tail and the head are
     # closed. In other words, when both #capacity < 0 and #pending < 0.
     #
-    # @return [Boolean] Returns true if the tranpsort is closed.
+    # @return [Boolean] Returns true if the transport is closed.
     #
     proton_caller :closed?
 
@@ -243,7 +243,7 @@ module Qpid::Proton
 
     # Returns additional information about the condition of the transport.
     #
-    # When a TRANSPORT_ERROR event occurs, this operaiton can be used to
+    # When a TRANSPORT_ERROR event occurs, this operation can be used to
     # access the details of the error condition.
     #
     # The object returned is valid until the Transport is discarded.

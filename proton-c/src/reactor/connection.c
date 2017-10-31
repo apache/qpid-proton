@@ -189,7 +189,7 @@ void pni_handle_bound(pn_reactor_t *reactor, pn_event_t *event) {
       pn_transport_close_head(transport);
   } else {
       pn_socket_t sock = pn_connect(pni_reactor_io(reactor), host, port);
-      // invalid sockets are ignored by poll, so we need to do this manualy
+      // invalid sockets are ignored by poll, so we need to do this manually
       if (sock == PN_INVALID_SOCKET) {
           pn_condition_t *cond = pn_transport_condition(transport);
           pn_condition_set_name(cond, "proton:io");

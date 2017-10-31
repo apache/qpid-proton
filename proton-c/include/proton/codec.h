@@ -191,7 +191,7 @@ typedef enum {
 PN_EXTERN const char *pn_type_name(pn_type_t type);
 
 /**
- * A descriminated union that holds any scalar AMQP value. The type
+ * A discriminated union that holds any scalar AMQP value. The type
  * field indicates the AMQP type of the value, and the union may be
  * used to access the value for a given type.
  *
@@ -389,7 +389,7 @@ PN_EXTERN void pn_data_free(pn_data_t *data);
 PN_EXTERN int pn_data_errno(pn_data_t *data);
 
 /**
- * Access the current error for a givn pn_data_t.
+ * Access the current error for a given pn_data_t.
  *
  * Every pn_data_t has an error descriptor that is created with the
  * pn_data_t and dies with the pn_data_t. The error descriptor is
@@ -425,7 +425,7 @@ PN_EXTERN void pn_data_clear(pn_data_t *data);
 /**
  * Returns the total number of nodes contained in a pn_data_t object.
  * This includes all parents, children, siblings, grandchildren, etc.
- * In other words the count of all ancesters and descendents of the
+ * In other words the count of all ancestors and descendants of the
  * current node, along with the current node if there is one.
  *
  * @param data a pn_data_t object
@@ -518,7 +518,7 @@ PN_EXTERN int pn_data_print(pn_data_t *data);
  * @param data a pn_data_t object
  * @param bytes a buffer to write the output to
  * @param size a pointer to the size of the buffer
- * @return zero on succes, or an error on failure
+ * @return zero on success, or an error on failure
  */
 PN_EXTERN int pn_data_format(pn_data_t *data, char *bytes, size_t *size);
 
@@ -1208,7 +1208,7 @@ PN_EXTERN pn_atom_t pn_data_get_atom(pn_data_t *data);
  * data object will be lost.
  *
  * @param data a pn_data_t object
- * @param src the sourc pn_data_t to copy from
+ * @param src the source pn_data_t to copy from
  * @return zero on success or an error code on failure
  */
 PN_EXTERN int pn_data_copy(pn_data_t *data, pn_data_t *src);
@@ -1217,7 +1217,7 @@ PN_EXTERN int pn_data_copy(pn_data_t *data, pn_data_t *src);
  * Append the contents of another pn_data_t object.
  *
  * @param data a pn_data_t object
- * @param src the sourc pn_data_t to append from
+ * @param src the source pn_data_t to append from
  * @return zero on success or an error code on failure
  */
 PN_EXTERN int pn_data_append(pn_data_t *data, pn_data_t *src);
@@ -1227,7 +1227,7 @@ PN_EXTERN int pn_data_append(pn_data_t *data, pn_data_t *src);
  * object.
  *
  * @param data a pn_data_t object
- * @param src the sourc pn_data_t to append from
+ * @param src the source pn_data_t to append from
  * @param limit the maximum number of values to append
  * @return zero on success or an error code on failure
  */

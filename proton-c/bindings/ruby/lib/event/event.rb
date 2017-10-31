@@ -41,7 +41,7 @@ module Qpid::Proton
     REACTOR_INIT = event_type(:PN_REACTOR_INIT)
     # A reactor has no more events to process.
     REACTOR_QUIESCED = event_type(:PN_REACTOR_QUIESCED)
-    # A reactor has been stopred.
+    # A reactor has been stopped.
     REACTOR_FINAL = event_type(:PN_REACTOR_FINAL)
 
     # A timer event has occurred.
@@ -50,7 +50,7 @@ module Qpid::Proton
     # A connection has been created. This is the first even that will ever
     # be issued for a connection.
     CONNECTION_INIT = event_type(:PN_CONNECTION_INIT)
-    # A conneciton has been bound toa  transport.
+    # A connection has been bound toa  transport.
     CONNECTION_BOUND = event_type(:PN_CONNECTION_BOUND)
     # A connection has been unbound from its transport.
     CONNECTION_UNBOUND = event_type(:PN_CONNECTION_UNBOUND)
@@ -63,7 +63,7 @@ module Qpid::Proton
     # A remote endpoint has closed its connection.
     CONNECTION_REMOTE_CLOSE = event_type(:PN_CONNECTION_REMOTE_CLOSE)
     # A connection has been freed and any outstanding processing has been
-    # completed. This is the final event htat will ever be issued for a
+    # completed. This is the final event that will ever be issued for a
     # connection
     CONNECTION_FINAL = event_type(:PN_CONNECTION_FINAL)
 
@@ -101,7 +101,7 @@ module Qpid::Proton
     # The flow control state for a link has changed.
     LINK_FLOW = event_type(:PN_LINK_FLOW)
     # A link has been freed and any outstanding processing has been completed.
-    # This is the final event htat will ever be issued for a link.
+    # This is the final event that will ever be issued for a link.
     LINK_FINAL = event_type(:PN_LINK_FINAL)
 
     # A delivery has been created or updated.

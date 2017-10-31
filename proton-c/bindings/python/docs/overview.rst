@@ -44,11 +44,11 @@ The :py:class:`~proton.reactor.Container` class is a convenient entry
 point into the API, allowing connections and links to be
 established. Applications are structured as one or more event
 handlers. Handlers can be set at Container, Connection, or Link
-scope. Messages are sent by establishing an approprate sender and
+scope. Messages are sent by establishing an appropriate sender and
 invoking its :py:meth:`~proton.Sender.send()` method. This is
 typically done when the sender is sendable, a condition indicated by
 the :py:meth:`~proton.handlers.MessagingHandler.on_sendable()` event, to
-avoid execessive build up of messages. Messages can be received by
+avoid excessive build up of messages. Messages can be received by
 establishing an appropriate receiver and handling the
 :py:meth:`~proton.handlers.MessagingHandler.on_message()` event.
 

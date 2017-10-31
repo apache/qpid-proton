@@ -39,7 +39,7 @@
 
 #include <uv.h>
 
-/* All asserts are cheap and should remain in a release build for debugability */
+/* All asserts are cheap and should remain in a release build for debuggability */
 #undef NDEBUG
 #include <assert.h>
 

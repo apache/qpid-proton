@@ -204,7 +204,7 @@ Data.isBoolean = function(o) {
 
 // We use the dot notation rather than associative array form for protected
 // methods so they are visible to this "package", but the Closure compiler will
-// minify and obfuscate names, effectively making a defacto "protected" method.
+// minify and obfuscate names, effectively making a de facto "protected" method.
 
 /**
  * This helper method checks the supplied error code, converts it into an
@@ -317,7 +317,7 @@ _Data_['exit'] = function() {
 
 /**
  * Look up a value by name. N.B. Need to use getObject() to retrieve the actual
- * value after lookup suceeds.
+ * value after lookup succeeds.
  * @method lookup
  * @memberof! proton.Data#
  * @param {string} name the name of the property to look up.
@@ -1298,7 +1298,7 @@ _Data_['putMAP'] = function(object) {
  * Deserialise from an AMQP Map into a Native JavaScript Object.
  * @method getMAP
  * @memberof! proton.Data#
- * @returns {object} the deserialised Native JavaScript Object.
+ * @returns {object} the deserialized Native JavaScript Object.
  */
 _Data_['getMAP'] = function() {
     if (this['enter']()) {
@@ -1335,7 +1335,7 @@ _Data_['putLIST'] = function(array) {
  * Deserialise from an AMQP List into a Native JavaScript Array.
  * @method getLIST
  * @memberof! proton.Data#
- * @returns {Array} the deserialised Native JavaScript Array.
+ * @returns {Array} the deserialized Native JavaScript Array.
  */
 _Data_['getLIST'] = function() {
     if (this['enter']()) {
@@ -1366,7 +1366,7 @@ _Data_['putDESCRIBED'] = function(d) {
  * Deserialise from an AMQP Described into a proton.Data.Described.
  * @method getDESCRIBED
  * @memberof! proton.Data#
- * @returns {proton.Data.Described} the deserialised proton.Data.Described.
+ * @returns {proton.Data.Described} the deserialized proton.Data.Described.
  */
 _Data_['getDESCRIBED'] = function() {
     if (this['enter']()) {
@@ -1434,7 +1434,7 @@ _Data_['putARRAY'] = function(a) {
  * Deserialise from an AMQP Array into a proton.Data.Array.
  * @method getARRAY
  * @memberof! proton.Data#
- * @returns {proton.Data.Array} the deserialised proton.Data.Array.
+ * @returns {proton.Data.Array} the deserialized proton.Data.Array.
  */
 _Data_['getARRAY'] = function() {
     var metadata = this['getARRAYNODE']();
@@ -1571,7 +1571,7 @@ _Data_['putObject'] = function(obj) {
 /**
  * @method getObject
  * @memberof! proton.Data#
- * @returns {object} the JavaScript Object or primitive being deserialised.
+ * @returns {object} the JavaScript Object or primitive being deserialized.
  */
 _Data_['getObject'] = function() {
     var type = Data['TypeNames'][this.type()];

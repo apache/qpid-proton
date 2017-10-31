@@ -175,7 +175,7 @@ int main(int, char**) {
 
 // print_next prints the next value from values by recursively descending into complex values.
 //
-// NOTE this is for example puroses only: There is a built in ostream operator<< for values.
+// NOTE this is for example purposes only: There is a built in ostream operator<< for values.
 //
 //
 static void print_next(proton::codec::decoder& d) {
