@@ -129,6 +129,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
    case PN_CONNECTION_BOUND: {
      int err =  pn_ssl_init(pn_ssl(pn_event_transport(event)), app->ssl_domain, NULL);
      if (err) fprintf(stderr, "error encoding message: %s\n", pn_code(err));
+     break;
    }
 
    case PN_LINK_FLOW: {
