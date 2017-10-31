@@ -66,8 +66,8 @@ WORKDIR=$(mktemp -d)
 (
     cd ${SRC}
     MTIME=$(date -d @`git log -1 --pretty=format:%ct tags/${TAG}` '+%Y-%m-%d %H:%M:%S')
-    ARCHIVE=$DIR/qpid-proton-${TAG}.tar.gz
     VERSION=$(git show tags/${TAG}:version.txt)
+    ARCHIVE=$DIR/qpid-proton-${VERSION}.tar.gz
     PREFIX=qpid-proton-${VERSION}
     [ -d ${WORKDIR} ] || mkdir -p ${WORKDIR}
     git archive --format=tar --prefix=${PREFIX}/ tags/${TAG} \
