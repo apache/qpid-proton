@@ -27,7 +27,7 @@ include_directories (${PYTHON_INCLUDE_PATH})
 set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
 # Suppress warnings in swig generated code.
-set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 # Set Compiler extra flags for Solaris when using SunStudio
 if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
