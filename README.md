@@ -1,9 +1,9 @@
 Qpid Proton - AMQP messaging toolkit
 ====================================
 
-Linux Build | Windows Build
-------------|--------------
-[![Linux Build Status](https://travis-ci.org/apache/qpid-proton.svg?branch=master)](https://travis-ci.org/apache/qpid-proton) | [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/apache/qpid-proton?branch=master&svg=true)](https://ci.appveyor.com/project/ke4qqq/qpid-proton/branch/master)
+Linux Build | Windows Build | OSX Build
+------------|---------------|----------
+[![Linux Build Status](https://travis-ci.org/apache/qpid-proton.svg?branch=master)](https://travis-ci.org/apache/qpid-proton) | [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/apache/qpid-proton?branch=master&svg=true)](https://ci.appveyor.com/project/ke4qqq/qpid-proton/branch/master) | [![OSX Build Status](https://api.travis-ci.org/RoddieKieley/qpid-proton.svg?branch=PROTON-522)](https://travis-ci.org/roddiekieley/qpid-proton/branch/PROTON-522)
 
 Qpid Proton is a high-performance, lightweight messaging library. It can be
 used in the widest range of messaging applications, including brokers, client
