@@ -232,18 +232,9 @@ if (CMAKE_COMPILER_IS_GNUCC)
   # C++ allow "%z" format specifier and variadic macros
   set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
   if (NOT BUILD_WITH_CXX)
-    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes")
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
     set (COMPILE_LANGUAGE_FLAGS "-std=c99")
     set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
-
-    execute_process(COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1} ${CMAKE_C_COMPILER_ARG2} -dumpversion OUTPUT_VARIABLE GCC_VERSION
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    if (${GCC_VERSION} VERSION_LESS "4.3.0")
-      # Only a concern if contibuting code back.
-      message (STATUS "Old gcc version detected.  C++ compatibility checks disabled")
-    else (${GCC_VERSION} VERSION_LESS "4.3.0")
-      set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
-    endif (${GCC_VERSION} VERSION_LESS "4.3.0")
   else (NOT BUILD_WITH_CXX)
     set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
   endif (NOT BUILD_WITH_CXX)
