@@ -162,20 +162,28 @@ endforeach()
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-# Check for valgrind here so tests under proton-c/ and examples/ can use it.
-find_program(VALGRIND_EXE valgrind DOC "Location of the valgrind program")
-mark_as_advanced (VALGRIND_EXE)
+# Can't do valgrind and coverage at athe same time - coverage takes precedence
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+  message(STATUS "Building for coverage analysis; no run-time error detection")
+else ()
+  # Check for valgrind here so tests under proton-c/ and examples/ can use it.
+  find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
+  mark_as_advanced (VALGRIND_EXECUTABLE)
 
-option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-if (ENABLE_VALGRIND)
-  if (NOT VALGRIND_EXE)
-    message(STATUS "Can't locate the valgrind command; no run-time error detection")
-  elseif (CMAKE_BUILD_TYPE MATCHES "Coverage")
-    message(STATUS "Building for coverage analysis; no run-time error detection")
-  else ()
-    set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXE}")
+  option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
+  if (ENABLE_VALGRIND)
+    if (VALGRIND_EXECUTABLE)
+      set (VALGRIND_SUPPRESSIONS ${CMAKE_SOURCE_DIR}/proton-c/src/tests/valgrind.supp CACHE STRING "Default valgrind suppressions")
+      set (VALGRIND_OPTIONS "--error-exitcode=42 --quiet --leak-check=full --trace-children=yes" CACHE STRING "Default valgrind options")
+      mark_as_advanced(VALGRIND_SUPPRESSIONS VALGRIND_OPTIONS)
+      set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXECUTABLE}" "VALGRIND_ARGS=${VALGRIND_OPTIONS} --suppressions=${VALGRIND_SUPPRESSIONS}")
+      separate_arguments(VALGRIND_OPTIONS_LIST UNIX_COMMAND ${VALGRIND_OPTIONS})
+      set (memcheck-cmd ${VALGRIND_EXECUTABLE} ${VALGRIND_OPTIONS_LIST} "--suppressions=${VALGRIND_SUPPRESSIONS}")
+    else ()
+      message(STATUS "Can't locate the valgrind command; no run-time error detection")
+    endif ()
   endif ()
-endif (ENABLE_VALGRIND)
+endif ()
 
 # Options to enable sanitizing compile flags. Compile flags are set in proton-c/CMakeLists.txt
 option(ENABLE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)

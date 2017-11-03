@@ -119,3 +119,13 @@
    fun:sasl_config_init
    fun:sasl_server_init
 }
+
+{
+   Known bug in glibc which tries to free ipv6 related static when getaddrinfo used
+   Memcheck:Free
+   fun:free
+   fun:__libc_freeres
+   fun:_vgnU_freeres
+   fun:__run_exit_handlers
+   fun:exit
+}

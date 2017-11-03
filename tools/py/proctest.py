@@ -74,7 +74,6 @@ class Proc(Popen):
     'ready' pattern' Use self.out to access output (combined stdout and stderr).
     You can't set the Popen stdout and stderr arguments, they will be overwritten.
     """
-    valgrind_exit = 42          # Special exit code for valgrind errors
 
     @property
     def out(self):
@@ -89,11 +88,11 @@ class Proc(Popen):
         valgrind_exe = valgrind and os.getenv("VALGRIND")
         if valgrind_exe:
             # run valgrind for speed, not for detailed information
-            vg = [valgrind_exe, "--quiet", "--error-exitcode=%s" % self.valgrind_exit]
+            vg = [valgrind_exe]
             if helgrind:
-                vg += ["--tool=helgrind"]
+                vg += ["--tool=helgrind", "--quiet", "--error-exitcode=42"]
             else:
-                vg += ["--tool=memcheck", "--leak-check=full"]
+                vg += ["--tool=memcheck"] + os.getenv("VALGRIND_ARGS").split(' ')
             self.args = vg + self.args
         if os.getenv("PROCTEST_VERBOSE"):
             sys.stderr.write("\n== running == "+" ".join(self.args)+"\n")

@@ -22,12 +22,6 @@ add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if (ENABLE_VALGRIND AND VALGRIND_EXE)
-  set(memcheck-cmd ${VALGRIND_EXE} --error-exitcode=42 --quiet
-    --leak-check=full --trace-children=yes
-    --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp)
-endif ()
-
 macro (pn_add_c_test test)
   add_executable (${test} ${ARGN})
   target_link_libraries (${test} qpid-proton ${PLATFORM_LIBS})

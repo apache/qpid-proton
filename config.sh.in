@@ -73,6 +73,7 @@ export PATH="$(merge_paths $PATH $PROTON_BUILD/tests/tools/apps/c $PROTON_HOME/t
 # can the test harness use valgrind?
 if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND@" == "ON" ]] ; then
     export VALGRIND=$(type -p valgrind)
+    export VALGRIND_ARGS=@VALGRIND_OPTIONS@
 fi
 
 # can the test harness use saslpasswd2?
