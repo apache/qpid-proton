@@ -65,6 +65,7 @@ class sender_options::impl {
     option<bool> auto_settle;
     option<source_options> source;
     option<target_options> target;
+    option<std::string> name;
 
     void apply(sender& s) {
         if (s.uninitialized()) {
@@ -110,7 +111,11 @@ sender_options& sender_options::delivery_mode(proton::delivery_mode m) {impl_->d
 sender_options& sender_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 sender_options& sender_options::source(const source_options &s) {impl_->source = s; return *this; }
 sender_options& sender_options::target(const target_options &s) {impl_->target = s; return *this; }
+sender_options& sender_options::name(const std::string &s) {impl_->name = s; return *this; }
 
 void sender_options::apply(sender& s) const { impl_->apply(s); }
 
+const std::string* sender_options::get_name() const {
+    return impl_->name.set ? &impl_->name.value : 0;
+}
 } // namespace proton

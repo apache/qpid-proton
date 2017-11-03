@@ -26,6 +26,7 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./delivery_mode.hpp"
+#include <string>
 
 /// @file
 /// @copybrief proton::sender_options
@@ -87,14 +88,19 @@ class sender_options {
     /// Options for the receiver node of the receiver.
     PN_CPP_EXTERN sender_options& target(const target_options&);
 
+    /// Set the link name. If not set a unique name is generated.
+    PN_CPP_EXTERN sender_options& name(const std::string& name);
+
   private:
     void apply(sender&) const;
+    const std::string* get_name() const; // Pointer to name if set, else 0
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
   friend class sender;
+  friend class session;
     /// @endcond
 };
 

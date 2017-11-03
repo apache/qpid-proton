@@ -22,8 +22,8 @@
 #include "proton_bits.hpp"
 #include "link_namer.hpp"
 
-#include "proton/container.hpp"
 #include "proton/connection.hpp"
+#include "proton/container.hpp"
 #include "proton/io/connection_driver.hpp"
 #include "proton/link.hpp"
 #include "proton/message.hpp"
@@ -31,7 +31,9 @@
 #include "proton/receiver_options.hpp"
 #include "proton/sender.hpp"
 #include "proton/sender_options.hpp"
+#include "proton/source.hpp"
 #include "proton/source_options.hpp"
+#include "proton/target.hpp"
 #include "proton/transport.hpp"
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"
@@ -327,39 +329,50 @@ void test_spin_interrupt() {
     } catch (test::error) {}
 }
 
-void test_link_filters() {
-    // Propagation of link properties
+void test_link_options() {
+    // Propagation of link properties, including filters
     record_handler ha, hb;
     driver_pair d(ha, hb);
 
-    source_options opts;
     source::filter_map f;
     f.put("xx", "xxx");
     ASSERT_EQUAL(1U, f.size());
-    d.a.connection().open_sender("x", sender_options().source(source_options().filters(f)));
+    d.a.connection().open_sender(
+        "x", sender_options().name("_x").source(source_options().filters(f)));
 
     f.clear();
     f.put("yy", "yyy");
     ASSERT_EQUAL(1U, f.size());
-    d.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f)));
+    d.a.connection().open_receiver(
+        "y", receiver_options().name("_y").source(source_options().filters(f)));
 
     while (ha.senders.size()+ha.receivers.size() < 2 ||
            hb.senders.size()+hb.receivers.size() < 2)
         d.process();
 
     proton::sender ax = quick_pop(ha.senders);
+    ASSERT_EQUAL("_x", ax.name());
+    // FIXME aconway 2017-11-03:
+    // ASSERT_EQUAL("x", ax.target().address());
+
     proton::receiver ay = quick_pop(ha.receivers);
+    ASSERT_EQUAL("_y", ay.name());
+    // FIXME aconway 2017-11-03:
+    // ASSERT_EQUAL("y", ay.source().address());
+
     proton::receiver bx = quick_pop(hb.receivers);
-    proton::sender by = quick_pop(hb.senders);
-
-    // C++ binding only gives remote_source so only look at remote ends of links
-    f = by.source().filters();
-    ASSERT_EQUAL(1U, f.size());
-    ASSERT_EQUAL(value("yyy"), f.get("yy"));
-
+    ASSERT_EQUAL("x", bx.target().address());
+    ASSERT_EQUAL("_x", bx.name());
     f = bx.source().filters();
     ASSERT_EQUAL(1U, f.size());
     ASSERT_EQUAL(value("xxx"), bx.source().filters().get("xx"));
+
+    proton::sender by = quick_pop(hb.senders);
+    ASSERT_EQUAL("y", by.source().address());
+    ASSERT_EQUAL("_y", by.name());
+    f = by.source().filters();
+    ASSERT_EQUAL(1U, f.size());
+    ASSERT_EQUAL(value("yyy"), f.get("yy"));
 }
 
 void test_message() {
@@ -437,7 +450,7 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_driver_disconnected());
     RUN_ARGV_TEST(failed, test_no_container());
     RUN_ARGV_TEST(failed, test_spin_interrupt());
-    RUN_ARGV_TEST(failed, test_link_filters());
+    RUN_ARGV_TEST(failed, test_link_options());
     RUN_ARGV_TEST(failed, test_message());
     RUN_ARGV_TEST(failed, test_message_timeout_succeed());
     RUN_ARGV_TEST(failed, test_message_timeout_fail());
