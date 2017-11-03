@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required (VERSION 2.8.7)
+cmake_minimum_required (VERSION 2.8.12)
 
 find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)

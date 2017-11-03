@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+cmake_minimum_required(VERSION 2.8.12)
+
 enable_language(CXX)
 
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")

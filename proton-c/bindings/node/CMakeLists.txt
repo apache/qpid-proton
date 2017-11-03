@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 
 if (NOT BUILD_WITH_CXX)
   message(FATAL_ERROR "ERROR: node bindings require CXX build to be enabled.\n"
