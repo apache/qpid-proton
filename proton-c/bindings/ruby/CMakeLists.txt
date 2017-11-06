@@ -113,6 +113,8 @@ if (result EQUAL 0)  # Have minitest
     set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB}")
   endmacro()
   add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
+  # Old examples for backwards compatibility testing.
+  add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old_examples)
 
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
