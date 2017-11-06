@@ -51,14 +51,16 @@ find_program(GEM_EXE gem DOC "Program to build and install ruby gem packages")
 mark_as_advanced(GEM_EXE)
 if (GEM_EXE)
   # Copy source and generated files to the build tree so we can build the gem in one place
-  configure_file(${src}/qpid_proton.gemspec.in ${bin}/qpid_proton.gemspec)
+  configure_file(${src}/qpid_proton.gemspec.in ${bin}/gem/qpid_proton.gemspec)
   add_custom_command(
     OUTPUT ${bin}/qpid_proton-${PN_VERSION}.gem
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}
-    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/ext/cproton/cproton.c
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}/gem
+    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/rubyRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
-    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby
-    WORKING_DIRECTORY ${bin})
+    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/gem/qpid_proton-${PN_VERSION}.gem ${bin}
+    WORKING_DIRECTORY ${bin}/gem
+    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby ${bin}/rubyRUBY_wrap.c
+    )
 
   add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )
 endif ()
