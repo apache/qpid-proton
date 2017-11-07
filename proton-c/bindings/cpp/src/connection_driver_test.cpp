@@ -352,12 +352,12 @@ void test_link_options() {
 
     proton::sender ax = quick_pop(ha.senders);
     ASSERT_EQUAL("_x", ax.name());
-    // FIXME aconway 2017-11-03:
+    // TODO PROTON-1679 - the following assertion should pass.
     // ASSERT_EQUAL("x", ax.target().address());
 
     proton::receiver ay = quick_pop(ha.receivers);
     ASSERT_EQUAL("_y", ay.name());
-    // FIXME aconway 2017-11-03:
+    // TODO PROTON-1679 - the following assertion should pass.
     // ASSERT_EQUAL("y", ay.source().address());
 
     proton::receiver bx = quick_pop(hb.receivers);

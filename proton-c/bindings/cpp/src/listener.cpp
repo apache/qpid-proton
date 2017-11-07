@@ -33,8 +33,6 @@ listener::listener(pn_listener_t* l): listener_(l) {}
 listener::listener(const listener& l) : listener_(l.listener_) {}
 listener::~listener() {}
 listener& listener::operator=(const listener& l) { listener_ = l.listener_; return *this; }
-
-// FIXME aconway 2017-10-06: should be a no-op if already closed - there is a race here.
 void listener::stop() { if (listener_) pn_listener_close(listener_); }
 
 listen_handler::~listen_handler() {}
