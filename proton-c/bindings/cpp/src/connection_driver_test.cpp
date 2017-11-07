@@ -34,6 +34,7 @@
 #include "proton/source.hpp"
 #include "proton/source_options.hpp"
 #include "proton/target.hpp"
+#include "proton/target_options.hpp"
 #include "proton/transport.hpp"
 #include "proton/types_fwd.hpp"
 #include "proton/uuid.hpp"
@@ -45,6 +46,7 @@ namespace {
 
 using namespace std;
 using namespace proton;
+using namespace test;
 
 using proton::io::connection_driver;
 using proton::io::const_buffer;
@@ -330,21 +332,25 @@ void test_spin_interrupt() {
 }
 
 void test_link_options() {
-    // Propagation of link properties, including filters
+    // Propagation of link and terminus properties
     record_handler ha, hb;
     driver_pair d(ha, hb);
+
+    std::vector<proton::symbol> caps;
+    caps.push_back("foo");
+    caps.push_back("bar");
 
     source::filter_map f;
     f.put("xx", "xxx");
     ASSERT_EQUAL(1U, f.size());
     d.a.connection().open_sender(
-        "x", sender_options().name("_x").source(source_options().filters(f)));
+        "x", sender_options().name("_x").target(target_options().capabilities(caps)));
 
     f.clear();
     f.put("yy", "yyy");
     ASSERT_EQUAL(1U, f.size());
     d.a.connection().open_receiver(
-        "y", receiver_options().name("_y").source(source_options().filters(f)));
+        "y", receiver_options().name("_y").source(source_options().filters(f).capabilities(caps)));
 
     while (ha.senders.size()+ha.receivers.size() < 2 ||
            hb.senders.size()+hb.receivers.size() < 2)
@@ -354,21 +360,24 @@ void test_link_options() {
     ASSERT_EQUAL("_x", ax.name());
     // TODO PROTON-1679 - the following assertion should pass.
     // ASSERT_EQUAL("x", ax.target().address());
+    // ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ax.target().capabilities());
 
     proton::receiver ay = quick_pop(ha.receivers);
     ASSERT_EQUAL("_y", ay.name());
     // TODO PROTON-1679 - the following assertion should pass.
     // ASSERT_EQUAL("y", ay.source().address());
+    // ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ay.source().capabilities());
 
     proton::receiver bx = quick_pop(hb.receivers);
     ASSERT_EQUAL("x", bx.target().address());
+    ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", bx.target().capabilities());
     ASSERT_EQUAL("_x", bx.name());
-    f = bx.source().filters();
-    ASSERT_EQUAL(1U, f.size());
-    ASSERT_EQUAL(value("xxx"), bx.source().filters().get("xx"));
+    ASSERT_EQUAL("", bx.source().address());
+    ASSERT_EQUAL(many<proton::symbol>(), bx.source().capabilities());
 
     proton::sender by = quick_pop(hb.senders);
     ASSERT_EQUAL("y", by.source().address());
+    ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", by.source().capabilities());
     ASSERT_EQUAL("_y", by.name());
     f = by.source().filters();
     ASSERT_EQUAL(1U, f.size());

@@ -28,6 +28,7 @@
 #include <proton/terminus.h>
 
 #include <string>
+#include <vector>
 
 /// @file
 /// @copybrief proton::terminus
@@ -95,6 +96,9 @@ class terminus {
     /// Obtain a reference to the AMQP dynamic node properties for the
     /// terminus.  See also lifetime_policy.
     PN_CPP_EXTERN value node_properties() const;
+
+    /// Extension capabilities that are supported/requested
+    PN_CPP_EXTERN std::vector<symbol> capabilities() const;
 
   protected:
     pn_terminus_t *pn_object() const { return object_; }

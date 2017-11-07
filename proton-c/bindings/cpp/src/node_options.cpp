@@ -19,10 +19,11 @@
  *
  */
 
-#include "proton/source_options.hpp"
+#include "proton/codec/vector.hpp"
 #include "proton/source.hpp"
-#include "proton/target_options.hpp"
+#include "proton/source_options.hpp"
 #include "proton/target.hpp"
+#include "proton/target_options.hpp"
 
 #include "proton_bits.hpp"
 
@@ -94,6 +95,7 @@ class source_options::impl {
     option<enum source::expiry_policy> expiry_policy;
     option<enum source::distribution_mode> distribution_mode;
     option<source::filter_map> filters;
+    option<std::vector<symbol> > capabilities;
 
     void apply(source& s) {
         node_address(s, address, dynamic);
@@ -104,6 +106,9 @@ class source_options::impl {
         if (filters.set && !filters.value.empty()) {
             // Applied at most once via source_option.  No need to clear.
             value(pn_terminus_filter(unwrap(s))) = filters.value;
+        }
+        if (capabilities.set) {
+            value(pn_terminus_capabilities(unwrap(s))) = capabilities.value;
         }
     }
 };
@@ -126,6 +131,7 @@ source_options& source_options::timeout(duration d) { impl_->timeout = d; return
 source_options& source_options::expiry_policy(enum source::expiry_policy m) { impl_->expiry_policy = m; return *this; }
 source_options& source_options::distribution_mode(enum source::distribution_mode m) { impl_->distribution_mode = m; return *this; }
 source_options& source_options::filters(const source::filter_map &map) { impl_->filters = map; return *this; }
+source_options& source_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
 
 void source_options::apply(source& s) const { impl_->apply(s); }
 
@@ -138,11 +144,15 @@ class target_options::impl {
     option<enum target::durability_mode> durability_mode;
     option<duration> timeout;
     option<enum target::expiry_policy> expiry_policy;
+    option<std::vector<symbol> > capabilities;
 
     void apply(target& t) {
         node_address(t, address, dynamic);
         node_durability(t, durability_mode);
         node_expiry(t, expiry_policy, timeout);
+        if (capabilities.set) {
+            value(pn_terminus_capabilities(unwrap(t))) = capabilities.value;
+        }
     }
 };
 
@@ -162,6 +172,7 @@ target_options& target_options::dynamic(bool b) { impl_->dynamic = b; return *th
 target_options& target_options::durability_mode(enum target::durability_mode m) { impl_->durability_mode = m; return *this; }
 target_options& target_options::timeout(duration d) { impl_->timeout = d; return *this; }
 target_options& target_options::expiry_policy(enum target::expiry_policy m) { impl_->expiry_policy = m; return *this; }
+target_options& target_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
 
 void target_options::apply(target& s) const { impl_->apply(s); }
 

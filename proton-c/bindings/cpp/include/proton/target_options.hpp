@@ -75,6 +75,9 @@ class target_options {
     /// target::LINK_CLOSE.
     PN_CPP_EXTERN target_options& expiry_policy(enum target::expiry_policy);
 
+    /// Extension capabilities that are supported/requested
+    PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
+
   private:
     void apply(target&) const;
 

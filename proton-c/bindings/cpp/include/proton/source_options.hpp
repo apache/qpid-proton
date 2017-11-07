@@ -84,6 +84,9 @@ class source_options {
     /// messages.
     PN_CPP_EXTERN source_options& filters(const source::filter_map&);
 
+    /// Extension capabilities that are supported/requested
+    PN_CPP_EXTERN source_options& capabilities(const std::vector<symbol>&);
+
   private:
     void apply(source&) const;
 
