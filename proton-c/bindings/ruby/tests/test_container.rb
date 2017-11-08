@@ -28,8 +28,8 @@ Disposition = Qpid::Proton::Disposition
 # Container that listens on a random port
 class TestContainer < Container
 
-  def initialize(opts = {}, lopts = {})
-    super opts
+  def initialize(handler, lopts = {}, id=nil)
+    super handler, id
     @server = TCPServer.open(0)
     @listener = listen_io(@server, ListenOnceHandler.new(lopts))
   end
@@ -69,7 +69,7 @@ class ContainerTest < Minitest::Test
       end
     end.new
 
-    c = TestContainer.new({:id => __method__.to_s, :handler => rh})
+    c = TestContainer.new(rh, {}, "test_simple")
     c.connect(c.url, {:handler => sh}).open_sender({:name => "testlink"})
     c.run
 
@@ -85,8 +85,8 @@ class ContainerTest < Minitest::Test
   end
 
   def test_auto_stop
-    c1 = Container.new "#{__method__}1"
-    c2 = Container.new "#{__method__}2"
+    c1 = Container.new
+    c2 = Container.new
 
     # A listener and a connection
     t1 = 3.times.collect { Thread.new { c1.run } }
@@ -104,7 +104,7 @@ class ContainerTest < Minitest::Test
   end
 
   def test_auto_stop_listener_only
-    c1 = Container.new "#{__method__}1"
+    c1 = Container.new
     # Listener only, external close
     t1 = Thread.new { c1.run }
     l = c1.listen_io(TCPServer.new(0))
@@ -113,7 +113,7 @@ class ContainerTest < Minitest::Test
   end
 
   def test_stop
-    c = Container.new __method__
+    c = Container.new
     c.auto_stop = false
     l = c.listen_io(TCPServer.new(0))
     c.connect("amqp://:#{l.to_io.addr[1]}")
@@ -211,7 +211,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 
   def test_sasl_anonymous()
     s = SASLHandler.new("amqp://",  {:sasl_allowed_mechs => "ANONYMOUS"})
-    TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "ANONYMOUS"}).run
+    TestContainer.new(s, {:sasl_allowed_mechs => "ANONYMOUS"}).run
     assert_nil(s.connections[0].user)
   end
 
@@ -220,7 +220,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     # Use default realm with URL, should authenticate with "default_password"
     opts = {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}
     s = SASLHandler.new("amqp://user:default_password@",  opts)
-    TestContainer.new({:id => __method__.to_s, :handler => s}, opts).run
+    TestContainer.new(s, opts).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end
@@ -231,7 +231,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     opts = {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true,
             :user => 'user', :password => 'default_password' }
     s = SASLHandler.new("amqp://", opts)
-    TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true}).run
+    TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true}).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end
@@ -240,7 +240,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   def test_disallow_insecure()
     # Don't set allow_insecure_mechs, but try to use PLAIN
     s = SASLHandler.new("amqp://user:password@", {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true})
-    e = assert_raises(TestError) { TestContainer.new({:id => __method__.to_s, :handler => s}, {:sasl_allowed_mechs => "PLAIN"}).run }
+    e = assert_raises(TestError) { TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN"}).run }
     assert_match(/PN_TRANSPORT_ERROR.*unauthorized-access/, e.to_s)
   end
 end

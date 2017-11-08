@@ -20,7 +20,10 @@
 module Qpid::Proton
   # A listener for incoming connections.
   #
-  # Create with {Container#listen} or  {Container#listen_with}
+  # Create with {Container#listen} or  {Container#listen_io}.
+  # To control the handler and connection options applied to incoming connections,
+  # pass a {ListenerHandler} on creation.
+  #
   class Listener
     # The listener's container
     attr_reader :container

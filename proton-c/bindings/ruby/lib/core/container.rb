@@ -22,7 +22,6 @@ require 'set'
 require_relative 'listener'
 
 module Qpid::Proton
-
   # An AMQP container manages a set of {Connection}s which contain {#Sender} and
   # {#Receiver} links to transfer messages.
   #
@@ -49,20 +48,22 @@ module Qpid::Proton
 
     # Create a new Container
     #
-    # @param opts [Hash] Options
-    # @option opts [String] :id A unique ID for this container. Defaults to a random UUID.
-    # @option opts [MessagingHandler] :handler Default handler for connections
+    # @param handler [MessagingHandler] Optional default handler for connections
     #   that do not have their own handler (see {#connect} and {#listen})
     #
-    #   @note In a multi-threaded, multi-connection container the default
-    #   handler can be called concurrently for different connections. An
-    #   individual handler attached to a single connection is never called
-    #   concurrently, so that is the recommended approach for multi-threading.
-    def initialize(opts = {})
-      opts = { :handler => opts } unless opts.is_a? Hash # Allow handler as only parameter
-      opts = { :handler => opts } if opts.is_a? String   # Allow ID as only parameter option
-      @handler = opts[:handler]
-      @id = String.new(opts[:id] || SecureRandom.uuid).freeze
+    #   @note For multi-threaded code, it is recommended to use a separate
+    #   handler instance for every connection, as a shared global handler can be
+    #   called concurrently for every connection that uses it.
+    # @param id [String] A unique ID for this container. Defaults to a random UUID.
+    #
+    def initialize(handler = nil, id = nil)
+      # Allow ID as sole argument
+      (handler, id = nil, handler.to_str) if (id.nil? && handler.respond_to?(:to_str))
+      raise TypeError, "Expected MessagingHandler, got #{handler.class}" if handler && !handler.is_a?(Qpid::Proton::Handler::MessagingHandler)
+
+      # TODO aconway 2017-11-08: allow handlers, opts for backwards compat?
+      @handler = handler
+      @id = (id || SecureRandom.uuid).freeze
       @work = Queue.new
       @work.push self           # Let the first #run thread select
       @wake = IO.pipe
