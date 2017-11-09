@@ -473,6 +473,7 @@ static int pconnection_init(pconnection_t *pc) {
     pc->tcp.data = pc;
     pc->connect.data = pc;
     err = uv_timer_init(&pc->work.proactor->loop, &pc->timer);
+    uv_mutex_init(&pc->lock);
     if (!err) {
       pc->timer.data = pc;
     } else {
@@ -660,6 +661,7 @@ void pn_listener_free(pn_listener_t *l) {
       free(ls);
     }
     assert(!l->accept.front);
+    uv_mutex_destroy(&l->lock);
     free(l);
   }
 }
@@ -1239,6 +1241,7 @@ pn_listener_t *pn_listener(void) {
       pn_listener_free(l);
       return NULL;
     }
+    uv_mutex_init(&l->lock);
   }
   return l;
 }

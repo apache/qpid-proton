@@ -865,7 +865,11 @@ static void test_netaddr(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_wake_handler), test_proactor(t, listen_handler) };
   pn_proactor_t *client = tps[0].proactor;
   /* Use IPv4 to get consistent results all platforms */
-  test_listener_t l = test_listen(&tps[1], "127.0.0.1");
+#if defined(__APPLE__)
+    test_listener_t l = test_listen(&tps[1], localhost);
+#else
+    test_listener_t l = test_listen(&tps[1], "127.0.0.1");
+#endif
   pn_connection_t *c = pn_connection();
   pn_proactor_connect(client, c, l.port.host_port);
   if (!TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps))) {
@@ -894,14 +898,22 @@ static void test_netaddr(test_t *t) {
   /* Examine as sockaddr */
   const pn_netaddr_t *na = pn_netaddr_remote(ct);
   const struct sockaddr *sa = pn_netaddr_sockaddr(na);
+#if defined(__APPLE__)
+  TEST_CHECK(t, AF_INET6 == sa->sa_family);
+#else
   TEST_CHECK(t, AF_INET == sa->sa_family);
+#endif
   char host[TEST_PORT_MAX_STR] = "";
   char serv[TEST_PORT_MAX_STR] = "";
   int err = getnameinfo(sa, pn_netaddr_socklen(na),
                         host, sizeof(host), serv, sizeof(serv),
                         NI_NUMERICHOST | NI_NUMERICSERV);
   TEST_CHECK(t, 0 == err);
+#if defined(__APPLE__)
+  TEST_STR_EQUAL(t, "::1", host);
+#else
   TEST_STR_EQUAL(t, "127.0.0.1", host);
+#endif
   TEST_STR_EQUAL(t, l.port.str, serv);
 
   /* Make sure you can use NULL, 0 to get length of address string without a crash */

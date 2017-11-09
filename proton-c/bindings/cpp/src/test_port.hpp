@@ -83,7 +83,12 @@ class test_socket {
                   "setsockop");
     }
     ~test_socket() { close(sock_); }
-    void close_early() {}   // Don't close early on POSIX, keep the port safe
+    void close_early() {
+        // Don't close early on POSIX, keep the port safe
+#if defined(__APPLE__)
+        close(sock_);
+#endif
+    }
 };
 
 #endif

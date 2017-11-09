@@ -85,7 +85,7 @@ const pnx_sasl_implementation * const cyrus_sasl_impl = &sasl_impl;
 // don't do any global clean up as it's not safe to use just sasl_done() for an
 // executable that uses both client and server parts of Cyrus SASL, because it can't
 // be called twice.
-#if SASL_VERSION_FULL<0x020118
+#if SASL_VERSION_FULL<0x020124
 # define sasl_client_done()
 # define sasl_server_done()
 #endif
