@@ -28,6 +28,7 @@ import (
 	"io"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -165,6 +166,8 @@ Types are converted as follows:
  +------------------------+-------------------------------------------------+
  |Described               |described type                                   |
  +------------------------+-------------------------------------------------+
+ |Time                    |timestamp                                        |
+ +------------------------+-------------------------------------------------+
 
 An AMQP described type can unmarshal into the corresponding plain type, discarding the descriptor.
 For example an AMQP described string can unmarshal into a plain go string.
@@ -197,14 +200,12 @@ Any AMQP type can unmarshal to an interface{}, the Go type used to unmarshal is 
  +------------------------+-------------------------------------------------+
  |described type          |Described                                        |
  +--------------------------------------------------------------------------+
+ |timestamp               |time.Time                                        |
+ +--------------------------------------------------------------------------+
 
 The following Go types cannot be unmarshaled: uintptr, function, interface, channel, array (use slice), struct
 
-TODO: Not yet implemented:
-
-AMQP types: decimal32/64/128, char (round trip), timestamp, uuid.
-
-AMQP maps with mixed key types, or key types that are not legal Go map keys.
+AMQP types not yet supported: decimal32/64/128, char (round trip), uuid, maps with key values that are not legal Go map keys.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	defer recoverUnmarshal(&err)
@@ -459,6 +460,14 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 			panic(newUnmarshalError(pnType, v))
 		}
 
+	case *time.Time:
+		switch pnType {
+		case C.PN_TIMESTAMP:
+			*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
+		default:
+			panic(newUnmarshalError(pnType, v))
+		}
+
 	case *interface{}:
 		getInterface(data, v)
 
@@ -541,6 +550,8 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 		d := Described{}
 		unmarshal(&d, data)
 		*v = d
+	case C.PN_TIMESTAMP:
+		*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
 	case C.PN_NULL:
 		*v = nil
 	case C.PN_INVALID:

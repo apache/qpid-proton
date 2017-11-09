@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"time"
 	"unsafe"
 )
 
@@ -99,14 +100,12 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |Described                            |described type                              |
  +-------------------------------------+--------------------------------------------+
+ |time.Time                            |timestamp                                   |
+ +-------------------------------------+--------------------------------------------+
 
-The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct
+The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct, complex64/128.
 
-TODO: Not yet implemented:
-
-Go types: struct, complex64/128.
-
-AMQP types: decimal32/64/128, char, timestamp, uuid, array.
+AMQP types not yet supported: decimal32/64/128, char, uuid, array.
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	defer recoverMarshal(&err)
@@ -219,6 +218,8 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		C.pn_data_exit(data)
 	case AnnotationKey:
 		marshal(v.Get(), data)
+	case time.Time:
+		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
 	default:
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:

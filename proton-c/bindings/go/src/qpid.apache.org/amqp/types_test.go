@@ -23,11 +23,12 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func checkEqual(want interface{}, got interface{}) error {
 	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("%#v != %#v", want, got)
+		return fmt.Errorf("%s != %s", want, got)
 	}
 	return nil
 }
@@ -53,6 +54,8 @@ func ExampleKey() {
 	// 42
 }
 
+var timeValue = time.Now().Round(time.Millisecond)
+
 // Values that are unchanged by a marshal/unmarshal round-trip from interface{}
 // to interface{}
 var rtValues = []interface{}{
@@ -65,6 +68,7 @@ var rtValues = []interface{}{
 	Map{"V": "X"},
 	List{"V", int32(1)},
 	Described{"D", "V"},
+	timeValue,
 }
 
 // Go values that unmarshal as an equivalent value but a different type
@@ -90,6 +94,7 @@ var vstrings = []string{
 	"map[V:X]",
 	"[V 1]",
 	"{D V}",
+	fmt.Sprintf("%v", timeValue),
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/
@@ -108,8 +113,8 @@ func TestTypesRoundTrip(t *testing.T) {
 		if err := checkUnmarshal(marshalled, &v); err != nil {
 			t.Error(err)
 		}
-		if err := checkEqual(v, x); err != nil {
-			t.Error(t, err)
+		if err := checkEqual(x, v); err != nil {
+			t.Error(err)
 		}
 	}
 }
@@ -129,7 +134,7 @@ func TestTypesRoundTripAll(t *testing.T) {
 			t.Error(err)
 		}
 		v := vp.Elem().Interface()
-		if err := checkEqual(v, x); err != nil {
+		if err := checkEqual(x, v); err != nil {
 			t.Error(err)
 		}
 	}
