@@ -96,9 +96,9 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |Map                                  |map, may have mixed types for keys, values  |
  +-------------------------------------+--------------------------------------------+
- |[]T                                  |list with T converted as above              |
+ |List, []interface{}                  |list, may have mixed-type values            |
  +-------------------------------------+--------------------------------------------+
- |List                                 |list, may have mixed types  values          |
+ |[]T, [N]T                            |array, T is mapped as per this table        |
  +-------------------------------------+--------------------------------------------+
  |Described                            |described type                              |
  +-------------------------------------+--------------------------------------------+
@@ -107,10 +107,12 @@ Go types are encoded as follows
  |UUID                                 |uuid                                        |
  +-------------------------------------+--------------------------------------------+
 
-The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct, complex64/128.
+The following Go types cannot be marshaled: uintptr, function, channel, struct, complex64/128
 
-AMQP types not yet supported: decimal32/64/128, array.
+AMQP types not yet supported:
+- decimal32/64/128,
 */
+
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	defer recoverMarshal(&err)
 	data := C.pn_data(0)
@@ -160,114 +162,203 @@ func encodeGrow(buffer []byte, encode encodeFn) ([]byte, error) {
 	return buffer, err
 }
 
-func marshal(v interface{}, data *C.pn_data_t) {
-	switch v := v.(type) {
+const intIsLong bool = (unsafe.Sizeof(int(0)) == 8)
+
+// Marshal v to data if data != nil
+// Return the pn_type_t for v, even if data == nil
+func marshal(i interface{}, data *C.pn_data_t) C.pn_type_t {
+	if data != nil { // On exit, check for errors on the data object
+		defer func() {
+			if err := dataMarshalError(i, data); err != nil {
+				panic(err)
+			}
+		}()
+	}
+	switch v := i.(type) {
 	case nil:
-		C.pn_data_put_null(data)
+		if data != nil {
+			C.pn_data_put_null(data)
+		}
+		return C.PN_NULL
 	case bool:
-		C.pn_data_put_bool(data, C.bool(v))
+		if data != nil {
+			C.pn_data_put_bool(data, C.bool(v))
+		}
+		return C.PN_BOOL
 	case int8:
-		C.pn_data_put_byte(data, C.int8_t(v))
+		if data != nil {
+			C.pn_data_put_byte(data, C.int8_t(v))
+		}
+		return C.PN_BYTE
 	case int16:
-		C.pn_data_put_short(data, C.int16_t(v))
+		if data != nil {
+			C.pn_data_put_short(data, C.int16_t(v))
+		}
+		return C.PN_SHORT
 	case int32:
-		C.pn_data_put_int(data, C.int32_t(v))
-	case int64:
-		C.pn_data_put_long(data, C.int64_t(v))
-	case int:
-		if unsafe.Sizeof(int(0)) == 8 {
-			C.pn_data_put_long(data, C.int64_t(v))
-		} else {
+		if data != nil {
 			C.pn_data_put_int(data, C.int32_t(v))
 		}
-	case uint8:
-		C.pn_data_put_ubyte(data, C.uint8_t(v))
-	case uint16:
-		C.pn_data_put_ushort(data, C.uint16_t(v))
-	case uint32:
-		C.pn_data_put_uint(data, C.uint32_t(v))
-	case uint64:
-		C.pn_data_put_ulong(data, C.uint64_t(v))
-	case uint:
-		if unsafe.Sizeof(int(0)) == 8 {
-			C.pn_data_put_ulong(data, C.uint64_t(v))
+		return C.PN_INT
+	case int64:
+		if data != nil {
+			C.pn_data_put_long(data, C.int64_t(v))
+		}
+		return C.PN_LONG
+	case int:
+		if intIsLong {
+			C.pn_data_put_long(data, C.int64_t(v))
+			return C.PN_LONG
 		} else {
+			C.pn_data_put_int(data, C.int32_t(v))
+			return C.PN_INT
+		}
+	case uint8:
+		if data != nil {
+			C.pn_data_put_ubyte(data, C.uint8_t(v))
+		}
+		return C.PN_UBYTE
+	case uint16:
+		if data != nil {
+			C.pn_data_put_ushort(data, C.uint16_t(v))
+		}
+		return C.PN_USHORT
+	case uint32:
+		if data != nil {
 			C.pn_data_put_uint(data, C.uint32_t(v))
 		}
-	case float32:
-		C.pn_data_put_float(data, C.float(v))
-	case float64:
-		C.pn_data_put_double(data, C.double(v))
-	case string:
-		C.pn_data_put_string(data, pnBytes([]byte(v)))
-	case []byte:
-		C.pn_data_put_binary(data, pnBytes(v))
-	case Binary:
-		C.pn_data_put_binary(data, pnBytes([]byte(v)))
-	case Symbol:
-		C.pn_data_put_symbol(data, pnBytes([]byte(v)))
-	case Map: // Special map type
-		C.pn_data_put_map(data)
-		C.pn_data_enter(data)
-		for key, val := range v {
-			marshal(key, data)
-			marshal(val, data)
+		return C.PN_UINT
+	case uint64:
+		if data != nil {
+			C.pn_data_put_ulong(data, C.uint64_t(v))
 		}
-		C.pn_data_exit(data)
+		return C.PN_ULONG
+	case uint:
+		if intIsLong {
+			C.pn_data_put_ulong(data, C.uint64_t(v))
+			return C.PN_ULONG
+		} else {
+			C.pn_data_put_uint(data, C.uint32_t(v))
+			return C.PN_UINT
+		}
+	case float32:
+		if data != nil {
+			C.pn_data_put_float(data, C.float(v))
+		}
+		return C.PN_FLOAT
+	case float64:
+		if data != nil {
+			C.pn_data_put_double(data, C.double(v))
+		}
+		return C.PN_DOUBLE
+	case string:
+		if data != nil {
+			C.pn_data_put_string(data, pnBytes([]byte(v)))
+		}
+		return C.PN_STRING
+
+	case []byte:
+		if data != nil {
+			C.pn_data_put_binary(data, pnBytes(v))
+		}
+		return C.PN_BINARY
+
+	case Binary:
+		if data != nil {
+			C.pn_data_put_binary(data, pnBytes([]byte(v)))
+		}
+		return C.PN_BINARY
+
+	case Symbol:
+		if data != nil {
+			C.pn_data_put_symbol(data, pnBytes([]byte(v)))
+		}
+		return C.PN_SYMBOL
+
 	case Described:
 		C.pn_data_put_described(data)
 		C.pn_data_enter(data)
 		marshal(v.Descriptor, data)
 		marshal(v.Value, data)
 		C.pn_data_exit(data)
+		return C.PN_DESCRIBED
+
 	case AnnotationKey:
-		marshal(v.Get(), data)
+		return marshal(v.Get(), data)
+
 	case time.Time:
-		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+		if data != nil {
+			C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+		}
+		return C.PN_TIMESTAMP
+
 	case UUID:
-		C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
+		if data != nil {
+			C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
+		}
+		return C.PN_UUID
+
 	case Char:
-		C.pn_data_put_char(data, (C.pn_char_t)(v))
+		if data != nil {
+			C.pn_data_put_char(data, (C.pn_char_t)(v))
+		}
+		return C.PN_CHAR
+
 	default:
-		switch reflect.TypeOf(v).Kind() {
+		// Look at more complex types by reflected structure
+
+		switch reflect.TypeOf(i).Kind() {
+
 		case reflect.Map:
-			putMap(data, v)
-		case reflect.Slice:
-			putList(data, v)
+			if data != nil {
+				m := reflect.ValueOf(v)
+				C.pn_data_put_map(data)
+				C.pn_data_enter(data)
+				defer C.pn_data_exit(data)
+				for _, key := range m.MapKeys() {
+					marshal(key.Interface(), data)
+					marshal(m.MapIndex(key).Interface(), data)
+				}
+			}
+			return C.PN_MAP
+
+		case reflect.Slice, reflect.Array:
+			// Note: Go array and slice are mapped the same way:
+			// if element type is an interface, map to AMQP list (mixed type)
+			// if element type is a non-interface type map to AMQP array (single type)
+			s := reflect.ValueOf(v)
+			var ret C.pn_type_t
+			t := reflect.TypeOf(i).Elem()
+			if t.Kind() == reflect.Interface {
+				if data != nil {
+					C.pn_data_put_list(data)
+				}
+				ret = C.PN_LIST
+			} else {
+				if data != nil {
+					pnType := marshal(reflect.Zero(t).Interface(), nil)
+					C.pn_data_put_array(data, false, pnType)
+				}
+				ret = C.PN_ARRAY
+			}
+			if data != nil {
+				C.pn_data_enter(data)
+				defer C.pn_data_exit(data)
+				for j := 0; j < s.Len(); j++ {
+					marshal(s.Index(j).Interface(), data)
+				}
+			}
+			return ret
+
 		default:
 			panic(newMarshalError(v, "no conversion"))
 		}
 	}
-	if err := dataMarshalError(v, data); err != nil {
-		panic(err)
-	}
-	return
 }
 
 func clearMarshal(v interface{}, data *C.pn_data_t) {
 	C.pn_data_clear(data)
 	marshal(v, data)
-}
-
-func putMap(data *C.pn_data_t, v interface{}) {
-	mapValue := reflect.ValueOf(v)
-	C.pn_data_put_map(data)
-	C.pn_data_enter(data)
-	for _, key := range mapValue.MapKeys() {
-		marshal(key.Interface(), data)
-		marshal(mapValue.MapIndex(key).Interface(), data)
-	}
-	C.pn_data_exit(data)
-}
-
-func putList(data *C.pn_data_t, v interface{}) {
-	listValue := reflect.ValueOf(v)
-	C.pn_data_put_list(data)
-	C.pn_data_enter(data)
-	for i := 0; i < listValue.Len(); i++ {
-		marshal(listValue.Index(i).Interface(), data)
-	}
-	C.pn_data_exit(data)
 }
 
 // Encoder encodes AMQP values to an io.Writer

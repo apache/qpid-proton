@@ -32,10 +32,17 @@ import (
 	"testing"
 )
 
+var skipped = false
+
 func getReader(t *testing.T, name string) (r io.Reader) {
 	dir := os.Getenv("PN_INTEROP_DIR")
 	if dir == "" {
-		t.Skip("no PN_INTEROP_DIR in environment")
+		if !skipped {
+			skipped = true // Don't keep repeating
+			t.Skip("no PN_INTEROP_DIR in environment")
+		} else {
+			t.SkipNow()
+		}
 	}
 	r, err := os.Open(dir + "/" + name + ".amqp")
 	if err != nil {

@@ -65,21 +65,23 @@ var rtValues = []interface{}{
 	float32(0.32), float64(0.64),
 	"string", Binary("Binary"), Symbol("symbol"),
 	nil,
-	Map{"V": "X"},
-	List{"V", int32(1)},
 	Described{"D", "V"},
 	timeValue,
 	UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	Char('\u2318'),
+	Map{"V": "X"},
+	List{"V", int32(1)},
+	[]string{"a", "b", "c"}, // to AMQP array
 }
 
-// Go values that unmarshal as an equivalent value but a different type
-// if unmarshalled to interface{}.
+// Go values that unmarshal as an equivalent value but a different default type
+// if unmarshalled to an interface{}
 var oddValues = []interface{}{
-	int(-99), uint(99), // [u]int32|64
+	int(-99),                  // int32|64 depending on platform
+	uint(99),                  // int32|64 depending on platform
 	[]byte("byte"),            // amqp.Binary
 	map[string]int{"str": 99}, // amqp.Map
-	[]string{"a", "b"},        // amqp.List
+	[]Map{Map{}},              // amqp.Array - the generic array
 }
 
 var allValues = append(rtValues, oddValues...)
@@ -93,16 +95,18 @@ var vstrings = []string{
 	"0.32", "0.64",
 	"string", "Binary", "symbol",
 	"<nil>",
-	"map[V:X]",
-	"[V 1]",
 	"{D V}",
 	fmt.Sprintf("%v", timeValue),
 	"UUID(01020304-0506-0708-090a-0b0c0d0e0f10)",
 	"\u2318",
+	"map[V:X]",
+	"[V 1]",
+	"[a b c]",
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/
 	"map[str:99]",
+	"[map[]]",
 	"[a b]",
 }
 

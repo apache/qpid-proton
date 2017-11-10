@@ -25,7 +25,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"time"
 	"unsafe"
 )
@@ -87,20 +86,15 @@ func (t C.pn_type_t) String() string {
 	}
 }
 
-// Go types
-var (
-	bytesType = reflect.TypeOf([]byte{})
-	valueType = reflect.TypeOf(reflect.Value{})
-)
-
-// TODO aconway 2015-04-08: can't handle AMQP maps with key types that are not valid Go map keys.
-
-// Map is a generic map that can have mixed key and value types and so can represent any AMQP map
+// The AMQP map type. A generic map that can have mixed-type keys and values.
 type Map map[interface{}]interface{}
 
-// List is a generic list that can hold mixed values and can represent any AMQP list.
-//
+// The AMQP list type. A generic list that can hold mixed-type values.
 type List []interface{}
+
+// The generic AMQP array type, used to unmarshal an array with nested array,
+// map or list elements. Arrays of simple type T unmarshal to []T
+type Array []interface{}
 
 // Symbol is a string that is encoded as an AMQP symbol
 type Symbol string
