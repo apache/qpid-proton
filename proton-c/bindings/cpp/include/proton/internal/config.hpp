@@ -33,6 +33,16 @@
 /// default.  Otherwise they can be enabled or disabled separately
 /// with -D on the compile line.
 
+/// The Apple clang compiler doesn't really support PN_CPP_HAS_THREAD_LOCAL
+/// before Xcode 8 even though it claims to be C++11 compatible
+#if defined(__clang__) && defined(__apple_build_version__) && ((__clang_major__ * 100) + __clang_minor__) >= 301
+#if __has_feature(cxx_thread_local)
+#define PN_CPP_HAS_THREAD_LOCAL 1
+#else
+#define PN_CPP_HAS_THREAD_LOCAL 0
+#endif
+#endif
+
 #ifndef PN_CPP_HAS_CPP11
 #if defined(__cplusplus) && __cplusplus >= 201103
 #define PN_CPP_HAS_CPP11 1
