@@ -226,3 +226,11 @@ type UUID [16]byte
 func (u UUID) String() string {
 	return fmt.Sprintf("UUID(%x-%x-%x-%x-%x)", u[0:4], u[4:6], u[6:8], u[8:10], u[10:])
 }
+
+// Char is an AMQP unicode character, equivalent to a Go rune.
+// It is defined as a distinct type so it can be distinguished from an AMQP int
+type Char rune
+
+func (c Char) String() string {
+	return fmt.Sprintf("%c", c)
+}

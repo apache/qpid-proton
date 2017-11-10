@@ -28,7 +28,7 @@ import (
 
 func checkEqual(want interface{}, got interface{}) error {
 	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("%s != %s", want, got)
+		return fmt.Errorf("%#v != %#v", want, got)
 	}
 	return nil
 }
@@ -70,6 +70,7 @@ var rtValues = []interface{}{
 	Described{"D", "V"},
 	timeValue,
 	UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	Char('\u2318'),
 }
 
 // Go values that unmarshal as an equivalent value but a different type
@@ -97,6 +98,7 @@ var vstrings = []string{
 	"{D V}",
 	fmt.Sprintf("%v", timeValue),
 	"UUID(01020304-0506-0708-090a-0b0c0d0e0f10)",
+	"\u2318",
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/

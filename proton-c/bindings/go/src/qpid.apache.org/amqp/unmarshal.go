@@ -148,7 +148,7 @@ Types are converted as follows:
  |bool                    |bool                                             |
  +------------------------+-------------------------------------------------+
  |int, int8, int16, int32,|Equivalent or smaller signed integer type: byte, |
- |int64                   |short, int, long.                                |
+ |int64                   |short, int, long or char.                        |
  +------------------------+-------------------------------------------------+
  |uint, uint8, uint16,    |Equivalent or smaller unsigned integer type:     |
  |uint32, uint64          |ubyte, ushort, uint, ulong                       |
@@ -159,6 +159,8 @@ Types are converted as follows:
  +------------------------+-------------------------------------------------+
  |Symbol                  |symbol                                           |
  +------------------------+-------------------------------------------------+
+ |Char                    |char                                             |
+ +------------------------+-------------------------------------------------+
  |map[K]T                 |map, provided all keys and values can unmarshal  |
  |                        |to types K,T                                     |
  +------------------------+-------------------------------------------------+
@@ -168,6 +170,8 @@ Types are converted as follows:
  +------------------------+-------------------------------------------------+
  |Time                    |timestamp                                        |
  +------------------------+-------------------------------------------------+
+ |UUID                    |uuid                                             |
+ +--------------------------------------------------------------------------+
 
 An AMQP described type can unmarshal into the corresponding plain type, discarding the descriptor.
 For example an AMQP described string can unmarshal into a plain go string.
@@ -190,6 +194,8 @@ Any AMQP type can unmarshal to an interface{}, the Go type used to unmarshal is 
  +------------------------+-------------------------------------------------+
  |symbol                  |Symbol                                           |
  +------------------------+-------------------------------------------------+
+ |char                    |Char                                             |
+ +------------------------+-------------------------------------------------+
  |binary                  |Binary                                           |
  +------------------------+-------------------------------------------------+
  |null                    |nil                                              |
@@ -207,7 +213,7 @@ Any AMQP type can unmarshal to an interface{}, the Go type used to unmarshal is 
 
 The following Go types cannot be unmarshaled: uintptr, function, interface, channel, array (use slice), struct
 
-AMQP types not yet supported: decimal32/64/128, char (round trip), maps with key values that are not legal Go map keys.
+AMQP types not yet supported: decimal32/64/128, maps with key values that are not legal Go map keys.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	defer recoverUnmarshal(&err)
@@ -269,8 +275,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		}
 	case *int8:
 		switch pnType {
-		case C.PN_CHAR:
-			*v = int8(C.pn_data_get_char(data))
 		case C.PN_BYTE:
 			*v = int8(C.pn_data_get_byte(data))
 		default:
@@ -278,8 +282,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		}
 	case *uint8:
 		switch pnType {
-		case C.PN_CHAR:
-			*v = uint8(C.pn_data_get_char(data))
 		case C.PN_UBYTE:
 			*v = uint8(C.pn_data_get_ubyte(data))
 		default:
@@ -287,8 +289,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		}
 	case *int16:
 		switch pnType {
-		case C.PN_CHAR:
-			*v = int16(C.pn_data_get_char(data))
 		case C.PN_BYTE:
 			*v = int16(C.pn_data_get_byte(data))
 		case C.PN_SHORT:
@@ -298,8 +298,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		}
 	case *uint16:
 		switch pnType {
-		case C.PN_CHAR:
-			*v = uint16(C.pn_data_get_char(data))
 		case C.PN_UBYTE:
 			*v = uint16(C.pn_data_get_ubyte(data))
 		case C.PN_USHORT:
@@ -333,7 +331,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		default:
 			panic(newUnmarshalError(pnType, v))
 		}
-
 	case *int64:
 		switch pnType {
 		case C.PN_CHAR:
@@ -349,7 +346,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		default:
 			panic(newUnmarshalError(pnType, v))
 		}
-
 	case *uint64:
 		switch pnType {
 		case C.PN_CHAR:
@@ -363,7 +359,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		default:
 			panic(newUnmarshalError(pnType, v))
 		}
-
 	case *int:
 		switch pnType {
 		case C.PN_CHAR:
@@ -383,7 +378,6 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		default:
 			panic(newUnmarshalError(pnType, v))
 		}
-
 	case *uint:
 		switch pnType {
 		case C.PN_CHAR:
@@ -400,6 +394,14 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 			} else {
 				panic(newUnmarshalError(pnType, v))
 			}
+		default:
+			panic(newUnmarshalError(pnType, v))
+		}
+
+	case *Char:
+		switch pnType {
+		case C.PN_CHAR:
+			*v = Char(C.pn_data_get_char(data))
 		default:
 			panic(newUnmarshalError(pnType, v))
 		}
@@ -534,7 +536,7 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 	case C.PN_INT:
 		*v = int32(C.pn_data_get_int(data))
 	case C.PN_CHAR:
-		*v = uint8(C.pn_data_get_char(data))
+		*v = Char(C.pn_data_get_char(data))
 	case C.PN_ULONG:
 		*v = uint64(C.pn_data_get_ulong(data))
 	case C.PN_LONG:
