@@ -82,9 +82,10 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  # Default to universal binary on Mac OS X unless user has overriden
-  if (NOT DEFINED CMAKE_OSX_ARCHITECTURES OR "${CMAKE_OSX_ARCHITECTURES}" STREQUAL "")
-    set(CMAKE_OSX_ARCHITECTURES "i386;x86_64")
+  if (NOT CMAKE_OSX_ARCHITECTURES)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64")
+    set(LIB_SUFFIX "")
+    set(CMAKE_MACOSX_RPATH ON)
   endif ()
 endif ()
 
