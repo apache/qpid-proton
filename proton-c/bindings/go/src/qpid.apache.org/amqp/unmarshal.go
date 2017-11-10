@@ -202,10 +202,12 @@ Any AMQP type can unmarshal to an interface{}, the Go type used to unmarshal is 
  +--------------------------------------------------------------------------+
  |timestamp               |time.Time                                        |
  +--------------------------------------------------------------------------+
+ |uuid                    |UUID                                             |
+ +--------------------------------------------------------------------------+
 
 The following Go types cannot be unmarshaled: uintptr, function, interface, channel, array (use slice), struct
 
-AMQP types not yet supported: decimal32/64/128, char (round trip), uuid, maps with key values that are not legal Go map keys.
+AMQP types not yet supported: decimal32/64/128, char (round trip), maps with key values that are not legal Go map keys.
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	defer recoverUnmarshal(&err)
@@ -468,6 +470,15 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 			panic(newUnmarshalError(pnType, v))
 		}
 
+	case *UUID:
+		switch pnType {
+		case C.PN_UUID:
+			pn := C.pn_data_get_uuid(data)
+			copy((*v)[:], C.GoBytes(unsafe.Pointer(&pn.bytes), 16))
+		default:
+			panic(newUnmarshalError(pnType, v))
+		}
+
 	case *interface{}:
 		getInterface(data, v)
 
@@ -552,6 +563,10 @@ func getInterface(data *C.pn_data_t, v *interface{}) {
 		*v = d
 	case C.PN_TIMESTAMP:
 		*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
+	case C.PN_UUID:
+		var u UUID
+		unmarshal(&u, data)
+		*v = u
 	case C.PN_NULL:
 		*v = nil
 	case C.PN_INVALID:

@@ -219,3 +219,10 @@ type Described struct {
 	Descriptor interface{}
 	Value      interface{}
 }
+
+// UUID is an AMQP 128-bit Universally Unique Identifier, as defined by RFC-4122 section 4.1.2
+type UUID [16]byte
+
+func (u UUID) String() string {
+	return fmt.Sprintf("UUID(%x-%x-%x-%x-%x)", u[0:4], u[4:6], u[6:8], u[8:10], u[10:])
+}

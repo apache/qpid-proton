@@ -69,6 +69,7 @@ var rtValues = []interface{}{
 	List{"V", int32(1)},
 	Described{"D", "V"},
 	timeValue,
+	UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 }
 
 // Go values that unmarshal as an equivalent value but a different type
@@ -95,6 +96,7 @@ var vstrings = []string{
 	"[V 1]",
 	"{D V}",
 	fmt.Sprintf("%v", timeValue),
+	"UUID(01020304-0506-0708-090a-0b0c0d0e0f10)",
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/

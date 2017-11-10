@@ -102,10 +102,12 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |time.Time                            |timestamp                                   |
  +-------------------------------------+--------------------------------------------+
+ |UUID                                 |uuid                                        |
+ +-------------------------------------+--------------------------------------------+
 
 The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct, complex64/128.
 
-AMQP types not yet supported: decimal32/64/128, char, uuid, array.
+AMQP types not yet supported: decimal32/64/128, char, array.
 */
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	defer recoverMarshal(&err)
@@ -220,6 +222,8 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		marshal(v.Get(), data)
 	case time.Time:
 		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+	case UUID:
+		C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
 	default:
 		switch reflect.TypeOf(v).Kind() {
 		case reflect.Map:
