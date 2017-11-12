@@ -305,6 +305,7 @@ static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool ser
   work_init(&pc->work, p,  T_CONNECTION);
   pc->next = pconnection_unqueued;
   pc->write.data = &pc->work;
+  uv_mutex_init(&pc->lock);
   if (server) {
     pn_transport_set_server(pc->driver.transport);
   }
@@ -660,6 +661,7 @@ void pn_listener_free(pn_listener_t *l) {
       free(ls);
     }
     assert(!l->accept.front);
+    uv_mutex_destroy(&l->lock);
     free(l);
   }
 }
@@ -1239,6 +1241,7 @@ pn_listener_t *pn_listener(void) {
       pn_listener_free(l);
       return NULL;
     }
+    uv_mutex_init(&l->lock);
   }
   return l;
 }
