@@ -59,6 +59,37 @@ class test_socket {
     void close_early()  { closesocket(sock_); } // Windows won't allow two sockets on a port
 };
 
+#elif defined(__APPLE__) || defined(__FreeBSD__)
+
+// BSD derivatives don't support the same SO_REUSEADDR semantics as Linux so
+// do the same thing as windows and hope for the best
+extern "C" {
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <netinet/in.h>
+# include <unistd.h>
+# include <netdb.h>
+}
+
+void check_err(int ret, const std::string& what) {
+    if (ret) throw std::runtime_error(what + ": " + std::strerror(errno));
+}
+
+class test_socket {
+  public:
+    int sock_;
+    test_socket() : sock_(socket(AF_INET, SOCK_STREAM, 0)) {
+        check_err(sock_ < 0, "socket");
+        int on = 1;
+        check_err(setsockopt(sock_, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)),
+                  "setsockop");
+    }
+    ~test_socket() { }
+    void close_early() {
+        close(sock_);
+    }
+};
+
 #else  /* POSIX */
 
 extern "C" {

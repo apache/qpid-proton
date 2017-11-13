@@ -106,7 +106,7 @@ test_port_t test_port(const char* host) {
   check_err(tp.sock < 0, "socket");
 #ifndef _WIN32
   int on = 1;
-  check_err(setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)), "setsockopt");;;
+  check_err(setsockopt(tp.sock, SOL_SOCKET, SO_REUSEADDR, (const char*)&on, sizeof(on)), "setsockopt");
 #endif
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;    /* set the type of connection to TCP/IP */
@@ -122,6 +122,8 @@ test_port_t test_port(const char* host) {
   test_port_use_host(&tp, host);
 #ifdef _WIN32                   /* Windows doesn't support the twice-open socket trick */
   closesocket(tp.sock);
+#elif defined (__APPLE__) || defined(__FreeBSD__)
+  close(tp.sock);
 #endif
   return tp;
 }
@@ -129,6 +131,8 @@ test_port_t test_port(const char* host) {
 void test_port_close(test_port_t *tp) {
 #ifdef _WIN32
   WSACleanup();
+#elif defined (__APPLE__) || defined(__FreeBSD__)
+  // We already closed and have no other cleanup to do
 #else
   close(tp->sock);
 #endif
