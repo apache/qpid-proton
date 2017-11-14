@@ -48,7 +48,7 @@ func testAuthClientServer(t *testing.T, copts []ConnectionOption, sopts []Connec
 }
 
 func TestAuthAnonymous(t *testing.T) {
-	fatalIf(t, configureSASL())
+	configureSASL()
 	got, err := testAuthClientServer(t,
 		[]ConnectionOption{User("fred"), VirtualHost("vhost"), SASLAllowInsecure(true)},
 		[]ConnectionOption{SASLAllowedMechs("ANONYMOUS"), SASLAllowInsecure(true)})
