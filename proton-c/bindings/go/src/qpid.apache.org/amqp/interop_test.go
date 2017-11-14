@@ -247,7 +247,7 @@ func TestStrings(t *testing.T) {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte{}, nil)
-	if !strings.Contains(err.Error(), "not enough data") {
+	if err := checkEqual(err, EndOfData); err != nil {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte("foobar"), nil)

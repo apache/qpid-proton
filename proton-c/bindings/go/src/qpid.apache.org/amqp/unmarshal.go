@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strings"
 	"time"
 	"unsafe"
 )
@@ -46,40 +45,50 @@ type UnmarshalError struct {
 
 func (e UnmarshalError) Error() string { return e.s }
 
-func newUnmarshalErrorMsg(pnType C.pn_type_t, v interface{}, msg string) *UnmarshalError {
-	if len(msg) > 0 && !strings.HasPrefix(msg, ":") {
-		msg = ": " + msg
-	}
-	e := &UnmarshalError{AMQPType: C.pn_type_t(pnType).String(), GoType: reflect.TypeOf(v)}
-	if e.GoType.Kind() != reflect.Ptr {
-		e.s = fmt.Sprintf("cannot unmarshal to type %s, not a pointer%s", e.GoType, msg)
-	} else {
-		e.s = fmt.Sprintf("cannot unmarshal AMQP %s to %s%s", e.AMQPType, e.GoType, msg)
-	}
-	return e
-}
+// Error returned if there are not enough bytes to decode a complete AMQP value.
+var EndOfData = &UnmarshalError{s: "Not enough data for AMQP value"}
+
+var badData = &UnmarshalError{s: "Unexpected error in data"}
 
 func newUnmarshalError(pnType C.pn_type_t, v interface{}) *UnmarshalError {
-	return newUnmarshalErrorMsg(pnType, v, "")
-}
-
-func newUnmarshalErrorData(data *C.pn_data_t, v interface{}) *UnmarshalError {
-	err := PnError(C.pn_data_error(data))
-	if err == nil {
-		return nil
+	e := &UnmarshalError{
+		AMQPType: C.pn_type_t(pnType).String(),
+		GoType:   reflect.TypeOf(v),
 	}
-	e := newUnmarshalError(C.pn_data_type(data), v)
-	e.s = e.s + ": " + err.Error()
+	if e.GoType == nil || e.GoType.Kind() != reflect.Ptr {
+		e.s = fmt.Sprintf("cannot unmarshal to Go type %v, not a pointer", e.GoType)
+	} else {
+		e.s = fmt.Sprintf("cannot unmarshal AMQP %v to Go %v", e.AMQPType, e.GoType.Elem())
+	}
 	return e
 }
 
-func recoverUnmarshal(err *error) {
-	if r := recover(); r != nil {
-		if uerr, ok := r.(*UnmarshalError); ok {
-			*err = uerr
-		} else {
-			panic(r)
-		}
+func doPanic(data *C.pn_data_t, v interface{}) {
+	e := newUnmarshalError(C.pn_data_type(data), v)
+	panic(e)
+}
+
+func doPanicMsg(data *C.pn_data_t, v interface{}, msg string) {
+	e := newUnmarshalError(C.pn_data_type(data), v)
+	e.s = e.s + ": " + msg
+	panic(e)
+}
+
+func panicIfBadData(data *C.pn_data_t, v interface{}) {
+	if C.pn_data_errno(data) != 0 {
+		doPanicMsg(data, v, PnError(C.pn_data_error(data)).Error())
+	}
+}
+
+func panicUnless(ok bool, data *C.pn_data_t, v interface{}) {
+	if !ok {
+		doPanic(data, v)
+	}
+}
+
+func checkOp(ok bool, v interface{}) {
+	if !ok {
+		panic(&badData)
 	}
 }
 
@@ -119,22 +128,20 @@ func (d *Decoder) Buffered() io.Reader {
 // See the documentation for Unmarshal for details about the conversion of AMQP into a Go value.
 //
 func (d *Decoder) Decode(v interface{}) (err error) {
-	defer recoverUnmarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	var n int
-	for n == 0 {
-		n, err = decode(data, d.buffer.Bytes())
-		if err != nil {
-			return err
-		}
-		if n == 0 { // n == 0 means not enough data, read more
-			err = d.more()
-		} else {
-			unmarshal(v, data)
+	for n, err = decode(data, d.buffer.Bytes()); err == EndOfData; {
+		err = d.more()
+		if err == nil {
+			n, err = decode(data, d.buffer.Bytes())
 		}
 	}
-	d.buffer.Next(n)
+	if err == nil {
+		if err = recoverUnmarshal(v, data); err == nil {
+			d.buffer.Next(n)
+		}
+	}
 	return
 }
 
@@ -174,7 +181,7 @@ type as follows:
  |map[K]T                     |map, provided all keys and values can unmarshal   |
  |                            |to types K,T                                      |
  +----------------------------+--------------------------------------------------+
- |[]interface{}               |list or array                                     |
+ |[]interface{}               |AMQP list or array                                |
  +----------------------------+--------------------------------------------------+
  |[]T                         |list or array if elements can unmarshal as T      |
  +----------------------------+------------------n-------------------------------+
@@ -215,7 +222,7 @@ determined by the AMQP type as follows:
  +----------------------------+--------------------------------------------------+
  |uuid                        |UUID                                              |
  +----------------------------+--------------------------------------------------+
- |map                         |Map                                               |
+ |map                         |Map or AnyMap[4]                                  |
  +----------------------------+--------------------------------------------------+
  |list                        |List                                              |
  +----------------------------+--------------------------------------------------+
@@ -226,6 +233,10 @@ determined by the AMQP type as follows:
 An AMQP array containing complex types (lists, maps or nested arrays) unmarshals
 to the generic array type amqp.Array
 
+[4] An AMQP map unmarshals as the generic `type Map map[interface{}]interface{}`
+unless it contains key values that are illegal as Go map types, in which case
+it unmarshals as type AnyMap.
+
 The following Go types cannot be unmarshaled: uintptr, function, interface,
 channel, array (use slice), struct
 
@@ -233,29 +244,19 @@ AMQP types not yet supported:
 - decimal32/64/128
 - maps with key values that are not legal Go map keys.
 */
-
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
-	defer recoverUnmarshal(&err)
-
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
 	n, err = decode(data, bytes)
-	if err != nil {
-		return 0, err
+	if err == nil {
+		err = recoverUnmarshal(v, data)
 	}
-	if n == 0 {
-		return 0, fmt.Errorf("not enough data")
-	} else {
-		unmarshal(v, data)
-	}
-	return n, nil
+	return
 }
 
 // Internal
-func UnmarshalUnsafe(pn_data unsafe.Pointer, v interface{}) (err error) {
-	defer recoverUnmarshal(&err)
-	unmarshal(v, (*C.pn_data_t)(pn_data))
-	return
+func UnmarshalUnsafe(pnData unsafe.Pointer, v interface{}) (err error) {
+	return recoverUnmarshal(v, (*C.pn_data_t)(pnData))
 }
 
 // more reads more data when we can't parse a complete AMQP type
@@ -272,50 +273,61 @@ func (d *Decoder) more() error {
 	return err
 }
 
+// Call unmarshal(), convert panic to error value
+func recoverUnmarshal(v interface{}, data *C.pn_data_t) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if uerr, ok := r.(*UnmarshalError); ok {
+				err = uerr
+			} else {
+				panic(r)
+			}
+		}
+	}()
+	unmarshal(v, data)
+	return nil
+}
+
 // Unmarshal from data into value pointed at by v. Returns v.
 // NOTE: If you update this you also need to update getInterface()
 func unmarshal(v interface{}, data *C.pn_data_t) {
-	pnType := C.pn_data_type(data)
+	rt := reflect.TypeOf(v)
+	rv := reflect.ValueOf(v)
+	panicUnless(v != nil && rt.Kind() == reflect.Ptr && !rv.IsNil(), data, v)
 
 	// Check for PN_DESCRIBED first, as described types can unmarshal into any of the Go types.
-	// Interfaces are handled in the switch below, even for described types.
+	// An interface{} target is handled in the switch below, even for described types.
 	if _, isInterface := v.(*interface{}); !isInterface && bool(C.pn_data_is_described(data)) {
 		getDescribed(data, v)
 		return
 	}
 
 	// Unmarshal based on the target type
+	pnType := C.pn_data_type(data)
 	switch v := v.(type) {
+
 	case *bool:
-		switch pnType {
-		case C.PN_BOOL:
-			*v = bool(C.pn_data_get_bool(data))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_BOOL, data, v)
+		*v = bool(C.pn_data_get_bool(data))
+
 	case *int8:
-		switch pnType {
-		case C.PN_BYTE:
-			*v = int8(C.pn_data_get_byte(data))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_BYTE, data, v)
+		*v = int8(C.pn_data_get_byte(data))
+
 	case *uint8:
-		switch pnType {
-		case C.PN_UBYTE:
-			*v = uint8(C.pn_data_get_ubyte(data))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_UBYTE, data, v)
+		*v = uint8(C.pn_data_get_ubyte(data))
+
 	case *int16:
-		switch pnType {
+		switch C.pn_data_type(data) {
 		case C.PN_BYTE:
 			*v = int16(C.pn_data_get_byte(data))
 		case C.PN_SHORT:
 			*v = int16(C.pn_data_get_short(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *uint16:
 		switch pnType {
 		case C.PN_UBYTE:
@@ -323,8 +335,9 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_USHORT:
 			*v = uint16(C.pn_data_get_ushort(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *int32:
 		switch pnType {
 		case C.PN_CHAR:
@@ -336,8 +349,9 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_INT:
 			*v = int32(C.pn_data_get_int(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *uint32:
 		switch pnType {
 		case C.PN_CHAR:
@@ -349,8 +363,9 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_UINT:
 			*v = uint32(C.pn_data_get_uint(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *int64:
 		switch pnType {
 		case C.PN_CHAR:
@@ -364,8 +379,9 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_LONG:
 			*v = int64(C.pn_data_get_long(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *uint64:
 		switch pnType {
 		case C.PN_CHAR:
@@ -377,8 +393,9 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_ULONG:
 			*v = uint64(C.pn_data_get_ulong(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *int:
 		switch pnType {
 		case C.PN_CHAR:
@@ -390,14 +407,15 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_INT:
 			*v = int(C.pn_data_get_int(data))
 		case C.PN_LONG:
-			if unsafe.Sizeof(int(0)) == 8 {
+			if intIs64 {
 				*v = int(C.pn_data_get_long(data))
 			} else {
-				panic(newUnmarshalError(pnType, v))
+				doPanic(data, v)
 			}
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+
 	case *uint:
 		switch pnType {
 		case C.PN_CHAR:
@@ -409,30 +427,18 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_UINT:
 			*v = uint(C.pn_data_get_uint(data))
 		case C.PN_ULONG:
-			if unsafe.Sizeof(int(0)) == 8 {
+			if intIs64 {
 				*v = uint(C.pn_data_get_ulong(data))
 			} else {
-				panic(newUnmarshalError(pnType, v))
+				doPanic(data, v)
 			}
 		default:
-			panic(newUnmarshalError(pnType, v))
-		}
-
-	case *Char:
-		switch pnType {
-		case C.PN_CHAR:
-			*v = Char(C.pn_data_get_char(data))
-		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
 
 	case *float32:
-		switch pnType {
-		case C.PN_FLOAT:
-			*v = float32(C.pn_data_get_float(data))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_FLOAT, data, v)
+		*v = float32(C.pn_data_get_float(data))
 
 	case *float64:
 		switch pnType {
@@ -441,7 +447,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_DOUBLE:
 			*v = float64(C.pn_data_get_double(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
 
 	case *string:
@@ -453,7 +459,7 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_BINARY:
 			*v = goString(C.pn_data_get_binary(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
 
 	case *[]byte:
@@ -465,74 +471,65 @@ func unmarshal(v interface{}, data *C.pn_data_t) {
 		case C.PN_BINARY:
 			*v = goBytes(C.pn_data_get_binary(data))
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
+		return
+
+	case *Char:
+		panicUnless(pnType == C.PN_CHAR, data, v)
+		*v = Char(C.pn_data_get_char(data))
 
 	case *Binary:
-		switch pnType {
-		case C.PN_BINARY:
-			*v = Binary(goBytes(C.pn_data_get_binary(data)))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_BINARY, data, v)
+		*v = Binary(goBytes(C.pn_data_get_binary(data)))
 
 	case *Symbol:
-		switch pnType {
-		case C.PN_SYMBOL:
-			*v = Symbol(goBytes(C.pn_data_get_symbol(data)))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_SYMBOL, data, v)
+		*v = Symbol(goBytes(C.pn_data_get_symbol(data)))
 
 	case *time.Time:
-		switch pnType {
-		case C.PN_TIMESTAMP:
-			*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_TIMESTAMP, data, v)
+		*v = time.Unix(0, int64(C.pn_data_get_timestamp(data))*1000)
 
 	case *UUID:
-		switch pnType {
-		case C.PN_UUID:
-			pn := C.pn_data_get_uuid(data)
-			copy((*v)[:], C.GoBytes(unsafe.Pointer(&pn.bytes), 16))
-		default:
-			panic(newUnmarshalError(pnType, v))
-		}
+		panicUnless(pnType == C.PN_UUID, data, v)
+		pn := C.pn_data_get_uuid(data)
+		copy((*v)[:], C.GoBytes(unsafe.Pointer(&pn.bytes), 16))
+
 	case *AnnotationKey:
-		if pnType == C.PN_ULONG || pnType == C.PN_SYMBOL || pnType == C.PN_STRING {
-			unmarshal(&v.value, data)
-		} else {
-			panic(newUnmarshalError(pnType, v))
+		panicUnless(pnType == C.PN_ULONG || pnType == C.PN_SYMBOL || pnType == C.PN_STRING, data, v)
+		unmarshal(&v.value, data)
+
+	case *AnyMap:
+		panicUnless(C.pn_data_type(data) == C.PN_MAP, data, v)
+		n := int(C.pn_data_get_map(data)) / 2
+		if cap(*v) < n {
+			*v = make(AnyMap, n)
+		}
+		*v = (*v)[:n]
+		data.enter(*v)
+		defer data.exit(*v)
+		for i := 0; i < n; i++ {
+			data.next(*v)
+			unmarshal(&(*v)[i].Key, data)
+			data.next(*v)
+			unmarshal(&(*v)[i].Value, data)
 		}
 
 	case *interface{}:
 		getInterface(data, v)
 
 	default: // This is not one of the fixed well-known types, reflect for map and slice types
-		if reflect.TypeOf(v).Kind() != reflect.Ptr {
-			panic(newUnmarshalError(pnType, v))
-		}
-		switch reflect.TypeOf(v).Elem().Kind() {
+
+		switch rt.Elem().Kind() {
 		case reflect.Map:
 			getMap(data, v)
 		case reflect.Slice:
 			getSequence(data, v)
 		default:
-			panic(newUnmarshalError(pnType, v))
+			doPanic(data, v)
 		}
 	}
-	if err := newUnmarshalErrorData(data, v); err != nil {
-		panic(err)
-	}
-	return
-}
-
-func rewindUnmarshal(v interface{}, data *C.pn_data_t) {
-	C.pn_data_rewind(data)
-	C.pn_data_next(data)
-	unmarshal(v, data)
 }
 
 // Unmarshalling into an interface{} the type is determined by the AMQP source type,
@@ -577,9 +574,15 @@ func getInterface(data *C.pn_data_t, vp *interface{}) {
 		unmarshal(&u, data)
 		*vp = u
 	case C.PN_MAP:
-		m := Map{}
-		unmarshal(&m, data)
-		*vp = m
+		// We will try to unmarshal as a Map first, if that fails try AnyMap
+		m := make(Map, int(C.pn_data_get_map(data))/2)
+		if err := recoverUnmarshal(&m, data); err == nil {
+			*vp = m
+		} else {
+			am := make(AnyMap, int(C.pn_data_get_map(data))/2)
+			unmarshal(&am, data)
+			*vp = am
+		}
 	case C.PN_LIST:
 		l := List{}
 		unmarshal(&l, data)
@@ -645,32 +648,33 @@ func getArrayStore(data *C.pn_data_t) interface{} {
 	return new(Array) // Not a simple type, use generic Array
 }
 
+var typeOfInterface = reflect.TypeOf(interface{}(nil))
+
 // get into map pointed at by v
 func getMap(data *C.pn_data_t, v interface{}) {
+	panicUnless(C.pn_data_type(data) == C.PN_MAP, data, v)
+	n := int(C.pn_data_get_map(data)) / 2
 	mapValue := reflect.ValueOf(v).Elem()
 	mapValue.Set(reflect.MakeMap(mapValue.Type())) // Clear the map
-	switch pnType := C.pn_data_type(data); pnType {
-	case C.PN_MAP:
-		count := int(C.pn_data_get_map(data))
-		if bool(C.pn_data_enter(data)) {
-			defer C.pn_data_exit(data)
-			for i := 0; i < count/2; i++ {
-				if bool(C.pn_data_next(data)) {
-					key := reflect.New(mapValue.Type().Key())
-					unmarshal(key.Interface(), data)
-					if bool(C.pn_data_next(data)) {
-						val := reflect.New(mapValue.Type().Elem())
-						unmarshal(val.Interface(), data)
-						mapValue.SetMapIndex(key.Elem(), val.Elem())
-					}
-				}
-			}
+	data.enter(v)
+	defer data.exit(v)
+	// Allocate re-usable key/val values
+	keyType := mapValue.Type().Key()
+	keyPtr := reflect.New(keyType)
+	valPtr := reflect.New(mapValue.Type().Elem())
+	for i := 0; i < n; i++ {
+		data.next(v)
+		unmarshal(keyPtr.Interface(), data)
+		if keyType.Kind() == reflect.Interface && !keyPtr.Elem().Elem().Type().Comparable() {
+			doPanicMsg(data, v, fmt.Sprintf("key %#v is not comparable", keyPtr.Elem().Interface()))
 		}
-	default: // Empty/error/unknown, leave map empty
+		data.next(v)
+		unmarshal(valPtr.Interface(), data)
+		mapValue.SetMapIndex(keyPtr.Elem(), valPtr.Elem())
 	}
 }
 
-func getSequence(data *C.pn_data_t, v interface{}) {
+func getSequence(data *C.pn_data_t, vp interface{}) {
 	var count int
 	pnType := C.pn_data_type(data)
 	switch pnType {
@@ -679,58 +683,51 @@ func getSequence(data *C.pn_data_t, v interface{}) {
 	case C.PN_ARRAY:
 		count = int(C.pn_data_get_array(data))
 	default:
-		panic(newUnmarshalError(pnType, v))
+		doPanic(data, vp)
 	}
-	listValue := reflect.MakeSlice(reflect.TypeOf(v).Elem(), count, count)
-	if bool(C.pn_data_enter(data)) {
-		for i := 0; i < count; i++ {
-			if bool(C.pn_data_next(data)) {
-				val := reflect.New(listValue.Type().Elem())
-				unmarshal(val.Interface(), data)
-				listValue.Index(i).Set(val.Elem())
-			}
-		}
-		C.pn_data_exit(data)
+	listValue := reflect.MakeSlice(reflect.TypeOf(vp).Elem(), count, count)
+	data.enter(vp)
+	defer data.exit(vp)
+	for i := 0; i < count; i++ {
+		data.next(vp)
+		val := reflect.New(listValue.Type().Elem())
+		unmarshal(val.Interface(), data)
+		listValue.Index(i).Set(val.Elem())
 	}
-	reflect.ValueOf(v).Elem().Set(listValue)
+	reflect.ValueOf(vp).Elem().Set(listValue)
 }
 
-func getDescribed(data *C.pn_data_t, v interface{}) {
-	d, _ := v.(*Described)
-	pnType := C.pn_data_type(data)
-	if bool(C.pn_data_enter(data)) {
-		defer C.pn_data_exit(data)
-		if bool(C.pn_data_next(data)) {
-			if d != nil {
-				unmarshal(&d.Descriptor, data)
-			}
-			if bool(C.pn_data_next(data)) {
-				if d != nil {
-					unmarshal(&d.Value, data)
-				} else {
-					unmarshal(v, data)
-				}
-				return
-			}
-		}
+func getDescribed(data *C.pn_data_t, vp interface{}) {
+	d, isDescribed := vp.(*Described)
+	data.enter(vp)
+	defer data.exit(vp)
+	data.next(vp)
+	if isDescribed {
+		unmarshal(&d.Descriptor, data)
+		data.next(vp)
+		unmarshal(&d.Value, data)
+	} else {
+		data.next(vp)       // Skip descriptor
+		unmarshal(vp, data) // Unmarshal plain value
 	}
-	// The pn_data cursor didn't move as expected
-	panic(newUnmarshalErrorMsg(pnType, v, "bad described value encoding"))
 }
 
 // decode from bytes.
 // Return bytes decoded or 0 if we could not decode a complete object.
 //
 func decode(data *C.pn_data_t, bytes []byte) (int, error) {
-	if len(bytes) == 0 {
-		return 0, nil
-	}
-	n := int(C.pn_data_decode(data, cPtr(bytes), cLen(bytes)))
-	if n == int(C.PN_UNDERFLOW) {
+	n := C.pn_data_decode(data, cPtr(bytes), cLen(bytes))
+	if n == C.PN_UNDERFLOW {
 		C.pn_error_clear(C.pn_data_error(data))
-		return 0, nil
+		return 0, EndOfData
 	} else if n <= 0 {
-		return 0, fmt.Errorf("unmarshal %s", PnErrorCode(n))
+		return 0, &UnmarshalError{s: fmt.Sprintf("unmarshal %v", PnErrorCode(n))}
 	}
-	return n, nil
+	return int(n), nil
 }
+
+// Checked versions of pn_data functions
+
+func (data *C.pn_data_t) enter(v interface{}) { checkOp(bool(C.pn_data_enter(data)), v) }
+func (data *C.pn_data_t) exit(v interface{})  { checkOp(bool(C.pn_data_exit(data)), v) }
+func (data *C.pn_data_t) next(v interface{})  { checkOp(bool(C.pn_data_next(data)), v) }

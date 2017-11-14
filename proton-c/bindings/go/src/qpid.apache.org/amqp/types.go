@@ -89,6 +89,28 @@ func (t C.pn_type_t) String() string {
 // The AMQP map type. A generic map that can have mixed-type keys and values.
 type Map map[interface{}]interface{}
 
+// The most general AMQP map type, for unusual interoperability cases.
+//
+// This is not a Go Map but a sequence of {key, value} pairs.
+//
+// An AnyMap lets you control or examine the encoded ordering of key,value pairs
+// and use key values that are not legal as Go map keys.
+//
+// The amqp.Map, or plain Go map types are easier to use for most cases.
+type AnyMap []KeyValue
+
+// Return a Map constructed from an AnyMap.
+// Panic if the AnyMap has key values that are not valid Go map keys (e.g. maps, slices)
+func (a AnyMap) Map() (m Map) {
+	for _, kv := range a {
+		m[kv.Key] = kv.Value
+	}
+	return
+}
+
+// KeyValue pair, used by AnyMap
+type KeyValue struct{ Key, Value interface{} }
+
 // The AMQP list type. A generic list that can hold mixed-type values.
 type List []interface{}
 
@@ -228,3 +250,5 @@ type Char rune
 func (c Char) String() string {
 	return fmt.Sprintf("%c", c)
 }
+
+const intIs64 = unsafe.Sizeof(int(0)) == 8

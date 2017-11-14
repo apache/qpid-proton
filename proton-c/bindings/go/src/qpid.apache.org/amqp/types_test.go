@@ -70,8 +70,12 @@ var rtValues = []interface{}{
 	UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
 	Char('\u2318'),
 	Map{"V": "X"},
+	Map{},
 	List{"V", int32(1)},
+	List{},
 	[]string{"a", "b", "c"},
+	[]int8{},
+	AnyMap{{[]int8{1, 2, 3}, "bad-key"}, {int16(1), "duplicate-1"}, {int16(1), "duplicate-2"}},
 }
 
 // Go values that round-trip if unmarshalled back to the same type they were
@@ -82,6 +86,7 @@ var oddValues = []interface{}{
 	[]byte("byte"),            // amqp.Binary
 	map[string]int{"str": 99}, // amqp.Map
 	[]Map{Map{}},              // amqp.Array - the generic array
+	AnyMap(nil),               // Map
 }
 
 var allValues = append(rtValues, oddValues...)
@@ -100,14 +105,18 @@ var vstrings = []string{
 	"UUID(01020304-0506-0708-090a-0b0c0d0e0f10)",
 	"\u2318",
 	"map[V:X]",
+	"map[]",
 	"[V 1]",
+	"[]",
 	"[a b c]",
+	"[]",
+	"[{[1 2 3] bad-key} {1 duplicate-1} {1 duplicate-2}]",
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/
 	"map[str:99]",
 	"[map[]]",
-	"[a b]",
+	"[]",
 }
 
 // Round-trip encoding test

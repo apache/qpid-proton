@@ -51,16 +51,6 @@ func dataMarshalError(v interface{}, data *C.pn_data_t) error {
 	return nil
 }
 
-func recoverMarshal(err *error) {
-	if r := recover(); r != nil {
-		if merr, ok := r.(*MarshalError); ok {
-			*err = merr
-		} else {
-			panic(r)
-		}
-	}
-}
-
 /*
 Marshal encodes a Go value as AMQP data in buffer.
 If buffer is nil, or is not large enough, a new buffer  is created.
@@ -96,6 +86,8 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |Map                                  |map, may have mixed types for keys, values  |
  +-------------------------------------+--------------------------------------------+
+ |AnyMap                               |map (See AnyMap)                            |
+ +-------------------------------------+--------------------------------------------+
  |List, []interface{}                  |list, may have mixed-type values            |
  +-------------------------------------+--------------------------------------------+
  |[]T, [N]T                            |array, T is mapped as per this table        |
@@ -114,10 +106,11 @@ AMQP types not yet supported:
 */
 
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer recoverMarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
-	marshal(v, data)
+	if err = recoverMarshal(v, data); err != nil {
+		return buffer, err
+	}
 	encode := func(buf []byte) ([]byte, error) {
 		n := int(C.pn_data_encode(data, cPtr(buf), cLen(buf)))
 		switch {
@@ -132,10 +125,22 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	return encodeGrow(buffer, encode)
 }
 
-// Internal
-func MarshalUnsafe(v interface{}, pn_data unsafe.Pointer) (err error) {
-	defer recoverMarshal(&err)
-	marshal(v, (*C.pn_data_t)(pn_data))
+// Internal use only
+func MarshalUnsafe(v interface{}, pnData unsafe.Pointer) (err error) {
+	return recoverMarshal(v, (*C.pn_data_t)(pnData))
+}
+
+func recoverMarshal(v interface{}, data *C.pn_data_t) (err error) {
+	defer func() { // Convert panic to error return
+		if r := recover(); r != nil {
+			if err2, ok := r.(*MarshalError); ok {
+				err = err2 // Convert internal panic to error
+			} else {
+				panic(r) // Unrecognized error, continue to panic
+			}
+		}
+	}()
+	marshal(v, data) // Panics on error
 	return
 }
 
@@ -180,7 +185,7 @@ func marshal(i interface{}, data *C.pn_data_t) {
 	case int64:
 		C.pn_data_put_long(data, C.int64_t(v))
 	case int:
-		if intIsLong {
+		if intIs64 {
 			C.pn_data_put_long(data, C.int64_t(v))
 		} else {
 			C.pn_data_put_int(data, C.int32_t(v))
@@ -196,7 +201,7 @@ func marshal(i interface{}, data *C.pn_data_t) {
 	case uint64:
 		C.pn_data_put_ulong(data, C.uint64_t(v))
 	case uint:
-		if intIsLong {
+		if intIs64 {
 			C.pn_data_put_ulong(data, C.uint64_t(v))
 		} else {
 			C.pn_data_put_uint(data, C.uint32_t(v))
@@ -237,6 +242,16 @@ func marshal(i interface{}, data *C.pn_data_t) {
 		// Restricted type annotation-key, marshals as contained value
 	case AnnotationKey:
 		marshal(v.Get(), data)
+
+		// Special type to represent AMQP maps with keys that are illegal in Go
+	case AnyMap:
+		C.pn_data_put_map(data)
+		C.pn_data_enter(data)
+		defer C.pn_data_exit(data)
+		for _, kv := range v {
+			marshal(kv.Key, data)
+			marshal(kv.Value, data)
+		}
 
 	default:
 		// Examine complex types (Go map, slice, array) by reflected structure
@@ -309,11 +324,9 @@ var arrayTypeMap = map[reflect.Type]C.pn_type_t{
 	reflect.TypeOf((*Char)(nil)).Elem():      C.PN_CHAR,
 }
 
-const intIsLong = unsafe.Sizeof(int(0)) == 8
-
 // Compute mapping of int/uint at runtime as they depend on execution environment.
 func init() {
-	if intIsLong {
+	if intIs64 {
 		arrayTypeMap[reflect.TypeOf(int(0))] = C.PN_LONG
 		arrayTypeMap[reflect.TypeOf(uint(0))] = C.PN_ULONG
 	} else {

@@ -245,9 +245,11 @@ func (m *message) GroupSequence() int32   { return int32(C.pn_message_get_group_
 func (m *message) ReplyToGroupId() string { return C.GoString(C.pn_message_get_reply_to_group_id(m.pn)) }
 
 func getAnnotations(data *C.pn_data_t) (v map[AnnotationKey]interface{}) {
-	C.pn_data_rewind(data)
-	C.pn_data_next(data)
-	unmarshal(&v, data)
+	if C.pn_data_size(data) > 0 {
+		C.pn_data_rewind(data)
+		C.pn_data_next(data)
+		unmarshal(&v, data)
+	}
 	return v
 }
 
@@ -261,9 +263,11 @@ func (m *message) MessageAnnotations() map[AnnotationKey]interface{} {
 func (m *message) ApplicationProperties() map[string]interface{} {
 	var v map[string]interface{}
 	data := C.pn_message_properties(m.pn)
-	C.pn_data_rewind(data)
-	C.pn_data_next(data)
-	unmarshal(&v, data)
+	if C.pn_data_size(data) > 0 {
+		C.pn_data_rewind(data)
+		C.pn_data_next(data)
+		unmarshal(&v, data)
+	}
 	return v
 }
 
@@ -322,10 +326,22 @@ func (m *message) SetApplicationProperties(v map[string]interface{}) {
 	setData(v, C.pn_message_properties(m.pn))
 }
 
-// Marshal/Unmarshal body
-func (m *message) Marshal(v interface{})   { clearMarshal(v, C.pn_message_body(m.pn)) }
-func (m *message) Unmarshal(v interface{}) { rewindUnmarshal(v, C.pn_message_body(m.pn)) }
-func (m *message) Body() (v interface{})   { m.Unmarshal(&v); return }
+// Marshal body from v
+func (m *message) Marshal(v interface{}) { clearMarshal(v, C.pn_message_body(m.pn)) }
+
+// Unmarshal body to v, which must be a pointer to a value. See amqp.Unmarshal
+func (m *message) Unmarshal(v interface{}) {
+	data := C.pn_message_body(m.pn)
+	if C.pn_data_size(data) > 0 {
+		C.pn_data_rewind(data)
+		C.pn_data_next(data)
+		unmarshal(v, data)
+	}
+	return
+}
+
+// Return the body value as an interface
+func (m *message) Body() (v interface{}) { m.Unmarshal(&v); return }
 
 func (m *message) Decode(data []byte) error {
 	m.Clear()
@@ -366,9 +382,11 @@ func (m *message) Encode(buffer []byte) ([]byte, error) {
 
 // ==== Deprecated functions
 func oldGetAnnotations(data *C.pn_data_t) (v map[string]interface{}) {
-	C.pn_data_rewind(data)
-	C.pn_data_next(data)
-	unmarshal(&v, data)
+	if C.pn_data_size(data) > 0 {
+		C.pn_data_rewind(data)
+		C.pn_data_next(data)
+		unmarshal(&v, data)
+	}
 	return v
 }
 
