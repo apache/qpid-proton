@@ -162,197 +162,163 @@ func encodeGrow(buffer []byte, encode encodeFn) ([]byte, error) {
 	return buffer, err
 }
 
-const intIsLong bool = (unsafe.Sizeof(int(0)) == 8)
-
-// Marshal v to data if data != nil
-// Return the pn_type_t for v, even if data == nil
-func marshal(i interface{}, data *C.pn_data_t) C.pn_type_t {
-	if data != nil { // On exit, check for errors on the data object
-		defer func() {
-			if err := dataMarshalError(i, data); err != nil {
-				panic(err)
-			}
-		}()
-	}
+// Marshal v to data
+func marshal(i interface{}, data *C.pn_data_t) {
 	switch v := i.(type) {
 	case nil:
-		if data != nil {
-			C.pn_data_put_null(data)
-		}
-		return C.PN_NULL
+		C.pn_data_put_null(data)
 	case bool:
-		if data != nil {
-			C.pn_data_put_bool(data, C.bool(v))
-		}
-		return C.PN_BOOL
+		C.pn_data_put_bool(data, C.bool(v))
+
+	// Signed integers
 	case int8:
-		if data != nil {
-			C.pn_data_put_byte(data, C.int8_t(v))
-		}
-		return C.PN_BYTE
+		C.pn_data_put_byte(data, C.int8_t(v))
 	case int16:
-		if data != nil {
-			C.pn_data_put_short(data, C.int16_t(v))
-		}
-		return C.PN_SHORT
+		C.pn_data_put_short(data, C.int16_t(v))
 	case int32:
-		if data != nil {
-			C.pn_data_put_int(data, C.int32_t(v))
-		}
-		return C.PN_INT
+		C.pn_data_put_int(data, C.int32_t(v))
 	case int64:
-		if data != nil {
-			C.pn_data_put_long(data, C.int64_t(v))
-		}
-		return C.PN_LONG
+		C.pn_data_put_long(data, C.int64_t(v))
 	case int:
 		if intIsLong {
 			C.pn_data_put_long(data, C.int64_t(v))
-			return C.PN_LONG
 		} else {
 			C.pn_data_put_int(data, C.int32_t(v))
-			return C.PN_INT
 		}
+
+		// Unsigned integers
 	case uint8:
-		if data != nil {
-			C.pn_data_put_ubyte(data, C.uint8_t(v))
-		}
-		return C.PN_UBYTE
+		C.pn_data_put_ubyte(data, C.uint8_t(v))
 	case uint16:
-		if data != nil {
-			C.pn_data_put_ushort(data, C.uint16_t(v))
-		}
-		return C.PN_USHORT
+		C.pn_data_put_ushort(data, C.uint16_t(v))
 	case uint32:
-		if data != nil {
-			C.pn_data_put_uint(data, C.uint32_t(v))
-		}
-		return C.PN_UINT
+		C.pn_data_put_uint(data, C.uint32_t(v))
 	case uint64:
-		if data != nil {
-			C.pn_data_put_ulong(data, C.uint64_t(v))
-		}
-		return C.PN_ULONG
+		C.pn_data_put_ulong(data, C.uint64_t(v))
 	case uint:
 		if intIsLong {
 			C.pn_data_put_ulong(data, C.uint64_t(v))
-			return C.PN_ULONG
 		} else {
 			C.pn_data_put_uint(data, C.uint32_t(v))
-			return C.PN_UINT
 		}
+
+		// Floating point
 	case float32:
-		if data != nil {
-			C.pn_data_put_float(data, C.float(v))
-		}
-		return C.PN_FLOAT
+		C.pn_data_put_float(data, C.float(v))
 	case float64:
-		if data != nil {
-			C.pn_data_put_double(data, C.double(v))
-		}
-		return C.PN_DOUBLE
+		C.pn_data_put_double(data, C.double(v))
+
+		// String-like (string, binary, symbol)
 	case string:
-		if data != nil {
-			C.pn_data_put_string(data, pnBytes([]byte(v)))
-		}
-		return C.PN_STRING
-
+		C.pn_data_put_string(data, pnBytes([]byte(v)))
 	case []byte:
-		if data != nil {
-			C.pn_data_put_binary(data, pnBytes(v))
-		}
-		return C.PN_BINARY
-
+		C.pn_data_put_binary(data, pnBytes(v))
 	case Binary:
-		if data != nil {
-			C.pn_data_put_binary(data, pnBytes([]byte(v)))
-		}
-		return C.PN_BINARY
-
+		C.pn_data_put_binary(data, pnBytes([]byte(v)))
 	case Symbol:
-		if data != nil {
-			C.pn_data_put_symbol(data, pnBytes([]byte(v)))
-		}
-		return C.PN_SYMBOL
+		C.pn_data_put_symbol(data, pnBytes([]byte(v)))
 
+		// Other simple types
+	case time.Time:
+		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+	case UUID:
+		C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
+	case Char:
+		C.pn_data_put_char(data, (C.pn_char_t)(v))
+
+		// Described types
 	case Described:
 		C.pn_data_put_described(data)
 		C.pn_data_enter(data)
 		marshal(v.Descriptor, data)
 		marshal(v.Value, data)
 		C.pn_data_exit(data)
-		return C.PN_DESCRIBED
 
+		// Restricted type annotation-key, marshals as contained value
 	case AnnotationKey:
-		return marshal(v.Get(), data)
-
-	case time.Time:
-		if data != nil {
-			C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
-		}
-		return C.PN_TIMESTAMP
-
-	case UUID:
-		if data != nil {
-			C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
-		}
-		return C.PN_UUID
-
-	case Char:
-		if data != nil {
-			C.pn_data_put_char(data, (C.pn_char_t)(v))
-		}
-		return C.PN_CHAR
+		marshal(v.Get(), data)
 
 	default:
-		// Look at more complex types by reflected structure
-
+		// Examine complex types (Go map, slice, array) by reflected structure
 		switch reflect.TypeOf(i).Kind() {
 
 		case reflect.Map:
-			if data != nil {
-				m := reflect.ValueOf(v)
-				C.pn_data_put_map(data)
-				C.pn_data_enter(data)
+			m := reflect.ValueOf(v)
+			C.pn_data_put_map(data)
+			if C.pn_data_enter(data) {
 				defer C.pn_data_exit(data)
-				for _, key := range m.MapKeys() {
-					marshal(key.Interface(), data)
-					marshal(m.MapIndex(key).Interface(), data)
-				}
+			} else {
+				panic(dataMarshalError(i, data))
 			}
-			return C.PN_MAP
+			for _, key := range m.MapKeys() {
+				marshal(key.Interface(), data)
+				marshal(m.MapIndex(key).Interface(), data)
+			}
 
 		case reflect.Slice, reflect.Array:
 			// Note: Go array and slice are mapped the same way:
 			// if element type is an interface, map to AMQP list (mixed type)
 			// if element type is a non-interface type map to AMQP array (single type)
 			s := reflect.ValueOf(v)
-			var ret C.pn_type_t
-			t := reflect.TypeOf(i).Elem()
-			if t.Kind() == reflect.Interface {
-				if data != nil {
-					C.pn_data_put_list(data)
-				}
-				ret = C.PN_LIST
+			if pnType, ok := arrayTypeMap[s.Type().Elem()]; ok {
+				C.pn_data_put_array(data, false, pnType)
 			} else {
-				if data != nil {
-					pnType := marshal(reflect.Zero(t).Interface(), nil)
-					C.pn_data_put_array(data, false, pnType)
-				}
-				ret = C.PN_ARRAY
+				C.pn_data_put_list(data)
 			}
-			if data != nil {
-				C.pn_data_enter(data)
-				defer C.pn_data_exit(data)
-				for j := 0; j < s.Len(); j++ {
-					marshal(s.Index(j).Interface(), data)
-				}
+			C.pn_data_enter(data)
+			defer C.pn_data_exit(data)
+			for j := 0; j < s.Len(); j++ {
+				marshal(s.Index(j).Interface(), data)
 			}
-			return ret
 
 		default:
 			panic(newMarshalError(v, "no conversion"))
 		}
+	}
+	if err := dataMarshalError(i, data); err != nil {
+		panic(err)
+	}
+}
+
+// Mapping froo Go element type to AMQP array type for types that can go in an AMQP array
+// NOTE: this must be kept consistent with marshal() which does the actual marshalling.
+var arrayTypeMap = map[reflect.Type]C.pn_type_t{
+	nil:                  C.PN_NULL,
+	reflect.TypeOf(true): C.PN_BOOL,
+
+	reflect.TypeOf(int8(0)):  C.PN_BYTE,
+	reflect.TypeOf(int16(0)): C.PN_INT,
+	reflect.TypeOf(int32(0)): C.PN_SHORT,
+	reflect.TypeOf(int64(0)): C.PN_LONG,
+
+	reflect.TypeOf(uint8(0)):  C.PN_UBYTE,
+	reflect.TypeOf(uint16(0)): C.PN_UINT,
+	reflect.TypeOf(uint32(0)): C.PN_USHORT,
+	reflect.TypeOf(uint64(0)): C.PN_ULONG,
+
+	reflect.TypeOf(float32(0)): C.PN_FLOAT,
+	reflect.TypeOf(float64(0)): C.PN_DOUBLE,
+
+	reflect.TypeOf(""):                    C.PN_STRING,
+	reflect.TypeOf((*Symbol)(nil)).Elem(): C.PN_SYMBOL,
+	reflect.TypeOf((*Binary)(nil)).Elem(): C.PN_BINARY,
+	reflect.TypeOf([]byte{}):              C.PN_BINARY,
+
+	reflect.TypeOf((*time.Time)(nil)).Elem(): C.PN_TIMESTAMP,
+	reflect.TypeOf((*UUID)(nil)).Elem():      C.PN_UUID,
+	reflect.TypeOf((*Char)(nil)).Elem():      C.PN_CHAR,
+}
+
+const intIsLong = unsafe.Sizeof(int(0)) == 8
+
+// Compute mapping of int/uint at runtime as they depend on execution environment.
+func init() {
+	if intIsLong {
+		arrayTypeMap[reflect.TypeOf(int(0))] = C.PN_LONG
+		arrayTypeMap[reflect.TypeOf(uint(0))] = C.PN_ULONG
+	} else {
+		arrayTypeMap[reflect.TypeOf(int(0))] = C.PN_INT
+		arrayTypeMap[reflect.TypeOf(uint(0))] = C.PN_UINT
 	}
 }
 

@@ -174,19 +174,19 @@ type as follows:
  |map[K]T                     |map, provided all keys and values can unmarshal   |
  |                            |to types K,T                                      |
  +----------------------------+--------------------------------------------------+
- |[]interface{}               |AMQP list or array                                |
+ |[]interface{}               |list or array                                     |
  +----------------------------+--------------------------------------------------+
- |[]T                         |AMQP list or array if elements can unmarshal as T |
+ |[]T                         |list or array if elements can unmarshal as T      |
  +----------------------------+------------------n-------------------------------+
  |interface{}                 |any AMQP type[2]                                  |
  +----------------------------+--------------------------------------------------+
 
-[1] An AMQP described value can also convert as if it were a plain value,
-discarding the descriptor. Unmarshalling into the special amqp.Described type
-preserves the descriptor.
+[1] An AMQP described value can also unmarshal to a plain value, discarding the
+descriptor. Unmarshalling into the special amqp.Described type preserves the
+descriptor.
 
 [2] Any AMQP value can be unmarshalled to an interface{}. The Go type is
-chosen based on the AMQP type as follows:
+determined by the AMQP type as follows:
 
  +----------------------------+--------------------------------------------------+
  |Source AMQP Type            |Go Type in target interface{}                     |

@@ -71,11 +71,11 @@ var rtValues = []interface{}{
 	Char('\u2318'),
 	Map{"V": "X"},
 	List{"V", int32(1)},
-	[]string{"a", "b", "c"}, // to AMQP array
+	[]string{"a", "b", "c"},
 }
 
-// Go values that unmarshal as an equivalent value but a different default type
-// if unmarshalled to an interface{}
+// Go values that round-trip if unmarshalled back to the same type they were
+// marshalled from, but unmarshal to interface{} as a different default type.
 var oddValues = []interface{}{
 	int(-99),                  // int32|64 depending on platform
 	uint(99),                  // int32|64 depending on platform
