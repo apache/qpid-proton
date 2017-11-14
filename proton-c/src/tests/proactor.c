@@ -877,7 +877,8 @@ static void test_netaddr(test_t *t) {
   char cr[1024], cl[1024], sr[1024], sl[1024];
 
   pn_transport_t *ct = pn_connection_transport(c);
-  pn_netaddr_str(pn_netaddr_remote(ct), cr, sizeof(cr));
+  const pn_netaddr_t *na = pn_netaddr_remote(ct);
+  pn_netaddr_str(na, cr, sizeof(cr));
   TEST_STR_IN(t, test_port_use_host(&l.port, ""), cr); /* remote address has listening port */
 
   pn_connection_t *s = last_accepted; /* server side of the connection */
@@ -892,7 +893,6 @@ static void test_netaddr(test_t *t) {
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
 
   /* Examine as sockaddr */
-  const pn_netaddr_t *na = pn_netaddr_remote(ct);
   const struct sockaddr *sa = pn_netaddr_sockaddr(na);
   TEST_CHECK(t, AF_INET == sa->sa_family);
   char host[TEST_PORT_MAX_STR] = "";
