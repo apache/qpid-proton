@@ -632,7 +632,12 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 
 int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
 {
-  return -1;
+  return PN_ERR;
+}
+
+int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols)
+{
+  return PN_ERR;
 }
 
 const pn_io_layer_t ssl_layer = {

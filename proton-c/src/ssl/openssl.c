@@ -617,6 +617,58 @@ int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
   return 0;
 }
 
+int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols)
+{
+  static const struct {
+    const char *name;
+    const long option;
+  } protocol_options[] =
+  {
+    {"TLSv1",   SSL_OP_NO_TLSv1},
+    {"TLSv1.1", SSL_OP_NO_TLSv1_1},
+    {"TLSv1.2", SSL_OP_NO_TLSv1_2}
+  };
+  static const char seps[]    = " ,;";
+  static const long all_prots = SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+
+  // Start with all protocols turned off
+  long options = all_prots;
+
+  // For each separate token in protocols
+  const char *token = protocols;
+  while (*token!=0) {
+    // Find next separator
+    size_t tsize = strcspn(token, seps);
+    while (tsize==0 && *token!=0) {
+      ++token;
+      tsize = strcspn(token, seps);
+    }
+    if (tsize==0) break; // No more tokens
+
+    // Linear search the posibilities for the option to set
+    for (size_t i = 0; i<sizeof(protocol_options)/sizeof(*protocol_options); ++i) {
+      if (strncmp(token, protocol_options[i].name, tsize)==0) {
+        options &= ~protocol_options[i].option;
+        goto found;
+      }
+    }
+    // Didn't find any match - error
+    return PN_ARG_ERR;
+
+found:
+    token += tsize;
+  }
+
+  // Check if we found anything
+  if (options==all_prots) return PN_ARG_ERR;
+
+  // Debug test only
+  //printf("%30s %016lx (~%016lx)\n", protocols, options, ~options&all_prots);
+
+  SSL_CTX_clear_options(domain->ctx, all_prots);
+  SSL_CTX_set_options(domain->ctx, options);
+  return 0;
+}
 
 int pn_ssl_domain_set_trusted_ca_db(pn_ssl_domain_t *domain,
                                     const char *certificate_db)

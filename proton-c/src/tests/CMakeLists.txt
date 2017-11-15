@@ -24,37 +24,36 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 macro (pn_add_c_test test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton ${PLATFORM_LIBS})
+  target_link_libraries (${test} qpid-proton-core ${PLATFORM_LIBS})
   if (BUILD_WITH_CXX)
     set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME ${test}
-              COMMAND ${env_py}
-                "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-                $<TARGET_FILE:${test}>)
-  else ()
-    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test})
-  endif ()
+  add_test (NAME ${test}
+            COMMAND ${memcheck-cmd} $<TARGET_FILE:${test}>)
+  set_tests_properties(${test} PROPERTIES ENVIRONMENT "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
 endmacro(pn_add_c_test)
 
 pn_add_c_test (c-object-tests object.c)
 pn_add_c_test (c-message-tests message.c)
 pn_add_c_test (c-engine-tests engine.c)
-pn_add_c_test (c-parse-url-tests parse-url.c)
 pn_add_c_test (c-refcount-tests refcount.c)
 pn_add_c_test (c-event-tests event.c)
 pn_add_c_test (c-data-tests data.c)
 pn_add_c_test (c-condition-tests condition.c)
 pn_add_c_test (c-connection-driver-tests connection_driver.c)
+pn_add_c_test (c-ssl-tests ssl.c)
+
+pn_add_c_test (c-parse-url-tests parse-url.c)
+target_link_libraries (c-parse-url-tests qpid-proton)
 
 if(HAS_PROACTOR)
   pn_add_c_test (c-proactor-tests proactor.c)
+  target_link_libraries (c-proactor-tests qpid-proton-proactor)
 
   if(WIN32)
-    # set(path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton>")
+    set(path "$<TARGET_FILE_DIR:c-broker>\\;$<TARGET_FILE_DIR:qpid-proton>")
   else(WIN32)
-    set(path "${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_BINARY_DIR}/examples/c:$ENV{PATH}")
+    set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
   endif(WIN32)
   # Add the tools directory for the 'proctest' module
   set_search_path(pypath "${CMAKE_SOURCE_DIR}/tools/py" "$ENV{PYTHON_PATH}")

@@ -227,6 +227,21 @@ PN_EXTERN int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
                                                     const char *trusted_CAs);
 
 /**
+ * Configure the list of permitted TLS protocols
+ *
+ * @param[in] domain the ssl domain to configure.
+ * @param[in] protocols string representing the protocol list.
+ * This list is a space separated string of the allowed TLS protocols,
+ * The current possibilities are TLSv1 TLSv1.1 TLSv1.2. None of the earlier SSL
+ * protocols are allowed for security reason.
+ *
+ * @note If this API not called then all the TLS protocols are allowed. The API only acts to
+ * restrict the allowed protocols to the specified set.
+ * @return 0 on success
+ */
+PN_EXTERN int pn_ssl_domain_set_protocols(pn_ssl_domain_t *domain, const char *protocols);
+
+/**
  * Configure the list of permitted ciphers
  *
  * @note The syntax of the permitted list is undefined and will depend on the
