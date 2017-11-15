@@ -17,19 +17,30 @@
 # under the License
 #
 
-os: linux
 sudo: false
 language: cpp
 compiler:
 - gcc
 - clang
-env:
-- QPID_PROTON_CMAKE_ARGS=
-- QPID_PROTON_CMAKE_ARGS=-DCMAKE_BUILD_TYPE=Coverage
+
 matrix:
-  exclude:
-  - compiler: clang
-    env: QPID_PROTON_CMAKE_ARGS=-DCMAKE_BUILD_TYPE=Coverage
+  include:
+  - os: linux
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
+
+  - os: osx
+    osx_image: xcode7.3
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11'
+
+  - os: osx
+    osx_image: xcode9
+    env:
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13'
+
+# Note addons is apt specific at the moment and will not be applied for osx.
+# See before_install brew commands below
 addons:
   apt:
     packages:
@@ -46,6 +57,11 @@ addons:
     - php5
     - golang
     - lcov
+
+before_install:
+- eval "${MATRIX_EVAL}"
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
+- if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install libuv openssl; fi
 
 install:
 - pip install --user --upgrade pip
