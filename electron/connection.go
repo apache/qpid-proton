@@ -374,6 +374,14 @@ func GlobalSASLConfigDir(dir string) { globalSASLConfigDir = dir }
 //
 func GlobalSASLConfigName(dir string) { globalSASLConfigName = dir }
 
+// Do we support extended SASL negotiation?
+// All implementations of Proton support ANONYMOUS and EXTERNAL on both
+// client and server sides and PLAIN on the client side.
+//
+// Extended SASL implememtations use an external library (Cyrus SASL)
+// to support other mechanisms beyond these basic ones.
+func SASLExtended() bool { return proton.SASLExtended() }
+
 var (
 	globalSASLConfigName string
 	globalSASLConfigDir  string

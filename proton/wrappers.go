@@ -448,3 +448,13 @@ func (t Transport) Push(bytes []byte) int {
 func (t Transport) SASL() SASL {
 	return SASL{C.pn_sasl(t.pn)}
 }
+
+// Do we support extended SASL negotiation?
+// All implementations of Proton support ANONYMOUS and EXTERNAL on both
+// client and server sides and PLAIN on the client side.
+//
+// Extended SASL implememtations use an external library (Cyrus SASL)
+// to support other mechanisms beyond these basic ones.
+func SASLExtended() bool {
+	return bool(C.pn_sasl_extended())
+}

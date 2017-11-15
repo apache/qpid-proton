@@ -2,6 +2,7 @@ package electron_test
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"qpid.apache.org/amqp"
 	"qpid.apache.org/electron"
@@ -12,8 +13,11 @@ import (
 // and prints messages received until the link closes.
 func Server(l net.Listener) {
 	cont := electron.NewContainer("server")
-	c, _ := cont.Accept(l) // Ignoring error handling
-	l.Close()              // This server only accepts one connection
+	c, err := cont.Accept(l)
+	if err != nil {
+		log.Fatal(err)
+	}
+	l.Close() // This server only accepts one connection
 	// Process incoming endpoints till we get a Receiver link
 	var r electron.Receiver
 	for r == nil {
@@ -51,8 +55,10 @@ func Server(l net.Listener) {
 //     https://github.com/apache/qpid-proton/blob/master/examples/go/README.md
 //
 func Example_clientServer() {
-	// NOTE: We ignoring error handling in this example
-	l, _ := net.Listen("tcp", "") // Open a listening port for server, client connect to this port
+	l, err := net.Listen("tcp", "127.0.0.1:0") // tcp4 so example will work on ipv6-disabled platforms
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// SERVER: start the server running in a separate goroutine
 	var waitServer sync.WaitGroup // We will wait for the server goroutine to finish before exiting
@@ -64,8 +70,14 @@ func Example_clientServer() {
 
 	// CLIENT: Send messages to the server
 	addr := l.Addr()
-	c, _ := electron.Dial(addr.Network(), addr.String())
-	s, _ := c.Sender()
+	c, err := electron.Dial(addr.Network(), addr.String())
+	if err != nil {
+		log.Fatal(err)
+	}
+	s, err := c.Sender()
+	if err != nil {
+		log.Fatal(err)
+	}
 	for i := 0; i < 3; i++ {
 		msg := fmt.Sprintf("hello %v", i)
 		// Send and wait for the Outcome from the server.
