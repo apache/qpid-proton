@@ -630,7 +630,7 @@ void container::impl::thread() {
     while (!finished) {
         pn_event_batch_t *events = pn_proactor_wait(proactor_);
         pn_event_t *e;
-        const char *what = 0;
+        error_condition error;
         try {
             while ((e = pn_event_batch_next(events))) {
                 finished = handle(e);
@@ -638,14 +638,13 @@ void container::impl::thread() {
             }
         } catch (const std::exception& e) {
             // If we caught an exception then shutdown the (other threads of the) container
-            what = e.what();
+            error = error_condition("exception", e.what());
         } catch (...) {
-            what = "container shut-down by unknown exception";
+            error = error_condition("exception", "container shut-down by unknown exception");
         }
         pn_proactor_done(proactor_, events);
-        if (what) {
+        if (!error.empty()) {
             finished = true;
-            error_condition error("exception", what);
             {
                 GUARD(lock_);
                 disconnect_error_ = error;
