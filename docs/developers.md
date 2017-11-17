@@ -80,9 +80,11 @@ To run coverage reporting:
     # install coverage tools
     $ dnf install lcov
     $ pip install coverage
+    $ gem install simplecov
 
     $ cmake -DCMAKE_BUILD_TYPE=Coverage && make && ctest && make coverage
-    # Then browse to {CMAKE_BUILD_DIR}/coverage_results/html/index.html
+    # Then browse to {CMAKE_BUILD_DIR}/coverage_results/html/index.html to see C/C++ coverage
+    # and to {CMAKE_BUILD_DIR}/ruby/coverage/index.html for Ruby coverage
 
 Mailing list
 ------------
