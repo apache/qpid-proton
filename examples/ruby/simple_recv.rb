@@ -52,6 +52,6 @@ Connect to URL and receive COUNT messages from ADDRESS"
   return 1
 end
 url, address, count = ARGV
-
-Qpid::Proton::Container.new(SimpleReceive.new(url, address, count || 10)).run
+count = Integer(count || 10)
+Qpid::Proton::Container.new(SimpleReceive.new(url, address, count)).run
 

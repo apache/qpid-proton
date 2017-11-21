@@ -31,8 +31,13 @@ class DirectSend < Qpid::Proton::Handler::MessagingHandler
     @expected = expected
   end
 
+  class ListenOnce < Qpid::Proton::Listener::Handler
+    def on_open(l) STDOUT.puts "Listening\n"; STDOUT.flush; end
+    def on_accept(l) l.close; end
+  end
+
   def on_start(event)
-*co    event.container.listen(@url)
+    event.container.listen(@url, ListenOnce.new)
   end
 
   def on_sendable(event)
@@ -47,7 +52,7 @@ class DirectSend < Qpid::Proton::Handler::MessagingHandler
     @confirmed = @confirmed + 1
     if @confirmed == @expected
       puts "All #{@expected} messages confirmed!"
-      event.container.stop
+      event.connection.close
     end
   end
 end
@@ -58,4 +63,5 @@ Listen on URL and send COUNT messages to ADDRESS"
   return 1
 end
 url, address, count = ARGV
-Qpid::Proton::Container.new(DirectSend.new(url, address, count || 10)).run
+count = Integer(count || 10)
+Qpid::Proton::Container.new(DirectSend.new(url, address, count)).run

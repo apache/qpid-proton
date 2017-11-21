@@ -32,25 +32,6 @@ The following events occur while **helloworld.rb** runs:
  * **on_sendable** - Fired when a message can be sent.
  * **on_message** - Fired when a message is received.
 
-### Hello World Without A Broker required
-
-The next example we'll look at will send the classic "Hello world" message to itself directly,
-without going through a broker.
-
-To launch the example:
-
-```
- $ ruby helloworld_direct.rb //:9999
- Hello world!
-```
-
-Not very different from the example that uses the broker, which is what we'd expect from the outside. But let's take a look inside of the example and see how it's different at that level
-
-The direct version takes on the responsibility for listening to incoming connections as well as making an outgoing connection. So we see the following additional events occurring:
-
- * **on_accepted** - Fired when a message is received.
- * **on_connection_closed** - Fired when an endpoint closes its connection.
-
 ## More Complex Examples
 
 Now that we've covered the basics with the archetypical hello world app, let's look at some more interesting examples.

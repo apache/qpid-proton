@@ -29,9 +29,7 @@ module Qpid::Proton
       @info = info
     end
 
-    def to_s() "#{@name}: #{@description
     def to_s() "#{@name}: #{@description}"; end
-}"; end
 
     def inspect() "#{self.class.name}(#{@name.inspect}, #{@description.inspect}, #{@info.inspect})"; end
 
@@ -50,7 +48,6 @@ module Qpid::Proton
     # - when Exception return Condition(obj.class.name, obj.to_s)
     # - when nil then nil
     # - else return Condition(default_name, obj.to_s)
-    # If objey
     def self.make(obj, default_name="proton")
       case obj
       when Condition then obj

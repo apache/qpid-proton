@@ -112,22 +112,34 @@ class ContainerTest < Minitest::Test
     assert t1.join(1)
   end
 
+  def test_stop_empty
+    c = Container.new
+    threads = 3.times.collect { Thread.new { c.run } }
+    assert_nil threads[0].join(0.001) # Not stopped
+    c.stop
+    threads.each { |t| assert t.join(1) }
+  end
+
   def test_stop
     c = Container.new
     c.auto_stop = false
-    l = c.listen_io(TCPServer.new(0))
-    c.connect("amqp://:#{l.to_io.addr[1]}")
-    threads = 5.times.collect { Thread.new { c.run } }
-    assert_nil threads[0].join(0.001)
-    c.stop
-    threads.each { |t| assert t.join(1) }
-    assert c.auto_stop          # Set by stop
 
-    # Stop an empty container
-    threads = 5.times.collect { Thread.new { c.run } }
-    assert_nil threads[0].join(0.001)
+    l = c.listen_io(TCPServer.new(0))
+    threads = 3.times.collect { Thread.new { c.run } }
+    l.close
+    assert_nil threads[0].join(0.001) # Not stopped, no auto_stop
+
+    l = c.listen_io(TCPServer.new(0)) # New listener
+    conn = c.connect("amqp://:#{l.to_io.addr[1]}")
     c.stop
     threads.each { |t| assert t.join(1) }
+    assert_nil l.condition
+    assert_nil conn.condition
+
+    # We should be able to run the container again once stopped.
+    threads = 5.times.collect { Thread.new { c.run } }
+    assert_nil threads[0].join(0.01)
+
   end
 
 end

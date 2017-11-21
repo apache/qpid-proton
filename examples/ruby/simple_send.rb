@@ -59,4 +59,5 @@ Connect to URL and send COUNT messages to ADDRESS"
   return 1
 end
 url, address, count = ARGV
-Qpid::Proton::Container.new(SimpleSend.new(url, address, count || 10)).run
+count = Integer(count || 10)
+Qpid::Proton::Container.new(SimpleSend.new(url, address, count)).run

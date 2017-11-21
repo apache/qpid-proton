@@ -30,8 +30,13 @@ class DirectReceive < Qpid::Proton::Handler::MessagingHandler
     @received = 0
   end
 
+  class ListenOnce < Qpid::Proton::Listener::Handler
+    def on_open(l) STDOUT.puts "Listening\n"; STDOUT.flush; end
+    def on_accept(l) l.close; end
+  end
+
   def on_start(event)
-    event.container.listen(@url)
+    event.container.listen(@url, ListenOnce.new)
   end
 
   def on_message(event)
@@ -39,7 +44,7 @@ class DirectReceive < Qpid::Proton::Handler::MessagingHandler
       puts "Received: #{event.message.body}"
       @received = @received + 1
       if @received == @expected
-        event.container.stop
+        event.connection.close
       end
     end
   end
@@ -51,5 +56,6 @@ Listen on URL and receive COUNT messages from ADDRESS"
   return 1
 end
 url, address, count = ARGV
-Qpid::Proton::Container.new(DirectReceive.new(url, address, count || 10)).run
+count = Integer(count || 10)
+Qpid::Proton::Container.new(DirectReceive.new(url, address, count)).run
 

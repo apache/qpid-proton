@@ -78,8 +78,8 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
   end
 
   def on_start(event)
-    @acceptor = event.container.listen(@url)
-    print "Listening on #{@url}\n"
+    @listener = event.container.listen(@url)
+    STDOUT.puts "Listening on #{@url}"; STDOUT.flush
   end
 
   def queue(address)

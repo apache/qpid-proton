@@ -25,7 +25,7 @@ require 'thread'
 require 'socket'
 
 Container = Qpid::Proton::Container
-ListenHandler = Qpid::Proton::Listener
+ListenHandler = Qpid::Proton::Listener::Handler
 MessagingHandler = Qpid::Proton::Handler::MessagingHandler
 
 class TestError < Exception; end
@@ -113,7 +113,7 @@ end
 # ListenHandler that closes the Listener after first accept
 class ListenOnceHandler < ListenHandler
   def initialize(opts={}) @opts=opts; end
-  def on_error(l, e)  raise TestError, e; end
+  def on_error(l, e)  raise TestError, e.inspect; end
   def on_accept(l) l.close; return @opts; end
   attr_reader :opts
 end
