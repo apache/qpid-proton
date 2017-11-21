@@ -73,7 +73,7 @@ module Qpid::Proton::Messenger
     # * name - the name (def. nil)
     #
     def initialize(name = nil)
-      warn "[DEPRECATION] `Qpid::Proton::Messenger` is deprecated, use `Qpid::Proton::Container`"
+      deprecated 'Qpid::Proton::Messenger', 'Qpid::Proton::Container'
       @impl = Cproton.pn_messenger(name)
       @selectables = {}
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
