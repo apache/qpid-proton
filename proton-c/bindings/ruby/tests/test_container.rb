@@ -31,7 +31,7 @@ Thread::abort_on_exception=true
 # Container that listens on a random port
 class TestContainer < Container
 
-  def initialize(handler, lopts = {}, id=nil)
+  def initialize(handler, lopts=nil, id=nil)
     super handler, id
     @server = TCPServer.open(0)
     @listener = listen_io(@server, ListenOnceHandler.new(lopts))
@@ -160,7 +160,7 @@ class ContainerSASLTest < Minitest::Test
   # Handler for test client/server that sets up server and client SASL options
   class SASLHandler < TestHandler
 
-    def initialize(url="amqp://", opts={}, mechanisms=nil, insecure=nil, realm=nil)
+    def initialize(url="amqp://", opts=nil, mechanisms=nil, insecure=nil, realm=nil)
       super()
       @url, @opts, @mechanisms, @insecure, @realm = url, opts, mechanisms, insecure, realm
     end

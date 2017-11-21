@@ -32,7 +32,7 @@ module Qpid::Proton
     # methods to provide more interesting behaviour.
     class Handler
       # @param opts [Hash] Options to return from on_accept.
-      def initialize(opts={}) @opts = opts; end
+      def initialize(opts=nil) @opts = opts || {}; end
 
       # Called when the listener is ready to accept connections.
       # @param listener [Listener] The listener

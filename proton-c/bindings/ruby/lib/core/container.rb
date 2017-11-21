@@ -170,11 +170,14 @@ module Qpid::Proton
     # url.user, url.password are used as defaults if opts[:user], opts[:password] are nil
     # @option (see Connection#open)
     # @return [Connection] The new AMQP connection
-    def connect(url, opts = {})
+    def connect(url, opts=nil)
       not_stopped
-      url = Qpid::Proton::uri(url)
-      opts[:user] ||= url.user
-      opts[:password] ||= url.password
+      url = Qpid::Proton::uri url
+      if url.user ||  url.password
+        opts ||= {}
+        opts[:user] ||= url.user
+        opts[:password] ||= url.password
+      end
       # TODO aconway 2017-10-26: Use SSL for amqps URLs
       connect_io(TCPSocket.new(url.host, url.port), opts)
     end
@@ -182,7 +185,7 @@ module Qpid::Proton
     # Open an AMQP protocol connection on an existing {IO} object
     # @param io [IO] An existing {IO} object, e.g. a {TCPSocket}
     # @option (see Connection#open)
-    def connect_io(io, opts = {})
+    def connect_io(io, opts=nil)
       not_stopped
       cd = connection_driver(io, opts)
       cd.connection.open()
@@ -199,8 +202,8 @@ module Qpid::Proton
     #
     def listen(url, handler=Listener::Handler.new)
       not_stopped
-      url = Qpid::Proton::uri(url)
-      # TODO aconway 2017-11-01: amqps
+      url = Qpid::Proton::uri url
+      # TODO aconway 2017-11-01: amqps, SSL
       listen_io(TCPServer.new(url.host, url.port), handler)
     end
 
@@ -321,7 +324,7 @@ module Qpid::Proton
       end
     end
 
-    def connection_driver(io, opts, server=false)
+    def connection_driver(io, opts=nil, server=false)
       opts ||= {}
       opts[:container_id] ||= @id
       opts[:handler] ||= @handler

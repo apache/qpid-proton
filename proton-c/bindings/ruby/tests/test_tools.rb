@@ -112,8 +112,6 @@ end
 
 # ListenHandler that closes the Listener after first accept
 class ListenOnceHandler < ListenHandler
-  def initialize(opts={}) @opts=opts; end
   def on_error(l, e)  raise TestError, e.inspect; end
-  def on_accept(l) l.close; return @opts; end
-  attr_reader :opts
+  def on_accept(l) l.close; super; end
 end

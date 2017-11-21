@@ -201,9 +201,9 @@ module Qpid::Proton
     # @option opts [String] :sasl_allowed_mechs the allowed SASL mechanisms for use on the connection.
     # @option opts [String] :container_id AMQP container ID, normally provided by {Container}
     #
-    def open(opts={})
+    def open(opts=nil)
       return if local_active?
-      apply opts
+      apply opts if opts
       Cproton.pn_connection_open(@impl)
     end
 
@@ -272,10 +272,10 @@ module Qpid::Proton
     end
 
     # Open a sender on the default_session
-    def open_sender(opts = {}) default_session.open_sender(opts) end
+    def open_sender(opts=nil) default_session.open_sender(opts) end
 
     # Open a  on the default_session
-    def open_receiver(opts = {}) default_session.open_receiver(opts) end
+    def open_receiver(opts=nil) default_session.open_receiver(opts) end
 
     # Returns the first session from the connection that matches the specified
     # state mask.

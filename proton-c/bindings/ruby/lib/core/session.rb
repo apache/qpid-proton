@@ -127,25 +127,27 @@ module Qpid::Proton
     def receiver(name) Receiver.new(Cproton.pn_receiver(@impl, name)); end
 
     # TODO aconway 2016-01-04: doc options or target param, move option handling to Link.
-    def open_receiver(options = {})
-      options = { :source => options } if options.is_a? String
-      receiver = Receiver.new Cproton.pn_receiver(@impl, options[:name] || connection.link_name)
-      receiver.source.address ||= options[:source]
-      receiver.target.address ||= options[:target]
-      receiver.source.dynamic = true if options[:dynamic]
-      receiver.handler = options[:handler] if !options[:handler].nil?
+    def open_receiver(opts=nil)
+      opts = { :source => opts } if opts.is_a? String
+      opts ||= {}
+      receiver = Receiver.new Cproton.pn_receiver(@impl, opts[:name] || connection.link_name)
+      receiver.source.address ||= opts[:source]
+      receiver.target.address ||= opts[:target]
+      receiver.source.dynamic = true if opts[:dynamic]
+      receiver.handler = opts[:handler] if !opts[:handler].nil?
       receiver.open
       return receiver
     end
 
-    # TODO aconway 2016-01-04: doc options or target param
-    def open_sender(options = {})
-      options = { :target => options } if options.is_a? String
-      sender = Sender.new Cproton.pn_sender(@impl, options[:name] || connection.link_name)
-      sender.target.address ||= options[:target]
-      sender.source.address ||= options[:source]
-      sender.target.dynamic = true if options[:dynamic]
-      sender.handler = options[:handler] if !options[:handler].nil?
+    # TODO aconway 2016-01-04: doc opts or target param
+    def open_sender(opts=nil)
+      opts = { :target => opts } if opts.is_a? String
+      opts ||= {}
+      sender = Sender.new Cproton.pn_sender(@impl, opts[:name] || connection.link_name)
+      sender.target.address ||= opts[:target]
+      sender.source.address ||= opts[:source]
+      sender.target.dynamic = true if opts[:dynamic]
+      sender.handler = opts[:handler] if !opts[:handler].nil?
       sender.open
       return sender
     end
