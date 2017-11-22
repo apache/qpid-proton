@@ -247,8 +247,4 @@ func (u UUID) String() string {
 // It is defined as a distinct type so it can be distinguished from an AMQP int
 type Char rune
 
-func (c Char) String() string {
-	return fmt.Sprintf("%c", c)
-}
-
 const intIs64 = unsafe.Sizeof(int(0)) == 8
