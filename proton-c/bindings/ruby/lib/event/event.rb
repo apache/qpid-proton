@@ -218,20 +218,13 @@ module Qpid::Proton
         end
       end
 
-      # Returns the reactor for this event.
-      #
-      # @return [Reactor, nil] The reactor.
-      #
+      # @deprecated use {#container}
       def reactor
-        impl = Cproton.pn_event_reactor(@impl)
-        Qpid::Proton::Util::ClassWrapper::WRAPPERS["pn_reactor"].call(impl)
+        deprecated __method__, :container
       end
 
-      def container
-        @container || Util::ClassWrapper::WRAPPERS["pn_reactor"].call(Cproton.pn_event_reactor(@impl))
-      end
-
-      def container=(c); @container = c; end
+      # @return container associated with this event
+      attr_reader :container
 
       # Returns the transport for this event.
       #
@@ -312,8 +305,8 @@ module Qpid::Proton
         "#{self.type}(#{self.context})"
       end
 
+      # @private
+      def container=(c); @container = c; end
     end
-
   end
-
 end

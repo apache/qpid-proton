@@ -139,7 +139,7 @@ module Qpid::Proton
       return receiver
     end
 
-    # TODO aconway 2016-01-04: doc opts or target param
+    # TODO aconway 2016-01-04: doc opts or target param, connection and containers
     def open_sender(opts=nil)
       opts = { :target => opts } if opts.is_a? String
       opts ||= {}

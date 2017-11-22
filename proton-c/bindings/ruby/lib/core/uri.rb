@@ -23,6 +23,9 @@ module URI
   # AMQP URI scheme for the AMQP protocol
   class AMQP < Generic
     DEFAULT_PORT = 5672
+
+    # Get the AMQP address: the {#path} minus any leading "/"
+    def amqp_address() path[0] == "/" ? path[1..-1] : path; end
   end
   @@schemes['AMQP'] = AMQP
 

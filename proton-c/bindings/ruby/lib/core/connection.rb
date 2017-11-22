@@ -219,7 +219,6 @@ module Qpid::Proton
       object_to_data(opts[:offered_capabilities], Cproton.pn_connection_offered_capabilities(@impl))
       object_to_data(opts[:desired_capabilities], Cproton.pn_connection_desired_capabilities(@impl))
       object_to_data(opts[:properties], Cproton.pn_connection_properties(@impl))
-      Cproton.pn_connection_open(@impl)
     end
 
     # @private Generate a unique link name, internal use only.
@@ -272,9 +271,11 @@ module Qpid::Proton
     end
 
     # Open a sender on the default_session
+    # @option opts (see Session#open_sender)
     def open_sender(opts=nil) default_session.open_sender(opts) end
 
     # Open a  on the default_session
+    # @option opts (see Session#open_receiver)
     def open_receiver(opts=nil) default_session.open_receiver(opts) end
 
     # Returns the first session from the connection that matches the specified

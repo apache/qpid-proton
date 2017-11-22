@@ -142,6 +142,9 @@ module Qpid::Proton
       @stop_err = nil           # Optional error to pass to tasks, from #stop
     end
 
+    # @return [MessagingHandler] The container-wide handler
+    attr_reader :handler
+
     # @return [String] unique identifier for this container
     attr_reader :id
 

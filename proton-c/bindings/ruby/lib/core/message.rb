@@ -19,25 +19,17 @@
 
 module Qpid::Proton
 
-  # A Message represents an addressable quantity of data.
+  # Messsage data and headers that can sent or received on a {Link}
   #
-  # ==== Message Body
+  # {#body} is the main message content.
+  # {#properties} is a hash of extra properties that can be attached to the message.
   #
-  # The message body can be set using the #body= method. The message will
-  # then attempt to determine how exactly to encode the content.
+  # @example Create a message containing a Unicode string
+  #   msg = Qpid::Proton::Message.new "this is a string"
   #
-  # ==== Examples
-  #
-  # To create a message for sending:
-  #
-  #   # send a simple text message
+  # @example Create a message containing binary data
   #   msg = Qpid::Proton::Message.new
-  #   msg.body = "STATE: update"
-  #
-  #   # send a binary chunk of data
-  #   data = File.binread("/home/qpid/binfile.tar.gz")
-  #   msg = Qpid::Proton::Message.new
-  #   msg.body = Qpid::Proton::BinaryString.new(data)
+  #   msg.body = Qpid::Proton::BinaryString.new(File.binread("/home/qpid/binfile.tar.gz"))
   #
   class Message
 

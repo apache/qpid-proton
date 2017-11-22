@@ -1,20 +1,72 @@
 = Qpid Proton Ruby Language Bindings
 
-
 This is a Ruby language binding for the Qpid proton AMQP messaging library.
 You can build clients and servers using this library.
 
+== Class Overview
+
+The {Qpid::Proton} module contains the key classes:
+
+{Qpid::Proton::Message} represents a message that can be sent or received.
+A message body can be a string or byte sequence encoded any way you choose. However, AMQP also provides standard, interoperable encodings for basic data types like {Hash} and {Array}. The equivalent AMQP encodings can be understood as maps or sequences in any programming langauge with an AMQP library.
+
+{Qpid::Proton::Link} allows messages to be transferred to or from a remote AMQP process. The {Qpid::Proton::Sender} subclass sends messages, the {Qpid::Proton::Receiver} subclass receives them. Links have a source and target address, as explained below.
+
+Links are grouped in a {Qpid::Proton::Session}. Messages in the same session are sent sequentially, while those on different sessions can be interleaved. A large message being sent on one session does not block messages being sent on another session.
+
+Sessions belong to a {Qpid::Proton::Connection}. If you don't need multiple sessions, a connection will create links directly using a default session.
+
+A {Qpid::Proton::Delivery} represents the transfer of a message and allows the receiver to accept or reject it. The sender can use a {Qpid::Proton::Tracker} to track the status of a sent message and find out if it was accepted.
+
+A delivery is settled when both ends are done with it. Different settlement methods give different levels of reliability: at-most-once, at-least-once, and exactly-once. See below.
+
+== The anatomy of a Proton application
+
+{Qpid::Proton::Container} is the top-level object in a Proton application. A client uses {Qpid::Proton::Container#connect} to establish connections. A server uses {Qpid::Proton::Container#listen} to accept connections.
+
+Proton is an event-driven API. You implement a subclass of {Qpid::Proton::MessagingHandler MessagingHandler} and override functions to handle AMQP events, such as {Qpid::Proton::MessagingHandler#on_message #on_message}. Each connection is associated with a handler for its events. {Qpid::Proton::Container#run} polls all connections and listeners and calls the event handling functions on your handlers.
+
+A multi-threaded application can call {Qpid::Proton::Container#run} in more than one thread, the container will use all the {Qpid::Proton::Container#run #run} threads as a thread pool to dispatch events.
+
+== Sources and targets
+
+Every link has two addresses, _source_ and _target_. The most common pattern for using these addresses is as follows:
+
+When a client creates a {Qpid::Proton::Receiver Receiver} link, it sets the _source_ address. This means "I want to receive messages from this source". This is often referred to as "subscribing" to the source. When a client creates a {Qpid::Proton::Sender Sender} link, it sets the _target_ address. This means "I want to send to this target".
+
+In the case of a broker, the source or target usually refers to a queue or topic. In general they can refer to any AMQP-capable node.
+
+In the request-response pattern, a request message carries a reply-to address for the response message. This can be any AMQP address, but it is often useful to create a temporary address for the response message. The client creates a receiver with no source address and the dynamic flag set. The server generates a unique source address for the receiver, which is discarded when the link closes. The client uses this source address as the reply-to when it sends the request, so the response is delivered to the client's receiver.
+
+The server_direct.cpp example shows how to implement a request-response server.
+
+== Settlement
+
+A message is _settled_ by one end of a link when that end has forgotton the message.
+
+_Pre-settled_ messages are settled by the sender before sending. If the connection is lost before the message is received by the receiver, the message will not be delivered.
+
+If the sender does not pre-settle a message, then the receiver settles it once it is processed, and the receiver is informed of the settlement via the {Qpid::Proton::Tracker Tracker}. If the connection is lost before the sender is informed of the settlement, then the delivery is considered in-doubt and the message should be re-set. This ensures it eventually gets delivered (provided the connection and link can be reestablished) but also that it may be delivered multiple times.
 
 == Installing
 
-If you have the complete proton sources, you can build and install locally with:
+You can install the latest published Gem with
 
-    cmake -DBUILD_BINDINGS=ruby && make install
+    gem install qpid_proton
 
-The cmake build also produces a Ruby Gem file at:
+*NOTE:* before installing the Gem, you must install the proton-C library.
+
+The proton-C library can be installed by the package manager on many platforms, e.g.
+    yum install qpid-proton-c # Fedora < 25, RHEL < 7
+    dnf install qpid-proton-c # Fedora >= 25, RHEL >= 7
+
+You can also download a source release or the latest development code from http://qpid.apache.org/proton. To build from source:
+
+    cmake -DBUILD_BINDINGS=ruby && make
+
+This produces a Gem file at:
 
     ${CMAKE_BUILD_DIR}/proton-c/bindings/ruby/qpid_proton-${PN_VERSION}.gem
 
-You can install the gem with `gem install` as usual, but note that the proton-C
-library must be before installing the gem.
+You can install the gem with +gem install+
 

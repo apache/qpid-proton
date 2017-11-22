@@ -28,7 +28,10 @@ else
 end
 
 DEPRECATION = "[DEPRECATION]"
-def deprecated(old, new) warn "#{DEPRECATION} #{old} is deprecated, use #{new}"; end
+def deprecated(old, new)
+  repl = new ? ", use `#{new}`" : "with no replacement"
+  warn "#{DEPRECATION} `#{old}` is deprecated #{repl} (called from #{caller(2).first})"
+end
 
 # Exception classes
 require "core/exceptions"
@@ -44,7 +47,6 @@ require "util/class_wrapper"
 require "util/engine"
 require "util/timeout"
 require "util/handler"
-require "util/reactor"
 
 # Types
 require "types/strings"
@@ -63,7 +65,6 @@ require "event/event"
 require "event/collector"
 
 # Main Proton classes
-require "core/selectable"
 require "core/uri"
 require "core/message"
 require "core/endpoint"
@@ -100,24 +101,18 @@ require "handler/outgoing_message_handler"
 require "handler/c_flow_controller"
 require "handler/messaging_handler"
 
-# Reactor classes
-require "reactor/task"
-require "reactor/acceptor"
-require "reactor/reactor"
-require "reactor/ssl_config"
-require "reactor/global_overrides"
-require "reactor/urls"
-require "reactor/connector"
-require "reactor/backoff"
-require "reactor/session_per_connection"
-require "reactor/container"
-require "reactor/link_option"
-
 # Core classes that depend on handlers and events
 require "core/container"
 require "core/connection_driver"
 
+# Reactor classes for backwards compatibility
+require "reactor/container"
+
 module Qpid::Proton
+
+  include Qpid::Proton::Handler
+  Tracker = Delivery
+
   # @private
   def self.registry
     @registry ||= {}

@@ -57,7 +57,8 @@ OptionParser.new do |opts|
 end.parse!
 
 begin
-  Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages])).run
+  Qpid::Proton::Reactor::Container.new(SimpleSend.new(options[:address], options[:messages]), {:container_id=> "direct_send"}).run
+
 rescue Interrupt => error
   puts "ERROR: #{error}"
 end

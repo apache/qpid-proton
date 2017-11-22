@@ -573,15 +573,6 @@ VALUE pni_address_of(void *object) {
 
 %}
 
-//%rename(pn_collector_put) wrap_pn_collector_put;
-//%inline %{
-//  pn_event_t *wrap_pn_collector_put(pn_collector_t *collector, void *context,
-//                               pn_event_type_t type) {
-//    return pn_collector_put(collector, PN_RBREF, context, type);
-//  }
-//  %}
-//%ignore pn_collector_put;
-
 int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %ignore pn_ssl_get_peer_hostname;
 
