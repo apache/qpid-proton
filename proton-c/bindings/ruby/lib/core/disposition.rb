@@ -19,6 +19,26 @@
 
 module Qpid::Proton
 
+  # States of a delivery
+  module DeliveryState
+    # Message was successfully processed by the receiver
+    ACCEPTED = Cproton::PN_ACCEPTED
+
+    # Message rejected as invalid and unprocessable by the receiver.
+    REJECTED = Cproton::PN_REJECTED
+
+    # Message was not (and will not be) processed by the receiver, but may be
+    # acceptable if re-delivered to another receiver
+    RELEASED = Cproton::PN_RELEASED
+
+    # Like released, but the disposition includes modifications to be made to
+    # the message before re-delivery
+    MODIFIED = Cproton::PN_MODIFIED
+
+    # Partial message data was received, message can be resuemed - used only during link recovery.
+    RECEIVED =  Cproton::PN_RECEIVED
+  end
+
   # Disposition records the current state and/or final outcome of a transfer.
   #
   # Every delivery contains both a local and a remote disposition. The local
@@ -27,18 +47,7 @@ module Qpid::Proton
   #
   class Disposition
 
-    include Util::Constants
-
-    # Indicates the delivery was received.
-    self.add_constant(:RECEIVED, Cproton::PN_RECEIVED)
-    # Indicates the delivery was accepted.
-    self.add_constant(:ACCEPTED, Cproton::PN_ACCEPTED)
-    # Indicates the delivery was rejected.
-    self.add_constant(:REJECTED, Cproton::PN_REJECTED)
-    # Indicates the delivery was released.
-    self.add_constant(:RELEASED, Cproton::PN_RELEASED)
-    # Indicates the delivery was modified.
-    self.add_constant(:MODIFIED, Cproton::PN_MODIFIED)
+    include DeliveryState
 
     attr_reader :impl
 

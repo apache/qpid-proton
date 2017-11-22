@@ -77,7 +77,7 @@ module Qpid::Proton
     # @param limit [Integer] The maximum bytes to receive.
     #
     # @return [Integer, nil] The number of bytes received, or nil if the end of
-    # the stream was reached.t
+    # the stream was reached.
     #
     # @see Deliver#pending To see how much buffer space is needed.
     #

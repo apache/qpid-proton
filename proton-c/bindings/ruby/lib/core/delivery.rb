@@ -38,6 +38,8 @@ module Qpid::Proton
   #
   class Delivery
 
+    include DeliveryState
+
     # @private
     include Util::Wrapper
 
@@ -121,14 +123,28 @@ module Qpid::Proton
     #
     proton_caller :settled?
 
+    # Update the state of the delivery
+    # @param state [Integer] the delivery state, defined in {DeliveryState}
+    def update(state) Cproton.pn_delivery_update(@impl, state); end
 
-    # @!method settle
-    #
-    # Settles a delivery.
-    #
-    #  A settled delivery can never be used again.
-    #
-    proton_caller :settle
+    # Settle a delivery, optionally update state before settling
+    # A settled delivery can never be used again.
+    # @param state [Integer] the delivery state, defined in {DeliveryState}
+    def settle(state = nil)
+      update(state) unless state.nil?
+      Cproton.pn_delivery_settle(@impl)
+    end
+
+    # Accept the receiveed message.
+    def accept() settle ACCEPTED; end
+
+    # Reject a received message that is considered invalid.
+    def reject() settle REJECTED; end
+
+    # FIXME aconway 2017-11-23: why the delivered argument?
+
+    # Release a received message making it available to other receivers.
+    def release(delivered = true) settle(delivered ? MODIFIED : RELEASED); end
 
     # @!method dump
     #
@@ -148,14 +164,6 @@ module Qpid::Proton
     #
     proton_caller :buffered?
 
-    def update(state)
-      impl = @local.impl
-      Codec::Data.from_object(Cproton.pn_disposition_data(impl), @local.data)
-      Codec::Data::from_object(Cproton.pn_disposition_annotations(impl), @local.annotations)
-      Condition.from_object(Cproton.pn_disposition_condition(impl), @local.condition)
-      Cproton.pn_delivery_update(@impl, state)
-    end
-
     # Returns the local disposition state for the delivery.
     #
     # @return [Disposition] The local disposition state.
@@ -170,16 +178,6 @@ module Qpid::Proton
     #
     def remote_state
       Cproton.pn_delivery_remote_state(@impl)
-    end
-
-    # Returns the next delivery on the connection that has pending operations.
-    #
-    # @return [Delivery, nil] The next delivery, or nil if there are none.
-    #
-    # @see Connection#work_head
-    #
-    def work_next
-      Delivery.wrap(Cproton.pn_work_next(@impl))
     end
 
     # Returns the parent link.

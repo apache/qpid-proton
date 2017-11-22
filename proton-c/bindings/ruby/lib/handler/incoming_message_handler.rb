@@ -24,8 +24,6 @@ module Qpid::Proton::Handler
   #
   class IncomingMessageHandler
 
-    include Acking
-
     def initialize(auto_accept = true, delegate = nil)
       @delegate = delegate
       @auto_accept = auto_accept

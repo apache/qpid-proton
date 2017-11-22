@@ -28,7 +28,7 @@ else
 end
 
 DEPRECATION = "[DEPRECATION]"
-def deprecated(old, new)
+def deprecated(old, new=nil)
   repl = new ? ", use `#{new}`" : "with no replacement"
   warn "#{DEPRECATION} `#{old}` is deprecated #{repl} (called from #{caller(2).first})"
 end
@@ -39,7 +39,6 @@ require "core/exceptions"
 # Utility classes
 require "util/version"
 require "util/error_handler"
-require "util/constants"
 require "util/swig_helper"
 require "util/wrapper"
 require "util/class_wrapper"
@@ -92,7 +91,6 @@ require "messenger/messenger"
 # Handler classes
 require "handler/c_adaptor"
 require "handler/wrapped_handler"
-require "handler/acking"
 require "handler/endpoint_state_handler"
 require "handler/incoming_message_handler"
 require "handler/outgoing_message_handler"
