@@ -148,13 +148,11 @@ module Qpid::Proton
     #
     proton_caller :buffered?
 
-    include Util::Engine
-
     def update(state)
       impl = @local.impl
-      object_to_data(@local.data, Cproton.pn_disposition_data(impl))
-      object_to_data(@local.annotations, Cproton.pn_disposition_annotations(impl))
-      object_to_data(@local.condition, Cproton.pn_disposition_condition(impl))
+      Codec::Data.from_object(Cproton.pn_disposition_data(impl), @local.data)
+      Codec::Data::from_object(Cproton.pn_disposition_annotations(impl), @local.annotations)
+      Condition.from_object(Cproton.pn_disposition_condition(impl), @local.condition)
       Cproton.pn_delivery_update(@impl, state)
     end
 

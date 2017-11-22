@@ -50,16 +50,27 @@ module Qpid::Proton
     # - else return Condition(default_name, obj.to_s)
     def self.make(obj, default_name="proton")
       case obj
+      when nil then nil
       when Condition then obj
       when Exception then Condition.new(obj.class.name, obj.to_s)
-      when nil then nil
+      when SWIG::TYPE_p_pn_condition_t
+        if Cproton.pn_condition_is_set(obj)
+          Condition.new(Cproton.pn_condition_get_name(obj),
+                        Cproton.pn_condition_get_description(obj),
+                        Codec::Data.to_object(Cproton.pn_condition_info(obj)))
+        end
       else Condition.new(default_name, obj.to_s)
       end
     end
 
-  end
-
-  module Util                   #TODO aconway 2017-10-28: backwards compat
-    Condition = Qpid::Proton::Condition
+    private
+    def self.from_object(impl, cond)
+      Cproton.pn_condition_clear(impl)
+      if cond
+        Cproton.pn_condition_set_name(impl, cond.name) if cond.name
+        Cproton.pn_condition_set_description(impl, cond.description) if cond.description
+        Codec::Data.from_object(Cproton.pn_condition_info(impl), cond.info) if cond.info
+      end
+    end
   end
 end

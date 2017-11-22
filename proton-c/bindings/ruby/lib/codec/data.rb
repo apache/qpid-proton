@@ -80,16 +80,21 @@ module Qpid::Proton::Codec
   #
   class Data
 
-    # Creates a new instance with the specified capacity.
-    #
-    # @param capacity [Integer, Object] The initial capacity or content.
-    #
+    private
+
+    def self.to_object(impl) Data.new(impl).rewind.object; end
+    def self.from_object(impl, x) Data.new(impl).rewind.object = x; end
+
+    public
+
+    # Creates a new instance.
+    # @param capacity [Integer] capacity for the new data instance.
     def initialize(capacity = 16)
-      # TODO aconway 2017-08-11: error prone, confusion between capacity and Integer content.
       if capacity.is_a?(Integer)
         @data = Cproton.pn_data(capacity.to_i)
         @free = true
       else
+        # Assume non-integer capacity is a SWIG::pn_data_t*
         @data = capacity
         @free = false
       end
@@ -125,8 +130,10 @@ module Qpid::Proton::Codec
     # Clearing the current node sets it *before* the first node, calling
     # #next will advance to the first node.
     #
+    # @return self
     def rewind
       Cproton.pn_data_rewind(@data)
+      self
     end
 
     # Advances the current node to its next sibling and returns its types.

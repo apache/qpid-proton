@@ -43,17 +43,23 @@ module Qpid::Proton
       return dlv
     end
 
-    # Decodes a message from supplied AMQP data and returns the number
-    # of bytes consumed.
-    #
-    # ==== Options
-    #
-    # * encoded - the encoded data
-    #
+    # Decodes a message from AMQP binary data.
+    # @param encoded [String] the encoded bytes
+    # @return[Integer] the number of bytes consumed
     def decode(encoded)
       check(Cproton.pn_message_decode(@impl, encoded, encoded.length))
-
       post_decode
+    end
+
+    # Receive and decode a message from a delivery.
+    #
+    # @param delivery [Delivery] the delivery
+    # @return [Integer] the number of bytes decoded
+    def receive(delivery)
+      raise RangeError, "delivery is incomplete" if delivery.partial?
+      n = decode(delivery.link.receive(delivery.pending))
+      delivery.link.advance
+      return n
     end
 
     def post_decode # :nodoc:

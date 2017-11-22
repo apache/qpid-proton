@@ -64,9 +64,6 @@ module Qpid::Proton
   #
   class Transport
 
-    # @private
-    include Util::Engine
-
     # Turn logging off entirely.
     TRACE_OFF = Cproton::PN_TRACE_OFF
     # Log raw binary data into/out of the transport.
@@ -229,25 +226,15 @@ module Qpid::Proton
       Cproton.pn_transport_quiesced(@impl)
     end
 
-    # Returns additional information about the condition of the transport.
-    #
-    # When a TRANSPORT_ERROR event occurs, this operaiton can be used to
-    # access the details of the error condition.
-    #
-    # The object returned is valid until the Transport is discarded.
-    #
+    # @return [Condition, nil] transport error condition or nil if there is no error.
     def condition
-      condition_to_object Cproton.pn_transport_condition(@impl)
+      Condition.make(Cproton.pn_transport_condition(@impl))
     end
 
-    # Set the condition of the transport.
-    #
-    # Setting a non-empty condition before closing the transport will cause a
-    # TRANSPORT_ERROR event.
-    #
+    # Set the error condition for the transport.
     # @param c [Condition] The condition to set
     def condition=(c)
-      object_to_condition c, Cproton.pn_transport_condition(@impl)
+      Condition.from_object(Cproton.pn_transport_condition(@impl), Condition.make(c))
     end
 
     # Binds to the given connection.

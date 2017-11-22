@@ -160,7 +160,8 @@ module Qpid::Proton
     # @return [Data] The offered capabilities.
     #
     def remote_offered_capabilities
-      data_to_object(Cproton.pn_connection_remote_offered_capabilities(@impl))
+      # FIXME aconway 2017-11-22: doesn't match doc - returning object, not Data
+      Codec::Data.to_object(Cproton.pn_connection_remote_offered_capabilities(@impl))
     end
 
     # Get the AMQP desired capabilities supplied by the remote connection
@@ -173,7 +174,7 @@ module Qpid::Proton
     # @return [Data] The desired capabilities.
     #
     def remote_desired_capabilities
-      data_to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
+      Codec::Data.to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
     end
 
     # Get the AMQP connection properties supplie by the remote connection
@@ -186,7 +187,7 @@ module Qpid::Proton
     # @return [Data] The remote properties.
     #
     def remote_properties
-      data_to_object(Cproton.pn_connection_remote_properites(@impl))
+      Codec::Data.to_object(Cproton.pn_connection_remote_properites(@impl))
     end
 
     # Open the local end of the connection.
@@ -216,9 +217,9 @@ module Qpid::Proton
       Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
       @link_prefix = opts[:link_prefix] || container_id
-      object_to_data(opts[:offered_capabilities], Cproton.pn_connection_offered_capabilities(@impl))
-      object_to_data(opts[:desired_capabilities], Cproton.pn_connection_desired_capabilities(@impl))
-      object_to_data(opts[:properties], Cproton.pn_connection_properties(@impl))
+      Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl), opts[:offered_capabilities])
+      Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl), opts[:desired_capabilities])
+      Codec::Data.from_object(Cproton.pn_connection_properties(@impl), opts[:properties])
     end
 
     # @private Generate a unique link name, internal use only.

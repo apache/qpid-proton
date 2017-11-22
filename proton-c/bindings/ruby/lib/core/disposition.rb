@@ -40,9 +40,6 @@ module Qpid::Proton
     # Indicates the delivery was modified.
     self.add_constant(:MODIFIED, Cproton::PN_MODIFIED)
 
-    # @private
-    include Util::Engine
-
     attr_reader :impl
 
     # @private
@@ -103,7 +100,7 @@ module Qpid::Proton
       if @local
         @data
       else
-        data_to_object(Cproton.pn_disposition_data(@impl))
+        Codec::Data.to_object(Cproton.pn_disposition_data(@impl))
       end
     end
 
@@ -126,7 +123,7 @@ module Qpid::Proton
       if @local
         @annotations
       else
-        data_to_object(Cproton.pn_disposition_annotations(@impl))
+        Codec::Data.to_object(Cproton.pn_disposition_annotations(@impl))
       end
     end
 
@@ -149,7 +146,7 @@ module Qpid::Proton
       if @local
         @condition
       else
-        condition_to_object(Cproton.pn_disposition_condition(@impl))
+        Condition.make(Cproton.pn_disposition_condition(@impl))
       end
     end
 

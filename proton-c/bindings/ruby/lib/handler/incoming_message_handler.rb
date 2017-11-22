@@ -35,7 +35,9 @@ module Qpid::Proton::Handler
       delivery = event.delivery
       return unless delivery.link.receiver?
       if delivery.readable? && !delivery.partial?
-        event.message = Qpid::Proton::Util::Engine.receive_message(delivery)
+        m = Qpid::Proton::Message.new
+        m.receive(delivery)
+        event.message = m
         if event.link.local_closed?
           if @auto_accept
             delivery.update(Qpid::Proton::Disposition::RELEASED)

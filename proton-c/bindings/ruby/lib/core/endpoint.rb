@@ -57,24 +57,21 @@ module Qpid::Proton
                   Cproton::PN_REMOTE_CLOSED
 
     # @private
-    include Util::Engine
-
-    # @private
     def initialize
       @condition = nil
     end
 
     # @private
     def _update_condition
-      object_to_condition(@condition, self._local_condition)
+      Condition.from_object(self._local_condition, @condition)
     end
 
     def condition
-      condition_to_object(_local_condition) || remote_condition; end
+      Condition.make(_local_condition) || remote_condition; end
 
     # @private
     def remote_condition
-      condition_to_object(self._remote_condition)
+      Condition.make(_remote_condition)
     end
 
     # Return the transport associated with this endpoint.
