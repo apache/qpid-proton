@@ -32,6 +32,7 @@ module Qpid::Proton
     # Parse a string, return a new URL
     # @param url [#to_s] the URL string
     def initialize(url = nil)
+      deprecated self.class, 'URI or String'
       if url
         @url = Cproton.pn_url_parse(url.to_s)
         if @url.nil?
@@ -72,7 +73,7 @@ module Qpid::Proton
     private
 
     def defaults
-      @scheme = @scheme || "ampq"
+      @scheme = @scheme || "amqp"
       @host = @host || "0.0.0.0"
       @port = @port || 5672
     end

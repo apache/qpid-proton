@@ -32,8 +32,6 @@ module Qpid::Proton
   class Container
     private
 
-    def amqp_uri(s) Qpid::Proton::amqp_uri s; end
-
     # Container driver applies options and adds container context to events
     class ConnectionTask < Qpid::Proton::HandlerDriver
       def initialize container, io, opts, server=false
@@ -162,7 +160,7 @@ module Qpid::Proton
     # @option (see Connection#open)
     # @return [Connection] The new AMQP connection
     def connect(url, opts = {})
-      url = amqp_uri(url)
+      url = Qpid::Proton::uri(url)
       opts[:user] ||= url.user
       opts[:password] ||= url.password
       # TODO aconway 2017-10-26: Use SSL for amqps URLs
@@ -187,7 +185,7 @@ module Qpid::Proton
     # @return [Listener] The AMQP listener.
     #
     def listen(url, handler=Listener::Handler.new)
-      url = amqp_uri(url)
+      url = Qpid::Proton::uri(url)
       # TODO aconway 2017-11-01: amqps
       listen_io(TCPServer.new(url.host, url.port), handler)
     end

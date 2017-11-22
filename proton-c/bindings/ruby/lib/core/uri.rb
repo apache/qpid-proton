@@ -34,17 +34,37 @@ module URI
 end
 
 module Qpid::Proton
-  # Convert s to an {URI::AMQP} or {URI::AMQPS}
-  # @param s [String,URI] If s has no scheme, use the {URI::AMQP} scheme
-  # @return [URI::AMQP]
-  # @raise [BadURIError] If s has a scheme that is not "amqp" or "amqps"
-  def self.amqp_uri(s)
-    u = URI(s)
-    u.host ||= ""               # Behaves badly with nil host
-    return u if u.is_a? URI::AMQP
-    raise URI::BadURIError, "Not an AMQP URI: '#{u}'" if u.scheme
-    u.scheme = "amqp" unless u.scheme
-    u = URI::parse(u.to_s)      # Re-parse with amqp scheme
-    return u
+  # Returns +s+ converted to a {URI::AMQP} or {URI::AMQPS} object
+  #
+  # Shortcut strings are allowed: an "amqp://" prefix is added if +s+ does
+  # not already look like an 'amqp:', 'amqps:' URI.
+  #
+  # @note this does not give the same result as a standard URI parser in all cases.
+  #  For standard conversion to a URI use: {#URI}(s)
+  #
+  # @param s [String,URI] String to convert to a URI, or a URI object.
+  #  A URI object with no scheme will be converted to {URI::AMQP}
+  # @return [URI::AMQP] A valid {URI::AMQP} or {URI::AMQPS} object
+  # @raise [BadURIError] s is a URI object with a non-AMQP scheme
+  # @raise [InvalidURIError] s cannot be parsed as a URI or shortcut
+  # @raise [::ArgumentError] s is not a string or URI
+  #
+  def self.uri(s)
+    case s
+      when URI::AMQP then s     # Pass-thru
+    when URI::Generic
+      s.scheme ||= 'amqp'
+      u = URI.parse(s.to_s)      # Re-parse as amqp
+      raise URI::BadURIError, "Not an AMQP URI: '#{u}'" unless u.is_a? URI::AMQP
+      u
+    else
+      s = String.try_convert s
+      raise ::ArgumentError, "bad argument (expected URI object or URI string)" unless s
+      case s
+      when %r{^amqps?:} then URI.parse(s)      # Looks like an AMQP URI
+      when %r{^//} then URI.parse("amqp:#{s}") # Looks like a scheme-less URI
+      else URI.parse("amqp://#{s}")            # Treat as a bare host:port/path string
+      end
+    end
   end
 end

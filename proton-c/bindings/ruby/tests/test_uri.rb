@@ -22,19 +22,63 @@ require 'qpid_proton'
 
 class TestURI < Minitest::Test
 
-  def amqp_uri(u) Qpid::Proton::amqp_uri(u); end
+  def uri(u) Qpid::Proton::uri(u); end
 
-  def test_amqp_uri
-    assert_equal URI("amqp:").port, 5672
-    assert_equal URI("amqps:").port, 5671
-    assert_equal URI("amqp://user:pass@host:1234/path"), amqp_uri("//user:pass@host:1234/path")
-    assert_equal URI("amqp://user:pass@host:1234/path"), amqp_uri("amqp://user:pass@host:1234/path")
-    assert_equal URI("amqps://user:pass@host:1234/path"), amqp_uri("amqps://user:pass@host:1234/path")
-    assert_equal URI("amqp://host:1234/path"), amqp_uri("//host:1234/path")
-    assert_equal URI("amqp://host:1234"), amqp_uri("//host:1234")
-    assert_equal URI("amqp://host"), amqp_uri("//host")
-    assert_equal URI("amqp://:1234"), amqp_uri("//:1234")
-    assert_raises(URI::BadURIError) { amqp_uri("http://foo") }
+  # Extension to standard URI parser
+  def test_standard
+    u = URI("amqp://u:p@h/x")
+    assert_equal URI::AMQP, u.class
+    assert_equal ['amqp', 'u:p', 'h', 5672, '/x'], u.select(:scheme, :userinfo, :host, :port, :path)
+
+    u = URI("amqps://u:p@h/x")
+    assert_equal URI::AMQPS, u.class
+    assert_equal ['amqps', 'u:p', 'h', 5671, '/x'], u.select(:scheme, :userinfo, :host, :port, :path)
+
+    assert_equal ['amqp', '[::1:2:3]', 5672], URI('amqp://[::1:2:3]').select(:scheme, :host, :port)
+  end
+
+  # Proton::uri on valid URIs
+  def test_valid
+    u = uri("amqp://u:p@h:1/x")
+    assert_equal URI::AMQP, u.class
+    assert_equal u.select(:scheme, :userinfo, :host, :port, :path), ['amqp', 'u:p', 'h', 1, '/x']
+
+    u = uri("amqps://u:p@h:1/x")
+    assert_equal URI::AMQPS, u.class
+    assert_equal u.select(:scheme, :userinfo, :host, :port, :path), ['amqps', 'u:p', 'h', 1, '/x']
+
+    # Schemeless string -> amqp
+    assert_equal URI("amqp://h:1/x"), uri("//h:1/x")
+    assert_equal URI("amqp:/x"), uri("/x")
+    assert_equal URI("amqp:"), uri("//")
+    assert_equal URI("amqp:"), uri("")
+    assert_equal URI("amqp://[::1]"), uri("//[::1]")
+
+    # Schemeless URI -> amqp, no re-parse for ambiguous case of path only
+    assert_equal URI("amqp:x"), uri(URI("x"))
+    assert_equal URI("amqp:/x"), uri(URI("/x"))
+
+    # Pass-through
+    u = uri('')
+    assert_same u, uri(u)
+  end
+
+  # Proton::uri non-standard shortcuts
+  def test_shortcut
+    assert_equal URI("amqp://u:p@h:1/x"), uri("u:p@h:1/x")
+    assert_equal URI("amqp://h:1"), uri("h:1")
+    assert_equal URI("amqp://h"), uri("h")
+    assert_equal URI("amqp://h"), uri("h:")
+    assert_equal URI("amqp://:1"), uri(":1")
+    assert_equal URI("amqp://[::1:2]:1"), uri("[::1:2]:1")
+    assert_equal URI("amqp://[::1:2]"), uri("[::1:2]")
+  end
+
+  def test_error
+    assert_raises(::ArgumentError) { uri(nil) }
+    assert_raises(URI::BadURIError) { uri(URI("http:x")) } # Don't re-parse a URI with wrong scheme
+    assert_raises(URI::InvalidURIError) { uri("x:y:z") } # Nonsense
+    assert_raises(URI::InvalidURIError) { uri("amqp://[foobar]") } # Bad host
   end
 
 end
