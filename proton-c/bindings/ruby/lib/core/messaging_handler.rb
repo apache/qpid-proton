@@ -17,11 +17,11 @@
 # under the License.
 #++
 
-module Qpid::Proton::Handler
+module Qpid::Proton
 
   # A general purpose handler that simplifies processing events.
   #
-  class MessagingHandler < Qpid::Proton::BaseHandler
+  class MessagingHandler
 
     attr_reader :handlers
 
@@ -34,10 +34,10 @@ module Qpid::Proton::Handler
     #
     def initialize(prefetch = 10, auto_accept = true, auto_settle = true, peer_close_is_error = false)
       @handlers = Array.new
-      @handlers << CFlowController.new(prefetch) unless prefetch.zero?
-      @handlers << EndpointStateHandler.new(peer_close_is_error, self)
-      @handlers << IncomingMessageHandler.new(auto_accept, self)
-      @handlers << OutgoingMessageHandler.new(auto_settle,self)
+      @handlers << Handler::CFlowController.new(prefetch) unless prefetch.zero?
+      @handlers << Handler::EndpointStateHandler.new(peer_close_is_error, self)
+      @handlers << Handler::IncomingMessageHandler.new(auto_accept, self)
+      @handlers << Handler::OutgoingMessageHandler.new(auto_settle,self)
     end
 
     # Called when the peer closes the connection with an error condition.
@@ -45,7 +45,7 @@ module Qpid::Proton::Handler
     # @param event [Qpid::Proton::Event::Event] The event.
     #
     def on_connection_error(event)
-      EndpointStateHandler.print_error(event.connection, "connection")
+      Handler::EndpointStateHandler.print_error(event.connection, "connection")
     end
 
       # Called when the peer closes the session with an error condition.
@@ -53,7 +53,7 @@ module Qpid::Proton::Handler
       # @param event [Qpid:Proton::Event::Event] The event.
       #
     def on_session_error(event)
-      EndpointStateHandler.print_error(event.session, "session")
+      Handler::EndpointStateHandler.print_error(event.session, "session")
       event.connection.close
     end
 
@@ -62,7 +62,7 @@ module Qpid::Proton::Handler
     # @param event [Qpid::Proton::Event::Event] The event.
     #
     def on_link_error(event)
-      EndpointStateHandler.print_error(event.link, "link")
+      Handler::EndpointStateHandler.print_error(event.link, "link")
       event.connection.close
     end
 

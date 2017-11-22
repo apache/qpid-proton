@@ -32,7 +32,7 @@ module Qpid::Proton::Handler
   #
   # The same applies to close.
   #
-  class EndpointStateHandler < Qpid::Proton::BaseHandler
+  class EndpointStateHandler
 
     def initialize(peer_close_is_error = false, delegate = nil)
       @delegate = delegate

@@ -22,7 +22,7 @@ module Qpid::Proton::Handler
   # A utility for simpler and more intuitive handling of delivery events
   # related to outgoing messages.
   #
-  class OutgoingMessageHandler < Qpid::Proton::BaseHandler
+  class OutgoingMessageHandler
 
     def initialize(auto_settle = true, delegate = nil)
       @auto_settle = auto_settle

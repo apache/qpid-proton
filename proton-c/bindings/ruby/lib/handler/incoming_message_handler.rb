@@ -22,7 +22,7 @@ module Qpid::Proton::Handler
   # A utility for simpler and more intuitive handling of delivery events
   # related to incoming messages.
   #
-  class IncomingMessageHandler < Qpid::Proton::BaseHandler
+  class IncomingMessageHandler
 
     include Acking
 

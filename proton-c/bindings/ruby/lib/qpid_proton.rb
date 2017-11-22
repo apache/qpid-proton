@@ -81,7 +81,6 @@ require "core/ssl_domain"
 require "core/ssl_details"
 require "core/ssl"
 require "core/transport"
-require "core/base_handler"
 require "core/url"
 require "core/connection_driver"
 
@@ -99,18 +98,21 @@ require "handler/endpoint_state_handler"
 require "handler/incoming_message_handler"
 require "handler/outgoing_message_handler"
 require "handler/c_flow_controller"
-require "handler/messaging_handler"
 
-# Core classes that depend on handlers and events
+# Core classes that depend on Handler
+require "core/messaging_handler"
 require "core/container"
 require "core/connection_driver"
 
-# Reactor classes for backwards compatibility
+# Backwards compatibility shims
 require "reactor/container"
 
-module Qpid::Proton
+module Qpid::Proton::Handler
+  # @deprecated alias for backwards compatibility
+  MessagingHandler = Qpid::Proton::MessagingHandler
+end
 
-  include Qpid::Proton::Handler
+module Qpid::Proton
   Tracker = Delivery
 
   # @private
