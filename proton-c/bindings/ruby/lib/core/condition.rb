@@ -35,7 +35,7 @@ module Qpid::Proton
 
     def ==(other)
       ((other.is_a? Condition) &&
-       (other.name == self.name) && 
+       (other.name == self.name) &&
        (other.description == self.description) &&
        (other.info == self.info))
     end
