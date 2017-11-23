@@ -552,10 +552,7 @@ static int leader_resolve(pn_proactor_t *p, addr_t *addr, bool listen) {
   struct addrinfo hints = { 0 };
   hints.ai_family = AF_UNSPEC;
   hints.ai_socktype = SOCK_STREAM;
-  /* Note this looks contradictory since we disable V4 mapping in bind() but it is
-     correct - read the getaddrinfo man page carefully!
-  */
-  hints.ai_flags = AI_V4MAPPED | AI_ADDRCONFIG;
+  hints.ai_flags = AI_ADDRCONFIG;
   if (listen) {
     hints.ai_flags |= AI_PASSIVE | AI_ALL;
   }
