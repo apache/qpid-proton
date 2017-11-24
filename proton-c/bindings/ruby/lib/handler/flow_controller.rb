@@ -17,17 +17,24 @@
 # under the License.
 #++
 
+# @private
 module Qpid::Proton::Handler
 
-  # @private
-  class CFlowController < Qpid::Proton::Handler::WrappedHandler
+  # Mixin to establish automatic flow control for a prefetch window
+  # Uses {#@prefetch}
+  #
+  module FlowController
 
-    include Qpid::Proton::Util::Wrapper
+    def on_link_local_open(event) topup(event); super; end
+    def on_link_remote_open(event) topup(event); super; end
+    def on_delivery(event) topup(event); super; end
+    def on_link_flow(event) topup(event); super; end
 
-    def initialize(window = 1024)
-      super(Cproton.pn_flowcontroller(window))
+    def add_credit(event)
+      r = event.receiver
+      if r && r.open? && (r.drained == 0) && @handler.prefetch && (@handler.prefetch > r.credit)
+        r.flow(@handler.prefetch - r.credit)
+      end
     end
-
   end
-
 end

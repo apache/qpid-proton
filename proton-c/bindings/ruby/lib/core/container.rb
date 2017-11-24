@@ -39,14 +39,6 @@ module Qpid::Proton
         transport.set_server if server
         transport.apply opts
         connection.apply opts
-        @container = container
-      end
-
-      def event
-        # Add a container to the event
-        e = super()
-        e.container = @container if e
-        e
       end
     end
 
@@ -237,11 +229,7 @@ module Qpid::Proton
         case task
 
         when :on_start
-          # TODO aconway 2017-11-27: proper syntesized events
-          event = Class.new do
-            def initialize(c) @container = c; end
-            attr_reader :container
-          end.new(self)
+          event = Event.new(nil, :on_start, self)
           @handler.on_start(event) if @handler.respond_to? :on_start
 
         when Container
@@ -329,7 +317,7 @@ module Qpid::Proton
 
     def connection_driver(io, opts=nil, server=false)
       opts ||= {}
-      opts[:container_id] ||= @id
+      opts[:container] = self
       opts[:handler] ||= @handler
       ConnectionTask.new(self, io, opts, server)
     end

@@ -17,19 +17,18 @@
 # under the License.
 #++
 
+# @private
 module Qpid::Proton::Handler
+  private
 
   # A utility for simpler and more intuitive handling of delivery events
   # related to incoming messages.
   #
-  class IncomingMessageHandler
-
-    def initialize(auto_accept = true, delegate = nil)
-      @delegate = delegate
-      @auto_accept = auto_accept
-    end
-
+  # uses @auto_accept
+  #
+  module IncomingMessageHandler
     def on_delivery(event)
+      super
       delivery = event.delivery
       return unless delivery.link.receiver?
       if delivery.readable? && !delivery.partial?
@@ -37,38 +36,20 @@ module Qpid::Proton::Handler
         m.receive(delivery)
         event.message = m
         if event.link.local_closed?
-          if @auto_accept
-            delivery.update(Qpid::Proton::Disposition::RELEASED)
-            delivery.settle
-          end
+          delivery.settle Qpid::Proton::Delivery::RELEASED if @auto_accept
         else
           begin
             self.on_message(event)
-            if @auto_accept
-              delivery.update(Qpid::Proton::Disposition::ACCEPTED)
-              delivery.settle
-            end
+            delivery.settle Qpid::Proton::Delivery::ACCEPTED if @auto_accept
           rescue Qpid::Proton::Reject
-            delivery.update(Qpid::Proton::Disposition::REJECTED)
-            delivery.settle
+            delivery.settle REJECTED
           rescue Qpid::Proton::Release
-            delivery.update(Qpid::Proton::Disposition::MODIFIED)
-            delivery.settle
+            delivery.settle MODIFIED
           end
         end
       elsif delivery.updated? && delivery.settled?
         self.on_settled(event)
       end
     end
-
-    def on_message(event)
-      Qpid::Proton::Event.dispatch(@delegate, :on_message, event) if !@delegate.nil?
-    end
-
-    def on_settled(event)
-      Qpid::Proton::Event.dispatch(@delegate, :on_settled, event) if !@delegate.nil?
-    end
-
   end
-
 end

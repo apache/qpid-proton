@@ -123,6 +123,15 @@ module Qpid::Proton
     #
     proton_caller :settled?
 
+    # @!attribute [r] aborted?
+    #
+    # A delivery can be aborted before it is complete by the remote sender.
+    # The receiver must ignore the message and discard any partial data.
+    #
+    # @return [Boolean] Returns if a delivery is aborted.
+    #
+    proton_caller :aborted?
+
     # Update the state of the delivery
     # @param state [Integer] the delivery state, defined in {DeliveryState}
     def update(state) Cproton.pn_delivery_update(@impl, state); end
@@ -140,8 +149,6 @@ module Qpid::Proton
 
     # Reject a received message that is considered invalid.
     def reject() settle REJECTED; end
-
-    # FIXME aconway 2017-11-23: why the delivered argument?
 
     # Release a received message making it available to other receivers.
     def release(delivered = true) settle(delivered ? MODIFIED : RELEASED); end
@@ -262,6 +269,25 @@ module Qpid::Proton
       self.remote_state == Disposition::MODIFIED
     end
 
-  end
+    # @return true if the delivery has a complete incoming message ready to decode
+    def message?
+      readable? && !aborted? && !partial?
+    end
 
+    # Decode the message from the delivery into a new {Message}
+    # @raise [ProtonError] unless {#message?}
+    def message
+      if message?
+        m = Message.new
+        m.decode(link.receive(pending))
+        link.advance
+        m
+      else
+        status = [("not readable" if !readable?),
+                  ("aborted" if aborted?),
+                  ("partial" if partial?)].compact.join(", ")
+        raise ProtonError, "incoming delivery #{status}"
+      end
+    end
+  end
 end

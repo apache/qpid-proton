@@ -21,10 +21,10 @@ require "cproton"
 require "date"
 require "weakref"
 
-if RUBY_VERSION < "1.9"
-require "kconv"
-else
+begin
   require "securerandom"
+rescue LoadError
+  require "kconv"               # Ruby < 1.9
 end
 
 DEPRECATION = "[DEPRECATION]"
@@ -41,9 +41,7 @@ require "util/version"
 require "util/error_handler"
 require "util/swig_helper"
 require "util/wrapper"
-require "util/class_wrapper"
 require "util/timeout"
-require "util/handler"
 
 # Types
 require "types/strings"
@@ -55,14 +53,9 @@ require "types/described"
 require "codec/mapping"
 require "codec/data"
 
-# Event API classes
-require "event/event_type"
-require "event/event_base"
-require "event/event"
-require "event/collector"
-
 # Main Proton classes
 require "core/condition"
+require "core/event"
 require "core/uri"
 require "core/message"
 require "core/endpoint"
@@ -89,12 +82,11 @@ require "messenger/tracker"
 require "messenger/messenger"
 
 # Handler classes
-require "handler/c_adaptor"
-require "handler/wrapped_handler"
 require "handler/endpoint_state_handler"
 require "handler/incoming_message_handler"
 require "handler/outgoing_message_handler"
-require "handler/c_flow_controller"
+require "handler/flow_controller"
+require "handler/adapter"
 
 # Core classes that depend on Handler
 require "core/messaging_handler"

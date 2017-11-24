@@ -51,17 +51,6 @@ module Qpid::Proton
       post_decode
     end
 
-    # Receive and decode a message from a delivery.
-    #
-    # @param delivery [Delivery] the delivery
-    # @return [Integer] the number of bytes decoded
-    def receive(delivery)
-      raise RangeError, "delivery is incomplete" if delivery.partial?
-      n = decode(delivery.link.receive(delivery.pending))
-      delivery.link.advance
-      return n
-    end
-
     def post_decode # :nodoc:
       # decode elements from the message
       @properties = {}

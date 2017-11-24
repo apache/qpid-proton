@@ -58,16 +58,12 @@ module Qpid::Proton
     # @see Endpoint::LOCAL_ACTIVE
     proton_caller :open
 
-    # @!method close
-    #
-    # Closes the link.
-    #
-    # Once this operation has completed, the state flag will be set.
-    # This may be called without first calling #open, which is the equivalent to
-    # calling #open and then #close.
-    #
-    # @see Endpoint::LOCAL_CLOSED
-    proton_caller :close
+    # Close the local end of the link. The remote end may or may not be closed.
+    # @param error [Condition] Optional error condition to send with the close.
+    def close(error=nil)
+      Condition.assign(_local_condition, error)
+      Cproton.pn_link_close(@impl)
+    end
 
     # @!method detach
     #

@@ -36,156 +36,68 @@ module Qpid::Proton
     #   @return [String] User name used for authentication (outgoing connection) or the authenticated user name (incoming connection)
     proton_accessor :user
 
-    # @private
+    private
+
     proton_writer :password
-
-    # @private
     attr_accessor :overrides
-    # @private
     attr_accessor :session_policy
-
-    # @private
     include Util::Wrapper
 
-    # @private
     def self.wrap(impl)
       return nil if impl.nil?
-
       self.fetch_instance(impl, :pn_connection_attachments) || Connection.new(impl)
     end
 
-    # Constructs a new instance of Connection.
-    #
-    # You do *not* need to provide the underlying C struct, as this is
-    # automatically generated as needed. The argument is a convenience
-    # for returning existing Connection objects.
-    #
-    # @param impl [pn_connection_t] The pn_connection_t struct.
-    #
     def initialize(impl = Cproton.pn_connection)
       super()
       @impl = impl
       @overrides = nil
-      @collector = nil
       @session_policy = nil
       @link_count = 0
       @link_prefix = ""
       self.class.store_instance(self, :pn_connection_attachments)
     end
 
-    def overrides?
-      !@overrides.nil?
-    end
+    public
 
-    def session_policy?
-      !@session_policy.nil?
-    end
+    # @deprecated no replacement
+    def overrides?() deprecated __method__; false; end
 
-    # This method is used when working within the context of an event.
-    #
-    # @return [Connection] The connection itself.
-    #
-    def connection
-      self
-    end
+    # @deprecated no replacement
+    def session_policy?() deprecated __method__; false; end
 
-    # The Transport to which this connection is bound.
-    #
-    # @return [Transport] The transport, or nil if the Connection is unbound.
-    #
-    def transport
-      Transport.wrap(Cproton.pn_connection_transport(@impl))
-    end
+    # @return [Connection] self
+    def connection() self; end
 
-    # Associates the connection with an event collector.
+    # @return [Transport, nil] transport bound to this connection, or nil if unbound.
     #
-    # By doing this, key changes in the endpoint's state are reported to
-    # the connector via Event objects that can be inspected and processed.
-    #
-    # Note that, by registering a collector, the user is requesting that an
-    # indefinite number of events be queued up on its behalf. This means
-    # that, unless the application eventual processes these events, the
-    # storage requirements for keeping them will grow without bound. So be
-    # careful and do not register a collector with a connection unless the
-    # application will process the events.
-    #
-    # @param collector [Event::Collector] The event collector.
-    #
-    def collect(collector)
-      if collector.nil?
-        Cproton.pn_connection_collect(@impl, nil)
-      else
-        Cproton.pn_connection_collect(@impl, collector.impl)
-      end
-      @collector = collector
-    end
+    def transport() Transport.wrap(Cproton.pn_connection_transport(@impl)); end
 
-    # Get the AMQP container name advertised by the remote connection.
-    #
-    # This will return nil until the REMOTE_ACTIVE state is reached.
-    #
-    # @return [String] The remote connection's AMQP container name.
-    #
-    # @see #container
-    #
-    def remote_container
-      Cproton.pn_connection_remote_container(@impl)
-    end
+    # @return AMQP container ID advertised by the remote peer
+    def remote_container_id() Cproton.pn_connection_remote_container(@impl); end
 
-    # AMQP container ID string for the local end of the connection.
-    def container_id
-      Cproton.pn_connection_get_container(@impl)
-    end
+    alias :remote_container :remote_container_id
 
-    # Get the AMQP hostname set by the remote connection endpoint.
-    #
-    # This will return nil until the #REMOTE_ACTIVE state is
-    # reached.
-    #
-    # @return [String] The remote connection's AMQP hostname.
-    #
-    # @see #hostname
-    #
-    def remote_hostname
-      Cproton.pn_connection_remote_hostname(@impl)
-    end
+    # @return [Container] the container managing this connection
+    attr_reader :container
 
-    # Get the AMQP offered capabilities suppolied by the remote connection
-    # endpoint.
-    #
-    # This object returned is valid until the connection is freed. The Data
-    # object will be empty until the remote connection is opened, as
-    # indicated by the #REMOTE_ACTIVE flag.
-    #
-    # @return [Data] The offered capabilities.
-    #
+    # @return AMQP container ID for the local end of the connection
+    def container_id() Cproton.pn_connection_get_container(@impl); end
+
+    # @return [String] hostname used by the remote end of the connection
+    def remote_hostname() Cproton.pn_connection_remote_hostname(@impl); end
+
+    # @return [Array<Symbol>] offered capabilities provided by the remote peer
     def remote_offered_capabilities
-      # FIXME aconway 2017-11-22: doesn't match doc - returning object, not Data
       Codec::Data.to_object(Cproton.pn_connection_remote_offered_capabilities(@impl))
     end
 
-    # Get the AMQP desired capabilities supplied by the remote connection
-    # endpoint.
-    #
-    # The object returned is valid until the connection is freed. The Data
-    # object will be empty until the remote connection is opened, as
-    # indicated by the #REMOTE_ACTIVE flag.
-    #
-    # @return [Data] The desired capabilities.
-    #
+    # @return [Array<Symbol>] desired capabilities provided by the remote peer
     def remote_desired_capabilities
       Codec::Data.to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
     end
 
-    # Get the AMQP connection properties supplie by the remote connection
-    # endpoint.
-    #
-    # The object returned is valid until the connection is freed. The Data
-    # object will be empty until the remote connection is opened, as
-    # indicated by the #REMOTE_ACTIVE flag.
-    #
-    # @return [Data] The remote properties.
-    #
+    # @return [Hash] connection-properties provided by the remote peer
     def remote_properties
       Codec::Data.to_object(Cproton.pn_connection_remote_properites(@impl))
     end
@@ -213,7 +125,9 @@ module Qpid::Proton
       # NOTE: Only connection options are set here. Transport options are set
       # with {Transport#apply} from the connection_driver (or in
       # on_connection_bound if not using a connection_driver)
-      Cproton.pn_connection_set_container(@impl, opts[:container_id] || SecureRandom.uuid)
+      @container = opts[:container]
+      cid = opts[:container_id] || (@container && @container.id) || SecureRandom.uuid
+      Cproton.pn_connection_set_container(@impl, cid)
       Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
       @link_prefix = opts[:link_prefix] || container_id
@@ -227,16 +141,10 @@ module Qpid::Proton
       @link_prefix + "/" +  (@link_count += 1).to_s(16)
     end
 
-    # Closes the connection.
-    #
-    # Once this operation has completed, the #LOCAL_CLOSED state flag will be
-    # set.
-    #
-    def close(error = nil)
-      if error
-        @condition = Condition.convert error
-        self._update_condition
-      end
+    # Closes the local end of the connection. The remote end may or may not be closed.
+    # @param error [Condition] Optional error condition to send with the close.
+    def close(error=nil)
+      Condition.assign(_local_condition, error)
       Cproton.pn_connection_close(@impl)
     end
 

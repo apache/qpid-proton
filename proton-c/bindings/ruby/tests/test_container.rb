@@ -160,25 +160,13 @@ class ContainerSASLTest < Minitest::Test
   # Handler for test client/server that sets up server and client SASL options
   class SASLHandler < TestHandler
 
-    def initialize(url="amqp://", opts=nil, mechanisms=nil, insecure=nil, realm=nil)
+    def initialize(url="amqp://", opts=nil)
       super()
-      @url, @opts, @mechanisms, @insecure, @realm = url, opts, mechanisms, insecure, realm
+      @url, @opts = url, opts
     end
 
     def on_start(e)
-      super
       @client = e.container.connect("#{@url}:#{e.container.port}", @opts)
-    end
-
-    def on_connection_bound(e)
-      if e.connection != @client # Incoming server connection
-        sasl = e.transport.sasl
-        sasl.allow_insecure_mechs = @insecure unless @insecure.nil?
-        sasl.allowed_mechs = @mechanisms unless @mechanisms.nil?
-        # TODO aconway 2017-08-16: need `sasl.realm(@realm)` here for non-default realms.
-        # That reqiures pn_sasl_set_realm() at the C layer - the realm should
-        # be passed to cyrus_sasl_init_server()
-      end
     end
 
     attr_reader :auth_user
@@ -263,7 +251,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     # Don't set allow_insecure_mechs, but try to use PLAIN
     s = SASLHandler.new("amqp://user:password@", {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true})
     e = assert_raises(TestError) { TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN"}).run }
-    assert_match(/PN_TRANSPORT_ERROR.*unauthorized-access/, e.to_s)
+    assert_match(/amqp:unauthorized-access.*Authentication failed/, e.to_s)
   end
 end
 

@@ -58,7 +58,7 @@ module Qpid::Proton
     # - String-like: return String.try_convert(obj)
     # - nil: return nil
     # @raise ::ArgumentError if obj is not convertible to {Condition}
-    def self.convert(obj, default_name="proton")
+    def self.convert(obj, default_name="error")
       case obj
       when nil then nil
       when Condition then obj
@@ -76,9 +76,11 @@ module Qpid::Proton
     end
 
     private
-    def self.from_object(impl, cond)
+
+    def self.assign(impl, cond)
       Cproton.pn_condition_clear(impl)
       if cond
+        cond = self.convert(cond)
         Cproton.pn_condition_set_name(impl, cond.name) if cond.name
         Cproton.pn_condition_set_description(impl, cond.description) if cond.description
         Codec::Data.from_object(Cproton.pn_condition_info(impl), cond.info) if cond.info

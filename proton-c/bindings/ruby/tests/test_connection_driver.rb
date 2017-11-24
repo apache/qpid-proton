@@ -40,7 +40,7 @@ class HandlerDriverTest < Minitest::Test
     end
 
     sender = HandlerDriver.new(@sockets[0], send_class.new)
-    sender.connection.open();
+    sender.connection.open(:container_id => "sender");
     sender.connection.open_sender()
     receiver = HandlerDriver.new(@sockets[1], recv_class.new)
     drivers = [sender, receiver]
@@ -58,14 +58,16 @@ class HandlerDriverTest < Minitest::Test
   end
 
   def test_idle
-    idle_class = Class.new(MessagingHandler) do
-      def on_connection_bound(event) event.transport.idle_timeout = 10; end
-    end
-    drivers = [HandlerDriver.new(@sockets[0], idle_class.new), HandlerDriver.new(@sockets[1], nil)]
-    drivers[0].connection.open()
+    drivers = [HandlerDriver.new(@sockets[0], nil), HandlerDriver.new(@sockets[1], nil)]
+    opts = {:idle_timeout=>10}
+    drivers[0].transport.apply(opts)
+    assert_equal 10, drivers[0].transport.idle_timeout
+    drivers[0].connection.open(opts)
+    drivers[1].transport.set_server
     now = Time.now
     drivers.each { |d| d.process(now) } until drivers[0].connection.open?
     assert_equal(10, drivers[0].transport.idle_timeout)
+    assert_equal(5, drivers[1].transport.remote_idle_timeout) # proton changes the value
     assert_in_delta(10, (drivers[0].tick(now) - now)*1000, 1)
   end
 end

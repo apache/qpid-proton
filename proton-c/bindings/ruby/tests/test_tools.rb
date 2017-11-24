@@ -67,26 +67,9 @@ class TestHandler < MessagingHandler
     raise TestError.new("TestHandler has errors:\n #{text}")
   end
 
-  # TODO aconway 2017-08-15: implement in MessagingHandler
-  def on_error(event, endpoint)
-    @errors.push "#{event.type}: #{endpoint.condition.inspect}"
+  def on_error(event)
+    @errors.push "#{event.type}: #{event.condition.inspect}"
     raise_errors if @raise_errors
-  end
-
-  def on_transport_error(event)
-    on_error(event, event.transport)
-  end
-
-  def on_connection_error(event)
-    on_error(event, event.connection)
-  end
-
-  def on_session_error(event)
-    on_error(event, event.session)
-  end
-
-  def on_link_error(event)
-    on_error(event, event.link)
   end
 
   def endpoint_opened(queue, endpoint)
@@ -114,4 +97,25 @@ end
 class ListenOnceHandler < ListenHandler
   def on_error(l, e)  raise TestError, e.inspect; end
   def on_accept(l) l.close; super; end
+end
+
+# A client/server pair of ConnectionDrivers linked by a socket pair
+class DriverPair < Array
+
+  def initialize(client_handler, server_handler)
+    handlers = [client_handler, server_handler]
+    self[0..-1] = Socket.pair(:LOCAL, :STREAM, 0).map { |s| HandlerDriver.new(s, handlers.shift) }
+    server.transport.set_server
+  end
+
+  alias :client :first
+  alias :server :last
+
+  # Run till there is nothing to do
+  def run
+    begin
+      each { |d| d.process }
+    end while (IO.select(self, [], [], 0) rescue nil)
+  end
+
 end

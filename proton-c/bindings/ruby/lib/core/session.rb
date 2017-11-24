@@ -87,14 +87,10 @@ module Qpid::Proton
       self.class.store_instance(self, :pn_session_attachments)
     end
 
-    # Closed the session.
-    #
-    # Once this operation has completed, the state flag will be set. This may be
-    # called without calling #open, in which case it is the equivalence of
-    # calling #open and then close immediately.
-    #
-    def close
-      self._update_condition
+    # Close the local end of the session. The remote end may or may not be closed.
+    # @param error [Condition] Optional error condition to send with the close.
+    def close(error=nil)
+      Condition.assign(_local_condition, error)
       Cproton.pn_session_close(@impl)
     end
 

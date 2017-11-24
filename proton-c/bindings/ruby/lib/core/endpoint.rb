@@ -33,7 +33,7 @@ module Qpid::Proton
   class Endpoint
 
     # The local connection is uninitialized.
-    LOCAL_UNINIT = Cproton::PN_LOCAL_UNINIT
+   LOCAL_UNINIT = Cproton::PN_LOCAL_UNINIT
     # The local connection is active.
     LOCAL_ACTIVE = Cproton::PN_LOCAL_ACTIVE
     # The local connection is closed.
@@ -47,32 +47,17 @@ module Qpid::Proton
     REMOTE_CLOSED = Cproton::PN_REMOTE_CLOSED
 
     # Bitmask for the local-only flags.
-    LOCAL_MASK = Cproton::PN_LOCAL_UNINIT |
-                 Cproton::PN_LOCAL_ACTIVE |
-                 Cproton::PN_LOCAL_CLOSED
+    LOCAL_MASK = Cproton::PN_LOCAL_UNINIT | Cproton::PN_LOCAL_ACTIVE | Cproton::PN_LOCAL_CLOSED
 
     # Bitmask for the remote-only flags.
-    REMOTE_MASK = Cproton::PN_REMOTE_UNINIT |
-                  Cproton::PN_REMOTE_ACTIVE |
-                  Cproton::PN_REMOTE_CLOSED
+    REMOTE_MASK = Cproton::PN_REMOTE_UNINIT | Cproton::PN_REMOTE_ACTIVE | Cproton::PN_REMOTE_CLOSED
 
     # @private
-    def initialize
-      @condition = nil
-    end
-
+    def condition; remote_condition || local_condition; end
     # @private
-    def _update_condition
-      Condition.from_object(self._local_condition, @condition)
-    end
-
-    def condition
-      Condition.convert(_local_condition) || remote_condition; end
-
+    def remote_condition; Condition.convert(_remote_condition); end
     # @private
-    def remote_condition
-      Condition.convert(_remote_condition)
-    end
+    def local_condition; Condition.convert(_local_condition); end
 
     # Return the transport associated with this endpoint.
     #
@@ -96,7 +81,7 @@ module Qpid::Proton
       check_state(LOCAL_UNINIT)
     end
 
-    def local_active?
+    def local_open?
       check_state(LOCAL_ACTIVE)
     end
 
@@ -108,12 +93,16 @@ module Qpid::Proton
       check_state(REMOTE_UNINIT)
     end
 
-    def remote_active?
+    def remote_open?
       check_state(REMOTE_ACTIVE)
     end
 
     def remote_closed?
       check_state(REMOTE_CLOSED)
     end
+
+    alias local_active? local_open?
+    alias remote_active? remote_open?
+
   end
 end

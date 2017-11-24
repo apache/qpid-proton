@@ -1068,3 +1068,4 @@ typedef unsigned long int uintptr_t;
 %include "proton/url.h"
 %include "proton/reactor.h"
 %include "proton/handlers.h"
+%include "proton/cid.h"

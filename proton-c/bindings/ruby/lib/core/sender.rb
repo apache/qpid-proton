@@ -39,10 +39,10 @@ module Qpid::Proton
       Cproton.pn_link_offered(@impl, n)
     end
 
-    # Sends the specified data to the remote endpoint.
+    # Send a message to the remote endpoint.
     #
-    # @param object [Object] The content to send.
-    # @param tag [Object] The tag
+    # @param message [Message] The message to send.
+    # @param tag [Object] Optional unique delivery tag, one will be generated if not supplied.
     #
     # @return [Integer] The number of bytes sent.
     #
@@ -56,7 +56,7 @@ module Qpid::Proton
 
     # Send the specified bytes as part of the current delivery.
     #
-    # @param bytes [Array] The bytes to send.
+    # @param bytes [String] The bytes to send.
     #
     # @return [Integer] The number of bytes sent.
     #
@@ -64,11 +64,12 @@ module Qpid::Proton
       Cproton.pn_link_send(@impl, bytes)
     end
 
+    # Generate a new unique delivery tag for this sender
     def delivery_tag
       @tag_count ||= 0
       result = @tag_count.succ
       @tag_count = result
-      return "#{result}"
+      return result.to_s(32) # Base 32 compactness
     end
 
   end

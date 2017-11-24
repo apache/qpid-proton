@@ -65,7 +65,13 @@ module Qpid
       def finished?() Cproton.pn_connection_driver_finished(@impl); end
 
       # Get the next event to dispatch, nil if no events available
-      def event() Event::Event.wrap(Cproton.pn_connection_driver_next_event(@impl)); end
+      def event()
+        e = Cproton.pn_connection_driver_next_event(@impl)
+        Event.new(e) if e
+      end
+
+      # True if {#event} will return non-nil
+      def event?() Cproton.pn_connection_driver_has_event(@impl); end
 
       # Iterator for all available events
       def each_event()
@@ -119,19 +125,23 @@ module Qpid
       # transport will close itself once the protocol close is complete.
       #
       def close_write error=nil
-        return if Cproton.pn_connection_driver_write_closed(@impl)
-        set_error error if error
+        set_error error
         Cproton.pn_connection_driver_write_close(@impl)
-        @io.close_write
+        @io.close_write rescue nil # Allow double-close
       end
+
+      # Is the read side of the driver closed?
+      def read_closed?() Cproton.pn_connection_driver_read_closed(@impl); end
+
+      # Is the write side of the driver closed?
+      def write_closed?() Cproton.pn_connection_driver_read_closed(@impl); end
 
       # Disconnect the read side of the transport, without waiting for an AMQP
       # close frame. See comments on {#close_write}
       def close_read error=nil
-        return if Cproton.pn_connection_driver_read_closed(@impl)
-        set_error error if error
+        set_error error
         Cproton.pn_connection_driver_read_close(@impl)
-        @io.close_read
+        @io.close_read rescue nil # Allow double-close
       end
 
       # Disconnect both sides of the transport sending/waiting for AMQP close
@@ -143,10 +153,8 @@ module Qpid
 
       private
 
-      def set_error e
-        if cond = Condition.convert(e, "proton:io")
-          Cproton.pn_connection_driver_errorf(@impl, cond.name, "%s", cond.description)
-        end
+      def set_error err
+        transport.condition ||= Condition.convert(err, "proton:io") if err
       end
     end
 
@@ -160,32 +168,37 @@ module Qpid
       #   {#dispatch} and {#process}
       def initialize(io, handler)
         super(io)
-        @handler = handler || Handler::MessagingHandler.new
+        @handler = handler
+        @adapter = Handler::Adapter.try_convert(handler)
       end
 
+      # @return [MessagingHandler] The handler dispatched to by {#process}
       attr_reader :handler
 
       # Dispatch all events available from {#event} to {#handler}
-      # @param handlers [Enum<Handler::MessagingHandler>]
-      def dispatch()
-        each_event { |e| e.dispatch @handler }
+      def dispatch() each_event do |e|
+          e.dispatch self       # See private on_transport_ methods below
+          e.dispatch @adapter
+        end
       end
 
       # Do {#read}, {#tick}, {#write} and {#dispatch} without blocking.
-      #
-      # @param [Handle::MessagingHanlder] handler A handler to dispatch
-      #   events to.
       # @param [Time] now the current time
       # @return [Time] Latest time to call {#process} again for scheduled events,
       #   or nil if there are no scheduled events
       def process(now=Time.now)
         read
         next_tick = tick(now)
-        dispatch                # May generate more data to write
+        dispatch                # Generate data for write
         write
-        dispatch                # Make sure we consume all events
+        dispatch                # Consume all events
         return next_tick
       end
+
+      private
+      def on_transport_tail_closed(event) close_read; end
+      def on_transport_head_closed(event) close_write; end
+      def on_transport_authenticated(event) connection.user = transport.user; end
     end
   end
 end

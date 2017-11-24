@@ -19,198 +19,157 @@
 
 module Qpid::Proton
 
-  # A general purpose handler that simplifies processing events.
+  # A handler for AMQP messaging events.
+  #
+  # Subclass the handler and provide the #on_xxx methods with your event-handling code.
   #
   class MessagingHandler
 
-    attr_reader :handlers
-
-    # Creates a new instance.
+    # @overload initialize(opts)
+    #   Create a {MessagingHandler} with options +opts+
+    #   @option opts [Integer] :prefetch (10)
+    #    The number of messages to  fetch in advance, 0 disables prefetch.
+    #   @option opts [Boolean] :auto_accept  (true)
+    #    If true, incoming messages are accepted automatically after {#on_message}.
+    #    If false, the application can accept, reject or release the message
+    #    by calling methods on {Delivery} when the message has been processed.
+    #   @option opts [Boolean] :auto_settle (true) If true, outgoing
+    #    messages are settled automatically when the remote peer settles. If false,
+    #    the application must call {Delivery#settle} explicitly.
+    #   @option opts [Boolean] :auto_open (true)
+    #    If true, incoming connections are  opened automatically.
+    #    If false, the application must call {Connection#open} to open incoming connections.
+    #   @option opts [Boolean] :auto_close (true)
+    #    If true, respond to a remote close automatically with a local close.
+    #    If false, the application must call {Connection#close} to finish closing connections.
+    #   @option opts [Boolean] :peer_close_is_error (false)
+    #    If true, and the remote peer closes the connection without an error condition,
+    #    the set the local error condition {Condition}("error", "unexpected peer close")
     #
-    # @param [Integer] prefetch
-    # @param [Boolean] auto_accept
-    # @param [Boolean] auto_settle
-    # @param [Boolean] peer_close_is_error
-    #
-    def initialize(prefetch = 10, auto_accept = true, auto_settle = true, peer_close_is_error = false)
-      @handlers = Array.new
-      @handlers << Handler::CFlowController.new(prefetch) unless prefetch.zero?
-      @handlers << Handler::EndpointStateHandler.new(peer_close_is_error, self)
-      @handlers << Handler::IncomingMessageHandler.new(auto_accept, self)
-      @handlers << Handler::OutgoingMessageHandler.new(auto_settle,self)
+    # @overload initialize(prefetch=10, auto_accept=true, auto_settle=true, peer_close_is_error=false)
+    #   @deprecated use +initialize(opts)+ overload
+    def initialize(*args)
+      @options = {}
+      if args.size == 1 && args[0].is_a?(Hash)
+        @options.replace(args[0])
+      else                      # Fill options from deprecated fixed arguments
+        [:prefetch, :auto_accept, :auto_settle, :peer_close_is_error].each do |k|
+          opts[k] = args.shift unless args.empty?
+        end
+      end
+      # NOTE: the options are processed by {Handler::Adapater}
     end
 
+    public
+
+    # @private
+    # @return [Hash] handler options, see {#initialize}
+    attr_reader :options
+
+
+    # @!method on_transport_error(event)
+    # Called when the transport fails or closes unexpectedly.
+    # @param event [Event] The event.
+
+    # !@method on_connection_error(event)
     # Called when the peer closes the connection with an error condition.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_connection_error(event)
-      Handler::EndpointStateHandler.print_error(event.connection, "connection")
-    end
+    # @param event [Event] The event.
 
-      # Called when the peer closes the session with an error condition.
-      #
-      # @param event [Qpid:Proton::Event::Event] The event.
-      #
-    def on_session_error(event)
-      Handler::EndpointStateHandler.print_error(event.session, "session")
-      event.connection.close
-    end
+    # @!method on_session_error(event)
+    # Called when the peer closes the session with an error condition.
+    # @param event [Qpid:Proton::Event] The event.
 
+    # @!method on_link_error(event)
     # Called when the peer closes the link with an error condition.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_link_error(event)
-      Handler::EndpointStateHandler.print_error(event.link, "link")
-      event.connection.close
-    end
+    # @param event [Event] The event.
 
+    # @!method on_start(event)
     # Called when the event loop starts.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_reactor_init(event)
-      self.on_start(event)
-    end
+    # @param event [Event] The event.
 
-    # Called when the event loop starts.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_start(event)
-    end
-
+    # @!method on_connection_closed(event)
     # Called when the connection is closed.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_connection_closed(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_session_closed(event)
     # Called when the session is closed.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_session_closed(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_link_closed(event)
     # Called when the link is closed.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_link_closed(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_connection_closing(event)
     # Called when the peer initiates the closing of the connection.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_connection_closing(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_session_closing(event)
     # Called when the peer initiates the closing of the session.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_session_closing(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_link_closing(event)
     # Called when the peer initiates the closing of the link.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_link_closing(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_disconnected(event)
     # Called when the socket is disconnected.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_disconnected(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_sendable(event)
     # Called when the sender link has credit and messages can therefore
     # be transferred.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_sendable(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_accepted(event)
     # Called when the remote peer accepts an outgoing message.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_accepted(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_rejected(event)
     # Called when the remote peer rejects an outgoing message.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_rejected(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_released(event)
     # Called when the remote peer releases an outgoing message.
-    #
     # Note that this may be in response to either the RELEASE or
     # MODIFIED state as defined by the AMPQ specification.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_released(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_settled(event)
     # Called when the remote peer has settled hte outgoing message.
-    #
     # This is the point at which it should never be retransmitted.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_settled(event)
-    end
+    # @param event [Event] The event.
 
+    # @!method on_message(event)
     # Called when a message is received.
     #
-    # The message itself can be obtained as a property on the event. For
-    # the purpose of referring to this message in further actions, such as
-    # explicitly accepting it) the delivery should be used. This is also
-    # obtainable vi a property on the event.
-    #
-    # This method needs to be overridden.
-    #
-    # @param event [Qpid::Proton::Event::Event] The event.
-    #
-    def on_message(event)
-    end
+    # The message is available from {Event#message}, to accept or reject the message
+    # use {Event#delivery}
+    # @param event [Event] The event.
 
+    # @!method on_aborted(event)
+    # Called when message delivery is aborted by the sender.
+    # The {Event#delivery} provides information about the delivery, but the message should be ignored.
+
+    # @!method on_error(event)
+    # If +on_xxx_error+ method is missing, {#on_error} is called instead.
+    # If {#on_error} is missing, the connection is closed with the error.
+    # @param event [Event] the event, {Event#method} provides the original method name.
+
+    # @!method on_unhandled(event)
+    # If an +on_xxx+ method is missing, {#on_unhandled} is called instead.
+    # @param event [Event] the event, {Event#method} provides the original method name.
   end
 
+  # An array of {MessagingHandler}, events are dispatched to each in turn
+  class MessagingHandlers < MessagingHandler
+    include Enumerable
+
+    # @param handlers an array of {MessagingHandler} objects
+    def initialize handlers; @handlers = handlers; end
+
+    def each(*args, &block) @handlers.each(*args, &block); end
+
+    def on_unhandled(event) each { |h| event.dispatch h }; end
+
+  end
 end

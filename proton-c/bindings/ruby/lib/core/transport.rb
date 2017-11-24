@@ -234,7 +234,7 @@ module Qpid::Proton
     # Set the error condition for the transport.
     # @param c [Condition] The condition to set
     def condition=(c)
-      Condition.from_object(Cproton.pn_transport_condition(@impl), Condition.convert(c))
+      Condition.assign(Cproton.pn_transport_condition(@impl), c)
     end
 
     # Binds to the given connection.
@@ -395,10 +395,14 @@ module Qpid::Proton
 
     # @private
     def apply opts
-      if opts[:sasl_enabled] != false # SASL is not disabled.
-        sasl.allow_insecure_mechs = opts[:sasl_allow_insecure_mechs] if opts[:sasl_allow_insecure_mechs]
-        sasl.allowed_mechs = opts[:sasl_allowed_mechs] if opts[:sasl_allowed_mechs]
+      sasl if opts[:sasl_enabled]                                 # Explicitly enabled
+      unless opts.include?(:sasl_enabled) && !opts[:sasl_enabled] # Not explicitly disabled
+        sasl.allowed_mechs = opts[:sasl_allowed_mechs] if opts.include? :sasl_allowed_mechs
+        sasl.allow_insecure_mechs = opts[:sasl_allow_insecure_mechs] if opts.include? :sasl_allow_insecure_mechs
       end
+      self.channel_max= opts[:channel_max] if opts.include? :channel_max
+      self.max_frame_size= opts[:max_frame_size] if opts.include? :max_frame_size
+      self.idle_timeout= opts[:idle_timeout] if opts.include? :idle_timeout
     end
   end
 end
