@@ -22,29 +22,35 @@ require 'minitest/autorun'
 require 'qpid_proton'
 require 'socket'
 
-class ExampleTest < MiniTest::Test
+def unused_port; TCPServer.open(0) { |s| s.addr[1] } end
+def make_url(port, path) "amqp://:#{port}/${path}"; end # Make a proton pseudo-url
 
-  def run_script(script, port)
-    assert File.exist? script
-    cmd = [RbConfig.ruby, script]
-    cmd += ["-a", ":#{port}/examples"] if port
-    return IO.popen(cmd)
+class OldExampleTest < MiniTest::Test
+
+  def run_script(*args)
+    IO.popen [RbConfig.ruby, "-W0", *args];
   end
 
-
-  def assert_output(script, want, port=nil)
-    out = run_script(script, port)
-    assert_equal want, out.read.strip
+  def assert_output(want, args)
+    assert_equal want.strip, run_script(*args).read.strip
   end
 
   def test_helloworld
-    assert_output("helloworld.rb", "Hello world!", $port)
+    assert_output "Hello world!", ["helloworld.rb", "-a", make_url($port, __method__)]
   end
 
   def test_send_recv
-    assert_output("simple_send.rb", "All 100 messages confirmed!", $port)
-    want = (0..99).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output("simple_recv.rb", want.strip, $port)
+    assert_output "All 10 messages confirmed!", ["simple_send.rb", "-a", make_url($port, __method__)]
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_output want, ["simple_recv.rb", "-a", make_url($port, __method__)]
+  end
+
+  def test_smoke
+    url = "127.0.0.1:#{unused_port}"
+    recv = run_script("recv.rb", "~#{url}")
+    recv.readline               # Wait for "Listening"
+    assert_output("Status: ACCEPTED", ["send.rb", url])
+    assert_equal "Got: Hello World!", recv.read.strip
   end
 
   def test_client_server
@@ -58,28 +64,37 @@ class ExampleTest < MiniTest::Test
 -> And the mome raths outgrabe.
 <- AND THE MOME RATHS OUTGRABE.
 EOS
-    srv = run_script("server.rb", $port)
-    assert_output("client.rb", want.strip, $port)
-
+    srv = run_script("server.rb", "-a", make_url($port, __method__))
+    assert_output(want, ["client.rb", "-a", make_url($port, __method__)])
   ensure
     Process.kill :TERM, srv.pid if srv
+  end
+
+  def test_direct_recv
+    url = make_url unused_port, __method__
+    p = run_script("direct_recv.rb", "-a", url)
+    p.readline                # Wait till ready
+    assert_output("All 10 messages confirmed!", ["simple_send.rb", "-a", url])
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_equal(want.strip, p.read.strip)
+  end
+
+  def test_direct_send
+    url = make_url unused_port, __method__
+    p = run_script("direct_send.rb", "-a", url)
+    p.readline                # Wait till ready
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_output(want, ["simple_recv.rb", "-a", url])
+    assert_equal("All 10 messages confirmed!", p.read.strip)
   end
 end
 
 # Start the broker before all tests.
-$port = TCPServer.open(0) do |s| s.addr[1]; end # find an unused port
-$broker = spawn("#{RbConfig.ruby} broker.rb -a :#{$port}")
-
-# Wait for the broker to be listening
-deadline = Time.now + 5
-begin
-  TCPSocket.open("", $port).close
-rescue Errno::ECONNREFUSED
-  retry if Time.now < deadline
-  raise
-end
+$port = unused_port
+$broker = IO.popen [RbConfig.ruby, "-W0", "broker.rb", "-a", ":#{$port}"]
+$broker.readline                # Wait for "Listening"
 
 # Kill the broker after all tests
 MiniTest.after_run do
-  Process.kill(:TERM, $broker) if $broker
+  Process.kill(:TERM, $broker.pid) if $broker
 end

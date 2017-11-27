@@ -24,7 +24,7 @@ require_relative 'lib/send_and_receive'
 
 options = {
   :address => "localhost:5672/examples",
-  :messages => 100,
+  :messages => 10,
 }
 
 class SimpleSend < ExampleSend
@@ -35,8 +35,12 @@ class SimpleSend < ExampleSend
 
   def on_start(event)
     @acceptor = event.container.listen(url)
+    puts "Listening"; STDOUT.flush
   end
 
+  def on_connection_opening(event)
+    @acceptor.close
+  end
 end
 
 OptionParser.new do |opts|

@@ -97,6 +97,7 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     debug("on_start event") if $options[:debug]
     @acceptor = event.container.listen(@url)
     print "Listening on #{@url}\n"
+    STDOUT.flush
   end
 
   def queue(address)

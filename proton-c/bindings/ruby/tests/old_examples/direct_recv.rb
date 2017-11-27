@@ -30,6 +30,11 @@ class DirectReceive < ExampleReceive
 
   def on_start(event)
     @acceptor = event.container.listen(self.url)
+    puts "Listening"; STDOUT.flush
+  end
+
+  def on_connection_opening(event)
+    @acceptor.close
   end
 
   def on_message(event)
@@ -41,7 +46,7 @@ end
 
 options = {
   :address => "localhost:5672/examples",
-  :messages => 100,
+  :messages => 10,
 }
 
 OptionParser.new do |opts|

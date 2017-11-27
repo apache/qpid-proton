@@ -36,7 +36,7 @@ end
 
 options = {
   :address => "localhost:5672/examples",
-  :messages => 100,
+  :messages => 10,
 }
 
 OptionParser.new do |opts|

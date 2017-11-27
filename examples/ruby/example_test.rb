@@ -35,8 +35,7 @@ class ExampleTest < MiniTest::Test
   end
 
   def assert_output(want, *args)
-    p = run_script(*args)
-    assert_equal(want, p.read.strip)
+    assert_equal(want.strip, run_script(*args).read.strip)
   end
 
   def test_helloworld

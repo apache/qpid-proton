@@ -24,7 +24,7 @@ require_relative 'lib/send_and_receive'
 
 options = {
   :address => "localhost:5672/examples",
-  :messages => 100,
+  :messages => 10,
 }
 
 class SimpleSend < ExampleSend
@@ -47,7 +47,7 @@ OptionParser.new do |opts|
   end
 
   opts.on("-m", "--messages=COUNT", "The number of messages to send (def. #{options[:messages]}",
-    OptionParser::DecimalInteger) do |messages|
+     OptionParser::DecimalInteger) do |messages|
     options[:messages] = messages
   end
 end.parse!
