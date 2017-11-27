@@ -28,6 +28,8 @@ matrix:
   - os: linux
     env:
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
+    after_success:
+    - bash <(curl -s https://codecov.io/bash)
 
   - os: osx
     osx_image: xcode7.3
@@ -77,8 +79,3 @@ before_script:
 script:
 - cmake --build . --target install && ctest -V ${QPID_PROTON_CTEST_ARGS}
 
-after_success:
-- |
-    if [[ -d coverage_results ]]; then
-      bash <(curl -s https://codecov.io/bash)
-    fi
