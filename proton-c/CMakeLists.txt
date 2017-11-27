@@ -759,7 +759,6 @@ if (BUILD_PYTHON)
   add_test (NAME python-test
             COMMAND ${env_py}
               "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
-              "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
               "SASLPASSWD=${SASLPASSWD_EXE}"
               ${VALGRIND_ENV}
               ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_root}/proton-test")
@@ -786,7 +785,6 @@ if (BUILD_PYTHON)
       add_test (NAME python-tox-test
                 COMMAND ${env_py}
                   "PATH=${py_path}"
-                  "CLASSPATH=${CMAKE_BINARY_DIR}/proton-j/proton-j.jar"
                   "SASLPASSWD=${SASLPASSWD_EXE}"
                   "SWIG=${SWIG_EXECUTABLE}"
                   ${VALGRIND_ENV}

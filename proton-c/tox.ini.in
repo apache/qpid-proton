@@ -14,7 +14,6 @@ passenv =
     CFLAGS
     SASLPASSWD
     VALGRIND
-    CLASSPATH
 commands =
     @CMAKE_SOURCE_DIR@/tests/python/proton-test '{posargs:--ignore-file=@CMAKE_SOURCE_DIR@/tests/python/tox-blacklist}'
 deps =
