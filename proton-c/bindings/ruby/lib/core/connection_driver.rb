@@ -67,6 +67,13 @@ module Qpid
       # Get the next event to dispatch, nil if no events available
       def event() Event::Event.wrap(Cproton.pn_connection_driver_next_event(@impl)); end
 
+      # Iterator for all available events
+      def each_event()
+        while e = event
+          yield e
+        end
+      end
+
       # Non-blocking read from {#io}, generate events for {#event}
       # IO errors are returned as transport errors by {#event}, not raised
       def read
@@ -161,9 +168,7 @@ module Qpid
       # Dispatch all events available from {#event} to {#handler}
       # @param handlers [Enum<Handler::MessagingHandler>]
       def dispatch()
-        while e = event
-          e.dispatch @handler
-        end
+        each_event { |e| e.dispatch @handler }
       end
 
       # Do {#read}, {#tick}, {#write} and {#dispatch} without blocking.
@@ -176,8 +181,9 @@ module Qpid
       def process(now=Time.now)
         read
         next_tick = tick(now)
+        dispatch                # May generate more data to write
         write
-        dispatch
+        dispatch                # Make sure we consume all events
         return next_tick
       end
     end

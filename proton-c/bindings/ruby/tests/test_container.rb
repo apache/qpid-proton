@@ -25,6 +25,9 @@ Message = Qpid::Proton::Message
 SASL = Qpid::Proton::SASL
 Disposition = Qpid::Proton::Disposition
 
+# Easier debugging of thread problems
+Thread::abort_on_exception=true
+
 # Container that listens on a random port
 class TestContainer < Container
 
@@ -84,39 +87,46 @@ class ContainerTest < Minitest::Test
     def on_connection_closing(e) e.connection.close; end
   end
 
-  def test_auto_stop
-    c1 = Container.new
-    c2 = Container.new
-
+  def test_auto_stop_one
     # A listener and a connection
-    t1 = 3.times.collect { Thread.new { c1.run } }
-    l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
-    c1.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
-    t1.each { |t| assert t.join(1) }
+    c = Container.new
+    threads = 3.times.collect { Thread.new { c.run } }
+    sleep(0.01) while c.running < 3
+    l = c.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
+    c.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
+    threads.each { |t| assert t.join(1) }
+    assert_raises(Container::StoppedError) { c.run }
+  end
 
-    # Connect between different containers, c2 has only a connection
-    t1 = Thread.new { c1.run }
+  def test_auto_stop_two
+    # Connect between different containers
+    c1, c2 = Container.new, Container.new
+    threads = [ Thread.new {c1.run }, Thread.new {c2.run } ]
     l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
-    t2 = Thread.new {c2.run }
     c2.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
-    assert t2.join(1)
-    assert t1.join(1)
+    assert threads.each { |t| t.join(1) }
+    assert_raises(Container::StoppedError) { c1.run }
+    assert_raises(Container::StoppedError) { c2.connect("") }
   end
 
   def test_auto_stop_listener_only
-    c1 = Container.new
+    c = Container.new
     # Listener only, external close
-    t1 = Thread.new { c1.run }
-    l = c1.listen_io(TCPServer.new(0))
+    t = Thread.new { c.run }
+    l = c.listen_io(TCPServer.new(0))
     l.close
-    assert t1.join(1)
+    assert t.join(1)
   end
 
   def test_stop_empty
     c = Container.new
     threads = 3.times.collect { Thread.new { c.run } }
+    sleep(0.01) while c.running < 3
     assert_nil threads[0].join(0.001) # Not stopped
     c.stop
+    assert c.stopped
+    assert_raises(Container::StoppedError) { c.connect("") }
+    assert_raises(Container::StoppedError) { c.run }
     threads.each { |t| assert t.join(1) }
   end
 
@@ -126,22 +136,22 @@ class ContainerTest < Minitest::Test
 
     l = c.listen_io(TCPServer.new(0))
     threads = 3.times.collect { Thread.new { c.run } }
+    sleep(0.01) while c.running < 3
     l.close
     assert_nil threads[0].join(0.001) # Not stopped, no auto_stop
 
     l = c.listen_io(TCPServer.new(0)) # New listener
     conn = c.connect("amqp://:#{l.to_io.addr[1]}")
     c.stop
+    assert c.stopped
+
     threads.each { |t| assert t.join(1) }
+
+    assert_raises(Container::StoppedError) { c.run }
+    assert_equal 0, c.running
     assert_nil l.condition
     assert_nil conn.condition
-
-    # We should be able to run the container again once stopped.
-    threads = 5.times.collect { Thread.new { c.run } }
-    assert_nil threads[0].join(0.01)
-
   end
-
 end
 
 
