@@ -23,7 +23,7 @@ require 'qpid_proton'
 require 'socket'
 
 def unused_port; TCPServer.open(0) { |s| s.addr[1] } end
-def make_url(port, path) "amqp://:#{port}/${path}"; end # Make a proton pseudo-url
+def make_url(port, path) "amqp://:#{port}/#{path}"; end
 
 class OldExampleTest < MiniTest::Test
 
