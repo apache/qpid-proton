@@ -111,7 +111,11 @@ func configureSASL() error {
 	conf := filepath.Join(confDir, "test.conf")
 
 	db := filepath.Join(confDir, "proton.sasldb")
-	cmd := exec.Command("saslpasswd2", "-c", "-p", "-f", db, "-u", "proton", "fred")
+        saslpasswd := os.Getenv("SASLPASSWD");
+        if saslpasswd == "" {
+            saslpasswd = "saslpasswd2"
+        }
+	cmd := exec.Command(saslpasswd, "-c", "-p", "-f", db, "-u", "proton", "fred")
 	cmd.Stdin = strings.NewReader("xxx") // Password
 	if out, err := cmd.CombinedOutput(); err != nil {
 		confErr = fmt.Errorf("saslpasswd2 failed: %s\n%s", err, out)

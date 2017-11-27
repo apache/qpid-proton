@@ -43,6 +43,7 @@ set(GO_ENV ${env_py} --
   "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include -I${CMAKE_BINARY_DIR}/proton-c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
+  "SASLPASSWD=${SASLPASSWD_EXE}"
   CACHE INTERNAL "Run a command with Go environment variables")
 
 set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")

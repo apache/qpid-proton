@@ -110,7 +110,7 @@ if (result EQUAL 0)  # Have minitest
       NAME ${name}
       COMMAND ${RUBY_EXECUTABLE} ${file} -v
       ${ARGN})
-    set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB}")
+    set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB};SASLPASSWD=${SASLPASSWD_EXE}")
   endmacro()
   add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
   # Old examples for backwards compatibility testing.
