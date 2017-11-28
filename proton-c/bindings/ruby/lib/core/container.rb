@@ -302,7 +302,7 @@ module Qpid::Proton
       @lock.synchronize do
         raise StoppedError if @stopped
         @stopped = true
-        @stop_err = Condition.make(error)
+        @stop_err = Condition.convert(error)
         check_stop_lh
         # NOTE: @stopped =>
         # - no new run threads can join

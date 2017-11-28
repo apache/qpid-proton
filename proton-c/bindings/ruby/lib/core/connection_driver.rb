@@ -144,7 +144,7 @@ module Qpid
       private
 
       def set_error e
-        if cond = Condition.make(e, "proton:io")
+        if cond = Condition.convert(e, "proton:io")
           Cproton.pn_connection_driver_errorf(@impl, cond.name, "%s", cond.description)
         end
       end

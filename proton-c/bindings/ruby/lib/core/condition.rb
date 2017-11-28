@@ -19,7 +19,15 @@
 
 module Qpid::Proton
 
-  class Condition
+  # An AMQP error condition.
+  #
+  # An error sent across an AMQP connection has a name, description and optional extra info.
+  # The {Connectin}, {Session} and {Link} endpoint classes all have a #condition method to
+  # check for errors.
+  #
+  # {Condition} can also be raised as an exception.
+  #
+  class Condition < ProtonError
 
     attr_reader :name, :description, :info
 
@@ -27,6 +35,7 @@ module Qpid::Proton
       @name = name
       @description = description
       @info = info
+      super(to_s)
     end
 
     def to_s() "#{@name}: #{@description}"; end
@@ -40,15 +49,16 @@ module Qpid::Proton
        (other.info == self.info))
     end
 
-    # Make a condition.
+    # Convert an object to a condition.
     # @param obj the object to turn into a condition
-    # @param default_name condition name to use if obj does not imply a name
-    # @return
-    # - when Condition return obj unchanged
-    # - when Exception return Condition(obj.class.name, obj.to_s)
-    # - when nil then nil
-    # - else return Condition(default_name, obj.to_s)
-    def self.make(obj, default_name="proton")
+    # @param default_name name to use if obj does not imply a name
+    # @return [Condition] Conversion depends on the type of obj
+    # - Condition: return obj
+    # - Exception: return Condition(obj.class.name, obj.to_s)
+    # - String-like: return String.try_convert(obj)
+    # - nil: return nil
+    # @raise ::ArgumentError if obj is not convertible to {Condition}
+    def self.convert(obj, default_name="proton")
       case obj
       when nil then nil
       when Condition then obj
@@ -59,7 +69,9 @@ module Qpid::Proton
                         Cproton.pn_condition_get_description(obj),
                         Codec::Data.to_object(Cproton.pn_condition_info(obj)))
         end
-      else Condition.new(default_name, obj.to_s)
+      else
+        raise ::ArgumentError, "can't convert #{obj.class.name} to #{self.class.name}" unless obj.respond_to? :to_str
+        Condition.new(default_name, obj.to_str)
       end
     end
 

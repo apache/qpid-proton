@@ -228,13 +228,13 @@ module Qpid::Proton
 
     # @return [Condition, nil] transport error condition or nil if there is no error.
     def condition
-      Condition.make(Cproton.pn_transport_condition(@impl))
+      Condition.convert(Cproton.pn_transport_condition(@impl))
     end
 
     # Set the error condition for the transport.
     # @param c [Condition] The condition to set
     def condition=(c)
-      Condition.from_object(Cproton.pn_transport_condition(@impl), Condition.make(c))
+      Condition.from_object(Cproton.pn_transport_condition(@impl), Condition.convert(c))
     end
 
     # Binds to the given connection.

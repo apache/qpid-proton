@@ -307,6 +307,11 @@ module Qpid::Proton
 
       # @private
       def container=(c); @container = c; end
+
+      # @return The remote error {Condition} or nil if there is none.
+      def condition
+        context.remote_condition if context.respond_to? :remote_condition
+      end
     end
   end
 end

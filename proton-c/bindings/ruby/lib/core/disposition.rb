@@ -155,7 +155,7 @@ module Qpid::Proton
       if @local
         @condition
       else
-        Condition.make(Cproton.pn_disposition_condition(@impl))
+        Condition.convert(Cproton.pn_disposition_condition(@impl))
       end
     end
 

@@ -67,11 +67,11 @@ module Qpid::Proton
     end
 
     def condition
-      Condition.make(_local_condition) || remote_condition; end
+      Condition.convert(_local_condition) || remote_condition; end
 
     # @private
     def remote_condition
-      Condition.make(_remote_condition)
+      Condition.convert(_remote_condition)
     end
 
     # Return the transport associated with this endpoint.

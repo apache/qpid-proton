@@ -65,7 +65,7 @@ module Qpid::Proton
     # @param error [Condition] Optional error condition.
     def close(error=nil)
       @closing = true
-      @condition ||= Condition.make(error) if error
+      @condition ||= Condition.convert error
       @io.close_read rescue nil # Cause listener to wake out of IO.select
       nil
     end

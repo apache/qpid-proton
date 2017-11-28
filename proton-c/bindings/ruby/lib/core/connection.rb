@@ -234,7 +234,7 @@ module Qpid::Proton
     #
     def close(error = nil)
       if error
-        @condition = Condition.make error
+        @condition = Condition.convert error
         self._update_condition
       end
       Cproton.pn_connection_close(@impl)
