@@ -77,6 +77,7 @@ if(HAS_CPP11)
   # Examples that use threads directly
   if (Threads_FOUND)
     foreach(example
+        reconnect-and-stop
         multithreaded_client
         multithreaded_client_flow_control)
       add_executable(${example} ${example}.cpp)

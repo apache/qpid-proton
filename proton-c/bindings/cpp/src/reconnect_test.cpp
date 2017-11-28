@@ -29,6 +29,7 @@
 #include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
 #include "proton/reconnect_options.hpp"
+#include "proton/work_queue.hpp"
 
 #include "proton/internal/pn_unique_ptr.hpp"
 
@@ -161,9 +162,40 @@ int test_failover_simple() {
 
 }
 
+class stop_reconnect_tester : public proton::messaging_handler {
+  public:
+    stop_reconnect_tester() :
+        container_(*this, "reconnect_tester")
+    {
+    }
+
+    void deferred_stop() {
+        container_.stop();
+    }
+
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        proton::reconnect_options reconnect_options;
+        c.connect("this-is-not-going-to work.com", proton::connection_options().reconnect(reconnect_options));
+        c.schedule(proton::duration::SECOND, proton::make_work(&stop_reconnect_tester::deferred_stop, this));
+    }
+
+    void run() {
+        container_.run();
+    }
+
+  private:
+    proton::container container_;
+};
+
+int test_stop_reconnect() {
+    stop_reconnect_tester().run();
+    return 0;
+}
+
 int main(int, char**) {
     int failed = 0;
     RUN_TEST(failed, test_failover_simple());
+    RUN_TEST(failed, test_stop_reconnect());
     return failed;
 }
 
