@@ -68,8 +68,7 @@ set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src/include")
+  "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS} "-DPN_CPP_USE_DEPRECATED_API=1")
 
@@ -78,6 +77,7 @@ set(qpid-proton-cpp-source
   src/byte_array.cpp
   src/map.cpp
   src/connection.cpp
+  src/connection_driver.cpp
   src/connection_options.cpp
   src/container.cpp
   src/proactor_container_impl.cpp
@@ -92,9 +92,8 @@ set(qpid-proton-cpp-source
   src/error.cpp
   src/error_condition.cpp
   src/handler.cpp
-  src/io/connection_driver.cpp
-  src/io/link_namer.cpp
   src/link.cpp
+  src/link_namer.cpp
   src/listener.cpp
   src/message.cpp
   src/messaging_adapter.cpp
