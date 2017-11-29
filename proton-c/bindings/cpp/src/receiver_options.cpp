@@ -65,7 +65,6 @@ class receiver_options::impl {
     option<messaging_handler*> handler;
     option<proton::delivery_mode> delivery_mode;
     option<bool> auto_accept;
-    option<bool> auto_settle;
     option<int> credit_window;
     option<bool> dynamic_address;
     option<source_options> source;
@@ -77,7 +76,6 @@ class receiver_options::impl {
         if (r.uninitialized()) {
             if (delivery_mode.set) set_delivery_mode(r, delivery_mode.value);
             if (handler.set && handler.value) container::impl::set_handler(r, handler.value);
-            if (auto_settle.set) get_context(r).auto_settle = auto_settle.value;
             if (auto_accept.set) get_context(r).auto_accept = auto_accept.value;
             if (credit_window.set) get_context(r).credit_window = credit_window.value;
 
@@ -96,7 +94,6 @@ class receiver_options::impl {
         handler.update(x.handler);
         delivery_mode.update(x.delivery_mode);
         auto_accept.update(x.auto_accept);
-        auto_settle.update(x.auto_settle);
         credit_window.update(x.credit_window);
         dynamic_address.update(x.dynamic_address);
         source.update(x.source);
@@ -121,7 +118,6 @@ void receiver_options::update(const receiver_options& x) { impl_->update(*x.impl
 receiver_options& receiver_options::handler(class messaging_handler &h) { impl_->handler = &h; return *this; }
 receiver_options& receiver_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 receiver_options& receiver_options::auto_accept(bool b) {impl_->auto_accept = b; return *this; }
-receiver_options& receiver_options::auto_settle(bool b) {impl_->auto_settle = b; return *this; }
 receiver_options& receiver_options::credit_window(int w) {impl_->credit_window = w; return *this; }
 receiver_options& receiver_options::source(source_options &s) {impl_->source = s; return *this; }
 receiver_options& receiver_options::target(target_options &s) {impl_->target = s; return *this; }

@@ -38,7 +38,7 @@ namespace proton {
 /// Options can be "chained" like this:
 ///
 /// @code
-/// l = container.create_receiver(url, receiver_options().handler(h).auto_settle(true));
+/// l = container.create_receiver(url, receiver_options().handler(h).auto_accept(true));
 /// @endcode
 ///
 /// You can also create an options object with common settings and use
@@ -47,7 +47,7 @@ namespace proton {
 ///
 /// @code
 /// receiver_options opts;
-/// opts.auto_settle(true);
+/// opts.auto_accept(true);
 /// c2 = container.open_receiver(url2, opts.handler(h2));
 /// @endcode
 ///
@@ -82,10 +82,6 @@ class receiver_options {
     /// otherwise released, rejected, or modified.  It is enabled by
     /// default.
     PN_CPP_EXTERN receiver_options& auto_accept(bool);
-
-    /// Enable or disable automatic settlement of messages.  It is
-    /// enabled by default.
-    PN_CPP_EXTERN receiver_options& auto_settle(bool);
 
     /// Options for the source node of the receiver.
     PN_CPP_EXTERN receiver_options& source(source_options&);
