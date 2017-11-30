@@ -59,7 +59,7 @@ export RUBYLIB=$RUBY_BINDINGS:$RUBY_SRC/lib:$RUBY_SRC/tests:$RUBY_SRC/spec
 export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
 
 # Go
-export GOPATH="$(merge_paths $PROTON_HOME/proton-c/bindings/go $GOPATH)"
+export GOPATH="$PROTON_BUILD/proton-c/bindings/go"
 # Help Go compiler find libraries and include files.
 export C_INCLUDE_PATH="$(merge_paths $PROTON_HOME/proton-c/include $PROTON_BUILD/proton-c/include $C_INCLUDE_PATH)"
 export LIBRARY_PATH="$(merge_paths $PROTON_BUILD/proton-c $LIBRARY_PATH)"
@@ -73,7 +73,7 @@ export PATH="$(merge_paths $PATH $PROTON_BUILD/tests/tools/apps/c $PROTON_HOME/t
 # can the test harness use valgrind?
 if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND@" == "ON" ]] ; then
     export VALGRIND=$(type -p valgrind)
-    export VALGRIND_ARGS=@VALGRIND_OPTIONS@
+    export VALGRIND_ARGS="@VALGRIND_OPTIONS@"
 fi
 
 # can the test harness use saslpasswd2?
