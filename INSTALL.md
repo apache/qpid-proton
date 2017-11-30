@@ -65,7 +65,7 @@ language binding you can omit the dev package for that language.
     $ apt-get install libssl-dev
 
     # dependencies needed for Cyrus SASL support
-    $ apt-get install libsasl2-2 libsasl2-dev
+    $ apt-get install libsasl2-2 libsasl2-dev libsasl2-modules
 
     # dependencies needed for bindings
     $ apt-get install swig python-dev ruby-dev libperl-dev
