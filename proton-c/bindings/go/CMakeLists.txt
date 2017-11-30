@@ -37,9 +37,14 @@ endif()
 separate_arguments(GO_BUILD_FLAGS)
 separate_arguments(GO_TEST_FLAGS)
 
+# Create a Go tree in the binary directory, link src to the source directory
+set(GOPATH ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(go-src-link ALL
+  COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/src ${GOPATH}/src)
+
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
 set(GO_ENV ${env_py} --
-  "GOPATH=${CMAKE_CURRENT_SOURCE_DIR}"
+  "GOPATH=${GOPATH}"
   "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/proton-c/include -I${CMAKE_BINARY_DIR}/proton-c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}/proton-c"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
@@ -51,9 +56,6 @@ set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
 set(GO_BUILD ${GO} build ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} CACHE INTERNAL "Run go build")
 set(GO_INSTALL ${GO} install ${GO_BUILD_FLAGS} CACHE INTERNAL "Run go install" )
 set(GO_TEST ${GO} test ${GO_BUILD_FLAGS} ${GO_RPATH_FLAGS} ${GO_TEST_FLAGS} CACHE INTERNAL "Run go test")
-
-# Go tools insist on standard Go layout which puts compiled code in the source tree :(
-# Build output is all under git-ignored pkg or bin subdirectories, they are removed by make clean.
 
 # The go build tools handle dependency checks and incremental builds better than
 # CMake so just run them every time, they do nothing if nothing needs to be
@@ -67,13 +69,8 @@ add_test(
   NAME go-test COMMAND ${GO_TEST} qpid.apache.org/...
   WORKING_DIRECTORY $ENV{PWD})
 
-# Make available to examples/go/CMakeLists
-set(GO_TARGETS go-build CACHE INTERNAL "Go package library targets")
-
 # Clean up go output directories.
-list(APPEND ADDITIONAL_MAKE_CLEAN_FILES
-  ${CMAKE_CURRENT_SOURCE_DIR}/pkg
-  ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)
 
 # Install go sources.
 set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/src CACHE PATH "Installation directory for Go code")
