@@ -604,13 +604,6 @@ static void test_ipv4_ipv6(test_t *t) {
     TEST_PROACTORS_DRAIN(tps);                                           \
   } while(0)
 
-#define EXPECT_FAIL(TP, HOST) do {                                      \
-    pn_proactor_connect(client, pn_connection(), test_port_use_host(&(TP), (HOST))); \
-    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));   \
-    TEST_COND_DESC(t, "refused", last_condition);                       \
-    TEST_PROACTORS_DRAIN(tps);                                           \
-  } while(0)
-
   EXPECT_CONNECT(l4.port, "127.0.0.1"); /* v4->v4 */
   EXPECT_CONNECT(l4.port, "");          /* local->v4*/
 
@@ -634,20 +627,14 @@ static void test_ipv4_ipv6(test_t *t) {
     EXPECT_CONNECT(l6.port, "");    /* local->v6 */
     EXPECT_CONNECT(l.port, "::1");  /* v6->all */
 
-    EXPECT_FAIL(l6.port, "127.0.0.1"); /* fail v4->v6 */
-    EXPECT_FAIL(l4.port, "::1");     /* fail v6->v4 */
-
     pn_listener_close(l6.listener);
   } else  {
     const char *d = pn_condition_get_description(last_condition);
     TEST_LOGF(t, "skip IPv6 tests: %s %s", pn_event_type_name(e), d ? d : "no condition");
   }
 
-  TEST_PROACTORS_DRAIN(tps);
   pn_listener_close(l.listener);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   pn_listener_close(l4.listener);
-  TEST_ETYPE_EQUAL(t, PN_LISTENER_CLOSE, TEST_PROACTORS_RUN(tps));
   TEST_PROACTORS_DESTROY(tps);
 }
 
