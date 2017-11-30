@@ -45,8 +45,6 @@ end
 
 # Handler that records some common events that are checked by tests
 class TestHandler < MessagingHandler
-  # TODO aconway 2017-10-28: make on_error stuff part of the default handler.
-
   attr_reader :errors, :connections, :sessions, :links, :messages
 
   # Pass optional extra handlers and options to the Container

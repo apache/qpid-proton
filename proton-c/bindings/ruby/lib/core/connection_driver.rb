@@ -168,7 +168,9 @@ module Qpid
       #   {#dispatch} and {#process}
       def initialize(io, handler)
         super(io)
-        @handler = handler
+        # Allow multiple handlers for backwards compatibility
+        a = Array(handler)
+        @handler = a.size > 1 ? MessagingHandlers.new(a) : handler
         @adapter = Handler::Adapter.try_convert(handler)
       end
 

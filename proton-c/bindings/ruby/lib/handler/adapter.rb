@@ -28,7 +28,7 @@ module Qpid::Proton::Handler
 
     def initialize handler
       @handler = handler || MessagingHandler.new # Pick up default MH behavior
-      @opts = handler.respond_to?(:options) ? handler.options : {}
+      @opts = (handler.options if handler.respond_to?(:options)) || {}
       @opts[:prefetch] ||= 10
       @opts[:peer_close_is_error] = false unless @opts.include? :peer_close_is_error
       [:auto_accept, :auto_settle, :auto_open, :auto_close].each do |k|

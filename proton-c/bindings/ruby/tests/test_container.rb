@@ -84,7 +84,19 @@ class ContainerTest < Minitest::Test
 
   class CloseOnOpenHandler < TestHandler
     def on_connection_opened(e) e.connection.close; end
-    def on_connection_closing(e) e.connection.close; end
+  end
+
+  def test_multi_handler
+    handler_class = Class.new(CloseOnOpenHandler) do
+      @@opened = 0
+      def self.opened; @@opened; end
+      def on_connection_opened(e) @@opened += 1; super; end
+    end
+    hs = 3.times.collect { handler_class.new }
+    c = TestContainer.new(hs)
+    c.connect(c.url)
+    c.run
+    assert_equal 6, handler_class.opened # Opened at each end * 3 handlers
   end
 
   def test_auto_stop_one

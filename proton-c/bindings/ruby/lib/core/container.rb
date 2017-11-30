@@ -106,11 +106,9 @@ module Qpid::Proton
     def initialize(handler = nil, id = nil)
       # Allow ID as sole argument
       (handler, id = nil, handler.to_str) if (id.nil? && handler.respond_to?(:to_str))
-      raise TypeError, "Expected MessagingHandler, got #{handler.class}" if
-        handler && !handler.is_a?(Qpid::Proton::Handler::MessagingHandler)
-
-      # TODO aconway 2017-11-08: allow multiple handlers, opts for backwards compat?
-      @handler = handler
+      # Allow multiple handlers for backwards compatibility
+      a = Array(handler)
+      @handler = a.size > 1 ? MessagingHandlers.new(a) : handler
       @id = ((id && id.to_s) || SecureRandom.uuid).freeze
 
       # Implementation note:

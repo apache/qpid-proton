@@ -160,16 +160,15 @@ module Qpid::Proton
     # @param event [Event] the event, {Event#method} provides the original method name.
   end
 
-  # An array of {MessagingHandler}, events are dispatched to each in turn
+  # A {MessagingHandler} that delegates events to an array of handlers, in order.
   class MessagingHandlers < MessagingHandler
-    include Enumerable
+    # @param handlers [Array<MessagingHandler>] handler objects
+    def initialize(handlers) @handlers = handlers; end
 
-    # @param handlers an array of {MessagingHandler} objects
-    def initialize handlers; @handlers = handlers; end
+    # @return [Array<MessagingHandler>] array of handlers
+    attr_reader :handlers
 
-    def each(*args, &block) @handlers.each(*args, &block); end
-
-    def on_unhandled(event) each { |h| event.dispatch h }; end
-
+    # Dispatch events to each of {#handlers} in turn
+    def on_unhandled(event) @handlers.each { |h| event.dispatch h }; end
   end
 end

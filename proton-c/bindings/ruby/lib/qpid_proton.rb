@@ -82,10 +82,6 @@ require "messenger/tracker"
 require "messenger/messenger"
 
 # Handler classes
-require "handler/endpoint_state_handler"
-require "handler/incoming_message_handler"
-require "handler/outgoing_message_handler"
-require "handler/flow_controller"
 require "handler/adapter"
 
 # Core classes that depend on Handler
