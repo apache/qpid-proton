@@ -31,17 +31,10 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   endif ()
   set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
-# AStitcher 20170804: Disabled for present - work on this when Windows C++ works
-#  cmake_minimum_required(VERSION 3.1)
-#  include(WriteCompilerDetectionHeader)
-#  write_compiler_detection_header(
-#    FILE cpp_features.h
-#    PREFIX PN
-#    COMPILERS GNU Clang MSVC SunPro
-#    FEATURES ${CMAKE_CXX_COMPILE_FEATURES}
-#    ALLOW_UNKNOWN_COMPILERS)
   if (MSVC)  # Compiler feature checks only needed for Visual Studio in this case
     include(cpp.cmake)
+  else()
+    set (CPP_DEFINITIONS "HAS_CPP11")
   endif()
 else ()
   if (BUILD_CPP_03)
@@ -53,6 +46,7 @@ else ()
     check_cxx_compiler_flag("-std=c++0x" ACCEPTS_CXX0X)
     if (ACCEPTS_CXX11)
       set(CXX_STANDARD "-std=c++11")
+      set (CPP_DEFINITIONS "HAS_CPP11")
     elseif(ACCEPTS_CXX0X)
       set(CXX_STANDARD "-std=c++0x")
       include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
@@ -62,13 +56,34 @@ else ()
   endif()
 endif ()
 
+# Construct #define lines to insert in config_presets.hpp
+foreach(d ${CPP_DEFINITIONS})
+  set(presets "${presets}#define PN_CPP_LIB_${d} 1\n")
+endforeach()
+# For Visual Studio define the app compile time macros now, for everything else don't
+if(MSVC)
+  set(presets "${presets}\n// Compiled for MSVC version ${CMAKE_CXX_COMPILER_VERSION} (${MSVC_VERSION})\n")
+  foreach(d ${CPP_DEFINITIONS})
+    set(presets "${presets}# define PN_CPP_${d} 1\n")
+  endforeach()
+else()
+  set(presets "${presets}\n#if qpid_proton_cpp_EXPORTS\n")
+  foreach(d ${CPP_DEFINITIONS})
+    set(presets "${presets}# define PN_CPP_${d} 1\n")
+  endforeach()
+  set(presets "${presets}#endif // qpid_proton_cpp_EXPORTS\n")
+endif()
+
+configure_file(config_presets.hpp.in config_presets.hpp @ONLY)
+
 # Make these CACHE INTERNAL so they will be set for the C++ examples
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
 
 include_directories(
   "${CMAKE_SOURCE_DIR}/proton-c/include"
-  "${CMAKE_CURRENT_SOURCE_DIR}/include")
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS} "-DPN_CPP_USE_DEPRECATED_API=1")
 
@@ -162,6 +177,7 @@ if (MSVC)
 endif (MSVC)
 
 install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
+install (FILES "${CMAKE_CURRENT_BINARY_DIR}/config_presets.hpp" DESTINATION "${INCLUDE_INSTALL_DIR}/proton/internal")
 
 add_subdirectory(docs)
 add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)

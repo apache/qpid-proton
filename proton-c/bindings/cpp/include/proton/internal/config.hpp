@@ -33,6 +33,15 @@
 /// default.  Otherwise they can be enabled or disabled separately
 /// with -D on the compile line.
 
+// Read library compilation presets -
+// This sets the options the library itself was compiled with
+// and sets up the compilation options is we are compiling the library itself
+#include "config_presets.hpp"
+
+/// Whether the library supports threads depends on the configuration of the library compilation only
+#define PN_CPP_SUPPORTS_THREADS PN_CPP_LIB_HAS_CPP11 || (PN_CPP_LIB_HAS_STD_THREAD && PN_CPP_LIB_HAS_STD_MUTEX)
+/// @endcond
+
 /// The Apple clang compiler doesn't really support PN_CPP_HAS_THREAD_LOCAL
 /// before Xcode 8 even though it claims to be C++11 compatible
 #if defined(__clang__) && defined(__apple_build_version__) && ((__clang_major__ * 100) + __clang_minor__) >= 301

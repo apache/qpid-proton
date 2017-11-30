@@ -28,7 +28,8 @@
 # tree build and installed in the appropriate place for cmake on that system.
 
 set (ProtonCpp_VERSION       ${PN_VERSION})
-set (ProtonCpp_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include ${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include)
+set (ProtonCpp_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/proton-c/include ${CMAKE_SOURCE_DIR}/proton-c/bindings/cpp/include
+    ${CMAKE_BINARY_DIR}/proton-c/bindings/cpp)
 set (ProtonCpp_LIBRARIES     ${C_EXAMPLE_LINK_FLAGS} qpid-proton-cpp)
 set (ProtonCpp_DEFINITIONS   ${CXX_EXAMPLE_FLAGS})
 set (ProtonCpp_FOUND True)

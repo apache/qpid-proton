@@ -35,7 +35,7 @@ createdSASLDb = False
 def _cyrusSetup(conf_dir):
   """Write out simple SASL config.tests
   """
-  saslpasswd = os.getenv('SASLPASSWD') or find_file('saslpasswd2', os.getenv('PATH'))
+  saslpasswd = os.getenv('SASLPASSWD')
   if saslpasswd:
     t = Template("""sasldb_path: ${db}
 mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
@@ -197,7 +197,7 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         self.assertTrue(len(out) > 0);
         self.assertEqual(["send"]*len(out), out)
 
-    @unittest.skipUnless(find_exes('scheduled_send'), "not a  C++11 build")
+    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
     def test_scheduled_send(self):
         out = self.proc(["scheduled_send", "-a", self.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).wait_exit().split()
         self.assertTrue(len(out) > 0);
@@ -215,13 +215,13 @@ expected conversion_error: "unexpected type, want: uint got: string"
 """
         self.assertMultiLineEqual(expect, self.proc(["message_properties"]).wait_exit())
 
-    @unittest.skipUnless(find_exes('multithreaded_client'), "not a  C++11 build")
+    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
     def test_multithreaded_client(self):
         got = self.proc(["multithreaded_client", self.addr, "examples", "10"], helgrind=True).wait_exit()
         self.maxDiff = None
         self.assertRegexpMatches(got, "10 messages sent and received");
 
-    @unittest.skipUnless(find_exes('multithreaded_client_flow_control'), "not a  C++11 build")
+    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
     def test_multithreaded_client_flow_control(self):
         got = self.proc(["multithreaded_client_flow_control", self.addr, "examples", "10", "2"], helgrind=True).wait_exit()
         self.maxDiff = None

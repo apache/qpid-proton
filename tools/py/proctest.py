@@ -213,26 +213,6 @@ class ProcTestCase(unittest.TestCase):
 
 from functools import reduce
 
-def find_file(filename, path):
-    """
-    Find filename in path. Path is a list of directory names or OS path strings
-    separated with os.pathsep. return absolute path to the file or None
-
-    """
-    dirs = reduce((lambda x,y: x+y), (p.split(os.pathsep) for p in path))
-    for d in dirs:
-        if os.path.exists(os.path.join(d, filename)):
-            return os.path.abspath(os.path.join(d, filename))
-    return None
-
-def find_exes(*filenames):
-    """
-    True if all filenames in the list are found on the system PATH.
-    """
-    for f in filenames:
-        if not find_file(f, os.getenv('PATH')): return False
-    return True
-
 #### Skip decorators missing in python 2.6
 
 def _id(obj):
