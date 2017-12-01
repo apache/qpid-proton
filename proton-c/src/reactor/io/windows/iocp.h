@@ -39,7 +39,7 @@ struct iocp_t {
   HANDLE completion_port;
   pn_hash_t *iocpdesc_map;
   pn_list_t *zombie_list;
-  int shared_pool_size;
+  unsigned shared_pool_size;
   char *shared_pool_memory;
   write_result_t **shared_results;
   write_result_t **available_results;

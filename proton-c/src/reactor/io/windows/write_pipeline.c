@@ -96,7 +96,7 @@ void pni_shared_pool_create(iocp_t *iocp)
     iocp->available_results = (write_result_t **) malloc(iocp->shared_pool_size * sizeof(write_result_t *));
     iocp->shared_available_count = iocp->shared_pool_size;
     char *mem = iocp->shared_pool_memory;
-    for (int i = 0; i < iocp->shared_pool_size; i++) {
+    for (unsigned i = 0; i < iocp->shared_pool_size; i++) {
       iocp->shared_results[i] = iocp->available_results[i] = pni_write_result(NULL, mem, IOCP_WBUFSIZE);
       mem += IOCP_WBUFSIZE;
     }
@@ -105,7 +105,7 @@ void pni_shared_pool_create(iocp_t *iocp)
 
 void pni_shared_pool_free(iocp_t *iocp)
 {
-  for (int i = 0; i < iocp->shared_pool_size; i++) {
+  for (unsigned i = 0; i < iocp->shared_pool_size; i++) {
     write_result_t *result = iocp->shared_results[i];
     if (result->in_use)
       pipeline_log("Proton buffer pool leak\n");
