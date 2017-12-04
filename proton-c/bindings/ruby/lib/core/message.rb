@@ -22,7 +22,7 @@ module Qpid::Proton
   # Messsage data and headers that can sent or received on a {Link}
   #
   # {#body} is the main message content.
-  # {#properties} is a hash of extra properties that can be attached to the message.
+  # {#properties} is a {Hash} of extra properties that can be attached to the message.
   #
   # @example Create a message containing a Unicode string
   #   msg = Qpid::Proton::Message.new "this is a string"
@@ -32,16 +32,6 @@ module Qpid::Proton
   #   msg.body = Qpid::Proton::BinaryString.new(File.binread("/home/qpid/binfile.tar.gz"))
   #
   class Message
-
-    # @private
-    def proton_send(sender, tag = nil)
-      dlv = sender.delivery(tag || sender.delivery_tag)
-      encoded = self.encode
-      sender.stream(encoded)
-      sender.advance
-      dlv.settle if sender.snd_settle_mode == Link::SND_SETTLED
-      return dlv
-    end
 
     # Decodes a message from AMQP binary data.
     # @param encoded [String] the encoded bytes
@@ -535,8 +525,8 @@ module Qpid::Proton
       @properties
     end
 
-    # Replaces the entire set of properties with the specified hash.
-    #
+    # Use +properties+ as the message properties.
+    # @param properties [Hash] new properties
     def properties=(properties)
       @properties = properties
     end

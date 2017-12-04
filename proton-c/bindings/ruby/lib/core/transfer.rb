@@ -1,0 +1,123 @@
+#--
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#++
+
+module Qpid::Proton
+
+  # Status of a message transfer on a {Link}
+  # Common base class for {Tracker} and {Delivery}.
+  class Transfer
+
+    private
+
+    include Util::Wrapper
+    include Util::SwigHelper
+    PROTON_METHOD_PREFIX = "pn_delivery"
+
+    protected
+
+    def self.wrap(impl)
+      return unless impl
+      self.fetch_instance(impl, :pn_delivery_attachments) ||
+        (Cproton.pn_link_is_sender(Cproton.pn_delivery_link(impl)) ? Tracker : Delivery).new(impl)
+    end
+
+    def initialize(impl)
+      @impl = impl
+      self.class.store_instance(self, :pn_delivery_attachments)
+    end
+
+    public
+
+    # States of a transfer
+    module State
+      # Message was successfully processed by the receiver
+      ACCEPTED = Cproton::PN_ACCEPTED
+
+      # Message rejected as invalid and unprocessable by the receiver.
+      REJECTED = Cproton::PN_REJECTED
+
+      # Message was not (and will not be) processed by the receiver, but may be
+      # acceptable if re-delivered to another receiver
+      RELEASED = Cproton::PN_RELEASED
+
+      # Like {RELEASED}, but {Tracker#modified} has modifications to be made to
+      # the message before re-delivery
+      MODIFIED = Cproton::PN_MODIFIED
+
+      # Partial message data received. Only used during link recovery.
+      RECEIVED =  Cproton::PN_RECEIVED
+    end
+
+    include State
+
+    # @return [String] Unique ID for the transfer in the context of the {#link}
+    def id() Cproton.pn_delivery_tag(@impl); end
+
+    # @deprecated use {#id}
+    alias tag id
+
+    # @return [Boolean] True if the transfer has is remotely settled.
+    proton_caller :settled?
+
+    # @return [Integer] Remote state of the transfer, one of the values in {State}
+    def state() Cproton.pn_delivery_remote_state(@impl); end
+
+    def to_s() Cproton.pn_delivery_dump(@impl); end
+    alias inspect to_s
+
+    # @return [Link] The parent link.
+    def link() Link.wrap(Cproton.pn_delivery_link(@impl)); end
+
+    # @return [Session] The parent session.
+    def session() link.session; end
+
+    # @return [Connection] The parent connection.
+    def connection() self.session.connection; end
+
+    # @return [Transport] The parent connection's transport.
+    def transport() self.connection.transport; end
+
+    # @deprecated internal use only
+    proton_caller :writable?
+    # @deprecated internal use only
+    proton_caller :readable?
+    # @deprecated internal use only
+    proton_caller :updated?
+    # @deprecated internal use only
+    proton_caller :clear
+    # @deprecated internal use only
+    proton_caller :pending
+    # @deprecated internal use only
+    proton_caller :partial?
+    # @deprecated internal use only
+    def update(state) Cproton.pn_delivery_update(@impl, state); end
+    # @deprecated internal use only
+    proton_caller :buffered?
+    # @deprecated internal use only
+    def local_state() Cproton.pn_delivery_local_state(@impl); end
+    # @deprecated use {#state}
+    def remote_state() Cproton.pn_delivery_remote_state(@impl); end
+    # @deprecated internal use only
+    def settle(state = nil)
+      update(state) unless state.nil?
+      Cproton.pn_delivery_settle(@impl)
+    end
+
+  end
+end

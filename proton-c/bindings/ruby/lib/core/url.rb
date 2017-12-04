@@ -19,11 +19,12 @@
 
 module Qpid::Proton
 
+  # @deprecated use {URI} or {String}
   class URL
 
     attr_reader :scheme
     attr_reader :username
-    alias :user :username
+    alias user username
     attr_reader :password
     attr_reader :host
     attr_reader :port
@@ -68,7 +69,7 @@ module Qpid::Proton
     end
 
     # @return [String] Allow implicit conversion by {String#try_convert}
-    alias :to_str :to_s
+    alias to_str to_s
 
     private
 

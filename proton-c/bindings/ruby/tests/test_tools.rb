@@ -106,8 +106,8 @@ class DriverPair < Array
     server.transport.set_server
   end
 
-  alias :client :first
-  alias :server :last
+  alias client first
+  alias server last
 
   # Run till there is nothing to do
   def run

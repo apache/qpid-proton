@@ -31,40 +31,40 @@ module Qpid::Proton
     # @private
     can_raise_error :stream, :error_class => Qpid::Proton::LinkError
 
-    # Signals the availability of deliveries.
-    #
+    # Hint to the remote receiver about the number of messages available.
+    # The receiver may use this to optimize credit flow, or may ignore it.
     # @param n [Integer] The number of deliveries potentially available.
-    #
     def offered(n)
       Cproton.pn_link_offered(@impl, n)
     end
 
-    # Send a message to the remote endpoint.
-    #
+    # TODO aconway 2017-12-05: incompatible, used to return bytes sent.
+
+    # @!method send(message)
+    # Send a message.
     # @param message [Message] The message to send.
-    # @param tag [Object] Optional unique delivery tag, one will be generated if not supplied.
-    #
-    # @return [Integer] The number of bytes sent.
-    #
-    def send(object, tag = nil)
-      if object.respond_to? :proton_send
-        object.proton_send(self, tag)
-      else
-        stream(object)
+    # @return [Tracker] Tracks the outcome of the message.
+    def send(message, *args)
+      tag = nil
+      if args.size > 0
+        # deprecated: allow tag in args[0] for backwards compat
+        raise ArgumentError("too many arguments") if args.size > 1
+        tag = args[0]
       end
+      tag ||= delivery_tag
+      t = Tracker.new(Cproton.pn_delivery(@impl, tag))
+      Cproton.pn_link_send(@impl, message.encode)
+      Cproton.pn_link_advance(@impl)
+      t.settle if snd_settle_mode == SND_SETTLED
+      return t
     end
 
-    # Send the specified bytes as part of the current delivery.
-    #
-    # @param bytes [String] The bytes to send.
-    #
-    # @return [Integer] The number of bytes sent.
-    #
+    # @deprecated internal use only
     def stream(bytes)
       Cproton.pn_link_send(@impl, bytes)
     end
 
-    # Generate a new unique delivery tag for this sender
+    # @deprecated internal use only
     def delivery_tag
       @tag_count ||= 0
       result = @tag_count.succ

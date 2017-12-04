@@ -5,7 +5,6 @@
 # regarding copyright ownership.  The ASF licenses this file
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
 #
 #   http://www.apache.org/licenses/LICENSE-2.0
 #
@@ -18,276 +17,74 @@
 #++
 
 module Qpid::Proton
-
-  # A Delivery maintains detail on the delivery of data to an endpoint.
-  #
-  # A Delivery has a single parent Qpid::Proton::Link
-  #
-  # @example
-  #
-  #   # SCENARIO: An event comes in notifying that data has been delivered to
-  #   #           the local endpoint. A Delivery object can be used to check
-  #   #           the details of the delivery.
-  #
-  #   delivery = @event.delivery
-  #   if delivery.readable? && !delivery.partial?
-  #     # decode the incoming message
-  #     msg = Qpid::Proton::Message.new
-  #     msg.decode(link.receive(delivery.pending))
-  #   end
-  #
-  class Delivery
-
-    include DeliveryState
-
-    # @private
-    include Util::Wrapper
-
-    # @private
-    def self.wrap(impl) # :nodoc:
-      return nil if impl.nil?
-      self.fetch_instance(impl, :pn_delivery_attachments) || Delivery.new(impl)
-    end
-
-    # @private
-    def initialize(impl)
-      @impl = impl
-      @local = Disposition.new(Cproton.pn_delivery_local(impl), true)
-      @remote = Disposition.new(Cproton.pn_delivery_remote(impl), false)
-      self.class.store_instance(self, :pn_delivery_attachments)
-    end
-
-    # @private
-    include Util::SwigHelper
-
-    # @private
-    PROTON_METHOD_PREFIX = "pn_delivery"
-
-    # @!attribute [r] tag
-    #
-    # @return [String] The tag for the delivery.
-    #
-    proton_caller :tag
-
-    # @!attribute [r] writable?
-    #
-    # A delivery is considered writable if it is the current delivery on an
-    # outgoing link, and the link has positive credit.
-    #
-    # @return [Boolean] Returns if a delivery is writable.
-    #
-    proton_caller :writable?
-
-    # @!attribute [r] readable?
-    #
-    # A delivery is considered readable if it is the current delivery on an
-    # incoming link.
-    #
-    # @return [Boolean] Returns if a delivery is readable.
-    #
-    proton_caller :readable?
-    # @!attribute [r] updated?
-    #
-    # A delivery is considered updated whenever the peer communicates a new
-    # disposition for the dlievery. Once a delivery becomes updated, it will
-    # remain so until cleared.
-    #
-    # @return [Boolean] Returns if a delivery is updated.
-    #
-    # @see #clear
-    #
-    proton_caller :updated?
-
-    # @!method clear
-    #
-    # Clear the updated flag for a delivery.
-    #
-    proton_caller :clear
-
-    # @!attribute [r] pending
-    #
-    # @return [Integer] Return the amount of pending message data for the
-    # delivery.
-    #
-    proton_caller :pending
-
-    # @!attribute [r] partial?
-    #
-    # @return [Boolean] Returns if the delivery has only partial message data.
-    #
-    proton_caller :partial?
-
-    # @!attribute [r] settled?
-    #
-    # @return [Boolean] Returns if the delivery is remotely settled.
-    #
-    proton_caller :settled?
-
-    # @!attribute [r] aborted?
-    #
-    # A delivery can be aborted before it is complete by the remote sender.
-    # The receiver must ignore the message and discard any partial data.
-    #
-    # @return [Boolean] Returns if a delivery is aborted.
-    #
-    proton_caller :aborted?
-
-    # Update the state of the delivery
-    # @param state [Integer] the delivery state, defined in {DeliveryState}
-    def update(state) Cproton.pn_delivery_update(@impl, state); end
-
-    # Settle a delivery, optionally update state before settling
-    # A settled delivery can never be used again.
-    # @param state [Integer] the delivery state, defined in {DeliveryState}
-    def settle(state = nil)
-      update(state) unless state.nil?
-      Cproton.pn_delivery_settle(@impl)
-    end
+  # Allow a {Receiver} to indicate the status of a received message to the {Sender}
+  class Delivery < Transfer
+    # @return [Receiver] The parent {Receiver} link.
+    def receiver() link; end
 
     # Accept the receiveed message.
     def accept() settle ACCEPTED; end
 
-    # Reject a received message that is considered invalid.
+    # Reject a received message that is considered invalid and should never
+    # be delivered again to this or any other receiver.
     def reject() settle REJECTED; end
 
-    # Release a received message making it available to other receivers.
-    def release(delivered = true) settle(delivered ? MODIFIED : RELEASED); end
-
-    # @!method dump
+    # Release a received message. It may be delivered again to this or another
+    # receiver.
     #
-    #  Utility function for printing details of a delivery.
+    # @option opts [Boolean] :failed (default true) If true
+    # {Message#delivery_count} will be increased so future receivers will know
+    # there was a failed delivery. If false, {Message#delivery_count} will not
+    # be increased.
     #
-    proton_caller :dump
-
-    # @!attribute [r] buffered?
+    # @option opts [Boolean] :undeliverable (default false) If true the message
+    # will not be re-delivered to this receiver. It may be delivered tbo other
+    # receivers.
     #
-    # A delivery that is buffered has not yet been written to the wire.
-    #
-    # Note that returning false does not imply that a delivery was definitely
-    # written to the wire. If false is returned, it is not known whether the
-    # delivery was actually written to the wire or not.
-    #
-    # @return [Boolean] Returns if the delivery is buffered.
-    #
-    proton_caller :buffered?
-
-    # Returns the local disposition state for the delivery.
-    #
-    # @return [Disposition] The local disposition state.
-    #
-    def local_state
-      Cproton.pn_delivery_local_state(@impl)
-    end
-
-    # Returns the remote disposition state for the delivery.
-    #
-    # @return [Disposition] The remote disposition state.
-    #
-    def remote_state
-      Cproton.pn_delivery_remote_state(@impl)
-    end
-
-    # Returns the parent link.
-    #
-    # @return [Link] The parent link.
-    #
-    def link
-      Link.wrap(Cproton.pn_delivery_link(@impl))
-    end
-
-    # Returns the parent session.
-    #
-    # @return [Session] The session.
-    #
-    def session
-      self.link.session
-    end
-
-    # Returns the parent connection.
-    #
-    # @return [Connection] The connection.
-    #
-    def connection
-      self.session.connection
-    end
-
-    # Returns the parent transport.
-    #
-    # @return [Transport] The transport.
-    #
-    def transport
-      self.connection.transport
-    end
-
-    # @private
-    def local_received?
-      self.local_state == Disposition::RECEIVED
-    end
-
-    # @private
-    def remote_received?
-      self.remote_state == Disposition::RECEIVED
-    end
-
-    # @private
-    def local_accepted?
-      self.local_state == Disposition::ACCEPTED
-    end
-
-    # @private
-    def remote_accepted?
-      self.remote_state == Disposition::ACCEPTED
-    end
-
-    # @private
-    def local_rejected?
-      self.local_state == Disposition::REJECTED
-    end
-
-    # @private
-    def remote_rejected?
-      self.remote_state == Disposition::REJECTED
-    end
-
-    # @private
-    def local_released?
-      self.local_state == Disposition::RELEASED
-    end
-
-    # @private
-    def remote_released?
-      self.remote_state == Disposition::RELEASED
-    end
-
-    # @private
-    def local_modified?
-      self.local_state == Disposition::MODIFIED
-    end
-
-    # @private
-    def remote_modified?
-      self.remote_state == Disposition::MODIFIED
-    end
-
-    # @return true if the delivery has a complete incoming message ready to decode
-    def message?
-      readable? && !aborted? && !partial?
-    end
-
-    # Decode the message from the delivery into a new {Message}
-    # @raise [ProtonError] unless {#message?}
-    def message
-      if message?
-        m = Message.new
-        m.decode(link.receive(pending))
-        link.advance
-        m
+    # @option opts [Hash] :annotations Annotations to be added to
+    # {Message#annotations} before re-delivery. Entries with the same key
+    # replace existing entries in {Message#annotations}
+    def release(opts = nil)
+      opts = { :failed => true } if opts == true # Backwards compatibility
+      failed = opts ? opts.fetch(:failed, true) : true
+      undeliverable = opts && opts[:undeliverable]
+      annotations = opts && opts[:annotations]
+      if failed || undeliverable || annotations
+        d = Cproton.pn_delivery_local(@impl)
+        Cproton.pn_disposition_set_failed(d) if failed
+        Cproton.pn_disposition_set_undeliverable(d) if undeliverable
+        Data.from_object(Cproton.pn_disposition_annotations(d), annotations) if annotations
+        settle(MODIFIED)
       else
-        status = [("not readable" if !readable?),
-                  ("aborted" if aborted?),
-                  ("partial" if partial?)].compact.join(", ")
-        raise ProtonError, "incoming delivery #{status}"
+        settle(RELEASED)
       end
     end
+
+    # @deprecated use {#release} with modification options
+    def modify()
+      deprecated __method__, "#release"
+      release failed=>true
+    end
+
+    # @return [Boolean] True if the transfer was aborted by the sender.
+    proton_caller :aborted?
+
+    # @return true if the incoming message is complete, call {#message} to retrieve it.
+    def complete?() readable? && !aborted? && !partial?; end
+
+    # Get the message from the delivery.
+    # @raise [ProtonError] if the message is not {#complete?} or there is an
+    # error decoding the message.
+    def message
+      return @message if @message
+      raise ProtonError("message aborted by sender") if aborted?
+      raise ProtonError("incoming message incomplete") if partial?
+      raise ProtonError("no incoming message") unless readable?
+      @message = Message.new
+      @message.decode(link.receive(pending))
+      link.advance
+      @message
+    end
+
   end
 end

@@ -208,15 +208,9 @@ module Qpid::Proton
 
     # @private
     def self.wrap(impl)
-      return nil if impl.nil?
-
-      result = self.fetch_instance(impl, :pn_link_attachments)
-      return result unless result.nil?
-      if Cproton.pn_link_is_sender(impl)
-        return Sender.new(impl)
-      elsif Cproton.pn_link_is_receiver(impl)
-        return Receiver.new(impl)
-      end
+      return unless impl
+      return fetch_instance(impl, :pn_link_attachments) ||
+        (Cproton.pn_link_is_sender(impl) ? Sender : Receiver).new(impl)
     end
 
     # @private
@@ -294,11 +288,10 @@ module Qpid::Proton
       self.session.connection
     end
 
-    # Returns the parent delivery.
-    #
-    # @return [Delivery] The delivery.
-    #
+
+    # @deprecated use {Sender#send}
     def delivery(tag)
+      deprecated __method__, "Sender#send"
       Delivery.new(Cproton.pn_delivery(@impl, tag))
     end
 

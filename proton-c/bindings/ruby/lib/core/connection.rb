@@ -76,7 +76,7 @@ module Qpid::Proton
     # @return AMQP container ID advertised by the remote peer
     def remote_container_id() Cproton.pn_connection_remote_container(@impl); end
 
-    alias :remote_container :remote_container_id
+    alias remote_container remote_container_id
 
     # @return [Container] the container managing this connection
     attr_reader :container
@@ -170,7 +170,7 @@ module Qpid::Proton
     end
 
     # @deprecated use #default_session()
-    alias_method :session, :default_session
+    alias session default_session
 
     # Open a new session on this connection.
     def open_session

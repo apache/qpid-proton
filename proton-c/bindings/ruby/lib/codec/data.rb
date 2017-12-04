@@ -82,10 +82,15 @@ module Qpid::Proton::Codec
 
     private
 
+    # Rewind and convert a pn_data_t* containing a single value to a ruby object.
     def self.to_object(impl) Data.new(impl).rewind.object; end
-    def self.from_object(impl, x) Data.new(impl).rewind.object = x; end
+    # Clear a pn_data_t* and convert a ruby object into it.
+    def self.from_object(impl, x) Data.new(impl).clear.object = x; end
 
     public
+
+    # TODO aconway 2017-12-05: confusing: use Data.new(cap) for making a
+    # brand new data object only, add Data.wrap(impl) to wrap existing data object.
 
     # Creates a new instance.
     # @param capacity [Integer] capacity for the new data instance.
@@ -123,6 +128,7 @@ module Qpid::Proton::Codec
     #
     def clear
       Cproton.pn_data_clear(@data)
+      self
     end
 
     # Clears the current node and sets the parent to the root node.

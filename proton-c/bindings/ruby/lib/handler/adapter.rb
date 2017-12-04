@@ -105,12 +105,12 @@ module Qpid::Proton::Handler
 
 
     def on_delivery(event)
-      d = event.delivery
-      if d.link.receiver?       # Incoming message
+      if event.link.receiver?       # Incoming message
+        d = event.delivery
         if d.aborted?
           delegate(:on_aborted, event)
           d.settle
-        elsif d.message?
+        elsif d.complete?
           if d.link.local_closed? && @opts[:auto_accept]
             d.release
           else
@@ -128,14 +128,15 @@ module Qpid::Proton::Handler
         end
         add_credit(event)
       else                      # Outgoing message
-        if d.updated?
-          case d.remote_state
+        t = event.tracker
+        if t.updated?
+          case t.remote_state
           when Qpid::Proton::Delivery::ACCEPTED then delegate(:on_accepted, event)
           when Qpid::Proton::Delivery::REJECTED then delegate(:on_rejected, event)
           when Qpid::Proton::Delivery::RELEASED, Qpid::Proton::Delivery::MODIFIED then delegate(:on_released, event)
           end
-          delegate(:on_settled, event) if d.settled?
-          d.settle if @opts[:auto_settle]
+          delegate(:on_settled, event) if t.settled?
+          t.settle if @opts[:auto_settle]
         end
       end
     end

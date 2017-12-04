@@ -16,9 +16,9 @@ Links are grouped in a {Qpid::Proton::Session}. Messages in the same session are
 
 Sessions belong to a {Qpid::Proton::Connection}. If you don't need multiple sessions, a connection will create links directly using a default session.
 
-A {Qpid::Proton::Delivery} represents the transfer of a message and allows the receiver to accept or reject it. The sender can use a {Qpid::Proton::Tracker} to track the status of a sent message and find out if it was accepted.
+A {Qpid::Proton::Transfer} represents the transfer of a message, the {Qpid::Proton::Delivery} subclass allows a receiver to accept or reject an incoming message. The {Qpid::Proton::Tracker} subclass allows a sender to track the status of a sent message and find out if it was accepted or rejected.
 
-A delivery is settled when both ends are done with it. Different settlement methods give different levels of reliability: at-most-once, at-least-once, and exactly-once. See below.
+A transfer is _settled_ when both ends are done with it. Different settlement methods give different levels of reliability: at-most-once, at-least-once, and exactly-once. See below.
 
 == The anatomy of a Proton application
 
@@ -40,13 +40,14 @@ In the request-response pattern, a request message carries a reply-to address fo
 
 The server_direct.cpp example shows how to implement a request-response server.
 
-== Settlement
+== Settling a Message Transfer
 
-A message is _settled_ by one end of a link when that end has forgotton the message.
+A message transfer is _settled_ at one end of a link when that end of the link
+has finished with the message and forgotten it.
 
-_Pre-settled_ messages are settled by the sender before sending. If the connection is lost before the message is received by the receiver, the message will not be delivered.
+_Pre-settled_ messages are settled by the sender before sending. This gives _at most once_ reliability(also known as _best effort_,  _unreliable_ or _fire and forget_) since the sender never knows for sure if the message arrived. If the connection is lost before the message is received by the receiver, the message will not be delivered.
 
-If the sender does not pre-settle a message, then the receiver settles it once it is processed, and the receiver is informed of the settlement via the {Qpid::Proton::Tracker Tracker}. If the connection is lost before the sender is informed of the settlement, then the delivery is considered in-doubt and the message should be re-set. This ensures it eventually gets delivered (provided the connection and link can be reestablished) but also that it may be delivered multiple times.
+If the sender does not pre-settle a message, then the receiver settles it once it has been processed. The sender is informed of the settlement via the {Qpid::Proton::Tracker Tracker}. If the connection is lost before the sender has received notice of settlement, the delivery is considered in-doubt and the sender can re-send it. This ensures it eventually gets delivered (provided the connection and link can be reestablished) but it is possible for multiple copies of the same message are delivered, so the receiver must be aware of that. This is known as _at_least_once_ reliability.
 
 == Installing
 

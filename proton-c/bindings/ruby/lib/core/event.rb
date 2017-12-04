@@ -71,6 +71,7 @@ module Qpid::Proton
       @method ||= TYPE_METHODS[Cproton.pn_event_type(@impl)] if @impl
     end
 
+    # Get the context if it is_a?(clazz), else call method on the context
     def get(clazz, method=nil)
       (ctx = context).is_a?(clazz) ? ctx : ctx.__send__(method) rescue nil
     end
@@ -98,7 +99,7 @@ module Qpid::Proton
     # @return [Symbol] method name that this event will call in {#dispatch}
     attr_accessor :method
 
-    alias :type :method
+    alias type method
 
     # @return [Object] the event context object
     def context; return @context ||= _context; end
@@ -125,10 +126,17 @@ module Qpid::Proton
     def receiver() link if link && link.receiver?; end
 
     # @return [Delivery, nil] delivery for this event
-    def delivery() @delivery ||= get(Delivery); end
+    def delivery()
+      return @delivery if @delivery
+      case context
+      when Delivery then @delivery = @context
+      # deprecated: for backwards compat allow a Tracker to be treated as a Delivery
+      when Tracker then @delivery = Delivery.new(Tracker.impl)
+      end
+    end
 
     # @return [Tracker, nil] delivery for this event
-    def tracker() delivery; end
+    def tracker() @tracker ||= get(Tracker); end
 
     # @return [Message, nil] message for this event
     def message() @message ||= delivery.message if delivery; end

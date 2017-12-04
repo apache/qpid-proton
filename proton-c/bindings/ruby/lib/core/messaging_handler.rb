@@ -129,9 +129,11 @@ module Qpid::Proton
     # @param event [Event] The event.
 
     # @!method on_released(event)
-    # Called when the remote peer releases an outgoing message.
-    # Note that this may be in response to either the RELEASE or
-    # MODIFIED state as defined by the AMPQ specification.
+    # Called when the remote peer releases an outgoing message for re-delivery as-is.
+    # @param event [Event] The event.
+
+    # @!method on_modified(event)
+    # Called when the remote peer releases an outgoing message for re-delivery with modifications.
     # @param event [Event] The event.
 
     # @!method on_settled(event)

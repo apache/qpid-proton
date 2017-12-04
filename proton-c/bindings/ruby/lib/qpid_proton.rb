@@ -29,8 +29,8 @@ end
 
 DEPRECATION = "[DEPRECATION]"
 def deprecated(old, new=nil)
-  repl = new ? ", use `#{new}`" : "with no replacement"
-  warn "#{DEPRECATION} `#{old}` is deprecated #{repl} (called from #{caller(2).first})"
+  repl = new ? "use `#{new}`" : "internal use only"
+  warn "#{DEPRECATION} `#{old}` is deprecated, #{repl} (called from #{caller(2).first})"
 end
 
 # Exception classes
@@ -62,7 +62,9 @@ require "core/endpoint"
 require "core/session"
 require "core/terminus"
 require "core/disposition"
+require "core/transfer"
 require "core/delivery"
+require "core/tracker"
 require "core/link"
 require "core/sender"
 require "core/receiver"
@@ -93,29 +95,24 @@ require "core/connection_driver"
 require "reactor/container"
 
 module Qpid::Proton::Handler
-  # @deprecated alias for backwards compatibility
+  # TODO aconway 2017-12-05: replace with back-compatible handler
   MessagingHandler = Qpid::Proton::MessagingHandler
 end
 
 module Qpid::Proton
-  Tracker = Delivery
-
-  # @private
+  private
   def self.registry
     @registry ||= {}
   end
 
-  # @private
   def self.add_to_registry(key, value)
     self.registry[key] = value
   end
 
-  # @private
   def self.get_from_registry(key)
     self.registry[key]
   end
 
-  # @private
   def self.delete_from_registry(key)
     self.registry.delete(key)
   end

@@ -19,40 +19,20 @@
 
 module Qpid::Proton
 
-  # States of a delivery
-  module DeliveryState
-    # Message was successfully processed by the receiver
-    ACCEPTED = Cproton::PN_ACCEPTED
-
-    # Message rejected as invalid and unprocessable by the receiver.
-    REJECTED = Cproton::PN_REJECTED
-
-    # Message was not (and will not be) processed by the receiver, but may be
-    # acceptable if re-delivered to another receiver
-    RELEASED = Cproton::PN_RELEASED
-
-    # Like released, but the disposition includes modifications to be made to
-    # the message before re-delivery
-    MODIFIED = Cproton::PN_MODIFIED
-
-    # Partial message data was received, message can be resuemed - used only during link recovery.
-    RECEIVED =  Cproton::PN_RECEIVED
-  end
-
-  # Disposition records the current state and/or final outcome of a transfer.
-  #
-  # Every delivery contains both a local and a remote disposition. The local
-  # disposition holds the local state of the delivery, and the remote
-  # disposition holds the *last known* remote state of the delivery.
-  #
+  # @deprecated use {Delivery}
   class Disposition
 
-    include DeliveryState
+    ACCEPTED = Cproton::PN_ACCEPTED
+    REJECTED = Cproton::PN_REJECTED
+    RELEASED = Cproton::PN_RELEASED
+    MODIFIED = Cproton::PN_MODIFIED
+    RECEIVED =  Cproton::PN_RECEIVED
 
     attr_reader :impl
 
     # @private
     def initialize(impl, local)
+      deprecated self.class, Delivery
       @impl = impl
       @local = local
       @data = nil
@@ -62,6 +42,7 @@ module Qpid::Proton
 
     # @private
     include Util::SwigHelper
+
 
     # @private
     PROTON_METHOD_PREFIX = "pn_disposition"
@@ -136,7 +117,7 @@ module Qpid::Proton
       end
     end
 
-    # Sets the condition for the disposition.
+   # Sets the condition for the disposition.
     #
     # @param condition [Codec::Data] The condition.
     #

@@ -23,7 +23,7 @@ module Qpid::Proton::Reactor
   class Container < Qpid::Proton::Container
 
     private
-    alias :super_connect :connect # Access to superclass method
+    alias super_connect connect # Access to superclass method
 
     public
 
@@ -33,8 +33,8 @@ module Qpid::Proton::Reactor
       super handlers || (opts && opts[:global_handler]), opts && opts[:container_id]
     end
 
-    alias :container_id :id
-    alias :global_handler :handler
+    alias container_id id
+    alias global_handler handler
 
     def connect(opts=nil)
       url = opts && (opts[:url] || opts[:address])
