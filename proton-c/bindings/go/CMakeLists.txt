@@ -21,16 +21,21 @@
 execute_process(COMMAND ${GO_EXE} version OUTPUT_VARIABLE go_ver OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Found Go: ${GO_EXE} (${go_ver})")
 
+# NOTE: go test -race flag is not included by default, it causes problems on several platforms:
+# - ubuntu up to trust: link errors
+# - ubuntu from xenial: requires extra package golang-race-detector-runtime
+# - fedora with gccgo: complains about "import cycles"
+# (Works well on fedora with original go)
+# Enable manually with -DGO_TEST_FLAGS="-v -race"
+
 set(GO_BUILD_FLAGS "" CACHE STRING "Flags for 'go build'")
 set(GO_VET_FLAGS "-v" CACHE STRING "Flags for 'go test'")
+set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
 if (go_ver MATCHES "gccgo")
-  # -race causes import cycles with gccgo.
-  set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}/proton-c")
 else()
-  set(GO_TEST_FLAGS "-v -race" CACHE STRING "Flags for 'go test'")
   set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}/proton-c")
 endif()
 
