@@ -678,6 +678,7 @@ void container::impl::run(int threads) {
 
 #if PN_CPP_SUPPORTS_THREADS
     // Run handler threads
+    threads = std::max(threads, 1); // Ensure at least 1 thread
     typedef std::vector<std::thread*> vt; // pointer vector to work around failures in older compilers
     vt ts(threads-1);
     for (vt::iterator i = ts.begin(); i != ts.end(); ++i) {
