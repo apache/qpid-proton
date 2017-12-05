@@ -286,8 +286,8 @@ static void test_client_server(test_t *t) {
   test_listener_t l = test_listen(&tps[1], localhost);
   /* Connect and wait for close at both ends */
   pn_proactor_connect(tps[0].proactor, pn_connection(), l.port.host_port);
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);  
   TEST_PROACTORS_DESTROY(tps);
 }
 
