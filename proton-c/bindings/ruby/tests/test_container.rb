@@ -72,7 +72,7 @@ class ContainerTest < Minitest::Test
       end
     end.new
 
-    c = TestContainer.new(rh, {}, "test_simple")
+    c = TestContainer.new(rh, {}, __method__)
     c.connect(c.url, {:handler => sh}).open_sender({:name => "testlink"})
     c.run
 
@@ -93,7 +93,7 @@ class ContainerTest < Minitest::Test
       def on_connection_opened(e) @@opened += 1; super; end
     end
     hs = 3.times.collect { handler_class.new }
-    c = TestContainer.new(hs)
+    c = TestContainer.new(hs, {},  __method__)
     c.connect(c.url)
     c.run
     assert_equal 6, handler_class.opened # Opened at each end * 3 handlers
@@ -101,7 +101,7 @@ class ContainerTest < Minitest::Test
 
   def test_auto_stop_one
     # A listener and a connection
-    c = Container.new
+    c = Container.new(__method__)
     threads = 3.times.collect { Thread.new { c.run } }
     sleep(0.01) while c.running < 3
     l = c.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
@@ -112,7 +112,7 @@ class ContainerTest < Minitest::Test
 
   def test_auto_stop_two
     # Connect between different containers
-    c1, c2 = Container.new, Container.new
+    c1, c2 = Container.new("#{__method__}-1"), Container.new("#{__method__}-2")
     threads = [ Thread.new {c1.run }, Thread.new {c2.run } ]
     l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
     c2.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
@@ -122,7 +122,7 @@ class ContainerTest < Minitest::Test
   end
 
   def test_auto_stop_listener_only
-    c = Container.new
+    c = Container.new(__method__)
     # Listener only, external close
     t = Thread.new { c.run }
     l = c.listen_io(TCPServer.new(0))
@@ -131,7 +131,7 @@ class ContainerTest < Minitest::Test
   end
 
   def test_stop_empty
-    c = Container.new
+    c = Container.new(__method__)
     threads = 3.times.collect { Thread.new { c.run } }
     sleep(0.01) while c.running < 3
     assert_nil threads[0].join(0.001) # Not stopped
@@ -143,7 +143,7 @@ class ContainerTest < Minitest::Test
   end
 
   def test_stop
-    c = Container.new
+    c = Container.new(__method__)
     c.auto_stop = false
 
     l = c.listen_io(TCPServer.new(0))
@@ -233,7 +233,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 
   def test_sasl_anonymous()
     s = SASLHandler.new("amqp://",  {:sasl_allowed_mechs => "ANONYMOUS"})
-    TestContainer.new(s, {:sasl_allowed_mechs => "ANONYMOUS"}).run
+    TestContainer.new(s, {:sasl_allowed_mechs => "ANONYMOUS"}, __method__).run
     assert_nil(s.connections[0].user)
   end
 
@@ -253,7 +253,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     opts = {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true,
             :user => 'user', :password => 'default_password' }
     s = SASLHandler.new("amqp://", opts)
-    TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true}).run
+    TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true}, __method__).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end
@@ -262,7 +262,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   def test_disallow_insecure()
     # Don't set allow_insecure_mechs, but try to use PLAIN
     s = SASLHandler.new("amqp://user:password@", {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true})
-    e = assert_raises(TestError) { TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN"}).run }
+    e = assert_raises(TestError) { TestContainer.new(s, {:sasl_allowed_mechs => "PLAIN"}, __method__).run }
     assert_match(/amqp:unauthorized-access.*Authentication failed/, e.to_s)
   end
 end
