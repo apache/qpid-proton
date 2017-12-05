@@ -27,10 +27,19 @@ rescue LoadError
   require "kconv"               # Ruby < 1.9
 end
 
-DEPRECATION = "[DEPRECATION]"
-def deprecated(old, new=nil)
-  repl = new ? "use `#{new}`" : "internal use only"
-  warn "#{DEPRECATION} `#{old}` is deprecated, #{repl} (called from #{caller(2).first})"
+# Qpid is the top level module for the Qpid project http://qpid.apache.org
+# Definitions for this library are in module {Qpid::Proton}
+module Qpid
+  # @private
+  def self.deprecated(old, new=nil)
+    repl = new ? "use `#{new}`" : "internal use only"
+    warn "[DEPRECATION] `#{old}` is deprecated, #{repl} (called from #{caller(2).first})"
+  end
+
+  # Proton is a ruby API for sending and receiving AMQP messages in clients or servers.
+  # {overveiw}[README.rdoc]
+  module Proton
+  end
 end
 
 # Exception classes
@@ -85,35 +94,18 @@ require "messenger/messenger"
 
 # Handler classes
 require "handler/adapter"
-
 # Core classes that depend on Handler
 require "core/messaging_handler"
 require "core/container"
 require "core/connection_driver"
 
 # Backwards compatibility shims
+
 require "reactor/container"
 
 module Qpid::Proton::Handler
-  # TODO aconway 2017-12-05: replace with back-compatible handler
+  # @deprecated alias for backwards compatibility
   MessagingHandler = Qpid::Proton::MessagingHandler
 end
 
-module Qpid::Proton
-  private
-  def self.registry
-    @registry ||= {}
-  end
 
-  def self.add_to_registry(key, value)
-    self.registry[key] = value
-  end
-
-  def self.get_from_registry(key)
-    self.registry[key]
-  end
-
-  def self.delete_from_registry(key)
-    self.registry.delete(key)
-  end
-end

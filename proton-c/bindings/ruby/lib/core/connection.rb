@@ -61,10 +61,10 @@ module Qpid::Proton
     public
 
     # @deprecated no replacement
-    def overrides?() deprecated __method__; false; end
+    def overrides?() Qpid.deprecated __method__; false; end
 
     # @deprecated no replacement
-    def session_policy?() deprecated __method__; false; end
+    def session_policy?() Qpid.deprecated __method__; false; end
 
     # @return [Connection] self
     def connection() self; end

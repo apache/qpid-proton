@@ -291,7 +291,7 @@ module Qpid::Proton
 
     # @deprecated use {Sender#send}
     def delivery(tag)
-      deprecated __method__, "Sender#send"
+      Qpid.deprecated __method__, "Sender#send"
       Delivery.new(Cproton.pn_delivery(@impl, tag))
     end
 

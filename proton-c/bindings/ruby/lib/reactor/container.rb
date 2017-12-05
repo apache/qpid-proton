@@ -29,7 +29,7 @@ module Qpid::Proton::Reactor
 
     # @deprecated use {Qpid::Proton::Container}
     def initialize(handlers, opts=nil)
-      deprecated self.class, "Qpid::Proton::Container"
+      Qpid.deprecated self.class, "Qpid::Proton::Container"
       super handlers || (opts && opts[:global_handler]), opts && opts[:container_id]
     end
 

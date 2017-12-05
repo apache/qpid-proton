@@ -32,7 +32,7 @@ module Qpid::Proton
 
     # @private
     def initialize(impl, local)
-      deprecated self.class, Delivery
+      Qpid.deprecated self.class, Delivery
       @impl = impl
       @local = local
       @data = nil

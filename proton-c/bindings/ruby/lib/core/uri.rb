@@ -19,12 +19,13 @@
 
 require 'uri'
 
+# Extend the standard ruby {URI} with AMQP and AMQPS schemes
 module URI
   # AMQP URI scheme for the AMQP protocol
   class AMQP < Generic
     DEFAULT_PORT = 5672
 
-    # Get the AMQP address: the {#path} minus any leading "/"
+    # @return [String] The AMQP address is the {#path} stripped of any leading "/"
     def amqp_address() path[0] == "/" ? path[1..-1] : path; end
   end
   @@schemes['AMQP'] = AMQP

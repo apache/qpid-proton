@@ -1,4 +1,4 @@
-#
+# --
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +15,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
+# ++
 
 module Qpid::Proton::Messenger
   # @deprecated use {Qpid::Proton::Container}
@@ -73,7 +73,7 @@ module Qpid::Proton::Messenger
     # * name - the name (def. nil)
     #
     def initialize(name = nil)
-      deprecated 'Qpid::Proton::Messenger', 'Qpid::Proton::Container'
+      Qpid.deprecated 'Qpid::Proton::Messenger', 'Qpid::Proton::Container'
       @impl = Cproton.pn_messenger(name)
       @selectables = {}
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))

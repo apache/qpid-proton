@@ -151,7 +151,7 @@ module Qpid::Proton
     end
 
     # @deprecated use {#container}
-    def reactor() deprecated __method__, :container; container; end
+    def reactor() Qpid.deprecated __method__, :container; container; end
 
     # @deprecated use {Qpid::Proton::Event}
     Event = self
