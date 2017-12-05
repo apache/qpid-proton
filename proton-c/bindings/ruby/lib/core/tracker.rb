@@ -1,4 +1,3 @@
-#--
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,7 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#++
+
 
 module Qpid::Proton
 
@@ -24,7 +23,7 @@ module Qpid::Proton
     # @return [Sender] The parent {Sender} link.
     def sender() link; end
 
-    # If {#state} == {#MODIFIED} this method returns additional information
+    # If {#state} == {MODIFIED} this method returns additional information
     # about re-delivery from the receiver's call to {Delivery#release}
     #
     # @return [Hash] See {Delivery#release} options for the meaning of hash entries.
