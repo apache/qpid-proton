@@ -102,15 +102,14 @@ to_native_path("$ENV{PATH};${bin};${bld}" PATH)
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
-
+  set(test_env ${env_py} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
   macro(add_ruby_test file)
     get_filename_component(name ${file} NAME_WE)
     string(REPLACE "_" "-" name "ruby-${name}")
     add_test(
       NAME ${name}
-      COMMAND ${RUBY_EXECUTABLE} ${file} -v
+      COMMAND ${test_env} ${RUBY_EXECUTABLE} ${file} -v
       ${ARGN})
-    set_tests_properties(${name} PROPERTIES ENVIRONMENT "PATH=${PATH};RUBYLIB=${RUBYLIB};SASLPASSWD=${SASLPASSWD_EXE}")
   endmacro()
   add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
   # Old examples for backwards compatibility testing.
