@@ -116,6 +116,12 @@ module Qpid::Proton::Util
 
     end
 
+    # Hash/equality of wrappers is based on their @impl pointers, not object_id
+
+    def hash() @impl.hash; end
+    def ==(x)  @impl == x.impl; end
+    alias eql? ==
+
   end
 
   # @private
