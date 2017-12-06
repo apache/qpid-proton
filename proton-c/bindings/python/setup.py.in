@@ -161,12 +161,15 @@ class Configure(build_ext):
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
         # return True and we'll use it. Otherwise, we'll use the stub.
-        if misc.pkg_config_version_installed('openssl', atleast='0'):
+
+        # PROTON-1326 - the 0.17.x release is not forward compatible with
+        # openssl >= 1.1.0
+        if misc.pkg_config_installed('openssl < 1.1.0'):
             libraries += ['ssl', 'crypto']
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
-            log.warn("OpenSSL not installed - disabling SSL support!")
+            log.warn("OpenSSL not installed or incompatible version - disabling SSL support!")
 
         # create a temp compiler to check for optional compile-time features
         cc = new_compiler(compiler=self.compiler_type)
@@ -239,7 +242,7 @@ class Configure(build_ext):
         """Check to see if the proper version of the Proton development library
         and headers are already installed
         """
-        return misc.pkg_config_version_installed('libqpid-proton', version)
+        return misc.pkg_config_installed('libqpid-proton = %s' % version)
 
     def use_installed_proton(self):
         """The Proton development headers and library are installed, update the
