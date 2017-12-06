@@ -20,6 +20,11 @@ module Qpid::Proton
 
   # @deprecated use {Delivery}
   class Disposition
+    # @private
+    PROTON_METHOD_PREFIX = "pn_disposition"
+    # @private
+    include Util::Wrapper
+
 
     ACCEPTED = Cproton::PN_ACCEPTED
     REJECTED = Cproton::PN_REJECTED
@@ -39,36 +44,29 @@ module Qpid::Proton
       @annotations = nil
     end
 
-    # @private
-    include Util::SwigHelper
-
-
-    # @private
-    PROTON_METHOD_PREFIX = "pn_disposition"
-
     # @!attribute section_number
     #
     # @return [Integer] The section number of the disposition.
     #
-    proton_accessor :section_number
+    proton_set_get :section_number
 
     # @!attribute section_offset
     #
     #  @return [Integer] The section offset of the disposition.
     #
-    proton_accessor :section_offset
+    proton_set_get :section_offset
 
     # @!attribute failed?
     #
     # @return [Boolean] The failed flag.
     #
-    proton_accessor :failed, :is_or_get => :is
+    proton_set_is :failed
 
     # @!attribute undeliverable?
     #
     # @return [Boolean] The undeliverable flag.
     #
-    proton_accessor :undeliverable, :is_or_get => :is
+    proton_set_is :undeliverable
 
     # Sets the data for the disposition.
     #

@@ -16,47 +16,46 @@
 # under the License.
 
 
-module Qpid::Proton::Util
-
-  # @private
-  module Wrapper
+module Qpid::Proton
+  module Util
 
     # @private
-    def impl=(impl)
-      @impl = impl
-    end
-
-    # @private
-    def impl
-      @impl
-    end
-
-    def self.registry
-      @registry ||= {}
-    end
-
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
-
-    # Adds methods to the target class for storing and retrieving pure Ruby
-    # wrappers to underlying Proton structures.
+    # Class methods to help wrapper classes define forwarding methods to proton-C functions
     #
-    # Such wrappers are stored in a registry using a key. The key is then
-    # attached to the Proton structure as a record. That record lives for as
-    # long as the Proton structure lives, and when the structure is released
-    # the record acts as hook to also delete the Ruby wrapper object from the
-    # registry.
+    # The extending class must define PROTON_METHOD_PREFIX, the functions here
+    # make it easy to define ruby methods to forward calls to C functions.
     #
-    # @private
-    #
-    module ClassMethods
+    module SWIGClassHelper
+      # Define ruby method +name+ to forward arguments to
+      # CProton.PROTON_METHOD_PREFIX_+pn_name+(@impl, ...)
+      def proton_forward(name, pn_name)
+        pn_name = pn_name[0..-2] if pn_name.to_s.end_with? "?" # Drop trailing ? for ruby bool methods
+        pn_name = "#{self::PROTON_METHOD_PREFIX}_#{pn_name}".to_sym
+        define_method(name.to_sym) { |*args| Cproton.__send__(pn_name, @impl, *args) }
+      end
+
+      def proton_caller(*names) names.each { |name| proton_forward(name, name) }; end
+      def proton_set(*names) names.each { |name| proton_forward("#{name}=", "set_#{name}") }; end
+      def proton_get(*names) names.each { |name| proton_forward(name, "get_#{name}") }; end
+      def proton_is(*names) names.each { |name| proton_forward("#{name}?", "is_#{name}") }; end
+      def proton_set_get(*names) names.each { |name| proton_get(name); proton_set(name) }; end
+      def proton_set_is(*names) names.each { |name| proton_is(name); proton_set(name) }; end
+
+      # Store ruby wrappers as attachments so they can be retrieved from the C pointer.
+      #
+      # Wrappers are stored in a registry using a key. The key is then attached to
+      # the Proton structure as a record. That record lives for as long as the
+      # Proton structure lives, and when the structure is released the record acts
+      # as hook to also delete the Ruby wrapper object from the registry.
+
+      @@registry = {}
 
       # @private
       def get_key(impl)
         ("%032x" % Cproton.pni_address_of(impl))
       end
 
+      # @private
       # Stores the given object for later retrieval.
       #
       # @param object [Object] The object.
@@ -75,7 +74,7 @@ module Qpid::Proton::Util
           Cproton.pn_record_def(record, RBCTX, Cproton.Pn_rbkey__class());
           Cproton.pn_record_set(record, RBCTX, rbkey)
         end
-        Qpid::Proton::Util::Wrapper.registry[registry_key] = object
+        @@registry[registry_key] = object
       end
 
       # Retrieves the wrapper object with the supplied Proton struct.
@@ -100,9 +99,9 @@ module Qpid::Proton::Util
           registry_key = get_key(impl)
         end
         # if the object's not in the registry then return
-        return nil unless Qpid::Proton::Util::Wrapper.registry.has_key?(registry_key)
+        return nil unless @@registry.has_key?(registry_key)
 
-        result = Qpid::Proton::Util::Wrapper.registry[registry_key]
+        result = @@registry[registry_key]
         # result = nil unless result.weakref_alive?
         if result.nil?
           raise Qpid::Proton::ProtonError.new("missing object for key=#{registry_key}")
@@ -112,18 +111,32 @@ module Qpid::Proton::Util
         end
         return result
       end
-
+      RBCTX = self.hash.to_i
     end
+    # @private
+    module Wrapper
 
-    # Hash/equality of wrappers is based on their @impl pointers, not object_id
+      def self.included(base)
+        base.extend(SWIGClassHelper)
+      end
 
-    def hash() @impl.hash; end
-    def ==(x)  @impl == x.impl; end
-    alias eql? ==
+      attr_accessor :impl
 
+      def inspect
+        pstr = Cproton.pn_string("")
+        begin
+          Cproton.pn_inspect(@impl, pstr)
+          return Cproton.pn_string_get(pstr)
+        ensure
+          Cproton.pn_free(pstr)
+        end
+      end
+
+      alias to_s inspect
+
+      def self.registry
+        @registry ||= {}
+      end
+    end
   end
-
-  # @private
-  RBCTX = Wrapper.hash.to_i
-
 end

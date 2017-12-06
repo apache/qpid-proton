@@ -24,7 +24,8 @@ module Qpid::Proton
   class Event
     private
 
-    include Qpid::Proton::Util::Wrapper
+    PROTON_METHOD_PREFIX = "pn_disposition"
+    include Util::Wrapper
 
     EVENT_TYPE_NAMES = [:PN_EVENT_NONE,
                         :PN_CONNECTION_INIT,

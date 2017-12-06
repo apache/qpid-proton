@@ -65,10 +65,9 @@ module Qpid::Proton
     DIST_MODE_MOVE = Cproton::PN_DIST_MODE_MOVE
 
     # @private
-    include Util::SwigHelper
-
-    # @private
     PROTON_METHOD_PREFIX = "pn_terminus"
+    # @private
+    include Util::Wrapper
 
     # @!attribute type
     #
@@ -78,13 +77,13 @@ module Qpid::Proton
     # @see TARGET
     # @see COORDINATOR
     #
-    proton_accessor :type
+    proton_set_get :type
 
     # @!attribute address
     #
     # @return [String] The terminus address.
     #
-    proton_accessor :address
+    proton_set_get :address
 
     # @!attribute durability
     #
@@ -94,7 +93,7 @@ module Qpid::Proton
     # @see CONFIGURATION
     # @see DELIVERIES
     #
-    proton_accessor :durability
+    proton_set_get :durability
 
     # @!attribute expiry_policy
     #
@@ -105,19 +104,19 @@ module Qpid::Proton
     # @see EXPIRE_WITH_CONNECTION
     # @see EXPIRE_NEVER
     #
-    proton_accessor :expiry_policy
+    proton_set_get :expiry_policy
 
     # @!attribute timeout
     #
     # @return [Integer] The timeout period.
     #
-    proton_accessor :timeout
+    proton_set_get :timeout
 
     # @!attribute dynamic?
     #
     # @return [Boolean] True if the terminus is dynamic.
     #
-    proton_accessor :dynamic, :is_or_get => :is
+    proton_set_is :dynamic
 
     # @!attribute distribution_mode
     #
@@ -127,7 +126,7 @@ module Qpid::Proton
     # @see DIST_MODE_COPY
     # @see DIST_MODE_MOVE
     #
-    proton_accessor :distribution_mode
+    proton_set_get :distribution_mode
 
     # @private
     include Util::ErrorHandler

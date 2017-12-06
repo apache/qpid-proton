@@ -25,6 +25,11 @@ module Qpid::Proton
   #
   class Link < Endpoint
 
+    # @private
+    PROTON_METHOD_PREFIX = "pn_link"
+    # @private
+    include Util::Wrapper
+
     # The sender will send all deliveries initially unsettled.
     SND_UNSETTLED = Cproton::PN_SND_UNSETTLED
     # The sender will send all deliveries settled to the receiver.
@@ -36,12 +41,6 @@ module Qpid::Proton
     RCV_FIRST = Cproton::PN_RCV_FIRST
     # The receiver will only settle deliveries after the sender settles.
     RCV_SECOND = Cproton::PN_RCV_SECOND
-
-    # @private
-    include Util::SwigHelper
-
-    # @private
-    PROTON_METHOD_PREFIX = "pn_link"
 
     # @!attribute [r] state
     #
@@ -171,7 +170,7 @@ module Qpid::Proton
     #
     # @return [Boolean] True if the link is a sender.
     #
-    proton_reader  :sender, :is_or_get => :is
+    proton_is  :sender
 
     # @!attribute [r] receiver?
     #
@@ -179,10 +178,10 @@ module Qpid::Proton
     #
     # @return [Boolean] True if the link is a receiver.
     #
-    proton_reader  :receiver, :is_or_get => :is
+    proton_is  :receiver
 
     # @private
-    proton_reader :attachments
+    proton_get :attachments
 
     # Drains excess credit.
     #
@@ -201,9 +200,6 @@ module Qpid::Proton
     # @return [Integer] The number of credits drained.
     #
     proton_caller :drained
-
-    # @private
-    include Util::Wrapper
 
     # @private
     def self.wrap(impl)

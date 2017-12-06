@@ -75,8 +75,11 @@ module Qpid::Proton::Codec
       data.__send__(@get_method)
     end
 
-    def self.for_class(klass) # :nodoc:
-      klass and (@@by_class[klass] or self.for_class(klass.superclass))
+    def self.for_class(klass)
+      c = klass
+      c = c.superclass while c && (x = @@by_class[c]).nil?
+      raise DataError, "no mapping for #{klass.inspect}" unless x
+      x
     end
 
     def self.for_code(code)

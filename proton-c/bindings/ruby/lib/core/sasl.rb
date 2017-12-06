@@ -39,7 +39,7 @@ module Qpid::Proton
 
     private
 
-    include Util::SwigHelper
+    include Util::Wrapper
     PROTON_METHOD_PREFIX = "pn_sasl"
 
     public
@@ -52,11 +52,11 @@ module Qpid::Proton
 
     # @!attribute allow_insecure_mechs
     #   @return [Bool] true if clear text authentication is allowed on insecure connections.
-    proton_accessor :allow_insecure_mechs
+    proton_set_get :allow_insecure_mechs
 
     # @!attribute user [r]
     #   @return [String] the authenticated user name
-    proton_reader :user
+    proton_get :user
 
     # Set the mechanisms allowed for SASL negotation
     # @param mechanisms [String] space-delimited list of allowed mechanisms

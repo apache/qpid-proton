@@ -60,11 +60,9 @@ module Qpid::Proton
     RESUME_REUSED = Cproton::PN_SSL_RESUME_REUSED
 
     # @private
-    include Util::SwigHelper
-
-    # @private
     PROTON_METHOD_PREFIX = "pn_ssl"
-
+    # @private
+    include Util::Wrapper
     # @private
     include Util::ErrorHandler
 

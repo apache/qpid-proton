@@ -24,9 +24,8 @@ module Qpid::Proton
 
     private
 
-    include Util::Wrapper
-    include Util::SwigHelper
     PROTON_METHOD_PREFIX = "pn_delivery"
+    include Util::Wrapper
 
     protected
 
@@ -76,9 +75,6 @@ module Qpid::Proton
 
     # @return [Integer] Remote state of the transfer, one of the values in {State}
     def state() Cproton.pn_delivery_remote_state(@impl); end
-
-    def to_s() Cproton.pn_delivery_dump(@impl); end
-    alias inspect to_s
 
     # @return [Link] The parent link.
     def link() Link.wrap(Cproton.pn_delivery_link(@impl)); end

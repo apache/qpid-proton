@@ -25,10 +25,9 @@ module Qpid::Proton
   class Receiver < Link
 
     # @private
-    include Util::SwigHelper
-
-    # @private
     PROTON_METHOD_PREFIX = "pn_link"
+    # @private
+    include Util::Wrapper
 
     # @!attribute drain
     #
@@ -42,7 +41,7 @@ module Qpid::Proton
     #
     # @return [Boolean] True if drain mode is set.
     #
-    proton_accessor :drain
+    proton_set_get :drain
 
     # @!attribute [r] draining?
     #

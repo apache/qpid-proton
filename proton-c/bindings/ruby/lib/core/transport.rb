@@ -62,6 +62,10 @@ module Qpid::Proton
   #   PN_TRACE_FRM=1 ruby my_proton_app.rb
   #
   class Transport
+    # @private
+    PROTON_METHOD_PREFIX = "pn_transport"
+    # @private
+    include Util::Wrapper
 
     # Turn logging off entirely.
     TRACE_OFF = Cproton::PN_TRACE_OFF
@@ -72,17 +76,12 @@ module Qpid::Proton
     # Log driver related events; i.e., initialization, end of stream, etc.
     TRACE_DRV = Cproton::PN_TRACE_DRV
 
-    # @private
-    include Util::SwigHelper
-
-    # @private
-    PROTON_METHOD_PREFIX = "pn_transport"
 
     # @!attribute channel_max
     #
     # @return [Integer] The maximum allowed channel.
     #
-    proton_accessor :channel_max
+    proton_set_get :channel_max
 
     # @!attribute [r] remote_channel_max
     #
@@ -94,25 +93,25 @@ module Qpid::Proton
     #
     # @return [Integer] The maximum frame size.
     #
-    proton_accessor :max_frame_size
+    proton_set_get :max_frame_size
 
     # @!attribute [r] remote_max_frame_size
     #
     # @return [Integer] The maximum frame size of the transport's remote peer.
     #
-    proton_reader :remote_max_frame_size
+    proton_get :remote_max_frame_size
 
     # @!attribute idle_timeout
     #
     # @return [Integer] The idle timeout.
     #
-    proton_accessor :idle_timeout
+    proton_set_get :idle_timeout
 
     # @!attribute [r] remote_idle_timeout
     #
     # @return [Integer] The idle timeout for the transport's remote peer.
     #
-    proton_accessor :remote_idle_timeout
+    proton_set_get :remote_idle_timeout
 
     # @!attribute [r] capacity
     #
@@ -181,13 +180,13 @@ module Qpid::Proton
     #
     # @return [Integer] The number of frames output by a transport.
     #
-    proton_reader :frames_output
+    proton_get :frames_output
 
     # @!attribute [r] frames_input
     #
     # @return [Integer] The number of frames input by a transport.
     #
-    proton_reader :frames_input
+    proton_get :frames_input
 
     # @private
     include Util::ErrorHandler
@@ -196,9 +195,6 @@ module Qpid::Proton
     can_raise_error :close_tail, :error_class => TransportError
     can_raise_error :pending, :error_class => TransportError, :below => Error::EOS
     can_raise_error :close_head, :error_class => TransportError
-
-    # @private
-    include Util::Wrapper
 
     # @private
     def self.wrap(impl)

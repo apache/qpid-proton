@@ -47,7 +47,6 @@ require "core/exceptions"
 # Utility classes
 require "util/version"
 require "util/error_handler"
-require "util/swig_helper"
 require "util/wrapper"
 require "util/timeout"
 

@@ -21,26 +21,24 @@ module Qpid::Proton
   # An AMQP connection.
   class Connection < Endpoint
 
-    protected
-    include Util::SwigHelper
+    # @private
     PROTON_METHOD_PREFIX = "pn_connection"
-
-    public
+    # @private
+    include Util::Wrapper
 
     # @!attribute hostname
     #   @return [String] The AMQP hostname for the connection.
-    proton_accessor :hostname
+    proton_set_get :hostname
 
     # @!attribute user
     #   @return [String] User name used for authentication (outgoing connection) or the authenticated user name (incoming connection)
-    proton_accessor :user
+    proton_set_get :user
 
     private
 
-    proton_writer :password
+    proton_set :password
     attr_accessor :overrides
     attr_accessor :session_policy
-    include Util::Wrapper
 
     def self.wrap(impl)
       return nil if impl.nil?
@@ -271,6 +269,6 @@ module Qpid::Proton
       Cproton.pn_connection_remote_condition(@impl)
     end
 
-    proton_reader :attachments
+    proton_get :attachments
   end
 end

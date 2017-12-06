@@ -32,6 +32,11 @@ module Qpid::Proton
   #
   class Message
 
+    # @private
+    PROTON_METHOD_PREFIX = "pn_message"
+    # @private
+    include Util::Wrapper
+
     # Decodes a message from AMQP binary data.
     # @param encoded [String] the encoded bytes
     # @return[Integer] the number of bytes consumed
@@ -40,7 +45,8 @@ module Qpid::Proton
       post_decode
     end
 
-    def post_decode # :nodoc:
+    # @private
+    def post_decode
       # decode elements from the message
       @properties = {}
       props = Codec::Data.new(Cproton::pn_message_properties(@impl))
@@ -79,7 +85,8 @@ module Qpid::Proton
       end
     end
 
-    def pre_encode # :nodoc:
+    # @private
+    def pre_encode
       # encode elements from the message
       props = Codec::Data.new(Cproton::pn_message_properties(@impl))
       props.clear
@@ -106,28 +113,20 @@ module Qpid::Proton
 
     # Creates a new +Message+ instance.
     # @param body the body of the message, equivalent to calling m.body=(body)
-    # @param set [Hash] additional settings, equivalent to m.key=value for each key=>value in settings
-    def initialize(body = nil, settings={})
+    # @param opts [Hash] additional options, equivalent to +Message#key=value+ for each +key=>value+
+    def initialize(body = nil, opts={})
       @impl = Cproton.pn_message
       ObjectSpace.define_finalizer(self, self.class.finalize!(@impl))
       @properties = {}
       @instructions = {}
       @annotations = {}
       self.body = body unless body.nil?
-      if !settings.nil? then
-        settings.each do |k, v|
+      if !opts.nil? then
+        opts.each do |k, v|
           setter = (k.to_s+"=").to_sym()
           self.send setter, v
         end
       end
-    end
-
-    def to_s
-      tmp = Cproton.pn_string("")
-      Cproton.pn_inspect(@impl, tmp)
-      result = Cproton.pn_string_get(tmp)
-      Cproton.pn_free(tmp)
-      return result
     end
 
     # Invoked by garbage collection to clean up resources used
@@ -587,6 +586,7 @@ module Qpid::Proton
     # Assigns a new value to the body of the message.
     #
     def body=(body)
+      Qpid::Proton::Codec::Mapping.for_class(body.class) unless body.nil? # Fail now if not convertible
       @body = body
     end
 

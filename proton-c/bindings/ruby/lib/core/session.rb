@@ -25,13 +25,9 @@ module Qpid::Proton
   class Session < Endpoint
 
     # @private
-    include Util::Wrapper
-
-    # @private
-    include Util::SwigHelper
-
-    # @private
     PROTON_METHOD_PREFIX = "pn_session"
+    # @private
+    include Util::Wrapper
 
     # @!attribute incoming_capacity
     #
@@ -42,10 +38,10 @@ module Qpid::Proton
     #
     # @return [Integer] The incoing capacity of the session, measured in bytes.
     #
-    proton_accessor :incoming_capacity
+    proton_set_get :incoming_capacity
 
     # @private
-    proton_reader :attachments
+    proton_get :attachments
 
     # @!attribute [r] outgoing_bytes
     #
