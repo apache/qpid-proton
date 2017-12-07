@@ -18,8 +18,8 @@
 
 module Qpid::Proton
 
+  # @private
   module Error
-
     NONE = 0
     EOS = Cproton::PN_EOS
     ERROR = Cproton::PN_ERR
@@ -30,7 +30,6 @@ module Qpid::Proton
     TIMEOUT = Cproton::PN_TIMEOUT
     INTERRUPTED = Cproton::PN_INTR
     INPROGRESS = Cproton::PN_INPROGRESS
-
   end
 
   # Represents a generic error at the messaging level.

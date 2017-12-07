@@ -48,26 +48,10 @@ module Qpid::Proton
     # @private
     def post_decode
       # decode elements from the message
-      @properties = {}
-      props = Codec::Data.new(Cproton::pn_message_properties(@impl))
-      if props.next
-        @properties = props.type.get(props)
-      end
-      @instructions = nil
-      insts = Codec::Data.new(Cproton::pn_message_instructions(@impl))
-      if insts.next
-        @instructions = insts.type.get(insts)
-      end
-      @annotations = nil
-      annts = Codec::Data.new(Cproton::pn_message_annotations(@impl))
-      if annts.next
-        @annotations = annts.type.get(annts)
-      end
-      @body = nil
-      body = Codec::Data.new(Cproton::pn_message_body(@impl))
-      if body.next
-        @body = body.type.get(body)
-      end
+      @properties = Codec::Data.to_object(Cproton::pn_message_properties(@impl)) || {}
+      @instructions = Codec:: Data.to_object(Cproton::pn_message_instructions(@impl)) || {}
+      @annotations = Codec::Data.to_object(Cproton::pn_message_annotations(@impl)) || {}
+      @body = Codec::Data.to_object(Cproton::pn_message_body(@impl))
     end
 
     # Encodes the message.
@@ -88,27 +72,15 @@ module Qpid::Proton
     # @private
     def pre_encode
       # encode elements from the message
-      props = Codec::Data.new(Cproton::pn_message_properties(@impl))
-      props.clear
-      Codec::Mapping.for_class(@properties.class).put(props, @properties) unless @properties.empty?
-      insts = Codec::Data.new(Cproton::pn_message_instructions(@impl))
-      insts.clear
-      if !@instructions.nil?
-        mapping = Codec::Mapping.for_class(@instructions.class)
-        mapping.put(insts, @instructions)
+      Codec::Data.from_object(Cproton::pn_message_properties(@impl), !@properties.empty? && @properties)
+      Codec::Data.from_object(Cproton::pn_message_instructions(@impl), !@instructions.empty? && @instructions)
+      if @annotations           # Make sure keys are symbols
+        @annotations.keys.each do |k|
+          @annotations[k.to_sym] = @annotations.delete(k) unless k.is_a? Symbol
+        end
       end
-      annts = Codec::Data.new(Cproton::pn_message_annotations(@impl))
-      annts.clear
-      if !@annotations.nil?
-        mapping = Codec::Mapping.for_class(@annotations.class)
-        mapping.put(annts, @annotations, :keys => :SYMBOL)
-      end
-      body = Codec::Data.new(Cproton::pn_message_body(@impl))
-      body.clear
-      if !@body.nil?
-        mapping = Codec::Mapping.for_class(@body.class)
-        mapping.put(body, @body)
-      end
+      Codec::Data.from_object(Cproton::pn_message_annotations(@impl), !@annotations.empty? && @annotations)
+      Codec::Data.from_object(Cproton::pn_message_body(@impl), @body)
     end
 
     # Creates a new +Message+ instance.
@@ -512,89 +484,32 @@ module Qpid::Proton
       Cproton.pn_message_get_reply_to_group_id(@impl)
     end
 
-    # Returns the list of property names for associated with this message.
-    #
-    # ==== Examples
-    #
-    #   msg.properties.each do |name|
-    #   end
-    #
-    def properties
-      @properties
-    end
+    # @return [Hash] Application properties for the message
+    attr_accessor :properties
 
-    # Use +properties+ as the message properties.
-    # @param properties [Hash] new properties
-    def properties=(properties)
-      @properties = properties
-    end
+    # Equivalent to +{#properties}[name] = value+
+    def []=(name, value) @properties[name] = value; end
 
-    # Assigns the value given to the named property.
-    #
-    # ==== Arguments
-    #
-    # * name - the property name
-    # * value - the property value
-    #
-    def []=(name, value)
-      @properties[name] = value
-    end
+    # Equivalent to +{#properties}[name]+
+    def [](name) @properties[name]; end
 
-    # Retrieves the value for the specified property name. If not found, then
-    # it returns nil.
-    #
-    def [](name)
-      @properties[name]
-    end
+    # Equivalent to +{#properties}.delete(name)+
+    def delete_property(name) @properties.delete(name); end
 
-    # Deletes the named property.
-    #
-    def delete_property(name)
-      @properties.delete(name)
-    end
+    # @return [Hash] Delivery instructions for this message.
+    attr_accessor :instructions
 
-    # Returns the instructions for this message.
-    #
-    def instructions
-      @instructions
-    end
+    # @return [Hash] Delivery annotations for this message.
+    attr_accessor :annotations
 
-    # Assigns instructions to this message.
-    #
-    def instructions=(instr)
-      @instructions = instr
-    end
-
-    # Returns the annotations for this message.
-    #
-    def annotations
-      @annotations
-    end
-
-    # Assigns annotations to this message.
-    #
-    def annotations=(annotations)
-      @annotations = annotations
-    end
-
-    # Returns the body property of the message.
-    #
-    def body
-      @body
-    end
-
-    # Assigns a new value to the body of the message.
-    #
-    def body=(body)
-      Qpid::Proton::Codec::Mapping.for_class(body.class) unless body.nil? # Fail now if not convertible
-      @body = body
-    end
+    # @return [Object] body of the message.
+    attr_accessor :body
 
     private
 
     def check(err) # :nodoc:
       if err < 0
-        raise DataError, "[#{err}]: #{Cproton.pn_message_error(@data)}"
+        raise TypeError, "[#{err}]: #{Cproton.pn_message_error(@data)}"
       else
         return err
       end

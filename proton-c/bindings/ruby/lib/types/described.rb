@@ -17,46 +17,5 @@
 
 
 module Qpid::Proton::Types
-
-  # @private
-  class Described
-
-    attr_reader :descriptor
-    attr_reader :value
-
-    def initialize(descriptor, value)
-      @descriptor = descriptor
-      @value = value
-    end
-
-    # Puts the description into the Data object.
-    #
-    # ==== Arguments
-    #
-    # * data - the Qpid::Proton::Data instance
-    #
-    # ==== Examples
-    #
-    #   described = Qpid::Proton::Described.new("my-descriptor", "the value")
-    #   data = Qpid::Proton::Data.new
-    #   ...
-    #   described.put(data)
-    #
-    def put(data)
-      data.symbol = @descriptor
-      data.string = @value
-    end
-
-    def ==(that) # :nodoc:
-      (that.is_a?(Qpid::Proton::Types::Described) &&
-       (self.descriptor == that.descriptor) &&
-       (self.value == that.value))
-    end
-
-    def to_s # :nodoc:
-      "descriptor=#{descriptor} value=#{value}"
-    end
-
-  end
-
+  Described = Struct.new(:descriptor, :value)
 end

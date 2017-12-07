@@ -23,64 +23,15 @@
 
 # @private
 class Hash # :nodoc:
-
-  # Places the contents of the hash into the specified data object.
-  #
-  # ==== Arguments
-  #
-  # * data - the Qpid::Proton::Data instance
-  #
-  # ==== Examples
-  #
-  #   data = Qpid::Proton::Data.new
-  #   values = {:foo => :bar}
-  #   values.proton_data_put(data)
-  #
+  # @deprecated
   def proton_data_put(data)
-    raise TypeError, "data object cannot be nil" if data.nil?
-
-    data.put_map
-    data.enter
-
-    each_pair do |key, value|
-      type = Qpid::Proton::Codec::Mapping.for_class(key.class)
-      type.put(data, key)
-      type = Qpid::Proton::Codec::Mapping.for_class(value.class)
-      type.put(data, value)
-    end
-
-    data.exit
+    Qpid.deprecated(__method__, "Codec::Data#map=")
+    data.map = self
   end
 
-  class << self
-
-    def proton_data_get(data)
-      raise TypeError, "data object cannot be nil" if data.nil?
-
-      type = data.type
-
-      raise TypeError, "element is not a map" unless type == Qpid::Proton::Codec::MAP
-
-      count = data.map
-      result = {}
-
-      data.enter
-
-      (0...(count/2)).each do
-        data.next
-        type = data.type
-        key = type.get(data)
-        data.next
-        type = data.type
-        value = type.get(data)
-        result[key] = value
-      end
-
-      data.exit
-
-      return result
-    end
-
+  # @deprecated
+  def self.proton_data_get(data)
+    Qpid.deprecated(__method__, "Codec::Data#map")
+    data.map
   end
-
 end

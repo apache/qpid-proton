@@ -84,7 +84,6 @@ module Qpid::Proton
       when Cproton::CID_pn_session then Session.wrap(Cproton.pn_cast_pn_session(x))
       when Cproton::CID_pn_link then Link.wrap(Cproton.pn_cast_pn_link(x))
       when Cproton::CID_pn_delivery then Delivery.wrap(Cproton.pn_cast_pn_delivery(x))
-      else raise TypeError, "bad class-id #{pn_class_id(Cproton.pn_event_class(impl))}"
       end
     end
 

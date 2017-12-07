@@ -15,80 +15,40 @@
 # specific language governing permissions and limitations
 # under the License.
 
+module Qpid::Proton
+  # @private
+  module Codec
 
-module Qpid::Proton module Codec
+    DataError = ::TypeError
 
-    # +DataError+ is raised when an error occurs while encoding
-    # or decoding data.
-    class DataError < Exception; end
-
-    # The +Data+ class provides an interface for decoding, extracting,
-    # creating, and encoding arbitrary AMQP data. A +Data+ object
-    # contains a tree of AMQP values. Leaf nodes in this tree correspond
-    # to scalars in the AMQP type system such as INT or STRING. Interior
-    # nodes in this tree correspond to compound values in the AMQP type
-    # system such as *LIST*,*MAP*, *ARRAY*, or *DESCRIBED*. The root node
-    # of the tree is the +Data+ object itself and can have an arbitrary
-    # number of children.
-    #
-    # A +Data+ object maintains the notion of the current sibling node
-    # and a current parent node. Siblings are ordered within their parent.
-    # Values are accessed and/or added by using the #next, #prev,
-    # #enter, and #exit methods to navigate to the desired location in
-    # the tree and using the supplied variety of mutator and accessor
-    # methods to access or add a value of the desired type.
-    #
-    # The mutator methods will always add a value _after_ the current node
-    # in the tree. If the current node has a next sibling the mutator method
-    # will overwrite the value on this node. If there is no current node
-    # or the current node has no next sibling then one will be added. The
-    # accessor methods always set the added/modified node to the current
-    # node. The accessor methods read the value of the current node and do
-    # not change which node is current.
-    #
-    # The following types of scalar values are supported:
-    #
-    # * NULL
-    # * BOOL
-    # * UBYTE
-    # * BYTE
-    # * USHORT
-    # * SHORT
-    # * UINT
-    # * INT
-    # * CHAR
-    # * ULONG
-    # * LONG
-    # * TIMESTAMP
-    # * FLOAT
-    # * DOUBLE
-    # * DECIMAL32
-    # * DECIMAL64
-    # * DECIMAL128
-    # * UUID
-    # * BINARY
-    # * STRING
-    # * SYMBOL
-    #
-    # The following types of compound values are supported:
-    #
-    # * DESCRIBED
-    # * ARRAY
-    # * LIST
-    # * MAP
-    #
+    # @private wrapper for pn_data_t*
+    # Raises TypeError for invalid conversions
     class Data
 
       # @private
-      PROTON_METHOD_PREFIX = "pn_disposition"
+      PROTON_METHOD_PREFIX = "pn_data"
       # @private
       include Util::Wrapper
 
-      # Rewind and convert a pn_data_t* containing a single value to a ruby object.
-      def self.to_object(impl) Data.new(impl).rewind.object; end
+      # @private
+      # Convert a pn_data_t* containing a single value to a ruby object.
+      # @return [Object, nil] The ruby value extracted from +impl+ or nil if impl is empty
+      def self.to_object(impl)
+        if (Cproton.pn_data_size(impl) > 0)
+          d = Data.new(impl)
+          d.rewind
+          d.next_object
+        end
+      end
 
-      # Clear a pn_data_t* and convert a ruby object into it.
-      def self.from_object(impl, x) Data.new(impl).clear.object = x; end
+      # @private
+      # Clear a pn_data_t* and convert a ruby object into it. If x==nil leave it empty.
+      def self.from_object(impl, x)
+        d = Data.new(impl)
+        d.clear
+        d.object = x if x
+        nil
+      end
 
       # @overload initialize(capacity)
       #   @param capacity [Integer] capacity for the new data instance.
@@ -115,86 +75,20 @@ module Qpid::Proton module Codec
         }
       end
 
-      # Clears the object.
-      #
-      def clear
-        Cproton.pn_data_clear(@impl)
-        self
+      proton_caller :clear, :rewind, :next, :prev, :enter, :exit, :type
+
+      def enter_exit()
+        enter
+        yield self
+      ensure
+        exit
       end
 
-      # Clears the current node and sets the parent to the root node.
-      #
-      # Clearing the current node sets it *before* the first node, calling
-      # #next will advance to the first node.
-      #
-      # @return self
-      def rewind
-        Cproton.pn_data_rewind(@impl)
-        self
-      end
+      def code() Cproton.pn_data_type(@impl); end
 
-      # Advances the current node to its next sibling and returns its types.
-      #
-      # If there is no next sibling the current node remains unchanged
-      # and nil is returned.
-      #
-      def next
-        Cproton.pn_data_next(@impl)
-      end
-
-      # Advances the current node to its previous sibling and returns its type.
-      #
-      # If there is no previous sibling then the current node remains unchanged
-      # and nil is return.
-      #
-      def prev
-        return Cproton.pn_data_prev(@impl) ? type : nil
-      end
-
-      # Sets the parent node to the current node and clears the current node.
-      #
-      # Clearing the current node sets it _before_ the first child.
-      #
-      def enter
-        Cproton.pn_data_enter(@impl)
-      end
-
-      # Sets the current node to the parent node and the parent node to its own
-      # parent.
-      #
-      def exit
-        Cproton.pn_data_exit(@impl)
-      end
-
-      # Returns the numeric type code of the current node.
-      #
-      # @return [Integer] The current node type.
-      # @return [nil] If there is no current node.
-      #
-      def type_code
-        dtype = Cproton.pn_data_type(@impl)
-        return (dtype == -1) ? nil : dtype
-      end
-
-      # @return [Integer] The type object for the current node.
-      # @see #type_code
-      #
-      def type
-        Mapping.for_code(type_code)
-      end
+      def type() Mapping.for_code(Cproton.pn_data_type(@impl)); end
 
       # Returns a representation of the data encoded in AMQP format.
-      #
-      # @return [String] The context of the Data as an AMQP data string.
-      #
-      # @example
-      #
-      #   @impl.string = "This is a test."
-      #   @encoded = @impl.encode
-      #
-      #   # @encoded now contains the text "This is a test." encoded for
-      #   # AMQP transport.
-      #
       def encode
         buffer = "\0"*1024
         loop do
@@ -213,233 +107,101 @@ module Qpid::Proton module Codec
       # of bytes consumed.
       #
       # @param encoded [String] The encoded data.
-      #
-      # @example
-      #
-      #   # SCENARIO: A string of encoded data, @encoded, contains the text
-      #   #           of "This is a test." and is passed to an instance of Data
-      #   #           for decoding.
-      #
-      #   @impl.decode(@encoded)
-      #   @impl.string #=> "This is a test."
-      #
       def decode(encoded)
         check(Cproton.pn_data_decode(@impl, encoded, encoded.length))
       end
 
-      # Puts a list value.
-      #
-      # Elements may be filled by entering the list node and putting element
-      # values.
-      #
-      # @example
-      #
-      #   data = Qpid::Proton::Codec::Data.new
-      #   data.put_list
-      #   data.enter
-      #   data.int = 1
-      #   data.int = 2
-      #   data.int = 3
-      #   data.exit
-      #
-      def put_list
-        check(Cproton.pn_data_put_list(@impl))
+      proton_is :described, :array_described
+      proton_caller :put_described
+      proton_caller :put_list, :get_list, :put_map, :get_map
+      proton_get :array_type
+      proton_caller :put_array
+      def get_array() [Cproton.pn_data_get_array(@impl), array_described?, array_type]; end
+
+      def expect(code)
+        unless code == self.code
+          raise TypeError, "expected #{Cproton.pn_type_name(code)}, got #{Cproton.pn_type_name(code)}"
+        end
       end
 
-      # If the current node is a list, this returns the number of elements.
-      # Otherwise, it returns zero.
-      #
-      # List elements can be accessed by entering the list.
-      #
-      # @example
-      #
-      #   count = @impl.list
-      #   @impl.enter
-      #   (0...count).each
-      #     type = @impl.next
-      #     puts "Value: #{@impl.string}" if type == STRING
-      #     # ... process other node types
-      #   end
+      def described
+        expect Cproton::PN_DESCRIBED
+        enter_exit { Types::Described.new(self.next_object, self.next_object) }
+      end
+
+      def described= d
+        put_described
+        enter_exit { self << d.descriptor << d.value }
+      end
+
+      def fill(a, count, what)
+        a << self.object while self.next
+        raise TypeError, "#{what} expected #{count} elements, got #{a.size}" unless a.size == count
+        a
+      end
+
       def list
-        Cproton.pn_data_get_list(@impl)
+        return array if code == Cproton::PN_ARRAY
+        expect Cproton::PN_LIST
+        count = get_list
+        a = []
+        enter_exit { fill(a, count, __method__) }
       end
 
-      # Puts a map value.
-      #
-      # Elements may be filled by entering the map node and putting alternating
-      # key/value pairs.
-      #
-      # @example
-      #
-      #   data = Qpid::Proton::Codec::Data.new
-      #   data.put_map
-      #   data.enter
-      #   data.string = "key"
-      #   data.string = "value"
-      #   data.exit
-      #
-      def put_map
-        check(Cproton.pn_data_put_map(@impl))
+      def list=(a)
+        put_list
+        enter_exit { a.each { |x| self << x } }
       end
 
-      # If the  current node is a map, this returns the number of child
-      # elements. Otherwise, it returns zero.
-      #
-      # Key/value pairs can be accessed by entering the map.
-      #
-      # @example
-      #
-      #   count = @impl.map
-      #   @impl.enter
-      #   (0...count).each do
-      #     type = @impl.next
-      #     puts "Key=#{@impl.string}" if type == STRING
-      #     # ... process other key types
-      #     type = @impl.next
-      #     puts "Value=#{@impl.string}" if type == STRING
-      #     # ... process other value types
-      #   end
-      #   @impl.exit
-      def map
-        Cproton.pn_data_get_map(@impl)
-      end
-
-      # @private
-      def get_map
-        ::Hash.proton_data_get(self)
-      end
-
-      # Puts an array value.
-      #
-      # Elements may be filled by entering the array node and putting the
-      # element values. The values must all be of the specified array element
-      # type.
-      #
-      # If an array is *described* then the first child value of the array
-      # is the descriptor and may be of any type.
-      #
-      # @param described [Boolean] True if the array is described.
-      # @param element_type [Integer] The AMQP type for each element of the array.
-      #
-      # @example
-      #
-      #   # create an array of integer values
-      #   data = Qpid::Proton::Codec::Data.new
-      #   data.put_array(false, INT)
-      #   data.enter
-      #   data.int = 1
-      #   data.int = 2
-      #   data.int = 3
-      #   data.exit
-      #
-      #   # create a described  array of double values
-      #   data.put_array(true, DOUBLE)
-      #   data.enter
-      #   data.symbol = "array-descriptor"
-      #   data.double = 1.1
-      #   data.double = 1.2
-      #   data.double = 1.3
-      #   data.exit
-      #
-      def put_array(described, element_type)
-        check(Cproton.pn_data_put_array(@impl, described, element_type.code))
-      end
-
-      # If the current node is an array, returns a tuple of the element count, a
-      # boolean indicating whether the array is described, and the type of each
-      # element. Otherwise it returns +(0, false, nil).
-      #
-      # Array data can be accessed by entering the array.
-      #
-      # @example
-      #
-      #   # get the details of thecurrent array
-      #   count, described, array_type = @impl.array
-      #
-      #   # enter the node
-      #   data.enter
-      #
-      #   # get the next node
-      #   data.next
-      #   puts "Descriptor: #{data.symbol}" if described
-      #   (0...count).each do
-      #     @impl.next
-      #     puts "Element: #{@impl.string}"
-      #   end
       def array
-        count = Cproton.pn_data_get_array(@impl)
-        described = Cproton.pn_data_is_array_described(@impl)
-        array_type = Cproton.pn_data_get_array_type(@impl)
-        return nil if array_type == -1
-        [count, described, Mapping.for_code(array_type) ]
+        return list if code == Cproton::PN_LIST
+        expect Cproton::PN_ARRAY
+        count, d, t = get_array
+        enter_exit do
+          desc = next_object if d
+          a = Types::UniformArray.new(t, nil, desc)
+          fill(a, count, "array")
+        end
       end
 
-      # @private
-      def get_array
-        ::Array.proton_get(self)
+      def array=(a)
+        t = a.type if a.respond_to? :type
+        d = a.descriptor if a.respond_to? :descriptor
+        if (h = a.instance_variable_get(:@proton_array_header))
+          t ||= h.type
+          d ||= h.descriptor
+        end
+        raise TypeError, "no type when converting #{a.class} to an array" unless t
+        put_array(!d.nil?, t.code)
+        m = Mapping[t]
+        enter_exit do
+          self << d unless d.nil?
+          a.each { |e| m.put(self, e); }
+        end
       end
 
-      # Puts a described value.
-      #
-      # A described node has two children, the descriptor and the value.
-      # These are specified by entering the node and putting the
-      # desired values.
-      #
-      # @example
-      #
-      #   data = Qpid::Proton::Codec::Data.new
-      #   data.put_described
-      #   data.enter
-      #   data.symbol = "value-descriptor"
-      #   data.string = "the value"
-      #   data.exit
-      #
-      def put_described
-        check(Cproton.pn_data_put_described(@impl))
+      def map
+        expect Cproton::PN_MAP
+        count = self.get_map
+        raise TypeError, "invalid map, total of keys and values is odd" if count.odd?
+        enter_exit do
+          m = {}
+          m[object] = next_object while self.next
+          raise TypeError, "map expected #{count/2} entries, got #{m.size}" unless m.size == count/2
+          m
+        end
       end
 
-      # @private
-      def get_described
-        raise TypeError, "not a described type" unless self.described?
-        self.enter
-        self.next
-        type = self.type
-        descriptor = type.get(self)
-        self.next
-        type = self.type
-        value = type.get(self)
-        self.exit
-        Qpid::Proton::Types::Described.new(descriptor, value)
+      def map= m
+        put_map
+        enter_exit { m.each_pair { |k,v| self << k << v } }
       end
 
-      # Checks if the current node is a described value.
-      #
-      # The described and value may be accessed by entering the described value.
-      #
-      # @example
-      #
-      #   if @impl.described?
-      #     @impl.enter
-      #     puts "The symbol is #{@impl.symbol}"
-      #     puts "The value is #{@impl.string}"
-      #   end
-      def described?
-        Cproton.pn_data_is_described(@impl)
-      end
+      # Return nil if vallue is null, raise exception otherwise.
+      def null() raise TypeError, "expected null, got #{type || 'empty'}" unless null?; end
 
-      # Puts a null value.
-      #
-      def null
-        check(Cproton.pn_data_put_null(@impl))
-      end
-
-      # Utility method for Qpid::Proton::Codec::Mapping
-      #
-      # @private
-      #
-      def null=(value)
-        null
-      end
+      # Set the current value to null
+      def null=(dummy=nil) check(Cproton.pn_data_put_null(@impl)); end
 
       # Puts an arbitrary object type.
       #
@@ -450,6 +212,16 @@ module Qpid::Proton module Codec
       #
       def object=(object)
         Mapping.for_class(object.class).put(self, object)
+        object
+      end
+
+      # Add an arbitrary data value using object=, return self
+      def <<(x) self.object=x; self; end
+
+      # Move forward to the next value and return it
+      def next_object
+        self.next or raise TypeError, "not enough data"
+        self.object
       end
 
       # Gets the current node, based on how it was encoded.
@@ -457,9 +229,7 @@ module Qpid::Proton module Codec
       # @return [Object] The current node.
       #
       def object
-        type = self.type
-        return nil if type.nil?
-        type.get(data)
+        self.type.get(self) if self.type
       end
 
       # Checks if the current node is null.
@@ -862,10 +632,10 @@ module Qpid::Proton module Codec
       # If the current node is a symbol, returns its value. Otherwise, it
       # returns an empty string ("").
       #
-      # @return [String] The symbolic string value.
+      # @return [Symbol] The symbol value.
       #
       def symbol
-        Cproton.pn_data_get_symbol(@impl)
+        Cproton.pn_data_get_symbol(@impl).to_sym
       end
 
       # Get the current value as a single object.
@@ -901,13 +671,12 @@ module Qpid::Proton module Codec
       # @private
       def check(err)
         if err < 0
-          raise DataError, "[#{err}]: #{Cproton.pn_data_error(@impl)}"
+          raise TypeError, "[#{err}]: #{Cproton.pn_data_error(@impl)}"
         else
           return err
         end
       end
 
     end
-
   end
 end

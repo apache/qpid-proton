@@ -34,7 +34,7 @@ module Qpid
       end
 
       it "can hold a null" do
-        @data.null
+        @data.null = nil
         expect(@data.null?).must_equal(true)
       end
 
@@ -385,17 +385,17 @@ module Qpid
 
       it "can hold a null symbol" do
         @data.symbol = nil
-        expect(@data.symbol).must_equal("")
+        expect(@data.symbol).must_equal(:"")
       end
 
       it "can hold a symbol" do
-        value = random_string(128)
+        value = random_string(128).to_sym
         @data.symbol = value
         expect(@data.symbol).must_equal(value)
       end
 
       it "can hold a described value" do
-        name = random_string(16)
+        name = random_string(16).to_sym
         value = random_string(16)
         @data.put_described
         @data.enter
@@ -411,12 +411,16 @@ module Qpid
         expect(@data.string).must_equal(value)
       end
 
-      it "raises an error when setting the wrong type in an array"
+      it "raises an error when setting the wrong type in an array" do
+        expect {
+          @data << Qpid::Proton::Types::UniformArray.new(Qpid::Proton::Types::INT, [1, 2.0, :a, "b"])
+        }.must_raise(TypeError)
+      end
 
       it "can hold an array" do
         values = []
         (1..(rand(100) + 5)).each { values << rand(2**16) }
-        @data.put_array false, Qpid::Proton::Codec::INT
+        @data.put_array false, Qpid::Proton::Codec::INT.code
         @data.enter
         values.each { |value| @data.int = value }
         @data.exit
@@ -431,14 +435,14 @@ module Qpid
       it "can hold a described array" do
         values = []
         (1..(rand(100) + 5)).each { values << random_string(64) }
-        descriptor = random_string(32)
-        @data.put_array true, Qpid::Proton::Codec::STRING
+        descriptor = random_string(32).to_sym
+        @data.put_array true, Qpid::Proton::Codec::STRING.code
         @data.enter
         @data.symbol = descriptor
         values.each { |value| @data.string = value }
         @data.exit
 
-        expect(@data.array).must_equal([values.size, true, Qpid::Proton::Codec::STRING])
+        expect(@data.get_array).must_equal([values.size, true, Qpid::Proton::Codec::STRING.code])
         @data.enter
         @data.next
         expect(@data.symbol).must_equal(descriptor)

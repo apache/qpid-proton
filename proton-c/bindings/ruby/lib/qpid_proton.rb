@@ -51,6 +51,7 @@ require "util/wrapper"
 require "util/timeout"
 
 # Types
+require "types/type"
 require "types/strings"
 require "types/hash"
 require "types/array"

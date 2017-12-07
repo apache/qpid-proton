@@ -14,8 +14,8 @@ if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)
 end
 
 class InteropTest < MiniTest::Test
-  Data = Qpid::Proton::Codec::Data
-  Message = Qpid::Proton::Message
+  include  Qpid::Proton
+  Data = Codec::Data
 
   def setup
     @data = Data.new
@@ -53,87 +53,81 @@ class InteropTest < MiniTest::Test
   def assert_next(type, value)
     assert @data.next
     assert_equal(type, @data.type)
-    assert_equal(value, type.get(@data))
+    assert_equal(value, @data.object)
   end
 
-  def assert_array_next(expected, header)
-    assert_next(Qpid::Proton::Codec::ARRAY, expected)
-    result = @data.type.get(@data)
-    assert_equal(result.proton_array_header, header)
+  def assert_array_next(expected)
+    result = @data.next_object
+    assert_equal(expected, result)
   end
 
   def test_message
     decode_message_file("message")
-    assert_next(Qpid::Proton::Codec::STRING, "hello")
+    assert_next(Codec::STRING, "hello")
     assert !@data.next
   end
 
   def test_primitives
     decode_data_file("primitives")
-    assert_next(Qpid::Proton::Codec::BOOL, true)
-    assert_next(Qpid::Proton::Codec::BOOL, false)
-    assert_next(Qpid::Proton::Codec::UBYTE, 42)
-    assert_next(Qpid::Proton::Codec::USHORT, 42)
-    assert_next(Qpid::Proton::Codec::SHORT, -42)
-    assert_next(Qpid::Proton::Codec::UINT, 12345)
-    assert_next(Qpid::Proton::Codec::INT, -12345)
-    assert_next(Qpid::Proton::Codec::ULONG, 12345)
-    assert_next(Qpid::Proton::Codec::LONG, -12345)
-    assert_next(Qpid::Proton::Codec::FLOAT, 0.125)
-    assert_next(Qpid::Proton::Codec::DOUBLE, 0.125)
+    assert_next(Codec::BOOL, true)
+    assert_next(Codec::BOOL, false)
+    assert_next(Codec::UBYTE, 42)
+    assert_next(Codec::USHORT, 42)
+    assert_next(Codec::SHORT, -42)
+    assert_next(Codec::UINT, 12345)
+    assert_next(Codec::INT, -12345)
+    assert_next(Codec::ULONG, 12345)
+    assert_next(Codec::LONG, -12345)
+    assert_next(Codec::FLOAT, 0.125)
+    assert_next(Codec::DOUBLE, 0.125)
     assert !@data.next
   end
 
   def test_strings
     decode_data_file("strings")
-    assert_next(Qpid::Proton::Codec::BINARY, "abc\0defg")
-    assert_next(Qpid::Proton::Codec::STRING, "abcdefg")
-    assert_next(Qpid::Proton::Codec::SYMBOL, "abcdefg")
-    assert_next(Qpid::Proton::Codec::BINARY, "")
-    assert_next(Qpid::Proton::Codec::STRING, "")
-    assert_next(Qpid::Proton::Codec::SYMBOL, "")
+    assert_next(Codec::BINARY, "abc\0defg")
+    assert_next(Codec::STRING, "abcdefg")
+    assert_next(Codec::SYMBOL, :abcdefg)
+    assert_next(Codec::BINARY, "")
+    assert_next(Codec::STRING, "")
+    assert_next(Codec::SYMBOL, :"")
     assert !@data.next
   end
 
   def test_described
     decode_data_file("described")
-    assert_next(Qpid::Proton::Codec::DESCRIBED, Qpid::Proton::Types::Described.new("foo-descriptor", "foo-value"))
+    assert_next(Codec::DESCRIBED, Types::Described.new(:"foo-descriptor", "foo-value"))
     assert(@data.described?)
-    assert_next(Qpid::Proton::Codec::DESCRIBED, Qpid::Proton::Types::Described.new(12, 13))
+    assert_next(Codec::DESCRIBED, Types::Described.new(12, 13))
     assert(@data.described?)
     assert !@data.next
   end
 
   def test_described_array
     decode_data_file("described_array")
-    assert_array_next((0...10).to_a,
-                       Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::INT,
-                                                     "int-array"))
+    assert_array_next(Types::UniformArray.new(Types::INT, (0...10).to_a, :"int-array"))
   end
 
   def test_arrays
     decode_data_file("arrays")
-    assert_array_next((0...100).to_a,
-                      Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::INT))
-    assert_array_next(["a", "b", "c"],
-                      Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::STRING))
-    assert_array_next([],
-                      Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::INT))
+    assert_array_next(Types::UniformArray.new(Codec::INT, (0...100).to_a))
+    assert_array_next(Types::UniformArray.new(Codec::STRING, ["a", "b", "c"]))
+    assert_array_next(Types::UniformArray.new(Codec::INT))
     assert !@data.next
   end
 
   def test_lists
     decode_data_file("lists")
-    assert_next(Qpid::Proton::Codec::LIST, [32, "foo", true])
-    assert_next(Qpid::Proton::Codec::LIST, [])
+    assert_next(Codec::LIST, [32, "foo", true])
+    assert_next(Codec::LIST, [])
     assert !@data.next
   end
 
   def test_maps
     decode_data_file("maps")
-    assert_next(Qpid::Proton::Codec::MAP, {"one" => 1, "two" => 2, "three" => 3 })
-    assert_next(Qpid::Proton::Codec::MAP, {1 => "one", 2 => "two", 3 => "three"})
-    assert_next(Qpid::Proton::Codec::MAP, {})
+    assert_next(Codec::MAP, {"one" => 1, "two" => 2, "three" => 3 })
+    assert_next(Codec::MAP, {1 => "one", 2 => "two", 3 => "three"})
+    assert_next(Codec::MAP, {})
     assert !@data.next
   end
 end

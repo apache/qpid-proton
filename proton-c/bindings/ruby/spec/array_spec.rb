@@ -38,20 +38,10 @@ describe "The extended array type" do
     expect(value).respond_to? :proton_described?
   end
 
-  it "raises an error when putting into a nil Data object" do
-    expect { @list.proton_put(nil) }.must_raise(TypeError)
-  end
-
   it "raises an error when getting from a nil Data object" do
     expect {
       Array.proton_get(nil)
-    }.must_raise(TypeError)
-  end
-
-  it "raises an error when the data object is empty" do
-    expect {
-      Array.proton_get(@data)
-    }.must_raise(TypeError)
+    }.must_raise
   end
 
   it "raises an error when the current object is not a list" do
@@ -92,6 +82,7 @@ describe "The extended array type" do
   it "can be put into a Data object as an undescribed array" do
     @undescribed.proton_put(@data)
     result = Array.proton_get(@data)
+    expect(result).is_a? Qpid::Proton::Types::UniformArray
     expect(@undescribed).must_equal(result)
     expect(result.proton_array_header).wont_be_nil
     expect(result.proton_array_header).must_equal(@undescribed.proton_array_header)
@@ -101,8 +92,8 @@ describe "The extended array type" do
   it "can be put into a Data object as a described array" do
     @described.proton_put(@data)
     result = Array.proton_get(@data)
-    expect(@described) == result
-
+    expect(@described).must_equal(result)
+    expect(result).is_a? Qpid::Proton::Types::UniformArray
     expect(result.proton_array_header).wont_be_nil
     expect(result.proton_array_header).must_equal(@described.proton_array_header)
     expect(result.proton_array_header.described?).must_equal(true)

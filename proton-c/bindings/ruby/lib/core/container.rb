@@ -105,7 +105,7 @@ module Qpid::Proton
     def initialize(handler = nil, id = nil)
       # Allow ID as sole argument
       (handler, id = nil, handler.to_str) if (id.nil? && handler.respond_to?(:to_str))
-      # Allow multiple handlers for backwards compatibility
+      # Allow multiple handlers ofor backwards compatibility
       a = Array(handler)
       @handler = a.size > 1 ? MessagingHandlers.new(a) : handler
       @id = ((id && id.to_s) || SecureRandom.uuid).freeze

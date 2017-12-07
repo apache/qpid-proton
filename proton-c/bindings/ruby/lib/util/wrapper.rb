@@ -113,6 +113,7 @@ module Qpid::Proton
       end
       RBCTX = self.hash.to_i
     end
+
     # @private
     module Wrapper
 
