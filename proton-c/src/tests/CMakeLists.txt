@@ -40,7 +40,10 @@ pn_add_c_test (c-event-tests event.c)
 pn_add_c_test (c-data-tests data.c)
 pn_add_c_test (c-condition-tests condition.c)
 pn_add_c_test (c-connection-driver-tests connection_driver.c)
-pn_add_c_test (c-ssl-tests ssl.c)
+if(NOT SSL_IMPL STREQUAL none)
+    pn_add_c_test (c-ssl-tests ssl.c)
+endif()
+
 
 pn_add_c_test (c-parse-url-tests parse-url.c)
 target_link_libraries (c-parse-url-tests qpid-proton)
