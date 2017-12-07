@@ -59,6 +59,11 @@ static void test_ssl_protocols(test_t *t)
 
 int main(int argc, char **argv) {
   int failed = 0;
+  // Don't run these tests if ssl functionality wasn't compiled
+  if (!pn_ssl_present()) {
+    fprintf(stderr, "No SSL implementation to test\n");
+    return failed;
+  }
 #if !defined(_WIN32)
   RUN_ARGV_TEST(failed, t, test_ssl_protocols(&t));
 #endif

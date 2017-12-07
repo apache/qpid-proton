@@ -125,6 +125,11 @@ int pn_ssl_domain_set_ciphers(pn_ssl_domain_t *domain, const char *ciphers)
   return -1;
 }
 
+int pn_ssl_domain_set_protocols(pn_ssl_domain_t* domain, const char* protocols)
+{
+  return -1;
+}
+
 bool pn_ssl_allow_unsecured(pn_ssl_t *ssl)
 {
   return true;
