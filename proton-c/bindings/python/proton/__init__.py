@@ -4172,6 +4172,10 @@ class Url(object):
   The port can be specified as a service name, e.g. 'amqp' in the
   URL string but Url.port always gives the integer value.
 
+  Warning: The placement of user and password in URLs is not
+  recommended.  It can result in credentials leaking out in program
+  logs.  Use connection configuration attributes instead.
+
   @ivar scheme: Url scheme e.g. 'amqp' or 'amqps'
   @ivar user: Username
   @ivar password: Password

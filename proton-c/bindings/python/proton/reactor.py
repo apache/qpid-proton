@@ -715,15 +715,17 @@ class Container(Reactor):
         called to process any events in the scope of this connection
         or its child links
 
-        @param kwargs: sasl_enabled, which determines whether a sasl
-        layer is used for the connection; allowed_mechs an optional
+        @param kwargs: 'sasl_enabled', which determines whether a sasl
+        layer is used for the connection; 'allowed_mechs', an optional
         string containing a space-separated list of SASL mechanisms to
-        allow if sasl is enabled; allow_insecure_mechs a flag
+        allow if sasl is enabled; 'allow_insecure_mechs', a flag
         indicating whether insecure mechanisms, such as PLAIN over a
-        non-encrypted socket, are allowed; 'virtual_host' the hostname
-        to set in the Open performative used by peer to determine the
-        correct back-end service for the client. If 'virtual_host' is
-        not supplied the host field from the URL is used instead."
+        non-encrypted socket, are allowed; 'virtual_host', the
+        hostname to set in the Open performative used by peer to
+        determine the correct back-end service for the client. If
+        'virtual_host' is not supplied the host field from the URL is
+        used instead; 'user', the user to authenticate; 'password',
+        the authentication secret.
 
         """
         conn = self.connection(handler)
