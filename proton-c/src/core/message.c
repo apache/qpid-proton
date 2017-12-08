@@ -828,7 +828,7 @@ int pn_message_data(pn_message_t *msg, pn_data_t *data)
     err = pn_data_append(data, msg->properties);
     if (err)
       return pn_error_format(msg->error, err, "data error: %s",
-                             pn_data_error(data));
+                             pn_error_text(pn_data_error(data)));
     pn_data_exit(data);
   }
 
