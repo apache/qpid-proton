@@ -698,9 +698,11 @@ class Container(Reactor):
 
         Only one of url or urls should be specified.
 
-        @param reconnect: A value of False will prevent the library
-        form automatically trying to reconnect if the underlying
-        socket is disconnected before the connection has been closed.
+        @param reconnect: Reconnect is enabled by default.  You can
+        pass in an instance of Backoff to control reconnect behavior.
+        A value of False will prevent the library from automatically
+        trying to reconnect if the underlying socket is disconnected
+        before the connection has been closed.
 
         @param heartbeat: A value in milliseconds indicating the
         desired frequency of heartbeats used to test the underlying
