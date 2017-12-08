@@ -4258,7 +4258,8 @@ class Url(object):
 
   def __str__(self): return pn_url_str(self._url)
 
-  def __repr__(self): return "Url(%r)" % str(self)
+  def __repr__(self):
+    return "Url(%s://%s/%s)" % (self.scheme, self.host, self.path)
 
   def __eq__(self, x): return str(self) == str(x)
   def __ne__(self, x): return not self == x

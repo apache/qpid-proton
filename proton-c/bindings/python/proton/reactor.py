@@ -554,7 +554,7 @@ class Connector(Handler):
         # if virtual-host not set, use host from address as default
         if self.virtual_host is None:
             connection.hostname = url.host
-        log.debug("connecting to %s..." % url)
+        log.debug("connecting to %r..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
