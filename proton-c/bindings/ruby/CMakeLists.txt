@@ -132,7 +132,7 @@ if (YARD_EXE)
   add_custom_command(
     OUTPUT ${bin}/doc
     WORKING_DIRECTORY ${src}
-    COMMAND ${YARD_EXE} -q -o ${bin}/doc -b ${bin}/.yardoc --no-progress --no-private -r README.rdoc
+    COMMAND ${YARD_EXE} -q -o ${bin}/doc -b ${bin}/.yardoc --no-progress --yardopts ${src}/.yardopts
     DEPENDS ${RUBY_SRC}
     )
   add_custom_target(docs-ruby DEPENDS ${bin}/doc)

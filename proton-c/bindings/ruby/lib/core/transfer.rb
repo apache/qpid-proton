@@ -43,7 +43,7 @@ module Qpid::Proton
 
     public
 
-    # States of a transfer
+    # AMQP Delivery States describing the outcome of a message transfer
     module State
       # Message was successfully processed by the receiver
       ACCEPTED = Cproton::PN_ACCEPTED
@@ -55,8 +55,8 @@ module Qpid::Proton
       # acceptable if re-delivered to another receiver
       RELEASED = Cproton::PN_RELEASED
 
-      # Like {RELEASED}, but {Tracker#modified} has modifications to be made to
-      # the message before re-delivery
+      # Like {RELEASED}, but there are modifications (see {Tracker#modifications})
+      # that must be applied to the message by the {Sender} before re-delivering it.
       MODIFIED = Cproton::PN_MODIFIED
 
       # Partial message data received. Only used during link recovery.

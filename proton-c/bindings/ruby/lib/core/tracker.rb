@@ -18,17 +18,15 @@
 
 module Qpid::Proton
 
-  # Tracks the status of a sent message.
+  # Track the {Transfer::State} of a sent message.
   class Tracker < Transfer
     # @return [Sender] The parent {Sender} link.
     def sender() link; end
 
-    # If {#state} == {MODIFIED} this method returns additional information
-    # about re-delivery from the receiver's call to {Delivery#release}
-    #
-    # @return [Hash] See {Delivery#release} options for the meaning of hash entries.
-    def modified()
-      return unless (state == MODIFIED) && (d = Cproton.pn_delivery_remote(@impl))
+    # Re-delivery modifications provided by the receiver in {Delivery#release}
+    # @return [Hash] See the {Delivery#release} +mods+ parameter.
+    def modifications()
+      return {}  unless (state == MODIFIED) && (d = Cproton.pn_delivery_remote(@impl))
       {
        :failed => Cproton.pn_disposition_get_failed(d),
        :undeliverable => Cproton.pn_disposition_get_undeliverable(d),

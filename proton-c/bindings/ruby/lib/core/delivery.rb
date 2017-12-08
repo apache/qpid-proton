@@ -24,38 +24,36 @@ module Qpid::Proton
     # Accept the receiveed message.
     def accept() settle ACCEPTED; end
 
-    # Reject a received message that is considered invalid and should never
-    # be delivered again to this or any other receiver.
+    # Reject a message, indicating to the sender that is invalid and should
+    # never be delivered again to this or any other receiver.
     def reject() settle REJECTED; end
 
-    # Release a received message. It may be delivered again to this or another
-    # receiver.
+    # Release a message, indicating to the sender that it was not processed
+    # but may be delivered again to this or another receiver.
     #
-    # @option opts [Boolean] :failed (default true) If true
-    # {Message#delivery_count} will be increased so future receivers will know
-    # there was a failed delivery. If false, {Message#delivery_count} will not
-    # be increased.
+    # @param mods [Hash] Instructions to the sender to modify re-delivery.
+    #  To allow re-delivery with no modifications at all use +release(nil)+
     #
-    # @option opts [Boolean] :undeliverable (default false) If true the message
-    # will not be re-delivered to this receiver. It may be delivered tbo other
-    # receivers.
+    # @option mods [Boolean] :failed Instruct the sender to increase
+    #  {Message#delivery_count} so future receivers will know there was a
+    #  previous failed delivery.
     #
-    # @option opts [Hash] :annotations Annotations to be added to
-    # {Message#annotations} before re-delivery. Entries with the same key
-    # replace existing entries in {Message#annotations}
-    def release(opts = nil)
-      opts = { :failed => true } if opts == true # Backwards compatibility
-      failed = opts ? opts.fetch(:failed, true) : true
-      undeliverable = opts && opts[:undeliverable]
-      annotations = opts && opts[:annotations]
-      if failed || undeliverable || annotations
-        d = Cproton.pn_delivery_local(@impl)
-        Cproton.pn_disposition_set_failed(d) if failed
-        Cproton.pn_disposition_set_undeliverable(d) if undeliverable
-        Data.from_object(Cproton.pn_disposition_annotations(d), annotations) if annotations
-        settle(MODIFIED)
-      else
+    # @option mods [Boolean] :undeliverable Instruct the sender that this
+    #  message should never be re-delivered to this receiver, although it may be
+    #  delivered other receivers.
+    #
+    # @option mods [Hash] :annotations Instruct the sender to update the
+    #  {Message#annotations} with these +key=>value+ pairs before re-delivery.
+    def release(mods = {:failed=>true})
+      mods = { :failed => true } if mods == true # Backwards compatibility
+      if !mods || mods.empty?
         settle(RELEASED)
+      else
+        d = Cproton.pn_delivery_local(@impl)
+        Cproton.pn_disposition_set_failed(mods[:failed])
+        Cproton.pn_disposition_set_undeliverable(mods[:undeliverable])
+        Data.from_object(Cproton.pn_disposition_annotations(d), mods[:annotations]) if mods.key? :annotations
+        settle(MODIFIED)
       end
     end
 
