@@ -49,8 +49,8 @@ release.
 Sections labeled **Thread safety** describe when and where it is safe
 to call functions or access data across threads.
 
-Sections called **C++ versions** discuss features the API that depend
-on particular versions of C++ such as C++11.
+Sections called **C++ versions** discuss features of the API that
+depend on particular versions of C++ such as C++11.
 
 ## URLs
 
