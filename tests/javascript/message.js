@@ -280,7 +280,7 @@ if (typeof process === 'object' && typeof require === 'function') {
     };
 
     /**
-     * This test tests the transparent serialisation and deserialisation of JavaScript
+     * This test tests the transparent serialization and deserialization of JavaScript
      * Objects using the AMQP type system (this is the default behaviour).
      */
     CodecTest.testRoundTripBodyObject = function() {
@@ -301,7 +301,7 @@ if (typeof process === 'object' && typeof require === 'function') {
     };
 
     /**
-     * This test tests the transparent serialisation and deserialisation of JavaScript
+     * This test tests the transparent serialization and deserialization of JavaScript
      * Objects as JSON. In this case the "on-the-wire" representation is an AMQP binary
      * stored in the AMQP data section.
      */

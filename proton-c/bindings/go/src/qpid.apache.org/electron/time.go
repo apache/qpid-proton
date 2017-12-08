@@ -33,7 +33,7 @@ import (
 // If timeout > 0 and there is no result available before the timeout, they
 // return a zero or nil value and Timeout as an error.
 //
-// If timeout == 0 they will return a result if one is immediatley available or
+// If timeout == 0 they will return a result if one is immediately available or
 // nil/zero and Timeout as an error if not.
 //
 // If timeout == Forever the function will return only when there is a result or

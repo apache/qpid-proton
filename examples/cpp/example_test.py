@@ -159,7 +159,7 @@ class ContainerExampleTest(BrokerTestCase):
         want="""success: Example 1: simple credit
 success: Example 2: basic drain
 success: Example 3: drain without credit
-success: Exmaple 4: high/low watermark
+success: Example 4: high/low watermark
 """
         with TestPort() as tp:
             self.assertMultiLineEqual(want, self.proc(["flow_control", "--address", tp.addr, "--quiet"]).wait_exit())

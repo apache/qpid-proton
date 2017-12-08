@@ -6,7 +6,7 @@ available at: <http://godoc.org/?q=qpid.apache.org>
 
 They require the
 [proton-C library and header files](http://qpid.apache.org/proton) to be
-installed.  On many platforms it is avaialable pre-packaged, for example on
+installed.  On many platforms it is available pre-packaged, for example on
 Fedora
 
     dnf install qpid-proton-c-devel

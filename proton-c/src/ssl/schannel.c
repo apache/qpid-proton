@@ -1409,7 +1409,7 @@ static bool grow_inbuf2(pn_transport_t *transport, size_t minimum_size) {
     if (old_capacity >= max_frame) {
       //  already big enough
       ssl_log(transport, "Application expecting %d bytes (> negotiated maximum frame)\n", new_capacity);
-      ssl_failed(transport, "TLS: transport maximimum frame size error");
+      ssl_failed(transport, "TLS: transport maximum frame size error");
       return false;
     }
   }
@@ -1450,7 +1450,7 @@ static void start_ssl_shutdown(pn_transport_t *transport)
   desc.pBuffers = &shutBuff;
   ApplyControlToken(&ssl->ctxt_handle, &desc);
 
-  // Next handshake will generate the shudown alert token
+  // Next handshake will generate the shutdown alert token
   ssl_handshake(transport);
 }
 

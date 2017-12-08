@@ -41,7 +41,7 @@ class TestPort(object):
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('127.0.0.1', 0)) # Testing exampless is local only
+        self.sock.bind(('127.0.0.1', 0)) # Testing examples is local only
         self.host, self.port = socket.getnameinfo(self.sock.getsockname(), 0)
         self.addr = "%s:%s" % (self.host, self.port)
 

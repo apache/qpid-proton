@@ -175,7 +175,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
     }
 }
 
-bool is_remote_unititialised(pn_state_t state) {
+bool is_remote_uninitialized(pn_state_t state) {
     return state & PN_REMOTE_UNINIT;
 }
 
@@ -275,7 +275,7 @@ void on_transport_closed(messaging_handler& handler, pn_event_t* event) {
     // If the connection isn't open generate on_transport_open event
     // because we didn't generate it yet and the events won't match.
     pn_connection_t *conn = pn_event_connection(event);
-    if (!conn || is_remote_unititialised(pn_connection_state(conn))) {
+    if (!conn || is_remote_uninitialized(pn_connection_state(conn))) {
         handler.on_transport_open(t);
     }
 

@@ -198,13 +198,13 @@ pn_connection_t* container::impl::make_connection_lh(
 
 // Takes ownership of pnc
 //
-// NOTE: After the call to start_connecton() pnc is active in a proactor thread,
+// NOTE: After the call to start_connection() pnc is active in a proactor thread,
 // and may even have been freed already. It is undefined to use pnc (or any
 // object belonging to it) except in appropriate handlers.
 //
 // SUBTLE NOTE: There must not be any proton::object wrappers in scope when
-// start_connecton() is called. The wrapper destructor will call pn_decref()
-// after start_connecton() which is undefined!
+// start_connection() is called. The wrapper destructor will call pn_decref()
+// after start_connection() which is undefined!
 //
 void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     char caddr[PN_MAX_ADDR];

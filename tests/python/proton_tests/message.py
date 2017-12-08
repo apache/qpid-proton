@@ -69,7 +69,7 @@ class AccessorsTest(Test):
   def testTtl(self):
     self._test("ttl", 0, range(12345, 54321))
 
-  def testFirstAquirer(self):
+  def testFirstAcquirer(self):
     self._test("first_acquirer", False, (True, False))
 
   def testDeliveryCount(self):

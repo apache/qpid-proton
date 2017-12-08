@@ -1,7 +1,7 @@
 // -*-markdown-*-
 // NOTE: doxygen can include markdown pages directly but there seems to be a bug
 // that shows messed-up line numbers in \skip \until code extracts. This file
-// is markdown wrapped in a doxygen comment - which works. The file is best viewed/editied
+// is markdown wrapped in a doxygen comment - which works. The file is best viewed/edited
 // as markdown.
 
 /**

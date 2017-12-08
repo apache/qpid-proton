@@ -57,8 +57,8 @@ void test_data_ostream() {
     ASSERT_EQUAL("true, false, 42, 42, -42, 12345, -12345, 12345, -12345, 0.125, 0.125", str(dt));
 }
 
-// Test extracting to exact AMQP types works corectly, extrating to invalid types fails.
-void test_decoder_primitves_exact() {
+// Test extracting to exact AMQP types works correctly, extracting to invalid types fails.
+void test_decoder_primitives_exact() {
     value dv;
     decoder d(dv);
     d.decode(read("primitives"));
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
     tests_dir = argv[1];
 
     RUN_TEST(failed, test_data_ostream());
-    RUN_TEST(failed, test_decoder_primitves_exact());
+    RUN_TEST(failed, test_decoder_primitives_exact());
     RUN_TEST(failed, test_encoder_primitives());
     return failed;
 }

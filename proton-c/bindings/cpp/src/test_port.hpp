@@ -150,7 +150,7 @@ class test_port {
 
     std::string url(const std::string& host="") const {
         std::ostringstream url;
-        url << "amp://" << host << ":" << port_;
+        url << "amqp://" << host << ":" << port_;
         return url.str();
     }
 };

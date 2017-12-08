@@ -123,7 +123,7 @@ struct iocpdesc_t {
   bool read_in_progress;
   write_pipeline_t *pipeline;
   read_result_t *read_result;
-  bool bound;          // associted with the completion port
+  bool bound;          // associated with the completion port
   bool closing;        // close called by application
   bool read_closed;    // EOF or read error
   bool write_closed;   // shutdown sent or write error
@@ -3256,7 +3256,7 @@ static bool proactor_remove(pcontext_t *ctx) {
     if (--ctx->disconnect_ops == 0) {
       --p->disconnects_pending;
     }
-    else                  // procator_disconnect() still processing
+    else                  // proactor_disconnect() still processing
       can_free = false;   // this psocket
   }
   else {

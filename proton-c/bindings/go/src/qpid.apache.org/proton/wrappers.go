@@ -168,10 +168,10 @@ func (s State) RemoteUninit() bool { return s.Has(SRemoteUninit) }
 func (s State) RemoteActive() bool { return s.Has(SRemoteActive) }
 func (s State) RemoteClosed() bool { return s.Has(SRemoteClosed) }
 
-// Return a State containig just the local flags
+// Return a State containing just the local flags
 func (s State) Local() State { return State(s & C.PN_LOCAL_MASK) }
 
-// Return a State containig just the remote flags
+// Return a State containing just the remote flags
 func (s State) Remote() State { return State(s & C.PN_REMOTE_MASK) }
 
 // Endpoint is the common interface for Connection, Link and Session.

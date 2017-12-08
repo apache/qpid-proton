@@ -280,7 +280,7 @@ PN_EXTERN pn_data_t *    pn_message_id                    (pn_message_t *msg);
  * The message id provides a globally unique identifier for a message.
  * A message id can be an a string, an unsigned long, a uuid or a
  * binary value. This operation returns the value of the id using the
- * ::pn_atom_t descriminated union. See ::pn_atom_t for details on how
+ * ::pn_atom_t discriminated union. See ::pn_atom_t for details on how
  * to access the value.
  *
  * @param[in] msg a message object
@@ -437,7 +437,7 @@ PN_EXTERN pn_data_t *    pn_message_correlation_id        (pn_message_t *msg);
  *
  * A correlation id can be an a string, an unsigned long, a uuid or a
  * binary value. This operation returns the value of the id using the
- * ::pn_atom_t descriminated union. See ::pn_atom_t for details on how
+ * ::pn_atom_t discriminated union. See ::pn_atom_t for details on how
  * to access the value.
  *
  * @param[in] msg a message object

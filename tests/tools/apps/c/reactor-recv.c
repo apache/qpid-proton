@@ -154,7 +154,7 @@ void connection_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t typ
     {
       pn_link_t *link = pn_event_link(event);
       if (pn_link_is_receiver(link)) {
-        check(cc->recv_link == NULL, "Multiple incomming links on one connection");
+        check(cc->recv_link == NULL, "Multiple incoming links on one connection");
         cc->recv_link = link;
         pn_connection_t *conn = pn_event_connection(event);
         pn_list_add(cc->global->active_connections, conn);
@@ -337,7 +337,7 @@ void listener_dispatch(pn_handler_t *h, pn_event_t *event, pn_event_type_t type)
     break;
   case PN_REACTOR_QUIESCED:
     {
-      // Two quiesce in a row means we have been idle for a timout period
+      // Two quiesce in a row means we have been idle for a timeout period
       if (gc->opts->timeout != -1 && gc->quiesce_count > 1)
         global_shutdown(gc);
     }

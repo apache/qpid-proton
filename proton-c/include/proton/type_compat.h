@@ -63,7 +63,7 @@
 # define PNI_DEFINE_SSIZE_T
 #endif
 
-/* Determinine default action */
+/* Determine default action */
 #ifndef _MSC_VER
 /* Not Windows and not using Visual Studio */
 

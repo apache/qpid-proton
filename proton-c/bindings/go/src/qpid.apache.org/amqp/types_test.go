@@ -33,13 +33,13 @@ func checkEqual(want interface{}, got interface{}) error {
 	return nil
 }
 
-func checkUnmarshal(marshalled []byte, v interface{}) error {
-	got, err := Unmarshal(marshalled, v)
+func checkUnmarshal(marshaled []byte, v interface{}) error {
+	got, err := Unmarshal(marshaled, v)
 	if err != nil {
 		return err
 	}
-	if got != len(marshalled) {
-		return fmt.Errorf("Wanted to Unmarshal %v bytes, got %v", len(marshalled), got)
+	if got != len(marshaled) {
+		return fmt.Errorf("Wanted to Unmarshal %v bytes, got %v", len(marshaled), got)
 	}
 	return nil
 }
@@ -139,7 +139,7 @@ func TestTypesRoundTrip(t *testing.T) {
 // Round trip from T to T where T is the type of the value.
 func TestTypesRoundTripAll(t *testing.T) {
 	for _, x := range allValues {
-		marshalled, err := Marshal(x, nil)
+		marshaled, err := Marshal(x, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -147,7 +147,7 @@ func TestTypesRoundTripAll(t *testing.T) {
 			continue
 		}
 		vp := reflect.New(reflect.TypeOf(x)) // v points to a Zero of the same type as x
-		if err := checkUnmarshal(marshalled, vp.Interface()); err != nil {
+		if err := checkUnmarshal(marshaled, vp.Interface()); err != nil {
 			t.Error(err)
 		}
 		v := vp.Elem().Interface()
@@ -168,11 +168,11 @@ func TestTypesPrint(t *testing.T) {
 
 func TestDescribed(t *testing.T) {
 	want := Described{"D", "V"}
-	marshalled, _ := Marshal(want, nil)
+	marshaled, _ := Marshal(want, nil)
 
 	// Unmarshal to Described type
 	var d Described
-	if err := checkUnmarshal(marshalled, &d); err != nil {
+	if err := checkUnmarshal(marshaled, &d); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, d); err != nil {
@@ -181,7 +181,7 @@ func TestDescribed(t *testing.T) {
 
 	// Unmarshal to interface{}
 	var i interface{}
-	if err := checkUnmarshal(marshalled, &i); err != nil {
+	if err := checkUnmarshal(marshaled, &i); err != nil {
 		t.Error(err)
 	}
 	if _, ok := i.(Described); !ok {
@@ -193,7 +193,7 @@ func TestDescribed(t *testing.T) {
 
 	// Unmarshal value only (drop descriptor) to the value type
 	var s string
-	if err := checkUnmarshal(marshalled, &s); err != nil {
+	if err := checkUnmarshal(marshaled, &s); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want.Value, s); err != nil {
@@ -202,15 +202,15 @@ func TestDescribed(t *testing.T) {
 
 	// Nested described types
 	want = Described{Described{int64(123), true}, "foo"}
-	marshalled, _ = Marshal(want, nil)
-	if err := checkUnmarshal(marshalled, &d); err != nil {
+	marshaled, _ = Marshal(want, nil)
+	if err := checkUnmarshal(marshaled, &d); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, d); err != nil {
 		t.Error(err)
 	}
 	// Nested to interface
-	if err := checkUnmarshal(marshalled, &i); err != nil {
+	if err := checkUnmarshal(marshaled, &i); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, i); err != nil {

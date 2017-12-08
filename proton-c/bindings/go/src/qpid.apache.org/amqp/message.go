@@ -99,7 +99,7 @@ type Message interface {
 	ContentEncoding() string
 	SetContentEncoding(string)
 
-	// ExpiryTime indicates an absoulte time when the message may be dropped.
+	// ExpiryTime indicates an absolute time when the message may be dropped.
 	// A Zero time (i.e. t.isZero() == true) indicates a message never expires.
 	ExpiryTime() time.Time
 	SetExpiryTime(time.Time)
@@ -146,7 +146,7 @@ type Message interface {
 	// Unmarshal the message body into the value pointed to by v. See amqp.Unmarshal() for details.
 	Unmarshal(interface{})
 
-	// Body value resulting from the default unmarshalling of message body as interface{}
+	// Body value resulting from the default unmarshaling of message body as interface{}
 	Body() interface{}
 
 	// Encode encodes the message as AMQP data. If buffer is non-nil and is large enough

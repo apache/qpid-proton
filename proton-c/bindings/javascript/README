@@ -269,7 +269,7 @@ illustrates how to do asynchronous request/response based applications.
 Aside from the asynchronous aspects the rest of the API is essentially the same
 as the Python binding aside from minor things such as camel casing method names etc.
 
-Serialisation/Deserialisation, Types etc.
+Serialisation/Deserialization, Types etc.
 =========================================
 
 The JavaScript binding tries to be as simple, intuitive and natural as possible
@@ -358,7 +358,7 @@ message.body = ['Rod', 'Jane', 'Freddy', {cat: true, donkey: 'hee haw'}];
 // attempt to use the correct type such that message.body = 2147483647; would be
 // sent as an AMQP integer, but because of the way JavaScript coerces integers
 // message.body = 2147483647.0; would also be sent as an AMQP integer because
-// 2147483647.0 gets transparently conveted to 2147483647 by the interpreter, so
+// 2147483647.0 gets transparently converted to 2147483647 by the interpreter, so
 // to explicitly send this as an AMQP float we'd need to do:
 // message.body = 2147483647.0.float();
 
@@ -398,15 +398,15 @@ JSON
 ====
 
 As well as allowing native JavaScript Objects and Arrays to be transparently
-serialised and deserialised via the AMQP type system it is also possible to
-serialise/deserialise as JSON.
+serialised and deserialized via the AMQP type system it is also possible to
+serialise/deserialize as JSON.
 
 message.setAddress('amqp://localhost');
 message.setContentType('application/json');
 message.body = {array: [1, 2, 3, 4], object: {name: "John Smith", age: 65}};
 
 On the wire the above will be encoded as an opaque binary in an AMQP data section
-but will be deserialised into a JavaScript Object in exactly the same was as the
+but will be deserialized into a JavaScript Object in exactly the same was as the
 previous examples that use the AMQP type system.
 
 SUPPORT

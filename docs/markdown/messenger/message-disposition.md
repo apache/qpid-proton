@@ -58,7 +58,7 @@ must set a positive size for its incoming window:
 
         pn_messenger_set_incoming_window(messenger, N);
 
-You can implicity accept messages by simply letting enough
+You can implicitly accept messages by simply letting enough
 new messages arrive.  As older messages pass beyond the threshold
 of your incoming window size, they will be automatically
 accepted.  Thus, if you want to automatically accept all

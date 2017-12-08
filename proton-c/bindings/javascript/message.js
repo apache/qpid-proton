@@ -42,7 +42,7 @@ Module['Message'] = function() { // Message Constructor.
 
     // ************************* Public properties ****************************
 
-    // Intitialise with an empty Object so we can set properties in a natural way.
+    // Initialize with an empty Object so we can set properties in a natural way.
     // message.properties.prop1 = "foo";
     // message.properties.prop2 = "bar";
     this['properties'] = {};
@@ -70,7 +70,7 @@ Message['DEFAULT_PRIORITY'] = 4; /** Default priority for messages.*/
 
 // We use the dot notation rather than associative array form for protected
 // methods so they are visible to this "package", but the Closure compiler will
-// minify and obfuscate names, effectively making a defacto "protected" method.
+// minify and obfuscate names, effectively making a de facto "protected" method.
 
 /**
  * This helper method checks the supplied error code, converts it into an
@@ -196,7 +196,7 @@ _Message_._postDecode = function(decodeBinaryAsString) {
  * Free the Message.
  * <p>
  * N.B. This method has to be called explicitly in JavaScript as we can't
- * intercept finalisers, so we need to remember to free before removing refs.
+ * intercept finalizers, so we need to remember to free before removing refs.
  * @method free
  * @memberof! proton.Message#
  */

@@ -89,7 +89,7 @@ type Injecter interface {
 // invalid. The handler methods will tell you when a value is no longer valid. For
 // example after a LinkClosed event, that link is no longer valid. If you do
 // Link.Close() yourself (in a handler or injected function) the link remains valid
-// until the corresponing LinkClosed event is received by the handler.
+// until the corresponding LinkClosed event is received by the handler.
 //
 // Engine.Close() will take care of cleaning up any remaining values when you are
 // done with the Engine. All values associated with a engine become invalid when you
@@ -217,7 +217,7 @@ func (eng *Engine) InjectWait(f func() error) error {
 }
 
 // Server puts the Engine in server mode, meaning it will auto-detect security settings on
-// the incoming connnection such as use of SASL and SSL.
+// the incoming connection such as use of SASL and SSL.
 // Must be called before Run()
 //
 func (eng *Engine) Server() { eng.Transport().SetServer() }
@@ -319,7 +319,7 @@ func (eng *Engine) Run() error {
 	eng.tick() // Start ticking if needed
 
 	// Channels for read and write buffers going in and out of the read/write goroutines.
-	// The channels are unbuffered: we want to exchange buffers in seuquence.
+	// The channels are unbuffered: we want to exchange buffers in sequence.
 	readsIn, writesIn := make(chan []byte), make(chan []byte)
 	readsOut, writesOut := make(chan []byte), make(chan []byte)
 

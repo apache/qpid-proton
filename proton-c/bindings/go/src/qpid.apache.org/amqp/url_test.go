@@ -33,7 +33,7 @@ func ExampleParseURL() {
 		"/path",
 		"",
 		":1234",
-                // Taken out becasue the go 1.4 URL parser isn't the same as later
+                // Taken out because the go 1.4 URL parser isn't the same as later
 		//"[::1]",
 		//"[::1",
 		// Output would be:

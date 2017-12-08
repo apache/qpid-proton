@@ -327,7 +327,7 @@ Module.EventDispatch = new function() { // Note the use of new to create a Singl
              * actually free and remove the selectable is deferred until next
              * time round the (internal JavaScript) event loop. This turned out
              * to be necessary because in some cases the ws WebSocket library
-             * calls the onclose callback (concurrently!!) before the onmessage
+             * calls the on_close callback (concurrently!!) before the on_message
              * callback exits, which could result in _pn_selectable_free being
              * called whilst _pn_selectable_writable is executing, which is bad!!
              */

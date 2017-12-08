@@ -27,7 +27,7 @@
 /**
  * Create a proton.Data.Uuid which is a type 4 UUID.
  * @classdesc
- * This class represents a type 4 UUID, wich may use crypto libraries to generate
+ * This class represents a type 4 UUID, which may use crypto libraries to generate
  * the UUID if supported by the platform (e.g. node.js or a modern browser)
  * @constructor proton.Data.Uuid
  * @param {number|Array|string} u a UUID. If null a type 4 UUID is generated wich may use crypto if
@@ -37,7 +37,7 @@
  * @property {Array} uuid is the compact array form of the UUID.
  */
 Data['Uuid'] = function(u) { // Data.Uuid Constructor.
-    // Helper to copy from emscriptem allocated storage into JavaScript Array.
+    // Helper to copy from emscripten allocated storage into JavaScript Array.
     function _p2a(p) {
         var uuid = new Array(16);
         for (var i = 0; i < 16; i++) {
@@ -46,7 +46,7 @@ Data['Uuid'] = function(u) { // Data.Uuid Constructor.
         return uuid;
     };
 
-    if (!u) { // Generate UUID using emscriptem's uuid_generate implementation.
+    if (!u) { // Generate UUID using emscripten's uuid_generate implementation.
         var sp = Runtime.stackSave();
         var p = allocate(16, 'i8', ALLOC_STACK); // Create temporary pointer storage.
         _uuid_generate(p);      // Generate UUID into allocated pointer.

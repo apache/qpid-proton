@@ -12,7 +12,7 @@
 # - The second is the build tree: this is optional and if not specified is assumed to be the
 #   current directory.
 #
-# The output is in the form of an html report which will be found in the generated html direectory.
+# The output is in the form of an html report which will be found in the generated html directory.
 # - There will also be a number of intermediate files left in the current directory.
 #
 # The typical way to use it would be to use the "Coverage" build type to get instrumented

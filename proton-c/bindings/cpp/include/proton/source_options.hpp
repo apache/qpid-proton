@@ -63,7 +63,7 @@ class source_options {
     /// ignored.
     PN_CPP_EXTERN source_options& dynamic(bool);
 
-    /// Control whether messsages are browsed or consumed.  The
+    /// Control whether messages are browsed or consumed.  The
     /// default is source::MOVE, meaning consumed.
     PN_CPP_EXTERN source_options& distribution_mode(enum source::distribution_mode);
 

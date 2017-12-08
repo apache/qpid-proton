@@ -165,7 +165,7 @@ func (l List) GoString() string {
 // pnTime converts Go time.Time to Proton millisecond Unix time.
 func pnTime(t time.Time) C.pn_timestamp_t {
 	secs := t.Unix()
-	// Note: sub-second accuracy is not guaraunteed if the Unix time in
+	// Note: sub-second accuracy is not guaranteed if the Unix time in
 	// nanoseconds cannot be represented by an int64 (sometime around year 2260)
 	msecs := (t.UnixNano() % int64(time.Second)) / int64(time.Millisecond)
 	return C.pn_timestamp_t(secs*1000 + msecs)

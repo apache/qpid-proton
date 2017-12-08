@@ -356,7 +356,7 @@ static pn_event_type_t listen_abort_handler(test_handler_t *th, pn_event_t *e) {
   }
 }
 
-/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protoocol close */
+/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protocol close */
 static void test_abort(test_t *t) {
   test_proactor_t tps[] = { test_proactor(t, open_close_handler), test_proactor(t, listen_abort_handler) };
   pn_proactor_t *client = tps[0].proactor;
@@ -415,7 +415,7 @@ static pn_event_type_t listen_refuse_handler(test_handler_t *th, pn_event_t *e) 
   }
 }
 
-/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protoocol close */
+/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP protocol close */
 static void test_refuse(test_t *t) {
   test_proactor_t tps[] = { test_proactor(t, open_close_handler), test_proactor(t, listen_refuse_handler) };
   pn_proactor_t *client = tps[0].proactor;
@@ -846,7 +846,7 @@ static void test_parse_addr(test_t *t) {
   TEST_STR_EQUAL(t, "5672", port);
 }
 
-/* Test pn_proactor_addr funtions */
+/* Test pn_proactor_addr functions */
 
 static void test_netaddr(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_wake_handler), test_proactor(t, listen_handler) };
@@ -1003,7 +1003,7 @@ static pn_event_type_t message_stream_handler(test_handler_t *th, pn_event_t *e)
      return PN_CONNECTION_WAKE;
    }
 
-   case PN_DELIVERY: {          /* Receive a delvery - smaller than a chunk? */
+   case PN_DELIVERY: {          /* Receive a delivery - smaller than a chunk? */
      pn_delivery_t *dlv = pn_event_delivery(e);
      if (pn_delivery_readable(dlv)) {
        ssize_t n = pn_delivery_pending(dlv);

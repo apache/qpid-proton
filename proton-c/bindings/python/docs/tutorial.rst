@@ -237,7 +237,7 @@ The code here is not too different from the simple receiver
 example. When we receive a request however, we look at the
 :py:attr:`~proton.Message.reply_to` address on the
 :py:class:`~proton.Message` and create a sender for that over which to
-send the response. We'll cache the senders incase we get further
+send the response. We'll cache the senders in case we get further
 requests with the same reply_to.
 
 Now let's create a simple client to test this service out.
@@ -291,7 +291,7 @@ When creating the receiver, we specify a Selector object as an
 option. The options argument can take a single object or a
 list. Another option that is sometimes of interest when using a broker
 is the ability to 'browse' the messages on a queue, rather than
-consumig them. This is done in AMQP by specifying a distribution mode
+consuming them. This is done in AMQP by specifying a distribution mode
 of 'copy' (instead of 'move' which is the expected default for
 queues). An example of that is shown next:
 

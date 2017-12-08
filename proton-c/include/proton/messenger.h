@@ -82,7 +82,7 @@ extern "C" {
  * Sending & Receiving Messages
  * ============================
  *
- * The messenger API works in conjuction with the ::pn_message_t API.
+ * The messenger API works in conjunction with the ::pn_message_t API.
  * A ::pn_message_t is a mutable holder of message content.
  *
  * The ::pn_messenger_put() operation copies content from the supplied
@@ -130,7 +130,7 @@ extern "C" {
  * and then return. You can then look at the number of incoming and
  * outgoing messages to see how much outstanding work still remains.
  *
- * Authentication Mechanims
+ * Authentication Mechanisms
  * ========================
  *
  * The messenger API authenticates using some specific mechanisms. In prior versions
@@ -726,7 +726,7 @@ PNX_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
  *
  * The get operation copies the message data from the head of the
  * messenger's incoming queue into the provided ::pn_message_t object.
- * If provided ::pn_message_t pointer is NULL, the head essage will be
+ * If provided ::pn_message_t pointer is NULL, the head message will be
  * discarded. This operation will return ::PN_EOS if there are no
  * messages left on the incoming queue.
  *
@@ -756,7 +756,7 @@ PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
  * Get the subscription of the message most recently retrieved by ::pn_messenger_get().
  *
  * This operation will return NULL if ::pn_messenger_get() has never
- * been succesfully called.
+ * been successfully called.
  *
  * @param[in] messenger a messenger object
  * @return a pn_subscription_t or NULL
@@ -1035,7 +1035,7 @@ PNX_EXTERN pn_millis_t
                                          const char *address);
 
 /**
- * Sets the SSL peer authentiacation mode required when a trust
+ * Sets the SSL peer authentication mode required when a trust
  * certificate is used.
  *
  * @param[in] messenger a messenger object

@@ -19,7 +19,7 @@
 
 # For use with CMake to run simple performance tests in Proton.
 # Assumes that rector-recv and reactor-send can be found in PATH.
-# CMkake's choice of python executable may be passed via PYTHON_EXE environment var.
+# CMake's choice of python executable may be passed via PYTHON_EXE environment var.
 # Add any OS specific monitor helpers in PN_QPERF_MON: i.e.
 #    PN_QPERF_MON="time taskset 0x2" make quick_perf_c
 

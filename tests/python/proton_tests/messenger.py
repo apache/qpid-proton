@@ -629,7 +629,7 @@ class MessengerTest(Test):
   def testDefaultRewriteSUPHPN(self):
     self._testRewrite("amqp://user:pass@original:123/name", "amqp://original:123/name")
 
-  def testRewriteSupress(self):
+  def testRewriteSuppress(self):
     self.client.rewrite("*", None)
     self._testRewrite("asdf", None)
 
