@@ -3573,7 +3573,7 @@ class SASL(Wrapper):
       return outcome
 
   def allowed_mechs(self, mechs):
-    pn_sasl_allowed_mechs(self._sasl, mechs)
+    pn_sasl_allowed_mechs(self._sasl, unicode2utf8(mechs))
 
   def _get_allow_insecure_mechs(self):
     return pn_sasl_get_allow_insecure_mechs(self._sasl)
