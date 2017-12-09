@@ -93,18 +93,13 @@ require "messenger/messenger"
 
 # Handler classes
 require "handler/adapter"
+require "handler/old_messaging_adapter"
 # Core classes that depend on Handler
 require "core/messaging_handler"
 require "core/container"
 require "core/connection_driver"
 
 # Backwards compatibility shims
-
 require "reactor/container"
-
-module Qpid::Proton::Handler
-  # @deprecated alias for backwards compatibility
-  MessagingHandler = Qpid::Proton::MessagingHandler
-end
-
+require "handler/messaging_handler"
 

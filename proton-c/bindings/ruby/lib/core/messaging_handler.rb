@@ -24,152 +24,180 @@ module Qpid::Proton
   #
   class MessagingHandler
 
-    # @overload initialize(opts)
-    #   Create a {MessagingHandler} with options +opts+
-    #   @option opts [Integer] :prefetch (10)
-    #    The number of messages to  fetch in advance, 0 disables prefetch.
-    #   @option opts [Boolean] :auto_accept  (true)
-    #    If true, incoming messages are accepted automatically after {#on_message}.
-    #    If false, the application can accept, reject or release the message
-    #    by calling methods on {Delivery} when the message has been processed.
-    #   @option opts [Boolean] :auto_settle (true) If true, outgoing
-    #    messages are settled automatically when the remote peer settles. If false,
-    #    the application must call {Delivery#settle} explicitly.
-    #   @option opts [Boolean] :auto_open (true)
-    #    If true, incoming connections are  opened automatically.
-    #    If false, the application must call {Connection#open} to open incoming connections.
-    #   @option opts [Boolean] :auto_close (true)
-    #    If true, respond to a remote close automatically with a local close.
-    #    If false, the application must call {Connection#close} to finish closing connections.
-    #   @option opts [Boolean] :peer_close_is_error (false)
-    #    If true, and the remote peer closes the connection without an error condition,
-    #    the set the local error condition {Condition}("error", "unexpected peer close")
-    #
-    # @overload initialize(prefetch=10, auto_accept=true, auto_settle=true, peer_close_is_error=false)
-    #   @deprecated use +initialize(opts)+ overload
-    def initialize(*args)
-      @options = {}
-      if args.size == 1 && args[0].is_a?(Hash)
-        @options.replace(args[0])
-      else                      # Fill options from deprecated fixed arguments
-        [:prefetch, :auto_accept, :auto_settle, :peer_close_is_error].each do |k|
-          opts[k] = args.shift unless args.empty?
-        end
-      end
-      # NOTE: the options are processed by {Handler::Adapater}
+    # Create a {MessagingHandler}
+    # @option opts [Integer] :prefetch (10)
+    #  The number of messages to  fetch in advance, 0 disables prefetch.
+    # @option opts [Boolean] :auto_accept  (true)
+    #  If true, incoming messages are accepted automatically after {#on_message}.
+    #  If false, the application can accept, reject or release the message
+    #  by calling methods on {Delivery} when the message has been processed.
+    # @option opts [Boolean] :auto_settle (true) If true, outgoing
+    #  messages are settled automatically when the remote peer settles. If false,
+    #  the application must call {Delivery#settle} explicitly.
+    # @option opts [Boolean] :auto_open (true)
+    #  If true, incoming connections are  opened automatically.
+    #  If false, the application must call {Connection#open} to open incoming connections.
+    # @option opts [Boolean] :auto_close (true)
+    #  If true, respond to a remote close automatically with a local close.
+    #  If false, the application must call {Connection#close} to finish closing connections.
+    # @option opts [Boolean] :peer_close_is_error (false)
+    #  If true, and the remote peer closes the connection without an error condition,
+    #  the set the local error condition {Condition}("error", "unexpected peer close")
+    def initialize(opts=nil)
+      @options = opts && opts.clone
     end
 
-    public
-
-    # @private
     # @return [Hash] handler options, see {#initialize}
     attr_reader :options
 
+    # @!group Most common events
 
-    # @!method on_transport_error(event)
-    # Called when the transport fails or closes unexpectedly.
-    # @param event [Event] The event.
+    # @!method on_container_start(container)
+    # The container event loop is started
+    # @param container [Container] The container.
 
-    # !@method on_connection_error(event)
-    # Called when the peer closes the connection with an error condition.
-    # @param event [Event] The event.
+    # @!method on_container_stop(container)
+    # The container event loop is stopped
+    # @param container [Container] The container.
 
-    # @!method on_session_error(event)
-    # Called when the peer closes the session with an error condition.
-    # @param event [Qpid:Proton::Event] The event.
+    # @!method on_message(delivery, message)
+    # A message is received.
+    # @param delivery [Delivery] The delivery.
+    # @param message [Message] The message
 
-    # @!method on_link_error(event)
-    # Called when the peer closes the link with an error condition.
-    # @param event [Event] The event.
+    # @!method on_sendable(sender)
+    # A message can be sent
+    # @param sender [Sender] The sender.
 
-    # @!method on_start(event)
-    # Called when the event loop starts.
-    # @param event [Event] The event.
+    # @!endgroup
 
-    # @!method on_connection_closed(event)
-    # Called when the connection is closed.
-    # @param event [Event] The event.
+    # @!group Endpoint lifecycle events
 
-    # @!method on_session_closed(event)
-    # Called when the session is closed.
-    # @param event [Event] The event.
+    # @!method on_connection_open(connection)
+    # The remote peer opened the connection
+    # @param connection
 
-    # @!method on_link_closed(event)
-    # Called when the link is closed.
-    # @param event [Event] The event.
+    # @!method on_connection_close(connection)
+    # The remote peer closed the connection
+    # @param connection
 
-    # @!method on_connection_closing(event)
-    # Called when the peer initiates the closing of the connection.
-    # @param event [Event] The event.
+    # @!method on_connection_error(connection)
+    # The remote peer closed the connection with an error condition
+    # @param connection
 
-    # @!method on_session_closing(event)
-    # Called when the peer initiates the closing of the session.
-    # @param event [Event] The event.
+    # @!method on_session_open(session)
+    # The remote peer opened the session
+    # @param session
 
-    # @!method on_link_closing(event)
-    # Called when the peer initiates the closing of the link.
-    # @param event [Event] The event.
+    # @!method on_session_close(session)
+    # The remote peer closed the session
+    # @param session
 
-    # @!method on_disconnected(event)
-    # Called when the socket is disconnected.
-    # @param event [Event] The event.
+    # @!method on_session_error(session)
+    # The remote peer closed the session with an error condition
+    # @param session
 
-    # @!method on_sendable(event)
-    # Called when the sender link has credit and messages can therefore
-    # be transferred.
-    # @param event [Event] The event.
+    # @!method on_sender_open(sender)
+    # The remote peer opened the sender
+    # @param sender
 
-    # @!method on_accepted(event)
-    # Called when the remote peer accepts an outgoing message.
-    # @param event [Event] The event.
+    # @!method on_sender_detach(sender)
+    # The remote peer detached the sender
+    # @param sender
 
-    # @!method on_rejected(event)
-    # Called when the remote peer rejects an outgoing message.
-    # @param event [Event] The event.
+    # @!method on_sender_close(sender)
+    # The remote peer closed the sender
+    # @param sender
 
-    # @!method on_released(event)
-    # Called when the remote peer releases an outgoing message for re-delivery as-is.
-    # @param event [Event] The event.
+    # @!method on_sender_error(sender)
+    # The remote peer closed the sender with an error condition
+    # @param sender
 
-    # @!method on_modified(event)
-    # Called when the remote peer releases an outgoing message for re-delivery with modifications.
-    # @param event [Event] The event.
+    # @!method on_receiver_open(receiver)
+    # The remote peer opened the receiver
+    # @param receiver
 
-    # @!method on_settled(event)
-    # Called when the remote peer has settled hte outgoing message.
-    # This is the point at which it should never be retransmitted.
-    # @param event [Event] The event.
+    # @!method on_receiver_detach(receiver)
+    # The remote peer detached the receiver
+    # @param receiver
 
-    # @!method on_message(event)
-    # Called when a message is received.
-    #
-    # The message is available from {Event#message}, to accept or reject the message
-    # use {Event#delivery}
-    # @param event [Event] The event.
+    # @!method on_receiver_close(receiver)
+    # The remote peer closed the receiver
+    # @param receiver
 
-    # @!method on_aborted(event)
-    # Called when message delivery is aborted by the sender.
-    # The {Event#delivery} provides information about the delivery, but the message should be ignored.
+    # @!method on_receiver_error(receiver)
+    # The remote peer closed the receiver with an error condition
+    # @param receiver
 
-    # @!method on_error(event)
-    # If +on_xxx_error+ method is missing, {#on_error} is called instead.
-    # If {#on_error} is missing, the connection is closed with the error.
-    # @param event [Event] the event, {Event#method} provides the original method name.
+    # @!endgroup
 
-    # @!method on_unhandled(event)
-    # If an +on_xxx+ method is missing, {#on_unhandled} is called instead.
-    # @param event [Event] the event, {Event#method} provides the original method name.
-  end
+    # @!group Delivery events
 
-  # A {MessagingHandler} that delegates events to an array of handlers, in order.
-  class MessagingHandlers < MessagingHandler
-    # @param handlers [Array<MessagingHandler>] handler objects
-    def initialize(handlers) @handlers = handlers; end
+    # @!method on_tracker_accept(tracker)
+    # The receiving end accepted a delivery
+    # @param tracker [Tracker] The tracker.
 
-    # @return [Array<MessagingHandler>] array of handlers
-    attr_reader :handlers
+    # @!method on_tracker_reject(tracker)
+    # The receiving end rejected a delivery
+    # @param tracker [Tracker] The tracker.
 
-    # Dispatch events to each of {#handlers} in turn
-    def on_unhandled(event) @handlers.each { |h| event.dispatch h }; end
+    # @!method on_tracker_release(tracker)
+    # The receiving end released a delivery
+    # @param tracker [Tracker] The tracker.
+
+    # @!method on_tracker_modify(tracker)
+    # The receiving end modified a delivery
+    # @param tracker [Tracker] The tracker.
+
+    # @!method on_tracker_settle(tracker)
+    # The receiving end settled a delivery
+    # @param tracker [Tracker] The tracker.
+
+    # @!method on_delivery_settle(delivery)
+    # The sending end settled a delivery
+    # @param delivery [Delivery] The delivery.
+
+    # @!endgroup
+
+    # @!group Flow control events
+
+    # @!method on_sender_drain_start(sender)
+    # The remote end of the sender requested draining
+    # @param sender [Sender] The sender.
+
+    # @!method on_receiver_drain_finish(receiver)
+    # The remote end of the receiver completed draining
+    # @param receiver [Receiver] The receiver.
+
+    # @!endgroup
+
+    # @!group Transport events
+
+    # @!method on_transport_open(transport)
+    # The underlying network channel opened
+    # @param transport [Transport] The transport.
+
+    # @!method on_transport_close(transport)
+    # The underlying network channel closed
+    # @param transport [Transport] The transport.
+
+    # @!method on_transport_error(transport)
+    # The underlying network channel is closing due to an error.
+    # @param transport [Transport] The transport.
+
+    # @!endgroup
+
+    # @!group Unhandled events
+
+    # @!method on_error(error_condition)
+    # The fallback error handler when no specific on_xxx_error is defined
+    # @param error_condition [Condition] Provides information about the error.
+
+    # @!method on_unhandled(method_name, *args)
+    # Called for events with no handler. Similar to ruby's standard #method_
+    # @param method_name [Symbol] Name of the event method that would have been called.
+    # @param args [Array] Arguments that would have been passed
+
+    # @!endgroup
   end
 end

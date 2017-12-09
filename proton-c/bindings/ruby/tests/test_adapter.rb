@@ -21,25 +21,25 @@ require 'qpid_proton'
 require 'test_tools'
 include Qpid::Proton
 
-# Tests with Mock handler that handles all methods.
-class TestAllHandler < Minitest::Test
-
-  class AllHandler < MessagingHandler
-    def initialize(*args)
-      super(*args)
-      @calls = []
-    end
-
-    attr_accessor :calls
-
-    def names; @calls.map { |c| c[0] }; end
-    def events; @calls.map { |c| c[1] }; end
-
-    def method_missing(name, *args) (/^on_/ =~ name) ? (@calls << [name] + args) : super; end
-    def respond_to_missing?(name, private=false); (/^on_/ =~ name); end
-    def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
+# Records every call
+class AllHandler < MessagingHandler
+  def initialize(*args)
+    super(*args)
+    @calls = []
   end
 
+  attr_accessor :calls
+
+  def names; @calls.map { |c| c[0] }; end
+  def events; @calls.map { |c| c[1] }; end
+
+  def method_missing(name, *args) (/^on_/ =~ name) ? (@calls << [name] + args) : super; end
+  def respond_to_missing?(name, private=false); (/^on_/ =~ name); end
+  def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
+end
+
+# Tests with Mock handler that handles all methods, expect both old and new calls
+class TestOldHandler < Minitest::Test
   def setup
     @h = [AllHandler.new, AllHandler.new]
     @ch, @sh = *@h
@@ -158,7 +158,7 @@ class TestAllHandler < Minitest::Test
 end
 
 # Test with real handlers that implement a few methods
-class TestUnhandled < Minitest::Test
+class TestOldUnhandled < Minitest::Test
 
   def test_message
     handler_class = Class.new(MessagingHandler) do

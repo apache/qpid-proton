@@ -167,10 +167,8 @@ module Qpid::Proton
     #   {#dispatch} and {#process}
     def initialize(io, handler)
       super(io)
-      # Allow multiple handlers for backwards compatibility
-      a = Array(handler)
-      @handler = a.size > 1 ? MessagingHandlers.new(a) : handler
-      @adapter = Handler::Adapter.try_convert(handler)
+      @handler = handler
+      @adapter = Handler::Adapter.adapt(handler)
     end
 
     # @return [MessagingHandler] The handler dispatched to by {#process}

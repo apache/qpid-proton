@@ -17,140 +17,61 @@
 
 
 # @private
-module Qpid::Proton::Handler
+module Qpid::Proton
+  module Handler
 
-  # @private
-  # Adapter to convert raw proton events to {#MessagingHandler} events
-  class Adapter
-
-    def self.try_convert(h) h.is_a?(Adapter) ? h : Adapter.new(h); end
-
-    def initialize handler
-      @handler = handler || MessagingHandler.new # Pick up default MH behavior
-      @opts = (handler.options if handler.respond_to?(:options)) || {}
-      @opts[:prefetch] ||= 10
-      @opts[:peer_close_is_error] = false unless @opts.include? :peer_close_is_error
-      [:auto_accept, :auto_settle, :auto_open, :auto_close].each do |k|
-        @opts[k] = true unless @opts.include? k
+    class MultiHandler
+      def self.maybe(h)
+        a = Array(h)
+        a.size > 1 ? self.new(h) : h
       end
-    end
 
-    def dispatch(method, event)
-      (@handler.__send__(method, event); true) if @handler.respond_to? method
-    end
-
-    def delegate(method, event)
-      event.method = method     # Update the event with the new method
-      event.dispatch(@handler) || dispatch(:on_unhandled, event)
-    end
-    def delegate_error(method, event)
-      event.method = method
-      unless event.dispatch(@handler) # Default behaviour if not dispatched
-        dispatch(:on_error, event) || dispatch(:on_unhandled, event)
-        event.connection.close event.context.condition # Close the connection by default
-      end
-    end
-
-    # Define repetative on_xxx_open/close methods for each endpoint type
-    def self.open_close(endpoint)
-      on_opening = :"on_#{endpoint}_opening"
-      on_opened = :"on_#{endpoint}_opened"
-      on_closing = :"on_#{endpoint}_closing"
-      on_closed = :"on_#{endpoint}_closed"
-      on_error = :"on_#{endpoint}_error"
-
-      Module.new do
-        define_method(:"on_#{endpoint}_local_open") do |event|
-          delegate(on_opened, event) if event.context.remote_open?
-        end
-
-        define_method(:"on_#{endpoint}_remote_open") do |event|
-          if event.context.local_open?
-            delegate(on_opened, event)
-          elsif event.context.local_uninit?
-            delegate(on_opening, event)
-            event.context.open if @opts[:auto_open]
+      def initialize(a)
+        @a = a;
+        @options = {}
+        @methods = Set.new
+        @a.each do |h|
+          @methods.merge(h.methods.select { |m| m.to_s.start_with?("on_") })
+          @options.merge(h.options) do |k, a, b|
+            raise ArgumentError, "handlers have conflicting option #{k} => #{a} != #{b}"
           end
         end
+      end
 
-        define_method(:"on_#{endpoint}_local_close") do |event|
-          delegate(on_closed, event) if event.context.remote_closed?
-        end
+      attr_reader :options
 
-        define_method(:"on_#{endpoint}_remote_close") do |event|
-          if event.context.remote_condition
-            delegate_error(on_error, event)
-          elsif event.context.local_closed?
-            delegate(on_closed, event)
-          elsif @opts[:peer_close_is_error]
-            Condition.assign(event.context.__send__(:_remote_condition), "unexpected peer close")
-            delegate_error(on_error, event)
-          else
-            delegate(on_closing, event)
-          end
-          event.context.close if @opts[:auto_close]
+      def method_missing(name, *args)
+        if respond_to_missing?(name)
+          @a.each { |h| h.__send__(name, *args) if h.respond_to? name}
+        else
+          super
         end
       end
+      def respond_to_missing?(name, private=false); @methods.include?(name); end
+      def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
     end
-    # Generate and include open_close modules for each endpoint type
-    [:connection, :session, :link].each { |endpoint| include open_close(endpoint) }
 
-    def on_transport_error(event) delegate_error(:on_transport_error, event); end
-    def on_transport_closed(event) delegate(:on_transport_closed, event); end
+    # Base adapter
+    class Adapter
+      def initialize(h)
+        @handler = MultiHandler.maybe h
+      end
 
-    # Add flow control for link opening events
-    def on_link_local_open(event) super; add_credit(event); end
-    def on_link_remote_open(event) super; add_credit(event); end
-
-
-    def on_delivery(event)
-      if event.link.receiver?       # Incoming message
-        d = event.delivery
-        if d.aborted?
-          delegate(:on_aborted, event)
-          d.settle
-        elsif d.complete?
-          if d.link.local_closed? && @opts[:auto_accept]
-            d.release
-          else
-            begin
-              delegate(:on_message, event)
-              d.accept if @opts[:auto_accept]
-            rescue Qpid::Proton::Reject
-              d.reject
-            rescue Qpid::Proton::Release
-              d.release(true)
-            end
-          end
-        end
-        delegate(:on_settled, event) if d.settled?
-        add_credit(event)
-      else                      # Outgoing message
-        t = event.tracker
-        if t.updated?
-          case t.remote_state
-          when Qpid::Proton::Delivery::ACCEPTED then delegate(:on_accepted, event)
-          when Qpid::Proton::Delivery::REJECTED then delegate(:on_rejected, event)
-          when Qpid::Proton::Delivery::RELEASED then delegate(:on_released, event)
-          when Qpid::Proton::Delivery::MODIFIED then delegate(:on_modified, event)
-          end
-          delegate(:on_settled, event) if t.settled?
-          t.settle if @opts[:auto_settle]
+      def self.adapt(h)
+        if h.respond_to? :proton_event_adapter
+          a = h.proton_event_adapter
+          a = a.new(h) if a.is_a? Class
+          a
+        else
+          OldMessagingAdapter.new h
         end
       end
-    end
 
-    def on_link_flow(event)
-      add_credit(event)
-      l = event.link
-      delegate(:on_sendable, event) if l.sender? && l.open? && l.credit > 0
-    end
+      # Adapter is already an adapter
+      def proton_event_adapter() self; end
 
-    def add_credit(event)
-      r = event.receiver
-      prefetch = @opts[:prefetch]
-      if r && r.open? && (r.drained == 0) && prefetch && (prefetch > r.credit)
-        r.flow(prefetch - r.credit)
+      def dispatch(method, *args)
+        (@handler.__send__(method, *args); true) if @handler.respond_to? method
       end
     end
   end
