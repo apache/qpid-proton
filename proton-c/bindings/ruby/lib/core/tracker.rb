@@ -23,14 +23,16 @@ module Qpid::Proton
     # @return [Sender] The parent {Sender} link.
     def sender() link; end
 
-    # Re-delivery modifications provided by the receiver in {Delivery#release}
-    # @return [Hash] See the {Delivery#release} +mods+ parameter.
+    # Re-delivery modifications sent by the receiver in {Delivery#release}
+    # @return [Hash] See the {Delivery#release} +opts+ parameter.
+    # @return [nil] If no modifications were requested by the receiver.
     def modifications()
-      return {}  unless (state == MODIFIED) && (d = Cproton.pn_delivery_remote(@impl))
+      return nil if (state != MODIFIED)
+      d = Cproton.pn_delivery_remote(@impl)
       {
-       :failed => Cproton.pn_disposition_get_failed(d),
-       :undeliverable => Cproton.pn_disposition_get_undeliverable(d),
-       :annotations => Data.to_object(Cproton.pn_disposition_annotations(d))
+       :failed => Cproton.pn_disposition_is_failed(d),
+       :undeliverable => Cproton.pn_disposition_is_undeliverable(d),
+       :annotations => Codec::Data.to_object(Cproton.pn_disposition_annotations(d))
       }
     end
   end

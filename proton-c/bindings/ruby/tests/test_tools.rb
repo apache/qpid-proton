@@ -116,3 +116,16 @@ class DriverPair < Array
   end
 
 end
+
+# Container that listens on a random port for a single connection
+class TestContainer < Container
+
+  def initialize(handler, lopts=nil, id=nil)
+    super handler, id
+    @server = TCPServer.open(0)
+    @listener = listen_io(@server, ListenOnceHandler.new(lopts))
+  end
+
+  def port() @server.addr[1]; end
+  def url() "amqp://:#{port}"; end
+end

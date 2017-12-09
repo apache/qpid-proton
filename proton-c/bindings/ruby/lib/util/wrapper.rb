@@ -124,6 +124,7 @@ module Qpid::Proton
       attr_accessor :impl
 
       def inspect
+        return "#{self.class}<nil>" unless @impl
         pstr = Cproton.pn_string("")
         begin
           Cproton.pn_inspect(@impl, pstr)
@@ -133,7 +134,7 @@ module Qpid::Proton
         end
       end
 
-      alias to_s inspect
+      def to_s() inspect; end
 
       def self.registry
         @registry ||= {}

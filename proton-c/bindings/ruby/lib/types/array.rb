@@ -18,7 +18,7 @@
 
 #--
 # Patch the Array class to provide methods for adding its contents
-# to a Qpid::Proton::Data instance.
+# to a Qpid::Proton::Codec::Data instance.
 #++
 
 module Qpid::Proton

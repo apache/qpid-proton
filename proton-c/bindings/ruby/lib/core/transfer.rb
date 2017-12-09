@@ -112,7 +112,10 @@ module Qpid::Proton
     def settle(state = nil)
       update(state) unless state.nil?
       Cproton.pn_delivery_settle(@impl)
+      @inspect = inspect # Save the inspect string, the delivery pointer will go bad.
     end
 
+    def inspect() @inspect || super; end
+    def to_s() inspect; end
   end
 end

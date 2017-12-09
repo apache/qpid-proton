@@ -122,9 +122,8 @@ module Qpid::Proton::Handler
               d.release(true)
             end
           end
-        elsif d.updated? && d.settled?
-          delegate(:on_settled, event)
         end
+        delegate(:on_settled, event) if d.settled?
         add_credit(event)
       else                      # Outgoing message
         t = event.tracker
@@ -132,7 +131,8 @@ module Qpid::Proton::Handler
           case t.remote_state
           when Qpid::Proton::Delivery::ACCEPTED then delegate(:on_accepted, event)
           when Qpid::Proton::Delivery::REJECTED then delegate(:on_rejected, event)
-          when Qpid::Proton::Delivery::RELEASED, Qpid::Proton::Delivery::MODIFIED then delegate(:on_released, event)
+          when Qpid::Proton::Delivery::RELEASED then delegate(:on_released, event)
+          when Qpid::Proton::Delivery::MODIFIED then delegate(:on_modified, event)
           end
           delegate(:on_settled, event) if t.settled?
           t.settle if @opts[:auto_settle]

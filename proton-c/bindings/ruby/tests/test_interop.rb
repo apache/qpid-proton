@@ -15,10 +15,9 @@ end
 
 class InteropTest < MiniTest::Test
   include  Qpid::Proton
-  Data = Codec::Data
 
   def setup
-    @data = Data.new
+    @data = Codec::Data.new
     @message = Message.new
   end
 

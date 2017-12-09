@@ -31,29 +31,34 @@ module Qpid::Proton
     # Release a message, indicating to the sender that it was not processed
     # but may be delivered again to this or another receiver.
     #
-    # @param mods [Hash] Instructions to the sender to modify re-delivery.
+    # @param opts [Hash] Instructions to the sender to modify re-delivery.
     #  To allow re-delivery with no modifications at all use +release(nil)+
     #
-    # @option mods [Boolean] :failed Instruct the sender to increase
+    # @option opts [Boolean] :failed (true) Instruct the sender to increase
     #  {Message#delivery_count} so future receivers will know there was a
     #  previous failed delivery.
     #
-    # @option mods [Boolean] :undeliverable Instruct the sender that this
+    # @option opts [Boolean] :undeliverable (false) Instruct the sender that this
     #  message should never be re-delivered to this receiver, although it may be
     #  delivered other receivers.
     #
-    # @option mods [Hash] :annotations Instruct the sender to update the
-    #  {Message#annotations} with these +key=>value+ pairs before re-delivery.
-    def release(mods = {:failed=>true})
-      mods = { :failed => true } if mods == true # Backwards compatibility
-      if !mods || mods.empty?
-        settle(RELEASED)
-      else
+    # @option opts [Hash] :annotations Instruct the sender to update the
+    #  {Message#annotations} with these +key=>value+ pairs before re-delivery,
+    #  replacing existing entries in {Message#annotations} with the same key.
+    def release(opts = nil)
+      opts = { :failed => false } if (opts == false) # deprecated
+      failed = !opts || opts.fetch(:failed, true)
+      undeliverable = opts && opts[:undeliverable]
+      annotations = opts && opts[:annotations]
+      annotations = nil if annotations && annotations.empty?
+      if failed || undeliverable || annotations
         d = Cproton.pn_delivery_local(@impl)
-        Cproton.pn_disposition_set_failed(mods[:failed])
-        Cproton.pn_disposition_set_undeliverable(mods[:undeliverable])
-        Data.from_object(Cproton.pn_disposition_annotations(d), mods[:annotations]) if mods.key? :annotations
+        Cproton.pn_disposition_set_failed(d, true) if failed
+        Cproton.pn_disposition_set_undeliverable(d, true) if undeliverable
+        Codec::Data.from_object(Cproton.pn_disposition_annotations(d), annotations) if annotations
         settle(MODIFIED)
+      else
+        settle(RELEASED)
       end
     end
 

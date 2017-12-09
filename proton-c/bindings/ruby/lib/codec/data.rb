@@ -120,7 +120,7 @@ module Qpid::Proton
 
       def expect(code)
         unless code == self.code
-          raise TypeError, "expected #{Cproton.pn_type_name(code)}, got #{Cproton.pn_type_name(code)}"
+          raise TypeError, "expected #{Cproton.pn_type_name(code)}, got #{Cproton.pn_type_name(self.code)}"
         end
       end
 
