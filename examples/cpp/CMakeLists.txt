@@ -28,6 +28,21 @@ include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
 add_definitions(${ProtonCpp_DEFINITIONS})
 
+
+macro (has_cxx_features result)
+set(${result} OFF)
+if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
+  set(${result} ON)
+  foreach(feature ${ARGN})
+    list(FIND CMAKE_CXX_COMPILE_FEATURES cxx_${feature} N)
+    if (N EQUAL -1)
+      set(${result} OFF)
+      break()
+    endif()
+  endforeach()
+endif()
+endmacro()
+
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile as C++03 even when C++11 is available")
 # This effectively checks for cmake version 3.1 or later
 if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
@@ -35,7 +50,8 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
     set(STD 98)
   else ()
     set(STD 11)
-    set(HAS_CPP11 ON)
+    has_cxx_features(HAS_ENOUGH_CPP11 lambdas variadic_templates)
+    message(STATUS "Compiling C++11 examples: ${HAS_ENOUGH_CPP11}")
   endif ()
   set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
@@ -66,7 +82,7 @@ foreach(example
   add_executable(${example} ${example}.cpp)
 endforeach()
 
-if(HAS_CPP11)
+if(HAS_ENOUGH_CPP11)
   # Examples that require C++11
   foreach(example
       scheduled_send
@@ -93,7 +109,7 @@ macro(add_cpp_test name)
     set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
   endif(WIN32)
   set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/proton-c/env.py ${EXAMPLE_ENV})
-  add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} "HAS_CPP11=${HAS_CPP11}" -- ${ARGN})
+  add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} "HAS_CPP11=${HAS_ENOUGH_CPP11}" -- ${ARGN})
 endmacro()
 
 add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
