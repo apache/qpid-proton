@@ -54,7 +54,7 @@ For example if you start `direct_recv.rb`, you can connect to it directly with
 
 In this set of examples we see the following event occurring, in addition to what we've seen before:
 
- * **on_disconnected** - Fired when the transport is closed.
+ * **on_transport_close** - Fired when the network transport is closed.
 
 ## Now About That Broker example
 
@@ -70,7 +70,7 @@ The Broker manages a map connecting a queue address to the instance of Exchange 
 
 The broker application demonstrates a new set of events:
 
- * **on_link_opening** - Fired when a remote link is opened but the local end is not yet open. From this event the broker grabs the address and subscribes the link to an exchange for that address.
- * **on_link_closing** - Fired when a remote link is closed but the local end is still open. From this event the broker grabs the address and unsubscribes the link from that exchange.
- * **on_connection_closing** - Fired when a remote connection is closed but the local end is still open.
- * **on_disconnected** - Fired when the protocol transport has closed. The broker removes all links for the disconnected connection, avoiding workign with endpoints that are now gone.
+ * **on_link_open** - Fired when a remote link is opened. From this event the broker grabs the address and subscribes the link to an exchange for that address.
+ * **on_link_close** - Fired when a remote link is closed. From this event the broker grabs the address and unsubscribes the link from that exchange.
+ * **on_connection_close** - Fired when a remote connection is closed but the local end is still open.
+ * **on_transport_close** - Fired when the protocol transport has closed. The broker removes all links for the disconnected connection, avoiding workign with endpoints that are now gone.

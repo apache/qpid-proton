@@ -16,58 +16,62 @@
 # under the License.
 
 
-module Qpid::Proton::Reactor
-
-  # @deprecated use {Qpid::Proton::Container}
-  class Container < Qpid::Proton::Container
-
-    private
-    alias super_connect connect # Access to superclass method
-
-    public
+module Qpid::Proton
+  module Reactor
 
     # @deprecated use {Qpid::Proton::Container}
-    def initialize(handlers, opts=nil)
-      Qpid.deprecated self.class, "Qpid::Proton::Container"
-      super handlers || (opts && opts[:global_handler]), opts && opts[:container_id]
-    end
+    class Container < Qpid::Proton::Container
 
-    alias container_id id
-    alias global_handler handler
+      private
+      alias super_connect connect # Access to superclass method
 
-    def connect(opts=nil)
-      url = opts && (opts[:url] || opts[:address])
-      raise ::ArgumentError.new, "no :url or :address option provided" unless url
-      super(url, opts)
-    end
+      public
 
-    # @deprecated use {#connect} then {Connection#open_sender}
-    def create_sender(context, opts=nil)
-      c = context if context.is_a? Qpid::Proton::Connection
-      unless c
-        url = Qpid::Proton::uri context
-        c = super_connect(url, opts)
-        opts ||= {}
-        opts[:target] ||= url.amqp_address
+      # @deprecated use {Qpid::Proton::Container}
+      def initialize(handlers, opts=nil)
+        Qpid.deprecated self.class, "Qpid::Proton::Container"
+        h = handlers || (opts && opts[:global_handler])
+        id = opts && opts[:container_id]
+        super(h, id)
       end
-      c.open_sender opts
-    end
 
-    # @deprecated use {#connect} then {Connection#open_receiver}
-    def create_receiver(context, opts=nil)
-      c = context if context.is_a? Qpid::Proton::Connection
-      unless c
-        url = Qpid::Proton::uri context
-        c = super_connect(url, opts)
-        opts ||= {}
-        opts[:source] ||= url.amqp_address
+      alias container_id id
+      alias global_handler handler
+
+      def connect(opts=nil)
+        url = opts && (opts[:url] || opts[:address])
+        raise ::ArgumentError.new, "no :url or :address option provided" unless url
+        super(url, opts)
       end
-      c.open_receiver opts
-    end
 
-    def listen(url, ssl_domain = nil)
-      # TODO aconway 2017-11-29: ssl_domain
-      super(url)
+      # @deprecated use {#connect} then {Connection#open_sender}
+      def create_sender(context, opts=nil)
+        c = context if context.is_a? Qpid::Proton::Connection
+        unless c
+          url = Qpid::Proton::uri context
+          c = super_connect(url, opts)
+          opts ||= {}
+          opts[:target] ||= url.amqp_address
+        end
+        c.open_sender opts
+      end
+
+      # @deprecated use {#connect} then {Connection#open_receiver}
+      def create_receiver(context, opts=nil)
+        c = context if context.is_a? Qpid::Proton::Connection
+        unless c
+          url = Qpid::Proton::uri context
+          c = super_connect(url, opts)
+          opts ||= {}
+          opts[:source] ||= url.amqp_address
+        end
+        c.open_receiver opts
+      end
+
+      def listen(url, ssl_domain = nil)
+        # TODO aconway 2017-11-29: ssl_domain
+        super(url)
+      end
     end
   end
 end

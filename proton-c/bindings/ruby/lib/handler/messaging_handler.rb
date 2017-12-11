@@ -22,6 +22,10 @@ module Qpid::Proton
     # @deprecated use {Qpid::Proton::MessagingHandler}
     class MessagingHandler
 
+      # @private
+      def proton_adapter_class() Handler::ReactorMessagingAdapter; end
+
+
       # @overload initialize(opts)
       #   Create a {MessagingHandler} with options +opts+
       #   @option opts [Integer] :prefetch (10)
@@ -46,6 +50,7 @@ module Qpid::Proton
       # @overload initialize(prefetch=10, auto_accept=true, auto_settle=true, peer_close_is_error=false)
       #   @deprecated use +initialize(opts)+ overload
       def initialize(*args)
+        Qpid.deprecated MessagingHandler, Qpid::Proton::MessagingHandler
         @options = {}
         if args.size == 1 && args[0].is_a?(Hash)
           @options.replace(args[0])

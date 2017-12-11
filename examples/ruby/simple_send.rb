@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class SimpleSend < Qpid::Proton::Handler::MessagingHandler
+class SimpleSend < Qpid::Proton::MessagingHandler
 
   def initialize(url, address, expected)
     super()
@@ -31,24 +31,24 @@ class SimpleSend < Qpid::Proton::Handler::MessagingHandler
     @expected = expected
   end
 
-  def on_start(event)
-    c = event.container.connect(@url)
+  def on_container_start(container)
+    c = container.connect(@url)
     c.open_sender(@address)
   end
 
-  def on_sendable(event)
-    while event.sender.credit > 0 && @sent < @expected
+  def on_sendable(sender)
+    while sender.credit > 0 && @sent < @expected
       msg = Qpid::Proton::Message.new("sequence #{@sent}", { :id => @sent } )
-      event.sender.send(msg)
+      sender.send(msg)
       @sent = @sent + 1
     end
   end
 
-  def on_accepted(event)
+  def on_tracker_accept(tracker)
     @confirmed = @confirmed + 1
     if @confirmed == @expected
       puts "All #{@expected} messages confirmed!"
-      event.connection.close
+      tracker.connection.close
     end
   end
 end

@@ -83,30 +83,24 @@ end
 # Generates a random array of a random type.
 # Returns both the array and the type.
 def random_array(length, described = false, description = nil)
-  result = []
-  type = rand(128) % 4
+  choice = rand(128) % 4
+  type = [Qpid::Proton::Types::INT,
+          Qpid::Proton::Types::STRING,
+          Qpid::Proton::Types::DOUBLE,
+          Qpid::Proton::Types::UUID][choice]
+  result = Qpid::Proton::Types::UniformArray.new(type)
+
   low = rand(512)
   high = rand(8192)
 
   (0...length).each do |element|
     case
-      when type == 0 then result << rand(1024)
-      when type == 1 then result << random_string(rand(128))
-      when type == 2 then result << rand * (low - high).abs + low
-      when type == 3 then result << SecureRandom.uuid
+      when choice == 0 then result << rand(1024)
+      when choice == 1 then result << random_string(rand(128))
+      when choice == 2 then result << rand * (low - high).abs + low
+      when choice == 3 then result << SecureRandom.uuid
     end
   end
-
-  # create the array header
-  case
-  when type == 0 then type = Qpid::Proton::Codec::INT
-  when type == 1 then type = Qpid::Proton::Codec::STRING
-  when type == 2 then type = Qpid::Proton::Codec::DOUBLE
-  when type == 3 then type = Qpid::Proton::Codec::UUID
-  end
-
-  result.proton_array_header = Qpid::Proton::Types::ArrayHeader.new(type, description)
-
   return result
 end
 

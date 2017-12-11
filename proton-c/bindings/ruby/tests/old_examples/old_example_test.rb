@@ -28,7 +28,7 @@ def make_url(port, path) "amqp://:#{port}/#{path}"; end
 class OldExampleTest < MiniTest::Test
 
   def run_script(*args)
-    IO.popen [RbConfig.ruby, "-W0", *args];
+    IO.popen [RbConfig.ruby, *args];
   end
 
   def assert_output(want, args)
@@ -91,7 +91,7 @@ end
 
 # Start the broker before all tests.
 $port = unused_port
-$broker = IO.popen [RbConfig.ruby, "-W0", "broker.rb", "-a", ":#{$port}"]
+$broker = IO.popen [RbConfig.ruby, "broker.rb", "-a", ":#{$port}"]
 $broker.readline                # Wait for "Listening"
 
 # Kill the broker after all tests

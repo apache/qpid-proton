@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class Server < Qpid::Proton::Handler::MessagingHandler
+class Server < Qpid::Proton::MessagingHandler
 
   def initialize(url, address)
     super()
@@ -29,34 +29,35 @@ class Server < Qpid::Proton::Handler::MessagingHandler
     @senders = {}
   end
 
-  def on_start(event)
-    c = event.container.connect(@url)
+  def on_container_start(container)
+    c = container.connect(@url)
     c.open_receiver(@address)
     @relay = nil
   end
 
-  def on_connection_opened(event)
-    if event.connection.remote_offered_capabilities &&
-        event.connection.remote_offered_capabilities.contain?("ANONYMOUS-RELAY")
-      @relay = event.connection.open_sender({:target => nil})
+  def on_connection_open(connection)
+    if connection.remote_offered_capabilities &&
+        connection.remote_offered_capabilities.contain?("ANONYMOUS-RELAY")
+      @relay = connection.open_sender({:target => nil})
     end
   end
 
-  def on_message(event)
-    msg = event.message
-    return unless msg.reply_to  # Not a request message
-    puts "<- #{msg.body}"
-    sender = @relay || (@senders[msg.reply_to] ||= event.connection.open_sender(msg.reply_to))
+  def on_message(delivery, message)
+    return unless message.reply_to  # Not a request message
+    puts "<- #{message.body}"
+    unless (sender = @relay)
+      sender = (@senders[message.reply_to] ||= delivery.connection.open_sender(message.reply_to))
+    end
     reply = Qpid::Proton::Message.new
-    reply.address = msg.reply_to
-    reply.body = msg.body.upcase
+    reply.address = message.reply_to
+    reply.body = message.body.upcase
     puts "-> #{reply.body}"
-    reply.correlation_id = msg.correlation_id
+    reply.correlation_id = message.correlation_id
     sender.send(reply)
   end
 
-  def on_transport_error(event)
-    raise "Connection error: #{event.transport.condition}"
+  def on_transport_error(transport)
+    raise "Connection error: #{transport.condition}"
   end
 end
 

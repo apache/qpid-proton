@@ -124,6 +124,7 @@ module Qpid::Proton
       # on_connection_bound if not using a connection_driver)
       @container = opts[:container]
       cid = opts[:container_id] || (@container && @container.id) || SecureRandom.uuid
+      cid = cid.to_s if cid.is_a? Symbol # Allow symbols as container name
       Cproton.pn_connection_set_container(@impl, cid)
       Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]

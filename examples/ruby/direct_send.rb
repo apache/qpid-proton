@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class DirectSend < Qpid::Proton::Handler::MessagingHandler
+class DirectSend < Qpid::Proton::MessagingHandler
 
   def initialize(url, address, expected)
     super()
@@ -36,23 +36,23 @@ class DirectSend < Qpid::Proton::Handler::MessagingHandler
     def on_accept(l) l.close; end
   end
 
-  def on_start(event)
-    event.container.listen(@url, ListenOnce.new)
+  def on_container_start(container)
+    container.listen(@url, ListenOnce.new)
   end
 
-  def on_sendable(event)
-    while event.sender.credit > 0 && @sent < @expected
+  def on_sendable(sender)
+    while sender.credit > 0 && @sent < @expected
       msg = Qpid::Proton::Message.new("sequence #{@sent}", { :id => @sent } )
-      event.sender.send(msg)
+      sender.send(msg)
       @sent = @sent + 1
     end
   end
 
-  def on_accepted(event)
+  def on_tracker_accept(tracker)
     @confirmed = @confirmed + 1
     if @confirmed == @expected
       puts "All #{@expected} messages confirmed!"
-      event.connection.close
+      tracker.connection.close
     end
   end
 end

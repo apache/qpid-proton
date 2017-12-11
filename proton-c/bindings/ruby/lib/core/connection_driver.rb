@@ -159,14 +159,13 @@ module Qpid::Proton
     end
   end
 
-  # A {ConnectionDriver} that feeds events to a {Handler::MessagingHandler}
+  # A {ConnectionDriver} that feeds raw proton events to a handler.
   class HandlerDriver < ConnectionDriver
-    # Combine an {IO} with a {Handler::MessagingHandler} and provide
+    # Combine an {IO} with a handler and provide
     # a simplified way to run the driver via {#process}
     #
     # @param io [IO]
-    # @param handler [Handler::MessagingHandler] to receive events in
-    #   {#dispatch} and {#process}
+    # @param handler [Handler::MessagingHandler] to receive raw events in  {#dispatch} and {#process}
     def initialize(io, handler)
       super(io)
       @handler = handler
@@ -176,7 +175,7 @@ module Qpid::Proton
     # @return [MessagingHandler] The handler dispatched to by {#process}
     attr_reader :handler
 
-    # Dispatch all events available from {#event} to {#handler}
+    # Dispatch all available raw proton events from {#event} to {#handler}
     def dispatch()
       each_event do |e|
         case e.method           # Events that affect the driver

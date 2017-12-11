@@ -23,10 +23,6 @@ require 'qpid_proton'
 require 'thread'
 require 'socket'
 
-Container = Qpid::Proton::Container
-ListenHandler = Qpid::Proton::Listener::Handler
-MessagingHandler = Qpid::Proton::Handler::MessagingHandler
-
 class TestError < Exception; end
 
 def wait_port(port, timeout=5)
@@ -43,7 +39,7 @@ def wait_port(port, timeout=5)
 end
 
 # Handler that records some common events that are checked by tests
-class TestHandler < MessagingHandler
+class TestHandler < Qpid::Proton::MessagingHandler
   attr_reader :errors, :connections, :sessions, :links, :messages
 
   # Pass optional extra handlers and options to the Container
@@ -64,49 +60,53 @@ class TestHandler < MessagingHandler
     raise TestError.new("TestHandler has errors:\n #{text}")
   end
 
-  def on_error(event)
-    @errors.push "#{event.type}: #{event.condition.inspect}"
+  def on_error(condition)
+    @errors.push "#{condition}"
     raise_errors if @raise_errors
   end
 
-  def endpoint_opened(queue, endpoint)
+  def endpoint_open(queue, endpoint)
     queue.push(endpoint)
   end
 
-  def on_connection_opened(event)
-    endpoint_opened(@connections, event.connection)
+  def on_connection_open(c)
+    endpoint_open(@connections, c)
   end
 
-  def on_session_opened(event)
-    endpoint_opened(@sessions, event.session)
+  def on_session_open(s)
+    endpoint_open(@sessions, s)
   end
 
-  def on_link_opened(event)
-    endpoint_opened(@links, event.link)
+  def on_link_open(l)
+    endpoint_open(@links, l)
   end
 
-  def on_message(event)
-    @messages.push(event.message)
+  def on_message(d, m)
+    @messages.push(m)
   end
 end
 
 # ListenHandler that closes the Listener after first accept
-class ListenOnceHandler < ListenHandler
+class ListenOnceHandler < Qpid::Proton::Listener::Handler
   def on_error(l, e)  raise TestError, e.inspect; end
   def on_accept(l) l.close; super; end
 end
 
+# Add port/url to Listener, assuming a TCP socket
+class Qpid::Proton::Listener
+  def port() to_io.addr[1]; end
+  def url() "amqp://:#{port}"; end
+end
+
 # A client/server pair of ConnectionDrivers linked by a socket pair
-class DriverPair < Array
+DriverPair = Struct.new(:client, :server) do
 
   def initialize(client_handler, server_handler)
-    handlers = [client_handler, server_handler]
-    self[0..-1] = Socket.pair(:LOCAL, :STREAM, 0).map { |s| HandlerDriver.new(s, handlers.shift) }
+    s = Socket.pair(:LOCAL, :STREAM, 0)
+    self.client = HandlerDriver.new(s[0], client_handler)
+    self.server = HandlerDriver.new(s[1], server_handler)
     server.transport.set_server
   end
-
-  alias client first
-  alias server last
 
   # Process each driver once, return time of next timed event
   def process(now = Time.now, max_time=nil)
@@ -115,40 +115,20 @@ class DriverPair < Array
     t
   end
 
-  # Run till there is no IO activity - does not handle waiting for timed events
+  def active()
+    can_read = self.select { |d| d.can_read? }
+    can_write = self.select  {|d| d.can_write? }
+    IO.select(can_read, can_write, [], 0)
+  end
+
+  # Run till there is nothing else to do - not handle waiting for timed events
   # but does pass +now+ to process and returns the min returned timed event time
   def run(now=Time.now)
-    t = process(now)    # Generate initial IO activity and get initial next-time
-    t = process(now, t) while (IO.select(self, [], [], 0) rescue nil)
-    t = process(now, t)         # Final gulp to finish off events
+    t = nil
+    begin
+      t = process(now, t)
+    end while active
+    t
   end
 end
 
-# Container that listens on a random port for a single connection
-class TestContainer < Container
-
-  def initialize(handler, lopts=nil, id=nil)
-    super handler, id
-    @server = TCPServer.open(0)
-    @listener = listen_io(@server, ListenOnceHandler.new(lopts))
-  end
-
-  def port() @server.addr[1]; end
-  def url() "amqp://:#{port}"; end
-end
-
-# Raw handler to record on_xxx calls via on_unhandled.
-# Handy as a base for raw test handlers
-class UnhandledHandler
-  def initialize() @calls =[]; end
-  def on_unhandled(name, args) @calls << name; end
-  attr_reader :calls
-
-  # Ruby mechanics to capture on_xxx calls
-
-  def method_missing(name, *args)
-    if respond_to_missing?(name) then on_unhandled(name, *args) else super end;
-  end
-  def respond_to_missing?(name, private=false); (/^on_/ =~ name); end
-  def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
-end

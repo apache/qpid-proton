@@ -85,21 +85,22 @@ require "core/transport"
 require "core/url"
 require "core/connection_driver"
 
-# Messenger API classes
+# Handlers and adapters
+require "handler/adapter"
+require "handler/messaging_adapter"
+require "core/messaging_handler"
+
+# Main container class
+require "core/container"
+
+# DEPRECATED Backwards compatibility shims for Reactor API
+require "handler/reactor_messaging_adapter"
+require "handler/messaging_handler" # Keep original name for compatibility
+require "reactor/container"
+
+# DEPRECATED Messenger API classes
 require "messenger/subscription"
 require "messenger/tracker_status"
 require "messenger/tracker"
 require "messenger/messenger"
-
-# Handler classes
-require "handler/adapter"
-require "handler/old_messaging_adapter"
-# Core classes that depend on Handler
-require "core/messaging_handler"
-require "core/container"
-require "core/connection_driver"
-
-# Backwards compatibility shims
-require "reactor/container"
-require "handler/messaging_handler"
 

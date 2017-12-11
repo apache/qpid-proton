@@ -91,10 +91,10 @@ module Qpid::Proton
 
     # Create a new Container
     # @overload initialize(id=nil)
-    #   @param id [String] A unique ID for this container, use random UUID if nil.
+    #   @param id [String,Symbol] A unique ID for this container, use random UUID if nil.
     #
     # @overload initialize(handler=nil, id=nil)
-    #  @param id [String] A unique ID for this container, use random UUID if nil.
+    #  @param id [String,Symbol] A unique ID for this container, use random UUID if nil.
     #  @param handler [MessagingHandler] Optional default handler for connections
     #   that do not have their own handler (see {#connect} and {#listen})
     #
@@ -102,12 +102,16 @@ module Qpid::Proton
     #   handler instance for each connection, as a shared handler may be called
     #   concurrently.
     #
-    def initialize(handler = nil, id = nil)
-      # Allow ID as sole argument
-      (handler, id = nil, handler.to_str) if (id.nil? && handler.respond_to?(:to_str))
-      # Allow multiple handlers ofor backwards compatibility
-      @handler = handler
-      @id = ((id && id.to_s) || SecureRandom.uuid).freeze
+    def initialize(*args)
+      case args.size
+      when 2 then @handler, @id = args
+      when 1 then
+        @id = String.try_convert(args[0]) || (args[0].to_s if args[0].is_a? Symbol)
+        @handler = args[0] unless @id
+      else raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 0..2"
+      end
+      @adapter = Handler::Adapter.adapt(@handler)
+      @id = (@id || SecureRandom.uuid).freeze
 
       # Implementation note:
       #
@@ -117,7 +121,7 @@ module Qpid::Proton
       # - nil on the @work queue makes a #run thread exit
 
       @work = Queue.new
-      @work << :on_start << self # Issue on_start and start start selecting
+      @work << :start << self   # Issue start and start start selecting
       @wake = IO.pipe           # Wakes #run thread in IO.select
       @auto_stop = true         # Stop when @active drops to 0
 
@@ -224,9 +228,8 @@ module Qpid::Proton
       while task = @work.pop
         case task
 
-        when :on_start
-          event = Event.new(nil, :on_start, self)
-          @handler.on_start(event) if @handler.respond_to? :on_start
+        when :start
+          @adapter.on_container_start(self) if @adapter.respond_to? :on_container_start
 
         when Container
           r, w = [@wake[0]], []
@@ -264,8 +267,11 @@ module Qpid::Proton
       end
     ensure
       @lock.synchronize do
-        @running -= 1
-        work_wake nil if @running > 0         # Tell the next thread to exit
+        if (@running -= 1) > 0
+          work_wake nil         # Signal the next thread
+        else
+          @adapter.on_container_stop(self) if @adapter.respond_to? :on_container_stop
+        end
       end
     end
 
@@ -296,7 +302,7 @@ module Qpid::Proton
       wake
     end
 
-    private
+    protected
 
     def wake; @wake[1].write_nonblock('x') rescue nil; end
 
@@ -314,7 +320,7 @@ module Qpid::Proton
     def connection_driver(io, opts=nil, server=false)
       opts ||= {}
       opts[:container] = self
-      opts[:handler] ||= @handler
+      opts[:handler] ||= @adapter
       ConnectionTask.new(self, io, opts, server)
     end
 

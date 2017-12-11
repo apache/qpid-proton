@@ -20,33 +20,31 @@
 require 'qpid_proton'
 require 'optparse'
 
-class HelloWorld < Qpid::Proton::Handler::MessagingHandler
+class HelloWorld < Qpid::Proton::MessagingHandler
 
   def initialize(url, address)
     super()
     @url, @address = url, address
   end
 
-  def on_start(event)
-    conn = event.container.connect(@url)
+  def on_container_start(container)
+    conn = container.connect(@url)
     conn.open_sender(@address)
     conn.open_receiver(@address)
   end
 
-  def on_sendable(event)
-    msg = Qpid::Proton::Message.new
-    msg.body = "Hello world!"
-    event.sender.send(msg)
-    event.sender.close
+  def on_sendable(sender)
+    sender.send(Qpid::Proton::Message.new("Hello world!"))
+    sender.close
   end
 
-  def on_message(event)
-    puts event.message.body
-    event.connection.close
+  def on_message(delivery, message)
+    puts message.body
+    delivery.connection.close
   end
 
-  def on_transport_error(event)
-    raise "Connection error: #{event.transport.condition}"
+  def on_transport_error(transport)
+    raise "Connection error: #{transport.condition}"
   end
 end
 

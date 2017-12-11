@@ -130,7 +130,7 @@ module Qpid::Proton
       case context
       when Delivery then @delivery = @context
       # deprecated: for backwards compat allow a Tracker to be treated as a Delivery
-      when Tracker then @delivery = Delivery.new(Tracker.impl)
+      when Tracker then @delivery = Delivery.new(context.impl)
       end
     end
 

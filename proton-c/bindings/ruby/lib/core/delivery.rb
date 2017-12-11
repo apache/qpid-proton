@@ -75,13 +75,15 @@ module Qpid::Proton
     def complete?() readable? && !aborted? && !partial?; end
 
     # Get the message from the delivery.
-    # @raise [ProtonError] if the message is not {#complete?} or there is an
-    # error decoding the message.
+    # @return [Message] The message
+    # @raise [AbortedError] if the message has been aborted (check with {#aborted?}
+    # @raise [UnderflowError] if the message is incomplete (check with {#complete?}
+    # @raise [::ArgumentError] if the delivery is not the current delivery on a receiving link.
     def message
       return @message if @message
-      raise ProtonError("message aborted by sender") if aborted?
-      raise ProtonError("incoming message incomplete") if partial?
-      raise ProtonError("no incoming message") unless readable?
+      raise AbortedError, "message aborted by sender" if aborted?
+      raise UnderflowError, "incoming message incomplete" if partial?
+      raise ArgumentError, "no incoming message" unless readable?
       @message = Message.new
       @message.decode(link.receive(pending))
       link.advance

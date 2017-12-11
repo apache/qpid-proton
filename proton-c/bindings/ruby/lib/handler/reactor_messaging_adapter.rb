@@ -20,8 +20,9 @@
 module Qpid::Proton
   module Handler
 
-    # Adapter to convert raw proton events to old {Handler::MessagingHandler} events
-    class OldMessagingAdapter  < Adapter
+    # Adapter to convert raw proton events for the old {Handler::MessagingHandler}
+    # used by the Reactor.
+    class ReactorMessagingAdapter  < Adapter
       def initialize handler
         super
         @opts = (handler.options if handler.respond_to?(:options)) || {}
@@ -32,17 +33,23 @@ module Qpid::Proton
         end
       end
 
+      alias dispatch forward
+
       def delegate(method, event)
         event.method = method     # Update the event with the new method
-        event.dispatch(@handler) || dispatch(:on_unhandled, event)
+        event.dispatch(@handler) or dispatch(:on_unhandled, event)
       end
+
       def delegate_error(method, event)
         event.method = method
-        unless event.dispatch(@handler) # Default behaviour if not dispatched
-          dispatch(:on_error, event) || dispatch(:on_unhandled, event)
-          event.connection.close event.context.condition # Close the connection by default
+        unless event.dispatch(@handler) || dispatch(:on_error, event)
+          dispatch(:on_unhandled, event)
+          event.connection.close(event.context.condition) if @opts[:auto_close]
         end
       end
+
+      def on_container_start(container) delegate(:on_start, Event.new(nil, nil, container)); end
+      def on_container_stop(container) delegate(:on_stop, Event.new(nil, nil, container)); end
 
       # Define repetative on_xxx_open/close methods for each endpoint type
       def self.open_close(endpoint)
@@ -108,7 +115,7 @@ module Qpid::Proton
             else
               begin
                 delegate(:on_message, event)
-                d.accept if @opts[:auto_accept]
+                d.accept if @opts[:auto_accept] && !d.settled?
               rescue Qpid::Proton::Reject
                 d.reject
               rescue Qpid::Proton::Release

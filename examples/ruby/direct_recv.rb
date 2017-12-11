@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class DirectReceive < Qpid::Proton::Handler::MessagingHandler
+class DirectReceive < Qpid::Proton::MessagingHandler
 
   def initialize(url, address, count)
     super()
@@ -35,16 +35,16 @@ class DirectReceive < Qpid::Proton::Handler::MessagingHandler
     def on_accept(l) l.close; end
   end
 
-  def on_start(event)
-    event.container.listen(@url, ListenOnce.new)
+  def on_container_start(container)
+    container.listen(@url, ListenOnce.new)
   end
 
-  def on_message(event)
+  def on_message(delivery, message)
     if @expected.zero? || (@received < @expected)
-      puts "Received: #{event.message.body}"
+      puts "Received: #{message.body}"
       @received = @received + 1
       if @received == @expected
-        event.connection.close
+        delivery.connection.close
       end
     end
   end

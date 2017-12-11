@@ -55,9 +55,14 @@ module Qpid::Proton
       attr_reader :type
 
       # @return [Object] Optional descriptor.
-      def attr_reader() descriptor; end
+      attr_reader :descriptor
 
       def inspect() "#{self.class.name}<#{type}>#{super}"; end
+
+      def <=>(x)
+        ret = [@type, @descriptor] <=> [x.type, x.descriptor]
+        ret == 0 ? super : ret
+      end
     end
   end
 end

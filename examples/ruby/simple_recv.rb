@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class SimpleReceive < Qpid::Proton::Handler::MessagingHandler
+class SimpleReceive < Qpid::Proton::MessagingHandler
 
   def initialize(url, address, count)
     super()
@@ -30,17 +30,17 @@ class SimpleReceive < Qpid::Proton::Handler::MessagingHandler
     @received = 0
   end
 
-  def on_start(event)
-    c = event.container.connect(@url)
+  def on_container_start(container)
+    c = container.connect(@url)
     c.open_receiver(@address)
   end
 
-  def on_message(event)
+  def on_message(delivery, message)
     if @expected.zero? || (@received < @expected)
-      puts "Received: #{event.message.body}"
+      puts "Received: #{message.body}"
       @received = @received + 1
       if @received == @expected
-        event.connection.close
+        delivery.connection.close
       end
     end
   end

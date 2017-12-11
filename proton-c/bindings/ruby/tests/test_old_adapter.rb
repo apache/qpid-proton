@@ -21,8 +21,10 @@ require 'qpid_proton'
 require 'test_tools'
 include Qpid::Proton
 
+OldMessagingHandler = Qpid::Proton::Handler::MessagingHandler #Use the old handler.
+
 # Records every call
-class AllHandler < MessagingHandler
+class AllHandler < OldMessagingHandler
   def initialize(*args)
     super(*args)
     @calls = []
@@ -162,7 +164,7 @@ end
 class TestOldUnhandled < Minitest::Test
 
   def test_message
-    handler_class = Class.new(MessagingHandler) do
+    handler_class = Class.new(OldMessagingHandler) do
       def on_message(event) @message = event.message; end
       def on_accepted(event) @accepted = true; end
       attr_accessor :message, :accepted, :sender
@@ -178,7 +180,7 @@ class TestOldUnhandled < Minitest::Test
 
   # Verify on_unhandled is called
   def test_unhandled
-    handler_class = Class.new(MessagingHandler) do
+    handler_class = Class.new(OldMessagingHandler) do
       def initialize() super; @unhandled = []; end
       def on_unhandled(event) @unhandled << event.method; end
       attr_accessor :unhandled
@@ -191,7 +193,7 @@ class TestOldUnhandled < Minitest::Test
 
   # Verify on_error is called
   def test_on_error
-    handler_class = Class.new(MessagingHandler) do
+    handler_class = Class.new(OldMessagingHandler) do
       def initialize() super; @error = []; @unhandled = []; end
       def on_error(event) @error << event.method; end
       def on_unhandled(event) @unhandled << event.method; end
@@ -202,18 +204,17 @@ class TestOldUnhandled < Minitest::Test
     r = d.client.connection.open_receiver; d.run
     r.close "oops"; d.run
     assert_equal [:on_connection_opened, :on_session_opened, :on_link_opened,
-                  :on_link_closed, :on_connection_closed, :on_transport_closed], d.client.handler.unhandled
-    assert_equal [:on_connection_error], d.client.handler.error
+                  :on_link_closed], d.client.handler.unhandled
     assert_equal [:on_connection_opening, :on_session_opening, :on_link_opening,
                   :on_connection_opened, :on_session_opened, :on_link_opened, :on_sendable,
-                  :on_link_closed, :on_connection_closed, :on_transport_closed], d.server.handler.unhandled
+                  :on_link_closed], d.server.handler.unhandled
     assert_equal [:on_link_error], d.server.handler.error
 
   end
 
   # Verify on_unhandled is called even for errors if there is no on_error
   def test_unhandled_error
-    handler_class = Class.new(MessagingHandler) do
+    handler_class = Class.new(OldMessagingHandler) do
       def initialize() super; @unhandled = []; end
       def on_unhandled(event) @unhandled << event.method; end
       attr_accessor :unhandled

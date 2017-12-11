@@ -38,65 +38,41 @@ describe "The extended array type" do
     expect(value).respond_to? :proton_described?
   end
 
-  it "raises an error when getting from a nil Data object" do
-    expect {
-      Array.proton_get(nil)
-    }.must_raise
-  end
-
   it "raises an error when the current object is not a list" do
     @data.string = random_string(128)
     @data.rewind
 
     expect {
-      Array.proton_get(@data)
+      @data.list
     }.must_raise(TypeError)
   end
 
-  it "does not have an array header when it's a simple list" do
-    assert !@list.proton_described?
-  end
-
   it "can be put into a Data object as a list" do
-    @list.proton_put(@data)
-    result = Array.proton_get(@data)
+    @data.list= @list
+    result = @data.list
     expect(result).must_equal(@list)
-    expect(result.proton_array_header) == (nil)
-  end
-
-  it "has an array header when it's an AMQP array" do
-    expect(@undescribed.proton_array_header).wont_be_nil
-    expect(@described.proton_array_header).wont_be_nil
   end
 
   it "raises an error when the elements of an Array are dissimilar and is put into a Data object" do
-    value = []
-    value.proton_array_header = Qpid::Proton::Types::ArrayHeader.new(Qpid::Proton::Codec::INT)
+    value = Qpid::Proton::Types::UniformArray.new(Qpid::Proton::Codec::INT)
     value << random_string(16)
-
     expect {
-      value.proton_put(@data)
+      @data << value
     }.must_raise(TypeError)
   end
 
   it "can be put into a Data object as an undescribed array" do
-    @undescribed.proton_put(@data)
-    result = Array.proton_get(@data)
+    @data << @undescribed
+    result = @data.array
     expect(result).is_a? Qpid::Proton::Types::UniformArray
     expect(@undescribed).must_equal(result)
-    expect(result.proton_array_header).wont_be_nil
-    expect(result.proton_array_header).must_equal(@undescribed.proton_array_header)
-    assert !result.proton_array_header.described?
   end
 
   it "can be put into a Data object as a described array" do
-    @described.proton_put(@data)
-    result = Array.proton_get(@data)
+    @data << @described
+    result = @data.array
     expect(@described).must_equal(result)
     expect(result).is_a? Qpid::Proton::Types::UniformArray
-    expect(result.proton_array_header).wont_be_nil
-    expect(result.proton_array_header).must_equal(@described.proton_array_header)
-    expect(result.proton_array_header.described?).must_equal(true)
   end
 
 end

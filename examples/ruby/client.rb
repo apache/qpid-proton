@@ -20,7 +20,7 @@
 require 'qpid_proton'
 require 'optparse'
 
-class Client < Qpid::Proton::Handler::MessagingHandler
+class Client < Qpid::Proton::MessagingHandler
 
   def initialize(url, address, requests)
     super()
@@ -29,8 +29,8 @@ class Client < Qpid::Proton::Handler::MessagingHandler
     @requests = requests
   end
 
-  def on_start(event)
-    c = event.container.connect(@url)
+  def on_container_start(container)
+    c = container.connect(@url)
     @sender = c.open_sender(@address)
     @receiver = c.open_receiver({:dynamic => true})
   end
@@ -45,24 +45,22 @@ class Client < Qpid::Proton::Handler::MessagingHandler
     end
   end
 
-  def on_link_opened(event)
-    if event.receiver == @receiver
-      next_request
-    end
+  def on_link_open(link)
+    next_request if link.receiver?
   end
 
-  def on_message(event)
-    puts "<- #{event.message.body}"
+  def on_message(delivery, message)
+    puts "<- #{message.body}"
     @requests.delete_at(0)
     if !@requests.empty?
       next_request
     else
-      event.connection.close
+      delivery.connection.close
     end
   end
 
-  def on_transport_error(event)
-    raise "Connection error: #{event.transport.condition}"
+  def on_transport_error(transport)
+    raise "Connection error: #{transport.condition}"
   end
 
 end

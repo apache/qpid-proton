@@ -20,92 +20,79 @@ require 'test_tools'
 require 'minitest/unit'
 require 'socket'
 
-Message = Qpid::Proton::Message
-SASL = Qpid::Proton::SASL
-Disposition = Qpid::Proton::Disposition
-
-# Easier debugging of thread problems
-Thread::abort_on_exception=true
-
 # Container that listens on a random port
-class TestContainer < Container
+class TestContainer < Qpid::Proton::Container
 
   def initialize(handler, lopts=nil, id=nil)
     super handler, id
-    @server = TCPServer.open(0)
-    @listener = listen_io(@server, ListenOnceHandler.new(lopts))
+    @listener = listen_io(TCPServer.open(0), ListenOnceHandler.new(lopts))
   end
 
-  def port() @server.addr[1]; end
-  def url() "amqp://:#{port}"; end
+  def port() @listener.to_io.addr[1]; end
+  def url() "amqp://:#{port}"; end#
 end
 
 class ContainerTest < Minitest::Test
+  include Qpid::Proton
 
   def test_simple()
-    sh = Class.new(MessagingHandler) do
+    send_handler = Class.new(MessagingHandler) do
       attr_reader :accepted, :sent
-      def on_sendable(e)
-        e.link.send Message.new("foo") unless @sent
+      def on_sendable(sender)
+        sender.send Message.new("foo") unless @sent
         @sent = true
       end
 
-      def on_accepted(e)
+      def on_tracker_accept(tracker)
         @accepted = true
-        e.connection.close
+        tracker.connection.close
       end
     end.new
 
-    rh = Class.new(MessagingHandler) do
+    receive_handler = Class.new(MessagingHandler) do
       attr_reader :message, :link
-      def on_link_opening(e)
-        @link = e.link
-        e.link.open
-        e.link.flow(1)
+      def on_link_open(link)
+        @link = link
+        @link.open
+        @link.flow(1)
       end
 
-      def on_message(e)
-        @message = e.message;
-        e.delivery.update Disposition::ACCEPTED
-        e.delivery.settle
+      def on_message(delivery, message)
+        @message = message;
+        delivery.update Disposition::ACCEPTED
+        delivery.settle
       end
     end.new
 
-    c = TestContainer.new(rh, {}, __method__)
-    c.connect(c.url, {:handler => sh}).open_sender({:name => "testlink"})
+    c = TestContainer.new(receive_handler, {}, __method__)
+    c.connect(c.url, {:handler => send_handler}).open_sender({:name => "testlink"})
     c.run
 
-    assert sh.accepted
-    assert_equal "testlink", rh.link.name
-    assert_equal "foo", rh.message.body
-    assert_equal "test_simple", rh.link.connection.container_id
+    assert send_handler.accepted
+    assert_equal "testlink", receive_handler.link.name
+    assert_equal "foo", receive_handler.message.body
+    assert_equal "test_simple", receive_handler.link.connection.container_id
   end
 
   class CloseOnOpenHandler < TestHandler
-    def on_connection_opened(e) e.connection.close; end
-  end
-
-  def test_multi_handler
-    handler_class = Class.new(CloseOnOpenHandler) do
-      @@opened = 0
-      def self.opened; @@opened; end
-      def on_connection_opened(e) @@opened += 1; super; end
-    end
-    hs = 3.times.collect { handler_class.new }
-    c = TestContainer.new(hs, {},  __method__)
-    c.connect(c.url)
-    c.run
-    assert_equal 6, handler_class.opened # Opened at each end * 3 handlers
+    def on_connection_open(c) c.close; end
   end
 
   def test_auto_stop_one
     # A listener and a connection
-    c = Container.new(__method__)
+    start_stop_handler = Class.new do
+      def on_container_start(c) @start = c; end
+      def on_container_stop(c) @stop = c; end
+      attr_reader :start, :stop
+    end.new
+    c = Container.new(start_stop_handler, __method__)
     threads = 3.times.collect { Thread.new { c.run } }
     sleep(0.01) while c.running < 3
+    assert_equal c, start_stop_handler.start
     l = c.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
     c.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
     threads.each { |t| assert t.join(1) }
+    assert_equal c, start_stop_handler.stop
     assert_raises(Container::StoppedError) { c.run }
   end
 
@@ -113,8 +100,8 @@ class ContainerTest < Minitest::Test
     # Connect between different containers
     c1, c2 = Container.new("#{__method__}-1"), Container.new("#{__method__}-2")
     threads = [ Thread.new {c1.run }, Thread.new {c2.run } ]
-    l = c1.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
-    c2.connect("amqp://:#{l.to_io.addr[1]}", { :handler => CloseOnOpenHandler.new} )
+    l = c2.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => CloseOnOpenHandler.new}))
+    c1.connect(l.url, { :handler => CloseOnOpenHandler.new} )
     assert threads.each { |t| t.join(1) }
     assert_raises(Container::StoppedError) { c1.run }
     assert_raises(Container::StoppedError) { c2.connect("") }
@@ -155,7 +142,6 @@ class ContainerTest < Minitest::Test
     conn = c.connect("amqp://:#{l.to_io.addr[1]}")
     c.stop
     assert c.stopped
-
     threads.each { |t| assert t.join(1) }
 
     assert_raises(Container::StoppedError) { c.run }
@@ -167,6 +153,7 @@ end
 
 
 class ContainerSASLTest < Minitest::Test
+  include Qpid::Proton
 
   # Handler for test client/server that sets up server and client SASL options
   class SASLHandler < TestHandler
@@ -176,24 +163,25 @@ class ContainerSASLTest < Minitest::Test
       @url, @opts = url, opts
     end
 
-    def on_start(e)
-      @client = e.container.connect("#{@url}:#{e.container.port}", @opts)
+    def on_container_start(container)
+      @client = container.connect("#{@url}:#{container.port}", @opts)
     end
 
     attr_reader :auth_user
 
-    def on_connection_opened(e)
+    def on_connection_open(connection)
       super
-      if e.connection == @client
-        e.connection.close
+      if connection == @client
+        connection.close
       else
-        @auth_user = e.transport.sasl.user
+        @auth_user = connection.transport.sasl.user
       end
     end
   end
 
   # Generate SASL server configuration files and database, initialize proton SASL
   class SASLConfig
+    include Qpid::Proton
     attr_reader :conf_dir, :conf_file, :conf_name, :database
 
     def initialize()

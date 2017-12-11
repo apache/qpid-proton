@@ -117,9 +117,9 @@ module Qpid::Proton
   class Release < ProtonError
   end
 
-  # Raised when a message is aborted.
+  # Raised when a message is aborted by the sender.
   #
-  class Aborted < ProtonError
+  class AbortedError < ProtonError
   end
 
 end

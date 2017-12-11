@@ -103,18 +103,21 @@ execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
   set(test_env ${env_py} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
-  macro(add_ruby_test file)
-    get_filename_component(name ${file} NAME_WE)
+
+  macro(add_ruby_test script)
+    if(${script} MATCHES "old")
+      set(opt "RUBYOPT=-W0")    # Suppress deprecation warnings
+    endif()
+    get_filename_component(name ${script} NAME_WE)
     string(REPLACE "_" "-" name "ruby-${name}")
     add_test(
       NAME ${name}
-      COMMAND ${test_env} ${RUBY_EXECUTABLE} ${file} -v
+      COMMAND ${test_env} ${opt} ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
+
   endmacro()
   add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
-  # Old examples for backwards compatibility testing.
   add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old_examples)
-
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})

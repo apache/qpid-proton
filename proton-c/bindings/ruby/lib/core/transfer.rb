@@ -22,12 +22,10 @@ module Qpid::Proton
   # Common base class for {Tracker} and {Delivery}.
   class Transfer
 
-    private
-
+    # @!private
     PROTON_METHOD_PREFIX = "pn_delivery"
+    # @!private
     include Util::Wrapper
-
-    protected
 
     def self.wrap(impl)
       return unless impl

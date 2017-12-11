@@ -69,7 +69,7 @@ class MessageQueue
 
 end
 
-class Broker < Qpid::Proton::Handler::MessagingHandler
+class Broker < Qpid::Proton::MessagingHandler
 
   def initialize(url)
     super()
@@ -77,8 +77,8 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     @queues = {}
   end
 
-  def on_start(event)
-    @listener = event.container.listen(@url)
+  def on_container_start(container)
+    @listener = container.listen(@url)
     STDOUT.puts "Listening on #{@url}"; STDOUT.flush
   end
 
@@ -89,20 +89,20 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     @queues[address]
   end
 
-  def on_link_opening(event)
-    if event.link.sender?
-      if event.link.remote_source.dynamic?
+  def on_link_open(link)
+    if link.sender?
+      if link.remote_source.dynamic?
         address = SecureRandom.uuid
-        event.link.source.address = address
+        link.source.address = address
         q = MessageQueue.new(true)
         @queues[address] = q
-        q.subscribe(event.link)
-      elsif event.link.remote_source.address
-        event.link.source.address = event.link.remote_source.address
-        self.queue(event.link.source.address).subscribe(event.link)
+        q.subscribe(link)
+      elsif link.remote_source.address
+        link.source.address = link.remote_source.address
+        self.queue(link.source.address).subscribe(link)
       end
-    elsif event.link.remote_target.address
-      event.link.target.address = event.link.remote_target.address
+    elsif link.remote_target.address
+      link.target.address = link.remote_target.address
     end
   end
 
@@ -114,16 +114,16 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     end
   end
 
-  def on_link_closing(event)
-    self.unsubscribe(event.link) if event.link.sender?
+  def on_link_close(link)
+    self.unsubscribe(link) if link.sender?
   end
 
-  def on_connection_closing(event)
-    self.remove_stale_consumers(event.connection)
+  def on_connection_close(connection)
+    self.remove_stale_consumers(connection)
   end
 
-  def on_disconnected(event)
-    self.remove_stale_consumers(event.connection)
+  def on_transport_close(transport)
+    self.remove_stale_consumers(transport.connection)
   end
 
   def remove_stale_consumers(connection)
@@ -134,14 +134,14 @@ class Broker < Qpid::Proton::Handler::MessagingHandler
     end
   end
 
-  def on_sendable(event)
-    q = self.queue(event.link.source.address)
-    q.dispatch(event.link)
+  def on_sendable(sender)
+    q = self.queue(sender.source.address)
+    q.dispatch(sender)
   end
 
-  def on_message(event)
-    q = self.queue(event.link.target.address)
-    q.publish(event.message)
+  def on_message(delivery, message)
+    q = self.queue(delivery.link.target.address)
+    q.publish(message)
   end
 
 end

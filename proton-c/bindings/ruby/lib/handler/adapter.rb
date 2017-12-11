@@ -20,57 +20,60 @@
 module Qpid::Proton
   module Handler
 
-    class MultiHandler
-      def self.maybe(h)
-        a = Array(h)
-        a.size > 1 ? self.new(h) : h
-      end
+    def self.handler_method?(method) /^on_/ =~ name; end
 
-      def initialize(a)
-        @a = a;
+    # Handler for an array of handlers of uniform type, with non-conflicting options
+    class ArrayHandler
+
+      def initialize(handlers)
+        raise "empty handler array" if handlers.empty?
+        adapters = handlers.map do |h|
+          h.__send__(proton_adapter_class) if h.respond_to? :proton_adapter_class
+        end.uniq
+        raise "handler array not uniform, adapters requested: #{adapters}" if adapters.size > 1
+        @proton_adapter_class = htypes[0]
+
         @options = {}
         @methods = Set.new
-        @a.each do |h|
-          @methods.merge(h.methods.select { |m| m.to_s.start_with?("on_") })
-          @options.merge(h.options) do |k, a, b|
-            raise ArgumentError, "handlers have conflicting option #{k} => #{a} != #{b}"
+        handlers.each do |h|
+          if h.respond_to?(:options)
+            @options.merge(h.options) do |k, a, b|
+              raise ArgumentError, "handler array has conflicting options for [#{k}]: #{a} != #{b}"
+            end
           end
+          @methods.merge(h.methods.select { |m| handler_method? m }) # Event handler methods
         end
       end
 
-      attr_reader :options
+      attr_reader :options, :proton_adapter_class
 
       def method_missing(name, *args)
         if respond_to_missing?(name)
-          @a.each { |h| h.__send__(name, *args) if h.respond_to? name}
+          @adapters.each { |a| a.__send__(name, *args) if a.respond_to? name}
         else
           super
         end
       end
+
       def respond_to_missing?(name, private=false); @methods.include?(name); end
       def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
     end
 
-    # Base adapter
+    # Base adapter for raw proton events
     class Adapter
-      def initialize(h)
-        @handler = MultiHandler.maybe h
+      def initialize(h) @handler = h; end
+
+      def adapter_class(h) nil; end # Adapters don't need adapting
+
+      # Create and return an adapter for handler, or return h if it does not need adapting.
+      def self.adapt(handler)
+        return unless handler
+        a = Array(handler)
+        h = (a.size == 1) ? a[0] : ArrayHandler.new(a)
+        a = h.respond_to?(:proton_adapter_class) ? h.proton_adapter_class.new(handler) : h
       end
 
-      def self.adapt(h)
-        if h.respond_to? :proton_event_adapter
-          a = h.proton_event_adapter
-          a = a.new(h) if a.is_a? Class
-          a
-        else
-          OldMessagingAdapter.new h
-        end
-      end
-
-      # Adapter is already an adapter
-      def proton_event_adapter() self; end
-
-      def dispatch(method, *args)
+      def forward(method, *args)
         (@handler.__send__(method, *args); true) if @handler.respond_to? method
       end
     end

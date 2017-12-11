@@ -24,6 +24,9 @@ module Qpid::Proton
   #
   class MessagingHandler
 
+    # @private
+    def proton_adapter_class() Handler::MessagingAdapter; end
+
     # Create a {MessagingHandler}
     # @option opts [Integer] :prefetch (10)
     #  The number of messages to  fetch in advance, 0 disables prefetch.
@@ -40,11 +43,8 @@ module Qpid::Proton
     # @option opts [Boolean] :auto_close (true)
     #  If true, respond to a remote close automatically with a local close.
     #  If false, the application must call {Connection#close} to finish closing connections.
-    # @option opts [Boolean] :peer_close_is_error (false)
-    #  If true, and the remote peer closes the connection without an error condition,
-    #  the set the local error condition {Condition}("error", "unexpected peer close")
-    def initialize(opts=nil)
-      @options = opts && opts.clone
+    def initialize(opts={})
+      @options = opts.clone
     end
 
     # @return [Hash] handler options, see {#initialize}
@@ -155,6 +155,10 @@ module Qpid::Proton
 
     # @!method on_delivery_settle(delivery)
     # The sending end settled a delivery
+    # @param delivery [Delivery] The delivery.
+
+    # @!method on_delivery_abort(delivery)
+    # A message was begun but aborted by the sender, so was not received.
     # @param delivery [Delivery] The delivery.
 
     # @!endgroup

@@ -24,8 +24,7 @@ include Qpid::Proton
 # Test Delivery and Tracker
 class TestDelivery < Minitest::Test
 
-  # Duck-typed handler
-  class NoAutoHandler
+  class NoAutoHandler < MessagingHandler
     @@options = {:auto_settle=>false, :auto_accept=>false}
     def options() @@options; end
   end
@@ -35,32 +34,32 @@ class TestDelivery < Minitest::Test
       @unsent = to_send
     end
 
-    def on_connection_opened(event)
+    def on_connection_open(connection)
       @outcomes = []
-      @sender = event.connection.open_sender("x")
+      @sender = connection.open_sender("x")
       @unsettled = {}           # Awaiting remote settlement
     end
 
     attr_reader :outcomes, :unsent, :unsettled
 
-    def on_sendable(event)
+    def on_sendable(sender)
       return if @unsent.empty?
       m = Message.new(@unsent.shift)
-      tracker = event.sender.send(m)
+      tracker = sender.send(m)
       @unsettled[tracker] = m
     end
 
-    def outcome(event)
-      t = event.tracker
+    def outcome(method, tracker)
+      t = tracker
       m = @unsettled.delete(t)
-      @outcomes << [m.body, event.method, t.id, t.state, t.modifications]
-      event.connection.close if @unsettled.empty?
+      @outcomes << [m.body, method, t.id, t.state, t.modifications]
+      tracker.connection.close if @unsettled.empty?
     end
 
-    def on_accepted(event) outcome(event); end
-    def on_rejected(event) outcome(event); end
-    def on_released(event) outcome(event); end
-    def on_modified(event) outcome(event); end
+    def on_tracker_accept(tracker) outcome(__method__, tracker); end
+    def on_tracker_reject(tracker) outcome(__method__, tracker); end
+    def on_tracker_release(tracker) outcome(__method__, tracker); end
+    def on_tracker_modify(tracker) outcome(__method__, tracker); end
   end
 
   class ReceiveHandler < NoAutoHandler
@@ -70,17 +69,17 @@ class TestDelivery < Minitest::Test
 
     attr_reader :received
 
-    def on_message(event)
-      @received << event.message.body
-      case event.message.body
-      when "accept" then event.delivery.accept
-      when "reject" then event.delivery.reject
-      when "release-really" then event.delivery.release({:failed=>false}) # AMQP RELEASED
-      when "release" then event.delivery.release # AMQP MODIFIED{ :failed => true }
-      when "modify" then event.delivery.release({:undeliverable => true, :annotations => {:x => 42 }})
-      when "modify-empty" then event.delivery.release({:failed => false, :undeliverable => false, :annotations => {}})
-      when "modify-nil" then event.delivery.release({:failed => false, :undeliverable => false, :annotations => nil})
-      else raise event.inspect
+    def on_message(delivery, message)
+      @received << message.body
+      case message.body
+      when "accept" then delivery.accept
+      when "reject" then delivery.reject
+      when "release-really" then delivery.release({:failed=>false}) # AMQP RELEASED
+      when "release" then delivery.release # AMQP MODIFIED{ :failed => true }
+      when "modify" then delivery.release({:undeliverable => true, :annotations => {:x => 42 }})
+      when "modify-empty" then delivery.release({:failed => false, :undeliverable => false, :annotations => {}})
+      when "modify-nil" then delivery.release({:failed => false, :undeliverable => false, :annotations => nil})
+      else raise inspect
       end
     end
   end
@@ -88,17 +87,18 @@ class TestDelivery < Minitest::Test
   def test_outcomes
     rh = ReceiveHandler.new
     sh = SendHandler.new(["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil"])
-    c = TestContainer.new(nil, { :handler => rh },  __method__)
-    c.connect(c.url, {:handler => sh})
+    c = Container.new(nil, __method__)
+    l = c.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => rh }))
+    c.connect(l.url, {:handler => sh})
     c.run
     o = sh.outcomes
-    assert_equal ["accept", :on_accepted, "1", Transfer::ACCEPTED, nil], o.shift
-    assert_equal ["reject", :on_rejected, "2", Transfer::REJECTED, nil], o.shift
-    assert_equal ["release-really", :on_released, "3", Transfer::RELEASED, nil], o.shift
-    assert_equal ["release", :on_modified, "4", Transfer::MODIFIED, {:failed=>true, :undeliverable=>false, :annotations=>nil}], o.shift
-    assert_equal ["modify", :on_modified, "5", Transfer::MODIFIED, {:failed=>true, :undeliverable=>true, :annotations=>{:x => 42}}], o.shift
-    assert_equal ["modify-empty", :on_released, "6", Transfer::RELEASED, nil], o.shift
-    assert_equal ["modify-nil", :on_released, "7", Transfer::RELEASED, nil], o.shift
+    assert_equal ["accept", :on_tracker_accept, "1", Transfer::ACCEPTED, nil], o.shift
+    assert_equal ["reject", :on_tracker_reject, "2", Transfer::REJECTED, nil], o.shift
+    assert_equal ["release-really", :on_tracker_release, "3", Transfer::RELEASED, nil], o.shift
+    assert_equal ["release", :on_tracker_modify, "4", Transfer::MODIFIED, {:failed=>true, :undeliverable=>false, :annotations=>nil}], o.shift
+    assert_equal ["modify", :on_tracker_modify, "5", Transfer::MODIFIED, {:failed=>true, :undeliverable=>true, :annotations=>{:x => 42}}], o.shift
+    assert_equal ["modify-empty", :on_tracker_release, "6", Transfer::RELEASED, nil], o.shift
+    assert_equal ["modify-nil", :on_tracker_release, "7", Transfer::RELEASED, nil], o.shift
     assert_empty o
     assert_equal ["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil"], rh.received
     assert_empty sh.unsettled
