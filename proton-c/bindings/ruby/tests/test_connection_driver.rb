@@ -21,10 +21,6 @@ include Qpid::Proton
 
 class HandlerDriverTest < Minitest::Test
 
-  def setup
-    @sockets = Socket.pair(:LOCAL, :STREAM, 0)
-  end
-
   def test_send_recv
     send_class = Class.new(MessagingHandler) do
       attr_reader :accepted
@@ -38,35 +34,39 @@ class HandlerDriverTest < Minitest::Test
       def on_message(event) @message = event.message; event.connection.close; end
     end
 
-    sender = HandlerDriver.new(@sockets[0], send_class.new)
-    sender.connection.open(:container_id => "sender");
-    sender.connection.open_sender()
-    receiver = HandlerDriver.new(@sockets[1], recv_class.new)
-    drivers = [sender, receiver]
-
-    until drivers.all? { |d| d.finished? }
-      rd = drivers.select {|d| d.can_read? }
-      wr = drivers.select {|d| d.can_write? }
-      IO.select(rd, wr)
-      drivers.each do |d|
-        d.process
-      end
-    end
-    assert_equal(receiver.handler.message.body, "foo")
-    assert(sender.handler.accepted)
+    d = DriverPair.new(send_class.new, recv_class.new)
+    d.client.connection.open(:container_id => "sender");
+    d.client.connection.open_sender()
+    d.run
+    assert_equal(d.server.handler.message.body, "foo")
+    assert(d.client.handler.accepted)
   end
 
   def test_idle
-    drivers = [HandlerDriver.new(@sockets[0], nil), HandlerDriver.new(@sockets[1], nil)]
-    opts = {:idle_timeout=>10}
-    drivers[0].transport.apply(opts)
-    assert_equal 10, drivers[0].transport.idle_timeout
-    drivers[0].connection.open(opts)
-    drivers[1].transport.set_server
-    now = Time.now
-    drivers.each { |d| d.process(now) } until drivers[0].connection.open?
-    assert_equal(10, drivers[0].transport.idle_timeout)
-    assert_equal(5, drivers[1].transport.remote_idle_timeout) # proton changes the value
-    assert_in_delta(10, (drivers[0].tick(now) - now)*1000, 1)
+
+    d = DriverPair.new(UnhandledHandler.new, UnhandledHandler.new)
+    ms = 444
+    secs = Rational(ms, 1000)   # Use rationals to keep it accurate
+    opts = {:idle_timeout => secs}
+    d.client.transport.apply(opts)
+    assert_equal(ms, d.client.transport.idle_timeout) # Transport converts to ms
+    d.server.transport.set_server
+    d.client.connection.open(opts)
+
+    start = Time.at(1)          # Dummy timeline
+    tick = d.run start          # Process all IO events
+    assert_equal(secs/4, tick - start)
+    assert_equal [:on_connection_opened], d.client.handler.calls
+    assert_equal [:on_connection_opening, :on_connection_opened], d.server.handler.calls
+    assert_equal (ms), d.client.transport.idle_timeout
+    assert_equal (ms/2), d.server.transport.remote_idle_timeout # proton changes the value
+    assert_equal (secs/2), d.server.connection.idle_timeout
+
+    # Now update the time till we get connections closing
+    d.each { |x| x.handler.calls.clear }
+    d.run(start + secs - 0.001) # Should nothing, timeout not reached
+    assert_equal [[],[]], d.collect { |x| x.handler.calls }
+    d.run(start + secs*2)   # After 2x timeout, connections should close
+    assert_equal [[:on_transport_error, :on_transport_closed], [:on_connection_error, :on_connection_closed, :on_transport_closed]], d.collect { |x| x.handler.calls }
   end
 end

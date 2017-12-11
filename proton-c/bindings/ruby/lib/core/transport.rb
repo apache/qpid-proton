@@ -103,11 +103,19 @@ module Qpid::Proton
 
     # @!attribute idle_timeout
     #
-    # @return [Integer] The idle timeout.
+    # @deprecated use {Connection#open} with the +:idle_timeout+ option to set
+    # the timeout, and {Connection#idle_timeout} to query the remote timeout.
+    #
+    # The Connection timeout values are in *seconds* and are automatically
+    # converted.
+    #
+    # @return [Integer] The idle timeout in *milliseconds*.
     #
     proton_set_get :idle_timeout
 
-    # @!attribute [r] remote_idle_timeout
+    # @!attribute [r] remote_idle_timeout in milliseconds
+    #
+    # @deprecated Use {Connection#idle_timeout} to query the remote timeout.
     #
     # @return [Integer] The idle timeout for the transport's remote peer.
     #
@@ -397,7 +405,11 @@ module Qpid::Proton
       end
       self.channel_max= opts[:channel_max] if opts.include? :channel_max
       self.max_frame_size= opts[:max_frame_size] if opts.include? :max_frame_size
-      self.idle_timeout= opts[:idle_timeout] if opts.include? :idle_timeout
+      # NOTE: The idle_timeout option is in Numeric *seconds*, can be Integer, Float or Rational.
+      # This is consistent with idiomatic ruby.
+      # The transport #idle_timeout property is in *milliseconds* passed direct to C.
+      # Direct use of the transport is deprecated.
+      self.idle_timeout= (opts[:idle_timeout]*1000).round if opts.include? :idle_timeout
     end
   end
 end

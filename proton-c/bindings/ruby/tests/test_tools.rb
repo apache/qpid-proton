@@ -108,13 +108,20 @@ class DriverPair < Array
   alias client first
   alias server last
 
-  # Run till there is nothing to do
-  def run
-    begin
-      each { |d| d.process }
-    end while (IO.select(self, [], [], 0) rescue nil)
+  # Process each driver once, return time of next timed event
+  def process(now = Time.now, max_time=nil)
+    t = collect { |d| d.process(now) }.compact.min
+    t =  max_time if max_time && t > max_time
+    t
   end
 
+  # Run till there is no IO activity - does not handle waiting for timed events
+  # but does pass +now+ to process and returns the min returned timed event time
+  def run(now=Time.now)
+    t = process(now)    # Generate initial IO activity and get initial next-time
+    t = process(now, t) while (IO.select(self, [], [], 0) rescue nil)
+    t = process(now, t)         # Final gulp to finish off events
+  end
 end
 
 # Container that listens on a random port for a single connection
@@ -128,4 +135,20 @@ class TestContainer < Container
 
   def port() @server.addr[1]; end
   def url() "amqp://:#{port}"; end
+end
+
+# Raw handler to record on_xxx calls via on_unhandled.
+# Handy as a base for raw test handlers
+class UnhandledHandler
+  def initialize() @calls =[]; end
+  def on_unhandled(name, args) @calls << name; end
+  attr_reader :calls
+
+  # Ruby mechanics to capture on_xxx calls
+
+  def method_missing(name, *args)
+    if respond_to_missing?(name) then on_unhandled(name, *args) else super end;
+  end
+  def respond_to_missing?(name, private=false); (/^on_/ =~ name); end
+  def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
 end

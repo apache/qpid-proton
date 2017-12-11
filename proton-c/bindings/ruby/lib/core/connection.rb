@@ -133,6 +133,17 @@ module Qpid::Proton
       Codec::Data.from_object(Cproton.pn_connection_properties(@impl), opts[:properties])
     end
 
+    # Idle-timeout advertised by the remote peer, in seconds.
+    # Set by {Connection#open} with the +:idle_timeout+ option.
+    # @return [Numeric] Idle-timeout advertised by the remote peer, in seconds.
+    # @return [nil] if The peer does not advertise an idle time-out
+    # @option :idle_timeout (see {#open})
+    def idle_timeout()
+      if transport && (t = transport.remote_idle_timeout)
+        Rational(t, 1000)       # More precise than Float
+      end
+    end
+
     # @private Generate a unique link name, internal use only.
     def link_name()
       @link_prefix + "/" +  (@link_count += 1).to_s(16)
@@ -257,6 +268,11 @@ module Qpid::Proton
     #
     def error
       Cproton.pn_error_code(Cproton.pn_connection_error(@impl))
+    end
+
+    # @private Generate a unique link name, internal use only.
+    def link_name()
+      @link_prefix + "/" +  (@link_count += 1).to_s(16)
     end
 
     protected

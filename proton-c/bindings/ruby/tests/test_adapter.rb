@@ -77,7 +77,8 @@ class TestOldHandler < Minitest::Test
     assert_equal [:on_session_opening], @sh.names
     assert_equal [], @ch.names
     clear
-    @d.client.connection.close; @d.run
+    @d.client.connection.close;
+    3.times { @d.process }
     assert_equal [:on_connection_closing], @sh.names
     assert_equal [], @ch.names
     @d.server.connection.close; @d.run
