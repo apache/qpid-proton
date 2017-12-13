@@ -40,6 +40,7 @@ URLs are of the form "amqp://<host>:<port>/<amqp-address>"
 }
 
 var count = flag.Uint64("count", 1, "Stop after receiving this many messages in total")
+var prefetch = flag.Int("prefetch", 0, "enable a pre-fetch window to improve throughput")
 var debug = flag.Bool("debug", false, "Print detailed debug output")
 var debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
@@ -78,7 +79,11 @@ func main() {
 			fatalIf(err)
 			connections <- c // Save connection so we can Close() when main() ends
 			addr := strings.TrimPrefix(url.Path, "/")
-			r, err := c.Receiver(electron.Source(addr))
+			opts := []electron.LinkOption{electron.Source(addr)}
+			if *prefetch > 0 {
+				opts = append(opts, electron.Capacity(*prefetch), electron.Prefetch(true))
+			}
+			r, err := c.Receiver(opts...)
 			fatalIf(err)
 			// Loop receiving messages and sending them to the main() goroutine
 			for {
