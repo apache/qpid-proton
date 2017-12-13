@@ -35,6 +35,11 @@ module Qpid::Proton
        :annotations => Codec::Data.to_object(Cproton.pn_disposition_annotations(d))
       }
     end
-  end
 
+    # Abort a partially-sent message.
+    # The tracker can no longer be used after calling {#abort}.
+    def abort()
+      Cproton.pn_delivery_abort(@impl)
+    end
+  end
 end
