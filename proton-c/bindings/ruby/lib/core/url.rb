@@ -20,6 +20,7 @@ module Qpid::Proton
 
   # @deprecated use {URI} or {String}
   class URL
+    include Util::Deprecation
 
     attr_reader :scheme
     attr_reader :username
@@ -32,7 +33,7 @@ module Qpid::Proton
     # Parse a string, return a new URL
     # @param url [#to_s] the URL string
     def initialize(url = nil)
-      Qpid.deprecated self.class, 'URI or String'
+      deprecated self.class, 'URI or String'
       if url
         @url = Cproton.pn_url_parse(url.to_s)
         if @url.nil?

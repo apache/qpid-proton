@@ -128,7 +128,7 @@ module Qpid::Proton
         else                      # Outgoing message
           t = event.tracker
           if t.updated?
-            case t.remote_state
+            case t.state
             when Qpid::Proton::Delivery::ACCEPTED then delegate(:on_accepted, event)
             when Qpid::Proton::Delivery::REJECTED then delegate(:on_rejected, event)
             when Qpid::Proton::Delivery::RELEASED then delegate(:on_released, event)

@@ -21,6 +21,7 @@ module Qpid::Proton
 
     # @deprecated use {Qpid::Proton::Container}
     class Container < Qpid::Proton::Container
+      include Util::Deprecation
 
       private
       alias super_connect connect # Access to superclass method
@@ -29,7 +30,7 @@ module Qpid::Proton
 
       # @deprecated use {Qpid::Proton::Container}
       def initialize(handlers, opts=nil)
-        Qpid.deprecated self.class, "Qpid::Proton::Container"
+        deprecated Qpid::Proton::Reactor::Container, Qpid::Proton::Container
         h = handlers || (opts && opts[:global_handler])
         id = opts && opts[:container_id]
         super(h, id)
@@ -44,7 +45,6 @@ module Qpid::Proton
         super(url, opts)
       end
 
-      # @deprecated use {#connect} then {Connection#open_sender}
       def create_sender(context, opts=nil)
         c = context if context.is_a? Qpid::Proton::Connection
         unless c
@@ -56,7 +56,6 @@ module Qpid::Proton
         c.open_sender opts
       end
 
-      # @deprecated use {#connect} then {Connection#open_receiver}
       def create_receiver(context, opts=nil)
         c = context if context.is_a? Qpid::Proton::Connection
         unless c

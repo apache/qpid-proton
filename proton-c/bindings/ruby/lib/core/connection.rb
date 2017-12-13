@@ -20,6 +20,7 @@ module Qpid::Proton
 
   # An AMQP connection.
   class Connection < Endpoint
+    include Util::Deprecation
 
     # @private
     PROTON_METHOD_PREFIX = "pn_connection"
@@ -58,10 +59,10 @@ module Qpid::Proton
     public
 
     # @deprecated no replacement
-    def overrides?() Qpid.deprecated __method__; false; end
+    def overrides?() deprecated __method__; false; end
 
     # @deprecated no replacement
-    def session_policy?() Qpid.deprecated __method__; false; end
+    def session_policy?() deprecated __method__; false; end
 
     # @return [Connection] self
     def connection() self; end
@@ -179,7 +180,7 @@ module Qpid::Proton
     end
 
     # @deprecated use #default_session()
-    alias session default_session
+    deprecated_alias :session, :default_session
 
     # Open a new session on this connection.
     def open_session

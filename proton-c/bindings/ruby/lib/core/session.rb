@@ -23,6 +23,7 @@ module Qpid::Proton
   # A Session has a single parent Qpid::Proton::Connection instance.
   #
   class Session < Endpoint
+    include Util::Deprecation
 
     # @private
     PROTON_METHOD_PREFIX = "pn_session"
@@ -112,10 +113,16 @@ module Qpid::Proton
     end
 
     # @deprecated use {#open_sender}
-    def sender(name) Sender.new(Cproton.pn_sender(@impl, name)); end
+    def sender(name)
+      deprecated __method__, "open_sender"
+      Sender.new(Cproton.pn_sender(@impl, name));
+    end
 
     # @deprecated use {#open_receiver}
-    def receiver(name) Receiver.new(Cproton.pn_receiver(@impl, name)); end
+    def receiver(name)
+      deprecated __method__, "open_receiver"
+      Receiver.new(Cproton.pn_receiver(@impl, name))
+    end
 
     # TODO aconway 2016-01-04: doc options or target param, move option handling to Link.
     def open_receiver(opts=nil)

@@ -26,7 +26,10 @@ module Qpid::Proton
 
     # @deprecated use {UniformArray}
     class ArrayHeader
-      def initialize(type, descriptor = nil) @type, @descriptor = Codec::Mapping[type], descriptor; end
+      def initialize(type, descriptor = nil)
+        Util::Deprecation.deprecated ArrayHeader, "UniformArray"
+        @type, @descriptor = Codec::Mapping[type], descriptor
+      end
       attr_reader :type, :descriptor
       def described?() !@descriptor.nil?; end
       def <=>(x) [@type, @descriptor] <=> [x.type, x.descriptor]; end
@@ -72,25 +75,25 @@ end
 class ::Array
   # @deprecated use  {UniformArray}
   def proton_array_header
-    Qpid.deprecated __method__, "UniformArray"
+    Qpid::Proton::Util::Deprecation.deprecated __method__, UniformArray
     @proton_array_header
   end
 
   # @deprecated use  {UniformArray}
   def proton_array_header=(h)
-    Qpid.deprecated __method__, "UniformArray"
+    Qpid::Proton::Util::Deprecation.deprecated __method__, UniformArray
     @proton_array_header= h
   end
 
   # @deprecated use  {UniformArray}
   def proton_described?()
-    Qpid.deprecated __method__, "UniformArray"
+    Qpid::Proton::Util::Deprecation.deprecated __method__, UniformArray
     @proton_array_header && @proton_array_header.described?
   end
 
   # @deprecated
   def proton_put(data)
-    Qpid.deprecated __method__, "Codec::Data#array=, Codec::Data#list="
+    Qpid::Proton::Util::Deprecation.deprecated __method__, "Codec::Data#array=, Codec::Data#list="
     raise TypeError, "nil data" unless data
     if @proton_array_header && @proton_array_header.type
       data.array = self
@@ -101,7 +104,7 @@ class ::Array
 
   # @deprecated
   def self.proton_get(data)
-    Qpid.deprecated __method__, "Codec::Data#list"
+    Qpid::Proton::Util::Deprecation.deprecated __method__, "Codec::Data#list"
     data.list
   end
 end

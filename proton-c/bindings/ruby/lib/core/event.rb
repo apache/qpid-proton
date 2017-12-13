@@ -17,12 +17,11 @@
 
 
 module Qpid::Proton
-  # AMQP protocol event.
-  #
-  # Includes a method name to call when the event is dispatched, and the context
-  # objects relevant to the event.
+
+  # @deprecated Only used with the deprecated {Handler::MessagingHandler} API.
   class Event
     private
+    include Util::Deprecation
 
     PROTON_METHOD_PREFIX = "pn_disposition"
     include Util::Wrapper
@@ -150,9 +149,9 @@ module Qpid::Proton
     end
 
     # @deprecated use {#container}
-    def reactor() Qpid.deprecated __method__, :container; container; end
+    deprecated_alias :reactor, :container
 
-    # @deprecated use {Qpid::Proton::Event}
+    # @private
     Event = self
   end
 end

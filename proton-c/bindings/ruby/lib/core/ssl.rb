@@ -51,7 +51,7 @@ module Qpid::Proton
   # @see #resume_status
   #
   class SSL
-
+ 
     # Session resume state is unkonnwn or not supported.
     RESUME_UNKNOWN = Cproton::PN_SSL_RESUME_UNKNOWN
     # Session renegotiated and not resumed.

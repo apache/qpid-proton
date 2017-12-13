@@ -15,25 +15,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
+module Qpid::Proton::Util
+  # @private
+  module Deprecation
+    def self.deprecated(old, new=nil, skip=2)
+      replace = new ? "use `#{new}`" : "internal use only"
+      warn "[DEPRECATION] `#{old}` is deprecated, #{replace}. Called from\n  #{caller(skip).first}"
+    end
 
-#--
-# Patch the Hash class to provide methods for adding its contents
-# to a Qpid::Proton::Codec::Data instance.
-#++
+    def deprecated(*arg) Deprecation.deprecated(*arg); end
 
-# @private
-class Hash # :nodoc:
-  
+    module ClassMethods
+      def deprecated_alias(bad, good)
+        bad, good = bad.to_sym, good.to_sym
+        define_method(bad) do |*args, &block|
+          self.deprecated bad, good, 3
+          self.__send__(good, *args, &block)
+        end
+      end
+    end
 
-  # @deprecated
-  def proton_data_put(data)
-    Qpid::Proton::Util::Deprecation.deprecated(__method__, "Codec::Data#map=")
-    data.map = self
-  end
-
-  # @deprecated
-  def self.proton_data_get(data)
-    Qpid::Proton::Util::Deprecation.deprecated(__method__, "Codec::Data#map")
-    data.map
+    def self.included(other)
+      other.__send__ :extend, ClassMethods
+    end
   end
 end

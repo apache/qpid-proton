@@ -29,6 +29,7 @@ module Qpid::Proton
   #
   # @note Do not instantiate directly, use {Transport#sasl} to create a SASL object.
   class SASL
+    include Util::Deprecation
 
     # Negotation has not completed.
     NONE = Cproton::PN_SASL_NONE
@@ -65,9 +66,7 @@ module Qpid::Proton
     end
 
     # @deprecated use {#allowed_mechs=}
-    def mechanisms(m)
-      self.allowed_mechs = m
-    end
+    deprecated_alias :mechanisms, :allowed_mechs=
 
     # True if extended SASL negotiation is supported
     #
@@ -82,44 +81,43 @@ module Qpid::Proton
       Cproton.pn_sasl_extended()
     end
 
-    # Set the sasl configuration path
-    #
-    # This is used to tell SASL where to look for the configuration file.
-    # In the current implementation it can be a colon separated list of directories.
-    #
-    # The environment variable PN_SASL_CONFIG_PATH can also be used to set this path,
-    # but if both methods are used then this pn_sasl_config_path() will take precedence.
-    #
-    # If not set the underlying implementation default will be used.
-    #
-    # @param path the configuration path
-    #
-    def self.config_path=(path)
-      Cproton.pn_sasl_config_path(nil, path)
-      path
-    end
+    class << self
+      include Util::Deprecation
 
-    # @deprecated use {config_path=}
-    def self.config_path(path)
-      self.config_path = path
-    end
+      # Set the sasl configuration path
+      #
+      # This is used to tell SASL where to look for the configuration file.
+      # In the current implementation it can be a colon separated list of directories.
+      #
+      # The environment variable PN_SASL_CONFIG_PATH can also be used to set this path,
+      # but if both methods are used then this pn_sasl_config_path() will take precedence.
+      #
+      # If not set the underlying implementation default will be used.
+      #
+      # @param path the configuration path
+      #
+      def config_path=(path)
+        Cproton.pn_sasl_config_path(nil, path)
+        path
+      end
 
-    # Set the configuration file name, without extension
-    #
-    # The name with an a ".conf" extension will be searched for in the
-    # configuration path.  If not set, it defaults to "proton-server" or
-    # "proton-client" for a server (incoming) or client (outgoing) connection
-    # respectively.
-    #
-    # @param name the configuration file name without extension
-    #
-    def self.config_name=(name)
-      Cproton.pn_sasl_config_name(nil, name)
-    end
+      # Set the configuration file name, without extension
+      #
+      # The name with an a ".conf" extension will be searched for in the
+      # configuration path.  If not set, it defaults to "proton-server" or
+      # "proton-client" for a server (incoming) or client (outgoing) connection
+      # respectively.
+      #
+      # @param name the configuration file name without extension
+      #
+      def config_name=(name)
+        Cproton.pn_sasl_config_name(nil, name)
+      end
 
-    # @deprecated use {config_name=}
-    def self.config_name(name)
-      self.config_name = name
+      # @deprecated use {config_path=}
+      deprecated_alias :config_path, :config_path=
+      # @deprecated use {config_name=}
+      deprecated_alias :config_name, :config_name=
     end
   end
 end

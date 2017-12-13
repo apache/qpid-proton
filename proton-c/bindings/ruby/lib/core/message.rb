@@ -31,6 +31,7 @@ module Qpid::Proton
   #   msg.body = Qpid::Proton::BinaryString.new(File.binread("/home/qpid/binfile.tar.gz"))
   #
   class Message
+    include Util::Deprecation
 
     # @private
     PROTON_METHOD_PREFIX = "pn_message"
@@ -364,11 +365,13 @@ module Qpid::Proton
 
     # @deprecated use {#body=}
     def content=(content)
+      deprecated __method__, "body="
       Cproton.pn_message_load(@impl, content)
     end
 
     # @deprecated use {#body}
     def content
+      deprecated __method__, "body"
       size = 16
       loop do
         result = Cproton.pn_message_save(@impl, size)

@@ -64,7 +64,7 @@ module Qpid::Proton
 
     # @deprecated use {#release} with modification options
     def modify()
-      Qpid.deprecated __method__, "#release"
+      deprecated __method__, "release(modification_options)"
       release failed=>true
     end
 

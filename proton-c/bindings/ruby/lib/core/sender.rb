@@ -50,7 +50,7 @@ module Qpid::Proton
         raise ArgumentError("too many arguments") if args.size > 1
         tag = args[0]
       end
-      tag ||= delivery_tag
+      tag ||= next_tag
       t = Tracker.new(Cproton.pn_delivery(@impl, tag))
       Cproton.pn_link_send(@impl, message.encode)
       Cproton.pn_link_advance(@impl)
@@ -58,19 +58,20 @@ module Qpid::Proton
       return t
     end
 
-    # @deprecated internal use only
+    # @deprecated use {#send}
     def stream(bytes)
+      deprecated __method__, "send"
       Cproton.pn_link_send(@impl, bytes)
     end
 
     # @deprecated internal use only
-    def delivery_tag
-      @tag_count ||= 0
-      result = @tag_count.succ
-      @tag_count = result
-      return result.to_s(32) # Base 32 compactness
-    end
+    def delivery_tag() deprecated(__method__); next_tag; end
 
+    private
+
+    def initialize(*arg) super; @tag_count = 0; end
+    def next_tag() (@tag_count += 1).to_s(32); end
   end
-
 end
+
+

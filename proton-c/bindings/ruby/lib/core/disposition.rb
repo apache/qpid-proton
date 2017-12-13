@@ -20,6 +20,8 @@ module Qpid::Proton
 
   # @deprecated use {Delivery}
   class Disposition
+    include Util::Deprecation
+
     # @private
     PROTON_METHOD_PREFIX = "pn_disposition"
     # @private
@@ -36,7 +38,7 @@ module Qpid::Proton
 
     # @private
     def initialize(impl, local)
-      Qpid.deprecated self.class, Delivery
+      deprecated self.class, Delivery
       @impl = impl
       @local = local
       @data = nil

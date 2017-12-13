@@ -97,7 +97,7 @@ module Qpid::Proton
           add_credit(event.receiver)
         else                      # Outgoing message
           t = event.tracker
-          case t.remote_state
+          case t.state
           when Delivery::ACCEPTED then delegate(:on_tracker_accept, t)
           when Delivery::REJECTED then delegate(:on_tracker_reject, t)
           when Delivery::RELEASED then delegate(:on_tracker_release, t)

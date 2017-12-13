@@ -29,15 +29,10 @@ end
 # Qpid is the top level module for the Qpid project http://qpid.apache.org
 # Definitions for this library are in module {Qpid::Proton}
 module Qpid
-  # @private
-  def self.deprecated(old, new=nil)
-    repl = new ? "use `#{new}`" : "internal use only"
-    warn "[DEPRECATION] `#{old}` is deprecated, #{repl} (called from #{caller(2).first})"
-  end
-
   # Proton is a ruby API for sending and receiving AMQP messages in clients or servers.
   # See the {overview}[../file.README.html] for more.
   module Proton
+    # Only opened here for module doc comment
   end
 end
 
@@ -45,6 +40,7 @@ end
 require "core/exceptions"
 
 # Utility classes
+require "util/deprecation"
 require "util/version"
 require "util/error_handler"
 require "util/wrapper"

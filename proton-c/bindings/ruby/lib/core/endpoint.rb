@@ -30,9 +30,10 @@ module Qpid::Proton
   #   puts "Remote connection flags: #{conn.state || Qpid::Proton::Endpoint::REMOTE_MASK}"
   #
   class Endpoint
+    include Util::Deprecation
 
     # The local connection is uninitialized.
-   LOCAL_UNINIT = Cproton::PN_LOCAL_UNINIT
+    LOCAL_UNINIT = Cproton::PN_LOCAL_UNINIT
     # The local connection is active.
     LOCAL_ACTIVE = Cproton::PN_LOCAL_ACTIVE
     # The local connection is closed.

@@ -21,6 +21,7 @@ module Qpid::Proton
 
     # @deprecated use {Qpid::Proton::MessagingHandler}
     class MessagingHandler
+      include Util::Deprecation
 
       # @private
       def proton_adapter_class() Handler::ReactorMessagingAdapter; end
@@ -48,9 +49,9 @@ module Qpid::Proton
       #    the set the local error condition {Condition}("error", "unexpected peer close")
       #
       # @overload initialize(prefetch=10, auto_accept=true, auto_settle=true, peer_close_is_error=false)
-      #   @deprecated use +initialize(opts)+ overload
+      # @deprecated use +initialize(opts)+ overload
       def initialize(*args)
-        Qpid.deprecated MessagingHandler, Qpid::Proton::MessagingHandler
+        deprecated MessagingHandler, Qpid::Proton::MessagingHandler
         @options = {}
         if args.size == 1 && args[0].is_a?(Hash)
           @options.replace(args[0])

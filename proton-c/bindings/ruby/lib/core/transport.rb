@@ -62,6 +62,8 @@ module Qpid::Proton
   #   PN_TRACE_FRM=1 ruby my_proton_app.rb
   #
   class Transport
+    include Util::Deprecation
+
     # @private
     PROTON_METHOD_PREFIX = "pn_transport"
     # @private

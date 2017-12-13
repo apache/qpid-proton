@@ -21,6 +21,7 @@ module Qpid::Proton
   # Status of a message transfer on a {Link}
   # Common base class for {Tracker} and {Delivery}.
   class Transfer
+    include Util::Deprecation
 
     # @!private
     PROTON_METHOD_PREFIX = "pn_delivery"
@@ -66,7 +67,7 @@ module Qpid::Proton
     def id() Cproton.pn_delivery_tag(@impl); end
 
     # @deprecated use {#id}
-    alias tag id
+    deprecated_alias :tag, :id
 
     # @return [Boolean] True if the transfer has is remotely settled.
     proton_caller :settled?
@@ -105,7 +106,7 @@ module Qpid::Proton
     # @deprecated internal use only
     def local_state() Cproton.pn_delivery_local_state(@impl); end
     # @deprecated use {#state}
-    def remote_state() Cproton.pn_delivery_remote_state(@impl); end
+    deprecated_alias :remote_state, :state
     # @deprecated internal use only
     def settle(state = nil)
       update(state) unless state.nil?
