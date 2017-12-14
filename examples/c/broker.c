@@ -291,7 +291,7 @@ static void handle(broker_t* b, pn_event_t* e) {
     break;
 
    case PN_LISTENER_ACCEPT:
-    pn_listener_accept(pn_event_listener(e), pn_connection());
+    pn_listener_accept(pn_event_listener(e), NULL, NULL);
     break;
 
    case PN_CONNECTION_INIT:

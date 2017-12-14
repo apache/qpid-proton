@@ -192,10 +192,10 @@ int test_stop_reconnect() {
     return 0;
 }
 
-int main(int, char**) {
+int main(int argc, char** argv) {
     int failed = 0;
-    RUN_TEST(failed, test_failover_simple());
-    RUN_TEST(failed, test_stop_reconnect());
+    RUN_ARGV_TEST(failed, test_failover_simple());
+    RUN_ARGV_TEST(failed, test_stop_reconnect());
     return failed;
 }
 

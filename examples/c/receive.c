@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
   /* Create the proactor and connect */
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
-  pn_proactor_connect(app.proactor, pn_connection(), addr);
+  pn_proactor_connect(app.proactor, NULL, NULL, addr);
   run(&app);
   pn_proactor_free(app.proactor);
   return exit_code;

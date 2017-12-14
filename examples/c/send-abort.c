@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
 
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
-  pn_proactor_connect(app.proactor, pn_connection(), addr);
+  pn_proactor_connect(app.proactor, NULL, NULL, addr);
   run(&app);
   pn_proactor_free(app.proactor);
   free(app.message_buffer.start);

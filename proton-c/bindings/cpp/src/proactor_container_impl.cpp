@@ -209,7 +209,7 @@ pn_connection_t* container::impl::make_connection_lh(
 void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     char caddr[PN_MAX_ADDR];
     pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
-    pn_proactor_connect(proactor_, pnc, caddr); // Takes ownership of pnc
+    pn_proactor_connect(proactor_, pnc, NULL, caddr); // Takes ownership of pnc
 }
 
 void container::impl::reconnect(pn_connection_t* pnc) {
@@ -531,7 +531,7 @@ bool container::impl::handle(pn_event_t* event) {
         cc.listener_context_ = &lc;
         cc.handler = opts.handler();
         cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
-        pn_listener_accept(l, c);
+        pn_listener_accept(l, c, NULL);
         return false;
     }
     case PN_LISTENER_CLOSE: {

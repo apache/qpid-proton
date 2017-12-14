@@ -2078,11 +2078,17 @@ static void pconnection_finalize(void *vp_pconnection) {
 
 static const pn_class_t pconnection_class = PN_CLASS(pconnection);
 
-static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_connection_t *c, bool server, const char *addr) {
+static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server, const char *addr)
+{
+  if (pn_connection_driver_init(&pc->driver, c, t) != 0) {
+    free(pc);
+    return "pn_connection_driver_init failure";
+  }
   {
     csguard g(&p->bind_lock);
-    pn_record_t *r = pn_connection_attachments(c);
+    pn_record_t *r = pn_connection_attachments(pc->driver.connection);
     if (pn_record_get(r, PN_PROACTOR)) {
+      pn_connection_driver_destroy(&pc->driver);
       free(pc);
       return "pn_connection_t already in use";
     }
@@ -2092,10 +2098,6 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
     pc->can_wake = true;
   }
 
-  if (pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
-    free(pc);
-    return "pn_connection_driver_init failure";
-  }
   pc->completion_queue = new std::queue<iocp_result_t *>();
   pc->work_queue = new std::queue<iocp_result_t *>();
   pcontext_init(&pc->context, PCONNECTION, p, pc);
@@ -2713,10 +2715,10 @@ static void connect_step_done(pconnection_t *pc, connect_result_t *result) {
   }
 }
 
-void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
+void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
-  const char *err = pconnection_setup(pc, p, c, false, addr);
+  const char *err = pconnection_setup(pc, p, c, t, false, addr);
   if (err) {
     pn_logf("pn_proactor_connect failure: %s", err);
     return;
@@ -3154,7 +3156,7 @@ static void recycle_result(accept_result_t *accept_result) {
   }
 }
 
-void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
+void pn_listener_accept(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   accept_result_t *accept_result = NULL;
   DWORD err = 0;
   psocket_t *ps = NULL;
@@ -3164,7 +3166,7 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
     csguard g(&l->context.cslock);
     pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
     assert(pc);  // TODO: memory safety
-    const char *err_str = pconnection_setup(pc, p, c, true, "");
+    const char *err_str = pconnection_setup(pc, p, c, t, true, "");
     if (err_str) {
       pn_logf("pn_listener_accept failure: %s", err_str);
       return;

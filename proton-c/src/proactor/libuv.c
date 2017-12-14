@@ -176,7 +176,7 @@ typedef struct pconnection_t {
   uv_connect_t connect;         /* Outgoing connection only */
   int connected;      /* 0: not connected, <0: connecting after error, 1 = connected ok */
 
-  lsocket_t *lsocket;         /* Incoming connection only */
+  lsocket_t *lsocket;           /* Incoming connection only */
 
   struct pn_netaddr_t local, remote; /* Actual addresses */
   uv_timer_t timer;
@@ -297,9 +297,9 @@ static void parse_addr(addr_t *addr, const char *str) {
   pni_parse_addr(str, addr->addr_buf, sizeof(addr->addr_buf), &addr->host, &addr->port);
 }
 
-static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, bool server) {
+static pconnection_t *pconnection(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server) {
   pconnection_t *pc = (pconnection_t*)calloc(1, sizeof(*pc));
-  if (!pc || pn_connection_driver_init(&pc->driver, c, NULL) != 0) {
+  if (!pc || pn_connection_driver_init(&pc->driver, c, t) != 0) {
     return NULL;
   }
   work_init(&pc->work, p,  T_CONNECTION);
@@ -865,7 +865,7 @@ static bool leader_process_pconnection(pconnection_t *pc) {
     uv_mutex_lock(&pc->lock);
     pc->wake = W_CLOSED;        /* wake() is a no-op from now on */
     uv_mutex_unlock(&pc->lock);
-    uv_safe_close((uv_handle_t*)&pc->tcp, on_close_pconnection);
+      uv_safe_close((uv_handle_t*)&pc->tcp, on_close_pconnection);
   } else {
     /* Check for events that can be generated without blocking for IO */
     check_wake(pc);
@@ -1115,8 +1115,8 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   uv_mutex_unlock(&p->lock);
 }
 
-void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
-  pconnection_t *pc = pconnection(p, c, false);
+void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
+  pconnection_t *pc = pconnection(p, c, t, false);
   assert(pc);                                  /* TODO aconway 2017-03-31: memory safety */
   pn_connection_open(pc->driver.connection);   /* Auto-open */
   parse_addr(&pc->addr, addr);
@@ -1270,9 +1270,9 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
   return l->attachments;
 }
 
-void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
+void pn_listener_accept(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   uv_mutex_lock(&l->lock);
-  pconnection_t *pc = pconnection(l->work.proactor, c, true);
+  pconnection_t *pc = pconnection(l->work.proactor, c, t, true);
   assert(pc);
   /* Get the socket from the accept event that we are processing */
   pn_event_t *e = pn_collector_prev(l->collector);
