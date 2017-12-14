@@ -45,9 +45,12 @@ module Qpid::Proton
 
       def initialize(io, handler, container)
         super
+        @closing = @closed = nil
         env = ENV['PN_TRACE_EVT']
         if env && ["true", "1", "yes", "on"].include?(env.downcase)
           @log_prefix = "[0x#{object_id.to_s(16)}](PN_LISTENER_"
+        else
+          @log_prefix = nil
         end
         dispatch(:on_open);
       end

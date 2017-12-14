@@ -27,9 +27,6 @@ module Qpid::Proton
     # @private
     include Util::ErrorHandler
 
-    # @private
-    can_raise_error :stream, :error_class => Qpid::Proton::LinkError
-
     # Hint to the remote receiver about the number of messages available.
     # The receiver may use this to optimize credit flow, or may ignore it.
     # @param n [Integer] The number of deliveries potentially available.
@@ -71,6 +68,9 @@ module Qpid::Proton
 
     def initialize(*arg) super; @tag_count = 0; end
     def next_tag() (@tag_count += 1).to_s(32); end
+
+    # @private
+    can_raise_error :stream, :error_class => Qpid::Proton::LinkError
   end
 end
 

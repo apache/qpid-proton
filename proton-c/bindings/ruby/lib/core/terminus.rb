@@ -131,10 +131,6 @@ module Qpid::Proton
     # @private
     include Util::ErrorHandler
 
-    can_raise_error [:type=, :address=, :durability=, :expiry_policy=,
-                          :timeout=, :dynamic=, :distribution_mode=, :copy],
-                    :error_class => Qpid::Proton::LinkError
-
     # @private
     attr_reader :impl
 
@@ -211,6 +207,8 @@ module Qpid::Proton
       Cproton.pn_terminus_copy(@impl,source.impl)
     end
 
+    can_raise_error([:type=, :address=, :durability=, :expiry_policy=,
+                     :timeout=, :dynamic=, :distribution_mode=, :copy],
+                    :error_class => Qpid::Proton::LinkError)
   end
-
 end

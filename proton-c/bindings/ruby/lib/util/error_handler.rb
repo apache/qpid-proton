@@ -23,35 +23,15 @@ module Qpid::Proton::Util
   # @private
   module ErrorHandler
 
-    def self.included(base)
-      base.extend(self)
-
-      unless defined? base.to_be_wrapped
-        class << base
-          @@to_be_wrapped = []
-        end
-      end
-
-      define_method :method_added do |name|
-        if (!@@to_be_wrapped.nil?) && (@@to_be_wrapped.include? name)
-          @@to_be_wrapped.delete name
-          create_exception_handler_wrapper(name)
-        end
-      end
-    end
+    def self.included(other) other.extend(self); end
 
     def can_raise_error(method_names, options = {})
       error_class = options[:error_class]
       below = options[:below] || 0
       # coerce the names to be an array
       Array(method_names).each do |method_name|
-        # if the method doesn't already exist then queue this aliasing
-        unless self.method_defined? method_name
-          @@to_be_wrapped ||= []
-          @@to_be_wrapped << method_name
-        else
-          create_exception_handler_wrapper(method_name, error_class, below)
-        end
+        raise "missing method #{method_name.inspect}" unless method_defined?(method_name) || private_method_defined?(method_name)
+        create_exception_handler_wrapper(method_name, error_class, below)
       end
     end
 

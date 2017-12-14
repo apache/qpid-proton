@@ -201,11 +201,6 @@ module Qpid::Proton
     # @private
     include Util::ErrorHandler
 
-    can_raise_error :process, :error_class => TransportError
-    can_raise_error :close_tail, :error_class => TransportError
-    can_raise_error :pending, :error_class => TransportError, :below => Error::EOS
-    can_raise_error :close_head, :error_class => TransportError
-
     # @private
     def self.wrap(impl)
       return nil if impl.nil?
@@ -413,5 +408,10 @@ module Qpid::Proton
       # Direct use of the transport is deprecated.
       self.idle_timeout= (opts[:idle_timeout]*1000).round if opts.include? :idle_timeout
     end
+
+    can_raise_error :process, :error_class => TransportError
+    can_raise_error :close_tail, :error_class => TransportError
+    can_raise_error :pending, :error_class => TransportError, :below => Error::EOS
+    can_raise_error :close_head, :error_class => TransportError
   end
 end

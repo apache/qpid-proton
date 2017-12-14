@@ -39,7 +39,7 @@ module Qpid::Proton::Util
     end
 
     def self.included(other)
-      other.__send__ :extend, ClassMethods
+      other.extend ClassMethods
     end
   end
 end

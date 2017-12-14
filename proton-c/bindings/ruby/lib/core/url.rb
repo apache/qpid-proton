@@ -27,7 +27,6 @@ module Qpid::Proton
     alias user username
     attr_reader :password
     attr_reader :host
-    attr_reader :port
     attr_reader :path
 
     # Parse a string, return a new URL

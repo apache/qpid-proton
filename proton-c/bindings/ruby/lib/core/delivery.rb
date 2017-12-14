@@ -18,6 +18,8 @@
 module Qpid::Proton
   # Allow a {Receiver} to indicate the status of a received message to the {Sender}
   class Delivery < Transfer
+    def initialize(*args) super; @message = nil; end
+
     # @return [Receiver] The parent {Receiver} link.
     def receiver() link; end
 
@@ -80,15 +82,15 @@ module Qpid::Proton
     # @raise [UnderflowError] if the message is incomplete (check with {#complete?}
     # @raise [::ArgumentError] if the delivery is not the current delivery on a receiving link.
     def message
-      return @message if @message
-      raise AbortedError, "message aborted by sender" if aborted?
-      raise UnderflowError, "incoming message incomplete" if partial?
-      raise ArgumentError, "no incoming message" unless readable?
-      @message = Message.new
-      @message.decode(link.receive(pending))
-      link.advance
+      unless @message
+        raise AbortedError, "message aborted by sender" if aborted?
+        raise UnderflowError, "incoming message incomplete" if partial?
+        raise ArgumentError, "no incoming message" unless readable?
+        @message = Message.new
+        @message.decode(link.receive(pending))
+        link.advance
+      end
       @message
     end
-
   end
 end

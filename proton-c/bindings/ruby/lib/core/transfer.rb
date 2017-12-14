@@ -36,6 +36,7 @@ module Qpid::Proton
 
     def initialize(impl)
       @impl = impl
+      @inspect = nil
       self.class.store_instance(self, :pn_delivery_attachments)
     end
 

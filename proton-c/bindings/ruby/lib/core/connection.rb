@@ -146,11 +146,6 @@ module Qpid::Proton
       end
     end
 
-    # @private Generate a unique link name, internal use only.
-    def link_name()
-      @link_prefix + "/" +  (@link_count += 1).to_s(16)
-    end
-
     # Closes the local end of the connection. The remote end may or may not be closed.
     # @param error [Condition] Optional error condition to send with the close.
     def close(error=nil)
@@ -259,7 +254,7 @@ module Qpid::Proton
 
     # @private Generate a unique link name, internal use only.
     def link_name()
-      @link_prefix + "/" +  (@link_count += 1).to_s(16)
+      @link_prefix + "/" +  (@link_count += 1).to_s(32)
     end
 
     protected

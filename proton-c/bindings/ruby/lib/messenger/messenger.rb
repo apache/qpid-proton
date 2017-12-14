@@ -58,11 +58,6 @@ module Qpid::Proton::Messenger
     include Qpid::Proton::Util::ErrorHandler
     include Qpid::Proton::Util::Deprecation
 
-    can_raise_error [:send, :receive, :password=, :start, :stop,
-                     :perform_put, :perform_get, :interrupt,
-                     :route, :rewrite, :accept, :reject,
-                     :incoming_window=, :outgoing_window=]
-
     # Creates a new +Messenger+.
     #
     # The +name+ parameter is optional. If one is not provided then
@@ -699,6 +694,10 @@ module Qpid::Proton::Messenger
       !window.nil? && window.is_a?(Numeric)
     end
 
-  end
+    can_raise_error [:send, :receive, :password=, :start, :stop,
+                     :perform_put, :perform_get, :interrupt,
+                     :route, :rewrite, :accept, :reject,
+                     :incoming_window=, :outgoing_window=]
 
+  end
 end

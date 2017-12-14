@@ -42,11 +42,6 @@ module Qpid::Proton
     # @private
     include Util::ErrorHandler
 
-    can_raise_error :credentials, :error_class => Qpid::Proton::SSLError
-    can_raise_error :trusted_ca_db, :error_class => Qpid::Proton::SSLError
-    can_raise_error :peer_authentication, :error_class => Qpid::Proton::SSLError
-    can_raise_error :allow_unsecured_client, :error_class => Qpid::Proton::SSLError
-
     # @private
     attr_reader :impl
 
@@ -150,6 +145,9 @@ module Qpid::Proton
       Cproton.pn_ssl_domain_allow_unsecured_client(@impl);
     end
 
+    can_raise_error :credentials, :error_class => Qpid::Proton::SSLError
+    can_raise_error :trusted_ca_db, :error_class => Qpid::Proton::SSLError
+    can_raise_error :peer_authentication, :error_class => Qpid::Proton::SSLError
+    can_raise_error :allow_unsecured_client, :error_class => Qpid::Proton::SSLError
   end
-
 end

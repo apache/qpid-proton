@@ -125,12 +125,11 @@ module Qpid::Proton
 
     # @return [Delivery, nil] delivery for this event
     def delivery()
-      return @delivery if @delivery
-      case context
-      when Delivery then @delivery = @context
-      # deprecated: for backwards compat allow a Tracker to be treated as a Delivery
-      when Tracker then @delivery = Delivery.new(context.impl)
-      end
+      @delivery ||= case context
+                    when Delivery then @delivery = @context
+                      # deprecated: for backwards compat allow a Tracker to be treated as a Delivery
+                    when Tracker then @delivery = Delivery.new(context.impl)
+                    end
     end
 
     # @return [Tracker, nil] delivery for this event

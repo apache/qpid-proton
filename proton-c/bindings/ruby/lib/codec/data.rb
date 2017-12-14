@@ -75,7 +75,7 @@ module Qpid::Proton
         }
       end
 
-      proton_caller :clear, :rewind, :next, :prev, :enter, :exit, :type
+      proton_caller :clear, :rewind, :next, :prev, :enter, :exit
 
       def enter_exit()
         enter
