@@ -127,11 +127,7 @@ class Broker < Qpid::Proton::MessagingHandler
   end
 
   def remove_stale_consumers(connection)
-    l = connection.link_head(Qpid::Proton::Endpoint::REMOTE_ACTIVE)
-    while !l.nil?
-      self.unsubscribe(l) if l.sender?
-      l = l.next(Qpid::Proton::Endpoint::REMOTE_ACTIVE)
-    end
+    connection.each_sender { |s| unsubscribe(s) }
   end
 
   def on_sendable(sender)

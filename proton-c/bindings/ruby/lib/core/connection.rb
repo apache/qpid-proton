@@ -197,78 +197,63 @@ module Qpid::Proton
     # @option opts (see Session#open_receiver)
     def open_receiver(opts=nil) default_session.open_receiver(opts) end
 
-    # Returns the first session from the connection that matches the specified
-    # state mask.
-    #
-    # Examines the state of each session owned by the connection, and returns
-    # the first session that matches the given state mask. If the state mask
-    # contains *both* local and remote flags, then an exact match against
-    # those flags is performed. If the state mask contains only local *or*
-    # remote flags, then a match occurs if a*any* of the local or remote flags
-    # are set, respectively.
-    #
-    # @param mask [Integer] The state mask to be matched.
-    #
-    # @return [Session] The first matching session, or nil if none matched.
-    #
-    # @see Endpoint#LOCAL_UNINIT
-    # @see Endpoint#LOCAL_ACTIVE
-    # @see Endpoint#LOCAL_CLOSED
-    # @see Endpoint#REMOTE_UNINIT
-    # @see Endpoint#REMOTE_ACTIVE
-    # @see Endpoint#REMOTE_CLOSED
-    #
-    def session_head(mask)
-      Session.wrap(Cproton.pn_session_header(@impl, mask))
+    # @deprecated use {#each_session}
+    def  session_head(mask)
+      deprecated __method__, "#each_session"
+      Session.wrap(Cproton.pn_session_head(@impl, mask))
     end
 
-    # Returns the first link that matches the given state mask.
-    #
-    # Examines the state of each link owned by the connection and returns the
-    # first that matches the given state mask. If the state mask contains
-    # *both* local and remote flags, then an exact match against those flags
-    # is performed. If the state mask contains *only* local or remote flags,
-    # then a match occurs if *any* of the local ore remote flags are set,
-    # respectively.
-    #
-    # @param mask [Integer] The state mask to be matched.
-    #
-    # @return [Link] The first matching link, or nil if none matched.
-    #
-    # @see Endpoint#LOCAL_UNINIT
-    # @see Endpoint#LOCAL_ACTIVE
-    # @see Endpoint#LOCAL_CLOSED
-    # @see Endpoint#REMOTE_UNINIT
-    # @see Endpoint#REMOTE_ACTIVE
-    # @see Endpoint#REMOTE_CLOSED
-    #
+    # Get the sessions on this connection.
+    # @overload each_session
+    #   @yieldparam s [Session] pass each session to block
+    # @overload each_session
+    #   @return [Enumerator] enumerator over sessions
+    def each_session(&block)
+      return enum_for(:each_session) unless block_given?
+      s = Cproton.pn_session_head(@impl, 0);
+      while s
+        yield Session.wrap(s)
+        s = Cproton.pn_session_next(s, 0)
+      end
+      self
+    end
+
+    # @deprecated use {#each_link}
     def link_head(mask)
+      deprecated __method__, "#each_link"
       Link.wrap(Cproton.pn_link_head(@impl, mask))
     end
 
-    # Extracts the first delivery on the connection that has pending
-    # operations.
-    #
-    # A readable delivery indicates message data is waiting to be read. A
-    # A writable delivery indcates that message data may be sent. An updated
-    # delivery indicates that the delivery's disposition has changed.
-    #
-    # A delivery will never be *both* readable and writable, but it may be
-    # both readable or writable and updated.
-    #
-    # @return [Delivery] The delivery, or nil if none are available.
-    #
-    # @see Delivery#next
-    #
+    # Get the links on this connection.
+    # @overload each_link
+    #   @yieldparam l [Link] pass each link to block
+    # @overload each_link
+    #   @return [Enumerator] enumerator over links
+    def each_link
+      return enum_for(:each_link) unless block_given?
+      l = Cproton.pn_link_head(@impl, 0);
+      while l
+        yield Link.wrap(l)
+        l = Cproton.pn_link_next(l, 0)
+      end
+      self
+    end
+
+    # Get the {Sender} links - see {#each_link}
+    def each_sender() each_link.select { |l| l.sender? }; end
+
+    # Get the {Receiver} links - see {#each_link}
+    def each_receiver() each_link.select { |l| l.receiver? }; end
+
+    # @deprecated use {#MessagingHandler} to handle work
     def work_head
+      deprecated __method__
       Delivery.wrap(Cproton.pn_work_head(@impl))
     end
 
-    # Returns the code for a connection error.
-    #
-    # @return [Integer] The error code.
-    #
+    # @deprecated use {#condition}
     def error
+      deprecated __method__, "#condition"
       Cproton.pn_error_code(Cproton.pn_connection_error(@impl))
     end
 

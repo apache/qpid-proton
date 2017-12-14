@@ -90,17 +90,9 @@ module Qpid::Proton
       Cproton.pn_session_close(@impl)
     end
 
-    # Retrieves the next session from a given connection that matches the
-    # specified state mask.
-    #
-    # When uses with Connection#session_head an application can access all of
-    # the session son the connection that match the given state.
-    #
-    # @param state_mask [Integer] The state mask to match.
-    #
-    # @return [Session, nil] The next session if one matches, or nil.
-    #
+    # @deprecated use {Connection#each_session}
     def next(state_mask)
+      deprecated __method__, "Connection#each_session"
       Session.wrap(Cproton.pn_session_next(@impl, state_mask))
     end
 
@@ -149,6 +141,28 @@ module Qpid::Proton
       sender.open
       return sender
     end
+
+    # Get the links on this Session.
+    # @overload each_link
+    #   @yieldparam l [Link] pass each link to block
+    # @overload each_link
+    #   @return [Enumerator] enumerator over links
+    def each_link
+      return enum_for(:each_link) unless block_given?
+      l = Cproton.pn_link_head(Cproton.pn_session_connection(@impl), 0);
+      while l
+        link = Link.wrap(l)
+        yield link if link.session == self
+        l = Cproton.pn_link_next(l, 0)
+      end
+      self
+    end
+
+    # Get the {Sender} links - see {#each_link}
+    def each_sender() each_link.select { |l| l.sender? }; end
+
+    # Get the {Receiver} links - see {#each_link}
+    def each_receiver() each_link.select { |l| l.receiver? }; end
 
     private
 

@@ -18,9 +18,12 @@
 module Qpid::Proton::Util
   # @private
   module Deprecation
-    def self.deprecated(old, new=nil, skip=2)
+    MATCH_DIR = /#{File.dirname(File.dirname(__FILE__))}/
+
+    def self.deprecated(old, new=nil)
       replace = new ? "use `#{new}`" : "internal use only"
-      warn "[DEPRECATION] `#{old}` is deprecated, #{replace}. Called from\n  #{caller(skip).first}"
+      line = caller.find { |l| not MATCH_DIR.match(l) }
+      warn "[DEPRECATION] `#{old}` is deprecated, #{replace}. Called from #{line}"
     end
 
     def deprecated(*arg) Deprecation.deprecated(*arg); end
@@ -29,7 +32,7 @@ module Qpid::Proton::Util
       def deprecated_alias(bad, good)
         bad, good = bad.to_sym, good.to_sym
         define_method(bad) do |*args, &block|
-          self.deprecated bad, good, 3
+          self.deprecated bad, good
           self.__send__(good, *args, &block)
         end
       end

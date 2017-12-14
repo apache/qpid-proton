@@ -48,12 +48,7 @@ module Qpid::Proton
     #
     proton_caller :state
 
-    # @!method open
-    #
-    # Opens the link. Once this operation has completed, the state flag will be
-    # set.
-    #
-    # @see Endpoint::LOCAL_ACTIVE
+    # @deprecated use {Session#open_sender} and {#Session#open_receiver}
     proton_caller :open
 
     # Close the local end of the link. The remote end may or may not be closed.
@@ -226,13 +221,9 @@ module Qpid::Proton
       Cproton.pn_link_error(@impl)
     end
 
-    # Returns the next link that matches the given state mask.
-    #
-    # @param state_mask [Integer] The state mask.
-    #
-    # @return [Sender, Receiver] The next link.
-    #
+    # @deprecated use {Session#each_link, Connection#each_link}
     def next(state_mask)
+      deprecated __method__, "Session#each_link, Connection#each_link"
       return Link.wrap(Cproton.pn_link_next(@impl, state_mask))
     end
 
