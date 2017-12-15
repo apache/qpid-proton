@@ -20,32 +20,17 @@ module Qpid::Proton
 
   # An AMQP connection.
   class Connection < Endpoint
+    PROTON_METHOD_PREFIX = "pn_connection"
+    include Util::Wrapper
     include Util::Deprecation
 
     # @private
-    PROTON_METHOD_PREFIX = "pn_connection"
-    # @private
-    include Util::Wrapper
-
-    # @!attribute hostname
-    #   @return [String] The AMQP hostname for the connection.
-    proton_set_get :hostname
-
-    # @!attribute user
-    #   @return [String] User name used for authentication (outgoing connection) or the authenticated user name (incoming connection)
-    proton_set_get :user
-
-    private
-
-    proton_set :password
-    attr_accessor :overrides
-    attr_accessor :session_policy
-
     def self.wrap(impl)
       return nil if impl.nil?
       self.fetch_instance(impl, :pn_connection_attachments) || Connection.new(impl)
     end
 
+    # @private
     def initialize(impl = Cproton.pn_connection)
       super()
       @impl = impl
@@ -56,7 +41,19 @@ module Qpid::Proton
       self.class.store_instance(self, :pn_connection_attachments)
     end
 
-    public
+    # @return [String] The AMQP hostname for the connection.
+    def virtual_host() Cproton.pn_connection_remote_hostname(@impl); end
+    deprecated_alias :remote_hostname, :virtual_host
+
+    # @!attribute hostname
+    # @deprecated use {#virtual_host}
+    proton_set_get :hostname
+
+    # @return [String] User name used for authentication (outgoing connection)
+    # or the authenticated user name (incoming connection)
+    def user()
+      Cproton.pn_connection_get_user(impl) or (connection.transport && connection.transport.user)
+    end
 
     # @deprecated no replacement
     def overrides?() deprecated __method__; false; end
@@ -68,49 +65,54 @@ module Qpid::Proton
     def connection() self; end
 
     # @return [Transport, nil] transport bound to this connection, or nil if unbound.
-    #
     def transport() Transport.wrap(Cproton.pn_connection_transport(@impl)); end
 
-    # @return AMQP container ID advertised by the remote peer
-    def remote_container_id() Cproton.pn_connection_remote_container(@impl); end
-
-    alias remote_container remote_container_id
+    # @return AMQP container ID advertised by the remote peer.
+    # To get the local container ID use {#container} and {Container#id}
+    def container_id() Cproton.pn_connection_remote_container(@impl); end
+    deprecated_alias :remote_container, :container_id
 
     # @return [Container] the container managing this connection
     attr_reader :container
 
-    # @return AMQP container ID for the local end of the connection
-    def container_id() Cproton.pn_connection_get_container(@impl); end
-
-    # @return [String] hostname used by the remote end of the connection
-    def remote_hostname() Cproton.pn_connection_remote_hostname(@impl); end
-
     # @return [Array<Symbol>] offered capabilities provided by the remote peer
-    def remote_offered_capabilities
+    def offered_capabilities
       Codec::Data.to_object(Cproton.pn_connection_remote_offered_capabilities(@impl))
     end
+    deprecated_alias :remote_offered_capabilities, :offered_capabilities
 
     # @return [Array<Symbol>] desired capabilities provided by the remote peer
-    def remote_desired_capabilities
+    def desired_capabilities
       Codec::Data.to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
     end
+    deprecated_alias :remote_desired_capabilities, :desired_capabilities
 
     # @return [Hash] connection-properties provided by the remote peer
-    def remote_properties
-      Codec::Data.to_object(Cproton.pn_connection_remote_properites(@impl))
+    def properties
+      Codec::Data.to_object(Cproton.pn_connection_remote_properties(@impl))
     end
+    deprecated_alias :remote_properties, :properties
 
     # Open the local end of the connection.
     #
     # @option opts [MessagingHandler] :handler handler for events related to this connection.
-    # @option opts [String] :user user-name for authentication.
-    # @option opts [String] :password password for authentication.
-    # @option opts [Numeric] :idle_timeout seconds before closing an idle connection
-    # @option opts [Boolean] :sasl_enabled Enable or disable SASL.
-    # @option opts [Boolean] :sasl_allow_insecure_mechs Allow mechanisms that disclose clear text
-    #   passwords, even over an insecure connection.
-    # @option opts [String] :sasl_allowed_mechs the allowed SASL mechanisms for use on the connection.
-    # @option opts [String] :container_id AMQP container ID, normally provided by {Container}
+    #
+    # @option opts [String] :user User name for authentication
+    # @option opts [String] :password Authentication secret
+    # @option opts [String] :virtual_host Virtual host name
+    # @option opts [String] :container_id (provided by {Container}) override advertised container-id
+    #
+    # @option opts [Hash<Symbol=>Object>] :properties Application-defined properties
+    # @option opts [Array<Symbol>] :offered_capabilities Extensions the endpoint supports
+    # @option opts [Array<Symbol>] :desired_capabilities Extensions the endpoint can use
+    #
+    # @option opts [Numeric] :idle_timeout Seconds before closing an idle connection
+    # @option opts [Integer] :max_sessions Limit the number of active sessions
+    # @option opts [Integer] :max_frame_size Limit the size of AMQP frames
+    #
+    # @option opts [Boolean] :sasl_enabled (false) Enable or disable SASL.
+    # @option opts [Boolean] :sasl_allow_insecure_mechs (false) Allow mechanisms send secrets in clear text
+    # @option opts [String] :sasl_allowed_mechs SASL mechanisms allowed by this end of the connection
     #
     def open(opts=nil)
       return if local_active?
@@ -129,21 +131,42 @@ module Qpid::Proton
       Cproton.pn_connection_set_container(@impl, cid)
       Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
-      @link_prefix = opts[:link_prefix] || container_id
-      Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl), opts[:offered_capabilities])
-      Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl), opts[:desired_capabilities])
-      Codec::Data.from_object(Cproton.pn_connection_properties(@impl), opts[:properties])
+      Cproton.pn_connection_set_hostname(@impl, opts[:virtual_host]) if opts[:virtual_host]
+      @link_prefix = opts[:link_prefix] || cid 
+      Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl),
+                              Types.symbol_array(opts[:offered_capabilities]))
+      Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl),
+                              Types.symbol_array(opts[:desired_capabilities]))
+      Codec::Data.from_object(Cproton.pn_connection_properties(@impl),
+                              Types.symbol_keys(opts[:properties]))
     end
 
     # Idle-timeout advertised by the remote peer, in seconds.
-    # Set by {Connection#open} with the +:idle_timeout+ option.
     # @return [Numeric] Idle-timeout advertised by the remote peer, in seconds.
-    # @return [nil] if The peer does not advertise an idle time-out
-    # @option :idle_timeout (see {#open})
+    # @return [nil] if the peer does not advertise an idle time-out
     def idle_timeout()
       if transport && (t = transport.remote_idle_timeout)
         Rational(t, 1000)       # More precise than Float
       end
+    end
+
+    # Session limit advertised by the remote peer. See {Connection#open :max_sessions}
+    # @return [Integer] maximum number of sessions per connection allowed by remote peer.
+    # @return [nil] no specific limit is set.
+    def max_sessions()
+      raise StateError, "connection not bound to transport" unless transport
+      max = transport.remote_channel_max
+      return max.zero? ? nil : max
+    end
+
+    # Maximum frame size, in bytes, advertised by the remote peer.
+    # See {Connection#open :max_frame_size}
+    # @return [Integer] maximum frame size
+    # @return [nil] no limit
+    def max_frame_size()
+      raise StateError, "connection not bound to transport" unless transport
+      max = transport.remote_max_frame
+      return max.zero? ? nil : max
     end
 
     # Closes the local end of the connection. The remote end may or may not be closed.

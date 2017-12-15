@@ -125,7 +125,8 @@ module Qpid::Proton
         @handler = args[0] unless @id
       else raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 0..2"
       end
-      @adapter = Handler::Adapter.adapt(@handler)
+      # Use an empty messaging adapter to give default behaviour if there's no global handler.
+      @adapter = Handler::Adapter.adapt(@handler) || Handler::MessagingAdapter.new(nil)
       @id = (@id || SecureRandom.uuid).freeze
 
       # Implementation note:

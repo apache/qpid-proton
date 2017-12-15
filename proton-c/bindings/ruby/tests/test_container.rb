@@ -75,7 +75,7 @@ class ContainerTest < Minitest::Test
   end
 
   class CloseOnOpenHandler < TestHandler
-    def on_connection_open(c) c.close; end
+    def on_connection_open(c) super; c.close; end
   end
 
   def test_auto_stop_one
@@ -159,6 +159,61 @@ class ContainerTest < Minitest::Test
     assert_match(/badconnect.example.com:999/, c.transport.condition.description)
   end
 
+  # Verify that connection options are sent to the peer and available as Connection methods
+  def test_connection_options
+    # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
+    server_handler = Class.new(MessagingHandler) do
+      def on_error(e) raise e.inspect; end
+      def on_connection_open(c) @connection = c
+        c.open({
+                :virtual_host => "server.to.client",
+                :properties => { :server => :client },
+                :offered_capabilities => [ :s1 ],
+                :desired_capabilities => [ :s2 ],
+                :container_id => "box",
+               })
+        c.close
+      end
+      attr_reader :connection
+    end.new
+    # Transport options must be provided to the listener, by Connection#open it is too late
+    cont = TestContainer.new(nil, {
+                                   :handler => server_handler,
+                                   :idle_timeout => 88,
+                                   :max_sessions =>1000,
+                                   :max_frame_size => 8888,
+                                  })
+    client = cont.connect(cont.url,
+                          {:virtual_host => "client.to.server",
+                           :properties => { :foo => :bar, "str" => "str" },
+                           :offered_capabilities => [:c1 ],
+                           :desired_capabilities => ["c2" ],
+                           :idle_timeout => 42,
+                           :max_sessions =>100,
+                           :max_frame_size => 4096,
+                           :container_id => "bowl"
+                          })
+    cont.run
+    c = server_handler.connection
+    assert_equal "client.to.server", c.virtual_host
+    assert_equal({ :foo => :bar, :str => "str" }, c.properties)
+    assert_equal([:c1], c.offered_capabilities)
+    assert_equal([:c2], c.desired_capabilities)
+    assert_equal 21, c.idle_timeout # Proton divides by 2
+    assert_equal 100, c.max_sessions
+    assert_equal 4096, c.max_frame_size
+    assert_equal "bowl", c.container_id
+
+    c = client
+    assert_equal "server.to.client", c.virtual_host
+    assert_equal({ :server => :client }, c.properties)
+    assert_equal([:s1], c.offered_capabilities)
+    assert_equal([:s2], c.desired_capabilities)
+    assert_equal "box", c.container_id
+    assert_equal 8888, c.max_frame_size
+    assert_equal 44, c.idle_timeout # Proton divides by 2
+    assert_equal 100, c.max_sessions
+  end
 end
 
 
@@ -184,7 +239,7 @@ class ContainerSASLTest < Minitest::Test
       if connection == @client
         connection.close
       else
-        @auth_user = connection.transport.sasl.user
+        @auth_user = connection.user
       end
     end
   end
@@ -231,7 +286,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   def test_sasl_anonymous()
     s = SASLHandler.new("amqp://",  {:sasl_allowed_mechs => "ANONYMOUS"})
     TestContainer.new(s, {:sasl_allowed_mechs => "ANONYMOUS"}, __method__).run
-    assert_nil(s.connections[0].user)
+    assert_equal "anonymous", s.connections[0].user
   end
 
   def test_sasl_plain_url()
@@ -239,7 +294,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     # Use default realm with URL, should authenticate with "default_password"
     opts = {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}
     s = SASLHandler.new("amqp://user:default_password@",  opts)
-    TestContainer.new(s, opts).run
+    TestContainer.new(s, opts, __method__).run
     assert_equal(2, s.connections.size)
     assert_equal("user", s.auth_user)
   end

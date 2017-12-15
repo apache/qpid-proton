@@ -23,7 +23,6 @@
 
 # @private
 class Hash # :nodoc:
-  
 
   # @deprecated
   def proton_data_put(data)
@@ -35,5 +34,17 @@ class Hash # :nodoc:
   def self.proton_data_get(data)
     Qpid::Proton::Util::Deprecation.deprecated(__method__, "Codec::Data#map")
     data.map
+  end
+end
+
+module Qpid::Proton::Types
+  # @private
+  def self.symbol_keys(h)
+    h && h.reduce({}) { |x, (k, v)| x[k.to_sym] = v; x }
+  end
+
+  # @private
+  def self.symbol_array(a)
+    a && UniformArray.new(SYMBOL, a.collect { |v| v.to_sym })
   end
 end

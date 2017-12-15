@@ -51,7 +51,11 @@ module Qpid::Proton
         @type, @descriptor = type, descriptor
         raise ArgumentError, "no type specified for array" if @type.nil?
         super elements if elements
-        @proton_array_header = ArrayHeader.new(@type, @descriptor) # Deprecated
+      end
+
+      # @deprecated backwards compatibility  {UniformArray}
+      def proton_array_header
+        @proton_array_header ||= ArrayHeader.new(@type, @descriptor) # Deprecated
       end
 
       # @return [Type] Array elements must be convertible to this AMQP type

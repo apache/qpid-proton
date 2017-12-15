@@ -31,7 +31,7 @@ module Qpid::Proton
       # @deprecated use {Qpid::Proton::Container}
       def initialize(handlers, opts=nil)
         deprecated Qpid::Proton::Reactor::Container, Qpid::Proton::Container
-        h = handlers || (opts && opts[:global_handler])
+        h = handlers || (opts && opts[:global_handler]) || Handler::ReactorMessagingAdapter.new(nil)
         id = opts && opts[:container_id]
         super(h, id)
       end

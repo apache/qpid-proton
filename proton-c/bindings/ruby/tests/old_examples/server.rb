@@ -36,8 +36,8 @@ class Server < Qpid::Proton::Handler::MessagingHandler
   end
 
   def on_connection_opened(event)
-    if event.connection.remote_offered_capabilities &&
-      event.connection.remote_offered_capabilities.contain?("ANONYMOUS-RELAY")
+    if event.connection.offered_capabilities &&
+      event.connection.offered_capabilities.contain?("ANONYMOUS-RELAY")
       @relay = @container.create_sender(@conn, nil)
     end
   end

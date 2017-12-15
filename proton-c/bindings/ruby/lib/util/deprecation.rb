@@ -20,10 +20,13 @@ module Qpid::Proton::Util
   module Deprecation
     MATCH_DIR = /#{File.dirname(File.dirname(__FILE__))}/
 
+    DEPRECATE_FULL_TRACE = false
+
     def self.deprecated(old, new=nil)
       replace = new ? "use `#{new}`" : "internal use only"
-      line = caller.find { |l| not MATCH_DIR.match(l) }
-      warn "[DEPRECATION] `#{old}` is deprecated, #{replace}. Called from #{line}"
+
+      from = DEPRECATE_FULL_TRACE ? caller(2).join("\n") : caller.find { |l| not MATCH_DIR.match(l) }
+      warn "[DEPRECATION] `#{old}` is deprecated, #{replace}. Called from #{from}"
     end
 
     def deprecated(*arg) Deprecation.deprecated(*arg); end

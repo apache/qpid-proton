@@ -181,7 +181,6 @@ module Qpid::Proton
         case e.method           # Events that affect the driver
         when :on_transport_tail_closed then close_read
         when :on_transport_head_closed then close_write
-        when :on_transport_authenticated then connection.user = transport.user
         end
         e.dispatch @adapter
       end

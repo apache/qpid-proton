@@ -18,49 +18,7 @@
 
 module Qpid::Proton
 
-  # A transport is used by a connection to interface with the network.
-  #
-  # A transport is associated with, at most, one Connection.
-  #
-  # == Client And Server Mode
-  #
-  # Initially, a transport is configured to be a client tranpsort. It can be
-  # configured to act as a server when it is created.
-  #
-  # A client transport initiates outgoing connections.
-  #
-  # A client transport must be configured with the protocol layers to use and
-  # cannot configure itself automatically.
-  #
-  # A server transport accepts incoming connections. It can automatically
-  # configure itself to include the various protocol layers depending on the
-  # incoming protocol headers.
-  #
-  # == Tracing Data
-  #
-  # Data can be traced into and out of the transport programmatically by setting
-  # the #trace level to one of the defined trace values (TRACE_RAW, TRACE_FRM or
-  # TRACE_DRV). Tracing can also be turned off programmatically by setting the
-  # #trace level to TRACE_OFF.
-  #
-  # @example
-  #
-  #   # turns on frame tracing
-  #   @transport.trace = Qpid::Proton::Transport::TRACE_FRM
-  #
-  #   # ... do something where the frames are of interest, such as debugging
-  #
-  #   # turn tracing off again
-  #   @transport.trace = Qpid::Proton::Transport::TRACE_NONE
-  #
-  # Tracing can also be enabled from the command line by defining the similarly
-  # named environment variable before starting a Proton application:
-  #
-  # @example
-  #
-  #   # enable tracing from the command line
-  #   PN_TRACE_FRM=1 ruby my_proton_app.rb
-  #
+  # @deprecated all important features are available from {#Connection}
   class Transport
     include Util::Deprecation
 
@@ -78,6 +36,7 @@ module Qpid::Proton
     # Log driver related events; i.e., initialization, end of stream, etc.
     TRACE_DRV = Cproton::PN_TRACE_DRV
 
+    proton_get :user
 
     # @!attribute channel_max
     #
@@ -94,8 +53,8 @@ module Qpid::Proton
     # @!attribute max_frame_size
     #
     # @return [Integer] The maximum frame size.
-    #
-    proton_set_get :max_frame_size
+    proton_set_get :max_frame
+    proton_get :remote_max_frame
 
     # @!attribute [r] remote_max_frame_size
     #
@@ -394,14 +353,15 @@ module Qpid::Proton
     end
 
     # @private
+    # Options are documented {Connection#open}, keep that consistent with this
     def apply opts
       sasl if opts[:sasl_enabled]                                 # Explicitly enabled
       unless opts.include?(:sasl_enabled) && !opts[:sasl_enabled] # Not explicitly disabled
         sasl.allowed_mechs = opts[:sasl_allowed_mechs] if opts.include? :sasl_allowed_mechs
         sasl.allow_insecure_mechs = opts[:sasl_allow_insecure_mechs] if opts.include? :sasl_allow_insecure_mechs
       end
-      self.channel_max= opts[:channel_max] if opts.include? :channel_max
-      self.max_frame_size= opts[:max_frame_size] if opts.include? :max_frame_size
+      self.channel_max= opts[:max_sessions] if opts.include? :max_sessions
+      self.max_frame = opts[:max_frame_size] if opts.include? :max_frame_size
       # NOTE: The idle_timeout option is in Numeric *seconds*, can be Integer, Float or Rational.
       # This is consistent with idiomatic ruby.
       # The transport #idle_timeout property is in *milliseconds* passed direct to C.
