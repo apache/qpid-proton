@@ -41,6 +41,18 @@ module Qpid::Proton
       end
     end
 
+    # Used as the @io when a socket cannot be created due to an erro (e.g resolver fails)
+    # Saves the error and raises it in on_readable so it can be reported via normal channels.
+     class BrokenSocket
+       def initialize(msg) @error = IOError.new(msg); end
+       [:read_nonblock, :write_nonblock, :accept].each do |m|
+         define_method(m) { |*args| raise @error }
+       end
+       [:close_read, :close_write, :close].each do |m|
+         define_method(m) {}
+       end
+    end
+
     class ListenTask < Listener
 
       def initialize(io, handler, container)
@@ -177,7 +189,12 @@ module Qpid::Proton
         opts[:password] ||= url.password
       end
       # TODO aconway 2017-10-26: Use SSL for amqps URLs
-      connect_io(TCPSocket.new(url.host, url.port), opts)
+      socket = begin
+                 TCPSocket.new(url.host, url.port)
+               rescue => e
+                 BrokenSocket.new("connect(#{url}): #{e}")
+               end
+      connect_io(socket, opts)
     end
 
     # Open an AMQP protocol connection on an existing {IO} object
@@ -202,7 +219,12 @@ module Qpid::Proton
       not_stopped
       url = Qpid::Proton::uri url
       # TODO aconway 2017-11-01: amqps, SSL
-      listen_io(TCPServer.new(url.host, url.port), handler)
+      server = begin
+                 TCPServer.new(url.host, url.port)
+               rescue => e
+                 BrokenSocket.new("listen(#{url}): #{e}")
+               end
+      listen_io(server, handler)
     end
 
     # Listen for incoming AMQP connections on an existing server socket.

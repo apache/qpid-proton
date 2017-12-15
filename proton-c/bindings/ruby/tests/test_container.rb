@@ -149,6 +149,16 @@ class ContainerTest < Minitest::Test
     assert_nil l.condition
     assert_nil conn.condition
   end
+
+  def test_bad_host
+    cont = Container.new(__method__)
+    l = cont.listen("badlisten.example.com:999")
+    c = cont.connect("badconnect.example.com:999")
+    cont.run
+    assert_match(/badlisten.example.com:999/, l.condition.description)
+    assert_match(/badconnect.example.com:999/, c.transport.condition.description)
+  end
+
 end
 
 
@@ -201,8 +211,8 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
                   ")
         end
         # Tell proton library to use the new configuration
-        SASL.config_path(conf_dir)
-        SASL.config_name(conf_name)
+        SASL.config_path =  conf_dir
+        SASL.config_name = conf_name
       end
     end
 
