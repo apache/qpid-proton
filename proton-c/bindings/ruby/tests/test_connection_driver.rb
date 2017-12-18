@@ -26,6 +26,7 @@ class RawDriverTest < Minitest::Test
   # Raw handler to record all on_xxx calls
   class RecordingHandler
     def initialize() @calls =[]; end
+    def proton_adapter_class() nil; end # Raw adapter
     attr_reader :calls
 
     def method_missing(name, *args) respond_to_missing?(name) ? @calls << name : super; end
@@ -35,6 +36,7 @@ class RawDriverTest < Minitest::Test
 
   def test_send_recv
     send_class = Class.new do
+      def proton_adapter_class() nil; end # Raw adapter
       attr_reader :outcome
       def on_link_flow(event) event.sender.send Message.new("foo"); end
       def on_delivery(event)
@@ -44,6 +46,7 @@ class RawDriverTest < Minitest::Test
     end
 
     recv_class = Class.new do
+      def proton_adapter_class() nil; end # Raw adapter
       attr_reader :message
       def on_connection_remote_open(event) event.context.open; end
       def on_session_remote_open(event) event.context.open; end

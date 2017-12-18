@@ -27,21 +27,12 @@ module Qpid::Proton
 
       def initialize(handlers)
         raise "empty handler array" if handlers.empty?
-        adapters = handlers.map do |h|
-          h.__send__(proton_adapter_class) if h.respond_to? :proton_adapter_class
-        end.uniq
+        adapters = (handlers.map { |h| Adapter.adapter(h) }).uniq
         raise "handler array not uniform, adapters requested: #{adapters}" if adapters.size > 1
-        @proton_adapter_class = htypes[0]
-
-        @options = {}
+        @proton_adapter_class = adapters[0]
         @methods = Set.new
         handlers.each do |h|
-          if h.respond_to?(:options)
-            @options.merge(h.options) do |k, a, b|
-              raise ArgumentError, "handler array has conflicting options for [#{k}]: #{a} != #{b}"
-            end
-          end
-          @methods.merge(h.methods.select { |m| handler_method? m }) # Event handler methods
+          @methods.merge(h.methods.select { |m| handler_method? m }) # Collect handler methods
         end
       end
 
@@ -63,15 +54,21 @@ module Qpid::Proton
     class Adapter
       def initialize(h) @handler = h; end
 
-      def adapter_class(h) nil; end # Adapters don't need adapting
-
       # Create and return an adapter for handler, or return h if it does not need adapting.
       def self.adapt(handler)
         return unless handler
         a = Array(handler)
         h = (a.size == 1) ? a[0] : ArrayHandler.new(a)
-        a = h.respond_to?(:proton_adapter_class) ? h.proton_adapter_class.new(handler) : h
+        ac = adapter(h)
+        ac ? ac.new(h) : h
       end
+
+      # Adapter class if requested by handler, else default to MessagingHandler
+      def self.adapter(handler)
+        handler.respond_to?(:proton_adapter_class) ? handler.proton_adapter_class : MessagingAdapter
+      end
+
+      def proton_adapter_class() nil; end # Adapters don't need adapting
 
       def forward(method, *args)
         (@handler.__send__(method, *args); true) if @handler.respond_to? method

@@ -30,9 +30,6 @@ module Qpid::Proton
   #
   class MessagingHandler
 
-    # @private
-    def proton_adapter_class() Handler::MessagingAdapter; end
-
     # @return [Hash] handler options, see {#initialize}
     attr_reader :options
 
