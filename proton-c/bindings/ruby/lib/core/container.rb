@@ -184,12 +184,12 @@ module Qpid::Proton
     def connect(url, opts=nil)
       not_stopped
       url = Qpid::Proton::uri url
+      opts ||= {}
       if url.user ||  url.password
-        opts ||= {}
         opts[:user] ||= url.user
         opts[:password] ||= url.password
       end
-      # TODO aconway 2017-10-26: Use SSL for amqps URLs
+      opts[:ssl_domain] ||= SSLDomain.new(SSLDomain::MODE_CLIENT) if url.scheme == "amqps"
       socket = begin
                  TCPSocket.new(url.host, url.port)
                rescue => e

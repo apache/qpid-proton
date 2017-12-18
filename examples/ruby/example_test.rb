@@ -65,6 +65,13 @@ EOS
     assert_output(want.strip, "simple_recv.rb", $url, __method__)
   end
 
+  def test_ssl_send_recv
+    out = run_script("ssl_send.rb", $url, __method__).read.strip
+    assert_match(/Connection secured with "...*\"\nAll 10 messages confirmed!/, out)
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_output(want.strip, "simple_recv.rb", $url, __method__)
+  end
+
   def test_direct_recv
     url = test_url
       p = run_script("direct_recv.rb", url, __method__)

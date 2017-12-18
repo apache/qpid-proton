@@ -128,8 +128,7 @@ module Qpid::Proton
     #
     def protocol_name
       rc, name = Cproton.pn_ssl_get_protocol_name(@impl, 128)
-      retur name if rc
-      nil
+      name if rc
     end
 
     # Checks whether or not the state has resumed.

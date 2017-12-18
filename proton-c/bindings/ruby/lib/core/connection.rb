@@ -114,6 +114,8 @@ module Qpid::Proton
     # @option opts [Boolean] :sasl_allow_insecure_mechs (false) Allow mechanisms send secrets in clear text
     # @option opts [String] :sasl_allowed_mechs SASL mechanisms allowed by this end of the connection
     #
+    # @option opts [SSLDomain] :ssl_domain SSL configuration domain.
+    #
     def open(opts=nil)
       return if local_active?
       apply opts if opts

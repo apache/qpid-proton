@@ -344,7 +344,7 @@ module Qpid::Proton
     # @return [SSL] The SSL object.
     #
     def ssl(domain = nil, session_details = nil)
-      @ssl ||= SSL.create(self, domain, session_details) if @ssl.nil?
+      @ssl ||= SSL.create(self, domain, session_details)
     end
 
     # @private
@@ -367,6 +367,7 @@ module Qpid::Proton
       # The transport #idle_timeout property is in *milliseconds* passed direct to C.
       # Direct use of the transport is deprecated.
       self.idle_timeout= (opts[:idle_timeout]*1000).round if opts.include? :idle_timeout
+      self.ssl(opts[:ssl_domain]) if opts[:ssl_domain]
     end
 
     can_raise_error :process, :error_class => TransportError
