@@ -48,7 +48,7 @@ module Qpid::Proton
     #
     proton_caller :state
 
-    # @deprecated use {Session#open_sender} and {#Session#open_receiver}
+    # @deprecated  Use {Sender#open} or {Receiver#open}
     proton_caller :open
 
     # Close the local end of the link. The remote end may or may not be closed.

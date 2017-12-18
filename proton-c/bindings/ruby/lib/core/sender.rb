@@ -27,6 +27,30 @@ module Qpid::Proton
     # @private
     include Util::ErrorHandler
 
+    # Open the {Sender} link
+    #
+    # @overload open_sender(address)
+    #   @param address [String] address of the target to send to
+    # @overload open_sender(opts)
+    #   @option opts [Boolean] :auto_settle (true) if true, automatically settle transfers
+    #   @option opts [Boolean] :dynamic (false) dynamic property for source {Terminus#dynamic}
+    #   @option opts [String,Hash] :source source address or source options, see {Terminus#apply}
+    #   @option opts [String,Hash] :target target address or target options, see {Terminus#apply}
+    #   @option opts [String] :name (generated) unique name for the link.
+    def open(opts=nil)
+      opts = { :target => opts } if opts.is_a? String
+      opts ||= {}
+      target.apply opts[:target]
+      source.apply opts[:source]
+      target.dynamic = !!opts[:dynamic]
+      @auto_settle = opts.fetch(:auto_settle, true)
+      super()
+      self
+    end
+
+    # @return [Boolean] auto_settle flag, see {#open}
+    attr_reader :auto_settle
+
     # Hint to the remote receiver about the number of messages available.
     # The receiver may use this to optimize credit flow, or may ignore it.
     # @param n [Integer] The number of deliveries potentially available.
@@ -68,8 +92,6 @@ module Qpid::Proton
 
     def initialize(*arg) super; @tag_count = 0; end
     def next_tag() (@tag_count += 1).to_s(32); end
-
-    # @private
     can_raise_error :stream, :error_class => Qpid::Proton::LinkError
   end
 end

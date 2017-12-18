@@ -22,15 +22,6 @@ module Qpid::Proton
 
     # Adapt raw proton events to {MessagingHandler} events.
     class MessagingAdapter  < Adapter
-      def initialize handler
-        super
-        @opts = { :prefetch => 10, :auto_accept => true, :auto_settle => true,
-                 :auto_open => true, :auto_close => true }
-        if handler.respond_to?(:options) && handler.options
-          @opts.update(handler.options)
-          handler.options.replace @opts
-        end
-      end
 
       def delegate(method, *args)
         forward(method, *args) or forward(:on_unhandled, method, *args)
@@ -39,8 +30,8 @@ module Qpid::Proton
       def delegate_error(method, context)
         unless forward(method, context) || forward(:on_error, context.condition)
           forward(:on_unhandled, method, context)
-          # By default close the whole connection on an un-handled error
-          context.connection.close(context.condition) if @opts[:auto_close]
+          # Close the whole connection on an un-handled error
+          context.connection.close(context.condition)
         end
       end
 
@@ -51,14 +42,20 @@ module Qpid::Proton
       def self.open_close(endpoint)
         Module.new do
           define_method(:"on_#{endpoint}_remote_open") do |event|
-            delegate(:"on_#{endpoint}_open", event.context)
-            event.context.open if @opts[:auto_open] && event.context.local_uninit?
+            begin
+              delegate(:"on_#{endpoint}_open", event.context)
+              event.context.open if event.context.local_uninit?
+            rescue StopAutoResponse
+            end
           end
 
           define_method(:"on_#{endpoint}_remote_close") do |event|
             delegate_error(:"on_#{endpoint}_error", event.context) if event.context.condition
-            delegate(:"on_#{endpoint}_close", event.context)
-            event.context.close if @opts[:auto_close] && event.context.local_active?
+            begin
+              delegate(:"on_#{endpoint}_close", event.context)
+              event.context.close if event.context.local_active?
+            rescue StopAutoResponse
+            end
           end
         end
       end
@@ -66,12 +63,17 @@ module Qpid::Proton
       # Using modules so we can override to extend the behavior later in the handler.
       [:connection, :session, :link].each { |endpoint| include open_close(endpoint) }
 
-      def on_transport_error(event) delegate_error(:on_transport_error, event.context); end
-      def on_transport_closed(event) delegate(:on_transport_close, event.context); end
+      def on_transport_error(event)
+        delegate_error(:on_transport_error, event.context)
+      end
+
+      def on_transport_closed(event)
+        delegate(:on_transport_close, event.context) rescue StopAutoResponse
+      end
 
       # Add flow control for link opening events
-      def on_link_local_open(event) add_credit(event.receiver); end
-      def on_link_remote_open(event) super; add_credit(event.receiver); end
+      def on_link_local_open(event) add_credit(event); end
+      def on_link_remote_open(event) super; add_credit(event); end
 
 
       def on_delivery(event)
@@ -80,12 +82,12 @@ module Qpid::Proton
           if d.aborted?
             delegate(:on_delivery_abort, d)
           elsif d.complete?
-            if d.link.local_closed? && @opts[:auto_accept]
+            if d.link.local_closed? && d.receiver.auto_accept
               d.release         # Auto release after close
             else
               begin
                 delegate(:on_message, d, d.message)
-                d.accept if @opts[:auto_accept]  && !d.settled?
+                d.accept if d.receiver.auto_accept  && !d.settled?
               rescue Reject
                 d.reject unless d.settled?
               rescue Release
@@ -94,7 +96,7 @@ module Qpid::Proton
             end
           end
           delegate(:on_delivery_settle, d) if d.settled?
-          add_credit(event.receiver)
+          add_credit(event)
         else                      # Outgoing message
           t = event.tracker
           case t.state
@@ -104,20 +106,20 @@ module Qpid::Proton
           when Delivery::MODIFIED then delegate(:on_tracker_modify, t)
           end
           delegate(:on_tracker_settle, t) if t.settled?
-          t.settle if @opts[:auto_settle]
+          t.settle if t.sender.auto_settle
         end
       end
 
       def on_link_flow(event)
-        add_credit(event.receiver)
+        add_credit(event)
         sender = event.sender
         delegate(:on_sendable, sender) if sender && sender.open? && sender.credit > 0
       end
 
-      def add_credit(r)
-        prefetch = @opts[:prefetch]
-        if r && r.open? && (r.drained == 0) && prefetch && (prefetch > r.credit)
-          r.flow(prefetch - r.credit)
+      def add_credit(event)
+        return unless (r = event.receiver)
+        if r.open? && (r.drained == 0) && r.credit_window && (r.credit_window > r.credit)
+          r.flow(r.credit_window - r.credit)
         end
       end
     end

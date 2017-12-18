@@ -45,14 +45,18 @@ class DriverPair
   def clear() each { |x| x.handler.clear; } end
 end
 
-class TestMessagingHandler < Minitest::Test
+class NoAutoOpenClose < RecordingHandler
+  def initialize() super; @endpoints = []; end
+  def on_connection_open(x) @connection = x; super; raise StopAutoResponse; end
+  def on_session_open(x) @session = x; super; raise StopAutoResponse; end
+  def on_link_open(x) @link = x; super; raise StopAutoResponse; end
+  def on_connection_close(x) super; raise StopAutoResponse; end
+  def on_session_close(x) super; raise StopAutoResponse; end
+  def on_link_close(x) super; raise StopAutoResponse; end
+  attr_reader :connection, :session, :link
+end
 
-  def test_handler_defaults
-    d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)
-    want = { :prefetch => 10, :auto_settle => true, :auto_accept => true, :auto_open => true, :auto_close => true }
-    assert_equal want, d.client.handler.options
-    assert_equal want, d.server.handler.options
-  end
+class TestMessagingHandler < Minitest::Test
 
   def test_auto_open_close
     d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)
@@ -66,9 +70,7 @@ class TestMessagingHandler < Minitest::Test
   end
 
   def test_no_auto_open_close
-    opts = { :auto_close => false, :auto_open => false }
-    d = DriverPair.new(RecordingHandler.new(opts), RecordingHandler.new(opts))
-
+    d = DriverPair.new(NoAutoOpenClose.new, NoAutoOpenClose.new)
     d.client.connection.open; d.run
     assert_equal [:on_connection_open], d.server.handler.names
     assert_equal [], d.client.handler.names
@@ -76,7 +78,7 @@ class TestMessagingHandler < Minitest::Test
     assert_equal [:on_connection_open], d.client.handler.names
     assert_equal [:on_connection_open], d.server.handler.names
     d.clear
-    d.client.connection.session.open; d.run
+    d.client.connection.open_session; d.run
     assert_equal [:on_session_open], d.server.handler.names
     assert_equal [], d.client.handler.names
     d.clear
@@ -102,10 +104,10 @@ class TestMessagingHandler < Minitest::Test
 
   # Close on half-open
   def test_connection_error
-    opts = { :auto_open => false }
-    d = DriverPair.new(RecordingHandler.new(opts), RecordingHandler.new(opts))
+    d = DriverPair.new(NoAutoOpenClose.new, NoAutoOpenClose.new)
     d.client.connection.open; d.run
     d.server.connection.close "bad dog"; d.run
+    d.client.connection.close; d.run
     assert_equal [:on_connection_open, :on_connection_error, :on_connection_close, :on_transport_close], d.client.handler.names
     assert_equal "bad dog", d.client.handler.calls[1][1].condition.description
     assert_equal [:on_connection_open, :on_connection_error, :on_connection_close, :on_transport_close], d.server.handler.names
@@ -137,24 +139,19 @@ class TestMessagingHandler < Minitest::Test
     assert_equal "bad dog", d.server.handler.calls[0][1].condition.description
   end
 
-  def test_options_off
-    handler_class = Class.new(RecordingHandler) do
-      def on_link_open(l) super; @link = l; end
-      def on_session_open(s) super; @session = s; end
-      attr_reader :link, :session
-    end
 
-    off = {:prefetch => nil, :auto_settle => false, :auto_accept => false, :auto_open => false, :auto_close => false}
-    d = DriverPair.new(handler_class.new(off), handler_class.new(off))
+  def test_options_off
+    linkopts = {:credit_window=>0, :auto_settle=>false, :auto_accept=>false}
+    d = DriverPair.new(NoAutoOpenClose.new, NoAutoOpenClose.new)
     d.client.connection.open; d.run
     assert_equal [[], [:on_connection_open]], d.names
     d.server.connection.open; d.run
     assert_equal [[:on_connection_open], [:on_connection_open]], d.names
     d.clear
-    s = d.client.connection.open_sender; d.run
+    s = d.client.connection.open_sender(linkopts); d.run
     assert_equal [[], [:on_session_open, :on_link_open]], d.names
-    d.server.handler.session.open
-    d.server.handler.link.open          # Return the opens
+    d.server.handler.session.open      # Return session open
+    d.server.handler.link.open(linkopts) # Return link open
     d.run
     assert_equal [[:on_session_open, :on_link_open], [:on_session_open, :on_link_open]], d.names
     d.clear

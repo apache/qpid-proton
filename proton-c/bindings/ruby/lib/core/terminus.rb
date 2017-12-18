@@ -29,6 +29,7 @@ module Qpid::Proton
   # the Link.
   #
   class Terminus
+    include Util::Deprecation
 
     # Indicates a non-existent source or target terminus.
     UNSPECIFIED = Cproton::PN_UNSPECIFIED
@@ -85,7 +86,7 @@ module Qpid::Proton
     #
     proton_set_get :address
 
-    # @!attribute durability
+    # @!attribute durability_mode
     #
     # @return [Integer] The durability mode of the terminus.
     #
@@ -93,7 +94,11 @@ module Qpid::Proton
     # @see CONFIGURATION
     # @see DELIVERIES
     #
-    proton_set_get :durability
+    proton_forward :durability_mode, :get_durability
+    proton_forward :durability_mode=, :set_durability
+
+    deprecated_alias :durability, :durability_mode
+    deprecated_alias :durability=, :durability_mode=
 
     # @!attribute expiry_policy
     #
@@ -120,7 +125,7 @@ module Qpid::Proton
 
     # @!attribute distribution_mode
     #
-    # @return [Integer] The distribution mode.
+    # @return [Integer] The distribution mode. Only relevant for a message source.
     #
     # @see DIST_MODE_UNSPECIFIED
     # @see DIST_MODE_COPY
@@ -184,7 +189,8 @@ module Qpid::Proton
       Codec::Data.new(Cproton.pn_terminus_outcomes(@impl))
     end
 
-    # Access and modify the AMQP filter set for the Terminus.
+    # Access and modify the AMQP filter set for a source terminus.
+    # Only relevant for a message source.
     #
     # This operation will return an instance of Data that is valid until the
     # Terminus is freed due to its parent being freed. Any data contained in
@@ -199,12 +205,42 @@ module Qpid::Proton
       Codec::Data.new(Cproton.pn_terminus_filter(@impl))
     end
 
-    # Copy another Terminus into this instance.
-    #
-    # @param source [Terminus] The source instance.
-    #
-    def copy(source)
-      Cproton.pn_terminus_copy(@impl,source.impl)
+    # Replace the data in this Terminus with the contents of +other+
+    # @param other [Terminus] The other instance.
+    def replace(other)
+      Cproton.pn_terminus_copy(@impl, other.impl)
+      self
+    end
+    deprecated_alias :copy, :replace
+
+    # Apply options to this terminus.
+    # @option opts [String] :address the node address
+    # @option opts [Boolean] :dynamic (false)
+    #   if true, request a new node with a unique address to be created. +:address+ is ignored.
+    # @option opts [Integer] :distribution_mode see {#distribution_mode}, only for source nodes
+    # @option opts [Integer] :durability_mode see {#durability_mode}
+    # @option opts [Integer] :timeout see {#timeout}
+    # @option opts [Integer] :expiry_policy see {#expiry_policy}
+    # @option opts [Hash] :filter see {#filter}, only for source nodes
+    # @option opts [Hash] :capabilities see {#capabilities}
+    def apply(opts=nil)
+      return unless opts
+      if opts.is_a? String      # Shorthand for address
+        self.address = opts
+      else
+        opts.each_pair do |k,v|
+          case k
+          when :address then self.address = v
+          when :dynamic then self.dynamic = !!v
+          when :distribution_mode then self.distribution_mode = v
+          when :durability_mode then self.durability_mode = v
+          when :timeout then self.timeout = v
+          when :expiry_policy then self.expiry_policy = v
+          when :filter then self.filter = v
+          when :capabilities then self.capabilities = v
+          end
+        end
+      end
     end
 
     can_raise_error([:type=, :address=, :durability=, :expiry_policy=,

@@ -132,7 +132,7 @@ module Qpid::Proton
       Cproton.pn_connection_set_user(@impl, opts[:user]) if opts[:user]
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
       Cproton.pn_connection_set_hostname(@impl, opts[:virtual_host]) if opts[:virtual_host]
-      @link_prefix = opts[:link_prefix] || cid 
+      @link_prefix = opts[:link_prefix] || cid
       Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl),
                               Types.symbol_array(opts[:offered_capabilities]))
       Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl),

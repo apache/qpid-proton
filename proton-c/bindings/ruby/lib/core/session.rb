@@ -56,13 +56,7 @@ module Qpid::Proton
     #
     proton_caller :incoming_bytes
 
-    # @!method open
-    # Opens the session.
-    #
-    # Once this operaton has completed, the state flag is updated.
-    #
-    # @see LOCAL_ACTIVE
-    #
+    # Open the session
     proton_caller :open
 
     # @!attribute [r] state
@@ -116,30 +110,20 @@ module Qpid::Proton
       Receiver.new(Cproton.pn_receiver(@impl, name))
     end
 
-    # TODO aconway 2016-01-04: doc options or target param, move option handling to Link.
-    def open_receiver(opts=nil)
-      opts = { :source => opts } if opts.is_a? String
-      opts ||= {}
-      receiver = Receiver.new Cproton.pn_receiver(@impl, opts[:name] || connection.link_name)
-      receiver.source.address ||= opts[:source]
-      receiver.target.address ||= opts[:target]
-      receiver.source.dynamic = true if opts[:dynamic]
-      receiver.handler = opts[:handler] if !opts[:handler].nil?
-      receiver.open
-      return receiver
+    # Create and open a {Receiver} link, see {Receiver#open}
+    # @param opts [Hash] receiver options, see {Receiver#open}
+    # @return [Receiver]
+    def open_receiver(opts=nil) 
+      name = opts[:name] rescue connection.link_name
+      Receiver.new(Cproton.pn_receiver(@impl, name)).open(opts)
     end
 
-    # TODO aconway 2016-01-04: doc opts or target param, connection and containers
+    # Create and open a {Sender} link, see {#open}
+    # @param opts [Hash] sender options, see {Sender#open}
+    # @return [Sender]
     def open_sender(opts=nil)
-      opts = { :target => opts } if opts.is_a? String
-      opts ||= {}
-      sender = Sender.new Cproton.pn_sender(@impl, opts[:name] || connection.link_name)
-      sender.target.address ||= opts[:target]
-      sender.source.address ||= opts[:source]
-      sender.target.dynamic = true if opts[:dynamic]
-      sender.handler = opts[:handler] if !opts[:handler].nil?
-      sender.open
-      return sender
+      name = opts[:name] rescue connection.link_name
+      Sender.new(Cproton.pn_sender(@impl, name)).open(opts)
     end
 
     # Get the links on this Session.

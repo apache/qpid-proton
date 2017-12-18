@@ -122,4 +122,8 @@ module Qpid::Proton
   class AbortedError < ProtonError
   end
 
+  # Raised to stop an automatic response to an endpoint open/close,
+  # so that the application can delay completing the open/close to a later time.
+  class StopAutoResponse < ProtonError
+  end
 end

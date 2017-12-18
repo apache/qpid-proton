@@ -25,8 +25,7 @@ include Qpid::Proton
 class TestDelivery < Minitest::Test
 
   class NoAutoHandler < MessagingHandler
-    @@options = {:auto_settle=>false, :auto_accept=>false}
-    def options() @@options; end
+    def on_link_open(l) l.open({:auto_settle=>false, :auto_accept=>false}); end
   end
 
   class SendHandler < NoAutoHandler

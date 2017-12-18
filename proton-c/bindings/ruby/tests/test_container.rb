@@ -164,7 +164,8 @@ class ContainerTest < Minitest::Test
     # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
     server_handler = Class.new(MessagingHandler) do
       def on_error(e) raise e.inspect; end
-      def on_connection_open(c) @connection = c
+      def on_connection_open(c)
+        @connection = c
         c.open({
                 :virtual_host => "server.to.client",
                 :properties => { :server => :client },

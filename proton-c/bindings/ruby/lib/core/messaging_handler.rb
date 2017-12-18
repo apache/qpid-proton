@@ -1,4 +1,4 @@
-# Licensed to the Apache Software Foundation (ASF) under one
+ # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -22,30 +22,16 @@ module Qpid::Proton
   #
   # Subclass the handler and provide the #on_xxx methods with your event-handling code.
   #
+  # An AMQP endpoint (connection, session or link) must be opened and closed at
+  # each end.  Normally proton responds automatically to an incoming
+  # open/close. You can prevent the automatic response by raising
+  # {StopAutoResponse} from +#on_xxx_open+ or +#on_xxx_close+. The application becomes responsible
+  # for calling +#open/#close+ at a later point.
+  #
   class MessagingHandler
 
     # @private
     def proton_adapter_class() Handler::MessagingAdapter; end
-
-    # Create a {MessagingHandler}
-    # @option opts [Integer] :prefetch (10)
-    #  The number of messages to  fetch in advance, 0 disables prefetch.
-    # @option opts [Boolean] :auto_accept  (true)
-    #  If true, incoming messages are accepted automatically after {#on_message}.
-    #  If false, the application can accept, reject or release the message
-    #  by calling methods on {Delivery} when the message has been processed.
-    # @option opts [Boolean] :auto_settle (true) If true, outgoing
-    #  messages are settled automatically when the remote peer settles. If false,
-    #  the application must call {Delivery#settle} explicitly.
-    # @option opts [Boolean] :auto_open (true)
-    #  If true, incoming connections are  opened automatically.
-    #  If false, the application must call {Connection#open} to open incoming connections.
-    # @option opts [Boolean] :auto_close (true)
-    #  If true, respond to a remote close automatically with a local close.
-    #  If false, the application must call {Connection#close} to finish closing connections.
-    def initialize(opts={})
-      @options = opts.clone
-    end
 
     # @return [Hash] handler options, see {#initialize}
     attr_reader :options
