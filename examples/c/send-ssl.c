@@ -216,7 +216,8 @@ int main(int argc, char **argv) {
   struct app_data_t app = {0};
   char addr[PN_MAX_ADDR];
   pn_transport_t *t = NULL;
-  
+  int err;
+
   app.container_id = argv[0];   /* Should be unique */
   app.host = (argc > 1) ? argv[1] : "";
   app.port = (argc > 2) ? argv[2] : "amqp";
@@ -229,7 +230,7 @@ int main(int argc, char **argv) {
 
   /* Configure a transport for SSL. The transport will be freed by the proactor. */
   t = pn_transport();
-  int err =  pn_ssl_init(pn_ssl(t), app.ssl_domain, NULL);
+  err =  pn_ssl_init(pn_ssl(t), app.ssl_domain, NULL);
   if (err) {
     fprintf(stderr, "error initializing SSL: %s\n", pn_code(err));
     return 1;
