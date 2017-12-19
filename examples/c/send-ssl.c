@@ -126,10 +126,14 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      }
    }
 
-   case PN_CONNECTION_BOUND: {
-     int err =  pn_ssl_init(pn_ssl(pn_event_transport(event)), app->ssl_domain, NULL);
-     if (err) fprintf(stderr, "error encoding message: %s\n", pn_code(err));
-     break;
+   case PN_CONNECTION_REMOTE_OPEN: {
+     pn_ssl_t *ssl = pn_ssl(pn_event_transport(event));
+     if (ssl) {
+       char name[1024];
+       pn_ssl_get_protocol_name(ssl, name, sizeof(name));
+       printf("secure connection: %s\n", name);
+       fflush(stdout);
+     }
    }
 
    case PN_LINK_FLOW: {
@@ -211,7 +215,8 @@ void run(app_data_t *app) {
 int main(int argc, char **argv) {
   struct app_data_t app = {0};
   char addr[PN_MAX_ADDR];
-
+  pn_transport_t *t = NULL;
+  
   app.container_id = argv[0];   /* Should be unique */
   app.host = (argc > 1) ? argv[1] : "";
   app.port = (argc > 2) ? argv[2] : "amqp";
@@ -221,7 +226,16 @@ int main(int argc, char **argv) {
 
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
-  pn_proactor_connect(app.proactor, NULL, NULL, addr);
+
+  /* Configure a transport for SSL. The transport will be freed by the proactor. */
+  t = pn_transport();
+  int err =  pn_ssl_init(pn_ssl(t), app.ssl_domain, NULL);
+  if (err) {
+    fprintf(stderr, "error initializing SSL: %s\n", pn_code(err));
+    return 1;
+  }
+  pn_proactor_connect2(app.proactor, NULL, t, addr);
+
   run(&app);
 
   pn_ssl_domain_free(app.ssl_domain);

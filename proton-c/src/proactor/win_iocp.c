@@ -2715,7 +2715,7 @@ static void connect_step_done(pconnection_t *pc, connect_result_t *result) {
   }
 }
 
-void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
+void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, t, false, addr);
@@ -3156,7 +3156,7 @@ static void recycle_result(accept_result_t *accept_result) {
   }
 }
 
-void pn_listener_accept(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
+void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   accept_result_t *accept_result = NULL;
   DWORD err = 0;
   psocket_t *ps = NULL;

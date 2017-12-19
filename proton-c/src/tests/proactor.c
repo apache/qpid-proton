@@ -207,7 +207,7 @@ static pn_event_type_t common_handler(test_handler_t *th, pn_event_t *e) {
 
    case PN_LISTENER_ACCEPT:
     last_accepted = pn_connection();
-    pn_listener_accept(l, last_accepted, NULL);
+    pn_listener_accept2(l, last_accepted, NULL);
     pn_listener_close(l);       /* Only accept one connection */
     return PN_EVENT_NONE;
 
@@ -257,7 +257,7 @@ static pn_event_type_t listen_handler(test_handler_t *th, pn_event_t *e) {
    case PN_LISTENER_ACCEPT:
     /* No automatic listener close/free for tests that accept multiple connections */
     last_accepted = pn_connection();
-    pn_listener_accept(pn_event_listener(e), last_accepted, NULL);
+    pn_listener_accept2(pn_event_listener(e), last_accepted, NULL);
     /* No automatic close */
     return PN_EVENT_NONE;
 
@@ -285,7 +285,7 @@ static void test_client_server(test_t *t) {
   test_proactor_t tps[] ={ test_proactor(t, open_close_handler), test_proactor(t, common_handler) };
   test_listener_t l = test_listen(&tps[1], localhost);
   /* Connect and wait for close at both ends */
-  pn_proactor_connect(tps[0].proactor, NULL, NULL, l.port.host_port);
+  pn_proactor_connect2(tps[0].proactor, NULL, NULL, l.port.host_port);
   TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
   TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);  
   TEST_PROACTORS_DESTROY(tps);
@@ -312,7 +312,7 @@ static void test_connection_wake(test_t *t) {
 
   pn_connection_t *c = pn_connection();
   pn_incref(c);                 /* Keep a reference for wake() after free */
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
   pn_connection_wake(c);
@@ -325,7 +325,7 @@ static void test_connection_wake(test_t *t) {
 
   /* Verify we don't get a wake after close even if they happen together */
   pn_connection_t *c2 = pn_connection();
-  pn_proactor_connect(client, c2, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c2, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_connection_wake(c2);
   pn_proactor_disconnect(client, NULL);
@@ -361,7 +361,7 @@ static void test_abort(test_t *t) {
   test_proactor_t tps[] = { test_proactor(t, open_close_handler), test_proactor(t, listen_abort_handler) };
   pn_proactor_t *client = tps[0].proactor;
   test_listener_t l = test_listen(&tps[1], localhost);
-  pn_proactor_connect(client, NULL, NULL, l.port.host_port);
+  pn_proactor_connect2(client, NULL, NULL, l.port.host_port);
 
   /* server transport closes */
   if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
@@ -420,7 +420,7 @@ static void test_refuse(test_t *t) {
   test_proactor_t tps[] = { test_proactor(t, open_close_handler), test_proactor(t, listen_refuse_handler) };
   pn_proactor_t *client = tps[0].proactor;
   test_listener_t l = test_listen(&tps[1], localhost);
-  pn_proactor_connect(client, NULL, NULL, l.port.host_port);
+  pn_proactor_connect2(client, NULL, NULL, l.port.host_port);
 
   /* client transport closes */
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps)); /* client */
@@ -458,7 +458,7 @@ static void test_inactive(test_t *t) {
   /* Listen, connect, disconnect */
   test_listener_t l = test_listen(&tps[1], localhost);
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, TEST_PROACTORS_RUN(tps));
@@ -475,7 +475,7 @@ static void test_inactive(test_t *t) {
   /* Connect, set-timer, disconnect */
   pn_proactor_set_timeout(client, 1000000);
   c = pn_connection();
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_connection_wake(c);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_WAKE, TEST_PROACTORS_RUN(tps));
@@ -503,7 +503,7 @@ static void test_errors(test_t *t) {
 
   /* Invalid connect/listen service name */
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, NULL, "127.0.0.1:xxx");
+  pn_proactor_connect2(client, c, NULL, "127.0.0.1:xxx");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "xxx", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
@@ -516,7 +516,7 @@ static void test_errors(test_t *t) {
 
   /* Invalid connect/listen host name */
   c = pn_connection();
-  pn_proactor_connect(client, c, NULL, "nosuch.example.com:");
+  pn_proactor_connect2(client, c, NULL, "nosuch.example.com:");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "nosuch", last_condition);
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
@@ -544,7 +544,7 @@ static void test_errors(test_t *t) {
 
   /* Connect with no listener */
   c = pn_connection();
-  pn_proactor_connect(client, c, NULL, port.host_port);
+  pn_proactor_connect2(client, c, NULL, port.host_port);
   if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
     TEST_COND_DESC(t, "refused", last_condition);
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
@@ -573,7 +573,7 @@ static pn_event_type_t transport_close_connection_handler(test_handler_t *th, pn
  */
 static void test_proton_1586(test_t *t) {
   test_proactor_t tps[] =  { test_proactor(t, transport_close_connection_handler) };
-  pn_proactor_connect(tps[0].proactor, NULL, NULL, ":yyy");
+  pn_proactor_connect2(tps[0].proactor, NULL, NULL, ":yyy");
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, ":yyy", last_condition);
   test_handler_clear(&tps[0].handler, 0); /* Clear events */
@@ -598,7 +598,7 @@ static void test_ipv4_ipv6(test_t *t) {
   TEST_PROACTORS_DRAIN(tps);
 
 #define EXPECT_CONNECT(TP, HOST) do {                                   \
-    pn_proactor_connect(client, NULL, NULL, test_port_use_host(&(TP), (HOST))); \
+    pn_proactor_connect2(client, NULL, NULL, test_port_use_host(&(TP), (HOST))); \
     TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));   \
     TEST_COND_EMPTY(t, last_condition);                                 \
     TEST_PROACTORS_DRAIN(tps);                                           \
@@ -645,12 +645,12 @@ static void test_release_free(test_t *t) {
   test_listener_t l = test_listen(&tps[1], localhost);
 
   /* leave one connection to the proactor  */
-  pn_proactor_connect(client, NULL, NULL, l.port.host_port);
+  pn_proactor_connect2(client, NULL, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
 
   /* release c1 and free immediately */
   pn_connection_t *c1 = pn_connection();
-  pn_proactor_connect(client, c1, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c1, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_proactor_release_connection(c1); /* We free but socket should still be cleaned up */
   pn_connection_free(c1);
@@ -659,7 +659,7 @@ static void test_release_free(test_t *t) {
 
   /* release c2 and but don't free till after proactor free */
   pn_connection_t *c2 = pn_connection();
-  pn_proactor_connect(client, c2, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c2, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_proactor_release_connection(c2);
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
@@ -750,7 +750,7 @@ static void test_ssl(test_t *t) {
   test_listener_t l = test_listen(server, localhost);
 
   /* Basic SSL connection */
-  pn_proactor_connect(client->proactor, NULL, NULL, l.port.host_port);
+  pn_proactor_connect2(client->proactor, NULL, NULL, l.port.host_port);
   /* Open ok at both ends */
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
@@ -764,7 +764,7 @@ static void test_ssl(test_t *t) {
   TEST_INT_EQUAL(t, 0, pn_ssl_domain_set_peer_authentication(cd, PN_SSL_VERIFY_PEER_NAME, NULL));
   pn_connection_t *c = pn_connection();
   pn_connection_set_hostname(c, "test_server");
-  pn_proactor_connect(client->proactor, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client->proactor, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_COND_EMPTY(t, last_condition);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
@@ -775,7 +775,7 @@ static void test_ssl(test_t *t) {
   /* Verify peer with bad hostname */
   c = pn_connection();
   pn_connection_set_hostname(c, "wrongname");
-  pn_proactor_connect(client->proactor, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client->proactor, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_COND_NAME(t, "amqp:connection:framing-error",  last_condition);
   TEST_COND_DESC(t, "SSL",  last_condition);
@@ -854,7 +854,7 @@ static void test_netaddr(test_t *t) {
   /* Use IPv4 to get consistent results all platforms */
   test_listener_t l = test_listen(&tps[1], "127.0.0.1");
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   if (!TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps))) {
     TEST_COND_EMPTY(t, last_condition); /* Show the last condition */
     return;                     /* don't continue if connection is closed */
@@ -910,10 +910,10 @@ static void test_disconnect(test_t *t) {
 
   /* Only wait for one connection to remote-open before disconnect */
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_connection_t *c2 = pn_connection();
-  pn_proactor_connect(client, c2, NULL, l2.port.host_port);
+  pn_proactor_connect2(client, c2, NULL, l2.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   TEST_PROACTORS_DRAIN(tps);
 
@@ -945,7 +945,7 @@ static void test_disconnect(test_t *t) {
 
   /* Make sure the proactors are still functional */
   test_listener_t l3 = test_listen(&tps[1], localhost);
-  pn_proactor_connect(client, NULL, NULL, l3.port.host_port);
+  pn_proactor_connect2(client, NULL, NULL, l3.port.host_port);
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_proactor_disconnect(client, NULL);
 
@@ -1042,7 +1042,7 @@ static void test_message_stream(test_t *t) {
   pn_message_free(m);
 
   pn_connection_t *c = pn_connection();
-  pn_proactor_connect(client, c, NULL, l.port.host_port);
+  pn_proactor_connect2(client, c, NULL, l.port.host_port);
   pn_session_t *ssn = pn_session(c);
   pn_session_open(ssn);
   pn_link_t *snd = pn_sender(ssn, "x");

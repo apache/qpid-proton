@@ -74,7 +74,7 @@ extern "C" {
 #define PN_MAX_ADDR 1060
 
 /**
- * Format a host:port address string for pn_proactor_connect() or pn_proactor_listen()
+ * Format a host:port address string for pn_proactor_connect2() or pn_proactor_listen2()
  *
  * @param[out] addr address is copied to this buffer, with trailing '\0'
  * @param[in] size  size of addr buffer
@@ -119,7 +119,12 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
  * An empty port will connect to the standard AMQP port (5672).
  *
  */
-PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection, pn_transport_t *transport, const char *addr);
+PNP_EXTERN void pn_proactor_connect2(pn_proactor_t *proactor, pn_connection_t *connection, pn_transport_t *transport, const char *addr);
+
+/**
+ * @deprecated Equivalent to pn_proactor_connect2(proactor, connection, NULL, addr)
+ */
+PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 
 /**
  * Start listening for incoming connections.
@@ -250,7 +255,7 @@ PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
  * and so on) remain intact, but the transport is closed and unbound. The
  * proactor will not return any more events for this connection. The caller must
  * call pn_connection_free(), either directly or indirectly by re-using @p
- * connection in another call to pn_proactor_connect() or pn_proactor_listen().
+ * connection in another call to pn_proactor_connect2() or pn_proactor_listen2().
  *
  * @note **Not thread-safe**.  Call this function from a connection
  * event handler.

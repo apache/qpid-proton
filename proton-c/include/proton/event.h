@@ -309,7 +309,7 @@ typedef enum {
   PN_CONNECTION_WAKE,
 
   /**
-   * Indicates the listener has an incoming connection, call pn_listener_accept()
+   * Indicates the listener has an incoming connection, call pn_listener_accept2()
    * to accept it.
    * Events of this type point to the @ref pn_listener_t.
    */

@@ -1115,7 +1115,7 @@ void pn_proactor_cancel_timeout(pn_proactor_t *p) {
   uv_mutex_unlock(&p->lock);
 }
 
-void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
+void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
   pconnection_t *pc = pconnection(p, c, t, false);
   assert(pc);                                  /* TODO aconway 2017-03-31: memory safety */
   pn_connection_open(pc->driver.connection);   /* Auto-open */
@@ -1270,7 +1270,7 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
   return l->attachments;
 }
 
-void pn_listener_accept(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
+void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   uv_mutex_lock(&l->lock);
   pconnection_t *pc = pconnection(l->work.proactor, c, t, true);
   assert(pc);

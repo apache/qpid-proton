@@ -290,26 +290,21 @@ static void handle(broker_t* b, pn_event_t* e) {
     fflush(stdout);
     break;
 
-   case PN_LISTENER_ACCEPT:
-    pn_listener_accept(pn_event_listener(e), NULL, NULL);
-    break;
-
+   case PN_LISTENER_ACCEPT: {
+    /* Configure a transport to allow SSL and SASL connections. See ssl_domain setup in main() */
+     pn_transport_t *t = pn_transport();
+     pn_transport_require_auth(t, false);
+     pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
+     if (b->ssl_domain) {
+       pn_ssl_init(pn_ssl(t), b->ssl_domain, NULL);
+     }
+     pn_listener_accept2(pn_event_listener(e), NULL, t);
+     break;
+   }
    case PN_CONNECTION_INIT:
      pn_connection_set_container(c, b->container_id);
      break;
 
-   case PN_CONNECTION_BOUND: {
-     /* Allow anonymous connections by SASL */
-     pn_transport_t *t = pn_connection_transport(c);
-     pn_transport_require_auth(t, false);
-     pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
-     /* Accept SSL connections if possible, but also plain connections.
-        See the call to pn_ssl_domain_allow_unsecured_client() in main() */
-     if (b->ssl_domain) {
-       pn_ssl_init(pn_ssl(pn_event_transport(e)), b->ssl_domain, NULL);
-     }
-     break;
-   }
    case PN_CONNECTION_REMOTE_OPEN: {
      pn_connection_open(pn_event_connection(e)); /* Complete the open */
      break;

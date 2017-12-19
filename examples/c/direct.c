@@ -234,7 +234,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
     break;
 
    case PN_LISTENER_ACCEPT:
-    pn_listener_accept(pn_event_listener(event), NULL, NULL);
+    pn_listener_accept2(pn_event_listener(event), NULL, NULL);
     break;
 
    case PN_CONNECTION_INIT:

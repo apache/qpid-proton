@@ -119,7 +119,9 @@ class CExampleTest(ProcTestCase):
     def test_send_ssl_receive(self):
         """Send first then receive"""
         with Broker(self) as b:
-            self.assertEqual(send_expect(), self.runex("send-ssl", b.port))
+            got = self.runex("send-ssl", b.port)
+            self.assertIn("secure connection:", got)
+            self.assertIn(send_expect(), got)
             self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
 
 if __name__ == "__main__":

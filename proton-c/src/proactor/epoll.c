@@ -1294,7 +1294,7 @@ static bool wake_if_inactive(pn_proactor_t *p) {
   return false;
 }
 
-void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
+void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, const char *addr) {
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, p, c, t, false, addr);
@@ -1537,7 +1537,7 @@ static void listener_begin_close(pn_listener_t* l) {
         unlock(&l->rearm_mutex);
       }
     }
-    /* Close all sockets waiting for a pn_listener_accept() */
+    /* Close all sockets waiting for a pn_listener_accept2() */
     if (l->unclaimed) l->pending_count++;
     acceptor_t *a = listener_list_next(&l->pending_acceptors);
     while (a) {
@@ -1697,7 +1697,7 @@ pn_record_t *pn_listener_attachments(pn_listener_t *l) {
   return l->attachments;
 }
 
-void pn_listener_accept(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
+void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t) {
   pconnection_t *pc = (pconnection_t*) pn_class_new(&pconnection_class, sizeof(pconnection_t));
   assert(pc); // TODO: memory safety
   const char *err = pconnection_setup(pc, pn_listener_proactor(l), c, t, true, "");

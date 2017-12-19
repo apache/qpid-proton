@@ -22,6 +22,7 @@
 
 #include "proactor-internal.h"
 #include <proton/error.h>
+#include <proton/listener.h>
 #include <proton/proactor.h>
 
 #include <stdio.h>
@@ -83,3 +84,15 @@ void pni_proactor_set_cond(
                         msg, what, nonull(host), nonull(port));
   }
 }
+
+// Backwards compatibility signatures.
+
+void pn_proactor_connect(pn_proactor_t *p, pn_connection_t *c, const char *addr) {
+  pn_proactor_connect2(p, c, NULL, addr);
+}
+
+void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
+  pn_listener_accept2(l, c, NULL);
+}
+
+
