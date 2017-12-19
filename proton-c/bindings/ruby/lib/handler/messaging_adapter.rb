@@ -91,7 +91,7 @@ module Qpid::Proton
               rescue Reject
                 d.reject unless d.settled?
               rescue Release
-                d.release unless d.settled
+                d.release unless d.settled?
               end
             end
           end

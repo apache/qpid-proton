@@ -78,6 +78,8 @@ class TestDelivery < Minitest::Test
       when "modify" then delivery.release({:undeliverable => true, :annotations => {:x => 42 }})
       when "modify-empty" then delivery.release({:failed => false, :undeliverable => false, :annotations => {}})
       when "modify-nil" then delivery.release({:failed => false, :undeliverable => false, :annotations => nil})
+      when "reject-raise" then raise Reject
+      when "release-raise" then raise Release
       else raise inspect
       end
     end
@@ -85,7 +87,7 @@ class TestDelivery < Minitest::Test
 
   def test_outcomes
     rh = ReceiveHandler.new
-    sh = SendHandler.new(["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil"])
+    sh = SendHandler.new(["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil", "reject-raise", "release-raise"])
     c = Container.new(nil, __method__)
     l = c.listen_io(TCPServer.new(0), ListenOnceHandler.new({ :handler => rh }))
     c.connect(l.url, {:handler => sh})
@@ -98,8 +100,10 @@ class TestDelivery < Minitest::Test
     assert_equal ["modify", :on_tracker_modify, "5", Transfer::MODIFIED, {:failed=>true, :undeliverable=>true, :annotations=>{:x => 42}}], o.shift
     assert_equal ["modify-empty", :on_tracker_release, "6", Transfer::RELEASED, nil], o.shift
     assert_equal ["modify-nil", :on_tracker_release, "7", Transfer::RELEASED, nil], o.shift
+    assert_equal ["reject-raise", :on_tracker_reject, "8", Transfer::REJECTED, nil], o.shift
+    assert_equal ["release-raise", :on_tracker_modify, "9", Transfer::MODIFIED, {:failed=>true, :undeliverable=>false, :annotations=>nil}], o.shift
     assert_empty o
-    assert_equal ["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil"], rh.received
+    assert_equal ["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil", "reject-raise", "release-raise"], rh.received
     assert_empty sh.unsettled
   end
 end
