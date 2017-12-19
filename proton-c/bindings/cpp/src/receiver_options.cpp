@@ -65,6 +65,7 @@ class receiver_options::impl {
     option<messaging_handler*> handler;
     option<proton::delivery_mode> delivery_mode;
     option<bool> auto_accept;
+    option<bool> auto_settle;
     option<int> credit_window;
     option<bool> dynamic_address;
     option<source_options> source;
@@ -76,6 +77,7 @@ class receiver_options::impl {
         if (r.uninitialized()) {
             if (delivery_mode.set) set_delivery_mode(r, delivery_mode.value);
             if (handler.set && handler.value) container::impl::set_handler(r, handler.value);
+            if (auto_settle.set) get_context(r).auto_settle = auto_settle.value;
             if (auto_accept.set) get_context(r).auto_accept = auto_accept.value;
             if (credit_window.set) get_context(r).credit_window = credit_window.value;
 
@@ -94,6 +96,7 @@ class receiver_options::impl {
         handler.update(x.handler);
         delivery_mode.update(x.delivery_mode);
         auto_accept.update(x.auto_accept);
+        auto_settle.update(x.auto_settle);
         credit_window.update(x.credit_window);
         dynamic_address.update(x.dynamic_address);
         source.update(x.source);
@@ -128,4 +131,8 @@ void receiver_options::apply(receiver& r) const { impl_->apply(r); }
 const std::string* receiver_options::get_name() const {
     return impl_->name.set ? &impl_->name.value : 0;
 }
+
+// No-op, kept for binary compat but auto_settle is not relevant to receiver only sender.
+receiver_options& receiver_options::auto_settle(bool b) { return *this; }
+
 } // namespace proton
