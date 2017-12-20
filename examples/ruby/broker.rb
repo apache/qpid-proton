@@ -85,7 +85,7 @@ class Broker < Qpid::Proton::MessagingHandler
       end
       @ssl_domain.allow_unsecured_client # SSL is optional, this is not secure.
     rescue
-      # Don't worry if we can't set up SSL.
+      @ssl_domain = nil # Don't worry if we can't set up SSL.
     end
   end
 
