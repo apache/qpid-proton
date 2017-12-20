@@ -152,11 +152,8 @@ class ContainerTest < Minitest::Test
 
   def test_bad_host
     cont = Container.new(__method__)
-    l = cont.listen("badlisten.example.com:999")
-    c = cont.connect("badconnect.example.com:999")
-    cont.run
-    assert_match(/badlisten.example.com:999/, l.condition.description)
-    assert_match(/badconnect.example.com:999/, c.transport.condition.description)
+    assert_raises (SocketError) { cont.listen("badlisten.example.com:999") }
+    assert_raises (SocketError) { c = cont.connect("badconnect.example.com:999") }
   end
 
   # Verify that connection options are sent to the peer and available as Connection methods
