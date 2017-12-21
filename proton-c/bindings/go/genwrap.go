@@ -58,8 +58,8 @@ func main() {
 func getVersion() string {
 	_, err := ioutil.ReadFile(path.Join(*include, "proton/version.h.in"))
 	if err == nil {
-		// We are using the headers in git sources, get the version.txt
-		vt, err := ioutil.ReadFile(path.Join(*include, "../../version.txt"))
+		// We are using the headers in git sources, get the VERSION.txt
+		vt, err := ioutil.ReadFile(path.Join(*include, "../../VERSION.txt"))
 		panicIf(err)
 		return versionTxt.FindString(string(vt))
 	}
