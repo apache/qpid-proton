@@ -525,7 +525,7 @@ else (CMAKE_SYSTEM_NAME STREQUAL Windows)
   endfunction()
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
-add_subdirectory(tests/tools/apps/c tests/tools/apps/c)
+add_subdirectory(tools/test-apps/c tools/test-apps/c)
 
 # for full source distribution:
 set (qpid-proton-platform-all
@@ -992,7 +992,7 @@ if (BUILD_PYTHON)
   add_custom_target(quick_perf_py COMMAND ${env_py} --
                     "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
                     ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "PYTHON"
-                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tests/tools/apps/python")
+                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tools/test-apps/python")
   add_dependencies(quick_perf_py reactor-recv _cproton)
 
 endif (BUILD_PYTHON)
