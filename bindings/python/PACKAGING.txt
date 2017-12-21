@@ -10,7 +10,7 @@ the Python bindings directory in the build directory.
 
 For example, assuming the build directory is named 'build':
 
-$ cd build/proton-c/bindings/python/dist
+$ cd build/bindings/python/dist
 
 You can now run the setup.py script from within the dist directory to
 build your source distribution package.

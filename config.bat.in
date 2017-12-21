@@ -33,19 +33,19 @@ set PROTON_BUILD=@CMAKE_BINARY_DIR@
 set PROTON_HOME=%PROTON_HOME:/=\%
 set PROTON_BUILD=%PROTON_BUILD:/=\%
 
-set PROTON_BINDINGS=%PROTON_BUILD%\proton-c\bindings
+set PROTON_BINDINGS=%PROTON_BUILD%\bindings
 
 REM Python
 set PYTHON_BINDINGS=%PROTON_BINDINGS%\python
-set COMMON_PYPATH=%PROTON_HOME%\tests\python;%PROTON_HOME%\proton-c\bindings\python
+set COMMON_PYPATH=%PROTON_HOME%\tests\python;%PROTON_HOME%\bindings\python
 set PYTHONPATH=%COMMON_PYPATH%;%PYTHON_BINDINGS%
 
 REM Ruby
 set RUBY_BINDINGS=%PROTON_BINDINGS%\ruby
-set RUBYLIB=%RUBY_BINDINGS%;%PROTON_HOME%\proton-c\bindings\ruby\lib;%PROTON_HOME%\tests\ruby
+set RUBYLIB=%RUBY_BINDINGS%;%PROTON_HOME%\bindings\ruby\lib;%PROTON_HOME%\tests\ruby
 
 REM test applications
 set PATH=%PATH%;%PROTON_BUILD%\tests\tools\apps\c
 set PATH=%PATH%;%PROTON_HOME%\tests\tools\apps\python
 set PATH=%PATH%;%PROTON_HOME%\tests\python
-set PATH=%PATH%;%PROTON_BUILD%\proton-c\%PROTON_BUILD_CONFIGURATION%
+set PATH=%PATH%;%PROTON_BUILD%\%PROTON_BUILD_CONFIGURATION%

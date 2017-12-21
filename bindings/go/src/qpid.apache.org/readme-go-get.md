@@ -4,13 +4,13 @@ rather than `master` when it is present.
 
 Created with:
 
-    git subtree split --prefix=proton-c/bindings/go/src/qpid.apache.org -b go1
+    git subtree split --prefix=bindings/go/src/qpid.apache.org -b go1
 
 Update with:
 
     git checkout go1
     git pull
-    git merge -s recursive -Xsubtree=proton-c/bindings/go/src/qpid.apache.org master
+    git merge -s recursive -Xsubtree=bindings/go/src/qpid.apache.org master
 
 To see the branch description: `git config branch.go1.description`
 

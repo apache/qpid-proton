@@ -52,7 +52,7 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT = @CMAKE_SOURCE_DIR@/proton-c/include @CMAKE_SOURCE_DIR@/proton-c/docs @CMAKE_SOURCE_DIR@/examples/c
+INPUT = @CMAKE_SOURCE_DIR@/include @CMAKE_SOURCE_DIR@/docs @CMAKE_SOURCE_DIR@/examples/c
 FILE_PATTERNS           = *.h *.md *.dox
 EXCLUDE_PATTERNS        = */examples/*.c \
                           */examples/*.h \
@@ -68,7 +68,7 @@ EXCLUDE_PATTERNS        = */examples/*.c \
                           */include/proton/type_compat.h
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
-STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/proton-c/include
+STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/include
 EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples/c
 EXAMPLE_RECURSIVE       = YES
 

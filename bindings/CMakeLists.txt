@@ -44,7 +44,7 @@ if(SWIG_FOUND)
   include(UseSWIG)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
-  file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/proton-c/include/proton/*.h")
+  file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/include/proton/*.h")
   # All swig modules should include ${BINDING_DEPS} in swig_link_libraries
   set (BINDING_DEPS qpid-proton)
 
