@@ -23,9 +23,6 @@ include(CheckPythonModule)
 
 include(versions.cmake)
 
-add_custom_target(docs)
-add_custom_target(doc DEPENDS docs)
-
 # Set the default SSL/TLS implementation
 find_package(OpenSSL)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -334,7 +331,6 @@ else (CMAKE_SYSTEM_NAME STREQUAL Windows)
   endfunction()
 endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
-add_subdirectory(docs/api)
 add_subdirectory(../tests/tools/apps/c ../tests/tools/apps/c)
 
 # for full source distribution:
