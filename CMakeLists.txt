@@ -211,7 +211,7 @@ endmacro()
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 
-install (FILES LICENSE README.md
+install (FILES LICENSE.txt README.md
          DESTINATION ${PROTON_SHARE})
 
 # Generate test environment settings
