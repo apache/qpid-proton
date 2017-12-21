@@ -762,6 +762,8 @@ static void pconnection_tick(pconnection_t *pc);
 
 static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_connection_t *c, pn_transport_t *t, bool server, const char *addr)
 {
+  memset(pc, 0, sizeof(*pc));
+
   if (pn_connection_driver_init(&pc->driver, c, t) != 0) {
     free(pc);
     return "pn_connection_driver_init failure";
@@ -1220,24 +1222,28 @@ void pconnection_connected_lh(pconnection_t *pc) {
       pc->addrinfo = NULL;
     }
     pc->ai = NULL;
+    socklen_t len = sizeof(pc->remote.ss);
+    (void)getpeername(pc->psocket.sockfd, (struct sockaddr*)&pc->remote.ss, &len);
   }
 }
 
 static void pconnection_start(pconnection_t *pc) {
   int efd = pc->psocket.proactor->epollfd;
+  /* Start polling is a no-op if the timer has alread started. */
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
 
-  int fd = pc->psocket.sockfd;
+  /* Get the local socket name now, get the peer name in pconnection_connected */
   socklen_t len = sizeof(pc->local.ss);
-  (void)getsockname(fd, (struct sockaddr*)&pc->local.ss, &len);
-  len = sizeof(pc->remote.ss);
-  (void)getpeername(fd, (struct sockaddr*)&pc->remote.ss, &len); /* Ignore error, leave ss null */
+  (void)getsockname(pc->psocket.sockfd, (struct sockaddr*)&pc->local.ss, &len);
 
-  start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
   epoll_extended_t *ee = &pc->psocket.epoll_io;
+  if (ee->polling) {     /* This is not the first attempt, stop polling and close the old FD */
+    int fd = ee->fd;     /* Save fd, it will be set to -1 by stop_polling */
+    stop_polling(ee, efd);
+    pclosefd(pc->psocket.proactor, fd);
+  }
   ee->fd = pc->psocket.sockfd;
   ee->wanted = EPOLLIN | EPOLLOUT;
-  ee->polling = false;
   start_polling(ee, efd);  // TODO: check for error
 }
 
