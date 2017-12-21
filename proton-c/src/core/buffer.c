@@ -315,6 +315,6 @@ int pn_buffer_quote(pn_buffer_t *buf, pn_string_t *str, size_t n)
     return 0;
   }
   pn_quote(str, buf->bytes + pni_buffer_head(buf), hsize);
-  if (tsize-(n-hsize) > 0) pn_quote(str, buf->bytes, tsize-(n-hsize));
+  pn_quote(str, buf->bytes, pn_min(tsize, n-hsize));
   return 0;
 }
