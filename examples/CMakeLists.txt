@@ -30,7 +30,7 @@ set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add the tools directory for the 'proctest' module
-set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/py" "$ENV{PYTHON_PATH}")
+set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
 set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
 
 add_subdirectory(c)

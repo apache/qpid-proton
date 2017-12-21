@@ -36,7 +36,7 @@ PROTON_BINDINGS=$PROTON_BUILD/proton-c/bindings
 PYTHON_BINDINGS=$PROTON_BINDINGS/python
 
 # Python
-COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python:$PROTON_HOME/tools/py
+COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python:$PROTON_HOME/tools/python
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 
 # Ruby
