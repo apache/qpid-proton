@@ -17,30 +17,6 @@
 # under the License.
 #
 
-include(CheckLibraryExists)
-include(CheckSymbolExists)
-
-include(versions.cmake)
-
-# Set the default SSL/TLS implementation
-find_package(OpenSSL)
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads)
-find_package(PythonInterp REQUIRED)
-find_package(SWIG)
-# FindSwig.cmake "forgets" make its outputs advanced like a good citizen
-mark_as_advanced(SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
-
-# See if Cyrus SASL is available
-find_library(CYRUS_SASL_LIBRARY sasl2)
-find_path(CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
-find_package_handle_standard_args(CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
-mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
-
-# Find saslpasswd2 executable to generate test config
-find_program(SASLPASSWD_EXE saslpasswd2 DOC "Program used to make SASL user db for testing")
-mark_as_advanced(SASLPASSWD_EXE)
-
 if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
   set (PN_WINAPI TRUE)

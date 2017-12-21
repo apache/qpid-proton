@@ -16,19 +16,43 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
 cmake_minimum_required (VERSION 2.8.12)
 
 project (Proton C)
 
-# Enable testing
-enable_testing()
 include (CTest)
-
-# Pull in local cmake modules
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules/")
-
 include (CheckLanguage)
-check_language(CXX)
+include (CheckLibraryExists)
+include (CheckSymbolExists)
+include (versions.cmake)
+
+enable_testing()
+
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules")
+set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
+
+find_package (OpenSSL)
+find_package (Threads)
+find_package (PythonInterp REQUIRED)
+
+## Swig
+
+find_package (SWIG)
+mark_as_advanced (SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
+
+## Cyrus SASL
+
+find_library (CYRUS_SASL_LIBRARY sasl2)
+find_path (CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
+find_package_handle_standard_args (CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
+find_program (SASLPASSWD_EXE saslpasswd2 DOC "Program used to make SASL user db for testing")
+mark_as_advanced (CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR SASLPASSWD_EXE)
+
+## C++
+
+check_language (CXX)
+
 if (CMAKE_CXX_COMPILER)
   enable_language(CXX)
 endif()
