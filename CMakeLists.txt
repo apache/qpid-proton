@@ -965,15 +965,16 @@ if (BUILD_PYTHON)
       message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
     elseif (TOX_EXE)
       configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+        "${CMAKE_CURRENT_SOURCE_DIR}/misc/tox.ini.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/misc/tox.ini")
       add_test (NAME python-tox-test
                 COMMAND ${env_py}
                   "PATH=${py_path}"
                   "SASLPASSWD=${SASLPASSWD_EXE}"
                   "SWIG=${SWIG_EXECUTABLE}"
                   ${VALGRIND_ENV}
-                  ${TOX_EXE})
+                  --
+                  ${TOX_EXE} -c "${CMAKE_CURRENT_BINARY_DIR}/misc/tox.ini")
       set_tests_properties(python-tox-test
                            PROPERTIES
                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
