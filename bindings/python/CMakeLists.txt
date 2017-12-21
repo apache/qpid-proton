@@ -36,7 +36,7 @@ endif ()
 
 
 list(APPEND SWIG_MODULE_cproton_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${CMAKE_SOURCE_DIR}/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
 
@@ -150,7 +150,7 @@ file(COPY ${pysrc} DESTINATION ${py_dist_dir}/proton)
 
 add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files)
-file(MAKE_DIRECTORY ${py_dist_dir}/proton-c)
+file(MAKE_DIRECTORY ${py_dist_dir})
 
 # copy generated source files from the binary dir to the dist
 foreach(sfile ${qpid-proton-include-generated})
@@ -175,7 +175,7 @@ set (all_src
 foreach(sfile ${all_src})
   add_custom_command(TARGET py_src_dist
                      COMMAND ${CMAKE_COMMAND} -E
-                         copy ${CMAKE_SOURCE_DIR}/proton-c/${sfile} ${py_dist_dir}/proton-c/${sfile})
+                         copy ${CMAKE_SOURCE_DIR}/${sfile} ${py_dist_dir}/${sfile})
 endforeach()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in

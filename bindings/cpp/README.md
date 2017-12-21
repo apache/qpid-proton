@@ -5,7 +5,7 @@ This is a C++ binding for the Proton API.
 The documentation includes a tutorial and API documentation.
 
 To generate the documentation go to your build directory, run `make
-docs-cpp`, and open `proton-c/bindings/cpp/docs/html/index.html` in a
+docs-cpp`, and open `bindings/cpp/docs/html/index.html` in a
 browser.
 
 ## Todo

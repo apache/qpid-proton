@@ -23,7 +23,7 @@ set(bin "${CMAKE_CURRENT_BINARY_DIR}")
 ## Build the swig library
 
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/proton-c/include/proton/cproton.i
+    ${CMAKE_SOURCE_DIR}/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
 include_directories (${RUBY_INCLUDE_PATH})

@@ -22,7 +22,7 @@ http://qpid.apache.org/proton. To build from source:
 
 This produces a Gem file at:
 
-    ${CMAKE_BUILD_DIR}/proton-c/bindings/ruby/qpid_proton-${PN_VERSION}.gem
+    ${CMAKE_BUILD_DIR}/bindings/ruby/qpid_proton-${PN_VERSION}.gem
 
 You can install the gem with +gem install+
 

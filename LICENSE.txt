@@ -212,4 +212,4 @@ The setup scripts for the python bindings include files derived by
 PyZMQ and are licensed with a separate Modified BSD license.  Use of
 the source code in these setup files are subject to the terms and
 conditions in the license:
-proton-c/bindings/python/setuputils/PYZMQ_LICENSE.BSD.
+bindings/python/setuputils/PYZMQ_LICENSE.BSD.
