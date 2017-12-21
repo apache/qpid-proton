@@ -173,7 +173,7 @@ set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
 
 set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
 
-set (BINDING_LANGS PERL PHP PYTHON RUBY)
+set (BINDING_LANGS PYTHON RUBY)
 
 foreach (LANG ${BINDING_LANGS})
   set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")
@@ -384,14 +384,9 @@ endif (PN_WINAPI)
 
 # Try to keep any platform specific overrides together here:
 
-# Until we can decide what to do with PHP support, turn it off by default
-# (We can't build with recent versions of PHP)
-set (NOBUILD_PHP ON)
-
 # MacOS has a bunch of differences in build tools and process and so we have to turn some things
 # off if building there:
 if (APPLE)
-  set (NOBUILD_PHP ON)
   set (NOENABLE_WARNING_ERROR ON)
   set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
@@ -1001,11 +996,6 @@ if (BUILD_PYTHON)
   add_dependencies(quick_perf_py reactor-recv _cproton)
 
 endif (BUILD_PYTHON)
-
-if (BUILD_JAVASCRIPT)
-  add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
-  add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
-endif (BUILD_JAVASCRIPT)
 
 add_subdirectory(examples)
 

@@ -30,7 +30,7 @@ echo Arch: `arch` Uname: `uname -a` lsb_release: `lsb_release -a` User: `whoami`
 echo =========================
 echo Listing installed packages
 dpkg -l | \
-  awk '/^ii  (cmake |maven |ruby |python |php |.*jdk |swig[0-9]*)/{print $2, $3}'| \
+  awk '/^ii  (cmake |maven |ruby |python |.*jdk |swig[0-9]*)/{print $2, $3}'| \
   sort
 echo =========================
 
