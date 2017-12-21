@@ -99,7 +99,7 @@ if (EPYDOC_EXE)
    foreach (py_src_doc ${pysrc})
      list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
    endforeach(py_src_doc)
-   add_custom_target(docs-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
+   add_custom_target(docs-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/bin/env.py --
      PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
      ${PY_DOC_FILES}
@@ -114,7 +114,7 @@ endif (EPYDOC_EXE)
 find_program(SPHINX_EXE sphinx-build)
 mark_as_advanced (SPHINX_EXE)
 if (SPHINX_EXE)
-   add_custom_target(tutorial-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_CURRENT_SOURCE_DIR}/../../env.py --
+   add_custom_target(tutorial-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/bin/env.py --
      PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
    add_dependencies(docs tutorial-py)

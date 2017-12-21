@@ -109,7 +109,7 @@ macro(add_cpp_test name)
   else(WIN32)
     set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
   endif(WIN32)
-  set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/env.py ${EXAMPLE_ENV})
+  set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/bin/env.py ${EXAMPLE_ENV})
   add_test(NAME ${name} COMMAND ${run_env} "PATH=${test_path}" ${VALGRIND_ENV} "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>" -- ${ARGN})
 endmacro()
 

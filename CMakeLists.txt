@@ -272,7 +272,7 @@ include_directories ("${CMAKE_CURRENT_BINARY_DIR}/include")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/env.py)
+set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/bin/env.py)
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
