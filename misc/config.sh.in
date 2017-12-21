@@ -54,7 +54,7 @@ export LD_LIBRARY_PATH="$(merge_paths $PROTON_BUILD $LD_LIBRARY_PATH)"
 
 
 # test applications
-export PATH="$(merge_paths $PATH $PROTON_BUILD/tools/messaging-apps/c $PROTON_HOME/tools/messaging-apps/python $PROTON_HOME/tests/python)"
+export PATH="$(merge_paths $PATH $PROTON_BUILD/tools/test-apps/c $PROTON_HOME/tools/test-apps/python $PROTON_HOME/tests/python)"
 
 # can the test harness use valgrind?
 if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND@" == "ON" ]] ; then
