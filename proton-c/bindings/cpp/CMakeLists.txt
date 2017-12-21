@@ -186,7 +186,6 @@ install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MAT
 install (FILES "${CMAKE_CURRENT_BINARY_DIR}/config_presets.hpp" DESTINATION "${INCLUDE_INSTALL_DIR}/proton/internal")
 
 add_subdirectory(docs)
-add_subdirectory(${CMAKE_SOURCE_DIR}/tests/tools/apps/cpp ${CMAKE_BINARY_DIR}/tests/tools/apps/cpp)
 
 # Pkg config file
 configure_file(
