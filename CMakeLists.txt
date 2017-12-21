@@ -208,6 +208,7 @@ macro(set_search_path result)
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
+add_subdirectory(docs)
 add_subdirectory(proton-c)
 add_subdirectory(examples)
 
