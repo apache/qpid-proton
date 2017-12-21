@@ -25,7 +25,7 @@ include (CTest)
 include (CheckLanguage)
 include (CheckLibraryExists)
 include (CheckSymbolExists)
-include (versions.cmake)
+include (src/lib-versions.cmake)
 
 enable_testing()
 
