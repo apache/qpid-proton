@@ -31,7 +31,7 @@ trap 'rm $syms_desired $syms_library $syms_missing $syms_extra' EXIT
 
 if [[ $# -lt 2 ]] ; then
   echo "Usage:"
-  echo "check_abi object_file expected_symbols_file"
+  echo "check-abi <object-file> <expected-symbols-file>"
   exit 1;
 fi
 
@@ -39,7 +39,7 @@ LC_ALL=C
 export LC_ALL
 
 # Extract exported symbols from library
-nm -DC --defined-only -f s $1 | cut -f1 -d'|' -s | sed -e "$(./cppabi)" -e "s/ *$//" | sort -u > $syms_library
+nm -DC --defined-only -f s $1 | cut -f1 -d'|' -s | sed -e "$(./cpp_abi)" -e "s/ *$//" | sort -u > $syms_library
 
 # Process API syms (substitute in some typedefs etc.)
 sed -e "
