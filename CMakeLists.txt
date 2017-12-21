@@ -966,15 +966,14 @@ if (BUILD_PYTHON)
     elseif (TOX_EXE)
       configure_file(
         "${CMAKE_CURRENT_SOURCE_DIR}/misc/tox.ini.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/misc/tox.ini")
+        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
       add_test (NAME python-tox-test
                 COMMAND ${env_py}
                   "PATH=${py_path}"
                   "SASLPASSWD=${SASLPASSWD_EXE}"
                   "SWIG=${SWIG_EXECUTABLE}"
                   ${VALGRIND_ENV}
-                  --
-                  ${TOX_EXE} -c "${CMAKE_CURRENT_BINARY_DIR}/misc/tox.ini")
+                  ${TOX_EXE})
       set_tests_properties(python-tox-test
                            PROPERTIES
                              PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
@@ -1004,7 +1003,7 @@ install (FILES LICENSE.txt README.md
          DESTINATION ${PROTON_SHARE})
 
 # Generate test environment settings
-configure_file(${CMAKE_SOURCE_DIR}/config.sh.in
+configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in
                ${CMAKE_BINARY_DIR}/config.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/config.bat.in
+configure_file(${CMAKE_SOURCE_DIR}/misc/config.bat.in
                ${CMAKE_BINARY_DIR}/config.bat @ONLY)
