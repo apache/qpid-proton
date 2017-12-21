@@ -46,7 +46,7 @@ to_native_path ("${py_pythonpath}" py_pythonpath)
 set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
 to_native_path ("${perf_pythonpath}" perf_pythonpath)
 
-add_custom_target(quick_perf_cpp ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/env.py --
+add_custom_target(quick_perf_cpp ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/bin/env.py --
                   "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
                   ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "CPP")
 
