@@ -30,5 +30,5 @@ add_custom_command(
     TARGET qpid-proton
 	PRE_LINK
     COMMAND ${PYTHON_EXECUTABLE}
-	    ${CMAKE_MODULE_PATH}WindowsC99SymbolCheck.py $<TARGET_FILE_DIR:qpid-proton>
+	    ${CMAKE_MODULE_PATH}/WindowsC99SymbolCheck.py $<TARGET_FILE_DIR:qpid-proton>
     COMMENT "Checking for dangerous use of C99-violating functions")
