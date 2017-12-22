@@ -62,7 +62,6 @@ addons:
     - ruby
     - ruby-dev
     - python3-dev
-    - php5
     - golang
     - lcov
 

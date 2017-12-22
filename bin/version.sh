@@ -39,4 +39,4 @@ else
     usage
 fi
 
-echo ${VERSION} > ${SRC}/version.txt
+echo ${VERSION} > ${SRC}/VERSION.txt

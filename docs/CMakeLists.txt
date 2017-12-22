@@ -17,18 +17,6 @@
 # under the License.
 #
 
-#
-# Check qpid-proton.dll after linking for dangerous calls to
-# Windows functions that suggest but deviate from C99 behavior:
-#   _snprintf, vsnprintf, _vsnprintf
-# See platform.h for safe wrapper calls.
-#
+add_custom_target(docs)
 
-set(obj_dir ${CMAKE_CURRENT_BINARY_DIR}/qpid-proton.dir/${CMAKE_CFG_INTDIR})
-
-add_custom_command(
-    TARGET qpid-proton
-	PRE_LINK
-    COMMAND ${PYTHON_EXECUTABLE}
-	    ${CMAKE_MODULE_PATH}/WindowsC99SymbolCheck.py $<TARGET_FILE_DIR:qpid-proton>
-    COMMENT "Checking for dangerous use of C99-violating functions")
+add_subdirectory(api)
