@@ -1096,6 +1096,7 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
   }
 
   if (pc->new_events) {
+    pc->current_arm = 0;
     if (!pc->context.closing) {
       if ((pc->new_events & (EPOLLHUP | EPOLLERR)) && !pconnection_rclosed(pc) && !pconnection_wclosed(pc))
         pconnection_maybe_connect_lh(pc);
@@ -1106,7 +1107,6 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       if (pc->new_events & EPOLLIN)
         pc->read_blocked = false;
     }
-    pc->current_arm = 0;
     pc->new_events = 0;
   }
 
@@ -1227,9 +1227,10 @@ void pconnection_connected_lh(pconnection_t *pc) {
   }
 }
 
+/* multi-address connections may call pconnection_start multiple times with diffferent FDs  */
 static void pconnection_start(pconnection_t *pc) {
   int efd = pc->psocket.proactor->epollfd;
-  /* Start polling is a no-op if the timer has alread started. */
+  /* Start timer, a no-op if the timer has already started. */
   start_polling(&pc->timer.epoll_io, efd);  // TODO: check for error
 
   /* Get the local socket name now, get the peer name in pconnection_connected */
@@ -1243,7 +1244,7 @@ static void pconnection_start(pconnection_t *pc) {
     pclosefd(pc->psocket.proactor, fd);
   }
   ee->fd = pc->psocket.sockfd;
-  ee->wanted = EPOLLIN | EPOLLOUT;
+  pc->current_arm = ee->wanted = EPOLLIN | EPOLLOUT;
   start_polling(ee, efd);  // TODO: check for error
 }
 
