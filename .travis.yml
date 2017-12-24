@@ -1,0 +1,53 @@
+os: linux
+dist: trusty
+sudo: false
+language:
+- c
+- cpp
+compiler:
+- gcc
+addons:
+  apt:
+    packages:
+    - cmake
+    - libssl-dev
+    - libsasl2-dev
+    - sasl2-bin
+    - swig
+    - python-dev
+    - valgrind
+    - ruby
+    - ruby-dev
+    - python3-dev
+    - php5
+    - golang
+    - lcov
+
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    - secure: "KuTcw3SrSjtap+3eZJqwMuPHKHqEgguk905EifiUQSHNHoLxmGk9SwCwy5ujIcdrPze2w18KF2Nfcqu213o7pK+5FHcFc4A61JkBw+TOYHYiP9GmuINlTg5Vp/tPoISRKdLUiJ1ZCstcmUAJ/+u3x0WqzlZ3qvWa7YCBruUprjNK2KaNqinNKOib8/vtyPP3MfcaQiG7LqG7PUGER0aVyMX/TjsBAG2ShiIB2ir3yFkshEw/eNRP9hVsHz7JmA18mHOmbTYPZ+TE3+snc1ocEcX/YwmNvq2dlu51XUlxE0hatF5Vt4D1BRd/pT4Y6cyJ3+HXTG5+l8LeTI5oGk7Msfhew/YCSlkygciwdzbwSJtNrtMNVkIh9WW3qDjAZyXKPpVIOwPZH+hARM/pPWGa/JtmOi8d8T/vr6OXjwuvtrvPssbauxbaOTe7q5whWrAH9gNoeUuGbz6JpvWwxVJwJ4f3Wj5aLmO3Fv4tAT3gQHjkKEE2RYg1PRySNI/qkEwuF0CFuVDEbb8dKBUoYQISCIbcoBjiC5rimt6hVmRbfvtBym2Dmwir4x3m00GvessUWShGe7Ai0SQdOAhJZTqXJyyqySEwLx8SJSiOP8j9VWOCcfSTMzBWQ4H/YjhUxOUkkyo3M9Q4XtOL15/0kemklts2qV/ztcI9+o8zupaZ0Tw="
+
+addons:
+  # https://scan.coverity.com/travis_ci
+  coverity_scan:
+    project:
+      name: cli-java
+      version: SNAPSHOT
+      description: cli-java is a collection of commandline messaging clients suitable for interacting with Message Oriented Middleware such as ActiveMQ Artemis broker or Qpid Dispatch router.
+
+    notification_email: jdanek@redhat.com
+
+    # Commands to prepare for build_command
+    build_command_prepend: ./prepare_for_build.sh
+
+    # The command that will be added as an argument to "cov-build" to compile your project for analysis,
+    build_command: --fs-capture-search ./ ./build_for_analysis.sh
+
+    # Pattern to match selecting branches that will run analysis. We recommend leaving this set to 'coverity_scan'.
+    # Take care in resource usage, and consider the build frequency allowances per
+    #   https://scan.coverity.com/faq#frequency
+    branch_pattern: .*
+
+# skip default build steps
+script: []
