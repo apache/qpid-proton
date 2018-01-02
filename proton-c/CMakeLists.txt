@@ -769,7 +769,7 @@ if (BUILD_PYTHON)
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
   option(TOX_TEST "Enable muti-version python testing with TOX" ON)
-  set(tox_default "py26,py27,py33,py34,py35")
+  set(tox_default "py26,py27,py33,py34,py35,py36")
   set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
   if (NOT (TOX_ENVLIST STREQUAL tox_default))
     message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
