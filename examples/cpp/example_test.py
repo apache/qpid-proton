@@ -104,10 +104,6 @@ class ContainerExampleTest(BrokerTestCase):
     def test_helloworld(self):
         self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
 
-    def test_helloworld_direct(self):
-        with TestPort() as tp:
-            self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld_direct", tp.addr]).wait_exit())
-
     def test_simple_send_recv(self):
         self.assertMultiLineEqual("all messages confirmed\n",
                          self.proc(["simple_send", "-a", self.addr]).wait_exit())
