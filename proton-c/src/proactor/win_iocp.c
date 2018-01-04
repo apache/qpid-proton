@@ -21,7 +21,6 @@
 
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
-#include <proton/netaddr.h>
 #include <proton/engine.h>
 #include <proton/message.h>
 #include <proton/object.h>
@@ -44,6 +43,8 @@
 
 #include <iostream>
 #include <sstream>
+
+#include "./netaddr-internal.h" /* Include after socket/inet headers */
 
 /*
  * Proactor for Windows using IO completion ports.
@@ -1657,8 +1658,9 @@ static void pcontext_finalize(pcontext_t* ctx) {
 }
 
 typedef struct psocket_t {
-  iocpdesc_t *iocpd;    // NULL if reaper, or socket open failure.
+  iocpdesc_t *iocpd;            /* NULL if reaper, or socket open failure. */
   pn_listener_t *listener;      /* NULL for a connection socket */
+  pn_netaddr_t listen_addr;     /* Not filled in for connection sockets */
   char addr_buf[PN_MAX_ADDR];
   const char *host, *port;
   bool is_reaper;
@@ -1693,10 +1695,6 @@ struct pn_proactor_t {
   bool timeout_processed;  /* timout event dispatched in the most recent event batch */
   bool delayed_interrupt;
   bool shutting_down;
-};
-
-struct pn_netaddr_t {
-  struct sockaddr_storage ss;
 };
 
 typedef struct pconnection_t {
@@ -2786,8 +2784,10 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     l->psockets = (psocket_t*)calloc(len, sizeof(psocket_t));
     assert(l->psockets);      /* TODO: memory safety */
     l->psockets_size = 0;
+    uint16_t dynamic_port = 0;  /* Record dynamic port from first bind(0) */
     /* Find working listen addresses */
     for (struct addrinfo *ai = addrinfo; ai; ai = ai->ai_next) {
+      if (dynamic_port) set_port(ai->ai_addr, dynamic_port);
       // Note fd destructor can clear WSAGetLastError()
       unique_socket fd(::socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol));
       if (fd != INVALID_SOCKET) {
@@ -2796,13 +2796,21 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
           if (!::listen(fd, backlog)) {
             iocpdesc_t *iocpd = pni_iocpdesc_create(p->iocp, fd);
             if (iocpd) {
-              fd.release();
+              pn_socket_t sock = fd.release();
               psocket_t *ps = &l->psockets[l->psockets_size++];
               psocket_init(ps, l, false, addr);
               ps->iocpd = iocpd;
               iocpd->is_mp = true;
               iocpd->active_completer = ps;
               pni_iocpdesc_start(ps->iocpd);
+              /* Get actual address */
+              socklen_t len = sizeof(ps->listen_addr.ss);
+              (void)getsockname(sock, (struct sockaddr*)&ps->listen_addr.ss, &len);
+              if (ps == l->psockets) { /* First socket, check for dynamic port */
+                dynamic_port = check_dynamic_port(ai->ai_addr, pn_netaddr_sockaddr(&ps->listen_addr));
+              } else {
+                (ps-1)->listen_addr.next = &ps->listen_addr; /* Link into list */
+              }
             }
           }
       }
@@ -3393,17 +3401,6 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   }
 }
 
-
-static int pni2_snprintf(char *buf, size_t count, const char *fmt, ...);
-
-const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
-  return (struct sockaddr*)na;
-}
-
-size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
-  return sizeof(struct sockaddr_storage);
-}
-
 const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc? &pc->local : NULL;
@@ -3414,26 +3411,8 @@ const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   return pc ? &pc->remote : NULL;
 }
 
-#ifndef NI_MAXHOST
-# define NI_MAXHOST 1025
-#endif
-
-#ifndef NI_MAXSERV
-# define NI_MAXSERV 32
-#endif
-
-int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
-                        host, sizeof(host), port, sizeof(port),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
-  if (!err) {
-    return pni2_snprintf(buf, len, "%s:%s", host, port);
-  } else {
-    if (buf) *buf = '\0';
-    return 0;
-  }
+const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l) {
+  return l->psockets ? &l->psockets[0].listen_addr : NULL;
 }
 
 pn_millis_t pn_proactor_now(void) {
@@ -3444,41 +3423,4 @@ pn_millis_t pn_proactor_now(void) {
   t.u.LowPart = now.dwLowDateTime;
   // Convert to milliseconds and adjust base epoch
   return t.QuadPart / 10000 - 11644473600000;
-}
-
-
-// ======================================================================
-// Platform dependent sprintf for pn_proactor_addr()
-// ======================================================================
-
-#include <stdarg.h>
-// [v]snprintf on Windows only matches C99 when no errors or overflow.
-static int pni2_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap) {
-  if (fmt == NULL)
-    return -1;
-  if ((buf == NULL) && (count > 0))
-    return -1;
-  if (count > 0) {
-    int n = vsnprintf_s(buf, count, _TRUNCATE, fmt, ap);
-    if (n >= 0)  // no overflow
-      return n;  // same as C99
-    buf[count-1] = '\0';
-  }
-  // separate call to get needed buffer size on overflow
-  int n = _vscprintf(fmt, ap);
-  if (n >= (int) count)
-    return n;
-  return -1;
-}
-
-static int pni2_snprintf(char *buf, size_t count, const char *fmt, ...) {
-  va_list ap;
-  va_start(ap, fmt);
-  int n = pni2_vsnprintf(buf, count, fmt, ap);
-  va_end(ap);
-  return n;
-}
-
-int pn_proactor_addr(char *buf, size_t len, const char *host, const char *port) {
-  return pni2_snprintf(buf, len, "%s:%s", host ? host : "", port ? port : "");
 }

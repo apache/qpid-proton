@@ -32,7 +32,6 @@
 #include <proton/condition.h>
 #include <proton/connection_driver.h>
 #include <proton/engine.h>
-#include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
@@ -56,6 +55,8 @@
 #include <sys/eventfd.h>
 #include <limits.h>
 #include <time.h>
+
+#include "./netaddr-internal.h" /* Include after socket/inet headers */
 
 // TODO: replace timerfd per connection with global lightweight timer mechanism.
 // logging in general
@@ -507,10 +508,6 @@ static void psocket_init(psocket_t* ps, pn_proactor_t* p, pn_listener_t *listene
   pni_parse_addr(addr, ps->addr_buf, sizeof(ps->addr_buf), &ps->host, &ps->port);
 }
 
-struct pn_netaddr_t {
-  struct sockaddr_storage ss;
-};
-
 typedef struct pconnection_t {
   psocket_t psocket;
   pcontext_t context;
@@ -553,6 +550,7 @@ struct acceptor_t{
   bool armed;
   bool overflowed;
   acceptor_t *next;              /* next listener list member */
+  struct pn_netaddr_t addr;      /* listening address */
 };
 
 struct pn_listener_t {
@@ -1435,8 +1433,10 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
     l->acceptors = (acceptor_t*)calloc(len, sizeof(acceptor_t));
     assert(l->acceptors);      /* TODO aconway 2017-05-05: memory safety */
     l->acceptors_size = 0;
+    uint16_t dynamic_port = 0;  /* Record dynamic port from first bind(0) */
     /* Find working listen addresses */
     for (struct addrinfo *ai = addrinfo; ai; ai = ai->ai_next) {
+      if (dynamic_port) set_port(ai->ai_addr, dynamic_port);
       int fd = socket(ai->ai_family, SOCK_STREAM, ai->ai_protocol);
       static int on = 1;
       if (fd >= 0) {
@@ -1448,6 +1448,15 @@ void pn_proactor_listen(pn_proactor_t *p, pn_listener_t *l, const char *addr, in
             !listen(fd, backlog))
         {
           acceptor_t *acceptor = &l->acceptors[l->acceptors_size++];
+          /* Get actual address */
+          socklen_t len = pn_netaddr_socklen(&acceptor->addr);
+          (void)getsockname(fd, (struct sockaddr*)(&acceptor->addr.ss), &len);
+          if (acceptor == l->acceptors) { /* First acceptor, check for dynamic port */
+            dynamic_port = check_dynamic_port(ai->ai_addr, pn_netaddr_sockaddr(&acceptor->addr));
+          } else {              /* Link addr to previous addr */
+            (acceptor-1)->addr.next = &acceptor->addr;
+          }
+
           acceptor->accepted_fd = -1;
           psocket_t *ps = &acceptor->psocket;
           psocket_init(ps, p, l, addr);
@@ -2195,14 +2204,6 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     wake_notify(&p->context);
 }
 
-const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
-  return (struct sockaddr*)na;
-}
-
-size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
-  return sizeof(struct sockaddr_storage);
-}
-
 const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc? &pc->local : NULL;
@@ -2213,26 +2214,8 @@ const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   return pc ? &pc->remote : NULL;
 }
 
-#ifndef NI_MAXHOST
-# define NI_MAXHOST 1025
-#endif
-
-#ifndef NI_MAXSERV
-# define NI_MAXSERV 32
-#endif
-
-int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
-                        host, sizeof(host), port, sizeof(port),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
-  if (!err) {
-    return snprintf(buf, len, "%s:%s", host, port);
-  } else {
-    if (buf) *buf = '\0';
-    return 0;
-  }
+const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l) {
+  return l->acceptors_size > 0 ? &l->acceptors[0].addr : NULL;
 }
 
 pn_millis_t pn_proactor_now(void) {

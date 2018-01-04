@@ -61,7 +61,7 @@ void test_vlogf_(test_t *t, const char *prefix, const char* expr,
   }
   if (t) fprintf(stderr, " [%s]", t->name);
   fprintf(stderr, "\n");
-  fflush(stdout);
+  fflush(stderr);
 }
 
 void test_logf_(test_t *t, const char *prefix, const char* expr,

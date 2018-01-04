@@ -32,12 +32,12 @@
 #include <proton/engine.h>
 #include <proton/listener.h>
 #include <proton/message.h>
-#include <proton/netaddr.h>
 #include <proton/object.h>
 #include <proton/proactor.h>
 #include <proton/transport.h>
 
 #include <uv.h>
+#include "netaddr-internal.h"   /* Include after socket headers via uv.h */
 
 /* All asserts are cheap and should remain in a release build for debuggability */
 #undef NDEBUG
@@ -157,10 +157,6 @@ PN_STRUCT_CLASSDEF(lsocket, CID_pn_listener_socket)
 
 typedef enum { W_NONE, W_PENDING, W_CLOSED } wake_state;
 
-struct pn_netaddr_t {
-  struct sockaddr_storage ss;
-};
-
 /* An incoming or outgoing connection. */
 typedef struct pconnection_t {
   work_t work;                  /* Must be first to allow casting */
@@ -212,6 +208,11 @@ struct pn_listener_t {
   /* Only used by leader */
   addr_t addr;
   lsocket_t *lsockets;
+  int dynamic_port;             /* Record dynamic port from first bind(0) */
+
+  /* Invariant listening addresses allocated during leader_listen_lh() */
+  struct pn_netaddr_t *addrs;
+  int addrs_len;
 
   /* Locked for thread-safe access. uv_listen can't be stopped or cancelled so we can't
    * detach a listener from the UV loop to prevent concurrent access.
@@ -602,10 +603,20 @@ static int lsocket(pn_listener_t *l, struct addrinfo *ai) {
   if (err) {
     free(ls);                   /* Will never be closed */
   } else {
+    if (l->dynamic_port) set_port(ai->ai_addr, l->dynamic_port);
     int flags = (ai->ai_family == AF_INET6) ? UV_TCP_IPV6ONLY : 0;
     err = uv_tcp_bind(&ls->tcp, ai->ai_addr, flags);
     if (!err) err = uv_listen((uv_stream_t*)&ls->tcp, l->backlog, on_connection);
     if (!err) {
+      /* Get actual listening address */
+      pn_netaddr_t *na = &l->addrs[l->addrs_len++];
+      int len = sizeof(na->ss);
+      uv_tcp_getsockname(&ls->tcp, (struct sockaddr*)(&na->ss), &len);
+      if (na == l->addrs) {     /*  First socket, check for dynamic port bind */
+        l->dynamic_port = check_dynamic_port(ai->ai_addr, pn_netaddr_sockaddr(na));
+      } else {
+        (na-1)->next = na;      /* Link into list */
+      }
       /* Add to l->lsockets list */
       ls->parent = l;
       ls->next = l->lsockets;
@@ -624,6 +635,13 @@ static void leader_listen_lh(pn_listener_t *l) {
   add_active(l->work.proactor);
   int err = leader_resolve(l->work.proactor, &l->addr, true);
   if (!err) {
+    /* Allocate enough space for the pn_netaddr_t addresses */
+    size_t len = 0;
+    for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
+      ++len;
+    }
+    l->addrs = (pn_netaddr_t*)calloc(len, sizeof(lsocket_t));
+
     /* Find the working addresses */
     for (struct addrinfo *ai = l->addr.getaddrinfo.addrinfo; ai; ai = ai->ai_next) {
       int err2 = lsocket(l, ai);
@@ -646,6 +664,7 @@ static void leader_listen_lh(pn_listener_t *l) {
 
 void pn_listener_free(pn_listener_t *l) {
   if (l) {
+    if (l->addrs) free(l->addrs);
     if (l->addr.getaddrinfo.addrinfo) { /* Interrupted after resolve */
       uv_freeaddrinfo(l->addr.getaddrinfo.addrinfo);
     }
@@ -1285,14 +1304,6 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
   work_notify(&l->work);
 }
 
-const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
-  return (struct sockaddr*)na;
-}
-
-size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
-  return sizeof(struct sockaddr_storage);
-}
-
 const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc? &pc->local : NULL;
@@ -1303,18 +1314,8 @@ const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
   return pc ? &pc->remote : NULL;
 }
 
-int pn_netaddr_str(const pn_netaddr_t* na, char *buf, size_t len) {
-  char host[NI_MAXHOST];
-  char port[NI_MAXSERV];
-  int err = getnameinfo((struct sockaddr *)&na->ss, sizeof(na->ss),
-                        host, sizeof(host), port, sizeof(port),
-                        NI_NUMERICHOST | NI_NUMERICSERV);
-  if (!err) {
-    return snprintf(buf, len, "%s:%s", host, port);
-  } else {
-    if (buf) *buf = '\0';
-    return 0;
-  }
+const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l) {
+  return l->addrs ? &l->addrs[0] : NULL;
 }
 
 pn_millis_t pn_proactor_now(void) {

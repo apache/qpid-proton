@@ -1,5 +1,5 @@
-#ifndef PROACTOR_NETADDR_INTERNAL_H
-#define PROACTOR_NETADDR_INTERNAL_H
+#ifndef PROACTOR_PROACTOR_INTERNAL_H
+#define PROACTOR_PROACTOR_INTERNAL_H
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -48,4 +48,4 @@ extern const char *PNI_IO_CONDITION;
 void pni_proactor_set_cond(
   pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg);
 
-#endif // PROACTOR_NETADDR_INTERNAL_H
+#endif  /*!PROACTOR_PROACTOR_INTERNAL_H*/

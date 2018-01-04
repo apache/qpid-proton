@@ -35,18 +35,18 @@ def receive_expect(n=MESSAGES): return receive_expect_messages(n)+receive_expect
 def send_expect(n=MESSAGES): return "%s messages sent and acknowledged\n" % n
 def send_abort_expect(n=MESSAGES): return "%s messages started and aborted\n" % n
 
+def wait_listening(proc):
+    m = proc.wait_re("listening on ([0-9]+)$")
+    return m.group(1), m.group(0)+"\n" # Return (port, line)
+
 class Broker(object):
     def __init__(self, test):
         self.test = test
 
     def __enter__(self):
-        with TestPort() as tp:
-            self.port = tp.port
-            self.host = tp.host
-            self.addr = tp.addr
-            self.proc = self.test.proc(["broker", "", self.port])
-            self.proc.wait_re("listening")
-            return self
+        self.proc = self.test.proc(["broker", "", "0"])
+        self.port, _ = wait_listening(self.proc)
+        return self
 
     def __exit__(self, *args):
         b = getattr(self, "proc")
@@ -75,19 +75,17 @@ class CExampleTest(ProcTestCase):
 
     def test_send_direct(self):
         """Send to direct server"""
-        with TestPort() as tp:
-            d = self.proc(["direct", "", tp.port])
-            d.wait_re("listening")
-            self.assertEqual(send_expect(), self.runex("send", tp.port))
-            self.assertMultiLineEqual("listening\n"+receive_expect(), d.wait_exit())
+        d = self.proc(["direct", "", "0"])
+        port, line = wait_listening(d)
+        self.assertEqual(send_expect(), self.runex("send", port))
+        self.assertMultiLineEqual(line+receive_expect(), d.wait_exit())
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        with TestPort() as tp:
-            d = self.proc(["direct", "", tp.port])
-            d.wait_re("listening")
-            self.assertMultiLineEqual(receive_expect(), self.runex("receive", tp.port))
-            self.assertEqual("listening\n10 messages sent and acknowledged\n", d.wait_exit())
+        d = self.proc(["direct", "", "0"])
+        port, line = wait_listening(d)
+        self.assertMultiLineEqual(receive_expect(), self.runex("receive", port))
+        self.assertEqual(line+"10 messages sent and acknowledged\n", d.wait_exit())
 
     def test_send_abort_broker(self):
         """Sending aborted messages to a broker"""
@@ -101,20 +99,19 @@ class CExampleTest(ProcTestCase):
 
     def test_send_abort_direct(self):
         """Send aborted messages to the direct server"""
-        with TestPort() as tp:
-            d = self.proc(["direct", "", tp.port, "examples", "20"])
-            expect = "listening\n"
-            d.wait_re(expect)
-            self.assertEqual(send_expect(), self.runex("send", tp.port))
-            expect += receive_expect_messages()
-            d.wait_re(expect)
-            self.assertEqual(send_abort_expect(), self.runex("send-abort", tp.port))
-            expect += "Message aborted\n"*MESSAGES
-            d.wait_re(expect)
-            self.assertEqual(send_expect(), self.runex("send", tp.port))
-            expect += receive_expect_messages()+receive_expect_total(20)
-            self.maxDiff = None
-            self.assertMultiLineEqual(expect, d.wait_exit())
+        d = self.proc(["direct", "", "0", "examples", "20"])
+        port, line = wait_listening(d)
+        expect = line
+        self.assertEqual(send_expect(), self.runex("send", port))
+        expect += receive_expect_messages()
+        d.wait_re(expect)
+        self.assertEqual(send_abort_expect(), self.runex("send-abort", port))
+        expect += "Message aborted\n"*MESSAGES
+        d.wait_re(expect)
+        self.assertEqual(send_expect(), self.runex("send", port))
+        expect += receive_expect_messages()+receive_expect_total(20)
+        self.maxDiff = None
+        self.assertMultiLineEqual(expect, d.wait_exit())
 
     def test_send_ssl_receive(self):
         """Send first then receive"""

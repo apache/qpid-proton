@@ -21,6 +21,7 @@
 
 #include <proton/engine.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <proton/ssl.h>
@@ -285,11 +286,13 @@ static void handle(broker_t* b, pn_event_t* e) {
 
   switch (pn_event_type(e)) {
 
-   case PN_LISTENER_OPEN:
-    printf("listening\n");
-    fflush(stdout);
-    break;
-
+   case PN_LISTENER_OPEN: {
+     char port[256];             /* Get the listening port */
+     pn_netaddr_host_port(pn_netaddr_listening(pn_event_listener(e)), NULL, 0, port, sizeof(port));
+     printf("listening on %s\n", port);
+     fflush(stdout);
+     break;
+   }
    case PN_LISTENER_ACCEPT: {
     /* Configure a transport to allow SSL and SASL connections. See ssl_domain setup in main() */
      pn_transport_t *t = pn_transport();

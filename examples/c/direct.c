@@ -24,6 +24,7 @@
 #include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/message.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
@@ -228,11 +229,13 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
 static bool handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
-   case PN_LISTENER_OPEN:
-    printf("listening\n");
-    fflush(stdout);
-    break;
-
+   case PN_LISTENER_OPEN: {
+     char port[256];             /* Get the listening port */
+     pn_netaddr_host_port(pn_netaddr_listening(pn_event_listener(event)), NULL, 0, port, sizeof(port));
+     printf("listening on %s\n", port);
+     fflush(stdout);
+     break;
+   }
    case PN_LISTENER_ACCEPT:
     pn_listener_accept2(pn_event_listener(event), NULL, NULL);
     break;
