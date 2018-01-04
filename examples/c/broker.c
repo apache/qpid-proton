@@ -77,16 +77,17 @@
 /* Simple thread-safe queue implementation */
 typedef struct queue_t {
   pthread_mutex_t lock;
-  char name[256];
-  VEC(pn_rwbytes_t) messages;   /* Messages on the queue_t */
-  VEC(pn_connection_t*) waiting; /* Connections waiting to send messages from this queue */
+  char *name;
+  VEC(pn_rwbytes_t) messages;      /* Messages on the queue_t */
+  VEC(pn_connection_t*) waiting;   /* Connections waiting to send messages from this queue */
   struct queue_t *next;            /* Next queue in chain */
   size_t sent;                     /* Count of messages sent, used as delivery tag */
 } queue_t;
 
 static void queue_init(queue_t *q, const char* name, queue_t *next) {
   pthread_mutex_init(&q->lock, NULL);
-  strncpy(q->name, name, sizeof(q->name)-1);
+  q->name = (char*)malloc(strlen(name)+1);
+  memcpy(q->name, name, strlen(name)+1);
   VEC_INIT(q->messages);
   VEC_INIT(q->waiting);
   q->next = next;
@@ -102,6 +103,7 @@ static void queue_destroy(queue_t *q) {
   for (i = 0; i < q->waiting.len; ++i)
     pn_decref(q->waiting.data[i]);
   VEC_FINAL(q->waiting);
+  free(q->name);
 }
 
 /* Send a message on s, or record s as eating if no messages.
@@ -357,7 +359,7 @@ static void handle(broker_t* b, pn_event_t* e) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = message_buffer(l); /* Append data to incoming message buffer */
-       int recv;
+       ssize_t recv;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
        recv = pn_link_recv(l, m->start, m->size);
@@ -368,7 +370,7 @@ static void handle(broker_t* b, pn_event_t* e) {
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
          pn_link_flow(l, WINDOW - pn_link_credit(l)); /* Replace credit for the aborted message */
        } else if (recv < 0 && recv != PN_EOS) {        /* Unexpected error */
-         pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code(recv));
+           pn_condition_format(pn_link_condition(l), "broker", "PN_DELIVERY error: %s", pn_code((int)recv));
          pn_link_close(l);               /* Unexpected error, close the link */
        } else if (!pn_delivery_partial(d)) { /* Message is complete */
          const char *qname = pn_terminus_get_address(pn_link_target(l));

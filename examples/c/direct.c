@@ -145,7 +145,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
-       int recv;
+       ssize_t recv;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
        recv = pn_link_recv(l, m->start, m->size);
