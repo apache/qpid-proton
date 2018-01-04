@@ -80,12 +80,9 @@ struct server_handler : public proton::messaging_handler {
 
 class hello_world_direct : public proton::messaging_handler {
   private:
-    std::string url;
     server_handler s_handler;
 
   public:
-    hello_world_direct(const std::string& u) : url(u) {}
-
     void on_container_start(proton::container &c) OVERRIDE {
         // Configure listener.  Details vary by platform.
         ssl_certificate server_cert = platform_certificate("tserver", "tserverpw");
@@ -116,8 +113,10 @@ class hello_world_direct : public proton::messaging_handler {
         } else throw std::logic_error("bad verify mode: " + verify);
 
         c.client_connection_options(client_opts);
-        s_handler.listener = c.listen(url);
-        c.open_sender(url);
+        s_handler.listener = c.listen("//:0"); // Listen on port 0 to get a dynamic port
+        std::ostringstream url;
+        url << "//:" << s_handler.listener.port() << "/example"; // Connect to the actual port
+        c.open_sender(url.str());
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
@@ -150,12 +149,7 @@ class hello_world_direct : public proton::messaging_handler {
 };
 
 int main(int argc, char **argv) {
-    // Pick an "unusual" port since we are going to be talking to
-    // ourselves, not a broker.
-    // Note the use of "amqps" as the URL scheme to denote a TLS/SSL connection.
-    std::string address("amqps://127.0.0.1:8888/examples");
     example::options opts(argc, argv);
-    opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_value(cert_directory, 'c', "cert_directory",
                    "directory containing SSL certificates and private key information", "CERTDIR");
     opts.add_value(verify, 'v', "verify", "verify type: \"minimum\", \"full\", \"fail\"", "VERIFY");
@@ -171,7 +165,7 @@ int main(int argc, char **argv) {
         if (verify != verify_noname && verify != verify_full && verify != verify_fail)
             throw std::runtime_error("bad verify argument: " + verify);
 
-        hello_world_direct hwd(address);
+        hello_world_direct hwd;
         proton::container(hwd).run();
         return 0;
     } catch (const std::exception& e) {

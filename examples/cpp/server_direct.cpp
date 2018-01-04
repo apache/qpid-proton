@@ -50,8 +50,8 @@ class server : public proton::messaging_handler {
     server(const std::string &u) : url(u), address_counter(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        c.listen(url);
-        std::cout << "server listening on " << url << std::endl;
+        proton::listener l = c.listen(url);
+        std::cout << "server listening on " << l.port() << std::endl;
     }
 
     std::string to_upper(const std::string &s) {

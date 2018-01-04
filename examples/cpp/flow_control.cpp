@@ -195,17 +195,19 @@ class flow_receiver : public proton::messaging_handler {
 
 class flow_control : public proton::messaging_handler {
   private:
-    std::string url;
     proton::listener listener;
     flow_sender send_handler;
     flow_receiver receive_handler;
 
   public:
-    flow_control(const std::string& u) : url(u), receive_handler(send_handler) {}
+    flow_control() : receive_handler(send_handler) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        listener = c.listen(url, proton::connection_options().handler(send_handler));
-        c.connect(url);
+        // Listen on a dynamic port on the local host.
+        listener = c.listen("//:0", proton::connection_options().handler(send_handler));
+        std::ostringstream url;
+        url << "//:" << listener.port() << "/example"; // Connect to the actual listening port
+        c.connect(url.str());
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
@@ -223,11 +225,9 @@ class flow_control : public proton::messaging_handler {
 int main(int argc, char **argv) {
     // Pick an "unusual" port since we are going to be talking to
     // ourselves, not a broker.
-    std::string address("127.0.0.1:8888");
     bool quiet = false;
 
     example::options opts(argc, argv);
-    opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_flag(quiet, 'q', "quiet", "suppress additional commentary of credit allocation and consumption");
 
     try {
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
         if (quiet)
             verbose = false;
 
-        flow_control fc(address);
+        flow_control fc;
         proton::container(fc).run();
 
         return 0;

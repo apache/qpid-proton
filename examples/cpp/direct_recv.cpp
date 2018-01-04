@@ -48,7 +48,7 @@ class direct_recv : public proton::messaging_handler {
 
     void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url);
-        std::cout << "direct_recv listening on " << url << std::endl;
+        std::cout << "listening on " << listener.port() << std::endl;
     }
 
     void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {

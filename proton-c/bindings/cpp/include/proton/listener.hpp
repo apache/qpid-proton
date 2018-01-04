@@ -51,6 +51,11 @@ class PN_CPP_CLASS_EXTERN listener {
     /// container::listen that returned this listener.
     PN_CPP_EXTERN void stop();
 
+    /// Return the port used by the listener.
+    /// If port 0 was passed to container::listen, this will be a dynamically allocated port.
+    /// @throw proton::error if the listener does not have a port
+    PN_CPP_EXTERN int port();
+
   private:
     pn_listener_t* listener_;
 

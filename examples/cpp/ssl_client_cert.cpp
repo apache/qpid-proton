@@ -31,6 +31,7 @@
 #include <proton/transport.hpp>
 
 #include <iostream>
+#include <sstream>
 
 #include "fake_cpp11.hpp"
 
@@ -76,11 +77,9 @@ struct server_handler : public proton::messaging_handler {
 
 class hello_world_direct : public proton::messaging_handler {
   private:
-    std::string url;
     server_handler s_handler;
 
   public:
-    hello_world_direct(const std::string& u) : url(u) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         // Configure listener.  Details vary by platform.
@@ -103,8 +102,10 @@ class hello_world_direct : public proton::messaging_handler {
         client_opts.ssl_client_options(ssl_cli).sasl_allowed_mechs("EXTERNAL");
         c.client_connection_options(client_opts);
 
-        s_handler.listener = c.listen(url);
-        c.open_sender(url);
+        s_handler.listener = c.listen("//:0");
+        std::ostringstream url;
+        url << "//:" << s_handler.listener.port() << "/example"; // Connect to the actual port
+        c.open_sender(url.str());
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
@@ -128,19 +129,16 @@ class hello_world_direct : public proton::messaging_handler {
 
 int main(int argc, char **argv) {
     try {
-        // Pick an "unusual" port since we are going to be talking to ourselves, not a broker.
-        // Note the use of "amqps" as the URL scheme to denote a TLS/SSL connection.
-        std::string url = argc > 1 ? argv[1] : "amqps://127.0.0.1:8888/examples";
         // Location of certificates and private key information:
-        if (argc > 2) {
-            cert_directory = argv[2];
+        if (argc > 1) {
+            cert_directory = argv[1];
             size_t sz = cert_directory.size();
             if (sz && cert_directory[sz -1] != '/')
                 cert_directory.append("/");
+        } else {
+            cert_directory = "ssl_certs/";
         }
-        else cert_directory = "ssl_certs/";
-
-        hello_world_direct hwd(url);
+        hello_world_direct hwd;
         proton::container(hwd).run();
         return 0;
     } catch (const std::exception& e) {

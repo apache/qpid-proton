@@ -49,7 +49,7 @@ class simple_send : public proton::messaging_handler {
 
     void on_container_start(proton::container &c) OVERRIDE {
         listener = c.listen(url);
-        std::cout << "direct_send listening on " << url << std::endl;
+        std::cout << "direct_send listening on " << listener.port() << std::endl;
     }
 
     void on_sendable(proton::sender &sender) OVERRIDE {

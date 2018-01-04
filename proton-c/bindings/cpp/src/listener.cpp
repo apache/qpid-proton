@@ -22,6 +22,7 @@
 #include "proton/listen_handler.hpp"
 
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 
 #include "contexts.hpp"
 
@@ -33,7 +34,16 @@ listener::listener(pn_listener_t* l): listener_(l) {}
 listener::listener(const listener& l) : listener_(l.listener_) {}
 listener::~listener() {}
 listener& listener::operator=(const listener& l) { listener_ = l.listener_; return *this; }
+
 void listener::stop() { if (listener_) pn_listener_close(listener_); }
+
+int listener::port() {
+    char port[16] = "invalid";
+    pn_netaddr_host_port(pn_netaddr_listening(listener_), NULL, 0, port, sizeof(port));
+    int i = atoi(port);
+    if (!i) throw error("listener has no port");
+    return i;
+}
 
 listen_handler::~listen_handler() {}
 void listen_handler::on_open(listener&) {}

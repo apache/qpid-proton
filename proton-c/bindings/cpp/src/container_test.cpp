@@ -19,7 +19,6 @@
 
 
 #include "test_bits.hpp"
-#include "test_port.hpp"
 
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
@@ -37,6 +36,11 @@
 
 namespace {
 
+std::string make_url(std::string host, int port) {
+    std::ostringstream url;
+    url << "//" << host << ":" << port;
+    return url.str();
+}
 
 struct test_listen_handler : public proton::listen_handler {
     bool on_open_, on_accept_, on_close_;
@@ -72,7 +76,6 @@ class test_handler : public proton::messaging_handler {
 
     std::string peer_vhost;
     std::string peer_container_id;
-    test_port port;
     proton::listener listener;
     test_listen_handler listen_handler;
 
@@ -81,8 +84,8 @@ class test_handler : public proton::messaging_handler {
     {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
-        listener = c.listen(port.url(), listen_handler);
-        proton::connection conn = c.connect(port.url(host), opts);
+        listener = c.listen("//:0", listen_handler);
+        proton::connection conn = c.connect(make_url(host, listener.port()), opts);
     }
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
@@ -164,14 +167,13 @@ int test_container_bad_address() {
 }
 
 class stop_tester : public proton::messaging_handler {
-    test_port port;
     proton::listener listener;
 
     // Set up a listener which would block forever
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
         ASSERT(state==0);
-        listener = c.listen(port.url());
-        c.connect(port.url());
+        listener = c.listen("//localhost:0");
+        c.connect(make_url("", listener.port()));
         c.auto_stop(false);
         state = 1;
     }
@@ -213,17 +215,16 @@ int test_container_stop() {
 
 struct hang_tester : public proton::messaging_handler {
     proton::listener listener;
-    test_port port;
     bool done;
 
     hang_tester() : done(false) {}
 
     void connect(proton::container* c) {
-        c->connect(port.url());
+        c->connect(make_url("", listener.port()));
     }
 
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
-        listener = c.listen(port.url());
+        listener = c.listen("//:0");
         c.schedule(proton::duration(250), make_work(&hang_tester::connect, this, &c));
     }
 
