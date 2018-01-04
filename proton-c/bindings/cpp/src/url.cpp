@@ -104,6 +104,9 @@ void parse_url(char *url, const char **scheme, const char **user, const char **p
       url = scheme_end + 3;
       slash = std::strchr(url, '/');
     }
+  } else if (0 == strncmp(url, "//", 2)) {
+      url += 2;
+      slash = std::strchr(url, '/');
   }
 
   if (slash) {
@@ -250,8 +253,6 @@ const std::string url::AMQP("amqp");
 const std::string url::AMQPS("amqps");
 
 uint16_t url::port_int() const {
-    // TODO aconway 2015-10-27: full service name lookup
-    // astitcher 2016-11-17: It is hard to make the full service name lookup platform independent
     if (port() == AMQP) return 5672;
     if (port() == AMQPS) return 5671;
     std::istringstream is(port());
