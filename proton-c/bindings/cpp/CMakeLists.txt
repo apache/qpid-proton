@@ -33,8 +33,6 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   set(CMAKE_CXX_EXTENSIONS OFF)
   if (MSVC)  # Compiler feature checks only needed for Visual Studio in this case
     include(cpp.cmake)
-  else()
-    set (CPP_DEFINITIONS "HAS_CPP11")
   endif()
 else ()
   if (BUILD_CPP_03)
