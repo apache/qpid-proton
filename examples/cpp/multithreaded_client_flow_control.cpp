@@ -275,14 +275,14 @@ int main(int argc, const char **argv) {
         // Start receiver threads, then sender threads.
         // Starting receivers first gives all receivers a chance to compete for messages.
         std::vector<std::thread> threads;
+        threads.reserve(n_threads*2); // Avoid re-allocation once threads are started
         for (int i = 0; i < n_threads; ++i)
             threads.push_back(std::thread([&]() { receive_thread(recv, remaining); }));
         for (int i = 0; i < n_threads; ++i)
             threads.push_back(std::thread([&]() { send_thread(send, n_messages); }));
 
         // Wait for threads to finish
-        for (auto& t : threads)
-            t.join();
+        for (auto& t : threads) t.join();
         send.close();
         recv.close();
         container_thread.join();
