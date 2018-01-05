@@ -25,6 +25,7 @@
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -192,22 +193,35 @@ class flow_receiver : public proton::messaging_handler {
     }
 };
 
+class flow_listener : public proton::listen_handler {
+    proton::connection_options opts;
+  public:
+    flow_listener(flow_sender& sh) {
+        opts.handler(sh);
+    }
+
+    void on_open(proton::listener& l) OVERRIDE {
+        std::ostringstream url;
+        url << "//:" << l.port() << "/example"; // Connect to the actual listening port
+        l.container().connect(url.str());
+    }
+
+    proton::connection_options on_accept(proton::listener&) OVERRIDE { return opts; }
+};
 
 class flow_control : public proton::messaging_handler {
   private:
     proton::listener listener;
     flow_sender send_handler;
     flow_receiver receive_handler;
+    flow_listener listen_handler;
 
   public:
-    flow_control() : receive_handler(send_handler) {}
+    flow_control() : receive_handler(send_handler), listen_handler(send_handler) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         // Listen on a dynamic port on the local host.
-        listener = c.listen("//:0", proton::connection_options().handler(send_handler));
-        std::ostringstream url;
-        url << "//:" << listener.port() << "/example"; // Connect to the actual listening port
-        c.connect(url.str());
+        listener = c.listen("//:0", listen_handler);
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {

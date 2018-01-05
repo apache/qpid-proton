@@ -56,6 +56,10 @@ class PN_CPP_CLASS_EXTERN listener {
     /// @throw proton::error if the listener does not have a port
     PN_CPP_EXTERN int port();
 
+    /// Get the container.
+    /// @throw proton::error if this connection is not managed by a container.
+    PN_CPP_EXTERN class container& container() const;
+
   private:
     pn_listener_t* listener_;
 

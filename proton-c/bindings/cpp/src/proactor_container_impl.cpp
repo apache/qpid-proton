@@ -375,6 +375,7 @@ pn_listener_t* container::impl::listen_common_lh(const std::string& addr) {
     pn_proactor_addr(&caddr[0], len+1, url.host().c_str(), url.port().c_str());
 
     pn_listener_t* listener = pn_listener();
+    pn_listener_set_context(listener, &container_);
     pn_proactor_listen(proactor_, listener, &caddr[0], 16);
     return listener;
 }

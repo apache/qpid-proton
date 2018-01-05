@@ -41,19 +41,44 @@
 
 namespace {
 
-static std::string int2string(int n) {
-    std::ostringstream strm;
-    strm << n;
-    return strm.str();
-}
+// Wait for N things to be done.
+class waiter {
+    size_t count;
+  public:
+    waiter(size_t n) : count(n) {}
+    void done() { if (--count == 0) ready(); }
+    virtual void ready() = 0;
+};
 
 class server_connection_handler : public proton::messaging_handler {
+
+    struct listen_handler : public proton::listen_handler {
+        proton::connection_options opts;
+        std::string url;
+        waiter& listen_waiter;
+
+        listen_handler(proton::messaging_handler& h, waiter& w) : listen_waiter(w) {
+            opts.handler(h);
+        }
+
+        void on_open(proton::listener& l) PN_CPP_OVERRIDE {
+            std::ostringstream o;
+            o << "//:" << l.port(); // Connect to the actual listening port
+            url = o.str();
+            // Schedule rather than call done() direct to ensure serialization
+            l.container().schedule(proton::duration::IMMEDIATE,
+                                   proton::make_work(&waiter::done, &listen_waiter));
+        }
+
+        proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE { return opts; }
+    };
+
     proton::listener listener_;
-    std::string url_;
     int messages_;
     int expect_;
     bool closing_;
     bool done_;
+    listen_handler listen_handler_;
 
     void close (proton::connection &c) {
         if (closing_) return;
@@ -62,30 +87,17 @@ class server_connection_handler : public proton::messaging_handler {
         closing_ = true;
     }
 
-    void listen_on_random_port(proton::container& c, proton::messaging_handler& h) {
-        int p;
-        // I'm going to hell for this (on more than one count!):
-        static struct once { once() {std::srand((unsigned int)time(0));} } x;
-        while (true) {
-            p = 20000 + (std::rand() % 30000);
-            try {
-                listener_ = c.listen("0.0.0.0:" + int2string(p), proton::connection_options().handler(h));
-                break;
-            } catch (...) {
-                // keep trying
-            }
-        }
-        url_ = "127.0.0.1:" + int2string(p);
-    }
-
   public:
-    server_connection_handler(proton::container& c, int e)
-        : messages_(0), expect_(e), closing_(false), done_(false)
+    server_connection_handler(proton::container& c, int e, waiter& w)
+        : messages_(0), expect_(e), closing_(false), done_(false), listen_handler_(*this, w)
     {
-        listen_on_random_port(c, *this);
+        listener_ = c.listen("//:0", listen_handler_);
     }
 
-    std::string url() const { return url_; }
+    std::string url() const {
+        if (listen_handler_.url.empty()) throw std::runtime_error("no url");
+        return listen_handler_.url;
+    }
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
         // Only listen for a single connection
@@ -105,28 +117,25 @@ class server_connection_handler : public proton::messaging_handler {
     }
 };
 
-class tester : public proton::messaging_handler {
+class tester : public proton::messaging_handler, public waiter {
   public:
-    tester() :
-        container_(*this, "reconnect_server")
-    {
-    }
+    tester() : waiter(3), container_(*this, "reconnect_server") {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         // Server that fails upon connection
-        s1.reset(new server_connection_handler(c, 0));
-        std::string url1 = s1->url();
+        s1.reset(new server_connection_handler(c, 0, *this));
         // Server that fails on first message
-        s2.reset(new server_connection_handler(c, 1));
-        std::string url2 = s2->url();
+        s2.reset(new server_connection_handler(c, 1, *this));
         // server that doesn't fail in this test
-        s3.reset(new server_connection_handler(c, 100));
-        std::string url3 = s3->url();
+        s3.reset(new server_connection_handler(c, 100, *this));
+    }
 
+    // waiter::ready is called when all 3 listeners are ready.
+    void ready() PN_CPP_OVERRIDE {
         std::vector<std::string> urls;
-        urls.push_back(url2);
-        urls.push_back(url3);
-        c.connect(url1, proton::connection_options().reconnect(proton::reconnect_options().failover_urls(urls)));
+        urls.push_back(s2->url());
+        urls.push_back(s3->url());
+        container_.connect(s1->url(), proton::connection_options().reconnect(proton::reconnect_options().failover_urls(urls)));
     }
 
     void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {

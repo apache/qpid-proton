@@ -22,6 +22,7 @@
 #include <proton/connection.hpp>
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -77,6 +78,15 @@ struct server_handler : public proton::messaging_handler {
 
 class hello_world_direct : public proton::messaging_handler {
   private:
+    class listener_open_handler : public proton::listen_handler {
+        void on_open(proton::listener& l) OVERRIDE {
+            std::ostringstream url;
+            url << "//:" << l.port() << "/example"; // Connect to the actual port
+            l.container().open_sender(url.str());
+        }
+    };
+
+    listener_open_handler listen_handler;
     server_handler s_handler;
 
   public:
@@ -102,10 +112,7 @@ class hello_world_direct : public proton::messaging_handler {
         client_opts.ssl_client_options(ssl_cli).sasl_allowed_mechs("EXTERNAL");
         c.client_connection_options(client_opts);
 
-        s_handler.listener = c.listen("//:0");
-        std::ostringstream url;
-        url << "//:" << s_handler.listener.port() << "/example"; // Connect to the actual port
-        c.open_sender(url.str());
+        s_handler.listener = c.listen("//:0", listen_handler);
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {

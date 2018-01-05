@@ -45,17 +45,25 @@ std::string make_url(std::string host, int port) {
 struct test_listen_handler : public proton::listen_handler {
     bool on_open_, on_accept_, on_close_;
     std::string on_error_;
-    test_listen_handler() : on_open_(false), on_accept_(false), on_close_(false) {}
+    std::string host_;
+    proton::connection_options opts_;
+
+    test_listen_handler(const std::string& host=std::string(),
+                        const proton::connection_options& opts=proton::connection_options()
+    ) : on_open_(false), on_accept_(false), on_close_(false), host_(host), opts_(opts) {}
+
     proton::connection_options on_accept(proton::listener&) PN_CPP_OVERRIDE {
         on_accept_ = true;
         return proton::connection_options();
     }
-    void on_open(proton::listener&) PN_CPP_OVERRIDE {
+    void on_open(proton::listener& l) PN_CPP_OVERRIDE {
         on_open_ = true;
         ASSERT(!on_accept_);
         ASSERT(on_error_.empty());
         ASSERT(!on_close_);
+        l.container().connect(make_url(host_, l.port()), opts_);
     }
+
     void on_close(proton::listener&) PN_CPP_OVERRIDE {
         on_close_ = true;
         ASSERT(on_open_ || on_error_.size());
@@ -69,8 +77,6 @@ struct test_listen_handler : public proton::listen_handler {
 
 class test_handler : public proton::messaging_handler {
   public:
-    const std::string host;
-    proton::connection_options opts;
     bool closing;
     bool done;
 
@@ -80,12 +86,11 @@ class test_handler : public proton::messaging_handler {
     test_listen_handler listen_handler;
 
     test_handler(const std::string h, const proton::connection_options& c_opts)
-        : host(h), opts(c_opts), closing(false), done(false)
+        : closing(false), done(false), listen_handler(h, c_opts)
     {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         listener = c.listen("//:0", listen_handler);
-        proton::connection conn = c.connect(make_url(host, listener.port()), opts);
     }
 
     void on_connection_open(proton::connection &c) PN_CPP_OVERRIDE {
@@ -168,12 +173,12 @@ int test_container_bad_address() {
 
 class stop_tester : public proton::messaging_handler {
     proton::listener listener;
+    test_listen_handler listen_handler;
 
     // Set up a listener which would block forever
     void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
         ASSERT(state==0);
-        listener = c.listen("//localhost:0");
-        c.connect(make_url("", listener.port()));
+        listener = c.listen("//:0", listen_handler);
         c.auto_stop(false);
         state = 1;
     }

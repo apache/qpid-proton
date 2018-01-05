@@ -63,13 +63,14 @@ PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
 
 /**
  * Get the listening addresses of a listener.
+ * Addresses are only available after the @ref PN_LISTENER_OPEN event for the listener.
  *
  * A listener can have more than one address for several reasons:
  * - DNS host records may indicate more than one address
  * - On a multi-homed host, listening on the default host "" will listen on all local addresses.
  * - Some IPv4/IPV6 configurations may expand a single address into a v4/v6 pair.
  *
- * pn_netaddr_next() will iterate over all the addresses in the list.
+ * pn_netaddr_next() will iterate over the addresses in the list.
  *
  * @param l points to the listener
  * @return The first listening address or NULL if there are no addresses are available.
