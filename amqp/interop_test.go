@@ -32,10 +32,17 @@ import (
 	"testing"
 )
 
+var skipped = false
+
 func getReader(t *testing.T, name string) (r io.Reader) {
 	dir := os.Getenv("PN_INTEROP_DIR")
 	if dir == "" {
-		t.Skip("no PN_INTEROP_DIR in environment")
+		if !skipped {
+			skipped = true // Don't keep repeating
+			t.Skip("no PN_INTEROP_DIR in environment")
+		} else {
+			t.SkipNow()
+		}
 	}
 	r, err := os.Open(dir + "/" + name + ".amqp")
 	if err != nil {
@@ -240,7 +247,7 @@ func TestStrings(t *testing.T) {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte{}, nil)
-	if !strings.Contains(err.Error(), "not enough data") {
+	if err := checkEqual(err, EndOfData); err != nil {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte("foobar"), nil)

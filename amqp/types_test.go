@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func checkEqual(want interface{}, got interface{}) error {
@@ -32,13 +33,13 @@ func checkEqual(want interface{}, got interface{}) error {
 	return nil
 }
 
-func checkUnmarshal(marshalled []byte, v interface{}) error {
-	got, err := Unmarshal(marshalled, v)
+func checkUnmarshal(marshaled []byte, v interface{}) error {
+	got, err := Unmarshal(marshaled, v)
 	if err != nil {
 		return err
 	}
-	if got != len(marshalled) {
-		return fmt.Errorf("Wanted to Unmarshal %v bytes, got %v", len(marshalled), got)
+	if got != len(marshaled) {
+		return fmt.Errorf("Wanted to Unmarshal %v bytes, got %v", len(marshaled), got)
 	}
 	return nil
 }
@@ -53,6 +54,8 @@ func ExampleKey() {
 	// 42
 }
 
+var timeValue = time.Now().Round(time.Millisecond)
+
 // Values that are unchanged by a marshal/unmarshal round-trip from interface{}
 // to interface{}
 var rtValues = []interface{}{
@@ -62,18 +65,28 @@ var rtValues = []interface{}{
 	float32(0.32), float64(0.64),
 	"string", Binary("Binary"), Symbol("symbol"),
 	nil,
-	Map{"V": "X"},
-	List{"V", int32(1)},
 	Described{"D", "V"},
+	timeValue,
+	UUID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+	Char('a'),
+	Map{"V": "X"},
+	Map{},
+	List{"V", int32(1)},
+	List{},
+	[]string{"a", "b", "c"},
+	[]int8{},
+	AnyMap{{[]int8{1, 2, 3}, "bad-key"}, {int16(1), "duplicate-1"}, {int16(1), "duplicate-2"}},
 }
 
-// Go values that unmarshal as an equivalent value but a different type
-// if unmarshalled to interface{}.
+// Go values that round-trip if unmarshalled back to the same type they were
+// marshalled from, but unmarshal to interface{} as a different default type.
 var oddValues = []interface{}{
-	int(-99), uint(99), // [u]int32|64
+	int(-99),                  // int32|64 depending on platform
+	uint(99),                  // int32|64 depending on platform
 	[]byte("byte"),            // amqp.Binary
 	map[string]int{"str": 99}, // amqp.Map
-	[]string{"a", "b"},        // amqp.List
+	[]Map{Map{}},              // amqp.Array - the generic array
+	AnyMap(nil),               // Map
 }
 
 var allValues = append(rtValues, oddValues...)
@@ -87,14 +100,23 @@ var vstrings = []string{
 	"0.32", "0.64",
 	"string", "Binary", "symbol",
 	"<nil>",
-	"map[V:X]",
-	"[V 1]",
 	"{D V}",
+	fmt.Sprintf("%v", timeValue),
+	"UUID(01020304-0506-0708-090a-0b0c0d0e0f10)",
+	fmt.Sprintf("%v", 'a'),
+	"map[V:X]",
+	"map[]",
+	"[V 1]",
+	"[]",
+	"[a b c]",
+	"[]",
+	"[{[1 2 3] bad-key} {1 duplicate-1} {1 duplicate-2}]",
 	// for oddValues
 	"-99", "99",
 	"[98 121 116 101]", /*"byte"*/
 	"map[str:99]",
-	"[a b]",
+	"[map[]]",
+	"[]",
 }
 
 // Round-trip encoding test
@@ -108,8 +130,8 @@ func TestTypesRoundTrip(t *testing.T) {
 		if err := checkUnmarshal(marshalled, &v); err != nil {
 			t.Error(err)
 		}
-		if err := checkEqual(v, x); err != nil {
-			t.Error(t, err)
+		if err := checkEqual(x, v); err != nil {
+			t.Error(err)
 		}
 	}
 }
@@ -117,7 +139,7 @@ func TestTypesRoundTrip(t *testing.T) {
 // Round trip from T to T where T is the type of the value.
 func TestTypesRoundTripAll(t *testing.T) {
 	for _, x := range allValues {
-		marshalled, err := Marshal(x, nil)
+		marshaled, err := Marshal(x, nil)
 		if err != nil {
 			t.Error(err)
 		}
@@ -125,11 +147,11 @@ func TestTypesRoundTripAll(t *testing.T) {
 			continue
 		}
 		vp := reflect.New(reflect.TypeOf(x)) // v points to a Zero of the same type as x
-		if err := checkUnmarshal(marshalled, vp.Interface()); err != nil {
+		if err := checkUnmarshal(marshaled, vp.Interface()); err != nil {
 			t.Error(err)
 		}
 		v := vp.Elem().Interface()
-		if err := checkEqual(v, x); err != nil {
+		if err := checkEqual(x, v); err != nil {
 			t.Error(err)
 		}
 	}
@@ -146,11 +168,11 @@ func TestTypesPrint(t *testing.T) {
 
 func TestDescribed(t *testing.T) {
 	want := Described{"D", "V"}
-	marshalled, _ := Marshal(want, nil)
+	marshaled, _ := Marshal(want, nil)
 
 	// Unmarshal to Described type
 	var d Described
-	if err := checkUnmarshal(marshalled, &d); err != nil {
+	if err := checkUnmarshal(marshaled, &d); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, d); err != nil {
@@ -159,7 +181,7 @@ func TestDescribed(t *testing.T) {
 
 	// Unmarshal to interface{}
 	var i interface{}
-	if err := checkUnmarshal(marshalled, &i); err != nil {
+	if err := checkUnmarshal(marshaled, &i); err != nil {
 		t.Error(err)
 	}
 	if _, ok := i.(Described); !ok {
@@ -171,7 +193,7 @@ func TestDescribed(t *testing.T) {
 
 	// Unmarshal value only (drop descriptor) to the value type
 	var s string
-	if err := checkUnmarshal(marshalled, &s); err != nil {
+	if err := checkUnmarshal(marshaled, &s); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want.Value, s); err != nil {
@@ -180,15 +202,15 @@ func TestDescribed(t *testing.T) {
 
 	// Nested described types
 	want = Described{Described{int64(123), true}, "foo"}
-	marshalled, _ = Marshal(want, nil)
-	if err := checkUnmarshal(marshalled, &d); err != nil {
+	marshaled, _ = Marshal(want, nil)
+	if err := checkUnmarshal(marshaled, &d); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, d); err != nil {
 		t.Error(err)
 	}
 	// Nested to interface
-	if err := checkUnmarshal(marshalled, &i); err != nil {
+	if err := checkUnmarshal(marshaled, &i); err != nil {
 		t.Error(err)
 	}
 	if err := checkEqual(want, i); err != nil {

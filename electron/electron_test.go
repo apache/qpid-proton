@@ -76,10 +76,10 @@ func newServer(t *testing.T, cont Container, opts ...ConnectionOption) (net.Addr
 func newClient(t *testing.T, cont Container, addr net.Addr, opts ...ConnectionOption) Session {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	fatalIf(t, err)
-	c, err := cont.Connection(conn, opts...)
-	fatalIf(t, err)
-	sn, err := c.Session()
-	fatalIf(t, err)
+	// Don't  bother checking error here, it's an async error so it's racy to do so anyway.
+	// Let caller use Sync() or catch it on first use.
+	c, _ := cont.Connection(conn, opts...)
+	sn, _ := c.Session()
 	return sn
 }
 
@@ -151,7 +151,7 @@ func TestClientSendServerReceive(t *testing.T) {
 				}
 			}()
 
-			// Server recieve
+			// Server receive
 			rm, err := r[i].Receive()
 			if err != nil {
 				t.Fatal(err)

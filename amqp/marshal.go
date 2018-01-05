@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"time"
 	"unsafe"
 )
 
@@ -48,16 +49,6 @@ func dataMarshalError(v interface{}, data *C.pn_data_t) error {
 		return newMarshalError(v, pe.Error())
 	}
 	return nil
-}
-
-func recoverMarshal(err *error) {
-	if r := recover(); r != nil {
-		if merr, ok := r.(*MarshalError); ok {
-			*err = merr
-		} else {
-			panic(r)
-		}
-	}
 }
 
 /*
@@ -85,6 +76,8 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |Symbol                               |symbol                                      |
  +-------------------------------------+--------------------------------------------+
+ |Char                                 |char                                        |
+ +-------------------------------------+--------------------------------------------+
  |interface{}                          |the contained type                          |
  +-------------------------------------+--------------------------------------------+
  |nil                                  |null                                        |
@@ -93,26 +86,31 @@ Go types are encoded as follows
  +-------------------------------------+--------------------------------------------+
  |Map                                  |map, may have mixed types for keys, values  |
  +-------------------------------------+--------------------------------------------+
- |[]T                                  |list with T converted as above              |
+ |AnyMap                               |map (See AnyMap)                            |
  +-------------------------------------+--------------------------------------------+
- |List                                 |list, may have mixed types  values          |
+ |List, []interface{}                  |list, may have mixed-type values            |
+ +-------------------------------------+--------------------------------------------+
+ |[]T, [N]T                            |array, T is mapped as per this table        |
  +-------------------------------------+--------------------------------------------+
  |Described                            |described type                              |
  +-------------------------------------+--------------------------------------------+
+ |time.Time                            |timestamp                                   |
+ +-------------------------------------+--------------------------------------------+
+ |UUID                                 |uuid                                        |
+ +-------------------------------------+--------------------------------------------+
 
-The following Go types cannot be marshaled: uintptr, function, channel, array (use slice), struct
+The following Go types cannot be marshaled: uintptr, function, channel, struct, complex64/128
 
-TODO: Not yet implemented:
-
-Go types: struct, complex64/128.
-
-AMQP types: decimal32/64/128, char, timestamp, uuid, array.
+AMQP types not yet supported:
+- decimal32/64/128,
 */
+
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
-	defer recoverMarshal(&err)
 	data := C.pn_data(0)
 	defer C.pn_data_free(data)
-	marshal(v, data)
+	if err = recoverMarshal(v, data); err != nil {
+		return buffer, err
+	}
 	encode := func(buf []byte) ([]byte, error) {
 		n := int(C.pn_data_encode(data, cPtr(buf), cLen(buf)))
 		switch {
@@ -127,10 +125,22 @@ func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
 	return encodeGrow(buffer, encode)
 }
 
-// Internal
-func MarshalUnsafe(v interface{}, pn_data unsafe.Pointer) (err error) {
-	defer recoverMarshal(&err)
-	marshal(v, (*C.pn_data_t)(pn_data))
+// Internal use only
+func MarshalUnsafe(v interface{}, pnData unsafe.Pointer) (err error) {
+	return recoverMarshal(v, (*C.pn_data_t)(pnData))
+}
+
+func recoverMarshal(v interface{}, data *C.pn_data_t) (err error) {
+	defer func() { // Convert panic to error return
+		if r := recover(); r != nil {
+			if err2, ok := r.(*MarshalError); ok {
+				err = err2 // Convert internal panic to error
+			} else {
+				panic(r) // Unrecognized error, continue to panic
+			}
+		}
+	}()
+	marshal(v, data) // Panics on error
 	return
 }
 
@@ -157,12 +167,15 @@ func encodeGrow(buffer []byte, encode encodeFn) ([]byte, error) {
 	return buffer, err
 }
 
-func marshal(v interface{}, data *C.pn_data_t) {
-	switch v := v.(type) {
+// Marshal v to data
+func marshal(i interface{}, data *C.pn_data_t) {
+	switch v := i.(type) {
 	case nil:
 		C.pn_data_put_null(data)
 	case bool:
 		C.pn_data_put_bool(data, C.bool(v))
+
+	// Signed integers
 	case int8:
 		C.pn_data_put_byte(data, C.int8_t(v))
 	case int16:
@@ -172,11 +185,13 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case int64:
 		C.pn_data_put_long(data, C.int64_t(v))
 	case int:
-		if unsafe.Sizeof(int(0)) == 8 {
+		if intIs64 {
 			C.pn_data_put_long(data, C.int64_t(v))
 		} else {
 			C.pn_data_put_int(data, C.int32_t(v))
 		}
+
+		// Unsigned integers
 	case uint8:
 		C.pn_data_put_ubyte(data, C.uint8_t(v))
 	case uint16:
@@ -186,15 +201,19 @@ func marshal(v interface{}, data *C.pn_data_t) {
 	case uint64:
 		C.pn_data_put_ulong(data, C.uint64_t(v))
 	case uint:
-		if unsafe.Sizeof(int(0)) == 8 {
+		if intIs64 {
 			C.pn_data_put_ulong(data, C.uint64_t(v))
 		} else {
 			C.pn_data_put_uint(data, C.uint32_t(v))
 		}
+
+		// Floating point
 	case float32:
 		C.pn_data_put_float(data, C.float(v))
 	case float64:
 		C.pn_data_put_double(data, C.double(v))
+
+		// String-like (string, binary, symbol)
 	case string:
 		C.pn_data_put_string(data, pnBytes([]byte(v)))
 	case []byte:
@@ -203,62 +222,122 @@ func marshal(v interface{}, data *C.pn_data_t) {
 		C.pn_data_put_binary(data, pnBytes([]byte(v)))
 	case Symbol:
 		C.pn_data_put_symbol(data, pnBytes([]byte(v)))
-	case Map: // Special map type
-		C.pn_data_put_map(data)
-		C.pn_data_enter(data)
-		for key, val := range v {
-			marshal(key, data)
-			marshal(val, data)
-		}
-		C.pn_data_exit(data)
+
+		// Other simple types
+	case time.Time:
+		C.pn_data_put_timestamp(data, C.pn_timestamp_t(v.UnixNano()/1000))
+	case UUID:
+		C.pn_data_put_uuid(data, *(*C.pn_uuid_t)(unsafe.Pointer(&v[0])))
+	case Char:
+		C.pn_data_put_char(data, (C.pn_char_t)(v))
+
+		// Described types
 	case Described:
 		C.pn_data_put_described(data)
 		C.pn_data_enter(data)
 		marshal(v.Descriptor, data)
 		marshal(v.Value, data)
 		C.pn_data_exit(data)
+
+		// Restricted type annotation-key, marshals as contained value
 	case AnnotationKey:
 		marshal(v.Get(), data)
+
+		// Special type to represent AMQP maps with keys that are illegal in Go
+	case AnyMap:
+		C.pn_data_put_map(data)
+		C.pn_data_enter(data)
+		defer C.pn_data_exit(data)
+		for _, kv := range v {
+			marshal(kv.Key, data)
+			marshal(kv.Value, data)
+		}
+
 	default:
-		switch reflect.TypeOf(v).Kind() {
+		// Examine complex types (Go map, slice, array) by reflected structure
+		switch reflect.TypeOf(i).Kind() {
+
 		case reflect.Map:
-			putMap(data, v)
-		case reflect.Slice:
-			putList(data, v)
+			m := reflect.ValueOf(v)
+			C.pn_data_put_map(data)
+			if C.pn_data_enter(data) {
+				defer C.pn_data_exit(data)
+			} else {
+				panic(dataMarshalError(i, data))
+			}
+			for _, key := range m.MapKeys() {
+				marshal(key.Interface(), data)
+				marshal(m.MapIndex(key).Interface(), data)
+			}
+
+		case reflect.Slice, reflect.Array:
+			// Note: Go array and slice are mapped the same way:
+			// if element type is an interface, map to AMQP list (mixed type)
+			// if element type is a non-interface type map to AMQP array (single type)
+			s := reflect.ValueOf(v)
+			if pnType, ok := arrayTypeMap[s.Type().Elem()]; ok {
+				C.pn_data_put_array(data, false, pnType)
+			} else {
+				C.pn_data_put_list(data)
+			}
+			C.pn_data_enter(data)
+			defer C.pn_data_exit(data)
+			for j := 0; j < s.Len(); j++ {
+				marshal(s.Index(j).Interface(), data)
+			}
+
 		default:
 			panic(newMarshalError(v, "no conversion"))
 		}
 	}
-	if err := dataMarshalError(v, data); err != nil {
+	if err := dataMarshalError(i, data); err != nil {
 		panic(err)
 	}
-	return
+}
+
+// Mapping froo Go element type to AMQP array type for types that can go in an AMQP array
+// NOTE: this must be kept consistent with marshal() which does the actual marshalling.
+var arrayTypeMap = map[reflect.Type]C.pn_type_t{
+	nil:                  C.PN_NULL,
+	reflect.TypeOf(true): C.PN_BOOL,
+
+	reflect.TypeOf(int8(0)):  C.PN_BYTE,
+	reflect.TypeOf(int16(0)): C.PN_INT,
+	reflect.TypeOf(int32(0)): C.PN_SHORT,
+	reflect.TypeOf(int64(0)): C.PN_LONG,
+
+	reflect.TypeOf(uint8(0)):  C.PN_UBYTE,
+	reflect.TypeOf(uint16(0)): C.PN_UINT,
+	reflect.TypeOf(uint32(0)): C.PN_USHORT,
+	reflect.TypeOf(uint64(0)): C.PN_ULONG,
+
+	reflect.TypeOf(float32(0)): C.PN_FLOAT,
+	reflect.TypeOf(float64(0)): C.PN_DOUBLE,
+
+	reflect.TypeOf(""):                    C.PN_STRING,
+	reflect.TypeOf((*Symbol)(nil)).Elem(): C.PN_SYMBOL,
+	reflect.TypeOf((*Binary)(nil)).Elem(): C.PN_BINARY,
+	reflect.TypeOf([]byte{}):              C.PN_BINARY,
+
+	reflect.TypeOf((*time.Time)(nil)).Elem(): C.PN_TIMESTAMP,
+	reflect.TypeOf((*UUID)(nil)).Elem():      C.PN_UUID,
+	reflect.TypeOf((*Char)(nil)).Elem():      C.PN_CHAR,
+}
+
+// Compute mapping of int/uint at runtime as they depend on execution environment.
+func init() {
+	if intIs64 {
+		arrayTypeMap[reflect.TypeOf(int(0))] = C.PN_LONG
+		arrayTypeMap[reflect.TypeOf(uint(0))] = C.PN_ULONG
+	} else {
+		arrayTypeMap[reflect.TypeOf(int(0))] = C.PN_INT
+		arrayTypeMap[reflect.TypeOf(uint(0))] = C.PN_UINT
+	}
 }
 
 func clearMarshal(v interface{}, data *C.pn_data_t) {
 	C.pn_data_clear(data)
 	marshal(v, data)
-}
-
-func putMap(data *C.pn_data_t, v interface{}) {
-	mapValue := reflect.ValueOf(v)
-	C.pn_data_put_map(data)
-	C.pn_data_enter(data)
-	for _, key := range mapValue.MapKeys() {
-		marshal(key.Interface(), data)
-		marshal(mapValue.MapIndex(key).Interface(), data)
-	}
-	C.pn_data_exit(data)
-}
-
-func putList(data *C.pn_data_t, v interface{}) {
-	listValue := reflect.ValueOf(v)
-	C.pn_data_put_list(data)
-	C.pn_data_enter(data)
-	for i := 0; i < listValue.Len(); i++ {
-		marshal(listValue.Index(i).Interface(), data)
-	}
-	C.pn_data_exit(data)
 }
 
 // Encoder encodes AMQP values to an io.Writer

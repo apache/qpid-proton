@@ -25,7 +25,6 @@ import "C"
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"time"
 	"unsafe"
 )
@@ -87,20 +86,37 @@ func (t C.pn_type_t) String() string {
 	}
 }
 
-// Go types
-var (
-	bytesType = reflect.TypeOf([]byte{})
-	valueType = reflect.TypeOf(reflect.Value{})
-)
-
-// TODO aconway 2015-04-08: can't handle AMQP maps with key types that are not valid Go map keys.
-
-// Map is a generic map that can have mixed key and value types and so can represent any AMQP map
+// The AMQP map type. A generic map that can have mixed-type keys and values.
 type Map map[interface{}]interface{}
 
-// List is a generic list that can hold mixed values and can represent any AMQP list.
+// The most general AMQP map type, for unusual interoperability cases.
 //
+// This is not a Go Map but a sequence of {key, value} pairs.
+//
+// An AnyMap lets you control or examine the encoded ordering of key,value pairs
+// and use key values that are not legal as Go map keys.
+//
+// The amqp.Map, or plain Go map types are easier to use for most cases.
+type AnyMap []KeyValue
+
+// Return a Map constructed from an AnyMap.
+// Panic if the AnyMap has key values that are not valid Go map keys (e.g. maps, slices)
+func (a AnyMap) Map() (m Map) {
+	for _, kv := range a {
+		m[kv.Key] = kv.Value
+	}
+	return
+}
+
+// KeyValue pair, used by AnyMap
+type KeyValue struct{ Key, Value interface{} }
+
+// The AMQP list type. A generic list that can hold mixed-type values.
 type List []interface{}
+
+// The generic AMQP array type, used to unmarshal an array with nested array,
+// map or list elements. Arrays of simple type T unmarshal to []T
+type Array []interface{}
 
 // Symbol is a string that is encoded as an AMQP symbol
 type Symbol string
@@ -149,7 +165,7 @@ func (l List) GoString() string {
 // pnTime converts Go time.Time to Proton millisecond Unix time.
 func pnTime(t time.Time) C.pn_timestamp_t {
 	secs := t.Unix()
-	// Note: sub-second accuracy is not guaraunteed if the Unix time in
+	// Note: sub-second accuracy is not guaranteed if the Unix time in
 	// nanoseconds cannot be represented by an int64 (sometime around year 2260)
 	msecs := (t.UnixNano() % int64(time.Second)) / int64(time.Millisecond)
 	return C.pn_timestamp_t(secs*1000 + msecs)
@@ -219,3 +235,16 @@ type Described struct {
 	Descriptor interface{}
 	Value      interface{}
 }
+
+// UUID is an AMQP 128-bit Universally Unique Identifier, as defined by RFC-4122 section 4.1.2
+type UUID [16]byte
+
+func (u UUID) String() string {
+	return fmt.Sprintf("UUID(%x-%x-%x-%x-%x)", u[0:4], u[4:6], u[6:8], u[8:10], u[10:])
+}
+
+// Char is an AMQP unicode character, equivalent to a Go rune.
+// It is defined as a distinct type so it can be distinguished from an AMQP int
+type Char rune
+
+const intIs64 = unsafe.Sizeof(int(0)) == 8

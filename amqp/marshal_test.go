@@ -20,6 +20,7 @@ under the License.
 package amqp
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -87,4 +88,116 @@ func TestIntKey(t *testing.T) {
 		t.Errorf("%v != %v", 12345, k.Get().(uint64))
 	}
 
+}
+
+func TestMapToMap(t *testing.T) {
+	in := Map{"k": "v", "x": "y", true: false, int8(3): uint64(24)}
+	if bytes, err := Marshal(in, nil); err == nil {
+		var out Map
+		if _, err := Unmarshal(bytes, &out); err == nil {
+			if err = checkEqual(in, out); err != nil {
+				t.Error(err)
+			}
+		} else {
+			t.Error(err)
+		}
+	}
+}
+
+func TestMapToInterface(t *testing.T) {
+	in := Map{"k": "v", "x": "y", true: false, int8(3): uint64(24)}
+	if bytes, err := Marshal(in, nil); err == nil {
+		var out interface{}
+		if _, err := Unmarshal(bytes, &out); err == nil {
+			if err = checkEqual(in, out); err != nil {
+				t.Error(err)
+			}
+		} else {
+			t.Error(err)
+		}
+	}
+}
+
+func TestAnyMap(t *testing.T) {
+	// nil
+	bytes, err := Marshal(AnyMap(nil), nil)
+	if err != nil {
+		t.Error(err)
+	}
+	var out AnyMap
+	if _, err := Unmarshal(bytes, &out); err != nil {
+		t.Error(err)
+	}
+	if err = checkEqual(AnyMap(nil), out); err != nil {
+		t.Error(err)
+	}
+
+	// empty
+	bytes, err = Marshal(AnyMap{}, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if _, err := Unmarshal(bytes, &out); err != nil {
+		t.Error(err)
+	}
+	if err = checkEqual(AnyMap(nil), out); err != nil {
+		t.Error(err)
+	}
+
+	// with data
+	in := AnyMap{{"k", "v"}, {true, false}}
+	bytes, err = Marshal(in, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	if _, err := Unmarshal(bytes, &out); err != nil {
+		t.Error(err)
+	}
+	if err = checkEqual(in, out); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestBadMap(t *testing.T) {
+	// unmarshal map with invalid keys
+	in := AnyMap{{"k", "v"}, {[]string{"x", "y"}, "invalid-key"}}
+	bytes, err := Marshal(in, nil)
+	if err != nil {
+		t.Error(err)
+	}
+	m := Map{}
+	//  Should fail to unmarshal to a map
+	if _, err := Unmarshal(bytes, &m); err != nil {
+		if !strings.Contains(err.Error(), "key []string{\"x\", \"y\"} is not comparable") {
+			t.Error(err)
+		}
+	} else {
+		t.Error("expected error")
+	}
+	// Should unmarshal to an AnyMap
+	var out AnyMap
+	if _, err := Unmarshal(bytes, &out); err != nil {
+		t.Error(err)
+	} else if err = checkEqual(in, out); err != nil {
+		t.Error(err)
+	}
+	// Should unmarshal to interface{} as AnyMap
+	var v interface{}
+	if _, err := Unmarshal(bytes, &v); err != nil {
+		t.Error(err)
+	} else if err = checkEqual(in, v); err != nil {
+		t.Error(err)
+	}
+	// Round trip from interface to interface
+	in = AnyMap{{[]int8{1, 2, 3}, "bad-key"}, {int16(1), "duplicate-1"}, {int16(1), "duplicate-2"}}
+	bytes, err = Marshal(interface{}(in), nil)
+	if err != nil {
+		t.Error(err)
+	}
+	v = nil
+	if _, err := Unmarshal(bytes, &v); err != nil {
+		t.Error(err)
+	} else if err = checkEqual(in, v); err != nil {
+		t.Error(err)
+	}
 }

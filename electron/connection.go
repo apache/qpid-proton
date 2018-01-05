@@ -130,7 +130,7 @@ func VirtualHost(virtualHost string) ConnectionOption {
 // connection.  Only applies to outbound client connection.
 //
 // The connection will erase its copy of the password from memory as soon as it
-// has been used to authenticate. If you are concerned about paswords staying in
+// has been used to authenticate. If you are concerned about passwords staying in
 // memory you should never store them as strings, and should overwrite your
 // copy as soon as you are done with it.
 //

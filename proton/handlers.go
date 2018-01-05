@@ -244,7 +244,7 @@ func (d flowcontroller) HandleEvent(e Event) {
 	}
 }
 
-// MessagingAdapter implments a EventHandler and delegates to a MessagingHandler.
+// MessagingAdapter implements a EventHandler and delegates to a MessagingHandler.
 // You can modify the exported fields before you pass the MessagingAdapter to
 // a Engine.
 type MessagingAdapter struct {

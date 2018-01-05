@@ -55,14 +55,14 @@ func TestDefaultMessage(t *testing.T) {
 		{m.ReplyToGroupId(), ""},
 		{m.MessageId(), nil},
 		{m.CorrelationId(), nil},
-		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}{}},
-		{m.MessageAnnotations(), map[AnnotationKey]interface{}{}},
-		{m.ApplicationProperties(), map[string]interface{}{}},
+		{m.DeliveryAnnotations(), map[AnnotationKey]interface{}(nil)},
+		{m.MessageAnnotations(), map[AnnotationKey]interface{}(nil)},
+		{m.ApplicationProperties(), map[string]interface{}(nil)},
 
 		// Deprecated
-		{m.Instructions(), map[string]interface{}{}},
-		{m.Annotations(), map[string]interface{}{}},
-		{m.Properties(), map[string]interface{}{}},
+		{m.Instructions(), map[string]interface{}(nil)},
+		{m.Annotations(), map[string]interface{}(nil)},
+		{m.Properties(), map[string]interface{}(nil)},
 		{m.Body(), nil},
 	} {
 		if err := checkEqual(data[0], data[1]); err != nil {
