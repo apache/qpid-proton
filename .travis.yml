@@ -23,29 +23,37 @@ compiler:
 - gcc
 - clang
 
+env:
+- PIP='pip'
+
 matrix:
   include:
   - os: linux
     env:
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_BUILD_TYPE=Coverage'
+    - PIP='pip'
     after_success:
     - bash <(curl -s https://codecov.io/bash)
 
   - os: osx
     osx_image: xcode7.3
     env:
-    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_PERL=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
+    - PIP='pip2'
     before_install:
     - brew update
-    - brew install libuv openssl swig
+    - brew upgrade python openssl
+    - brew install libuv swig
 
   - os: osx
     osx_image: xcode9
     env:
-    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_PERL=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DOPENSSL_INCLUDE_DIR=/usr/local/opt/openssl/include -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
+    - PIP='pip2'
     before_install:
     - brew update
-    - brew install libuv openssl swig
+    - brew upgrade python openssl
+    - brew install libuv swig
 
 # Note addons is apt specific at the moment and will not be applied for osx.
 # See before_install brew commands below
@@ -67,8 +75,8 @@ addons:
     - lcov
 
 install:
-- pip install --user --upgrade pip
-- pip install --user coverage tox
+- ${PIP} install --user --upgrade pip
+- ${PIP} install --user coverage tox
 - gem install minitest
 
 before_script:
