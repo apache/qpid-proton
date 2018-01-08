@@ -87,7 +87,7 @@ template <class T> class object : private comparable<object<T> > {
   public:
     bool operator!() const { return !object_; }
 #if PN_CPP_HAS_EXPLICIT_CONVERSIONS
-    explicit operator bool() const { return object_; }
+    explicit operator bool() const { return object_.get(); }
 #endif
 
   protected:
