@@ -161,13 +161,14 @@ PNP_EXTERN void pn_proactor_listen(pn_proactor_t *proactor, pn_listener_t *liste
  * @ref PN_LISTENER_CLOSE, @ref PN_TRANSPORT_CLOSED and other @ref proactor_events are
  * generated as usual.
  *
- * If no new listeners or connections are created, then a @ref
- * PN_PROACTOR_INACTIVE event will be generated when all connections and
- * listeners are disconnected and no timeout is pending - see
- * pn_proactor_set_timeout() pn_proactor_cancel_timeout()
+ * A @ref PN_PROACTOR_INACTIVE event will be generated when all connections and
+ * listeners are disconnected and no timeout is pending. The event will also be
+ * generated if there are no listeners, connections or timeout when
+ * pn_proactor_disconnect() is called.
  *
- * Note the proactor remains active, connections and listeners created after a call to
- * pn_proactor_disconnect() are not affected by it.
+ * Creating new connections and listeners after this call and before the
+ * PN_PROACTOR_INACTIVE event may prevent the proactor from becoming inactive.
+ * After the PN_PROACTOR_INACTIVE event, the proactor can be used normally.
  *
  * @note Thread-safe
  *

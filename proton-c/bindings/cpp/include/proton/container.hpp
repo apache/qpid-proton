@@ -190,8 +190,7 @@ class PN_CPP_CLASS_EXTERN container {
     ///
     /// When the process is complete, `run()` returns in all threads.
     ///
-    /// **Thread safety** - It is safe to call this method across
-    /// threads.
+    /// **Thread safety** - It is safe to call this method in any thread.
     PN_CPP_EXTERN void stop();
 
     /// Open a connection and sender for `addr_url`.
