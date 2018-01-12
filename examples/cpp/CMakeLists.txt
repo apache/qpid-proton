@@ -73,6 +73,7 @@ foreach(example
     server_direct
     connection_options
     queue_browser
+    colour_send
     selected_recv
     flow_control
     ssl

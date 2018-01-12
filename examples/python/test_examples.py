@@ -149,3 +149,20 @@ class ExamplesTest(unittest.TestCase):
         actual = [l.strip() for l in r.stdout]
         expected = ["{%s'sequence': int32(%i)}" % (_unicode_prefix, (i+1)) for i in range(100)]
         self.assertEqual(actual, expected)
+
+    def test_selected_recv(self):
+        s = subprocess.Popen(['colour_send.py'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                             universal_newlines=True)
+        s.wait()
+        r = subprocess.Popen(['selected_recv.py', '-m', '50'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                             universal_newlines=True)
+        r.wait()
+        actual = [l.strip() for l in r.stdout]
+        expected = ["green %i" % (i+1) for i in range(100) if i % 2 == 0]
+        self.assertEqual(actual, expected)
+        r2 = subprocess.Popen(['simple_recv.py', '-m', '50'], stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                             universal_newlines=True)
+        r2.wait()
+        actual = [l.strip() for l in r2.stdout]
+        expected = ["red %i" % (i+1) for i in range(100) if i % 2 == 1]
+        self.assertEqual(actual, expected)

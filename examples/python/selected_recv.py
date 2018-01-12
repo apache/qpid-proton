@@ -19,22 +19,38 @@
 #
 
 from __future__ import print_function, unicode_literals
+import optparse
+from proton import Url
 from proton.reactor import Container, Selector
 from proton.handlers import MessagingHandler
 
 class Recv(MessagingHandler):
-    def __init__(self):
+    def __init__(self, url, count):
         super(Recv, self).__init__()
+        self.url = Url(url)
+        self.expected = count
+        self.received = 0
 
     def on_start(self, event):
-        conn = event.container.connect("localhost:5672")
-        event.container.create_receiver(conn, "examples", options=Selector("colour = 'green'"))
+        conn = event.container.connect(self.url)
+        event.container.create_receiver(conn, self.url.path, options=Selector("colour = 'green'"))
 
     def on_message(self, event):
         print(event.message.body)
+        self.received += 1
+        if self.received == self.expected:
+            event.receiver.close()
+            event.connection.close()
+
+parser = optparse.OptionParser(usage="usage: %prog [options]")
+parser.add_option("-a", "--address", default="localhost:5672/examples",
+                  help="address from which messages are received (default %default)")
+parser.add_option("-m", "--messages", type="int", default=0,
+                  help="number of messages to receive; 0 receives indefinitely (default %default)")
+opts, args = parser.parse_args()
 
 try:
-    Container(Recv()).run()
+    Container(Recv(opts.address, opts.messages)).run()
 except KeyboardInterrupt: pass
 
 
