@@ -44,7 +44,7 @@ namespace {
         proton::codec::encoder enc(filter_value);
         enc << proton::codec::start::described()
             << proton::symbol("apache.org:selector-filter:string")
-            << proton::binary(selector_str)
+            << selector_str
             << proton::codec::finish();
         // In our case, the map has this one element
         map.put(filter_key, filter_value);

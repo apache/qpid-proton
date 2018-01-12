@@ -18,7 +18,7 @@
 # under the License.
 #
 
-from __future__ import print_function
+from __future__ import print_function, unicode_literals
 from proton.reactor import Container, Selector
 from proton.handlers import MessagingHandler
 
