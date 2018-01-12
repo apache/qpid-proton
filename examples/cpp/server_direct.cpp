@@ -22,6 +22,7 @@
 #include "options.hpp"
 
 #include <proton/container.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
@@ -41,7 +42,14 @@
 
 class server : public proton::messaging_handler {
   private:
+    class listener_ready_handler : public proton::listen_handler {
+        void on_open(proton::listener& l) OVERRIDE {
+            std::cout << "listening on " << l.port() << std::endl;
+        }
+    };
+
     typedef std::map<std::string, proton::sender> sender_map;
+    listener_ready_handler listen_handler;
     std::string url;
     sender_map senders;
     int address_counter;
@@ -50,8 +58,7 @@ class server : public proton::messaging_handler {
     server(const std::string &u) : url(u), address_counter(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        c.listen(url);
-        std::cout << "server listening on " << url << std::endl;
+        c.listen(url, listen_handler);
     }
 
     std::string to_upper(const std::string &s) {

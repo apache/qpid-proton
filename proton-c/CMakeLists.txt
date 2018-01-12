@@ -440,6 +440,7 @@ set (qpid-proton-private-includes
   src/reactor/selectable.h
   src/platform/platform.h
   src/platform/platform_fmt.h
+  src/proactor/netaddr-internal.h
   src/proactor/proactor-internal.h
   )
 

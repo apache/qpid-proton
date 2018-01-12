@@ -24,6 +24,7 @@
 #include <proton/delivery.h>
 #include <proton/link.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/message.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
@@ -144,7 +145,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
        pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
-       int recv;
+       ssize_t recv;
        m->size += size;
        m->start = (char*)realloc(m->start, m->size);
        recv = pn_link_recv(l, m->start, m->size);
@@ -228,11 +229,13 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
 static bool handle(app_data_t* app, pn_event_t* event) {
   switch (pn_event_type(event)) {
 
-   case PN_LISTENER_OPEN:
-    printf("listening\n");
-    fflush(stdout);
-    break;
-
+   case PN_LISTENER_OPEN: {
+     char port[256];             /* Get the listening port */
+     pn_netaddr_host_port(pn_netaddr_listening(pn_event_listener(event)), NULL, 0, port, sizeof(port));
+     printf("listening on %s\n", port);
+     fflush(stdout);
+     break;
+   }
    case PN_LISTENER_ACCEPT:
     pn_listener_accept2(pn_event_listener(event), NULL, NULL);
     break;

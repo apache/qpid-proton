@@ -60,6 +60,10 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 # Globally initialize Cyrus SASL configuration
 _cyrusSetup('sasl_conf')
 
+def wait_listening(proc):
+    m = proc.wait_re(".*listening on ([0-9]+)$")
+    return m.group(1), m.group(0)+"\n" # Return (port, line)
+
 class BrokerTestCase(ProcTestCase):
     """
     ExampleTest that starts a broker in setUpClass and kills it in tearDownClass.
@@ -68,10 +72,9 @@ class BrokerTestCase(ProcTestCase):
     @classmethod
     def setUpClass(cls):
         cls.broker = None       # In case Proc throws, create the attribute.
-        with TestPort() as tp:
-            cls.addr = "%s:%s/example" % (tp.host, tp.port)
-            cls.broker = Proc([cls.broker_exe, "-a", tp.addr])
-            cls.broker.wait_re("listening")
+        cls.broker = Proc([cls.broker_exe, "-a", "//:0"])
+        cls.port, line = wait_listening(cls.broker)
+        cls.addr = "//:%s/example" % cls.port
 
     @classmethod
     def tearDownClass(cls):
@@ -92,9 +95,8 @@ All mimsy were the borogroves, => ALL MIMSY WERE THE BOROGROVES,
 And the mome raths outgrabe. => AND THE MOME RATHS OUTGRABE.
 """
 
-def recv_expect(name, addr):
-    return "%s listening on %s\n%s" % (
-        name, addr, "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)]))
+def recv_expect():
+    return "".join(['{"sequence"=%s}\n' % (i+1) for i in range(100)])
 
 class ContainerExampleTest(BrokerTestCase):
     """Run the container examples, verify they behave as expected."""
@@ -104,42 +106,31 @@ class ContainerExampleTest(BrokerTestCase):
     def test_helloworld(self):
         self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld", self.addr]).wait_exit())
 
-    def test_helloworld_direct(self):
-        with TestPort() as tp:
-            self.assertMultiLineEqual('Hello World!\n', self.proc(["helloworld_direct", tp.addr]).wait_exit())
-
     def test_simple_send_recv(self):
-        self.assertMultiLineEqual("all messages confirmed\n",
-                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
+        self.assertMultiLineEqual("all messages confirmed\n", self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertMultiLineEqual(recv_expect(), self.proc(["simple_recv", "-a", self.addr]).wait_exit())
 
     def test_simple_recv_send(self):
         # Start receiver first, then run sender"""
         recv = self.proc(["simple_recv", "-a", self.addr])
-        self.assertMultiLineEqual("all messages confirmed\n",
-                         self.proc(["simple_send", "-a", self.addr]).wait_exit())
-        self.assertMultiLineEqual(recv_expect("simple_recv", self.addr), recv.wait_exit())
+        self.assertMultiLineEqual("all messages confirmed\n", self.proc(["simple_send", "-a", self.addr]).wait_exit())
+        self.assertMultiLineEqual(recv_expect(), recv.wait_exit())
 
 
     def test_simple_send_direct_recv(self):
-        with TestPort() as tp:
-            addr = "%s/examples" % tp.addr
-            recv = self.proc(["direct_recv", "-a", addr])
-            recv.wait_re("listening")
-            self.assertMultiLineEqual("all messages confirmed\n",
-                             self.proc(["simple_send", "-a", addr]).wait_exit())
-            self.assertMultiLineEqual(recv_expect("direct_recv", addr), recv.wait_exit())
+        recv = self.proc(["direct_recv", "-a", "//:0"])
+        port, line = wait_listening(recv)
+        addr = "//:%s/examples" % port
+        self.assertMultiLineEqual("all messages confirmed\n",
+                                  self.proc(["simple_send", "-a", addr]).wait_exit())
+        self.assertMultiLineEqual(line+recv_expect(), recv.wait_exit())
 
     def test_simple_recv_direct_send(self):
-        with TestPort() as tp:
-            addr = "%s/examples" % tp.addr
-            send = self.proc(["direct_send", "-a", addr])
-            send.wait_re("listening")
-            self.assertMultiLineEqual(recv_expect("simple_recv", addr),
-                             self.proc(["simple_recv", "-a", addr]).wait_exit())
-            self.assertMultiLineEqual(
-                "direct_send listening on %s\nall messages confirmed\n" % addr,
-                send.wait_exit())
+        send = self.proc(["direct_send", "-a", "//:0"])
+        port, line = wait_listening(send)
+        addr = "//:%s/examples" % port
+        self.assertMultiLineEqual(recv_expect(), self.proc(["simple_recv", "-a", addr]).wait_exit())
+        self.assertMultiLineEqual(line+"all messages confirmed\n", send.wait_exit())
 
     def test_request_response(self):
         server = self.proc(["server", self.addr, "example"]) # self.addr has the connection info
@@ -148,12 +139,10 @@ class ContainerExampleTest(BrokerTestCase):
                          self.proc(["client", "-a", self.addr]).wait_exit())
 
     def test_request_response_direct(self):
-        with TestPort() as tp:
-            addr = "%s/examples" % tp.addr
-            server = self.proc(["server_direct", "-a", addr])
-            server.wait_re("listening")
-            self.assertMultiLineEqual(CLIENT_EXPECT,
-                             self.proc(["client", "-a", addr]).wait_exit())
+        server = self.proc(["server_direct", "-a", "//:0"])
+        port, line = wait_listening(server);
+        addr = "//:%s/examples" % port
+        self.assertMultiLineEqual(CLIENT_EXPECT, self.proc(["client", "-a", addr]).wait_exit())
 
     def test_flow_control(self):
         want="""success: Example 1: simple credit
@@ -161,8 +150,7 @@ success: Example 2: basic drain
 success: Example 3: drain without credit
 success: Example 4: high/low watermark
 """
-        with TestPort() as tp:
-            self.assertMultiLineEqual(want, self.proc(["flow_control", "--address", tp.addr, "--quiet"]).wait_exit())
+        self.assertMultiLineEqual(want, self.proc(["flow_control", "--quiet"]).wait_exit())
 
     def test_encode_decode(self):
         want="""
@@ -246,33 +234,23 @@ class ContainerExampleSSLTest(BrokerTestCase):
 
     def test_ssl(self):
         # SSL without SASL, VERIFY_PEER_NAME
-        with TestPort() as tp:
-            addr = "amqps://%s/examples" % tp.addr
-            # Disable valgrind when using OpenSSL
-            out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir()]).wait_exit()
-            expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
-            expect_found = (out.find(expect) >= 0)
-            self.assertEqual(expect_found, True)
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-c", self.ssl_certs_dir()]).wait_exit()
+        expect = "Server certificate identity CN=test_server\nHello World!"
+        self.assertIn(expect, out)
 
     def test_ssl_no_name(self):
         # VERIFY_PEER
-        with TestPort() as tp:
-            addr = "amqps://%s/examples" % tp.addr
-            # Disable valgrind when using OpenSSL
-            out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "noname"], valgrind=False).wait_exit()
-            expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
-            expect_found = (out.find(expect) >= 0)
-            self.assertEqual(expect_found, True)
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl", "-c", self.ssl_certs_dir(), "-v", "noname"], valgrind=False).wait_exit()
+        expect = "Outgoing client connection connected via SSL.  Server certificate identity CN=test_server\nHello World!"
+        self.assertIn(expect, out)
 
     def test_ssl_bad_name(self):
         # VERIFY_PEER
-        with TestPort() as tp:
-            addr = "amqps://%s/examples" % tp.addr
-            # Disable valgrind when using OpenSSL
-            out = self.proc(["ssl", "-a", addr, "-c", self.ssl_certs_dir(), "-v", "fail"]).wait_exit()
-            expect = "Expected failure of connection with wrong peer name"
-            expect_found = (out.find(expect) >= 0)
-            self.assertEqual(expect_found, True)
+        out = self.proc(["ssl", "-c", self.ssl_certs_dir(), "-v", "fail"]).wait_exit()
+        expect = "Expected failure of connection with wrong peer name"
+        self.assertIn(expect, out)
 
     def test_ssl_client_cert(self):
         # SSL with SASL EXTERNAL
@@ -280,12 +258,9 @@ class ContainerExampleSSLTest(BrokerTestCase):
 Outgoing client connection connected via SSL.  Server certificate identity CN=test_server
 Hello World!
 """
-        with TestPort() as tp:
-            addr = "amqps://%s/examples" % tp.addr
-            # Disable valgrind when using OpenSSL
-            out = self.proc(["ssl_client_cert", addr, self.ssl_certs_dir()]).wait_exit()
-            expect_found = (out.find(expect) >= 0)
-            self.assertEqual(expect_found, True)
+        # Disable valgrind when using OpenSSL
+        out = self.proc(["ssl_client_cert", self.ssl_certs_dir()]).wait_exit()
+        self.assertIn(expect, out)
 
 if __name__ == "__main__":
     unittest.main()

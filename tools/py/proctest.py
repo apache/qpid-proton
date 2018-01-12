@@ -33,27 +33,6 @@ from os.path import dirname as dirname
 
 DEFAULT_TIMEOUT=10
 
-class TestPort(object):
-    """Get an unused port using bind(0) and SO_REUSEADDR and hold it till close()
-    Can be used as `with TestPort() as tp:` Provides tp.host, tp.port and tp.addr
-    (a "host:port" string)
-    """
-    def __init__(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('127.0.0.1', 0)) # Testing examples is local only
-        self.host, self.port = socket.getnameinfo(self.sock.getsockname(), 0)
-        self.addr = "%s:%s" % (self.host, self.port)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.close()
-
-    def close(self):
-        self.sock.close()
-
 class ProcError(Exception):
     """An exception that displays failed process output"""
     def __init__(self, proc, what="bad exit status"):

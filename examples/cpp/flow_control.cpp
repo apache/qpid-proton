@@ -25,6 +25,7 @@
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
@@ -192,20 +193,35 @@ class flow_receiver : public proton::messaging_handler {
     }
 };
 
+class flow_listener : public proton::listen_handler {
+    proton::connection_options opts;
+  public:
+    flow_listener(flow_sender& sh) {
+        opts.handler(sh);
+    }
+
+    void on_open(proton::listener& l) OVERRIDE {
+        std::ostringstream url;
+        url << "//:" << l.port() << "/example"; // Connect to the actual listening port
+        l.container().connect(url.str());
+    }
+
+    proton::connection_options on_accept(proton::listener&) OVERRIDE { return opts; }
+};
 
 class flow_control : public proton::messaging_handler {
   private:
-    std::string url;
     proton::listener listener;
     flow_sender send_handler;
     flow_receiver receive_handler;
+    flow_listener listen_handler;
 
   public:
-    flow_control(const std::string& u) : url(u), receive_handler(send_handler) {}
+    flow_control() : receive_handler(send_handler), listen_handler(send_handler) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        listener = c.listen(url, proton::connection_options().handler(send_handler));
-        c.connect(url);
+        // Listen on a dynamic port on the local host.
+        listener = c.listen("//:0", listen_handler);
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
@@ -223,11 +239,9 @@ class flow_control : public proton::messaging_handler {
 int main(int argc, char **argv) {
     // Pick an "unusual" port since we are going to be talking to
     // ourselves, not a broker.
-    std::string address("127.0.0.1:8888");
     bool quiet = false;
 
     example::options opts(argc, argv);
-    opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_flag(quiet, 'q', "quiet", "suppress additional commentary of credit allocation and consumption");
 
     try {
@@ -235,7 +249,7 @@ int main(int argc, char **argv) {
         if (quiet)
             verbose = false;
 
-        flow_control fc(address);
+        flow_control fc;
         proton::container(fc).run();
 
         return 0;

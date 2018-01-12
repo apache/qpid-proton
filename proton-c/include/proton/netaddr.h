@@ -51,13 +51,39 @@ PNP_EXTERN int pn_netaddr_str(const pn_netaddr_t *addr, char *buf, size_t size);
 
 /**
  * Get the local address of a transport. Return `NULL` if not available.
+ * Pointer is invalid after the transport closes (PN_TRANSPORT_CLOSED event is handled)
  */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
 
 /**
- * Get the remote address of a transport. Return NULL if not available.
+ * Get the local address of a transport. Return `NULL` if not available.
+ * Pointer is invalid after the transport closes (PN_TRANSPORT_CLOSED event is handled)
  */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
+
+/**
+ * Get the listening addresses of a listener.
+ * Addresses are only available after the @ref PN_LISTENER_OPEN event for the listener.
+ *
+ * A listener can have more than one address for several reasons:
+ * - DNS host records may indicate more than one address
+ * - On a multi-homed host, listening on the default host "" will listen on all local addresses.
+ * - Some IPv4/IPV6 configurations may expand a single address into a v4/v6 pair.
+ *
+ * pn_netaddr_next() will iterate over the addresses in the list.
+ *
+ * @param l points to the listener
+ * @return The first listening address or NULL if there are no addresses are available.
+ * Use pn_netaddr_next() to iterate over the list.
+ * Pointer is invalid after the listener closes (PN_LISTENER_CLOSED event is handled)
+ */
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l);
+
+/**
+ * @return Pointer to the next address in a list of addresses, NULL if at the end of the list or
+ * if this address is not part of a list.
+ */
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_next(const pn_netaddr_t *na);
 
 struct sockaddr;
 
@@ -72,6 +98,12 @@ PNP_EXTERN const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na);
  * Return 0 if not available.
  */
 PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
+
+/**
+ * Get the host and port name from na as separate strings.
+ * Returns 0 if successful, non-0 on error.
+ */
+PNP_EXTERN int pn_netaddr_host_port(const pn_netaddr_t* na, char *host, size_t hlen, char *port, size_t plen);
 
 /**
  * @}

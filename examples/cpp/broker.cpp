@@ -389,7 +389,6 @@ class broker {
         container_("broker"), queues_(container_), listener_(queues_)
     {
         container_.listen(addr, listener_);
-        std::cout << "broker listening on " << addr << std::endl;
     }
 
     void run() {
@@ -408,6 +407,10 @@ class broker {
 
         proton::connection_options on_accept(proton::listener&) OVERRIDE{
             return proton::connection_options().handler(*(new connection_handler(queues_)));
+        }
+
+        void on_open(proton::listener& l) OVERRIDE {
+            std::cout << "broker listening on " << l.port() << std::endl;
         }
 
         void on_error(proton::listener&, const std::string& s) OVERRIDE {

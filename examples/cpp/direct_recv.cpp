@@ -28,6 +28,7 @@
 #include <proton/message_id.hpp>
 #include <proton/messaging_handler.hpp>
 #include <proton/link.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/value.hpp>
 
@@ -38,8 +39,15 @@
 
 class direct_recv : public proton::messaging_handler {
   private:
+    class listener_ready_handler : public proton::listen_handler {
+        void on_open(proton::listener& l) OVERRIDE {
+            std::cout << "listening on " << l.port() << std::endl;
+        }
+    };
+
     std::string url;
     proton::listener listener;
+    listener_ready_handler listen_handler;
     int expected;
     int received;
 
@@ -47,8 +55,7 @@ class direct_recv : public proton::messaging_handler {
     direct_recv(const std::string &s, int c) : url(s), expected(c), received(0) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        listener = c.listen(url);
-        std::cout << "direct_recv listening on " << url << std::endl;
+        listener = c.listen(url, listen_handler);
     }
 
     void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {

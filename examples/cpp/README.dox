@@ -18,15 +18,6 @@ node. Sends one message and receives it back.
 
 */
 
-/** @example helloworld_direct.cpp
-
-Variation of helloworld that does not use a broker, but listens for
-incoming connections itself. It establishes a connection to itself
-with a link over which a single message is sent. This demonstrates the
-ease with which a simple daemon an be built using the API.
-
-*/
-
 /** @example simple_send.cpp
 
 An example of sending a fixed number of messages and tracking their

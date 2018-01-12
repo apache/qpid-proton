@@ -53,6 +53,7 @@ class duration : private internal::comparable<duration> {
     PN_CPP_EXTERN static const duration FOREVER;   ///< Wait forever
     PN_CPP_EXTERN static const duration IMMEDIATE; ///< Don't wait at all
     PN_CPP_EXTERN static const duration SECOND;    ///< One second
+    PN_CPP_EXTERN static const duration MILLISECOND; ///< One millisecond
     PN_CPP_EXTERN static const duration MINUTE;    ///< One minute
 
   private:
@@ -71,6 +72,7 @@ inline duration operator+(duration x, duration y) { return duration(x.millisecon
 inline duration operator-(duration x, duration y) { return duration(x.milliseconds() - y.milliseconds()); }
 inline duration operator*(duration d, uint64_t n) { return duration(d.milliseconds()*n); }
 inline duration operator*(uint64_t n, duration d) { return d * n; }
+inline duration operator/(duration d, uint64_t n) { return duration(d.milliseconds() / n); }
 /// @}
 
 } // proton

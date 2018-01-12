@@ -49,7 +49,7 @@ class PN_CPP_CLASS_EXTERN listen_handler {
     /// the connection.  messaging_handler::on_connection_open() will be called with
     /// the proton::connection, it can call connection::open() to accept or
     /// connection::close() to reject the connection.
-    PN_CPP_EXTERN virtual connection_options on_accept(listener&)= 0;
+    PN_CPP_EXTERN virtual connection_options on_accept(listener&);
 
     /// Called if there is a listening error, with an error message.
     /// close() will also be called.

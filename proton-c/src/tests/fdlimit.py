@@ -20,17 +20,19 @@ from __future__ import print_function
 
 from proctest import *
 
+def wait_listening(proc):
+    m = proc.wait_re("listening on ([0-9]+)$")
+    return m.group(1), m.group(0)+"\n" # Return (port, line)
+
 class LimitedBroker(object):
     def __init__(self, test, fdlimit):
         self.test = test
         self.fdlimit = fdlimit
 
     def __enter__(self):
-        with TestPort() as tp:
-            self.port = str(tp.port)
-            self.proc = self.test.proc(['prlimit', '-n%d' % self.fdlimit, 'broker', '', self.port])
-            self.proc.wait_re("listening")
-            return self
+        self.proc = self.test.proc(["broker", "", "0"])
+        self.port, _ = wait_listening(self.proc)
+        return self
 
     def __exit__(self, *args):
         b = getattr(self, "proc")

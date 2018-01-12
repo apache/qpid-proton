@@ -23,6 +23,7 @@
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
+#include <proton/listen_handler.hpp>
 #include <proton/listener.hpp>
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
@@ -38,8 +39,15 @@
 
 class simple_send : public proton::messaging_handler {
   private:
+    class listener_ready_handler : public proton::listen_handler {
+        void on_open(proton::listener& l) OVERRIDE {
+            std::cout << "listening on " << l.port() << std::endl;
+        }
+    };
+
     std::string url;
     proton::listener listener;
+    listener_ready_handler listen_handler;
     int sent;
     int confirmed;
     int total;
@@ -48,8 +56,7 @@ class simple_send : public proton::messaging_handler {
     simple_send(const std::string &s, int c) : url(s), sent(0), confirmed(0), total(c) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
-        listener = c.listen(url);
-        std::cout << "direct_send listening on " << url << std::endl;
+        listener = c.listen(url, listen_handler);
     }
 
     void on_sendable(proton::sender &sender) OVERRIDE {
