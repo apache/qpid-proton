@@ -285,8 +285,10 @@ bool container::impl::setup_reconnect(pn_connection_t* pnc) {
     // - we pretend to have set up a reconnect attempt so
     //   that the proactor disconnect will finish and we will exit
     //   the run loop without error.
-    if (stopping_) return true;
-
+    {
+        GUARD(lock_);
+        if (stopping_) return true;
+    }
     connection_context& cc = connection_context::get(pnc);
     reconnect_context* rc = cc.reconnect_context_.get();
 
