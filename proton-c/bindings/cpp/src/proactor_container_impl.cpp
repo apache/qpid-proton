@@ -209,7 +209,11 @@ pn_connection_t* container::impl::make_connection_lh(
 void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     char caddr[PN_MAX_ADDR];
     pn_proactor_addr(caddr, sizeof(caddr), url.host().c_str(), url.port().c_str());
-    pn_proactor_connect2(proactor_, pnc, NULL, caddr); // Takes ownership of pnc
+    pn_transport_t* pnt = pn_transport();
+    connection_context& cc = connection_context::get(pnc);
+    connection_options& co = *cc.connection_options_;
+    co.apply_unbound_client(pnt);
+    pn_proactor_connect2(proactor_, pnc, pnt, caddr); // Takes ownership of pnc, pnt
 }
 
 void container::impl::reconnect(pn_connection_t* pnc) {
@@ -527,14 +531,16 @@ bool container::impl::handle(pn_event_t* event) {
             opts.update(lc.listen_handler_->on_accept(lstr));
         }
         else if (!!lc.connection_options_) opts.update(*lc.connection_options_);
-        lc.connection_options_.reset(new connection_options(opts));
         // Handler applied separately
         connection_context& cc = connection_context::get(c);
         cc.container = &container_;
         cc.listener_context_ = &lc;
         cc.handler = opts.handler();
         cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
-        pn_listener_accept2(l, c, NULL);
+        pn_transport_t* pnt = pn_transport();
+        pn_transport_set_server(pnt);
+        opts.apply_unbound_server(pnt);
+        pn_listener_accept2(l, c, pnt);
         return false;
     }
     case PN_LISTENER_CLOSE: {
@@ -554,19 +560,10 @@ bool container::impl::handle(pn_event_t* event) {
     case PN_CONNECTION_INIT:
         return false;
 
-    case PN_CONNECTION_BOUND: {
-        // Need to apply post bind connection options
-        pn_connection_t* c = pn_event_connection(event);
-        connection conn = make_wrapper(c);
-        connection_context& cc = connection_context::get(c);
-        if (cc.listener_context_) {
-            cc.listener_context_->connection_options_->apply_bound(conn);
-        } else {
-            cc.connection_options_->apply_bound(conn);
-        }
-
+    // We've already applied options, so don't need to do it here
+    case PN_CONNECTION_BOUND:
         return false;
-    }
+
     case PN_CONNECTION_REMOTE_OPEN: {
         // This is the only event that we get indicating that the connection succeeded so
         // it's the only place to reset the reconnection logic.

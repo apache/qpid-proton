@@ -38,6 +38,7 @@
 /// @copybrief proton::connection_options
 
 struct pn_connection_t;
+struct pn_transport_t;
 
 namespace proton {
 
@@ -158,7 +159,8 @@ class connection_options {
 
   private:
     void apply_unbound(connection&) const;
-    void apply_bound(connection&) const;
+    void apply_unbound_client(pn_transport_t*) const;
+    void apply_unbound_server(pn_transport_t*) const;
     messaging_handler* handler() const;
 
     class impl;

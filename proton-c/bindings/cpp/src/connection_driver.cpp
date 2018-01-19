@@ -62,9 +62,13 @@ connection_driver::~connection_driver() {
 void connection_driver::configure(const connection_options& opts, bool server) {
     proton::connection c(connection());
     opts.apply_unbound(c);
-    if (server) pn_transport_set_server(driver_.transport);
+    if (server) {
+        pn_transport_set_server(driver_.transport);
+        opts.apply_unbound_server(driver_.transport);
+    } else {
+        opts.apply_unbound_client(driver_.transport);
+    }
     pn_connection_driver_bind(&driver_);
-    opts.apply_bound(c);
     handler_ =  opts.handler();
 }
 
