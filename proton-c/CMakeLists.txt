@@ -514,7 +514,7 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
     set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
-    set (PROACTOR_LIBS -lpthread)
+    set (PROACTOR_LIBS ${CMAKE_THREAD_LIBS_INIT} ${TIME_LIB})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
@@ -610,7 +610,7 @@ add_library (
   )
 add_dependencies(qpid-proton-core generated_c_files)
 
-target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton-core LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 
 set_target_properties (
   qpid-proton-core

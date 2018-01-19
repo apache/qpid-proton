@@ -20,6 +20,9 @@ cmake_minimum_required(VERSION 2.8.12)
 
 enable_language(CXX)
 
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads)
+
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
 
 # This effectively checks for cmake version 3.1 or later
@@ -28,6 +31,7 @@ if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
     set(STD 98)
   else ()
     set(STD 11)
+    list(APPEND PLATFORM_LIBS "${CMAKE_THREAD_LIBS_INIT}")
   endif ()
   set(CMAKE_CXX_STANDARD ${STD})
   set(CMAKE_CXX_EXTENSIONS OFF)
@@ -47,8 +51,10 @@ else ()
     if (ACCEPTS_CXX11)
       set(CXX_STANDARD "-std=c++11")
       set(CPP_DEFINITIONS "HAS_CPP11")
+      list(APPEND PLATFORM_LIBS "${CMAKE_THREAD_LIBS_INIT}")
     elseif(ACCEPTS_CXX0X)
       set(CXX_STANDARD "-std=c++0x")
+      list(APPEND PLATFORM_LIBS "${CMAKE_THREAD_LIBS_INIT}")
       include(cpp.cmake) # Compiler checks needed for C++0x as not all C++11 may be supported
     else()
       include(cpp.cmake) # Compiler checks needed as we have no idea whats going on here!
@@ -149,7 +155,7 @@ set_source_files_properties (
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 
-target_link_libraries (qpid-proton-cpp ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor)
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor)
 
 set_target_properties (
   qpid-proton-cpp
