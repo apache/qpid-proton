@@ -1749,6 +1749,7 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
   if (fd >= 0) {
     configure_socket(fd);
     pconnection_start(pc);
+    pconnection_connected_lh(pc);
   }
   else
     psocket_error(&pc->psocket, err2, "pn_listener_accept");
