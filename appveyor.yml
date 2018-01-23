@@ -1,7 +1,11 @@
 version: '{branch}.{build}'
 configuration: RelWithDebInfo
 environment:
-  CMAKE_GENERATOR: Visual Studio 12
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 15
+    - CMAKE_GENERATOR: Visual Studio 12
+    - CMAKE_GENERATOR: Visual Studio 10
 install:
 - cinst -y swig
 cache:
