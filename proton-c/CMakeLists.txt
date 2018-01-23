@@ -610,7 +610,7 @@ add_library (
   )
 add_dependencies(qpid-proton-core generated_c_files)
 
-target_link_libraries (qpid-proton-core LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton-core LINK_PRIVATE ${SSL_LIB} ${SASL_LIB})
 
 set_target_properties (
   qpid-proton-core
@@ -645,7 +645,7 @@ if (MSVC)
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
 
-target_link_libraries (qpid-proton LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
 set_target_properties (
   qpid-proton
