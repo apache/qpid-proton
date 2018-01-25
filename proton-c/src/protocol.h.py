@@ -34,6 +34,17 @@ for type in TYPES:
   for f in type.query["field"]:
     print("#define %s_%s (%s)" % (field_kw(type), field_kw(f), fidx))
     fidx += 1
+    d = f["@default"]
+    if d:
+        ft = ftype(f)
+        # Don't bother to emit a boolean default that is False
+        if ft=="boolean" and d=="false": continue
+        # Don't output non numerics unless symbol
+        # We should really fully resolve to actual restricted value
+        # this is really true for symbols too which accidentally work
+        if ft=="symbol": d = '"' + d + '"'
+        elif d[0] not in '0123456789': continue
+        print("#define %s_%s_DEFAULT (%s) /* %s */" % (field_kw(type), field_kw(f), d, ft))
 
 idx = 0
 
