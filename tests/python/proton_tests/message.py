@@ -132,3 +132,37 @@ class CodecTest(Test):
     assert self.msg.address == msg2.address, (self.msg.address, msg2.address)
     assert self.msg.subject == msg2.subject, (self.msg.subject, msg2.subject)
     assert self.msg.body == msg2.body, (self.msg.body, msg2.body)
+
+  def testDefaultPriorityEncodeAndDecode(self):
+    assert self.msg.priority == 4, (self.msg.priority)
+    self.msg.ttl = 0.003 # field after priority, so forces priority to be present
+    data = self.msg.encode()
+
+    decoder = Data()
+    decoder.decode(data)
+
+    dheaders = decoder.get_py_described()
+    # Check we've got the correct described list
+    assert dheaders.descriptor == 0x70, (dheaders.descriptor)
+
+    # Check that the priority field (second field) is encoded as null
+    headers = dheaders.value
+    assert headers[1] == None, (headers[1])
+
+    # This is a message with everything filled explicitly as null or zero in LIST32 HEADER and PROPERTIES lists
+    data = str2bin('\x00\x53\x70\xd0\x00\x00\x00\x0a\x00\x00\x00\x05\x42\x40\x40\x42\x52\x00\x00\x53\x73\xd0\x00\x00\x00\x22\x00\x00\x00\x0d\x40\x40\x40\x40\x40\x40\x40\x40\x83\x00\x00\x00\x00\x00\x00\x00\x00\x83\x00\x00\x00\x00\x00\x00\x00\x00\x40\x52\x00\x40')
+    msg2 = Message()
+    msg2.decode(data)
+    assert msg2.priority == 4, (msg2.priority)
+
+    # The same message with LIST8s instead
+    data = str2bin('\x00\x53\x70\xc0\x07\x05\x42\x40\x40\x42\x52\x00\x00\x53\x73\xc0\x1f\x0d\x40\x40\x40\x40\x40\x40\x40\x40\x83\x00\x00\x00\x00\x00\x00\x00\x00\x83\x00\x00\x00\x00\x00\x00\x00\x00\x40\x52\x00\x40')
+    msg3 = Message()
+    msg3.decode(data)
+    assert msg3.priority == 4, (msg3.priority)
+
+    # Minified message with zero length HEADER and PROPERTIES lists
+    data = str2bin('\x00\x53\x70\x45' '\x00\x53\x73\x45')
+    msg4 = Message()
+    msg4.decode(data)
+    assert msg4.priority == 4, (msg4.priority)

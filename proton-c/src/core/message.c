@@ -114,7 +114,7 @@ int pn_message_inspect(void *obj, pn_string_t *dst)
     comma = true;
   }
 
-  if (msg->priority != PN_DEFAULT_PRIORITY) {
+  if (msg->priority != HEADER_PRIORITY_DEFAULT) {
     err = pn_string_addf(dst, "priority=%i, ", msg->priority);
     if (err) return err;
     comma = true;
@@ -309,7 +309,7 @@ static pn_message_t *pni_message_new(size_t size)
   static const pn_class_t clazz = PN_CLASS(pn_message);
   pn_message_t *msg = (pn_message_t *) pn_class_new(&clazz, size);
   msg->durable = false;
-  msg->priority = PN_DEFAULT_PRIORITY;
+  msg->priority = HEADER_PRIORITY_DEFAULT;
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
@@ -364,7 +364,7 @@ void pn_message_free(pn_message_t *msg)
 void pn_message_clear(pn_message_t *msg)
 {
   msg->durable = false;
-  msg->priority = PN_DEFAULT_PRIORITY;
+  msg->priority = HEADER_PRIORITY_DEFAULT;
   msg->ttl = 0;
   msg->first_acquirer = false;
   msg->delivery_count = 0;
@@ -672,12 +672,20 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
     pn_data_next(msg->data);
 
     switch (desc) {
-    case HEADER:
-      err = pn_data_scan(msg->data, "D.[oBIoI]", &msg->durable, &msg->priority,
-                   &msg->ttl, &msg->first_acquirer, &msg->delivery_count);
+    case HEADER: {
+      bool priority_q;
+      uint8_t priority;
+      err = pn_data_scan(msg->data, "D.[o?BIoI]",
+                         &msg->durable,
+                         &priority_q, &priority,
+                         &msg->ttl,
+                         &msg->first_acquirer,
+                         &msg->delivery_count);
       if (err) return pn_error_format(msg->error, err, "data error: %s",
                                       pn_error_text(pn_data_error(msg->data)));
+      msg->priority = priority_q ? priority : HEADER_PRIORITY_DEFAULT;
       break;
+    }
     case PROPERTIES:
       {
         pn_bytes_t user_id, address, subject, reply_to, ctype, cencoding,
@@ -771,8 +779,11 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
   pn_data_clear(data);
-  int err = pn_data_fill(data, "DL[oB?IoI]", HEADER, msg->durable,
-                         msg->priority, msg->ttl, msg->ttl, msg->first_acquirer,
+  int err = pn_data_fill(data, "DL[o?B?IoI]", HEADER,
+                         msg->durable,
+                         msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
+                         msg->ttl, msg->ttl,
+                         msg->first_acquirer,
                          msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",

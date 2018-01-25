@@ -36,11 +36,11 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   <section name="message-format">
     <type name="header" class="composite" source="list" provides="section">
       <descriptor name="amqp:header:list" code="0x00000000:0x00000070"/>
-      <field name="durable" type="boolean"/>
-      <field name="priority" type="ubyte"/>
+      <field name="durable" type="boolean" default="false"/>
+      <field name="priority" type="ubyte" default="4"/>
       <field name="ttl" type="milliseconds"/>
-      <field name="first-acquirer" type="boolean"/>
-      <field name="delivery-count" type="uint"/>
+      <field name="first-acquirer" type="boolean" default="false"/>
+      <field name="delivery-count" type="uint" default="0"/>
     </type>
     <type name="delivery-annotations" class="restricted" source="annotations" provides="section">
       <descriptor name="amqp:delivery-annotations:map" code="0x00000000:0x00000071"/>
