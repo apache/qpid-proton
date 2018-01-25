@@ -61,7 +61,7 @@ class PN_CPP_CLASS_EXTERN listener {
     /// **Unsettedled API**
     ///
     /// Get the container.
-    /// @throw proton::error if this connection is not managed by a container.
+    /// @throw proton::error if this listener is not managed by a container.
     PN_CPP_EXTERN class container& container() const;
 
   private:
