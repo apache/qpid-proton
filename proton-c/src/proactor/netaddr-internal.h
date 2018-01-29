@@ -34,7 +34,12 @@ const struct sockaddr *pn_netaddr_sockaddr(const pn_netaddr_t *na) {
 }
 
 size_t pn_netaddr_socklen(const pn_netaddr_t *na) {
-  return sizeof(na->ss);
+  if (!na) return 0;
+  switch (na->ss.ss_family) {
+   case AF_INET: return sizeof(struct sockaddr_in);
+   case AF_INET6: return sizeof(struct sockaddr_in6);
+   default: return sizeof(na->ss);
+  }
 }
 
 const pn_netaddr_t *pn_netaddr_next(const pn_netaddr_t *na) {
