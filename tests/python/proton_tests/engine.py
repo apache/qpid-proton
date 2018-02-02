@@ -268,8 +268,9 @@ class ConnectionTest(Test):
     assert self.c1.transport.channel_max == upper_limit
 
 
+  # TODO: Currently failing test - PROTON-1759 - skip
   def test_channel_max_limits_sessions(self):
-    return
+    raise Skipped('Test fails - PROTON-1759')
     # This is an index -- so max number of channels should be 1.
     self.c1.transport.channel_max = 0
     self.c1.open()
@@ -280,6 +281,8 @@ class ConnectionTest(Test):
     self.pump()
     try:
       ssn_1 = self.c2.session()
+      ssn_1.open()
+      self.pump()
       assert False, "expected session exception"
     except SessionException:
       pass
