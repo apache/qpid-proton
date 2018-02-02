@@ -44,6 +44,9 @@ if IS_PY3:
         else:
             raise v.with_traceback(tb)
 
+    def bin2str(s, encoding='utf-8'):
+        return s
+
     def iteritems(d):
         return iter(d.items())
 
@@ -70,6 +73,9 @@ else:
     exec("""def raise_(t, v=None, tb=None):
     raise t, v, tb
 """)
+
+    def bin2str(s, encoding='utf-8'):
+        return s.decode(encoding)
 
     def iteritems(d, **kw):
         return d.iteritems()

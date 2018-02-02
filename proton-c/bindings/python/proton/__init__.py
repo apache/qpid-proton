@@ -841,6 +841,13 @@ class Message(object):
     else:
       return err
 
+  def _check_property_keys(self):
+      for k in self.properties.keys():
+        if not isinstance(k, (bytes, str, unicode)):
+          raise MessageException('Application property key is not unicode string: key=%s %s' % (str(k), type(k)))
+        if isinstance(k, bytes):
+          self.properties[_compat.bin2str(k)] = self.properties.pop(k)
+
   def _pre_encode(self):
     inst = Data(pn_message_instructions(self._msg))
     ann = Data(pn_message_annotations(self._msg))
@@ -855,6 +862,7 @@ class Message(object):
       ann.put_object(self.annotations)
     props.clear()
     if self.properties is not None:
+      self._check_property_keys()
       props.put_object(self.properties)
     body.clear()
     if self.body is not None:
