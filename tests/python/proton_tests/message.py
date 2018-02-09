@@ -134,6 +134,7 @@ class CodecTest(Test):
     assert self.msg.body == msg2.body, (self.msg.body, msg2.body)
 
   def testExpiryEncodeAsNull(self):
+    self.msg.group_id = "A" # Force creation and expiry fields to be present
     data = self.msg.encode()
 
     decoder = Data()
@@ -152,6 +153,7 @@ class CodecTest(Test):
     assert properties[8] == None, properties[8]
 
   def testCreationEncodeAsNull(self):
+    self.msg.group_id = "A" # Force creation and expiry fields to be present
     data = self.msg.encode()
 
     decoder = Data()
@@ -168,6 +170,47 @@ class CodecTest(Test):
 
     properties = dproperties.value
     assert properties[9] == None, properties[9]
+
+  def testGroupSequenceEncodeAsNull(self):
+    self.msg.reply_to_group_id = "R" # Force group_id and group_sequence fields to be present
+    data = self.msg.encode()
+
+    decoder = Data()
+
+    # Skip past the headers
+    consumed = decoder.decode(data)
+    decoder.clear()
+    data = data[consumed:]
+
+    decoder.decode(data)
+    dproperties = decoder.get_py_described()
+    # Check we've got the correct described list
+    assert dproperties.descriptor == 0x73, (dproperties.descriptor)
+
+    properties = dproperties.value
+    assert properties[10] == None, properties[10]
+    assert properties[11] == None, properties[11]
+
+  def testGroupSequenceEncodeAsNonNull(self):
+    self.msg.group_id = "G"
+    self.msg.reply_to_group_id = "R" # Force group_id and group_sequence fields to be present
+    data = self.msg.encode()
+
+    decoder = Data()
+
+    # Skip past the headers
+    consumed = decoder.decode(data)
+    decoder.clear()
+    data = data[consumed:]
+
+    decoder.decode(data)
+    dproperties = decoder.get_py_described()
+    # Check we've got the correct described list
+    assert dproperties.descriptor == 0x73, (dproperties.descriptor)
+
+    properties = dproperties.value
+    assert properties[10] == 'G', properties[10]
+    assert properties[11] == 0, properties[11]
 
   def testDefaultCreationExpiryDecode(self):
     # This is a message with everything filled explicitly as null or zero in LIST32 HEADER and PROPERTIES lists
