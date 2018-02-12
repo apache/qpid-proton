@@ -37,9 +37,15 @@ module URI
 end
 
 module Qpid::Proton
-  # Returns +s+ converted to a {URI::AMQP} or {URI::AMQPS} object
+  private
+  # Make sure to allow empty hostnames, Ruby 2.0.0 does not.
+  DEFAULT_URI_PARSER = URI::Parser.new(:HOSTNAME => /(?:#{URI::PATTERN::HOSTNAME})|/)
+
+  public
+
+  # Convert +s+ to a {URI::AMQP} or {URI::AMQPS} object
   #
-  # Shortcut strings are allowed: an "amqp://" prefix is added if +s+ does
+  # Shortcut strings like "host:port" are allowed: an "amqp://" prefix is added if +s+ does
   # not already look like an 'amqp:', 'amqps:' URI.
   #
   # @note this does not give the same result as a standard URI parser in all cases.
@@ -54,19 +60,19 @@ module Qpid::Proton
   #
   def self.uri(s)
     case s
-      when URI::AMQP then s     # Pass-thru
-    when URI::Generic
-      s.scheme ||= 'amqp'
-      u = URI.parse(s.to_s)      # Re-parse as amqp
+    when URI::AMQP then s       # This is already an AMQP or AMQPS URL.
+    when URI::Generic           # Re-parse a generic URI that was not parsed as AMQP/AMQPS class
+      s.scheme ||= 'amqp'       # Default to amqp: scheme
+      u = DEFAULT_URI_PARSER.parse(s.to_s)
       raise URI::BadURIError, "Not an AMQP URI: '#{u}'" unless u.is_a? URI::AMQP
       u
     else
       s = String.try_convert s
       raise ::ArgumentError, "bad argument (expected URI object or URI string)" unless s
       case s
-      when %r{^amqps?:} then URI.parse(s)      # Looks like an AMQP URI
-      when %r{^//} then URI.parse("amqp:#{s}") # Looks like a scheme-less URI
-      else URI.parse("amqp://#{s}")            # Treat as a bare host:port/path string
+      when %r{^amqps?:} then DEFAULT_URI_PARSER.parse(s)      # Looks like an AMQP URI
+      when %r{^//} then DEFAULT_URI_PARSER.parse("amqp:#{s}") # Looks like an authority with no scheme
+      else DEFAULT_URI_PARSER.parse("amqp://#{s}")            # Treat as a bare host:port/path string
       end
     end
   end

@@ -48,7 +48,7 @@ module Qpid::Proton
     # @private
     def initialize(mode)
       @impl = Cproton.pn_ssl_domain(mode)
-      raise SSLUnavailable.new if @impl.nil?
+      raise Qpid::Proton::SSLError, "SSL Unavailable" if @impl.nil?
     end
 
     # Set the certificate that identifies the local node to the remote.

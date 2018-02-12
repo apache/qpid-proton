@@ -125,7 +125,8 @@ module Qpid::Proton
       # - nil on the @work queue makes a #run thread exit
 
       @work = Queue.new
-      @work << :start << self   # Issue start and start start selecting
+      @work << :start
+      @work << self             # Issue start and start start selecting
       @wake = IO.pipe           # Wakes #run thread in IO.select
       @auto_stop = true         # Stop when @active drops to 0
 
