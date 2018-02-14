@@ -324,19 +324,23 @@ bool pn_ssl_get_cipher_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE)
 bool pn_ssl_get_protocol_name(pn_ssl_t *ssl, char *OUTPUT, size_t MAX_OUTPUT_SIZE);
 %ignore pn_ssl_get_protocol_name;
 
-%inline %{
-#if defined(RUBY20) || defined(RUBY21)
+/* TODO aconway 2018-02-14: Remove RB_BLOCKING_CALL once messenger is deprecated */
 
+/* Don't use %inline sections for #define */
+%{
+#if defined(RUBY_USE_rb_thread_call_without_gvl)
+
+  #include <ruby/thread.h>
   typedef void *non_blocking_return_t;
-#define RB_BLOCKING_CALL rb_thread_call_without_gvl
+  #define RB_BLOCKING_CALL (VALUE)rb_thread_call_without_gvl
 
-#elif defined(RUBY19)
+#elif defined(RUBY_USE_rb_thread_blocking_region)
 
-    typedef VALUE non_blocking_return_t;
-#define RB_BLOCKING_CALL rb_thread_blocking_region
+  typedef VALUE non_blocking_return_t;
+  #define RB_BLOCKING_CALL rb_thread_blocking_region
 
 #endif
-  %}
+%}
 
 %rename(pn_messenger_send) wrap_pn_messenger_send;
 %rename(pn_messenger_recv) wrap_pn_messenger_recv;
