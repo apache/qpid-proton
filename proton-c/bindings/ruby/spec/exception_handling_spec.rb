@@ -41,49 +41,49 @@ module Qpid
       end
 
       it "raises EOS on PN_EOS" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::EOS)
         }.must_raise(Qpid::Proton::EOSError)
       end
 
       it "raises Error on PN_ERR" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::ERROR)
         }.must_raise(Qpid::Proton::ProtonError)
       end
 
       it "raises Overflow on PN_OVERFLOW" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::OVERFLOW)
         }.must_raise(Qpid::Proton::OverflowError)
       end
 
       it "raises Underflow on PN_UNDERFLOW" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::UNDERFLOW)
         }.must_raise(Qpid::Proton::UnderflowError)
       end
 
       it "raises Argument on PN_ARG_ERR" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::ARGUMENT)
         }.must_raise(Qpid::Proton::ArgumentError)
       end
 
       it "raises Timeout on PN_TIMEOUT" do
-        expect {
+        proc {
           @handler.check_for_error(Qpid::Proton::Error::TIMEOUT)
         }.must_raise(Qpid::Proton::TimeoutError)
       end
 
       it "raises an Ruby ArgumentError on a nil code" do
-        expect {
+        proc {
           @handler.check_for_error(nil)
         }.must_raise(::ArgumentError)
       end
 
       it "raises a Ruby ArgumentError on an unknown value" do
-        expect {
+        proc {
           @handler.check_for_error("farkle")
         }.must_raise(::ArgumentError)
       end

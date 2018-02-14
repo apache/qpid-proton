@@ -56,7 +56,7 @@ class NoAutoOpenClose < RecordingHandler
   attr_reader :connection, :session, :link
 end
 
-class TestMessagingHandler < Minitest::Test
+class TestMessagingHandler < MiniTest::Test
 
   def test_auto_open_close
     d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)

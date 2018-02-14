@@ -16,11 +16,11 @@
 # under the License.
 
 
-require 'minitest/autorun'
+require 'test_tools'
 require "securerandom"
 require 'qpid_proton'
 
-class TestData < Minitest::Test
+class TestData < MiniTest::Test
   include Qpid::Proton
 
   def assert_from_to(*values)

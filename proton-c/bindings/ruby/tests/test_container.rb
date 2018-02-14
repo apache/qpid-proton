@@ -32,7 +32,7 @@ class TestContainer < Qpid::Proton::Container
   def url() "amqp://:#{port}"; end#
 end
 
-class ContainerTest < Minitest::Test
+class ContainerTest < MiniTest::Test
   include Qpid::Proton
 
   def test_simple()
@@ -215,7 +215,7 @@ class ContainerTest < Minitest::Test
 end
 
 
-class ContainerSASLTest < Minitest::Test
+class ContainerSASLTest < MiniTest::Test
   include Qpid::Proton
 
   # Handler for test client/server that sets up server and client SASL options

@@ -20,8 +20,13 @@
 
 require 'minitest/autorun'
 require 'qpid_proton'
-require 'thread'
 require 'socket'
+
+begin
+  MiniTest::Test
+rescue NameError                # For older versions of MiniTest
+  MiniTest::Test = MiniTest::Unit::TestCase
+end
 
 class TestError < Exception; end
 

@@ -21,6 +21,13 @@
 require 'minitest/autorun'
 require 'qpid_proton'
 require 'socket'
+require 'rbconfig'
+
+begin
+  MiniTest::Test
+rescue NameError                # For older versions of MiniTest
+  MiniTest::Test = MiniTest::Unit::TestCase
+end
 
 # URL with an unused port
 def test_url()

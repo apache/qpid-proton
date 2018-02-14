@@ -16,12 +16,13 @@
 
 
 require 'test_tools'
+require 'minitest/unit'
 
 include Qpid::Proton
 
 # Test delivery of raw proton events
 
-class RawDriverTest < Minitest::Test
+class RawDriverTest < MiniTest::Test
 
   # Raw handler to record all on_xxx calls
   class RecordingHandler

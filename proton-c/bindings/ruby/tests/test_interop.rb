@@ -1,7 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'minitest/autorun'
-require 'minitest/unit'
+require 'test_tools'
 require 'qpid_proton'
 
 if ((RUBY_VERSION.split(".").map {|x| x.to_i}  <=> [1, 9]) < 0)

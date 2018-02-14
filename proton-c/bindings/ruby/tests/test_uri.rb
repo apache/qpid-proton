@@ -16,10 +16,10 @@
 # under the License.
 
 
-require 'minitest/autorun'
+require 'test_tools'
 require 'qpid_proton'
 
-class TestURI < Minitest::Test
+class TestURI < MiniTest::Test
 
   PARTS=[:scheme, :userinfo, :host, :port, :path] # Interesting URI components
   def uri(u) Qpid::Proton::uri(u); end

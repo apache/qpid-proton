@@ -29,15 +29,15 @@ describe "The extended hash type" do
   it "can be put into an instance of Data" do
     @hash.proton_data_put(@data)
     result = Hash.proton_data_get(@data)
-    expect(result.keys).must_equal(@hash.keys)
-    expect(result.values).must_equal(@hash.values)
+    result.keys.must_equal(@hash.keys)
+    result.values.must_equal(@hash.values)
   end
 
   it "raises an error when trying to get what is not a Hash" do
     @data.string = random_string(128)
     @data.rewind
 
-    expect {
+    proc {
       Hash.proton_data_get(@data)
     }.must_raise(TypeError)
   end
