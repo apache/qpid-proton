@@ -193,14 +193,9 @@ endif (PN_WINAPI)
 
 # Try to keep any platform specific overrides together here:
 
-# Until we can decide what to do with PHP support, turn it off by default
-# (We can't build with recent versions of PHP)
-set (NOBUILD_PHP ON)
-
 # MacOS has a bunch of differences in build tools and process and so we have to turn some things
 # off if building there:
 if (APPLE)
-  set (NOBUILD_PHP ON)
   set (NOENABLE_WARNING_ERROR ON)
   set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
@@ -814,8 +809,3 @@ if (BUILD_PYTHON)
   add_dependencies(quick_perf_py reactor-recv _cproton)
 
 endif (BUILD_PYTHON)
-
-if (BUILD_JAVASCRIPT)
-  add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
-  add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
-endif (BUILD_JAVASCRIPT)

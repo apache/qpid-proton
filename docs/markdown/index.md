@@ -18,8 +18,7 @@ globally federated topologies
 
 Proton is multi-lingual:
 
-- Proton-C - a C implementation with language bindings in Python, Php, Perl,
-Ruby, and Java (via JNI).
+- Proton-C - a C implementation with language bindings in C++, Go, Python, and Ruby
 - Proton-J - a pure Java implementation
 
 Please see http://qpid.apache.org/proton for a more info.

@@ -19,17 +19,7 @@
 
 # Add bindings that do not require swig here - the directory name must be the same as the binding name
 # See below for swig bindings
-set(BINDINGS javascript cpp go)
-
-# Prerequisites for javascript.
-#
-# It uses a C/C++ to JavaScript cross-compiler called emscripten (https://github.com/kripken/emscripten). Emscripten takes C/C++
-# and compiles it into a highly optimisable subset of JavaScript called asm.js (http://asmjs.org/) that can be
-# aggressively optimised and run at near-native speed (usually between 1.5 to 10 times slower than native C/C++).
-find_package(Emscripten)
-if (EMSCRIPTEN_FOUND)
-  set (DEFAULT_JAVASCRIPT ON)
-endif (EMSCRIPTEN_FOUND)
+set(BINDINGS cpp go)
 
 if (CMAKE_CXX_COMPILER)
   set (DEFAULT_CPP ON)
@@ -49,7 +39,7 @@ endif (GO_EXE)
 
 if(SWIG_FOUND)
   # Add any new swig bindings here - the directory name must be the same as the binding name
-  list(APPEND BINDINGS python ruby php perl)
+  list(APPEND BINDINGS python ruby)
 
   include(UseSWIG)
 
@@ -57,11 +47,6 @@ if(SWIG_FOUND)
   file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/proton-c/include/proton/*.h")
   # All swig modules should include ${BINDING_DEPS} in swig_link_libraries
   set (BINDING_DEPS qpid-proton)
-
-  # If swig version is 3.0 or greater then we can build some additional bindings
-  if (${SWIG_VERSION} VERSION_GREATER 3.0 OR ${SWIG_VERSION} VERSION_EQUAL 3.0)
-    list(APPEND SWIG_BINDINGS node)
-  endif()
 
   # Add a block here to detect the prerequisites to build each language binding:
   #
@@ -79,26 +64,6 @@ if(SWIG_FOUND)
   if (RUBY_FOUND)
     set (DEFAULT_RUBY ON)
   endif (RUBY_FOUND)
-
-  # Prerequites for PHP:
-  # For now, assume PHP support if the 'php-config' tool is present.
-  # @todo: allow user to specify which php-config if multiple PHP sources installed!
-  find_program(PHP_CONFIG_EXE php-config)
-  if (PHP_CONFIG_EXE)
-    find_program(PHP_EXE php)
-    mark_as_advanced (PHP_EXE)
-    if (PHP_EXE)
-      set (DEFAULT_PHP ON)
-    endif (PHP_EXE)
-  endif (PHP_CONFIG_EXE)
-  mark_as_advanced (PHP_CONFIG_EXE)
-
-  # Prerequisites for Perl:
-  include(ProtonFindPerl)
-  if (PERLLIBS_FOUND)
-    set (DEFAULT_PERL ON)
-  endif (PERLLIBS_FOUND)
-
 endif()
 
 
