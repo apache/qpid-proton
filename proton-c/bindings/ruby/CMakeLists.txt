@@ -52,19 +52,43 @@ file(GLOB_RECURSE RUBY_SRC RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.rb *.rdoc)
 find_program(GEM_EXE gem DOC "Program to build and install ruby gem packages")
 mark_as_advanced(GEM_EXE)
 if (GEM_EXE)
+  set(GEM_FILE "${bin}/gem/qpid_proton-${PN_VERSION}.gem")
   # Copy source and generated files to the build tree so we can build the gem in one place
   configure_file(${src}/qpid_proton.gemspec.in ${bin}/gem/qpid_proton.gemspec)
   add_custom_command(
-    OUTPUT ${bin}/qpid_proton-${PN_VERSION}.gem
+    OUTPUT ${GEM_FILE}
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}/gem
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/examples/ruby/ ${bin}/gem/examples
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/cprotonRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
-    COMMAND ${CMAKE_COMMAND} -E copy ${bin}/gem/qpid_proton-${PN_VERSION}.gem ${bin}
     WORKING_DIRECTORY ${bin}/gem
-    DEPENDS ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog cproton-ruby ${bin}/cprotonRUBY_wrap.c
+    DEPENDS ${bin}/gem/qpid_proton.gemspec ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog
+    cproton-ruby
+    # NOTE: cproton-ruby is not strictly a dependency, we only need
+    # cprotonRUBY_wrap.c which is generated as a side effect of
+    # cproton-ruby. However it is easier to depend on cproton-ruby than to work
+    # around CMake's issues with dependencies on add_custom_command output in
+    # parallel builds.
     )
 
-  add_custom_target(ruby-gem ALL DEPENDS ${bin}/qpid_proton-${PN_VERSION}.gem )
+  add_custom_target(ruby-gem ALL DEPENDS ${GEM_FILE})
+
+  # Test installing the gem
+  to_native_path("${bin}/install" gem_home)
+  set(gem_env ${env_py} -- "GEM_HOME=${gem_home}" "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/proton-c")
+  add_test(
+    NAME ruby-gem-install COMMAND ${gem_env} ${GEM_EXE} install "${GEM_FILE}" --
+    "--with-qpid-proton-include=${CMAKE_SOURCE_DIR}/proton-c/include"
+    "--with-qpid-proton-lib=${CMAKE_BINARY_DIR}/proton-c"
+    )
+
+  # Test running examples against the installed gem
+  add_test(
+    NAME ruby-gem-examples
+    COMMAND ${gem_env} ${RUBY_EXECUTABLE} example_test.rb -v
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby
+    )
+  SET_TESTS_PROPERTIES(ruby-gem-examples PROPERTIES DEPENDS ruby-gem-install) # Run after install
 endif ()
 
 ## CMake-based install

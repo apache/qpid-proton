@@ -26,6 +26,8 @@ EOF
                 "ext/cproton/*.rb",
                 "ext/cproton/*.c",
                 "lib/**/*.rb",
+                "tests/**/*.rb",
+                "examples/**/*"
                 ]
   s.require_path = 'lib'
   s.required_ruby_version = '>=  1.9.3'
