@@ -28,4 +28,5 @@ EOF
                 "lib/**/*.rb",
                 ]
   s.require_path = 'lib'
+  s.required_ruby_version = '>=  1.9.3'
 end
