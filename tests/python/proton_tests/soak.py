@@ -22,7 +22,6 @@ import sys
 from .common import Test, Skipped, free_tcp_ports, \
     MessengerReceiverC, MessengerSenderC, \
     MessengerReceiverValgrind, MessengerSenderValgrind, \
-    MessengerReceiverPython, MessengerSenderPython, \
     ReactorReceiverC, ReactorSenderC, \
     ReactorReceiverValgrind, ReactorSenderValgrind, \
     isSSLPresent
@@ -294,15 +293,6 @@ class MessengerTests(AppTests):
         self.valgrind_test()
         self._do_oneway_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
 
-    def test_oneway_Python(self):
-        self._do_oneway_test(MessengerReceiverPython(), MessengerSenderPython())
-
-    def test_oneway_C_Python(self):
-        self._do_oneway_test(MessengerReceiverC(), MessengerSenderPython())
-
-    def test_oneway_Python_C(self):
-        self._do_oneway_test(MessengerReceiverPython(), MessengerSenderC())
-
     def test_echo_C(self):
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC())
 
@@ -313,15 +303,6 @@ class MessengerTests(AppTests):
     def test_echo_valgrind(self):
         self.valgrind_test()
         self._do_echo_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
-
-    def test_echo_Python(self):
-        self._do_echo_test(MessengerReceiverPython(), MessengerSenderPython())
-
-    def test_echo_C_Python(self):
-        self._do_echo_test(MessengerReceiverC(), MessengerSenderPython())
-
-    def test_echo_Python_C(self):
-        self._do_echo_test(MessengerReceiverPython(), MessengerSenderC())
 
     def test_relay_C(self):
         self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC())
@@ -334,12 +315,6 @@ class MessengerTests(AppTests):
         self.valgrind_test()
         self._do_relay_test(MessengerReceiverValgrind(), MessengerReceiverValgrind(), MessengerSenderValgrind())
 
-    def test_relay_C_Python(self):
-        self._do_relay_test(MessengerReceiverC(), MessengerReceiverPython(), MessengerSenderPython())
-
-    def test_relay_Python(self):
-        self._do_relay_test(MessengerReceiverPython(), MessengerReceiverPython(), MessengerSenderPython())
-
     def test_star_topology_C(self):
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC )
 
@@ -350,15 +325,6 @@ class MessengerTests(AppTests):
     def test_star_topology_valgrind(self):
         self.valgrind_test()
         self._do_star_topology_test( MessengerReceiverValgrind, MessengerSenderValgrind )
-
-    def test_star_topology_Python(self):
-        self._do_star_topology_test( MessengerReceiverPython, MessengerSenderPython )
-
-    def test_star_topology_Python_C(self):
-        self._do_star_topology_test( MessengerReceiverPython, MessengerSenderC )
-
-    def test_star_topology_C_Python(self):
-        self._do_star_topology_test( MessengerReceiverPython, MessengerSenderC )
 
     def test_oneway_reactor(self):
         self._do_oneway_test(ReactorReceiverC(), ReactorSenderC())
