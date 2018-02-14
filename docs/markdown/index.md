@@ -1,8 +1,6 @@
 
 Proton is a library for speaking AMQP, including:
 
-- The AMQP [Messenger API](messenger/index.html), a simple but powerful interface to send and receive
-  messages over AMQP.
 - The [AMQP Protocol Engine](engine/engine.html), a succinct encapsulation of the full
   AMQP protocol machinery.
 
