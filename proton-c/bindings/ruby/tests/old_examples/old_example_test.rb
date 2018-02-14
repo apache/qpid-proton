@@ -52,14 +52,6 @@ class OldExampleTest < MiniTest::Test
     assert_output want, ["simple_recv.rb", "-a", make_url($port, __method__)]
   end
 
-  def test_smoke
-    url = "127.0.0.1:#{unused_port}"
-    recv = run_script("recv.rb", "~#{url}")
-    recv.readline               # Wait for "Listening"
-    assert_output("Status: ACCEPTED", ["send.rb", url])
-    assert_equal "Got: Hello World!", recv.read.strip
-  end
-
   def test_client_server
     want =  <<EOS
 -> Twas brillig, and the slithy toves
