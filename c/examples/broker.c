@@ -289,7 +289,7 @@ static void handle(broker_t* b, pn_event_t* e) {
   switch (pn_event_type(e)) {
 
    case PN_LISTENER_OPEN: {
-     char port[256];             /* Get the listening port */
+     char port[PN_MAX_ADDR];    /* Get the listening port */
      pn_netaddr_host_port(pn_listener_addr(pn_event_listener(e)), NULL, 0, port, sizeof(port));
      printf("listening on %s\n", port);
      fflush(stdout);

@@ -74,7 +74,7 @@ extern "C" {
 #define PN_MAX_ADDR 1060
 
 /**
- * Format a host:port address string for pn_proactor_connect2() or pn_proactor_listen2()
+ * Format a host:port address string for pn_proactor_connect() or pn_proactor_listen()
  *
  * @param[out] addr address is copied to this buffer, with trailing '\0'
  * @param[in] size  size of addr buffer
@@ -234,8 +234,7 @@ PNP_EXTERN void pn_proactor_interrupt(pn_proactor_t *proactor);
  * will be delivered to the next available thread.
  *
  * Calling pn_proactor_set_timeout() again before the PN_PROACTOR_TIMEOUT
- * is delivered will cancel the previous timeout and deliver an event only after
- * the new timeout.
+ * is delivered replaces the previous timeout value.
  *
  * @note Thread-safe
  */
@@ -256,7 +255,7 @@ PNP_EXTERN void pn_proactor_cancel_timeout(pn_proactor_t *proactor);
  * and so on) remain intact, but the transport is closed and unbound. The
  * proactor will not return any more events for this connection. The caller must
  * call pn_connection_free(), either directly or indirectly by re-using @p
- * connection in another call to pn_proactor_connect2() or pn_proactor_listen2().
+ * connection in another call to pn_proactor_connect() or pn_proactor_listen().
  *
  * @note **Not thread-safe**.  Call this function from a connection
  * event handler.

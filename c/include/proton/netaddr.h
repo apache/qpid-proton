@@ -42,7 +42,7 @@ extern "C" {
 typedef struct pn_netaddr_t pn_netaddr_t;
 
 /**
- * Format a network address as a human-readable string in `buf`.
+ * Format a network address string in `buf`.
  *
  * @return the length of the string (excluding trailing '\0'), if >= size then
  * the address was truncated.

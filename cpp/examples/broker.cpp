@@ -52,8 +52,8 @@ int hardware_concurrency() {return 1;}
 
 #include "fake_cpp11.hpp"
 
-// This is a simplified model for a message broker, that only allows for messages to go to a
-// single receiver.
+// This is a simplified model for a message broker, that only allows for
+// messages to go to a single receiver.
 //
 // This broker is multithread safe and if compiled with C++11 with a multithreaded Proton
 // binding library will use as many threads as there are thread resources available (usually
