@@ -19,6 +19,7 @@
 
 set(src "${CMAKE_CURRENT_SOURCE_DIR}")
 set(bin "${CMAKE_CURRENT_BINARY_DIR}")
+set(c_lib_dir "$<TARGET_FILE_DIR:qpid-proton>") # Location of qpid-proton library
 
 ## Build the swig library
 
@@ -54,6 +55,10 @@ mark_as_advanced(GEM_EXE)
 if (GEM_EXE)
   set(GEM_FILE "${bin}/gem/qpid_proton-${PN_VERSION}.gem")
   # Copy source and generated files to the build tree so we can build the gem in one place
+  #
+  # NOTE: the gem does not need the cproton-ruby library, but it does need
+  # cprotonRUBY_wrap.c which is generated as a side effect. We have to depend on
+  # cproton-ruby as there's no parallel-safe way to generate only the C file.
   configure_file(${src}/qpid_proton.gemspec.in ${bin}/gem/qpid_proton.gemspec)
   add_custom_command(
     OUTPUT ${GEM_FILE}
@@ -64,31 +69,9 @@ if (GEM_EXE)
     WORKING_DIRECTORY ${bin}/gem
     DEPENDS ${bin}/gem/qpid_proton.gemspec ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog
     cproton-ruby
-    # NOTE: cproton-ruby is not strictly a dependency, we only need
-    # cprotonRUBY_wrap.c which is generated as a side effect of
-    # cproton-ruby. However it is easier to depend on cproton-ruby than to work
-    # around CMake's issues with dependencies on add_custom_command output in
-    # parallel builds.
     )
 
   add_custom_target(ruby-gem ALL DEPENDS ${GEM_FILE})
-
-  # Test installing the gem
-  to_native_path("${bin}/install" gem_home)
-  set(gem_env ${env_py} -- "GEM_HOME=${gem_home}" "LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}/proton-c")
-  add_test(
-    NAME ruby-gem-install COMMAND ${gem_env} ${GEM_EXE} install "${GEM_FILE}" --
-    "--with-qpid-proton-include=${CMAKE_SOURCE_DIR}/proton-c/include"
-    "--with-qpid-proton-lib=${CMAKE_BINARY_DIR}/proton-c"
-    )
-
-  # Test running examples against the installed gem
-  add_test(
-    NAME ruby-gem-examples
-    COMMAND ${gem_env} ${RUBY_EXECUTABLE} example_test.rb -v
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby
-    )
-  SET_TESTS_PROPERTIES(ruby-gem-examples PROPERTIES DEPENDS ruby-gem-install) # Run after install
 endif ()
 
 ## CMake-based install
@@ -120,10 +103,8 @@ install(DIRECTORY lib DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 
 ## Tests
 
-set(bld "$<TARGET_FILE_DIR:qpid-proton>")
-
-to_native_path("$ENV{RUBYLIB};${src}/lib;${src}/tests;${src}/spec;${bin};${bld}" RUBYLIB)
-to_native_path("$ENV{PATH};${bin};${bld}" PATH)
+to_native_path("$ENV{RUBYLIB};${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir}" RUBYLIB)
+to_native_path("$ENV{PATH};${bin};${c_lib_dir}" PATH)
 
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
