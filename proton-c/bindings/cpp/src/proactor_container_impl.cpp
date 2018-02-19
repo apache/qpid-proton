@@ -594,7 +594,12 @@ bool container::impl::handle(pn_event_t* event) {
         // If reconnect is turned on then handle closed on error here with reconnect attempt
         pn_connection_t* c = pn_event_connection(event);
         pn_transport_t* t = pn_event_transport(event);
+        // If we successfully schedule a re-connect then hide the event from
+        // user handlers by returning here.
         if (pn_condition_is_set(pn_transport_condition(t)) && setup_reconnect(c)) return false;
+        // Otherwise, this connection will be freed by the proactor.
+        // Mark its work_queue finished so it won't try to use the freed connection.
+        connection_context::get(c).work_queue_.impl_.get()->finished();
     }
     default:
         break;
