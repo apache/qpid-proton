@@ -248,6 +248,7 @@ struct pn_connection_t {
   pn_collector_t *collector;
   pn_record_t *context;
   pn_list_t *delivery_pool;
+  void *driver_data;            /* See pn_connection_driver_data */
 };
 
 struct pn_session_t {

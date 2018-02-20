@@ -536,6 +536,7 @@ pn_connection_t *pn_connection()
   conn->collector = NULL;
   conn->context = pn_record();
   conn->delivery_pool = pn_list(PN_OBJECT, 0);
+  conn->driver_data = NULL;
 
   return conn;
 }

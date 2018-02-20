@@ -267,6 +267,16 @@ PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *
 PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
 
 /**
+ * @cond INTERNAL
+ * @return pointer to location in the pn_connection_t private struct that can hold a `void*`.
+ * Only for use by IO integration code (e.g. pn_proactor_t implementations use this pointer)
+ */
+PN_EXTERN void **pn_connection_driver_data(pn_connection_t *connection);
+/**
+ *  @endcond
+ */
+
+/**
  * @}
  */
 
