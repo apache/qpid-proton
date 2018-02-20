@@ -27,6 +27,7 @@
 #undef _GNU_SOURCE
 
 #include "../core/log_private.h"
+#include "../core/connection_driver-internal.h"
 #include "./proactor-internal.h"
 
 #include <proton/condition.h>
@@ -538,20 +539,21 @@ typedef struct pconnection_t {
  *
  * TODO: replace mutex with atomic load/store
  */
-static pthread_mutex_t driver_data_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t driver_ptr_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static pconnection_t *get_pconnection(pn_connection_t* c) {
   if (!c) return NULL;
-  lock(&driver_data_mutex);
-  pconnection_t *pc = (pconnection_t*)*pn_connection_driver_data(c);
-  unlock(&driver_data_mutex);
+  lock(&driver_ptr_mutex);
+  pn_connection_driver_t *d = *pn_connection_driver_ptr(c);
+  unlock(&driver_ptr_mutex);
+  pconnection_t *pc = (pconnection_t*)((char*)d-offsetof(pconnection_t, driver));
   return pc;
 }
 
 static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
-  lock(&driver_data_mutex);
-  *pn_connection_driver_data(c) = pc;
-  unlock(&driver_data_mutex);
+  lock(&driver_ptr_mutex);
+  *pn_connection_driver_ptr(c) = &pc->driver;
+  unlock(&driver_ptr_mutex);
 }
 
 /*

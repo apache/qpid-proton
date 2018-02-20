@@ -18,9 +18,9 @@
  */
 
 #include "engine-internal.h"
+#include "connection_driver-internal.h"
 #include <proton/condition.h>
 #include <proton/connection.h>
-#include <proton/connection_driver.h>
 #include <proton/event.h>
 #include <proton/transport.h>
 #include <string.h>
@@ -188,4 +188,4 @@ pn_connection_driver_t* pn_event_batch_connection_driver(pn_event_batch_t *batch
     NULL;
 }
 
-void** pn_connection_driver_data(pn_connection_t *c) { return &c->driver_data; }
+pn_connection_driver_t** pn_connection_driver_ptr(pn_connection_t *c) { return &c->driver; }
