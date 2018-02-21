@@ -545,13 +545,13 @@ static pconnection_t *get_pconnection(pn_connection_t* c) {
   lock(&driver_ptr_mutex);
   pn_connection_driver_t *d = *pn_connection_driver_ptr(c);
   unlock(&driver_ptr_mutex);
-  pconnection_t *pc = (pconnection_t*)((char*)d-offsetof(pconnection_t, driver));
-  return pc;
+  if (!d) return NULL;
+  return (pconnection_t*)((char*)d-offsetof(pconnection_t, driver));
 }
 
 static void set_pconnection(pn_connection_t* c, pconnection_t *pc) {
   lock(&driver_ptr_mutex);
-  *pn_connection_driver_ptr(c) = &pc->driver;
+  *pn_connection_driver_ptr(c) = pc ? &pc->driver : NULL;
   unlock(&driver_ptr_mutex);
 }
 
