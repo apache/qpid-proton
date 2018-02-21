@@ -267,6 +267,19 @@ PN_EXTERN void pn_connection_driver_logf(pn_connection_driver_t *d, const char *
 PN_EXTERN void pn_connection_driver_vlogf(pn_connection_driver_t *d, const char *fmt, va_list ap);
 
 /**
+ * Associate a pn_connection_t with its pn_connection_driver_t.
+ *
+ * **NOTE**: this is only for use by IO integration writers. If you are using the standard
+ * pn_proactor_t you *must not* use this function.
+ *
+ * @return pointer to the pn_connection_driver_t* field in a pn_connection_t.
+ *
+ * Return type is pointer to a pointer so that the caller can (if desired) use
+ * atomic operations when loading and storing the value.
+ */
+PN_EXTERN pn_connection_driver_t **pn_connection_driver_ptr(pn_connection_t *connection);
+
+/**
  * @}
  */
 

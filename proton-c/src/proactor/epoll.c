@@ -27,7 +27,6 @@
 #undef _GNU_SOURCE
 
 #include "../core/log_private.h"
-#include "../core/connection_driver-internal.h"
 #include "./proactor-internal.h"
 
 #include <proton/condition.h>

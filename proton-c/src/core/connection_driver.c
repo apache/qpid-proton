@@ -18,9 +18,9 @@
  */
 
 #include "engine-internal.h"
-#include "connection_driver-internal.h"
 #include <proton/condition.h>
 #include <proton/connection.h>
+#include <proton/connection_driver.h>
 #include <proton/event.h>
 #include <proton/transport.h>
 #include <string.h>
