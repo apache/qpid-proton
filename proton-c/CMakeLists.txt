@@ -765,39 +765,41 @@ if (BUILD_PYTHON)
               ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-  # Eventually, we'll get rid of this check when other
-  # platforms will be supported. Since `setup.py` will skip
-  # the build for non linux plaforms, it doesn't make sense
-  # to try to run them.
-  option(TOX_TEST "Enable muti-version python testing with TOX" ON)
-  set(tox_default "py26,py27,py33,py34,py35,py36")
-  set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
-  if (NOT (TOX_ENVLIST STREQUAL tox_default))
-    message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
-  endif()
-  if (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
-    find_program(TOX_EXE "tox")
-    if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-      message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
-    elseif (TOX_EXE)
-      configure_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
-      add_test (NAME python-tox-test
-                COMMAND ${env_py}
+  find_program(TOX_EXECUTABLE "tox")
+  mark_as_advanced(TOX_EXECUTABLE)
+  if (TOX_EXECUTABLE)
+    option(ENABLE_TOX_TEST "Enable muti-version python testing with TOX" ON)
+
+    set(tox_default "py26,py27,py33,py34,py35,py36")
+    set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
+    mark_as_advanced(TOX_ENVLIST)
+
+    if (NOT (TOX_ENVLIST STREQUAL tox_default))
+      message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
+    endif()
+    if (ENABLE_TOX_TEST)
+      if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+        message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
+      else ()
+        configure_file(
+          "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+          "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+        add_test (NAME python-tox-test
+                  COMMAND ${env_py}
                   "PATH=${py_path}"
                   "SASLPASSWD=${SASLPASSWD_EXE}"
                   "SWIG=${SWIG_EXECUTABLE}"
                   ${VALGRIND_ENV}
-                  ${TOX_EXE})
-      set_tests_properties(python-tox-test
-                           PROPERTIES
-                             PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
-                             FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
-    else (TOX_EXE)
-      message(STATUS "The tox tool is not available; skipping the python-tox-tests")
-    endif ()
-  endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
+                  ${TOX_EXECUTABLE})
+        set_tests_properties(python-tox-test
+                             PROPERTIES
+                               PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+                               FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+      endif ()
+    endif (ENABLE_TOX_TEST)
+  else (TOX_EXECUTABLE)
+    message(STATUS "The tox tool is not available; skipping the python-tox-tests")
+  endif(TOX_EXECUTABLE)
 
   set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
   to_native_path ("${perf_pythonpath}" perf_pythonpath)
