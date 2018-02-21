@@ -363,13 +363,6 @@ class Transaction(object):
         return dlv
 
     def accept(self, delivery):
-        """
-        Accept the message corresponding to this delivery.
-
-        Note that this method cannot currently be used in combination
-        with transactions.
-        """
-
         self.update(delivery, PN_ACCEPTED)
         if self.settle_before_discharge:
             delivery.settle()

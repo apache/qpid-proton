@@ -116,6 +116,9 @@ class Acking(object):
     def accept(self, delivery):
         """
         Accepts a received message.
+
+        Note that this method cannot currently be used in combination
+        with transactions.
         """
         self.settle(delivery, Delivery.ACCEPTED)
 
