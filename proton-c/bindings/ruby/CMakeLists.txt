@@ -32,7 +32,9 @@ swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 
 # Set version-dependent compile flags
-if (RUBY_VERSION VERSION_LESS 2.0.0)
+if (RUBY_VERSION VERSION_LESS 1.9.0)
+   # Don't have blocking control API
+elseif(RUBY_VERSION VERSION_LESS 2.0.0)
   set(RUBY_C_FLAGS "-DRUBY_USE_rb_thread_blocking_region")
 else()
   set(RUBY_C_FLAGS "-DRUBY_USE_rb_thread_call_without_gvl")
