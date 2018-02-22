@@ -168,7 +168,6 @@ set (all_src
   ${qpid-proton-include-extra}
   ${qpid-proton-layers-all}
   ${qpid-proton-platform-all}
-  ${qpid-proton-proactor}
   ${qpid-proton-private-includes}
   include/proton/cproton.i
 )

@@ -144,14 +144,14 @@ class Configure(build_ext):
                   'schannel.c',
                   'ssl_stub.c',
                   'cyrus_sasl.c',
-                  'cyrus_stub.c',
-                  'libuv.c']
+                  'cyrus_stub.c']
         sources = filter(lambda x: os.path.basename(x) not in cfgdep, sources)
         sources = [os.path.join(proton_base, x) for x in sources]
 
         # Look for any optional libraries that proton needs, and adjust the
         # source list and compile flags as necessary.
         libraries = []
+        includes = []
 
         # -D flags (None means no value, just define)
         macros=[('qpid_proton_EXPORTS', None),
@@ -163,6 +163,7 @@ class Configure(build_ext):
         # return True and we'll use it. Otherwise, we'll use the stub.
         if misc.pkg_config_version_installed('openssl', atleast='0'):
             libraries += ['ssl', 'crypto']
+            includes += [misc.pkg_config_get_var('openssl', 'includedir')]
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
@@ -194,12 +195,6 @@ class Configure(build_ext):
                      " PLAIN mechanisms will be supported!")
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
 
-        # Include proactor if libuv is available
-        if cc.has_function('uv_tcp_init', includes=['uv.h'],
-                           libraries=['uv']):
-            libraries.append('uv')
-            sources.append(os.path.join(proton_src, 'proactor', 'libuv.c'))
-
         # compile all the proton sources.  We'll add the resulting list of
         # objects to the _cproton extension as 'extra objects'.  We do this
         # instead of just lumping all the sources into the extension to prevent
@@ -213,7 +208,7 @@ class Configure(build_ext):
                              macros=macros,
                              include_dirs=[build_include,
                                            proton_include,
-                                           proton_src],
+                                           proton_src]+includes,
                              # compiler command line options:
                              extra_postargs=['-std=gnu99'],
                              output_dir=self.build_temp)

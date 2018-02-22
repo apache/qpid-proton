@@ -66,7 +66,7 @@ def pkg_config_version_installed(package, version=None, atleast=None):
             return False
         log.info("Using %s version %s (found via pkg-config)" %
                  (package,
-                  _call_pkg_config(['--modversion', package]).communicate()[0]))
+                  _call_pkg_config(['--modversion', package]).communicate()[0].splitlines()[0]))
         return True
     return False
 
@@ -82,5 +82,5 @@ def pkg_config_get_var(package, name):
     if p.returncode:
         out = ""
         log.warn(err)
-    return out
+    return out.splitlines()[0]
 
