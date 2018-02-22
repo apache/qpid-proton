@@ -305,7 +305,7 @@ static void parse_addr(addr_t *addr, const char *str) {
 static pthread_mutex_t driver_ptr_mutex;
 
 static uv_once_t global_init_once = UV_ONCE_INIT;
-static void global_init_fn() {  /* Call via uv_once(&global_init_once, global_init_fn) */
+static void global_init_fn(void) {  /* Call via uv_once(&global_init_once, global_init_fn) */
   uv_mutex_init(&driver_ptr_mutex);
 }
 
