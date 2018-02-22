@@ -2103,6 +2103,8 @@ pn_proactor_t *pn_connection_proactor(pn_connection_t* c) {
 }
 
 void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
+  bool notify = false;
+
   lock(&p->context.mutex);
   // Move the whole contexts list into a disconnecting state
   pcontext_t *disconnecting_pcontexts = p->contexts;
@@ -2115,12 +2117,14 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
     p->disconnects_pending++;
     ctx = ctx->next;
   }
+  notify = wake_if_inactive(p);
   unlock(&p->context.mutex);
-  if (!disconnecting_pcontexts)
+  if (!disconnecting_pcontexts) {
+    if (notify) wake_notify(&p->context);
     return;
+  }
 
   // Second pass: different locking, close the pcontexts, free them if !disconnect_ops
-  bool notify = false;
   for (ctx = disconnecting_pcontexts; ctx; ctx = ctx->next) {
     bool do_free = false;
     bool ctx_notify = true;

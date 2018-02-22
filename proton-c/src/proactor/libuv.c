@@ -989,9 +989,13 @@ static pn_event_batch_t *leader_lead_lh(pn_proactor_t *p, uv_run_mode mode) {
   /* If disconnect was requested, walk the socket list */
   if (p->disconnect) {
     p->disconnect = false;
-    uv_mutex_unlock(&p->lock);
-    uv_walk(&p->loop, on_proactor_disconnect, NULL);
-    uv_mutex_lock(&p->lock);
+    if (p->active) {
+      uv_mutex_unlock(&p->lock);
+      uv_walk(&p->loop, on_proactor_disconnect, NULL);
+      uv_mutex_lock(&p->lock);
+    } else {
+      p->need_inactive = true;  /* Send INACTIVE right away, nothing to do. */
+    }
   }
   pn_event_batch_t *batch = NULL;
   for (work_t *w = work_pop(&p->leader_q); w; w = work_pop(&p->leader_q)) {

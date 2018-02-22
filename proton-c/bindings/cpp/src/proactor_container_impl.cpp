@@ -143,7 +143,7 @@ class work_queue::impl* container::impl::make_work_queue(container& c) {
 
 container::impl::impl(container& c, const std::string& id, messaging_handler* mh)
     : threads_(0), container_(c), proactor_(pn_proactor()), handler_(mh), id_(id),
-      auto_stop_(true), stopping_(false)
+      reconnecting_(0), auto_stop_(true), stopping_(false)
 {}
 
 container::impl::~impl() {
@@ -217,6 +217,15 @@ void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
 }
 
 void container::impl::reconnect(pn_connection_t* pnc) {
+    --reconnecting_;
+
+    if (stopping_ && reconnecting_==0) {
+        pn_connection_free(pnc);
+        //TODO: We've lost the error - we should really propagate it here
+        pn_proactor_disconnect(proactor_, NULL);
+        return;
+    }
+
     connection_context& cc = connection_context::get(pnc);
     reconnect_context& rc = *cc.reconnect_context_.get();
     const reconnect_options::impl& roi = *rc.reconnect_options_->impl_;
@@ -318,6 +327,7 @@ bool container::impl::setup_reconnect(pn_connection_t* pnc) {
     // Schedule reconnect - can do this on container work queue as no one can have the connection
     // now anyway
     schedule(delay, make_work(&container::impl::reconnect, this, pnc));
+    ++reconnecting_;
 
     return true;
 }
@@ -727,6 +737,8 @@ void container::impl::stop(const proton::error_condition& err) {
         if (stopping_) return;  // Already stopping
         auto_stop_ = true;
         stopping_ = true;
+        // Have to wait until actual reconnect to stop or we leak the connection
+        if (reconnecting_>0) return;
     }
     pn_condition_t* error_condition = pn_condition();
     set_error_condition(err, error_condition);

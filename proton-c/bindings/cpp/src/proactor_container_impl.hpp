@@ -147,6 +147,7 @@ class container::impl {
     proton::receiver_options receiver_options_;
     error_condition disconnect_error_;
 
+    unsigned reconnecting_;
     bool auto_stop_;
     bool stopping_;
     friend class connector;
