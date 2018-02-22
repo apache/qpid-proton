@@ -220,7 +220,7 @@ install (FILES
 
 macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
-  target_link_libraries (${test} qpid-proton-cpp)
+  target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME cpp-${test}
       COMMAND ${env_py}
