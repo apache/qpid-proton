@@ -3343,8 +3343,11 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   }
   // no lock
 
-  if (!disconnecting_pcontexts)
+  if (!disconnecting_pcontexts) {
+    csguard p_guard(&p->context.cslock);
+    wake_if_inactive(p);
     return;
+  }
 
   // Second pass: different locking, close the pcontexts, free them if !disconnect_ops
   for (ctx = disconnecting_pcontexts; ctx; ctx = ctx ? ctx->next : NULL) {
