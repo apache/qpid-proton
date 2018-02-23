@@ -523,28 +523,41 @@ bool container::impl::handle(pn_event_t* event) {
     }
     case PN_LISTENER_OPEN: {
         pn_listener_t* l = pn_event_listener(event);
-        listener_context &lc(listener_context::get(l));
-        if (lc.listen_handler_) {
+        proton::listen_handler* handler;
+        {
+            GUARD(lock_);
+            listener_context &lc(listener_context::get(l));
+            handler = lc.listen_handler_;
+        }
+        if (handler) {
             listener lstnr(l);
-            lc.listen_handler_->on_open(lstnr);
+            handler->on_open(lstnr);
         }
         return false;
     }
     case PN_LISTENER_ACCEPT: {
         pn_listener_t* l = pn_event_listener(event);
         pn_connection_t* c = pn_connection();
-        listener_context &lc(listener_context::get(l));
         pn_connection_set_container(c, id_.c_str());
         connection_options opts = server_connection_options_;
-        if (lc.listen_handler_) {
-            listener lstr(l);
-            opts.update(lc.listen_handler_->on_accept(lstr));
+        listen_handler* handler;
+        listener_context* lc;
+        const connection_options* options;
+        {
+            GUARD(lock_);
+            lc = &listener_context::get(l);
+            handler = lc->listen_handler_;
+            options = lc->connection_options_.get();
         }
-        else if (!!lc.connection_options_) opts.update(*lc.connection_options_);
+        if (handler) {
+            listener lstr(l);
+            opts.update(handler->on_accept(lstr));
+        }
+        else if (options) opts.update(*options);
         // Handler applied separately
         connection_context& cc = connection_context::get(c);
         cc.container = &container_;
-        cc.listener_context_ = &lc;
+        cc.listener_context_ = lc;
         cc.handler = opts.handler();
         cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
         pn_transport_t* pnt = pn_transport();
@@ -555,14 +568,19 @@ bool container::impl::handle(pn_event_t* event) {
     }
     case PN_LISTENER_CLOSE: {
         pn_listener_t* l = pn_event_listener(event);
-        listener_context &lc(listener_context::get(l));
+        proton::listen_handler* handler;
+        {
+            GUARD(lock_);
+            listener_context &lc(listener_context::get(l));
+            handler = lc.listen_handler_;
+        }
         listener lstnr(l);
-        if (lc.listen_handler_) {
+        if (handler) {
             pn_condition_t* c = pn_listener_condition(l);
             if (pn_condition_is_set(c)) {
-                lc.listen_handler_->on_error(lstnr, make_wrapper(c).what());
+                handler->on_error(lstnr, make_wrapper(c).what());
             }
-            lc.listen_handler_->on_close(lstnr);
+            handler->on_close(lstnr);
         }
         return false;
     }
