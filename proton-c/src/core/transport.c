@@ -1349,7 +1349,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
   char strbuf[128];      // avoid malloc for most link names
   char *strheap = (name.size >= sizeof(strbuf)) ? (char *) malloc(name.size + 1) : NULL;
   char *strname = strheap ? strheap : strbuf;
-  strncpy(strname, name.start, name.size);
+  if (name.size > 0) strncpy(strname, name.start, name.size);
   strname[name.size] = '\0';
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
