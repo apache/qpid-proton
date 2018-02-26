@@ -321,11 +321,21 @@ class test_mt_handler : public proton::messaging_handler {
     void on_connection_open(proton::connection &) PN_CPP_OVERRIDE { set("open"); }
 };
 
+class container_runner {
+    proton::container& c_;
+
+  public:
+    container_runner(proton::container& c) : c_(c) {}
+
+    void operator()() {c_.run();}
+};
+
 int test_container_mt_stop_empty() {
     test_mt_handler th;
     proton::container c(th);
     c.auto_stop( false );
-    auto t = std::thread([&]() { c.run(); });
+    container_runner runner(c);
+    auto t = std::thread(runner);
     ASSERT_EQUAL("start", th.wait());
     c.stop();
     t.join();
@@ -336,7 +346,8 @@ int test_container_mt_stop() {
     test_mt_handler th;
     proton::container c(th);
     c.auto_stop(false);
-    auto t = std::thread([&]() { c.run(); });
+    container_runner runner(c);
+    auto t = std::thread(runner);
     test_listen_handler lh;
     c.listen("//:0", lh);       //  Also opens a connection
     ASSERT_EQUAL("start", th.wait());
