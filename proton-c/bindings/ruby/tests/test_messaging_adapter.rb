@@ -39,20 +39,16 @@ class RecordingHandler < Qpid::Proton::MessagingHandler
   def respond_to?(name, all=false) super || respond_to_missing?(name); end # For ruby < 1.9.2
 end
 
-# Extra methods for driver pairs of RecordingHandler
-class DriverPair
-  def names() collect { |x| x.handler.names }; end
-  def clear() each { |x| x.handler.clear; } end
-end
-
 class NoAutoOpenClose < RecordingHandler
   def initialize() super; @endpoints = []; end
   def on_connection_open(x) @connection = x; super; raise StopAutoResponse; end
   def on_session_open(x) @session = x; super; raise StopAutoResponse; end
-  def on_link_open(x) @link = x; super; raise StopAutoResponse; end
+  def on_sender_open(x) @link = x; super; raise StopAutoResponse; end
+  def on_receiver_open(x) @link = x; super; raise StopAutoResponse; end
   def on_connection_close(x) super; raise StopAutoResponse; end
   def on_session_close(x) super; raise StopAutoResponse; end
-  def on_link_close(x) super; raise StopAutoResponse; end
+  def on_sender_close(x) super; raise StopAutoResponse; end
+  def on_receiver_close(x) super; raise StopAutoResponse; end
   attr_reader :connection, :session, :link
 end
 
@@ -61,8 +57,8 @@ class TestMessagingHandler < MiniTest::Test
   def test_auto_open_close
     d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)
     d.client.connection.open; d.client.connection.open_sender; d.run
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open, :on_sendable], d.client.handler.names
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open], d.server.handler.names
+    assert_equal [:on_connection_open, :on_session_open, :on_sender_open, :on_sendable], d.client.handler.names
+    assert_equal [:on_connection_open, :on_session_open, :on_receiver_open], d.server.handler.names
     d.clear
     d.client.connection.close; d.run
     assert_equal [:on_connection_close, :on_transport_close], d.server.handler.names
@@ -126,19 +122,18 @@ class TestMessagingHandler < MiniTest::Test
     assert_equal "bad dog", d.server.handler.calls[0][1].condition.description
   end
 
-  def test_link_error
+  def test_sender_receiver_error
     d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)
     d.client.connection.open
     s = d.client.connection.open_sender; d.run
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open, :on_sendable], d.client.handler.names
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open], d.server.handler.names
+    assert_equal [:on_connection_open, :on_session_open, :on_sender_open, :on_sendable], d.client.handler.names
+    assert_equal [:on_connection_open, :on_session_open, :on_receiver_open], d.server.handler.names
     d.clear
     s.close "bad dog"; d.run
-    assert_equal [:on_link_error, :on_link_close], d.client.handler.names
-    assert_equal [:on_link_error, :on_link_close], d.server.handler.names
+    assert_equal [:on_sender_error, :on_sender_close], d.client.handler.names
+    assert_equal [:on_receiver_error, :on_receiver_close], d.server.handler.names
     assert_equal "bad dog", d.server.handler.calls[0][1].condition.description
   end
-
 
   def test_options_off
     linkopts = {:credit_window=>0, :auto_settle=>false, :auto_accept=>false}
@@ -149,11 +144,11 @@ class TestMessagingHandler < MiniTest::Test
     assert_equal [[:on_connection_open], [:on_connection_open]], d.names
     d.clear
     s = d.client.connection.open_sender(linkopts); d.run
-    assert_equal [[], [:on_session_open, :on_link_open]], d.names
+    assert_equal [[], [:on_session_open, :on_receiver_open]], d.names
     d.server.handler.session.open      # Return session open
     d.server.handler.link.open(linkopts) # Return link open
     d.run
-    assert_equal [[:on_session_open, :on_link_open], [:on_session_open, :on_link_open]], d.names
+    assert_equal [[:on_session_open, :on_sender_open], [:on_session_open, :on_receiver_open]], d.names
     d.clear
     d.server.handler.link.flow(1); d.run
     assert_equal [[:on_sendable], []], d.names
@@ -162,7 +157,6 @@ class TestMessagingHandler < MiniTest::Test
     s.send Message.new("foo"); d.run
     assert_equal [[], [:on_message]], d.names
   end
-
 
   def test_message
     handler_class = Class.new(MessagingHandler) do
@@ -203,12 +197,12 @@ class TestMessagingHandler < MiniTest::Test
     d = DriverPair.new(handler_class.new, handler_class.new)
     d.client.connection.open
     r = d.client.connection.open_receiver; d.run
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open], d.client.handler.unhandled
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open, :on_sendable], d.server.handler.unhandled
+    assert_equal [:on_connection_open, :on_session_open, :on_receiver_open], d.client.handler.unhandled
+    assert_equal [:on_connection_open, :on_session_open, :on_sender_open, :on_sendable], d.server.handler.unhandled
     r.close Condition.new("goof", "oops"); d.run
 
     assert_equal [Condition.new("goof", "oops")], d.client.handler.error
-    assert_equal [:on_connection_open, :on_session_open, :on_link_open, :on_sendable, :on_link_close], d.server.handler.unhandled
+    assert_equal [:on_connection_open, :on_session_open, :on_sender_open, :on_sendable, :on_sender_close], d.server.handler.unhandled
     assert_equal [Condition.new("goof", "oops")], d.server.handler.error
 
   end

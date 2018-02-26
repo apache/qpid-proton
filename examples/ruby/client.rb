@@ -45,8 +45,8 @@ class Client < Qpid::Proton::MessagingHandler
     end
   end
 
-  def on_link_open(link)
-    next_request if link.receiver?
+  def on_receiver_open(receiver)
+    next_request
   end
 
   def on_message(delivery, message)

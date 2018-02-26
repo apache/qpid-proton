@@ -82,7 +82,11 @@ class TestHandler < Qpid::Proton::MessagingHandler
     endpoint_open(@sessions, s)
   end
 
-  def on_link_open(l)
+  def on_receiver_open(l)
+    endpoint_open(@links, l)
+  end
+
+  def on_sender_open(l)
     endpoint_open(@links, l)
   end
 
@@ -125,6 +129,10 @@ DriverPair = Struct.new(:client, :server) do
     can_write = self.select  {|d| d.can_write? }
     IO.select(can_read, can_write, [], 0)
   end
+
+  def names() collect { |x| x.handler.names }; end
+
+  def clear() each { |x| x.handler.clear; } end
 
   # Run till there is nothing else to do - not handle waiting for timed events
   # but does pass +now+ to process and returns the min returned timed event time

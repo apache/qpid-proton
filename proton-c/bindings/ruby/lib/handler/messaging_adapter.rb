@@ -38,7 +38,7 @@ module Qpid::Proton
       def on_container_start(container) delegate(:on_container_start, container); end
       def on_container_stop(container) delegate(:on_container_stop, container); end
 
-      # Define repetative on_xxx_open/close methods for each endpoint type
+      # Define repetative on_xxx_open/close methods for session and connection
       def self.open_close(endpoint)
         Module.new do
           define_method(:"on_#{endpoint}_remote_open") do |event|
@@ -61,7 +61,24 @@ module Qpid::Proton
       end
       # Generate and include open_close modules for each endpoint type
       # Using modules so we can override to extend the behavior later in the handler.
-      [:connection, :session, :link].each { |endpoint| include open_close(endpoint) }
+      [:connection, :session].each { |endpoint| include open_close(endpoint) }
+
+      # Link open/close is handled separately because links are split into
+      # sender and receiver on the messaging API
+      def on_link_remote_open(event)
+        delegate(event.link.sender? ? :on_sender_open : :on_receiver_open, event.link)
+        event.link.open if event.link.local_uninit?
+        add_credit(event)
+      rescue StopAutoResponse
+      end
+
+      def on_link_remote_close(event)
+        s = event.link.sender?
+        delegate_error(s ? :on_sender_error : :on_receiver_error, event.link) if event.link.condition
+        delegate(s ? :on_sender_close : :on_receiver_close, event.link)
+        event.link.close if event.link.local_active?
+      rescue StopAutoResponse
+      end
 
       def on_transport_error(event)
         delegate_error(:on_transport_error, event.context)
@@ -71,10 +88,8 @@ module Qpid::Proton
         delegate(:on_transport_close, event.context) rescue StopAutoResponse
       end
 
-      # Add flow control for link opening events
+      # Add flow control for local link open
       def on_link_local_open(event) add_credit(event); end
-      def on_link_remote_open(event) super; add_credit(event); end
-
 
       def on_delivery(event)
         if event.link.receiver?       # Incoming message

@@ -103,20 +103,22 @@ class Broker < Qpid::Proton::MessagingHandler
     @queues[address]
   end
 
-  def on_link_open(link)
-    if link.sender?
-      if link.remote_source.dynamic?
-        address = SecureRandom.uuid
-        link.source.address = address
-        q = MessageQueue.new(true)
-        @queues[address] = q
-        q.subscribe(link)
-      elsif link.remote_source.address
-        link.source.address = link.remote_source.address
-        self.queue(link.source.address).subscribe(link)
-      end
-    elsif link.remote_target.address
-      link.target.address = link.remote_target.address
+  def on_sender_open(sender)
+    if sender.remote_source.dynamic?
+      address = SecureRandom.uuid
+      sender.source.address = address
+      q = MessageQueue.new(true)
+      @queues[address] = q
+      q.subscribe(sender)
+    elsif sender.remote_source.address
+      sender.source.address = sender.remote_source.address
+      self.queue(sender.source.address).subscribe(sender)
+    end
+  end
+
+  def on_receiver_open(receiver)
+    if receiver.remote_target.address
+      receiver.target.address = receiver.remote_target.address
     end
   end
 
@@ -128,8 +130,8 @@ class Broker < Qpid::Proton::MessagingHandler
     end
   end
 
-  def on_link_close(link)
-    self.unsubscribe(link) if link.sender?
+  def on_sender_close(sender)
+    self.unsubscribe(sender)
   end
 
   def on_connection_close(connection)

@@ -51,7 +51,7 @@ class ContainerTest < MiniTest::Test
 
     receive_handler = Class.new(MessagingHandler) do
       attr_reader :message, :link
-      def on_link_open(link)
+      def on_receiver_open(link)
         @link = link
         @link.open
         @link.flow(1)
