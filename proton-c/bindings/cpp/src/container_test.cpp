@@ -302,6 +302,7 @@ class test_mt_handler : public proton::messaging_handler {
     std::mutex lock_;
     std::condition_variable cond_;
     std::string str_;
+    proton::error_condition err_;
 
     void set(const std::string& s) {
         std::lock_guard<std::mutex> l(lock_);
@@ -317,8 +318,12 @@ class test_mt_handler : public proton::messaging_handler {
         return s;
     }
 
+    proton::error_condition error() const { return err_; }
     void on_container_start(proton::container &) PN_CPP_OVERRIDE { set("start"); }
     void on_connection_open(proton::connection &) PN_CPP_OVERRIDE { set("open"); }
+
+    // Catch errors and save.
+    void on_error(const proton::error_condition& e) PN_CPP_OVERRIDE { err_ = e; }
 };
 
 class container_runner {
@@ -339,6 +344,7 @@ int test_container_mt_stop_empty() {
     ASSERT_EQUAL("start", th.wait());
     c.stop();
     t.join();
+    ASSERT_EQUAL("", th.error().name());
     return 0;
 }
 
@@ -354,6 +360,7 @@ int test_container_mt_stop() {
     ASSERT_EQUAL("open", th.wait());
     c.stop();
     t.join();
+    // It is possible to get sporadic connection errors from this test depending on timing of stop()
     return 0;
 }
 
