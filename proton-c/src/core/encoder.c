@@ -31,18 +31,20 @@
 
 struct pn_encoder_t {
   char *output;
-  size_t size;
   char *position;
   pn_error_t *error;
+  size_t size;
+  unsigned null_count;
 };
 
 static void pn_encoder_initialize(void *obj)
 {
   pn_encoder_t *encoder = (pn_encoder_t *) obj;
   encoder->output = NULL;
-  encoder->size = 0;
   encoder->position = NULL;
   encoder->error = pn_error();
+  encoder->size = 0;
+  encoder->null_count = 0;
 }
 
 static void pn_encoder_finalize(void *obj) {
@@ -237,6 +239,13 @@ static bool pn_is_first_in_array(pn_data_t *data, pni_node_t *parent, pni_node_t
   return parent->described && (!pn_data_node(data, node->prev)->prev);
 }
 
+/** True if node is in a described list - not the descriptor.
+ *  - In this case we can omit trailing nulls
+ */
+static bool pn_is_in_described_list(pn_data_t *data, pni_node_t *parent, pni_node_t *node) {
+  return parent && parent->atom.type == PN_LIST && parent->described;
+}
+
 typedef union {
   uint32_t i;
   uint32_t a[2];
@@ -261,7 +270,21 @@ static int pni_encoder_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     }
   } else {
     code = pn_node2code(encoder, node);
-    pn_encoder_writef8(encoder, code);
+    // Omit trailing nulls for described lists
+    if (pn_is_in_described_list(data, parent, node)) {
+      if (code==PNE_NULL) {
+        encoder->null_count++;
+      } else {
+        // Output pending nulls, then the nodes code
+        for (unsigned i = 0; i<encoder->null_count; i++) {
+          pn_encoder_writef8(encoder, PNE_NULL);
+        }
+        encoder->null_count = 0;
+        pn_encoder_writef8(encoder, code);
+      }
+    } else {
+      pn_encoder_writef8(encoder, code);
+    }
   }
 
   switch (code) {
@@ -340,12 +363,21 @@ static int pni_encoder_exit(void *ctx, pn_data_t *data, pni_node_t *node)
       // backfill size
       size_t size = pos - node->start - 1;
       pn_encoder_writef8(encoder, size);
+      // Adjust count
+      if (encoder->null_count) {
+        pn_encoder_writef8(encoder, node->children-encoder->null_count);
+      }
     } else {
       // backfill size
       size_t size = pos - node->start - 4;
       pn_encoder_writef32(encoder, size);
+      // Adjust count
+      if (encoder->null_count) {
+        pn_encoder_writef32(encoder, node->children-encoder->null_count);
+      }
     }
     encoder->position = pos;
+    encoder->null_count = 0;
     return 0;
   default:
     return 0;

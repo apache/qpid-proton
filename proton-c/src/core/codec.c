@@ -665,13 +665,16 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     if (err) return err;
 
     pni_node_t *parent = pn_data_node(data, data->parent);
+    pni_node_t *current = pn_data_node(data, data->current);
     while (parent) {
       if (parent->atom.type == PN_DESCRIBED && parent->children == 2) {
+        current->described = true;
         pn_data_exit(data);
+        current = pn_data_node(data, data->current);
         parent = pn_data_node(data, data->parent);
       } else if (parent->atom.type == PN_NULL && parent->children == 1) {
         pn_data_exit(data);
-        pni_node_t *current = pn_data_node(data, data->current);
+        current = pn_data_node(data, data->current);
         current->down = 0;
         current->children = 0;
         parent = pn_data_node(data, data->parent);
@@ -1426,6 +1429,7 @@ static pni_node_t *pni_data_add(pn_data_t *data)
   node->down = 0;
   node->children = 0;
   node->data = false;
+  node->described = false;
   node->data_offset = 0;
   node->data_size = 0;
   data->current = pni_data_id(data, node);
