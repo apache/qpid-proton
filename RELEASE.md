@@ -1,7 +1,7 @@
 ### Building a release for vote:
 
 1. Grab a clean checkout for safety.
-2. Run: "git checkout ${BRANCH}" to switch to a branch of the intended release point.
+2. Run: "git checkout ${BRANCH}" if needed.
 3. Update the versions:
   - Run: "bin/version.sh ${VERSION}", e.g: bin/version.sh 0.18.0
   - Update the version(s) if needed in file: proton-c/bindings/python/docs/conf.py
