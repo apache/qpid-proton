@@ -773,8 +773,6 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
     return "pn_connection_driver_init failure";
   }
 
-  set_pconnection(pc->driver.connection, pc);
-
   pcontext_init(&pc->context, PCONNECTION, p, pc);
   psocket_init(&pc->psocket, p, NULL, addr);
   pc->new_events = 0;
@@ -801,6 +799,12 @@ static const char *pconnection_setup(pconnection_t *pc, pn_proactor_t *p, pn_con
     pc->disconnected = true;    /* Already failed */
   }
   pmutex_init(&pc->rearm_mutex);
+
+  /* Set the pconnection_t backpointer last.
+     Connections that were released by pn_proactor_release_connection() must not reveal themselves
+     to be re-associated with a proactor till setup is complete.
+   */
+  set_pconnection(pc->driver.connection, pc);
 
   return NULL;
 }
