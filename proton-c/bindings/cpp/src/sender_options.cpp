@@ -89,6 +89,7 @@ class sender_options::impl {
         auto_settle.update(x.auto_settle);
         source.update(x.source);
         target.update(x.target);
+        name.update(x.name);
     }
 
 };
