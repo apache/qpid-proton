@@ -196,8 +196,7 @@ func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error)
 		c.container = NewContainer("").(*container)
 	}
 	c.pConnection.SetContainer(c.container.Id())
-	globalSASLInit(c.engine)
-
+	saslConfig.setup(c.engine)
 	c.endpoint.init(c.engine.String())
 	go c.run()
 	return c, nil
@@ -356,13 +355,52 @@ func Heartbeat(delay time.Duration) ConnectionOption {
 	return func(c *connection) { c.engine.Transport().SetIdleTimeout(2 * delay) }
 }
 
+type saslConfigState struct {
+	lock        sync.Mutex
+	name        string
+	dir         string
+	initialized bool
+}
+
+func (s *saslConfigState) set(target *string, value string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if s.initialized {
+		panic("SASL configuration cannot be changed after a Connection has been created")
+	}
+	*target = value
+}
+
+// Apply the global SASL configuration the first time a proton.Engine needs it
+//
+// TODO aconway 2016-09-15: Current pn_sasl C impl config is broken, so all we
+// can realistically offer is global configuration. Later if/when the pn_sasl C
+// impl is fixed we can offer per connection over-rides.
+func (s *saslConfigState) setup(eng *proton.Engine) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	if !s.initialized {
+		s.initialized = true
+		sasl := eng.Transport().SASL()
+		if s.name != "" {
+			sasl.ConfigName(saslConfig.name)
+		}
+		if s.dir != "" {
+			sasl.ConfigPath(saslConfig.dir)
+		}
+	}
+}
+
+var saslConfig saslConfigState
+
 // GlobalSASLConfigDir sets the SASL configuration directory for every
 // Connection created in this process. If not called, the default is determined
 // by your SASL installation.
 //
 // You can set SASLAllowInsecure and SASLAllowedMechs on individual connections.
 //
-func GlobalSASLConfigDir(dir string) { globalSASLConfigDir = dir }
+// Must be called at most once, before any connections are created.
+func GlobalSASLConfigDir(dir string) { saslConfig.set(&saslConfig.dir, dir) }
 
 // GlobalSASLConfigName sets the SASL configuration name for every Connection
 // created in this process. If not called the default is "proton-server".
@@ -372,7 +410,8 @@ func GlobalSASLConfigDir(dir string) { globalSASLConfigDir = dir }
 //
 // You can set SASLAllowInsecure and SASLAllowedMechs on individual connections.
 //
-func GlobalSASLConfigName(dir string) { globalSASLConfigName = dir }
+// Must be called at most once, before any connections are created.
+func GlobalSASLConfigName(name string) { saslConfig.set(&saslConfig.name, name) }
 
 // Do we support extended SASL negotiation?
 // All implementations of Proton support ANONYMOUS and EXTERNAL on both
@@ -381,24 +420,6 @@ func GlobalSASLConfigName(dir string) { globalSASLConfigName = dir }
 // Extended SASL implememtations use an external library (Cyrus SASL)
 // to support other mechanisms beyond these basic ones.
 func SASLExtended() bool { return proton.SASLExtended() }
-
-var (
-	globalSASLConfigName string
-	globalSASLConfigDir  string
-)
-
-// TODO aconway 2016-09-15: Current pn_sasl C impl config is broken, so all we
-// can realistically offer is global configuration. Later if/when the pn_sasl C
-// impl is fixed we can offer per connection over-rides.
-func globalSASLInit(eng *proton.Engine) {
-	sasl := eng.Transport().SASL()
-	if globalSASLConfigName != "" {
-		sasl.ConfigName(globalSASLConfigName)
-	}
-	if globalSASLConfigDir != "" {
-		sasl.ConfigPath(globalSASLConfigDir)
-	}
-}
 
 // Dial is shorthand for using net.Dial() then NewConnection()
 // See net.Dial() for the meaning of the network, address arguments.
