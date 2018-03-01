@@ -982,11 +982,17 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
 
  compute_performatives:
   pn_data_clear(transport->output_args);
-  int err = pn_data_fill(transport->output_args, "DL[IIzIoon?DLCooo]", TRANSFER,
-                         handle, id, tag->size, tag->start,
+  int err = pn_data_fill(transport->output_args, "DL[IIzI?o?on?DLC?o?o?o]", TRANSFER,
+                         handle,
+                         id,
+                         tag->size, tag->start,
                          message_format,
-                         settled, more_flag, (bool)code, code, state,
-                         resume, aborted, batchable);
+                         settled, settled,
+                         more_flag, more_flag,
+                         (bool)code, code, state,
+                         resume, resume,
+                         aborted, aborted,
+                         batchable, batchable);
   if (err) {
     pn_transport_logf(transport,
                       "error posting transfer frame: %s: %s", pn_code(err),
@@ -2081,9 +2087,12 @@ static int pni_flush_disp(pn_transport_t *transport, pn_session_t *ssn)
   uint64_t code = ssn->state.disp_code;
   bool settled = ssn->state.disp_settled;
   if (ssn->state.disp) {
-    int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[oIIo?DL[]]", DISPOSITION,
-                            ssn->state.disp_type, ssn->state.disp_first, ssn->state.disp_last,
-                            settled, (bool)code, code);
+    int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel, "DL[oI?I?o?DL[]]", DISPOSITION,
+                            ssn->state.disp_type,
+                            ssn->state.disp_first,
+                            ssn->state.disp_last!=ssn->state.disp_first, ssn->state.disp_last,
+                            settled, settled,
+                            (bool)code, code);
     if (err) return err;
     ssn->state.disp_type = 0;
     ssn->state.disp_code = 0;
@@ -2114,8 +2123,9 @@ static int pni_post_disp(pn_transport_t *transport, pn_delivery_t *delivery)
     pn_data_clear(transport->disp_data);
     PN_RETURN_IF_ERROR(pni_disposition_encode(&delivery->local, transport->disp_data));
     return pn_post_frame(transport, AMQP_FRAME_TYPE, ssn->state.local_channel,
-      "DL[oIIo?DLC]", DISPOSITION,
-      role, state->id, state->id, delivery->local.settled,
+      "DL[oIn?o?DLC]", DISPOSITION,
+      role, state->id,
+      delivery->local.settled, delivery->local.settled,
       (bool)code, code, transport->disp_data);
   }
 
@@ -2352,7 +2362,8 @@ static int pni_process_link_teardown(pn_transport_t *transport, pn_endpoint_t *e
 
       int err =
           pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
-                        "DL[Io?DL[sSC]]", DETACH, state->local_handle, !link->detached,
+                        "DL[I?o?DL[sSC]]", DETACH, state->local_handle,
+                        !link->detached, !link->detached,
                         (bool)name, ERROR, name, description, info);
       if (err) return err;
       pni_unmap_local_handle(link);

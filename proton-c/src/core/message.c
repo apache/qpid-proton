@@ -779,12 +779,12 @@ int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size)
 int pn_message_data(pn_message_t *msg, pn_data_t *data)
 {
   pn_data_clear(data);
-  int err = pn_data_fill(data, "DL[o?B?IoI]", HEADER,
-                         msg->durable,
+  int err = pn_data_fill(data, "DL[?o?B?I?o?I]", HEADER,
+                         msg->durable, msg->durable,
                          msg->priority!=HEADER_PRIORITY_DEFAULT, msg->priority,
-                         msg->ttl, msg->ttl,
-                         msg->first_acquirer,
-                         msg->delivery_count);
+                         (bool)msg->ttl, msg->ttl,
+                         msg->first_acquirer, msg->first_acquirer,
+                         (bool)msg->delivery_count, msg->delivery_count);
   if (err)
     return pn_error_format(msg->error, err, "data error: %s",
                            pn_error_text(pn_data_error(data)));
