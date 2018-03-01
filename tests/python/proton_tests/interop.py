@@ -63,6 +63,8 @@ class InteropTest(common.Test):
         # Re-encode and verify pre-computed and actual encoded size match.
         reencoded = self.data.encode()
         assert encoded_size == len(reencoded), "%d != %d" % (encoded_size, len(reencoded))
+        # verify round trip bytes
+        assert reencoded == encoded, "Value mismatch: %s != %s" % (reencoded, encoded)
 
     def decode_message_file(self, name):
         self.message.decode(self.get_data(name))

@@ -31,8 +31,8 @@
 static void test_overflow_error(void)
 {
   pn_message_t *message = pn_message();
-  char buf[8];
-  size_t size = 8;
+  char buf[6];
+  size_t size = 6;
 
   int err = pn_message_encode(message, buf, &size);
   assert(err == PN_OVERFLOW);
