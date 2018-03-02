@@ -53,13 +53,13 @@ PNP_EXTERN int pn_netaddr_str(const pn_netaddr_t *addr, char *buf, size_t size);
  * Get the local address of a transport. Return `NULL` if not available.
  * Pointer is invalid after the transport closes (PN_TRANSPORT_CLOSED event is handled)
  */
-PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
+PNP_EXTERN const pn_netaddr_t *pn_transport_local_addr(pn_transport_t *t);
 
 /**
  * Get the local address of a transport. Return `NULL` if not available.
  * Pointer is invalid after the transport closes (PN_TRANSPORT_CLOSED event is handled)
  */
-PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
+PNP_EXTERN const pn_netaddr_t *pn_transport_remote_addr(pn_transport_t *t);
 
 /**
  * Get the listening addresses of a listener.
@@ -77,7 +77,7 @@ PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
  * Use pn_netaddr_next() to iterate over the list.
  * Pointer is invalid after the listener closes (PN_LISTENER_CLOSED event is handled)
  */
-PNP_EXTERN const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l);
+PNP_EXTERN const pn_netaddr_t *pn_listener_addr(pn_listener_t *l);
 
 /**
  * @return Pointer to the next address in a list of addresses, NULL if at the end of the list or
@@ -104,6 +104,15 @@ PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
  * Returns 0 if successful, non-0 on error.
  */
 PNP_EXTERN int pn_netaddr_host_port(const pn_netaddr_t* na, char *host, size_t hlen, char *port, size_t plen);
+
+/**  @deprecated @{ */
+PN_DEPRECATED("use pn_transport_local_addr")
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
+PN_DEPRECATED("use pn_transport_remote_addr()")
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
+PN_DEPRECATED("use pn_listener_addr()")
+PNP_EXTERN const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l);
+/** @} */
 
 /**
  * @}

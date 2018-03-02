@@ -23,6 +23,7 @@
 #include "proactor-internal.h"
 #include <proton/error.h>
 #include <proton/listener.h>
+#include <proton/netaddr.h>
 #include <proton/proactor.h>
 
 #include <stdio.h>
@@ -96,4 +97,8 @@ void pn_listener_accept(pn_listener_t *l, pn_connection_t *c) {
   pn_listener_accept2(l, c, NULL);
 }
 
+/* Deprecated, keep backwards compatible library symbols */
+const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) { return pn_transport_local_addr(t); }
+const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) { return pn_transport_remote_addr(t); }
+const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l) { return pn_listener_addr(l); }
 

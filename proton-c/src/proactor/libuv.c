@@ -1324,17 +1324,17 @@ void pn_listener_accept2(pn_listener_t *l, pn_connection_t *c, pn_transport_t *t
   work_notify(&l->work);
 }
 
-const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t) {
+const pn_netaddr_t *pn_transport_local_addr(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc? &pc->local : NULL;
 }
 
-const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t) {
+const pn_netaddr_t *pn_transport_remote_addr(pn_transport_t *t) {
   pconnection_t *pc = get_pconnection(pn_transport_connection(t));
   return pc ? &pc->remote : NULL;
 }
 
-const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l) {
+const pn_netaddr_t *pn_listener_addr(pn_listener_t *l) {
   return l->addrs ? &l->addrs[0] : NULL;
 }
 

@@ -144,7 +144,7 @@ struct addrinfo {
 
 struct addrinfo listener_info(pn_listener_t *l) {
   struct addrinfo ai = {{0}};
-  const pn_netaddr_t *na = pn_netaddr_listening(l);
+  const pn_netaddr_t *na = pn_listener_addr(l);
   TEST_ASSERT(0 == pn_netaddr_host_port(na, ai.host, sizeof(ai.host), ai.port, sizeof(ai.port)));
   for (na = pn_netaddr_next(na); na; na = pn_netaddr_next(na)) { /* Check that ports are consistent */
     char port[MAX_STR];
@@ -880,7 +880,7 @@ static void test_netaddr(test_t *t) {
   char cr[1024], cl[1024], sr[1024], sl[1024];
 
   pn_transport_t *ct = pn_connection_transport(c);
-  const pn_netaddr_t *na = pn_netaddr_remote(ct);
+  const pn_netaddr_t *na = pn_transport_remote_addr(ct);
   pn_netaddr_str(na, cr, sizeof(cr));
   TEST_STR_IN(t, listener_info(l).port, cr); /* remote address has listening port */
 
@@ -888,11 +888,11 @@ static void test_netaddr(test_t *t) {
 
   pn_transport_t *st = pn_connection_transport(s);
   if (!TEST_CHECK(t, st)) return;
-  pn_netaddr_str(pn_netaddr_local(st), sl, sizeof(sl));
+  pn_netaddr_str(pn_transport_local_addr(st), sl, sizeof(sl));
   TEST_STR_EQUAL(t, cr, sl);  /* client remote == server local */
 
-  pn_netaddr_str(pn_netaddr_local(ct), cl, sizeof(cl));
-  pn_netaddr_str(pn_netaddr_remote(st), sr, sizeof(sr));
+  pn_netaddr_str(pn_transport_local_addr(ct), cl, sizeof(cl));
+  pn_netaddr_str(pn_transport_remote_addr(st), sr, sizeof(sr));
   TEST_STR_EQUAL(t, cl, sr);    /* client local == server remote */
 
   char host[MAX_STR] = "";
@@ -903,7 +903,7 @@ static void test_netaddr(test_t *t) {
   TEST_STR_EQUAL(t, listener_info(l).port, serv);
 
   /* Make sure you can use NULL, 0 to get length of address string without a crash */
-  size_t len = pn_netaddr_str(pn_netaddr_local(ct), NULL, 0);
+  size_t len = pn_netaddr_str(pn_transport_local_addr(ct), NULL, 0);
   TEST_CHECKF(t, strlen(cl) == len, "%d != %d", strlen(cl), len);
 
   TEST_PROACTORS_DRAIN(tps);

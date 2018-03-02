@@ -41,7 +41,7 @@ void listener::stop() { if (listener_) pn_listener_close(listener_); }
 
 int listener::port() {
     char port[16] = "";
-    pn_netaddr_host_port(pn_netaddr_listening(listener_), NULL, 0, port, sizeof(port));
+    pn_netaddr_host_port(pn_listener_addr(listener_), NULL, 0, port, sizeof(port));
     int i = atoi(port);
     if (!i) throw error("listener has no port");
     return i;

@@ -65,6 +65,20 @@
 #  define PNX_EXTERN PN_IMPORT
 #endif
 
+#if ! defined(PN_USE_DEPRECATED_API)
+#  if defined(WIN32)
+#    define PN_DEPRECATED(message) __declspec(deprecated(message))
+#  elif defined __GNUC__
+#    if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500
+#      define PN_DEPRECATED(message) __attribute__((deprecated))
+#    else
+#      define PN_DEPRECATED(message) __attribute__((deprecated(message)))
+#    endif
+#  endif
+#endif
+#ifndef PN_DEPRECATED
+#  define  PN_DEPRECATED(message)
+#endif
 /**
  * @endcond
  */

@@ -231,7 +231,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
 
    case PN_LISTENER_OPEN: {
      char port[256];             /* Get the listening port */
-     pn_netaddr_host_port(pn_netaddr_listening(pn_event_listener(event)), NULL, 0, port, sizeof(port));
+     pn_netaddr_host_port(pn_listener_addr(pn_event_listener(event)), NULL, 0, port, sizeof(port));
      printf("listening on %s\n", port);
      fflush(stdout);
      break;
