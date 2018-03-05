@@ -106,7 +106,7 @@ static void queue_destroy(queue_t *q) {
   free(q->name);
 }
 
-/* Send a message on s, or record s as eating if no messages.
+/* Send a message on s, or record s as waiting if there are no messages to send.
    Called in s dispatch loop, assumes s has credit.
 */
 static void queue_send(queue_t *q, pn_link_t *s) {
@@ -132,7 +132,7 @@ static void queue_send(queue_t *q, pn_link_t *s) {
     pn_delivery_t *d = pn_delivery(s, pn_dtag((char*)&tag, sizeof(tag)));
     pn_link_send(s, m.start, m.size);
     pn_link_advance(s);
-    pn_delivery_settle(d);  /* Pre-settled: unreliable, there will bea no ack/ */
+    pn_delivery_settle(d);  /* Pre-settled: unreliable, there will be no ack/ */
     free(m.start);
   }
 }
