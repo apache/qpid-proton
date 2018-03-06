@@ -46,7 +46,7 @@ class ExampleTest < MiniTest::Test
   end
 
   def test_helloworld
-    assert_output("Hello world!", "helloworld.rb", $url, __method__)
+    assert_output("Hello world!", "helloworld.rb", $url, "examples")
   end
 
   def test_client_server
@@ -60,40 +60,40 @@ class ExampleTest < MiniTest::Test
 -> And the mome raths outgrabe.
 <- AND THE MOME RATHS OUTGRABE.
 EOS
-    server = run_script("server.rb", $url, __method__)
-    assert_output(want.strip, "client.rb", $url, __method__)
+    server = run_script("server.rb", $url, "examples")
+    assert_output(want.strip, "client.rb", $url, "examples")
   ensure
     Process.kill :TERM, server.pid if server
   end
 
   def test_send_recv
-    assert_output("All 10 messages confirmed!", "simple_send.rb", $url, __method__)
+    assert_output("All 10 messages confirmed!", "simple_send.rb", $url, "examples")
     want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output(want.strip, "simple_recv.rb", $url, __method__)
+    assert_output(want.strip, "simple_recv.rb", $url, "examples")
   end
 
   def test_ssl_send_recv
-    out = run_script("ssl_send.rb", $url, __method__).read.strip
+    out = run_script("ssl_send.rb", $url, "examples").read.strip
     assert_match(/Connection secured with "...*\"\nAll 10 messages confirmed!/, out)
     want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output(want.strip, "simple_recv.rb", $url, __method__)
+    assert_output(want.strip, "simple_recv.rb", $url, "examples")
   end
 
   def test_direct_recv
     url = test_url
-      p = run_script("direct_recv.rb", url, __method__)
+      p = run_script("direct_recv.rb", url, "examples")
       p.readline                # Wait till ready
-      assert_output("All 10 messages confirmed!", "simple_send.rb", url, __method__)
+      assert_output("All 10 messages confirmed!", "simple_send.rb", url, "examples")
       want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
       assert_equal(want.strip, p.read.strip)
   end
 
   def test_direct_send
     url = test_url
-    p = run_script("direct_send.rb", url, __method__)
+    p = run_script("direct_send.rb", url, "examples")
     p.readline                # Wait till ready
     want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-    assert_output(want.strip, "simple_recv.rb", url, __method__)
+    assert_output(want.strip, "simple_recv.rb", url, "examples")
     assert_equal("All 10 messages confirmed!", p.read.strip)
   end
 end

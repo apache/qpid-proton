@@ -253,17 +253,24 @@ module Qpid::Proton
       return enum_for(:each_link) unless block_given?
       l = Cproton.pn_link_head(@impl, 0);
       while l
-        yield Link.wrap(l)
+        l2 = l                  #  get next before yield, in case yield closes l and unlinks it
         l = Cproton.pn_link_next(l, 0)
+        yield Link.wrap(l2)
       end
       self
     end
 
     # Get the {Sender} links - see {#each_link}
-    def each_sender() each_link.select { |l| l.sender? }; end
+    def each_sender()
+      return enum_for(:each_sender) unless block_given?
+      each_link.select { |l| yield l if l.sender? }
+    end
 
     # Get the {Receiver} links - see {#each_link}
-    def each_receiver() each_link.select { |l| l.receiver? }; end
+      def each_receiver()
+        return enum_for(:each_receiver) unless block_given?
+        each_link.select { |l| yield l if l.receiver? }
+      end
 
     # @deprecated use {#MessagingHandler} to handle work
     def work_head
