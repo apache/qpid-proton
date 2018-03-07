@@ -22,14 +22,19 @@ add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-macro (pn_add_c_test test)
+macro (pn_build_c_test test)
   add_executable (${test} ${ARGN})
   target_link_libraries (${test} qpid-proton-core ${PLATFORM_LIBS})
   if (BUILD_WITH_CXX)
     set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
-  add_test (NAME ${test}
-    COMMAND ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>" ${memcheck-cmd} $<TARGET_FILE:${test}>)
+endmacro()
+
+set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+
+macro (pn_add_c_test test)
+  pn_build_c_test(${test} ${ARGN})
+  add_test (NAME ${test} COMMAND ${test_env} ${memcheck-cmd} $<TARGET_FILE:${test}>)
 endmacro(pn_add_c_test)
 
 pn_add_c_test (c-object-tests object.c)
@@ -48,6 +53,25 @@ target_link_libraries (c-parse-url-tests qpid-proton)
 if(HAS_PROACTOR)
   pn_add_c_test (c-proactor-tests proactor.c)
   target_link_libraries (c-proactor-tests qpid-proton-proactor)
+
+  # TODO Enable by default when races are cleared up
+  option(THRADERCISER "Run the threaderciser concurrency tests" OFF)
+  if (THREADERCISER)
+    pn_build_c_test(c-threaderciser threaderciser.c)
+    target_link_libraries (c-threaderciser pthread qpid-proton-proactor)
+    find_library(PTHREAD_LIBRARY pthread)
+    if (PTHREAD_LIBRARY)
+      target_link_libraries (c-threaderciser ${PTHREAD_LIBRARY})
+    endif()
+
+    # Always run with race checker, run with mem checker also if it is enabled
+    set(prog $<TARGET_FILE:c-threaderciser>)
+    set (opts --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/threaderciser.supp)
+    add_test (NAME c-threaderciser-racecheck COMMAND ${test_env} ${racecheck-cmd} ${opts} ${prog})
+    if (memcheck-cmd)
+      add_test (NAME c-threaderciser-memcheck COMMAND ${test_env} ${memcheck-cmd} ${prog})
+    endif()
+  endif()
 
   if(WIN32)
     set(path "$<TARGET_FILE_DIR:c-broker>\\;$<TARGET_FILE_DIR:qpid-proton>")

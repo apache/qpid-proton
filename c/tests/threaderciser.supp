@@ -1,0 +1,5 @@
+{
+   IGNORE: benign race in pni_log_enabled
+   Helgrind:Race
+   fun:pni_log_enabled
+}
