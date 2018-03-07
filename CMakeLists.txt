@@ -103,7 +103,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   make_directory(coverage_results)
   add_custom_target(coverage
     WORKING_DIRECTORY ./coverage_results
-    COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -272,7 +272,7 @@ include_directories ("${CMAKE_CURRENT_BINARY_DIR}/include")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
 include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
 
-set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/bin/env.py)
+set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/env.py)
 
 add_custom_command (
   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
