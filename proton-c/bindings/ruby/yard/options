@@ -1,0 +1,8 @@
+--readme README.rdoc
+--quiet
+--no-progress
+--no-private
+--default-return ""
+--hide-void-return
+--template default
+
