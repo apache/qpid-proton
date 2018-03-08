@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
             if (sz && cert_directory[sz -1] != '/')
                 cert_directory.append("/");
         } else {
-            cert_directory = "ssl_certs/";
+            cert_directory = "ssl-certs/";
         }
         hello_world_direct hwd;
         proton::container(hwd).run();

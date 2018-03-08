@@ -58,7 +58,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     createdSASLDb = True
 
 # Globally initialize Cyrus SASL configuration
-_cyrusSetup('sasl_conf')
+_cyrusSetup('sasl-conf')
 
 def wait_listening(proc):
     m = proc.wait_re(".*listening on ([0-9]+)$")
@@ -229,7 +229,7 @@ class ContainerExampleSSLTest(BrokerTestCase):
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
-        return os.path.join(dirname(sys.argv[0]), "ssl_certs")
+        return os.path.join(dirname(sys.argv[0]), "ssl-certs")
 
     def test_ssl(self):
         # SSL without SASL, VERIFY_PEER_NAME

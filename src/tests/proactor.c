@@ -689,7 +689,7 @@ static void test_release_free(test_t *t) {
   pn_connection_free(pn_connection());
 }
 
-#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl_certs/" NAME
+#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl-certs/" NAME
 #define SSL_PW "tserverpw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)

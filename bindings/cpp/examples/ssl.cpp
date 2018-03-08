@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
         size_t sz = cert_directory.size();
         if (sz && cert_directory[sz -1] != '/')
             cert_directory.append("/");
-        else cert_directory = "ssl_certs/";
+        else cert_directory = "ssl-certs/";
 
         if (verify != verify_noname && verify != verify_full && verify != verify_fail)
             throw std::runtime_error("bad verify argument: " + verify);

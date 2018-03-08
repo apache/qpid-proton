@@ -31,8 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* The ssl_certs subdir must be in the current directory for an ssl-enabled broker */
-#define SSL_FILE(NAME) "ssl_certs/" NAME
+/* The ssl-certs subdir must be in the current directory for an ssl-enabled broker */
+#define SSL_FILE(NAME) "ssl-certs/" NAME
 #define SSL_PW "tserverpw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)

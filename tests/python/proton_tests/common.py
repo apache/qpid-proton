@@ -160,7 +160,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 
 # Globally initialize Cyrus SASL configuration
 if SASL.extended():
-  _cyrusSetup('sasl_conf')
+  _cyrusSetup('sasl-conf')
 
 def ensureCanTestExtendedSASL():
   if not SASL.extended():

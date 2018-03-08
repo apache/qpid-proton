@@ -48,7 +48,7 @@ typedef struct app_data_t {
 static int exit_code = 0;
 
 /* Note must be run in the current directory to find certificate files */
-#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl_certs/" NAME
+#define SSL_FILE(NAME) CMAKE_CURRENT_SOURCE_DIR "/ssl-certs/" NAME
 #define SSL_PW "tclientpw"
 /* Windows vs. OpenSSL certificates */
 #if defined(_WIN32)

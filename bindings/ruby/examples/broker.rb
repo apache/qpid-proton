@@ -79,9 +79,9 @@ class Broker < Qpid::Proton::MessagingHandler
       @ssl_domain = Qpid::Proton::SSLDomain.new(Qpid::Proton::SSLDomain::MODE_SERVER)
       cert_passsword = "tserverpw"
       if Gem.win_platform?       # Use P12 certs for windows schannel
-        @ssl_domain.credentials("ssl_certs/tserver-certificate.p12", "", cert_passsword)
+        @ssl_domain.credentials("ssl-certs/tserver-certificate.p12", "", cert_passsword)
       else
-        @ssl_domain.credentials("ssl_certs/tserver-certificate.pem", "ssl_certs/tserver-private-key.pem", cert_passsword)
+        @ssl_domain.credentials("ssl-certs/tserver-certificate.pem", "ssl-certs/tserver-private-key.pem", cert_passsword)
       end
       @ssl_domain.allow_unsecured_client # SSL is optional, this is not secure.
     rescue

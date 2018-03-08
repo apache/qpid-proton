@@ -133,7 +133,7 @@ if (result EQUAL 0)  # Have minitest
 
   endmacro()
   add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
-  add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old_examples)
+  add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old-examples)
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})
