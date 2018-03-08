@@ -67,6 +67,8 @@ class TestURI < MiniTest::Test
     assert_equal URI("amqp://h:1"), uri("h:1")
     assert_equal URI("amqp://h"), uri("h")
     assert_equal URI("amqp://h"), uri("h:")
+    assert_equal ["amqp", nil, "", 5672, ""], uri_parts("")
+    assert_equal ["amqp", nil, "", 5672, ""], uri_parts(":")
     assert_equal ["amqp", nil, "", 1, ""], uri_parts(":1")
     assert_equal ["amqp", nil, "", 1, ""], uri_parts("amqp://:1")
     assert_equal URI("amqp://[::1:2]:1"), uri("[::1:2]:1")

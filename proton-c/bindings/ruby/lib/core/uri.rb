@@ -75,5 +75,7 @@ module Qpid::Proton
       else DEFAULT_URI_PARSER.parse("amqp://#{s}")            # Treat as a bare host:port/path string
       end
     end
+  rescue =>e
+    raise e.class, "#{self}.#{__method__}(#{s.inspect}): #{e}"
   end
 end
