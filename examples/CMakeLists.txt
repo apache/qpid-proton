@@ -18,6 +18,7 @@
 #
 cmake_minimum_required (VERSION 2.8.12)
 
+set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(Proton REQUIRED Core Proactor)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
