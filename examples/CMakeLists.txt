@@ -16,42 +16,48 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+cmake_minimum_required (VERSION 2.8.12)
 
-# NOTE: The examples and their build files are self-contained, and installed
-# stand-alone independent of the library build tree. They must build and work in
-# this mode.
-#
-# For self-test purposes, the library and binding CMake files can provide extra
-# settings in <LANGUAGE>_EXAMPLE_* variables - for example to enable extra error
-# checking or ensure compiler consistency with the library build. However, the
-# examples must also build correctly stand-alone, with none of those variables set.
+find_package(Proton REQUIRED Core Proactor)
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
 
-set (Proton_DIR ${CMAKE_CURRENT_SOURCE_DIR})
-set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${Proton_INCLUDE_DIRS})
+add_definitions(${Proton_DEFINITIONS})
+
+foreach (name broker send receive direct send-abort send-ssl)
+  add_executable(c-${name} ${name}.c)
+  target_link_libraries(c-${name} ${Proton_Proactor_LIBRARIES} ${Proton_Core_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+  set_target_properties(c-${name} PROPERTIES
+    OUTPUT_NAME ${name})
+endforeach()
+
+
+# Add a test to run all examples
+
+# Make correct environment to find test executables and valgrind.
+if(WIN32)
+  set(test_path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton-core>;$<TARGET_FILE_DIR:qpid-proton-proactor>")
+else()
+  set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+endif()
+
+# Set result to a native search path - used by examples and binding tests.
+# args after result are directories or search paths.
+macro(set_search_path result)
+  set(${result} ${ARGN})
+  if (UNIX)
+    string(REPLACE ";" ":" ${result} "${${result}}") # native search path separators.
+  endif()
+  file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
+endmacro()
 
 # Add the tools directory for the 'proctest' module
 set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
 set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
 
-add_subdirectory(c)
-add_subdirectory(go)
-if (BUILD_CPP)
-  add_subdirectory(cpp)
-endif()
-
-install(DIRECTORY c cpp go
-        DESTINATION ${PROTON_SHARE}/examples)
-
-install(DIRECTORY python
-        DESTINATION ${PROTON_SHARE}/examples
-        PATTERN "*.py"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                    GROUP_EXECUTE GROUP_READ
-                    WORLD_EXECUTE WORLD_READ)
-
-install(DIRECTORY ruby
-        DESTINATION ${PROTON_SHARE}/examples
-        PATTERN "*.rb"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                    GROUP_EXECUTE GROUP_READ
-                    WORLD_EXECUTE WORLD_READ)
+set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/env.py ${EXAMPLE_ENV})
+add_test(
+  NAME c-example-tests
+  COMMAND ${run_env} "PATH=${test_path}"  ${VALGRIND_ENV} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

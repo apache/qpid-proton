@@ -11,7 +11,7 @@ simply striving for the shortest program possible, we'll aim for a
 more illustrative example while still restricting the functionality to
 sending and receiving a single message.
 
-.. literalinclude:: ../../../examples/python/helloworld.py
+.. literalinclude:: ../examples/helloworld.py
    :lines: 21-
    :linenos:
 
@@ -69,7 +69,7 @@ directly if desired.
 
 Let's modify our example to demonstrate this.
 
-.. literalinclude:: ../../../examples/python/helloworld_direct.py
+.. literalinclude:: ../examples/helloworld_direct.py
    :lines: 21-
    :emphasize-lines: 11,21-22,24-25
    :linenos:
@@ -115,7 +115,7 @@ a single message between them.
 
 We'll start with a simple sender.
 
-.. literalinclude:: ../../../examples/python/simple_send.py
+.. literalinclude:: ../examples/simple_send.py
    :lines: 21-
    :linenos:
 
@@ -161,7 +161,7 @@ know the receiver got to.
 
 Now let's look at the corresponding receiver:
 
-.. literalinclude:: ../../../examples/python/simple_recv.py
+.. literalinclude:: ../examples/simple_recv.py
    :lines: 21-
    :linenos:
 
@@ -180,7 +180,7 @@ case one or other of the processes needs to accept incoming socket
 connections. Let's create a modified version of the receiving example
 that does this:
 
-.. literalinclude:: ../../../examples/python/direct_recv.py
+.. literalinclude:: ../examples/direct_recv.py
    :lines: 21-
    :emphasize-lines: 13,25
    :linenos:
@@ -199,7 +199,7 @@ address to each example via the -a command line switch).
 We could equally well modify the original sender to allow the original
 receiver to connect to it. Again that just requires two modifications:
 
-.. literalinclude:: ../../../examples/python/direct_send.py
+.. literalinclude:: ../examples/direct_send.py
    :lines: 21-
    :emphasize-lines: 15,28
    :linenos:
@@ -229,7 +229,7 @@ response. Note that we are still using a broker in this example.
 Our server will provide a very simple service: it will respond with
 the body of the request converted to uppercase.
 
-.. literalinclude:: ../../../examples/python/server.py
+.. literalinclude:: ../examples/server.py
    :lines: 21-
    :linenos:
 
@@ -242,7 +242,7 @@ requests with the same reply_to.
 
 Now let's create a simple client to test this service out.
 
-.. literalinclude:: ../../../examples/python/client.py
+.. literalinclude:: ../examples/client.py
    :lines: 21-
    :linenos:
 
@@ -264,7 +264,7 @@ Again, we could avoid having any intermediary process here if we
 wished. The following code implementas a server to which the client
 above could connect directly without any need for a broker or similar.
 
-.. literalinclude:: ../../../examples/python/server_direct.py
+.. literalinclude:: ../examples/server_direct.py
    :lines: 21-
    :linenos:
 
@@ -282,7 +282,7 @@ Many brokers offer the ability to consume messages based on a
 particular values of the headers. The following example shows how that
 can be achieved:
 
-.. literalinclude:: ../../../examples/python/selected_recv.py
+.. literalinclude:: ../examples/selected_recv.py
    :lines: 21-
    :emphasize-lines: 10
    :linenos:
@@ -295,7 +295,7 @@ consuming them. This is done in AMQP by specifying a distribution mode
 of 'copy' (instead of 'move' which is the expected default for
 queues). An example of that is shown next:
 
-.. literalinclude:: ../../../examples/python/queue_browser.py
+.. literalinclude:: ../examples/queue_browser.py
    :lines: 21-
    :emphasize-lines: 10
    :linenos:

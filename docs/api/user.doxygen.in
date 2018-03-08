@@ -52,24 +52,26 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT = @CMAKE_SOURCE_DIR@/include @CMAKE_SOURCE_DIR@/docs @CMAKE_SOURCE_DIR@/examples/c
+INPUT                   = @CMAKE_SOURCE_DIR@/include \
+                          @CMAKE_SOURCE_DIR@/docs/api \
+                          @CMAKE_SOURCE_DIR@/examples
 FILE_PATTERNS           = *.h *.md *.dox
-EXCLUDE_PATTERNS        = */examples/*.c \
-                          */examples/*.h \
-                          */include/proton/cid.h \
-                          */include/proton/engine.h \
-                          */include/proton/handlers.h \
-                          */include/proton/import_export.h \
-                          */include/proton/log.h \
-                          */include/proton/object.h \
-                          */include/proton/reactor.h \
-                          */include/proton/sasl-plugin.h \
-                          */include/proton/selectable.h \
-                          */include/proton/type_compat.h
+EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/examples/*.c \
+                          @CMAKE_SOURCE_DIR@/examples/*.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/cid.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/engine.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/handlers.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/import_export.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/log.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/object.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/reactor.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/sasl-plugin.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/selectable.h \
+                          @CMAKE_SOURCE_DIR@/include/proton/type_compat.h
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
 STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/include
-EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples/c
+EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples
 EXAMPLE_RECURSIVE       = YES
 
 # View and list options

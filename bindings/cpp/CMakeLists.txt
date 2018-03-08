@@ -184,7 +184,11 @@ endif (MSVC)
 
 install (DIRECTORY "include/proton" DESTINATION ${INCLUDE_INSTALL_DIR} FILES_MATCHING PATTERN "*.hpp")
 install (FILES "${CMAKE_CURRENT_BINARY_DIR}/config_presets.hpp" DESTINATION "${INCLUDE_INSTALL_DIR}/proton/internal")
+install (DIRECTORY "examples/"
+  DESTINATION "${PROTON_SHARE}/examples/cpp"
+  PATTERN "ProtonCppConfig.cmake" EXCLUDE)
 
+add_subdirectory(examples)
 add_subdirectory(docs)
 
 # Pkg config file

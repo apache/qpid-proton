@@ -56,14 +56,14 @@ WARNINGS                = YES
 
 INPUT                   = @CMAKE_SOURCE_DIR@/bindings/cpp/include \
                           @CMAKE_SOURCE_DIR@/bindings/cpp/docs \
-                          @CMAKE_SOURCE_DIR@/examples/cpp
+                          @CMAKE_SOURCE_DIR@/bindings/cpp/examples
 FILE_PATTERNS           = *.hpp *.md *.dox
-EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/examples/*.?pp \
+EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/bindings/cpp/examples/*.?pp \
                           @CMAKE_SOURCE_DIR@/bindings/cpp/include/proton/internal/*.hpp
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
 STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/bindings/cpp/include
-EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples/cpp
+EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/bindings/cpp/examples
 EXAMPLE_RECURSIVE       = YES
 
 # View and list options

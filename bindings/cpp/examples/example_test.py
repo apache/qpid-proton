@@ -229,8 +229,7 @@ class ContainerExampleSSLTest(BrokerTestCase):
 
     def ssl_certs_dir(self):
         """Absolute path to the test SSL certificates"""
-        pn_root = dirname(dirname(dirname(sys.argv[0])))
-        return os.path.join(pn_root, "examples/cpp/ssl_certs")
+        return os.path.join(dirname(sys.argv[0]), "ssl_certs")
 
     def test_ssl(self):
         # SSL without SASL, VERIFY_PEER_NAME

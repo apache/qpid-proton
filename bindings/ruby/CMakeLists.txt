@@ -102,6 +102,13 @@ endif()
 
 install(TARGETS cproton-ruby DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 install(DIRECTORY lib/ DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
+install(DIRECTORY examples/
+        DESTINATION "${PROTON_SHARE}/examples/ruby"
+        COMPONENT Ruby
+        PATTERN "*.rb"
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+                    GROUP_EXECUTE GROUP_READ
+                    WORLD_EXECUTE WORLD_READ)
 
 ## Tests
 
@@ -125,7 +132,7 @@ if (result EQUAL 0)  # Have minitest
       ${ARGN})
 
   endmacro()
-  add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/ruby)
+  add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
   add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old_examples)
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)

@@ -102,6 +102,20 @@ if(HAS_ENOUGH_CPP11)
   endif()
 endif()
 
+# Set result to a native search path - used by examples and binding tests.
+# args after result are directories or search paths.
+macro(set_search_path result)
+  set(${result} ${ARGN})
+  if (UNIX)
+    string(REPLACE ";" ":" ${result} "${${result}}") # native search path separators.
+  endif()
+  file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
+endmacro()
+
+# Add the tools directory for the 'proctest' module
+set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
+set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
+
 # Add a test with the correct environment to find test executables and valgrind.
 macro(add_cpp_test name)
   if(WIN32)

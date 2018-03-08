@@ -77,7 +77,11 @@ add_test(
 # Clean up go output directories.
 list(APPEND ADDITIONAL_MAKE_CLEAN_FILES ${GOPATH}/pkg ${GOPATH}/bin)
 
+add_subdirectory(examples)
+
 # Install go sources.
 set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/src CACHE PATH "Installation directory for Go code")
 mark_as_advanced (GO_INSTALL_DIR)
+
 install(DIRECTORY src/qpid.apache.org DESTINATION ${GO_INSTALL_DIR} COMPONENT Go)
+install(DIRECTORY examples/ DESTINATION "${PROTON_SHARE}/examples/go" COMPONENT Go)

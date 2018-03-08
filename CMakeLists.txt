@@ -235,8 +235,6 @@ endmacro()
 
 add_subdirectory(docs)
 
-#add_subdirectory(proton-c)
-
 if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
   set (PN_WINAPI TRUE)
@@ -988,28 +986,13 @@ if (BUILD_PYTHON)
       message(STATUS "The tox tool is not available; skipping the python-tox-tests")
     endif ()
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
-
-  set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
-  to_native_path ("${perf_pythonpath}" perf_pythonpath)
-  add_custom_target(quick_perf_c ${env_py} -- "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
-                           ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "C")
-  add_dependencies(quick_perf_c reactor-send reactor-recv)
-
-  add_custom_target(quick_perf_py COMMAND ${env_py} --
-                    "PATH=${py_path}" "PYTHONPATH=${perf_pythonpath}"
-                    ${PYTHON_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tests/perf/quick_perf.py" "PYTHON"
-                    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/tools/test-apps/python")
-  add_dependencies(quick_perf_py reactor-recv _cproton)
-
 endif (BUILD_PYTHON)
-
-if (BUILD_JAVASCRIPT)
-  add_test (javascript-codec ${env_py} node ${pn_test_root}/javascript/codec.js)
-  add_test (javascript-message ${env_py} node ${pn_test_root}/javascript/message.js)
-endif (BUILD_JAVASCRIPT)
 
 add_subdirectory(examples)
 
+install (DIRECTORY examples/
+         DESTINATION "${PROTON_SHARE}/examples/c"
+         PATTERN ProtonConfig.cmake EXCLUDE)
 install (FILES LICENSE.txt README.md
          DESTINATION ${PROTON_SHARE})
 
