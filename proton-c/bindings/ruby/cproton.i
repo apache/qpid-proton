@@ -184,12 +184,12 @@ Keep preprocessor directives and macro expansions in the normal header section.
 
 %typemap (in) pn_decimal32_t
 {
-  $1 = FIX2UINT($input);
+  $1 = NUM2UINT($input);
 }
 
 %typemap (out) pn_decimal32_t
 {
-  $result = ULL2NUM($1);
+  $result = UINT2NUM($1);
 }
 
 %typemap (in) pn_decimal64_t
