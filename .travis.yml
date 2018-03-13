@@ -36,20 +36,22 @@ matrix:
     osx_image: xcode7.3
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
+    - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
     before_install:
     - brew update
-    - brew upgrade python openssl
+    - brew upgrade cmake python openssl
     - brew install libuv swig
 
   - os: osx
     osx_image: xcode9
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
+    - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
     - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
     before_install:
     - brew update
-    - brew upgrade python openssl
+    - brew upgrade cmake python openssl
     - brew install libuv swig
 
 # Note addons is apt specific at the moment and will not be applied for osx.
@@ -72,8 +74,8 @@ addons:
     - lcov
 
 install:
-- pip2 install --user --upgrade pip
-- pip2 install --user coverage tox
+- python -m pip install --user --upgrade pip
+- python -m pip install --user coverage tox
 - gem install minitest
 
 before_script:
