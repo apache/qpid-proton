@@ -240,9 +240,7 @@ it unmarshals as type AnyMap.
 The following Go types cannot be unmarshaled: uintptr, function, interface,
 channel, array (use slice), struct
 
-AMQP types not yet supported:
-- decimal32/64/128
-- maps with key values that are not legal Go map keys.
+AMQP types not yet supported: decimal32/64/128
 */
 func Unmarshal(bytes []byte, v interface{}) (n int, err error) {
 	data := C.pn_data(0)
