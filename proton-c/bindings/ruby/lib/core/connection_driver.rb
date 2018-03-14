@@ -181,6 +181,7 @@ module Qpid::Proton
         case e.method           # Events that affect the driver
         when :on_transport_tail_closed then close_read
         when :on_transport_head_closed then close_write
+        when :on_transport_closed then @io.close rescue nil # Allow double-close
         end
         e.dispatch @adapter
       end
