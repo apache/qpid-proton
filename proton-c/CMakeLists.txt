@@ -19,6 +19,7 @@
 
 include(CheckLibraryExists)
 include(CheckSymbolExists)
+include(CheckPythonModule)
 
 include(versions.cmake)
 
@@ -765,10 +766,11 @@ if (BUILD_PYTHON)
               ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
-  find_program(TOX_EXECUTABLE "tox")
-  mark_as_advanced(TOX_EXECUTABLE)
-  if (TOX_EXECUTABLE)
-    option(ENABLE_TOX_TEST "Enable muti-version python testing with TOX" ON)
+  check_python_module("tox" TOX_MODULE_FOUND)
+  if (NOT TOX_MODULE_FOUND)
+    message(STATUS "The tox tool is not available; skipping the python-tox-tests")
+  else ()
+    option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
     set(tox_default "py26,py27,py33,py34,py35,py36")
     set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
@@ -789,17 +791,15 @@ if (BUILD_PYTHON)
                   "PATH=${py_path}"
                   "SASLPASSWD=${SASLPASSWD_EXE}"
                   "SWIG=${SWIG_EXECUTABLE}"
-                  ${VALGRIND_ENV}
-                  ${TOX_EXECUTABLE})
+                  ${VALGRIND_ENV} --
+                  ${PYTHON_EXECUTABLE} -m tox)
         set_tests_properties(python-tox-test
                              PROPERTIES
                                PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
                                FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
       endif ()
     endif (ENABLE_TOX_TEST)
-  else (TOX_EXECUTABLE)
-    message(STATUS "The tox tool is not available; skipping the python-tox-tests")
-  endif(TOX_EXECUTABLE)
+  endif(NOT TOX_MODULE_FOUND)
 
   set (perf_pythonpath "${py_pythonpath}" "${CMAKE_SOURCE_DIR}/examples/cpp")
   to_native_path ("${perf_pythonpath}" perf_pythonpath)
