@@ -177,7 +177,8 @@ module Qpid::Proton
     # @!group Unhandled events
 
     # @!method on_error(error_condition)
-    # The fallback error handler when no specific on_xxx_error is defined
+    # Called on an error if no more specific on_xxx_error method is provided.
+    # If on_error() is also not defined, the connection is closed with error_condition
     # @param error_condition [Condition] Provides information about the error.
 
     # @!method on_unhandled(method_name, *args)

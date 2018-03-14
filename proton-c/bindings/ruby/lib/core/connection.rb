@@ -124,9 +124,8 @@ module Qpid::Proton
 
     # @private
     def apply opts
-      # NOTE: Only connection options are set here. Transport options are set
-      # with {Transport#apply} from the connection_driver (or in
-      # on_connection_bound if not using a connection_driver)
+      # NOTE: Only connection options are set here.
+      # Transport options must be applied with {Transport#apply}
       @container = opts[:container]
       cid = opts[:container_id] || (@container && @container.id) || SecureRandom.uuid
       cid = cid.to_s if cid.is_a? Symbol # Allow symbols as container name
