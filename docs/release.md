@@ -3,13 +3,13 @@
 1. Grab a clean checkout for safety.
 2. Run: "git checkout ${BRANCH}" if needed.
 3. Update the versions:
-  - Run: "bin/version.sh ${VERSION}", e.g: bin/version.sh 0.18.0
-  - Update the version(s) if needed in file: bindings/python/docs/conf.py
+  - Run: "scripts/version.sh ${VERSION}", e.g: scripts/version.sh 0.18.0
+  - Update the version(s) if needed in file: python/docs/conf.py
 4. Commit the changes, tag them.
   - Run: "git add ."
   - Run: 'git commit -m "update versions for ${TAG}"'
   - Run: 'git tag -m "tag ${TAG}" ${TAG}', e.g: git tag -m "tag 0.18.0-rc1" 0.18.0-rc1
-5. Run: "bin/export.sh $PWD ${TAG}" to create the qpid-proton-${VERSION}.tar.gz release archive.
+5. Run: "scripts/export.sh $PWD ${TAG}" to create the qpid-proton-${VERSION}.tar.gz release archive.
 6. Create signature and checksum files for the archive:
   - e.g "gpg --detach-sign --armor qpid-proton-${VERSION}.tar.gz"
   - e.g "sha512sum qpid-proton-${VERSION}.tar.gz > qpid-proton-${VERSION}.tar.gz.sha512"
