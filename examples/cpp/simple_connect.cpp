@@ -37,11 +37,12 @@ class simple_connect : public proton::messaging_handler {
     std::string password;
     bool sasl;
     std::string mechs;
+    bool insecure;
     proton::connection connection;
 
   public:
-    simple_connect(const std::string &a, const std::string &u, const std::string &p, bool s, const std::string& ms) :
-        url(a), user(u), password(p), sasl(s), mechs(ms) {}
+    simple_connect(const std::string &a, const std::string &u, const std::string &p, bool s, const std::string& ms, bool in) :
+        url(a), user(u), password(p), sasl(s), mechs(ms), insecure(in) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         proton::connection_options co;
@@ -49,11 +50,16 @@ class simple_connect : public proton::messaging_handler {
         if (!password.empty()) co.password(password);
         if (sasl) co.sasl_enabled(true);
         if (!mechs.empty()) co.sasl_allowed_mechs(mechs);
+        co.sasl_allow_insecure_mechs(insecure);
         connection = c.connect(url, co);
     }
 
     void on_connection_open(proton::connection &c) OVERRIDE {
         c.close();
+    }
+
+    void on_error(const proton::error_condition& e) OVERRIDE {
+        throw std::runtime_error(e.what());
     }
 };
 
@@ -63,6 +69,7 @@ int main(int argc, char **argv) {
     std::string password;
     std::string mechs;
     bool sasl = false;
+    bool insecure = false;
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
@@ -70,11 +77,12 @@ int main(int argc, char **argv) {
     opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
     opts.add_flag(sasl,'s', "sasl", "force SASL authentication with no user specified (Use for Kerberos/GSSAPI)");
     opts.add_value(mechs, 'm', "mechs", "allowed SASL mechanisms", "MECHS");
+    opts.add_flag(insecure, 'i', "insecure", "allow clear-text passwords");
 
     try {
         opts.parse();
 
-        simple_connect connect(address, user, password, sasl, mechs);
+        simple_connect connect(address, user, password, sasl, mechs, insecure);
         proton::container(connect).run();
 
         return 0;

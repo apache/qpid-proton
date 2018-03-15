@@ -61,6 +61,7 @@ endif()
 foreach(example
     broker
     helloworld
+    simple_connect
     simple_recv
     simple_send
     reconnect_client
