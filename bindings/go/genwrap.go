@@ -44,7 +44,7 @@ import (
 )
 
 var minVersion = "0.10" // The minimum version of proton-c that the Go binding can use
-var include = flag.String("include", "../../include", "Directory containing proton/*.h include files")
+var include = flag.String("include", "../../c/include", "Directory containing proton/*.h include files")
 
 var versionH = regexp.MustCompile("(?s:PN_VERSION_MAJOR ([0-9]+).*PN_VERSION_MINOR ([0-9]+))")
 var versionTxt = regexp.MustCompile("^[0-9]+\\.[0-9]+")

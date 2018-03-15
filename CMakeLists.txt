@@ -26,7 +26,7 @@ include (CheckLanguage)
 include (CheckLibraryExists)
 include (CheckSymbolExists)
 include (CheckPythonModule)
-include (versions.cmake)
+include (c/src/versions.cmake)
 
 enable_testing()
 
@@ -199,7 +199,7 @@ else ()
   option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
   if (ENABLE_VALGRIND)
     if (VALGRIND_EXECUTABLE)
-      set (VALGRIND_SUPPRESSIONS ${CMAKE_SOURCE_DIR}/src/tests/valgrind.supp CACHE STRING "Default valgrind suppressions")
+      set (VALGRIND_SUPPRESSIONS ${CMAKE_SOURCE_DIR}/c/src/tests/valgrind.supp CACHE STRING "Default valgrind suppressions")
       set (VALGRIND_OPTIONS "--error-exitcode=42 --quiet --leak-check=full --trace-children=yes" CACHE STRING "Default valgrind options")
       mark_as_advanced(VALGRIND_SUPPRESSIONS VALGRIND_OPTIONS)
       set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXECUTABLE}" "VALGRIND_ARGS=${VALGRIND_OPTIONS} --suppressions=${VALGRIND_SUPPRESSIONS}")
@@ -233,7 +233,8 @@ macro(set_search_path result)
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
-add_subdirectory(docs)
+add_custom_target(docs)
+add_subdirectory(c/docs)
 
 if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
@@ -261,50 +262,50 @@ endif ()
 set(SASL_IMPL ${sasl_impl} CACHE STRING "Library to use for SASL support. Valid values: ${sasl_providers}")
 
 configure_file (
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/proton/version.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h"
+  "${CMAKE_CURRENT_SOURCE_DIR}/c/include/proton/version.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/c/include/proton/version.h"
   )
 
-include_directories ("${CMAKE_CURRENT_BINARY_DIR}/src")
-include_directories ("${CMAKE_CURRENT_BINARY_DIR}/include")
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/src")
-include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/include")
+include_directories ("${CMAKE_CURRENT_BINARY_DIR}/c/src")
+include_directories ("${CMAKE_CURRENT_BINARY_DIR}/c/include")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/c/src")
+include_directories ("${CMAKE_CURRENT_SOURCE_DIR}/c/include")
 
 set (env_py ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/env.py)
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/encodings.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/c/src/encodings.h
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/c/src/encodings.h.py > ${CMAKE_CURRENT_BINARY_DIR}/c/src/encodings.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/c/src/encodings.h.py
   )
 
 add_custom_command (
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/protocol.h.py
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/c/src/protocol.h
+  COMMAND ${env_py} PYTHONPATH=${CMAKE_SOURCE_DIR}/tools/python ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/c/src/protocol.h.py > ${CMAKE_CURRENT_BINARY_DIR}/c/src/protocol.h
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/c/src/protocol.h.py
   )
 
 add_custom_target(
   generated_c_files
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/c/src/protocol.h ${CMAKE_CURRENT_BINARY_DIR}/c/src/encodings.h
   )
 
 # Select IO impl
 if(PN_WINAPI)
-  set (pn_io_impl src/reactor/io/windows/io.c src/reactor/io/windows/iocp.c src/reactor/io/windows/write_pipeline.c)
-  set (pn_selector_impl src/reactor/io/windows/selector.c)
+  set (pn_io_impl c/src/reactor/io/windows/io.c c/src/reactor/io/windows/iocp.c c/src/reactor/io/windows/write_pipeline.c)
+  set (pn_selector_impl c/src/reactor/io/windows/selector.c)
 else(PN_WINAPI)
-  set (pn_io_impl src/reactor/io/posix/io.c)
-  set (pn_selector_impl src/reactor/io/posix/selector.c)
+  set (pn_io_impl c/src/reactor/io/posix/io.c)
+  set (pn_selector_impl c/src/reactor/io/posix/selector.c)
 endif(PN_WINAPI)
 
 # Link in SASL if present
 if (SASL_IMPL STREQUAL cyrus)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_sasl.c)
+  set(pn_sasl_impl c/src/sasl/sasl.c c/src/sasl/default_sasl.c c/src/sasl/cyrus_sasl.c)
   include_directories (${CYRUS_SASL_INCLUDE_DIR})
   set(SASL_LIB ${CYRUS_SASL_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 elseif (SASL_IMPL STREQUAL none)
-  set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_stub.c)
+  set(pn_sasl_impl c/src/sasl/sasl.c c/src/sasl/default_sasl.c c/src/sasl/cyrus_stub.c)
 endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
@@ -318,14 +319,14 @@ endif()
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
-  set (pn_ssl_impl src/ssl/openssl.c)
+  set (pn_ssl_impl c/src/ssl/openssl.c)
   include_directories (${OPENSSL_INCLUDE_DIR})
   set (SSL_LIB ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 elseif (SSL_IMPL STREQUAL schannel)
-  set (pn_ssl_impl src/ssl/schannel.c)
+  set (pn_ssl_impl c/src/ssl/schannel.c)
   set (SSL_LIB Crypt32.lib Secur32.lib)
 else ()
-  set (pn_ssl_impl src/ssl/ssl_stub.c)
+  set (pn_ssl_impl c/src/ssl/ssl_stub.c)
 endif ()
 
 # First check whether we get clock_gettime without any special library linked
@@ -495,7 +496,7 @@ if (MSVC)
         /wd4800
         /wd4996
     )
-    set (qpid-proton-platform src/compiler/msvc/snprintf.c)
+    set (qpid-proton-platform c/src/compiler/msvc/snprintf.c)
 endif (MSVC)
 
 macro (pn_absolute_install_dir NAME VALUE PREFIX)
@@ -533,31 +534,31 @@ add_subdirectory(tools/test-apps/c tools/test-apps/c)
 
 # for full source distribution:
 set (qpid-proton-platform-all
-  src/platform/platform.c
-  src/reactor/io/windows/io.c
-  src/reactor/io/windows/iocp.c
-  src/reactor/io/windows/write_pipeline.c
-  src/reactor/io/windows/selector.c
-  src/reactor/io/posix/io.c
-  src/reactor/io/posix/selector.c
+  c/src/platform/platform.c
+  c/src/reactor/io/windows/io.c
+  c/src/reactor/io/windows/iocp.c
+  c/src/reactor/io/windows/write_pipeline.c
+  c/src/reactor/io/windows/selector.c
+  c/src/reactor/io/posix/io.c
+  c/src/reactor/io/posix/selector.c
   )
 
 # platform specific library build:
 set (qpid-proton-platform-io
-  src/platform/platform.c
+  c/src/platform/platform.c
   ${pn_io_impl}
   ${pn_selector_impl}
   )
 
 # for full source distribution:
 set (qpid-proton-layers-all
-  src/sasl/sasl.c
-  src/sasl/default_sasl.c
-  src/sasl/cyrus_sasl.c
-  src/sasl/cyrus_stub.c
-  src/ssl/openssl.c
-  src/ssl/schannel.c
-  src/ssl/ssl_stub.c
+  c/src/sasl/sasl.c
+  c/src/sasl/default_sasl.c
+  c/src/sasl/cyrus_sasl.c
+  c/src/sasl/cyrus_stub.c
+  c/src/ssl/openssl.c
+  c/src/ssl/schannel.c
+  c/src/ssl/ssl_stub.c
   )
 
 # for current build system's environment:
@@ -567,127 +568,127 @@ set (qpid-proton-layers
   )
 
 set (qpid-proton-core
-  src/core/object/object.c
-  src/core/object/list.c
-  src/core/object/map.c
-  src/core/object/string.c
-  src/core/object/iterator.c
-  src/core/object/record.c
+  c/src/core/object/object.c
+  c/src/core/object/list.c
+  c/src/core/object/map.c
+  c/src/core/object/string.c
+  c/src/core/object/iterator.c
+  c/src/core/object/record.c
 
-  src/core/log.c
-  src/core/util.c
-  src/core/error.c
-  src/core/buffer.c
-  src/core/types.c
+  c/src/core/log.c
+  c/src/core/util.c
+  c/src/core/error.c
+  c/src/core/buffer.c
+  c/src/core/types.c
 
-  src/core/framing.c
+  c/src/core/framing.c
 
-  src/core/codec.c
-  src/core/decoder.c
-  src/core/encoder.c
+  c/src/core/codec.c
+  c/src/core/decoder.c
+  c/src/core/encoder.c
 
-  src/core/dispatcher.c
-  src/core/connection_driver.c
-  src/core/engine.c
-  src/core/event.c
-  src/core/autodetect.c
-  src/core/transport.c
-  src/core/message.c
+  c/src/core/dispatcher.c
+  c/src/core/connection_driver.c
+  c/src/core/engine.c
+  c/src/core/event.c
+  c/src/core/autodetect.c
+  c/src/core/transport.c
+  c/src/core/message.c
 )
 
 set (qpid-proton-include-generated
-  ${CMAKE_CURRENT_BINARY_DIR}/src/encodings.h
-  ${CMAKE_CURRENT_BINARY_DIR}/src/protocol.h
-  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
+  ${CMAKE_CURRENT_BINARY_DIR}/c/src/encodings.h
+  ${CMAKE_CURRENT_BINARY_DIR}/c/src/protocol.h
+  ${CMAKE_CURRENT_BINARY_DIR}/c/include/proton/version.h
   )
 
 set (qpid-proton-private-includes
-  src/messenger/store.h
-  src/messenger/subscription.h
-  src/messenger/messenger.h
-  src/messenger/transform.h
-  src/ssl/ssl-internal.h
-  src/sasl/sasl-internal.h
-  src/core/autodetect.h
-  src/core/log_private.h
-  src/core/config.h
-  src/core/encoder.h
-  src/core/dispatch_actions.h
-  src/core/engine-internal.h
-  src/core/transport.h
-  src/core/framing.h
-  src/core/buffer.h
-  src/core/util.h
-  src/core/dispatcher.h
-  src/core/data.h
-  src/core/decoder.h
-  src/core/max_align.h
-  src/core/message-internal.h
-  src/reactor/io/windows/iocp.h
-  src/reactor/selector.h
-  src/reactor/io.h
-  src/reactor/reactor.h
-  src/reactor/selectable.h
-  src/platform/platform.h
-  src/platform/platform_fmt.h
-  src/proactor/proactor-internal.h
+  c/src/messenger/store.h
+  c/src/messenger/subscription.h
+  c/src/messenger/messenger.h
+  c/src/messenger/transform.h
+  c/src/ssl/ssl-internal.h
+  c/src/sasl/sasl-internal.h
+  c/src/core/autodetect.h
+  c/src/core/log_private.h
+  c/src/core/config.h
+  c/src/core/encoder.h
+  c/src/core/dispatch_actions.h
+  c/src/core/engine-internal.h
+  c/src/core/transport.h
+  c/src/core/framing.h
+  c/src/core/buffer.h
+  c/src/core/util.h
+  c/src/core/dispatcher.h
+  c/src/core/data.h
+  c/src/core/decoder.h
+  c/src/core/max_align.h
+  c/src/core/message-internal.h
+  c/src/reactor/io/windows/iocp.h
+  c/src/reactor/selector.h
+  c/src/reactor/io.h
+  c/src/reactor/reactor.h
+  c/src/reactor/selectable.h
+  c/src/platform/platform.h
+  c/src/platform/platform_fmt.h
+  c/src/proactor/proactor-internal.h
   )
 
 set (qpid-proton-extra
-  src/extra/url.c
+  c/src/extra/url.c
 
-  src/reactor/reactor.c
-  src/reactor/handler.c
-  src/reactor/connection.c
-  src/reactor/acceptor.c
-  src/reactor/selectable.c
-  src/reactor/timer.c
+  c/src/reactor/reactor.c
+  c/src/reactor/handler.c
+  c/src/reactor/connection.c
+  c/src/reactor/acceptor.c
+  c/src/reactor/selectable.c
+  c/src/reactor/timer.c
 
-  src/handlers/handshaker.c
-  src/handlers/iohandler.c
-  src/handlers/flowcontroller.c
+  c/src/handlers/handshaker.c
+  c/src/handlers/iohandler.c
+  c/src/handlers/flowcontroller.c
 
-  src/messenger/messenger.c
-  src/messenger/subscription.c
-  src/messenger/store.c
-  src/messenger/transform.c
+  c/src/messenger/messenger.c
+  c/src/messenger/subscription.c
+  c/src/messenger/store.c
+  c/src/messenger/transform.c
   )
 
 set (qpid-proton-include
-  include/proton/cid.h
-  include/proton/codec.h
-  include/proton/condition.h
-  include/proton/connection.h
-  include/proton/connection_driver.h
-  include/proton/delivery.h
-  include/proton/disposition.h
-  include/proton/engine.h
-  include/proton/error.h
-  include/proton/event.h
-  include/proton/import_export.h
-  include/proton/link.h
-  include/proton/listener.h
-  include/proton/log.h
-  include/proton/message.h
-  include/proton/netaddr.h
-  include/proton/object.h
-  include/proton/proactor.h
-  include/proton/sasl.h
-  include/proton/sasl-plugin.h
-  include/proton/session.h
-  include/proton/ssl.h
-  include/proton/terminus.h
-  include/proton/transport.h
-  include/proton/type_compat.h
-  include/proton/types.h
+  c/include/proton/cid.h
+  c/include/proton/codec.h
+  c/include/proton/condition.h
+  c/include/proton/connection.h
+  c/include/proton/connection_driver.h
+  c/include/proton/delivery.h
+  c/include/proton/disposition.h
+  c/include/proton/engine.h
+  c/include/proton/error.h
+  c/include/proton/event.h
+  c/include/proton/import_export.h
+  c/include/proton/link.h
+  c/include/proton/listener.h
+  c/include/proton/log.h
+  c/include/proton/message.h
+  c/include/proton/netaddr.h
+  c/include/proton/object.h
+  c/include/proton/proactor.h
+  c/include/proton/sasl.h
+  c/include/proton/sasl-plugin.h
+  c/include/proton/session.h
+  c/include/proton/ssl.h
+  c/include/proton/terminus.h
+  c/include/proton/transport.h
+  c/include/proton/type_compat.h
+  c/include/proton/types.h
 )
 
 set (qpid-proton-include-extra
-  include/proton/handlers.h
-  include/proton/messenger.h
-  include/proton/reactor.h
-  include/proton/selectable.h
-  include/proton/url.h
+  c/include/proton/handlers.h
+  c/include/proton/messenger.h
+  c/include/proton/reactor.h
+  c/include/proton/selectable.h
+  c/include/proton/url.h
 )
 
 #
@@ -702,7 +703,7 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   check_symbol_exists(epoll_wait "sys/epoll.h" HAVE_EPOLL)
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
-    set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor c/src/proactor/epoll.c c/src/proactor/proactor-internal.c)
     set (PROACTOR_LIBS -lpthread)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -713,7 +714,7 @@ endif()
 if (PROACTOR STREQUAL "iocp" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if(WIN32 AND NOT CYGWIN)
     set (PROACTOR_OK iocp)
-    set (qpid-proton-proactor src/proactor/win_iocp.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor c/src/proactor/win_iocp.c c/src/proactor/proactor-internal.c)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS} ${LTO}"
       COMPILE_DEFINITIONS "${PLATFORM_DEFINITIONS}"
@@ -725,7 +726,7 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   find_package(Libuv)
   if (LIBUV_FOUND)
     set (PROACTOR_OK libuv)
-    set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c)
+    set (qpid-proton-proactor c/src/proactor/libuv.c c/src/proactor/proactor-internal.c)
     set (PROACTOR_LIBS ${Libuv_LIBRARIES})
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
@@ -829,7 +830,7 @@ add_dependencies(qpid-proton generated_c_files)
 if (MSVC)
   # Add a phony dependency for Windows builds to serialize creation
   # of generated files. See issue PROTON-1376.
-  # When a Windows build creates src/encodings.h and src/protocol.h
+  # When a Windows build creates c/src/encodings.h and c/src/protocol.h
   # only once then this can be removed.
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
@@ -882,9 +883,9 @@ if (MSVC)
 endif (MSVC)
 
 # Install header files
-file(GLOB headers "include/proton/*.[hi]")
+file(GLOB headers "c/include/proton/*.[hi]")
 install (FILES ${headers} DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
-install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/include/proton/version.h
+install (FILES  ${CMAKE_CURRENT_BINARY_DIR}/c/include/proton/version.h
          DESTINATION ${INCLUDE_INSTALL_DIR}/proton)
 
 # Set ${VAR}/${VAR}DEBUG variables, configure and install the packageconf files for LIB
@@ -899,7 +900,7 @@ macro(configure_lib VAR LIB)
   set(${VAR} ${LIB_PREFIX}${LIB}${LIB_SUFFIX})
   set("${VAR}DEBUG" ${LIB_PREFIX}${LIB}${CMAKE_DEBUG_POSTFIX}${LIB_SUFFIX})
   configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lib${LIB}.pc.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/c/src/lib${LIB}.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc @ONLY)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/lib${LIB}.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
 endmacro()
@@ -913,7 +914,7 @@ endif(HAS_PROACTOR)
 include(WriteBasicConfigVersionFile)
 
 configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/ProtonConfig.cmake.in
+  ${CMAKE_CURRENT_SOURCE_DIR}/c/src/ProtonConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfig.cmake @ONLY)
 write_basic_config_version_file(
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonConfigVersion.cmake
@@ -926,7 +927,7 @@ install (FILES
 
 # c tests:
 
-add_subdirectory(src/tests)
+add_subdirectory(c/src/tests)
 
 # python test: tests/python/proton-test
 if (BUILD_PYTHON)
@@ -958,7 +959,7 @@ if (BUILD_PYTHON)
   # the build for non linux plaforms, it doesn't make sense
   # to try to run them.
   option(TOX_TEST "Enable muti-version python testing with TOX" ON)
-  set(tox_default "py26,py27,py33,py34,py35")
+  set(tox_default "py26,py27,py33bbb,py34,py35")
   set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
   if (NOT (TOX_ENVLIST STREQUAL tox_default))
     message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
@@ -988,9 +989,9 @@ if (BUILD_PYTHON)
   endif (CMAKE_SYSTEM_NAME STREQUAL Linux AND TOX_TEST)
 endif (BUILD_PYTHON)
 
-add_subdirectory(examples)
+add_subdirectory(c/examples)
 
-install (DIRECTORY examples/
+install (DIRECTORY c/examples/
          DESTINATION "${PROTON_SHARE}/examples/c"
          PATTERN ProtonConfig.cmake EXCLUDE)
 install (FILES LICENSE.txt README.md

@@ -24,7 +24,7 @@ set(c_lib_dir "$<TARGET_FILE_DIR:qpid-proton>") # Location of qpid-proton librar
 ## Build the swig library
 
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
-    ${CMAKE_SOURCE_DIR}/include/proton/cproton.i
+    ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
     ${PROTON_HEADERS}
 )
 include_directories (${RUBY_INCLUDE_PATH})

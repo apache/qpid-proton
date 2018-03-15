@@ -50,7 +50,7 @@ add_custom_target(go-src-link ALL
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
 set(GO_ENV ${env_py} --
   "GOPATH=${GOPATH}"
-  "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/include -I${CMAKE_BINARY_DIR}/include"
+  "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/c/include -I${CMAKE_BINARY_DIR}/c/include"
   "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
   "SASLPASSWD=${SASLPASSWD_EXE}"
