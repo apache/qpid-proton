@@ -72,6 +72,9 @@ module Qpid::Proton
     # Get the {IO} server socket used by the listener
     def to_io() @io; end
 
+    # Get the IP port used by the listener
+    def port() to_io.addr[1]; end
+
     private                     # Called by {Container}
 
     def initialize(io, handler, container)
