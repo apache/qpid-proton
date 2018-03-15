@@ -32,11 +32,17 @@ class TestContainer < Qpid::Proton::Container
   def url() "amqp://:#{port}"; end#
 end
 
+# MessagingHandler that raises in on_error to catch unexpected errors
+class ExceptionMessagingHandler
+  def on_error(e) raise e; end
+end
+Thread.abort_on_exception = true
+
 class ContainerTest < MiniTest::Test
   include Qpid::Proton
 
   def test_simple()
-    send_handler = Class.new(MessagingHandler) do
+    send_handler = Class.new(ExceptionMessagingHandler) do
       attr_reader :accepted, :sent
       def on_sendable(sender)
         sender.send Message.new("foo") unless @sent
@@ -49,7 +55,7 @@ class ContainerTest < MiniTest::Test
       end
     end.new
 
-    receive_handler = Class.new(MessagingHandler) do
+    receive_handler = Class.new(ExceptionMessagingHandler) do
       attr_reader :message, :link
       def on_receiver_open(link)
         @link = link
@@ -159,8 +165,7 @@ class ContainerTest < MiniTest::Test
   # Verify that connection options are sent to the peer and available as Connection methods
   def test_connection_options
     # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
-    server_handler = Class.new(MessagingHandler) do
-      def on_error(e) raise e.inspect; end
+    server_handler = Class.new(ExceptionMessagingHandler) do
       def on_connection_open(c)
         @connection = c
         c.open({
@@ -211,6 +216,38 @@ class ContainerTest < MiniTest::Test
     assert_equal 8888, c.max_frame_size
     assert_equal 44, c.idle_timeout # Proton divides by 2
     assert_equal 100, c.max_sessions
+  end
+
+  # Test for time out on connecting to an unresponsive server
+  def test_idle_timeout_server_no_open
+    s = TCPServer.new(0)
+    cont = Container.new(__method__)
+    cont.connect(":#{s.addr[1]}", {:idle_timeout => 0.1, :handler => ExceptionMessagingHandler.new })
+    ex = assert_raises(Qpid::Proton::Condition) { cont.run }
+    assert_match(/resource-limit-exceeded/, ex.to_s)
+  ensure
+    s.close if s
+  end
+
+  # Test for time out on unresponsive client
+  def test_idle_timeout_client
+    server = TestContainer.new(nil, {:idle_timeout => 0.1}, "#{__method__}.server")
+    server_thread = Thread.new { server.run }
+
+    client_handler = Class.new(ExceptionMessagingHandler) do
+      def initialize() @signal = Queue.new; end
+      attr_reader :signal
+      def on_connection_open(c) @signal.pop; end # Jam the client to get a timeout
+    end.new
+    client = Container.new(nil, "#{__method__}.client")
+    client.connect(server.url, {:handler => client_handler})
+    client_thread = Thread.new { client.run }
+
+    server_thread.join          # Exits when the connection closes from idle-timeout
+    client_handler.signal.push true # Unblock the client
+
+    ex = assert_raises(Qpid::Proton::Condition) { client_thread.join }
+    assert_match(/resource-limit-exceeded/, ex.to_s)
   end
 end
 

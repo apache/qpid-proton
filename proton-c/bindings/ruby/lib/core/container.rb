@@ -117,6 +117,16 @@ module Qpid::Proton
       end
     end
 
+    def next_tick_due(x, now)
+      nt = x.respond_to?(:next_tick) && x.next_tick
+      nt && (nt <= now)
+    end
+
+    def next_tick_min(x, t)
+      nt = x.respond_to?(:next_tick) && x.next_tick
+      nt if !t || (nt < t)
+    end
+
     public
 
     # Error raised if the container is used after {#stop} has been called.
@@ -270,15 +280,22 @@ module Qpid::Proton
 
         when Container
           r, w = [@wake], []
+          next_tick = nil
           @lock.synchronize do
             @selectable.each do |s|
               r << s if s.send :can_read?
               w << s if s.send :can_write?
+              next_tick = next_tick_min(s, next_tick)
             end
           end
-          r, w = IO.select(r, w)
-          selected = Set.new(r).merge(w)
-          @wake.reset if selected.delete?(@wake)
+          now = Time.now
+          timeout = ((next_tick > now) ? next_tick - now : 0) if next_tick
+          r, w = IO.select(r, w, nil, timeout)
+          now = Time.now
+          selected = Set.new(r).delete(@wake)
+          selected.merge(w) if w
+          selected.merge(@selectable.select { |s| next_tick_due(s, now) })
+          @wake.reset
           stop_select = nil
           @lock.synchronize do
             if stop_select = @stopped # close everything
@@ -300,7 +317,6 @@ module Qpid::Proton
           add(connection_driver(io, opts, true)) if io
           rearm task
         end
-        # TODO aconway 2017-10-26: scheduled tasks, heartbeats
       end
     ensure
       @lock.synchronize do
