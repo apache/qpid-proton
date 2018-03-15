@@ -5,7 +5,7 @@
 //
 //     make docs-cpp
 //
-// then open bindings/cpp/docs/html/tutorial.html in your browser.
+// then open cpp/docs/html/tutorial.html in your browser.
 
 // DEVELOPER NOTE: If you add or modify examples, please add/update a short
 // description below and (if appropriate) extend/update tutorial.dox.

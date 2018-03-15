@@ -22,7 +22,7 @@ class InteropTest < MiniTest::Test
 
   # Walk up the directory tree to find the tests directory.
   def get_data(name)
-    path = File.join(File.dirname(__FILE__), "../../../tests/interop/#{name}.amqp")
+    path = File.join(File.dirname(__FILE__), "../../tests/interop/#{name}.amqp")
     raise "Can't find test/interop directory from #{__FILE__}" unless File.exists?(path)
     File.open(path, "rb") { |f| f.read }
   end

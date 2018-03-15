@@ -8,13 +8,13 @@
 *.pyc
 *.pyo
 
-# Artifacts in src/
+# Artifacts in /c/src/
 
-src/codec/encodings.h
-src/protocol.h
-src/proton
-src/test
-src/libqpidproton.so
+/c/src/codec/encodings.h
+/c/src/protocol.h
+/c/src/proton
+/c/src/test
+/c/src/libqpidproton.so
 
 # Emacs, vim etc
 
@@ -44,8 +44,8 @@ eclipse-classes
 
 # Python TOX test build output
 
-/bindings/python/MANIFEST
-/bindings/python/build
+/python/MANIFEST
+/python/build
 
 # Test results from the jenkins build script
 

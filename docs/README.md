@@ -1,8 +1,9 @@
 # Qpid Proton documentation
 
-This directory contains general Proton documentation and the C API
-reference source code.  You can find documentation source for the
-binding languages at the following locations.
+This directory contains general Proton documentation. You can find
+documentation source for specific languages at the following
+locations.
 
- - [C++ documentation](../bindings/cpp/docs)
- - [Python documentation](../bindings/python/docs)
+ - [C documentation](../c/docs)
+ - [C++ documentation](../cpp/docs)
+ - [Python documentation](../python/docs)
