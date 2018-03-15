@@ -49,8 +49,16 @@ class simple_connect : public proton::messaging_handler {
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
         if (sasl) co.sasl_enabled(true);
+        //
+        // NB: We only set sasl options if they are not default to avoid
+        // forcing SASL negotiation on when it's not needed.
+        //
+        // This is because the SASL negotiation is turned off unless
+        // it is needed. Setting a username/password or any SASL option will
+        // force the SASL negotiation to be turned on.
+        //
         if (!mechs.empty()) co.sasl_allowed_mechs(mechs);
-        co.sasl_allow_insecure_mechs(insecure);
+        if (insecure) co.sasl_allow_insecure_mechs(true);
         connection = c.connect(url, co);
     }
 
