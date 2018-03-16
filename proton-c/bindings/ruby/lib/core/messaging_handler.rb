@@ -28,6 +28,9 @@ module Qpid::Proton
   # {StopAutoResponse} from +#on_xxx_open+ or +#on_xxx_close+. The application becomes responsible
   # for calling +#open/#close+ at a later point.
   #
+  # *Note*: If a {MessagingHandler} method raises an exception, it will stop the {Container}
+  # that the handler is running in. See {Container#run}
+  #
   class MessagingHandler
 
     # @return [Hash] handler options, see {#initialize}

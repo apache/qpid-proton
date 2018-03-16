@@ -28,7 +28,8 @@ rescue NameError                # For older versions of MiniTest
   MiniTest::Test = MiniTest::Unit::TestCase
 end
 
-class TestError < Exception; end
+class TestError < RuntimeError; end  # Normal error
+class TestException < Exception; end # Not caught by default rescue
 
 def wait_port(port, timeout=5)
   deadline = Time.now + timeout
@@ -97,7 +98,7 @@ end
 
 # ListenHandler that closes the Listener after first accept
 class ListenOnceHandler < Qpid::Proton::Listener::Handler
-  def on_error(l, e)  raise TestError, e.inspect; end
+  def on_error(l, e) raise e; end
   def on_accept(l) l.close; super; end
 end
 
@@ -143,5 +144,22 @@ DriverPair = Struct.new(:client, :server) do
     end while active
     t
   end
+end
+
+# Container that listens on a random port and runs itself
+class ServerContainer < Qpid::Proton::Container
+  include Qpid::Proton
+
+  def initialize(id=nil, listener_opts=nil)
+    super id
+    @listener = listen_io(TCPServer.open(0), Listener::Handler.new(listener_opts))
+    @thread = Thread.new { run }
+  end
+
+  attr_reader :listener
+
+  def port() @listener.port; end
+  def url() "amqp://:#{port}"; end
+  def wait() @listener.close; @thread.join; end
 end
 

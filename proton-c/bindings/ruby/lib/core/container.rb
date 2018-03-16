@@ -127,6 +127,63 @@ module Qpid::Proton
       nt if !t || (nt < t)
     end
 
+    # Rescue any exception raised by the block and stop the container.
+    def maybe_panic
+      begin
+        yield
+      rescue Exception => e
+        stop(nil, e)
+      end
+    end
+
+    # Handle a single item from the @work queue, this is the heart of the #run loop.
+    def run_one(task)
+      case task
+
+      when :start
+        @adapter.on_container_start(self) if @adapter.respond_to? :on_container_start
+
+      when Container
+        r, w = [@wake], []
+        next_tick = nil
+        @lock.synchronize do
+          @selectable.each do |s|
+            r << s if s.send :can_read?
+            w << s if s.send :can_write?
+            next_tick = next_tick_min(s, next_tick)
+          end
+        end
+        now = Time.now
+        timeout = ((next_tick > now) ? next_tick - now : 0) if next_tick
+        r, w = IO.select(r, w, nil, timeout)
+        now = Time.now
+        selected = Set.new(r).delete(@wake)
+        selected.merge(w) if w
+        selected.merge(@selectable.select { |s| next_tick_due(s, now) })
+        @wake.reset
+        stop_select = nil
+        @lock.synchronize do
+          if stop_select = @stopped # close everything
+            selected += @selectable
+            selected.each { |s| s.close @stop_err }
+            @wake.close
+          end
+          @selectable -= selected # Remove selected tasks
+        end
+        selected.each { |s| @work << s } # Queue up tasks needing #process
+        @work << self unless stop_select
+
+      when ConnectionTask then
+        maybe_panic { task.process }
+        rearm task
+
+      when ListenTask then
+        io, opts = maybe_panic { task.process }
+        add(connection_driver(io, opts, true)) if io
+        rearm task
+      end
+    end
+
     public
 
     # Error raised if the container is used after {#stop} has been called.
@@ -262,10 +319,24 @@ module Qpid::Proton
 
     # Run the container: wait for IO activity, dispatch events to handlers.
     #
-    # More than one thread can call {#run} concurrently, the container will use
-    # all the {#run} threads as a thread pool. Calls to
-    # {Handler::MessagingHandler} methods are serialized for each connection or
-    # listener, even if the container has multiple threads.
+    # *Multiple threads* : More than one thread can call {#run} concurrently,
+    # the container will use all {#run} threads as a thread pool. Calls to
+    # {MessagingHandler} or {Listener::Handler} methods are serialized for each
+    # connection or listener, even if the container has multiple threads.
+    #
+    # *Exceptions*: If any handler method raises an exception it will stop the
+    # container, and the exception will be raised by all calls to {#run}. For
+    # single threaded code this is often desirable. Multi-threaded server
+    # applications should normally rescue exceptions in the handler and deal
+    # with them in another way: logging, closing the connection with an error
+    # condition, signalling another thread etc.
+    #
+    # @return [void] Returns when the container stops, see {#stop} and {#auto_stop}
+    #
+    # @raise [StoppedError] If the container has already been stopped when {#run} was called.
+    #
+    # @raise [Exception] If any {MessagingHandler} or {Listener::Handler} managed by
+    #   the container raises an exception, that exception will be raised by {#run}
     #
     def run
       @lock.synchronize do
@@ -273,51 +344,9 @@ module Qpid::Proton
         raise StoppedError if @stopped
       end
       while task = @work.pop
-        case task
-
-        when :start
-          @adapter.on_container_start(self) if @adapter.respond_to? :on_container_start
-
-        when Container
-          r, w = [@wake], []
-          next_tick = nil
-          @lock.synchronize do
-            @selectable.each do |s|
-              r << s if s.send :can_read?
-              w << s if s.send :can_write?
-              next_tick = next_tick_min(s, next_tick)
-            end
-          end
-          now = Time.now
-          timeout = ((next_tick > now) ? next_tick - now : 0) if next_tick
-          r, w = IO.select(r, w, nil, timeout)
-          now = Time.now
-          selected = Set.new(r).delete(@wake)
-          selected.merge(w) if w
-          selected.merge(@selectable.select { |s| next_tick_due(s, now) })
-          @wake.reset
-          stop_select = nil
-          @lock.synchronize do
-            if stop_select = @stopped # close everything
-              selected += @selectable
-              selected.each { |s| s.close @stop_err }
-              @wake.close
-            end
-            @selectable -= selected # Remove selected tasks
-          end
-          selected.each { |s| @work << s } # Queue up tasks needing #process
-          @work << self unless stop_select
-
-        when ConnectionTask then
-          task.process
-          rearm task
-
-        when ListenTask then
-          io, opts = task.process
-          add(connection_driver(io, opts, true)) if io
-          rearm task
-        end
+        run_one task
       end
+      raise @panic if @panic
     ensure
       @lock.synchronize do
         if (@running -= 1) > 0
@@ -339,13 +368,19 @@ module Qpid::Proton
     # {StoppedError} on attempting.  Create a new container if you want to
     # resume activity.
     #
-    # @param error [Condition] Optional transport/listener error condition
+    # @param error [Condition] Optional error condition passed to
+    #  {MessagingHandler#on_transport_error} for each connection and
+    #  {Listener::Handler::on_error} for each listener.
     #
-    def stop(error=nil)
+    # @param panic [Exception] Optional exception raised by all concurrent calls
+    # to run()
+    #
+    def stop(error=nil, panic=nil)
       @lock.synchronize do
-        raise StoppedError if @stopped
-        @stopped = true
+        return if @stopped
         @stop_err = Condition.convert(error)
+        @panic = panic
+        @stopped = true
         check_stop_lh
         # NOTE: @stopped =>
         # - no new run threads can join

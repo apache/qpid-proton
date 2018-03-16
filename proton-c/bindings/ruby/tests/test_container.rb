@@ -20,23 +20,10 @@ require 'test_tools'
 require 'minitest/unit'
 require 'socket'
 
-# Container that listens on a random port
-class TestContainer < Qpid::Proton::Container
-
-  def initialize(handler, lopts=nil, id=nil)
-    super handler, id
-    @listener = listen_io(TCPServer.open(0), ListenOnceHandler.new(lopts))
-  end
-
-  def port() @listener.to_io.addr[1]; end
-  def url() "amqp://:#{port}"; end#
-end
-
 # MessagingHandler that raises in on_error to catch unexpected errors
 class ExceptionMessagingHandler
   def on_error(e) raise e; end
 end
-Thread.abort_on_exception = true
 
 class ContainerTest < MiniTest::Test
   include Qpid::Proton
@@ -70,9 +57,9 @@ class ContainerTest < MiniTest::Test
       end
     end.new
 
-    c = TestContainer.new(receive_handler, {}, __method__)
+    c = ServerContainer.new(__method__, {:handler => receive_handler})
     c.connect(c.url, {:handler => send_handler}).open_sender({:name => "testlink"})
-    c.run
+    c.wait
 
     assert send_handler.accepted
     assert_equal "testlink", receive_handler.link.name
@@ -162,41 +149,42 @@ class ContainerTest < MiniTest::Test
     assert_raises (SocketError) { c = cont.connect("badconnect.example.com:999") }
   end
 
-  # Verify that connection options are sent to the peer and available as Connection methods
+  # Verify that connection options are sent to the peer
   def test_connection_options
     # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
     server_handler = Class.new(ExceptionMessagingHandler) do
       def on_connection_open(c)
         @connection = c
         c.open({
-                :virtual_host => "server.to.client",
-                :properties => { :server => :client },
-                :offered_capabilities => [ :s1 ],
-                :desired_capabilities => [ :s2 ],
-                :container_id => "box",
-               })
+          :virtual_host => "server.to.client",
+          :properties => { :server => :client },
+          :offered_capabilities => [ :s1 ],
+          :desired_capabilities => [ :s2 ],
+          :container_id => "box",
+        })
         c.close
       end
       attr_reader :connection
     end.new
-    # Transport options must be provided to the listener, by Connection#open it is too late
-    cont = TestContainer.new(nil, {
-                                   :handler => server_handler,
-                                   :idle_timeout => 88,
-                                   :max_sessions =>1000,
-                                   :max_frame_size => 8888,
-                                  })
+    # Transport options set by listener, by Connection#open it is too late
+    cont = ServerContainer.new(__method__, {
+      :handler => server_handler,
+      :idle_timeout => 88,
+      :max_sessions =>1000,
+      :max_frame_size => 8888,
+    })
     client = cont.connect(cont.url,
-                          {:virtual_host => "client.to.server",
-                           :properties => { :foo => :bar, "str" => "str" },
-                           :offered_capabilities => [:c1 ],
-                           :desired_capabilities => ["c2" ],
-                           :idle_timeout => 42,
-                           :max_sessions =>100,
-                           :max_frame_size => 4096,
-                           :container_id => "bowl"
-                          })
-    cont.run
+      {:virtual_host => "client.to.server",
+        :properties => { :foo => :bar, "str" => "str" },
+        :offered_capabilities => [:c1 ],
+        :desired_capabilities => ["c2" ],
+        :idle_timeout => 42,
+        :max_sessions =>100,
+        :max_frame_size => 4096,
+        :container_id => "bowl"
+      })
+    cont.wait
+
     c = server_handler.connection
     assert_equal "client.to.server", c.virtual_host
     assert_equal({ :foo => :bar, :str => "str" }, c.properties)
@@ -231,24 +219,44 @@ class ContainerTest < MiniTest::Test
 
   # Test for time out on unresponsive client
   def test_idle_timeout_client
-    server = TestContainer.new(nil, {:idle_timeout => 0.1}, "#{__method__}.server")
-    server_thread = Thread.new { server.run }
-
+    server = ServerContainer.new("#{__method__}.server", {:idle_timeout => 0.1})
     client_handler = Class.new(ExceptionMessagingHandler) do
-      def initialize() @signal = Queue.new; end
-      attr_reader :signal
-      def on_connection_open(c) @signal.pop; end # Jam the client to get a timeout
+      def initialize() @ready, @block = Queue.new, Queue.new; end
+      attr_reader :ready, :block
+      def on_connection_open(c)
+        @ready.push nil        # Tell the main thread we are now open
+        @block.pop             # Block the client so the server will time it out
+      end
     end.new
     client = Container.new(nil, "#{__method__}.client")
     client.connect(server.url, {:handler => client_handler})
     client_thread = Thread.new { client.run }
-
-    server_thread.join          # Exits when the connection closes from idle-timeout
-    client_handler.signal.push true # Unblock the client
-
+    client_handler.ready.pop    # Wait till the client has connected
+    server.wait                 # Exits when the connection closes from idle-timeout
+    client_handler.block.push nil   # Unblock the client
     ex = assert_raises(Qpid::Proton::Condition) { client_thread.join }
     assert_match(/resource-limit-exceeded/, ex.to_s)
   end
-end
 
+  # Make sure we stop and clean up if an aborted connection causes a handler to raise.
+  # https://issues.apache.org/jira/browse/PROTON-1791
+  def test_handler_raise
+    cont = ServerContainer.new(__method__)
+    client_handler = Class.new(MessagingHandler) do
+      # TestException is < Exception so not handled by default rescue clause
+      def on_connection_open(c) raise TestException.new("Bad Dog"); end
+    end.new
+    threads = 3.times.collect { Thread.new { cont.run } }
+    sleep 0.01 while cont.running < 3 # Wait for all threads to be running
+    sockets = 2.times.collect { TCPSocket.new("", cont.port) }
+    cont.connect_io(sockets[1]) # No exception
+    cont.connect_io(sockets[0], {:handler => client_handler}) # Should stop container
+
+    threads.each { |t| assert_equal("Bad Dog", assert_raises(TestException) {t.join}.message) }
+    sockets.each { |s| assert s.closed? }
+    assert cont.listener.to_io.closed?
+    assert_raises(Container::StoppedError) { cont.run }
+    assert_raises(Container::StoppedError) { cont.listen "" }
+  end
+end
 

@@ -29,6 +29,9 @@ module Qpid::Proton
     # connections. This class simply returns a fixed set of options for every
     # connection accepted, but you can subclass and override all of the on_
     # methods to provide more interesting behaviour.
+    #
+    # *Note*: If a {Listener} method raises an exception, it will stop the {Container}
+    # that the handler is running in. See {Container#run}
     class Handler
       # @param opts [Hash] Options to return from on_accept.
       def initialize(opts=nil) @opts = opts || {}; end
