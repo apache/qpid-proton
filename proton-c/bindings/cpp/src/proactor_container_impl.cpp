@@ -310,10 +310,14 @@ bool container::impl::setup_reconnect(pn_connection_t* pnc) {
 
     const reconnect_options::impl& roi = *rc->reconnect_options_->impl_;
 
+    pn_transport_t* t = pn_connection_transport(pnc);
+    pn_condition_t* condition = pn_transport_condition(t);
+
+    // If we failed to authenticate then don't reconnect any more and just fail
+    if ( !strcmp(pn_condition_get_name(condition), "amqp:unauthorized-access") ) return false;
+
     // If too many reconnect attempts just fail
     if ( roi.max_attempts != 0 && rc->retries_ >= roi.max_attempts) {
-        pn_transport_t* t = pn_connection_transport(pnc);
-        pn_condition_t* condition = pn_transport_condition(t);
         pn_condition_format(condition, "proton:io", "Too many reconnect attempts (%d)", rc->retries_);
         return false;
     }

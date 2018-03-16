@@ -92,16 +92,26 @@ const pnx_sasl_implementation * const cyrus_sasl_impl = &sasl_impl;
 
 static const char *amqp_service = "amqp";
 
-static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logger)
+static inline bool pni_check_result(sasl_conn_t *conn, int r, pn_transport_t *logger, const char* condition_name)
 {
     if (r==SASL_OK) return true;
 
     const char* err = conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL);
     pnx_sasl_logf(logger, "sasl error: %s", err);
     pn_condition_t* c = pn_transport_condition(logger);
-    pn_condition_set_name(c, "proton:io:sasl_error");
+    pn_condition_set_name(c, condition_name);
     pn_condition_set_description(c, err);
     return false;
+}
+
+static bool pni_check_io_result(sasl_conn_t *conn, int r, pn_transport_t *logger)
+{
+    return pni_check_result(conn, r, logger, "proton:io:sasl_error");
+}
+
+static bool pni_check_sasl_result(sasl_conn_t *conn, int r, pn_transport_t *logger)
+{
+    return pni_check_result(conn, r, logger, "amqp:unauthorized-access");
 }
 
 // Cyrus wrappers
@@ -565,7 +575,7 @@ ssize_t cyrus_sasl_encode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *
   unsigned int outlen;
   int r = sasl_encode(cyrus_conn, in.start, in.size, &output, &outlen);
   if (outlen==0) return 0;
-  if ( pni_check_sasl_result(cyrus_conn, r, transport) ) {
+  if ( pni_check_io_result(cyrus_conn, r, transport) ) {
     *out = pn_bytes(outlen, output);
     return outlen;
   }
@@ -580,7 +590,7 @@ ssize_t cyrus_sasl_decode(pn_transport_t *transport, pn_bytes_t in, pn_bytes_t *
   unsigned int outlen;
   int r = sasl_decode(cyrus_conn, in.start, in.size, &output, &outlen);
   if (outlen==0) return 0;
-  if ( pni_check_sasl_result(cyrus_conn, r, transport) ) {
+  if ( pni_check_io_result(cyrus_conn, r, transport) ) {
     *out = pn_bytes(outlen, output);
     return outlen;
   }
