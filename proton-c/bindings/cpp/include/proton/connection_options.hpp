@@ -152,7 +152,7 @@ class connection_options {
     PN_CPP_EXTERN connection_options& sasl_config_path(const std::string&);
 
     /// **Unsettled API** - Set reconnect and failover options.
-    PN_CPP_EXTERN connection_options& reconnect(reconnect_options &);
+    PN_CPP_EXTERN connection_options& reconnect(const reconnect_options &);
 
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);

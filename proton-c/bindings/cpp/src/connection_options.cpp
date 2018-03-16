@@ -192,7 +192,7 @@ connection_options& connection_options::container_id(const std::string &id) { im
 connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
 connection_options& connection_options::user(const std::string &user) { impl_->user = user; return *this; }
 connection_options& connection_options::password(const std::string &password) { impl_->password = password; return *this; }
-connection_options& connection_options::reconnect(reconnect_options &r) { impl_->reconnect = r; return *this; }
+connection_options& connection_options::reconnect(const reconnect_options &r) { impl_->reconnect = r; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }
 connection_options& connection_options::sasl_enabled(bool b) { impl_->sasl_enabled = b; return *this; }
