@@ -25,6 +25,7 @@
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/reconnect_options.hpp>
 
 #include <iostream>
 
@@ -35,19 +36,23 @@ class simple_connect : public proton::messaging_handler {
     std::string url;
     std::string user;
     std::string password;
+    bool reconnect;
     bool sasl;
     std::string mechs;
     bool insecure;
     proton::connection connection;
 
   public:
-    simple_connect(const std::string &a, const std::string &u, const std::string &p, bool s, const std::string& ms, bool in) :
-        url(a), user(u), password(p), sasl(s), mechs(ms), insecure(in) {}
+    simple_connect(const std::string &a, const std::string &u, const std::string &p,
+                   bool r, bool s, const std::string& ms, bool in) :
+        url(a), user(u), password(p),
+        reconnect(r), sasl(s), mechs(ms), insecure(in) {}
 
     void on_container_start(proton::container &c) OVERRIDE {
         proton::connection_options co;
         if (!user.empty()) co.user(user);
         if (!password.empty()) co.password(password);
+        if (reconnect) co.reconnect(proton::reconnect_options());
         if (sasl) co.sasl_enabled(true);
         //
         // NB: We only set sasl options if they are not default to avoid
@@ -75,14 +80,16 @@ int main(int argc, char **argv) {
     std::string address("127.0.0.1:5672/examples");
     std::string user;
     std::string password;
-    std::string mechs;
+    bool reconnect = false;
     bool sasl = false;
+    std::string mechs;
     bool insecure = false;
     example::options opts(argc, argv);
 
     opts.add_value(address, 'a', "address", "connect and send to URL", "URL");
     opts.add_value(user, 'u', "user", "authenticate as USER", "USER");
     opts.add_value(password, 'p', "password", "authenticate with PASSWORD", "PASSWORD");
+    opts.add_flag(reconnect, 'r', "reconnect", "reconnect on connection failure");
     opts.add_flag(sasl,'s', "sasl", "force SASL authentication with no user specified (Use for Kerberos/GSSAPI)");
     opts.add_value(mechs, 'm', "mechs", "allowed SASL mechanisms", "MECHS");
     opts.add_flag(insecure, 'i', "insecure", "allow clear-text passwords");
@@ -90,7 +97,7 @@ int main(int argc, char **argv) {
     try {
         opts.parse();
 
-        simple_connect connect(address, user, password, sasl, mechs, insecure);
+        simple_connect connect(address, user, password, reconnect, sasl, mechs, insecure);
         proton::container(connect).run();
 
         return 0;
