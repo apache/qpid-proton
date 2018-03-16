@@ -150,10 +150,20 @@ end
 class ServerContainer < Qpid::Proton::Container
   include Qpid::Proton
 
+  class ListenerHandler < Listener::Handler
+    def initialize(opts) super; @ready = Queue.new; end
+    def on_open(l) @ready.push nil; end
+    def wait() @ready.pop; end
+  end
+
   def initialize(id=nil, listener_opts=nil)
     super id
-    @listener = listen_io(TCPServer.open(0), Listener::Handler.new(listener_opts))
+    lh = ListenerHandler.new(listener_opts)
+    @listener = listen_io(TCPServer.open(0), lh)
     @thread = Thread.new { run }
+    # Wait for listener to avoid nasty race conditions where a test closes the
+    # listener before it opens and therefore nothing happens.
+    lh.wait
   end
 
   attr_reader :listener
