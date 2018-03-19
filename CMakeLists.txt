@@ -174,6 +174,22 @@ set (MAN_INSTALL_DIR share/man CACHE PATH "Manpage directory")
 
 mark_as_advanced (INCLUDE_INSTALL_DIR LIB_INSTALL_DIR SYSCONF_INSTALL_DIR SHARE_INSTALL_DIR MAN_INSTALL_DIR)
 
+macro (pn_absolute_install_dir NAME VALUE PREFIX)
+  if (IS_ABSOLUTE ${VALUE})
+    set (${NAME} "${VALUE}")
+  elseif (IS_ABSOLUTE ${PREFIX})
+    set (${NAME} "${PREFIX}/${VALUE}")
+  else ()
+    set (${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
+  endif ()
+  get_filename_component (${NAME} ${${NAME}} ABSOLUTE)
+endmacro ()
+
+pn_absolute_install_dir (PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir (EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir (LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+pn_absolute_install_dir (INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
+
 ## LANGUAGE BINDINGS
 
 # Default directory for language bindings not being installed into
@@ -239,6 +255,21 @@ macro(set_search_path result)
   endif()
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
+
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # No change needed for windows already use correct separator
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+else (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  # Just change ';'->':'
+  function(to_native_path path result)
+    file (TO_NATIVE_PATH "${path}" path)
+    string (REGEX REPLACE ";" ":" path "${path}")
+    set (${result} ${path} PARENT_SCOPE)
+  endfunction()
+endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 add_custom_target(docs)
 

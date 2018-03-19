@@ -290,37 +290,6 @@ if (MSVC)
     set (qpid-proton-platform src/compiler/msvc/snprintf.c)
 endif (MSVC)
 
-macro (pn_absolute_install_dir NAME VALUE PREFIX)
-  if(IS_ABSOLUTE ${VALUE})
-    set(${NAME} "${VALUE}")
-  elseif(IS_ABSOLUTE ${PREFIX})
-    set(${NAME} "${PREFIX}/${VALUE}")
-  else()
-    set(${NAME} "${CMAKE_BINARY_DIR}/${PREFIX}/${VALUE}")
-  endif(IS_ABSOLUTE ${VALUE})
-  get_filename_component(${NAME} ${${NAME}} ABSOLUTE)
-endmacro()
-
-pn_absolute_install_dir(PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(EXEC_PREFIX "." ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(LIBDIR ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
-pn_absolute_install_dir(INCLUDEDIR ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX})
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # No change needed for windows already use correct separator
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # Just change ';'->':'
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    string (REGEX REPLACE ";" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
-
 # for full source distribution:
 set (qpid-proton-platform-all
   src/platform/platform.c
@@ -529,21 +498,6 @@ if (PROACTOR_OK)
 elseif (PROACTOR AND NOT PROACTOR STREQUAL "none")
   message(FATAL_ERROR "Cannot build the ${PROACTOR} proactor")
 endif()
-
-if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # No change needed for windows already use correct separator
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-else (CMAKE_SYSTEM_NAME STREQUAL Windows)
-  # Just change ';'->':'
-  function(to_native_path path result)
-    file (TO_NATIVE_PATH "${path}" path)
-    string (REGEX REPLACE ";" ":" path "${path}")
-    set (${result} ${path} PARENT_SCOPE)
-  endfunction()
-endif (CMAKE_SYSTEM_NAME STREQUAL Windows)
 
 source_group("API Header Files" FILES ${qpid-proton-include} ${qpid-proton-include-extra})
 
