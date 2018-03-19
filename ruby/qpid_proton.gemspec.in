@@ -20,9 +20,7 @@ EOF
 
   s.extensions   = "ext/cproton/extconf.rb"
   s.files        = Dir[
-                "LICENSE",
-                "TODO",
-                "ChangeLog",
+                "LICENSE.txt",
                 "ext/cproton/*.rb",
                 "ext/cproton/*.c",
                 "lib/**/*.rb",

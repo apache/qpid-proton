@@ -71,7 +71,7 @@ if (GEM_EXE)
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/cprotonRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
     WORKING_DIRECTORY ${bin}/gem
-    DEPENDS ${bin}/gem/qpid_proton.gemspec ${RUBY_SRC} ${src}/LICENSE ${src}/TODO ${src}/ChangeLog
+    DEPENDS ${bin}/gem/qpid_proton.gemspec ${RUBY_SRC} ${src}/LICENSE.txt
     cproton-ruby
     )
 
