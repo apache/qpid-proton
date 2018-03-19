@@ -52,26 +52,25 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT                   = @CMAKE_SOURCE_DIR@/include \
-                          @CMAKE_SOURCE_DIR@/docs/api \
-                          @CMAKE_SOURCE_DIR@/examples
+INPUT                   = @CMAKE_SOURCE_DIR@/c/include \
+                          @CMAKE_SOURCE_DIR@/c/examples
 FILE_PATTERNS           = *.h *.md *.dox
-EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/examples/*.c \
-                          @CMAKE_SOURCE_DIR@/examples/*.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/cid.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/engine.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/handlers.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/import_export.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/log.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/object.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/reactor.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/sasl-plugin.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/selectable.h \
-                          @CMAKE_SOURCE_DIR@/include/proton/type_compat.h
+EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/c/examples/*.c \
+                          @CMAKE_SOURCE_DIR@/c/examples/*.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/cid.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/engine.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/handlers.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/import_export.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/log.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/object.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/reactor.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/sasl-plugin.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/selectable.h \
+                          @CMAKE_SOURCE_DIR@/c/include/proton/type_compat.h
 FULL_PATH_NAMES         = YES
 RECURSIVE               = YES
-STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/include
-EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/examples
+STRIP_FROM_PATH         = @CMAKE_SOURCE_DIR@/c/include
+EXAMPLE_PATH            = @CMAKE_SOURCE_DIR@/c/examples
 EXAMPLE_RECURSIVE       = YES
 
 # View and list options
