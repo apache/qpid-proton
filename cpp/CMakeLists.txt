@@ -23,6 +23,8 @@ enable_language(CXX)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
 
+include(versions.cmake)
+
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
 
 # This effectively checks for cmake version 3.1 or later

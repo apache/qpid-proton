@@ -17,7 +17,7 @@
 # under the License.
 #
 
-include (src/versions.cmake)
+include (versions.cmake)
 
 if(WIN32 AND NOT CYGWIN)
   # linking against Windows native libraries, including mingw
