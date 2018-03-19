@@ -29,7 +29,7 @@ macro (pn_add_c_test test)
     set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
   add_test (NAME ${test}
-    COMMAND ${env_py} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>" ${memcheck-cmd} $<TARGET_FILE:${test}>)
+    COMMAND ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>" ${memcheck-cmd} $<TARGET_FILE:${test}>)
 endmacro(pn_add_c_test)
 
 pn_add_c_test (c-object-tests object.c)
@@ -57,5 +57,5 @@ if(HAS_PROACTOR)
   # Add the tools directory for the 'proctest' module
   set_search_path(pypath "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
 
-  add_test(NAME c-fdlimit-tests COMMAND ${env_py} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+  add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
 endif(HAS_PROACTOR)

@@ -57,8 +57,8 @@ endmacro()
 set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
 set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
 
-set(run_env ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/env.py ${EXAMPLE_ENV})
 add_test(
   NAME c-example-tests
-  COMMAND ${run_env} "PATH=${test_path}"  ${VALGRIND_ENV} -- ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
+  COMMAND ${PN_ENV_SCRIPT} ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV} --
+          ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

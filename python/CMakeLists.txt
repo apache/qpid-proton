@@ -22,7 +22,7 @@
 
 set(CMAKE_SWIG_FLAGS "-threads")
 
-include_directories (${PYTHON_INCLUDE_PATH})
+include_directories (${PN_C_INCLUDE_DIR} ${PYTHON_INCLUDE_PATH})
 
 set_source_files_properties(cproton.i PROPERTIES CPLUSPLUS NO)
 
@@ -99,10 +99,9 @@ if (EPYDOC_EXE)
    foreach (py_src_doc ${pysrc})
      list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
    endforeach(py_src_doc)
-   add_custom_target(docs-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/scripts/env.py --
-     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-     ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html
-     ${PY_DOC_FILES}
+   add_custom_target(docs-py
+     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+             ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html ${PY_DOC_FILES}
      DEPENDS ${SWIG_MODULE_${cproton}_REAL_NAME})
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
@@ -114,8 +113,8 @@ endif (EPYDOC_EXE)
 find_program(SPHINX_EXE sphinx-build)
 mark_as_advanced (SPHINX_EXE)
 if (SPHINX_EXE)
-   add_custom_target(tutorial-py COMMAND "${PYTHON_EXECUTABLE}" ${CMAKE_SOURCE_DIR}/scripts/env.py --
-     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+   add_custom_target(tutorial-py
+     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
    add_dependencies(docs tutorial-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
@@ -157,38 +156,17 @@ file(COPY ${pysrc} DESTINATION ${py_dist_dir}/proton)
 
 add_custom_target(py_src_dist ALL)
 add_dependencies(py_src_dist generated_c_files)
+
 file(MAKE_DIRECTORY ${py_dist_dir})
 
-# copy generated source files from the binary dir to the dist
-foreach(sfile ${qpid-proton-include-generated})
-  file(RELATIVE_PATH dfile ${CMAKE_BINARY_DIR}/c ${sfile})
-  add_custom_command(TARGET py_src_dist
-                     COMMAND ${CMAKE_COMMAND} -E
-                        copy ${sfile} ${py_dist_dir}/${dfile})
-endforeach()
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_INCLUDE_DIR} "${py_dist_dir}/include")
 
-# copy the proton C sources to the dist
-set(all_src_in
-  ${qpid-proton-core}
-  ${qpid-proton-extra}
-  ${qpid-proton-include}
-  ${qpid-proton-include-extra}
-  ${qpid-proton-layers-all}
-  ${qpid-proton-platform-all}
-  ${qpid-proton-private-includes}
-  c/include/proton/cproton.i
-  )
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR} "${py_dist_dir}/src")
 
-foreach(sfile ${all_src_in})
-  file(RELATIVE_PATH dfile ${CMAKE_SOURCE_DIR}/c ${CMAKE_SOURCE_DIR}/${sfile})
-  list(APPEND all_src ${dfile})
-endforeach()
-
-foreach(sfile ${all_src})
-  add_custom_command(TARGET py_src_dist
-                     COMMAND ${CMAKE_COMMAND} -E
-                         copy ${CMAKE_SOURCE_DIR}/c/${sfile} ${py_dist_dir}/${sfile})
-endforeach()
+add_custom_command(TARGET py_src_dist
+                   COMMAND ${CMAKE_COMMAND} -E remove_directory "${py_dist_dir}/src/tests/CMakeFiles")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
                ${py_dist_dir}/setup.py

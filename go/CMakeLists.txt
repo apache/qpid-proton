@@ -34,9 +34,9 @@ set(GO_TEST_FLAGS "-v" CACHE STRING "Flags for 'go test'")
 
 # Flags that differ for golang go and gcc go.
 if (go_ver MATCHES "gccgo")
-  set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${CMAKE_BINARY_DIR}")
+  set(GO_RPATH_FLAGS -gccgoflags "-Wl,-rpath=${PN_C_LIBRARY_DIR}")
 else()
-  set(GO_RPATH_FLAGS -ldflags "-r ${CMAKE_BINARY_DIR}")
+  set(GO_RPATH_FLAGS -ldflags "-r ${PN_C_LIBRARY_DIR}")
 endif()
 
 separate_arguments(GO_BUILD_FLAGS)
@@ -48,10 +48,10 @@ add_custom_target(go-src-link ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/src ${GOPATH}/src)
 
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
-set(GO_ENV ${env_py} --
+set(GO_ENV ${PN_ENV_SCRIPT} --
   "GOPATH=${GOPATH}"
-  "CGO_CFLAGS=-I${CMAKE_SOURCE_DIR}/c/include -I${CMAKE_BINARY_DIR}/c/include"
-  "CGO_LDFLAGS=-L${CMAKE_BINARY_DIR}"
+  "CGO_CFLAGS=-I${PN_C_INCLUDE_DIR}"
+  "CGO_LDFLAGS=-L${PN_C_LIBRARY_DIR}"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
   "SASLPASSWD=${SASLPASSWD_EXE}"
   CACHE INTERNAL "Run a command with Go environment variables")

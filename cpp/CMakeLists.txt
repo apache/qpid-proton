@@ -86,10 +86,12 @@ configure_file(config_presets.hpp.in config_presets.hpp @ONLY)
 set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
 
-include_directories(
-  "${CMAKE_SOURCE_DIR}/c/include"
+include_directories (
+  "${PN_C_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/c/src" # Here because of a naughty looking dependency on message-internal.h
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
-  "${CMAKE_CURRENT_BINARY_DIR}")
+  "${CMAKE_CURRENT_BINARY_DIR}"
+  )
 
 add_definitions(${CXX_STANDARD} ${CXX_WARNING_FLAGS} "-DPN_CPP_USE_DEPRECATED_API=1")
 
@@ -226,7 +228,7 @@ macro(add_cpp_test test)
   target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME cpp-${test}
-      COMMAND ${env_py}
+      COMMAND ${PN_ENV_SCRIPT}
       "PATH=$<TARGET_FILE_DIR:qpid-proton>"
       $<TARGET_FILE:${test}> ${ARGN})
   else ()

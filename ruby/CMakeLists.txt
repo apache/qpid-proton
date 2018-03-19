@@ -26,8 +26,10 @@ set(c_lib_dir "$<TARGET_FILE_DIR:qpid-proton>") # Location of qpid-proton librar
 list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${CMAKE_SOURCE_DIR}/c/include/proton/cproton.i
     ${PROTON_HEADERS}
-)
-include_directories (${RUBY_INCLUDE_PATH})
+    )
+
+include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
+
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
 swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 
@@ -65,7 +67,7 @@ if (GEM_EXE)
   add_custom_command(
     OUTPUT ${GEM_FILE}
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin}/gem
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/examples/ruby/ ${bin}/gem/examples
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${src}/examples/ ${bin}/gem/examples
     COMMAND ${CMAKE_COMMAND} -E copy ${bin}/cprotonRUBY_wrap.c ${bin}/gem/ext/cproton/cproton.c
     COMMAND ${GEM_EXE} build qpid_proton.gemspec
     WORKING_DIRECTORY ${bin}/gem
@@ -118,7 +120,7 @@ to_native_path("$ENV{PATH};${bin};${c_lib_dir}" PATH)
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
-  set(test_env ${env_py} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
+  set(test_env ${PN_ENV_SCRIPT} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
 
   macro(add_ruby_test script)
     if(${script} MATCHES "old")

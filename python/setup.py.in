@@ -138,15 +138,27 @@ class Configure(build_ext):
 
         # Collect all the Proton C files packaged in the sdist and strip out
         # anything windows and configuration-dependent
-        sources = [x for x in "@all_src@".split(';')
-                   if x.endswith(".c") and x.find('windows') == -1]
-        cfgdep = ['openssl.c',
+
+        sources = []
+        cfgdep = ['libuv.c',
+                  'openssl.c',
                   'schannel.c',
                   'ssl_stub.c',
                   'cyrus_sasl.c',
-                  'cyrus_stub.c']
-        sources = filter(lambda x: os.path.basename(x) not in cfgdep, sources)
-        sources = [os.path.join(proton_base, x) for x in sources]
+                  'cyrus_stub.c',
+                  'snprintf.c',
+                  'win_iocp.c']
+
+        for root, dirs, files in os.walk(proton_src):
+            if 'tests' in dirs:
+                dirs.remove('tests')
+
+            if 'windows' in dirs:
+                dirs.remove('windows')
+
+            for file_ in files:
+                if file_.endswith('.c') and file_ not in cfgdep:
+                    sources.append(os.path.join(root, file_))
 
         # Look for any optional libraries that proton needs, and adjust the
         # source list and compile flags as necessary.
