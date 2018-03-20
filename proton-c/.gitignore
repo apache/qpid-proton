@@ -1,8 +1,0 @@
-*.pyc
-*.o
-*.d
-src/codec/encodings.h
-src/protocol.h
-src/proton
-src/test
-src/libqpidproton.so

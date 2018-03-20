@@ -160,7 +160,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 
 # Globally initialize Cyrus SASL configuration
 if SASL.extended():
-  _cyrusSetup('sasl_conf')
+  _cyrusSetup('sasl-conf')
 
 def ensureCanTestExtendedSASL():
   if not SASL.extended():
@@ -266,7 +266,7 @@ class TestServer(object):
 
 #
 # Classes that wrap the messenger applications msgr-send and msgr-recv.
-# These applications reside in the tests/tools/apps directory
+# These applications reside in the c/tools directory
 #
 
 class MessengerApp(object):

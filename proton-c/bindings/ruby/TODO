@@ -1,8 +1,0 @@
-Proton Ruby bindings TODO List
-========================================================================
-
-You can find the list of bugs and enhacements to be fixed at:
-
-  https://issues.apache.org/jira/issues/?jql=project%20%3D%20PROTON%20AND%20status%20in%20(Open%2C%20%22In%20Progress%22%2C%20Reopened)%20AND%20component%20%3D%20ruby-binding
-
-

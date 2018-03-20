@@ -1,5 +1,0 @@
-graft docs
-graft setuputils
-graft proton-c
-global-exclude proton-c *.pyc *.pyo
-

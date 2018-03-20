@@ -1,0 +1,27 @@
+version: '{branch}.{build}'
+configuration: RelWithDebInfo
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      CMAKE_GENERATOR: Visual Studio 15
+    - CMAKE_GENERATOR: Visual Studio 12
+    - CMAKE_GENERATOR: Visual Studio 10
+install:
+- cinst -y swig
+cache:
+- C:\ProgramData\chocolatey\bin -> .appveyor.yml
+- C:\ProgramData\chocolatey\lib -> .appveyor.yml
+before_build:
+- mkdir BLD
+- cd BLD
+- cmake -G "%CMAKE_GENERATOR%" %QPID_PROTON_CMAKE_ARGS% ..
+- cd ..
+build:
+  project: BLD/Proton.sln
+  parallel: true
+  verbosity: normal
+test_script:
+- cd BLD
+- cmake --build . --target install --config %CONFIGURATION%
+- ctest -V -C %CONFIGURATION% %QPID_PROTON_CTEST_ARGS%
+- cd ..
