@@ -20,7 +20,7 @@
 #include "test_tools.h"
 #include "test_handler.h"
 #include "test_config.h"
-#include "../proactor/proactor-internal.h"
+#include "../src/proactor/proactor-internal.h"
 
 #include <proton/condition.h>
 #include <proton/connection.h>

@@ -165,9 +165,6 @@ add_custom_command(TARGET py_src_dist
 add_custom_command(TARGET py_src_dist
                    COMMAND ${CMAKE_COMMAND} -E copy_directory ${PN_C_SOURCE_DIR} "${py_dist_dir}/src")
 
-add_custom_command(TARGET py_src_dist
-                   COMMAND ${CMAKE_COMMAND} -E remove_directory "${py_dist_dir}/src/tests/CMakeFiles")
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
                ${py_dist_dir}/setup.py
 )
