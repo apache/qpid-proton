@@ -115,6 +115,12 @@ class server_connection_handler : public proton::messaging_handler {
     void on_connection_close(proton::connection & c) PN_CPP_OVERRIDE {
         done_ = true;
     }
+
+    void on_transport_error(proton::transport & ) PN_CPP_OVERRIDE {
+        // If we get an error then (try to) stop the listener
+        // - this will stop the listener if we didn't already accept a connection
+        listener_.stop();
+    }
 };
 
 class tester : public proton::messaging_handler, public waiter {
@@ -201,10 +207,54 @@ int test_stop_reconnect() {
     return 0;
 }
 
+class authfail_reconnect_tester : public proton::messaging_handler, public waiter {
+  public:
+    authfail_reconnect_tester() :
+        waiter(1), container_(*this, "authfail_reconnect_tester"), errored_(false)
+    {}
+
+    void deferred_stop() {
+        container_.stop();
+    }
+
+    void on_container_start(proton::container& c) PN_CPP_OVERRIDE {
+        // This server won't fail in this test
+        s1.reset(new server_connection_handler(c, 100, *this));
+        c.schedule(proton::duration::SECOND, proton::make_work(&authfail_reconnect_tester::deferred_stop, this));
+    }
+
+    void on_transport_error(proton::transport& t) PN_CPP_OVERRIDE {
+        errored_ = true;
+    }
+
+    void ready() PN_CPP_OVERRIDE {
+        proton::connection_options co;
+        co.sasl_allowed_mechs("PLAIN");
+        co.reconnect(proton::reconnect_options());
+        container_.connect(s1->url(), co);
+    }
+
+    void run() {
+        container_.run();
+        ASSERT(errored_);
+    }
+
+  private:
+    proton::container container_;
+    proton::internal::pn_unique_ptr<server_connection_handler> s1;
+    bool errored_;
+};
+
+int test_auth_fail_reconnect() {
+    authfail_reconnect_tester().run();
+    return 0;
+}
+
 int main(int argc, char** argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_failover_simple());
     RUN_ARGV_TEST(failed, test_stop_reconnect());
+    RUN_ARGV_TEST(failed, test_auth_fail_reconnect());
     return failed;
 }
 
