@@ -44,6 +44,12 @@ module Qpid::Proton::Types
   end
 
   # @private
+  def self.symbol_keys!(h)
+    h.keys.each { |k| h[k.to_sym] = h.delete(k) unless k.is_a? Symbol } if h
+    h
+  end
+
+  # @private
   def self.symbol_array(a)
     a && UniformArray.new(SYMBOL, a.collect { |v| v.to_sym })
   end

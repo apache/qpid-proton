@@ -32,20 +32,19 @@ class ContainerTest < MiniTest::Test
     send_handler = Class.new(ExceptionMessagingHandler) do
       attr_reader :accepted, :sent
 
-      def initialize() @ready = Queue.new; end
-
       def on_sendable(sender)
-        sender.send Message.new("foo") unless @sent
+        unless @sent
+          m = Message.new("hello")
+          m[:foo] = :bar
+          sender.send m
+        end
         @sent = true
       end
 
       def on_tracker_accept(tracker)
         @accepted = true
         tracker.connection.close
-        @ready << nil
       end
-
-      def wait() @ready.pop(); end
     end.new
 
     receive_handler = Class.new(ExceptionMessagingHandler) do
@@ -69,7 +68,8 @@ class ContainerTest < MiniTest::Test
 
     assert send_handler.accepted
     assert_equal "testlink", receive_handler.link.name
-    assert_equal "foo", receive_handler.message.body
+    assert_equal "hello", receive_handler.message.body
+    assert_equal :bar, receive_handler.message[:foo]
     assert_equal "test_simple", receive_handler.link.connection.container_id
   end
 
