@@ -96,10 +96,11 @@ class TestHandler < Qpid::Proton::MessagingHandler
   end
 end
 
-# ListenHandler that closes the Listener after first accept
+# ListenHandler that closes the Listener after first (or n) accepts
 class ListenOnceHandler < Qpid::Proton::Listener::Handler
+  def initialize(opts, n=1) super(opts); @n=n; end
   def on_error(l, e) raise e; end
-  def on_accept(l) l.close; super; end
+  def on_accept(l) l.close if (@n -= 1).zero?; super; end
 end
 
 # Add port/url to Listener, assuming a TCP socket
@@ -150,9 +151,9 @@ end
 class ServerContainer < Qpid::Proton::Container
   include Qpid::Proton
 
-  def initialize(id=nil, listener_opts=nil)
+  def initialize(id=nil, listener_opts=nil, n=0)
     super id
-    @listener = listen_io(TCPServer.open(0), Listener::Handler.new(listener_opts))
+    @listener = listen_io(TCPServer.open(0), ListenOnceHandler.new(listener_opts, n))
     @thread = Thread.new { run }
   end
 

@@ -25,7 +25,7 @@ module Qpid::Proton
     # @private
     PROTON_METHOD_PREFIX = "pn_disposition"
     # @private
-    include Util::Wrapper
+    extend Util::SWIGClassHelper
 
 
     ACCEPTED = Cproton::PN_ACCEPTED

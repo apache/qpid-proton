@@ -40,7 +40,7 @@ module Qpid::Proton
 
     private
 
-    include Util::Wrapper
+    extend Util::SWIGClassHelper
     PROTON_METHOD_PREFIX = "pn_sasl"
 
     public

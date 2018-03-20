@@ -68,7 +68,7 @@ module Qpid::Proton
     # @private
     PROTON_METHOD_PREFIX = "pn_terminus"
     # @private
-    include Util::Wrapper
+    extend Util::SWIGClassHelper
 
     # @!attribute type
     #

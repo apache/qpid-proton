@@ -115,6 +115,10 @@ module Qpid::Proton
     end
 
     # @private
+    #
+    # Instance methods to include in classes that wrap pn_object types
+    # that support pn_inspect etc. Automatically extends SWIGClassHelper
+    #
     module Wrapper
 
       def self.included(base)
