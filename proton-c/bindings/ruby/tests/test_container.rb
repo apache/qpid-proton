@@ -65,8 +65,7 @@ class ContainerTest < MiniTest::Test
 
     c = ServerContainer.new(__method__, {:handler => receive_handler})
     c.connect(c.url, {:handler => send_handler}).open_sender({:name => "testlink"})
-    send_handler.wait
-    c.wait
+    c.run
 
     assert send_handler.accepted
     assert_equal "testlink", receive_handler.link.name
@@ -160,9 +159,8 @@ class ContainerTest < MiniTest::Test
   def test_connection_options
     # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
     server_handler = Class.new(ExceptionMessagingHandler) do
-      def initialize() @connection = Queue.new; end
       def on_connection_open(c)
-        @connection << c
+        @connection = c
         c.open({
           :virtual_host => "server.to.client",
           :properties => { :server => :client },
@@ -191,10 +189,9 @@ class ContainerTest < MiniTest::Test
         :max_frame_size => 4096,
         :container_id => "bowl"
       })
-    server = server_handler.connection.pop
-    cont.wait
+    cont.run
 
-    c = server
+    c = server_handler.connection
     assert_equal "client.to.server", c.virtual_host
     assert_equal({ :foo => :bar, :str => "str" }, c.properties)
     assert_equal([:c1], c.offered_capabilities)
@@ -215,6 +212,39 @@ class ContainerTest < MiniTest::Test
     assert_equal 100, c.max_sessions
   end
 
+  def test_link_options
+    server_handler = Class.new(ExceptionMessagingHandler) do
+      def initialize() @links = []; end
+      attr_reader :links
+      def on_sender_open(l) @links << l; end
+      def on_receiver_open(l) @links << l; end
+    end.new
+
+    client_handler = Class.new(ExceptionMessagingHandler) do
+      def on_connection_open(c)
+        @links = [];
+        @links << c.open_sender("s1")
+        @links << c.open_sender({:name => "s2-n", :target => "s2-t", :source => "s2-s"})
+        @links << c.open_receiver("r1")
+        @links << c.open_receiver({:name => "r2-n", :target => "r2-t", :source => "r2-s"})
+        c.close
+      end
+      attr_reader :links
+    end.new
+
+    cont = ServerContainer.new(__method__, {:handler => server_handler }, 1)
+    cont.connect(cont.url, :handler => client_handler)
+    cont.run
+
+    expect = ["test_link_options/1", "s2-n", "test_link_options/2", "r2-n"]
+    assert_equal expect, server_handler.links.map(&:name)
+    assert_equal expect, client_handler.links.map(&:name)
+
+    expect = [[nil,"s1"], ["s2-s","s2-t"], ["r1",nil], ["r2-s","r2-t"]]
+    assert_equal expect, server_handler.links.map { |l| [l.remote_source.address, l.remote_target.address] }
+    assert_equal expect, client_handler.links.map { |l| [l.source.address, l.target.address] }
+  end
+
   # Test for time out on connecting to an unresponsive server
   def test_idle_timeout_server_no_open
     s = TCPServer.new(0)
@@ -228,7 +258,7 @@ class ContainerTest < MiniTest::Test
 
   # Test for time out on unresponsive client
   def test_idle_timeout_client
-    server = ServerContainer.new("#{__method__}.server", {:idle_timeout => 0.1})
+    server = ServerContainerThread.new("#{__method__}.server", {:idle_timeout => 0.1})
     client_handler = Class.new(ExceptionMessagingHandler) do
       def initialize() @ready, @block = Queue.new, Queue.new; end
       attr_reader :ready, :block
@@ -237,11 +267,12 @@ class ContainerTest < MiniTest::Test
         @block.pop             # Block the client so the server will time it out
       end
     end.new
+
     client = Container.new(nil, "#{__method__}.client")
     client.connect(server.url, {:handler => client_handler})
     client_thread = Thread.new { client.run }
     client_handler.ready.pop    # Wait till the client has connected
-    server.wait                 # Exits when the connection closes from idle-timeout
+    server.join                 # Exits when the connection closes from idle-timeout
     client_handler.block.push nil   # Unblock the client
     ex = assert_raises(Qpid::Proton::Condition) { client_thread.join }
     assert_match(/resource-limit-exceeded/, ex.to_s)
@@ -250,7 +281,7 @@ class ContainerTest < MiniTest::Test
   # Make sure we stop and clean up if an aborted connection causes a handler to raise.
   # https://issues.apache.org/jira/browse/PROTON-1791
   def test_handler_raise
-    cont = ServerContainer.new(__method__)
+    cont = ServerContainer.new(__method__, {}, 0) # Don't auto-close the listener
     client_handler = Class.new(MessagingHandler) do
       # TestException is < Exception so not handled by default rescue clause
       def on_connection_open(c) raise TestException.new("Bad Dog"); end

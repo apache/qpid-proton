@@ -114,16 +114,14 @@ module Qpid::Proton
     # @param opts [Hash] receiver options, see {Receiver#open}
     # @return [Receiver]
     def open_receiver(opts=nil) 
-      name = opts[:name] rescue connection.link_name
-      Receiver.new(Cproton.pn_receiver(@impl, name)).open(opts)
+      Receiver.new(Cproton.pn_receiver(@impl, link_name(opts))).open(opts)
     end
 
     # Create and open a {Sender} link, see {#open}
     # @param opts [Hash] sender options, see {Sender#open}
     # @return [Sender]
     def open_sender(opts=nil)
-      name = opts[:name] rescue connection.link_name
-      Sender.new(Cproton.pn_sender(@impl, name)).open(opts)
+      Sender.new(Cproton.pn_sender(@impl, link_name(opts))).open(opts)
     end
 
     # Get the links on this Session.
@@ -149,6 +147,10 @@ module Qpid::Proton
     def each_receiver() each_link.select { |l| l.receiver? }; end
 
     private
+
+    def link_name(opts)
+      (opts.respond_to?(:to_hash) && opts[:name]) || connection.link_name
+    end
 
     def _local_condition
       Cproton.pn_session_condition(@impl)

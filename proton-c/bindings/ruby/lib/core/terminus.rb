@@ -243,6 +243,12 @@ module Qpid::Proton
       end
     end
 
+    def inspect()
+      "\#<#{self.class}: address=#{address.inspect} dynamic?=#{dynamic?.inspect}>"
+    end
+
+    def to_s() inspect; end
+
     can_raise_error([:type=, :address=, :durability=, :expiry_policy=,
                      :timeout=, :dynamic=, :distribution_mode=, :copy],
                     :error_class => Qpid::Proton::LinkError)

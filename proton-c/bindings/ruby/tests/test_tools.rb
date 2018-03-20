@@ -147,23 +147,27 @@ DriverPair = Struct.new(:client, :server) do
   end
 end
 
-# Container that listens on a random port and runs itself
+# Container that listens on a random port
 class ServerContainer < Qpid::Proton::Container
   include Qpid::Proton
 
-  def initialize(id=nil, listener_opts=nil, n=0)
+  def initialize(id=nil, listener_opts=nil, n=1)
     super id
     @listener = listen_io(TCPServer.open(0), ListenOnceHandler.new(listener_opts, n))
-    @thread = Thread.new { run }
   end
 
   attr_reader :listener
 
   def port() @listener.port; end
   def url() "amqp://:#{port}"; end
-
-  # NOTE: the test must have already waited for some events to happen before
-  # calling this, otherwise the listener can close before it opens and nothing happens
-  def wait() @listener.close; @thread.join; end
 end
 
+class ServerContainerThread < ServerContainer
+  def initialize(id=nil, listener_opts=nil, n=1)
+    super
+    @thread = Thread.new { run }
+  end
+
+  attr_reader :thread
+  def join() @thread.join; end
+end
