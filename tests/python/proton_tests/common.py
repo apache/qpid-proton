@@ -509,19 +509,6 @@ class MessengerReceiverValgrind(MessengerReceiverC):
     def __init__(self, suppressions=None):
         setup_valgrind(self)
 
-class MessengerSenderPython(MessengerSender):
-    def __init__(self):
-        MessengerSender.__init__(self)
-        self._command = ["msgr-send.py"]
-
-
-class MessengerReceiverPython(MessengerReceiver):
-    def __init__(self):
-        MessengerReceiver.__init__(self)
-        self._command = ["msgr-recv.py"]
-
-
-
 class ReactorSenderC(MessengerSender):
     def __init__(self):
         MessengerSender.__init__(self)

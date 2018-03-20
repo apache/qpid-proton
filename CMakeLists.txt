@@ -149,7 +149,7 @@ set (BINDINGS_DIR ${LIB_INSTALL_DIR}/proton/bindings)
 
 set (SYSINSTALL_BINDINGS OFF CACHE BOOL "If SYSINSTALL_BINDINGS is OFF then proton bindings will be installed underneath ${BINDINGS_DIR} and each user will need to modify their interpreter configuration to load the appropriate binding. If SYSINSTALL_BINDINGS is ON, then each language interpreter will be queried for the appropriate directory and proton bindings will be installed and available system wide with no additional per user configuration.")
 
-set (BINDING_LANGS PERL PHP PYTHON RUBY)
+set (BINDING_LANGS PYTHON RUBY)
 
 foreach (LANG ${BINDING_LANGS})
   set (SYSINSTALL_${LANG} OFF CACHE BOOL "Install ${LANG} bindings into interpreter specified location.")

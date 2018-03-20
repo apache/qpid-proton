@@ -46,8 +46,6 @@ language.
     $ yum install swig                                       # Required for all bindings
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-minitest                # Ruby
-    $ yum install php-devel                                  # PHP
-    $ yum install perl-devel                                 # Perl
 
     # Dependencies needed to generate documentation
     $ yum install epydoc                                     # Python
@@ -68,7 +66,7 @@ language binding you can omit the dev package for that language.
     $ apt-get install libsasl2-2 libsasl2-dev libsasl2-modules
 
     # dependencies needed for bindings
-    $ apt-get install swig python-dev ruby-dev libperl-dev
+    $ apt-get install swig python-dev ruby-dev
 
     # dependencies needed for python docs
     $ apt-get install python-epydoc
@@ -169,7 +167,7 @@ libraries in order to place them in a default search path.
 
 When `SYSINSTALL_BINDINGS` is enabled (`ON`), the
 `CMAKE_INSTALL_PREFIX` does not affect the location for where the
-language bindings (Python, Perl, PHP, Ruby) are installed. For those
+language bindings (Python and Ruby) are installed. For those
 elements, the location is determined by the language interpreter
 itself; that is, each interpreter is queried for the proper location
 for extensions.
@@ -182,23 +180,21 @@ dynamic language bindings into a central, default location:
 In order to use these bindings, you'll need to configure your
 interpreter to load the bindings from the appropriate directory.
 
-  - Perl   - Add ${BINDINGS}/perl to PERL5LIB
-  - PHP    - Set the PHPRC envvar to point to ${BINDINGS}/php/proton.ini
   - Python - Add ${BINDINGS}/python to PYTHONPATH
   - Ruby   - Add ${BINDINGS}/ruby to RUBYLIB
 
 You can configure the build to install a specific binding to the
 location specified by the system interpreter with the
-SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of PERL,
-PHP, PYTHON, or RUBY.
+SYSINSTALL_[LANGUAGE] options, where [LANGUAGE] is one of PYTHON
+or RUBY.
 
-    $ cmake .. -DSYSINSTALL_PHP=ON
+    $ cmake .. -DSYSINSTALL_PYTHON=ON
 
 Disabling Language Bindings
 ---------------------------
 
 To disable any given language bindings, you can use the
-BUILD_[LANGUAGE] option where [LANGUAGE] is one of PERL, PHP,
-PYTHON or RUBY, for example:
+BUILD_[LANGUAGE] option where [LANGUAGE] is one of PYTHON
+or RUBY, for example:
 
-    $ cmake .. -DBUILD_PHP=OFF
+    $ cmake .. -DBUILD_PYTHON=OFF

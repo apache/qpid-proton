@@ -14,7 +14,7 @@ cache:
 before_build:
 - mkdir BLD
 - cd BLD
-- cmake -G "%CMAKE_GENERATOR%" -DBUILD_PERL=no  %QPID_PROTON_CMAKE_ARGS% ..
+- cmake -G "%CMAKE_GENERATOR%" %QPID_PROTON_CMAKE_ARGS% ..
 - cd ..
 build:
   project: BLD/Proton.sln

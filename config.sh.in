@@ -34,29 +34,15 @@ PROTON_BUILD=@CMAKE_BINARY_DIR@
 PROTON_BINDINGS=$PROTON_BUILD/proton-c/bindings
 
 PYTHON_BINDINGS=$PROTON_BINDINGS/python
-PHP_BINDINGS=$PROTON_BINDINGS/php
-PERL_BINDINGS=$PROTON_BINDINGS/perl
 
 # Python
 COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/proton-c/bindings/python:$PROTON_HOME/tools/py
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDINGS
 
-# PHP
-if [ -d $PHP_BINDINGS ]; then
-    cat <<EOF > $PHP_BINDINGS/php.ini
-include_path="$PHP_BINDINGS:$PROTON_HOME/proton-c/bindings/php"
-extension="$PHP_BINDINGS/cproton.so"
-EOF
-    export PHPRC=$PHP_BINDINGS/php.ini
-fi
-
 # Ruby
 RUBY_BINDINGS=$PROTON_BINDINGS/ruby
 RUBY_SRC=$PROTON_HOME/proton-c/bindings/ruby
 export RUBYLIB=$RUBY_BINDINGS:$RUBY_SRC/lib:$RUBY_SRC/tests:$RUBY_SRC/spec
-
-# Perl
-export PERL5LIB=$PERL5LIB:$PERL_BINDINGS:$PROTON_HOME/proton-c/bindings/perl/lib
 
 # Go
 export GOPATH="$PROTON_BUILD/proton-c/bindings/go"

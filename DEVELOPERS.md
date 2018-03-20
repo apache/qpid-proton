@@ -15,7 +15,7 @@ the file config.sh from the CMake build directory.
     $ source config.sh
 
 This file sets the necessary environment variables for all supported
-dynamic languages (Python, Perl, Ruby, PHP) and for running the tests.
+dynamic languages (Python and Ruby) and for running the tests.
 
 Testing
 -------

@@ -37,7 +37,7 @@ matrix:
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
-    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_RUBY=OFF'
     before_install:
     - brew update
     - brew upgrade cmake python openssl
@@ -48,7 +48,7 @@ matrix:
     env:
     - PKG_CONFIG_PATH='/usr/local/opt/openssl/lib/pkgconfig'
     - PATH="/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH"
-    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_PERL=OFF -DBUILD_RUBY=OFF'
+    - QPID_PROTON_CMAKE_ARGS='-DPROACTOR=libuv -DSASL_IMPL=none -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13 -DBUILD_RUBY=OFF'
     before_install:
     - brew update
     - brew upgrade cmake python openssl
@@ -69,7 +69,6 @@ addons:
     - ruby
     - ruby-dev
     - python3-dev
-    - php5
     - golang
     - lcov
 

@@ -40,21 +40,9 @@ set PYTHON_BINDINGS=%PROTON_BINDINGS%\python
 set COMMON_PYPATH=%PROTON_HOME%\tests\python;%PROTON_HOME%\proton-c\bindings\python
 set PYTHONPATH=%COMMON_PYPATH%;%PYTHON_BINDINGS%
 
-REM PHP
-set PHP_BINDINGS=%PROTON_BINDINGS%\php
-if EXIST %PHP_BINDINGS% (
-    echo include_path="%PHP_BINDINGS%;%PROTON_HOME%\proton-c\bindings\php" >  %PHP_BINDINGS%\php.ini
-    echo extension="%PHP_BINDINGS%\cproton.so"                             >> %PHP_BINDINGS%\php.ini
-    set PHPRC=%PHP_BINDINGS%\php.ini
-)
-
 REM Ruby
 set RUBY_BINDINGS=%PROTON_BINDINGS%\ruby
 set RUBYLIB=%RUBY_BINDINGS%;%PROTON_HOME%\proton-c\bindings\ruby\lib;%PROTON_HOME%\tests\ruby
-
-REM Perl
-set PERL_BINDINGS=%PROTON_BINDINGS%\perl
-set PERL5LIB=%PERL5LIB%;%PERL_BINDINGS%;%PROTON_HOME%\proton-c\bindings\perl\lib
 
 REM test applications
 set PATH=%PATH%;%PROTON_BUILD%\tests\tools\apps\c
