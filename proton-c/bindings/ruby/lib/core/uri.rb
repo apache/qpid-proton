@@ -43,19 +43,16 @@ module Qpid::Proton
 
   public
 
-  # Convert +s+ to a {URI::AMQP} or {URI::AMQPS} object
+  # Convert +s+ to an amqp: or amqps: URI
   #
-  # Shortcut strings like "host:port" are allowed: an "amqp://" prefix is added if +s+ does
-  # not already look like an 'amqp:', 'amqps:' URI.
-  #
-  # @note this does not give the same result as a standard URI parser in all cases.
-  #  For standard conversion to a URI use: {#URI}(s)
+  # This does not give the same result as the standard URI parser in all cases.
+  # Short-cut strings like "host:port" are allowed, an "amqp://" prefix is added if +s+ does
+  # not already look like an 'amqp:' or 'amqps:' URI.
   #
   # @param s [String,URI] String to convert to a URI, or a URI object.
-  #  A URI object with no scheme will be converted to {URI::AMQP}
-  # @return [URI::AMQP] A valid {URI::AMQP} or {URI::AMQPS} object
-  # @raise [BadURIError] s is a URI object with a non-AMQP scheme
-  # @raise [InvalidURIError] s cannot be parsed as a URI or shortcut
+  # @return [URI] A valid AMQP or AMQPS URI
+  # @raise [URI::BadURIError] s is a URI object with a non-AMQP scheme
+  # @raise [URI::InvalidURIError] s cannot be parsed as a URI or shortcut
   # @raise [::ArgumentError] s is not a string or URI
   #
   def self.uri(s)

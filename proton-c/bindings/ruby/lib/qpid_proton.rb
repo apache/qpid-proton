@@ -26,6 +26,7 @@ rescue LoadError
   require "kconv"               # Ruby < 1.9
 end
 
+# @api qpid
 # Qpid is the top level module for the Qpid project http://qpid.apache.org
 # Definitions for this library are in module {Qpid::Proton}
 module Qpid
