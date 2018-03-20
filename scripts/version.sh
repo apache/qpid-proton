@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,18 +19,24 @@
 # under the License.
 #
 
-#
-# Check qpid-proton.dll after linking for dangerous calls to
-# Windows functions that suggest but deviate from C99 behavior:
-#   _snprintf, vsnprintf, _vsnprintf
-# See platform.h for safe wrapper calls.
-#
+# version.sh - Sets the version of the proton source tree to the given
+#              value.
 
-set(obj_dir ${CMAKE_CURRENT_BINARY_DIR}/qpid-proton.dir/${CMAKE_CFG_INTDIR})
+ME=$(basename ${0})
+usage()
+{
+    echo "Usage: ${ME} [SRC] VERSION"
+    exit 1
+}
 
-add_custom_command(
-    TARGET qpid-proton
-	PRE_LINK
-    COMMAND ${PYTHON_EXECUTABLE}
-	    ${CMAKE_MODULE_PATH}/WindowsC99SymbolCheck.py $<TARGET_FILE_DIR:qpid-proton>
-    COMMENT "Checking for dangerous use of C99-violating functions")
+if [ $# == 2 ]; then
+    SRC=$1
+    VERSION=$2
+elif [ $# == 1 ]; then
+    SRC=$(dirname $(dirname $(readlink -f $0)))
+    VERSION=$1
+else
+    usage
+fi
+
+echo ${VERSION} > ${SRC}/VERSION.txt

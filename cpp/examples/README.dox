@@ -1,0 +1,139 @@
+// C++ examples list (doxygen format)
+//
+// For a tutorial-style description of the examples see tutorial.dox.
+// To build the full HTML tutorial and documentation, in your build directory do:
+//
+//     make docs-cpp
+//
+// then open cpp/docs/html/tutorial.html in your browser.
+
+// DEVELOPER NOTE: If you add or modify examples, please add/update a short
+// description below and (if appropriate) extend/update tutorial.dox.
+
+/** @example helloworld.cpp
+
+Connects to a broker on 127.0.0.1:5672, establishes a subscription
+from the 'examples' node, and creates a sending link to the same
+node. Sends one message and receives it back.
+
+*/
+
+/** @example simple_send.cpp
+
+An example of sending a fixed number of messages and tracking their
+(asynchronous) acknowledgement. Messages are sent through the 'examples' node on
+an intermediary accessible on 127.0.0.1:5672.
+
+*/
+
+/** @example simple_recv.cpp
+
+Subscribes to the 'examples' node on an intermediary accessible
+on 127.0.0.1:5672. Simply prints out the body of received messages.
+
+*/
+
+/** @example message_properties.cpp
+
+Shows how to set and examine message properties.
+
+*/
+
+/** @example direct_send.cpp
+
+Accepts an incoming connection and then sends like `simple_send`.  You can
+connect directly to `direct_send` *without* a broker using @ref simple_recv.cpp.
+Make sure to stop the broker first or use a different port for `direct_send`.
+
+*/
+
+/** @example direct_recv.cpp
+
+Accepts an incoming connection and then receives like `simple_recv`.  You can
+connect directly to `direct_recv` *without* a broker using @ref simple_send.cpp.
+Make sure to stop the broker first or use a different port for `direct_recv`.
+
+*/
+
+/// @cond INTERNAL
+/** @example encode_decode.cpp
+
+Shows how C++ data types can be converted to and from AMQP types.
+
+*/
+/// @endcond
+
+/** @example client.cpp
+
+The client part of a request-response example. Sends requests and
+prints out responses. Requires an intermediary that supports the AMQP
+1.0 dynamic nodes on which the responses are received. The requests
+are sent through the 'examples' node.
+
+*/
+
+/** @example server.cpp
+
+The server part of a request-response example, that receives requests
+via the examples node, converts the body to uppercase and sends the
+result back to the indicated reply address.
+
+*/
+
+/** @example server_direct.cpp
+
+A variant of the server part of a request-response example that
+accepts incoming connections and does not need an intermediary. Much
+like the original server, it receives incoming requests, converts the
+body to uppercase and sends the result back to the indicated reply
+address. Can be used in conjunction with any of the client
+alternatives.
+
+*/
+
+/** @example broker.cpp
+
+A broker using the `proton::container`. You can use this to run other examples
+that require an intermediary, or you can use any AMQP 1.0 broker. This broker
+creates queues automatically when a client tries to send or subscribe.
+
+*/
+
+/** @example scheduled_send.cpp
+
+Shows how to use proton::container::schedule to schedule a timed callback.
+This version uses std::function and so requires C++11 or better. For a C++03 compatible
+approach see @ref scheduled_send_03.cpp.
+
+*/
+
+/** @example scheduled_send_03.cpp
+
+Shows how to use proton::container::schedule to schedule a timed callback in a
+C++03 compatible way. See @ref scheduled_send.cpp for a more convenient approach
+using std::function if you have C++11.
+
+*/
+
+/** @example service_bus.cpp
+
+A working example for accessing Service Bus session-enabled queues.
+Also provides some general notes on Service Bus usage.
+
+*/
+
+/** @example multithreaded_client.cpp
+
+A multithreaded sender and receiver.
+
+__Requires C++11__
+
+*/
+
+/** @example multithreaded_client_flow_control.cpp
+
+A multithreaded sender and receiver enhanced for flow control.
+
+__Requires C++11__
+
+*/

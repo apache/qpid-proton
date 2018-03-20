@@ -1,44 +1,58 @@
+# General
+
+/build/
+/bld/
+*.class
+*.o
+*.d
+*.pyc
+*.pyo
+
+# Artifacts in /c/src/
+
+/c/src/codec/encodings.h
+/c/src/protocol.h
+/c/src/proton
+/c/src/test
+/c/src/libqpidproton.so
+
 # Emacs, vim etc
+
 *~
 *.swp
 
-# Start of IntelliJ IDE files
-.idea
-.idea/*
-*.iml
-*.ipr
-*.iws
-# End of IntelliJ IDE files
+# Eclipse IDE files
 
-/build/
-*.class
-*.pyc
-*.pyo
-target
-
-# MacOS File
-.DS_Store
-
-# Start of Eclipse IDE files
 .project
 .classpath
 .settings
 .cproject
 eclipse-classes
 .pydevproject
-# End of Eclipse IDE files
 
-# The usual location for proton-c build files
-proton-c/build
+# IntelliJ IDE files
 
-# Testresults from the jenkins build script
-testresults
+.idea
+.idea/*
+*.iml
+*.ipr
+*.iws
+
+# MacOS files
+
+.DS_Store
 
 # Python TOX test build output
-/proton-c/bindings/python/MANIFEST
-/proton-c/bindings/python/build
+
+/python/MANIFEST
+/python/build
+
+# Test results from the jenkins build script
+
+testresults
 
 # Visual Studio config
+
 /.vs
 /.vscode
 /CMakeSettings.json

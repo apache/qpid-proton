@@ -1,0 +1,5 @@
+graft docs
+graft setuputils
+graft src
+graft include
+global-exclude *.pyc *.pyo

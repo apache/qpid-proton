@@ -1,0 +1,142 @@
+= Qpid Proton AMQP Library
+
+This is a library for sending and receiving AMQP messages. It can be used to
+build clients and servers.
+
+== Installing
+
+You can install the latest published Gem with
+
+    gem install qpid_proton
+
+*NOTE:* before installing the Gem, you must install the proton-C library.
+
+The proton-C library can be installed by the package manager on many platforms,
+    e.g.  yum install qpid-proton-c # Fedora < 25, RHEL < 7 dnf install
+    qpid-proton-c # Fedora >= 25, RHEL >= 7
+
+You can also download a source release or the latest development code from
+http://qpid.apache.org/proton. To build from source:
+
+    cmake -DBUILD_BINDINGS=ruby && make
+
+This produces a Gem file at:
+
+    ${CMAKE_BUILD_DIR}/ruby/qpid_proton-${PN_VERSION}.gem
+
+You can install the gem with +gem install+
+
+== Overview
+
+{Qpid::Proton::Message} represents a message that can be sent or received.  A
+message body can be a string or byte sequence encoded any way you
+choose. However, AMQP also provides standard, interoperable encodings for basic
+data types like {Hash} and {Array}. The equivalent AMQP encodings can be
+understood as maps or sequences in any programming langauge with an AMQP
+library.
+
+{Qpid::Proton::Link} allows messages to be transferred to or from a remote AMQP
+process. The {Qpid::Proton::Sender} subclass sends messages, the
+{Qpid::Proton::Receiver} subclass receives them. Links have a source and target
+address, as explained below.
+
+Links are grouped in a {Qpid::Proton::Session}. Messages in the same session are
+sent sequentially, while those on different sessions can be interleaved. A large
+message being sent on one session does not block messages being sent on another
+session.
+
+Sessions belong to a {Qpid::Proton::Connection}. If you don't need multiple
+sessions, a connection will create links directly using a default session.
+
+A {Qpid::Proton::Transfer} represents the transfer of a message, the
+{Qpid::Proton::Delivery} subclass allows a receiver to accept or reject an
+incoming message. The {Qpid::Proton::Tracker} subclass allows a sender to track
+the status of a sent message and find out if it was accepted or rejected.
+
+A transfer is _settled_ when both ends are done with it. Different settlement
+methods give different levels of reliability: at-most-once, at-least-once, and
+exactly-once. See below.
+
+== Anatomy of a Proton application
+
+{Qpid::Proton::Container} is the top-level object in a Proton application. A
+client uses {Qpid::Proton::Container#connect} to establish connections. A server
+uses {Qpid::Proton::Container#listen} to accept connections.
+
+Proton is an event-driven library. You implement one or more _handlers_ which
+subclass {Qpid::Proton::MessagingHandler MessagingHandler} and override
+functions to handle AMQP events, such as {Qpid::Proton::MessagingHandler#on_message
+#on_message}. Each connection is associated with a handler for its
+events. {Qpid::Proton::Container#run} polls all connections and listeners and
+calls the event handling functions on your handlers.
+
+A multi-threaded application can call {Qpid::Proton::Container#run} in more than
+one thread, the container will use all the {Qpid::Proton::Container#run #run}
+threads as a thread pool to dispatch events.
+
+== Sources and targets
+
+Every link has two addresses, _source_ and _target_. The most common pattern for
+using these addresses is as follows:
+
+When a client creates a {Qpid::Proton::Receiver Receiver} link, it sets the
+_source_ address. This means "I want to receive messages from this source". This
+is often referred to as "subscribing" to the source. When a client creates a
+{Qpid::Proton::Sender Sender} link, it sets the _target_ address. This means "I
+want to send to this target".
+
+In the case of a broker, the source or target usually refers to a queue or
+topic. In general they can refer to any AMQP-capable node.
+
+In the request-response pattern, a request message carries a reply-to address
+for the response message. This can be any AMQP address, but it is often useful
+to create a temporary address for the response message. The client creates a
+receiver with no source address and the dynamic flag set. The server generates a
+unique source address for the receiver, which is discarded when the link
+closes. The client uses this source address as the reply-to when it sends the
+request, so the response is delivered to the client's receiver.
+
+The server_direct.cpp example shows how to implement a request-response server.
+
+== Settling a Message Transfer
+
+A message transfer is _settled_ at one end of a link when that end of the link
+has finished with the message and forgotten it.
+
+_Pre-settled_ messages are settled by the sender before sending. This gives _at
+most once_ reliability(also known as _best effort_, _unreliable_ or _fire and
+forget_) since the sender never knows for sure if the message arrived. If the
+connection is lost before the message is received by the receiver, the message
+will not be delivered.
+
+If the sender does not pre-settle a message, then the receiver settles it once
+it has been processed. The sender is informed of the settlement via the
+{Qpid::Proton::Tracker Tracker}. If the connection is lost before the sender has
+received notice of settlement, the delivery is considered in-doubt and the
+sender can re-send it. This ensures it eventually gets delivered (provided the
+connection and link can be reestablished) but it is possible for multiple copies
+of the same message are delivered, so the receiver must be aware of that. This
+is known as _at_least_once_ reliability.
+
+== Multi-threaded applications
+
+{Qpid::Proton::Container#run} can be called by multiple threads concurrently,
+giving the container a thread-pool to execute handler methods in parallel.
+
+Instances of {Qpid::Proton::Connection} and objects associated with it
+({Qpid::Proton::Session}, {Qpid::Proton::Sender}, {Qpid::Proton::Receiver},
+{Qpid::Proton::Delivery}, {Qpid::Proton::Tracker}) are not thread-safe and must
+be used correctly when multiple threads call {Qpid::Proton::Container#run}
+
+Calls to {Qpid::Proton::MessagingHandler} and {Qpid::Proton::Listener::Handler}
+methods by the {Qpid::Proton::Container} are automatically serialized for each
+connection instance.
+
+Other threads may have code similarly serialized by adding it to the
+{Qpid::Proton::Connection#work_queue} for the connection.  Each object related
+to a {Qpid::Proton::Connection} also provides a +work_queue+ method.
+
+You also need to use the {Qpid::Proton::WorkQueue} to communicate between a
+{Qpid::Proton::MessagingHandler} method call for one connection instance, and a
+different {Qpid::Proton::Connection} instance in the same container, as separate
+connections can be processed in parallel.
