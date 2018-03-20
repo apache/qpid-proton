@@ -207,7 +207,7 @@ PROTON SUBCOMPONENTS:
 Proton includes freegetopt with a separate BSD license.  Your use
 of the source code for freegetopt is subject to the terms and
 conditions of its license in the license file
-tools/test-apps/c/include/pncompat/internal/LICENSE.
+c/tools/include/pncompat/internal/LICENSE.txt.
 
 The setup scripts for the python bindings include files derived by
 PyZMQ and are licensed with a separate Modified BSD license.  Use of

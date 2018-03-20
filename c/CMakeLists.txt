@@ -665,6 +665,7 @@ install (FILES
 add_subdirectory(docs)
 add_subdirectory(examples)
 add_subdirectory(tests)
+add_subdirectory(tools)
 
 install (DIRECTORY examples/
          DESTINATION "${PROTON_SHARE}/examples/c"

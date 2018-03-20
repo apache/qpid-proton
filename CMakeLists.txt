@@ -420,5 +420,3 @@ configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in
                ${CMAKE_BINARY_DIR}/config.sh @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/misc/config.bat.in
                ${CMAKE_BINARY_DIR}/config.bat @ONLY)
-
-add_subdirectory (tools/test-apps/c)

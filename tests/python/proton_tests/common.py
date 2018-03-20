@@ -266,7 +266,7 @@ class TestServer(object):
 
 #
 # Classes that wrap the messenger applications msgr-send and msgr-recv.
-# These applications reside in the tools/test-apps directory
+# These applications reside in the c/tools directory
 #
 
 class MessengerApp(object):

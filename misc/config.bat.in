@@ -42,8 +42,7 @@ REM Ruby
 set RUBY_BINDING=%PROTON_BUILD%\ruby
 set RUBYLIB=%RUBY_BINDING%;%PROTON_HOME%\bindings\ruby\lib;%PROTON_HOME%\tests\ruby
 
-REM test applications
-set PATH=%PATH%;%PROTON_BUILD%\tools\test-apps\c
-set PATH=%PATH%;%PROTON_HOME%\tools\test-apps\python
+REM Test applications
+set PATH=%PATH%;%PROTON_BUILD%\c\tools
 set PATH=%PATH%;%PROTON_HOME%\tests\python
 set PATH=%PATH%;%PROTON_BUILD%\%PROTON_BUILD_CONFIGURATION%
