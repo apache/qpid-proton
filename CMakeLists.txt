@@ -25,12 +25,13 @@ include (CTest)
 include (CheckLanguage)
 include (CheckLibraryExists)
 include (CheckSymbolExists)
-include (CheckPythonModule)
 
 enable_testing()
 
 set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/tools/cmake/Modules")
 set (CMAKE_THREAD_PREFER_PTHREAD TRUE)
+
+include (CheckPythonModule)
 
 find_package (OpenSSL)
 find_package (Threads)
