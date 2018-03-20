@@ -150,26 +150,19 @@ end
 class ServerContainer < Qpid::Proton::Container
   include Qpid::Proton
 
-  class ListenerHandler < Listener::Handler
-    def initialize(opts) super; @ready = Queue.new; end
-    def on_open(l) @ready.push nil; end
-    def wait() @ready.pop; end
-  end
-
   def initialize(id=nil, listener_opts=nil)
     super id
-    lh = ListenerHandler.new(listener_opts)
-    @listener = listen_io(TCPServer.open(0), lh)
+    @listener = listen_io(TCPServer.open(0), Listener::Handler.new(listener_opts))
     @thread = Thread.new { run }
-    # Wait for listener to avoid nasty race conditions where a test closes the
-    # listener before it opens and therefore nothing happens.
-    lh.wait
   end
 
   attr_reader :listener
 
   def port() @listener.port; end
   def url() "amqp://:#{port}"; end
+
+  # NOTE: the test must have already waited for some events to happen before
+  # calling this, otherwise the listener can close before it opens and nothing happens
   def wait() @listener.close; @thread.join; end
 end
 

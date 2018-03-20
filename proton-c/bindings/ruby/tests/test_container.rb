@@ -31,6 +31,9 @@ class ContainerTest < MiniTest::Test
   def test_simple()
     send_handler = Class.new(ExceptionMessagingHandler) do
       attr_reader :accepted, :sent
+
+      def initialize() @ready = Queue.new; end
+
       def on_sendable(sender)
         sender.send Message.new("foo") unless @sent
         @sent = true
@@ -39,7 +42,10 @@ class ContainerTest < MiniTest::Test
       def on_tracker_accept(tracker)
         @accepted = true
         tracker.connection.close
+        @ready << nil
       end
+
+      def wait() @ready.pop(); end
     end.new
 
     receive_handler = Class.new(ExceptionMessagingHandler) do
@@ -59,6 +65,7 @@ class ContainerTest < MiniTest::Test
 
     c = ServerContainer.new(__method__, {:handler => receive_handler})
     c.connect(c.url, {:handler => send_handler}).open_sender({:name => "testlink"})
+    send_handler.wait
     c.wait
 
     assert send_handler.accepted
@@ -153,8 +160,9 @@ class ContainerTest < MiniTest::Test
   def test_connection_options
     # Note: user, password and sasl_xxx options are tested by ContainerSASLTest below
     server_handler = Class.new(ExceptionMessagingHandler) do
+      def initialize() @connection = Queue.new; end
       def on_connection_open(c)
-        @connection = c
+        @connection << c
         c.open({
           :virtual_host => "server.to.client",
           :properties => { :server => :client },
@@ -183,9 +191,10 @@ class ContainerTest < MiniTest::Test
         :max_frame_size => 4096,
         :container_id => "bowl"
       })
+    server = server_handler.connection.pop
     cont.wait
 
-    c = server_handler.connection
+    c = server
     assert_equal "client.to.server", c.virtual_host
     assert_equal({ :foo => :bar, :str => "str" }, c.properties)
     assert_equal([:c1], c.offered_capabilities)
