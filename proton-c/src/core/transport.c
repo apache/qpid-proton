@@ -1475,12 +1475,12 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   pn_sequence_t id;
   bool settled;
   bool more;
-  bool has_type;
+  bool has_type, settled_set;
   bool resume, aborted, batchable;
   uint64_t type;
   pn_data_clear(transport->disp_data);
-  int err = pn_data_scan(args, "D.[I?Iz.oo.D?LCooo]", &handle, &id_present, &id, &tag,
-                         &settled, &more, &has_type, &type, transport->disp_data,
+  int err = pn_data_scan(args, "D.[I?Iz.?oo.D?LCooo]", &handle, &id_present, &id, &tag,
+                         &settled_set, &settled, &more, &has_type, &type, transport->disp_data,
                          &resume, &aborted, &batchable);
   if (err) return err;
   pn_session_t *ssn = pni_channel_state(transport, channel);
@@ -1499,6 +1499,8 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
   pn_delivery_t *delivery;
   if (link->unsettled_tail && !link->unsettled_tail->done) {
     delivery = link->unsettled_tail;
+    if (settled_set && !settled && delivery->remote.settled)
+      return pn_do_error(transport, "amqp:invalid-field", "invalid transition from settled to unsettled");
   } else {
     pn_delivery_map_t *incoming = &ssn->state.incoming;
 
@@ -1523,18 +1525,17 @@ int pn_do_transfer(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
     link->state.delivery_count++;
     link->state.link_credit--;
     link->queued++;
-
-    // XXX: need to fill in remote state: delivery->remote.state = ...;
-    delivery->remote.settled = settled;
-    if (settled) {
-      delivery->updated = true;
-      pn_work_update(transport->connection, delivery);
-    }
   }
 
   pn_buffer_append(delivery->bytes, payload->start, payload->size);
   ssn->incoming_bytes += payload->size;
   delivery->done = !more;
+  // XXX: need to fill in remote state: delivery->remote.state = ...;
+  if (settled && !delivery->remote.settled) {
+    delivery->remote.settled = settled;
+    delivery->updated = true;
+    pn_work_update(transport->connection, delivery);
+  }
 
   ssn->state.incoming_transfer_count++;
   ssn->state.incoming_window--;
