@@ -105,8 +105,8 @@ install(DIRECTORY lib/ DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 
 ## Tests
 
-to_native_path("$ENV{RUBYLIB};${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir}" RUBYLIB)
-to_native_path("$ENV{PATH};${bin};${c_lib_dir}" PATH)
+to_native_path("${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir};$ENV{RUBYLIB}" RUBYLIB)
+to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
 
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
