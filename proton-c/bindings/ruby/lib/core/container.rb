@@ -19,6 +19,7 @@
 require 'thread'
 require 'set'
 require_relative 'listener'
+require_relative 'work_queue'
 
 module Qpid::Proton
   public
@@ -193,7 +194,7 @@ module Qpid::Proton
         raise StoppedError if @stopped
       end
       while task = @work.pop
-        run_one task
+        run_one(task, Time.now)
       end
       raise @panic if @panic
     ensure
@@ -242,23 +243,36 @@ module Qpid::Proton
     # Schedule code to be executed after a delay.
     # @param delay [Numeric] delay in seconds, must be >= 0
     # @yield [ ] the block is invoked with no parameters in a {#run} thread after +delay+ has elapsed
-    def schedule(delay, &block)
-      delay >= 0.0 or raise ArgumentError, "delay=#{delay} must be >= 0"
-      block_given? or raise ArgumentError, "no block given"
+    # @return [void]
+    # @raise [ThreadError] if +non_block+ is true and the operation would block
+    def schedule(delay, non_block=false, &block)
       not_stopped
-      @lock.synchronize { @active += 1 } if @schedule.add(Time.now + delay, &block)
+      @lock.synchronize { @active += 1 } if @schedule.add(Time.now + delay, non_block, &block)
       @wake.wake
     end
 
     private
 
+    def wake() @wake.wake; end
+
     # Container driver applies options and adds container context to events
     class ConnectionTask < Qpid::Proton::HandlerDriver
+      include TimeCompare
+
       def initialize container, io, opts, server=false
         super io, opts[:handler]
         transport.set_server if server
         transport.apply opts
         connection.apply opts
+        @work_queue = WorkQueue.new container
+        connection.instance_variable_set(:@work_queue, @work_queue)
+      end
+      def next_tick() earliest(super, @work_queue.send(:next_tick)); end
+      def process(now) @work_queue.send(:process, now); super(); end
+
+      def dispatch              # Intercept dispatch to close work_queue
+        super
+        @work_queue.send(:close) if read_closed? && write_closed? 
       end
     end
 
@@ -341,7 +355,7 @@ module Qpid::Proton
     end
 
     # Handle a single item from the @work queue, this is the heart of the #run loop.
-    def run_one(task)
+    def run_one(task, now)
       case task
 
       when :start
@@ -359,10 +373,9 @@ module Qpid::Proton
           end
         end
 
-        now = Time.now
         timeout = ((next_tick > now) ? next_tick - now : 0) if next_tick
         r, w = IO.select(r, w, nil, timeout)
-        now = Time.now
+        now = Time.now unless timeout == 0
         @wake.reset if r && r.delete(@wake)
 
         # selected is a Set to eliminate duplicates between r, w and next_tick due.
@@ -387,7 +400,7 @@ module Qpid::Proton
         @work << :select        # Enable next select
 
       when ConnectionTask then
-        maybe_panic { task.process }
+        maybe_panic { task.process now }
         rearm task
 
       when ListenTask then
@@ -396,7 +409,7 @@ module Qpid::Proton
         rearm task
 
       when :schedule then
-        if maybe_panic { @schedule.process Time.now }
+        if maybe_panic { @schedule.process now }
           @lock.synchronize { @active -= 1; check_stop_lh }
         else
           @lock.synchronize { @schedule_working = false }

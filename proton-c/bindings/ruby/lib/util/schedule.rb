@@ -33,13 +33,23 @@ module Qpid::Proton
     include TimeCompare
     Item = Struct.new(:time, :proc)
 
-    def initialize() @lock = Mutex.new; @items = []; end
+    def initialize()
+      @lock = Mutex.new
+      @items = []
+      @closed = false
+    end
 
-    def next_tick() @lock.synchronize { @items.empty? ? nil : @items.first.time } end
+    def next_tick()
+      @lock.synchronize { @items.first.time unless @items.empty? }
+    end
 
     # @return true if the Schedule was previously empty
-    def add(time, &proc)
+    # @raise EOFError if schedule is closed
+    # @raise ThreadError if +non_block+ and operation would block
+    def add(time, non_block=false, &proc)
+      # non_block ignored for now, but we may implement a bounded schedule in future.
       @lock.synchronize do
+        raise EOFError if @closed
         if at = (0...@items.size).bsearch { |i| @items[i].time > time }
           @items.insert(at, Item.new(time, proc))
         else
@@ -53,11 +63,17 @@ module Qpid::Proton
     def process(now)
       due = []
       empty = @lock.synchronize do
-        due << @items.shift while !@items.empty? && before_eq(@items.first.time, now)
+        due << @items.shift while (!@items.empty? && before_eq(@items.first.time, now))
         @items.empty?
       end
       due.each { |i| i.proc.call() }
       return empty && !due.empty?
+    end
+
+    # #add raises EOFError after #close.
+    # #process can still be called to drain the schedule.
+    def close()
+      @lock.synchronize { @closed = true }
     end
   end
 end

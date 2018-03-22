@@ -67,6 +67,9 @@ module Qpid::Proton
       self.connection.transport
     end
 
+    # @return [WorkQueue] the work queue for work on this endpoint.
+    def work_queue() connection.work_queue; end
+
     # @private
     # @return [Bool] true if {#state} has all the bits of `mask` set
     def check_state(mask) (self.state & mask) == mask; end

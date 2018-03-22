@@ -336,7 +336,32 @@ class ContainerTest < MiniTest::Test
     delays.sort.each do |d|
       x = a.shift
       assert_equal d, x[0]
-      assert_in_delta  start + d, x[1], 0.01, "#{d}"
+      assert_in_delta  start + d, x[1], 0.01
     end
+  end
+
+  def test_work_queue
+    cont = ServerContainer.new(__method__, {}, 1)
+    c = cont.connect(cont.url)
+    t = Thread.new { cont.run }
+    q = Queue.new
+
+    start = Time.now
+    c.work_queue.schedule(0.02) { q << [3, Thread.current] }
+    c.work_queue.add { q << [1, Thread.current] }
+    c.work_queue.schedule(0.04) { q << [4, Thread.current] }
+    c.work_queue.add { q << [2, Thread.current] }
+
+    assert_equal [1, t], q.pop
+    assert_equal [2, t], q.pop
+    assert_in_delta  0.0, Time.now - start, 0.01
+    assert_equal [3, t], q.pop
+    assert_in_delta  0.02, Time.now - start, 0.01
+    assert_equal [4, t], q.pop
+    assert_in_delta  0.04, Time.now - start, 0.01
+
+    c.work_queue.add { c.close }
+    t.join
+    assert_raises(EOFError) { c.work_queue.add {  } }
   end
 end

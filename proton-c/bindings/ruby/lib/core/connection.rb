@@ -288,6 +288,10 @@ module Qpid::Proton
       @link_prefix + "/" +  (@link_count += 1).to_s(32)
     end
 
+    # @return [WorkQueue] work queue for code that should be run in the thread
+    # context for this connection
+    attr_reader :work_queue
+
     protected
 
     def _local_condition
