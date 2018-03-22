@@ -224,7 +224,7 @@ class SaslTest(Test):
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
 
-    self.t1.push(str2bin("6\x02\x01\x00\x00\x00S@\xc04\x01\xe01\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5"))
+    self.t1.push(str2bin("6\x02\x01\x00\x00\x00S@\xc0\x29\x01\xe0\x26\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5"))
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
     self.t1.push(str2bin("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00"))
