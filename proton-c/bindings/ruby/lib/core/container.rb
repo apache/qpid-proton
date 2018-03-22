@@ -205,6 +205,7 @@ module Qpid::Proton
     #   concurrently.
     #
     def initialize(*args)
+      @handler, @id, @panic = nil
       case args.size
       when 2 then @handler, @id = args
       when 1 then

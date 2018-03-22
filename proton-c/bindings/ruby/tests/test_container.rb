@@ -32,6 +32,8 @@ class ContainerTest < MiniTest::Test
     send_handler = Class.new(ExceptionMessagingHandler) do
       attr_reader :accepted, :sent
 
+      def initialize() @sent, @accepted = nil; end
+
       def on_sendable(sender)
         unless @sent
           m = Message.new("hello")
@@ -152,7 +154,7 @@ class ContainerTest < MiniTest::Test
   def test_bad_host
     cont = Container.new(__method__)
     assert_raises (SocketError) { cont.listen("badlisten.example.com:999") }
-    assert_raises (SocketError) { c = cont.connect("badconnect.example.com:999") }
+    assert_raises (SocketError) { cont.connect("badconnect.example.com:999") }
   end
 
   # Verify that connection options are sent to the peer

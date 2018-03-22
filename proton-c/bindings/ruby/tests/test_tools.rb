@@ -105,7 +105,6 @@ end
 
 # Add port/url to Listener, assuming a TCP socket
 class Qpid::Proton::Listener
-  def port() to_io.addr[1]; end
   def url() "amqp://:#{port}"; end
 end
 

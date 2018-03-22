@@ -170,6 +170,7 @@ module Qpid::Proton
     # Creates a new transport instance.
     def initialize(impl = Cproton.pn_transport)
       @impl = impl
+      @ssl = nil
       self.class.store_instance(self, :pn_transport_attachments)
     end
 

@@ -49,6 +49,7 @@ module Qpid::Proton
       # @param descriptor [Object] Optional array descriptor
       def initialize(type, elements=nil, descriptor=nil)
         @type, @descriptor = type, descriptor
+        @proton_array_header = nil
         raise ArgumentError, "no type specified for array" if @type.nil?
         super elements if elements
       end
