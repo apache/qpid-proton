@@ -28,7 +28,7 @@ else ()
   set(FUZZING_LIBRARY FuzzingEngine)
 endif ()
 
-add_library (StandaloneFuzzTargetMain StandaloneFuzzTargetMain.c)
+add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c StandaloneFuzzTargetInit.c)
 
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})

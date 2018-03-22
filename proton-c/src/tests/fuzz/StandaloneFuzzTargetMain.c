@@ -18,12 +18,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern int LLVMFuzzerInitialize(int *argc, char ***argv);
 extern int LLVMFuzzerTestOneInput(const unsigned char *data, size_t size);
-__attribute__((weak)) extern int LLVMFuzzerInitialize(int *argc, char ***argv);
+
 int main(int argc, char **argv) {
   fprintf(stderr, "StandaloneFuzzTargetMain: running %d inputs\n", argc - 1);
-  if (LLVMFuzzerInitialize)
-    LLVMFuzzerInitialize(&argc, &argv);
+  LLVMFuzzerInitialize(&argc, &argv);
+
   for (int i = 1; i < argc; i++) {
     fprintf(stderr, "Running: %s\n", argv[i]);
     FILE *f = fopen(argv[i], "r");
