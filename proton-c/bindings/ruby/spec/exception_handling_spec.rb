@@ -70,7 +70,7 @@ module Qpid
         }.must_raise(Qpid::Proton::ArgumentError)
       end
 
-      it "raises Timeout on PN_TIMEOUT" do
+      it "raises TimeoutError on PN_TIMEOUT" do
         proc {
           @handler.check_for_error(Qpid::Proton::Error::TIMEOUT)
         }.must_raise(Qpid::Proton::TimeoutError)

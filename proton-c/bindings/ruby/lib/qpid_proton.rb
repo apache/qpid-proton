@@ -45,7 +45,6 @@ require "util/deprecation"
 require "util/version"
 require "util/error_handler"
 require "util/wrapper"
-require "util/timeout"
 
 # Types
 require "types/type"
