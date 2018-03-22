@@ -1196,16 +1196,10 @@ int pn_do_open(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
       transport->remote_max_frame = AMQP_MIN_MAX_FRAME_SIZE;
     }
   }
-  if (container_q) {
-    transport->remote_container = pn_bytes_strdup(remote_container);
-  } else {
-    transport->remote_container = NULL;
-  }
-  if (hostname_q) {
-    transport->remote_hostname = pn_bytes_strdup(remote_hostname);
-  } else {
-    transport->remote_hostname = NULL;
-  }
+  free(transport->remote_container);
+  transport->remote_container = container_q ? pn_bytes_strdup(remote_container) : NULL;
+  free(transport->remote_hostname);
+  transport->remote_hostname = hostname_q ? pn_bytes_strdup(remote_hostname) : NULL;
 
   if (conn) {
     PN_SET_REMOTE(conn->endpoint.state, PN_REMOTE_ACTIVE);
