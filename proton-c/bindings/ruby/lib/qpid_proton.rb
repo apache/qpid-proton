@@ -44,6 +44,7 @@ require "core/exceptions"
 require "util/deprecation"
 require "util/version"
 require "util/error_handler"
+require "util/schedule"
 require "util/wrapper"
 
 # Types

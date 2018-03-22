@@ -300,5 +300,43 @@ class ContainerTest < MiniTest::Test
     assert_raises(Container::StoppedError) { cont.run }
     assert_raises(Container::StoppedError) { cont.listen "" }
   end
-end
 
+  # Make sure Container::Scheduler puts tasks in proper order.
+  def test_scheduler
+    a = []
+    s = Schedule.new
+
+    assert_equal true,  s.add(Time.at 3) { a << 3 }
+    assert_equal false, s.process(Time.at 2)      # Should not run
+    assert_equal [], a
+    assert_equal true, s.process(Time.at 3)      # Should run
+    assert_equal [3], a
+
+    a = []
+    assert_equal true, s.add(Time.at 3) { a << 3 }
+    assert_equal false, s.add(Time.at 5) { a << 5 }
+    assert_equal false, s.add(Time.at 1) { a << 1 }
+    assert_equal false, s.add(Time.at 4) { a << 4 }
+    assert_equal false, s.add(Time.at 4) { a << 4.1 }
+    assert_equal false, s.add(Time.at 4) { a << 4.2 }
+    assert_equal false, s.process(Time.at 4)
+    assert_equal [1, 3, 4, 4.1, 4.2], a
+    a = []
+    assert_equal true, s.process(Time.at 5)
+    assert_equal [5], a
+  end
+
+  def test_container_schedule
+    c = Container.new __method__
+    delays = [0.1, 0.03, 0.02, 0.04]
+    a = []
+    delays.each { |d| c.schedule(d) { a << [d, Time.now] } }
+    start = Time.now
+    c.run
+    delays.sort.each do |d|
+      x = a.shift
+      assert_equal d, x[0]
+      assert_in_delta  start + d, x[1], 0.01, "#{d}"
+    end
+  end
+end
