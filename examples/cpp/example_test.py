@@ -209,7 +209,8 @@ expected conversion_error: "unexpected type, want: uint got: string"
         self.maxDiff = None
         self.assertRegexpMatches(got, "10 messages sent and received");
 
-    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
+#    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
+    @unittest.skip("Test is unstable, will enable when fixed")
     def test_multithreaded_client_flow_control(self):
         got = self.proc(["multithreaded_client_flow_control", self.addr, "examples", "10", "2"], helgrind=True).wait_exit()
         self.maxDiff = None
