@@ -317,7 +317,7 @@ void test_no_container() {
     try {
         d.connection().container();
         FAIL("expected error");
-    } catch (proton::error) {}
+    } catch (const proton::error&) {}
 }
 
 void test_spin_interrupt() {
@@ -328,7 +328,7 @@ void test_spin_interrupt() {
         while (true)
             d.process();
         FAIL("expected exception");
-    } catch (test::error) {}
+    } catch (const test::error&) {}
 }
 
 void test_link_options() {
