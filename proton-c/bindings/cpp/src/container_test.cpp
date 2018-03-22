@@ -364,7 +364,6 @@ int test_container_mt_stop() {
     return 0;
 }
 
-// FIXME aconway 2018-01-04: test busy stop from other thread
 #endif
 
 } // namespace
