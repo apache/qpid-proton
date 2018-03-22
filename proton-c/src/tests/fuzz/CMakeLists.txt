@@ -19,38 +19,44 @@
 
 add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 
+option(FUZZ_REGRESSION_TESTS "Run fuzz tests with regression test driver" ON)
+option(FUZZ_LONG_TESTS "Run fuzz tests that take a long time" OFF)
+
+if (FUZZ_REGRESSION_TESTS)
+  set(FUZZING_LIBRARY StandaloneFuzzTargetMain)
+else ()
+  set(FUZZING_LIBRARY FuzzingEngine)
+endif ()
+
 add_library (StandaloneFuzzTargetMain StandaloneFuzzTargetMain.c)
-if (BUILD_WITH_CXX)
-  # ignore the flag for this file, it complicates things for no gain
-endif (BUILD_WITH_CXX)
 
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
-  if (FUZZING_ENGINE)
-    target_link_libraries (${test} qpid-proton FuzzingEngine)
-  else (FUZZING_ENGINE)
-    target_link_libraries (${test} qpid-proton StandaloneFuzzTargetMain)
-  endif (FUZZING_ENGINE)
-  if (BUILD_WITH_CXX)
-    set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
-  else (BUILD_WITH_CXX)
-    set_target_properties(${test} PROPERTIES LINKER_LANGUAGE CXX)
-  endif (BUILD_WITH_CXX)
-  
-  if (FUZZING_ENGINE)
-    add_test (${test} ${CMAKE_CURRENT_BINARY_DIR}/${test} -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test})
-  else (FUZZING_ENGINE)
+  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+
+  if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
-    add_test (${test} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${files})
-  endif (FUZZING_ENGINE)
+    add_test (${test} ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${files})
+  else ()
+    add_test (${test} ${CMAKE_CURRENT_BINARY_DIR}/${test} -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test})
+  endif ()
 endmacro(pn_add_fuzz_test)
 
+# Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
-# pni_sniff_header is internal, it has to be compiled in anew
-pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${PROJECT_SOURCE_DIR}/proton-c/src/core/autodetect.c)
-pn_add_fuzz_test (fuzz-url fuzz-url.c)
-if(HAS_PROACTOR)
+
+# pn_url_parse is not in proton core and is only used by messenger so compile specially
+pn_add_fuzz_test (fuzz-url fuzz-url.c ${PROJECT_SOURCE_DIR}/proton-c/src/extra/url.c ${PROJECT_SOURCE_DIR}/proton-c/src/core/util.c)
+
+# This regression test can take a very long time so don't run by default
+if(HAS_PROACTOR AND FUZZ_LONG_TESTS)
   pn_add_fuzz_test (fuzz-proactor-receive fuzz-proactor-receive.c)
-endif(HAS_PROACTOR)
+  target_link_libraries(fuzz-proactor-receive qpid-proton-proactor)
+endif()
+
+# Fuzz tests of internals
+
+# pni_sniff_header is internal so it has to be compiled specially
+pn_add_fuzz_test (fuzz-sniff-header fuzz-sniff-header.c ${PROJECT_SOURCE_DIR}/proton-c/src/core/autodetect.c)

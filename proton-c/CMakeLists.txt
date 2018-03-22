@@ -32,7 +32,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads)
 find_package(PythonInterp REQUIRED)
 find_package(SWIG)
-# FindSwig.cmake "forgets" make its outputs advanced like a good citizen
+# FindSwig.cmake "forgets" to make its outputs advanced like a good citizen
 mark_as_advanced(SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
 
 # See if Cyrus SASL is available
@@ -200,12 +200,18 @@ if (APPLE)
   set (NOENABLE_UNDEFINED_ERROR ON)
 endif (APPLE)
 
+# Can't build fuzz tests/or run regression tests on MSVC currently
+# (due to limit on command line length)
+if (MSVC)
+  set (NOENABLE_FUZZ_TESTING ON)
+endif (MSVC)
+
 # Make LTO default to off until we can figure out the valgrind issues
 set (NOENABLE_LINKTIME_OPTIMIZATION ON)
 
 # Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
 # overridden on a platform specific basis above by NOENABLE_<whatever>
-set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS)
+set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS FUZZ_TESTING)
 
 foreach (OPTION ${OPTIONS})
   if (NOT NOENABLE_${OPTION})
@@ -218,6 +224,7 @@ option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ${DEFAULT_
 option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_UNDEFINED_ERROR})
 option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
 option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
+option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with libFuzzer" ${DEFAULT_FUZZ_TESTING})
 
 # Set any additional compiler specific flags
 if (CMAKE_COMPILER_IS_GNUCC)

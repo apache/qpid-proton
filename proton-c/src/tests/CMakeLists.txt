@@ -59,3 +59,8 @@ if(HAS_PROACTOR)
 
   add_test(NAME c-fdlimit-tests COMMAND ${env_py} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
 endif(HAS_PROACTOR)
+
+# fuzz tests: tests/fuzz
+if (ENABLE_FUZZ_TESTING)
+  add_subdirectory(fuzz)
+endif (ENABLE_FUZZ_TESTING)
