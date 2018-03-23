@@ -42,12 +42,9 @@ in the system. The rest of the commands and steps are done normally without any 
 of monkey patching.
 """
 
-import glob
 import os
-import subprocess
-import sys
+import shutil
 
-import distutils.spawn as ds_spawn
 import distutils.sysconfig as ds_sys
 from distutils.ccompiler import new_compiler, get_default_compiler
 from distutils.core import setup, Extension
@@ -122,7 +119,7 @@ class Configure(build_ext):
         ext.swig_opts = []
 
     def use_bundled_proton(self):
-        """The proper version of libqpid-proton is not installed on the system,
+        """The proper version of libqpid-proton-core is not installed on the system,
         so use the included proton-c sources to build the extension
         """
         log.info("Building the bundled proton-c sources into the extension")
@@ -132,6 +129,7 @@ class Configure(build_ext):
         build_include = os.path.join(base, 'include')
         proton_base = os.path.abspath(os.path.join(setup_path))
         proton_src = os.path.join(proton_base, 'src')
+        proton_core_src = os.path.join(proton_base, 'src', 'core')
         proton_include = os.path.join(proton_base, 'include')
 
         log.debug("Using Proton C sources: %s" % proton_base)
@@ -140,35 +138,22 @@ class Configure(build_ext):
         # anything windows and configuration-dependent
 
         sources = []
-        cfgdep = ['openssl.c',
-                  'schannel.c',
-                  'ssl_stub.c',
-                  'cyrus_sasl.c',
-                  'cyrus_stub.c',
-                  'snprintf.c']
-
-        stripdirs = ['proactor',
-                     'msvc',
-                     'windows']
-
-        for root, dirs, files in os.walk(proton_src):
-            for dir_ in stripdirs:
-                if dir_ in dirs:
-                    dirs.remove(dir_)
-
+        for root, _, files in os.walk(proton_core_src):
             for file_ in files:
-                if file_.endswith('.c') and file_ not in cfgdep:
+                if file_.endswith(('.c', '.cpp')):
                     sources.append(os.path.join(root, file_))
 
         # Look for any optional libraries that proton needs, and adjust the
         # source list and compile flags as necessary.
         libraries = []
         includes = []
+        macros = []
 
         # -D flags (None means no value, just define)
-        macros=[('qpid_proton_EXPORTS', None),
-                ('USE_ATOLL', None),
-                ('USE_STRERROR_R', None)]
+        macros += [('PROTON_DECLARE_STATIC', None)]
+
+        if self.compiler_type=='msvc':
+            sources.append(os.path.join(proton_src, 'compiler' , 'msvc', 'snprintf.c'))
 
         # Check whether openssl is installed by poking
         # pkg-config for a minimum version 0. If it's installed, it should
@@ -177,6 +162,9 @@ class Configure(build_ext):
             libraries += ['ssl', 'crypto']
             includes += [misc.pkg_config_get_var('openssl', 'includedir')]
             sources.append(os.path.join(proton_src, 'ssl', 'openssl.c'))
+        elif os.name=='nt':
+            libraries += ['crypt32', 'secur32']
+            sources.append(os.path.join(proton_src, 'ssl', 'schannel.c'))
         else:
             sources.append(os.path.join(proton_src, 'ssl', 'ssl_stub.c'))
             log.warn("OpenSSL not installed - disabling SSL support!")
@@ -185,19 +173,12 @@ class Configure(build_ext):
         cc = new_compiler(compiler=self.compiler_type)
         cc.output_dir = self.build_temp
 
-        # Some systems need to link to `rt`. Check whether `clock_gettime` is
-        # around and if librt is needed
-        if cc.has_function('clock_gettime'):
-            macros.append(('USE_CLOCK_GETTIME', None))
-        else:
-            if cc.has_function('clock_gettime', libraries=['rt']):
-                libraries.append('rt')
-                macros.append(('USE_CLOCK_GETTIME', None))
-
         # 0.10 added an implementation for cyrus. Check
         # if it is available before adding the implementation to the sources
-        # list. Eventually, `sasl.c` will be added and one of the existing
+        # list. 'sasl.c` and 'default_sasl.c' are added and one of the existing
         # implementations will be used.
+        sources.append(os.path.join(proton_src, 'sasl', 'sasl.c'))
+        sources.append(os.path.join(proton_src, 'sasl', 'default_sasl.c'))
         if cc.has_function('sasl_client_done', includes=['sasl/sasl.h'],
                            libraries=['sasl2']):
             libraries.append('sasl2')
@@ -206,6 +187,35 @@ class Configure(build_ext):
             log.warn("Cyrus SASL not installed - only the ANONYMOUS and"
                      " PLAIN mechanisms will be supported!")
             sources.append(os.path.join(proton_src, 'sasl', 'cyrus_stub.c'))
+
+        # Hack for Windows/msvc: We need to compile proton as C++, but it seems the only way to
+        # force this in setup.py is to use a .cpp extension! So copy all the source files to .cpp
+        # and use these as the compile sources
+        if self.compiler_type=='msvc':
+            targets = []
+            target_base = os.path.join(self.build_temp, 'srcs')
+            try:
+                os.mkdir(target_base)
+            except FileExistsError:
+	            pass
+
+            for f in sources:
+                # We know each file ends in '.c' as we filtered on that above so just add 'pp' to end
+                target = os.path.join(target_base, os.path.basename(f) + 'pp')
+                shutil.copy(f, target)
+                targets.append(target)
+
+            # Copy .h files into temp tree too as we need them to compile
+            for root, _, files in os.walk(proton_core_src):
+                for file_ in files:
+                    if file_.endswith('.h'):
+                        shutil.copy(os.path.join(root, file_), os.path.join(target_base, file_))
+
+            # Copy ssl/sasl .h files
+            shutil.copy(os.path.join(proton_src, 'sasl', 'sasl-internal.h'), os.path.join(target_base, 'sasl-internal.h'))
+            shutil.copy(os.path.join(proton_src, 'ssl', 'ssl-internal.h'), os.path.join(target_base, 'ssl-internal.h'))
+
+            sources = targets
 
         # compile all the proton sources.  We'll add the resulting list of
         # objects to the _cproton extension as 'extra objects'.  We do this
@@ -216,13 +226,16 @@ class Configure(build_ext):
         cc = new_compiler(compiler=self.compiler_type)
         ds_sys.customize_compiler(cc)
 
+        extra = []
+        if self.compiler_type=='unix':
+            extra.append('-std=gnu99')
         objects = cc.compile(sources,
                              macros=macros,
                              include_dirs=[build_include,
                                            proton_include,
                                            proton_src]+includes,
                              # compiler command line options:
-                             extra_postargs=['-std=gnu99'],
+                             extra_preargs=extra,
                              output_dir=self.build_temp)
 
         #
@@ -238,7 +251,7 @@ class Configure(build_ext):
         _cproton.swig_opts.append('-I%s' % build_include)
         _cproton.swig_opts.append('-I%s' % proton_include)
 
-        # lastly replace the libqpid-proton dependency with libraries required
+        # lastly replace the libqpid-proton-core dependency with libraries required
         # by the Proton objects:
         _cproton.libraries=libraries
 
@@ -246,7 +259,7 @@ class Configure(build_ext):
         """Check to see if the proper version of the Proton development library
         and headers are already installed
         """
-        return misc.pkg_config_version_installed('libqpid-proton', version)
+        return misc.pkg_config_version_installed('libqpid-proton-core', version)
 
     def use_installed_proton(self):
         """The Proton development headers and library are installed, update the
@@ -255,11 +268,11 @@ class Configure(build_ext):
         # update the Extension instance passed to setup() to use the installed
         # headers and link library
         _cproton = self.distribution.ext_modules[-1]
-        incs = misc.pkg_config_get_var('libqpid-proton', 'includedir')
+        incs = misc.pkg_config_get_var('libqpid-proton-core', 'includedir')
         for i in incs.split():
             _cproton.swig_opts.append('-I%s' % i)
             _cproton.include_dirs.append(i)
-        ldirs = misc.pkg_config_get_var('libqpid-proton', 'libdir')
+        ldirs = misc.pkg_config_get_var('libqpid-proton-core', 'libdir')
         _cproton.library_dirs.extend(ldirs.split())
 
     def run(self):
@@ -330,4 +343,4 @@ setup(name='python-qpid-proton',
                              sources=['cproton.i', 'cproton_wrap.c'],
                              swig_opts=['-threads'],
                              extra_compile_args=['-pthread'],
-                             libraries=['qpid-proton'])])
+                             libraries=['qpid-proton-core'])])

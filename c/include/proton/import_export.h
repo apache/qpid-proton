@@ -32,7 +32,11 @@
  * PN_IMPORT         - Import declaration
  */
 
-#if defined(_WIN32) && !defined(PROTON_DECLARE_STATIC)
+#if defined(PROTON_DECLARE_STATIC)
+/* Static library - no imports/exports */
+#  define PN_EXPORT
+#  define PN_IMPORT
+#elif defined(_WIN32)
 /* Import and Export definitions for Windows */
 #  define PN_EXPORT __declspec(dllexport)
 #  define PN_IMPORT __declspec(dllimport)
