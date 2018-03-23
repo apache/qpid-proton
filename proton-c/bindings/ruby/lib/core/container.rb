@@ -59,6 +59,7 @@ module Qpid::Proton
       when 1 then
         @id = String.try_convert(args[0]) || (args[0].to_s if args[0].is_a? Symbol)
         @handler = args[0] unless @id
+      when 0 then
       else raise ArgumentError, "wrong number of arguments (given #{args.size}, expected 0..2"
       end
       # Use an empty messaging adapter to give default behaviour if there's no global handler.
@@ -169,10 +170,11 @@ module Qpid::Proton
 
     # Run the container: wait for IO activity, dispatch events to handlers.
     #
-    # *Multiple threads* : More than one thread can call {#run} concurrently,
+    # *Multi-threaading* : More than one thread can call {#run} concurrently,
     # the container will use all {#run} threads as a thread pool. Calls to
     # {MessagingHandler} or {Listener::Handler} methods are serialized for each
-    # connection or listener, even if the container has multiple threads.
+    # connection or listener. See {WorkQueue} for coordinating with other
+    # threads.
     #
     # *Exceptions*: If any handler method raises an exception it will stop the
     # container, and the exception will be raised by all calls to {#run}. For

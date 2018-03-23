@@ -88,6 +88,9 @@ module Qpid::Proton
     # @return [Transport] The parent connection's transport.
     def transport() self.connection.transport; end
 
+    # @return [WorkQueue] The parent connection's work-queue.
+    def work_queue() self.connection.work_queue; end
+
     # @deprecated internal use only
     proton_caller :writable?
     # @deprecated internal use only

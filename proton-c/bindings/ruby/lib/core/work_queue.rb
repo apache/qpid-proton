@@ -17,10 +17,24 @@
 
 module Qpid::Proton
 
-  # A queue of work items to be executed, possibly in a different thread.
+  # A thread-safe queue of work for multi-threaded programs.
+  #
+  # Instances of {Connection} and objects associated with it ({Session}, {Sender},
+  # {Receiver}, {Delivery}, {Tracker}) are not thread-safe and must be
+  # used correctly when multiple threads call {Container#run}
+  #
+  # Calls to {MessagingHandler} methods by the {Container} are automatically
+  # serialized for each connection instance. Other threads may have code
+  # similarly serialized by adding it to the {Connection#work_queue} for the
+  # connection.  Each object related to a {Connection} also provides a
+  # +work_queue+ method.
+  #
   class WorkQueue
 
-    # Add code to be executed by the WorkQueue immediately.
+    # Add code to be executed in series with other {Container} operations on the
+    # work queue's owner. The code will be executed as soon as possible.
+    #
+    # @note Thread Safe: may be called in any thread.
     # @param non_block [Boolean] if true raise {ThreadError} if the operation would block.
     # @yield [ ] the block will be invoked with no parameters in the {WorkQueue} context,
     #  which may be a different thread.
@@ -32,9 +46,12 @@ module Qpid::Proton
       @container.send :wake
     end
 
-    # Schedule work to be executed by the WorkQueue after a delay.
-    # Note that tasks scheduled after the WorkQueue closes will be silently dropped
+    # Schedule code to be executed after +delay+ seconds in series with other
+    # {Container} operations on the work queue's owner.
     #
+    # Work scheduled for after the {WorkQueue} has closed will be silently dropped.
+    #
+    # @note (see #add)
     # @param delay delay in seconds until the block is added to the queue.
     # @param (see #add)
     # @yield (see #add)

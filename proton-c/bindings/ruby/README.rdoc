@@ -118,4 +118,25 @@ connection and link can be reestablished) but it is possible for multiple copies
 of the same message are delivered, so the receiver must be aware of that. This
 is known as _at_least_once_ reliability.
 
+== Multi-threaded applications
 
+{Qpid::Proton::Container#run} can be called by multiple threads concurrently,
+giving the container a thread-pool to execute handler methods in parallel.
+
+Instances of {Qpid::Proton::Connection} and objects associated with it
+({Qpid::Proton::Session}, {Qpid::Proton::Sender}, {Qpid::Proton::Receiver},
+{Qpid::Proton::Delivery}, {Qpid::Proton::Tracker}) are not thread-safe and must
+be used correctly when multiple threads call {Qpid::Proton::Container#run}
+
+Calls to {Qpid::Proton::MessagingHandler} and {Qpid::Proton::Listener::Handler}
+methods by the {Qpid::Proton::Container} are automatically serialized for each
+connection instance.
+
+Other threads may have code similarly serialized by adding it to the
+{Qpid::Proton::Connection#work_queue} for the connection.  Each object related
+to a {Qpid::Proton::Connection} also provides a +work_queue+ method.
+
+You also need to use the {Qpid::Proton::WorkQueue} to communicate between a
+{Qpid::Proton::MessagingHandler} method call for one connection instance, and a
+different {Qpid::Proton::Connection} instance in the same container, as separate
+connections can be processed in parallel.

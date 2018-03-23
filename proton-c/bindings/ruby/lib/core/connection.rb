@@ -288,8 +288,7 @@ module Qpid::Proton
       @link_prefix + "/" +  (@link_count += 1).to_s(32)
     end
 
-    # @return [WorkQueue] work queue for code that should be run in the thread
-    # context for this connection
+    # @return [WorkQueue] work queue to execute code serialized correctly for this connection
     attr_reader :work_queue
 
     protected
