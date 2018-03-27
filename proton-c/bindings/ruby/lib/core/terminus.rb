@@ -234,10 +234,10 @@ module Qpid::Proton
           when :dynamic then self.dynamic = !!v
           when :distribution_mode then self.distribution_mode = v
           when :durability_mode then self.durability_mode = v
-          when :timeout then self.timeout = v
+          when :timeout then self.timeout = v.round # Should be integer seconds
           when :expiry_policy then self.expiry_policy = v
-          when :filter then self.filter = v
-          when :capabilities then self.capabilities = v
+          when :filter then self.filter << v
+          when :capabilities then self.capabilities << v
           end
         end
       end

@@ -247,6 +247,35 @@ class ContainerTest < MiniTest::Test
     assert_equal expect, client_handler.links.map { |l| [l.source.address, l.target.address] }
   end
 
+  def extract_terminus_options(t)
+    opts = Hash[[:address, :distribution_mode, :durability_mode, :timeout, :expiry_policy].map { |m| [m, t.send(m)] }]
+    opts[:filter] = t.filter.map
+    opts[:capabilities] = t.capabilities.map
+    opts[:dynamic] = t.dynamic?
+    opts
+  end
+
+  def test_terminus_options
+    opts = {
+      :distribution_mode => Terminus::DIST_MODE_COPY,
+      :durability_mode => Terminus::DELIVERIES,
+      :timeout => 5,
+      :expiry_policy => Terminus::EXPIRE_WITH_LINK,
+      :filter => { :try => 'me' },
+      :capabilities => { :cap => 'len' },
+    }
+    src_opts = { :address => "src", :dynamic => true }.update(opts)
+    tgt_opts = { :address => "tgt", :dynamic => false }.update(opts)
+
+    cont = ServerContainer.new(__method__, {}, 1)
+    c = cont.connect(cont.url)
+    s = c.open_sender({:target => tgt_opts, :source => src_opts })
+    assert_equal src_opts, extract_terminus_options(s.source)
+    assert_equal tgt_opts, extract_terminus_options(s.target)
+    assert s.source.dynamic?
+    assert !s.target.dynamic?
+  end
+
   # Test for time out on connecting to an unresponsive server
   def test_idle_timeout_server_no_open
     s = TCPServer.new(0)
