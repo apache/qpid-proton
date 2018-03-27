@@ -123,10 +123,10 @@ func (s extendedSASLState) teardown() {
 }
 
 func (s extendedSASLState) startTest(t *testing.T) {
-	if SASLExtended() {
-		fatalIf(t, extendedSASL.err)
-	} else {
-		t.Skip()
+	if !SASLExtended() {
+		t.Skipf("Extended SASL not enabled")
+	} else if extendedSASL.err != nil {
+		t.Skipf("Extended SASL setup error: %v", extendedSASL.err)
 	}
 }
 

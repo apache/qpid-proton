@@ -60,7 +60,7 @@ class ContainerSASLTest < MiniTest::Test
   # Generate SASL server configuration files and database, initialize proton SASL
   class SASLConfig
     include Qpid::Proton
-    attr_reader :conf_dir, :conf_file, :conf_name, :database
+    attr_reader :conf_dir, :conf_file, :conf_name, :database, :error
 
     def initialize()
       if SASL.extended? # Configure cyrus SASL
@@ -76,12 +76,14 @@ class ContainerSASLTest < MiniTest::Test
           f.write("
 sasldb_path: #{database}
 mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
-                  ")
+            ")
         end
         # Tell proton library to use the new configuration
         SASL.config_path =  conf_dir
         SASL.config_name = conf_name
       end
+    rescue => e
+      @error = e
     end
 
     private
@@ -91,9 +93,15 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
     def make_user(user, password, realm=nil)
       realm_opt = (realm ? "-u #{realm}" : "")
       cmd = "echo '#{password}' | #{SASLPASSWD} -c -p -f #{database} #{realm_opt} #{user}"
-      system(cmd) or raise RuntimeError.new("saslpasswd2 failed: #{makepw_cmd}")
+      system(cmd) or raise RuntimeError.new("saslpasswd2 failed: #{cmd}")
     end
-    DEFAULT = SASLConfig.new
+
+    INSTANCE = SASLConfig.new
+  end
+
+  def begin_extended_test
+    skip("Extended SASL not enabled") unless SASL.extended?
+    skip("Extended SASL setup error: #{SASLConfig::INSTANCE.error}") if SASLConfig::INSTANCE.error
   end
 
   def test_sasl_anonymous()
@@ -103,7 +111,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   end
 
   def test_sasl_plain_url()
-    skip unless SASL.extended?
+    begin_extended_test
     # Use default realm with URL, should authenticate with "default_password"
     opts = {:sasl_allowed_mechs => "PLAIN", :sasl_allow_insecure_mechs => true}
     s = SASLHandler.new("amqp://user:default_password@",  opts)
@@ -113,7 +121,7 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
   end
 
   def test_sasl_plain_options()
-    skip unless SASL.extended?
+    begin_extended_test
     # Use default realm with connection options, should authenticate with "default_password"
     opts = {:sasl_allowed_mechs => "PLAIN",:sasl_allow_insecure_mechs => true,
             :user => 'user', :password => 'default_password' }
