@@ -105,12 +105,13 @@ PNP_EXTERN size_t pn_netaddr_socklen(const pn_netaddr_t *na);
  */
 PNP_EXTERN int pn_netaddr_host_port(const pn_netaddr_t* na, char *host, size_t hlen, char *port, size_t plen);
 
+/* These function names will be deprecated in a future release of proton */
 /**  @deprecated @{ */
-PN_DEPRECATED("use pn_transport_local_addr")
+/* PN_DEPRECATED("use pn_transport_local_addr") */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
-PN_DEPRECATED("use pn_transport_remote_addr()")
+/* PN_DEPRECATED("use pn_transport_remote_addr()") */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
-PN_DEPRECATED("use pn_listener_addr()")
+/* PN_DEPRECATED("use pn_listener_addr()") */
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l);
 /** @} */
 
