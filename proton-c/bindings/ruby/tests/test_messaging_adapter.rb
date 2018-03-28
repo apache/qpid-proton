@@ -112,7 +112,7 @@ class TestMessagingHandler < MiniTest::Test
   def test_session_error
     d = DriverPair.new(RecordingHandler.new, RecordingHandler.new)
     d.client.connection.open
-    s = d.client.connection.session; s.open; d.run
+    s = d.client.connection.default_session; s.open; d.run
     assert_equal [:on_connection_open, :on_session_open], d.client.handler.names
     assert_equal [:on_connection_open, :on_session_open], d.server.handler.names
     d.clear

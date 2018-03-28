@@ -27,8 +27,8 @@ describe "The extended hash type" do
   end
 
   it "can be put into an instance of Data" do
-    @hash.proton_data_put(@data)
-    result = Hash.proton_data_get(@data)
+    @data.map = @hash
+    result = @data.map
     result.keys.must_equal(@hash.keys)
     result.values.must_equal(@hash.values)
   end
@@ -38,7 +38,7 @@ describe "The extended hash type" do
     @data.rewind
 
     proc {
-      Hash.proton_data_get(@data)
+      @data.map
     }.must_raise(TypeError)
   end
 

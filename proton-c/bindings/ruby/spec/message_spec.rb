@@ -580,7 +580,6 @@ module Qpid
       end
 
       it "has no body after being cleared" do
-        name = random_string(16)
         value = random_string(128)
 
         @message.body = value

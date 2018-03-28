@@ -114,14 +114,11 @@ if (result EQUAL 0)  # Have minitest
   set(test_env ${env_py} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
 
   macro(add_ruby_test script)
-    if(${script} MATCHES "old")
-      set(opt "RUBYOPT=-W0")    # Suppress deprecation warnings
-    endif()
     get_filename_component(name ${script} NAME_WE)
     string(REPLACE "_" "-" name "ruby-${name}")
     add_test(
       NAME ${name}
-      COMMAND ${test_env} ${opt} ${RUBY_EXECUTABLE} ${script} -v
+      COMMAND ${test_env} ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
 
   endmacro()
@@ -132,6 +129,10 @@ if (result EQUAL 0)  # Have minitest
   foreach(t ${TESTS} ${SPECS})
     add_ruby_test(${t})
   endforeach()
+  # Suppress deprecation warnings from backward-compatibility tests
+  set_tests_properties(
+    ruby-old-example-test ruby-test-old-adapter
+    PROPERTIES ENVIRONMENT "RUBYOPT=-W0")
 else()
   # No minitest
   message(STATUS "Ruby tests will not run, minitest is not installed")

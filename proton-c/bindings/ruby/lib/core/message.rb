@@ -70,7 +70,6 @@ module Qpid::Proton
       end
     end
 
-    # @private nill
     # @private
     def pre_encode
       # encode elements from the message
@@ -89,6 +88,7 @@ module Qpid::Proton
       @properties = {}
       @instructions = {}
       @annotations = {}
+      @body = nil
       self.body = body unless body.nil?
       if !opts.nil? then
         opts.each do |k, v|
@@ -503,6 +503,8 @@ module Qpid::Proton
 
     # @return [Object] body of the message.
     attr_accessor :body
+
+    def inspect() pre_encode; super; end
 
     private
 

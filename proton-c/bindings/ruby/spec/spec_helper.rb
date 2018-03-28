@@ -17,7 +17,6 @@
 # under the License.
 #
 
-require 'minitest/spec'
 require 'minitest/autorun'
 require "securerandom"
 require "qpid_proton"
@@ -65,7 +64,6 @@ end
 def random_list(length)
   result = []
   (0...length).each do |element|
-    type = rand(8192) % 4
     low = rand(512)
     high = rand(8192)
 
