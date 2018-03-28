@@ -20,6 +20,7 @@
  */
 
 #include "engine-internal.h"
+#include "framing.h"
 #include <stdlib.h>
 #include <string.h>
 #include "protocol.h"
@@ -987,12 +988,12 @@ pn_session_t *pn_session(pn_connection_t *conn)
   ssn->links = pn_list(PN_WEAKREF, 0);
   ssn->freed = pn_list(PN_WEAKREF, 0);
   ssn->context = pn_record();
-  ssn->incoming_capacity = 1024*1024;
+  ssn->incoming_capacity = 0;
   ssn->incoming_bytes = 0;
   ssn->outgoing_bytes = 0;
   ssn->incoming_deliveries = 0;
   ssn->outgoing_deliveries = 0;
-  ssn->outgoing_window = 2147483647;
+  ssn->outgoing_window = AMQP_MAX_WINDOW_SIZE;
 
   // begin transport state
   memset(&ssn->state, 0, sizeof(ssn->state));

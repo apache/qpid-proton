@@ -1894,10 +1894,12 @@ static size_t pni_session_outgoing_window(pn_session_t *ssn)
 static size_t pni_session_incoming_window(pn_session_t *ssn)
 {
   uint32_t size = ssn->connection->transport->local_max_frame;
-  if (!size) {
-    return 2147483647; // biggest legal value
+  size_t cap = ssn->incoming_capacity;
+  if (size && cap) {    /* session flow control is enabled if both are specified */
+    if (cap < size) ssn->incoming_capacity = size; /* Must be able to hold 1 frame */
+    return (ssn->incoming_capacity - ssn->incoming_bytes) / size;
   } else {
-    return (ssn->incoming_capacity - ssn->incoming_bytes)/size;
+    return AMQP_MAX_WINDOW_SIZE;
   }
 }
 
