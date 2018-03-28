@@ -134,12 +134,9 @@ module Qpid::Proton
       Cproton.pn_connection_set_password(@impl, opts[:password]) if opts[:password]
       Cproton.pn_connection_set_hostname(@impl, opts[:virtual_host]) if opts[:virtual_host]
       @link_prefix = opts[:link_prefix] || cid
-      Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl),
-                              Types.symbol_array(opts[:offered_capabilities]))
-      Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl),
-                              Types.symbol_array(opts[:desired_capabilities]))
-      Codec::Data.from_object(Cproton.pn_connection_properties(@impl),
-                              Types.symbol_keys(opts[:properties]))
+      Codec::Data.from_object(Cproton.pn_connection_offered_capabilities(@impl), opts[:offered_capabilities])
+      Codec::Data.from_object(Cproton.pn_connection_desired_capabilities(@impl), opts[:desired_capabilities])
+      Codec::Data.from_object(Cproton.pn_connection_properties(@impl), opts[:properties])
     end
 
     # Idle-timeout advertised by the remote peer, in seconds.

@@ -183,9 +183,9 @@ class ContainerTest < MiniTest::Test
     })
     client = cont.connect(cont.url,
       {:virtual_host => "client.to.server",
-        :properties => { :foo => :bar, "str" => "str" },
+        :properties => { "foo" => :bar, "str" => "str" },
         :offered_capabilities => [:c1 ],
-        :desired_capabilities => ["c2" ],
+        :desired_capabilities => [:c2 ],
         :idle_timeout => 42,
         :max_sessions =>100,
         :max_frame_size => 4096,
@@ -195,7 +195,7 @@ class ContainerTest < MiniTest::Test
 
     c = server_handler.connection
     assert_equal "client.to.server", c.virtual_host
-    assert_equal({ :foo => :bar, :str => "str" }, c.properties)
+    assert_equal({ "foo" => :bar, "str" => "str" }, c.properties)
     assert_equal([:c1], c.offered_capabilities)
     assert_equal([:c2], c.desired_capabilities)
     assert_equal 21, c.idle_timeout # Proton divides by 2
