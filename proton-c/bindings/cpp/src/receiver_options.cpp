@@ -101,6 +101,7 @@ class receiver_options::impl {
         dynamic_address.update(x.dynamic_address);
         source.update(x.source);
         target.update(x.target);
+        name.update(x.name);
     }
 
 };
