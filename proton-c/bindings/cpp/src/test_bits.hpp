@@ -67,12 +67,14 @@ inline void assert_equalish(T want, T got, T delta, const std::string& what)
             std::cout << "TEST: " << #TEST << std::endl;                \
             TEST;                                                       \
             break;                                                      \
-        } catch(const test::fail& e) {                                        \
+        } catch(const test::fail& e) {                                  \
             std::cout << "FAIL " << #TEST << std::endl << e.what() << std::endl; \
         } catch(const std::exception& e) {                              \
             std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": " << e.what() << std::endl; \
+        } catch(...) {                                                  \
+            std::cout << "ERROR " << #TEST << std::endl << __FILE__ << ":" << __LINE__ << ": (unknown)" << std::endl; \
         }                                                               \
-            ++BAD_COUNT;                                                \
+        ++BAD_COUNT;                                                    \
     } while(0)
 
 /* Like RUN_TEST but only if one of the argv strings is found in the test EXPR */
