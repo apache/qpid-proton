@@ -119,6 +119,7 @@ set(qpid-proton-cpp-source
   src/message.cpp
   src/messaging_adapter.cpp
   src/node_options.cpp
+  src/null.cpp
   src/object.cpp
   src/proton_bits.cpp
   src/receiver.cpp

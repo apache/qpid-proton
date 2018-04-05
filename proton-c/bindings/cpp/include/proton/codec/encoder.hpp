@@ -97,6 +97,9 @@ class encoder : public internal::data {
     PN_CPP_EXTERN encoder& operator<<(const binary&);
     PN_CPP_EXTERN encoder& operator<<(const scalar_base&);
     PN_CPP_EXTERN encoder& operator<<(const null&);
+#if PN_CPP_HAS_NULLPTR
+    PN_CPP_EXTERN encoder& operator<<(decltype(nullptr));
+#endif
     /// @}
 
     /// Insert a proton::value.

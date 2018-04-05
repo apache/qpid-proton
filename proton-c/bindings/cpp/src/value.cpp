@@ -183,10 +183,7 @@ bool operator<(const value& x, const value& y) {
 }
 
 std::ostream& operator<<(std::ostream& o, const value& x) {
-    if (x.empty()) {
-        return o << "<empty-value>";
-    }
-    if (type_id_is_scalar(x.type()) || x.empty())
+    if (type_id_is_scalar(x.type()))
         return o << proton::get<scalar>(x); // Print as a scalar
     // Use pn_inspect for complex types.
     proton::decoder d(x);

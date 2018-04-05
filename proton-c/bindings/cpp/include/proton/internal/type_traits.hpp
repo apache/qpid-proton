@@ -113,6 +113,9 @@ template<> struct type_id_of<uuid> : public type_id_constant<UUID, uuid> {};
 template<> struct type_id_of<std::string> : public type_id_constant<STRING, std::string> {};
 template<> struct type_id_of<symbol> : public type_id_constant<SYMBOL, symbol> {};
 template<> struct type_id_of<binary> : public type_id_constant<BINARY, binary> {};
+#if PN_CPP_HAS_NULLPTR
+template<> struct type_id_of<decltype(nullptr)> : public type_id_constant<NULL_TYPE, null> {};
+#endif
 /// @}
 
 /// Metafunction to test if a class has a type_id.

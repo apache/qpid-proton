@@ -27,10 +27,6 @@
 
 #include "./internal/config.hpp"
 
-#if PN_CPP_HAS_NULLPTR
-#include <cstddef>
-#endif
-
 namespace proton {
 
 class binary;
@@ -43,13 +39,7 @@ class timestamp;
 class duration;
 class uuid;
 class value;
-
-struct null {
-    null() {}
-#if PN_CPP_HAS_NULLPTR
-    null(std::nullptr_t) {}
-#endif
-};
+class null;
 
 } // proton
 

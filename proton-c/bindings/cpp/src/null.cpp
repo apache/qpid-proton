@@ -1,6 +1,3 @@
-#ifndef PROTON_TYPES_HPP
-#define PROTON_TYPES_HPP
-
 /*
  *
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -22,32 +19,17 @@
  *
  */
 
-/// @file
-/// Proton types used to represent AMQP types.
+#include "proton/null.hpp"
 
-// TODO aconway 2016-03-15: described types, described arrays.
+#include "proton/value.hpp"
 
-#include "./internal/config.hpp"
+#include <ostream>
 
-#include "./annotation_key.hpp"
-#include "./binary.hpp"
-#include "./decimal.hpp"
-#include "./duration.hpp"
-#include "./message_id.hpp"
-#include "./null.hpp"
-#include "./scalar.hpp"
-#include "./symbol.hpp"
-#include "./timestamp.hpp"
-#include "./uuid.hpp"
-#include "./value.hpp"
+namespace proton {
 
-#include "./codec/deque.hpp"
-#include "./codec/list.hpp"
-#include "./codec/map.hpp"
-#include "./codec/vector.hpp"
-#if PN_CPP_HAS_CPP11
-#include "./codec/forward_list.hpp"
-#include "./codec/unordered_map.hpp"
-#endif
+std::ostream& operator<<(std::ostream& os, const null& n) {
+    os << to_string(n);
+    return os;
+}
 
-#endif // PROTON_TYPES_HPP
+}

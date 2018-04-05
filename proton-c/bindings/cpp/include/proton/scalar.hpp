@@ -22,6 +22,8 @@
 
 #include "./scalar_base.hpp"
 
+#include "proton/null.hpp"
+
 #include <proton/type_compat.h>
 
 /// @file

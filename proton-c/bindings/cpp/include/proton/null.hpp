@@ -1,5 +1,5 @@
-#ifndef PROTON_TYPES_HPP
-#define PROTON_TYPES_HPP
+#ifndef PROTON_NULL_HPP
+#define PROTON_NULL_HPP
 
 /*
  *
@@ -23,31 +23,28 @@
  */
 
 /// @file
-/// Proton types used to represent AMQP types.
-
-// TODO aconway 2016-03-15: described types, described arrays.
+/// @copybrief proton::null
 
 #include "./internal/config.hpp"
+#include "./internal/export.hpp"
 
-#include "./annotation_key.hpp"
-#include "./binary.hpp"
-#include "./decimal.hpp"
-#include "./duration.hpp"
-#include "./message_id.hpp"
-#include "./null.hpp"
-#include "./scalar.hpp"
-#include "./symbol.hpp"
-#include "./timestamp.hpp"
-#include "./uuid.hpp"
-#include "./value.hpp"
+#include <iosfwd>
 
-#include "./codec/deque.hpp"
-#include "./codec/list.hpp"
-#include "./codec/map.hpp"
-#include "./codec/vector.hpp"
-#if PN_CPP_HAS_CPP11
-#include "./codec/forward_list.hpp"
-#include "./codec/unordered_map.hpp"
+namespace proton {
+
+/// The type of the AMQP null value
+///
+/// @see @ref types_page
+class null {
+  public:
+    null() {}
+#if PN_CPP_HAS_NULLPTR
+    null(decltype(nullptr)) {}
 #endif
+};
 
-#endif // PROTON_TYPES_HPP
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const null&);
+
+}
+
+#endif // PROTON_NULL_HPP

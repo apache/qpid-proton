@@ -76,6 +76,23 @@ template <class T, class U> void map_test(const U& values, const string& s) {
         ASSERT_EQUAL(s, to_string(v));
 }
 
+#if PN_CPP_HAS_CPP11
+void null_test() {
+    auto n = null();
+    proton::value nn = nullptr;
+    ASSERT_EQUAL(n, nn);
+    ASSERT_EQUAL("null", to_string(nn));
+    ASSERT_EQUAL("null", to_string(n));
+    std::vector<proton::value> nulls = {nullptr, null{}};
+    ASSERT_EQUAL("[null, null]", to_string(nulls));
+
+    std::vector<std::nullptr_t> nulls1 = {nullptr, nullptr};
+    ASSERT_EQUAL("@PN_NULL[null, null]", to_string(nulls1));
+
+    std::vector<proton::value> vs = {nullptr, nulls, nulls1};
+    ASSERT_EQUAL("[null, [null, null], @PN_NULL[null, null]]", to_string(vs));
+}
+#endif
 }
 
 int main(int, char**) {
@@ -125,6 +142,7 @@ int main(int, char**) {
         RUN_TEST(failed, sequence_test<forward_list<binary> >(
                      ARRAY, many<binary>() + binary("xx") + binary("yy"), "@PN_BINARY[b\"xx\", b\"yy\"]"));
         RUN_TEST(failed, (map_test<unordered_map<string, uint64_t> >(si_pairs, "")));
+        RUN_TEST(failed, null_test());
 #endif
         return failed;
     } catch (const std::exception& e) {
