@@ -1321,7 +1321,9 @@ void pn_proactor_connect2(pn_proactor_t *p, pn_connection_t *c, pn_transport_t *
     } else {
       psocket_gai_error(&pc->psocket, gai_error, "connect to ");
       notify = wake(&pc->context);
+      lock(&p->context.mutex);
       notify_proactor = wake_if_inactive(p);
+      unlock(&p->context.mutex);
     }
   }
   /* We need to issue INACTIVE on immediate failure */
