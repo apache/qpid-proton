@@ -84,6 +84,9 @@ class Proc(Popen):
         except Exception as e:
             raise ProcError(self, str(e))
 
+    def __del__(self):
+        self._out.close()
+
     def kill(self):
         try:
             if self.poll() is None:
