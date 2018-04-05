@@ -35,7 +35,7 @@ module Qpid::Proton
     include TimeCompare
 
     # Error raised if the container is used after {#stop} has been called.
-    class StoppedError < RuntimeError
+    class StoppedError < StateError
       def initialize(*args) super("container has been stopped"); end
     end
 
@@ -53,7 +53,7 @@ module Qpid::Proton
     #   concurrently.
     #
     def initialize(*args)
-      @handler, @id, @panic = nil
+      @handler, @id = nil
       case args.size
       when 2 then @handler, @id = args
       when 1 then
@@ -87,6 +87,7 @@ module Qpid::Proton
       @running = 0              # Count of #run threads
       @stopped = false          # #stop called
       @stop_err = nil           # Optional error to pass to tasks, from #stop
+      @panic = nil              # Exception caught in a run thread, to be raised by all run threads
     end
 
     # @return [MessagingHandler] The container-wide handler
@@ -94,6 +95,9 @@ module Qpid::Proton
 
     # @return [String] unique identifier for this container
     attr_reader :id
+
+    def to_s() "#<#{self.class} id=#{id.inspect}>"; end
+    def inspect() to_s; end
 
     # Auto-stop flag.
     #
@@ -198,12 +202,13 @@ module Qpid::Proton
       while task = @work.pop
         run_one(task, Time.now)
       end
-      raise @panic if @panic
+      @lock.synchronize { raise @panic if @panic }
     ensure
       @lock.synchronize do
         if (@running -= 1) > 0
           work_wake nil         # Signal the next thread
         else
+          # This is the last thread, no need to do maybe_panic around this final handler call.
           @adapter.on_container_stop(self) if @adapter.respond_to? :on_container_stop
         end
       end
@@ -217,15 +222,13 @@ module Qpid::Proton
     # is finished.
     #
     # The container can no longer be used, using a stopped container raises
-    # {StoppedError} on attempting.  Create a new container if you want to
-    # resume activity.
+    # {StoppedError}.  Create a new container if you want to resume activity.
     #
     # @param error [Condition] Optional error condition passed to
     #  {MessagingHandler#on_transport_error} for each connection and
     #  {Listener::Handler::on_error} for each listener.
     #
-    # @param panic [Exception] Optional exception raised by all concurrent calls
-    # to run()
+    # @param panic [Exception] Optional exception to raise from all calls to run()
     #
     def stop(error=nil, panic=nil)
       @lock.synchronize do
@@ -338,14 +341,14 @@ module Qpid::Proton
         @lock.synchronize do
           return if @set        # Don't write if already has data
           @set = true
-          begin @wr.write_nonblock('x') rescue IO::WaitWritable end
+          @wr.write_nonblock('x') rescue nil
         end
       end
 
       def reset
         @lock.synchronize do
           return unless @set
-          begin @rd.read_nonblock(1) rescue IO::WaitReadable end
+          @rd.read_nonblock(1) rescue nil
           @set = false
         end
       end
@@ -361,7 +364,7 @@ module Qpid::Proton
       case task
 
       when :start
-        @adapter.on_container_start(self) if @adapter.respond_to? :on_container_start
+        maybe_panic { @adapter.on_container_start(self) } if @adapter.respond_to? :on_container_start
 
       when :select
         # Compute read/write select sets and minimum next_tick for select timeout
