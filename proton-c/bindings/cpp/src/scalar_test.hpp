@@ -86,18 +86,18 @@ template <class V, class T> void simple_integral_test() {
 // Test invalid gets, valid same-type get<T> is tested by simple_type_test
 // Templated to test both scalar and value.
 template<class V>  void bad_get_test() {
-    try { get<bool>(V(int8_t(1))); FAIL("byte as bool"); } catch (conversion_error) {}
-    try { get<uint8_t>(V(true)); FAIL("bool as uint8_t"); } catch (conversion_error) {}
-    try { get<uint8_t>(V(int8_t(1))); FAIL("int8 as uint8"); } catch (conversion_error) {}
-    try { get<int16_t>(V(uint16_t(1))); FAIL("uint16 as int16"); } catch (conversion_error) {}
-    try { get<int16_t>(V(int32_t(1))); FAIL("int32 as int16"); } catch (conversion_error) {}
-    try { get<symbol>(V(std::string())); FAIL("string as symbol"); } catch (conversion_error) {}
-    try { get<std::string>(V(binary())); FAIL("binary as string"); } catch (conversion_error) {}
-    try { get<binary>(V(symbol())); FAIL("symbol as binary"); } catch (conversion_error) {}
-    try { get<binary>(V(timestamp())); FAIL("timestamp as binary"); } catch (conversion_error) {}
-    try { get<int>(V(timestamp())); FAIL("timestamp as int"); } catch (conversion_error) {}
-    try { get<timestamp>(V(0)); FAIL("int as timestamp"); } catch (conversion_error) {}
-    try { get<timestamp>(V(std::string())); FAIL("string as timestamp"); } catch (conversion_error) {}
+    try { get<bool>(V(int8_t(1))); FAIL("byte as bool"); } catch (const conversion_error&) {}
+    try { get<uint8_t>(V(true)); FAIL("bool as uint8_t"); } catch (const conversion_error&) {}
+    try { get<uint8_t>(V(int8_t(1))); FAIL("int8 as uint8"); } catch (const conversion_error&) {}
+    try { get<int16_t>(V(uint16_t(1))); FAIL("uint16 as int16"); } catch (const conversion_error&) {}
+    try { get<int16_t>(V(int32_t(1))); FAIL("int32 as int16"); } catch (const conversion_error&) {}
+    try { get<symbol>(V(std::string())); FAIL("string as symbol"); } catch (const conversion_error&) {}
+    try { get<std::string>(V(binary())); FAIL("binary as string"); } catch (const conversion_error&) {}
+    try { get<binary>(V(symbol())); FAIL("symbol as binary"); } catch (const conversion_error&) {}
+    try { get<binary>(V(timestamp())); FAIL("timestamp as binary"); } catch (const conversion_error&) {}
+    try { get<int>(V(timestamp())); FAIL("timestamp as int"); } catch (const conversion_error&) {}
+    try { get<timestamp>(V(0)); FAIL("int as timestamp"); } catch (const conversion_error&) {}
+    try { get<timestamp>(V(std::string())); FAIL("string as timestamp"); } catch (const conversion_error&) {}
 }
 
 // Test some valid coercions and some bad ones with mixed types.
@@ -124,17 +124,17 @@ template<class V> void coerce_test() {
 
     // Bad coercions, types are not `is_convertible`
     V s("foo");
-    try { coerce<bool>(s); FAIL("string as bool"); } catch (conversion_error) {}
-    try { coerce<int>(s); FAIL("string as int"); } catch (conversion_error) {}
-    try { coerce<double>(s); FAIL("string as double"); } catch (conversion_error) {}
+    try { coerce<bool>(s); FAIL("string as bool"); } catch (const conversion_error&) {}
+    try { coerce<int>(s); FAIL("string as int"); } catch (const conversion_error&) {}
+    try { coerce<double>(s); FAIL("string as double"); } catch (const conversion_error&) {}
 
-    try { coerce<std::string>(V(0)); FAIL("int as string"); } catch (conversion_error) {}
-    try { coerce<symbol>(V(true)); FAIL("bool as symbol"); } catch (conversion_error) {}
-    try { coerce<binary>(V(0.0)); FAIL("double as binary"); } catch (conversion_error) {}
-    try { coerce<symbol>(V(binary())); FAIL("binary as symbol"); } catch (conversion_error) {}
-    try { coerce<binary>(V(symbol())); FAIL("symbol as binary"); } catch (conversion_error) {}
-    try { coerce<binary>(s); } catch (conversion_error) {}
-    try { coerce<symbol>(s); } catch (conversion_error) {}
+    try { coerce<std::string>(V(0)); FAIL("int as string"); } catch (const conversion_error&) {}
+    try { coerce<symbol>(V(true)); FAIL("bool as symbol"); } catch (const conversion_error&) {}
+    try { coerce<binary>(V(0.0)); FAIL("double as binary"); } catch (const conversion_error&) {}
+    try { coerce<symbol>(V(binary())); FAIL("binary as symbol"); } catch (const conversion_error&) {}
+    try { coerce<binary>(V(symbol())); FAIL("symbol as binary"); } catch (const conversion_error&) {}
+    try { coerce<binary>(s); } catch (const conversion_error&) {}
+    try { coerce<symbol>(s); } catch (const conversion_error&) {}
 }
 
 template <class V> void null_test() {
@@ -149,7 +149,7 @@ template <class V> void null_test() {
     ASSERT_EQUAL(NULL_TYPE, v.type());
     v = "foo";
     ASSERT_EQUAL(STRING, v.type());
-    try { get<null>(v); FAIL("Expected conversion_error"); } catch (conversion_error) {}
+    try { get<null>(v); FAIL("Expected conversion_error"); } catch (const conversion_error&) {}
     v = null();
     get<null>(v);
 }
