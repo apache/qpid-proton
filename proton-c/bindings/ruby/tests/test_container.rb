@@ -330,34 +330,10 @@ class ContainerTest < MiniTest::Test
     assert_raises(Container::StoppedError) { cont.listen "" }
   end
 
-  # Make sure Container::Scheduler puts tasks in proper order.
-  def test_scheduler
-    a = []
-    s = Schedule.new
-
-    assert_equal true,  s.add(Time.at 3) { a << 3 }
-    assert_equal false, s.process(Time.at 2)      # Should not run
-    assert_equal [], a
-    assert_equal true, s.process(Time.at 3)      # Should run
-    assert_equal [3], a
-
-    a = []
-    assert_equal true, s.add(Time.at 3) { a << 3 }
-    assert_equal false, s.add(Time.at 5) { a << 5 }
-    assert_equal false, s.add(Time.at 1) { a << 1 }
-    assert_equal false, s.add(Time.at 4) { a << 4 }
-    assert_equal false, s.add(Time.at 4) { a << 4.1 }
-    assert_equal false, s.add(Time.at 4) { a << 4.2 }
-    assert_equal false, s.process(Time.at 4)
-    assert_equal [1, 3, 4, 4.1, 4.2], a
-    a = []
-    assert_equal true, s.process(Time.at 5)
-    assert_equal [5], a
-  end
-
-  def test_container_schedule
+  # Test container doesn't stops only when schedule work is done
+  def test_container_work_queue
     c = Container.new __method__
-    delays = [0.1, 0.03, 0.02, 0.04]
+    delays = [0.1, 0.03, 0.02]
     a = []
     delays.each { |d| c.schedule(d) { a << [d, Time.now] } }
     start = Time.now
@@ -369,7 +345,82 @@ class ContainerTest < MiniTest::Test
     end
   end
 
-  def test_work_queue
+  # Test container work queue finishes due tasks on external stop, drops future tasks
+  def test_container_work_queue_stop
+    q = Queue.new
+    c = Container.new __method__
+    t = Thread.new { c.run }
+    [0.1, 0.2, 0.2, 0.2, 1.0].each { |d| c.schedule(d) { q << d } }
+    assert_equal 0.1, q.pop
+    assert_equal 0.2, q.pop
+    c.stop
+    t.join
+    assert_equal 0.2, q.pop
+    assert_equal 0.2, q.pop
+    assert_empty q
+  end
+
+  # Chain schedule calls from other schedule calls
+  def test_container_schedule_chain
+    c = Container.new(__method__)
+    delays = [0.05, 0.02, 0.04]
+    i = delays.each
+    a = []
+    p = Proc.new { c.schedule(i.next) { a << Time.now; p.call } rescue nil }
+    p.call                 # Schedule the first, which schedules the second etc.
+    start = Time.now
+    c.run
+    assert_equal 3, a.size
+    delays.inject(0) do |d,sum|
+      x = a.shift
+      assert_in_delta  start + d + sum, x, 0.01
+      sum + d
+    end
+  end
+
+  # Schedule calls from handlers
+  def test_container_schedule_handler
+    h = Class.new() do
+      def initialize() @got = []; end
+      attr_reader :got
+      def record(m) @got << m; end
+      def on_container_start(c) c.schedule(0) {record __method__}; end
+      def on_connection_open(c) c.close; c.container.schedule(0) {record __method__}; end
+      def on_connection_close(c) c.container.schedule(0) {record __method__}; end
+    end.new
+    t = ServerContainerThread.new(__method__, nil, 1, h)
+    t.connect(t.url)
+    t.join
+    assert_equal [:on_container_start, :on_connection_open, :on_connection_open, :on_connection_close, :on_connection_close], h.got
+  end
+
+  # Raising from container handler should stop container
+  def test_container_handler_raise
+    h = Class.new() do
+      def on_container_start(c) raise "BROKEN"; end
+    end.new
+    c = Container.new(h, __method__)
+    assert_equal("BROKEN", (assert_raises(RuntimeError) { c.run }).to_s)
+  end
+
+  # Raising from connection handler should stop container
+  def test_connection_handler_raise
+    h = Class.new() do
+      def on_connection_open(c) raise "BROKEN"; end
+    end.new
+    c = ServerContainer.new(__method__, nil, 1, h)
+    c.connect(c.url)
+    assert_equal("BROKEN", (assert_raises(RuntimeError) { c.run }).to_s)
+  end
+
+  # Raising from container schedule should stop container
+  def test_container_schedule_raise
+    c = Container.new(__method__)
+    c.schedule(0) { raise "BROKEN" }
+    assert_equal("BROKEN", (assert_raises(RuntimeError) { c.run }).to_s)
+  end
+
+  def test_connection_work_queue
     cont = ServerContainer.new(__method__, {}, 1)
     c = cont.connect(cont.url)
     t = Thread.new { cont.run }
@@ -391,6 +442,14 @@ class ContainerTest < MiniTest::Test
 
     c.work_queue.add { c.close }
     t.join
-    assert_raises(EOFError) { c.work_queue.add {  } }
+    assert_raises(WorkQueue::StoppedError) { c.work_queue.add {  } }
+  end
+
+  # Raising from connection schedule should stop container
+  def test_connection_work_queue_raise
+    c = ServerContainer.new(__method__)
+    c.connect(c.url)
+    c.work_queue.add { raise "BROKEN" }
+    assert_equal("BROKEN", (assert_raises(RuntimeError) { c.run }).to_s)
   end
 end

@@ -19,58 +19,79 @@ module Qpid::Proton
 
   # A thread-safe queue of work for multi-threaded programs.
   #
-  # Instances of {Connection} and objects associated with it ({Session}, {Sender},
-  # {Receiver}, {Delivery}, {Tracker}) are not thread-safe and must be
-  # used correctly when multiple threads call {Container#run}
+  # A {Container} can have multiple threads calling {Container#run}
+  # The container ensures that work associated with a single {Connection} or
+  # {Listener} is _serialized_ - two threads will never concurrently call
+  # handlers associated with the same object.
   #
-  # Calls to {MessagingHandler} methods by the {Container} are automatically
-  # serialized for each connection instance. Other threads may have code
-  # similarly serialized by adding it to the {Connection#work_queue} for the
-  # connection.  Each object related to a {Connection} also provides a
-  # +work_queue+ method.
+  # To have your own code serialized in the same, add a block to the connection's
+  # {WorkQueue}. The block will be invoked as soon as it is safe to do so.
+  #
+  # A {Connection} and the objects associated with it ({Session}, {Sender},
+  # {Receiver}, {Delivery}, {Tracker}) are not thread safe, so if you have
+  # multiple threads calling {Container#run} or if you want to affect objects
+  # managed by the container from non-container threads you need to use the
+  # {WorkQueue}
   #
   class WorkQueue
 
-    # Add code to be executed in series with other {Container} operations on the
-    # work queue's owner. The code will be executed as soon as possible.
+    # Error raised if work is added after the queue has been stopped.
+    class StoppedError < Qpid::Proton::StoppedError
+      def initialize() super("WorkQueue has been stopped"); end
+    end
+
+    # Add a block of code to be invoked in sequence.
     #
+    # @yield [ ] the block will be invoked with no parameters in the appropriate thread context
     # @note Thread Safe: may be called in any thread.
-    # @param non_block [Boolean] if true raise {ThreadError} if the operation would block.
-    # @yield [ ] the block will be invoked with no parameters in the {WorkQueue} context,
-    #  which may be a different thread.
     # @return [void]
-    # @raise [ThreadError] if +non_block+ is true and the operation would block
-    # @raise [EOFError] if the queue is closed and cannot accept more work
-    def add(non_block=false, &block)
-      @schedule.add(Time.at(0), non_block, &block)
-      @container.send :wake
+    # @raise [StoppedError] if the queue is closed and cannot accept more work
+    def add(&block)
+      schedule(0, &block)
     end
 
-    # Schedule code to be executed after +delay+ seconds in series with other
-    # {Container} operations on the work queue's owner.
+    # Schedule a block to be invoked at a certain time.
     #
-    # Work scheduled for after the {WorkQueue} has closed will be silently dropped.
-    #
+    # @param at [Time] Invoke block as soon as possible after Time +at+
+    # @param at [Numeric] Invoke block after a delay of +at+ seconds from now
+    # @yield [ ] (see #add)
     # @note (see #add)
-    # @param delay delay in seconds until the block is added to the queue.
-    # @param (see #add)
-    # @yield (see #add)
-    # @return [void]
+    # @return (see #add)
     # @raise (see #add)
-    def schedule(delay, non_block=false, &block)
-      @schedule.add(Time.now + delay, non_block, &block)
+    def schedule(at, &block)
+      raise ArgumentError, "no block" unless block_given?
+      @lock.synchronize do
+        raise @closed if @closed
+        @schedule.insert(at, block)
+      end
       @container.send :wake
     end
 
-    private
-
+    # @private
     def initialize(container)
+      @lock = Mutex.new
       @schedule = Schedule.new
       @container = container
+      @closed = nil
     end
 
-    def close() @schedule.close; end
-    def process(now) @schedule.process(now); end
-    def next_tick() @schedule.next_tick; end
+    # @private
+    def close() @lock.synchronize { @closed = StoppedError.new } end
+
+    # @private
+    def process(now)
+      while p = @lock.synchronize { @schedule.pop(now) }
+        p.call
+      end
+    end
+
+    # @private
+    def next_tick() @lock.synchronize { @schedule.next_tick } end
+
+    # @private
+    def empty?() @lock.synchronize { @schedule.empty? } end
+
+    # @private
+    def clear() @lock.synchronize { @schedule.clear } end
   end
 end

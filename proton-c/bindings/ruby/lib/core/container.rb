@@ -35,8 +35,8 @@ module Qpid::Proton
     include TimeCompare
 
     # Error raised if the container is used after {#stop} has been called.
-    class StoppedError < StateError
-      def initialize(*args) super("container has been stopped"); end
+    class StoppedError < Qpid::Proton::StoppedError
+      def initialize() super("container has been stopped"); end
     end
 
     # Create a new Container
@@ -66,19 +66,13 @@ module Qpid::Proton
       @adapter = Handler::Adapter.adapt(@handler) || Handler::MessagingAdapter.new(nil)
       @id = (@id || SecureRandom.uuid).freeze
 
-      # Implementation note:
-      #
-      # - #run threads take work items from @work, process them, and rearm them for select
-      # - work items are: ConnectionTask, ListenTask, :start, :select, :schedule
-      # - nil on the @work queue makes a #run thread exit
-
+      # Threading and implementation notes: see comment on #run_one
       @work = Queue.new
       @work << :start
       @work << :select
       @wake = SelectWaker.new   # Wakes #run thread in IO.select
       @auto_stop = true         # Stop when @active drops to 0
-      @schedule = Schedule.new
-      @schedule_working = false # True if :schedule is on the work queue
+      @work_queue = WorkQueue.new(self)  # work scheduled by other threads for :select context
 
       # Following instance variables protected by lock
       @lock = Mutex.new
@@ -242,25 +236,22 @@ module Qpid::Proton
         # - no more select calls after next wakeup
         # - once @active == 0, all threads will be stopped with nil
       end
-      @wake.wake
+      wake
     end
 
-    # Schedule code to be executed after a delay.
-    # @param delay [Numeric] delay in seconds, must be >= 0
-    # @yield [ ] the block is invoked with no parameters in a {#run} thread after +delay+ has elapsed
-    # @return [void]
-    # @raise [ThreadError] if +non_block+ is true and the operation would block
-    def schedule(delay, non_block=false, &block)
-      not_stopped
-      @lock.synchronize { @active += 1 } if @schedule.add(Time.now + delay, non_block, &block)
-      @wake.wake
-    end
+    # Get the {WorkQueue} that can be used to schedule code to be run by the container.
+    #
+    # Note: to run code that affects a {Connection} or it's associated objects,
+    # use {Connection#work_queue}
+    def work_queue() @work_queue; end
+
+    # (see WorkQueue#schedule)
+    def schedule(at, &block) @work_queue.schedule(at, &block) end
 
     private
 
     def wake() @wake.wake; end
 
-    # Container driver applies options and adds container context to events
     class ConnectionTask < Qpid::Proton::HandlerDriver
       include TimeCompare
 
@@ -269,15 +260,15 @@ module Qpid::Proton
         transport.set_server if server
         transport.apply opts
         connection.apply opts
-        @work_queue = WorkQueue.new container
+        @work_queue = WorkQueue.new(container)
         connection.instance_variable_set(:@work_queue, @work_queue)
       end
-      def next_tick() earliest(super, @work_queue.send(:next_tick)); end
-      def process(now) @work_queue.send(:process, now); super(); end
+      def next_tick() earliest(super, @work_queue.next_tick); end
+      def process(now) @work_queue.process(now); super(); end
 
       def dispatch              # Intercept dispatch to close work_queue
         super
-        @work_queue.send(:close) if read_closed? && write_closed? 
+        @work_queue.close if read_closed? && write_closed?
       end
     end
 
@@ -360,6 +351,12 @@ module Qpid::Proton
     end
 
     # Handle a single item from the @work queue, this is the heart of the #run loop.
+    # Take one task from @work, process it, and rearm for select
+    # Tasks are: ConnectionTask, ListenTask, :start, :select
+    # - ConnectionTask/ListenTask have #can_read, #can_write, #next_tick to set up IO.select
+    #   and #process to run handlers and process relevant work_queue
+    # - nil means exit from the  #run thread exit (handled by #run)
+    # - :select does IO.select and processes Container#work_queue
     def run_one(task, now)
       case task
 
@@ -369,40 +366,43 @@ module Qpid::Proton
       when :select
         # Compute read/write select sets and minimum next_tick for select timeout
         r, w = [@wake], []
-        next_tick = @schedule.next_tick
+        next_tick = @work_queue.next_tick
         @lock.synchronize do
           @selectable.each do |s|
-            r << s if s.send :can_read?
-            w << s if s.send :can_write?
+            r << s if s.can_read?
+            w << s if s.can_write?
             next_tick = earliest(s.next_tick, next_tick)
           end
         end
 
         timeout = ((next_tick > now) ? next_tick - now : 0) if next_tick
         r, w = IO.select(r, w, nil, timeout)
-        now = Time.now unless timeout == 0
         @wake.reset if r && r.delete(@wake)
+        now = Time.now unless timeout == 0 # Update now if we may have blocked
 
         # selected is a Set to eliminate duplicates between r, w and next_tick due.
         selected = Set.new
         selected.merge(r) if r
         selected.merge(w) if w
-        @lock.synchronize do
-          if @stopped # close everything
+        stopped = @lock.synchronize do
+          if @stopped           # close everything
             @selectable.each { |s| s.close @stop_err; @work << s }
             @selectable.clear
+            @work_queue.close
             @wake.close
-            return
+          else
+            @selectable -= selected # Remove already-selected tasks from @selectable
+            # Also select and remove items with next_tick before now
+            @selectable.delete_if { |s| before_eq(s.next_tick, now) and selected << s }
           end
-          if !@schedule_working && before_eq(@schedule.next_tick, now)
-            @schedule_working = true
-            @work << :schedule
-          end
-          selected.merge(@selectable.select { |s| before_eq(s.next_tick, now) })
-          @selectable -= selected # Remove selected tasks from @selectable
+          @stopped
         end
         selected.each { |s| @work << s } # Queue up tasks needing #process
-        @work << :select        # Enable next select
+        maybe_panic { @work_queue.process(now) } # Process current work queue items
+        @work_queue.clear if stopped
+        @lock.synchronize { check_stop_lh } if @work_queue.empty?
+
+        @work << :select  unless stopped # Enable next select
 
       when ConnectionTask then
         maybe_panic { task.process now }
@@ -412,56 +412,7 @@ module Qpid::Proton
         io, opts = maybe_panic { task.process }
         add(connection_driver(io, opts, true)) if io
         rearm task
-
-      when :schedule then
-        if maybe_panic { @schedule.process now }
-          @lock.synchronize { @active -= 1; check_stop_lh }
-        else
-          @lock.synchronize { @schedule_working = false }
-        end
       end
-    end
-
-    def do_select
-      # Compute the sets to select for read and write, and the minimum next_tick for the timeout
-      r, w = [@wake], []
-      next_tick = nil
-      @lock.synchronize do
-        @selectable.each do |s|
-          r << s if s.can_read?
-          w << s if s.can_write?
-          next_tick = earliest(s.next_tick, next_tick)
-        end
-      end
-      next_tick = earliest(@schedule.next_tick, next_tick)
-
-      # Do the select and queue up all resulting work
-      now = Time.now
-      timeout = next_tick - now if next_tick
-      r, w = (timeout.nil? || timeout > 0) && IO.select(r, w, nil, timeout)
-      @wake.reset
-      selected = Set.new
-      @lock.synchronize do
-        if @stopped
-          @selectable.each { |s| s.close @stop_err; @work << s }
-          @wake.close
-          return
-        end
-        # Check if schedule has items due and is not already working
-        if !@schedule_working && before_eq(@schedule.next_tick, now)
-          @work << :schedule
-          @schedule_working = true
-        end
-        # Eliminate duplicates between r, w and next_tick due.
-        selected.merge(r) if r
-        selected.delete(@wake)
-        selected.merge(w) if w
-        @selectable -= selected
-        selected.merge(@selectable.select { |s| before_eq(s.next_tick, now) })
-        @selectable -= selected
-      end
-      selected.each { |s| @work << s } # Queue up tasks needing #process
-      @work << :select
     end
 
     # Rescue any exception raised by the block and stop the container.
@@ -513,7 +464,7 @@ module Qpid::Proton
     end
 
     def check_stop_lh
-      if @active.zero? && (@auto_stop || @stopped)
+      if @active.zero? && (@auto_stop || @stopped) && @work_queue.empty?
         @stopped = true
         work_wake nil          # Signal threads to stop
         true

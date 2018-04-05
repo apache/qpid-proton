@@ -126,4 +126,8 @@ module Qpid::Proton
   # so that the application can delay completing the open/close to a later time.
   class StopAutoResponse < ProtonError
   end
+
+  # Raised when a method is called on an object that has been stopped.
+  class StoppedError < StateError
+  end
 end

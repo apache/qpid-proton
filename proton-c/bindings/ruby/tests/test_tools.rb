@@ -150,8 +150,8 @@ end
 class ServerContainer < Qpid::Proton::Container
   include Qpid::Proton
 
-  def initialize(id=nil, listener_opts=nil, n=1)
-    super id
+  def initialize(id=nil, listener_opts=nil, n=1, handler=nil)
+    super handler, id
     @listener = listen_io(TCPServer.open(0), ListenOnceHandler.new(listener_opts, n))
   end
 
@@ -162,7 +162,7 @@ class ServerContainer < Qpid::Proton::Container
 end
 
 class ServerContainerThread < ServerContainer
-  def initialize(id=nil, listener_opts=nil, n=1)
+  def initialize(*args)
     super
     @thread = Thread.new { run }
   end
