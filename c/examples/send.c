@@ -38,6 +38,7 @@ typedef struct app_data_t {
   int message_count;
 
   pn_proactor_t *proactor;
+  pn_message_t *message;
   pn_rwbytes_t message_buffer;
   int sent;
   int acknowledged;
@@ -55,39 +56,20 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond) {
 }
 
 /* Create a message with a map { "sequence" : number } encode it and return the encoded buffer. */
-static pn_bytes_t encode_message(app_data_t* app) {
+static void send_message(app_data_t* app, pn_link_t *sender) {
   /* Construct a message with the map { "sequence": app.sent } */
-  pn_message_t* message = pn_message();
-  pn_data_t* body = pn_message_body(message);
-  pn_data_put_int(pn_message_id(message), app->sent); /* Set the message_id also */
+  pn_data_t* body;
+  pn_message_clear(app->message);
+  body = pn_message_body(app->message);
+  pn_data_put_int(pn_message_id(app->message), app->sent); /* Set the message_id also */
   pn_data_put_map(body);
   pn_data_enter(body);
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
   pn_data_put_int(body, app->sent); /* The sequence number */
   pn_data_exit(body);
-
-  /* encode the message, expanding the encode buffer as needed */
-  if (app->message_buffer.start == NULL) {
-    static const size_t initial_size = 128;
-    app->message_buffer = pn_rwbytes(initial_size, (char*)malloc(initial_size));
-  }
-  /* app->message_buffer is the total buffer space available. */
-  /* mbuf wil point at just the portion used by the encoded message */
-  {
-  pn_rwbytes_t mbuf = pn_rwbytes(app->message_buffer.size, app->message_buffer.start);
-  int status = 0;
-  while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
-    app->message_buffer.size *= 2;
-    app->message_buffer.start = (char*)realloc(app->message_buffer.start, app->message_buffer.size);
-    mbuf.size = app->message_buffer.size;
-    mbuf.start = app->message_buffer.start;
-  }
-  if (status != 0) {
-    fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
+  if (pn_message_send(app->message, sender, &app->message_buffer) < 0) {
+    fprintf(stderr, "error sending message: %s\n", pn_error_text(pn_message_error(app->message)));
     exit(1);
-  }
-  pn_message_free(message);
-  return pn_bytes(mbuf.size, mbuf.start);
   }
 }
 
@@ -116,10 +98,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
        ++app->sent;
        /* Use sent counter as unique delivery tag. */
        pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
-       {
-       pn_bytes_t msgbuf = encode_message(app);
-       pn_link_send(sender, msgbuf.start, msgbuf.size);
-       }
+       send_message(app, sender);
        pn_link_advance(sender);
      }
      break;
@@ -193,6 +172,7 @@ int main(int argc, char **argv) {
   app.port = (argc > 2) ? argv[2] : "amqp";
   app.amqp_address = (argc > 3) ? argv[3] : "examples";
   app.message_count = (argc > 4) ? atoi(argv[4]) : 10;
+  app.message = pn_message();
 
   app.proactor = pn_proactor();
   pn_proactor_addr(addr, sizeof(addr), app.host, app.port);
@@ -200,5 +180,6 @@ int main(int argc, char **argv) {
   run(&app);
   pn_proactor_free(app.proactor);
   free(app.message_buffer.start);
+  pn_message_free(app.message);
   return exit_code;
 }

@@ -76,7 +76,7 @@ static void check_condition(pn_event_t *e, pn_condition_t *cond, app_data_t *app
 }
 
 /* Create a message with a map { "sequence" : number } encode it and return the encoded buffer. */
-static pn_bytes_t encode_message(app_data_t* app) {
+static void send_message(app_data_t *app, pn_link_t *sender) {
   /* Construct a message with the map { "sequence": app.sent } */
   pn_message_t* message = pn_message();
   pn_data_t* body = pn_message_body(message);
@@ -86,29 +86,11 @@ static pn_bytes_t encode_message(app_data_t* app) {
   pn_data_put_string(body, pn_bytes(sizeof("sequence")-1, "sequence"));
   pn_data_put_int(body, app->sent); /* The sequence number */
   pn_data_exit(body);
-
-  /* encode the message, expanding the encode buffer as needed */
-  if (app->msgout.start == NULL) {
-    static const size_t initial_size = 128;
-    app->msgout = pn_rwbytes(initial_size, (char*)malloc(initial_size));
-  }
-  /* app->msgout is the total buffer space available. */
-  /* mbuf wil point at just the portion used by the encoded message */
-  {
-  pn_rwbytes_t mbuf = pn_rwbytes(app->msgout.size, app->msgout.start);
-  int status = 0;
-  while ((status = pn_message_encode(message, mbuf.start, &mbuf.size)) == PN_OVERFLOW) {
-    app->msgout.size *= 2;
-    app->msgout.start = (char*)realloc(app->msgout.start, app->msgout.size);
-    mbuf.size = app->msgout.size;
-  }
-  if (status != 0) {
-    fprintf(stderr, "error encoding message: %s\n", pn_error_text(pn_message_error(message)));
-    exit(1);
+  if (pn_message_send(message, sender, &app->msgout) < 0) {
+    fprintf(stderr, "send error: %s\n", pn_error_text(pn_message_error(message)));
+    exit_code = 1;
   }
   pn_message_free(message);
-  return pn_bytes(mbuf.size, mbuf.start);
-  }
 }
 
 static void decode_message(pn_rwbytes_t data) {
@@ -124,7 +106,7 @@ static void decode_message(pn_rwbytes_t data) {
     pn_message_free(m);
     free(data.start);
   } else {
-    fprintf(stderr, "decode_message: %s\n", pn_code(err));
+    fprintf(stderr, "decode error: %s\n", pn_error_text(pn_message_error(m)));
     exit_code = 1;
   }
 }
@@ -142,7 +124,7 @@ static void handle_receive(app_data_t *app, pn_event_t* event) {
    case PN_DELIVERY: {          /* Incoming message data */
      pn_delivery_t *d = pn_event_delivery(event);
      if (pn_delivery_readable(d)) {
-       pn_link_t *l = pn_delivery_link(d);
+     pn_link_t *l = pn_delivery_link(d);
        size_t size = pn_delivery_pending(d);
        pn_rwbytes_t* m = &app->msgin; /* Append data to incoming message buffer */
        ssize_t recv;
@@ -198,11 +180,8 @@ static void handle_send(app_data_t* app, pn_event_t* event) {
        ++app->sent;
        /* Use sent counter as unique delivery tag. */
        pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
-       {
-       pn_bytes_t msgbuf = encode_message(app);
-       pn_link_send(sender, msgbuf.start, msgbuf.size);
+       send_message(app, sender);
        pn_link_advance(sender);
-       }
      }
      break;
    }
@@ -308,7 +287,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
      }
    }
   }
-  return true;
+  return exit_code == 0;
 }
 
 void run(app_data_t *app) {

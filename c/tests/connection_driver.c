@@ -102,11 +102,10 @@ static void test_message_transfer(test_t *t) {
   /* Encode and send a message */
   pn_message_t *m = pn_message();
   pn_data_put_string(pn_message_body(m), pn_bytes(4, "abc")); /* Include trailing NULL */
-  pn_rwbytes_t buf = { 0 };
-  ssize_t size = message_encode(m, &buf);
-  pn_message_free(m);
   pn_delivery(snd, PN_BYTES_LITERAL(x));
-  TEST_INT_EQUAL(t, size, pn_link_send(snd, buf.start, size));
+  pn_message_send(m, snd, NULL);
+  pn_message_free(m);
+
   TEST_CHECK(t, pn_link_advance(snd));
   test_connection_drivers_run(&client, &server);
   TEST_HANDLER_EXPECT(&server.handler, PN_TRANSPORT, PN_DELIVERY, 0);
@@ -125,7 +124,6 @@ static void test_message_transfer(test_t *t) {
   TEST_STR_EQUAL(t, "abc", pn_data_get_string(pn_message_body(m2)).start);
   pn_message_free(m2);
 
-  free(buf.start);
   free(buf2.start);
   test_connection_driver_destroy(&client);
   test_connection_driver_destroy(&server);

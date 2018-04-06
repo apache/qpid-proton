@@ -26,6 +26,7 @@
 #include "protocol.h"
 #include "util.h"
 
+#include <proton/link.h>
 #include <proton/object.h>
 #include <proton/codec.h>
 #include <proton/error.h>
@@ -894,4 +895,31 @@ pn_data_t *pn_message_properties(pn_message_t *msg)
 pn_data_t *pn_message_body(pn_message_t *msg)
 {
   return msg ? msg->body : NULL;
+}
+
+PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbytes_t *buffer) {
+  static const size_t initial_size = 256;
+  pn_rwbytes_t local_buf = { 0 };
+  ssize_t err = 0;
+  size_t size = 0;
+
+  if (buffer == NULL) buffer = &local_buf;
+  if (buffer->start == NULL) {
+    buffer->start = (char*)malloc(initial_size);
+    buffer->size = initial_size;
+  }
+  if (buffer->start == NULL) return PN_OUT_OF_MEMORY;
+  size = buffer->size;
+  while ((err = pn_message_encode(msg, buffer->start, &size)) == PN_OVERFLOW) {
+    buffer->size *= 2;
+    buffer->start = (char*)realloc(buffer->start, buffer->size);
+    if (buffer->start == NULL) return PN_OUT_OF_MEMORY;
+    size = buffer->size;
+  }
+  if (err == 0) {
+    err = pn_link_send(sender, buffer->start, size);
+    if (err < 0) pn_error_copy(pn_message_error(msg), pn_link_error(sender));
+  }
+  free(local_buf.start);
+  return err;
 }
