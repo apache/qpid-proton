@@ -33,7 +33,7 @@ Standard - Built around the AMQP 1.0 messaging standard, Proton is not only
 ideal for building out your own messaging applications but also for connecting
 them to the broader ecosystem of AMQP 1.0-based messaging applications.
 
-Please see http://qpid.apache.org/proton for more information.
+Please see <https://qpid.apache.org/proton> for more information.
 
 Getting Started
 ---------------
