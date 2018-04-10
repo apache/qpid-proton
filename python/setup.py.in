@@ -140,21 +140,21 @@ class Configure(build_ext):
         # anything windows and configuration-dependent
 
         sources = []
-        cfgdep = ['libuv.c',
-                  'openssl.c',
+        cfgdep = ['openssl.c',
                   'schannel.c',
                   'ssl_stub.c',
                   'cyrus_sasl.c',
                   'cyrus_stub.c',
-                  'snprintf.c',
-                  'win_iocp.c']
+                  'snprintf.c']
+
+        stripdirs = ['proactor',
+                     'msvc',
+                     'windows']
 
         for root, dirs, files in os.walk(proton_src):
-            if 'tests' in dirs:
-                dirs.remove('tests')
-
-            if 'windows' in dirs:
-                dirs.remove('windows')
+            for dir_ in stripdirs:
+                if dir_ in dirs:
+                    dirs.remove(dir_)
 
             for file_ in files:
                 if file_.endswith('.c') and file_ not in cfgdep:
