@@ -1893,11 +1893,21 @@ static size_t pni_session_outgoing_window(pn_session_t *ssn)
 
 static size_t pni_session_incoming_window(pn_session_t *ssn)
 {
-  uint32_t size = ssn->connection->transport->local_max_frame;
-  if (!size) {
-    return 2147483647; // biggest legal value
-  } else {
-    return (ssn->incoming_capacity - ssn->incoming_bytes)/size;
+  pn_transport_t *t = ssn->connection->transport;
+  uint32_t size = t->local_max_frame;
+  size_t capacity = ssn->incoming_capacity;
+  if (!size || !capacity) {     /* session flow control is not enabled */
+    return AMQP_MAX_WINDOW_SIZE;
+  } else if (capacity >= size) { /* precondition */
+    return (capacity - ssn->incoming_bytes) / size;
+  } else {                     /* error: we will never have a non-zero window */
+    pn_condition_format(
+      pn_transport_condition(t),
+      "amqp:internal-error",
+      "session capacity %"PN_ZU" is less than frame size %"PN_ZU,
+      capacity, size);
+    pn_transport_close_tail(t);
+    return 0;
   }
 }
 

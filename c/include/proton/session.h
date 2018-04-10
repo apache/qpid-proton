@@ -198,9 +198,7 @@ PN_EXTERN void pn_session_close(pn_session_t *session);
  * Get the incoming capacity of the session measured in bytes.
  *
  * The incoming capacity of a session determines how much incoming
- * message data the session will buffer. Note that if this value is
- * less than the negotiated frame size of the transport, it will be
- * rounded up to one full frame.
+ * message data the session will buffer.
  *
  * @param[in] session the session object
  * @return the incoming capacity of the session in bytes
@@ -211,9 +209,10 @@ PN_EXTERN size_t pn_session_get_incoming_capacity(pn_session_t *session);
  * Set the incoming capacity for a session object.
  *
  * The incoming capacity of a session determines how much incoming
- * message data the session will buffer. Note that if this value is
- * less than the negotiated frame size of the transport, it will be
- * rounded up to one full frame.
+ * message data the session will buffer.
+ *
+ * NOTE: If set, this value must be greater than or equal to the negotiated
+ * frame size of the transport.
  *
  * @param[in] session the session object
  * @param[in] capacity the incoming capacity for the session

@@ -379,6 +379,68 @@ static void test_message_abort_mixed(test_t *t) {
   test_connection_driver_destroy(&server);
 }
 
+/* Set capacity and max frame, send a single message */
+static void set_capacity_and_max_frame(
+  size_t capacity, size_t max_frame,
+  test_connection_driver_t *client, test_connection_driver_t *server,
+  const char* data)
+{
+  pn_transport_set_max_frame(client->driver.transport, max_frame);
+  pn_connection_open(client->driver.connection);
+  pn_session_t *ssn = pn_session(client->driver.connection);
+  pn_session_set_incoming_capacity(ssn, capacity);
+  pn_session_open(ssn);
+  pn_link_t *snd = pn_sender(ssn, "x");
+  pn_link_open(snd);
+  test_connection_drivers_run(client, server);
+  pn_link_flow(server->handler.link, 1);
+  test_connection_drivers_run(client, server);
+  if (pn_transport_closed(client->driver.transport) ||
+      pn_transport_closed(server->driver.transport))
+    return;
+  /* Send a message */
+  pn_message_t *m = pn_message();
+  pn_message_set_address(m, data);
+  pn_delivery(snd, PN_BYTES_LITERAL(x));
+  pn_message_send(m, snd, NULL);
+  pn_message_free(m);
+  test_connection_drivers_run(client, server);
+}
+
+#define MAX_WINDOW (2147483647)
+#define MAX_FRAME (4294967295)
+/* Test different settings for max-frame, outgoing-window, incoming-capacity */
+static void test_session_flow_control(test_t *t) {
+  test_connection_driver_t client, server;
+  test_connection_drivers_init(t, &client, open_handler, &server, delivery_handler);
+  pn_message_t *m = pn_message();
+  pn_rwbytes_t buf= {0};
+
+  /* Capacity equal to frame size OK */
+  set_capacity_and_max_frame(1234, 1234, &client, &server, "foo");
+  pn_delivery_t *dlv = server.handler.delivery;
+  if (TEST_CHECK(t, dlv)) {
+    message_decode(m, dlv, &buf);
+    TEST_STR_EQUAL(t, "foo", pn_message_get_address(m));
+  }
+
+  /* Capacity bigger than frame size OK */
+  set_capacity_and_max_frame(12345, 1234, &client, &server, "foo");
+  dlv = server.handler.delivery;
+  if (TEST_CHECK(t, dlv)) {
+    message_decode(m, dlv, &buf);
+    TEST_STR_EQUAL(t, "foo", pn_message_get_address(m));
+  }
+
+  /* Capacity smaller than frame size is an error */
+  set_capacity_and_max_frame(1234, 12345, &client, &server, "foo");
+  TEST_COND_NAME(t, "amqp:internal-error", pn_transport_condition(client.driver.transport));
+  TEST_COND_DESC(t, "session capacity 1234 is less than frame size 12345", pn_transport_condition(client.driver.transport));
+
+  pn_message_free(m);
+  free(buf.start);
+  test_connection_drivers_destroy(&client, &server);
+}
 
 int main(int argc, char **argv) {
   int failed = 0;
@@ -386,6 +448,6 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_message_stream(&t));
   RUN_ARGV_TEST(failed, t, test_message_abort(&t));
   RUN_ARGV_TEST(failed, t, test_message_abort_mixed(&t));
+  RUN_ARGV_TEST(failed, t, test_session_flow_control(&t));
   return failed;
-
 }

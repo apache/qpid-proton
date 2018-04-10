@@ -93,7 +93,7 @@ static bool handle(app_data_t* app, pn_event_t* event) {
    } break;
 
    case PN_DELIVERY: {
-     /* A message has been received */
+     /* A message (or part of a message) has been received */
      pn_delivery_t *d = pn_event_delivery(event);
      if (pn_delivery_readable(d)) {
        pn_link_t *l = pn_delivery_link(d);

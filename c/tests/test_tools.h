@@ -148,6 +148,11 @@ bool test_int_equal_(test_t *t, int want, int got, const char *file, int line) {
 }
 #define TEST_INT_EQUAL(TEST, WANT, GOT) test_int_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
+bool test_size_equal_(test_t *t, size_t want, size_t got, const char *file, int line) {
+  return test_check_(t, want == got, NULL, file, line, "want %zd, got %zd", want, got);
+}
+#define TEST_SIZE_EQUAL(TEST, WANT, GOT) test_size_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
+
 bool test_str_equal_(test_t *t, const char* want, const char* got, const char *file, int line) {
   return test_check_(t, !strcmp(want, got), NULL, file, line, "want '%s', got '%s'", want, got);
 }
@@ -231,7 +236,8 @@ void message_decode(pn_message_t *m, pn_delivery_t *d, pn_rwbytes_t *buf) {
   pn_link_t *l = pn_delivery_link(d);
   ssize_t size = pn_delivery_pending(d);
   rwbytes_ensure(buf, size);
-  TEST_ASSERT(size == pn_link_recv(l, buf->start, size));
+  ssize_t result = pn_link_recv(l, buf->start, size);
+  TEST_ASSERTF(size == result, "%ld != %ld", (long)size, (long)result);
   pn_message_clear(m);
   TEST_ASSERTF(!pn_message_decode(m, buf->start, size), "decode: %s", pn_error_text(pn_message_error(m)));
 }

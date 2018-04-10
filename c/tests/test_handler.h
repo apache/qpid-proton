@@ -46,6 +46,7 @@ typedef struct test_handler_t {
   pn_link_t *sender;
   pn_link_t *receiver;
   pn_delivery_t *delivery;
+  pn_message_t *message;
   pn_ssl_domain_t *ssl_domain;
 } test_handler_t;
 
@@ -167,4 +168,15 @@ test_connection_driver_t* test_connection_drivers_run(test_connection_driver_t *
   return NULL;
 }
 
+/* Initialize a client-server driver pair */
+void test_connection_drivers_init(test_t *t, test_connection_driver_t *a, test_handler_fn fa, test_connection_driver_t *b, test_handler_fn fb) {
+  test_connection_driver_init(a, t, fa, NULL);
+  test_connection_driver_init(b, t, fb, NULL);
+  pn_transport_set_server(b->driver.transport);
+}
+
+void test_connection_drivers_destroy(test_connection_driver_t *a, test_connection_driver_t *b) {
+  test_connection_driver_destroy(a);
+  test_connection_driver_destroy(b);
+}
 #endif // TESTS_TEST_DRIVER_H

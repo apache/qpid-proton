@@ -748,6 +748,9 @@ struct pn_link_t;
  * - call pn_link_send() to send the encoded message bytes
  * - call pn_link_advance() to indicate the message is complete
  *
+ * Note: you must create a delivery for the message before calling
+ * pn_message_send() see pn_delivery()
+ *
  * @param[in] msg A message object.
  * @param[in] sender A sending link.
  * The message will be encoded and sent with pn_link_send()
