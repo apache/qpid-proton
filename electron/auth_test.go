@@ -48,7 +48,6 @@ func testAuthClientServer(t *testing.T, copts []ConnectionOption, sopts []Connec
 }
 
 func TestAuthAnonymous(t *testing.T) {
-	configureSASL()
 	got, err := testAuthClientServer(t,
 		[]ConnectionOption{User("fred"), VirtualHost("vhost"), SASLAllowInsecure(true)},
 		[]ConnectionOption{SASLAllowedMechs("ANONYMOUS"), SASLAllowInsecure(true)})
@@ -57,10 +56,7 @@ func TestAuthAnonymous(t *testing.T) {
 }
 
 func TestAuthPlain(t *testing.T) {
-	if !SASLExtended() {
-		t.Skip()
-	}
-	fatalIf(t, configureSASL())
+	extendedSASL.startTest(t)
 	got, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("xxx"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
@@ -69,10 +65,7 @@ func TestAuthPlain(t *testing.T) {
 }
 
 func TestAuthBadPass(t *testing.T) {
-	if !SASLExtended() {
-		t.Skip()
-	}
-	fatalIf(t, configureSASL())
+	extendedSASL.startTest(t)
 	_, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("yyy"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
@@ -82,10 +75,7 @@ func TestAuthBadPass(t *testing.T) {
 }
 
 func TestAuthBadUser(t *testing.T) {
-	if !SASLExtended() {
-		t.Skip()
-	}
-	fatalIf(t, configureSASL())
+	extendedSASL.startTest(t)
 	_, err := testAuthClientServer(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("foo@bar"), Password([]byte("yyy"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
@@ -94,44 +84,60 @@ func TestAuthBadUser(t *testing.T) {
 	}
 }
 
-var confDir string
-var confErr error
-
-func configureSASL() error {
-	if confDir != "" || confErr != nil {
-		return confErr
-	}
-	confDir, confErr = ioutil.TempDir("", "")
-	if confErr != nil {
-		return confErr
-	}
-
-	GlobalSASLConfigDir(confDir)
-	GlobalSASLConfigName("test")
-	conf := filepath.Join(confDir, "test.conf")
-
-	db := filepath.Join(confDir, "proton.sasldb")
-        saslpasswd := os.Getenv("SASLPASSWD");
-        if saslpasswd == "" {
-            saslpasswd = "saslpasswd2"
-        }
-	cmd := exec.Command(saslpasswd, "-c", "-p", "-f", db, "-u", "proton", "fred")
-	cmd.Stdin = strings.NewReader("xxx") // Password
-	if out, err := cmd.CombinedOutput(); err != nil {
-		confErr = fmt.Errorf("saslpasswd2 failed: %s\n%s", err, out)
-		return confErr
-	}
-	confStr := "sasldb_path: " + db + "\nmech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS\n"
-	if err := ioutil.WriteFile(conf, []byte(confStr), os.ModePerm); err != nil {
-		confErr = fmt.Errorf("write conf file %s failed: %s", conf, err)
-	}
-	return confErr
+type extendedSASLState struct {
+	err error
+	dir string
 }
 
-func TestMain(m *testing.M) {
-	status := m.Run()
-	if confDir != "" {
-		_ = os.RemoveAll(confDir)
+func (s *extendedSASLState) setup() {
+	if SASLExtended() {
+		if s.dir, s.err = ioutil.TempDir("", ""); s.err == nil {
+			GlobalSASLConfigDir(s.dir)
+			GlobalSASLConfigName("test")
+			conf := filepath.Join(s.dir, "test.conf")
+			db := filepath.Join(s.dir, "proton.sasldb")
+			saslpasswd := os.Getenv("SASLPASSWD")
+			if saslpasswd == "" {
+				saslpasswd = "saslpasswd2"
+			}
+			cmd := exec.Command(saslpasswd, "-c", "-p", "-f", db, "-u", "proton", "fred")
+			cmd.Stdin = strings.NewReader("xxx") // Password
+			if _, s.err = cmd.CombinedOutput(); s.err == nil {
+				confStr := fmt.Sprintf(`
+sasldb_path: %s
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
+`, db)
+				s.err = ioutil.WriteFile(conf, []byte(confStr), os.ModePerm)
+			}
+		}
 	}
+	// Note we don't do anything with s.err now, tests that need the
+	// extended SASL config will fail if s.err != nil. If no such tests
+	// are run then it is not an error that we couldn't set it up.
+}
+
+func (s extendedSASLState) teardown() {
+	if s.dir != "" {
+		_ = os.RemoveAll(s.dir)
+	}
+}
+
+func (s extendedSASLState) startTest(t *testing.T) {
+	if !SASLExtended() {
+		t.Skipf("Extended SASL not enabled")
+	} else if extendedSASL.err != nil {
+		t.Skipf("Extended SASL setup error: %v", extendedSASL.err)
+	}
+}
+
+var extendedSASL extendedSASLState
+
+func TestMain(m *testing.M) {
+	// Do global SASL setup/teardown in main.
+	// Doing it on-demand makes the tests fragile to parallel test runs and
+	// changes in test ordering.
+	extendedSASL.setup()
+	status := m.Run()
+	extendedSASL.teardown()
 	os.Exit(status)
 }

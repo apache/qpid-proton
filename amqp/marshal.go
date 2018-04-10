@@ -101,8 +101,7 @@ Go types are encoded as follows
 
 The following Go types cannot be marshaled: uintptr, function, channel, struct, complex64/128
 
-AMQP types not yet supported:
-- decimal32/64/128,
+AMQP types not yet supported: decimal32/64/128
 */
 
 func Marshal(v interface{}, buffer []byte) (outbuf []byte, err error) {
