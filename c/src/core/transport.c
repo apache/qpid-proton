@@ -1904,7 +1904,7 @@ static size_t pni_session_incoming_window(pn_session_t *ssn)
     pn_condition_format(
       pn_transport_condition(t),
       "amqp:internal-error",
-      "session capacity %"PN_ZU" is less than frame size %"PN_ZU,
+      "session capacity %" PN_ZU " is less than frame size %" PN_ZU,
       capacity, size);
     pn_transport_close_tail(t);
     return 0;
