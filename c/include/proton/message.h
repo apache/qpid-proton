@@ -742,6 +742,12 @@ struct pn_link_t;
 /**
  * Encode and send a message on a sender link.
  *
+ * Performs the following steps:
+ * - create or expand the buffer @buf as required
+ * - call pn_message_encode() to encode the message to a buffer
+ * - call pn_link_send() to send the encoded message bytes
+ * - call pn_link_advance() to indicate the message is complete
+ *
  * @param[in] msg A message object.
  * @param[in] sender A sending link.
  * The message will be encoded and sent with pn_link_send()

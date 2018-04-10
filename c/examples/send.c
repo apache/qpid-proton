@@ -99,7 +99,6 @@ static bool handle(app_data_t* app, pn_event_t* event) {
        /* Use sent counter as unique delivery tag. */
        pn_delivery(sender, pn_dtag((const char *)&app->sent, sizeof(app->sent)));
        send_message(app, sender);
-       pn_link_advance(sender);
      }
      break;
    }

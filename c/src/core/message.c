@@ -916,10 +916,9 @@ PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbyt
     if (buffer->start == NULL) return PN_OUT_OF_MEMORY;
     size = buffer->size;
   }
-  if (err == 0) {
-    err = pn_link_send(sender, buffer->start, size);
-    if (err < 0) pn_error_copy(pn_message_error(msg), pn_link_error(sender));
-  }
+  if (err >= 0) err = pn_link_send(sender, buffer->start, size);
+  if (err >= 0) err = pn_link_advance(sender);
+  if (err < 0) pn_error_copy(pn_message_error(msg), pn_link_error(sender));
   free(local_buf.start);
   return err;
 }

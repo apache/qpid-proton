@@ -106,7 +106,6 @@ static void test_message_transfer(test_t *t) {
   pn_message_send(m, snd, NULL);
   pn_message_free(m);
 
-  TEST_CHECK(t, pn_link_advance(snd));
   test_connection_drivers_run(&client, &server);
   TEST_HANDLER_EXPECT(&server.handler, PN_TRANSPORT, PN_DELIVERY, 0);
 
