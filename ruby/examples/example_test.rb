@@ -29,11 +29,13 @@ rescue NameError                # For older versions of MiniTest
   MiniTest::Test = MiniTest::Unit::TestCase
 end
 
-# URL with an unused port
-def test_url()
-  "amqp://:#{TCPServer.open(0) { |s| s.addr[1] }}"
+def listening_port(s)
+  /Listening on ([0-9]+)/.match(s)[1]
 end
 
+def listening_url(s)
+  ":#{listening_port s}"
+end
 
 class ExampleTest < MiniTest::Test
 
@@ -80,18 +82,16 @@ EOS
   end
 
   def test_direct_recv
-    url = test_url
-      p = run_script("direct_recv.rb", url, "examples")
-      p.readline                # Wait till ready
-      assert_output("All 10 messages confirmed!", "simple_send.rb", url, "examples")
-      want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
-      assert_equal(want.strip, p.read.strip)
+    p = run_script("direct_recv.rb", ":0", "examples")
+    url = listening_url(p.readline) # Wait till ready
+    assert_output("All 10 messages confirmed!", "simple_send.rb", url, "examples")
+    want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
+    assert_equal(want.strip, p.read.strip)
   end
 
   def test_direct_send
-    url = test_url
-    p = run_script("direct_send.rb", url, "examples")
-    p.readline                # Wait till ready
+    p = run_script("direct_send.rb", ":0", "examples")
+    url = listening_url(p.readline) # Wait till ready
     want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
     assert_output(want.strip, "simple_recv.rb", url, "examples")
     assert_equal("All 10 messages confirmed!", p.read.strip)
@@ -99,9 +99,9 @@ EOS
 end
 
 # Start the broker before all tests.
-$url = test_url
-$broker = IO.popen([RbConfig.ruby, 'broker.rb', $url])
-$broker.readline
+$broker = IO.popen([RbConfig.ruby, 'broker.rb', ":0"])
+l = $broker.readline
+$url = listening_url(l)
 
 # Kill the broker after all tests
 MiniTest.after_run do

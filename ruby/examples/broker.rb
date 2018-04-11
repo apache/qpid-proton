@@ -146,7 +146,7 @@ class Broker < Qpid::Proton::Listener::Handler
   end
 
   def on_open(l)
-    STDOUT.puts "Listening on #{l}\n"; STDOUT.flush
+    STDOUT.puts "Listening on #{l.port}\n"; STDOUT.flush
   end
 
   # Create a new BrokerHandler instance for each connection we accept

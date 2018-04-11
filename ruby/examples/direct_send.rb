@@ -32,7 +32,7 @@ class DirectSend < Qpid::Proton::MessagingHandler
   end
 
   class ListenOnce < Qpid::Proton::Listener::Handler
-    def on_open(l) STDOUT.puts "Listening\n"; STDOUT.flush; end
+    def on_open(l) STDOUT.puts "Listening on #{l.port}\n"; STDOUT.flush; end
     def on_accept(l) l.close; end
   end
 
