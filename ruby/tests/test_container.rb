@@ -349,15 +349,24 @@ class ContainerTest < MiniTest::Test
   def test_container_work_queue_stop
     q = Queue.new
     c = Container.new __method__
-    t = Thread.new { c.run }
-    [0.1, 0.2, 0.2, 0.2, 1.0].each { |d| c.schedule(d) { q << d } }
-    assert_equal 0.1, q.pop
-    assert_equal 0.2, q.pop
+    thread = Thread.new { c.run }
+    time = Time.now + 0.01
+    # Mix good scheduled tasks at time and bad tasks scheduled after 10 secs
+    10.times do
+      c.schedule(time) { q << true }
+      c.schedule(10) { q << false }
+    end
+    assert_same true, q.pop # First task processed, all others at same time are due
+    # Mix in some immediate tasks
+    5.times do
+      c.work_queue.add { q << true } # Immediate
+      c.schedule(time) { q << true }
+      c.schedule(10) { q << false }
+    end
     c.stop
-    t.join
-    assert_equal 0.2, q.pop
-    assert_equal 0.2, q.pop
-    assert_empty q
+    thread.join
+    19.times { assert_same true, q.pop }
+    assert_equal 0, q.size      # Tasks with 10 sec delay should be dropped
   end
 
   # Chain schedule calls from other schedule calls
