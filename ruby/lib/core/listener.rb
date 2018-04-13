@@ -63,12 +63,14 @@ module Qpid::Proton
     # @return [Condition] The error condition if there is one
     attr_reader :condition
 
-    # Close the listener
+    # Initiate closing the the listener.
+    # It will not be fully {#closed?} until its {Handler#on_close} is called by the {Container}
     # @param error [Condition] Optional error condition.
     def close(error=nil)
+      return if closed? || @closing
       @closing = true
       @condition ||= Condition.convert error
-      @io.close_read rescue nil # Cause listener to wake out of IO.select
+      @io.close_read rescue nil # Force Container IO.select to wake with listener readable.
       nil
     end
 
@@ -78,11 +80,15 @@ module Qpid::Proton
     # Get the IP port used by the listener
     def port() to_io.addr[1]; end
 
+    # True if the listening socket is fully closed
+    def closed?() @io.closed?; end
+
     private                     # Called by {Container}
 
-    def initialize(io, handler, container)
-      @io, @handler = io, handler
+    def initialize(io, container)
+      @io = io
       @container = container
+      @closing = nil
     end
   end
 end

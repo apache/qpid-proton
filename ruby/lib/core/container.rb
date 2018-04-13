@@ -163,7 +163,7 @@ module Qpid::Proton
       not_stopped
       l = ListenTask.new(io, handler, self)
       add(l)
-      l
+      l.listener
     end
 
     # Run the container: wait for IO activity, dispatch events to handlers.
@@ -275,8 +275,8 @@ module Qpid::Proton
     class ListenTask < Listener
 
       def initialize(io, handler, container)
-        super
-        @closing = @closed = nil
+        @io, @handler = io, handler
+        @listener = Listener.new(io, container)
         env = ENV['PN_TRACE_EVT']
         if env && ["true", "1", "yes", "on"].include?(env.downcase)
           @log_prefix = "[0x#{object_id.to_s(16)}](PN_LISTENER_"
@@ -286,28 +286,33 @@ module Qpid::Proton
         dispatch(:on_open);
       end
 
+      attr_reader :listener
+      def closing?() @listener.instance_variable_get(:@closing); end
+      def condition() @listener.instance_variable_get(:@condition); end
+      def closed?() @io.closed?; end
+
       def process
-        return if @closed
-        unless @closing
+        return if closed?
+        unless closing?
           begin
             return @io.accept, dispatch(:on_accept)
           rescue IO::WaitReadable, Errno::EINTR
-          rescue IOError, SystemCallError => e
-            close e
+          rescue StandardError => e
+            @listener.close(e)
           end
         end
       ensure
-        if @closing
+        if closing?
           @io.close rescue nil
-          @closed = true
-          dispatch(:on_error, @condition) if @condition
+          @listener.instance_variable_set(:@closed, true)
+          dispatch(:on_error, condition) if condition
           dispatch(:on_close)
         end
       end
 
       def can_read?() !finished?; end
       def can_write?() false; end
-      def finished?() @closed; end
+      def finished?() closed?; end
 
       def dispatch(method, *args)
         # TODO aconway 2017-11-27: better logging
@@ -316,6 +321,12 @@ module Qpid::Proton
       end
 
       def next_tick() nil; end
+
+      # Close listener and force immediate close of socket
+      def close(e=nil)
+        @listener.close(e)
+        @io.close rescue nil
+      end
     end
 
     # Selectable object that can be used to wake IO.select from another thread
