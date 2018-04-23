@@ -155,10 +155,6 @@ typedef struct pn_messenger_t pn_messenger_t;
 
 /**
  * A subscription is a request for incoming messages.
- *
- * @todo currently the subscription API is under developed, this
- * should allow more explicit control over subscription properties and
- * behaviour
  */
 typedef struct pn_subscription_t pn_subscription_t;
 

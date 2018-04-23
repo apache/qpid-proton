@@ -70,10 +70,6 @@ EXAMPLE_RECURSIVE       = YES
 
 DISABLE_INDEX           = YES
 GENERATE_TREEVIEW       = YES
-GENERATE_TODOLIST       = NO
-GENERATE_TESTLIST       = NO
-GENERATE_BUGLIST        = NO
-GENERATE_DEPRECATEDLIST = NO
 
 # Configuration options related to the output format
 

@@ -72,7 +72,7 @@ PNP_EXTERN void pn_listener_free(pn_listener_t *l);
 PNP_EXTERN void pn_listener_accept2(pn_listener_t *listener, pn_connection_t *connection, pn_transport_t *transport);
 
 /**
- * @deprecated Equivalent to pn_listener_accept2(listener, connection, NULL)
+ * @deprecated Use pn_listener_accept2(listener, connection, NULL)
  */
 PNP_EXTERN void pn_listener_accept(pn_listener_t* listener, pn_connection_t *connection);
 

@@ -122,7 +122,7 @@ PNP_EXTERN void pn_proactor_free(pn_proactor_t *proactor);
 PNP_EXTERN void pn_proactor_connect2(pn_proactor_t *proactor, pn_connection_t *connection, pn_transport_t *transport, const char *addr);
 
 /**
- * @deprecated Equivalent to pn_proactor_connect2(proactor, connection, NULL, addr)
+ * @deprecated Use pn_proactor_connect2(proactor, connection, NULL, addr)
  */
 PNP_EXTERN void pn_proactor_connect(pn_proactor_t *proactor, pn_connection_t *connection, const char *addr);
 

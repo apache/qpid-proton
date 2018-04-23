@@ -77,10 +77,6 @@ EXAMPLE_RECURSIVE       = YES
 
 DISABLE_INDEX           = YES
 GENERATE_TREEVIEW       = YES
-GENERATE_TODOLIST       = NO
-GENERATE_TESTLIST       = NO
-GENERATE_BUGLIST        = NO
-GENERATE_DEPRECATEDLIST = NO
 IGNORE_PREFIX           = pn_ PN_
 
 # Configuration options related to the output format

@@ -39,10 +39,12 @@ class null {
   public:
     null() {}
 #if PN_CPP_HAS_NULLPTR
+    /// Constructed from nullptr literal
     null(decltype(nullptr)) {}
 #endif
 };
 
+/// Print a null value
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const null&);
 
 }

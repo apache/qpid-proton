@@ -91,15 +91,11 @@ PN_EXTERN bool pn_sasl_extended(void);
  * Set the outcome of SASL negotiation
  *
  * Used by the server to set the result of the negotiation process.
- *
- * @todo
  */
 PN_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
 
 /**
  * Retrieve the outcome of SASL negotiation.
- *
- * @todo
  */
 PN_EXTERN pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl);
 
