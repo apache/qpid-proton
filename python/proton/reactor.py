@@ -19,6 +19,9 @@ from __future__ import absolute_import
 #
 import logging, os, socket, time, types
 from heapq import heappush, heappop, nsmallest
+
+import traceback
+
 from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
 from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
 from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, SSL, SSLDomain, SSLUnavailable, symbol
@@ -27,16 +30,13 @@ from select import select
 from proton.handlers import OutgoingMessageHandler
 from proton import unicode2utf8, utf82unicode
 
-import traceback
 from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
 from .wrapper import Wrapper, PYCTX
 from cproton import *
+
 from . import _compat
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+from ._compat import queue
 
 log = logging.getLogger("proton")
 
@@ -259,7 +259,7 @@ class EventInjector(object):
     needed, to allow the event loop to end if needed.
     """
     def __init__(self):
-        self.queue = Queue.Queue()
+        self.queue = queue.Queue()
         self.pipe = os.pipe()
         self._closed = False
 
@@ -269,7 +269,7 @@ class EventInjector(object):
         of the reactor to which this EventInjector was added.
         """
         self.queue.put(event)
-        os.write(self.pipe[1], _compat.str2bin("!"))
+        os.write(self.pipe[1], b"!")
 
     def close(self):
         """
@@ -278,7 +278,7 @@ class EventInjector(object):
         then this will be removed from the set of interest.
         """
         self._closed = True
-        os.write(self.pipe[1], _compat.str2bin("!"))
+        os.write(self.pipe[1], b"!")
 
     def fileno(self):
         return self.pipe[0]
@@ -806,7 +806,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, _compat.STRING_TYPES):
+        if isinstance(context, _compat.string_types):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -847,7 +847,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, _compat.STRING_TYPES):
+        if isinstance(context, _compat.string_types):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

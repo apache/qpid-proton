@@ -32,94 +32,43 @@ from __future__ import absolute_import
 
 from cproton import *
 from .wrapper import Wrapper
-from proton import _compat
+from . import _compat
 
-import logging, weakref, socket, sys, threading
+import logging
+import socket
+import sys
+import threading
+import uuid
+import weakref
 
-try:
-  handler = logging.NullHandler()
-except AttributeError:
-  class NullHandler(logging.Handler):
-    def handle(self, record):
-        pass
+# This private NullHandler is required for Python 2.6,
+# when we no longer support 2.6 this replace NullHandler class definition and assignment with:
+#  handler = logging.NullHandler()
+class NullHandler(logging.Handler):
+  def handle(self, record):
+      pass
 
-    def emit(self, record):
-        pass
+  def emit(self, record):
+      pass
 
-    def createLock(self):
-        self.lock = None
+  def createLock(self):
+      self.lock = None
 
-  handler = NullHandler()
+handler = NullHandler()
 
 log = logging.getLogger("proton")
 log.addHandler(handler)
 
-try:
-  import uuid
-
-  def generate_uuid():
-    return uuid.uuid4()
-
-except ImportError:
-  """
-  No 'native' UUID support.  Provide a very basic UUID type that is a compatible subset of the uuid type provided by more modern python releases.
-  """
-  import struct
-  class uuid:
-    class UUID:
-      def __init__(self, hex=None, bytes=None):
-        if [hex, bytes].count(None) != 1:
-          raise TypeError("need one of hex or bytes")
-        if bytes is not None:
-          self.bytes = bytes
-        elif hex is not None:
-          fields=hex.split("-")
-          fields[4:5] = [fields[4][:4], fields[4][4:]]
-          self.bytes = struct.pack("!LHHHHL", *[int(x,16) for x in fields])
-
-      def __cmp__(self, other):
-        if isinstance(other, uuid.UUID):
-          return cmp(self.bytes, other.bytes)
-        else:
-          return -1
-
-      def __str__(self):
-        return "%08x-%04x-%04x-%04x-%04x%08x" % struct.unpack("!LHHHHL", self.bytes)
-
-      def __repr__(self):
-        return "UUID(%r)" % str(self)
-
-      def __hash__(self):
-        return self.bytes.__hash__()
-
-  import os, random, time
-  rand = random.Random()
-  rand.seed((os.getpid(), time.time(), socket.gethostname()))
-  def random_uuid():
-    data = [rand.randint(0, 255) for i in xrange(16)]
-
-    # From RFC4122, the version bits are set to 0100
-    data[6] &= 0x0F
-    data[6] |= 0x40
-
-    # From RFC4122, the top two bits of byte 8 get set to 01
-    data[8] &= 0x3F
-    data[8] |= 0x80
-    return "".join(map(chr, data))
-
-  def uuid4():
-    return uuid.UUID(bytes=random_uuid())
-
-  def generate_uuid():
-    return uuid4()
+def generate_uuid():
+  return uuid.uuid4()
 
 #
 # Hacks to provide Python2 <---> Python3 compatibility
 #
-try:
-  bytes()
-except NameError:
-  bytes = str
+# The results are
+# |       |long|unicode|
+# |python2|long|unicode|
+# |python3| int|    str|
 try:
   long()
 except NameError:
@@ -241,10 +190,15 @@ class Message(object):
 
   def _check_property_keys(self):
       for k in self.properties.keys():
-        if not isinstance(k, (bytes, str, unicode)):
-          raise MessageException('Application property key is not unicode string: key=%s %s' % (str(k), type(k)))
-        if isinstance(k, bytes):
-          self.properties[_compat.bin2str(k)] = self.properties.pop(k)
+        if isinstance(k, unicode):
+          # py2 unicode, py3 str (via hack definition)
+          continue
+        # If key is binary then change to string
+        elif isinstance(k, str):
+          # py2 str
+          self.properties[k.encode('utf-8')] = self.properties.pop(k)
+        else:
+          raise MessageException('Application property key is not string type: key=%s %s' % (str(k), type(k)))
 
   def _pre_encode(self):
     inst = Data(pn_message_instructions(self._msg))
@@ -376,7 +330,7 @@ The number of delivery attempts made for this message.
   def _get_id(self):
     return self._id.get_object()
   def _set_id(self, value):
-    if type(value) in _compat.INT_TYPES:
+    if type(value) in (int, long):
       value = ulong(value)
     self._id.rewind()
     self._id.put_object(value)
@@ -432,7 +386,7 @@ The reply-to address for the message.
   def _get_correlation_id(self):
     return self._correlation_id.get_object()
   def _set_correlation_id(self, value):
-    if type(value) in _compat.INT_TYPES:
+    if type(value) in (int, long):
       value = ulong(value)
     self._correlation_id.rewind()
     self._correlation_id.put_object(value)
@@ -908,7 +862,7 @@ class Data:
   def type_name(type): return Data.type_names[type]
 
   def __init__(self, capacity=16):
-    if type(capacity) in _compat.INT_TYPES:
+    if type(capacity) in (int, long):
       self._data = pn_data(capacity)
       self._free = True
     else:
@@ -1419,7 +1373,7 @@ class Data:
     If the current node is a char, returns its value, returns 0
     otherwise.
     """
-    return char(_compat.unichar(pn_data_get_char(self._data)))
+    return char(_compat.unichr(pn_data_get_char(self._data)))
 
   def get_ulong(self):
     """
@@ -1827,37 +1781,33 @@ def millis2timeout(millis):
   return millis2secs(millis)
 
 def unicode2utf8(string):
-    """Some Proton APIs expect a null terminated string. Convert python text
-    types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
-    This method will throw if the string cannot be converted.
-    """
-    if string is None:
-        return None
-    if _compat.IS_PY2:
-        if isinstance(string, unicode):
-            return string.encode('utf-8')
-        elif isinstance(string, str):
-            return string
-    else:
-        # decoding a string results in bytes
-        if isinstance(string, str):
-            string = string.encode('utf-8')
-            # fall through
-        if isinstance(string, bytes):
-            return string.decode('utf-8')
-    raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
+  """Some Proton APIs expect a null terminated string. Convert python text
+  types to UTF8 to avoid zero bytes introduced by other multi-byte encodings.
+  This method will throw if the string cannot be converted.
+  """
+  if string is None:
+    return None
+  elif isinstance(string, str):
+    # Must be py2 or py3 str
+    # The swig binding converts py3 str -> utf8 char* and back sutomatically
+    return string
+  elif isinstance(string, unicode):
+    # This must be python2 unicode as we already detected py3 str above
+    return string.encode('utf-8')
+  # Anything else illegal - specifically python3 bytes
+  raise TypeError("Unrecognized string type: %r (%s)" % (string, type(string)))
 
 def utf82unicode(string):
-    """Covert C strings returned from proton-c into python unicode"""
-    if string is None:
-        return None
-    if isinstance(string, _compat.TEXT_TYPES):
-        # already unicode
-        return string
-    elif isinstance(string, _compat.BINARY_TYPES):
-        return string.decode('utf8')
-    else:
-        raise TypeError("Unrecognized string type")
+  """Convert C strings returned from proton-c into python unicode"""
+  if string is None:
+    return None
+  elif isinstance(string, unicode):
+    # py2 unicode, py3 str (via hack definition)
+    return string
+  elif isinstance(string, bytes):
+    # py2 str (via hack definition), py3 bytes
+    return string.decode('utf8')
+  raise TypeError("Unrecognized string type")
 
 class Connection(Wrapper, Endpoint):
   """

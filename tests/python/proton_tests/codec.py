@@ -20,11 +20,8 @@
 import os, sys
 from . import common
 from proton import *
-from proton._compat import raise_, str2unicode, unichar, str2bin
-try:
-  from uuid import uuid4
-except ImportError:
-  from proton import uuid4
+from proton._compat import raise_
+from uuid import uuid4
 
 class Test(common.Test):
 
@@ -281,8 +278,7 @@ class DataTest(Test):
     self._test("double", 0, 1, 2, 3, 0.1, 0.2, 0.3, -1, -2, -3, -0.1, -0.2, -0.3)
 
   def testBinary(self):
-    self._test("binary", str2bin("this"), str2bin("is"), str2bin("a"), str2bin("test"),
-               str2bin("of" "b\x00inary"))
+    self._test("binary", b"this", b"is", b"a", b"test",b"of" b"b\x00inary")
 
   def testSymbol(self):
     self._test("symbol", symbol("this is a symbol test"), symbol("bleh"), symbol("blah"))
@@ -291,7 +287,7 @@ class DataTest(Test):
     self._test("timestamp", timestamp(0), timestamp(12345), timestamp(1000000))
 
   def testChar(self):
-    self._test("char", char('a'), char('b'), char('c'), char(unichar(0x20AC)))
+    self._test("char", char('a'), char('b'), char('c'), char(u'\u20AC'))
 
   def testUUID(self):
     self._test("uuid", uuid4(), uuid4(), uuid4())
@@ -303,7 +299,7 @@ class DataTest(Test):
     self._test("decimal64", decimal64(0), decimal64(1), decimal64(2), decimal64(3), decimal64(4), decimal64(2**60))
 
   def testDecimal128(self):
-    self._test("decimal128", decimal128(str2bin("fdsaasdf;lkjjkl;")), decimal128(str2bin("x"*16)))
+    self._test("decimal128", decimal128(b"fdsaasdf;lkjjkl;"), decimal128(b"x"*16))
 
   def testCopy(self):
     self.data.put_described()
@@ -344,10 +340,10 @@ class DataTest(Test):
     obj = {symbol("key"): timestamp(1234),
            ulong(123): "blah",
            char("c"): "bleh",
-           str2unicode("desc"): Described(symbol("url"), str2unicode("http://example.org")),
-           str2unicode("array"): Array(UNDESCRIBED, Data.INT, 1, 2, 3),
-           str2unicode("list"): [1, 2, 3, None, 4],
-           str2unicode("boolean"): True}
+           u"desc": Described(symbol("url"), u"http://example.org"),
+           u"array": Array(UNDESCRIBED, Data.INT, 1, 2, 3),
+           u"list": [1, 2, 3, None, 4],
+           u"boolean": True}
     self.data.put_object(obj)
     enc = self.data.encode()
     data = Data()
@@ -359,7 +355,7 @@ class DataTest(Test):
 
   def testBuffer(self):
     try:
-      self.data.put_object(buffer(str2bin("foo")))
+      self.data.put_object(buffer(b"foo"))
     except NameError:
       # python >= 3.0 does not have `buffer`
       return
@@ -368,11 +364,11 @@ class DataTest(Test):
     data.rewind()
     assert data.next()
     assert data.type() == Data.BINARY
-    assert data.get_object() == str2bin("foo")
+    assert data.get_object() == b"foo"
 
   def testMemoryView(self):
     try:
-      self.data.put_object(memoryview(str2bin("foo")))
+      self.data.put_object(memoryview(b"foo"))
     except NameError:
       # python <= 2.6 does not have `memoryview`
       return
@@ -381,10 +377,10 @@ class DataTest(Test):
     data.rewind()
     assert data.next()
     assert data.type() == Data.BINARY
-    assert data.get_object() == str2bin("foo")
+    assert data.get_object() == b"foo"
 
   def testLookup(self):
-    obj = {symbol("key"): str2unicode("value"),
+    obj = {symbol("key"): u"value",
            symbol("pi"): 3.14159,
            symbol("list"): [1, 2, 3, 4]}
     self.data.put_object(obj)
@@ -396,7 +392,7 @@ class DataTest(Test):
     assert self.data.get_object() == 3.14159
     self.data.rewind()
     assert self.data.lookup("key")
-    assert self.data.get_object() == str2unicode("value")
+    assert self.data.get_object() == u"value"
     self.data.rewind()
     assert self.data.lookup("list")
     assert self.data.get_object() == [1, 2, 3, 4]

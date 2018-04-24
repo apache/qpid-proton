@@ -25,7 +25,6 @@ from time import time, sleep
 from proton import *
 from .common import pump, Skipped
 from proton.reactor import Reactor
-from proton._compat import str2bin
 
 
 # older versions of gc do not provide the garbage list
@@ -50,7 +49,7 @@ try:
     bytearray()
 except:
     def bytearray(x):
-        return str2bin('\x00') * x
+        return b'\x00' * x
 
 OUTPUT_SIZE = 10*1024
 
@@ -836,7 +835,7 @@ class TransferTest(Test):
     assert tag == "tag", tag
     assert d.writable
 
-    n = self.snd.send(str2bin("this is a test"))
+    n = self.snd.send(b"this is a test")
     assert self.snd.advance()
     assert self.c1.work_head is None
 
@@ -849,7 +848,7 @@ class TransferTest(Test):
   def test_multiframe(self):
     self.rcv.flow(1)
     self.snd.delivery("tag")
-    msg = str2bin("this is a test")
+    msg = b"this is a test"
     n = self.snd.send(msg)
     assert n == len(msg)
 
@@ -864,9 +863,9 @@ class TransferTest(Test):
     assert binary == msg, (binary, msg)
 
     binary = self.rcv.recv(1024)
-    assert binary == str2bin("")
+    assert binary == b""
 
-    msg = str2bin("this is more")
+    msg = b"this is more"
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -885,7 +884,7 @@ class TransferTest(Test):
     self.pump()
 
     sd = self.snd.delivery("tag")
-    msg = str2bin("this is a test")
+    msg = b"this is a test"
     n = self.snd.send(msg)
     assert n == len(msg)
     assert self.snd.advance()
@@ -984,7 +983,7 @@ class TransferTest(Test):
 
     for x in range(10):
         self.snd.delivery("tag%d" % x)
-        msg = str2bin("this is a test")
+        msg = b"this is a test"
         n = self.snd.send(msg)
         assert n == len(msg)
         assert self.snd.advance()
@@ -1567,7 +1566,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagA")
     assert sd
-    n = self.snd.send(str2bin("A"))
+    n = self.snd.send(b"A")
     assert n == 1
     self.pump()
     self.snd.advance()
@@ -1584,7 +1583,7 @@ class CreditTest(Test):
     assert self.rcv.credit == 10, self.rcv.credit
 
     data = self.rcv.recv(10)
-    assert data == str2bin("A"), data
+    assert data == b"A", data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 9, self.snd.credit
@@ -1605,7 +1604,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagB")
     assert sd
-    n = self.snd.send(str2bin("B"))
+    n = self.snd.send(b"B")
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1619,7 +1618,7 @@ class CreditTest(Test):
 
     sd = self.snd.delivery("tagC")
     assert sd
-    n = self.snd.send(str2bin("C"))
+    n = self.snd.send(b"C")
     assert n == 1
     self.snd.advance()
     self.pump()
@@ -1634,10 +1633,10 @@ class CreditTest(Test):
     assert self.rcv.credit == 2, self.rcv.credit
 
     data = self.rcv.recv(10)
-    assert data == str2bin("B"), data
+    assert data == b"B", data
     self.rcv.advance()
     data = self.rcv.recv(10)
-    assert data == str2bin("C"), data
+    assert data == b"C", data
     self.rcv.advance()
     self.pump()
     assert self.snd.credit == 0, self.snd.credit
@@ -1971,8 +1970,9 @@ class PipelineTest(Test):
     snd.open()
 
     for i in range(10):
-      d = snd.delivery("delivery-%s" % i)
-      snd.send(str2bin("delivery-%s" % i))
+      t = "delivery-%s" % i
+      d = snd.delivery(t)
+      snd.send(t.encode('ascii'))
       d.settle()
 
     snd.close()
@@ -2402,7 +2402,7 @@ class EventTest(CollectorTest):
     self.expect(Event.CONNECTION_INIT, Event.SESSION_INIT,
                 Event.LINK_INIT, Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     snd.delivery("delivery")
-    snd.send(str2bin("Hello World!"))
+    snd.send(b"Hello World!")
     snd.advance()
     self.pump()
     self.expect()
@@ -2418,7 +2418,7 @@ class EventTest(CollectorTest):
     snd, rcv = self.testFlowEvents()
     snd.open()
     dlv = snd.delivery("delivery")
-    snd.send(str2bin("Hello World!"))
+    snd.send(b"Hello World!")
     assert snd.advance()
     self.expect(Event.LINK_LOCAL_OPEN, Event.TRANSPORT)
     self.pump()
@@ -2449,7 +2449,7 @@ class EventTest(CollectorTest):
     t.bind(c)
     self.expect(Event.CONNECTION_BOUND)
     assert t.condition is None
-    t.push(str2bin("asdf"))
+    t.push(b"asdf")
     self.expect(Event.TRANSPORT_ERROR, Event.TRANSPORT_TAIL_CLOSED)
     assert t.condition is not None
     assert t.condition.name == "amqp:connection:framing-error"
@@ -2646,9 +2646,9 @@ class SaslEventTest(CollectorTest):
     transport.bind(conn)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
 
-    transport.push(str2bin('AMQP\x03\x01\x00\x00\x00\x00\x00 \x02\x01\x00\x00\x00SA'
-                           '\xd0\x00\x00\x00\x10\x00\x00\x00\x02\xa3\tANONYMOUS@'
-                           'AMQP\x00\x01\x00\x00'))
+    transport.push(b'AMQP\x03\x01\x00\x00\x00\x00\x00 \x02\x01\x00\x00\x00SA'
+                   b'\xd0\x00\x00\x00\x10\x00\x00\x00\x02\xa3\tANONYMOUS@'
+                   b'AMQP\x00\x01\x00\x00')
     self.expect(Event.TRANSPORT)
     for i in range(1024):
       p = transport.pending()
@@ -2664,16 +2664,16 @@ class SaslEventTest(CollectorTest):
     s.allowed_mechs("ANONYMOUS PLAIN")
     transport.bind(conn)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
-    transport.push(str2bin(
+    transport.push(
         # SASL
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
-        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        b'\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
         # @sasl-outcome(68) [code=0]
-        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        b'\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
         # AMQP
-        'AMQP\x00\x01\x00\x00'
-         ))
+        b'AMQP\x00\x01\x00\x00'
+        )
     self.expect(Event.TRANSPORT)
     p = transport.pending()
     bytes = transport.peek(p)
@@ -2695,16 +2695,16 @@ class SaslEventTest(CollectorTest):
     bytes = transport.peek(p)
     transport.pop(p)
     self.expect(Event.CONNECTION_INIT, Event.CONNECTION_BOUND)
-    transport.push(str2bin(
+    transport.push(
         # SASL
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
-        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        b'\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
         # @sasl-outcome(68) [code=0]
-        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        b'\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
         # AMQP
-        'AMQP\x00\x01\x00\x00'
-        ))
+        b'AMQP\x00\x01\x00\x00'
+        )
     self.expect(Event.TRANSPORT)
     p = transport.pending()
     bytes = transport.peek(p)

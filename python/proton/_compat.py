@@ -22,16 +22,17 @@ Utilities to help Proton support both python2 and python3.
 """
 
 import sys
-import types
-IS_PY2 = sys.version_info[0] == 2
-IS_PY3 = sys.version_info[0] == 3
 
-if IS_PY3:
-    INT_TYPES = (int,)
-    TEXT_TYPES = (str,)
-    STRING_TYPES = (str,)
-    BINARY_TYPES = (bytes,)
-    CLASS_TYPES = (type,)
+# bridge between py2 Queue renamed as py3 queue
+try:
+    import Queue as queue
+except ImportError:
+    import queue
+
+PY3 = sys.version_info[0] == 3
+
+if PY3:
+    string_types = (str,)
 
     def raise_(t, v=None, tb=None):
         """Mimic the old 2.x raise behavior:
@@ -44,29 +45,13 @@ if IS_PY3:
         else:
             raise v.with_traceback(tb)
 
-    def bin2str(s, encoding='utf-8'):
-        return s
+    def iteritems(d, **kw):
+        return iter(d.items(**kw))
 
-    def iteritems(d):
-        return iter(d.items())
-
-    def unichar(i):
-        return chr(i)
-
-    def str2bin(s, encoding='latin-1'):
-        """Convert str to binary type"""
-        return s.encode(encoding)
-
-    def str2unicode(s):
-        return s
-
+    unichr = chr
 else:
-    INT_TYPES = (int, long)
-    TEXT_TYPES = (unicode,)
     # includes both unicode and non-unicode strings:
-    STRING_TYPES = (basestring,)
-    BINARY_TYPES = (str,)
-    CLASS_TYPES = (type, types.ClassType)
+    string_types = (basestring,)
 
     # the raise syntax will cause a parse error in Py3, so 'sneak' in a
     # definition that won't cause the parser to barf
@@ -74,17 +59,9 @@ else:
     raise t, v, tb
 """)
 
-    def bin2str(s, encoding='utf-8'):
-        return s.decode(encoding)
-
     def iteritems(d, **kw):
-        return d.iteritems()
+        return d.iteritems(**kw)
 
-    def unichar(i):
-        return unichr(i)
+    unichr = unichr
 
-    def str2bin(s, encoding='latin-1'):
-        return s
-
-    def str2unicode(s):
-        return unicode(s, "unicode_escape")
+__all__ = [ 'PY3', 'queue', 'string_types', 'raise_', 'iteritems', 'unichr']

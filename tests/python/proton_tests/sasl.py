@@ -24,7 +24,6 @@ from . import engine
 
 from proton import *
 from .common import pump, Skipped
-from proton._compat import str2bin
 
 def _sslCertpath(file):
     """ Return the full path to the certificate, keyfile, etc.
@@ -113,20 +112,20 @@ class SaslTest(Test):
     assert self.s2.outcome is None
 
     # Push client bytes into server
-    self.t2.push(str2bin(
+    self.t2.push(
         # SASL
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@fuschia"]
-        '\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
+        b'\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
         # SASL (again illegally)
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@fuschia"]
-        '\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
+        b'\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
         # AMQP
-        'AMQP\x00\x01\x00\x00'
+        b'AMQP\x00\x01\x00\x00'
         # @open(16) [container-id="", channel-max=1234]
-        '\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
-        ))
+        b'\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
+        )
 
     consumeAllOuput(self.t2)
 
@@ -144,16 +143,16 @@ class SaslTest(Test):
     assert self.s2.outcome is None
 
     # Push client bytes into server
-    self.t2.push(str2bin(
+    self.t2.push(
         # SASL
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@fuschia"]
-        '\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
+        b'\x00\x00\x002\x02\x01\x00\x00\x00SA\xd0\x00\x00\x00"\x00\x00\x00\x02\xa3\x09ANONYMOUS\xa0\x11anonymous@fuschia'
         # AMQP
-        'AMQP\x00\x01\x00\x00'
+        b'AMQP\x00\x01\x00\x00'
         # @open(16) [container-id="", channel-max=1234]
-        '\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
-        ))
+        b'\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
+        )
 
     consumeAllOuput(self.t2)
 
@@ -173,18 +172,18 @@ class SaslTest(Test):
     # Push server bytes into client
     # Commented out lines in this test are where the client input processing doesn't
     # run after output processing even though there is input waiting
-    self.t1.push(str2bin(
+    self.t1.push(
         # SASL
-        'AMQP\x03\x01\x00\x00'
+        b'AMQP\x03\x01\x00\x00'
         # @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS]]
-        '\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
+        b'\x00\x00\x00\x1c\x02\x01\x00\x00\x00S@\xc0\x0f\x01\xe0\x0c\x01\xa3\tANONYMOUS'
         # @sasl-outcome(68) [code=0]
-        '\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
+        b'\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00'
         # AMQP
-        'AMQP\x00\x01\x00\x00'
+        b'AMQP\x00\x01\x00\x00'
         # @open(16) [container-id="", channel-max=1234]
-        '\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
-        ))
+        b'\x00\x00\x00!\x02\x00\x00\x00\x00S\x10\xd0\x00\x00\x00\x11\x00\x00\x00\x0a\xa1\x00@@`\x04\xd2@@@@@@'
+        )
 
     consumeAllOuput(self.t1)
 
@@ -217,17 +216,17 @@ class SaslTest(Test):
 
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push(str2bin("AMQP\x03\x01\x00\x00"))
+    self.t1.push(b"AMQP\x03\x01\x00\x00")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push(str2bin("\x00\x00\x00"))
+    self.t1.push(b"\x00\x00\x00")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
 
-    self.t1.push(str2bin("6\x02\x01\x00\x00\x00S@\xc0\x29\x01\xe0\x26\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5"))
+    self.t1.push(b"6\x02\x01\x00\x00\x00S@\xc0\x29\x01\xe0\x26\x04\xa3\x05PLAIN\x0aDIGEST-MD5\x09ANONYMOUS\x08CRAM-MD5")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
-    self.t1.push(str2bin("\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00"))
+    self.t1.push(b"\x00\x00\x00\x10\x02\x01\x00\x00\x00SD\xc0\x03\x01P\x00")
     out = self.t1.peek(1024)
     self.t1.pop(len(out))
     while out:

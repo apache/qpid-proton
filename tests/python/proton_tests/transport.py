@@ -21,7 +21,6 @@ import os
 import sys
 from . import common
 from proton import *
-from proton._compat import str2bin
 
 
 class Test(common.Test):
@@ -63,16 +62,16 @@ class ClientTransportTest(Test):
     assert self.conn.remote_condition.name == name, self.conn.remote_condition
 
   def testEOS(self):
-    self.transport.push(str2bin("")) # should be a noop
+    self.transport.push(b"") # should be a noop
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
   def testPartial(self):
-    self.transport.push(str2bin("AMQ")) # partial header
+    self.transport.push(b"AMQ") # partial header
     self.transport.close_tail() # should result in framing error
     self.assert_error(u'amqp:connection:framing-error')
 
-  def testGarbage(self, garbage=str2bin("GARBAGE_")):
+  def testGarbage(self, garbage=b"GARBAGE_"):
     self.transport.push(garbage)
     self.assert_error(u'amqp:connection:framing-error')
     assert self.transport.pending() < 0
@@ -80,35 +79,35 @@ class ClientTransportTest(Test):
     assert self.transport.pending() < 0
 
   def testSmallGarbage(self):
-    self.testGarbage(str2bin("XXX"))
+    self.testGarbage(b"XXX")
 
   def testBigGarbage(self):
-    self.testGarbage(str2bin("GARBAGE_XXX"))
+    self.testGarbage(b"GARBAGE_XXX")
 
   def testHeader(self):
-    self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
+    self.transport.push(b"AMQP\x00\x01\x00\x00")
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
   def testHeaderBadDOFF1(self):
     """Verify doff > size error"""
-    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x08\x00\x00\x00"))
+    self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x08\x00\x00\x00")
 
   def testHeaderBadDOFF2(self):
     """Verify doff < 2 error"""
-    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x01\x00\x00\x00"))
+    self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x00\x08\x01\x00\x00\x00")
 
   def testHeaderBadSize(self):
     """Verify size > max_frame_size error"""
     self.transport.max_frame_size = 512
-    self.testGarbage(str2bin("AMQP\x00\x01\x00\x00\x00\x00\x02\x01\x02\x00\x00\x00"))
+    self.testGarbage(b"AMQP\x00\x01\x00\x00\x00\x00\x02\x01\x02\x00\x00\x00")
 
   def testProtocolNotSupported(self):
-    self.transport.push(str2bin("AMQP\x01\x01\x0a\x00"))
+    self.transport.push(b"AMQP\x01\x01\x0a\x00")
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
+    assert bytes[:8] == b"AMQP\x00\x01\x00\x00"
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
@@ -127,8 +126,8 @@ class ClientTransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert str2bin("test-container") in out, repr(out)
-    assert str2bin("test-hostname") in out, repr(out)
+    assert b"test-container" in out, repr(out)
+    assert b"test-hostname" in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -185,7 +184,7 @@ class ClientTransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == str2bin("")
+    assert self.transport.peek(1024) == b""
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])
@@ -228,50 +227,50 @@ class ServerTransportTest(Test):
 
   # TODO: This may no longer be testing anything
   def testEOS(self):
-    self.transport.push(str2bin("")) # should be a noop
+    self.transport.push(b"") # should be a noop
     self.transport.close_tail()
     p = self.transport.pending()
     self.drain()
     assert self.transport.closed
 
   def testPartial(self):
-    self.transport.push(str2bin("AMQ")) # partial header
+    self.transport.push(b"AMQ") # partial header
     self.transport.close_tail()
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
+    assert bytes[:8] == b"AMQP\x00\x01\x00\x00"
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
 
-  def testGarbage(self, garbage="GARBAGE_"):
-    self.transport.push(str2bin(garbage))
+  def testGarbage(self, garbage=b"GARBAGE_"):
+    self.transport.push(garbage)
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
+    assert bytes[:8] == b"AMQP\x00\x01\x00\x00"
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
 
   def testSmallGarbage(self):
-    self.testGarbage("XXX")
+    self.testGarbage(b"XXX")
 
   def testBigGarbage(self):
-    self.testGarbage("GARBAGE_XXX")
+    self.testGarbage(b"GARBAGE_XXX")
 
   def testHeader(self):
-    self.transport.push(str2bin("AMQP\x00\x01\x00\x00"))
+    self.transport.push(b"AMQP\x00\x01\x00\x00")
     self.transport.close_tail()
     self.assert_error(u'amqp:connection:framing-error')
 
   def testProtocolNotSupported(self):
-    self.transport.push(str2bin("AMQP\x01\x01\x0a\x00"))
+    self.transport.push(b"AMQP\x01\x01\x0a\x00")
     p = self.transport.pending()
     assert p >= 8, p
     bytes = self.transport.peek(p)
-    assert bytes[:8] == str2bin("AMQP\x00\x01\x00\x00")
+    assert bytes[:8] == b"AMQP\x00\x01\x00\x00"
     self.transport.pop(p)
     self.drain()
     assert self.transport.closed
@@ -290,8 +289,8 @@ class ServerTransportTest(Test):
     trn = Transport()
     trn.bind(conn)
     out = trn.peek(1024)
-    assert str2bin("test-container") in out, repr(out)
-    assert str2bin("test-hostname") in out, repr(out)
+    assert b"test-container" in out, repr(out)
+    assert b"test-hostname" in out, repr(out)
     self.transport.push(out)
 
     c = Connection()
@@ -348,7 +347,7 @@ class ServerTransportTest(Test):
     self.transport.pop(len(dat2) - len(dat1))
     dat3 = self.transport.peek(1024)
     self.transport.pop(len(dat3))
-    assert self.transport.peek(1024) == str2bin("")
+    assert self.transport.peek(1024) == b""
 
     self.peer.push(dat1)
     self.peer.push(dat2[len(dat1):])
