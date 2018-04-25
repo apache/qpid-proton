@@ -31,7 +31,7 @@ from copy import copy
 import platform
 from os.path import dirname as dirname
 
-DEFAULT_TIMEOUT=10
+DEFAULT_TIMEOUT=30              # Valgrind can be very slow.
 
 class ProcError(Exception):
     """An exception that displays failed process output"""

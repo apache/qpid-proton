@@ -48,6 +48,24 @@ static pn_event_type_t open_handler(test_handler_t *th, pn_event_t *e) {
   return PN_EVENT_NONE;
 }
 
+/* Like open_handler but also reply to REMOTE_CLOSE */
+static pn_event_type_t open_close_handler(test_handler_t *th, pn_event_t *e) {
+  switch (pn_event_type(e)) {
+   case PN_CONNECTION_REMOTE_CLOSE:
+    pn_connection_open(pn_event_connection(e));
+    break;
+   case PN_SESSION_REMOTE_CLOSE:
+    pn_session_open(pn_event_session(e));
+    break;
+   case PN_LINK_REMOTE_CLOSE:
+    pn_link_close(pn_event_link(e));
+    break;
+   default:
+    return open_handler(th, e);
+  }
+  return PN_EVENT_NONE;
+}
+
 /* Handler that returns control on PN_DELIVERY and stores the delivery on the handler */
 static pn_event_type_t delivery_handler(test_handler_t *th, pn_event_t *e) {
   switch (pn_event_type(e)) {
@@ -407,8 +425,6 @@ static void set_capacity_and_max_frame(
   test_connection_drivers_run(client, server);
 }
 
-#define MAX_WINDOW (2147483647)
-#define MAX_FRAME (4294967295)
 /* Test different settings for max-frame, outgoing-window, incoming-capacity */
 static void test_session_flow_control(test_t *t) {
   test_connection_driver_t client, server;
@@ -442,6 +458,76 @@ static void test_session_flow_control(test_t *t) {
   test_connection_drivers_destroy(&client, &server);
 }
 
+/* Regression test for https://issues.apache.org/jira/browse/PROTON-1832.
+   Make sure we error on attempt to re-attach an already-attached link name.
+   No crash or memory error.
+*/
+static void test_duplicate_link_server(test_t *t) {
+  test_connection_driver_t client, server;
+  test_connection_drivers_init(t, &client, open_close_handler, &server, open_close_handler);
+  pn_connection_open(client.driver.connection);
+  pn_session_t *ssn = pn_session(client.driver.connection);
+  pn_session_open(ssn);
+
+  /* Set up link "x" */
+  pn_link_t *x = pn_sender(ssn, "xxx");
+  pn_link_open(x);
+  test_connection_drivers_run(&client, &server);
+  test_handler_clear(&client.handler, 0);
+  test_handler_clear(&server.handler, 0);
+  /* Free (but don't close) the link and open a new one to generate the invalid double-attach */
+  pn_link_free(x);
+  pn_link_open(pn_sender(ssn, "xxx"));
+  test_connection_drivers_run(&client, &server);
+
+  TEST_COND_NAME(t, "amqp:invalid-field", pn_transport_condition(server.driver.transport));
+  TEST_COND_DESC(t, "xxx", pn_transport_condition(server.driver.transport));
+
+  TEST_COND_NAME(t, "amqp:invalid-field", pn_connection_remote_condition(client.driver.connection));
+  TEST_COND_DESC(t, "xxx", pn_connection_remote_condition(client.driver.connection));
+
+  /* Freeing the link at this point is allowed but caused a crash in transport_unbind with the bug */
+  pn_link_free(server.handler.link);
+  test_connection_drivers_destroy(&client, &server);
+}
+
+/* Regression test for https://issues.apache.org/jira/browse/PROTON-1832.
+   Make sure the client does not generate an illegal "attach; attach; detach" sequence
+   from a legal "pn_link_open(); pn_link_close(); pn_link_open()" sequence
+*/
+static void test_duplicate_link_client(test_t *t) {
+  /* Set up the initial link */
+  test_connection_driver_t client, server;
+  test_connection_drivers_init(t, &client, open_close_handler, &server, open_close_handler);
+  pn_connection_open(client.driver.connection);
+  pn_session_t *ssn = pn_session(client.driver.connection);
+  pn_session_open(ssn);
+  pn_link_t *x = pn_sender(ssn, "x");
+  pn_link_open(x);
+  test_connection_drivers_run(&client, &server);
+  test_handler_clear(&client.handler, 0);
+  test_handler_clear(&server.handler, 0);
+
+  /* Close the link and open a new link with same name in the same batch of events. */
+  pn_link_close(x);
+  pn_link_open(pn_sender(ssn, "x"));
+  test_connection_drivers_run(&client, &server);
+
+  TEST_HANDLER_EXPECT(&server.handler,
+                      PN_LINK_REMOTE_CLOSE, PN_LINK_LOCAL_CLOSE, PN_TRANSPORT,
+                      PN_LINK_INIT, PN_LINK_REMOTE_OPEN, PN_LINK_LOCAL_OPEN, PN_TRANSPORT,
+                      0);
+  TEST_COND_EMPTY(t, pn_transport_condition(server.driver.transport));
+
+  test_connection_drivers_run(&client, &server);
+  TEST_HANDLER_EXPECT(&client.handler,
+                      PN_LINK_LOCAL_CLOSE, PN_TRANSPORT, PN_LINK_REMOTE_CLOSE,
+                      PN_LINK_INIT, PN_LINK_LOCAL_OPEN, PN_TRANSPORT, PN_LINK_REMOTE_OPEN,
+                      0);
+  TEST_COND_EMPTY(t, pn_connection_remote_condition(client.driver.connection));
+  test_connection_drivers_destroy(&client, &server);
+}
+
 int main(int argc, char **argv) {
   int failed = 0;
   RUN_ARGV_TEST(failed, t, test_message_transfer(&t));
@@ -449,5 +535,9 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_message_abort(&t));
   RUN_ARGV_TEST(failed, t, test_message_abort_mixed(&t));
   RUN_ARGV_TEST(failed, t, test_session_flow_control(&t));
+  RUN_ARGV_TEST(failed, t, test_duplicate_link_server(&t));
+  fprintf(stderr, "\n==== Following tests are expected to fail ====\n");
+  int ignore = 0;               /* run but don't fail the build */
+  RUN_ARGV_TEST(ignore, t, test_duplicate_link_client(&t));
   return failed;
 }

@@ -1253,7 +1253,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
   return 0;
 }
 
-pn_link_t *pn_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
+static pn_link_t *pni_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_sender)
 {
   pn_endpoint_type_t type = is_sender ? SENDER : RECEIVER;
 
@@ -1354,12 +1354,17 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
 
   pn_session_t *ssn = pni_channel_state(transport, channel);
   if (!ssn) {
-      pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
-      if (strheap) free(strheap);
-      return PN_EOS;
+    pn_do_error(transport, "amqp:not-allowed", "no such channel: %u", channel);
+    if (strheap) free(strheap);
+    return PN_EOS;
   }
-  pn_link_t *link = pn_find_link(ssn, name, is_sender);
-  if (!link) {
+  pn_link_t *link = pni_find_link(ssn, name, is_sender);
+  if (link && (int32_t)link->state.remote_handle >= 0) {
+    pn_do_error(transport, "amqp:invalid-field", "link name already attached: %s", strname);
+    if (strheap) free(strheap);
+    return PN_EOS;
+  }
+  if (!link) {                  /* Make a new link for the attach */
     if (is_sender) {
       link = (pn_link_t *) pn_sender(ssn, strname);
     } else {
