@@ -18,10 +18,17 @@
 #
 
 find_package(Doxygen)
+
 if (DOXYGEN_FOUND)
   configure_file (${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
                   ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
-  add_custom_target (docs-c COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen)
+
+  file(GLOB docsrc ../include/proton/*.h *.md)
+  add_custom_target (docs-c COMMAND
+    COMMAND ${CMAKE_COMMAND} -E remove_directory html # get rid of old files
+    COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen
+    DEPENDS ${docsrc})
+
   add_dependencies (docs docs-c)
 
   # HTML files are generated to ./html - put those in the install.

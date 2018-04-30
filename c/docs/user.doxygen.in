@@ -53,7 +53,8 @@ WARNINGS                = YES
 # Configuration options related to the input files
 
 INPUT                   = @CMAKE_SOURCE_DIR@/c/include \
-                          @CMAKE_SOURCE_DIR@/c/examples
+                          @CMAKE_SOURCE_DIR@/c/examples \
+                          @CMAKE_CURRENT_SOURCE_DIR@
 FILE_PATTERNS           = *.h *.md *.dox
 EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/c/examples/*.c \
                           @CMAKE_SOURCE_DIR@/c/examples/*.h \
