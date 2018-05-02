@@ -16,7 +16,12 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-from cproton import *
+
+from cproton import pn_incref, pn_decref, \
+    pn_py2void, pn_void2py, \
+    pn_record_get, pn_record_def, pn_record_set, \
+    PN_PYREF
+
 
 class EmptyAttrs:
 
@@ -29,7 +34,9 @@ class EmptyAttrs:
     def __setitem__(self, name, value):
         raise TypeError("does not support item assignment")
 
+
 EMPTY_ATTRS = EmptyAttrs()
+
 
 class Wrapper(object):
 
@@ -43,7 +50,8 @@ class Wrapper(object):
                 self.__dict__["_attrs"] = EMPTY_ATTRS
                 self.__dict__["_record"] = None
                 from proton import ProtonException
-                raise ProtonException("Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
+                raise ProtonException(
+                    "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
             init = True
         else:
             # we are wrapping an existing object
@@ -104,8 +112,8 @@ class Wrapper(object):
 
     def __repr__(self):
         return '<%s.%s 0x%x ~ 0x%x>' % (self.__class__.__module__,
-                                               self.__class__.__name__,
-                                               id(self), addressof(self._impl))
+                                        self.__class__.__name__,
+                                        id(self), addressof(self._impl))
 
 
 PYCTX = int(pn_py2void(Wrapper))

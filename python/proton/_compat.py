@@ -32,8 +32,6 @@ except ImportError:
 PY3 = sys.version_info[0] == 3
 
 if PY3:
-    string_types = (str,)
-
     def raise_(t, v=None, tb=None):
         """Mimic the old 2.x raise behavior:
         Raise an exception of type t with value v using optional traceback tb
@@ -45,23 +43,22 @@ if PY3:
         else:
             raise v.with_traceback(tb)
 
+
     def iteritems(d, **kw):
         return iter(d.items(**kw))
 
+
     unichr = chr
 else:
-    # includes both unicode and non-unicode strings:
-    string_types = (basestring,)
-
     # the raise syntax will cause a parse error in Py3, so 'sneak' in a
     # definition that won't cause the parser to barf
-    exec("""def raise_(t, v=None, tb=None):
+    exec ("""def raise_(t, v=None, tb=None):
     raise t, v, tb
 """)
+
 
     def iteritems(d, **kw):
         return d.iteritems(**kw)
 
-    unichr = unichr
 
-__all__ = [ 'PY3', 'queue', 'string_types', 'raise_', 'iteritems', 'unichr']
+    unichr = unichr

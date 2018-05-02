@@ -17,28 +17,52 @@ from __future__ import absolute_import
 # specific language governing permissions and limitations
 # under the License.
 #
-import logging, os, socket, time, types
-from heapq import heappush, heappop, nsmallest
+from __future__ import absolute_import
 
+import os
+import logging
 import traceback
 
-from proton import Collector, Connection, ConnectionException, Delivery, Described, dispatch
-from proton import Endpoint, Event, EventBase, EventType, generate_uuid, Handler, Link, Message
-from proton import ProtonException, PN_ACCEPTED, PN_PYREF, SASL, Session, SSL, SSLDomain, SSLUnavailable, symbol
-from proton import Terminus, Timeout, Transport, TransportException, ulong, Url
-from select import select
+from proton import Connection, Delivery, Described
+from proton import Endpoint, EventType, Handler, Link, Message
+from proton import Session, SSL, SSLDomain, SSLUnavailable, symbol
+from proton import Terminus, Transport, ulong, Url
 from proton.handlers import OutgoingMessageHandler
-from proton import unicode2utf8, utf82unicode
 
-from proton import WrappedHandler, _chandler, secs2millis, millis2secs, timeout2millis, millis2timeout, Selectable
-from .wrapper import Wrapper, PYCTX
-from cproton import *
+from proton import generate_uuid
+
+from ._common import isstring, secs2millis, millis2secs, unicode2utf8, utf82unicode
+
+from ._events import EventBase
+from ._reactor_impl import Selectable, WrappedHandler, _chandler
+from ._wrapper import Wrapper, PYCTX
+
+from cproton import PN_MILLIS_MAX, PN_PYREF, PN_ACCEPTED, \
+    pn_reactor_stop, pn_selectable_attachments, pn_reactor_quiesced, pn_reactor_acceptor, \
+    pn_record_set_handler, pn_collector_put, pn_reactor_get_timeout, pn_task_cancel, pn_acceptor_set_ssl_domain, \
+    pn_record_get, pn_reactor_selectable, pn_task_attachments, pn_reactor_schedule, pn_acceptor_close, pn_py2void, \
+    pn_reactor_error, pn_reactor_attachments, pn_reactor_get_global_handler, pn_reactor_process, pn_reactor, \
+    pn_reactor_set_handler, pn_reactor_set_global_handler, pn_reactor_yield, pn_error_text, pn_reactor_connection, \
+    pn_cast_pn_reactor, pn_reactor_get_connection_address, pn_reactor_update, pn_reactor_collector, pn_void2py, \
+    pn_reactor_start, pn_reactor_set_connection_host, pn_cast_pn_task, pn_decref, pn_reactor_set_timeout, \
+    pn_reactor_mark, pn_reactor_get_handler, pn_reactor_wakeup
 
 from . import _compat
 
 from ._compat import queue
 
 log = logging.getLogger("proton")
+
+
+def _timeout2millis(secs):
+    if secs is None: return PN_MILLIS_MAX
+    return secs2millis(secs)
+
+
+def _millis2timeout(millis):
+    if millis == PN_MILLIS_MAX: return None
+    return millis2secs(millis)
+
 
 class Task(Wrapper):
 
@@ -58,6 +82,7 @@ class Task(Wrapper):
     def cancel(self):
         pn_task_cancel(self._impl)
 
+
 class Acceptor(Wrapper):
 
     def __init__(self, impl):
@@ -68,6 +93,7 @@ class Acceptor(Wrapper):
 
     def close(self):
         pn_acceptor_close(self._impl)
+
 
 class Reactor(Wrapper):
 
@@ -95,11 +121,12 @@ class Reactor(Wrapper):
     # error will always be generated from a callback from this reactor.
     # Needed to prevent reference cycles and be compatible with wrappers.
     class ErrorDelegate(object):
-      def __init__(self, reactor):
-        self.reactor_impl = reactor._impl
-      def on_error(self, info):
-        ractor = Reactor.wrap(self.reactor_impl)
-        ractor.on_error(info)
+        def __init__(self, reactor):
+            self.reactor_impl = reactor._impl
+
+        def on_error(self, info):
+            ractor = Reactor.wrap(self.reactor_impl)
+            ractor.on_error(info)
 
     def on_error_delegate(self):
         return Reactor.ErrorDelegate(self).on_error
@@ -119,10 +146,10 @@ class Reactor(Wrapper):
     global_handler = property(_get_global, _set_global)
 
     def _get_timeout(self):
-        return millis2timeout(pn_reactor_get_timeout(self._impl))
+        return _millis2timeout(pn_reactor_get_timeout(self._impl))
 
     def _set_timeout(self, secs):
-        return pn_reactor_set_timeout(self._impl, timeout2millis(secs))
+        return pn_reactor_set_timeout(self._impl, _timeout2millis(secs))
 
     timeout = property(_get_timeout, _set_timeout)
 
@@ -244,7 +271,9 @@ class Reactor(Wrapper):
     def push_event(self, obj, etype):
         pn_collector_put(pn_reactor_collector(self._impl), PN_PYREF, pn_py2void(obj), etype.number)
 
-from proton import wrappers as _wrappers
+
+from ._events import wrappers as _wrappers
+
 _wrappers["pn_reactor"] = lambda x: Reactor.wrap(pn_cast_pn_reactor(x))
 _wrappers["pn_task"] = lambda x: Task.wrap(pn_cast_pn_task(x))
 
@@ -258,6 +287,7 @@ class EventInjector(object):
     it. The close() method should be called when it is no longer
     needed, to allow the event loop to end if needed.
     """
+
     def __init__(self):
         self.queue = queue.Queue()
         self.pipe = os.pipe()
@@ -305,6 +335,7 @@ class ApplicationEvent(EventBase):
     Application defined event, which can optionally be associated with
     an engine object and or an arbitrary subject
     """
+
     def __init__(self, typename, connection=None, session=None, link=None, delivery=None, subject=None):
         super(ApplicationEvent, self).__init__(PN_PYREF, self, EventType(typename))
         self.connection = connection
@@ -323,10 +354,12 @@ class ApplicationEvent(EventBase):
         objects = [self.connection, self.session, self.link, self.delivery, self.subject]
         return "%s(%s)" % (self.type, ", ".join([str(o) for o in objects if o is not None]))
 
+
 class Transaction(object):
     """
     Class to track state of an AMQP 1.0 transaction.
     """
+
     def __init__(self, txn_ctrl, handler, settle_before_discharge=False):
         self.txn_ctrl = txn_ctrl
         self.handler = handler
@@ -397,7 +430,7 @@ class Transaction(object):
             if event.delivery.remote_state == Delivery.REJECTED:
                 if not self.failed:
                     self.handler.on_transaction_commit_failed(event)
-                    self._release_pending() # make this optional?
+                    self._release_pending()  # make this optional?
             else:
                 if self.failed:
                     self.handler.on_transaction_aborted(event)
@@ -406,16 +439,19 @@ class Transaction(object):
                     self.handler.on_transaction_committed(event)
             self._clear_pending()
 
+
 class LinkOption(object):
     """
     Abstract interface for link configuration options
     """
+
     def apply(self, link):
         """
         Subclasses will implement any configuration logic in this
         method
         """
         pass
+
     def test(self, link):
         """
         Subclasses can override this to selectively apply an option
@@ -423,22 +459,29 @@ class LinkOption(object):
         """
         return True
 
+
 class AtMostOnce(LinkOption):
     def apply(self, link):
         link.snd_settle_mode = Link.SND_SETTLED
+
 
 class AtLeastOnce(LinkOption):
     def apply(self, link):
         link.snd_settle_mode = Link.SND_UNSETTLED
         link.rcv_settle_mode = Link.RCV_FIRST
 
+
 class SenderOption(LinkOption):
     def apply(self, sender): pass
+
     def test(self, link): return link.is_sender
+
 
 class ReceiverOption(LinkOption):
     def apply(self, receiver): pass
+
     def test(self, link): return link.is_receiver
+
 
 class DynamicNodeProperties(LinkOption):
     def __init__(self, props={}):
@@ -455,6 +498,7 @@ class DynamicNodeProperties(LinkOption):
         else:
             link.target.properties.put_dict(self.properties)
 
+
 class Filter(ReceiverOption):
     def __init__(self, filter_set={}):
         self.filter_set = filter_set
@@ -462,25 +506,31 @@ class Filter(ReceiverOption):
     def apply(self, receiver):
         receiver.source.filter.put_dict(self.filter_set)
 
+
 class Selector(Filter):
     """
     Configures a link with a message selector filter
     """
+
     def __init__(self, value, name='selector'):
         super(Selector, self).__init__({symbol(name): Described(symbol('apache.org:selector-filter:string'), value)})
+
 
 class DurableSubscription(ReceiverOption):
     def apply(self, receiver):
         receiver.source.durability = Terminus.DELIVERIES
         receiver.source.expiry_policy = Terminus.EXPIRE_NEVER
 
+
 class Move(ReceiverOption):
     def apply(self, receiver):
         receiver.source.distribution_mode = Terminus.DIST_MODE_MOVE
 
+
 class Copy(ReceiverOption):
     def apply(self, receiver):
         receiver.source.distribution_mode = Terminus.DIST_MODE_COPY
+
 
 def _apply_link_options(options, link):
     if options:
@@ -489,6 +539,7 @@ def _apply_link_options(options, link):
                 if o.test(link): o.apply(link)
         else:
             if options.test(link): options.apply(link)
+
 
 def _create_session(connection, handler=None):
     session = connection.session()
@@ -502,6 +553,7 @@ def _get_attr(target, name):
     else:
         return None
 
+
 class SessionPerConnection(object):
     def __init__(self):
         self._default_session = None
@@ -511,11 +563,13 @@ class SessionPerConnection(object):
             self._default_session = _create_session(connection)
         return self._default_session
 
+
 class GlobalOverrides(object):
     """
     Internal handler that triggers the necessary socket connect for an
     opened connection.
     """
+
     def __init__(self, base):
         self.base = base
 
@@ -527,11 +581,13 @@ class GlobalOverrides(object):
         conn = event.connection
         return conn and hasattr(conn, '_overrides') and event.dispatch(conn._overrides)
 
+
 class Connector(Handler):
     """
     Internal handler that triggers the necessary socket connect for an
     opened connection.
     """
+
     def __init__(self, connection):
         self.connection = connection
         self.address = None
@@ -548,7 +604,7 @@ class Connector(Handler):
         self.max_frame_size = None
 
     def _connect(self, connection, reactor):
-        assert(reactor is not None)
+        assert (reactor is not None)
         url = self.address.next()
         reactor.set_connection_host(connection, url.host, str(url.port))
         # if virtual-host not set, use host from address as default
@@ -615,11 +671,13 @@ class Connector(Handler):
     def on_timer_task(self, event):
         self._connect(self.connection, event.reactor)
 
+
 class Backoff(object):
     """
     A reconnect strategy involving an increasing delay between
     retries, up to a maximum or 10 seconds.
     """
+
     def __init__(self):
         self.delay = 0
 
@@ -631,8 +689,9 @@ class Backoff(object):
         if current == 0:
             self.delay = 0.1
         else:
-            self.delay = min(10, 2*current)
+            self.delay = min(10, 2 * current)
         return current
+
 
 class Urls(object):
     def __init__(self, values):
@@ -648,6 +707,7 @@ class Urls(object):
         except StopIteration:
             self.i = iter(self.values)
             return next(self.i)
+
 
 class SSLConfig(object):
     def __init__(self):
@@ -670,6 +730,7 @@ class Container(Reactor):
        an extension to the Reactor class that adds convenience methods
        for creating connections and sender- or receiver- links.
     """
+
     def __init__(self, *handlers, **kwargs):
         super(Container, self).__init__(*handlers, **kwargs)
         if "impl" not in kwargs:
@@ -687,7 +748,8 @@ class Container(Reactor):
             self.password = None
             Wrapper.__setattr__(self, 'subclass', self.__class__)
 
-    def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None, **kwargs):
+    def connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None,
+                **kwargs):
         """
         Initiates the establishment of an AMQP connection. Returns an
         instance of proton.Connection.
@@ -748,10 +810,14 @@ class Container(Reactor):
         connector.max_frame_size = kwargs.get('max_frame_size')
 
         conn._overrides = connector
-        if url: connector.address = Urls([url])
-        elif urls: connector.address = Urls(urls)
-        elif address: connector.address = address
-        else: raise ValueError("One of url, urls or address required")
+        if url:
+            connector.address = Urls([url])
+        elif urls:
+            connector.address = Urls(urls)
+        elif address:
+            connector.address = address
+        else:
+            raise ValueError("One of url, urls or address required")
         if heartbeat:
             connector.heartbeat = heartbeat
         if reconnect:
@@ -761,15 +827,19 @@ class Container(Reactor):
         # use container's default client domain if none specified.  This is
         # only necessary of the URL specifies the "amqps:" scheme
         connector.ssl_domain = ssl_domain or (self.ssl and self.ssl.client)
-        conn._session_policy = SessionPerConnection() #todo: make configurable
+        conn._session_policy = SessionPerConnection()  # todo: make configurable
         conn.open()
         return conn
 
     def _get_id(self, container, remote, local):
-        if local and remote: "%s-%s-%s" % (container, remote, local)
-        elif local: return "%s-%s" % (container, local)
-        elif remote: return "%s-%s" % (container, remote)
-        else: return "%s-%s" % (container, str(generate_uuid()))
+        if local and remote:
+            "%s-%s-%s" % (container, remote, local)
+        elif local:
+            return "%s-%s" % (container, local)
+        elif remote:
+            return "%s-%s" % (container, remote)
+        else:
+            return "%s-%s" % (container, str(generate_uuid()))
 
     def _get_session(self, context):
         if isinstance(context, Url):
@@ -806,7 +876,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, _compat.string_types):
+        if isstring(context):
             context = Url(context)
         if isinstance(context, Url) and not target:
             target = context.path
@@ -847,7 +917,7 @@ class Container(Reactor):
         Various LinkOptions can be specified to further control the
         attachment.
         """
-        if isinstance(context, _compat.string_types):
+        if isstring(context):
             context = Url(context)
         if isinstance(context, Url) and not source:
             source = context.path

@@ -16,28 +16,35 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import heapq, logging, os, re, socket, time, types, weakref
 
-from proton import dispatch, generate_uuid, PN_ACCEPTED, SASL, symbol, ulong, Url
-from proton import Collector, Connection, Delivery, Described, Endpoint, Event, Link, Terminus, Timeout
-from proton import Message, Handler, ProtonException, Transport, TransportException, ConnectionException
+from __future__ import absolute_import
+
+import logging
+import time
+import weakref
 from select import select
 
+from proton import Delivery, Endpoint
+from proton import Message, Handler, ProtonException
+from ._events import dispatch
+
 log = logging.getLogger("proton")
+
 
 class OutgoingMessageHandler(Handler):
     """
     A utility for simpler and more intuitive handling of delivery
     events related to outgoing i.e. sent messages.
     """
+
     def __init__(self, auto_settle=True, delegate=None):
         self.auto_settle = auto_settle
         self.delegate = delegate
 
     def on_link_flow(self, event):
         if event.link.is_sender and event.link.credit \
-           and event.link.state & Endpoint.LOCAL_ACTIVE \
-           and event.link.state & Endpoint.REMOTE_ACTIVE :
+                and event.link.state & Endpoint.LOCAL_ACTIVE \
+                and event.link.state & Endpoint.REMOTE_ACTIVE:
             self.on_sendable(event)
 
     def on_delivery(self, event):
@@ -94,23 +101,27 @@ class OutgoingMessageHandler(Handler):
         if self.delegate != None:
             dispatch(self.delegate, 'on_settled', event)
 
+
 def recv_msg(delivery):
     msg = Message()
     msg.decode(delivery.link.recv(delivery.pending))
     delivery.link.advance()
     return msg
 
+
 class Reject(ProtonException):
-  """
-  An exception that indicate a message should be rejected
-  """
-  pass
+    """
+    An exception that indicate a message should be rejected
+    """
+    pass
+
 
 class Release(ProtonException):
-  """
-  An exception that indicate a message should be rejected
-  """
-  pass
+    """
+    An exception that indicate a message should be rejected
+    """
+    pass
+
 
 class Acking(object):
     def accept(self, delivery):
@@ -145,6 +156,7 @@ class Acking(object):
         if state:
             delivery.update(state)
         delivery.settle()
+
 
 class IncomingMessageHandler(Handler, Acking):
     """
@@ -201,6 +213,7 @@ class IncomingMessageHandler(Handler, Acking):
     def on_aborted(self, event):
         if self.delegate != None:
             dispatch(self.delegate, 'on_aborted', event)
+
 
 class EndpointStateHandler(Handler):
     """
@@ -272,7 +285,7 @@ class EndpointStateHandler(Handler):
                 return
             self.on_connection_error(event)
         elif self.is_local_closed(event.connection):
-           self.on_connection_closed(event)
+            self.on_connection_closed(event)
         else:
             self.on_connection_closing(event)
         event.connection.close()
@@ -391,12 +404,14 @@ class EndpointStateHandler(Handler):
         if self.delegate != None and event.connection and self.is_local_open(event.connection):
             dispatch(self.delegate, 'on_disconnected', event)
 
+
 class MessagingHandler(Handler, Acking):
     """
     A general purpose handler that makes the proton-c events somewhat
     simpler to deal with and/or avoids repetitive tasks for common use
     cases.
     """
+
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
         if prefetch:
@@ -414,7 +429,8 @@ class MessagingHandler(Handler, Acking):
         """
         if event.transport.condition:
             if event.transport.condition.info:
-                log.error("%s: %s: %s" % (event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
+                log.error("%s: %s: %s" % (
+                event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
             else:
                 log.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description))
             if event.transport.condition.name in self.fatal_conditions:
@@ -455,36 +471,43 @@ class MessagingHandler(Handler, Acking):
         Called when the event loop starts. (Just an alias for on_reactor_init)
         """
         pass
+
     def on_connection_closed(self, event):
         """
         Called when the connection is closed.
         """
         pass
+
     def on_session_closed(self, event):
         """
         Called when the session is closed.
         """
         pass
+
     def on_link_closed(self, event):
         """
         Called when the link is closed.
         """
         pass
+
     def on_connection_closing(self, event):
         """
         Called when the peer initiates the closing of the connection.
         """
         pass
+
     def on_session_closing(self, event):
         """
         Called when the peer initiates the closing of the session.
         """
         pass
+
     def on_link_closing(self, event):
         """
         Called when the peer initiates the closing of the link.
         """
         pass
+
     def on_disconnected(self, event):
         """
         Called when the socket is disconnected.
@@ -525,6 +548,7 @@ class MessagingHandler(Handler, Acking):
         retransmitted.
         """
         pass
+
     def on_message(self, event):
         """
         Called when a message is received. The message itself can be
@@ -535,11 +559,13 @@ class MessagingHandler(Handler, Acking):
         """
         pass
 
+
 class TransactionHandler(object):
     """
     The interface for transaction handlers, i.e. objects that want to
     be notified of state changes related to a transaction.
     """
+
     def on_transaction_declared(self, event):
         pass
 
@@ -554,6 +580,7 @@ class TransactionHandler(object):
 
     def on_transaction_commit_failed(self, event):
         pass
+
 
 class TransactionalClientHandler(MessagingHandler, TransactionHandler):
     """
@@ -570,23 +597,28 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
         else:
             super(TransactionalClientHandler, self).accept(delivery)
 
-from proton import WrappedHandler
+
+from ._events import WrappedHandler
 from cproton import pn_flowcontroller, pn_handshaker, pn_iohandler
+
 
 class CFlowController(WrappedHandler):
 
     def __init__(self, window=1024):
         WrappedHandler.__init__(self, lambda: pn_flowcontroller(window))
 
+
 class CHandshaker(WrappedHandler):
 
     def __init__(self):
         WrappedHandler.__init__(self, pn_handshaker)
 
+
 class IOHandler(WrappedHandler):
 
     def __init__(self):
         WrappedHandler.__init__(self, pn_iohandler)
+
 
 class PythonIO:
 

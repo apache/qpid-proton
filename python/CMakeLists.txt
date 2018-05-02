@@ -64,11 +64,24 @@ endif()
 set (pysrc-generated cproton.py)
 set (pysrc
     proton/__init__.py
+    proton/_compat.py
+    proton/_common.py
+    proton/_condition.py
+    proton/_data.py
+    proton/_delivery.py
+    proton/_endpoints.py
+    proton/_events.py
+    proton/_exceptions.py
+    proton/_message.py
+    proton/_transport.py
+    proton/_url.py
+    proton/_wrapper.py
+
     proton/handlers.py
     proton/reactor.py
     proton/utils.py
-    proton/wrapper.py
-    proton/_compat.py
+
+    proton/_reactor_impl.py
     )
 # extra files included in the source distribution
 set(py_dist_files
