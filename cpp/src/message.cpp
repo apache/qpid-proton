@@ -320,4 +320,14 @@ void message::group_sequence(int32_t d) { pn_message_set_group_sequence(pn_msg()
 
 const uint8_t message::default_priority = PN_DEFAULT_PRIORITY;
 
+std::ostream& operator<<(std::ostream& o, const message& m) {
+    return o << inspectable(m.pn_msg());
+}
+
+std::string to_string(const message& m) {
+    std::ostringstream os;
+    os << m;
+    return os.str();
+}
+
 }

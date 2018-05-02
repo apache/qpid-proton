@@ -317,6 +317,9 @@ class message {
     /// Default priority assigned to new messages.
     PN_CPP_EXTERN static const uint8_t default_priority;
 
+    /// Human readable string representation
+    friend PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const message&);
+
     /// @cond INTERNAL
   private:
     struct impl;
@@ -328,6 +331,9 @@ class message {
   PN_CPP_EXTERN friend void swap(message&, message&);
     /// @endcond
 };
+
+/// Human readable string representation
+PN_CPP_EXTERN std::string to_string(const message&);
 
 } // proton
 

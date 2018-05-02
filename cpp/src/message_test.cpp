@@ -194,6 +194,19 @@ void test_message_reuse() {
     ASSERT_EQUAL(value("b"), m1.properties().get("a"));
 }
 
+void test_message_print() {
+  message m("hello");
+  m.to("to");
+  m.user("user");
+  m.subject("subject");
+  m.content_type("weird");
+  m.correlation_id(23);
+  m.properties().put("foo", "bar");
+  m.properties().put("num", 9);
+  m.delivery_annotations().put("deliverme", "please");
+  ASSERT_EQUAL("Message{address=\"to\", user_id=\"user\", subject=\"subject\", correlation_id=23, content_type=\"weird\", body=\"hello\"}", to_string(m));
+}
+
 }
 
 int main(int, char**) {
@@ -203,5 +216,6 @@ int main(int, char**) {
     RUN_TEST(failed, test_message_body());
     RUN_TEST(failed, test_message_maps());
     RUN_TEST(failed, test_message_reuse());
+    RUN_TEST(failed, test_message_print());
     return failed;
 }
