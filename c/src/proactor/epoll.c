@@ -1179,19 +1179,15 @@ static pn_event_batch_t *pconnection_process(pconnection_t *pc, uint32_t events,
       return NULL;
     }
   }
-  bool rearm_pc = pconnection_rearm_check(pc);
 
   if (!pc->timer_armed && !pc->timer.shutting_down && pc->timer.timerfd >= 0) {
-    pc->timer_armed = true;  // about to rearm outside the lock
-    rearm_timer = true;      // so we remember
-  }
-  unlock(&pc->context.mutex);
-
-  if (rearm_timer) {
+    pc->timer_armed = true;
     rearm(pc->psocket.proactor, &pc->timer.epoll_io);
   }
-  if (rearm_pc) pconnection_rearm(pc);
+  bool rearm_pc = pconnection_rearm_check(pc);  // holds rearm_mutex until pconnection_rearm() below
 
+  unlock(&pc->context.mutex);
+  if (rearm_pc) pconnection_rearm(pc);
   return NULL;
 }
 
