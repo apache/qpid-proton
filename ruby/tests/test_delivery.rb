@@ -107,4 +107,12 @@ class TestDelivery < MiniTest::Test
     assert_equal ["accept", "reject", "release-really", "release", "modify", "modify-empty", "modify-nil", "reject-raise", "release-raise"], rh.received
     assert_empty sh.unsettled
   end
+
+  def test_names
+    names = ["accepted", "rejected", "released", "modified"]
+    states = names.collect { |n| Disposition.const_get(n.upcase) }
+    assert_equal names, states.collect { |s| Disposition::name_of(s) }
+    assert_equal names, states.collect { |s| Disposition::State::name_of(s) }
+    assert_equal names, states.collect { |s| Transfer::name_of(s) }
+  end
 end

@@ -42,26 +42,7 @@ module Qpid::Proton
 
     public
 
-    # AMQP Delivery States describing the outcome of a message transfer
-    module State
-      # Message was successfully processed by the receiver
-      ACCEPTED = Cproton::PN_ACCEPTED
-
-      # Message rejected as invalid and unprocessable by the receiver.
-      REJECTED = Cproton::PN_REJECTED
-
-      # Message was not (and will not be) processed by the receiver, but may be
-      # acceptable if re-delivered to another receiver
-      RELEASED = Cproton::PN_RELEASED
-
-      # Like {RELEASED}, but there are modifications (see {Tracker#modifications})
-      # that must be applied to the message by the {Sender} before re-delivering it.
-      MODIFIED = Cproton::PN_MODIFIED
-
-      # Partial message data received. Only used during link recovery.
-      RECEIVED =  Cproton::PN_RECEIVED
-    end
-
+    State = Disposition::State
     include State
 
     # @return [String] Unique ID for the transfer in the context of the {#link}

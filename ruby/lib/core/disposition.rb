@@ -18,7 +18,6 @@
 
 module Qpid::Proton
 
-  # @deprecated use {Delivery}
   class Disposition
     include Util::Deprecation
 
@@ -27,12 +26,31 @@ module Qpid::Proton
     # @private
     extend Util::SWIGClassHelper
 
+    # States of a message transfer
+    module State
+      # Message was successfully processed by the receiver
+      ACCEPTED = Cproton::PN_ACCEPTED
 
-    ACCEPTED = Cproton::PN_ACCEPTED
-    REJECTED = Cproton::PN_REJECTED
-    RELEASED = Cproton::PN_RELEASED
-    MODIFIED = Cproton::PN_MODIFIED
-    RECEIVED =  Cproton::PN_RECEIVED
+      # Message rejected as invalid and unprocessable by the receiver.
+      REJECTED = Cproton::PN_REJECTED
+
+      # Message was not (and will not be) processed by the receiver, but may be
+      # acceptable if re-delivered to another receiver
+      RELEASED = Cproton::PN_RELEASED
+      # Like {RELEASED}, but there are modifications (see {Tracker#modifications})
+      # that must be applied to the message by the {Sender} before re-delivering it.
+      MODIFIED = Cproton::PN_MODIFIED
+
+      # Partial message data received. Only used during link recovery.
+      RECEIVED = Cproton::PN_RECEIVED
+
+      module ClassMethods
+        def name_of(state) Cproton::pn_disposition_type_name(state); end
+      end
+      extend ClassMethods
+      def self.included(klass) klass.extend ClassMethods; end
+    end
+    include State
 
     attr_reader :impl
 
