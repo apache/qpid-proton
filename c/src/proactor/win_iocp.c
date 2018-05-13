@@ -3350,7 +3350,10 @@ void pn_proactor_disconnect(pn_proactor_t *p, pn_condition_t *cond) {
   }
 
   // Second pass: different locking, close the pcontexts, free them if !disconnect_ops
-  for (ctx = disconnecting_pcontexts; ctx; ctx = ctx ? ctx->next : NULL) {
+  pcontext_t *next = disconnecting_pcontexts;
+  while (next) {
+    ctx = next;
+    next = ctx->next;           /* Save next pointer in case we free ctx */
     bool do_free = false;
     pconnection_t *pc = pcontext_pconnection(ctx);
     pn_listener_t *l = pc ? NULL : pcontext_listener(ctx);
