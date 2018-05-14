@@ -846,6 +846,8 @@ static void pconnection_cleanup(pconnection_t *pc) {
 
 // Call with lock held or from forced_shutdown
 static void pconnection_begin_close(pconnection_t *pc) {
+  lock(&pc->rearm_mutex);
+  unlock(&pc->rearm_mutex);  // Allow parallel pconnection_rearm() to complete
   if (!pc->context.closing) {
     pc->context.closing = true;
     if (pc->current_arm != 0 && !pc->new_events) {
