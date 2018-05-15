@@ -33,6 +33,8 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
   target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  # link fuzzer binaries with libstdc++ since -lFuzzingEngine is a C++ library
+  set_target_properties(${test} PROPERTIES LINKER_LANGUAGE CXX)
 
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
