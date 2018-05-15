@@ -1263,9 +1263,9 @@ static pn_link_t *pni_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_send
     if (link->endpoint.type == type &&
         // This function is used to locate the link object for an
         // incoming attach. If a link object of the same name is found
-        // which is closed both locally and remotely, assume that is
-        // no longer in use.
-        !((link->endpoint.state & PN_LOCAL_CLOSED) && (link->endpoint.state & PN_REMOTE_CLOSED)) &&
+        // which is remotely closed or detached, assume that is
+        // no longer in use and a new link is intended.
+        (!(link->endpoint.state & PN_REMOTE_CLOSED) && ((int32_t) link->state.remote_handle != -2)) &&
         pn_bytes_equal(name, pn_string_bytes(link->name)))
     {
       return link;
