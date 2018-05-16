@@ -57,8 +57,8 @@ class simple_recv : public proton::messaging_handler {
     }
 
     void on_message(proton::delivery &d, proton::message &msg) OVERRIDE {
-        if (proton::coerce<int>(msg.id()) < received) {
-            return; // Ignore duplicate
+        if (!msg.id().empty() && proton::coerce<int>(msg.id()) < received) {
+            return; // Ignore if no id or duplicate
         }
 
         if (expected == 0 || received < expected) {
