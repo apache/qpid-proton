@@ -110,7 +110,8 @@ class container::impl {
 
     // Event loop to run in each container thread
     void thread();
-    bool handle(pn_event_t*);
+    enum dispatch_result {ContinueLoop, EndBatch, EndLoop};
+    dispatch_result dispatch(pn_event_t*);
     void run_timer_jobs();
 
     int threads_;
