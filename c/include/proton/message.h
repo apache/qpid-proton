@@ -740,6 +740,8 @@ PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 struct pn_link_t;
 
 /**
+ * **Unsettled API**
+ *
  * Encode and send a message on a sender link.
  *
  * Performs the following steps:
