@@ -20,12 +20,7 @@
 from __future__ import absolute_import
 
 import socket
-
-from cproton import pn_url, pn_url_free, pn_url_parse, pn_url_str, pn_url_get_port, pn_url_get_scheme, \
-    pn_url_get_host, pn_url_get_username, pn_url_get_password, pn_url_get_path, pn_url_set_scheme, pn_url_set_host, \
-    pn_url_set_username, pn_url_set_password, pn_url_set_port, pn_url_set_path
-
-from ._common import unicode2utf8
+from ._compat import urlparse, urlunparse, quote, unquote
 
 
 class Url(object):
@@ -97,58 +92,104 @@ class Url(object):
         @param kwargs: scheme, user, password, host, port, path.
           If specified, replaces corresponding part in url string.
         """
-        if url:
-            self._url = pn_url_parse(unicode2utf8(str(url)))
-            if not self._url: raise ValueError("Invalid URL '%s'" % url)
+        if isinstance(url, Url):
+            self.scheme = url.scheme
+            self.username = url.username
+            self.password = url.password
+            self.host = url.host
+            self._port = url._port
+            self._path = url._path
+            self._params = url._params
+            self._query = url._query
+            self._fragment = url._fragment
+        elif url:
+            if not '://' in url:
+                url = '//' + url
+            u = urlparse(url)
+            if not u: raise ValueError("Invalid URL '%s'" % url)
+            self.scheme = None if not u.scheme else u.scheme
+            self.username = u.username and unquote(u.username)
+            self.password = u.password and unquote(u.password)
+            self.host = None if not u.hostname else u.hostname
+            self._port = self._parse_port(u.netloc)
+            self._path = None if not u.path else u.path
+            self._params = u.params
+            self._query = u.query
+            self._fragment = u.fragment
         else:
-            self._url = pn_url()
+            self.scheme = None
+            self.username = None
+            self.password = None
+            self.host = None
+            self._port = None
+            self._path = None
+            self._params = None
+            self._query = None
+            self._fragment = None
         for k in kwargs:  # Let kwargs override values parsed from url
             getattr(self, k)  # Check for invalid kwargs
             setattr(self, k, kwargs[k])
         if defaults: self.defaults()
 
-    class PartDescriptor(object):
-        def __init__(self, part):
-            self.getter = globals()["pn_url_get_%s" % part]
-            self.setter = globals()["pn_url_set_%s" % part]
+    @staticmethod
+    def _parse_port(nl):
+        netloc = nl.split('@')[-1].split(']')[-1]
+        if ':' in netloc:
+            port = netloc.split(':')[1]
+            if port:
+                return port
+        return None
 
-        def __get__(self, obj, type=None): return self.getter(obj._url)
+    @property
+    def path(self):
+        return self._path if not self._path or self._path[0] != '/' else self._path[1:]
 
-        def __set__(self, obj, value): return self.setter(obj._url, str(value))
+    @path.setter
+    def path(self, p):
+        self._path = p if p[0] == '/' else '/' + p
 
-    scheme = PartDescriptor('scheme')
-    username = PartDescriptor('username')
-    password = PartDescriptor('password')
-    host = PartDescriptor('host')
-    path = PartDescriptor('path')
+    @property
+    def port(self):
+        return self._port and Url.Port(self._port)
 
-    def _get_port(self):
-        portstr = pn_url_get_port(self._url)
-        return portstr and Url.Port(portstr)
+    @port.setter
+    def port(self, p):
+        self._port = p
 
-    def _set_port(self, value):
-        if value is None:
-            pn_url_set_port(self._url, None)
-        else:
-            pn_url_set_port(self._url, str(Url.Port(value)))
-
-    port = property(_get_port, _set_port)
+    @property
+    def _netloc(self):
+        hostport = ''
+        if self.host:
+            hostport = self.host
+        if self._port:
+            hostport += ':'
+            hostport += str(self._port)
+        userpart = ''
+        if self.username:
+            userpart += quote(self.username)
+        if self.password:
+            userpart += ':'
+            userpart += quote(self.password)
+        if self.username or self.password:
+            userpart += '@'
+        return userpart + hostport
 
     def __str__(self):
-        return pn_url_str(self._url)
+        if self.scheme \
+                and not self._netloc and not self._path \
+                and not self._params and not self._query and not self._fragment:
+            return self.scheme + '://'
+        return urlunparse((self.scheme or '', self._netloc or '', self._path or '',
+                           self._params or '', self._query or '', self._fragment or ''))
 
     def __repr__(self):
-        return "Url(%s://%s/%s)" % (self.scheme, self.host, self.path)
+        return "Url('%s')" % self
 
     def __eq__(self, x):
         return str(self) == str(x)
 
     def __ne__(self, x):
         return not self == x
-
-    def __del__(self):
-        pn_url_free(self._url)
-        del self._url
 
     def defaults(self):
         """
@@ -157,5 +198,5 @@ class Url(object):
         """
         self.scheme = self.scheme or self.AMQP
         self.host = self.host or '0.0.0.0'
-        self.port = self.port or self.Port(self.scheme)
+        self._port = self._port or self.Port(self.scheme)
         return self

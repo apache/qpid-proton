@@ -29,6 +29,12 @@ try:
 except ImportError:
     import queue
 
+try:
+    from urlparse import urlparse, urlunparse
+    from urllib import quote, unquote
+except ImportError:
+    from urllib.parse import urlparse, urlunparse, quote, unquote
+
 PY3 = sys.version_info[0] == 3
 
 if PY3:
