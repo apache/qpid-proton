@@ -22,7 +22,7 @@ import time
 import sys
 from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
-from proton.handlers import CHandshaker, MessagingHandler
+from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url
 
 class Barf(Exception):
@@ -56,7 +56,7 @@ class BarfOnFinal:
     def on_reactor_final(self, event):
         raise Barf()
     
-class BarfOnFinalDerived(CHandshaker):
+class BarfOnFinalDerived(Handshaker):
     init = False
     
     def on_reactor_init(self, event):

@@ -415,7 +415,7 @@ class MessagingHandler(Handler, Acking):
     def __init__(self, prefetch=10, auto_accept=True, auto_settle=True, peer_close_is_error=False):
         self.handlers = []
         if prefetch:
-            self.handlers.append(CFlowController(prefetch))
+            self.handlers.append(FlowController(prefetch))
         self.handlers.append(EndpointStateHandler(peer_close_is_error, weakref.proxy(self)))
         self.handlers.append(IncomingMessageHandler(auto_accept, weakref.proxy(self)))
         self.handlers.append(OutgoingMessageHandler(auto_settle, weakref.proxy(self)))
@@ -599,21 +599,79 @@ class TransactionalClientHandler(MessagingHandler, TransactionHandler):
             super(TransactionalClientHandler, self).accept(delivery)
 
 
-from ._events import WrappedHandler
-from cproton import pn_flowcontroller, pn_handshaker, pn_iohandler
-
-
-class CFlowController(WrappedHandler):
-
+class FlowController(Handler):
     def __init__(self, window=1024):
-        WrappedHandler.__init__(self, lambda: pn_flowcontroller(window))
+        self._window = window
+        self._drained = 0
+
+    def on_link_local_open(self, event):
+        self._flow(event.link)
+
+    def on_link_remote_open(self, event):
+        self._flow(event.link)
+
+    def on_link_flow(self, event):
+        self._flow(event.link)
+
+    def on_delivery(self, event):
+        self._flow(event.link)
+
+    def _flow(self, link):
+        if link.is_receiver:
+            self._drained += link.drained()
+            if self._drained == 0:
+                delta = self._window - link.credit
+                link.flow(delta)
 
 
-class CHandshaker(WrappedHandler):
+class Handshaker(Handler):
 
-    def __init__(self):
-        WrappedHandler.__init__(self, pn_handshaker)
+    @staticmethod
+    def on_connection_remote_open(event):
+        conn = event.connection
+        if conn.state & Endpoint.LOCAL_UNINIT:
+            conn.open()
 
+    @staticmethod
+    def on_session_remote_open(event):
+        ssn = event.session
+        if ssn.state() & Endpoint.LOCAL_UNINIT:
+            ssn.open()
+
+    @staticmethod
+    def on_link_remote_open(event):
+        link = event.link
+        if link.state & Endpoint.LOCAL_UNINIT:
+            link.source.copy(link.remote_source)
+            link.target.copy(link.remote_target)
+            link.open()
+
+    @staticmethod
+    def on_connection_remote_close(event):
+        conn = event.connection
+        if not conn.state & Endpoint.LOCAL_CLOSED:
+            conn.close()
+
+    @staticmethod
+    def on_session_remote_close(event):
+        ssn = event.session
+        if not ssn.state & Endpoint.LOCAL_CLOSED:
+            ssn.close()
+
+    @staticmethod
+    def on_link_remote_close(event):
+        link = event.link
+        if not link.state & Endpoint.LOCAL_CLOSED:
+            link.close()
+
+
+# Back compatibility definitions
+CFlowController = FlowController
+CHandshaker = Handshaker
+
+
+from ._events import WrappedHandler
+from cproton import pn_iohandler
 
 class IOHandler(WrappedHandler):
 

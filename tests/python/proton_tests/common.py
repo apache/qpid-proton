@@ -34,7 +34,7 @@ from subprocess import Popen,PIPE,STDOUT
 import sys, os, subprocess
 from proton import SASL, SSL
 from proton.reactor import Container
-from proton.handlers import CHandshaker, CFlowController
+from proton.handlers import Handshaker, FlowController
 from string import Template
 
 def free_tcp_ports(count=1):
@@ -195,7 +195,7 @@ class TestServer(object):
       self.host = kwargs["host"]
     if "port" in kwargs:
       self.port = kwargs["port"]
-    self.handlers = [CFlowController(10), CHandshaker()]
+    self.handlers = [FlowController(10), Handshaker()]
     self.thread = Thread(name="server-thread", target=self.run)
     self.thread.daemon = True
     self.running = True
