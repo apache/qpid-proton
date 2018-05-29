@@ -159,6 +159,9 @@ set_source_files_properties (
   )
 
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
+if(BUILD_STATIC_LIBS)
+  add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
+endif(BUILD_STATIC_LIBS)
 
 target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor)
 

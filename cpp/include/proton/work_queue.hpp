@@ -364,14 +364,6 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// **Deprecated** - Use `add(work)`.
     PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::add(work)'") bool add(void_function0& fn);
 
-    /// @cond INTERNAL
-    // This is a hack to ensure that the C++03 version is declared
-    // only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
-    PN_CPP_EXTERN bool add(internal::v03::work fn);
-#endif
-    /// @endcond
-
     /// **Unsettled API** - Add work `fn` to the work queue after a
     /// duration.
     ///
@@ -385,15 +377,14 @@ class PN_CPP_CLASS_EXTERN work_queue {
     /// **Deprecated** - Use `schedule(duration, work)`.
     PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'work_queue::schedule(duration, work)'") void schedule(duration, void_function0& fn);
 
-    /// @cond INTERNAL
-    // This is a hack to ensure that the C++03 version is declared
-    // only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
+  private:
+    /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
+    /// A C++11 user should never call the v03 overload so it is private in this case
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
+    PN_CPP_EXTERN bool add(internal::v03::work fn);
     PN_CPP_EXTERN void schedule(duration, internal::v03::work fn);
 #endif
-    /// @endcond
 
-  private:
     PN_CPP_EXTERN static work_queue& get(pn_connection_t*);
     PN_CPP_EXTERN static work_queue& get(pn_session_t*);
     PN_CPP_EXTERN static work_queue& get(pn_link_t*);

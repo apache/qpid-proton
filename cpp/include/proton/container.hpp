@@ -306,15 +306,12 @@ class PN_CPP_CLASS_EXTERN container {
     /// **Deprecated** - Use `container::schedule(duration, work)`.
     PN_CPP_EXTERN PN_CPP_DEPRECATED("Use 'container::schedule(duration, work)'") void schedule(duration dur, void_function0& fn);
 
-    /// @cond INTERNAL
-    // This is a hack to ensure that the C++03 version is declared
-    // only during the compilation of the library
-#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES && defined(qpid_proton_cpp_EXPORTS)
+  private:
+    /// Declare both v03 and v11 if compiling with c++11 as the library contains both.
+    /// A C++11 user should never call the v03 overload so it is private in this case
+#if PN_CPP_HAS_LAMBDAS && PN_CPP_HAS_VARIADIC_TEMPLATES
     PN_CPP_EXTERN void schedule(duration dur, internal::v03::work fn);
 #endif
-    /// @endcond
-
-  private:
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 

@@ -538,17 +538,18 @@ if (BUILD_WITH_CXX)
     )
 endif (BUILD_WITH_CXX)
 
-add_library (
-  qpid-proton-core SHARED
+set(qpid-proton-core-src
   ${qpid-proton-core}
   ${qpid-proton-layers}
   ${qpid-proton-platform}
   ${qpid-proton-include}
   ${qpid-proton-include-generated}
   )
-add_dependencies(qpid-proton-core generated_c_files)
-
+add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
 target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+if (BUILD_STATIC_LIBS)
+  add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
+endif(BUILD_STATIC_LIBS)
 
 set_target_properties (
   qpid-proton-core
@@ -558,8 +559,7 @@ set_target_properties (
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
   )
 
-add_library(
-  qpid-proton SHARED
+set(qpid-proton-src
   # Proton Core
   ${qpid-proton-core}
   ${qpid-proton-layers}
@@ -573,7 +573,10 @@ add_library(
   ${qpid-proton-platform-io}
   ${qpid-proton-include-extra}
   )
-add_dependencies(qpid-proton generated_c_files)
+add_library(qpid-proton SHARED ${qpid-proton-src})
+if (BUILD_STATIC_LIBS)
+  add_library(qpid-proton-static STATIC ${qpid-proton-src})
+endif(BUILD_STATIC_LIBS)
 
 if (MSVC)
   # Add a phony dependency for Windows builds to serialize creation
@@ -599,10 +602,8 @@ if (MSVC)
 endif(MSVC)
 
 if (qpid-proton-proactor)
-  # Bizarre CMake variable setting
   set(HAS_PROACTOR True)
-  add_library (
-    qpid-proton-proactor SHARED ${qpid-proton-proactor})
+  add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
   list(APPEND LIB_TARGETS qpid-proton-proactor)
@@ -613,6 +614,9 @@ if (qpid-proton-proactor)
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
     )
+  if (BUILD_STATIC_LIBS)
+    add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
+  endif(BUILD_STATIC_LIBS)
 endif()
 
 # Install executables and libraries

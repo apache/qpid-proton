@@ -77,6 +77,9 @@ if (CMAKE_CXX_COMPILER)
   option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 endif()
 
+# Bulid static C and C++ libraries in addition to shared libraries.
+option(BUILD_STATIC_LIBS "Build static libraries as well as shared libraries" OFF)
+
 if (CMAKE_CONFIGURATION_TYPES)
   # There is no single "build type"...
   message(STATUS "Build types are ${CMAKE_CONFIGURATION_TYPES}")
@@ -331,13 +334,13 @@ endif()
 
 # To kick-start a build with just a few bindings enabled by default, e.g. ruby and go:
 #
-#     cmake -DBUILD_BINDINGS=ruby;go
+#     cmake -DBUILD_BINDINGS="ruby;go"
 #
 # This is only used when CMakeCache.txt is first created, after that set the normal
 # BUILD_XXX variables to enable/disable bindings.
 #
 if (NOT DEFINED BUILD_BINDINGS)
-  set(BUILD_BINDINGS "${BINDINGS}")
+    set(BUILD_BINDINGS "${BINDINGS}")
 endif()
 
 foreach(BINDING ${BINDINGS})
@@ -348,7 +351,7 @@ foreach(BINDING ${BINDINGS})
   endif()
   option(BUILD_${UBINDING} "Build ${BINDING} language binding" ${DEFAULT_${UBINDING}})
   if (BUILD_${UBINDING})
-    add_subdirectory(${BINDING})
+      add_subdirectory(${BINDING})
   endif ()
 endforeach(BINDING)
 
