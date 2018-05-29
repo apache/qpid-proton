@@ -78,7 +78,7 @@ func TestIntKey(t *testing.T) {
 		t.Error(err)
 	}
 	if 12345 != k.Get().(uint64) {
-		t.Errorf("(%T)%v != (%T)%v", 12345, k.Get().(uint64))
+		t.Errorf("%v != %v", 12345, k.Get().(uint64))
 	}
 	var n uint64
 	if _, err := Unmarshal(bytes, &n); err != nil {
