@@ -32,7 +32,13 @@ add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c Standalo
 
 macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+  # prefer static lib for the fuzzer, if available
+  if (BUILD_STATIC_LIBS)
+    set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core-static)
+  else()
+    set(FUZZING_QPID_PROTON_CORE_LIBRARY qpid-proton-core)
+  endif()
+  target_link_libraries (${test} ${FUZZING_QPID_PROTON_CORE_LIBRARY} ${FUZZING_LIBRARY})
 
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
