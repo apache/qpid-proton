@@ -36,13 +36,29 @@ struct pn_condition_t;
 
 namespace proton {
 
-/// Describes an endpoint error state.
+/// Standard AMQP error condition names.
+const std::string INTERNAL_ERROR;
+const std::string NOT_FOUND;
+const std::string UNAUTHORIZED_ACCESS;
+const std::string DECODE_ERROR;
+const std::string RESOURCE_LIMIT_EXCEEDED;
+const std::string NOT_ALLOWED;
+const std::string INVALID_FIELD;
+const std::string NOT_IMPLEMENTED;
+const std::string RESOURCE_LOCKED;
+const std::string PRECONDITION_FAILED;
+const std::string RESOURCE_DELETED;
+const std::string ILLEGAL_STATE;
+const std::string FRAME_SIZE_TOO_SMALL;
+
+/// Describes an endpoint error stte.
 class error_condition {
     /// @cond INTERNAL
     error_condition(pn_condition_t* c);
     /// @endcond
 
   public:
+
     /// Create an empty error condition.
     error_condition() {}
 

@@ -99,4 +99,18 @@ std::ostream& operator<<(std::ostream& o, const error_condition& err) {
     return o << err.what();
 }
 
+const std::string INTERNAL_ERROR = "amqp:internal-error";
+const std::string NOT_FOUND = "amqp:not-found";
+const std::string UNAUTHORIZED_ACCESS = "amqp:unauthorized-access";
+const std::string DECODE_ERROR = "amqp:decode-error";
+const std::string RESOURCE_LIMIT_EXCEEDED = "amqp:resource-limit-exceeded";
+const std::string NOT_ALLOWED = "amqp:not-allowed";
+const std::string INVALID_FIELD = "amqp:invalid-field";
+const std::string NOT_IMPLEMENTED = "amqp:not-implemented";
+const std::string RESOURCE_LOCKED = "amqp:resource-locked";
+const std::string PRECONDITION_FAILED = "amqp:precondition-failed";
+const std::string RESOURCE_DELETED = "amqp:resource-deleted";
+const std::string ILLEGAL_STATE = "amqp:illegal-state";
+const std::string FRAME_SIZE_TOO_SMALL = "amqp:frame-size-too-small";
+
 }
