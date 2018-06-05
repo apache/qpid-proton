@@ -546,6 +546,7 @@ set(qpid-proton-core-src
   ${qpid-proton-include-generated}
   )
 add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
+add_dependencies(qpid-proton-core generated_c_files)
 target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
