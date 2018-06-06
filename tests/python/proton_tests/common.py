@@ -31,33 +31,11 @@ from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
-import sys, os, string, subprocess
-from proton import Connection, Transport, SASL, Endpoint, Delivery, SSL
+import sys, os, subprocess
+from proton import SASL, SSL
 from proton.reactor import Container
 from proton.handlers import CHandshaker, CFlowController
 from string import Template
-
-if sys.version_info[0] == 2 and sys.version_info[1] < 6:
-    # this is for compatibility, apparently the version of jython we
-    # use doesn't have the next() builtin.
-    # we should remove this when we upgrade to a python 2.6+ compatible version
-    # of jython
-    #_DEF = object()  This causes the test loader to fail (why?)
-    class _dummy(): pass
-    _DEF = _dummy
-
-    def next(iter, default=_DEF):
-        try:
-            return iter.next()
-        except StopIteration:
-            if default is _DEF:
-                raise
-            else:
-                return default
-    # I may goto hell for this:
-    import __builtin__
-    __builtin__.__dict__['next'] = next
-
 
 def free_tcp_ports(count=1):
   """ return a list of 'count' TCP ports that are free to used (ie. unbound)

@@ -66,21 +66,21 @@ class OutgoingMessageHandler(Handler):
         Called when the sender link has credit and messages can
         therefore be transferred.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_sendable', event)
 
     def on_accepted(self, event):
         """
         Called when the remote peer accepts an outgoing message.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_accepted', event)
 
     def on_rejected(self, event):
         """
         Called when the remote peer rejects an outgoing message.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_rejected', event)
 
     def on_released(self, event):
@@ -89,7 +89,7 @@ class OutgoingMessageHandler(Handler):
         that this may be in response to either the RELEASE or MODIFIED
         state as defined by the AMQP specification.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_released', event)
 
     def on_settled(self, event):
@@ -98,7 +98,7 @@ class OutgoingMessageHandler(Handler):
         message. This is the point at which it should never be
         retransmitted.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_settled', event)
 
 
@@ -203,15 +203,15 @@ class IncomingMessageHandler(Handler, Acking):
         explicitly accepting it, the ``delivery`` should be used, also
         obtainable via a property on the event.
         """
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_message', event)
 
     def on_settled(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_settled', event)
 
     def on_aborted(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_aborted', event)
 
 
@@ -324,75 +324,75 @@ class EndpointStateHandler(Handler):
             event.link.open()
 
     def on_connection_opened(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_connection_opened', event)
 
     def on_session_opened(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_session_opened', event)
 
     def on_link_opened(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_link_opened', event)
 
     def on_connection_opening(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_connection_opening', event)
 
     def on_session_opening(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_session_opening', event)
 
     def on_link_opening(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_link_opening', event)
 
     def on_connection_error(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_connection_error', event)
         else:
             self.log_error(event.connection, "connection")
 
     def on_session_error(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_session_error', event)
         else:
             self.log_error(event.session, "session")
             event.connection.close()
 
     def on_link_error(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_link_error', event)
         else:
             self.log_error(event.link, "link")
             event.connection.close()
 
     def on_connection_closed(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_connection_closed', event)
 
     def on_session_closed(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_session_closed', event)
 
     def on_link_closed(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_link_closed', event)
 
     def on_connection_closing(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_connection_closing', event)
         elif self.peer_close_is_error:
             self.on_connection_error(event)
 
     def on_session_closing(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_session_closing', event)
         elif self.peer_close_is_error:
             self.on_session_error(event)
 
     def on_link_closing(self, event):
-        if self.delegate != None:
+        if self.delegate is not None:
             dispatch(self.delegate, 'on_link_closing', event)
         elif self.peer_close_is_error:
             self.on_link_error(event)
@@ -401,7 +401,7 @@ class EndpointStateHandler(Handler):
         self.on_transport_closed(event)
 
     def on_transport_closed(self, event):
-        if self.delegate != None and event.connection and self.is_local_open(event.connection):
+        if self.delegate is not None and event.connection and self.is_local_open(event.connection):
             dispatch(self.delegate, 'on_disconnected', event)
 
 
@@ -430,7 +430,8 @@ class MessagingHandler(Handler, Acking):
         if event.transport.condition:
             if event.transport.condition.info:
                 log.error("%s: %s: %s" % (
-                event.transport.condition.name, event.transport.condition.description, event.transport.condition.info))
+                    event.transport.condition.name, event.transport.condition.description,
+                    event.transport.condition.info))
             else:
                 log.error("%s: %s" % (event.transport.condition.name, event.transport.condition.description))
             if event.transport.condition.name in self.fatal_conditions:
