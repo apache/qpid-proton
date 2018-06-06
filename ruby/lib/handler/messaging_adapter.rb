@@ -66,6 +66,10 @@ module Qpid::Proton
       # Link open/close is handled separately because links are split into
       # sender and receiver on the messaging API
       def on_link_remote_open(event)
+        if !event.link.local_active? # Copy remote terminus data to local
+          event.link.source.replace(event.link.remote_source);
+          event.link.target.replace(event.link.remote_target);
+        end
         delegate(event.link.sender? ? :on_sender_open : :on_receiver_open, event.link)
         event.link.open if event.link.local_uninit?
         add_credit(event)
