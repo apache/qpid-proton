@@ -106,6 +106,16 @@ class AccessorsTest(Test):
 
 class CodecTest(Test):
 
+  def testProperties(self):
+    self.msg.properties = {}
+    self.msg.properties['key'] = 'value'
+    data = self.msg.encode()
+
+    msg2 = Message()
+    msg2.decode(data)
+
+    assert msg2.properties['key'] == 'value', msg2.properties['key']
+
   def testRoundTrip(self):
     self.msg.id = "asdf"
     self.msg.correlation_id = uuid4()

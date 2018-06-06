@@ -46,6 +46,14 @@ from ._data import Data, ulong, symbol
 from ._endpoints import Link
 from ._exceptions import EXCEPTIONS, MessageException
 
+#
+# Hack to provide Python2 <---> Python3 compatibility
+try:
+    unicode()
+except NameError:
+    unicode = str
+
+
 PENDING = Constant("PENDING")
 ACCEPTED = Constant("ACCEPTED")
 REJECTED = Constant("REJECTED")
