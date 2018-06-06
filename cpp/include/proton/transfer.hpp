@@ -27,6 +27,7 @@
 #include "./internal/object.hpp"
 
 #include <proton/disposition.h>
+#include <iosfwd>
 
 /// @file
 /// @copybrief proton::transfer
@@ -80,6 +81,9 @@ class transfer : public internal::object<pn_delivery_t> {
   friend class internal::factory<transfer>;
     /// @endcond
 };
+
+PN_CPP_EXTERN std::string to_string(enum transfer::state);
+PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const enum transfer::state);
 
 } // proton
 

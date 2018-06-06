@@ -59,6 +59,7 @@ class uuid : public byte_array<16> {
 /// UUID standard format: 8-4-4-4-12 (36 chars, 32 alphanumeric chars
 /// and 4 hyphens).
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const uuid&);
+inline std::string to_string(const uuid& u) { return u.str(); }
 
 } // proton
 
