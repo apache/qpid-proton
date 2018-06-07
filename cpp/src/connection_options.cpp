@@ -21,6 +21,7 @@
 #include "proton/connection_options.hpp"
 
 #include "proton/connection.hpp"
+#include "proton/codec/vector.hpp"
 #include "proton/fwd.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/reconnect_options.hpp"
@@ -58,6 +59,8 @@ class connection_options::impl {
     option<std::string> virtual_host;
     option<std::string> user;
     option<std::string> password;
+    option<std::vector<symbol> > offered_capabilities;
+    option<std::vector<symbol> > desired_capabilities;
     option<reconnect_options> reconnect;
     option<class ssl_client_options> ssl_client_options;
     option<class ssl_server_options> ssl_server_options;
@@ -91,6 +94,10 @@ class connection_options::impl {
             pn_connection_set_user(pnc, user.value.c_str());
         if (password.set)
             pn_connection_set_password(pnc, password.value.c_str());
+        if (offered_capabilities.set)
+            value(pn_connection_offered_capabilities(pnc)) = offered_capabilities.value;
+        if (desired_capabilities.set)
+            value(pn_connection_desired_capabilities(pnc)) = desired_capabilities.value;
     }
 
     void apply_transport(pn_transport_t* pnt) {
@@ -152,6 +159,8 @@ class connection_options::impl {
         virtual_host.update(x.virtual_host);
         user.update(x.user);
         password.update(x.password);
+        offered_capabilities.update(x.offered_capabilities);
+        desired_capabilities.update(x.desired_capabilities);
         reconnect.update(x.reconnect);
         ssl_client_options.update(x.ssl_client_options);
         ssl_server_options.update(x.ssl_server_options);
@@ -192,6 +201,8 @@ connection_options& connection_options::container_id(const std::string &id) { im
 connection_options& connection_options::virtual_host(const std::string &id) { impl_->virtual_host = id; return *this; }
 connection_options& connection_options::user(const std::string &user) { impl_->user = user; return *this; }
 connection_options& connection_options::password(const std::string &password) { impl_->password = password; return *this; }
+connection_options& connection_options::offered_capabilities(const std::vector<symbol> &caps) { impl_->offered_capabilities = caps; return *this; }
+connection_options& connection_options::desired_capabilities(const std::vector<symbol> &caps) { impl_->desired_capabilities = caps; return *this; }
 connection_options& connection_options::reconnect(const reconnect_options &r) { impl_->reconnect = r; return *this; }
 connection_options& connection_options::ssl_client_options(const class ssl_client_options &c) { impl_->ssl_client_options = c; return *this; }
 connection_options& connection_options::ssl_server_options(const class ssl_server_options &c) { impl_->ssl_server_options = c; return *this; }

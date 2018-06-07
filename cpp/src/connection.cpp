@@ -21,6 +21,7 @@
 
 #include "proton_bits.hpp"
 
+#include "proton/codec/vector.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
@@ -177,6 +178,16 @@ uint32_t connection::idle_timeout() const {
 
 void connection::wake() const {
     pn_connection_wake(pn_object());
+}
+
+std::vector<symbol> connection::offered_capabilities() const {
+    value caps(pn_connection_offered_capabilities(pn_object()));
+    return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
+}
+
+std::vector<symbol> connection::desired_capabilities() const {
+    value caps(pn_connection_desired_capabilities(pn_object()));
+    return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
 }
 
 }

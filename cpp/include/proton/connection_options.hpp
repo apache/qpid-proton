@@ -27,6 +27,7 @@
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
+#include "./symbol.hpp"
 #include "./types_fwd.hpp"
 
 #include <proton/type_compat.h>
@@ -144,6 +145,12 @@ class connection_options {
 
     /// Specify the allowed mechanisms for use on the connection.
     PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string&);
+
+    /// **Unsettled API** - Extension capabilities offered to the remote peer.
+    PN_CPP_EXTERN connection_options& offered_capabilities(const std::vector<symbol>&);
+
+    /// **Unsettled API** - Extension capabilities desired from the remote peer.
+    PN_CPP_EXTERN connection_options& desired_capabilities(const std::vector<symbol>&);
 
     /// **Unsettled API** - Set the SASL configuration name.
     PN_CPP_EXTERN connection_options& sasl_config_name(const std::string&);

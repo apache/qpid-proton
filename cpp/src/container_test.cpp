@@ -88,6 +88,8 @@ class test_handler : public proton::messaging_handler {
 
     std::string peer_vhost;
     std::string peer_container_id;
+    std::vector<proton::symbol> peer_offered_capabilities;
+    std::vector<proton::symbol> peer_desired_capabilities;
     proton::listener listener;
     test_listen_handler listen_handler;
 
@@ -107,6 +109,8 @@ class test_handler : public proton::messaging_handler {
             peer_vhost = c.virtual_host();
         if (peer_container_id.empty() && !c.container_id().empty())
             peer_container_id = c.container_id();
+        peer_offered_capabilities = c.offered_capabilities();
+        peer_desired_capabilities = c.desired_capabilities();
         if (!closing) c.close();
         closing = true;
     }
@@ -154,6 +158,23 @@ int test_container_no_vhost() {
     test_handler th("127.0.0.1", opts);
     proton::container(th).run();
     ASSERT_EQUAL(th.peer_vhost, "");
+    return 0;
+}
+
+std::vector<proton::symbol> make_caps(const std::string& s) {
+    std::vector<proton::symbol> caps;
+    caps.push_back(s);
+    return caps;
+}
+
+int test_container_capabilities() {
+    proton::connection_options opts;
+    opts.offered_capabilities(make_caps("offered"));
+    opts.desired_capabilities(make_caps("desired"));
+    test_handler th("", opts);
+    proton::container(th).run();
+    ASSERT_EQUAL(th.peer_offered_capabilities[0], proton::symbol("offered"));
+    ASSERT_EQUAL(th.peer_desired_capabilities[0], proton::symbol("desired"));
     return 0;
 }
 
@@ -372,6 +393,7 @@ int main(int argc, char** argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_container_default_container_id());
     RUN_ARGV_TEST(failed, test_container_vhost());
+    RUN_ARGV_TEST(failed, test_container_capabilities());
     RUN_ARGV_TEST(failed, test_container_default_vhost());
     RUN_ARGV_TEST(failed, test_container_no_vhost());
     RUN_ARGV_TEST(failed, test_container_bad_address());

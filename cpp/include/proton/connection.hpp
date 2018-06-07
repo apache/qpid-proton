@@ -27,6 +27,7 @@
 #include "./internal/object.hpp"
 #include "./endpoint.hpp"
 #include "./session.hpp"
+#include "./symbol.hpp"
 
 #include <proton/type_compat.h>
 
@@ -137,6 +138,12 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     ///
     /// @see @ref connection_options::max_sessions
     PN_CPP_EXTERN uint16_t max_sessions() const;
+
+    /// **Unsettled API** - Extension capabilities offered by the remote peer.
+    PN_CPP_EXTERN std::vector<symbol> offered_capabilities() const;
+
+    /// **Unsettled API** - Extension capabilities desired by the remote peer.
+    PN_CPP_EXTERN std::vector<symbol> desired_capabilities() const;
 
     /// Get the idle timeout set by the remote peer.
     ///
