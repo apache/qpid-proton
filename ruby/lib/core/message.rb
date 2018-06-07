@@ -279,21 +279,18 @@ module Qpid::Proton
       Cproton.pn_message_get_user_id(@impl)
     end
 
-    # Sets the destination address.
-    #
-    # ==== Options
-    #
-    # * address - the address
-    #
-    def address=(address)
+    # @param address[String] set the destination address
+    def to=(address)
       Cproton.pn_message_set_address(@impl, address)
     end
+    alias address= to=
 
-    # Returns the destination address.
-    #
-    def address
+    # @return [String] get the destination address.
+    def to
       Cproton.pn_message_get_address(@impl)
     end
+
+    alias address to
 
     # Sets the subject.
     #
