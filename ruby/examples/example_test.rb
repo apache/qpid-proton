@@ -75,6 +75,7 @@ EOS
   end
 
   def test_ssl_send_recv
+    skip 'SSL not available' unless Qpid::Proton::SSL.present?
     out = run_script("ssl_send.rb", $url, "examples").read.strip
     assert_match(/Connection secured with "...*\"\nAll 10 messages confirmed!/, out)
     want = (0..9).reduce("") { |x,y| x << "Received: sequence #{y}\n" }
