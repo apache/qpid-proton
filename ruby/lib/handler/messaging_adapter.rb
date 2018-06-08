@@ -106,11 +106,11 @@ module Qpid::Proton
             else
               begin
                 delegate(:on_message, d, d.message)
-                d.accept if d.receiver.auto_accept  && !d.settled?
+                d.accept if d.receiver.auto_accept && d.local_state == 0
               rescue Reject
-                d.reject unless d.settled?
+                d.reject
               rescue Release
-                d.release unless d.settled?
+                d.release
               end
             end
           end

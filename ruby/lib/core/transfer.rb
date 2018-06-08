@@ -51,7 +51,7 @@ module Qpid::Proton
     # @deprecated use {#id}
     deprecated_alias :tag, :id
 
-    # @return [Boolean] True if the transfer has is remotely settled.
+    # @return [Boolean] True if the transfer is remotely settled.
     proton_caller :settled?
 
     # @return [Integer] Remote state of the transfer, one of the values in {State}
