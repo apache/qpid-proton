@@ -54,10 +54,13 @@ class UrlTest(common.Test):
 
         # Expanding abbreviated url strings.
         for s, u in [
-                ("", "amqp://0.0.0.0:amqp"),
-                ("foo", "amqp://foo:amqp"),
-                (":1234", "amqp://0.0.0.0:1234"),
-                ("/path", "amqp://0.0.0.0:amqp/path")
+            ("", "amqp://0.0.0.0:amqp"),
+            ("foo", "amqp://foo:amqp"),
+            (":1234", "amqp://0.0.0.0:1234"),
+            ("/path", "amqp://0.0.0.0:amqp/path"),
+            ("user@host/topic://test", "amqp://user@host:amqp/topic://test"),
+            ("user@host:3456", "amqp://user@host:3456"),
+            ("user:pass@host/topic://test", "amqp://user:pass@host:amqp/topic://test")
         ]: self.assertEqual(str(Url(s)), u)
 
     def assertPort(self, port, portint, portstr):

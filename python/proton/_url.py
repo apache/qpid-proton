@@ -103,8 +103,10 @@ class Url(object):
             self._query = url._query
             self._fragment = url._fragment
         elif url:
-            if not '://' in url:
-                url = '//' + url
+            if not url.startswith('//'):
+                p = url.partition(':')
+                if '/' in p[0] or not p[2].startswith('//'):
+                    url = '//' + url
             u = urlparse(url)
             if not u: raise ValueError("Invalid URL '%s'" % url)
             self.scheme = None if not u.scheme else u.scheme
