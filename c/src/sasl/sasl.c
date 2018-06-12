@@ -36,6 +36,9 @@
 // Change this to &default_sasl_impl when we change cyrus to opt in
 static const pnx_sasl_implementation *global_sasl_impl = NULL;
 
+// List of SASL mechansms to exclude by default as they cause user pain
+static const char* pni_excluded_mechs = "GSSAPI GSS-SPNEGO";
+
 //-----------------------------------------------------------------------------
 // pnx_sasl: API for SASL implementations to use
 
@@ -384,8 +387,6 @@ void pnx_sasl_set_desired_state(pn_transport_t *transport, enum pnx_sasl_state d
 // Note that if there is no inclusion list then every mech is implicitly included.
 static bool pni_sasl_included_mech(const char *included_mech_list, pn_bytes_t s)
 {
-  if (!included_mech_list) return true;
-
   const char * end_list = included_mech_list+strlen(included_mech_list);
   size_t len = s.size;
   const char *c = included_mech_list;
@@ -402,12 +403,26 @@ static bool pni_sasl_included_mech(const char *included_mech_list, pn_bytes_t s)
   return false;
 }
 
+static bool pni_sasl_server_included_mech(const char *included_mech_list, pn_bytes_t s)
+{
+  if (!included_mech_list) return true;
+
+  return pni_sasl_included_mech(included_mech_list, s);
+}
+
+static bool pni_sasl_client_included_mech(const char *included_mech_list, pn_bytes_t s)
+{
+  if (!included_mech_list && pni_excluded_mechs) return !pni_sasl_included_mech(pni_excluded_mechs, s);
+
+  return pni_sasl_included_mech(included_mech_list, s);
+}
+
 // Look for symbol in the mech include list - plugin API version
 //
 // Note that if there is no inclusion list then every mech is implicitly included.
 bool pnx_sasl_is_included_mech(pn_transport_t* transport, pn_bytes_t s)
 {
-  return pni_sasl_included_mech(transport->sasl->included_mechanisms, s);
+  return pni_sasl_server_included_mech(transport->sasl->included_mechanisms, s);
 }
 
 // This takes a space separated list and zero terminates it in place
@@ -423,7 +438,7 @@ static void pni_split_mechs(char *mechlist, const char* included_mechs, char *me
     if (*end == ' ') {
       if (start != end) {
         *end = '\0';
-        if (pni_sasl_included_mech(included_mechs, pn_bytes(end-start, start))) {
+        if (pni_sasl_server_included_mech(included_mechs, pn_bytes(end-start, start))) {
           mechs[(*count)++] = start;
         }
       }
@@ -435,7 +450,7 @@ static void pni_split_mechs(char *mechlist, const char* included_mechs, char *me
   }
 
   if (start != end) {
-    if (pni_sasl_included_mech(included_mechs, pn_bytes(end-start, start))) {
+    if (pni_sasl_server_included_mech(included_mechs, pn_bytes(end-start, start))) {
       mechs[(*count)++] = start;
     }
   }
@@ -836,7 +851,7 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   // We need to filter out a supplied mech in in the inclusion list
   // as the client could have used a mech that we support, but that
   // wasn't on the list we sent.
-  if (!pni_sasl_included_mech(sasl->included_mechanisms, mech)) {
+  if (!pni_sasl_server_included_mech(sasl->included_mechanisms, mech)) {
     pnx_sasl_error(transport, "Client mechanism not in mechanism inclusion list.", "amqp:unauthorized-access");
     sasl->outcome = PN_SASL_AUTH;
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
@@ -865,7 +880,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     // Now keep checking for end of array and pull a symbol
     while(pn_data_next(args)) {
       pn_bytes_t s = pn_data_get_symbol(args);
-      if (pni_sasl_included_mech(sasl->included_mechanisms, s)) {
+      if (pni_sasl_client_included_mech(sasl->included_mechanisms, s)) {
         pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
       }
     }
@@ -880,7 +895,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     int err = pn_data_scan(args, "D.[s]", &symbol);
     if (err) return err;
 
-    if (pni_sasl_included_mech(sasl->included_mechanisms, symbol)) {
+    if (pni_sasl_client_included_mech(sasl->included_mechanisms, symbol)) {
       pn_string_setn(mechs, symbol.start, symbol.size);
     }
   }

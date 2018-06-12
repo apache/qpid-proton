@@ -91,6 +91,8 @@ PN_EXTERN bool pn_sasl_extended(void);
  * Set the outcome of SASL negotiation
  *
  * Used by the server to set the result of the negotiation process.
+ *
+ * @deprecated Do not use - there is no correct way to use this API
  */
 PN_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
 
@@ -134,6 +136,14 @@ PN_EXTERN const char *pn_sasl_get_mech(pn_sasl_t *sasl);
  *
  * This can be used on either the client or the server to restrict the SASL
  * mechanisms that may be used to the mechanisms on the list.
+ *
+ * @note By default the GSSAPI and GSS-SPNEGO mechanisms are not enabled for clients. This is because
+ * these mechanisms have the problematic behaviour of 'capturing' the client whenever they are installed
+ * so that they will be used by the client if offered by the server even if the client can't successfully
+ * authenticate this way. This can lead to some very hard to debug failures.
+ *
+ * @note The GSSAPI or GSS-SPNEGO mechanisms need to be explicitly enabled if they are required (together
+ * with any other required mechanisms).
  *
  * @param[in] sasl the SASL layer
  * @param[in] mechs space separated list of mechanisms that are allowed for authentication
