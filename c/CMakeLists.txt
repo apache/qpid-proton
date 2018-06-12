@@ -57,9 +57,10 @@ foreach (sfile ${headers})
 endforeach ()
 
 include_directories (
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
   ${PN_C_INCLUDE_DIR}
   "${CMAKE_CURRENT_BINARY_DIR}/src"
-  "${CMAKE_CURRENT_SOURCE_DIR}/src"
   )
 
 add_custom_command (

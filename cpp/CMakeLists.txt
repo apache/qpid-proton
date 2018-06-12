@@ -89,9 +89,10 @@ set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" 
 set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
 
 include_directories (
-  "${PN_C_INCLUDE_DIR}"
+  "${CMAKE_SOURCE_DIR}/c/include"
   "${CMAKE_SOURCE_DIR}/c/src" # Here because of a naughty looking dependency on message-internal.h
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${PN_C_INCLUDE_DIR}"
   "${CMAKE_CURRENT_BINARY_DIR}"
   )
 
