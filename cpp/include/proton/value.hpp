@@ -125,7 +125,7 @@ class value : public internal::value_base, private internal::comparable<value> {
 /// @relatedalso proton::value
 template<class T> T get(const value& v) { T x; get(v, x); return x; }
 
-/// Like get(const value&) but assigns the value to a reference
+/// Like get(const value&) but extracts the value to a reference @p x
 /// instead of returning it.  May be more efficient for complex values
 /// (arrays, maps, etc.)
 ///

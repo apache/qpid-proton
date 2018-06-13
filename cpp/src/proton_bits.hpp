@@ -157,6 +157,32 @@ template <class T> returned<T> make_returned(typename internal::wrapped<T>::type
     return internal::returned_factory::make<T>(pn);
 }
 
+// Get an AMQP "multiple" field from a value. A "multiple" field can be encoded as a single
+// value or as an array. This function always extracts it as a sequence, a sequence of one
+// if it is encoded as a single value.
+//
+// T should be a valid sequence type for proton::get() with a T::value_type typedef.
+//
+template<class T>
+void get_multiple(const value& v, T& x) {
+    if (v.empty()) {
+        x.clear();
+    } else if (v.type() == ARRAY) {
+        proton::get(v,x);
+    } else {
+        x.resize(1);
+        proton::get(v,x[0]);
+    }
 }
+
+// Same as previous but returns the value.
+template<class T>
+T get_multiple(const value& v) {
+    T x;
+    get_multiple(v, x);
+    return x;
+}
+
+} // namespace proton
 
 #endif // PROTON_BITS_HPP
