@@ -105,13 +105,15 @@ class test_handler : public proton::messaging_handler {
         ASSERT(listen_handler.on_open_);
         ASSERT(!listen_handler.on_close_);
         ASSERT(listen_handler.on_error_.empty());
-        if (peer_vhost.empty() && !c.virtual_host().empty())
+        // First call is the incoming server-side of the connection, that we are interested in.
+        // Second call is for the response to the client, ignore that.
+        if (!closing) {
             peer_vhost = c.virtual_host();
-        if (peer_container_id.empty() && !c.container_id().empty())
             peer_container_id = c.container_id();
-        peer_offered_capabilities = c.offered_capabilities();
-        peer_desired_capabilities = c.desired_capabilities();
-        if (!closing) c.close();
+            peer_offered_capabilities = c.offered_capabilities();
+            peer_desired_capabilities = c.desired_capabilities();
+            c.close();
+        }
         closing = true;
     }
 
@@ -173,7 +175,9 @@ int test_container_capabilities() {
     opts.desired_capabilities(make_caps("desired"));
     test_handler th("", opts);
     proton::container(th).run();
+    ASSERT_EQUAL(th.peer_offered_capabilities.size(), 1);
     ASSERT_EQUAL(th.peer_offered_capabilities[0], proton::symbol("offered"));
+    ASSERT_EQUAL(th.peer_desired_capabilities.size(), 1);
     ASSERT_EQUAL(th.peer_desired_capabilities[0], proton::symbol("desired"));
     return 0;
 }

@@ -181,12 +181,12 @@ void connection::wake() const {
 }
 
 std::vector<symbol> connection::offered_capabilities() const {
-    value caps(pn_connection_offered_capabilities(pn_object()));
+    value caps(pn_connection_remote_offered_capabilities(pn_object()));
     return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
 }
 
 std::vector<symbol> connection::desired_capabilities() const {
-    value caps(pn_connection_desired_capabilities(pn_object()));
+    value caps(pn_connection_remote_desired_capabilities(pn_object()));
     return caps.empty() ? std::vector<symbol>() : caps.get<std::vector<symbol> >();
 }
 
