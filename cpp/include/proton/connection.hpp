@@ -69,10 +69,10 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Get the transport for the connection.
     PN_CPP_EXTERN class transport transport() const;
 
-    /// Return the AMQP hostname attribute for the connection.
+    /// Return the remote AMQP hostname attribute for the connection.
     PN_CPP_EXTERN std::string virtual_host() const;
 
-    /// Return the container ID for the connection.
+    /// Return the remote container ID for the connection.
     PN_CPP_EXTERN std::string container_id() const;
 
     /// Return authenticated user for the connection
