@@ -21,6 +21,8 @@
 from __future__ import print_function
 from proton_server import Server
 
+print("DO NOT MERGE!")
+
 class Application(Server):
     def __init__(self, host, address):
         super(Application, self).__init__(host, address)
