@@ -128,7 +128,7 @@ void on_delivery(messaging_handler& handler, pn_event_t* event) {
                     d.release();
             } else {
                 handler.on_message(d, msg);
-                if (lctx.auto_accept && !d.settled())
+                if (lctx.auto_accept && pn_delivery_local_state(dlv) == 0) // Not set by handler
                     d.accept();
                 if (lctx.draining && !pn_link_credit(lnk)) {
                     lctx.draining = false;
