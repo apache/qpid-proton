@@ -114,12 +114,18 @@ class CExampleTest(ProcTestCase):
         self.assertMultiLineEqual(expect, d.wait_exit())
 
     def test_send_ssl_receive(self):
-        """Send first then receive"""
-        with Broker(self) as b:
-            got = self.runex("send-ssl", b.port)
-            self.assertIn("secure connection:", got)
-            self.assertIn(send_expect(), got)
-            self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
+        """Send with SSL, then receive"""
+        try:
+            with Broker(self) as b:
+                got = self.runex("send-ssl", b.port)
+                self.assertIn("secure connection:", got)
+                self.assertIn(send_expect(), got)
+                self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
+        except ProcError as e:
+            if e.out.startswith("error initializing SSL"):
+                print("Skipping %s: SSL not available" % self.id())
+            else:
+                raise
 
 if __name__ == "__main__":
     unittest.main()
