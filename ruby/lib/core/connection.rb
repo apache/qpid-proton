@@ -77,13 +77,15 @@ module Qpid::Proton
 
     # @return [Array<Symbol>] offered capabilities provided by the remote peer
     def offered_capabilities
-      Codec::Data.to_object(Cproton.pn_connection_remote_offered_capabilities(@impl))
+      # Provide capabilities consistently as an array, even if encoded as a single symbol
+      Codec::Data.to_multiple(Cproton.pn_connection_remote_offered_capabilities(@impl))
     end
     deprecated_alias :remote_offered_capabilities, :offered_capabilities
 
     # @return [Array<Symbol>] desired capabilities provided by the remote peer
     def desired_capabilities
-      Codec::Data.to_object(Cproton.pn_connection_remote_desired_capabilities(@impl))
+      # Provide capabilities consistently as an array, even if encoded as a single symbol
+      Codec::Data.to_multiple(Cproton.pn_connection_remote_desired_capabilities(@impl))
     end
     deprecated_alias :remote_desired_capabilities, :desired_capabilities
 

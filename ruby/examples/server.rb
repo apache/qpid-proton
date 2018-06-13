@@ -37,7 +37,7 @@ class Server < Qpid::Proton::MessagingHandler
 
   def on_connection_open(connection)
     if connection.offered_capabilities &&
-        connection.offered_capabilities.contain?("ANONYMOUS-RELAY")
+        connection.offered_capabilities.include?(:"ANONYMOUS-RELAY")
       @relay = connection.open_sender({:target => nil})
     end
   end

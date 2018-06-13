@@ -42,6 +42,15 @@ module Qpid::Proton
       end
 
       # @private
+      # Convert a pn_data_t* containing an AMQP "multiple" field to an Array or nil.
+      # A "multiple" field can be encoded as an array or a single value - always return Array.
+      # @return [Array, nil] The ruby Array extracted from +impl+ or nil if impl is empty
+      def self.to_multiple(impl)
+        o = self.to_object(impl)
+        Array(o) if o
+      end
+
+      # @private
       # Clear a pn_data_t* and convert a ruby object into it. If x==nil leave it empty.
       def self.from_object(impl, x)
         d = Data.new(impl)
@@ -676,7 +685,6 @@ module Qpid::Proton
           return err
         end
       end
-
     end
   end
 end
