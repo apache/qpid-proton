@@ -258,6 +258,11 @@ void on_link_local_open(messaging_handler& handler, pn_event_t* event) {
 
 void on_link_remote_open(messaging_handler& handler, pn_event_t* event) {
     pn_link_t *lnk = pn_event_link(event);
+    if (pn_link_state(lnk) & PN_LOCAL_UNINIT) { // Incoming link
+        // Copy source and target from remote end.
+        pn_terminus_copy(pn_link_source(lnk), pn_link_remote_source(lnk));
+        pn_terminus_copy(pn_link_target(lnk), pn_link_remote_target(lnk));
+    }
     if (pn_link_is_receiver(lnk)) {
       receiver r(make_wrapper<receiver>(lnk));
       handler.on_receiver_open(r);

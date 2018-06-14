@@ -358,15 +358,13 @@ void test_link_options() {
 
     proton::sender ax = quick_pop(ha.senders);
     ASSERT_EQUAL("_x", ax.name());
-    // TODO PROTON-1679 - the following assertion should pass.
-    // ASSERT_EQUAL("x", ax.target().address());
-    // ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ax.target().capabilities());
+    ASSERT_EQUAL("x", ax.target().address());
+    ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ax.target().capabilities());
 
     proton::receiver ay = quick_pop(ha.receivers);
     ASSERT_EQUAL("_y", ay.name());
-    // TODO PROTON-1679 - the following assertion should pass.
-    // ASSERT_EQUAL("y", ay.source().address());
-    // ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ay.source().capabilities());
+    ASSERT_EQUAL("y", ay.source().address());
+    ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ay.source().capabilities());
 
     proton::receiver bx = quick_pop(hb.receivers);
     ASSERT_EQUAL("x", bx.target().address());
