@@ -169,6 +169,8 @@ struct record_handler : public messaging_handler {
     std::deque<std::string> unhandled_errors, transport_errors, connection_errors;
     std::deque<proton::message> messages;
 
+    size_t link_count() const { return senders.size() + receivers.size(); }
+
     void on_receiver_open(receiver &l) PN_CPP_OVERRIDE {
         messaging_handler::on_receiver_open(l);
         receivers.push_back(l);
@@ -331,55 +333,143 @@ void test_spin_interrupt() {
     } catch (const test::error&) {}
 }
 
-void test_link_options() {
-    // Propagation of link and terminus properties
+#define ASSERT_ADDR(ADDR, TERMINUS) do {                                \
+        ASSERT_EQUAL((ADDR), (TERMINUS).address());                     \
+        if ((ADDR) == std::string()) ASSERT((TERMINUS).anonymous());    \
+        else ASSERT(!(TERMINUS).anonymous());                           \
+    } while(0);
+
+#define ASSERT_LINK(SRC, TGT, LINK) do {        \
+        ASSERT_ADDR((SRC), (LINK).source());    \
+        ASSERT_ADDR((TGT), (LINK).target());    \
+    } while(0);
+
+void test_link_address() {
     record_handler ha, hb;
     driver_pair d(ha, hb);
 
+    // FIXME aconway 2018-06-14: also fixes PROTON-1679?
+
+    // Using open(address, opts)
+    d.a.connection().open_sender("tx", sender_options().name("_x").source(source_options().address("sx")));
+    d.a.connection().open_receiver("sy", receiver_options().name("_y").target(target_options().address("ty")));
+    while (ha.link_count()+hb.link_count() < 4) d.process();
+
+    proton::sender ax = quick_pop(ha.senders);
+    ASSERT_EQUAL("_x", ax.name());
+    ASSERT_LINK("sx", "tx", ax);
+    proton::receiver bx = quick_pop(hb.receivers);
+    ASSERT_EQUAL("_x", bx.name());
+    ASSERT_LINK("sx", "tx", bx);
+
+    proton::receiver ay = quick_pop(ha.receivers);
+    ASSERT_EQUAL("_y", ay.name());
+    ASSERT_LINK("sy", "ty", ay);
+    proton::sender by = quick_pop(hb.senders);
+    ASSERT_EQUAL("_y", by.name());
+    ASSERT_LINK("sy", "ty", by);
+
+    // Override address parameter in opts
+    d.a.connection().open_sender("x", sender_options().target(target_options().address("X")));
+    d.a.connection().open_receiver("y", receiver_options().source(source_options().address("Y")));
+    while (ha.link_count()+hb.link_count() < 4) d.process();
+
+    ax = quick_pop(ha.senders);
+    ASSERT_LINK("", "X", ax);
+    bx = quick_pop(hb.receivers);
+    ASSERT_LINK("", "X", bx);
+
+    ay = quick_pop(ha.receivers);
+    ASSERT_LINK("Y", "", ay);
+    by = quick_pop(hb.senders);
+    ASSERT_LINK("Y", "", by);
+}
+
+void test_link_anonymous_dynamic() {
+    record_handler ha, hb;
+    driver_pair d(ha, hb);
+
+    // Anonymous link should have NULL address
+    d.a.connection().open_sender("x", sender_options().target(target_options().anonymous(true)));
+    d.a.connection().open_receiver("y", receiver_options().source(source_options().anonymous(true)));
+    while (ha.link_count()+hb.link_count() < 4) d.process();
+
+    proton::sender ax = quick_pop(ha.senders);
+    ASSERT_LINK("", "", ax);
+    proton::receiver bx = quick_pop(hb.receivers);
+    ASSERT_LINK("", "", bx);
+
+    proton::receiver ay = quick_pop(ha.receivers);
+    ASSERT_LINK("", "", ay);
+    proton::sender by = quick_pop(hb.senders);
+    ASSERT_LINK("", "", by);
+
+    // Dynamic link should have NULL address and dynamic flag
+    d.a.connection().open_sender("x", sender_options().target(target_options().dynamic(true)));
+    d.a.connection().open_receiver("y", receiver_options().source(source_options().dynamic(true)));
+    while (ha.link_count()+hb.link_count() < 4) d.process();
+
+    ax = quick_pop(ha.senders);
+    ASSERT(ax.target().dynamic());
+    ASSERT_LINK("", "", ax);
+    bx = quick_pop(hb.receivers);
+    ASSERT(bx.target().dynamic());
+    ASSERT_LINK("", "", bx);
+
+    ay = quick_pop(ha.receivers);
+    ASSERT(ay.source().dynamic());
+    ASSERT_LINK("", "", ay);
+    by = quick_pop(hb.senders);
+    ASSERT(by.source().dynamic());
+    ASSERT_LINK("", "", by);
+
+    // Empty string as a link address is allowed and not considered anonymous.
+    d.a.connection().open_sender("", sender_options());
+    d.a.connection().open_receiver("", receiver_options());
+    while (ha.link_count()+hb.link_count() < 4) d.process();
+
+    ax = quick_pop(ha.senders);
+    ASSERT(ax.target().address().empty());
+    ASSERT(!ax.target().anonymous());
+
+    ay = quick_pop(ha.receivers);
+    ASSERT(ay.source().address().empty());
+    ASSERT(!ay.source().anonymous());
+}
+
+void test_link_capability_filter() {
+    record_handler ha, hb;
+    driver_pair d(ha, hb);
+
+    // Capabilities and filters
     std::vector<proton::symbol> caps;
     caps.push_back("foo");
     caps.push_back("bar");
 
+    d.a.connection().open_sender("x", sender_options().target(target_options().capabilities(caps)));
+
     source::filter_map f;
-    f.put("xx", "xxx");
-    ASSERT_EQUAL(1U, f.size());
-    d.a.connection().open_sender(
-        "x", sender_options().name("_x").target(target_options().capabilities(caps)));
-
-    f.clear();
-    f.put("yy", "yyy");
-    ASSERT_EQUAL(1U, f.size());
-    d.a.connection().open_receiver(
-        "y", receiver_options().name("_y").source(source_options().filters(f).capabilities(caps)));
-
-    while (ha.senders.size()+ha.receivers.size() < 2 ||
-           hb.senders.size()+hb.receivers.size() < 2)
-        d.process();
+    f.put("1", "11");
+    f.put("2", "22");
+    d.a.connection().open_receiver("y", receiver_options().source(source_options().filters(f).capabilities(caps)));
+    while (ha.link_count()+hb.link_count() < 4) d.process();
 
     proton::sender ax = quick_pop(ha.senders);
-    ASSERT_EQUAL("_x", ax.name());
-    ASSERT_EQUAL("x", ax.target().address());
     ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ax.target().capabilities());
 
     proton::receiver ay = quick_pop(ha.receivers);
-    ASSERT_EQUAL("_y", ay.name());
-    ASSERT_EQUAL("y", ay.source().address());
     ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", ay.source().capabilities());
 
     proton::receiver bx = quick_pop(hb.receivers);
-    ASSERT_EQUAL("x", bx.target().address());
     ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", bx.target().capabilities());
-    ASSERT_EQUAL("_x", bx.name());
-    ASSERT_EQUAL("", bx.source().address());
     ASSERT_EQUAL(many<proton::symbol>(), bx.source().capabilities());
 
     proton::sender by = quick_pop(hb.senders);
-    ASSERT_EQUAL("y", by.source().address());
     ASSERT_EQUAL(many<proton::symbol>() + "foo" + "bar", by.source().capabilities());
-    ASSERT_EQUAL("_y", by.name());
     f = by.source().filters();
-    ASSERT_EQUAL(1U, f.size());
-    ASSERT_EQUAL(value("yyy"), f.get("yy"));
+    ASSERT_EQUAL(2U, f.size());
+    ASSERT_EQUAL(value("11"), f.get("1"));
+    ASSERT_EQUAL(value("22"), f.get("2"));
 }
 
 void test_message() {
@@ -457,7 +547,9 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_driver_disconnected());
     RUN_ARGV_TEST(failed, test_no_container());
     RUN_ARGV_TEST(failed, test_spin_interrupt());
-    RUN_ARGV_TEST(failed, test_link_options());
+    RUN_ARGV_TEST(failed, test_link_address());
+    RUN_ARGV_TEST(failed, test_link_anonymous_dynamic());
+    RUN_ARGV_TEST(failed, test_link_capability_filter());
     RUN_ARGV_TEST(failed, test_message());
     RUN_ARGV_TEST(failed, test_message_timeout_succeed());
     RUN_ARGV_TEST(failed, test_message_timeout_fail());

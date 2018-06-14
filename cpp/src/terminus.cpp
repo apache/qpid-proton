@@ -48,6 +48,10 @@ bool terminus::dynamic() const {
     return pn_terminus_is_dynamic(object_);
 }
 
+bool terminus::anonymous() const {
+    return pn_terminus_get_address(object_) == NULL;
+}
+
 value terminus::node_properties() const {
     return value(pn_terminus_properties(object_));
 }

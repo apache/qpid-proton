@@ -93,6 +93,9 @@ class terminus {
     /// True if the remote node is created dynamically.
     PN_CPP_EXTERN bool dynamic() const;
 
+    /// True if the remote node is an anonymous-relay
+    PN_CPP_EXTERN bool anonymous() const;
+
     /// Obtain a reference to the AMQP dynamic node properties for the
     /// terminus.  See also lifetime_policy.
     PN_CPP_EXTERN value node_properties() const;

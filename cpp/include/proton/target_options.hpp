@@ -60,8 +60,13 @@ class target_options {
 
     /// Request that a node be dynamically created by the remote peer.
     /// The default is false.  Any specified target address() is
-    /// ignored.
+    /// ignored if true.
     PN_CPP_EXTERN target_options& dynamic(bool);
+
+    /// Request an anonymous node on the remote peer.
+    /// The default is false.  Any specified target address() is
+    /// ignored if true.
+    PN_CPP_EXTERN target_options& anonymous(bool);
 
     /// Control the persistence of the target node.  The default is
     /// target::NONDURABLE, meaning non-persistent.
