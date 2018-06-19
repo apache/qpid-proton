@@ -48,6 +48,14 @@ void pnx_sasl_logf(pn_transport_t *logger, const char *fmt, ...)
     va_end(ap);
 }
 
+void pnx_sasl_error(pn_transport_t *logger, const char* err, const char* condition_name)
+{
+    pnx_sasl_logf(logger, "sasl error: %s", err);
+    pn_condition_t* c = pn_transport_condition(logger);
+    pn_condition_set_name(c, condition_name);
+    pn_condition_set_description(c, err);
+}
+
 void *pnx_sasl_get_context(pn_transport_t *transport)
 {
   return transport->sasl ? transport->sasl->impl_context : NULL;
@@ -137,6 +145,9 @@ void  pnx_sasl_succeed_authentication(pn_transport_t *transport, const char *use
     transport->sasl->username = username;
     transport->sasl->outcome = PN_SASL_OK;
     transport->authenticated = true;
+
+    pnx_sasl_logf(transport, "Authenticated user: %s with mechanism %s",
+                  username, transport->sasl->selected_mechanism);
   }
 }
 
@@ -822,7 +833,16 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
   if (err) return err;
   sasl->selected_mechanism = pn_strndup(mech.start, mech.size);
 
-  pni_sasl_impl_process_init(transport, sasl->selected_mechanism, &recv);
+  // We need to filter out a supplied mech in in the inclusion list
+  // as the client could have used a mech that we support, but that
+  // wasn't on the list we sent.
+  if (!pni_sasl_included_mech(sasl->included_mechanisms, mech)) {
+    pnx_sasl_error(transport, "Client mechanism not in mechanism inclusion list.", "amqp:unauthorized-access");
+    sasl->outcome = PN_SASL_AUTH;
+    pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
+  } else {
+    pni_sasl_impl_process_init(transport, sasl->selected_mechanism, &recv);
+  }
 
   return 0;
 }
@@ -845,7 +865,7 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     // Now keep checking for end of array and pull a symbol
     while(pn_data_next(args)) {
       pn_bytes_t s = pn_data_get_symbol(args);
-      if (pnx_sasl_is_included_mech(transport, s)) {
+      if (pni_sasl_included_mech(sasl->included_mechanisms, s)) {
         pn_string_addf(mechs, "%*s ", (int)s.size, s.start);
       }
     }
@@ -860,7 +880,9 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
     int err = pn_data_scan(args, "D.[s]", &symbol);
     if (err) return err;
 
-    pn_string_setn(mechs, symbol.start, symbol.size);
+    if (pni_sasl_included_mech(sasl->included_mechanisms, symbol)) {
+      pn_string_setn(mechs, symbol.start, symbol.size);
+    }
   }
 
   if (!(pni_sasl_impl_init_client(transport) &&

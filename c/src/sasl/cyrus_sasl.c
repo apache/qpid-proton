@@ -97,10 +97,7 @@ static inline bool pni_check_result(sasl_conn_t *conn, int r, pn_transport_t *lo
     if (r==SASL_OK) return true;
 
     const char* err = conn ? sasl_errdetail(conn) : sasl_errstring(r, NULL, NULL);
-    pnx_sasl_logf(logger, "sasl error: %s", err);
-    pn_condition_t* c = pn_transport_condition(logger);
-    pn_condition_set_name(c, condition_name);
-    pn_condition_set_description(c, err);
+    pnx_sasl_error(logger, err, condition_name);
     return false;
 }
 
@@ -120,9 +117,6 @@ static void pni_cyrus_interact(pn_transport_t *transport, sasl_interact_t *inter
   for (sasl_interact_t *i = interact; i->id!=SASL_CB_LIST_END; i++) {
     switch (i->id) {
     case SASL_CB_USER:
-      i->result = 0;
-      i->len = 0;
-      break;
     case SASL_CB_AUTHNAME: {
       const char *username = pnx_sasl_get_username(transport);
       i->result = username;
@@ -473,8 +467,6 @@ static void pni_process_server_result(pn_transport_t *transport, int result)
             const void* value;
             sasl_getprop(cyrus_conn, SASL_USERNAME, &value);
             pnx_sasl_succeed_authentication(transport, (const char*) value);
-            pnx_sasl_logf(transport, "Authenticated user: %s with mechanism %s",
-                          pnx_sasl_get_username(transport), pnx_sasl_get_selected_mechanism(transport));
             pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
             break;
         }
@@ -495,16 +487,6 @@ static void pni_process_server_result(pn_transport_t *transport, int result)
 void cyrus_sasl_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
 {
     int result = pni_wrap_server_start(transport, mechanism, recv);
-    if (result==SASL_OK) {
-        // We need to filter out a supplied mech in in the inclusion list
-        // as the client could have used a mech that we support, but that
-        // wasn't on the list we sent.
-        if (!pnx_sasl_is_included_mech(transport, pn_bytes(strlen(mechanism), mechanism))) {
-            sasl_conn_t *cyrus_conn = (sasl_conn_t*)pnx_sasl_get_context(transport);
-            sasl_seterror(cyrus_conn, 0, "Client mechanism not in mechanism inclusion list.");
-            result = SASL_FAIL;
-        }
-    }
     pni_process_server_result(transport, result);
 }
 

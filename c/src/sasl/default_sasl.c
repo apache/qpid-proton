@@ -93,6 +93,7 @@ void default_sasl_impl_free(pn_transport_t *transport)
 }
 
 // Client handles ANONYMOUS or PLAIN mechanisms if offered
+// Offered mechanisms have already been filtered against the "allowed" list
 bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mechs)
 {
   const char *username = pnx_sasl_get_username(transport);
@@ -101,9 +102,8 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
   // Check whether offered EXTERNAL, PLAIN or ANONYMOUS
   // Look for "EXTERNAL" in mechs
   const char *found = strstr(mechs, EXTERNAL);
-  // Make sure that string is separated and terminated and allowed
-  if (found && (found==mechs || found[-1]==' ') && (found[8]==0 || found[8]==' ') &&
-      pnx_sasl_is_included_mech(transport, pn_bytes(8, found))) {
+  // Make sure that string is separated and terminated
+  if (found && (found==mechs || found[-1]==' ') && (found[8]==0 || found[8]==' ')) {
     pnx_sasl_set_selected_mechanism(transport, EXTERNAL);
     if (username) {
       size_t size = strlen(username);
@@ -127,7 +127,6 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
   // Make sure that string is separated and terminated, allowed
   // and we have a username and password and connection is encrypted or we allow insecure
   if (found && (found==mechs || found[-1]==' ') && (found[5]==0 || found[5]==' ') &&
-      pnx_sasl_is_included_mech(transport, pn_bytes(5, found)) &&
       (pnx_sasl_is_transport_encrypted(transport) || pnx_sasl_get_allow_insecure_mechs(transport)) &&
       username && password) {
     pnx_sasl_set_selected_mechanism(transport, PLAIN);
@@ -155,8 +154,7 @@ bool default_sasl_process_mechanisms(pn_transport_t *transport, const char *mech
   // Look for "ANONYMOUS" in mechs
   found = strstr(mechs, ANONYMOUS);
   // Make sure that string is separated and terminated and allowed
-  if (found && (found==mechs || found[-1]==' ') && (found[9]==0 || found[9]==' ') &&
-      pnx_sasl_is_included_mech(transport, pn_bytes(9, found))) {
+  if (found && (found==mechs || found[-1]==' ') && (found[9]==0 || found[9]==' ')) {
     pnx_sasl_set_selected_mechanism(transport, ANONYMOUS);
     if (username) {
       size_t size = strlen(username);
@@ -188,11 +186,11 @@ const char *default_sasl_impl_list_mechs(pn_transport_t *transport)
   }
 }
 
+// The selected mechanism has already been verified against the "allowed" list
 void default_sasl_process_init(pn_transport_t *transport, const char *mechanism, const pn_bytes_t *recv)
 {
-  // Check that mechanism is ANONYMOUS and it is allowed
-  if (strcmp(mechanism, ANONYMOUS)==0 &&
-      pnx_sasl_is_included_mech(transport, pn_bytes(sizeof(ANONYMOUS)-1, ANONYMOUS))) {
+  // Check that mechanism is ANONYMOUS
+  if (strcmp(mechanism, ANONYMOUS)==0) {
     pnx_sasl_succeed_authentication(transport, "anonymous");
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
@@ -200,9 +198,7 @@ void default_sasl_process_init(pn_transport_t *transport, const char *mechanism,
 
   // Or maybe EXTERNAL
   const char *ext_username = pnx_sasl_get_external_username(transport);
-  if (strcmp(mechanism, EXTERNAL)==0 &&
-      pnx_sasl_is_included_mech(transport, pn_bytes(sizeof(EXTERNAL)-1, EXTERNAL)) &&
-      ext_username) {
+  if (strcmp(mechanism, EXTERNAL)==0 && ext_username) {
     pnx_sasl_succeed_authentication(transport, ext_username);
     pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
     return;
