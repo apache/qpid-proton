@@ -101,11 +101,11 @@ class error_condition {
     /// @endcond
 };
 
-/// @cond INTERNAL
-// XXX Document these 
+/// @return true if name, description and properties are all equal
 PN_CPP_EXTERN bool operator==(const error_condition& x, const error_condition& y);
+
+/// Human readable string
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream& o, const error_condition& err);
-/// @endcond
 
 } // proton
 
