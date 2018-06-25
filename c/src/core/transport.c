@@ -1274,21 +1274,18 @@ static pn_link_t *pni_find_link(pn_session_t *ssn, pn_bytes_t name, bool is_send
   return NULL;
 }
 
-static pn_expiry_policy_t symbol2policy(pn_bytes_t symbol)
+static void set_expiry_policy_from_symbol(pn_terminus_t* terminus, pn_bytes_t symbol)
 {
-  if (!symbol.start)
-    return PN_EXPIRE_WITH_SESSION;
-
-  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(link-detach)))
-    return PN_EXPIRE_WITH_LINK;
-  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(session-end)))
-    return PN_EXPIRE_WITH_SESSION;
-  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(connection-close)))
-    return PN_EXPIRE_WITH_CONNECTION;
-  if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(never)))
-    return PN_EXPIRE_NEVER;
-
-  return PN_EXPIRE_WITH_SESSION;
+  if (symbol.start) {
+    if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(link-detach)))
+      pn_terminus_set_expiry_policy(terminus, PN_EXPIRE_WITH_LINK);
+    if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(session-end)))
+      pn_terminus_set_expiry_policy(terminus, PN_EXPIRE_WITH_SESSION);
+    if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(connection-close)))
+      pn_terminus_set_expiry_policy(terminus, PN_EXPIRE_WITH_CONNECTION);
+    if (pn_bytes_equal(symbol, PN_BYTES_LITERAL(never)))
+      pn_terminus_set_expiry_policy(terminus, PN_EXPIRE_NEVER);
+  }
 }
 
 static pn_distribution_mode_t symbol2dist_mode(const pn_bytes_t symbol)
@@ -1383,7 +1380,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_terminus_set_type(rsrc, PN_SOURCE);
     pn_terminus_set_address_bytes(rsrc, source);
     pn_terminus_set_durability(rsrc, src_dr);
-    pn_terminus_set_expiry_policy(rsrc, symbol2policy(src_exp));
+    set_expiry_policy_from_symbol(rsrc, src_exp);
     pn_terminus_set_timeout(rsrc, src_timeout);
     pn_terminus_set_dynamic(rsrc, src_dynamic);
     pn_terminus_set_distribution_mode(rsrc, symbol2dist_mode(dist_mode));
@@ -1395,7 +1392,7 @@ int pn_do_attach(pn_transport_t *transport, uint8_t frame_type, uint16_t channel
     pn_terminus_set_type(rtgt, PN_TARGET);
     pn_terminus_set_address_bytes(rtgt, target);
     pn_terminus_set_durability(rtgt, tgt_dr);
-    pn_terminus_set_expiry_policy(rtgt, symbol2policy(tgt_exp));
+    set_expiry_policy_from_symbol(rtgt, tgt_exp);
     pn_terminus_set_timeout(rtgt, tgt_timeout);
     pn_terminus_set_dynamic(rtgt, tgt_dynamic);
   } else {
@@ -1958,14 +1955,16 @@ static int pni_process_ssn_setup(pn_transport_t *transport, pn_endpoint_t *endpo
   return 0;
 }
 
-static const char *expiry_symbol(pn_expiry_policy_t policy)
+static const char *expiry_symbol(pn_terminus_t* terminus)
 {
-  switch (policy)
+  if (!terminus->has_expiry_policy) return NULL;
+
+  switch (terminus->expiry_policy)
   {
   case PN_EXPIRE_WITH_LINK:
     return "link-detach";
   case PN_EXPIRE_WITH_SESSION:
-    return NULL;
+    return "session-end";
   case PN_EXPIRE_WITH_CONNECTION:
     return "connection-close";
   case PN_EXPIRE_NEVER:
@@ -2011,7 +2010,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 (bool) link->source.type, SOURCE,
                                 pn_string_get(link->source.address),
                                 link->source.durability,
-                                expiry_symbol(link->source.expiry_policy),
+                                expiry_symbol(&link->source),
                                 link->source.timeout,
                                 link->source.dynamic,
                                 link->source.properties,
@@ -2033,7 +2032,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 (bool) link->source.type, SOURCE,
                                 pn_string_get(link->source.address),
                                 link->source.durability,
-                                expiry_symbol(link->source.expiry_policy),
+                                expiry_symbol(&link->source),
                                 link->source.timeout,
                                 link->source.dynamic,
                                 link->source.properties,
@@ -2044,7 +2043,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 (bool) link->target.type, TARGET,
                                 pn_string_get(link->target.address),
                                 link->target.durability,
-                                expiry_symbol(link->target.expiry_policy),
+                                expiry_symbol(&link->target),
                                 link->target.timeout,
                                 link->target.dynamic,
                                 link->target.properties,

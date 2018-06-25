@@ -191,6 +191,15 @@ PN_EXTERN int pn_terminus_set_durability(pn_terminus_t *terminus,
 PN_EXTERN pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus);
 
 /**
+ * Return true if the terminus has an explicit expiry policy set,
+ * false if it does not.
+ *
+ * @param[in] terminus a terminus object
+ * @return whether the terminus has an explicit expiry-policy
+ */
+PN_EXTERN bool pn_terminus_has_expiry_policy(const pn_terminus_t *terminus);
+
+/**
  * Set the expiry policy of a terminus object.
  *
  * @param[in] terminus a terminus object
@@ -198,6 +207,8 @@ PN_EXTERN pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *termin
  * @return 0 on success or an error code on failure
  */
 PN_EXTERN int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t policy);
+
+
 
 /**
  * Get the timeout of a terminus object.

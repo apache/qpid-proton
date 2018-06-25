@@ -274,6 +274,7 @@ struct pn_terminus_t {
   pn_data_t *filter;
   pn_durability_t durability;
   pn_expiry_policy_t expiry_policy;
+  bool has_expiry_policy;
   pn_seconds_t timeout;
   pn_terminus_type_t type;
   pn_distribution_mode_t distribution_mode;

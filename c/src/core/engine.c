@@ -1085,6 +1085,7 @@ static void pni_terminus_init(pn_terminus_t *terminus, pn_terminus_type_t type)
   terminus->type = type;
   terminus->address = pn_string(NULL);
   terminus->durability = PN_NONDURABLE;
+  terminus->has_expiry_policy = false;
   terminus->expiry_policy = PN_EXPIRE_WITH_SESSION;
   terminus->timeout = 0;
   terminus->dynamic = false;
@@ -1267,10 +1268,16 @@ pn_expiry_policy_t pn_terminus_get_expiry_policy(pn_terminus_t *terminus)
   return terminus ? terminus->expiry_policy : (pn_expiry_policy_t) 0;
 }
 
+bool pn_terminus_has_expiry_policy(const pn_terminus_t *terminus)
+{
+    return terminus && terminus->has_expiry_policy;
+}
+
 int pn_terminus_set_expiry_policy(pn_terminus_t *terminus, pn_expiry_policy_t expiry_policy)
 {
   if (!terminus) return PN_ARG_ERR;
   terminus->expiry_policy = expiry_policy;
+  terminus->has_expiry_policy = true;
   return 0;
 }
 
@@ -1340,6 +1347,7 @@ int pn_terminus_copy(pn_terminus_t *terminus, pn_terminus_t *src)
   int err = pn_terminus_set_address(terminus, pn_terminus_get_address(src));
   if (err) return err;
   terminus->durability = src->durability;
+  terminus->has_expiry_policy = src->has_expiry_policy;
   terminus->expiry_policy = src->expiry_policy;
   terminus->timeout = src->timeout;
   terminus->dynamic = src->dynamic;
