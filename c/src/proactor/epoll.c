@@ -295,7 +295,7 @@ static bool start_polling(epoll_extended_t *ee, int epollfd) {
   if (ee->polling)
     return false;
   ee->polling = true;
-  struct epoll_event ev;
+  struct epoll_event ev = {0};
   ev.data.ptr = ee;
   ev.events = ee->wanted | EPOLLONESHOT;
   memory_barrier(ee);
@@ -306,7 +306,7 @@ static void stop_polling(epoll_extended_t *ee, int epollfd) {
   // TODO: check for error, return bool or just log?
   if (ee->fd == -1 || !ee->polling || epollfd == -1)
     return;
-  struct epoll_event ev;
+  struct epoll_event ev = {0};
   ev.data.ptr = ee;
   ev.events = 0;
   memory_barrier(ee);
@@ -690,7 +690,7 @@ static void psocket_gai_error(psocket_t *ps, int gai_err, const char* what) {
 }
 
 static void rearm(pn_proactor_t *p, epoll_extended_t *ee) {
-  struct epoll_event ev;
+  struct epoll_event ev = {0};
   ev.data.ptr = ee;
   ev.events = ee->wanted | EPOLLONESHOT;
   memory_barrier(ee);
