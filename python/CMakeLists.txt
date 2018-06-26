@@ -20,7 +20,7 @@
 # NB For python the SWIG module name must have the same name as the input .i file for CMake to generate the
 # correct dependencies
 
-set(CMAKE_SWIG_FLAGS "-threads")
+set(CMAKE_SWIG_FLAGS "-threads" "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
 
 include_directories (${PN_C_INCLUDE_DIR} ${PYTHON_INCLUDE_PATH})
 

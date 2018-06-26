@@ -26,7 +26,11 @@ typedef unsigned long int uint32_t;
 typedef long int int32_t;
 typedef unsigned long long int uint64_t;
 typedef long long int int64_t;
+#if UINTPTR_SIZE==8
+typedef unsigned long long int uintptr_t;
+#else
 typedef unsigned long int uintptr_t;
+#endif
 
 /* Parse these interface header files to generate APIs for script languages */
 
@@ -61,8 +65,7 @@ typedef unsigned long int uintptr_t;
 %immutable PN_OBJECT;
 %immutable PN_VOID;
 %immutable PN_WEAKREF;
-/* Treat pn_handle_t like uintptr_t - syntactically it is a C void* but really it's just an int */
-%apply uintptr_t { pn_handle_t };
+
 %include "proton/object.h"
 
 %ignore pn_error_format;

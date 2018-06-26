@@ -100,6 +100,14 @@ PN_HANDLE(PNI_PYTRACER);
 %ignore pn_message_get_correlation_id;
 %ignore pn_message_set_correlation_id;
 
+%typemap(in) pn_handle_t {
+  $1 = PyLong_AsVoidPtr($input);
+}
+
+%typemap(out) pn_handle_t {
+  $result = PyLong_FromVoidPtr((void*)$1);
+}
+
 %typemap(in) pn_bytes_t {
   if ($input == Py_None) {
     $1.start = NULL;

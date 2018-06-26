@@ -28,6 +28,8 @@ list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     ${PROTON_HEADERS}
     )
 
+set(CMAKE_SWIG_FLAGS "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
+
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
