@@ -100,6 +100,60 @@ PN_HANDLE(PNI_PYTRACER);
 %ignore pn_message_get_correlation_id;
 %ignore pn_message_set_correlation_id;
 
+%ignore pn_list;
+%ignore pn_list_size;
+%ignore pn_list_get;
+%ignore pn_list_set;
+%ignore pn_list_add;
+%ignore pn_list_pop;
+%ignore pn_list_index;
+%ignore pn_list_remove;
+%ignore pn_list_del;
+%ignore pn_list_clear;
+%ignore pn_list_iterator;
+%ignore pn_list_minpush;
+%ignore pn_list_minpop;
+
+%ignore pn_map;
+%ignore pn_map_size;
+%ignore pn_map_put;
+%ignore pn_map_get;
+%ignore pn_map_del;
+%ignore pn_map_head;
+%ignore pn_map_next;
+%ignore pn_map_key;
+%ignore pn_map_value;
+
+%ignore pn_hash;
+%ignore pn_hash_size;
+%ignore pn_hash_put;
+%ignore pn_hash_get;
+%ignore pn_hash_del;
+%ignore pn_hash_head;
+%ignore pn_hash_next;
+%ignore pn_hash_key;
+%ignore pn_hash_value;
+
+%ignore pn_stringn;
+%ignore pn_string_size;
+%ignore pn_string_set;
+%ignore pn_string_setn;
+%ignore pn_string_put;
+%ignore pn_string_clear;
+%ignore pn_string_format;
+%ignore pn_string_vformat;
+%ignore pn_string_addf;
+%ignore pn_string_vaddf;
+%ignore pn_string_grow;
+%ignore pn_string_buffer;
+%ignore pn_string_capacity;
+%ignore pn_string_resize;
+%ignore pn_string_copy;
+
+%ignore pn_iterator;
+%ignore pn_iterator_start;
+%ignore pn_iterator_next;
+
 %typemap(in) pn_handle_t {
   $1 = PyLong_AsVoidPtr($input);
 }
@@ -161,7 +215,7 @@ ssize_t pn_link_send(pn_link_t *transport, const char *BIN_IN, size_t BIN_LEN);
 
 %rename(pn_link_recv) wrap_pn_link_recv;
 %inline %{
-  int wrap_pn_link_recv(pn_link_t *link, char *BIN_OUT, size_t *BIN_SIZE) {
+  ssize_t wrap_pn_link_recv(pn_link_t *link, char *BIN_OUT, size_t *BIN_SIZE) {
     ssize_t sz = pn_link_recv(link, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
       *BIN_SIZE = sz;
@@ -178,7 +232,7 @@ ssize_t pn_transport_push(pn_transport_t *transport, const char *BIN_IN, size_t 
 
 %rename(pn_transport_peek) wrap_pn_transport_peek;
 %inline %{
-  int wrap_pn_transport_peek(pn_transport_t *transport, char *BIN_OUT, size_t *BIN_SIZE) {
+  ssize_t wrap_pn_transport_peek(pn_transport_t *transport, char *BIN_OUT, size_t *BIN_SIZE) {
     ssize_t sz = pn_transport_peek(transport, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
       *BIN_SIZE = sz;
@@ -214,7 +268,7 @@ ssize_t pn_data_decode(pn_data_t *data, const char *BIN_IN, size_t BIN_LEN);
 
 %rename(pn_data_encode) wrap_pn_data_encode;
 %inline %{
-  int wrap_pn_data_encode(pn_data_t *data, char *BIN_OUT, size_t *BIN_SIZE) {
+  ssize_t wrap_pn_data_encode(pn_data_t *data, char *BIN_OUT, size_t *BIN_SIZE) {
     ssize_t sz = pn_data_encode(data, BIN_OUT, *BIN_SIZE);
     if (sz >= 0) {
       *BIN_SIZE = sz;
