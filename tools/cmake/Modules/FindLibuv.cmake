@@ -17,11 +17,15 @@
 # under the License.
 #
 
+#.rst
+# FindLibuv
+#----------
+#
 # Find libuv include dirs and libraries.
 #
 # Sets the following variables:
 #
-#   LIBUV_FOUND            - True if headers and requested libraries were found
+#   Libuv_FOUND            - True if headers and requested libraries were found
 #   Libuv_INCLUDE_DIRS     - Libuv include directories
 #   Libuv_LIBRARIES        - Link these to use libuv.
 #
@@ -30,17 +34,37 @@
 #   LIBUV_INCLUDEDIR       - Preferred include directory e.g. <prefix>/include
 #   LIBUV_LIBRARYDIR       - Preferred library directory e.g. <prefix>/lib
 
+find_package (PkgConfig)
+pkg_check_modules (PC_Libuv QUIET libuv)
+
 find_library(Libuv_LIBRARY NAMES uv libuv
-  HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_ROOT}/lib ${CMAKE_INSTALL_PREFIX}/lib)
+  HINTS ${LIBUV_LIBRARYDIR} ${LIBUV_ROOT}/lib ${CMAKE_INSTALL_PREFIX}/lib
+  PATHS ${PC_Libuv_LIBRARY_DIRS})
 
 find_path(Libuv_INCLUDE_DIR NAMES uv.h
   HINTS ${LIBUV_INCLUDEDIR} ${LIBUV_ROOT}/include ${CMAKE_INSTALL_PREFIX}/include
-  PATHS /usr/include)
+  PATHS /usr/include ${PC_Libuv_INCLUDE_DIRS})
+
+set(Libuv_VERSION ${PC_Libuv_VERSION})
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(Libuv REQUIRED_VARS Libuv_LIBRARY Libuv_INCLUDE_DIR)
+find_package_handle_standard_args(Libuv
+  REQUIRED_VARS Libuv_LIBRARY Libuv_INCLUDE_DIR
+  VERSION_VAR Libuv_VERSION)
 
-if (LIBUV_FOUND)
+if (Libuv_FOUND)
   set(Libuv_INCLUDE_DIRS ${Libuv_INCLUDE_DIR})
   set(Libuv_LIBRARIES ${Libuv_LIBRARY})
+
+  if (NOT TARGET Libuv::Libuv)
+    add_library(Libuv::Libuv UNKNOWN IMPORTED)
+    set_target_properties(Libuv::Libuv
+      PROPERTIES
+        IMPORTED_LOCATION "${Libuv_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Libuv_INCLUDE_DIR}"
+    )
+  endif ()
+
 endif ()
+
+mark_as_advanced (Libuv_LIBRARY Libuv_INCLUDE_DIR)

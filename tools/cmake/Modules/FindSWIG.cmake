@@ -41,3 +41,6 @@ if (NOT COMMAND swig_add_library)
     swig_add_module(${name} ${_SAM_LANGUAGE} ${_SAM_SOURCES})
   endmacro ()
 endif (NOT COMMAND swig_add_library)
+
+# Builtin FindSWIG.cmake "forgets" to make its outputs advanced like a good citizen
+mark_as_advanced (SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)

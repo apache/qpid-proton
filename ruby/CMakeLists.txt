@@ -122,7 +122,7 @@ to_native_path("${bin};${c_lib_dir};$ENV{PATH}" PATH)
 execute_process(COMMAND ${RUBY_EXECUTABLE} -r minitest -e ""
   RESULT_VARIABLE result OUTPUT_QUIET ERROR_QUIET)
 if (result EQUAL 0)  # Have minitest
-  set(test_env ${PN_ENV_SCRIPT} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${SASLPASSWD_EXE}")
+  set(test_env ${PN_ENV_SCRIPT} -- "PATH=${PATH}" "RUBYLIB=${RUBYLIB}" "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}")
 
   macro(add_ruby_test script)
     get_filename_component(name ${script} NAME_WE)

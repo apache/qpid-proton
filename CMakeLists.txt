@@ -33,24 +33,10 @@ include (CheckPythonModule)
 find_package (OpenSSL)
 find_package (Threads)
 find_package (PythonInterp REQUIRED)
+find_package (SWIG)
+find_package (CyrusSASL)
 
 enable_testing ()
-
-## Swig
-
-find_package (SWIG)
-# FindSwig.cmake "forgets" to make its outputs advanced like a good citizen
-mark_as_advanced (SWIG_DIR SWIG_EXECUTABLE SWIG_VERSION)
-
-## Cyrus SASL
-
-find_library (CYRUS_SASL_LIBRARY sasl2)
-find_path (CYRUS_SASL_INCLUDE_DIR sasl/sasl.h PATH_SUFFIXES include)
-find_package_handle_standard_args (CyrusSASL DEFAULT_MSG CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
-mark_as_advanced(CYRUS_SASL_LIBRARY CYRUS_SASL_INCLUDE_DIR)
-# Find saslpasswd2 executable to generate test config
-find_program (SASLPASSWD_EXE saslpasswd2 DOC "Program used to make the SASL user db for testing")
-mark_as_advanced (SASLPASSWD_EXE)
 
 ## Variables used across components
 
@@ -377,7 +363,7 @@ if (BUILD_PYTHON)
   add_test (NAME python-test
             COMMAND ${PN_ENV_SCRIPT}
               "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
-              "SASLPASSWD=${SASLPASSWD_EXE}"
+              "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
               ${VALGRIND_ENV}
               ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_root}/proton-test")
   set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
@@ -405,7 +391,7 @@ if (BUILD_PYTHON)
         add_test (NAME python-tox-test
                   COMMAND ${PN_ENV_SCRIPT}
                   "PATH=${py_path}"
-                  "SASLPASSWD=${SASLPASSWD_EXE}"
+                  "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
                   "SWIG=${SWIG_EXECUTABLE}"
                   ${VALGRIND_ENV} --
                   ${PYTHON_EXECUTABLE} -m tox)

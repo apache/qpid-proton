@@ -53,7 +53,7 @@ set(GO_ENV ${PN_ENV_SCRIPT} --
   "CGO_CFLAGS=-I${PN_C_INCLUDE_DIR}"
   "CGO_LDFLAGS=-L${PN_C_LIBRARY_DIR}"
   "PN_INTEROP_DIR=${CMAKE_SOURCE_DIR}/tests/interop"
-  "SASLPASSWD=${SASLPASSWD_EXE}"
+  "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
   CACHE INTERNAL "Run a command with Go environment variables")
 
 set(GO ${GO_ENV} ${GO_EXE} CACHE INTERNAL "Run go with environment set")
