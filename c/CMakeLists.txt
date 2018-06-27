@@ -99,8 +99,7 @@ endif(PN_WINAPI)
 # Link in SASL if present
 if (SASL_IMPL STREQUAL cyrus)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_sasl.c)
-  include_directories (${CyrusSASL_INCLUDE_DIRS})
-  set(SASL_LIB ${CyrusSASL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+  set(SASL_LIB CyrusSASL::CyrusSASL Threads::Threads)
 elseif (SASL_IMPL STREQUAL none)
   set(pn_sasl_impl src/sasl/sasl.c src/sasl/default_sasl.c src/sasl/cyrus_stub.c)
 endif ()
@@ -117,8 +116,7 @@ endif()
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
   set (pn_ssl_impl src/ssl/openssl.c)
-  include_directories (${OPENSSL_INCLUDE_DIR})
-  set (SSL_LIB ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+  set (SSL_LIB OpenSSL::SSL Threads::Threads)
 elseif (SSL_IMPL STREQUAL schannel)
   set (pn_ssl_impl src/ssl/schannel.c)
   set (SSL_LIB Crypt32.lib Secur32.lib)
@@ -472,7 +470,7 @@ if (PROACTOR STREQUAL "epoll" OR (NOT PROACTOR AND NOT BUILD_PROACTOR))
   if (HAVE_EPOLL)
     set (PROACTOR_OK epoll)
     set (qpid-proton-proactor src/proactor/epoll.c src/proactor/proactor-internal.c)
-    set (PROACTOR_LIBS -lpthread)
+    set (PROACTOR_LIBS Threads::Threads)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
@@ -495,11 +493,10 @@ if (PROACTOR STREQUAL "libuv" OR (NOT PROACTOR AND NOT PROACTOR_OK))
   if (Libuv_FOUND)
     set (PROACTOR_OK libuv)
     set (qpid-proton-proactor src/proactor/libuv.c src/proactor/proactor-internal.c)
-    set (PROACTOR_LIBS ${Libuv_LIBRARIES})
+    set (PROACTOR_LIBS Libuv::Libuv)
     set_source_files_properties (${qpid-proton-proactor} PROPERTIES
       COMPILE_FLAGS "${COMPILE_WARNING_FLAGS} ${COMPILE_LANGUAGE_FLAGS} ${LTO}"
       )
-    include_directories(${Libuv_INCLUDE_DIRS})
   endif()
 endif()
 
@@ -548,7 +545,7 @@ set(qpid-proton-core-src
   )
 add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
 add_dependencies(qpid-proton-core generated_c_files)
-target_link_libraries (qpid-proton-core ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+target_link_libraries (qpid-proton-core ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
 if (BUILD_STATIC_LIBS)
   add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
 endif(BUILD_STATIC_LIBS)
@@ -588,7 +585,7 @@ if (MSVC)
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
 
-target_link_libraries (qpid-proton LINK_PRIVATE ${UUID_LIB} ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
 
 set_target_properties (
   qpid-proton
