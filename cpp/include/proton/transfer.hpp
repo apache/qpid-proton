@@ -82,7 +82,9 @@ class transfer : public internal::object<pn_delivery_t> {
     /// @endcond
 };
 
+/// Human-readalbe name of the transfer::state
 PN_CPP_EXTERN std::string to_string(enum transfer::state);
+/// Human-readalbe name of the transfer::state
 PN_CPP_EXTERN std::ostream& operator<<(std::ostream&, const enum transfer::state);
 
 } // proton
