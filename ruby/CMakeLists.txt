@@ -153,11 +153,12 @@ endif()
 
 find_program(YARD_EXE "yard")
 if (YARD_EXE)
+  file(GLOB_RECURSE TEMPLATES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "doc/templates/**")
   add_custom_command(
     OUTPUT ${bin}/doc
     WORKING_DIRECTORY ${src}
-    COMMAND ${YARD_EXE} -o ${bin}/doc -b ${bin}/.yardoc --yardopts ${src}/.yardopts -p ${src}/yard/templates
-    DEPENDS ${RUBY_SRC}
+    COMMAND ${YARD_EXE} -o ${bin}/doc -b ${bin}/.yardoc -p ${src}/doc/templates
+    DEPENDS ${RUBY_SRC} ${TEMPLATES}
     )
   add_custom_target(docs-ruby DEPENDS ${bin}/doc)
   add_dependencies (docs docs-ruby)

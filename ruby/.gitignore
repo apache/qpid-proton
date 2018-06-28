@@ -1,6 +1,0 @@
-coverage
-ext/cproton/cproton.c
-html
-lib/*.so
-pkg
-tmp
