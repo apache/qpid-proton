@@ -22,7 +22,7 @@ require 'socket'
 
 # Since ruby 2.5 the default is true, turn it off since we have tests that deliberately
 # leak exceptions from threads to very they are caught properly from Container#run()
-Thread.report_on_exception = false rescue nil
+(Thread.report_on_exception = false) rescue nil
 
 # MessagingHandler that raises in on_error to catch unexpected errors
 class ExceptionMessagingHandler
