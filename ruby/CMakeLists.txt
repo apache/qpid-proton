@@ -158,7 +158,7 @@ if (YARD_EXE)
     OUTPUT ${bin}/doc
     WORKING_DIRECTORY ${src}
     COMMAND ${YARD_EXE} -o ${bin}/doc -b ${bin}/.yardoc -p ${src}/doc/templates
-    DEPENDS ${RUBY_SRC} ${TEMPLATES}
+    DEPENDS ${RUBY_SRC} ${TEMPLATES} .yardopts
     )
   add_custom_target(docs-ruby DEPENDS ${bin}/doc)
   add_dependencies (docs docs-ruby)
