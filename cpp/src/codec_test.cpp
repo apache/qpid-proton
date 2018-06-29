@@ -53,6 +53,7 @@ int main(int, char**) {
     int failed = 0;
 
     // Basic AMQP types
+    RUN_TEST(failed, simple_type_test(null()));
     RUN_TEST(failed, simple_type_test(false));
     RUN_TEST(failed, simple_type_test(uint8_t(42)));
     RUN_TEST(failed, simple_type_test(int8_t(-42)));

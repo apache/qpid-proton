@@ -141,6 +141,14 @@ decoder& decoder::operator>>(null&) {
     return *this;
 }
 
+#if PN_CPP_HAS_NULLPTR
+decoder& decoder::operator>>(decltype(nullptr)&) {
+    internal::state_guard sg(*this);
+    assert_type_equal(NULL_TYPE, pre_get());
+    return *this;
+}
+#endif
+
 decoder& decoder::operator>>(internal::value_base& x) {
     if (*this == x.data_)
         throw conversion_error("extract into self");

@@ -82,8 +82,19 @@ inline bool type_id_is_decimal(type_id t) { return t == DECIMAL32 || t == DECIMA
 inline bool type_id_is_signed(type_id t) { return type_id_is_signed_int(t) || type_id_is_floating_point(t) || type_id_is_decimal(t); }
 inline bool type_id_is_string_like(type_id t) { return t == BINARY || t == STRING || t == SYMBOL; }
 inline bool type_id_is_container(type_id t) { return t == LIST || t == MAP || t == ARRAY || t == DESCRIBED; }
-inline bool type_id_is_scalar(type_id t) { return type_id_is_integral(t) || type_id_is_floating_point(t) || type_id_is_decimal(t) || type_id_is_string_like(t) || t == TIMESTAMP || t == UUID; }
+
 inline bool type_id_is_null(type_id t) { return t == NULL_TYPE; }
+
+inline bool type_id_is_scalar(type_id t) {
+    return type_id_is_integral(t) ||
+        type_id_is_floating_point(t) ||
+        type_id_is_decimal(t) ||
+        type_id_is_string_like(t) ||
+        type_id_is_null(t) ||
+        t == TIMESTAMP ||
+        t == UUID;
+}
+
 /// }
 
 } // proton

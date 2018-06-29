@@ -159,6 +159,11 @@ template<class T> void coerce(const value& v, T& x) {
 template<> inline void get<null>(const value& v, null&) {
     assert_type_equal(NULL_TYPE, v.type());
 }
+#if PN_CPP_HAS_NULLPTR
+template<> inline void get<decltype(nullptr)>(const value& v, decltype(nullptr)&) {
+    assert_type_equal(NULL_TYPE, v.type());
+}
+#endif
 
 /// Return a readable string representation of x for display purposes.
 PN_CPP_EXTERN std::string to_string(const value& x);

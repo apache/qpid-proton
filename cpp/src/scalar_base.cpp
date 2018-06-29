@@ -84,6 +84,10 @@ void scalar_base::put_(const symbol& x) { set(binary(x), PN_SYMBOL); }
 void scalar_base::put_(const binary& x) { set(x, PN_BINARY); }
 void scalar_base::put_(const char* x) { set(binary(std::string(x)), PN_STRING); }
 void scalar_base::put_(const null&) { atom_.type = PN_NULL; }
+#if PN_CPP_HAS_NULLPTR
+void scalar_base::put_(decltype(nullptr)) { atom_.type = PN_NULL; }
+#endif
+
 
 void scalar_base::ok(pn_type_t t) const {
     if (atom_.type != t) throw make_conversion_error(type_id(t), type());
@@ -110,6 +114,9 @@ void scalar_base::get_(std::string& x) const { ok(PN_STRING); x = std::string(by
 void scalar_base::get_(symbol& x) const { ok(PN_SYMBOL); x = symbol(bytes_.begin(), bytes_.end()); }
 void scalar_base::get_(binary& x) const { ok(PN_BINARY); x = bytes_; }
 void scalar_base::get_(null&) const { ok(PN_NULL); }
+#if PN_CPP_HAS_NULLPTR
+void scalar_base::get_(decltype(nullptr)&) const { ok(PN_NULL); }
+#endif
 
 namespace {
 
@@ -147,7 +154,7 @@ bool operator<(const scalar_base& x, const scalar_base& y) {
 
 std::ostream& operator<<(std::ostream& o, const scalar_base& s) {
     switch (s.type()) {
-      case NULL_TYPE: return o << "<null>";
+      case NULL_TYPE: return o << "null";
       case BYTE: return o << static_cast<int>(internal::get<int8_t>(s));
       case UBYTE: return o << static_cast<unsigned int>(internal::get<uint8_t>(s));
         // Other types printed using normal C++ operator <<
