@@ -542,21 +542,21 @@ set(qpid-proton-core-src
   ${qpid-proton-platform}
   ${qpid-proton-include}
   ${qpid-proton-include-generated}
-  )
-add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
-add_dependencies(qpid-proton-core generated_c_files)
-target_link_libraries (qpid-proton-core ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
-if (BUILD_STATIC_LIBS)
-  add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
-endif(BUILD_STATIC_LIBS)
+)
 
-set_target_properties (
-  qpid-proton-core
+add_library (qpid-proton-core SHARED ${qpid-proton-core-src})
+add_dependencies (qpid-proton-core generated_c_files)
+target_link_libraries (qpid-proton-core ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS})
+set_target_properties (qpid-proton-core
   PROPERTIES
   VERSION   "${PN_LIB_CORE_VERSION}"
   SOVERSION "${PN_LIB_CORE_MAJOR_VERSION}"
   LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
-  )
+)
+
+if (BUILD_STATIC_LIBS)
+  add_library (qpid-proton-core-static STATIC ${qpid-proton-core-src})
+endif(BUILD_STATIC_LIBS)
 
 set(qpid-proton-src
   # Proton Core
@@ -571,8 +571,17 @@ set(qpid-proton-src
   ${qpid-proton-extra}
   ${qpid-proton-platform-io}
   ${qpid-proton-include-extra}
-  )
-add_library(qpid-proton SHARED ${qpid-proton-src})
+)
+
+add_library (qpid-proton SHARED ${qpid-proton-src})
+target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
+set_target_properties (qpid-proton
+  PROPERTIES
+  VERSION   "${PN_LIB_LEGACY_VERSION}"
+  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
+  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
+)
+
 if (BUILD_STATIC_LIBS)
   add_library(qpid-proton-static STATIC ${qpid-proton-src})
 endif(BUILD_STATIC_LIBS)
@@ -585,16 +594,6 @@ if (MSVC)
   add_dependencies(qpid-proton qpid-proton-core)
 endif (MSVC)
 
-target_link_libraries (qpid-proton LINK_PRIVATE ${SSL_LIB} ${SASL_LIB} ${TIME_LIB} ${PLATFORM_LIBS} ${PROACTOR_LIBS})
-
-set_target_properties (
-  qpid-proton
-  PROPERTIES
-  VERSION   "${PN_LIB_LEGACY_VERSION}"
-  SOVERSION "${PN_LIB_LEGACY_MAJOR_VERSION}"
-  LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
-  )
-
 if (MSVC)
   # guard against use of C99 violating functions on Windows
   include(WindowsC99CheckDef)
@@ -605,33 +604,49 @@ if (qpid-proton-proactor)
   add_library (qpid-proton-proactor SHARED ${qpid-proton-proactor})
   target_link_libraries (qpid-proton-proactor  LINK_PUBLIC qpid-proton-core)
   target_link_libraries (qpid-proton-proactor  LINK_PRIVATE ${PLATFORM_LIBS} ${PROACTOR_LIBS})
-  list(APPEND LIB_TARGETS qpid-proton-proactor)
-  set_target_properties (
-    qpid-proton-proactor
+  set_target_properties (qpid-proton-proactor
     PROPERTIES
     VERSION   "${PN_LIB_PROACTOR_VERSION}"
     SOVERSION "${PN_LIB_PROACTOR_MAJOR_VERSION}"
     LINK_FLAGS "${CATCH_UNDEFINED} ${LTO}"
-    )
+  )
   if (BUILD_STATIC_LIBS)
     add_library (qpid-proton-proactor-static STATIC ${qpid-proton-proactor})
   endif(BUILD_STATIC_LIBS)
 endif()
 
 # Install executables and libraries
-install(TARGETS qpid-proton qpid-proton-core ${LIB_TARGETS}
+install(TARGETS qpid-proton qpid-proton-core
   EXPORT  proton
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
   LIBRARY DESTINATION ${LIB_INSTALL_DIR})
 
-# Install windows qpid-proton pdb files
+# Install windows pdb files
 if (MSVC)
-  install(FILES $<TARGET_PDB_FILE:qpid-proton>
+  install(FILES
+      $<TARGET_PDB_FILE:qpid-proton>
+      $<TARGET_PDB_FILE:qpid-proton-core>
     DESTINATION bin
     CONFIGURATIONS RelWithDebInfo Debug
     OPTIONAL)
 endif (MSVC)
+
+if (HAS_PROACTOR)
+  install(TARGETS qpid-proton-proactor
+    EXPORT  proton
+    RUNTIME DESTINATION bin
+    ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
+    LIBRARY DESTINATION ${LIB_INSTALL_DIR})
+
+  # Install windows pdb files
+  if (MSVC)
+    install(FILES $<TARGET_PDB_FILE:qpid-proton-proactor>
+      DESTINATION bin
+      CONFIGURATIONS RelWithDebInfo Debug
+      OPTIONAL)
+  endif (MSVC)
+endif ()
 
 # Install header files
 file(GLOB headers "${CMAKE_CURRENT_BINARY_DIR}/include/proton/*.[hi]")
