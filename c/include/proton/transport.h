@@ -635,6 +635,10 @@ PN_EXTERN bool pn_transport_closed(pn_transport_t *transport);
  * generating output (see ::pn_transport_output). It returns the
  * deadline for the next pending timer event, if any are present.
  *
+ * Note that this function does nothing until the first data is read from or
+ * written to the transport.
+ *
+ *
  * @param[in] transport the transport to process.
  * @param[in] now the current time
  *
