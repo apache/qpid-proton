@@ -6,3 +6,4 @@
 --hide-void-return
 --template default
 --api qpid
+--title "Qpid Proton"
