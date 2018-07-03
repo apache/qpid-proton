@@ -25,15 +25,15 @@ import (
 )
 
 func roundTrip(m Message) error {
-	buffer, err := m.Encode(nil)
-	if err != nil {
-		return err
+	var err error
+	if buffer, err := m.Encode(nil); err == nil {
+		if m2, err := DecodeMessage(buffer); err == nil {
+			if err = checkEqual(m, m2); err == nil {
+				err = checkEqual(m.String(), m2.String())
+			}
+		}
 	}
-	m2, err := DecodeMessage(buffer)
-	if err != nil {
-		return err
-	}
-	return checkEqual(m, m2)
+	return err
 }
 
 func TestDefaultMessage(t *testing.T) {
@@ -70,6 +70,22 @@ func TestDefaultMessage(t *testing.T) {
 		}
 	}
 	if err := roundTrip(m); err != nil {
+		t.Error(err)
+	}
+	if err := checkEqual("Message{}", m.String()); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestMessageString(t *testing.T) {
+	m := NewMessageWith("hello")
+	m.SetInferred(false)
+	m.SetUserId("user")
+	m.SetDeliveryAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("instructions"): "foo"})
+	m.SetMessageAnnotations(map[AnnotationKey]interface{}{AnnotationKeySymbol("annotations"): "bar"})
+	m.SetApplicationProperties(map[string]interface{}{"int": int32(32)})
+	msgstr := `Message{user_id="user", instructions={:instructions="foo"}, annotations={:annotations="bar"}, properties={"int"=32}, body="hello"}`
+	if err := checkEqual(msgstr, m.String()); err != nil {
 		t.Error(err)
 	}
 }

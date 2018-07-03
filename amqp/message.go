@@ -38,6 +38,7 @@ import (
 	"fmt"
 	"runtime"
 	"time"
+	"unsafe"
 )
 
 // Message is the interface to an AMQP message.
@@ -174,6 +175,9 @@ type Message interface {
 	// Deprecated: use ApplicationProperties() for a more type-safe interface
 	Properties() map[string]interface{}
 	SetProperties(v map[string]interface{})
+
+	// Human-readable string showing message contents and properties
+	String() string
 }
 
 type message struct{ pn *C.pn_message_t }
@@ -378,7 +382,12 @@ func (m *message) Encode(buffer []byte) ([]byte, error) {
 
 // TODO aconway 2015-09-14: Multi-section messages.
 
-// TODO aconway 2016-09-09: Message.String() use inspect.
+func (m *message) String() string {
+	str := C.pn_string(C.CString(""))
+	defer C.pn_free(unsafe.Pointer(str))
+	C.pn_inspect(unsafe.Pointer(m.pn), str)
+	return C.GoString(C.pn_string_get(str))
+}
 
 // ==== Deprecated functions
 func oldGetAnnotations(data *C.pn_data_t) (v map[string]interface{}) {
