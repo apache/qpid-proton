@@ -95,8 +95,6 @@ The [proton](http://godoc.org/qpid.apache.org/proton) and
 [electron](http://godoc.org/qpid.apache.org/electron) packages provide two
 different APIs for building AMQP applications. For most applications,
 [electron](http://godoc.org/qpid.apache.org/electron) is easier to use.
-[The proton Go README](https://github.com/apache/qpid-proton/blob/master/go/src/qpid.apache.org/README.md)
-has some discussion about why there are two APIs.
 
 The examples [proton/broker.go](proton/broker.go) and
 [electron/broker.go](electron/broker.go) implement the same simple broker

@@ -40,13 +40,10 @@ in both directions on a single Connection.
 Some of the documentation examples show client and server side by side in a
 single program, in separate goroutines. This is only for example purposes, real
 AMQP applications would run in separate processes on the network.
-More realistic examples: https://github.com/apache/qpid-proton/blob/master/examples/go/README.md
 
 Some of the documentation examples show client and server side by side in a
 single program, in separate goroutines. This is only for example purposes, real
 AMQP applications would run in separate processes on the network.
-More realistic examples: https://github.com/apache/qpid-proton/blob/master/examples/go/README.md
-
 */
 package electron
 

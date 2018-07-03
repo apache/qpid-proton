@@ -38,7 +38,7 @@ event-driven, concurrent-unsafe package that closely follows the proton C
 API. Most Go programmers will find the
 [electron](http://godoc.org/qpid.apache.org/electron) package easier to use.
 
-See the [examples](https://github.com/apache/qpid-proton/blob/master/examples/go/README.md)
+See the [examples](https://github.com/apache/qpid-proton/blob/master/go/examples/README.md)
 to help you get started.
 
 Feedback is encouraged at:
