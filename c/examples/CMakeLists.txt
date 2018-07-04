@@ -53,12 +53,8 @@ macro(set_search_path result)
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
-# Add the tools directory for the 'proctest' module
-set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
-set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
-
 add_test(
   NAME c-example-tests
-  COMMAND ${PN_ENV_SCRIPT} ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV} --
+  COMMAND ${PN_ENV_SCRIPT} "PATH=${test_path}" ${VALGRIND_ENV} --
           ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

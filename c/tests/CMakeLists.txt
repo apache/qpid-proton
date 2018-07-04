@@ -78,8 +78,6 @@ if(HAS_PROACTOR)
   else(WIN32)
     set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
   endif(WIN32)
-  # Add the tools directory for the 'proctest' module
-  set_search_path(pypath "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
 
   add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
 endif(HAS_PROACTOR)

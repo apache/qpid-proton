@@ -18,28 +18,23 @@
 #
 from __future__ import print_function
 
-from proctest import *
+import os, sys
+from subprocess import Popen, PIPE
 
-def wait_listening(proc):
-    m = proc.wait_re("listening on ([0-9]+)$")
-    return m.group(1), m.group(0)+"\n" # Return (port, line)
+def wait_listening(p):
+    return re.search("listening on ([0-9]+)$", p.stdout.readline()).group(1)
 
-class LimitedBroker(object):
-    def __init__(self, test, fdlimit):
-        self.test = test
+class LimitedBroker(Popen):
+    def __init__(self, fdlimit):
+        super(LimitedBroker, self).__init__(["broker", "", "0"], stdout=PIPE, stderr=open(os.devnull))
         self.fdlimit = fdlimit
 
     def __enter__(self):
-        self.proc = self.test.proc(["broker", "", "0"])
-        self.port, _ = wait_listening(self.proc)
+        self.port = wait_listening(self)
         return self
 
     def __exit__(self, *args):
-        b = getattr(self, "proc")
-        if b:
-            if b.poll() not in [1, None]: # Broker crashed or got expected connection error
-                raise ProcError(b, "broker crash")
-            b.kill()
+        self.kill()
 
 # Check if we can run prlimit to control resources
 try:
@@ -50,36 +45,27 @@ except:
 
 class FdLimitTest(ProcTestCase):
 
-    def proc(self, *args, **kwargs):
-        """Skip valgrind for all processes started by this test"""
-        return super(FdLimitTest, self).proc(*args, valgrind=False, **kwargs)
-
     def test_fd_limit_broker(self):
         """Check behaviour when running out of file descriptors on accept"""
         # Not too many FDs but not too few either, some are used for system purposes.
         fdlimit = 256
-        with LimitedBroker(self, fdlimit) as b:
+        with LimitedBroker(fdlimit) as b:
             receivers = []
             # Start enough receivers to use all FDs, make sure the broker logs an error
             for i in range(fdlimit+1):
-                receivers.append(self.proc(["receive", "", b.port, str(i)]))
-
-            # Note: libuv silently swallows EMFILE/ENFILE errors so there is no error reporting.
-            # The epoll proactor will close the users connection with the EMFILE/ENFILE error
-            if "TRANSPORT_CLOSED" in b.proc.out:
-                self.assertIn("open files", b.proc.out)
+                receivers.append(Popen(["receive", "", b.port, str(i)], stdout=PIPE))
 
             # All FDs are now in use, send attempt should fail or hang
-            self.assertIn(self.proc(["send", "", b.port, "x"]).poll(), [1, None])
+            self.assertIn(Popen(["send", "", b.port, "x"], stdout=PIPE, stderr=STDOUT).poll(), [1, None])
 
             # Kill receivers to free up FDs
             for r in receivers:
                 r.kill()
             for r in receivers:
-                r.wait_exit(expect=None)
+                r.wait()
             # send/receive should succeed now
-            self.assertIn("10 messages sent", self.proc(["send", "", b.port]).wait_exit())
-            self.assertIn("10 messages received", self.proc(["receive", "", b.port]).wait_exit())
+            self.assertIn("10 messages sent", check_output(["send", "", b.port]))
+            self.assertIn("10 messages received", check_output(["receive", "", b.port]))
 
 if __name__ == "__main__":
     main()

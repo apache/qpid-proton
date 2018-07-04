@@ -44,10 +44,6 @@
 
 #if PN_CPP_HAS_STD_THREAD
 #include <thread>
-
-int hardware_concurrency() {return std::thread::hardware_concurrency();}
-#else
-int hardware_concurrency() {return 1;}
 #endif
 
 #include "fake_cpp11.hpp"
@@ -396,14 +392,9 @@ class broker {
     }
 
     void run() {
-#if PN_CPP_SUPPORTS_THREADS
-        int threads = hardware_concurrency();
-        std::cout << "starting " << threads << " listening threads\n";
-        std::cout.flush();
-        container_.run(threads);
+#if PN_CPP_HAS_STD_THREAD
+        container_.run(std::thread::hardware_concurrency());
 #else
-        std::cout << "no thread support - starting 1 listening thread\n";
-        std::cout.flush();
         container_.run();
 #endif
     }

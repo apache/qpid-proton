@@ -113,10 +113,6 @@ macro(set_search_path result)
   file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
 endmacro()
 
-# Add the tools directory for the 'proctest' module
-set_search_path(EXAMPLE_PYTHONPATH "${CMAKE_SOURCE_DIR}/tools/python" "$ENV{PYTHON_PATH}")
-set(EXAMPLE_ENV "PYTHONPATH=${EXAMPLE_PYTHONPATH}")
-
 # Add a test with the correct environment to find test executables and valgrind.
 macro(add_cpp_test name)
   if(WIN32)
@@ -126,7 +122,7 @@ macro(add_cpp_test name)
   endif(WIN32)
   add_test(
     NAME ${name}
-    COMMAND ${PN_ENV_SCRIPT} ${EXAMPLE_ENV} "PATH=${test_path}" ${VALGRIND_ENV}
+    COMMAND ${PN_ENV_SCRIPT} "PATH=${test_path}" ${VALGRIND_ENV}
             "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>" -- ${ARGN}
     )
 endmacro()

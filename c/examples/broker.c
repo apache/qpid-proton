@@ -364,8 +364,8 @@ static void handle(broker_t* b, pn_event_t* e) {
        m->start = (char*)realloc(m->start, m->size);
        recv = pn_link_recv(l, m->start, m->size);
        if (recv == PN_ABORTED) { /*  */
-         fprintf(stderr, "Message aborted\n");
-         fflush(stderr);
+         printf("Message aborted\n");
+         fflush(stdout);
          m->size = 0;           /* Forget the data we accumulated */
          pn_delivery_settle(d); /* Free the delivery so we can receive the next message */
          pn_link_flow(l, WINDOW - pn_link_credit(l)); /* Replace credit for the aborted message */
