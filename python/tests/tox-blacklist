@@ -10,4 +10,3 @@ proton_tests.messenger.IdleTimeoutTest.testIdleTimeout
 proton_tests.messenger.MessengerTest.testCreditBlockingRebalance
 proton_tests.messenger.NBMessengerTest.testCreditReplenish
 proton_tests.messenger.NBMessengerTest.testRecvBeforeSubscribe
-

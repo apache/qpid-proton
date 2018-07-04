@@ -18,17 +18,17 @@
 #
 
 from proton import *
-import os
 from . import common
+import os
 
 
 def find_test_interop_dir():
-    """Walk up the directory tree to find the tests directory."""
-    f = os.path.dirname(os.path.abspath(__file__))
-    while f and os.path.basename(f) != "tests": f = os.path.dirname(f)
-    f = os.path.join(f, "interop")
-    if not os.path.isdir(f):
-        raise Exception("Cannot find test/interop directory from "+__file__)
+    """Find the common tests directory relative to this script"""
+    from os.path import dirname, join, abspath, isdir
+    f = dirname(dirname(dirname(dirname(abspath(__file__)))))
+    f = join(f, "tests", "interop")
+    if not isdir(f):
+        raise Exception("Cannot find tests/interop directory from "+__file__)
     return f
 
 test_interop_dir=find_test_interop_dir()

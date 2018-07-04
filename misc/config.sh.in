@@ -34,7 +34,7 @@ PROTON_BUILD=@CMAKE_BINARY_DIR@
 PYTHON_BINDING=$PROTON_BUILD/python
 
 # Python
-COMMON_PYPATH=$PROTON_HOME/tests/python:$PROTON_HOME/python:$PROTON_HOME/tools/python
+COMMON_PYPATH=$PROTON_HOME/python/tests:$PROTON_HOME/python:$PROTON_HOME/tools/python
 export PYTHONPATH=$COMMON_PYPATH:$PYTHON_BINDING
 
 # Ruby
@@ -50,7 +50,7 @@ export LIBRARY_PATH="$(merge_paths $PROTON_BUILD $LIBRARY_PATH)"
 export LD_LIBRARY_PATH="$(merge_paths $PROTON_BUILD $LD_LIBRARY_PATH)"
 
 # Test applications
-export PATH="$(merge_paths $PATH $PROTON_BUILD/c/tools $PROTON_HOME/tests/python)"
+export PATH="$(merge_paths $PATH $PROTON_BUILD/c/tools $PROTON_HOME/python/tests)"
 
 # Can the test harness use valgrind?
 if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND@" == "ON" ]] ; then

@@ -69,7 +69,7 @@ $RUN_TOX && ctest -V -R 'python-tox-test'
 source config.sh
 
 # proton-c tests via python
-python ../tests/python/proton-test --xml=${XMLOUTPUT}
+python ../python/tests/proton-test --xml=${XMLOUTPUT}
 
 # proton-c native c-* tests
 ctest -V -R '^c-*'

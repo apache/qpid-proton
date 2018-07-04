@@ -184,3 +184,62 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
                ${py_dist_dir}/README.rst
 )
+
+# python test: python/tests/proton-test
+set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
+set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
+set (py_dll "$<TARGET_FILE_DIR:_cproton>")
+set (py_bld "$<TARGET_FILE_DIR:qpid-proton>") # For windows
+set (py_tests "${py_src}/tests")
+
+set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})
+set (py_pythonpath ${py_tests} ${py_src} ${py_bin} ${py_dll} $ENV{PYTHONPATH})
+to_native_path ("${py_pythonpath}" py_pythonpath)
+to_native_path ("${py_path}" py_path)
+
+if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+  set (python_coverage_options -m coverage run)
+endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
+
+add_test (NAME python-test
+  COMMAND ${PN_ENV_SCRIPT}
+  "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
+  "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+  ${VALGRIND_ENV}
+  ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_tests}/proton-test")
+set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
+
+check_python_module("tox" TOX_MODULE_FOUND)
+if (NOT TOX_MODULE_FOUND)
+  message(STATUS "The tox tool is not available; skipping the python-tox-tests")
+else ()
+  option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
+
+  set(tox_default "py26,py27,py34,py35,py36")
+  set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
+  mark_as_advanced(TOX_ENVLIST)
+
+  if (NOT (TOX_ENVLIST STREQUAL tox_default))
+    message(WARNING "non-default TOX test set '${TOX_ENVLIST}' (default '${tox_default}')")
+  endif()
+  if (ENABLE_TOX_TEST)
+    if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+      message(STATUS "Building for coverage analysis; skipping the python-tox-tests")
+    else ()
+      configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
+      add_test (NAME python-tox-test
+        COMMAND ${PN_ENV_SCRIPT}
+        "PATH=${py_path}"
+        "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
+        "SWIG=${SWIG_EXECUTABLE}"
+        ${VALGRIND_ENV} --
+        ${PYTHON_EXECUTABLE} -m tox)
+      set_tests_properties(python-tox-test
+        PROPERTIES
+        PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
+        FAIL_REGULAR_EXPRESSION "ERROR:[ ]+py[0-9]*: commands failed")
+    endif ()
+  endif (ENABLE_TOX_TEST)
+endif (NOT TOX_MODULE_FOUND)

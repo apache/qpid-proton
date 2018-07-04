@@ -55,16 +55,16 @@ class BarfOnFinal:
 
     def on_reactor_final(self, event):
         raise Barf()
-    
+
 class BarfOnFinalDerived(Handshaker):
     init = False
-    
+
     def on_reactor_init(self, event):
         self.init = True
 
     def on_reactor_final(self, event):
         raise Barf()
-    
+
 class ExceptionTest(Test):
 
     def setUp(self):

@@ -15,7 +15,7 @@ passenv =
     SASLPASSWD
     VALGRIND
 commands =
-    @CMAKE_SOURCE_DIR@/tests/python/proton-test '{posargs:--ignore-file=@CMAKE_SOURCE_DIR@/tests/python/tox-blacklist}'
+    @CMAKE_SOURCE_DIR@/python/tests/proton-test '{posargs:--ignore-file=@CMAKE_SOURCE_DIR@/python/tests/tox-blacklist}'
 deps =
     unittest2
 

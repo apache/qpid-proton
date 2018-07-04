@@ -90,17 +90,17 @@ class HandlerTest(common.Test):
     assert child.did_init
     assert root.did_custom
     assert child.did_custom
-    
+
   def set_root(self, reactor, root):
     reactor.handler = root
   def add_root(self, reactor, root):
     reactor.handler.add(root)
   def append_root(self, reactor, root):
     reactor.handler.handlers.append(root)
-    
+
   def event_root(self, event):
     return event.root
-  
+
   def event_reactor_handler(self, event):
     return event.reactor.handler
 

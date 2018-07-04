@@ -227,7 +227,7 @@ class ConnectionTest(Test):
     assert self.c1.remote_properties == p2, (self.c2.remote_properties, p2)
 
   # The proton implementation limits channel_max to 32767.
-  # If I set the application's limit lower than that, I should 
+  # If I set the application's limit lower than that, I should
   # get my wish.  If I set it higher -- not.
   def test_channel_max_low(self, value=1234):
     self.c1.transport.channel_max = value
