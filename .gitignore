@@ -8,14 +8,6 @@
 *.pyc
 *.pyo
 
-# Artifacts in /c/src/
-
-/c/src/codec/encodings.h
-/c/src/protocol.h
-/c/src/proton
-/c/src/test
-/c/src/libqpidproton.so
-
 # Emacs, vim etc
 
 *~
