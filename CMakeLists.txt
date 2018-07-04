@@ -374,7 +374,7 @@ if (BUILD_PYTHON)
   else ()
     option(ENABLE_TOX_TEST "Enable multi-version python testing with TOX" ON)
 
-    set(tox_default "py26,py27,py33,py34,py35,py36")
+    set(tox_default "py26,py27,py34,py35,py36")
     set(TOX_ENVLIST ${tox_default} CACHE STRING "List of python environments for TOX tests" )
     mark_as_advanced(TOX_ENVLIST)
 
