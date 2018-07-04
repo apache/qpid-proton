@@ -51,9 +51,6 @@ func Server(l net.Listener) {
 
 // Example client sending messages to a server running in a goroutine.
 //
-// Normally client and server would be separate processes. For more realistic and detailed examples:
-//     https://github.com/apache/qpid-proton/blob/master/examples/go/README.md
-//
 func Example_clientServer() {
 	l, err := net.Listen("tcp", "127.0.0.1:0") // tcp4 so example will work on ipv6-disabled platforms
 	if err != nil {
