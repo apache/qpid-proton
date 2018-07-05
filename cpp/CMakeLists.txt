@@ -159,6 +159,10 @@ set_source_files_properties (
   COMPILE_FLAGS "${LTO}"
   )
 
+if (MSVC)
+  set (CMAKE_DEBUG_POSTFIX "d")
+endif ()
+
 add_library(qpid-proton-cpp SHARED ${qpid-proton-cpp-source})
 if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
@@ -207,10 +211,6 @@ configure_file(
 install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/libqpid-proton-cpp.pc
   DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-
-if (MSVC)
-  set (CMAKE_DEBUG_POSTFIX "d")
-endif ()
 
 if (DEFINED CMAKE_IMPORT_LIBRARY_PREFIX)
 set(PROTONCPPLIB ${CMAKE_IMPORT_LIBRARY_PREFIX}qpid-proton-cpp${CMAKE_IMPORT_LIBRARY_SUFFIX})
