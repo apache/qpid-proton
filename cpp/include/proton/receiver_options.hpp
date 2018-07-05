@@ -84,7 +84,7 @@ class receiver_options {
     PN_CPP_EXTERN receiver_options& auto_accept(bool);
 
     /// @deprecated not applicable to receiver, only to sender
-    PN_CPP_EXTERN receiver_options& auto_settle(bool);
+    PN_CPP_EXTERN PN_CPP_DEPRECATED("not applicable to receiver, only sender") receiver_options& auto_settle(bool);
 
     /// Options for the source node of the receiver.
     PN_CPP_EXTERN receiver_options& source(source_options&);
