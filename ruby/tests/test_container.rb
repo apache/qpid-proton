@@ -334,6 +334,11 @@ class ContainerTest < MiniTest::Test
     assert_raises(Container::StoppedError) { cont.listen "" }
   end
 
+  # Check if two time values are "close enough" to be reasonable.
+  def assert_equalish(x, y, delta=0.1)
+    assert_in_delta(x, y, delta)
+  end
+
   # Test container doesn't stops only when schedule work is done
   def test_container_work_queue
     c = Container.new __method__
@@ -345,8 +350,8 @@ class ContainerTest < MiniTest::Test
     delays.sort.each do |d|
       x = a.shift
       assert_equal d, x[0]
-      assert_in_delta  start + d, x[1], 0.01
     end
+    assert_equalish delays.sum, Time.now-start
   end
 
   # Test container work queue finishes due tasks on external stop, drops future tasks
@@ -384,11 +389,7 @@ class ContainerTest < MiniTest::Test
     start = Time.now
     c.run
     assert_equal 3, a.size
-    delays.inject(0) do |d,sum|
-      x = a.shift
-      assert_in_delta  start + d + sum, x, 0.01
-      sum + d
-    end
+    assert_equalish delays.sum, Time.now-start
   end
 
   # Schedule calls from handlers
@@ -447,11 +448,10 @@ class ContainerTest < MiniTest::Test
 
     assert_equal [1, t], q.pop
     assert_equal [2, t], q.pop
-    assert_in_delta  0.0, Time.now - start, 0.01
+    assert_equalish 0.0, Time.now-start
     assert_equal [3, t], q.pop
-    assert_in_delta  0.02, Time.now - start, 0.01
     assert_equal [4, t], q.pop
-    assert_in_delta  0.04, Time.now - start, 0.01
+    assert_equalish 0.02 + 0.04, Time.now-start
 
     c.work_queue.add { c.close }
     t.join
