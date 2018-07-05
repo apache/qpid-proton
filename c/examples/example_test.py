@@ -21,7 +21,31 @@
 # Example executables must be in PATH
 
 import unittest, sys, time, re
-from subprocess import Popen, PIPE, check_output, CalledProcessError, STDOUT
+
+import subprocess
+
+class Server(subprocess.Popen):
+    def __init__(self, *args, **kwargs):
+        self.kill_me = kwargs.pop('kill_me', False)
+        kwargs.update({'universal_newlines': True,
+                       'stdout': subprocess.PIPE,
+                       'stderr': subprocess.STDOUT})
+        super(Server, self).__init__(*args, **kwargs)
+
+    def __enter__(self):
+        line = self.stdout.readline()
+        self.port = re.search("listening on ([0-9]+)$", line).group(1)
+        return self
+
+    def __exit__(self, *args):
+        if self.kill_me:
+            self.kill()
+            self.stdout.close() # Doesn't get closed if killed
+        self.wait()
+
+def check_output(*args, **kwargs):
+    kwargs.update({'universal_newlines': True})
+    return subprocess.check_output(*args, **kwargs)
 
 MESSAGES=10
 
@@ -31,25 +55,15 @@ def receive_expect(n=MESSAGES): return receive_expect_messages(n)+receive_expect
 def send_expect(n=MESSAGES): return "%s messages sent and acknowledged\n" % n
 def send_abort_expect(n=MESSAGES): return "%s messages started and aborted\n" % n
 
-def wait_listening(p):
-    return re.search("listening on ([0-9]+)$", p.stdout.readline()).group(1)
-
-class Broker(Popen):
+class Broker(Server):
     def __init__(self):
-        super(Broker, self).__init__(["broker", "", "0"], stdout=PIPE)
-
-    def __enter__(self):
-        self.port = wait_listening(self)
-        return self
-
-    def __exit__(self, *args):
-        self.kill()
+        super(Broker, self).__init__(["broker", "", "0"], kill_me=True)
 
 class ExampleTest(unittest.TestCase):
 
     def runex(self, name, port, messages=MESSAGES):
         """Run an example with standard arguments, return output"""
-        return check_output([name, "", str(port), "xtest", str(messages)], stderr=STDOUT)
+        return check_output([name, "", port, "xtest", str(messages)])
 
     def test_send_receive(self):
         """Send first then receive"""
@@ -65,24 +79,22 @@ class ExampleTest(unittest.TestCase):
 
     def test_send_direct(self):
         """Send to direct server"""
-        d = Popen(["direct", "", "0"], stdout=PIPE)
-        port = wait_listening(d)
-        self.assertEqual(send_expect(), self.runex("send", port))
-        self.assertMultiLineEqual(receive_expect(), d.communicate()[0])
+        with Server(["direct", "", "0"]) as d:
+            self.assertEqual(send_expect(), self.runex("send", d.port))
+            self.assertMultiLineEqual(receive_expect(), d.communicate()[0])
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        d = Popen(["direct", "", "0"], stdout=PIPE)
-        port = wait_listening(d)
-        self.assertMultiLineEqual(receive_expect(), self.runex("receive", port))
-        self.assertEqual("10 messages sent and acknowledged\n", d.communicate()[0])
+        with Server(["direct", "", "0"]) as d:
+            self.assertMultiLineEqual(receive_expect(), self.runex("receive", d.port))
+            self.assertEqual("10 messages sent and acknowledged\n", d.communicate()[0])
 
     def test_send_abort_broker(self):
         """Sending aborted messages to a broker"""
         with Broker() as b:
             self.assertEqual(send_expect(), self.runex("send", b.port))
             self.assertEqual(send_abort_expect(), self.runex("send-abort", b.port))
-            for i in xrange(MESSAGES):
+            for i in range(MESSAGES):
                 self.assertEqual("Message aborted\n", b.stdout.readline())
             self.assertEqual(send_expect(), self.runex("send", b.port))
             expect = receive_expect_messages(MESSAGES)+receive_expect_messages(MESSAGES)+receive_expect_total(20)
@@ -90,14 +102,13 @@ class ExampleTest(unittest.TestCase):
 
     def test_send_abort_direct(self):
         """Send aborted messages to the direct server"""
-        d = Popen(["direct", "", "0", "examples", "20"], stdout=PIPE)
-        port = wait_listening(d)
-        self.assertEqual(send_expect(), self.runex("send", port))
-        self.assertEqual(send_abort_expect(), self.runex("send-abort", port))
-        self.assertEqual(send_expect(), self.runex("send", port))
-        expect = receive_expect_messages() + "Message aborted\n"*MESSAGES + receive_expect_messages()+receive_expect_total(20)
-        self.maxDiff = None
-        self.assertMultiLineEqual(expect, d.communicate()[0])
+        with Server(["direct", "", "0", "examples", "20"]) as d:
+            self.assertEqual(send_expect(), self.runex("send", d.port))
+            self.assertEqual(send_abort_expect(), self.runex("send-abort", d.port))
+            self.assertEqual(send_expect(), self.runex("send", d.port))
+            expect = receive_expect_messages() + "Message aborted\n"*MESSAGES + receive_expect_messages()+receive_expect_total(20)
+            self.maxDiff = None
+            self.assertMultiLineEqual(expect, d.communicate()[0])
 
     def test_send_ssl_receive(self):
         """Send with SSL, then receive"""
@@ -107,9 +118,8 @@ class ExampleTest(unittest.TestCase):
                 self.assertIn("secure connection:", got)
                 self.assertIn(send_expect(), got)
                 self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
-        except CalledProcessError as e:
-            print "FIXME", e.output
-            if e.output.startswith("error initializing SSL"):
+        except subprocess.CalledProcessError as e:
+            if e.output.startswith(b"error initializing SSL"):
                 print("Skipping %s: SSL not available" % self.id())
             else:
                 raise

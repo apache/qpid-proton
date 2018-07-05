@@ -22,7 +22,7 @@ import os, sys
 from subprocess import Popen, PIPE
 
 def wait_listening(p):
-    return re.search("listening on ([0-9]+)$", p.stdout.readline()).group(1)
+    return re.search(b"listening on ([0-9]+)$", p.stdout.readline()).group(1)
 
 class LimitedBroker(Popen):
     def __init__(self, fdlimit):
