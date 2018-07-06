@@ -103,16 +103,6 @@ if(HAS_ENOUGH_CPP11)
   endif()
 endif()
 
-# Set result to a native search path - used by examples and binding tests.
-# args after result are directories or search paths.
-macro(set_search_path result)
-  set(${result} ${ARGN})
-  if (UNIX)
-    string(REPLACE ";" ":" ${result} "${${result}}") # native search path separators.
-  endif()
-  file(TO_NATIVE_PATH "${${result}}" ${result}) # native slash separators
-endmacro()
-
 # Add a test with the correct environment to find test executables and valgrind.
 macro(add_cpp_test name)
   if(WIN32)
