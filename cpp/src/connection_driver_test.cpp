@@ -348,8 +348,6 @@ void test_link_address() {
     record_handler ha, hb;
     driver_pair d(ha, hb);
 
-    // FIXME aconway 2018-06-14: also fixes PROTON-1679?
-
     // Using open(address, opts)
     d.a.connection().open_sender("tx", sender_options().name("_x").source(source_options().address("sx")));
     d.a.connection().open_receiver("sy", receiver_options().name("_y").target(target_options().address("ty")));

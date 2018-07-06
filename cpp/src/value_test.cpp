@@ -96,8 +96,7 @@ void null_test() {
     vm[n] = 1;
     vm[nulls1] = 2;
     vm[nulls] = 3;
-    // FIXME aconway 2018-06-29: note different types compare by type-id,
-    // so NULL < ARRAY < LIST
+    // Different types compare by type-id, so NULL < ARRAY < LIST
     ASSERT_EQUAL("{null=1, @PN_NULL[null, null]=2, [null, null]=3}", to_string(vm));
 
     std::map<proton::scalar, proton::scalar> vm2;

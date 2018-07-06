@@ -430,7 +430,7 @@ static bool handle(global *g, pn_event_t *e) {
 
    case PN_CONNECTION_WAKE: {
      if (!action_enabled[A_CLOSE_CONNECT] && maybe(0.5)) pn_connection_close(c);
-     /* FIXME aconway 2018-05-16: connection release/re-use */
+     /* TODO aconway 2018-05-16: connection release/re-use */
      break;
    }
 
@@ -453,8 +453,6 @@ static bool handle(global *g, pn_event_t *e) {
    case PN_PROACTOR_INTERRUPT:
     pn_proactor_interrupt(g->proactor); /* Pass the interrupt along */
     return false;
-
-    /* FIXME aconway 2018-03-09: MORE */
 
    default:
     break;
