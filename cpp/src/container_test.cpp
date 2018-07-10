@@ -175,9 +175,9 @@ int test_container_capabilities() {
     opts.desired_capabilities(make_caps("desired"));
     test_handler th("", opts);
     proton::container(th).run();
-    ASSERT_EQUAL(th.peer_offered_capabilities.size(), 1);
+    ASSERT_EQUAL(th.peer_offered_capabilities.size(), 1u);
     ASSERT_EQUAL(th.peer_offered_capabilities[0], proton::symbol("offered"));
-    ASSERT_EQUAL(th.peer_desired_capabilities.size(), 1);
+    ASSERT_EQUAL(th.peer_desired_capabilities.size(), 1u);
     ASSERT_EQUAL(th.peer_desired_capabilities[0], proton::symbol("desired"));
     return 0;
 }

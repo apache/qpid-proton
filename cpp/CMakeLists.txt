@@ -84,9 +84,8 @@ endif()
 
 configure_file(config_presets.hpp.in config_presets.hpp @ONLY)
 
-# Make these CACHE INTERNAL so they will be set for the C++ examples
-set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CMAKE_CXX_FLAGS} ${CXX_STANDARD}" CACHE INTERNAL "")
-set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}" CACHE INTERNAL "")
+set(CXX_EXAMPLE_FLAGS "${CXX_WARNING_FLAGS} ${CXX_STANDARD}")
+set(CXX_EXAMPLE_LINK_FLAGS "${SANITIZE_FLAGS}")
 
 include_directories (
   "${CMAKE_SOURCE_DIR}/c/include"

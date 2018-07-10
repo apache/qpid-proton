@@ -30,6 +30,6 @@
 set (ProtonCpp_VERSION       ${PN_VERSION})
 set (ProtonCpp_INCLUDE_DIRS  ${CMAKE_SOURCE_DIR}/c/include ${CMAKE_SOURCE_DIR}/cpp/include
                              ${CMAKE_BINARY_DIR}/cpp)
-set (ProtonCpp_LIBRARIES     ${C_EXAMPLE_LINK_FLAGS} qpid-proton-cpp)
+set (ProtonCpp_LIBRARIES     ${CXX_EXAMPLE_LINK_FLAGS} qpid-proton-cpp)
 set (ProtonCpp_DEFINITIONS   ${CXX_EXAMPLE_FLAGS})
 set (ProtonCpp_FOUND True)

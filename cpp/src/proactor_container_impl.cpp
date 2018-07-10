@@ -468,7 +468,7 @@ void container::impl::run_timer_jobs() {
 
         // Figure out how many tasks we need to execute and pop them to the back of the
         // queue (in reverse order)
-        int i = 0;
+        unsigned i = 0;
         for (;;) {
             // Have we seen all the queued tasks?
             if  ( deferred_.size()-i==0 ) break;

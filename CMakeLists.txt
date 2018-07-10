@@ -63,7 +63,7 @@ if (CMAKE_CXX_COMPILER)
   option(BUILD_WITH_CXX "Compile Proton using C++" ${DEFAULT_BUILD_WITH_CXX})
 endif()
 
-# Bulid static C and C++ libraries in addition to shared libraries.
+# Build static C and C++ libraries in addition to shared libraries.
 option(BUILD_STATIC_LIBS "Build static libraries as well as shared libraries" OFF)
 
 if (CMAKE_CONFIGURATION_TYPES)
@@ -102,6 +102,107 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
   add_custom_target(coverage
     WORKING_DIRECTORY ./coverage_results
     COMMAND ${CMAKE_SOURCE_DIR}/scripts/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+endif()
+
+# Try to keep any platform specific overrides together here:
+
+# MacOS has a bunch of differences in build tools and process and so we have to turn some things
+# off if building there:
+if (APPLE)
+  set (NOENABLE_WARNING_ERROR ON)
+  set (NOENABLE_UNDEFINED_ERROR ON)
+  # TODO: Currently segfaults on MacOS - fix bug and re-enable
+  set (NOENABLE_FUZZ_TESTING ON)
+endif (APPLE)
+
+# TODO: Can't build fuzz tests/or run regression tests on MSVC currently
+# (due to limit on command line length)
+if (MSVC)
+  set (NOENABLE_FUZZ_TESTING ON)
+endif (MSVC)
+
+# Make LTO default to off until we can figure out the valgrind issues
+set (NOENABLE_LINKTIME_OPTIMIZATION ON)
+
+# Add options here called <whatever> they will turn into "ENABLE_<whatever" and can be
+# overridden on a platform specific basis above by NOENABLE_<whatever>
+set (OPTIONS WARNING_ERROR UNDEFINED_ERROR LINKTIME_OPTIMIZATION HIDE_UNEXPORTED_SYMBOLS FUZZ_TESTING)
+
+foreach (OPTION ${OPTIONS})
+  if (NOT NOENABLE_${OPTION})
+    set ("DEFAULT_${OPTION}" ON)
+  endif ()
+endforeach (OPTION)
+
+# And add the option here too with help text
+option(ENABLE_WARNING_ERROR "Consider compiler warnings to be errors" ${DEFAULT_WARNING_ERROR})
+option(ENABLE_UNDEFINED_ERROR "Check for unresolved library symbols" ${DEFAULT_UNDEFINED_ERROR})
+option(ENABLE_LINKTIME_OPTIMIZATION "Perform link time optimization" ${DEFAULT_LINKTIME_OPTIMIZATION})
+option(ENABLE_HIDE_UNEXPORTED_SYMBOLS "Only export library symbols that are explicitly requested" ${DEFAULT_HIDE_UNEXPORTED_SYMBOLS})
+option(ENABLE_FUZZ_TESTING "Enable building fuzzers and regression testing with libFuzzer" ${DEFAULT_FUZZ_TESTING})
+
+# Set any additional compiler specific flags
+if (CMAKE_COMPILER_IS_GNUCC)
+  if (ENABLE_WARNING_ERROR)
+    set (WERROR "-Werror")
+  endif (ENABLE_WARNING_ERROR)
+  set (COMPILE_WARNING_FLAGS "${WERROR} -Wall -pedantic-errors")
+  # C++ allow "%z" format specifier and variadic macros
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-format -Wno-variadic-macros")
+  if (NOT BUILD_WITH_CXX)
+    set (COMPILE_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wstrict-prototypes -Wc++-compat -Wvla -Wsign-compare -Wwrite-strings")
+    set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+    set (COMPILE_PLATFORM_FLAGS "-std=gnu99")
+  else (NOT BUILD_WITH_CXX)
+    set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
+  endif (NOT BUILD_WITH_CXX)
+
+  if (ENABLE_UNDEFINED_ERROR)
+    set (CATCH_UNDEFINED "-Wl,--no-undefined")
+    set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
+  endif (ENABLE_UNDEFINED_ERROR)
+
+  if (ENABLE_LINKTIME_OPTIMIZATION)
+    set (LTO "-flto")
+  endif (ENABLE_LINKTIME_OPTIMIZATION)
+
+  if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  endif (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
+  if (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -xldscope=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -xldscope=hidden")
+  endif (ENABLE_HIDE_UNEXPORTED_SYMBOLS)
+endif (CMAKE_COMPILER_IS_GNUCC)
+
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+  set (COMPILE_WARNING_FLAGS  "-Wall -pedantic")
+  set (COMPILE_LANGUAGE_FLAGS "-std=c99")
+  if (ENABLE_WARNING_ERROR)
+    set (COMPILE_WARNING_FLAGS "-Werror ${COMPILE_WARNING_FLAGS}")
+  endif (ENABLE_WARNING_ERROR)
+  # TODO aconway 2016-01-06: we should be able to clean up the code and turn on
+  # some of these warnings.
+  set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
+endif()
+
+# Sanitizer flags apply to to both GNU and clang, C and C++
+if(ENABLE_SANITIZERS)
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+endif()
+if(ENABLE_TSAN)
+  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
+endif()
+if (SANITIZE_FLAGS)
+  mark_as_advanced(SANITIZE_FLAGS)
+  if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SANITIZE_FLAGS}")
+  endif()
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_FLAGS}")
+  endif()
 endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
