@@ -112,8 +112,11 @@ macro(add_cpp_test name)
   endif(WIN32)
   add_test(
     NAME ${name}
-    COMMAND ${PN_ENV_SCRIPT} "PATH=${test_path}" ${VALGRIND_ENV}
-            "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>" -- ${ARGN}
+    COMMAND ${WITH_ENV}
+    "PATH=${test_path}"
+    ${VALGRIND_ENV}
+    "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>"
+    ${ARGN}
     )
 endmacro()
 

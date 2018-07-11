@@ -40,7 +40,7 @@ enable_testing ()
 
 ## Variables used across components
 
-set (PN_ENV_SCRIPT "${PYTHON_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
+set (WITH_ENV "${CMAKE_COMMAND}" -E env)
 set (PN_C_INCLUDE_DIR "${CMAKE_BINARY_DIR}/c/include")
 set (PN_C_LIBRARY_DIR "${CMAKE_BINARY_DIR}/c")
 set (PN_C_SOURCE_DIR "${CMAKE_BINARY_DIR}/c/src")

@@ -30,7 +30,7 @@ macro (pn_build_c_test test)
   endif (BUILD_WITH_CXX)
 endmacro()
 
-set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+set(test_env ${WITH_ENV} "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
 
 macro (pn_add_c_test test)
   pn_build_c_test(${test} ${ARGN})
@@ -79,7 +79,7 @@ if(HAS_PROACTOR)
     set(path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
   endif(WIN32)
 
-  add_test(NAME c-fdlimit-tests COMMAND ${PN_ENV_SCRIPT} -- "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
+  add_test(NAME c-fdlimit-tests COMMAND ${WITH_ENV} "PATH=${path}" "PYTHONPATH=${pypath}" ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/fdlimit.py)
 endif(HAS_PROACTOR)
 
 # fuzz tests: tests/fuzz

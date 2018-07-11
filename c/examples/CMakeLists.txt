@@ -45,6 +45,6 @@ endif()
 
 add_test(
   NAME c-example-tests
-  COMMAND ${PN_ENV_SCRIPT} "PATH=${test_path}" ${VALGRIND_ENV} --
-          ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
+  COMMAND ${WITH_ENV} "PATH=${test_path}" ${VALGRIND_ENV}
+  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
