@@ -69,6 +69,9 @@ typedef enum {
  * On the client side of an AMQP connection this will have the effect
  * of ensuring that the AMQP SASL layer is used for that connection.
  *
+ * @note For incoming connections you must call pn_transport_set_server()
+ * before pn_sasl() in order to set up a server SASL configuration.
+ *
  * @return an object representing the SASL layer.
  */
 PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);

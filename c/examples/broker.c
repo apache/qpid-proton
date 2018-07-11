@@ -298,7 +298,7 @@ static void handle(broker_t* b, pn_event_t* e) {
    case PN_LISTENER_ACCEPT: {
     /* Configure a transport to allow SSL and SASL connections. See ssl_domain setup in main() */
      pn_transport_t *t = pn_transport();
-     pn_transport_require_auth(t, false);
+     pn_transport_set_server(t); /* Must call before pn_sasl() */
      pn_sasl_allowed_mechs(pn_sasl(t), "ANONYMOUS");
      if (b->ssl_domain) {
        pn_ssl_init(pn_ssl(t), b->ssl_domain, NULL);

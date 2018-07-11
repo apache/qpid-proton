@@ -63,6 +63,11 @@ PNP_EXTERN void pn_listener_free(pn_listener_t *l);
  *
  * Errors are returned as @ref PN_TRANSPORT_CLOSED events by pn_proactor_wait().
  *
+ * @note If you provide a transport, pn_listener_accept2() will call
+ * pn_transport_set_server() to mark it as a server. However if you use
+ * pn_sasl() you *must* call call pn_transport_set_server() yourself *before*
+ * calling pn_sasl() to set up a server SASL configuration.
+ *
  * @param[in] listener the listener
  * @param[in] connection If NULL a new connection is created.
  * Memory management is the same as for pn_proactor_connect2()
