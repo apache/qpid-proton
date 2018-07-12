@@ -173,6 +173,11 @@ bool test_str_equal_(test_t *t, const char* want, const char* got, const char *f
   (TEST_CHECKNF(t, pn_condition_is_set((C)), "No condition, expected %s:", (WANT)) ? \
    TEST_STR_EQUAL(t, (WANT), pn_condition_get_name(C)) : 0);
 
+#define TEST_CONDITION(TEST, NAME, DESC, C) do {        \
+    TEST_COND_NAME(TEST, NAME, C);                      \
+    TEST_COND_DESC(TEST, DESC, C);                      \
+  } while(0)
+
 /* T is name of a test_t variable, EXPR is the test expression (which should update T)
    FAILED is incremented if the test has errors
 */

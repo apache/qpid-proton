@@ -214,6 +214,7 @@ static pn_event_type_t common_handler(test_handler_t *th, pn_event_t *e) {
   switch (pn_event_type(e)) {
 
     /* Stop on these events */
+   case PN_TRANSPORT_ERROR:
    case PN_TRANSPORT_CLOSED:
    case PN_PROACTOR_INACTIVE:
    case PN_PROACTOR_TIMEOUT:
@@ -253,7 +254,6 @@ static pn_event_type_t common_handler(test_handler_t *th, pn_event_t *e) {
    case PN_SESSION_INIT:
    case PN_SESSION_LOCAL_OPEN:
    case PN_TRANSPORT:
-   case PN_TRANSPORT_ERROR:
    case PN_TRANSPORT_HEAD_CLOSED:
    case PN_TRANSPORT_TAIL_CLOSED:
     return PN_EVENT_NONE;
@@ -346,6 +346,8 @@ static void test_connection_wake(test_t *t) {
   pn_proactor_disconnect(client, NULL);
   pn_connection_wake(c2);
 
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, test_proactors_run(&tps[0], 1));
+  TEST_CONDITION(t, "amqp:connection:framing-error", "connection aborted", last_condition);
   TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, test_proactors_run(&tps[0], 1));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, test_proactors_run(&tps[0], 1));
   TEST_ETYPE_EQUAL(t, PN_EVENT_NONE, test_proactors_get(&tps[0], 1)); /* No late wake */
@@ -379,14 +381,14 @@ static void test_abort(test_t *t) {
   pn_proactor_connect2(client, NULL, NULL, listener_info(l).connect);
 
   /* server transport closes */
-  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
-    TEST_COND_NAME(t, "amqp:connection:framing-error",last_condition);
-    TEST_COND_DESC(t, "abort", last_condition);
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps))) {
+    TEST_CONDITION(t, "amqp:connection:framing-error", "abort", last_condition);
+    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   }
   /* client transport closes */
-  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
-    TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
-    TEST_COND_DESC(t, "abort", last_condition);
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps))) {
+    TEST_CONDITION(t, "amqp:connection:framing-error", "abort", last_condition);
+    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   }
 
   pn_listener_close(l);
@@ -438,12 +440,12 @@ static void test_refuse(test_t *t) {
   pn_proactor_connect2(client, NULL, NULL, listener_info(l).connect);
 
   /* client transport closes */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps)); /* client */
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps)); /* client */
   TEST_COND_NAME(t, "amqp:connection:framing-error", last_condition);
 
   pn_listener_close(l);
-  while (TEST_PROACTORS_RUN(tps) != PN_PROACTOR_INACTIVE) {}
-  while (TEST_PROACTORS_RUN(tps) != PN_PROACTOR_INACTIVE) {}
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_PROACTOR_INACTIVE);
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_PROACTOR_INACTIVE);
 
   /* Verify expected event sequences, no unexpected events */
   TEST_HANDLER_EXPECT(
@@ -519,8 +521,9 @@ static void test_errors(test_t *t) {
   /* Invalid connect/listen service name */
   pn_connection_t *c = pn_connection();
   pn_proactor_connect2(client, c, NULL, "127.0.0.1:xxx");
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "xxx", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   pn_proactor_listen(server, pn_listener(), "127.0.0.1:xxx", 1);
@@ -532,8 +535,9 @@ static void test_errors(test_t *t) {
   /* Invalid connect/listen host name */
   c = pn_connection();
   pn_proactor_connect2(client, c, NULL, "nosuch.example.com:");
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps));
   TEST_COND_DESC(t, "nosuch", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
   TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
 
   test_handler_clear(&tps[1].handler, 0);
@@ -560,8 +564,9 @@ static void test_errors(test_t *t) {
   /* Connect with no listener */
   c = pn_connection();
   pn_proactor_connect2(client, c, NULL, laddr.connect);
-  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps))) {
+  if (TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps))) {
     TEST_COND_DESC(t, "refused", last_condition);
+    TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
     TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, TEST_PROACTORS_RUN(tps));
   }
 
@@ -671,7 +676,7 @@ static void test_release_free(test_t *t) {
   pn_proactor_release_connection(c1); /* We free but socket should still be cleaned up */
   pn_connection_free(c1);
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps)); /* Server closed */
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
 
   /* release c2 and but don't free till after proactor free */
   pn_connection_t *c2 = pn_connection();
@@ -679,7 +684,7 @@ static void test_release_free(test_t *t) {
   TEST_ETYPE_EQUAL(t, PN_CONNECTION_REMOTE_OPEN, TEST_PROACTORS_RUN(tps));
   pn_proactor_release_connection(c2);
   TEST_CHECK(t, pn_proactor_get(client) == NULL); /* Should be idle */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps)); /* Server closed */
+  TEST_PROACTORS_RUN_UNTIL(tps, PN_TRANSPORT_CLOSED);
 
   TEST_PROACTORS_DESTROY(tps);
   pn_connection_free(c2);
@@ -792,9 +797,8 @@ static void test_ssl(test_t *t) {
   c = pn_connection();
   pn_connection_set_hostname(c, "wrongname");
   pn_proactor_connect2(client->proactor, c, NULL, listener_info(l).connect);
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
-  TEST_COND_NAME(t, "amqp:connection:framing-error",  last_condition);
-  TEST_COND_DESC(t, "SSL",  last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps));
+  TEST_CONDITION(t, "amqp:connection:framing-error", "SSL", last_condition);
   TEST_PROACTORS_DRAIN(tps);
 
   pn_ssl_domain_free(cd);
@@ -934,17 +938,18 @@ static void test_disconnect(test_t *t) {
   pn_condition_set_description(cond, "test-description");
   pn_proactor_disconnect(client, cond);
   /* Verify expected client side first */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, test_proactors_run(&tps[0], 1));
-  TEST_COND_NAME(t, "test-name", last_condition);
-  TEST_COND_DESC(t, "test-description", last_condition);
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, test_proactors_run(&tps[0], 1));
-  TEST_COND_NAME(t, "test-name", last_condition);
-  TEST_COND_DESC(t, "test-description", last_condition);
-  TEST_ETYPE_EQUAL(t, PN_PROACTOR_INACTIVE, test_proactors_run(&tps[0], 1));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, test_proactors_run(&tps[0], 1));
+  TEST_CONDITION(t, "test-name", "test-description", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, test_proactors_run(&tps[0], 1));
+  TEST_CONDITION(t, "test-name", "test-description", last_condition);
+  test_proactors_run_until(&tps[0], 1, PN_PROACTOR_INACTIVE);
 
   /* Now check server sees the disconnects */
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
-  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_CLOSED, TEST_PROACTORS_RUN(tps));
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps));
+  TEST_CONDITION(t, "amqp:connection:framing-error", "connection aborted", last_condition);
+  TEST_ETYPE_EQUAL(t, PN_TRANSPORT_ERROR, TEST_PROACTORS_RUN(tps));
+  TEST_CONDITION(t, "amqp:connection:framing-error", "connection aborted", last_condition);
+  TEST_PROACTORS_DRAIN(tps);
 
   /* Now disconnect the server end (the listeners) */
   pn_proactor_disconnect(server, cond);
