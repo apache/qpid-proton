@@ -48,7 +48,7 @@ add_custom_target(go-src-link ALL
   COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_CURRENT_SOURCE_DIR}/src ${GOPATH}/src)
 
 # Following are CACHE INTERNAL so examples/CMakeLists.txt can see them.
-set(GO_ENV ${WITH_ENV}
+set(GO_ENV ${PN_ENV_SCRIPT} --
   "GOPATH=${GOPATH}"
   "CGO_CFLAGS=-I${PN_C_INCLUDE_DIR}"
   "CGO_LDFLAGS=-L${PN_C_LIBRARY_DIR}"

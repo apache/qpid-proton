@@ -113,9 +113,8 @@ if (EPYDOC_EXE)
      list(APPEND PY_DOC_FILES "${CMAKE_CURRENT_SOURCE_DIR}/${py_src_doc}")
    endforeach(py_src_doc)
    add_custom_target(docs-py
-     COMMAND ${WITH_ENV}
-     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
-     ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html ${PY_DOC_FILES}
+     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+             ${EPYDOC_EXE} -v --no-private --html -o ${CMAKE_CURRENT_BINARY_DIR}/html ${PY_DOC_FILES}
      DEPENDS ${SWIG_MODULE_${cproton}_REAL_NAME})
    add_dependencies(docs docs-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/html/"
@@ -128,8 +127,7 @@ find_program(SPHINX_EXE sphinx-build)
 mark_as_advanced (SPHINX_EXE)
 if (SPHINX_EXE)
    add_custom_target(tutorial-py
-     COMMAND ${WITH_ENV}
-     PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
+     COMMAND ${PN_ENV_SCRIPT} -- PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_SOURCE_DIR}
      ${SPHINX_EXE} -b html ${CMAKE_CURRENT_SOURCE_DIR}/docs ${CMAKE_CURRENT_BINARY_DIR}/tutorial)
    add_dependencies(docs tutorial-py)
    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tutorial/"
@@ -204,11 +202,11 @@ if (CMAKE_BUILD_TYPE MATCHES "Coverage")
 endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 
 add_test (NAME python-test
-  COMMAND ${WITH_ENV}
+  COMMAND ${PN_ENV_SCRIPT}
   "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
   "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
   ${VALGRIND_ENV}
-  ${PYTHON_EXECUTABLE} ${python_coverage_options} "${py_tests}/proton-test")
+  ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 check_python_module("tox" TOX_MODULE_FOUND)
@@ -232,11 +230,11 @@ else ()
         "${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in"
         "${CMAKE_CURRENT_BINARY_DIR}/tox.ini")
       add_test (NAME python-tox-test
-        COMMAND ${WITH_ENV}
+        COMMAND ${PN_ENV_SCRIPT}
         "PATH=${py_path}"
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
         "SWIG=${SWIG_EXECUTABLE}"
-        ${VALGRIND_ENV}
+        ${VALGRIND_ENV} --
         ${PYTHON_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES

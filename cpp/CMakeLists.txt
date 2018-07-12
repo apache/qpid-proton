@@ -239,10 +239,9 @@ macro(add_cpp_test test)
   target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
   if (CMAKE_SYSTEM_NAME STREQUAL Windows)
     add_test (NAME cpp-${test}
-      COMMAND ${WITH_ENV}
+      COMMAND ${PN_ENV_SCRIPT}
       "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      "$<TARGET_FILE:${test}>"
-      ${ARGN})
+      $<TARGET_FILE:${test}> ${ARGN})
   else ()
     add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
   endif ()
