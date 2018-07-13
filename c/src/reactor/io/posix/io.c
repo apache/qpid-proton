@@ -274,7 +274,7 @@ static ssize_t nosigpipe_send(int fd, const void *buffer, size_t size) {
   if (!sigpipeIsPending) {
     sigemptyset(&newSignals);
     sigaddset(&newSignals, SIGPIPE);
-    if (sigmaskErr = pthread_sigmask(SIG_BLOCK, (const sigset_t *)&newSignals, (sigset_t *)&oldSignals))
+    if ((sigmaskErr = pthread_sigmask(SIG_BLOCK, (const sigset_t *)&newSignals, (sigset_t *)&oldSignals)) != 0)
     {
       errno = sigmaskErr;
       return -1;
@@ -288,7 +288,7 @@ static ssize_t nosigpipe_send(int fd, const void *buffer, size_t size) {
       while (-1 == sigtimedwait(&newSignals, NULL, &(struct timespec){ 0, 0 }) && errno == EINTR)
         ; //do nothing
     }
-    if (sigmaskErr = pthread_sigmask(SIG_SETMASK, (const sigset_t *)&oldSignals, (sigset_t *)NULL))
+    if ((sigmaskErr = pthread_sigmask(SIG_SETMASK, (const sigset_t *)&oldSignals, (sigset_t *)NULL)) != 0)
     {
       errno = sigmaskErr;
       return -1;

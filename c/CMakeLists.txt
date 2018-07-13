@@ -105,13 +105,18 @@ elseif (SASL_IMPL STREQUAL none)
 endif ()
 
 # Set Compiler extra flags for Solaris when using SunStudio
-if(CMAKE_CXX_COMPILER_ID STREQUAL "SunPro" )
-  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt" )
+if (CMAKE_CXX_COMPILER_ID STREQUAL "SunPro")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mt -D_REENTRANT")
 endif()
 
-if(CMAKE_C_COMPILER_ID STREQUAL "SunPro" )
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt")
+if (CMAKE_C_COMPILER_ID STREQUAL "SunPro")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mt -D_REENTRANT")
 endif()
+
+# Set linker's extra flags for Solaris (used by SunStudio and GCC without discrimination)
+if (CMAKE_HOST_SOLARIS)
+  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -lsocket")
+endif(CMAKE_HOST_SOLARIS)
 
 # Link in openssl if present
 if (SSL_IMPL STREQUAL openssl)
@@ -230,9 +235,18 @@ if (CMAKE_COMPILER_IS_GNUCC)
     set (COMPILE_WARNING_FLAGS "${CXX_WARNING_FLAGS}")
   endif (NOT BUILD_WITH_CXX)
 
+  if (CMAKE_HOST_SOLARIS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D__EXTENSIONS__")
+  endif (CMAKE_HOST_SOLARIS)
+
   if (ENABLE_UNDEFINED_ERROR)
-    set (CATCH_UNDEFINED "-Wl,--no-undefined")
-    set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
+    if (CMAKE_HOST_SOLARIS)
+      set (CATCH_UNDEFINED "-zdefs")
+      set (ALLOW_UNDEFINED "-znodefs")
+    else(CMAKE_HOST_SOLARIS)
+      set (CATCH_UNDEFINED "-Wl,--no-undefined")
+      set (ALLOW_UNDEFINED "-Wl,--allow-shlib-undefined")
+    endif(CMAKE_HOST_SOLARIS)
   endif (ENABLE_UNDEFINED_ERROR)
 
   if (ENABLE_LINKTIME_OPTIMIZATION)
