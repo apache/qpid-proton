@@ -39,6 +39,12 @@ class UrlTest(common.Test):
         self.assertUrl(url, 'amqp', 'me', 'secret', 'myhost', 1234, 'foobar')
         self.assertEqual(str(url), "amqp://me:secret@myhost:1234/foobar")
 
+    def testIpV6Url(self):
+        url = Url('amqp://me:secret@[::1]:1234/foobar')
+        self.assertEqual(str(url), "amqp://me:secret@[::1]:1234/foobar")
+        self.assertUrl(url, 'amqp', 'me', 'secret', '::1', 1234, 'foobar')
+        self.assertEqual(str(url), "amqp://me:secret@[::1]:1234/foobar")
+
     def testDefaults(self):
         # Check that we allow None for scheme, port
         url = Url(username='me', password='secret', host='myhost', path='foobar', defaults=False)

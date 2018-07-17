@@ -96,7 +96,7 @@ class Url(object):
             self.scheme = url.scheme
             self.username = url.username
             self.password = url.password
-            self.host = url.host
+            self._host = url._host
             self._port = url._port
             self._path = url._path
             self._params = url._params
@@ -112,8 +112,7 @@ class Url(object):
             self.scheme = None if not u.scheme else u.scheme
             self.username = u.username and unquote(u.username)
             self.password = u.password and unquote(u.password)
-            self.host = None if not u.hostname else u.hostname
-            self._port = self._parse_port(u.netloc)
+            (self._host, self._port) = self._parse_host_port(u.netloc)
             self._path = None if not u.path else u.path
             self._params = u.params
             self._query = u.query
@@ -122,7 +121,7 @@ class Url(object):
             self.scheme = None
             self.username = None
             self.password = None
-            self.host = None
+            self._host = None
             self._port = None
             self._path = None
             self._params = None
@@ -134,13 +133,28 @@ class Url(object):
         if defaults: self.defaults()
 
     @staticmethod
-    def _parse_port(nl):
-        netloc = nl.split('@')[-1].split(']')[-1]
-        if ':' in netloc:
-            port = netloc.split(':')[1]
-            if port:
-                return port
-        return None
+    def _parse_host_port(nl):
+        hostport = nl.split('@')[-1]
+        hostportsplit = hostport.split(']')
+        beforebrace = hostportsplit[0]
+        afterbrace = hostportsplit[-1]
+
+        if len(hostportsplit)==1:
+            beforebrace = ''
+        else:
+            beforebrace += ']'
+        if ':' in afterbrace:
+            afterbracesplit = afterbrace.split(':')
+            port = afterbracesplit[1]
+            host = (beforebrace+afterbracesplit[0]).lower()
+            if not port:
+                port = None
+        else:
+            host = (beforebrace+afterbrace).lower()
+            port = None
+        if not host:
+            host = None
+        return (host, port)
 
     @property
     def path(self):
@@ -149,6 +163,24 @@ class Url(object):
     @path.setter
     def path(self, p):
         self._path = p if p[0] == '/' else '/' + p
+
+    @staticmethod
+    def _ipv6literal(s):
+        return s.startswith('[') and s.endswith(']')
+
+    @property
+    def host(self):
+        if self._host and self._ipv6literal(self._host):
+            return self._host[1:-1]
+        else:
+            return self._host
+
+    @host.setter
+    def host(self, h):
+        if ':' in h and not self._ipv6literal(h):
+            self._host = '[' + h + ']'
+        else:
+            self._host = h
 
     @property
     def port(self):
@@ -161,8 +193,8 @@ class Url(object):
     @property
     def _netloc(self):
         hostport = ''
-        if self.host:
-            hostport = self.host
+        if self._host:
+            hostport = self._host
         if self._port:
             hostport += ':'
             hostport += str(self._port)
@@ -199,6 +231,6 @@ class Url(object):
         @return: self
         """
         self.scheme = self.scheme or self.AMQP
-        self.host = self.host or '0.0.0.0'
+        self._host = self._host or '0.0.0.0'
         self._port = self._port or self.Port(self.scheme)
         return self
