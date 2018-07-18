@@ -63,22 +63,22 @@ void test_decoder_primitives_exact() {
     decoder d(dv);
     d.decode(read("primitives"));
     ASSERT(d.more());
-    try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(conversion_error){}
+    try { get< ::int8_t>(d); FAIL("got bool as byte"); } catch(const conversion_error&){}
     ASSERT_EQUAL(true, get<bool>(d));
     ASSERT_EQUAL(false, get<bool>(d));
-    try { get< ::int8_t>(d); FAIL("got ubyte as byte"); } catch(conversion_error){}
+    try { get< ::int8_t>(d); FAIL("got ubyte as byte"); } catch(const conversion_error&){}
     ASSERT_EQUAL(42, get< ::uint8_t>(d));
-    try { get< ::int32_t>(d); FAIL("got uint as ushort"); } catch(conversion_error){}
+    try { get< ::int32_t>(d); FAIL("got uint as ushort"); } catch(const conversion_error&){}
     ASSERT_EQUAL(42, get< ::uint16_t>(d));
-    try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(conversion_error){}
+    try { get< ::uint16_t>(d); FAIL("got short as ushort"); } catch(const conversion_error&){}
     ASSERT_EQUAL(-42, get< ::int16_t>(d));
     ASSERT_EQUAL(12345u, get< ::uint32_t>(d));
     ASSERT_EQUAL(-12345, get< ::int32_t>(d));
     ASSERT_EQUAL(12345u, get< ::uint64_t>(d));
     ASSERT_EQUAL(-12345, get< ::int64_t>(d));
-    try { get<double>(d); FAIL("got float as double"); } catch(conversion_error){}
+    try { get<double>(d); FAIL("got float as double"); } catch(const conversion_error&){}
     ASSERT_EQUAL(0.125f, get<float>(d));
-    try { get<float>(d); FAIL("got double as float"); } catch(conversion_error){}
+    try { get<float>(d); FAIL("got double as float"); } catch(const conversion_error&){}
     ASSERT_EQUAL(0.125, get<double>(d));
     ASSERT(!d.more());
 }
