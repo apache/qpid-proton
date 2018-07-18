@@ -360,33 +360,46 @@ class container_runner {
     void operator()() {c_.run();}
 };
 
-int test_container_mt_stop_empty() {
+void test_container_mt_stop_empty() {
     test_mt_handler th;
     proton::container c(th);
     c.auto_stop( false );
     container_runner runner(c);
     auto t = std::thread(runner);
-    ASSERT_EQUAL("start", th.wait());
-    c.stop();
-    t.join();
-    ASSERT_EQUAL("", th.error().name());
-    return 0;
+    // Must ensure that thread is joined or detached
+    try {
+        ASSERT_EQUAL("start", th.wait());
+        c.stop();
+        t.join();
+        ASSERT_EQUAL("", th.error().name());
+    } catch (...) {
+        // We don't join as we don't know if we'll be stuck waiting
+        if (t.joinable()) {
+            t.detach();
+        }
+    }
 }
 
-int test_container_mt_stop() {
+void test_container_mt_stop() {
     test_mt_handler th;
     proton::container c(th);
     c.auto_stop(false);
     container_runner runner(c);
     auto t = std::thread(runner);
-    test_listen_handler lh;
-    c.listen("//:0", lh);       //  Also opens a connection
-    ASSERT_EQUAL("start", th.wait());
-    ASSERT_EQUAL("open", th.wait());
-    c.stop();
-    t.join();
-    // It is possible to get sporadic connection errors from this test depending on timing of stop()
-    return 0;
+    // Must ensure that thread is joined or detached
+    try {
+        test_listen_handler lh;
+        c.listen("//:0", lh);       //  Also opens a connection
+        ASSERT_EQUAL("start", th.wait());
+        ASSERT_EQUAL("open", th.wait());
+        c.stop();
+        t.join();
+    } catch (...) {
+        // We don't join as we don't know if we'll be stuck waiting
+        if (t.joinable()) {
+            t.detach();
+        }
+    }
 }
 
 #endif
