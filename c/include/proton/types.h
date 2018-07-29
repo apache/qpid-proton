@@ -135,7 +135,7 @@ extern "C" {
  *
  * @ingroup api_types
  */
-typedef int32_t  pn_sequence_t;
+typedef uint32_t  pn_sequence_t;
 
 /**
  * A span of time in milliseconds.

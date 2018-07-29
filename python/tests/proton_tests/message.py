@@ -99,7 +99,7 @@ class AccessorsTest(Test):
     self._test_str("group_id")
 
   def testGroupSequence(self):
-    self._test("group_sequence", 0, (0, -10, 10, 20, -20))
+    self._test("group_sequence", 0, (0, 1, 10, 20, 4294967294, 4294967295))
 
   def testReplyToGroupId(self):
     self._test_str("reply_to_group_id")

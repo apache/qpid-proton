@@ -39,7 +39,7 @@ struct pni_store_t {
   pni_entry_t *store_tail;
   pn_hash_t *tracked;
   size_t size;
-  int window;
+  unsigned window;
   pn_sequence_t lwm;
   pn_sequence_t hwm;
 };
@@ -348,7 +348,7 @@ pni_entry_t *pni_store_entry(pni_store_t *store, pn_sequence_t id)
 
 bool pni_store_tracking(pni_store_t *store, pn_sequence_t id)
 {
-  return (id - store->lwm >= 0) && (store->hwm - id > 0);
+  return (id - store->lwm < INT32_MAX) && (store->hwm - id < INT32_MAX + 1u);
 }
 
 pn_sequence_t pni_entry_track(pni_entry_t *entry)
@@ -359,7 +359,7 @@ pn_sequence_t pni_entry_track(pni_entry_t *entry)
   entry->id = store->hwm++;
   pn_hash_put(store->tracked, entry->id, entry);
 
-  if (store->window >= 0) {
+  if (store->window < INT32_MAX) {
     while (store->hwm - store->lwm > store->window) {
       pni_entry_t *e = pni_store_entry(store, store->lwm);
       if (e) {

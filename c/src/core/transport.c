@@ -975,7 +975,7 @@ static int pni_post_amqp_transfer_frame(pn_transport_t *transport, uint16_t ch,
                                         bool batchable)
 {
   bool more_flag = more;
-  int framecount = 0;
+  unsigned framecount = 0;
   pn_buffer_t *frame = transport->frame;
 
   // create preformatives, assuming 'more' flag need not change
@@ -1626,13 +1626,8 @@ static int pn_scan_error(pn_data_t *data, pn_condition_t *condition, const char 
   return 0;
 }
 
-/*
-  This operator, inspired by code for the qpid cpp broker, gives the correct
-  result when comparing sequence numbers implemented in a signed integer type.
-*/
-
-static inline int sequence_cmp(pn_sequence_t a, pn_sequence_t b) {
-  return a-b;
+static inline bool sequence_lte(pn_sequence_t a, pn_sequence_t b) {
+  return b-a <= INT32_MAX;
 }
 
 int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
@@ -1664,7 +1659,9 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   bool remote_data = (pn_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
-  for (pn_sequence_t id = first; sequence_cmp(id, last) <= 0; ++id) {
+  // TODO: We need to clamp the first & last values here to the actual first and last unsettled
+  // Otherwise we could just be told to process any old sequence.
+  for (pn_sequence_t id = first; sequence_lte(id, last); ++id) {
     pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
     pn_disposition_t *remote = &delivery->remote;
     if (delivery) {

@@ -331,19 +331,13 @@ module Qpid
         }.must_raise(TypeError)
       end
 
-      it "can have a negative group sequence" do
-        seq = (0 - rand(32767))
-        @message.group_sequence = seq
-        @message.group_sequence.must_equal(seq)
-      end
-
       it "can have a zero group sequence" do
         @message.group_sequence = 0
         @message.group_sequence.must_equal(0)
       end
 
       it "has a group sequence" do
-        id = rand(32767)
+        id = rand(4294967295)
         @message.group_sequence = id
         @message.group_sequence.must_equal(id)
       end
