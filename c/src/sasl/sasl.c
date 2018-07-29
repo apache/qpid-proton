@@ -847,6 +847,14 @@ pn_sasl_outcome_t pn_sasl_outcome(pn_sasl_t *sasl0)
 int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
+
+  // If we haven't got an sasl struct yet we've in an error state
+  // This can only happen if our peer sent SASL frames even though he didn't send the SASL header
+  if (!sasl) return PN_ERR;
+
+  // We should only receive this if we are a sasl server
+  if (sasl->client) return PN_ERR;
+
   pn_bytes_t mech;
   pn_bytes_t recv;
   int err = pn_data_scan(args, "D.[sz]", &mech, &recv);
@@ -871,6 +879,13 @@ int pn_do_init(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, 
 int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
   pni_sasl_t *sasl = transport->sasl;
+
+  // If we haven't got an sasl struct yet we've in an error state
+  // This can only happen if our peer sent SASL frames even though we didn't send the SASL header
+  if (!sasl) return PN_ERR;
+
+  // We should only receive this if we are a sasl client
+  if (!sasl->client) return PN_ERR;
 
   // This scanning relies on pn_data_scan leaving the pn_data_t cursors
   // where they are after finishing the scan
@@ -919,6 +934,15 @@ int pn_do_mechanisms(pn_transport_t *transport, uint8_t frame_type, uint16_t cha
 // Received client side
 int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+  pni_sasl_t *sasl = transport->sasl;
+
+  // If we haven't got an sasl struct yet we've in an error state
+  // This can only happen if our peer sent SASL frames even though we didn't send the SASL header
+  if (!sasl) return PN_ERR;
+
+  // We should only receive this if we are a sasl client
+  if (!sasl->client) return PN_ERR;
+
   pn_bytes_t recv;
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
@@ -931,6 +955,15 @@ int pn_do_challenge(pn_transport_t *transport, uint8_t frame_type, uint16_t chan
 // Received server side
 int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+  pni_sasl_t *sasl = transport->sasl;
+
+  // If we haven't got an sasl struct yet we've in an error state
+  // This can only happen if our peer sent SASL frames even though he didn't send the SASL header
+  if (!sasl) return PN_ERR;
+
+  // We should only receive this if we are a sasl server
+  if (sasl->client) return PN_ERR;
+
   pn_bytes_t recv;
   int err = pn_data_scan(args, "D.[z]", &recv);
   if (err) return err;
@@ -943,11 +976,19 @@ int pn_do_response(pn_transport_t *transport, uint8_t frame_type, uint16_t chann
 // Received client side
 int pn_do_outcome(pn_transport_t *transport, uint8_t frame_type, uint16_t channel, pn_data_t *args, const pn_bytes_t *payload)
 {
+  pni_sasl_t *sasl = transport->sasl;
+
+  // If we haven't got an sasl struct yet we've in an error state
+  // This can only happen if our peer sent SASL frames even though we didn't send the SASL header
+  if (!sasl) return PN_ERR;
+
+  // We should only receive this if we are a sasl client
+  if (!sasl->client) return PN_ERR;
+
   uint8_t outcome;
   int err = pn_data_scan(args, "D.[B]", &outcome);
   if (err) return err;
 
-  pni_sasl_t *sasl = transport->sasl;
   sasl->outcome = (pn_sasl_outcome_t) outcome;
   bool authenticated = sasl->outcome==PN_SASL_OK;
   transport->authenticated = authenticated;
