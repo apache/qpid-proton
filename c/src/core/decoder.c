@@ -360,22 +360,31 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
   case PNE_LIST8:
   case PNE_LIST32:
   case PNE_MAP8:
-  case PNE_MAP32:
+  case PNE_MAP32: {
+    size_t min_expected_size = 0;
     switch (code)
     {
     case PNE_ARRAY8:
+      min_expected_size += 1; // Array has a constructor of at least 1 byte
     case PNE_LIST8:
     case PNE_MAP8:
-      if (pn_decoder_remaining(decoder) < 2) return PN_UNDERFLOW;
+      min_expected_size += 1; // All these types have a count
+      if (pn_decoder_remaining(decoder) < min_expected_size+1) return PN_UNDERFLOW;
       size = pn_decoder_readf8(decoder);
+      // size must be at least big enough for count or count+constructor
+      if (size < min_expected_size) return PN_ARG_ERR;
       if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
       count = pn_decoder_readf8(decoder);
       break;
     case PNE_ARRAY32:
+      min_expected_size += 1; // Array has a constructor of at least 1 byte
     case PNE_LIST32:
     case PNE_MAP32:
-      if (pn_decoder_remaining(decoder) < 8) return PN_UNDERFLOW;
+      min_expected_size += 4; // All these types have a count
+      if (pn_decoder_remaining(decoder) < min_expected_size+4) return PN_UNDERFLOW;
       size = pn_decoder_readf32(decoder);
+      // size must be at least big enough for count or count+constructor
+      if (size < min_expected_size) return PN_ARG_ERR;
       if (pn_decoder_remaining(decoder) < size) return PN_UNDERFLOW;
       count = pn_decoder_readf32(decoder);
       break;
@@ -422,7 +431,6 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     default:
       return PN_ARG_ERR;
     }
-
     pn_data_enter(data);
     for (size_t i = 0; i < count; i++)
     {
@@ -432,6 +440,7 @@ static int pni_decoder_decode_value(pn_decoder_t *decoder, pn_data_t *data, uint
     pn_data_exit(data);
 
     return 0;
+  }
   default:
     return pn_error_format(decoder->error, PN_ARG_ERR, "unrecognized typecode: %u", code);
   }
