@@ -265,7 +265,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
       return 0;
     }
     const char *name = (index < grandfields->field_count)
-        ? FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[grandfields->first_field_index+index]
+        ? (const char*)FIELD_STRINGPOOL.STRING0+FIELD_FIELDS[grandfields->first_field_index+index]
         : NULL;
     if (name) {
       err = pn_string_addf(str, "%s=", name);
@@ -285,7 +285,7 @@ int pni_inspect_enter(void *ctx, pn_data_t *data, pni_node_t *node)
     return pn_string_addf(str, "{");
   default:
     if (fields && index == 0) {
-      err = pn_string_addf(str, "%s", FIELD_STRINGPOOL.STRING0+FIELD_NAME[fields->name_index]);
+      err = pn_string_addf(str, "%s", (const char *)FIELD_STRINGPOOL.STRING0+FIELD_NAME[fields->name_index]);
       if (err) return err;
       err = pn_string_addf(str, "(");
       if (err) return err;
