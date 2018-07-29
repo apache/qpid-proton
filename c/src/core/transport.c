@@ -1229,7 +1229,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
                 channel,
                 transport->channel_max
                );
-    return PN_TRANSPORT_ERROR;
+    return PN_ARG_ERR;
   }
 
   pn_session_t *ssn;
@@ -1241,7 +1241,7 @@ int pn_do_begin(pn_transport_t *transport, uint8_t frame_type, uint16_t channel,
                 "begin reply to unknown channel %d.",
                 remote_channel
                );
-      return PN_TRANSPORT_ERROR;
+      return PN_ARG_ERR;
     }
   } else {
     ssn = pn_session(transport->connection);
