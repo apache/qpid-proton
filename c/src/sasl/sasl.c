@@ -541,7 +541,7 @@ static void pn_error_sasl(pn_transport_t* transport, unsigned int layer)
 
 static ssize_t pn_input_read_sasl_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
-  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  bool eos = transport->tail_closed;
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
   switch (protocol) {
   case PNI_PROTOCOL_AMQP_SASL:
@@ -581,7 +581,7 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
 {
   pni_sasl_t *sasl = transport->sasl;
 
-  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  bool eos = transport->tail_closed;
   if (eos) {
     pn_do_error(transport, "amqp:connection:framing-error", "connection aborted");
     pn_set_error_layer(transport);
@@ -591,7 +591,12 @@ static ssize_t pn_input_read_sasl(pn_transport_t* transport, unsigned int layer,
   pni_sasl_start_server_if_needed(transport);
 
   if (!pni_sasl_is_final_input_state(sasl)) {
-    return pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
+    ssize_t n = pn_dispatcher_input(transport, bytes, available, false, &transport->halt);
+    if (n < 0 || transport->close_rcvd) {
+      return PN_EOS;
+    } else {
+      return n;
+    }
   }
 
   if (!pni_sasl_is_final_output_state(sasl)) {

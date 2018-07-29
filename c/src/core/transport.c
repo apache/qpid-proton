@@ -271,7 +271,7 @@ void pn_set_error_layer(pn_transport_t *transport)
 ssize_t pn_io_layer_input_autodetect(pn_transport_t *transport, unsigned int layer, const char *bytes, size_t available)
 {
   const char* error;
-  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  bool eos = transport->tail_closed;
   if (eos && available==0) {
     pn_do_error(transport, "amqp:connection:framing-error", "No valid protocol header found");
     pn_set_error_layer(transport);
@@ -2533,7 +2533,7 @@ static void pn_error_amqp(pn_transport_t* transport, unsigned int layer)
 
 static ssize_t pn_input_read_amqp_header(pn_transport_t* transport, unsigned int layer, const char* bytes, size_t available)
 {
-  bool eos = pn_transport_capacity(transport)==PN_EOS;
+  bool eos = transport->tail_closed;
   pni_protocol_type_t protocol = pni_sniff_header(bytes, available);
   switch (protocol) {
   case PNI_PROTOCOL_AMQP1:
@@ -2575,10 +2575,7 @@ static ssize_t pn_input_read_amqp(pn_transport_t* transport, unsigned int layer,
 
 
   ssize_t n = pn_dispatcher_input(transport, bytes, available, true, &transport->halt);
-  if (n < 0) {
-    //return pn_error_set(transport->error, n, "dispatch error");
-    return PN_EOS;
-  } else if (transport->close_rcvd) {
+  if (n < 0 || transport->close_rcvd) {
     return PN_EOS;
   } else {
     return n;
