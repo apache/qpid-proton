@@ -1659,12 +1659,15 @@ int pn_do_disposition(pn_transport_t *transport, uint8_t frame_type, uint16_t ch
   bool remote_data = (pn_data_next(transport->disp_data) &&
                       pn_data_get_list(transport->disp_data) > 0);
 
-  // TODO: We need to clamp the first & last values here to the actual first and last unsettled
-  // Otherwise we could just be told to process any old sequence.
+  // Do some validation of received first and last values
+  // TODO: We should really also clamp the first value here, but we're not keeping track of the earliest
+  // unsettled delivery sequence no
+  last = sequence_lte(last, deliveries->next) ? last : deliveries->next;
+  first = sequence_lte(first, last) ? first : last;
   for (pn_sequence_t id = first; sequence_lte(id, last); ++id) {
     pn_delivery_t *delivery = pni_delivery_map_get(deliveries, id);
-    pn_disposition_t *remote = &delivery->remote;
     if (delivery) {
+      pn_disposition_t *remote = &delivery->remote;
       if (type_init) remote->type = type;
       if (remote_data) {
         switch (type) {
