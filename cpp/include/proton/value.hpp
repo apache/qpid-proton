@@ -155,11 +155,12 @@ template<class T> void coerce(const value& v, T& x) {
     }
 }
 
-/// Special case for get<null>(), just checks that value contains NULL.
+/// Special case for null, just checks that value contains NULL.
 template<> inline void get<null>(const value& v, null&) {
     assert_type_equal(NULL_TYPE, v.type());
 }
 #if PN_CPP_HAS_NULLPTR
+/// @copybrief get<null>()
 template<> inline void get<decltype(nullptr)>(const value& v, decltype(nullptr)&) {
     assert_type_equal(NULL_TYPE, v.type());
 }

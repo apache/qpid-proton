@@ -43,9 +43,9 @@ class null : private internal::comparable<null> {
     /// Constructed from nullptr literal
     null(decltype(nullptr)) {}
 #endif
-    // null instances are always equal
+    /// null instances are always equal
   friend bool operator==(const null&, const null&) { return true; }
-    // null instances are never unequal
+    /// null instances are never unequal
   friend bool operator<(const null&, const null&) { return false; }
 };
 
