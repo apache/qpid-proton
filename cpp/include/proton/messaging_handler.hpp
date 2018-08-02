@@ -34,6 +34,30 @@ namespace proton {
 ///
 /// Subclass and override the event-handling member functions.
 ///
+/// Event handling functions can always use the objects passed as
+/// arguments.
+///
+/// @note A handler function **must not** use proton objects that are
+/// not accessible via the arguments passed without taking extra
+/// care. For example an on_message() handler called for connection
+/// "A" cannot simply call sender::send() on a proton::sender
+/// belonging to connection "B".
+///
+/// **Thread-safety**: To be safe for both single- and multi-threaded
+/// use, a handler **must not** directly use objects belonging to
+/// another connection. See @ref mt_page and proton::work_queue for
+/// safe ways to communicate. We recommend writing safe handlers to
+/// avoid mysterious failures if the handler is ever used in a
+/// multi-threaded container.
+///
+/// **Single-threaded only**: An application is single-threaded if it
+/// calls container::run() exactly once, and does not make proton
+/// calls from any other thread. In this case a handler can use
+/// objects belonging to another connection, but it must call
+/// connection::wake() on the other connection before returning.  Such
+/// a handler will fail mysteriously if the container is run with
+/// multiple threads.
+///
 /// #### Close and error handling
 ///
 /// There are several objects that have `on_X_close` and `on_X_error`
