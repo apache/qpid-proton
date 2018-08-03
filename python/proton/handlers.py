@@ -24,9 +24,11 @@ import time
 import weakref
 from select import select
 
-from proton import Delivery, Endpoint
-from proton import Message, Handler, ProtonException
-from ._events import dispatch
+from ._delivery import Delivery
+from ._endpoints import Endpoint
+from ._message import Message
+from ._exceptions import ProtonException
+from ._events import Handler, dispatch
 
 log = logging.getLogger("proton")
 

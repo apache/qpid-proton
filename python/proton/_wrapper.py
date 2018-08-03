@@ -17,10 +17,14 @@
 # under the License.
 #
 
+from __future__ import absolute_import
+
 from cproton import pn_incref, pn_decref, \
     pn_py2void, pn_void2py, \
     pn_record_get, pn_record_def, pn_record_set, \
     PN_PYREF
+
+from ._exceptions import ProtonException
 
 
 class EmptyAttrs:
@@ -49,7 +53,6 @@ class Wrapper(object):
                 self.__dict__["_impl"] = impl
                 self.__dict__["_attrs"] = EMPTY_ATTRS
                 self.__dict__["_record"] = None
-                from proton import ProtonException
                 raise ProtonException(
                     "Wrapper failed to create wrapped object. Check for file descriptor or memory exhaustion.")
             init = True

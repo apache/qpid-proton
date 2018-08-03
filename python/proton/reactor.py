@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,25 +16,13 @@ from __future__ import absolute_import
 # specific language governing permissions and limitations
 # under the License.
 #
+
 from __future__ import absolute_import
 
 import os
 import logging
 import traceback
-
-from proton import Connection, Delivery, Described
-from proton import Endpoint, EventType, Handler, Link, Message
-from proton import Session, SSL, SSLDomain, SSLUnavailable, symbol
-from proton import Terminus, Transport, ulong, Url
-from proton.handlers import OutgoingMessageHandler
-
-from proton import generate_uuid
-
-from ._common import isstring, secs2millis, millis2secs, unicode2utf8, utf82unicode
-
-from ._events import EventBase
-from ._reactor_impl import Selectable, WrappedHandler, _chandler
-from ._wrapper import Wrapper, PYCTX
+import uuid
 
 from cproton import PN_MILLIS_MAX, PN_PYREF, PN_ACCEPTED, \
     pn_reactor_stop, pn_selectable_attachments, pn_reactor_quiesced, pn_reactor_acceptor, \
@@ -47,11 +34,27 @@ from cproton import PN_MILLIS_MAX, PN_PYREF, PN_ACCEPTED, \
     pn_reactor_start, pn_reactor_set_connection_host, pn_cast_pn_task, pn_decref, pn_reactor_set_timeout, \
     pn_reactor_mark, pn_reactor_get_handler, pn_reactor_wakeup
 
-from . import _compat
+from ._delivery import  Delivery
+from ._endpoints import Connection, Endpoint, Link, Session, Terminus
+from ._data import Described, symbol, ulong
+from ._message import  Message
+from ._transport import Transport, SSL, SSLDomain, SSLUnavailable
+from ._url import Url
+from ._common import isstring, secs2millis, millis2secs, unicode2utf8, utf82unicode
+from ._events import EventType, EventBase, Handler
+from ._reactor_impl import Selectable, WrappedHandler, _chandler
+from ._wrapper import Wrapper, PYCTX
 
+from .handlers import OutgoingMessageHandler
+
+from . import _compat
 from ._compat import queue
 
 log = logging.getLogger("proton")
+
+
+def generate_uuid():
+    return uuid.uuid4()
 
 
 def _timeout2millis(secs):

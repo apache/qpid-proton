@@ -129,8 +129,3 @@ handler = NullHandler()
 
 log = logging.getLogger("proton")
 log.addHandler(handler)
-
-
-def generate_uuid():
-    import uuid
-    return uuid.uuid4()

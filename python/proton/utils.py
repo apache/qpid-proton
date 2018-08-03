@@ -16,13 +16,23 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import collections, socket, time, threading
 
-from proton import ConnectionException, Delivery, Endpoint, Handler, Link, LinkException, Message
-from proton import ProtonException, Timeout, Url
-from proton.reactor import Container
-from proton.handlers import MessagingHandler, IncomingMessageHandler
+from __future__ import absolute_import
+
+import collections
+import time
+import threading
+
 from cproton import pn_reactor_collector, pn_collector_release
+
+from ._exceptions import ProtonException, ConnectionException, LinkException, Timeout
+from ._delivery import Delivery
+from ._endpoints import Endpoint, Link
+from ._events import Handler
+from ._url import Url
+
+from .reactor import Container
+from .handlers import MessagingHandler, IncomingMessageHandler
 
 
 class BlockingLink(object):
