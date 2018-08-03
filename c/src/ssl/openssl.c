@@ -197,7 +197,7 @@ static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size
   }
 }
 
-// unrecoverable SSL failure occured, notify transport and generate error code.
+// unrecoverable SSL failure occurred, notify transport and generate error code.
 static int ssl_failed(pn_transport_t *transport)
 {
   pni_ssl_t *ssl = transport->ssl;
@@ -1235,6 +1235,7 @@ static int init_ssl_socket(pn_transport_t* transport, pni_ssl_t *ssl)
   ssl->ssl = SSL_new(ssl->domain->ctx);
   if (!ssl->ssl) {
     pn_transport_logf(transport, "SSL socket setup failure." );
+    ssl_log_flush(transport);
     return -1;
   }
 
