@@ -45,8 +45,10 @@ if [ -n $PIP ] && [ -x "$PIP" ]; then
     PATH="$ldir/bin:$PATH"
     echo "PATH=$PATH"
     if [ $VIRTUAL_ENV ]; then
+      pip install -U pip
       pip install -U tox
     else
+      pip install --user -U pip
       pip install --user -U tox
     fi
     RUN_TOX=true
