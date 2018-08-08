@@ -305,7 +305,7 @@ int send_receive_message(test_t *t, const char* tag,
 {
   int errors = t->errors;
   char data[100] = {0};          /* Dummy data to send. */
-  strncpy(data, tag, sizeof(data));
+  strncpy(data, tag, sizeof(data)-1);
   data[99] = 0; /* Ensure terminated as we strcmp this later*/
 
   if (!TEST_CHECK(t, pn_link_credit(src->handler.link))) return 1;
