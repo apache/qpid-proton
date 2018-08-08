@@ -19,7 +19,9 @@
 #
 
 from __future__ import print_function
-from proton import generate_uuid, Message
+
+import uuid
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -37,7 +39,7 @@ class Server(MessagingHandler):
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
-                event.link.source.address = str(generate_uuid())
+                event.link.source.address = str(uuid.uuid4())
                 self.senders[event.link.source.address] = event.link
             elif event.link.remote_target and event.link.remote_target.address:
                 event.link.target.address = event.link.remote_target.address

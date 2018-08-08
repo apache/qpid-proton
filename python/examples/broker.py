@@ -18,8 +18,8 @@
 # under the License.
 #
 
-import collections, optparse
-from proton import Endpoint, generate_uuid
+import collections, optparse, uuid
+from proton import Endpoint
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
@@ -76,7 +76,7 @@ class Broker(MessagingHandler):
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source.dynamic:
-                address = str(generate_uuid())
+                address = str(uuid.uuid4())
                 event.link.source.address = address
                 q = Queue(True)
                 self.queues[address] = q
