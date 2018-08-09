@@ -16,13 +16,15 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
 from __future__ import absolute_import
 
-import sys, os
-from . import common
-from . import engine
+import os
 
 from proton import *
+
+from . import common
+from . import engine
 from .common import pump, Skipped
 
 def _sslCertpath(file):

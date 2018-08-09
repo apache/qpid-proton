@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import absolute_import
+
 from unittest import TestCase
 try:
   from unittest import SkipTest
@@ -27,15 +29,17 @@ except:
     class SkipTest(Exception):
       pass
 
+import sys, os, subprocess
 from random import randint
 from threading import Thread
 from socket import socket, AF_INET, SOCK_STREAM
 from subprocess import Popen,PIPE,STDOUT
-import sys, os, subprocess
+from string import Template
+
 from proton import SASL, SSL
 from proton.reactor import Container
 from proton.handlers import Handshaker, FlowController
-from string import Template
+
 
 def free_tcp_ports(count=1):
   """ return a list of 'count' TCP ports that are free to used (ie. unbound)

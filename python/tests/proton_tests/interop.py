@@ -17,9 +17,13 @@
 # under the License.
 #
 
-from proton import *
-from . import common
+from __future__ import absolute_import
+
 import os
+
+from proton import *
+
+from . import common
 
 
 def find_test_interop_dir():

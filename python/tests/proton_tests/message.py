@@ -17,10 +17,13 @@
 # under the License.
 #
 
-import os
-from . import common
-from proton import *
+from __future__ import absolute_import
+
 from uuid import uuid4
+
+from proton import *
+
+from . import common
 
 class Test(common.Test):
 

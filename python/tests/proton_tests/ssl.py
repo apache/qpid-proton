@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,13 +17,13 @@ from __future__ import absolute_import
 # under the License.
 #
 
+from __future__ import absolute_import
+
 import os
-from . import common
-import random
-import string
-import subprocess
-import sys
+
 from proton import *
+
+from . import common
 from .common import Skipped, pump
 
 

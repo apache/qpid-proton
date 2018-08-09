@@ -16,15 +16,15 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+
 from __future__ import absolute_import
 
 import os, gc
-import sys
-from . import common
 from time import time, sleep
 from proton import *
-from .common import pump, Skipped
 from proton.reactor import Reactor
+from . import common
+from .common import pump, Skipped
 
 
 # older versions of gc do not provide the garbage list

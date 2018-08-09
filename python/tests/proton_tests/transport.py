@@ -17,11 +17,13 @@
 # under the License.
 #
 
-import os
+from __future__ import absolute_import
+
 import sys
-from . import common
+
 from proton import *
 
+from . import common
 
 class Test(common.Test):
   pass

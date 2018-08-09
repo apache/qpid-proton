@@ -20,12 +20,10 @@
 
 # TODO: summarize, test harness preconditions (e.g. broker is alive)
 
-import logging, optparse, os, struct, sys, time, traceback, types, cgi
+import optparse, os, struct, sys, time, traceback, types, cgi
 from fnmatch import fnmatchcase as match
-from getopt import GetoptError
 from logging import getLogger, StreamHandler, Formatter, Filter, \
     WARN, DEBUG, ERROR
-import unittest
 from proton_tests.common import SkipTest
 
 if sys.version_info[0] == 3:

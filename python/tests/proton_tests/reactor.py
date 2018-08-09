@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,12 +17,15 @@ from __future__ import absolute_import
 # under the License.
 #
 
+from __future__ import absolute_import
+
 import time
-import sys
-from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
+
 from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
 from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url
+
+from .common import Test, SkipTest, TestServer, free_tcp_port, ensureCanTestExtendedSASL
 
 class Barf(Exception):
     pass

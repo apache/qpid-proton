@@ -17,21 +17,25 @@
 # under the License.
 #
 
-import os, time, sys
+from __future__ import absolute_import
+
 from threading import Thread, Event
-from unittest import TestCase
-from proton_tests.common import Test, free_tcp_port
-from copy import copy
-from proton import Message, Url, generate_uuid, Array, UNDESCRIBED, Data, symbol, ConnectionException, ProtonException
+from uuid import uuid4
+
+from proton import Message, Url, Array, UNDESCRIBED, Data, symbol, ConnectionException
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton.utils import SyncRequestResponse, BlockingConnection
-from .common import Skipped, ensureCanTestExtendedSASL
+
+from .common import Test, free_tcp_port
+from .common import ensureCanTestExtendedSASL
+
 CONNECTION_PROPERTIES={u'connection': u'properties'}
 OFFERED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("O_one"), symbol("O_two"), symbol("O_three"))
 DESIRED_CAPABILITIES = Array(UNDESCRIBED, Data.SYMBOL, symbol("D_one"), symbol("D_two"), symbol("D_three"))
 ANONYMOUS='ANONYMOUS'
 EXTERNAL='EXTERNAL'
+
 
 class EchoServer(MessagingHandler, Thread):
     """
@@ -57,7 +61,7 @@ class EchoServer(MessagingHandler, Thread):
     def on_link_opening(self, event):
         if event.link.is_sender:
             if event.link.remote_source and event.link.remote_source.dynamic:
-                event.link.source.address = str(generate_uuid())
+                event.link.source.address = str(uuid4())
                 self.senders[event.link.source.address] = event.link
 
     def on_message(self, event):

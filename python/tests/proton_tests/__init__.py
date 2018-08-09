@@ -17,15 +17,17 @@
 # under the License.
 #
 
-import proton_tests.codec
-import proton_tests.engine
-import proton_tests.message
-import proton_tests.handler
-import proton_tests.reactor
-import proton_tests.sasl
-import proton_tests.transport
-import proton_tests.ssl
-import proton_tests.interop
-import proton_tests.soak
-import proton_tests.url
-import proton_tests.utils
+from __future__ import absolute_import
+
+from . import codec
+from . import engine
+from . import message
+from . import handler
+from . import reactor
+from . import sasl
+from . import transport
+from . import ssl
+from . import interop
+from . import soak
+from . import url
+from . import utils

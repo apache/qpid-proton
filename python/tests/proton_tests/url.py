@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,9 +17,11 @@ from __future__ import absolute_import
 # under the License.
 #
 
+from __future__ import absolute_import
+
+from proton import Url
 
 from . import common
-from proton import Url
 
 class UrlTest(common.Test):
     def assertEqual(self, a, b):
