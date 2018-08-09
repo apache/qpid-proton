@@ -54,6 +54,7 @@ __all__ = [
     "Collector",
     "Condition",
     "Connection",
+    "ConnectionException",
     "Data",
     "DataException",
     "Delivery",
