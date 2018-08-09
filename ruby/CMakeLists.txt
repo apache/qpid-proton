@@ -29,6 +29,8 @@ list(APPEND SWIG_MODULE_cproton-ruby_EXTRA_DEPS
     )
 
 set(CMAKE_SWIG_FLAGS "-DUINTPTR_SIZE=${CMAKE_SIZEOF_VOID_P}")
+# Put the generated source in a known place, we need to copy it for the gem.
+set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
