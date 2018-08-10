@@ -530,6 +530,53 @@ static void test_duplicate_link_client(test_t *t) {
   test_connection_drivers_destroy(&client, &server);
 }
 
+/* Settling an incomplete delivery should not cause an error */
+static void test_settle_incomplete_receiver(test_t *t) {
+  /* This test will fail till PROTON-1832 is fully fixed */
+  t->inverted = true;
+
+  /* Set up the link, give credit, start the delivery */
+  test_connection_driver_t client, server;
+  test_connection_driver_init(&client, t, send_client_handler, NULL);
+  test_connection_driver_init(&server, t, delivery_handler, NULL);
+  pn_transport_set_server(server.driver.transport);
+  pn_connection_open(client.driver.connection);
+
+  test_connection_drivers_run(&client, &server);
+  pn_link_t *rcv = server.handler.link;
+  pn_link_t *snd = client.handler.link;
+  char data[100] = {0};          /* Dummy data to send. */
+  char rbuf[sizeof(data)] = {0}; /* Read buffer for incoming data. */
+  pn_link_flow(rcv, 1);
+  pn_delivery(snd, PN_BYTES_LITERAL(1)); /* Prepare to send */
+  test_connection_drivers_run(&client, &server);
+
+  /* Send/receive a frame */
+  TEST_INT_EQUAL(t, sizeof(data), pn_link_send(snd, data, sizeof(data)));
+  test_connection_drivers_run(&client, &server);
+  TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
+  TEST_INT_EQUAL(t, sizeof(data), pn_link_recv(rcv, rbuf, sizeof(data)));
+  test_connection_drivers_run(&client, &server);
+
+  /* Settle the receiver's delivery */
+  pn_delivery_settle(pn_link_current(rcv));
+  test_connection_drivers_run(&client, &server);
+  TEST_COND_EMPTY(t, pn_connection_remote_condition(client.driver.connection));
+  TEST_COND_EMPTY(t, pn_connection_condition(server.driver.connection));
+
+  /* Send/receive a frame, should not cause error */
+  TEST_INT_EQUAL(t, sizeof(data), pn_link_send(snd, data, sizeof(data)));
+  test_connection_drivers_run(&client, &server);
+  TEST_HANDLER_EXPECT_LAST(&server.handler, PN_DELIVERY);
+  TEST_INT_EQUAL(t, sizeof(data), pn_link_recv(rcv, rbuf, sizeof(data)));
+  test_connection_drivers_run(&client, &server);
+  TEST_COND_EMPTY(t, pn_connection_remote_condition(client.driver.connection));
+  TEST_COND_EMPTY(t, pn_connection_condition(server.driver.connection));
+
+  test_connection_driver_destroy(&client);
+  test_connection_driver_destroy(&server);
+}
+
 int main(int argc, char **argv) {
   int failed = 0;
   RUN_ARGV_TEST(failed, t, test_message_transfer(&t));
@@ -539,5 +586,6 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_session_flow_control(&t));
   RUN_ARGV_TEST(failed, t, test_duplicate_link_server(&t));
   RUN_ARGV_TEST(failed, t, test_duplicate_link_client(&t));
+  RUN_ARGV_TEST(failed, t, test_settle_incomplete_receiver(&t));
   return failed;
 }
