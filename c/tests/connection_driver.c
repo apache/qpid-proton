@@ -532,7 +532,7 @@ static void test_duplicate_link_client(test_t *t) {
 
 /* Settling an incomplete delivery should not cause an error */
 static void test_settle_incomplete_receiver(test_t *t) {
-  /* This test will fail till PROTON-1832 is fully fixed */
+  /* Inverted: this test will fail till PROTON-1914 is fixed */
   t->inverted = true;
 
   /* Set up the link, give credit, start the delivery */
