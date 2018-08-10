@@ -44,6 +44,7 @@ typedef struct test_t {
   const char* name;
   int errors;
   uintptr_t data;               /* Test can store some non-error data here */
+  bool inverted;                /* An inverted test prints no output and reports failure if it passes */
 } test_t;
 
 /* Internal, use macros. Print error message and increase the t->errors count.
@@ -52,6 +53,7 @@ typedef struct test_t {
 void test_vlogf_(test_t *t, const char *prefix, const char* expr,
                  const char* file, int line, const char *fmt, va_list ap)
 {
+  if (t->inverted) return;
   fprintf(stderr, "%s:%d", file, line);
   if (prefix && *prefix) fprintf(stderr, ": %s", prefix);
   if (expr && *expr) fprintf(stderr, ": %s", expr);
@@ -186,8 +188,11 @@ bool test_str_equal_(test_t *t, const char* want, const char* got, const char *f
     fflush(stdout);                                                     \
     test_t T = { #EXPR, 0 };                                            \
     (EXPR);                                                             \
-    if (T.errors) {                                                     \
+    if (T.errors && !t.inverted) {                                      \
       fprintf(stderr, "FAIL: %s (%d errors)\n", #EXPR, T.errors);       \
+      ++(FAILED);                                                       \
+    } else if (!T.errors && t.inverted) {                               \
+      fprintf(stderr, "UNEXPECTED PASS: %s", #EXPR);                    \
       ++(FAILED);                                                       \
     }                                                                   \
   } while(0)

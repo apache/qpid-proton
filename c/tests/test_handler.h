@@ -83,19 +83,21 @@ void test_etypes_expect_(test_t *t, pn_event_type_t *etypes, size_t size, const 
   }
   if (i < size || want) {
     test_errorf_(t, NULL, file, line, "event mismatch");
-    fprintf(stderr, "after:");
-    for (size_t j = 0; j < i; ++j) { /* These events matched */
-      fprintf(stderr, " %s", pn_event_type_name(etypes[j]));
+    if (!t->inverted) {
+      fprintf(stderr, "after:");
+      for (size_t j = 0; j < i; ++j) { /* These events matched */
+        fprintf(stderr, " %s", pn_event_type_name(etypes[j]));
+      }
+      fprintf(stderr, "\n want:");
+      for (; want; want = (pn_event_type_t)va_arg(ap, int)) {
+        fprintf(stderr, " %s", pn_event_type_name(want));
+      }
+      fprintf(stderr, "\n  got:");
+      for (; i < size; ++i) {
+        fprintf(stderr, " %s", pn_event_type_name(etypes[i]));
+      }
+      fprintf(stderr, "\n");
     }
-    fprintf(stderr, "\n want:");
-    for (; want; want = (pn_event_type_t)va_arg(ap, int)) {
-      fprintf(stderr, " %s", pn_event_type_name(want));
-    }
-    fprintf(stderr, "\n  got:");
-    for (; i < size; ++i) {
-      fprintf(stderr, " %s", pn_event_type_name(etypes[i]));
-    }
-    fprintf(stderr, "\n");
   }
   va_end(ap);
 }

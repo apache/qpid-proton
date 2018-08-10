@@ -491,11 +491,13 @@ static void test_duplicate_link_server(test_t *t) {
   test_connection_drivers_destroy(&client, &server);
 }
 
-/* Regression test for https://issues.apache.org/jira/browse/PROTON-1832.
+/* Reproducer test for https://issues.apache.org/jira/browse/PROTON-1832.
    Make sure the client does not generate an illegal "attach; attach; detach" sequence
    from a legal "pn_link_open(); pn_link_close(); pn_link_open()" sequence
 */
 static void test_duplicate_link_client(test_t *t) {
+  /* This test will fail till PROTON-1832 is fully fixed */
+  t->inverted = true;
   /* Set up the initial link */
   test_connection_driver_t client, server;
   test_connection_drivers_init(t, &client, open_close_handler, &server, open_close_handler);
@@ -536,8 +538,6 @@ int main(int argc, char **argv) {
   RUN_ARGV_TEST(failed, t, test_message_abort_mixed(&t));
   RUN_ARGV_TEST(failed, t, test_session_flow_control(&t));
   RUN_ARGV_TEST(failed, t, test_duplicate_link_server(&t));
-  fprintf(stderr, "\n==== Following tests are expected to fail ====\n");
-  int ignore = 0;               /* run but don't fail the build */
-  RUN_ARGV_TEST(ignore, t, test_duplicate_link_client(&t));
+  RUN_ARGV_TEST(failed, t, test_duplicate_link_client(&t));
   return failed;
 }
