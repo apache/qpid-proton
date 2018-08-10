@@ -377,6 +377,7 @@ void test_container_mt_stop_empty() {
         if (t.joinable()) {
             t.detach();
         }
+        throw;
     }
 }
 
@@ -399,6 +400,7 @@ void test_container_mt_stop() {
         if (t.joinable()) {
             t.detach();
         }
+        throw;
     }
 }
 
