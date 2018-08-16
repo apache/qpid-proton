@@ -101,7 +101,7 @@ static void pmutex_init(pthread_mutex_t *pm){
   pthread_mutexattr_t attr;
 
   pthread_mutexattr_init(&attr);
-  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
   if (pthread_mutex_init(pm, &attr)) {
     perror("pthread failure");
     abort();

@@ -27,6 +27,11 @@ Windows dependencies
 
 CMake (Linux)
 -------------
+The following are prerequisites for building on Alpine
+
+    # Required dependencies
+    $ apk add gcc g++ make cmake libuuid libressl-dev cyrus-sasl swig python3 python3-dev
+
 
 The following prerequisites are required to do a full build on
 RPM-based systems (RHEL, Fedora, etc.).  If you do not wish to build a
@@ -90,6 +95,10 @@ From the directory where you found this `INSTALL.md` file:
 When make install completes, all installed files are listed in the
 `install_manifest.txt` file. The contents of this file may be used to
 uninstall.
+
+Python distribution
+
+inside build/python, run `python3 setup sdist` and upload the resulting build/python/dist/*.tar.gz to artifactory.
 
 CMake (Windows)
 ---------------
