@@ -302,9 +302,9 @@ cmdclass = {'configure': Configure,
             'build_ext': CheckingBuildExt,
             'sdist': CheckSDist}
 
-setup(name='python-qpid-proton',
+setup(name='python-qpid-proton-libressl',
       version=_PROTON_VERSION_STR + os.environ.get('PROTON_VERSION_SUFFIX', ''),
-      description='An AMQP based messaging library.',
+      description='An AMQP based messaging library with libressl support.',
       author='Apache Qpid',
       author_email='users@qpid.apache.org',
       url='http://qpid.apache.org/proton/',
