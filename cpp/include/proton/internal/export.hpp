@@ -25,7 +25,7 @@
 /// @cond INTERNAL
 
 /// import/export macros
-#if defined(WIN32) && !defined(PN_CPP_DECLARE_STATIC)
+#if defined(_WIN32) && !defined(PN_CPP_DECLARE_STATIC)
   //
   // Import and Export definitions for Windows:
   //
@@ -62,7 +62,7 @@
 #else
 #  if defined(PN_COMPILER_CXX_ATTRIBUTE_DEPRECATED) && PN_COMPILER_CXX_ATTRIBUTE_DEPRECATED
 #    define PN_CPP_DEPRECATED(message) [[deprecated(message)]]
-#  elif defined(WIN32)
+#  elif defined(_WIN32)
 #    define PN_CPP_DEPRECATED(message) __declspec(deprecated(message))
 #  elif (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500
 #    define PN_CPP_DEPRECATED(message) __attribute__((deprecated))

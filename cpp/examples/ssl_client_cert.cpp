@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 
 bool using_OpenSSL() {
     // Current defaults.
-#if defined(WIN32)
+#if defined(_WIN32)
     return false;
 #else
     return true;
