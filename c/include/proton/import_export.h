@@ -33,7 +33,7 @@
   PN_IMPORT         - Import declaration
 */
 
-#if defined(WIN32) && !defined(PROTON_DECLARE_STATIC)
+#if defined(_WIN32) && !defined(PROTON_DECLARE_STATIC)
 /* Import and Export definitions for Windows: */
 #  define PN_EXPORT __declspec(dllexport)
 #  define PN_IMPORT __declspec(dllimport)
@@ -66,7 +66,7 @@
 #endif
 
 #if ! defined(PN_USE_DEPRECATED_API)
-#  if defined(WIN32)
+#  if defined(_WIN32)
 #    define PN_DEPRECATED(message) __declspec(deprecated(message))
 #  elif defined __GNUC__
 #    if (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__) < 40500

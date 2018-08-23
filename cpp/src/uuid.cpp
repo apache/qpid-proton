@@ -27,7 +27,7 @@
 #include <sstream>
 #include <iomanip>
 
-#ifdef WIN32
+#if defined(_WIN32)
 #include <process.h>
 #define GETPID _getpid
 #else
