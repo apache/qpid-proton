@@ -242,7 +242,7 @@ macro(add_cpp_test test)
       "PATH=$<TARGET_FILE_DIR:qpid-proton>"
       $<TARGET_FILE:${test}> ${ARGN})
   else ()
-    add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} ${CMAKE_CURRENT_BINARY_DIR}/${test} ${ARGN})
+    add_test (NAME cpp-${test} COMMAND ${memcheck-cmd} $<TARGET_FILE:${test}> ${ARGN})
   endif ()
 endmacro(add_cpp_test)
 
