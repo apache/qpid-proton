@@ -19,9 +19,7 @@
 
 from __future__ import absolute_import
 
-from cproton import PN_STATUS_SETTLED, PN_DEFAULT_PRIORITY, PN_STATUS_MODIFIED, PN_STATUS_RELEASED, PN_STATUS_ABORTED, \
-    PN_STATUS_REJECTED, PN_STATUS_PENDING, PN_STATUS_UNKNOWN, PN_STATUS_ACCEPTED, \
-    PN_OVERFLOW, \
+from cproton import PN_DEFAULT_PRIORITY, PN_OVERFLOW, \
     pn_message_set_delivery_count, pn_message_set_address, pn_message_properties, \
     pn_message_get_user_id, pn_message_set_content_encoding, pn_message_get_subject, pn_message_get_priority, \
     pn_message_get_content_encoding, pn_message_body, \
@@ -53,25 +51,6 @@ try:
 except NameError:
     unicode = str
 
-
-PENDING = Constant("PENDING")
-ACCEPTED = Constant("ACCEPTED")
-REJECTED = Constant("REJECTED")
-RELEASED = Constant("RELEASED")
-MODIFIED = Constant("MODIFIED")
-ABORTED = Constant("ABORTED")
-SETTLED = Constant("SETTLED")
-
-STATUSES = {
-    PN_STATUS_ABORTED: ABORTED,
-    PN_STATUS_ACCEPTED: ACCEPTED,
-    PN_STATUS_REJECTED: REJECTED,
-    PN_STATUS_RELEASED: RELEASED,
-    PN_STATUS_MODIFIED: MODIFIED,
-    PN_STATUS_PENDING: PENDING,
-    PN_STATUS_SETTLED: SETTLED,
-    PN_STATUS_UNKNOWN: None
-}
 
 
 class Message(object):

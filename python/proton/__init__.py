@@ -42,20 +42,13 @@ from ._endpoints import Endpoint, Connection, Session, Link, Receiver, Sender, T
 from ._events import Collector, Event, EventType, Handler
 from ._exceptions import ProtonException, MessageException, DataException, TransportException, \
     SSLException, SSLUnavailable, ConnectionException, SessionException, LinkException, Timeout, Interrupt
-from ._message import Message, ABORTED, ACCEPTED, PENDING, REJECTED, RELEASED, MODIFIED, SETTLED
+from ._message import Message
 from ._transport import Transport, SASL, SSL, SSLDomain, SSLSessionDetails
 from ._url import Url
 
 __all__ = [
     "API_LANGUAGE",
     "IMPLEMENTATION_LANGUAGE",
-    "ABORTED",
-    "ACCEPTED",
-    "PENDING",
-    "REJECTED",
-    "RELEASED",
-    "MODIFIED",
-    "SETTLED",
     "UNDESCRIBED",
     "Array",
     "Collector",
