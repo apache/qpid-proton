@@ -919,107 +919,6 @@ typedef unsigned long int uintptr_t;
 
 %include "proton/sasl.h"
 
-%contract pn_messenger_name(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
- ensure:
-  pn_messenger_name != NULL;
-}
-
-%contract pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_get_timeout(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_free(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_errno(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_error(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_start(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_stop(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_subscribe(pn_messenger_t *messenger, const char *source)
-{
- require:
-  messenger != NULL;
-  source != NULL;
-}
-
-%contract pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg)
-{
- require:
-  messenger != NULL;
-  msg != NULL;
-}
-
-%contract pn_messenger_send(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_recv(pn_messenger_t *messenger, int n)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_get(pn_messenger_t *messenger, pn_message_t *msg)
-{
- require:
-  messenger != NULL;
-}
-
-%contract pn_messenger_outgoing(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
- ensure:
-  pn_messenger_outgoing >= 0;
-}
-
-%contract pn_messenger_incoming(pn_messenger_t *messenger)
-{
- require:
-  messenger != NULL;
- ensure:
-  pn_messenger_incoming >= 0;
-}
-
-
-%include "proton/messenger.h"
-
 %include "proton/selectable.h"
 
 %include "proton/ssl.h"
@@ -1068,7 +967,6 @@ typedef unsigned long int uintptr_t;
 %include "proton/connection_driver.h"
 
 
-%include "proton/url.h"
 %include "proton/reactor.h"
 %include "proton/handlers.h"
 %include "proton/cid.h"

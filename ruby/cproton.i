@@ -673,3 +673,5 @@ int pn_ssl_get_peer_hostname(pn_ssl_t *ssl, char *OUTPUT, size_t *OUTPUT_SIZE);
 %}
 
 %include "proton/cproton.i"
+
+%include "proton/url.h"
