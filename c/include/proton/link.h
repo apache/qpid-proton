@@ -83,8 +83,6 @@ PN_EXTERN pn_link_t *pn_receiver(pn_session_t *session, const char *name);
 PN_EXTERN void pn_link_free(pn_link_t *link);
 
 /**
- * **Deprecated** - Use ::pn_link_attachments().
- *
  * Get the application context that is associated with a link object.
  *
  * The application context for a link may be set using
@@ -96,8 +94,6 @@ PN_EXTERN void pn_link_free(pn_link_t *link);
 PN_EXTERN void *pn_link_get_context(pn_link_t *link);
 
 /**
- * **Deprecated** - Use ::pn_link_attachments().
- *
  * Set a new application context for a link object.
  *
  * The application context for a link object may be retrieved using

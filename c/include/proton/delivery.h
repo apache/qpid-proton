@@ -68,8 +68,6 @@ PN_EXTERN pn_delivery_tag_t pn_dtag(const char *bytes, size_t size);
 PN_EXTERN pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 
 /**
- * **Deprecated** - Use ::pn_delivery_attachments().
- *
  * Get the application context that is associated with a delivery object.
  *
  * The application context for a delivery may be set using
@@ -81,8 +79,6 @@ PN_EXTERN pn_delivery_t *pn_delivery(pn_link_t *link, pn_delivery_tag_t tag);
 PN_EXTERN void *pn_delivery_get_context(pn_delivery_t *delivery);
 
 /**
- * **Deprecated** - Use ::pn_delivery_attachments().
- *
  * Set a new application context for a delivery object.
  *
  * The application context for a delivery object may be retrieved using

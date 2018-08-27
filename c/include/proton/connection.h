@@ -162,8 +162,6 @@ PN_EXTERN void pn_connection_collect(pn_connection_t *connection, pn_collector_t
 PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 
 /**
- * **Deprecated** - Use ::pn_connection_attachments().
- *
  * Get the application context that is associated with a connection
  * object.
  *
@@ -176,8 +174,6 @@ PN_EXTERN pn_collector_t* pn_connection_collector(pn_connection_t *connection);
 PN_EXTERN void *pn_connection_get_context(pn_connection_t *connection);
 
 /**
- * **Deprecated** - Use ::pn_connection_attachments().
- *
  * Set a new application context for a connection object.
  *
  * The application context for a connection object may be retrieved
