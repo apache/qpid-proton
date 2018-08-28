@@ -107,7 +107,7 @@ class EventType(object):
         return self.name
 
 
-def dispatch(handler, method, *args):
+def _dispatch(handler, method, *args):
     m = getattr(handler, method, None)
     if m:
         return m(*args)
@@ -123,7 +123,7 @@ class EventBase(object):
         self.type = type
 
     def dispatch(self, handler):
-        return dispatch(handler, self.type.method, self)
+        return _dispatch(handler, self.type.method, self)
 
 
 def _none(x): return None
@@ -248,7 +248,7 @@ class Event(Wrapper, EventBase):
         if isinstance(handler, WrappedHandler):
             pn_handler_dispatch(handler._impl, self._impl, type.number)
         else:
-            result = dispatch(handler, type.method, self)
+            result = _dispatch(handler, type.method, self)
             if result != DELEGATED and hasattr(handler, "handlers"):
                 for h in handler.handlers:
                     self.dispatch(h, type)

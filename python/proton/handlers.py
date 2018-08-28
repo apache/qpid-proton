@@ -28,7 +28,7 @@ from ._delivery import Delivery
 from ._endpoints import Endpoint
 from ._message import Message
 from ._exceptions import ProtonException
-from ._events import Handler, dispatch
+from ._events import Handler, _dispatch
 
 log = logging.getLogger("proton")
 
@@ -69,21 +69,21 @@ class OutgoingMessageHandler(Handler):
         therefore be transferred.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_sendable', event)
+            _dispatch(self.delegate, 'on_sendable', event)
 
     def on_accepted(self, event):
         """
         Called when the remote peer accepts an outgoing message.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_accepted', event)
+            _dispatch(self.delegate, 'on_accepted', event)
 
     def on_rejected(self, event):
         """
         Called when the remote peer rejects an outgoing message.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_rejected', event)
+            _dispatch(self.delegate, 'on_rejected', event)
 
     def on_released(self, event):
         """
@@ -92,7 +92,7 @@ class OutgoingMessageHandler(Handler):
         state as defined by the AMQP specification.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_released', event)
+            _dispatch(self.delegate, 'on_released', event)
 
     def on_settled(self, event):
         """
@@ -101,7 +101,7 @@ class OutgoingMessageHandler(Handler):
         retransmitted.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_settled', event)
+            _dispatch(self.delegate, 'on_settled', event)
 
 
 def recv_msg(delivery):
@@ -206,15 +206,15 @@ class IncomingMessageHandler(Handler, Acking):
         obtainable via a property on the event.
         """
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_message', event)
+            _dispatch(self.delegate, 'on_message', event)
 
     def on_settled(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_settled', event)
+            _dispatch(self.delegate, 'on_settled', event)
 
     def on_aborted(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_aborted', event)
+            _dispatch(self.delegate, 'on_aborted', event)
 
 
 class EndpointStateHandler(Handler):
@@ -327,75 +327,75 @@ class EndpointStateHandler(Handler):
 
     def on_connection_opened(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_connection_opened', event)
+            _dispatch(self.delegate, 'on_connection_opened', event)
 
     def on_session_opened(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_session_opened', event)
+            _dispatch(self.delegate, 'on_session_opened', event)
 
     def on_link_opened(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_link_opened', event)
+            _dispatch(self.delegate, 'on_link_opened', event)
 
     def on_connection_opening(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_connection_opening', event)
+            _dispatch(self.delegate, 'on_connection_opening', event)
 
     def on_session_opening(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_session_opening', event)
+            _dispatch(self.delegate, 'on_session_opening', event)
 
     def on_link_opening(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_link_opening', event)
+            _dispatch(self.delegate, 'on_link_opening', event)
 
     def on_connection_error(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_connection_error', event)
+            _dispatch(self.delegate, 'on_connection_error', event)
         else:
             self.log_error(event.connection, "connection")
 
     def on_session_error(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_session_error', event)
+            _dispatch(self.delegate, 'on_session_error', event)
         else:
             self.log_error(event.session, "session")
             event.connection.close()
 
     def on_link_error(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_link_error', event)
+            _dispatch(self.delegate, 'on_link_error', event)
         else:
             self.log_error(event.link, "link")
             event.connection.close()
 
     def on_connection_closed(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_connection_closed', event)
+            _dispatch(self.delegate, 'on_connection_closed', event)
 
     def on_session_closed(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_session_closed', event)
+            _dispatch(self.delegate, 'on_session_closed', event)
 
     def on_link_closed(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_link_closed', event)
+            _dispatch(self.delegate, 'on_link_closed', event)
 
     def on_connection_closing(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_connection_closing', event)
+            _dispatch(self.delegate, 'on_connection_closing', event)
         elif self.peer_close_is_error:
             self.on_connection_error(event)
 
     def on_session_closing(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_session_closing', event)
+            _dispatch(self.delegate, 'on_session_closing', event)
         elif self.peer_close_is_error:
             self.on_session_error(event)
 
     def on_link_closing(self, event):
         if self.delegate is not None:
-            dispatch(self.delegate, 'on_link_closing', event)
+            _dispatch(self.delegate, 'on_link_closing', event)
         elif self.peer_close_is_error:
             self.on_link_error(event)
 
@@ -404,7 +404,7 @@ class EndpointStateHandler(Handler):
 
     def on_transport_closed(self, event):
         if self.delegate is not None and event.connection and self.is_local_open(event.connection):
-            dispatch(self.delegate, 'on_disconnected', event)
+            _dispatch(self.delegate, 'on_disconnected', event)
 
 
 class MessagingHandler(Handler, Acking):
