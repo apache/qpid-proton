@@ -19,6 +19,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include <proton/messenger.h>
 
 #include <proton/connection.h>
@@ -540,10 +542,10 @@ static char *build_name(const char *name)
 
   generated = (char *) malloc(37*sizeof(char));
   sprintf(generated, uuid_fmt,
-	  bytes[0], bytes[1], bytes[2], bytes[3],
-	  bytes[4], bytes[5], bytes[6], bytes[7],
-	  bytes[8], bytes[9], bytes[10], bytes[11],
-	  bytes[12], bytes[13], bytes[14], bytes[15]);
+          bytes[0], bytes[1], bytes[2], bytes[3],
+          bytes[4], bytes[5], bytes[6], bytes[7],
+          bytes[8], bytes[9], bytes[10], bytes[11],
+          bytes[12], bytes[13], bytes[14], bytes[15]);
   return generated;
 }
 
@@ -2437,3 +2439,5 @@ pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
   messenger->ssl_peer_authentication_mode = mode;
   return 0;
 }
+
+#undef PN_USE_DEPRECATED_API

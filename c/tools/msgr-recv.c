@@ -18,6 +18,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include "msgr-common.h"
 #include "proton/message.h"
 #include "proton/messenger.h"
@@ -279,3 +281,5 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
+#undef PN_USE_DEPRECATED_API

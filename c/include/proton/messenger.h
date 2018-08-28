@@ -190,6 +190,7 @@ typedef enum {
  *
  * @return pointer to a new ::pn_messenger_t
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_messenger_t *pn_messenger(const char *name);
 
 /**
@@ -198,6 +199,7 @@ PNX_EXTERN pn_messenger_t *pn_messenger(const char *name);
  * @param[in] messenger a messenger object
  * @return the name of the messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
 
 /**
@@ -209,6 +211,7 @@ PNX_EXTERN const char *pn_messenger_name(pn_messenger_t *messenger);
  * @param[in] certificate a path to a certificate file
  * @return an error code of zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const char *certificate);
 
 /**
@@ -218,6 +221,7 @@ PNX_EXTERN int pn_messenger_set_certificate(pn_messenger_t *messenger, const cha
  * @param[in] messenger the messenger
  * @return the certificate file path
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
 
 /**
@@ -228,6 +232,7 @@ PNX_EXTERN const char *pn_messenger_get_certificate(pn_messenger_t *messenger);
  * @param[in] private_key a path to a private key file
  * @return an error code of zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const char *private_key);
 
 /**
@@ -236,6 +241,7 @@ PNX_EXTERN int pn_messenger_set_private_key(pn_messenger_t *messenger, const cha
  * @param[in] messenger a messenger object
  * @return the messenger's private key file path
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
 
 /**
@@ -246,6 +252,7 @@ PNX_EXTERN const char *pn_messenger_get_private_key(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *password);
 
 /**
@@ -254,6 +261,7 @@ PNX_EXTERN int pn_messenger_set_password(pn_messenger_t *messenger, const char *
  * @param[in] messenger a messenger object
  * @return password for the private key file
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
 
 /**
@@ -267,6 +275,7 @@ PNX_EXTERN const char *pn_messenger_get_password(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, const char *cert_db);
 
 /**
@@ -275,6 +284,7 @@ PNX_EXTERN int pn_messenger_set_trusted_certificates(pn_messenger_t *messenger, 
  * @param[in] messenger a messenger object
  * @return path to the trusted certificates database
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *messenger);
 
 /**
@@ -289,6 +299,7 @@ PNX_EXTERN const char *pn_messenger_get_trusted_certificates(pn_messenger_t *mes
  * @param[in] timeout a new timeout for the messenger, in milliseconds
  * @return an error code or zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
 
 /**
@@ -299,6 +310,7 @@ PNX_EXTERN int pn_messenger_set_timeout(pn_messenger_t *messenger, int timeout);
  * @param[in] messenger a messenger object
  * @return the timeout for the messenger, in milliseconds
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
 
 /**
@@ -307,6 +319,7 @@ PNX_EXTERN int pn_messenger_get_timeout(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return true if blocking has been enabled, false otherwise
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
 
 /**
@@ -317,6 +330,7 @@ PNX_EXTERN bool pn_messenger_is_blocking(pn_messenger_t *messenger);
  * @param[in] blocking the value of the blocking flag
  * @return an error code or zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blocking);
 
 /**
@@ -331,6 +345,7 @@ PNX_EXTERN int pn_messenger_set_blocking(pn_messenger_t *messenger, bool blockin
  * @param[in] messenger a messenger object
  * @return true if the messenger is in passive mode, false otherwise
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
 
 /**
@@ -343,6 +358,7 @@ PNX_EXTERN bool pn_messenger_is_passive(pn_messenger_t *messenger);
  * passive mode
  * @return an error code or zero on success
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive);
 
 /** Frees a Messenger.
@@ -350,6 +366,7 @@ PNX_EXTERN int pn_messenger_set_passive(pn_messenger_t *messenger, bool passive)
  * @param[in] messenger the messenger to free (or NULL), no longer
  *                      valid on return
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
 
 /**
@@ -365,6 +382,7 @@ PNX_EXTERN void pn_messenger_free(pn_messenger_t *messenger);
  * @return an error code or zero if there is no error
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
 
 /**
@@ -378,6 +396,7 @@ PNX_EXTERN int pn_messenger_errno(pn_messenger_t *messenger);
  * @return a pointer to the messenger's error descriptor
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
 
 /**
@@ -395,6 +414,7 @@ PNX_EXTERN pn_error_t *pn_messenger_error(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the outgoing window for the messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
 
 /**
@@ -407,6 +427,7 @@ PNX_EXTERN int pn_messenger_get_outgoing_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int window);
 
 /**
@@ -427,6 +448,7 @@ PNX_EXTERN int pn_messenger_set_outgoing_window(pn_messenger_t *messenger, int w
  * @param[in] messenger a messenger object
  * @return the incoming window for the messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
 
 /**
@@ -439,6 +461,7 @@ PNX_EXTERN int pn_messenger_get_incoming_window(pn_messenger_t *messenger);
  * @return an error or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
                                                int window);
 
@@ -450,6 +473,7 @@ PNX_EXTERN int pn_messenger_set_incoming_window(pn_messenger_t *messenger,
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
 
 /**
@@ -466,6 +490,7 @@ PNX_EXTERN int pn_messenger_start(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
 
 /**
@@ -475,6 +500,7 @@ PNX_EXTERN int pn_messenger_stop(pn_messenger_t *messenger);
  * @param[in] messenger the messenger to stop
  *
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
 
 /**
@@ -484,6 +510,7 @@ PNX_EXTERN bool pn_messenger_stopped(pn_messenger_t *messenger);
  * @param[in] source
  * @return a subscription
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, const char *source);
 
 /**
@@ -496,6 +523,7 @@ PNX_EXTERN pn_subscription_t *pn_messenger_subscribe(pn_messenger_t *messenger, 
  *            link is closed.
  * @return a subscription
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_subscription_t *
 pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
                            pn_seconds_t timeout);
@@ -509,6 +537,7 @@ pn_messenger_subscribe_ttl(pn_messenger_t *messenger, const char *source,
  *            receiver
  * @return a link, or NULL if no link matches the address / sender parameters
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
                                            const char *address, bool sender);
 
@@ -520,6 +549,7 @@ PNX_EXTERN pn_link_t *pn_messenger_get_link(pn_messenger_t *messenger,
  * @param[in] sub a subscription object
  * @return the subscription's application context
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
 
 /**
@@ -528,6 +558,7 @@ PNX_EXTERN void *pn_subscription_get_context(pn_subscription_t *sub);
  * @param[in] sub a subscription object
  * @param[in] context the application context for the subscription
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *context);
 
 /**
@@ -536,6 +567,7 @@ PNX_EXTERN void pn_subscription_set_context(pn_subscription_t *sub, void *contex
  * @param[in] sub a subscription object
  * @return the subscription's source address
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
 
 /**
@@ -548,6 +580,7 @@ PNX_EXTERN const char *pn_subscription_address(pn_subscription_t *sub);
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
 
 /**
@@ -561,6 +594,7 @@ PNX_EXTERN int pn_messenger_put(pn_messenger_t *messenger, pn_message_t *msg);
  * @param[in] tracker the tracker identifying the delivery
  * @return a status code for the delivery
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker_t tracker);
 
 /**
@@ -574,6 +608,7 @@ PNX_EXTERN pn_status_t pn_messenger_status(pn_messenger_t *messenger, pn_tracker
  * @param[in] tracker the tracker identifying the delivery
  * @return a pn_delivery_t representing the delivery.
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
                                                pn_tracker_t tracker);
 
@@ -589,6 +624,7 @@ PNX_EXTERN pn_delivery_t *pn_messenger_delivery(pn_messenger_t *messenger,
  *
  * @return true if the delivery is still buffered
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tracker);
 
 /**
@@ -603,6 +639,7 @@ PNX_EXTERN bool pn_messenger_buffered(pn_messenger_t *messenger, pn_tracker_t tr
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
@@ -618,6 +655,7 @@ PNX_EXTERN int pn_messenger_settle(pn_messenger_t *messenger, pn_tracker_t track
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger);
 
 /**
@@ -630,6 +668,7 @@ PNX_EXTERN pn_tracker_t pn_messenger_outgoing_tracker(pn_messenger_t *messenger)
  *
  * @return 0 if no work to do, < 0 if error, or 1 if work was done.
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
 
 /**
@@ -643,6 +682,7 @@ PNX_EXTERN int pn_messenger_work(pn_messenger_t *messenger, int timeout);
  *
  * @param[in] messenger the Messenger to interrupt
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
 
 /**
@@ -677,6 +717,7 @@ PNX_EXTERN int pn_messenger_interrupt(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
 
 /**
@@ -703,6 +744,7 @@ PNX_EXTERN int pn_messenger_send(pn_messenger_t *messenger, int n);
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
 
 /**
@@ -715,6 +757,7 @@ PNX_EXTERN int pn_messenger_recv(pn_messenger_t *messenger, int limit);
  *
  * @param[in] messenger the messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
 
 /**
@@ -731,6 +774,7 @@ PNX_EXTERN int pn_messenger_receiving(pn_messenger_t *messenger);
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message);
 
 /**
@@ -746,6 +790,7 @@ PNX_EXTERN int pn_messenger_get(pn_messenger_t *messenger, pn_message_t *message
  * @return a pn_tracker_t or an undefined value if pn_messenger_get
  *         has never been called for the given messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger);
 
 /**
@@ -757,6 +802,7 @@ PNX_EXTERN pn_tracker_t pn_messenger_incoming_tracker(pn_messenger_t *messenger)
  * @param[in] messenger a messenger object
  * @return a pn_subscription_t or NULL
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t *messenger);
 
 /**
@@ -785,6 +831,7 @@ PNX_EXTERN pn_subscription_t *pn_messenger_incoming_subscription(pn_messenger_t 
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
@@ -808,6 +855,7 @@ PNX_EXTERN int pn_messenger_accept(pn_messenger_t *messenger, pn_tracker_t track
  * @return an error code or zero on success
  * @see error.h
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t tracker, int flags);
 
 /**
@@ -817,6 +865,7 @@ PNX_EXTERN int pn_messenger_reject(pn_messenger_t *messenger, pn_tracker_t track
  * @param[in] tracker a tracker object
  * @return a pn_link_t or NULL if the link could not be determined.
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
                                                pn_tracker_t tracker);
 
@@ -827,6 +876,7 @@ PNX_EXTERN pn_link_t *pn_messenger_tracker_link(pn_messenger_t *messenger,
  * @param[in] messenger a messenger object
  * @return the outgoing queue depth
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
 
 /**
@@ -835,6 +885,7 @@ PNX_EXTERN int pn_messenger_outgoing(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the incoming queue depth
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 
 //! Adds a routing rule to a Messenger's internal routing table.
@@ -899,6 +950,7 @@ PNX_EXTERN int pn_messenger_incoming(pn_messenger_t *messenger);
 //!
 //! @return an error code or zero on success
 //! @see error.h
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern,
                                  const char *address);
 
@@ -924,6 +976,7 @@ PNX_EXTERN int pn_messenger_route(pn_messenger_t *messenger, const char *pattern
  * @param[in] address an address indicating outgoing address rewrite
  * @return an error code or zero on success
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *pattern,
                                    const char *address);
 
@@ -953,6 +1006,7 @@ PNX_EXTERN int pn_messenger_rewrite(pn_messenger_t *messenger, const char *patte
  * @param[in] messenger a messenger object
  * @return the next selectable, or NULL if there are none left
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
 
 /**
@@ -961,6 +1015,7 @@ PNX_EXTERN pn_selectable_t *pn_messenger_selectable(pn_messenger_t *messenger);
  * @param[in] messenger a messenger object
  * @return the nearest deadline
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
 
 #define PN_FLAGS_CHECK_ROUTES                                                   \
@@ -981,6 +1036,7 @@ PNX_EXTERN pn_timestamp_t pn_messenger_deadline(pn_messenger_t *messenger);
  *
  * @return an error code of zero if there is no error
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
                                      const int flags);
 
@@ -990,6 +1046,7 @@ PNX_EXTERN int pn_messenger_set_flags(pn_messenger_t *messenger,
  * @param[in] messenger the messenger
  * @return The flags set for the messenger
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
 
 /**
@@ -998,6 +1055,7 @@ PNX_EXTERN int pn_messenger_get_flags(pn_messenger_t *messenger);
  * @param[in] messenger the messenger
  * @param[in] mode the sender settle mode
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
                                                const pn_snd_settle_mode_t mode);
 
@@ -1007,6 +1065,7 @@ PNX_EXTERN int pn_messenger_set_snd_settle_mode(pn_messenger_t *messenger,
  * @param[in] messenger the messenger
  * @param[in] mode the receiver settle mode
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
                                                const pn_rcv_settle_mode_t mode);
 
@@ -1016,6 +1075,7 @@ PNX_EXTERN int pn_messenger_set_rcv_settle_mode(pn_messenger_t *messenger,
  * @param[in] messenger a messenger object
  * @param[in] tracer the tracer callback
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
                                        pn_tracer_t tracer);
 
@@ -1026,6 +1086,7 @@ PNX_EXTERN void pn_messenger_set_tracer(pn_messenger_t *messenger,
  * @param[in] address of remote service whose idle timeout is required
  * @return the timeout in milliseconds or -1 if an error occurs
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN pn_millis_t
     pn_messenger_get_remote_idle_timeout(pn_messenger_t *messenger,
                                          const char *address);
@@ -1039,6 +1100,7 @@ PNX_EXTERN pn_millis_t
  *             enum for valid values)
  * @return 0 if successful or -1 if an error occurs
  */
+PN_DEPRECATED("use the Proactor API or Qpid Proton C++")
 PNX_EXTERN int
 pn_messenger_set_ssl_peer_authentication_mode(pn_messenger_t *messenger,
                                               const pn_ssl_verify_mode_t mode);
