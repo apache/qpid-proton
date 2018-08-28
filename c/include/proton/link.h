@@ -145,7 +145,7 @@ PN_EXTERN bool pn_link_is_receiver(pn_link_t *link);
 PN_EXTERN pn_state_t pn_link_state(pn_link_t *link);
 
 /**
- * **Deprecated**
+ * **Deprecated** - Use ::pn_link_condition().
  *
  * Get additional error information associated with the link.
  *
@@ -160,6 +160,7 @@ PN_EXTERN pn_state_t pn_link_state(pn_link_t *link);
  * @param[in] link the link object
  * @return the link's error object
  */
+/* PN_DEPRECATED("Use pn_link_condition") */
 PN_EXTERN pn_error_t *pn_link_error(pn_link_t *link);
 
 /**

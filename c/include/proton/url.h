@@ -43,7 +43,7 @@ typedef struct pn_url_t pn_url_t;
 /**
  * Create an empty URL
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN pn_url_t *pn_url(void);
 
 /**
@@ -64,19 +64,19 @@ PNX_EXTERN pn_url_t *pn_url(void);
  * @param[in] url A URL string.
  * @return The parsed pn_url_t or NULL if url is not a valid URL string.
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN pn_url_t *pn_url_parse(const char *url);
 
 /**
  * Free a URL
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_free(pn_url_t *url);
 
 /**
  * Clear the contents of the URL.
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_clear(pn_url_t *url);
 
 /**
@@ -85,7 +85,7 @@ PNX_EXTERN void pn_url_clear(pn_url_t *url);
  * The returned string is owned by the pn_url_t and will become
  * invalid if it is modified.
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_str(pn_url_t *url);
 
 /**
@@ -95,17 +95,17 @@ PNX_EXTERN const char *pn_url_str(pn_url_t *url);
  *
  * @{
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_scheme(pn_url_t *url);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_username(pn_url_t *url);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_password(pn_url_t *url);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_host(pn_url_t *url);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_port(pn_url_t *url);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN const char *pn_url_get_path(pn_url_t *url);
 /**
  * @}
@@ -119,17 +119,17 @@ PNX_EXTERN const char *pn_url_get_path(pn_url_t *url);
  *
  * @{
  */
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_scheme(pn_url_t *url, const char *scheme);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_username(pn_url_t *url, const char *username);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_password(pn_url_t *url, const char *password);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_host(pn_url_t *url, const char *host);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_port(pn_url_t *url, const char *port);
-PN_DEPRECATED("use a third-party URL library")
+PN_DEPRECATED("Use a third-party URL library")
 PNX_EXTERN void pn_url_set_path(pn_url_t *url, const char *path);
 /**
  * @}

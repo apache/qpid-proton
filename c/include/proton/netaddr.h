@@ -108,19 +108,19 @@ PNP_EXTERN int pn_netaddr_host_port(const pn_netaddr_t* na, char *host, size_t h
 /**
  * **Deprecated** - Use ::pn_transport_local_addr()
  */
-PN_DEPRECATED("use pn_transport_local_addr")
+PN_DEPRECATED("Use pn_transport_local_addr")
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_local(pn_transport_t *t);
 
 /**
  * **Deprecated** - Use ::pn_transport_remote_addr()
  */
-PN_DEPRECATED("use pn_transport_remote_addr()")
+PN_DEPRECATED("Use pn_transport_remote_addr")
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_remote(pn_transport_t *t);
 
 /**
  * **Deprecated** - Use ::pn_listener_addr()
  */
-PN_DEPRECATED("use pn_listener_addr()")
+PN_DEPRECATED("Use pn_listener_addr")
 PNP_EXTERN const pn_netaddr_t *pn_netaddr_listening(pn_listener_t *l);
 
 /**

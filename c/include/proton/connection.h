@@ -118,7 +118,7 @@ PN_EXTERN void pn_connection_free(pn_connection_t *connection);
 PN_EXTERN void pn_connection_release(pn_connection_t *connection);
 
 /**
- * **Deprecated**
+ * **Deprecated** - Use ::pn_connection_condition().
  *
  * Get additional error information associated with the connection.
  *
@@ -133,6 +133,7 @@ PN_EXTERN void pn_connection_release(pn_connection_t *connection);
  * @param[in] connection the connection object
  * @return the connection's error object
  */
+/* PN_DEPRECATED("Use pn_connection_condition") */
 PN_EXTERN pn_error_t *pn_connection_error(pn_connection_t *connection);
 
 /**
