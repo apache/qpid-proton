@@ -91,11 +91,12 @@ PN_EXTERN pn_sasl_t *pn_sasl(pn_transport_t *transport);
 PN_EXTERN bool pn_sasl_extended(void);
 
 /**
+ * **Deprecated** - Do not use.  There is no correct way to use this
+ * API.
+ *
  * Set the outcome of SASL negotiation
  *
  * Used by the server to set the result of the negotiation process.
- *
- * @deprecated Do not use - there is no correct way to use this API
  */
 PN_EXTERN void pn_sasl_done(pn_sasl_t *sasl, pn_sasl_outcome_t outcome);
 

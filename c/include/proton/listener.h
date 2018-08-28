@@ -77,7 +77,7 @@ PNP_EXTERN void pn_listener_free(pn_listener_t *l);
 PNP_EXTERN void pn_listener_accept2(pn_listener_t *listener, pn_connection_t *connection, pn_transport_t *transport);
 
 /**
- * @deprecated Use pn_listener_accept2(listener, connection, NULL)
+ * **Deprecated** - Use ::pn_listener_accept2().
  */
 PNP_EXTERN void pn_listener_accept(pn_listener_t* listener, pn_connection_t *connection);
 
@@ -87,16 +87,26 @@ PNP_EXTERN void pn_listener_accept(pn_listener_t* listener, pn_connection_t *con
 PNP_EXTERN pn_condition_t *pn_listener_condition(pn_listener_t *l);
 
 /**
- * @cond INTERNAL
+ * Get the application context associated with this listener object.
+ *
+ * The application context for a connection may be set using
+ * ::pn_listener_set_context.
+ *
+ * @param[in] listener the listener whose context is to be returned.
+ * @return the application context for the listener object
  */
-
 PNP_EXTERN void *pn_listener_get_context(pn_listener_t *listener);
 
-PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
-
 /**
- * @endcond
+ * Set a new application context for a listener object.
+ *
+ * The application context for a listener object may be retrieved
+ * using ::pn_listener_get_context.
+ *
+ * @param[in] listener the listener object
+ * @param[in] context the application context
  */
+PNP_EXTERN void pn_listener_set_context(pn_listener_t *listener, void *context);
 
 /**
  * Get the attachments that are associated with a listener object.

@@ -24,17 +24,16 @@
 
 /**
  * @cond INTERNAL
+ *
+ * Compiler specific mechanisms for managing the import and export of
+ * symbols between shared objects.
+ *
+ * PN_EXPORT         - Export declaration
+ * PN_IMPORT         - Import declaration
  */
 
-/*
-  Compiler specific mechanisms for managing the import and export of
-  symbols between shared objects. 
-  PN_EXPORT         - Export declaration 
-  PN_IMPORT         - Import declaration
-*/
-
 #if defined(_WIN32) && !defined(PROTON_DECLARE_STATIC)
-/* Import and Export definitions for Windows: */
+/* Import and Export definitions for Windows */
 #  define PN_EXPORT __declspec(dllexport)
 #  define PN_IMPORT __declspec(dllimport)
 #else
@@ -42,7 +41,6 @@
 #  define PN_EXPORT __attribute ((visibility ("default")))
 #  define PN_IMPORT
 #endif
-
 
 /* For core proton library symbols */
 #if defined(qpid_proton_core_EXPORTS) || defined(qpid_proton_EXPORTS)
@@ -79,6 +77,7 @@
 #ifndef PN_DEPRECATED
 #  define  PN_DEPRECATED(message)
 #endif
+
 /**
  * @endcond
  */
