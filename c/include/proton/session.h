@@ -121,7 +121,7 @@ PN_EXTERN pn_state_t pn_session_state(pn_session_t *session);
  * @param[in] session the session object
  * @return the session's error object
  */
-PN_DEPRECATED("Use pn_session_condition")
+/* PN_DEPRECATED("Use pn_session_condition") */
 PN_EXTERN pn_error_t *pn_session_error(pn_session_t *session);
 
 /**
