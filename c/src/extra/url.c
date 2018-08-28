@@ -19,6 +19,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include "core/util.h"
 #include "proton/url.h"
 #include "proton/object.h"
@@ -267,4 +269,4 @@ void pn_url_set_host(pn_url_t *url, const char *host) { SET(host); }
 void pn_url_set_port(pn_url_t *url, const char *port) { SET(port); }
 void pn_url_set_path(pn_url_t *url, const char *path) { SET(path); }
 
-
+#undef PN_USE_DEPRECATED_API

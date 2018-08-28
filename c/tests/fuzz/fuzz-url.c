@@ -19,6 +19,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,3 +43,5 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   free(str);
   return 0;
 }
+
+#undef PN_USE_DEPRECATED_API

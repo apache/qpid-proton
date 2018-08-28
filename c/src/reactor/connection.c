@@ -19,6 +19,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include <proton/connection.h>
 #include <proton/object.h>
 #include <proton/sasl.h>
@@ -368,3 +370,5 @@ const char *pn_reactor_get_connection_address(pn_reactor_t *reactor,
     }
     return NULL;
 }
+
+#undef PN_USE_DEPRECATED_API

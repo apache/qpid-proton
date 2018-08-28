@@ -19,6 +19,8 @@
  *
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,3 +123,5 @@ int main(int argc, char **argv)
   TEST(testrt("://:@://:", "", "", "", 0, "", "/:"));
   return failed;
 }
+
+#undef PN_USE_DEPRECATED_API

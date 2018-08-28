@@ -22,6 +22,8 @@
  * Implements a subset of msgr-recv.c using reactor events.
  */
 
+#define PN_USE_DEPRECATED_API 1
+
 #include "proton/message.h"
 #include "proton/error.h"
 #include "proton/types.h"
@@ -449,3 +451,5 @@ int main(int argc, char** argv)
   addresses_free( &opts.subscriptions );
   return 0;
 }
+
+#undef PN_USE_DEPRECATED_API
