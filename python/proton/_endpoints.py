@@ -97,9 +97,9 @@ class Endpoint(object):
         assert False, "Subclass must override this!"
 
     def _get_handler(self):
-        from . import reactor
+        from . import _reactor
         from . import _reactor_impl
-        ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+        ractor = _reactor.Reactor.wrap(pn_object_reactor(self._impl))
         if ractor:
             on_error = ractor.on_error_delegate()
         else:
@@ -108,9 +108,9 @@ class Endpoint(object):
         return _reactor_impl.WrappedHandler.wrap(pn_record_get_handler(record), on_error)
 
     def _set_handler(self, handler):
-        from . import reactor
+        from . import _reactor
         from . import _reactor_impl
-        ractor = reactor.Reactor.wrap(pn_object_reactor(self._impl))
+        ractor = _reactor.Reactor.wrap(pn_object_reactor(self._impl))
         if ractor:
             on_error = ractor.on_error_delegate()
         else:
