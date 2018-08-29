@@ -81,7 +81,10 @@ set (pysrc
     proton/reactor.py
     proton/utils.py
 
+    proton/_handlers.py
+    proton/_reactor.py
     proton/_reactor_impl.py
+    proton/_utils.py
     )
 # extra files included in the source distribution
 set(py_dist_files
