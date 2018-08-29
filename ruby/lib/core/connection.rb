@@ -113,8 +113,8 @@ module Qpid::Proton
     # @option opts [Integer] :max_frame_size Limit the size of AMQP frames
     #
     # @option opts [Boolean] :sasl_enabled (false) Enable or disable SASL.
-    # @option opts [Boolean] :sasl_allow_insecure_mechs (false) Allow mechanisms send secrets in clear text
-    # @option opts [String] :sasl_allowed_mechs SASL mechanisms allowed by this end of the connection
+    # @option opts [Boolean] :sasl_allow_insecure_mechs (false) Allow mechanisms that send secrets in cleartext
+    # @option opts [String] :sasl_allowed_mechs Specify the SASL mechanisms allowed for this connection.  The value is a space-separated list of mechanism names. The mechanisms allowed by default are determined by your SASL library and system configuration, with two exceptions: GSSAPI and GSS-SPNEGO are disabled by default.  To enable them, you must explicitly add them using this option. Clients must set the allowed mechanisms before the the outgoing connection is attempted.  Servers must set them before the listening connection is setup.
     #
     # @option opts [SSLDomain] :ssl_domain SSL configuration domain.
     #

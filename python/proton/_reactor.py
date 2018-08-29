@@ -781,15 +781,22 @@ class Container(Reactor):
         or its child links
 
         @param kwargs: 'sasl_enabled', which determines whether a sasl
-        layer is used for the connection; 'allowed_mechs', an optional
-        string containing a space-separated list of SASL mechanisms to
-        allow if sasl is enabled; 'allow_insecure_mechs', a flag
-        indicating whether insecure mechanisms, such as PLAIN over a
-        non-encrypted socket, are allowed; 'virtual_host', the
+        layer is used for the connection. 'allowed_mechs', an optional
+        string specifying the SASL mechanisms allowed for this
+        connection; the value is a space-separated list of mechanism
+        names; the mechanisms allowed by default are determined by
+        your SASL library and system configuration, with two
+        exceptions: GSSAPI and GSS-SPNEGO are disabled by default; to
+        enable them, you must explicitly add them using this option;
+        clients must set the allowed mechanisms before the the
+        outgoing connection is attempted; servers must set them before
+        the listening connection is setup.  'allow_insecure_mechs', a
+        flag indicating whether insecure mechanisms, such as PLAIN
+        over a non-encrypted socket, are allowed. 'virtual_host', the
         hostname to set in the Open performative used by peer to
-        determine the correct back-end service for the client. If
+        determine the correct back-end service for the client; if
         'virtual_host' is not supplied the host field from the URL is
-        used instead; 'user', the user to authenticate; 'password',
+        used instead. 'user', the user to authenticate. 'password',
         the authentication secret.
 
         """

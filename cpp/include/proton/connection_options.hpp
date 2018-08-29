@@ -143,7 +143,17 @@ class connection_options {
     /// are disabled.
     PN_CPP_EXTERN connection_options& sasl_allow_insecure_mechs(bool);
 
-    /// Specify the allowed mechanisms for use on the connection.
+    /// Specify the SASL mechanisms allowed for this connection.
+    /// The value is a space-separated list of mechanism names.
+    ///
+    /// The mechanisms allowed by default are determined by your SASL
+    /// library and system configuration, with two exceptions: GSSAPI
+    /// and GSS-SPNEGO are disabled by default.  To enable them, you
+    /// must explicitly add them using this option.
+    ///
+    /// Clients must set the allowed mechanisms before the the
+    /// outgoing connection is attempted.  Servers must set them
+    /// before the listening connection is setup.
     PN_CPP_EXTERN connection_options& sasl_allowed_mechs(const std::string&);
 
     /// **Unsettled API** - Extension capabilities offered to the remote peer.
