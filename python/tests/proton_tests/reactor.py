@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 import time
 
-from proton.reactor import Container, Reactor, ApplicationEvent, EventInjector
+from proton.reactor import Container, ApplicationEvent, EventInjector
 from proton.handlers import Handshaker, MessagingHandler
 from proton import Handler, Url
 
@@ -70,123 +70,123 @@ class BarfOnFinalDerived(Handshaker):
 class ExceptionTest(Test):
 
     def setUp(self):
-        self.reactor = Reactor()
+        self.container = Container()
 
     def test_reactor_final(self):
-        self.reactor.global_handler = BarfOnFinal()
+        self.container.global_handler = BarfOnFinal()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_global_set(self):
-        self.reactor.global_handler = BarfOnInit()
+        self.container.global_handler = BarfOnInit()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_global_add(self):
-        self.reactor.global_handler.add(BarfOnInit())
+        self.container.global_handler.add(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_reactor_set(self):
-        self.reactor.handler = BarfOnInit()
+        self.container.handler = BarfOnInit()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_reactor_add(self):
-        self.reactor.handler.add(BarfOnInit())
+        self.container.handler.add(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_connection(self):
-        self.reactor.connection(BarfOnInit())
+        self.container.connection(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_connection_set(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         c.handler = BarfOnInit()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_connection_add(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         c.handler = object()
         c.handler.add(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_session_set(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         s = c.session()
         s.handler = BarfOnInit()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_session_add(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         s = c.session()
         s.handler = object()
         s.handler.add(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_link_set(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         s = c.session()
         l = s.sender("xxx")
         l.handler = BarfOnInit()
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_link_add(self):
-        c = self.reactor.connection()
+        c = self.container.connection()
         s = c.session()
         l = s.sender("xxx")
         l.handler = object()
         l.handler.add(BarfOnInit())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
 
     def test_schedule(self):
-        self.reactor.schedule(0, BarfOnTask())
+        self.container.schedule(0, BarfOnTask())
         try:
-            self.reactor.run()
+            self.container.run()
             assert False, "expected to barf"
         except Barf:
             pass
@@ -198,8 +198,8 @@ class ExceptionTest(Test):
                 self.results.append(None)
         num = 12345
         for a in range(num):
-            self.reactor.schedule(0, Nothing())
-        self.reactor.run()
+            self.container.schedule(0, Nothing())
+        self.container.run()
         assert len(Nothing.results) == num
 
     def test_schedule_many_nothing_refs(self):
@@ -210,8 +210,8 @@ class ExceptionTest(Test):
         num = 12345
         tasks = []
         for a in range(num):
-            tasks.append(self.reactor.schedule(0, Nothing()))
-        self.reactor.run()
+            tasks.append(self.container.schedule(0, Nothing()))
+        self.container.run()
         assert len(Nothing.results) == num
 
     def test_schedule_many_nothing_refs_cancel_before_run(self):
@@ -222,25 +222,25 @@ class ExceptionTest(Test):
         num = 12345
         tasks = []
         for a in range(num):
-            tasks.append(self.reactor.schedule(0, Nothing()))
+            tasks.append(self.container.schedule(0, Nothing()))
         for task in tasks:
             task.cancel()
-        self.reactor.run()
+        self.container.run()
         assert len(Nothing.results) == 0
 
     def test_schedule_cancel(self):
-        barf = self.reactor.schedule(10, BarfOnTask())
+        barf = self.container.schedule(10, BarfOnTask())
         class CancelBarf:
             def __init__(self, barf):
                 self.barf = barf
             def on_timer_task(self, event):
                 self.barf.cancel()
                 pass
-        self.reactor.schedule(0, CancelBarf(barf))
-        now = self.reactor.mark()
+        self.container.schedule(0, CancelBarf(barf))
+        now = self.container.mark()
         try:
-            self.reactor.run()
-            elapsed = self.reactor.mark() - now
+            self.container.run()
+            elapsed = self.container.mark() - now
             assert elapsed < 10, "expected cancelled task to not delay the reactor by %s" % elapsed
         except Barf:
             assert False, "expected barf to be cancelled"
@@ -249,7 +249,7 @@ class ExceptionTest(Test):
         num = 12345
         barfs = set()
         for a in range(num):
-            barf = self.reactor.schedule(10*(a+1), BarfOnTask())
+            barf = self.container.schedule(10 * (a + 1), BarfOnTask())
             class CancelBarf:
                 def __init__(self, barf):
                     self.barf = barf
@@ -257,12 +257,12 @@ class ExceptionTest(Test):
                     self.barf.cancel()
                     barfs.discard(self.barf)
                     pass
-            self.reactor.schedule(0, CancelBarf(barf))
+            self.container.schedule(0, CancelBarf(barf))
             barfs.add(barf)
-        now = self.reactor.mark()
+        now = self.container.mark()
         try:
-            self.reactor.run()
-            elapsed = self.reactor.mark() - now
+            self.container.run()
+            elapsed = self.container.mark() - now
             assert elapsed < num, "expected cancelled task to not delay the reactor by %s" % elapsed
             assert not barfs, "expected all barfs to be discarded"
         except Barf:

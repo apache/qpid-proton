@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import os, gc
 from time import time, sleep
 from proton import *
-from proton.reactor import Reactor
+from proton.reactor import Container
 from . import common
 from .common import pump, Skipped
 
@@ -2046,7 +2046,7 @@ class ServerTest(Test):
         assert self.conn.transport.frames_input > self.old_count, "No idle frames received"
         self.conn.close()
 
-    Reactor(Program()).run()
+    Container(Program()).run()
     server.stop()
 
   def testIdleTimeout(self):
@@ -2092,7 +2092,7 @@ class ServerTest(Test):
         sleep(suspend_time)
 
     p = Program()
-    Reactor(p).run()
+    Container(p).run()
     assert p.remote_condition
     assert p.remote_condition.name == "amqp:resource-limit-exceeded"
     server.stop()

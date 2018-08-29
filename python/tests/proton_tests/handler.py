@@ -22,7 +22,7 @@ from __future__ import absolute_import
 import os, gc, traceback
 
 from proton import *
-from proton.reactor import Reactor
+from proton.reactor import Container
 
 from . import common
 
@@ -45,13 +45,13 @@ class HandlerTest(common.Test):
         return d
     custom = CustomHandler()
 
-    reactor = Reactor()
-    reactor.handler = custom
+    container = Container()
+    container.handler = custom
     for i in range(n):
-      h = reactor.handler
-      reactor.handler = h
+      h = container.handler
+      container.handler = h
     custom.reset()
-    reactor.run()
+    container.run()
     assert custom.init_depth < 50, "Unexpectedly long traceback for a simple handler"
 
   def test_reactorHandlerCycling10k(self):
@@ -81,10 +81,10 @@ class HandlerTest(common.Test):
     child = CustomInvoker()
     root = CustomHandler(child)
 
-    reactor = Reactor()
+    container = Container()
 
-    reactor_handler(reactor, root)
-    reactor.run()
+    reactor_handler(container, root)
+    container.run()
     assert root.did_init
     assert child.did_init
     assert root.did_custom

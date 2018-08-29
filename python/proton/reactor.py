@@ -21,8 +21,7 @@ from __future__ import absolute_import
 
 from ._reactor import Container, ApplicationEvent, EventInjector, Handler,\
     LinkOption, ReceiverOption, SenderOption,\
-    AtLeastOnce, AtMostOnce, DynamicNodeProperties, Filter, Selector, DurableSubscription, Copy, Move,\
-    Reactor
+    AtLeastOnce, AtMostOnce, DynamicNodeProperties, Filter, Selector, DurableSubscription, Copy, Move
 
 __all__ = [
     'Container',
@@ -39,6 +38,5 @@ __all__ = [
     'Selector',
     'DurableSubscription',
     'Copy',
-    'Move',
-    'Reactor'
+    'Move'
 ]
