@@ -22,20 +22,24 @@ add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-macro (pn_build_c_test test)
+set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+
+# Add test without any qpid-proton lib: allows choice of
+# qpid-proton-core or qpid-proton
+macro (pn_add_c_test_nolib test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${PLATFORM_LIBS})
+  target_link_libraries (${test} ${PLATFORM_LIBS})
   if (BUILD_WITH_CXX)
     set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
-endmacro()
+  add_test(NAME ${test} COMMAND ${test_env} ${memcheck-cmd} $<TARGET_FILE:${test}>)
+endmacro (pn_add_c_test_nolib)
 
-set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
-
+# Add test with qpid-proton-core linked
 macro (pn_add_c_test test)
-  pn_build_c_test(${test} ${ARGN})
-  add_test (NAME ${test} COMMAND ${test_env} ${memcheck-cmd} $<TARGET_FILE:${test}>)
-endmacro(pn_add_c_test)
+  pn_add_c_test_nolib (${test} ${ARGN})
+  target_link_libraries (${test} qpid-proton-core ${PLATFORM_LIBS})
+endmacro (pn_add_c_test)
 
 pn_add_c_test (c-object-tests object.c)
 pn_add_c_test (c-message-tests message.c)
@@ -47,7 +51,7 @@ pn_add_c_test (c-condition-tests condition.c)
 pn_add_c_test (c-connection-driver-tests connection_driver.c)
 pn_add_c_test (c-ssl-tests ssl.c)
 
-pn_add_c_test (c-parse-url-tests parse-url.c)
+pn_add_c_test_nolib (c-parse-url-tests parse-url.c)
 target_link_libraries (c-parse-url-tests qpid-proton)
 
 if(HAS_PROACTOR)
@@ -55,21 +59,13 @@ if(HAS_PROACTOR)
   target_link_libraries (c-proactor-tests qpid-proton-proactor)
 
   # TODO Enable by default when races are cleared up
-  option(THRADERCISER "Run the threaderciser concurrency tests" OFF)
+  option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
   if (THREADERCISER)
-    pn_build_c_test(c-threaderciser threaderciser.c)
-    target_link_libraries (c-threaderciser pthread qpid-proton-proactor)
-    find_library(PTHREAD_LIBRARY pthread)
-    if (PTHREAD_LIBRARY)
-      target_link_libraries (c-threaderciser ${PTHREAD_LIBRARY})
-    endif()
-
-    # Always run with race checker, run with mem checker also if it is enabled
-    set(prog $<TARGET_FILE:c-threaderciser>)
-    set (opts --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/threaderciser.supp)
-    add_test (NAME c-threaderciser-racecheck COMMAND ${test_env} ${racecheck-cmd} ${opts} ${prog})
-    if (memcheck-cmd)
-      add_test (NAME c-threaderciser-memcheck COMMAND ${test_env} ${memcheck-cmd} ${prog})
+    pn_add_c_test(c-threaderciser threaderciser.c)
+    target_link_libraries (c-threaderciser qpid-proton-proactor)
+    find_library(Pthread_LIBRARY pthread)
+    if (Pthread_LIBRARY)
+      target_link_libraries (c-threaderciser ${Pthread_LIBRARY})
     endif()
   endif()
 
