@@ -31,8 +31,7 @@ class Server(subprocess.Popen):
         self.port = None
         self.kill_me = kwargs.pop('kill_me', False)
         kwargs.update({'universal_newlines': True,
-                       'stdout': subprocess.PIPE,
-                       'stderr': subprocess.STDOUT})
+                       'stdout': subprocess.PIPE})
         super(Server, self).__init__(*args, **kwargs)
 
     def __enter__(self):
