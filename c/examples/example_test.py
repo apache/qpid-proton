@@ -117,8 +117,8 @@ class ExampleTest(unittest.TestCase):
                 self.assertIn("secure connection:", got)
                 self.assertIn(send_expect(), got)
                 self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
-        except subprocess.CalledProcessError as e:
-            if e.output.startswith(b"error initializing SSL"):
+        except TestProcessError as e:
+            if e.output and e.output.startswith(b"error initializing SSL"):
                 print("Skipping %s: SSL not available" % self.id())
             else:
                 raise
