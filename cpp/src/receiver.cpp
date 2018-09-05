@@ -39,6 +39,8 @@ namespace proton {
 
 receiver::receiver(pn_link_t* r): link(make_wrapper(r)) {}
 
+receiver::~receiver() {}
+
 void receiver::open() {
     attach();
 }

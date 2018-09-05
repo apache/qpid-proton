@@ -51,6 +51,8 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// Create an empty connection.
     connection() : internal::object<pn_connection_t>(0) {}
 
+    PN_CPP_EXTERN ~connection();
+
     PN_CPP_EXTERN bool uninitialized() const;
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;

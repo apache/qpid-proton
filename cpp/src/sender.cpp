@@ -40,6 +40,8 @@ namespace proton {
 
 sender::sender(pn_link_t *l): link(make_wrapper(l)) {}
 
+sender::~sender() {}
+
 void sender::open() {
     attach();
 }

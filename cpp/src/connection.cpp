@@ -45,6 +45,8 @@
 
 namespace proton {
 
+connection::~connection() {}
+
 transport connection::transport() const {
     return make_wrapper(pn_connection_transport(pn_object()));
 }

@@ -44,6 +44,8 @@ class delivery : public transfer {
   public:
     delivery() {}
 
+    PN_CPP_EXTERN ~delivery();
+
     /// Return the receiver for this delivery.
     PN_CPP_EXTERN class receiver receiver() const;
 

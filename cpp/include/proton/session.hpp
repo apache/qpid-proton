@@ -49,6 +49,8 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     /// Create an empty session.
     session() : internal::object<pn_session_t>(0) {}
 
+    PN_CPP_EXTERN ~session();
+
     PN_CPP_EXTERN bool uninitialized() const;
     PN_CPP_EXTERN bool active() const;
     PN_CPP_EXTERN bool closed() const;

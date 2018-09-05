@@ -40,6 +40,7 @@ namespace proton {
 
 delivery::delivery(pn_delivery_t* d): transfer(make_wrapper(d)) {}
 receiver delivery::receiver() const { return make_wrapper<class receiver>(pn_delivery_link(pn_object())); }
+delivery::~delivery() {}
 void delivery::accept() { settle_delivery(pn_object(), ACCEPTED); }
 void delivery::reject() { settle_delivery(pn_object(), REJECTED); }
 void delivery::release() { settle_delivery(pn_object(), RELEASED); }

@@ -36,6 +36,8 @@
 
 namespace proton {
 
+session::~session() {}
+
 void session::open() {
     pn_session_open(pn_object());
 }

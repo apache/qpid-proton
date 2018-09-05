@@ -46,6 +46,8 @@ PN_CPP_CLASS_EXTERN sender : public link {
     /// Create an empty sender.
     sender() {}
 
+    PN_CPP_EXTERN ~sender();
+
     /// Open the sender.
     ///
     /// @see endpoint_lifecycle

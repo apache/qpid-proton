@@ -47,6 +47,8 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     /// Create an empty receiver.
     receiver() {}
 
+    PN_CPP_EXTERN ~receiver();
+
     /// Open the receiver.
     ///
     /// @see endpoint_lifecycle
