@@ -181,6 +181,7 @@ int main(int argc, char** argv)
 
     if (opts.password) {
         rc = pn_messenger_set_password(messenger, opts.password);
+        free(opts.password);
         check_messenger(messenger);
         check( rc == 0, "Failed to set password" );
     }
