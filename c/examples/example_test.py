@@ -20,31 +20,14 @@
 # Run the C examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import unittest, sys, time, re
+import unittest
 
-import subprocess
+from test_subprocess import Popen, TestProcessError, check_output
 
-class Server(subprocess.Popen):
+class Server(Popen):
     def __init__(self, *args, **kwargs):
-        self.kill_me = kwargs.pop('kill_me', False)
-        kwargs.update({'universal_newlines': True,
-                       'stdout': subprocess.PIPE})
         super(Server, self).__init__(*args, **kwargs)
-
-    def __enter__(self):
-        line = self.stdout.readline()
-        self.port = re.search("listening on ([0-9]+)$", line).group(1)
-        return self
-
-    def __exit__(self, *args):
-        if self.kill_me:
-            self.kill()
-            self.stdout.close() # Doesn't get closed if killed
-        self.wait()
-
-def check_output(*args, **kwargs):
-    kwargs.update({'universal_newlines': True})
-    return subprocess.check_output(*args, **kwargs)
+        self.port = self.expect("listening on ([0-9]+)$").group(1)
 
 MESSAGES=10
 
@@ -64,6 +47,10 @@ class ExampleTest(unittest.TestCase):
         """Run an example with standard arguments, return output"""
         return check_output([name, "", port, "xtest", str(messages)])
 
+    def startex(self, name, port, messages=MESSAGES):
+        """Start an example sub-process with standard arguments"""
+        return Popen([name, "", port, "xtest", str(messages)])
+
     def test_send_receive(self):
         """Send first then receive"""
         with Broker() as b:
@@ -73,20 +60,21 @@ class ExampleTest(unittest.TestCase):
     def test_receive_send(self):
         """Start receiving  first, then send."""
         with Broker() as b:
+            r = self.startex("receive", b.port)
             self.assertEqual(send_expect(), self.runex("send", b.port))
-            self.assertMultiLineEqual(receive_expect(), self.runex("receive", b.port))
+            self.assertMultiLineEqual(receive_expect(), r.communicate()[0])
 
     def test_send_direct(self):
         """Send to direct server"""
-        with Server(["direct", "", "0"]) as d:
-            self.assertEqual(send_expect(), self.runex("send", d.port))
-            self.assertMultiLineEqual(receive_expect(), d.communicate()[0])
+        d = Server(["direct", "", "0"])
+        self.assertEqual(send_expect(), self.runex("send", d.port))
+        self.assertMultiLineEqual(receive_expect(), d.communicate()[0])
 
     def test_receive_direct(self):
         """Receive from direct server"""
-        with Server(["direct", "", "0"]) as d:
-            self.assertMultiLineEqual(receive_expect(), self.runex("receive", d.port))
-            self.assertEqual("10 messages sent and acknowledged\n", d.communicate()[0])
+        d =  Server(["direct", "", "0"])
+        self.assertMultiLineEqual(receive_expect(), self.runex("receive", d.port))
+        self.assertEqual("10 messages sent and acknowledged\n", d.communicate()[0])
 
     def test_send_abort_broker(self):
         """Sending aborted messages to a broker"""
@@ -101,13 +89,13 @@ class ExampleTest(unittest.TestCase):
 
     def test_send_abort_direct(self):
         """Send aborted messages to the direct server"""
-        with Server(["direct", "", "0", "examples", "20"]) as d:
-            self.assertEqual(send_expect(), self.runex("send", d.port))
-            self.assertEqual(send_abort_expect(), self.runex("send-abort", d.port))
-            self.assertEqual(send_expect(), self.runex("send", d.port))
-            expect = receive_expect_messages() + "Message aborted\n"*MESSAGES + receive_expect_messages()+receive_expect_total(20)
-            self.maxDiff = None
-            self.assertMultiLineEqual(expect, d.communicate()[0])
+        d = Server(["direct", "", "0", "examples", "20"])
+        self.assertEqual(send_expect(), self.runex("send", d.port))
+        self.assertEqual(send_abort_expect(), self.runex("send-abort", d.port))
+        self.assertEqual(send_expect(), self.runex("send", d.port))
+        expect = receive_expect_messages() + "Message aborted\n"*MESSAGES + receive_expect_messages()+receive_expect_total(20)
+        self.maxDiff = None
+        self.assertMultiLineEqual(expect, d.communicate()[0])
 
     def test_send_ssl_receive(self):
         """Send with SSL, then receive"""

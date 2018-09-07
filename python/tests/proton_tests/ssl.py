@@ -882,39 +882,6 @@ class SslTest(common.Test):
         receiver.wait()
         assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
 
-    def DISABLED_test_defaults_valgrind(self):
-        """ Run valgrind over a simple SSL connection (no certificates)
-        """
-        # the openssl libraries produce far too many valgrind errors to be
-        # useful.  AFAIK, there is no way to wriate a valgrind suppression
-        # expression that will ignore all errors from a given library.
-        # Until we can, skip this test.
-        port = common.free_tcp_ports()[0]
-
-        receiver = common.MessengerReceiverValgrind()
-        receiver.subscriptions = ["amqps://~127.0.0.1:%s" % port]
-        receiver.receive_count = 1
-        receiver.timeout = self.timeout
-        receiver.start()
-
-        sender = common.MessengerSenderValgrind()
-        sender.targets = ["amqps://127.0.0.1:%s/X" % port]
-        sender.send_count = 1
-        sender.timeout = self.timeout
-        sender.start()
-        sender.wait()
-        assert sender.status() == 0, "Command '%s' failed" % str(sender.cmdline())
-
-        receiver.wait()
-        assert receiver.status() == 0, "Command '%s' failed" % str(receiver.cmdline())
-
-        # self.server_domain.set_credentials(self._testpath("client-certificate.pem"),
-        #                                    self._testpath("client-private-key.pem"),
-        #                                    "client-password")
-
-        # self.client_domain.set_trusted_ca_db(self._testpath("ca-certificate.pem"))
-        # self.client_domain.set_peer_authentication( SSLDomain.VERIFY_PEER )
-
     def test_singleton(self):
         """Verify that only a single instance of SSL can exist per Transport"""
         transport = Transport()

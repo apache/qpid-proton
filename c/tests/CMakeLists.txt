@@ -32,7 +32,7 @@ macro (pn_add_c_test_nolib test)
   if (BUILD_WITH_CXX)
     set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
   endif (BUILD_WITH_CXX)
-  add_test(NAME ${test} COMMAND ${test_env} ${memcheck-cmd} $<TARGET_FILE:${test}>)
+  add_test(NAME ${test} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}>)
 endmacro (pn_add_c_test_nolib)
 
 # Add test with qpid-proton-core linked
@@ -58,7 +58,7 @@ if(HAS_PROACTOR)
   pn_add_c_test (c-proactor-tests proactor.c)
   target_link_libraries (c-proactor-tests qpid-proton-proactor)
 
-  # TODO Enable by default when races are cleared up
+  # TODO Enable by default when races and xcode problems are cleared up
   option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
   if (THREADERCISER)
     pn_add_c_test(c-threaderciser threaderciser.c)

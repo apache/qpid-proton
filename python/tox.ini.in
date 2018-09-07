@@ -13,7 +13,7 @@ passenv =
     PKG_CONFIG_PATH
     CFLAGS
     SASLPASSWD
-    VALGRIND
+    TEST_EXE_PREFIX
 commands =
     @CMAKE_SOURCE_DIR@/python/tests/proton-test '{posargs:--ignore-file=@CMAKE_SOURCE_DIR@/python/tests/tox-blacklist}'
 deps =

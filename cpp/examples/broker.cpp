@@ -355,7 +355,7 @@ public:
     }
 
     void on_error(const proton::error_condition& e) OVERRIDE {
-        std::cerr << "error: " << e.what() << std::endl;
+        std::cout << "protocol error: " << e.what() << std::endl;
     }
 
     // The container calls on_transport_close() last.
@@ -429,7 +429,7 @@ int main(int argc, char **argv) {
     } catch (const example::bad_option& e) {
         std::cout << opts << std::endl << e.what() << std::endl;
     } catch (const std::exception& e) {
-        std::cerr << "broker shutdown: " << e.what() << std::endl;
+        std::cout << "broker shutdown: " << e.what() << std::endl;
     }
     return 1;
 }

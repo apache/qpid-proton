@@ -37,7 +37,7 @@ macro (pn_add_fuzz_test test)
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
-    add_test (NAME ${test} COMMAND ${memcheck-cmd} $<TARGET_FILE:${test}> ${files})
+    add_test (NAME ${test} COMMAND ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${files})
   else ()
     add_test (NAME ${test} COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
   endif ()

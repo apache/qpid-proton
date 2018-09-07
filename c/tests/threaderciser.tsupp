@@ -1,5 +1,0 @@
-# TSAN suppressions for threaderciser
-
-# Benign race in pni_log_enabled
-race:pni_log_enabled
-

@@ -1,0 +1,151 @@
+{
+   SSL does a number of uninitialized accesses (expected) 1
+   Memcheck:Cond
+   fun:BN_bin2bn
+   obj:*
+   obj:*
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 2
+   Memcheck:Cond
+   fun:BN_num_bits_word
+   fun:BN_num_bits
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 3
+   Memcheck:Value8
+   fun:BN_num_bits_word
+   fun:BN_num_bits
+   fun:BN_mod_exp_mont_consttime
+   obj:*
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 4
+   Memcheck:Value8
+   fun:BN_mod_exp_mont_consttime
+   obj:*
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL does a number of uninitialized accesses (FreeBSD version)
+   Memcheck:Value8
+   fun:BN_num_bits_word
+   fun:BN_num_bits
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*libcrypto.so*
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL does a number of uninitialized accesses (FreeBSD version)
+   Memcheck:Value8
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*libcrypto.so*
+   fun:ssl3_ctx_ctrl
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 5
+   Memcheck:Value4
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*
+   obj:*
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 6
+   Memcheck:Value4
+   fun:BN_num_bits_word
+   fun:BN_mod_exp_mont_consttime
+   fun:BN_mod_exp_mont
+   obj:*
+   obj:*
+}
+
+{
+   SSL does a number of uninitialized accesses (expected) 7
+   Memcheck:Cond
+   fun:ASN1_STRING_set
+   fun:ASN1_mbstring_ncopy
+   fun:ASN1_mbstring_copy
+}
+
+{
+   Since we can never safely uninitialize SSL, allow this
+   Memcheck:Leak
+   fun:_vgrZU_libcZdsoZa_realloc
+   fun:CRYPTO_realloc
+   fun:lh_insert
+   obj:/lib64/libcrypto.so.0.9.8e
+   fun:ERR_load_strings
+   fun:ERR_load_X509V3_strings
+   fun:ERR_load_crypto_strings
+   fun:SSL_load_error_strings
+}
+
+{
+   Since we can never safely uninitialize SSL, allow this
+   Memcheck:Leak
+   fun:_vgrZU_libcZdsoZa_malloc
+   fun:CRYPTO_malloc
+   fun:lh_new
+   fun:OBJ_NAME_init
+   fun:OBJ_NAME_add
+   fun:EVP_add_cipher
+   fun:SSL_library_init
+}
+
+{
+   Since we can never safely uninitialize SSL, allow this
+   Memcheck:Leak
+   fun:malloc
+   obj:*
+   fun:CRYPTO_malloc
+}
+
+{
+   Known memory leak in cyrus-sasl (fixed in 2.1.26)
+   Memcheck:Leak
+   fun:malloc
+   fun:*
+   fun:sasl_config_init
+   fun:sasl_server_init
+}
+
+{
+   Known bug in glibc which tries to free ipv6 related static when getaddrinfo used
+   Memcheck:Free
+   fun:free
+   fun:__libc_freeres
+   fun:_vgnU_freeres
+   fun:__run_exit_handlers
+   fun:exit
+}
+
+{
+   Benign race in pni_log_enabled
+   Helgrind:Race
+   fun:pni_log_enabled
+}
+
+{
+   NSS library poking around in its own data segment upsets helgrind
+   Helgrind:Race
+   fun:strpbrk
+   fun:_nss_files_parse_servent
+}
+
+{
+   NSS library poking around in its own text segment upsets helgrind
+   Helgrind:Race
+   fun:*
+   fun:_nss_files_getservbyname_r
+}

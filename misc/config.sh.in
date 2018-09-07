@@ -52,12 +52,6 @@ export LD_LIBRARY_PATH="$(merge_paths $PROTON_BUILD $LD_LIBRARY_PATH)"
 # Test applications
 export PATH="$(merge_paths $PATH $PROTON_BUILD/c/tools $PROTON_HOME/python/tests)"
 
-# Can the test harness use valgrind?
-if [[ -x "$(type -p valgrind)" && "@ENABLE_VALGRIND@" == "ON" ]] ; then
-    export VALGRIND=$(type -p valgrind)
-    export VALGRIND_ARGS="@VALGRIND_OPTIONS@"
-fi
-
 # Can the test harness use saslpasswd2?
 if [[ -x "$(type -p saslpasswd2)" ]] ; then
     export SASLPASSWD=$(type -p saslpasswd2)

@@ -104,7 +104,7 @@ if(HAS_ENOUGH_CPP11)
 endif()
 
 # Add a test with the correct environment to find test executables and valgrind.
-macro(add_cpp_test name)
+macro(add_cpp_example_test name)
   if(WIN32)
     set(test_path "$<TARGET_FILE_DIR:broker>;$<TARGET_FILE_DIR:qpid-proton>;$<TARGET_FILE_DIR:qpid-proton-cpp>")
   else(WIN32)
@@ -112,13 +112,17 @@ macro(add_cpp_test name)
   endif(WIN32)
   add_test(
     NAME ${name}
-    COMMAND ${PN_ENV_SCRIPT} "PATH=${test_path}" ${VALGRIND_ENV}
-            "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>" -- ${ARGN}
+    COMMAND ${PN_ENV_SCRIPT}
+    "PATH=${test_path}"
+    "PYTHONPATH=${CMAKE_SOURCE_DIR}/tests/py"
+    "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>"
+    ${TEST_ENV} --
+    ${ARGN}
     )
 endmacro()
 
-add_cpp_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
+add_cpp_example_test(cpp-example-container ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleTest)
 
 if (NOT SSL_IMPL STREQUAL none)
-add_cpp_test(cpp-example-container-ssl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleSSLTest)
+add_cpp_example_test(cpp-example-container-ssl ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v ContainerExampleSSLTest)
 endif()

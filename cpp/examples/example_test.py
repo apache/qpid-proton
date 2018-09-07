@@ -20,39 +20,20 @@
 # Run the C++ examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import unittest, sys, time, re, shutil, os
+import unittest, sys, shutil, os
+from test_subprocess import Popen, TestProcessError, check_output
 from os.path import dirname
 from string import Template
 
-import subprocess
-
-class Server(subprocess.Popen):
+class Server(Popen):
+    """A process that prints 'listening on <port>' to stdout"""
     def __init__(self, *args, **kwargs):
-        self.port = None
-        self.kill_me = kwargs.pop('kill_me', False)
-        kwargs.update({'universal_newlines': True,
-                       'stdout': subprocess.PIPE})
         super(Server, self).__init__(*args, **kwargs)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        if self.kill_me:
-            self.kill()
-            self.stdout.close() # Doesn't get closed if killed
-        self.wait()
+        self.port = self.expect("listening on ([0-9]+)$").group(1)
 
     @property
     def addr(self):
-        if not self.port:
-            line = self.stdout.readline()
-            self.port = re.search("listening on ([0-9]+)$", line).group(1)
         return ":%s/example" % self.port
-
-def check_output(*args, **kwargs):
-    kwargs.update({'universal_newlines': True})
-    return subprocess.check_output(*args, **kwargs)
 
 def _cyrusSetup(conf_dir):
   """Write out simple SASL config.tests
@@ -77,12 +58,9 @@ mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS
 # Globally initialize Cyrus SASL configuration
 _cyrusSetup('sasl-conf')
 
-def wait_listening(p):
-    return re.search(b"listening on ([0-9]+)$", p.stdout.readline()).group(1)
-
 class Broker(Server):
-  def __init__(self):
-    super(Broker, self).__init__(["broker", "-a", "//:0"], kill_me=True)
+    def __init__(self):
+        super(Broker, self).__init__(["broker", "-a", "//:0"], kill_me=True)
 
 CLIENT_EXPECT="""Twas brillig, and the slithy toves => TWAS BRILLIG, AND THE SLITHY TOVES
 Did gire and gymble in the wabe. => DID GIRE AND GYMBLE IN THE WABE.
@@ -104,7 +82,7 @@ class ContainerExampleTest(unittest.TestCase):
         self.assertMultiLineEqual(recv_expect(), check_output(["simple_recv", "-a", Broker.addr]))
 
     def test_simple_recv_send(self):
-        recv = Server(["simple_recv", "-a", Broker.addr])
+        recv = Popen(["simple_recv", "-a", Broker.addr])
         self.assertMultiLineEqual("all messages confirmed\n", check_output(["simple_send", "-a", Broker.addr]))
         self.assertMultiLineEqual(recv_expect(), recv.communicate()[0])
 
@@ -119,8 +97,8 @@ class ContainerExampleTest(unittest.TestCase):
         self.assertMultiLineEqual("all messages confirmed\n", send.communicate()[0])
 
     def test_request_response(self):
-        with Server(["server", Broker.addr, "example"], kill_me=True) as server:
-            self.assertIn("connected to", server.stdout.readline())
+        with Popen(["server", Broker.addr, "example"], kill_me=True) as server:
+            server.expect("connected to %s" % Broker.addr)
             self.assertMultiLineEqual(CLIENT_EXPECT, check_output(["client", "-a", Broker.addr]))
 
     def test_request_response_direct(self):

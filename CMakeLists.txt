@@ -38,6 +38,9 @@ find_package (CyrusSASL)
 
 enable_testing ()
 
+# Set up runtime checks (valgrind, sanitizers etc.)
+include(runtime_check.cmake)  
+
 ## Variables used across components
 
 set (PN_ENV_SCRIPT "${PYTHON_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/env.py")
@@ -188,23 +191,6 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   set (CXX_WARNING_FLAGS "${COMPILE_WARNING_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-float-equal -Wno-padded -Wno-sign-conversion -Wno-switch-enum -Wno-weak-vtables -Wno-exit-time-destructors -Wno-global-constructors -Wno-shorten-64-to-32 -Wno-documentation -Wno-documentation-unknown-command -Wno-old-style-cast -Wno-missing-noreturn")
 endif()
 
-# Sanitizer flags apply to to both GNU and clang, C and C++
-if(ENABLE_SANITIZERS)
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-endif()
-if(ENABLE_TSAN)
-  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=thread")
-endif()
-if (SANITIZE_FLAGS)
-  mark_as_advanced(SANITIZE_FLAGS)
-  if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SANITIZE_FLAGS}")
-  endif()
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_FLAGS}")
-  endif()
-endif()
-
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   if (NOT CMAKE_OSX_ARCHITECTURES)
     set(CMAKE_OSX_ARCHITECTURES "x86_64")
@@ -300,41 +286,6 @@ endforeach()
 set (PROTON_SHARE ${SHARE_INSTALL_DIR}/proton-${PN_VERSION})
 # End of variables used during install
 
-# Can't do valgrind and coverage at athe same time - coverage takes precedence
-if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-  message(STATUS "Building for coverage analysis; no run-time error detection")
-else ()
-  find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
-  mark_as_advanced (VALGRIND_EXECUTABLE)
-
-  option(ENABLE_VALGRIND "Use valgrind to detect run-time problems" ON)
-  if (ENABLE_VALGRIND)
-    if (VALGRIND_EXECUTABLE)
-      set (VALGRIND_SUPPRESSIONS ${CMAKE_SOURCE_DIR}/c/tests/valgrind.supp CACHE STRING "Default valgrind suppressions")
-      set (VALGRIND_OPTIONS "--error-exitcode=42 --quiet --leak-check=full --trace-children=yes" CACHE STRING "Default valgrind options")
-      mark_as_advanced(VALGRIND_SUPPRESSIONS VALGRIND_OPTIONS)
-      set (VALGRIND_ENV "VALGRIND=${VALGRIND_EXECUTABLE}" "VALGRIND_ARGS=${VALGRIND_OPTIONS} --suppressions=${VALGRIND_SUPPRESSIONS}")
-      separate_arguments(VALGRIND_OPTIONS_LIST UNIX_COMMAND ${VALGRIND_OPTIONS})
-      set (memcheck-cmd ${VALGRIND_EXECUTABLE} ${VALGRIND_OPTIONS_LIST} "--suppressions=${VALGRIND_SUPPRESSIONS}")
-      set (racecheck-cmd ${VALGRIND_EXECUTABLE} --tool=helgrind --error-exitcode=42 --quiet)
-    else ()
-      message(STATUS "Can't locate the valgrind command; no run-time error detection")
-    endif ()
-  endif ()
-endif ()
-
-# Options to enable sanitizing compile flags. Compile flags are set in c/CMakeLists.txt
-option(ENABLE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
-option(ENABLE_TSAN "Compile with Thread Sanitizer (TSan); incompatible with Valgrind" OFF)
-if (ENABLE_SANITIZERS OR ENABLE_TSAN)
-  set(DISABLE ENABLE_VALGRIND ENABLE_UNDEFINED_ERROR BUILD_GO)
-  message(STATUS "Building with sanitizers; disables ${DISABLE}")
-  foreach(d ${DISABLE})
-    set(${d} OFF CACHE BOOL "Disabled to run sanitizers" FORCE)
-  endforeach()
-  unset(VALGRIND_ENV)
-endif()
-
 # Set result to a native search path - used by examples and binding tests.
 # args after result are directories or search paths.
 macro(set_search_path result)
@@ -379,11 +330,11 @@ endif()
 find_program(GO_EXE go)
 mark_as_advanced(GO_EXE)
 if (GO_EXE)
-  if(WIN32)
+  set (DEFAULT_GO ON)
+  if(WIN32 OR RUNTIME_CHECK)
     # Go on windows requires gcc tool chain
+    # Go does not work with C-based runtime checkers.
     set (DEFAULT_GO OFF)
-  else()
-    set (DEFAULT_GO ON)
   endif()
 endif (GO_EXE)
 
@@ -405,15 +356,17 @@ if(SWIG_FOUND)
 
   # Prerequisites for Python wrapper:
   find_package (PythonLibs ${PYTHON_VERSION_STRING} EXACT)
-  if (PYTHONLIBS_FOUND)
+  # TODO aconway 2018-09-07: get python binding tests working with sanitizers
+  if (PYTHONLIBS_FOUND AND NOT SANITIZE_FLAGS)
     set (DEFAULT_PYTHON ON)
-  endif (PYTHONLIBS_FOUND)
+  endif ()
 
   # Prerequisites for Ruby:
   find_package(Ruby)
-  if (RUBY_FOUND)
+  # TODO aconway 2018-09-07: get ruby binding tests working with sanitizers
+  if (RUBY_FOUND AND NOT SANITIZE_FLAGS)
     set (DEFAULT_RUBY ON)
-  endif (RUBY_FOUND)
+  endif ()
 endif()
 
 # To kick-start a build with just a few bindings enabled by default, e.g. ruby and go:

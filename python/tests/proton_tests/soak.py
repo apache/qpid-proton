@@ -24,9 +24,7 @@ import os
 
 from .common import Test, Skipped, free_tcp_ports, \
     MessengerReceiverC, MessengerSenderC, \
-    MessengerReceiverValgrind, MessengerSenderValgrind, \
     ReactorReceiverC, ReactorSenderC, \
-    ReactorReceiverValgrind, ReactorSenderValgrind, \
     isSSLPresent
 
 #
@@ -192,52 +190,14 @@ class MessengerTests(AppTests):
 
         self._do_test(iterations)
 
-    def _do_relay_test(self, receiver, relay, sender, domain="amqp"):
-        """ Send N messages to a receiver, which replies to each and forwards
-        each of them to different receiver.
-        Parameters:
-        iterations - repeat the senders this many times
-        target_count - # targets to send to
-        send_count = # messages sent to each target
-        send_batch - wait for replies after this many messages sent
-        forward_count - forward to this many targets
-        """
-        iterations = self.iterations
-        send_count = self.send_count
-        target_count = self.target_count
-        send_batch = self.send_batch
-        forward_count = self.forward_count
-
-        send_total = send_count * target_count
-        receive_total = send_total * iterations
-
-        port = free_tcp_ports()[0]
-
-        receiver.subscriptions = ["%s://~0.0.0.0:%s" % (domain, port)]
-        receiver.receive_count = receive_total
-        receiver.send_reply = True
-        # forward to 'relay' - uses two links
-        # ## THIS FAILS:
-        # receiver.forwards = ["amqp://Relay/%d" % j for j in range(forward_count)]
-        receiver.forwards = ["%s://Relay" % domain]
-        receiver.timeout = MessengerTests._timeout
-        self.receivers.append( receiver )
-
-        relay.subscriptions = ["%s://0.0.0.0:%s" % (domain, port)]
-        relay.name = "Relay"
-        relay.receive_count = receive_total
-        relay.timeout = MessengerTests._timeout
-        self.receivers.append( relay )
-
-        # send to 'receiver'
-        sender.targets = ["%s://0.0.0.0:%s/X%dY" % (domain, port, j) for j in range(target_count)]
-        sender.send_count = send_total
-        sender.get_reply = True
-        sender.timeout = MessengerTests._timeout
-        self.senders.append( sender )
-
-        self._do_test(iterations)
-
+    # Removed messenger "relay" tests. The test start-up is faulty:
+    # msgr-recv prints it's -X ready message when it starts to open a
+    # connection but it does not wait for the remote open. The relay
+    # tests depends on mapping a container name from an incoming
+    # connection. They can fail under if the sender starts before the
+    # connection is complete (esp. valgrind with SSL connections) We
+    # could fix the tests but since messenger is deprecated it does
+    # not seem worthwhile.
 
     def _do_star_topology_test(self, r_factory, s_factory, domain="amqp"):
         """
@@ -291,31 +251,12 @@ class MessengerTests(AppTests):
         self._ssl_check()
         self._do_oneway_test(MessengerReceiverC(), MessengerSenderC(), "amqps")
 
-    def test_oneway_valgrind(self):
-        self.valgrind_test()
-        self._do_oneway_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
-
     def test_echo_C(self):
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC())
 
     def test_echo_C_SSL(self):
         self._ssl_check()
         self._do_echo_test(MessengerReceiverC(), MessengerSenderC(), "amqps")
-
-    def test_echo_valgrind(self):
-        self.valgrind_test()
-        self._do_echo_test(MessengerReceiverValgrind(), MessengerSenderValgrind())
-
-    def test_relay_C(self):
-        self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC())
-
-    def test_relay_C_SSL(self):
-        self._ssl_check()
-        self._do_relay_test(MessengerReceiverC(), MessengerReceiverC(), MessengerSenderC(), "amqps")
-
-    def test_relay_valgrind(self):
-        self.valgrind_test()
-        self._do_relay_test(MessengerReceiverValgrind(), MessengerReceiverValgrind(), MessengerSenderValgrind())
 
     def test_star_topology_C(self):
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC )
@@ -324,13 +265,5 @@ class MessengerTests(AppTests):
         self._ssl_check()
         self._do_star_topology_test( MessengerReceiverC, MessengerSenderC, "amqps" )
 
-    def test_star_topology_valgrind(self):
-        self.valgrind_test()
-        self._do_star_topology_test( MessengerReceiverValgrind, MessengerSenderValgrind )
-
     def test_oneway_reactor(self):
         self._do_oneway_test(ReactorReceiverC(), ReactorSenderC())
-
-    def test_oneway_reactor_valgrind(self):
-        self.valgrind_test()
-        self._do_oneway_test(ReactorReceiverValgrind(), ReactorSenderValgrind())

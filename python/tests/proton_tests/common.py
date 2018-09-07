@@ -281,7 +281,7 @@ class MessengerApp(object):
                 del cmd[0:1]
                 cmd.insert(0, foundfile)
                 cmd.insert(0, sys.executable)
-            self._process = Popen(cmd, stdout=PIPE, stderr=STDOUT,
+            self._process = Popen(cmd, stdout=PIPE,
                                   bufsize=4096, universal_newlines=True)
         except OSError:
             e = sys.exc_info()[1]
@@ -425,7 +425,8 @@ class MessengerReceiver(MessengerApp):
 
     # command string?
     def _build_command(self):
-        self._cmdline = self._command
+        self._cmdline = os.environ.get("TEST_EXE_PREFIX", "").split()
+        self._cmdline += self._command
         self._do_common_options()
         self._cmdline += ["-X", "READY"]
         assert self.subscriptions, "Missing subscriptions, required for receiver!"
@@ -468,47 +469,17 @@ class MessengerSenderC(MessengerSender):
         MessengerSender.__init__(self)
         self._command = ["msgr-send"]
 
-def setup_valgrind(self):
-    if "VALGRIND" not in os.environ:
-        raise Skipped("Skipping test - $VALGRIND not set.")
-    super(type(self), self).__init__()
-    self._command = [os.environ["VALGRIND"]] + os.environ["VALGRIND_ARGS"].split(' ') + self._command
-
-class MessengerSenderValgrind(MessengerSenderC):
-    """ Run the C sender under Valgrind
-    """
-    def __init__(self, suppressions=None):
-        setup_valgrind(self)
-
 class MessengerReceiverC(MessengerReceiver):
     def __init__(self):
         MessengerReceiver.__init__(self)
         self._command = ["msgr-recv"]
-
-class MessengerReceiverValgrind(MessengerReceiverC):
-    """ Run the C receiver under Valgrind
-    """
-    def __init__(self, suppressions=None):
-        setup_valgrind(self)
 
 class ReactorSenderC(MessengerSender):
     def __init__(self):
         MessengerSender.__init__(self)
         self._command = ["reactor-send"]
 
-class ReactorSenderValgrind(ReactorSenderC):
-    """ Run the C sender under Valgrind
-    """
-    def __init__(self, suppressions=None):
-        setup_valgrind(self)
-
 class ReactorReceiverC(MessengerReceiver):
     def __init__(self):
         MessengerReceiver.__init__(self)
         self._command = ["reactor-recv"]
-
-class ReactorReceiverValgrind(ReactorReceiverC):
-    """ Run the C receiver under Valgrind
-    """
-    def __init__(self, suppressions=None):
-        setup_valgrind(self)

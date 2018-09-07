@@ -208,8 +208,8 @@ add_test (NAME python-test
   COMMAND ${PN_ENV_SCRIPT}
   "PATH=${py_path}" "PYTHONPATH=${py_pythonpath}"
   "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
-  ${VALGRIND_ENV}
-  ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_tests}/proton-test")
+  ${TEST_ENV}
+  ${TEST_WRAP_PREFIX_CMD} ${PYTHON_EXECUTABLE} -- ${python_coverage_options} "${py_tests}/proton-test")
 set_tests_properties(python-test PROPERTIES PASS_REGULAR_EXPRESSION "Totals: .* 0 failed")
 
 check_python_module("tox" TOX_MODULE_FOUND)
@@ -237,8 +237,8 @@ else ()
         "PATH=${py_path}"
         "SASLPASSWD=${CyrusSASL_Saslpasswd_EXECUTABLE}"
         "SWIG=${SWIG_EXECUTABLE}"
-        ${VALGRIND_ENV} --
-        ${PYTHON_EXECUTABLE} -m tox)
+        ${TEST_ENV} --
+        ${TEST_WRAP_PREFIX_CMD} ${PYTHON_EXECUTABLE} -m tox)
       set_tests_properties(python-tox-test
         PROPERTIES
         PASS_REGULAR_EXPRESSION "Totals: .* ignored, 0 failed"
