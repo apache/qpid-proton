@@ -112,11 +112,7 @@ install(DIRECTORY lib/ DESTINATION ${RUBY_ARCHLIB_DIR} COMPONENT Ruby)
 install(DIRECTORY examples/
         DESTINATION "${PROTON_SHARE}/examples/ruby"
         COMPONENT Ruby
-        PATTERN "*.rb"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                    GROUP_EXECUTE GROUP_READ
-                    WORLD_EXECUTE WORLD_READ)
-
+        USE_SOURCE_PERMISSIONS)
 ## Tests
 
 to_native_path("${src}/lib;${src}/tests;${src}/spec;${bin};${c_lib_dir};$ENV{RUBYLIB}" RUBYLIB)
@@ -138,10 +134,18 @@ if (result EQUAL 0)  # Have minitest
       NAME ${name}
       COMMAND ${test_env} ${TEST_WRAP_PREFIX_CMD} ${RUBY_EXECUTABLE} ${script} -v
       ${ARGN})
-
   endmacro()
-  add_ruby_test(example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
-  add_ruby_test(old_example_test.rb WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old-examples)
+
+  add_test(
+    NAME ruby-example-test
+    COMMAND ${test_env} ${RUBY_EXECUTABLE} testme -v
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/examples)
+
+  add_test(
+    NAME ruby-old-example-test
+    COMMAND ${test_env} ${RUBY_EXECUTABLE} old_example_test.rb -v
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/old-examples)
+
   file(GLOB TESTS tests/test_*.rb)
   file(GLOB SPECS spec/*_spec.rb)
   foreach(t ${TESTS} ${SPECS})

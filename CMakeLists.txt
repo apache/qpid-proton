@@ -39,7 +39,7 @@ find_package (CyrusSASL)
 enable_testing ()
 
 # Set up runtime checks (valgrind, sanitizers etc.)
-include(runtime_check.cmake)  
+include(tests/runtime_check.cmake)  
 
 ## Variables used across components
 
@@ -394,8 +394,9 @@ endforeach(BINDING)
 
 unset(BUILD_BINDINGS CACHE) # Remove from cache, only relevant when creating the initial cache.
 
-install (FILES LICENSE.txt README.md
-         DESTINATION ${PROTON_SHARE})
+install (FILES LICENSE.txt README.md tests/share/CMakeLists.txt DESTINATION ${PROTON_SHARE})
+install (FILES tests/share/examples-README.md RENAME README.md DESTINATION ${PROTON_SHARE}/examples)
+install (DIRECTORY tests DESTINATION ${PROTON_SHARE} PATTERN share EXCLUDE)
 
 # Generate test environment settings
 configure_file(${CMAKE_SOURCE_DIR}/misc/config.sh.in

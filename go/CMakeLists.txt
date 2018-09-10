@@ -84,4 +84,7 @@ set (GO_INSTALL_DIR ${SHARE_INSTALL_DIR}/gocode/src CACHE PATH "Installation dir
 mark_as_advanced (GO_INSTALL_DIR)
 
 install(DIRECTORY src/qpid.apache.org DESTINATION ${GO_INSTALL_DIR} COMPONENT Go)
-install(DIRECTORY examples/ DESTINATION "${PROTON_SHARE}/examples/go" COMPONENT Go)
+install(DIRECTORY examples/
+  DESTINATION "${PROTON_SHARE}/examples/go"
+  COMPONENT Go
+  PATTERN "CMakeLists.txt" EXCLUDE)
