@@ -366,17 +366,18 @@ void test_container_mt_stop_empty() {
     c.auto_stop( false );
     container_runner runner(c);
     auto t = std::thread(runner);
-    // Must ensure that thread is joined or detached
+    // Must ensure that thread is joined
     try {
         ASSERT_EQUAL("start", th.wait());
         c.stop();
         t.join();
         ASSERT_EQUAL("", th.error().name());
-    } catch (...) {
-        // We don't join as we don't know if we'll be stuck waiting
-        if (t.joinable()) {
-            t.detach();
-        }
+    } catch (const std::exception &e) {
+        std::cerr << FAIL_MSG(e.what()) << std::endl;
+        // If join hangs, let the test die by timeout.  We cannot
+        // detach and continue: deleting the container while t is
+        // still alive will put the process in an undefined state.
+        t.join();
         throw;
     }
 }
@@ -387,19 +388,20 @@ void test_container_mt_stop() {
     c.auto_stop(false);
     container_runner runner(c);
     auto t = std::thread(runner);
-    // Must ensure that thread is joined or detached
+    // Must ensure that thread is joined
     try {
         test_listen_handler lh;
-        c.listen("//:0", lh);       //  Also opens a connection
         ASSERT_EQUAL("start", th.wait());
+        c.listen("//:0", lh);       //  Also opens a connection
         ASSERT_EQUAL("open", th.wait());
         c.stop();
         t.join();
-    } catch (...) {
-        // We don't join as we don't know if we'll be stuck waiting
-        if (t.joinable()) {
-            t.detach();
-        }
+    } catch (const std::exception& e) {
+        std::cerr << FAIL_MSG(e.what()) << std::endl;
+        // If join hangs, let the test die by timeout.  We cannot
+        // detach and continue: deleting the container while t is
+        // still alive will put the process in an undefined state.
+        t.join();
         throw;
     }
 }
