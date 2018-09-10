@@ -151,10 +151,7 @@ install(TARGETS ${SWIG_MODULE_cproton_REAL_NAME}
 install(DIRECTORY examples/
         DESTINATION "${PROTON_SHARE}/examples/python"
         COMPONENT Python
-        PATTERN "*.py"
-        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
-                    GROUP_EXECUTE GROUP_READ
-                    WORLD_EXECUTE WORLD_READ)
+        USE_SOURCE_PERMISSIONS)
 
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "html;tutorial")
 

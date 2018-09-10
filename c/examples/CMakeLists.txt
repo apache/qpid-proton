@@ -34,20 +34,24 @@ foreach (name broker send receive direct send-abort send-ssl)
 endforeach()
 
 
-# Add a test to run all examples
+find_package (PythonInterp)     # For test-driver script
+if (PYTHON_EXECUTABLE)
 
-# Make correct environment to find test executables and valgrind.
-if(WIN32)
-  set(test_path "$<TARGET_FILE_DIR:c-broker>;$<TARGET_FILE_DIR:qpid-proton-core>;$<TARGET_FILE_DIR:qpid-proton-proactor>")
-else()
-  set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+  if(WIN32)
+    # NOTE: need to escape semicolons as cmake uses them as list separators.
+    set(test_path "$<TARGET_FILE_DIR:c-broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-proactor>")
+  else()
+    set(test_path "$<TARGET_FILE_DIR:c-broker>:$ENV{PATH}")
+  endif()
+
+  set(test_env
+    "PATH=${test_path}"
+    "PYTHONPATH=../../tests/py"
+    ${TEST_ENV})
+
+  add_test(
+    NAME c-example-tests
+    COMMAND ${PYTHON_EXECUTABLE} testme -v
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+  set_tests_properties(c-example-tests PROPERTIES ENVIRONMENT "${test_env}")
 endif()
-
-add_test(
-  NAME c-example-tests
-  COMMAND ${PN_ENV_SCRIPT}
-  "PATH=${test_path}"
-  "PYTHONPATH=${CMAKE_SOURCE_DIR}/tests/py"
-  ${TEST_ENV} --
-  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/example_test.py -v
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})

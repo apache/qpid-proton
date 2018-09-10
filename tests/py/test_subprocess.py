@@ -33,7 +33,7 @@ class TestProcessError(Exception):
 
 class Popen(subprocess.Popen):
     """
-    Adds TEST_EXE_PREFIX to the command and checks stderr for runtime checker output.
+    Add TEST_EXE_PREFIX to the command, check stderr for runtime checker output.
     In a 'with' statement it runs check_wait() on exit from the block, or
     check_kill() if initialized with kill_me=True
     """
@@ -43,11 +43,13 @@ class Popen(subprocess.Popen):
         Takes all args and kwargs of subprocess.Popen except stdout, stderr, universal_newlines
         kill_me=True runs check_kill() in __exit__() instead of check_wait()
         """
-        self.cmd = args[0]
         self.on_exit = self.check_kill if kwargs.pop('kill_me', False) else self.check_wait
         self.errfile = tempfile.NamedTemporaryFile(delete=False)
         kwargs.update({'universal_newlines': True, 'stdout': PIPE, 'stderr': self.errfile})
-        args = ((os.environ.get("TEST_EXE_PREFIX", "").split() + args[0]),) + args[1:]
+        prefix = os.environ.get("TEST_EXE_PREFIX")
+        if prefix:
+            args = [prefix.split() + args[0]] + list(args[1:])
+        self.cmd = args[0]
         super(Popen, self).__init__(*args, **kwargs)
 
     def check_wait(self):
@@ -75,7 +77,7 @@ class Popen(subprocess.Popen):
         line = self.stdout.readline()
         match = re.search(pattern, line)
         if not match:
-            raise Exception("%s: can't find '%s' in '%s'" % (self.cmd, pattern, line))
+            raise TestProcessError(self, "can't find '%s' in '%s'" % (pattern, line))
         return match
 
     @property
