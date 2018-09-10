@@ -51,6 +51,7 @@ void pn_log_logger(pn_logger_t new_logger) {
 void pni_vlogf_impl(const char *fmt, va_list ap) {
     vfprintf(stderr, fmt, ap);
     fprintf(stderr, "\n");
+    fflush(stderr);
 }
 
 /**@internal

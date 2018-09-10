@@ -32,12 +32,15 @@
  * the latter.
  */
 
+#include "core/autodetect.h"
+#include "core/engine-internal.h"
+#include "core/log_private.h"
+#include "core/util.h"
+
+#include "platform/platform.h"
+
 #include <proton/ssl.h>
 #include <proton/engine.h>
-#include "core/engine-internal.h"
-#include "platform/platform.h"
-#include "core/util.h"
-#include "core/autodetect.h"
 
 #include <assert.h>
 
@@ -194,7 +197,7 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
       if (cert_count == 1) {
         found_ctx = CertDuplicateCertificateContext(tmpctx);
       } else {
-        ssl_log_error("Multiple certificates to choose from certificate store %s\n", store_name);
+        ssl_log_error("Multiple certificates to choose from certificate store %s", store_name);
         found_ctx = NULL;
         break;
       }
@@ -206,7 +209,7 @@ static int win_credential_load_cert(win_credential_t *cred, const char *store_na
     tmpctx = false;
   }
   if (!found_ctx && cert_name && cert_count == 1)
-    ssl_log_error("Could not find certificate %s in store %s\n", cert_name, store_name);
+    ssl_log_error("Could not find certificate %s in store %s", cert_name, store_name);
   cred->cert_context = found_ctx;
 
   free(fn);
@@ -366,9 +369,8 @@ static void ssl_log_error(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
+  pn_vlogf(fmt, ap);
   va_end(ap);
-  fflush(stderr);
 }
 
 // @todo: used to avoid littering the code with calls to printf...
@@ -377,9 +379,8 @@ static void ssl_log(pn_transport_t *transport, const char *fmt, ...)
   if (PN_TRACE_DRV & transport->trace) {
     va_list ap;
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    pn_vlogf(fmt, ap);
     va_end(ap);
-    fflush(stderr);
   }
 }
 
@@ -390,25 +391,21 @@ static void ssl_log_error_status(HRESULT status, const char *fmt, ...)
 
   if (fmt) {
     va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
+    pn_vlogf(fmt, ap);
     va_end(ap);
   }
 
   if (FormatMessage(FORMAT_MESSAGE_MAX_WIDTH_MASK | FORMAT_MESSAGE_FROM_SYSTEM,
                     0, status, 0, buf, sizeof(buf), 0))
-    ssl_log_error(" : %s\n", buf);
+    ssl_log_error(" : %s", buf);
   else
-    fprintf(stderr, "pn internal Windows error: %x for %x\n", GetLastError(), status);
-
-  fflush(stderr);
+    pn_logf("pn internal Windows error: %x for %x", GetLastError(), status);
 }
 
 static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
 {
   if (PN_TRACE_RAW & transport->trace) {
-    fprintf(stderr, "SSL decrypted data: \"");
-    pn_fprint_data( stderr, data, len );
-    fprintf(stderr, "\"\n");
+    pn_log_data("SSL decrypted data", data, len);
   }
 }
 
@@ -473,7 +470,7 @@ pn_ssl_domain_t *pn_ssl_domain( pn_ssl_mode_t mode )
     break;
 
   default:
-    ssl_log_error("Invalid mode for pn_ssl_mode_t: %d\n", mode);
+    ssl_log_error("Invalid mode for pn_ssl_mode_t: %d", mode);
     free(domain);
     return NULL;
   }
@@ -568,8 +565,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
   csguard g2(&domain->cred->cslock);
 
   if (!domain->has_ca_db && (mode == PN_SSL_VERIFY_PEER || mode == PN_SSL_VERIFY_PEER_NAME)) {
-    ssl_log_error("Error: cannot verify peer without a trusted CA configured.\n"
-                  "       Use pn_ssl_domain_set_trusted_ca_db()\n");
+    ssl_log_error("Error: cannot verify peer without a trusted CA configured, use pn_ssl_domain_set_trusted_ca_db()");
     return -1;
   }
 
@@ -585,8 +581,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
         return -1;
       }
       if (!win_credential_has_certificate(domain->cred)) {
-        ssl_log_error("Error: Server cannot verify peer without configuring a certificate.\n"
-                   "       Use pn_ssl_domain_set_credentials()");
+        ssl_log_error("Error: Server cannot verify peer without configuring a certificate, use pn_ssl_domain_set_credentials()");
         return -1;
       }
       int ec = 0;
@@ -603,7 +598,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
     break;
 
   default:
-    ssl_log_error("Invalid peer authentication mode given.\n");
+    ssl_log_error("Invalid peer authentication mode given.");
     return -1;
   }
 
@@ -711,7 +706,7 @@ int pn_ssl_domain_allow_unsecured_client(pn_ssl_domain_t *domain)
 {
   if (!domain) return -1;
   if (domain->mode != PN_SSL_MODE_SERVER) {
-    ssl_log_error("Cannot permit unsecured clients - not a server.\n");
+    ssl_log_error("Cannot permit unsecured clients - not a server.");
     return -1;
   }
   domain->allow_unsecured = true;
@@ -768,7 +763,7 @@ bool pn_ssl_get_protocol_name(pn_ssl_t *ssl0, char *buffer, size_t size )
     else if ((info.dwProtocol & 0xC00))
       pni_snprintf(buffer, size, "%s", "TLSv1.2");
     else {
-      ssl_log_error("unexpected protocol %x\n", info.dwProtocol);
+      ssl_log_error("unexpected protocol %x", info.dwProtocol);
       return false;
     }
     return true;
@@ -781,7 +776,7 @@ void pn_ssl_free( pn_transport_t *transport)
 {
   pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return;
-  ssl_log( transport, "SSL socket freed.\n" );
+  ssl_log( transport, "SSL socket freed." );
   // clean up Windows per TLS session data before releasing the domain count
   csguard g(&ssl->domain->cslock);
   csguard g2(&ssl->cred->cslock);
@@ -978,7 +973,7 @@ static void ssl_encrypt(pn_transport_t *transport, char *app_data, size_t count)
   ssl->sc_out_count = buffs[0].cbBuffer + buffs[1].cbBuffer + buffs[2].cbBuffer;
   ssl->network_outp = ssl->sc_outbuf;
   ssl->network_out_pending = ssl->sc_out_count;
-  ssl_log(transport, "ssl_encrypt %d network bytes\n", ssl->network_out_pending);
+  ssl_log(transport, "ssl_encrypt %d network bytes", ssl->network_out_pending);
 }
 
 // Returns true if decryption succeeded (even for empty content)
@@ -1020,7 +1015,7 @@ static bool ssl_decrypt(pn_transport_t *transport)
       return false;
 
     case SEC_I_RENEGOTIATE:
-      ssl_log_error("unexpected TLS renegotiation\n");
+      ssl_log_error("unexpected TLS renegotiation");
       // TODO.  Fall through for now.
     default:
       ssl_failed(transport, 0);
@@ -1081,7 +1076,7 @@ static void client_handshake_init(pn_transport_t *transport)
     ssl->network_out_pending = ssl->sc_out_count;
     // the token is the whole quantity to send
     ssl->network_outp = ssl->sc_outbuf;
-    ssl_log(transport, "Sending client hello %d bytes\n", ssl->network_out_pending);
+    ssl_log(transport, "Sending client hello %d bytes", ssl->network_out_pending);
   } else {
     ssl_log_error_status(status, "InitializeSecurityContext failed");
     ssl_failed(transport, 0);
@@ -1137,7 +1132,7 @@ static void client_handshake( pn_transport_t* transport) {
   case SEC_E_INCOMPLETE_MESSAGE:
     // Not enough - get more data from the server then try again.
     // Leave input buffers untouched.
-    ssl_log(transport, "client handshake: incomplete record\n");
+    ssl_log(transport, "client handshake: incomplete record");
     ssl->sc_in_incomplete = true;
     return;
 
@@ -1147,7 +1142,7 @@ static void client_handshake( pn_transport_t* transport) {
     // the token is the whole quantity to send
     ssl->network_out_pending = ssl->sc_out_count;
     ssl->network_outp = ssl->sc_outbuf;
-    ssl_log(transport, "client handshake token %d bytes\n", ssl->network_out_pending);
+    ssl_log(transport, "client handshake token %d bytes", ssl->network_out_pending);
     break;
 
   case SEC_E_OK:
@@ -1158,7 +1153,7 @@ static void client_handshake( pn_transport_t* transport) {
         // the token is the whole quantity to send
         ssl->network_out_pending = ssl->sc_out_count;
         ssl->network_outp = ssl->sc_outbuf;
-        ssl_log(transport, "client shutdown token %d bytes\n", ssl->network_out_pending);
+        ssl_log(transport, "client shutdown token %d bytes", ssl->network_out_pending);
       } else {
         ssl->state = SSL_CLOSED;
       }
@@ -1178,9 +1173,9 @@ static void client_handshake( pn_transport_t* transport) {
       HRESULT ec = verify_peer(ssl, ssl->cred->trust_store, ssl->peer_hostname, tracing);
       if (ec) {
         if (ssl->peer_hostname)
-          ssl_log_error_status(ec, "certificate verification failed for host %s\n", ssl->peer_hostname);
+          ssl_log_error_status(ec, "certificate verification failed for host %s", ssl->peer_hostname);
         else
-          ssl_log_error_status(ec, "certificate verification failed\n");
+          ssl_log_error_status(ec, "certificate verification failed");
         ssl_failed(transport, "TLS certificate verification error");
         break;
       }
@@ -1197,7 +1192,7 @@ static void client_handshake( pn_transport_t* transport) {
                              SECPKG_ATTR_STREAM_SIZES, &ssl->sc_sizes);
     max = ssl->sc_sizes.cbMaximumMessage + ssl->sc_sizes.cbHeader + ssl->sc_sizes.cbTrailer;
     if (max > ssl->sc_out_size) {
-      ssl_log_error("Buffer size mismatch have %d, need %d\n", (int) ssl->sc_out_size, (int) max);
+      ssl_log_error("Buffer size mismatch have %d, need %d", (int) ssl->sc_out_size, (int) max);
       ssl->state = SHUTTING_DOWN;
       ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
       start_ssl_shutdown(transport);
@@ -1207,13 +1202,13 @@ static void client_handshake( pn_transport_t* transport) {
 
     ssl->state = RUNNING;
     ssl->max_data_size = max - ssl->sc_sizes.cbHeader - ssl->sc_sizes.cbTrailer;
-    ssl_log(transport, "client handshake successful %d max record size\n", max);
+    ssl_log(transport, "client handshake successful %d max record size", max);
     break;
 
   case SEC_I_CONTEXT_EXPIRED:
     // ended before we got going
   default:
-    ssl_log(transport, "client handshake failed %d\n", (int) status);
+    ssl_log(transport, "client handshake failed %d", (int) status);
     ssl_failed(transport, 0);
     break;
   }
@@ -1238,7 +1233,7 @@ static void server_handshake(pn_transport_t* transport)
     // waiting for more bytes.  Help out here.
     pni_protocol_type_t type = pni_sniff_header(ssl->sc_inbuf, ssl->sc_in_count);
     if (type == PNI_PROTOCOL_INSUFFICIENT) {
-      ssl_log(transport, "server handshake: incomplete record\n");
+      ssl_log(transport, "server handshake: incomplete record");
       ssl->sc_in_incomplete = true;
       return;
     } else {
@@ -1300,7 +1295,7 @@ static void server_handshake(pn_transport_t* transport)
   case SEC_E_INCOMPLETE_MESSAGE:
     // Not enough - get more data from the client then try again.
     // Leave input buffers untouched.
-    ssl_log(transport, "server handshake: incomplete record\n");
+    ssl_log(transport, "server handshake: incomplete record");
     ssl->sc_in_incomplete = true;
     return;
 
@@ -1316,7 +1311,7 @@ static void server_handshake(pn_transport_t* transport)
         // the token is the whole quantity to send
         ssl->network_out_pending = ssl->sc_out_count;
         ssl->network_outp = ssl->sc_outbuf;
-        ssl_log(transport, "server shutdown token %d bytes\n", ssl->network_out_pending);
+        ssl_log(transport, "server shutdown token %d bytes", ssl->network_out_pending);
       } else {
         ssl->state = SSL_CLOSED;
       }
@@ -1333,7 +1328,7 @@ static void server_handshake(pn_transport_t* transport)
       bool tracing = PN_TRACE_DRV & transport->trace;
       HRESULT ec = verify_peer(ssl, ssl->cred->trust_store, NULL, tracing);
       if (ec) {
-        ssl_log_error_status(ec, "certificate verification failed\n");
+        ssl_log_error_status(ec, "certificate verification failed");
         ssl_failed(transport, "certificate verification error");
         break;
       }
@@ -1343,7 +1338,7 @@ static void server_handshake(pn_transport_t* transport)
                              SECPKG_ATTR_STREAM_SIZES, &ssl->sc_sizes);
     max = ssl->sc_sizes.cbMaximumMessage + ssl->sc_sizes.cbHeader + ssl->sc_sizes.cbTrailer;
     if (max > ssl->sc_out_size) {
-      ssl_log_error("Buffer size mismatch have %d, need %d\n", (int) ssl->sc_out_size, (int) max);
+      ssl_log_error("Buffer size mismatch have %d, need %d", (int) ssl->sc_out_size, (int) max);
       ssl->state = SHUTTING_DOWN;
       ssl->app_input_closed = ssl->app_output_closed = PN_ERR;
       start_ssl_shutdown(transport);
@@ -1356,13 +1351,13 @@ static void server_handshake(pn_transport_t* transport)
 
     ssl->state = RUNNING;
     ssl->max_data_size = max - ssl->sc_sizes.cbHeader - ssl->sc_sizes.cbTrailer;
-    ssl_log(transport, "server handshake successful %d max record size\n", max);
+    ssl_log(transport, "server handshake successful %d max record size", max);
     break;
 
   case SEC_I_CONTEXT_EXPIRED:
     // ended before we got going
   default:
-    ssl_log(transport, "server handshake failed %d\n", (int) status);
+    ssl_log(transport, "server handshake failed %d", (int) status);
     ssl_failed(transport, 0);
     break;
   }
@@ -1374,7 +1369,7 @@ static void server_handshake(pn_transport_t* transport)
     // the token is the whole quantity to send
     ssl->network_out_pending = ssl->sc_out_count;
     ssl->network_outp = ssl->sc_outbuf;
-    ssl_log(transport, "server handshake token %d bytes\n", ssl->network_out_pending);
+    ssl_log(transport, "server handshake token %d bytes", ssl->network_out_pending);
   }
 
   if (token_buffs[1].BufferType == SECBUFFER_EXTRA && token_buffs[1].cbBuffer > 0 &&
@@ -1408,7 +1403,7 @@ static bool grow_inbuf2(pn_transport_t *transport, size_t minimum_size) {
   if (max_frame != 0) {
     if (old_capacity >= max_frame) {
       //  already big enough
-      ssl_log(transport, "Application expecting %d bytes (> negotiated maximum frame)\n", new_capacity);
+      ssl_log(transport, "Application expecting %d bytes (> negotiated maximum frame)", new_capacity);
       ssl_failed(transport, "TLS: transport maximum frame size error");
       return false;
     }
@@ -1417,7 +1412,7 @@ static bool grow_inbuf2(pn_transport_t *transport, size_t minimum_size) {
   size_t extra_bytes = new_capacity - pn_buffer_size(ssl->inbuf2);
   int err = pn_buffer_ensure(ssl->inbuf2, extra_bytes);
   if (err) {
-    ssl_log(transport, "TLS memory allocation failed for %d bytes\n", max_frame);
+    ssl_log(transport, "TLS memory allocation failed for %d bytes", max_frame);
     ssl_failed(transport, "TLS memory allocation failed");
     return false;
   }
@@ -1437,7 +1432,7 @@ static void start_ssl_shutdown(pn_transport_t *transport)
   if (ssl->queued_shutdown)
     return;
   ssl->queued_shutdown = true;
-  ssl_log(transport, "Shutting down SSL connection...\n");
+  ssl_log(transport, "Shutting down SSL connection...");
 
   DWORD shutdown = SCHANNEL_SHUTDOWN;
   SecBuffer shutBuff;
@@ -1603,7 +1598,7 @@ static void read_closed(pn_transport_t *transport, unsigned int layer, ssize_t e
 static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, const char *input_data, size_t available)
 {
   pni_ssl_t *ssl = transport->ssl;
-  ssl_log( transport, "process_input_ssl( data size=%d )\n",available );
+  ssl_log( transport, "process_input_ssl( data size=%d )",available );
   ssize_t consumed = 0;
   ssize_t forwarded = 0;
   bool new_app_input;
@@ -1680,7 +1675,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
             rewind_sc_inbuf(ssl);
           }
         }
-        ssl_log(transport, "Next decryption, %d left over\n", available);
+        ssl_log(transport, "Next decryption, %d left over", available);
       }
     }
 
@@ -1702,7 +1697,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
             forwarded += count;
             // advance() can increase app_inbytes.size if double buffered
             app_inbytes_advance(transport, count);
-            ssl_log(transport, "Application consumed %d bytes from peer\n", (int) count);
+            ssl_log(transport, "Application consumed %d bytes from peer", (int) count);
           } else if (count == 0) {
             size_t old_size = ssl->app_inbytes.size;
             app_inbytes_advance(transport, 0);
@@ -1711,13 +1706,13 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
             }
           } else {
             // count < 0
-            ssl_log(transport, "Application layer closed its input, error=%d (discarding %d bytes)\n",
+            ssl_log(transport, "Application layer closed its input, error=%d (discarding %d bytes)",
                  (int) count, (int)ssl->app_inbytes.size);
             app_inbytes_advance(transport, ssl->app_inbytes.size);    // discard
             read_closed(transport, layer, count);
           }
         } else {
-          ssl_log(transport, "Input closed discard %d bytes\n",
+          ssl_log(transport, "Input closed discard %d bytes",
                (int)ssl->app_inbytes.size);
           app_inbytes_advance(transport, ssl->app_inbytes.size);      // discard
         }
@@ -1737,7 +1732,7 @@ static ssize_t process_input_ssl(pn_transport_t *transport, unsigned int layer, 
       }
     }
   }
-  ssl_log(transport, "process_input_ssl() returning %d, forwarded %d\n", (int) consumed, (int) forwarded);
+  ssl_log(transport, "process_input_ssl() returning %d, forwarded %d", (int) consumed, (int) forwarded);
   return consumed;
 }
 
@@ -1745,7 +1740,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
 {
   pni_ssl_t *ssl = transport->ssl;
   if (!ssl) return PN_EOS;
-  ssl_log( transport, "process_output_ssl( max_len=%d )\n",max_len );
+  ssl_log( transport, "process_output_ssl( max_len=%d )",max_len );
 
   ssize_t written = 0;
   ssize_t total_app_bytes = 0;
@@ -1784,17 +1779,17 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
         if (app_bytes > 0) {
           app_outp += app_bytes;
           remaining -= app_bytes;
-          ssl_log( transport, "Gathered %d bytes from app to send to peer\n", app_bytes );
+          ssl_log( transport, "Gathered %d bytes from app to send to peer", app_bytes );
         } else {
           if (app_bytes < 0) {
-            ssl_log(transport, "Application layer closed its output, error=%d (%d bytes pending send)\n",
+            ssl_log(transport, "Application layer closed its output, error=%d (%d bytes pending send)",
                  (int) app_bytes, (int) ssl->network_out_pending);
             ssl->app_output_closed = app_bytes;
             if (ssl->app_input_closed)
               ssl->state = SHUTTING_DOWN;
           } else if (total_app_bytes == 0 && ssl->app_input_closed) {
             // We've drained all the App layer can provide
-            ssl_log(transport, "Application layer blocked on input, closing\n");
+            ssl_log(transport, "Application layer blocked on input, closing");
             ssl->state = SHUTTING_DOWN;
             ssl->app_output_closed = PN_ERR;
           }
@@ -1830,7 +1825,7 @@ static ssize_t process_output_ssl( pn_transport_t *transport, unsigned int layer
       transport->io_layers[layer] = &ssl_output_closed_layer;
     }
   }
-  ssl_log(transport, "process_output_ssl() returning %d\n", (int) written);
+  ssl_log(transport, "process_output_ssl() returning %d", (int) written);
   return written;
 }
 
@@ -2099,7 +2094,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
   wchar_t *nameUCS2 = 0;
 
   if (server_name && strlen(server_name) > 255) {
-    ssl_log_error("invalid server name: %s\n", server_name);
+    ssl_log_error("invalid server name: %s", server_name);
     return WSAENAMETOOLONG;
   }
 
@@ -2144,7 +2139,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
     return st;
   }
   if (chain_context->cChain < 1 || chain_context->rgpChain[0]->cElement < 1) {
-    ssl_log_error("empty chain with status %x %x\n", chain_context->TrustStatus.dwErrorStatus,
+    ssl_log_error("empty chain with status %x %x", chain_context->TrustStatus.dwErrorStatus,
                  chain_context->TrustStatus.dwInfoStatus);
     return SEC_E_CERT_UNKNOWN;
   }
@@ -2154,7 +2149,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
   PCCERT_CONTEXT trunk_cert = chain_context->rgpChain[0]->rgpElement[chain_len - 1]->pCertContext;
   if (tracing)
     // See doc for CERT_CHAIN_POLICY_STATUS for bit field error and info status values
-    ssl_log_error("status for complete chain: error bits %x info bits %x\n",
+    ssl_log_error("status for complete chain: error bits %x info bits %x",
                   chain_context->TrustStatus.dwErrorStatus, chain_context->TrustStatus.dwInfoStatus);
 
   // Supplement with checks against Proton's trusted_ca_db, custom revocation and usage.
@@ -2167,7 +2162,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
       PCCERT_CONTEXT cc = ce->pCertContext;
       if (cc->pCertInfo->dwVersion != CERT_V3) {
         if (tracing)
-          ssl_log_error("certificate chain element %d is not version 3\n", i);
+          ssl_log_error("certificate chain element %d is not version 3", i);
         error = SEC_E_CERT_WRONG_USAGE; // A fossil
         break;
       }
@@ -2192,7 +2187,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
         if (!CertNameToStr(cc->dwCertEncodingType, &cc->pCertInfo->Subject,
                            CERT_X500_NAME_STR | CERT_NAME_STR_NO_PLUS_FLAG, name, sizeof(name)))
           strcpy(name, "[too long]");
-        ssl_log_error("element %d (name: %s)%s error bits %x info bits %x\n", i, name, is_anchor,
+        ssl_log_error("element %d (name: %s)%s error bits %x info bits %x", i, name, is_anchor,
                       ce->TrustStatus.dwErrorStatus, ce->TrustStatus.dwInfoStatus);
       }
     }
@@ -2208,9 +2203,9 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
       if (trust_anchor) {
         if (tracing) {
           if (flags & CERT_STORE_SIGNATURE_FLAG)
-            ssl_log_error("root certificate signature failure\n");
+            ssl_log_error("root certificate signature failure");
           if (flags & CERT_STORE_TIME_VALIDITY_FLAG)
-            ssl_log_error("root certificate time validity failure\n");
+            ssl_log_error("root certificate time validity failure");
         }
         if (flags) {
           CertFreeCertificateContext(trust_anchor);
@@ -2292,7 +2287,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
         if (chain_status.lChainIndex == 0 && chain_status.lElementIndex != -1) {
           int idx = chain_status.lElementIndex;
           CERT_CHAIN_ELEMENT *ce = chain_context->rgpChain[0]->rgpElement[idx];
-          ssl_log_error("  chain failure at %d error/info: %x %x\n", idx,
+          ssl_log_error("  chain failure at %d error/info: %x %x", idx,
                         ce->TrustStatus.dwErrorStatus, ce->TrustStatus.dwInfoStatus);
         }
       }
@@ -2312,7 +2307,7 @@ static HRESULT verify_peer(pni_ssl_t *ssl, HCERTSTORE root_store, const char *se
   } while (0);
 
   if (tracing && !error)
-    ssl_log_error("peer certificate authenticated\n");
+    ssl_log_error("peer certificate authenticated");
 
   // Lots to clean up.
   if (peer_cc)

@@ -135,6 +135,7 @@ static void pni_delivery_map_clear(pn_delivery_map_t *dm)
 static void pni_default_tracer(pn_transport_t *transport, const char *message)
 {
   fprintf(stderr, "[%p]:%s\n", (void *) transport, message);
+  fflush(stderr);
 }
 
 static ssize_t pn_io_layer_input_passthru(pn_transport_t *, unsigned int, const char *, size_t );

@@ -19,9 +19,9 @@
  *
  */
 
-#include "util.h"
-
 #include "buffer.h"
+#include "log_private.h"
+#include "util.h"
 
 #include <proton/error.h>
 #include <proton/types.h>
@@ -82,25 +82,17 @@ int pn_quote(pn_string_t *dst, const char *src, size_t size)
   }
 }
 
-void pn_fprint_data(FILE *stream, const char *bytes, size_t size)
+void pn_log_data(const char *msg, const char *bytes, size_t size)
 {
   char buf[256];
   ssize_t n = pn_quote_data(buf, 256, bytes, size);
   if (n >= 0) {
-    fputs(buf, stream);
+    pn_logf("%s: %s", msg, buf);
+  } else if (n == PN_OVERFLOW) {
+    pn_logf("%s: %s (truncated)", msg, buf);
   } else {
-    if (n == PN_OVERFLOW) {
-      fputs(buf, stream);
-      fputs("... (truncated)", stream);
-    }
-    else
-      fprintf(stderr, "pn_quote_data: %s\n", pn_code(n));
+    pn_logf("%s: cannot log data: %s", msg, pn_code(n));
   }
-}
-
-void pn_print_data(const char *bytes, size_t size)
-{
-  pn_fprint_data(stdout, bytes, size);
 }
 
 int pn_strcasecmp(const char *a, const char *b)

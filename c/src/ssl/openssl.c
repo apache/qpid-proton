@@ -20,8 +20,9 @@
  */
 
 #include "platform/platform.h"
-#include "core/util.h"
 #include "core/engine-internal.h"
+#include "core/log_private.h"
+#include "core/util.h"
 
 #include <proton/ssl.h>
 #include <proton/engine.h>
@@ -184,16 +185,13 @@ static void ssl_log_error(const char *fmt, ...)
     ssl_vlog(NULL, fmt, ap);
     va_end(ap);
   }
-
   ssl_log_flush(NULL);
 }
 
 static void ssl_log_clear_data(pn_transport_t *transport, const char *data, size_t len)
 {
   if (PN_TRACE_RAW & transport->trace) {
-    fprintf(stderr, "SSL decrypted data: \"");
-    pn_fprint_data( stderr, data, len );
-    fprintf(stderr, "\"\n");
+    pn_log_data("SSL decrypted data", data, len );
   }
 }
 
@@ -662,9 +660,6 @@ found:
   // Check if we found anything
   if (options==all_prots) return PN_ARG_ERR;
 
-  // Debug test only
-  //printf("%30s %016lx (~%016lx)\n", protocols, options, ~options&all_prots);
-
   SSL_CTX_clear_options(domain->ctx, all_prots);
   SSL_CTX_set_options(domain->ctx, options);
   return 0;
@@ -719,8 +714,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
 #endif
 
     if (!domain->has_ca_db) {
-      pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured.\n"
-                        "       Use pn_ssl_domain_set_trusted_ca_db()");
+      pn_transport_logf(NULL, "Error: cannot verify peer without a trusted CA configured, use pn_ssl_domain_set_trusted_ca_db()");
       return -1;
     }
 
@@ -732,8 +726,7 @@ int pn_ssl_domain_set_peer_authentication(pn_ssl_domain_t *domain,
         return -1;
       }
       if (!domain->has_certificate) {
-        pn_transport_logf(NULL, "Error: Server cannot verify peer without configuring a certificate.\n"
-                          "       Use pn_ssl_domain_set_credentials()");
+        pn_transport_logf(NULL, "Error: Server cannot verify peer without configuring a certificate, use pn_ssl_domain_set_credentials()");
       }
 
       if (domain->trusted_CAs) free(domain->trusted_CAs);
@@ -1406,13 +1399,13 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
     digest_name = "md5";
     break;
    default:
-    ssl_log_error("Unknown or unhandled hash algorithm %i \n", hash_alg);
+    ssl_log_error("Unknown or unhandled hash algorithm %i ", hash_alg);
     return PN_ERR;
 
   }
 
   if(fingerprint_length < min_required_length) {
-    ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be %i or above for %s digest\n",
+    ssl_log_error("Insufficient fingerprint_length %i. fingerprint_length must be %i or above for %s digest",
                   fingerprint_length, min_required_length, digest_name);
     return PN_ERR;
   }
@@ -1428,7 +1421,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
     unsigned char bytes[64]; // sha512 uses 64 octets, we will use that as the maximum.
 
     if (X509_digest(cert, digest, bytes, &len) != 1) {
-      ssl_log_error("Failed to extract X509 digest\n");
+      ssl_log_error("Failed to extract X509 digest");
       return PN_ERR;
     }
 
@@ -1442,7 +1435,7 @@ int pn_ssl_get_cert_fingerprint(pn_ssl_t *ssl0, char *fingerprint, size_t finger
     return PN_OK;
   }
   else {
-    ssl_log_error("No certificate is available yet \n");
+    ssl_log_error("No certificate is available yet ");
     return PN_ERR;
   }
 
@@ -1475,7 +1468,7 @@ const char* pn_ssl_get_remote_subject_subfield(pn_ssl_t *ssl0, pn_ssl_cert_subje
     openssl_field = NID_commonName;
     break;
    default:
-    ssl_log_error("Unknown or unhandled certificate subject subfield %i \n", field);
+    ssl_log_error("Unknown or unhandled certificate subject subfield %i", field);
     return NULL;
   }
 
