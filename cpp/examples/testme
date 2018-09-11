@@ -23,15 +23,11 @@
 
 import unittest, sys, shutil, os
 from test_subprocess import Popen, TestProcessError, check_output
+import test_subprocess
 from os.path import dirname
 from string import Template
 
-class Server(Popen):
-    """A process that prints 'listening on <port>' to stdout"""
-    def __init__(self, *args, **kwargs):
-        super(Server, self).__init__(*args, **kwargs)
-        self.port = self.expect("listening on ([0-9]+)$").group(1)
-
+class Server(test_subprocess.Server):
     @property
     def addr(self):
         return ":%s/example" % self.port

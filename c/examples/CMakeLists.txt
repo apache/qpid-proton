@@ -36,7 +36,6 @@ endforeach()
 
 find_package (PythonInterp)     # For test-driver script
 if (PYTHON_EXECUTABLE)
-
   if(WIN32)
     # NOTE: need to escape semicolons as cmake uses them as list separators.
     set(test_path "$<TARGET_FILE_DIR:c-broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-proactor>")
@@ -51,7 +50,7 @@ if (PYTHON_EXECUTABLE)
 
   add_test(
     NAME c-example-tests
-    COMMAND ${PYTHON_EXECUTABLE} testme -v
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${PYTHON_EXECUTABLE} testme -v)
   set_tests_properties(c-example-tests PROPERTIES ENVIRONMENT "${test_env}")
 endif()

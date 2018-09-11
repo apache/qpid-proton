@@ -23,7 +23,7 @@ enable_language(CXX)
 set (ProtonCpp_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 find_package(ProtonCpp REQUIRED)
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads)
+find_package(Threads REQUIRED)
 
 include_directories(${ProtonCpp_INCLUDE_DIRS})
 link_libraries(${ProtonCpp_LIBRARIES})
@@ -107,10 +107,10 @@ find_package (PythonInterp)     # For test-driver script
 if (PYTHON_EXECUTABLE)
   if(WIN32)
     # NOTE: need to escape semicolons as cmake uses them as list separators.
-    set(test_path "$<TARGET_FILE_DIR:c-broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-proactor>")
-  else(WIN32)
+    set(test_path "$<TARGET_FILE_DIR:broker>\;$<TARGET_FILE_DIR:qpid-proton-core>\;$<TARGET_FILE_DIR:qpid-proton-cpp>")
+  else()
     set(test_path "$<TARGET_FILE_DIR:broker>:$ENV{PATH}")
-  endif(WIN32)
+  endif()
 
   set(test_env
     "PATH=${test_path}"
@@ -118,18 +118,17 @@ if (PYTHON_EXECUTABLE)
     "HAS_CPP11=$<$<BOOL:${HAS_ENOUGH_CPP11}>:1>"
     ${TEST_ENV})
 
-
   add_test(
     NAME cpp-example-container
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/testme -v ContainerExampleTest)
+    COMMAND ${PYTHON_EXECUTABLE} testme -v ContainerExampleTest)
   set_tests_properties(cpp-example-container PROPERTIES ENVIRONMENT "${test_env}")
 
   if (NOT SSL_IMPL STREQUAL none)
     add_test(
       NAME cpp-example-container-ssl
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${PYTHON_EXECUTABLE}  ${CMAKE_CURRENT_SOURCE_DIR}/testme -v ContainerExampleSSLTest)
+      COMMAND ${PYTHON_EXECUTABLE}  testme -v ContainerExampleSSLTest)
     set_tests_properties(cpp-example-container-ssl PROPERTIES ENVIRONMENT "${test_env}")
   endif()
 endif()
