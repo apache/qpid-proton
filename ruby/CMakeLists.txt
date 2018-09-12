@@ -41,9 +41,9 @@ swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
 if (RUBY_VERSION VERSION_LESS 1.9.0)
    # Don't have blocking control API
 elseif(RUBY_VERSION VERSION_LESS 2.0.0)
-  string(APPEND CMAKE_C_FLAGS " -DRUBY_USE_rb_thread_blocking_region")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DRUBY_USE_rb_thread_blocking_region")
 else()
-  string(APPEND CMAKE_C_FLAGS " -DRUBY_USE_rb_thread_call_without_gvl")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DRUBY_USE_rb_thread_call_without_gvl")
 endif()
 
 # Remove -fvisibility=hidden, it causes an obscure failure in release builds.
