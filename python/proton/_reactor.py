@@ -36,9 +36,10 @@ from cproton import PN_MILLIS_MAX, PN_PYREF, PN_ACCEPTED, \
 
 from ._delivery import  Delivery
 from ._endpoints import Connection, Endpoint, Link, Session, Terminus
+from ._exceptions import SSLUnavailable
 from ._data import Described, symbol, ulong
 from ._message import  Message
-from ._transport import Transport, SSL, SSLDomain, SSLUnavailable
+from ._transport import Transport, SSL, SSLDomain
 from ._url import Url
 from ._common import isstring, secs2millis, millis2secs, unicode2utf8, utf82unicode
 from ._events import EventType, EventBase, Handler

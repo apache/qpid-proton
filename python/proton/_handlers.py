@@ -672,7 +672,7 @@ CFlowController = FlowController
 CHandshaker = Handshaker
 
 
-from ._events import WrappedHandler
+from ._reactor_impl import WrappedHandler
 from cproton import pn_iohandler
 
 class IOHandler(WrappedHandler):

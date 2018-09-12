@@ -27,11 +27,11 @@ import sys
 try:
     import Queue as queue
 except ImportError:
-    import queue
+    import queue # type: ignore
 
 try:
     from urlparse import urlparse, urlunparse
-    from urllib import quote, unquote
+    from urllib import quote, unquote # type: ignore
 except ImportError:
     from urllib.parse import urlparse, urlunparse, quote, unquote
 
