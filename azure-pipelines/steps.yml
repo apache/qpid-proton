@@ -1,0 +1,30 @@
+steps:
+- task: UsePythonVersion@0
+  enabled: false
+  inputs:
+    versionSpec: $(PythonVersion)
+    addToPath: true
+    architecture: $(PythonArch)
+- task: CMake@1
+  name: CMakeConfigure
+  inputs:
+    workingDirectory: 'BLD'
+    cmakeArgs: $(Build.SourcesDirectory) $(CmakeConfigExtraArgs)
+- task: CMake@1
+  name: CMakeBuild
+  inputs:
+    workingDirectory: 'BLD'
+    cmakeArgs: --build . --config $(Config)
+- script: ctest -C $(Config) -V -T Test --no-compress-output
+  displayName: CMakeTest
+  workingDirectory: 'BLD'
+  continueOnError: true
+- task: PublishTestResults@2
+  inputs:
+    testRunTitle: Test run on $(Agent.OS) build $(Build.BuildNumber)
+    testResultsFormat: cTest
+    testResultsFiles: '**/Test.xml'
+    buildConfiguration: $(Config)
+- bash: env | sort
+  displayName: Environment
+  condition: always()
