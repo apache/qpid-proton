@@ -20,7 +20,6 @@
  */
 
 #include "buffer.h"
-#include "log_private.h"
 #include "util.h"
 
 #include <proton/error.h>
@@ -79,19 +78,6 @@ int pn_quote(pn_string_t *dst, const char *src, size_t size)
     } else {
       return ssize;
     }
-  }
-}
-
-void pn_log_data(const char *msg, const char *bytes, size_t size)
-{
-  char buf[256];
-  ssize_t n = pn_quote_data(buf, 256, bytes, size);
-  if (n >= 0) {
-    pn_logf("%s: %s", msg, buf);
-  } else if (n == PN_OVERFLOW) {
-    pn_logf("%s: %s (truncated)", msg, buf);
-  } else {
-    pn_logf("%s: cannot log data: %s", msg, pn_code(n));
   }
 }
 

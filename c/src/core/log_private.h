@@ -49,6 +49,8 @@ PN_EXTERN void pni_logf_impl(const char* fmt, ...);
 /**@internal*/
 PN_EXTERN void pni_vlogf_impl(const char *fmt, va_list ap);
 
+/**@internal*/
+void pn_log_data(const char *msg, const char *bytes, size_t size);
 
 
 #endif

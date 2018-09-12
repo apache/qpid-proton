@@ -30,9 +30,10 @@ endif ()
 
 add_library (StandaloneFuzzTargetMain STATIC StandaloneFuzzTargetMain.c StandaloneFuzzTargetInit.c)
 
-macro (pn_add_fuzz_test_no_proton test)
+macro (pn_add_fuzz_test test)
   add_executable (${test} ${ARGN})
-  target_link_libraries (${test} ${FUZZING_LIBRARY})
+  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
+
   if (FUZZ_REGRESSION_TESTS)
     # StandaloneFuzzTargetMain cannot walk directory trees
     file(GLOB_RECURSE files ${CMAKE_CURRENT_SOURCE_DIR}/${test}/*)
@@ -40,20 +41,14 @@ macro (pn_add_fuzz_test_no_proton test)
   else ()
     add_test (NAME ${test} COMMAND $<TARGET_FILE:${test}> -runs=1 ${CMAKE_CURRENT_SOURCE_DIR}/${test}>)
   endif ()
-endmacro(pn_add_fuzz_test_no_proton)
-
-macro (pn_add_fuzz_test test)
-  pn_add_fuzz_test_no_proton (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${FUZZING_LIBRARY})
-endmacro (pn_add_fuzz_test)
+endmacro(pn_add_fuzz_test)
 
 # Fuzz tests at the User API level
 pn_add_fuzz_test (fuzz-connection-driver fuzz-connection-driver.c)
 pn_add_fuzz_test (fuzz-message-decode fuzz-message-decode.c)
 
-# pn_url_parse is not in qpid-proton-core so link with qpid-proton instead
-pn_add_fuzz_test_no_proton (fuzz-url fuzz-url.c)
-target_link_libraries (fuzz-url qpid-proton ${FUZZING_LIBRARY})
+# pn_url_parse is not in proton core and is only used by messenger so compile specially
+pn_add_fuzz_test (fuzz-url fuzz-url.c ${PN_C_SOURCE_DIR}/extra/url.c  ${PN_C_SOURCE_DIR}/core/util.c)
 
 # This regression test can take a very long time so don't run by default
 if(HAS_PROACTOR AND FUZZ_LONG_TESTS)
