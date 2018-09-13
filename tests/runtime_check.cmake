@@ -85,13 +85,13 @@ if(RUNTIME_CHECK STREQUAL "memcheck")
   assert_has_valgrind()
   message(STATUS "Runtime memory checker: valgrind memcheck")
   set(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=memcheck --leak-check=full ${VALGRIND_COMMON_ARGS}")
-  # FIXME aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
+  # TODO aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
 
 elseif(RUNTIME_CHECK STREQUAL "helgrind")
   assert_has_valgrind()
   message(STATUS "Runtime race checker: valgrind helgrind")
   set(TEST_EXE_PREFIX "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
-  # FIXME aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
+  # TODO aconway 2018-09-06: NO TEST_WRAP_PREFIX, need --trace-children + many suppressions
 
 elseif(RUNTIME_CHECK STREQUAL "asan")
   assert_has_sanitizers()
