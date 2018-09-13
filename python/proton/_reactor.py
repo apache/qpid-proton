@@ -51,10 +51,10 @@ from ._handlers import OutgoingMessageHandler
 from . import _compat
 from ._compat import queue
 
-log = logging.getLogger("proton")
+Logger = logging.getLogger("proton")
 
 
-def generate_uuid():
+def _generate_uuid():
     return uuid.uuid4()
 
 
@@ -428,7 +428,7 @@ class Transaction(object):
             elif event.delivery.remote_state == Delivery.REJECTED:
                 self.handler.on_transaction_declare_failed(event)
             else:
-                log.warning("Unexpected outcome for declare: %s" % event.delivery.remote_state)
+                Logger.warning("Unexpected outcome for declare: %s" % event.delivery.remote_state)
                 self.handler.on_transaction_declare_failed(event)
         elif event.delivery == self._discharge:
             if event.delivery.remote_state == Delivery.REJECTED:
@@ -614,7 +614,7 @@ class Connector(Handler):
         # if virtual-host not set, use host from address as default
         if self.virtual_host is None:
             connection.hostname = url.host
-        log.debug("connecting to %r..." % url)
+        Logger.debug("connecting to %r..." % url)
 
         transport = Transport()
         if self.sasl_enabled:
@@ -645,7 +645,7 @@ class Connector(Handler):
         self._connect(event.connection, event.reactor)
 
     def on_connection_remote_open(self, event):
-        log.debug("connected to %s" % event.connection.hostname)
+        Logger.debug("connected to %s" % event.connection.hostname)
         if self.reconnect:
             self.reconnect.reset()
             self.transport = None
@@ -660,15 +660,15 @@ class Connector(Handler):
                 event.transport.unbind()
                 delay = self.reconnect.next()
                 if delay == 0:
-                    log.info("Disconnected, reconnecting...")
+                    Logger.info("Disconnected, reconnecting...")
                     self._connect(self.connection, event.reactor)
                     return
                 else:
-                    log.info("Disconnected will try to reconnect after %s seconds" % delay)
+                    Logger.info("Disconnected will try to reconnect after %s seconds" % delay)
                     event.reactor.schedule(delay, self)
                     return
             else:
-                log.debug("Disconnected")
+                Logger.debug("Disconnected")
         # See connector.cpp: conn.free()/pn_connection_release() here?
         self.connection = None
 
@@ -744,7 +744,7 @@ class Container(Reactor):
                 self.ssl = None
             self.global_handler = GlobalOverrides(kwargs.get('global_handler', self.global_handler))
             self.trigger = None
-            self.container_id = str(generate_uuid())
+            self.container_id = str(_generate_uuid())
             self.allow_insecure_mechs = True
             self.allowed_mechs = None
             self.sasl_enabled = True
@@ -802,7 +802,7 @@ class Container(Reactor):
 
         """
         conn = self.connection(handler)
-        conn.container = self.container_id or str(generate_uuid())
+        conn.container = self.container_id or str(_generate_uuid())
         conn.offered_capabilities = kwargs.get('offered_capabilities')
         conn.desired_capabilities = kwargs.get('desired_capabilities')
         conn.properties = kwargs.get('properties')
@@ -850,7 +850,7 @@ class Container(Reactor):
         elif remote:
             return "%s-%s" % (container, remote)
         else:
-            return "%s-%s" % (container, str(generate_uuid()))
+            return "%s-%s" % (container, str(_generate_uuid()))
 
     def _get_session(self, context):
         if isinstance(context, Url):

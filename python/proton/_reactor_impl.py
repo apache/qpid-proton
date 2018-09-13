@@ -35,7 +35,7 @@ from ._wrapper import Wrapper
 
 from . import _compat
 
-_DEFAULT = object()
+_DEFAULT = False
 
 
 class Selectable(Wrapper):
