@@ -452,7 +452,7 @@ static pn_bytes_t *pni_data_bytes(pn_data_t *data, pni_node_t *node)
 
 static void pni_data_rebase(pn_data_t *data, char *base)
 {
-  for (unsigned i = 0; i < data->size; i++) {
+  for (pni_nid_t i = 0; i < data->size; i++) {
     pni_node_t *node = &data->nodes[i];
     if (node->data) {
       pn_bytes_t *bytes = pni_data_bytes(data, node);
@@ -1174,11 +1174,11 @@ pn_handle_t pn_data_point(pn_data_t *data)
 bool pn_data_restore(pn_data_t *data, pn_handle_t point)
 {
   pn_shandle_t spoint = (pn_shandle_t) point;
-  if (spoint <= 0 && ((size_t) (-spoint)) <= data->size) {
+  if (spoint <= 0 && ((int32_t) (-spoint)) <= data->size) {
     data->parent = -((pn_shandle_t) point);
     data->current = 0;
     return true;
-  } else if (spoint && spoint <= data->size) {
+  } else if (spoint && (int32_t) spoint <= data->size) {
     data->current = spoint;
     pni_node_t *current = pni_data_current(data);
     data->parent = current->parent;
@@ -1360,7 +1360,7 @@ bool pn_data_lookup(pn_data_t *data, const char *name)
 void pn_data_dump(pn_data_t *data)
 {
   printf("{current=%" PN_ZI ", parent=%" PN_ZI "}\n", (size_t) data->current, (size_t) data->parent);
-  for (unsigned i = 0; i < data->size; i++)
+  for (pni_nid_t i = 0; i < data->size; i++)
   {
     pni_node_t *node = &data->nodes[i];
     pn_string_set(data->str, "");

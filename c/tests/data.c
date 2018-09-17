@@ -26,22 +26,21 @@
 #include <assert.h>
 #include <stdio.h>
 
-// Make sure we can grow the capacity of a pn_data_t all the way to the max and we stop there.
+// Make sure we can grow the capacity of a pn_data_t until we run out of memory
+// and stop correctly when we get there.
 static void test_grow(void)
 {
   pn_data_t* data = pn_data(0);
   while (pn_data_size(data) < PNI_NID_MAX) {
     int code = pn_data_put_int(data, 1);
-    if (code) fprintf(stderr, "%d: %s", code, pn_error_text(pn_data_error(data)));
-    assert(code == 0);
+    if (code) {
+      pn_data_free(data);
+      assert(code == PN_OUT_OF_MEMORY);
+      assert(pn_data_size(data) > 0);
+      assert(pn_data_size(data) <= PNI_NID_MAX);
+      break;
+    }
   }
-  assert(pn_data_size(data) == PNI_NID_MAX);
-  int code = pn_data_put_int(data, 1);
-  if (code != PN_OUT_OF_MEMORY)
-    fprintf(stderr, "expected PN_OUT_OF_MEMORY, got  %s\n", pn_code(code));
-  assert(code == PN_OUT_OF_MEMORY);
-  assert(pn_data_size(data) == PNI_NID_MAX);
-  pn_data_free(data);
 }
 
 int main(int argc, char **argv) {
