@@ -26,21 +26,25 @@
 #include <assert.h>
 #include <stdio.h>
 
-// Make sure we can grow the capacity of a pn_data_t until we run out of memory
-// and stop correctly when we get there.
+// Make sure we can grow the capacity of a pn_data_t to at least more nodes
+// than fit in a short, or if we don't have enough memory to run that far we
+// return the correct error. If does not seem to be realistic to run the test
+// up to PNI_NID_MAX because it takes to long.
 static void test_grow(void)
 {
   pn_data_t* data = pn_data(0);
-  while (pn_data_size(data) < PNI_NID_MAX) {
+  for (size_t i = 1; i <= UINT16_MAX * 2; ++i) {
     int code = pn_data_put_int(data, 1);
-    if (code) {
-      pn_data_free(data);
+    if (code == 0) {
+      assert(pn_data_size(data) == i);
+    } else {
       assert(code == PN_OUT_OF_MEMORY);
       assert(pn_data_size(data) > 0);
       assert(pn_data_size(data) <= PNI_NID_MAX);
       break;
     }
   }
+  pn_data_free(data);
 }
 
 int main(int argc, char **argv) {
