@@ -28,21 +28,6 @@
 #include <assert.h>
 #include <stdlib.h>
 
-pn_selectables_t *pn_selectables(void)
-{
-  return pn_iterator();
-}
-
-pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables)
-{
-  return (pn_selectable_t *) pn_iterator_next(selectables);
-}
-
-void pn_selectables_free(pn_selectables_t *selectables)
-{
-  pn_free(selectables);
-}
-
 struct pn_selectable_t {
   pn_socket_t fd;
   int index;

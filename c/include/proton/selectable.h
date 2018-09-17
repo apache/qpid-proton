@@ -36,11 +36,6 @@ extern "C" {
  */
 
 /**
- * An iterator for selectables.
- */
-typedef pn_iterator_t pn_selectables_t;
-
-/**
  * A ::pn_socket_t provides an abstract handle to an IO stream.  The
  * pipe version is uni-directional.  The network socket version is
  * bi-directional.  Both are non-blocking.
@@ -87,28 +82,6 @@ typedef int pn_socket_t;
  * external event loop and discarded using ::pn_selectable_free().
  */
 typedef struct pn_selectable_t pn_selectable_t;
-
-/**
- * Construct a new selectables iterator.
- *
- * @return a pointer to a new selectables iterator
- */
-PNX_EXTERN pn_selectables_t *pn_selectables(void);
-
-/**
- * Get the next selectable from an iterator.
- *
- * @param[in] selectables a selectable iterator
- * @return the next selectable from the iterator
- */
-PNX_EXTERN pn_selectable_t *pn_selectables_next(pn_selectables_t *selectables);
-
-/**
- * Free a selectables iterator.
- *
- * @param[in] selectables a selectables iterator (or NULL)
- */
-PNX_EXTERN void pn_selectables_free(pn_selectables_t *selectables);
 
 PNX_EXTERN pn_selectable_t *pn_selectable(void);
 
