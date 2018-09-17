@@ -81,7 +81,7 @@ struct iocpdesc_t {
   iocpdesc_t *triggered_list_prev;
   iocpdesc_t *deadlines_next;
   iocpdesc_t *deadlines_prev;
-  pn_timestamp_t reap_time;;
+  pn_timestamp_t reap_time;
 };
 
 typedef enum { IOCP_ACCEPT, IOCP_CONNECT, IOCP_READ, IOCP_WRITE } iocp_type_t;

@@ -39,7 +39,7 @@
 
 #include <winsock2.h>
 #include <mswsock.h>
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
 
 #include <iostream>
 #include <sstream>

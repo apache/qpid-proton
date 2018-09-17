@@ -30,7 +30,7 @@
 // openssl on windows expects the user to have already included
 // winsock.h
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(_WIN32)
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
 #endif
@@ -39,7 +39,7 @@
 #endif
 #include <winsock2.h>
 #include <mswsock.h>
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
 #endif
 
 

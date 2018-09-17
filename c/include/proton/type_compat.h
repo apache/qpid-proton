@@ -118,7 +118,7 @@ the ARM compiler. In that case ssize_t needs to be defined in this file. */
 
 #ifdef PNI_DEFINE_SSIZE_T
 # ifdef _MSC_VER
-#  include <BaseTsd.h>
+#  include <basetsd.h>
 typedef SSIZE_T ssize_t;
 # else
 typedef intptr_t ssize_t;

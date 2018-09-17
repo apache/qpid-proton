@@ -68,7 +68,7 @@ int64_t pn_i_atoll(const char* num);
 int pni_snprintf(char *buf, size_t count, const char *fmt, ...);
 int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !defined(_WIN32)
 
 #define pni_snprintf snprintf
 #define pni_vsnprintf vsnprintf
@@ -81,7 +81,7 @@ int pni_vsnprintf(char *buf, size_t count, const char *fmt, va_list ap);
 
 #endif
 
-#if defined _MSC_VER || defined _OPENVMS
+#if defined _MSC_VER || defined(_WIN32) || defined _OPENVMS
 #if !defined(va_copy)
 #define va_copy(d,s) ((d) = (s))
 #endif

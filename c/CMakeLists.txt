@@ -119,7 +119,7 @@ if (SSL_IMPL STREQUAL openssl)
   set (SSL_LIB OpenSSL::SSL Threads::Threads)
 elseif (SSL_IMPL STREQUAL schannel)
   set (pn_ssl_impl src/ssl/schannel.c)
-  set (SSL_LIB Crypt32.lib Secur32.lib)
+  set (SSL_LIB crypt32.lib secur32.lib)
 else ()
   set (pn_ssl_impl src/ssl/ssl_stub.c)
 endif ()
@@ -173,7 +173,7 @@ else (C99_ATOLL)
 endif (C99_ATOLL)
 
 if (PN_WINAPI)
-  set (PLATFORM_LIBS ws2_32 Rpcrt4)
+  set (PLATFORM_LIBS ws2_32 rpcrt4)
   list(APPEND PLATFORM_DEFINITIONS "PN_WINAPI")
 endif (PN_WINAPI)
 
@@ -194,6 +194,8 @@ if (MSVC)
         /wd4800
         /wd4996
     )
+    set (qpid-proton-platform src/compiler/msvc/snprintf.c)
+elseif (PN_WINAPI)
     set (qpid-proton-platform src/compiler/msvc/snprintf.c)
 endif (MSVC)
 

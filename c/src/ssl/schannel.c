@@ -48,8 +48,8 @@
 #include <windows.h>
 #define SECURITY_WIN32
 #include <security.h>
-#include <Schnlsp.h>
-#include <WinInet.h>
+#include <schnlsp.h>
+#include <wininet.h>
 #undef SECURITY_WIN32
 
 

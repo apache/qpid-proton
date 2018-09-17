@@ -34,7 +34,7 @@
 #error "Proton requires Windows API support for XP or later."
 #endif
 #include <winsock2.h>
-#include <Ws2tcpip.h>
+#include <ws2tcpip.h>
 
 #include "reactor/io.h"
 #include "reactor/selector.h"
