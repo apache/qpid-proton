@@ -83,6 +83,10 @@ returned<connection> container::connect(const std::string& url, const connection
     return impl_->connect(url, opts);
 }
 
+returned<connection> container::connect() {
+    return impl_->connect();
+}
+
 listener container::listen(const std::string& url, listen_handler& l) { return impl_->listen(url, l); }
 
 void container::run() { impl_->run(1); }

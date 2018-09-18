@@ -24,7 +24,7 @@ if (DOXYGEN_FOUND)
     ${CMAKE_CURRENT_SOURCE_DIR}/user.doxygen.in
     ${CMAKE_CURRENT_BINARY_DIR}/user.doxygen)
 
-  file(GLOB_RECURSE headers ../include/proton/*.hpp)
+  file(GLOB_RECURSE sources ../include/proton/*.hpp ../../connect_config.md)
   add_custom_target (docs-cpp
     COMMAND ${CMAKE_COMMAND} -E remove_directory html # get rid of old files
     COMMAND ${DOXYGEN_EXECUTABLE} user.doxygen

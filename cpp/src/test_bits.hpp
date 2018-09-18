@@ -52,6 +52,11 @@ inline void assert_equalish(T want, T got, T delta, const std::string& what)
         throw fail(MSG(what << " " << want << " !=~ " << got));
 }
 
+void assert_substring(const std::string& want, const std::string& got, const std::string& what) {
+    if (got.find(want) == std::string::npos)
+        throw fail(MSG(what << " '" << want << "' not found in '" << got << "'"));
+}
+
 #define FAIL_MSG(WHAT) (MSG(__FILE__ << ":" << __LINE__ << ": " << WHAT).str())
 #define FAIL(WHAT) throw test::fail(FAIL_MSG(WHAT))
 #define ASSERT(TEST) do { if (!(TEST)) FAIL("failed ASSERT(" #TEST ")"); } while(false)
@@ -59,7 +64,10 @@ inline void assert_equalish(T want, T got, T delta, const std::string& what)
     test::assert_equal((WANT), (GOT), FAIL_MSG("failed ASSERT_EQUAL(" #WANT ", " #GOT ")"))
 #define ASSERT_EQUALISH(WANT, GOT, DELTA) \
     test::assert_equalish((WANT), (GOT), (DELTA), FAIL_MSG("failed ASSERT_EQUALISH(" #WANT ", " #GOT ")"))
+#define ASSERT_SUBSTRING(WANT, GOT) \
+    test::assert_substring((WANT), (GOT), FAIL_MSG("failed ASSERT_SUBSTRING(" #WANT ", " #GOT ")"))
 #define ASSERT_THROWS(WANT, EXPR) do { try { EXPR; FAIL("Expected " #WANT); } catch(const WANT&) {} } while(0)
+#define ASSERT_THROWS_MSG(CLASS, MSG, EXPR) do { try { EXPR; FAIL("Expected " #CLASS); } catch(const CLASS& e) { ASSERT_SUBSTRING((MSG), e.what()); } } while(0)
 
 #define RUN_TEST(BAD_COUNT, TEST)                                       \
     do {                                                                \

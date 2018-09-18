@@ -71,6 +71,7 @@ class container::impl {
     impl(container& c, const std::string& id, messaging_handler* = 0);
     ~impl();
     std::string id() const { return id_; }
+    returned<connection> connect();
     returned<connection> connect(const std::string&, const connection_options&);
     returned<sender> open_sender(
         const std::string&, const proton::sender_options &, const connection_options &);

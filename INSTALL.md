@@ -20,6 +20,7 @@ Linux dependencies
   - GCC 4.4+
   - Cyrus SASL 2.1+ (for SASL support)
   - OpenSSL 1.0+ (for SSL support)
+  - JsonCpp 1.8+ for C++ connection configuration file support
 
 Windows dependencies
 
@@ -46,6 +47,7 @@ language.
     $ yum install swig                                       # Required for all bindings
     $ yum install python-devel                               # Python
     $ yum install ruby-devel rubygem-minitest                # Ruby
+    $ yum install jsoncpp-devel                              # C++ optional config file
 
     # Dependencies needed to generate documentation
     $ yum install epydoc                                     # Python

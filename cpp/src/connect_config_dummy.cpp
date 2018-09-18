@@ -1,9 +1,5 @@
-#ifndef _PROTON_VERSION_H
-#define _PROTON_VERSION_H 1
-
 /*
- *
- * Licensed to the Apache Software Foundation (ASF) under one
+* Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -19,13 +15,17 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
  */
 
-#define PN_VERSION_MAJOR @PN_VERSION_MAJOR@
-#define PN_VERSION_MINOR @PN_VERSION_MINOR@
-#define PN_VERSION_POINT @PN_VERSION_POINT@
+#include <proton/connect_config.hpp>
+#include <proton/error.hpp>
 
-#define PN_INSTALL_PREFIX "@CMAKE_INSTALL_PREFIX@"
+namespace proton {
+namespace connect_config {
+namespace { const error nope("connection configuration is not supported"); }
 
-#endif /* version.h */
+std::string default_file() { throw nope; }
+std::string parse(std::istream& is, connection_options& opts)  { throw nope; }
+std::string parse_default(proton::connection_options&)  { throw nope; }
+
+}} // namespace proton::connect_config

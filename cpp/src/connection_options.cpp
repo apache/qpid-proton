@@ -217,4 +217,5 @@ void connection_options::apply_unbound_client(pn_transport_t *t) const { impl_->
 void connection_options::apply_unbound_server(pn_transport_t *t) const { impl_->apply_sasl(t); impl_->apply_ssl(t, false); impl_->apply_transport(t); }
 
 messaging_handler* connection_options::handler() const { return impl_->handler.value; }
+
 } // namespace proton

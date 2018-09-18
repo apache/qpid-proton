@@ -27,6 +27,16 @@ include(versions.cmake)
 
 set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++11 is available")
 
+# Check for JSON-CPP support for connection configuration
+find_package(JsonCpp)
+option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND})
+if (ENABLE_JSONCPP)
+  set(CONNECT_CONFIG_SRC src/connect_config.cpp)
+  set(CONNECT_CONFIG_LIBS ${JsonCpp_LIBRARY})
+else()
+  set(CONNECT_CONFIG_SRC src/connect_config_dummy.cpp)
+endif()
+
 # This effectively checks for cmake version 3.1 or later
 if (DEFINED CMAKE_CXX_COMPILE_FEATURES)
   if (BUILD_CPP_03)
@@ -150,6 +160,7 @@ set(qpid-proton-cpp-source
   src/uuid.cpp
   src/value.cpp
   src/work_queue.cpp
+  ${CONNECT_CONFIG_SRC}
   )
 
 set_source_files_properties (
@@ -167,7 +178,7 @@ if(BUILD_STATIC_LIBS)
   add_library(qpid-proton-cpp-static STATIC ${qpid-proton-cpp-source})
 endif(BUILD_STATIC_LIBS)
 
-target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor)
+target_link_libraries (qpid-proton-cpp LINK_PRIVATE ${PLATFORM_LIBS} qpid-proton-core qpid-proton-proactor ${CONNECT_CONFIG_LIBS})
 
 set_target_properties (
   qpid-proton-cpp
@@ -258,3 +269,10 @@ add_cpp_test(container_test)
 add_cpp_test(url_test)
 add_cpp_test(reconnect_test)
 add_cpp_test(link_test)
+if (ENABLE_JSONCPP)
+  # Directories needed by connect_config tests
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/testdata/.config/messaging")
+  add_cpp_test(connect_config_test)
+  set_tests_properties(cpp-connect_config_test PROPERTIES
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+endif()
