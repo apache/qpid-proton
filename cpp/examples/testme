@@ -21,7 +21,7 @@
 # Run the C++ examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import unittest, sys, shutil, os
+import unittest, sys, shutil, os, errno
 from test_subprocess import Popen, TestProcessError, check_output
 import test_subprocess
 from os.path import dirname
@@ -143,11 +143,13 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         self.assertTrue(len(out) > 0);
         self.assertEqual(["send"]*len(out), out)
 
-    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
     def test_scheduled_send(self):
-        out = check_output(["scheduled_send", "-a", Broker.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).split()
-        self.assertTrue(len(out) > 0);
-        self.assertEqual(["send"]*len(out), out)
+        try:
+            out = check_output(["scheduled_send", "-a", Broker.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).split()
+            self.assertTrue(len(out) > 0);
+            self.assertEqual(["send"]*len(out), out)
+        except OSError as e:
+            if e.errno != errno.ENOENT: raise
 
     def test_message_properties(self):
         expect="""using put/get: short=123 string=foo symbol=sym
@@ -161,15 +163,16 @@ expected conversion_error: "unexpected type, want: uint got: string"
 """
         self.assertMultiLineEqual(expect, check_output(["message_properties"]))
 
-    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
     def test_multithreaded_client(self):
-        got = check_output(["multithreaded_client", Broker.addr, "examples", "10"])
-        self.maxDiff = None
-        self.assertIn("10 messages sent and received", got);
+        try:
+            got = check_output(["multithreaded_client", Broker.addr, "examples", "10"])
+            self.maxDiff = None
+            self.assertIn("10 messages sent and received", got);
+        except OSError as e:
+            if e.errno != errno.ENOENT: raise
 
-#    @unittest.skipUnless(os.getenv('HAS_CPP11'), "not a  C++11 build")
-    @unittest.skip("Test is unstable, will enable when fixed")
-    def test_multithreaded_client_flow_control(self):
+    # Test is unstable, enable when fixed
+    def skip_test_multithreaded_client_flow_control(self):
         got = check_output(["multithreaded_client_flow_control", Broker.addr, "examples", "10", "2"])
         self.maxDiff = None
         self.assertIn("20 messages sent and received", got);

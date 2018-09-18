@@ -23,6 +23,13 @@ import subprocess, re, os, tempfile
 
 from subprocess import PIPE
 
+def in_path(name):
+    """Look for name in the PATH""" 
+    for path in os.environ["PATH"].split(os.pathsep):
+        f = os.path.join(path, name)
+        if os.path.isfile(f) and os.access(f, os.X_OK):
+            return f
+
 class TestProcessError(Exception):
     def __init__(self, proc, what, output=None):
         self.output = output
