@@ -29,7 +29,7 @@ values, all properties are optional.
         "enable": true,         // [bool] Enable or disable SASL
         "mechanisms": null,     // [list] List of allowed SASL mechanism names.
                                 // If null the library determines the default list.
-        "allow_insecure": false // [boolean] Allow mechanisms that send clear-text passwords
+        "allow_insecure": false // [boolean] Allow mechanisms that send unencrypted clear-text passwords
       },
 
       // Note: it is an error to have a "tls" object unless scheme="amqps"
