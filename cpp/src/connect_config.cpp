@@ -202,7 +202,7 @@ string parse_default(connection_options& opts) {
     std::ifstream f;
     try {
         f.exceptions(~std::ifstream::goodbit);
-        f.open(name);
+        f.open(name.c_str());
     } catch (const std::exception& e) {
         raise(msg() << "error opening '" << name << "': " << e.what());
     }

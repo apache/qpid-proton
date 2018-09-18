@@ -161,12 +161,12 @@ int main(int, char**) {
         many<pair<annotation_key, message_id> > restricted_pairs(si_pairs);
         RUN_TEST(failed, (map_test<map<annotation_key, message_id> >(
                               restricted_pairs, "{:a=0, :b=1, :c=2}")));
+        RUN_TEST(failed, null_test());
 
 #if PN_CPP_HAS_CPP11
         RUN_TEST(failed, sequence_test<forward_list<binary> >(
                      ARRAY, many<binary>() + binary("xx") + binary("yy"), "@PN_BINARY[b\"xx\", b\"yy\"]"));
         RUN_TEST(failed, (map_test<unordered_map<string, uint64_t> >(si_pairs, "")));
-        RUN_TEST(failed, null_test());
 #endif
         return failed;
     } catch (const std::exception& e) {
