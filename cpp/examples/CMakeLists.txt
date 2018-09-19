@@ -121,14 +121,12 @@ if (PYTHON_EXECUTABLE)
   add_test(
     NAME cpp-example-container
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} testme -v ContainerExampleTest)
-  set_tests_properties(cpp-example-container PROPERTIES ENVIRONMENT "${test_env}")
+    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE} testme -v ContainerExampleTest)
 
   if (NOT SSL_IMPL STREQUAL none)
     add_test(
       NAME cpp-example-container-ssl
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${PYTHON_EXECUTABLE}  testme -v ContainerExampleSSLTest)
-    set_tests_properties(cpp-example-container-ssl PROPERTIES ENVIRONMENT "${test_env}")
+      COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE}  testme -v ContainerExampleSSLTest)
   endif()
 endif()
