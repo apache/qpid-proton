@@ -322,7 +322,7 @@ class PN_CPP_CLASS_EXTERN container {
     internal::pn_unique_ptr<impl> impl_;
 
     /// @cond INTERNAL
-  friend class connection_options;
+  friend class connection_options_impl;
   friend class session_options;
   friend class receiver_options;
   friend class sender_options;

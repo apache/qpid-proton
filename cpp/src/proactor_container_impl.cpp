@@ -19,6 +19,7 @@
 
 #include "proactor_container_impl.hpp"
 #include "proactor_work_queue_impl.hpp"
+#include "connection_options_impl.hpp"
 
 #include "proton/connect_config.hpp"
 #include "proton/error_condition.hpp"
@@ -181,7 +182,7 @@ pn_connection_t* container::impl::make_connection_lh(
 
     connection_options opts = client_connection_options_; // Defaults
     opts.update(user_opts);
-    messaging_handler* mh = opts.handler();
+    messaging_handler* mh = connection_options_impl::get(opts).handler.value;
 
     pn_connection_t *pnc = pn_connection();
     connection_context& cc(connection_context::get(pnc));
@@ -213,7 +214,7 @@ void container::impl::start_connection(const url& url, pn_connection_t *pnc) {
     pn_transport_t* pnt = pn_transport();
     connection_context& cc = connection_context::get(pnc);
     connection_options& co = *cc.connection_options_;
-    co.apply_unbound_client(pnt);
+    connection_options_impl::get(co).apply_unbound_client(pnt);
     pn_proactor_connect2(proactor_, pnc, pnt, caddr); // Takes ownership of pnc, pnt
 }
 
@@ -592,11 +593,11 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         connection_context& cc = connection_context::get(c);
         cc.container = &container_;
         cc.listener_context_ = lc;
-        cc.handler = opts.handler();
+        cc.handler = connection_options_impl::get(opts).handler.value;
         cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
         pn_transport_t* pnt = pn_transport();
         pn_transport_set_server(pnt);
-        opts.apply_unbound_server(pnt);
+        connection_options_impl::get(opts).apply_unbound_server(pnt);
         pn_listener_accept2(l, c, pnt);
         return ContinueLoop;
     }

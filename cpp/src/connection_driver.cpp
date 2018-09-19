@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "connection_options_impl.hpp"
 #include "proton/io/connection_driver.hpp"
 
 #include "proton/connection.hpp"
@@ -61,15 +62,15 @@ connection_driver::~connection_driver() {
 
 void connection_driver::configure(const connection_options& opts, bool server) {
     proton::connection c(connection());
-    opts.apply_unbound(c);
+    connection_options_impl::get(opts).apply_unbound(c);
     if (server) {
         pn_transport_set_server(driver_.transport);
-        opts.apply_unbound_server(driver_.transport);
+        connection_options_impl::get(opts).apply_unbound_server(driver_.transport);
     } else {
-        opts.apply_unbound_client(driver_.transport);
+        connection_options_impl::get(opts).apply_unbound_client(driver_.transport);
     }
     pn_connection_driver_bind(&driver_);
-    handler_ =  opts.handler();
+    handler_ =  connection_options_impl::get(opts).handler.value;
 }
 
 void connection_driver::connect(const connection_options& opts) {
