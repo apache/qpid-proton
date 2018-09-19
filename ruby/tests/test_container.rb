@@ -351,7 +351,7 @@ class ContainerTest < MiniTest::Test
       x = a.shift
       assert_equal d, x[0]
     end
-    assert_equalish delays.sum, Time.now-start
+    assert_equalish delays.reduce(:+), Time.now-start
   end
 
   # Test container work queue finishes due tasks on external stop, drops future tasks
@@ -389,7 +389,7 @@ class ContainerTest < MiniTest::Test
     start = Time.now
     c.run
     assert_equal 3, a.size
-    assert_equalish delays.sum, Time.now-start
+    assert_equalish delays.reduce(:+), Time.now-start
   end
 
   # Schedule calls from handlers
