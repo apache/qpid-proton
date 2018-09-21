@@ -23,6 +23,8 @@ package electron
 import "C"
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net"
 	"qpid.apache.org/proton"
 	"sync"
@@ -106,7 +108,7 @@ func (c connectionSettings) User() string             { return c.user }
 func (c connectionSettings) VirtualHost() string      { return c.virtualHost }
 func (c connectionSettings) Heartbeat() time.Duration { return c.heartbeat }
 
-// ConnectionOption can be passed when creating a connection to configure various options
+// ConnectionOption arguments can be passed when creating a connection to configure it.
 type ConnectionOption func(*connection)
 
 // User returns a ConnectionOption sets the user name for a connection
@@ -160,6 +162,12 @@ func Parent(cont Container) ConnectionOption {
 	return func(c *connection) { c.container = cont.(*container) }
 }
 
+// ContainerId returns a ConnectionOption that creates a new Container
+// with id and associates it with the connection
+func ContainerId(id string) ConnectionOption {
+	return func(c *connection) { c.container = NewContainer(id).(*container) }
+}
+
 type connection struct {
 	endpoint
 	connectionSettings
@@ -178,6 +186,7 @@ type connection struct {
 }
 
 // NewConnection creates a connection with the given options.
+// Options are applied in order.
 func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error) {
 	c := &connection{
 		conn: conn,
@@ -193,7 +202,12 @@ func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error)
 		set(c)
 	}
 	if c.container == nil {
-		c.container = NewContainer("").(*container)
+		// Generate a random container-id. Not an RFC4122-compliant UUID but probably-unique
+		id := make([]byte, 16)
+		if _, err = rand.Read(id); err != nil {
+			return nil, err
+		}
+		c.container = NewContainer(hex.EncodeToString(id)).(*container)
 	}
 	c.pConnection.SetContainer(c.container.Id())
 	saslConfig.setup(c.engine)
@@ -294,14 +308,16 @@ type IncomingConnection struct {
 func newIncomingConnection(c *connection) *IncomingConnection {
 	c.user = c.pConnection.Transport().User()
 	c.virtualHost = c.pConnection.RemoteHostname()
+	c.heartbeat = c.pConnection.Transport().RemoteIdleTimeout()
 	return &IncomingConnection{
 		incoming:           makeIncoming(c.pConnection),
 		connectionSettings: c.connectionSettings,
 		c:                  c}
 }
 
-// AcceptConnection is like Accept() but takes ConnectionOption s
-// For example you can set the Heartbeat() for the accepted connection.
+// AcceptConnection is like Accept() but takes ConnectionOption
+// arguments like NewConnection(). For example you can set the
+// Heartbeat() for the incoming connection.
 func (in *IncomingConnection) AcceptConnection(opts ...ConnectionOption) Connection {
 	return in.accept(func() Endpoint {
 		for _, opt := range opts {
