@@ -29,57 +29,40 @@ import (
 	"testing"
 )
 
-func testAuthClientServer(t *testing.T, copts []ConnectionOption, sopts []ConnectionOption) (got connectionSettings, err error) {
-	client, server := newClientServerOpts(t, copts, sopts)
-	defer closeClientServer(client, server)
-
-	go func() {
-		for in := range server.Incoming() {
-			switch in := in.(type) {
-			case *IncomingConnection:
-				got = connectionSettings{user: in.User(), virtualHost: in.VirtualHost()}
-			}
-			in.Accept()
-		}
-	}()
-
-	err = client.Sync()
-	return
-}
-
 func TestAuthAnonymous(t *testing.T) {
-	got, err := testAuthClientServer(t,
+	p := newPipe(t,
 		[]ConnectionOption{User("fred"), VirtualHost("vhost"), SASLAllowInsecure(true)},
 		[]ConnectionOption{SASLAllowedMechs("ANONYMOUS"), SASLAllowInsecure(true)})
-	fatalIf(t, err)
-	errorIf(t, checkEqual(connectionSettings{user: "anonymous", virtualHost: "vhost"}, got))
+	fatalIf(t, p.server.Sync())
+	errorIf(t, checkEqual("anonymous", p.server.User()))
+	errorIf(t, checkEqual("vhost", p.server.VirtualHost()))
 }
 
 func TestAuthPlain(t *testing.T) {
 	extendedSASL.startTest(t)
-	got, err := testAuthClientServer(t,
+	p := newPipe(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("xxx"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
-	fatalIf(t, err)
-	errorIf(t, checkEqual(connectionSettings{user: "fred@proton"}, got))
+	fatalIf(t, p.server.Sync())
+	errorIf(t, checkEqual("fred@proton", p.server.User()))
 }
 
 func TestAuthBadPass(t *testing.T) {
 	extendedSASL.startTest(t)
-	_, err := testAuthClientServer(t,
+	p := newPipe(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("yyy"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
-	if err == nil {
+	if p.server.Sync() == nil {
 		t.Error("Expected auth failure for bad pass")
 	}
 }
 
 func TestAuthBadUser(t *testing.T) {
 	extendedSASL.startTest(t)
-	_, err := testAuthClientServer(t,
+	p := newPipe(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("foo@bar"), Password([]byte("yyy"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
-	if err == nil {
+	if p.server.Sync() == nil {
 		t.Error("Expected auth failure for bad user")
 	}
 }
