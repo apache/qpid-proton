@@ -113,8 +113,7 @@ class PN_CPP_CLASS_EXTERN container {
     /// @copydetails returned
     PN_CPP_EXTERN returned<connection> connect(const std::string& conn_url);
 
-    /// Connect using the default @ref connect_config
-    /// FIXME aconway 2018-08-07: cmake - copy connect_config.md into C++ doc
+    /// Connect using the default @ref connect-config file.
     ///
     /// @copydetails returned
     PN_CPP_EXTERN returned<connection> connect();

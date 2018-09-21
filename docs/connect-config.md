@@ -1,6 +1,6 @@
-# Connection Configuration
+# Connection Configuration {#connect-config}
 
-Proton clients can read default connection information from a
+Proton clients can read default connection configuration from a
 configuration file.
 
 If the environment variable `MESSAGING_CONNECT_FILE` is set, it is the
@@ -20,7 +20,7 @@ values, all properties are optional.
 
     {
       "scheme": "amqps",   // [string] "amqp" (no TLS) or "amqps"
-      "host": "",          // [string] DNS or IP address for connection. Defaults to local host.
+      "host": "localhost", // [string] DNS or IP address for connection. Defaults to local host.
       "port": "amqps",     // [string] "amqp", "amqps" or port number. Defaults to value of 'scheme'.
       "user": null,        // [string] Authentication user name
       "password": null,    // [string] Authentication password

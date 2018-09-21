@@ -56,7 +56,7 @@ WARNINGS                = YES
 INPUT                   = @CMAKE_SOURCE_DIR@/cpp/include \
                           @CMAKE_SOURCE_DIR@/cpp/docs \
                           @CMAKE_SOURCE_DIR@/cpp/examples \
-                          @CMAKE_SOURCE_DIR@/docs/connect_config.md
+                          @CMAKE_SOURCE_DIR@/docs/connect-config.md
 FILE_PATTERNS           = *.hpp *.md *.dox
 EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/cpp/examples/*.?pp \
                           @CMAKE_SOURCE_DIR@/cpp/include/proton/internal/*.hpp

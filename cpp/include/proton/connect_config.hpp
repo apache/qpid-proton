@@ -27,19 +27,22 @@ namespace proton {
 class connection_options;
 
 /// *Unsettled API*
+///
+/// Functions for locating and using a @ref connect-config file, or a
+/// configuration string to set @ref connection_options
 namespace connect_config {
 
-/// @return name of the default connection configuration file
+/// @return name of the default @ref connect-config file.
 /// @throw proton::error if no default file is found
 PN_CPP_EXTERN std::string default_file();
 
-/// Parse configuration from @p is and update @p opts
+/// Parse @ref connect-config from @p is and update @p opts
 /// @param is input stream for configuration file/string
 /// @param opts [out] connection options to update
 /// @return address suitable for container::connect() from configuration
 PN_CPP_EXTERN std::string parse(std::istream& is, connection_options& opts);
 
-/// Parse configuration from default_file() and update @p opts
+/// Parse @ref connect-config from default_file() and update @p opts
 /// @param opts [out] connection options to update
 /// @return address suitable for container::connect() from configuration
 PN_CPP_EXTERN std::string parse_default(connection_options& opts);
