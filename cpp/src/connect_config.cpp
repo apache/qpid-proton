@@ -70,7 +70,7 @@ Value validate(ValueType t, const Value& v, const string& name) {
 }
 
 Value get(ValueType t, const Value& obj, const char *key, const Value& dflt=Value()) {
-    Value v = obj ? obj.get(key, dflt) : dflt;
+    Value v = (obj.type() != nullValue) ? obj.get(key, dflt) : dflt;
     return validate(t, v, key);
 }
 
@@ -93,7 +93,7 @@ bool exists(const string& name) { return std::ifstream(name.c_str()).good(); }
 void parse_sasl(Value root, connection_options& opts) {
     Value sasl = root.get("sasl", Value());
     opts.sasl_enabled(get_bool(sasl, "enable", true));
-    if (sasl) {
+    if (sasl.type() != nullValue) {
         validate(objectValue, sasl, "sasl");
         opts.sasl_allow_insecure_mechs(get_bool(sasl, "allow_insecure", false));
         Value mechs = sasl.get("mechanisms", Value());
@@ -124,7 +124,7 @@ void parse_sasl(Value root, connection_options& opts) {
 
 void parse_tls(const string& scheme, Value root, connection_options& opts) {
     Value tls = root.get("tls", Value());
-    if (tls) {
+    if (tls.type() != nullValue) {
         validate(objectValue, tls, "tls");
         if (scheme != "amqps") {
             raise(msg() << "'tls' object is not allowed unless scheme is \"amqps\"");
@@ -133,9 +133,9 @@ void parse_tls(const string& scheme, Value root, connection_options& opts) {
         bool verify = get_bool(tls, "verify", true);
         Value cert = get(stringValue, tls, "cert");
         ssl::verify_mode mode = verify ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
-        if (cert) {
+        if (cert.type() != nullValue) {
             Value key = get(stringValue, tls, "key");
-            ssl_certificate cert2 = key ?
+            ssl_certificate cert2 = (key.type() != nullValue) ?
                 ssl_certificate(cert.asString(), key.asString()) :
                 ssl_certificate(cert.asString());
             opts.ssl_client_options(ssl_client_options(cert2, ca, mode));
@@ -165,9 +165,9 @@ std::string parse(std::istream& is, connection_options& opts) {
     }
 
     Value user = root.get("user", Value());
-    if (user) opts.user(validate(stringValue, user, "user").asString());
+    if (user.type() != nullValue) opts.user(validate(stringValue, user, "user").asString());
     Value password = root.get("password", Value());
-    if (password) opts.password(validate(stringValue, password, "password").asString());
+    if (password.type() != nullValue) opts.password(validate(stringValue, password, "password").asString());
 
     parse_sasl(root, opts);
     parse_tls(scheme, root, opts);
