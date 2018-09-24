@@ -21,8 +21,10 @@
 
 #undef NDEBUG                   /* Make sure that assert() is enabled even in a release build. */
 
-#include <proton/codec.h>
+#include "test_tools.h"
 #include "core/data.h"
+
+#include <proton/codec.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -44,6 +46,59 @@ static void test_grow(void)
   pn_data_free(data);
 }
 
+static void test_multiple(test_t *t) {
+  pn_data_t *data = pn_data(1);
+  pn_data_t *src = pn_data(1);
+
+  /* NULL data pointer */
+  pn_data_fill(data, "M", NULL);
+  TEST_INSPECT(t, "null", data);
+
+  /* Empty data object */
+  pn_data_clear(data);
+  pn_data_fill(data, "M", src);
+  TEST_INSPECT(t, "null", data);
+
+  /* Empty array */
+  pn_data_clear(data);
+  pn_data_clear(src);
+  pn_data_put_array(src, false, PN_SYMBOL);
+  pn_data_fill(data, "M", src);
+  TEST_INSPECT(t, "null", data);
+
+  /* Single-element array */
+  pn_data_clear(data);
+  pn_data_clear(src);
+  pn_data_put_array(src, false, PN_SYMBOL);
+  pn_data_enter(src);
+  pn_data_put_symbol(src, PN_BYTES_LITERAL(foo));
+  pn_data_fill(data, "M", src);
+  TEST_INSPECT(t, ":foo", data);
+
+  /* Multi-element array */
+  pn_data_clear(data);
+  pn_data_clear(src);
+  pn_data_put_array(src, false, PN_SYMBOL);
+  pn_data_enter(src);
+  pn_data_put_symbol(src, PN_BYTES_LITERAL(foo));
+  pn_data_put_symbol(src, PN_BYTES_LITERAL(bar));
+  pn_data_fill(data, "M", src);
+  TEST_INSPECT(t, "@PN_SYMBOL[:foo, :bar]", data);
+
+  /* Non-array */
+  pn_data_clear(data);
+  pn_data_clear(src);
+  pn_data_put_symbol(src, PN_BYTES_LITERAL(baz));
+  pn_data_fill(data, "M", src);
+  TEST_INSPECT(t, ":baz", data);
+
+  pn_data_free(data);
+  pn_data_free(src);
+}
+
 int main(int argc, char **argv) {
+  int failed = 0;
   test_grow();
+  RUN_ARGV_TEST(failed, t, test_multiple(&t));
+  return failed;
 }

@@ -1858,13 +1858,13 @@ static int pni_process_conn_setup(pn_transport_t *transport, pn_endpoint_t *endp
       pn_connection_t *connection = (pn_connection_t *) endpoint;
       const char *cid = pn_string_get(connection->container);
       pni_calculate_channel_max(transport);
-      int err = pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[SS?I?H?InnCCC]", OPEN,
+      int err = pn_post_frame(transport, AMQP_FRAME_TYPE, 0, "DL[SS?I?H?InnMMC]", OPEN,
                               cid ? cid : "",
                               pn_string_get(connection->hostname),
                               // TODO: This is messy, because we also have to allow local_max_frame_ to be 0 to mean unlimited
                               // otherwise flow control goes wrong
                               transport->local_max_frame!=0 && transport->local_max_frame!=OPEN_MAX_FRAME_SIZE_DEFAULT,
-                                transport->local_max_frame,
+                              transport->local_max_frame,
                               transport->channel_max!=OPEN_CHANNEL_MAX_DEFAULT, transport->channel_max,
                               (bool)idle_timeout, idle_timeout,
                               connection->offered_capabilities,
@@ -2024,12 +2024,13 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
         if (err) return err;
       } else {
         int err = pn_post_frame(transport, AMQP_FRAME_TYPE, ssn_state->local_channel,
-                                "DL[SIoBB?DL[SIsIoC?sCnCC]?DL[SIsIoCC]nnIL]", ATTACH,
+                                "DL[SIoBB?DL[SIsIoC?sCnMM]?DL[SIsIoCM]nnIL]", ATTACH,
                                 pn_string_get(link->name),
                                 state->local_handle,
                                 endpoint->type == RECEIVER,
                                 link->snd_settle_mode,
                                 link->rcv_settle_mode,
+
                                 (bool) link->source.type, SOURCE,
                                 pn_string_get(link->source.address),
                                 link->source.durability,
@@ -2041,6 +2042,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->source.filter,
                                 link->source.outcomes,
                                 link->source.capabilities,
+
                                 (bool) link->target.type, TARGET,
                                 pn_string_get(link->target.address),
                                 link->target.durability,
@@ -2049,6 +2051,7 @@ static int pni_process_link_setup(pn_transport_t *transport, pn_endpoint_t *endp
                                 link->target.dynamic,
                                 link->target.properties,
                                 link->target.capabilities,
+
                                 0, link->max_message_size);
         if (err) return err;
       }

@@ -160,6 +160,13 @@ bool test_str_equal_(test_t *t, const char* want, const char* got, const char *f
 }
 #define TEST_STR_EQUAL(TEST, WANT, GOT) test_str_equal_((TEST), (WANT), (GOT), __FILE__, __LINE__)
 
+#define TEST_INSPECT(TEST, WANT, GOT) do {              \
+    pn_string_t *s = pn_string(NULL);                   \
+    TEST_ASSERT(0 == pn_inspect(GOT, s));               \
+    TEST_STR_EQUAL((TEST), (WANT), pn_string_get(s));   \
+    pn_free(s);                                         \
+  } while (0)
+
 #define TEST_STR_IN(TEST, WANT, GOT)                                    \
   test_check_((TEST), strstr((GOT), (WANT)), NULL, __FILE__, __LINE__, "'%s' not in '%s'", (WANT), (GOT))
 

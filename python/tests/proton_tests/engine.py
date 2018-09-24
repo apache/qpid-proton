@@ -690,7 +690,7 @@ class LinkTest(Test):
                                             capabilities=["one", "two", "three"]),
                              TerminusConfig(address="source",
                                             timeout=7,
-                                            capabilities=[]))
+                                            capabilities=None))
   def test_distribution_mode(self):
     self._test_source_target(TerminusConfig(address="source",
                                             dist_mode=Terminus.DIST_MODE_COPY),

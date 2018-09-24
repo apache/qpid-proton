@@ -481,6 +481,84 @@ static int pni_data_intern_node(pn_data_t *data, pni_node_t *node)
   return 0;
 }
 
+
+/*
+   Append src to data after normalizing for "multiple" field encoding.
+
+   AMQP composite field definitions can be declared "multiple", see:
+
+   - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#doc-idp115568
+   - http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-types-v1.0-os.html#section-composite-type-representation
+
+   Multiple fields allow redundant encoding of two cases:
+
+   1. empty: null or an empty array.
+   2. single-value: direct encoding of value, or array with one element
+
+   For encoding compactness and inter-operability, normalize multiple
+   field values to always use null for empty, and direct encoding for
+   single value.
+*/
+static int pni_normalize_multiple(pn_data_t *data, pn_data_t *src) {
+  int err = 0;
+  pn_handle_t point = pn_data_point(src);
+  pn_data_rewind(src);
+  pn_data_next(src);
+  if (pn_data_type(src) == PN_ARRAY) {
+    switch (pn_data_get_array(src)) {
+     case 0:                    /* Empty array => null */
+      err = pn_data_put_null(data);
+      break;
+     case 1:          /* Single-element array => encode the element */
+      pn_data_enter(src);
+      pn_data_narrow(src);
+      err = pn_data_appendn(data, src, 1);
+      pn_data_widen(src);
+      break;
+     default:              /* Multi-element array, encode unchanged */
+      err = pn_data_appendn(data, src, 1);
+      break;
+    }
+  } else {
+    err = pn_data_appendn(data, src, 1); /* Non-array, append the value */
+  }
+  pn_data_restore(src, point);
+  return err;
+}
+
+
+/* Format codes:
+   code: AMQP-type (arguments)
+   n: null ()
+   o: bool (int)
+   B: ubyte (unsigned int)
+   b: byte (int)
+   H: ushort  (unsigned int)
+   h: short (int)
+   I: uint (uint32_t)
+   i: int (int32_t)
+   L: ulong (ulong32_t)
+   l: long (long32_t)
+   t: timestamp (pn_timestamp_t)
+   f: float (float)
+   d: double (double)
+   Z: binary (size_t, char*) - must not be NULL
+   z: binary (size_t, char*) - encode as AMQP null if NULL
+   S: symbol (char*)
+   s: string (char*)
+   D: described - next two codes are [descriptor, body]
+   @: enter array. If followed by D, a described array. Following codes to matching ']' are elements.
+   T: type (pn_type_t) - set array type while in array
+   [: enter list. Following codes up to matching ']' are elements
+   {: enter map. Following codes up to matching '}' are key, value  pairs
+   ]: exit list or array
+   }: exit map
+   ?: TODO document
+   *: TODO document
+   C: single value (pn_data_t*) - append the pn_data_t unmodified
+   M: multiple value (pn_data_t*) - normalize and append multiple field value,
+      see pni_normalize_multiple()
+ */
 int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
 {
   int err = 0;
@@ -529,7 +607,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
     case 'd':
       err = pn_data_put_double(data, va_arg(ap, double));
       break;
-    case 'Z':
+    case 'Z':                   /* encode binary, must not be NULL */
       {
 	// For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
@@ -537,7 +615,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         err = pn_data_put_binary(data, pn_bytes(size, start));
       }
       break;
-    case 'z':
+    case 'z':                   /* encode binary or null if pointer is NULL */
       {
 	// For maximum portability, caller must pass these as two separate args, not a single struct
         size_t size = va_arg(ap, size_t);
@@ -549,8 +627,8 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-    case 'S':
-    case 's':
+    case 'S':                   /* encode symbol or null if NULL */
+    case 's':                   /* encode string or null if NULL */
       {
         char *start = va_arg(ap, char *);
         size_t size;
@@ -571,7 +649,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
       err = pn_data_put_described(data);
       pn_data_enter(data);
       break;
-    case 'T':
+    case 'T':                   /* Set type of open array */
       {
         pni_node_t *parent = pn_data_node(data, data->parent);
         if (parent->atom.type == PN_ARRAY) {
@@ -581,7 +659,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-    case '@':
+    case '@':                   /* begin array */
       {
         bool described;
         if (*(fmt + 1) == 'D') {
@@ -594,14 +672,14 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         pn_data_enter(data);
       }
       break;
-    case '[':
+    case '[':                   /* begin list */
       if (fmt < (begin + 2) || *(fmt - 2) != 'T') {
         err = pn_data_put_list(data);
         if (err) return err;
         pn_data_enter(data);
       }
       break;
-    case '{':
+    case '{':                   /* begin map */
       err = pn_data_put_map(data);
       if (err) return err;
       pn_data_enter(data);
@@ -612,7 +690,6 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         return pn_error_format(data->error, PN_ERR, "exit failed");
       break;
     case '?':
-     /* Consumes 2 args: bool, value. Insert null if bool is false else value */
       if (!va_arg(ap, int)) {
         err = pn_data_put_null(data);
         if (err) return err;
@@ -645,7 +722,7 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-    case 'C':
+    case 'C':                   /* Append an existing pn_data_t *  */
       {
         pn_data_t *src = va_arg(ap, pn_data_t *);
         if (src && pn_data_size(src) > 0) {
@@ -657,7 +734,14 @@ int pn_data_vfill(pn_data_t *data, const char *fmt, va_list ap)
         }
       }
       break;
-    default:
+     case 'M':
+      {
+        pn_data_t *src = va_arg(ap, pn_data_t *);
+        err = (src && pn_data_size(src) > 0) ?
+          pni_normalize_multiple(data, src) : pn_data_put_null(data);
+        break;
+      }
+     default:
       pn_logf("unrecognized fill code: 0x%.2X '%c'", code, code);
       return PN_ARG_ERR;
     }
