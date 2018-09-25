@@ -39,7 +39,7 @@ find_package (CyrusSASL)
 enable_testing ()
 
 # Set up runtime checks (valgrind, sanitizers etc.)
-include(tests/runtime_check.cmake)  
+include(tests/RuntimeCheck.cmake)  
 
 ## Variables used across components
 

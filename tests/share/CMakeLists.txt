@@ -22,7 +22,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(ProtonExamples)
 include(CTest)
 enable_testing()
-include("tests/runtime_check.cmake")
+include("tests/RuntimeCheck.cmake")
 
 # ind example sub-directories that contain "CMakeLists.txt" or "testme"
 set(ex_dir "${CMAKE_SOURCE_DIR}/examples")
