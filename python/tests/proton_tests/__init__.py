@@ -31,3 +31,4 @@ from . import interop
 from . import soak
 from . import url
 from . import utils
+from . import connect

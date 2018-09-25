@@ -42,11 +42,18 @@ keytool -storetype pkcs12 -keystore server.pkcs12 -storepass server-password -al
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-request.pem -outfile server-certificate.pem
 openssl pkcs12 -nocerts -passin pass:server-password -in server.pkcs12 -passout pass:server-password -out server-private-key.pem
 
+# Create a certificate request for a server certificate using localhost.  Use the CA's certificate to sign it:
+keytool -storetype pkcs12 -keystore server-lh.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -genkey  -dname "CN=localhost" -validity 99999
+keytool -storetype pkcs12 -keystore server-lh.pkcs12 -storepass server-password -alias server-certificate -keypass server-password -certreq -file server-request-lh.pem
+keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile server-request-lh.pem -outfile server-certificate-lh.pem
+openssl pkcs12 -nocerts -passin pass:server-password -in server-lh.pkcs12 -passout pass:server-password -out server-private-key-lh.pem
+
 # Create a certificate request for the client certificate.  Use the CA's certificate to sign it:
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1" -validity 99999
 keytool -storetype pkcs12 -keystore client.pkcs12 -storepass client-password -alias client-certificate -keypass client-password -certreq -file client-request.pem
 keytool -storetype pkcs12 -keystore ca.pkcs12 -storepass ca-password -alias ca -keypass ca-password -gencert -rfc -validity 99999 -infile client-request.pem -outfile client-certificate.pem
 openssl pkcs12 -nocerts -passin pass:client-password -in client.pkcs12 -passout pass:client-password -out client-private-key.pem
+openssl pkcs12 -nocerts -passin pass:client-password -in client.pkcs12 -nodes -out client-private-key-no-password.pem
 
 # Create another client certificate with a different subject line
 keytool -storetype pkcs12 -keystore client1.pkcs12 -storepass client-password -alias client-certificate1 -keypass client-password -genkey  -dname "O=Client,CN=127.0.0.1,C=US,ST=ST,L=City,OU=Dev" -validity 99999

@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import
 
+import json
 import os
 import logging
 import traceback
@@ -726,6 +727,28 @@ class SSLConfig(object):
         self.client.set_trusted_ca_db(certificate_db)
         self.server.set_trusted_ca_db(certificate_db)
 
+def find_config_file():
+    confname = 'connect.json'
+    confpath = ['.', '~/.config/messaging','/etc/messaging']
+    for d in confpath:
+        f = os.path.join(d, confname)
+        if os.path.isfile(f):
+            return f
+    return None
+
+def get_default_config():
+    conf = os.environ.get('MESSAGING_CONNECT_FILE') or find_config_file()
+    if conf and os.path.isfile(conf):
+        with open(conf, 'r') as f:
+            return json.load(f)
+    else:
+        return {}
+
+def get_default_port_for_scheme(scheme):
+    if scheme == 'amqps':
+        return 5671
+    else:
+        return 5672
 
 class Container(Reactor):
     """A representation of the AMQP concept of a 'container', which
@@ -801,6 +824,38 @@ class Container(Reactor):
         the authentication secret.
 
         """
+        if not url and not urls and not address:
+            config = get_default_config()
+            scheme = config.get('scheme', 'amqp')
+            _url = "%s://%s:%s" % (scheme, config.get('host', 'localhost'), config.get('port', get_default_port_for_scheme(scheme)))
+            _ssl_domain = None
+            _kwargs = kwargs
+            if config.get('user'):
+                _kwargs['user'] = config.get('user')
+                if config.get('password'):
+                    _kwargs['password'] = config.get('password')
+            sasl_config = config.get('sasl', {})
+            _kwargs['sasl_enabled'] = sasl_config.get('enabled', True)
+            if sasl_config.get('mechanisms'):
+                _kwargs['allowed_mechs'] = sasl_config.get('mechanisms')
+            tls_config = config.get('tls', {})
+            if scheme == 'amqps':
+                _ssl_domain = SSLDomain(SSLDomain.MODE_CLIENT)
+                ca = tls_config.get('ca')
+                cert = tls_config.get('cert')
+                key = tls_config.get('key')
+                if ca:
+                    _ssl_domain.set_trusted_ca_db(str(ca))
+                    if tls_config.get('verify', True):
+                        _ssl_domain.set_peer_authentication(SSLDomain.VERIFY_PEER_NAME, str(ca))
+                if cert and key:
+                    _ssl_domain.set_credentials(str(cert), str(key), None)
+
+            return self._connect(_url, handler=handler, reconnect=reconnect, heartbeat=heartbeat, ssl_domain=_ssl_domain, **_kwargs)
+        else:
+            return self._connect(url=url, urls=urls, handler=handler, reconnect=reconnect, heartbeat=heartbeat, ssl_domain=ssl_domain, **kwargs)
+
+    def _connect(self, url=None, urls=None, address=None, handler=None, reconnect=None, heartbeat=None, ssl_domain=None, **kwargs):
         conn = self.connection(handler)
         conn.container = self.container_id or str(_generate_uuid())
         conn.offered_capabilities = kwargs.get('offered_capabilities')
