@@ -32,22 +32,13 @@
 
 namespace proton {
 
-template <class T> struct option {
-    T value;
-    bool set;
-
-    option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
-};
-
 class session_options::impl {
   public:
     option<messaging_handler *> handler;
 
     void apply(session& s) {
         if (s.uninitialized()) {
-            if (handler.set && handler.value) container::impl::set_handler(s, handler.value);
+            if (handler.is_set() && handler.get()) container::impl::set_handler(s, handler.get());
         }
     }
 
@@ -68,7 +59,7 @@ session_options& session_options::handler(class messaging_handler &h) { impl_->h
 
 void session_options::apply(session& s) const { impl_->apply(s); }
 
-
+option<messaging_handler*> session_options::handler() const { return impl_->handler; }
 
 
 } // namespace proton

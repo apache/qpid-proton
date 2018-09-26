@@ -27,6 +27,7 @@
 #include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
+#include "./option.hpp"
 #include "./symbol.hpp"
 #include "./types_fwd.hpp"
 
@@ -171,6 +172,27 @@ class connection_options {
     /// **Unsettled API** - Set reconnect and failover options.
     PN_CPP_EXTERN connection_options& reconnect(const reconnect_options &);
 
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<messaging_handler*> handler() const;
+    PN_CPP_EXTERN option<uint32_t> max_frame_size() const;
+    PN_CPP_EXTERN option<uint16_t> max_sessions() const;
+    PN_CPP_EXTERN option<duration> idle_timeout() const;
+    PN_CPP_EXTERN option<std::string> container_id() const;
+    PN_CPP_EXTERN option<std::string> virtual_host() const;
+    PN_CPP_EXTERN option<std::string> user() const;
+    PN_CPP_EXTERN option<class ssl_client_options >ssl_client_options() const;
+    PN_CPP_EXTERN option<class ssl_server_options >ssl_server_options() const;
+    PN_CPP_EXTERN option<bool> sasl_enabled() const;
+    PN_CPP_EXTERN option<bool> sasl_allow_insecure_mechs() const;
+    PN_CPP_EXTERN option<std::string> sasl_allowed_mechs() const;
+    PN_CPP_EXTERN option<std::vector<symbol> > offered_capabilities() const;
+    PN_CPP_EXTERN option<std::vector<symbol> > desired_capabilities() const;
+    PN_CPP_EXTERN option<std::string> sasl_config_name() const;
+    PN_CPP_EXTERN option<std::string> sasl_config_path() const;
+    PN_CPP_EXTERN option<reconnect_options> reconnect() const;
+    /// @}
+
     /// Update option values from values set in other.
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
 
@@ -178,7 +200,6 @@ class connection_options {
     void apply_unbound(connection&) const;
     void apply_unbound_client(pn_transport_t*) const;
     void apply_unbound_server(pn_transport_t*) const;
-    messaging_handler* handler() const;
 
     class impl;
     internal::pn_unique_ptr<impl> impl_;

@@ -25,6 +25,7 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
+#include "./option.hpp"
 #include "./source.hpp"
 
 #include <string>
@@ -91,6 +92,19 @@ class source_options {
 
     /// Extension capabilities that are supported/requested
     PN_CPP_EXTERN source_options& capabilities(const std::vector<symbol>&);
+
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<std::string> address() const;
+    PN_CPP_EXTERN option<bool> dynamic() const;
+    PN_CPP_EXTERN option<bool> anonymous() const;
+    PN_CPP_EXTERN option<enum source::distribution_mode> distribution_mode() const;
+    PN_CPP_EXTERN option<enum source::durability_mode> durability_mode() const;
+    PN_CPP_EXTERN option<duration> timeout() const;
+    PN_CPP_EXTERN option<enum source::expiry_policy> expiry_policy() const;
+    PN_CPP_EXTERN option<source::filter_map> filters() const;
+    PN_CPP_EXTERN option<std::vector<symbol> > capabilities() const;
+    /// @}
 
   private:
     void apply(source&) const;

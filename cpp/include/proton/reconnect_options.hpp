@@ -26,6 +26,7 @@
 #include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
 #include "./source.hpp"
+#include "./option.hpp"
 
 #include <string>
 #include <vector>
@@ -78,6 +79,15 @@ class reconnect_options {
     /// Alternative connection URLs used for failover.  There are none
     /// by default.
     PN_CPP_EXTERN reconnect_options& failover_urls(const std::vector<std::string>& conn_urls);
+
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<duration> delay() const;
+    PN_CPP_EXTERN option<float> delay_multiplier() const;
+    PN_CPP_EXTERN option<duration> max_delay() const;
+    PN_CPP_EXTERN option<int> max_attempts() const;
+    PN_CPP_EXTERN option<std::vector<std::string> > failover_urls() const;
+    /// @}
 
   private:
     class impl;

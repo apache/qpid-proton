@@ -30,7 +30,8 @@ namespace proton {
 /// The message delivery policy to establish when opening a link.
 /// This structure imitates the newer C++11 "enum class" so that
 /// The enumeration constants are in the delivery_mode namespace.
-struct delivery_mode {
+class delivery_mode {
+  public:
     /// Delivery modes
     enum modes {
         /// No set policy.  The application must settle messages
@@ -47,7 +48,7 @@ struct delivery_mode {
     };
 
     /// @cond INTERNAL
-    
+
     delivery_mode() : modes_(NONE) {}
     delivery_mode(modes m) : modes_(m) {}
     operator modes() { return modes_; }

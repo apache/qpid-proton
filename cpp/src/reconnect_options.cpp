@@ -41,4 +41,10 @@ reconnect_options& reconnect_options::max_delay(duration d) { impl_->max_delay =
 reconnect_options& reconnect_options::max_attempts(int i) { impl_->max_attempts = i; return *this; }
 reconnect_options& reconnect_options::failover_urls(const std::vector<std::string>& urls) { impl_->failover_urls = urls; return *this; }
 
+option<duration> reconnect_options::delay() const { return impl_->delay; }
+option<float> reconnect_options::delay_multiplier() const { return impl_->delay_multiplier; }
+option<duration> reconnect_options::max_delay() const { return impl_->max_delay; }
+option<int> reconnect_options::max_attempts() const { return impl_->max_attempts; }
+option<std::vector<std::string> > reconnect_options::failover_urls() const { return impl_->failover_urls; }
+
 } // namespace proton

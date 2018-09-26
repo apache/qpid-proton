@@ -25,6 +25,7 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./duration.hpp"
+#include "./option.hpp"
 #include "./target.hpp"
 
 #include <string>
@@ -82,6 +83,17 @@ class target_options {
 
     /// Extension capabilities that are supported/requested
     PN_CPP_EXTERN target_options& capabilities(const std::vector<symbol>&);
+
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<std::string> address() const;
+    PN_CPP_EXTERN option<bool> dynamic() const;
+    PN_CPP_EXTERN option<bool> anonymous() const;
+    PN_CPP_EXTERN option<enum target::durability_mode> durability_mode() const;
+    PN_CPP_EXTERN option<duration> timeout() const;
+    PN_CPP_EXTERN option<enum target::expiry_policy> expiry_policy() const;
+    PN_CPP_EXTERN option<std::vector<symbol> > capabilities() const;
+    /// @}
 
   private:
     void apply(target&) const;

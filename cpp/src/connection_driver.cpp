@@ -69,7 +69,7 @@ void connection_driver::configure(const connection_options& opts, bool server) {
         opts.apply_unbound_client(driver_.transport);
     }
     pn_connection_driver_bind(&driver_);
-    handler_ =  opts.handler();
+    handler_ =  opts.handler().get(0);
 }
 
 void connection_driver::connect(const connection_options& opts) {

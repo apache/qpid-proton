@@ -26,6 +26,7 @@
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./delivery_mode.hpp"
+#include "./option.hpp"
 #include <string>
 
 /// @file
@@ -76,7 +77,7 @@ class receiver_options {
 
     /// Set the delivery mode on the receiver.  The default is
     /// delivery_mode::AT_LEAST_ONCE.
-    PN_CPP_EXTERN receiver_options& delivery_mode(delivery_mode);
+    PN_CPP_EXTERN receiver_options& delivery_mode(class delivery_mode);
 
     /// Enable or disable automatic acceptance of messages that aren't
     /// otherwise released, rejected, or modified.  It is enabled by
@@ -100,11 +101,19 @@ class receiver_options {
     /// Set the link name. If not set a unique name is generated.
     PN_CPP_EXTERN receiver_options& name(const std::string& name);
 
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<messaging_handler*> handler() const;
+    PN_CPP_EXTERN option<class delivery_mode> delivery_mode() const;
+    PN_CPP_EXTERN option<bool> auto_accept() const;
+    PN_CPP_EXTERN option<class source_options> source() const;
+    PN_CPP_EXTERN option<class target_options> target() const;
+    PN_CPP_EXTERN option<int> credit_window() const;
+    PN_CPP_EXTERN option<std::string> name() const;
+    /// @}
 
   private:
     void apply(receiver &) const;
-    const std::string* get_name() const; // Pointer to name if set, else 0
-
     class impl;
     internal::pn_unique_ptr<impl> impl_;
 

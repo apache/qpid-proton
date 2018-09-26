@@ -22,6 +22,7 @@
 #include "proton/codec/vector.hpp"
 #include "proton/source.hpp"
 #include "proton/source_options.hpp"
+#include "proton/option.hpp"
 #include "proton/target.hpp"
 #include "proton/target_options.hpp"
 
@@ -30,15 +31,6 @@
 #include <limits>
 
 namespace proton {
-
-template <class T> struct option {
-    T value;
-    bool set;
-
-    option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
-};
 
 namespace {
 
@@ -64,23 +56,23 @@ namespace {
 // Options common to sources and targets
 
 void node_address(terminus &t, option<std::string> &addr, option<bool> &dynamic, option<bool> &anonymous) {
-    if (dynamic.set && dynamic.value) {
+    if (dynamic.is_set() && dynamic.get()) {
         pn_terminus_set_dynamic(unwrap(t), true);
         pn_terminus_set_address(unwrap(t), NULL);
-    } else if (anonymous.set && anonymous.value) {
+    } else if (anonymous.is_set() && anonymous.get()) {
         pn_terminus_set_address(unwrap(t), NULL);
-    } else if (addr.set) {
-        pn_terminus_set_address(unwrap(t), addr.value.c_str());
+    } else if (addr.is_set()) {
+        pn_terminus_set_address(unwrap(t), addr.get().c_str());
     }
 }
 
 void node_durability(terminus &t, option<enum terminus::durability_mode> &mode) {
-    if (mode.set) pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.value));
+    if (mode.is_set()) pn_terminus_set_durability(unwrap(t), pn_durability_t(mode.get()));
 }
 
 void node_expiry(terminus &t, option<enum terminus::expiry_policy> &policy, option<duration> &d) {
-    if (policy.set) pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(policy.value));
-    if (d.set) timeout(t, d.value);
+    if (policy.is_set()) pn_terminus_set_expiry_policy(unwrap(t), pn_expiry_policy_t(policy.get()));
+    if (d.is_set()) timeout(t, d.get());
 }
 
 }
@@ -102,14 +94,14 @@ class source_options::impl {
         node_address(s, address, dynamic, anonymous);
         node_durability(s, durability_mode);
         node_expiry(s, expiry_policy, timeout);
-        if (distribution_mode.set)
-          pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.value));
-        if (filters.set && !filters.value.empty()) {
+        if (distribution_mode.is_set())
+          pn_terminus_set_distribution_mode(unwrap(s), pn_distribution_mode_t(distribution_mode.get()));
+        if (filters.is_set() && !filters.get().empty()) {
             // Applied at most once via source_option.  No need to clear.
-            value(pn_terminus_filter(unwrap(s))) = filters.value;
+            value(pn_terminus_filter(unwrap(s))) = filters.get();
         }
-        if (capabilities.set) {
-            value(pn_terminus_capabilities(unwrap(s))) = capabilities.value;
+        if (capabilities.is_set()) {
+            value(pn_terminus_capabilities(unwrap(s))) = capabilities.get();
         }
     }
 };
@@ -137,6 +129,16 @@ source_options& source_options::capabilities(const std::vector<symbol>& c) { imp
 
 void source_options::apply(source& s) const { impl_->apply(s); }
 
+option<std::string> source_options::address() const { return impl_->address; }
+option<bool> source_options::dynamic() const { return impl_->dynamic; }
+option<bool> source_options::anonymous() const { return impl_->anonymous; }
+option<enum source::distribution_mode> source_options::distribution_mode() const { return impl_->distribution_mode; }
+option<enum source::durability_mode> source_options::durability_mode() const { return impl_->durability_mode; }
+option<duration> source_options::timeout() const { return impl_->timeout; }
+option<enum source::expiry_policy> source_options::expiry_policy() const { return impl_->expiry_policy; }
+option<source::filter_map> source_options::filters() const { return impl_->filters; }
+option<std::vector<symbol> > source_options::capabilities() const { return impl_->capabilities; }
+
 // TARGET
 
 class target_options::impl {
@@ -153,8 +155,8 @@ class target_options::impl {
         node_address(t, address, dynamic, anonymous);
         node_durability(t, durability_mode);
         node_expiry(t, expiry_policy, timeout);
-        if (capabilities.set) {
-            value(pn_terminus_capabilities(unwrap(t))) = capabilities.value;
+        if (capabilities.is_set()) {
+            value(pn_terminus_capabilities(unwrap(t))) = capabilities.get();
         }
     }
 };
@@ -179,6 +181,14 @@ target_options& target_options::expiry_policy(enum target::expiry_policy m) { im
 target_options& target_options::capabilities(const std::vector<symbol>& c) { impl_->capabilities = c; return *this; }
 
 void target_options::apply(target& s) const { impl_->apply(s); }
+
+option<std::string> target_options::address() const { return impl_->address; }
+option<bool> target_options::dynamic() const { return impl_->dynamic; }
+option<bool> target_options::anonymous() const { return impl_->anonymous; }
+option<enum target::durability_mode> target_options::durability_mode() const { return impl_->durability_mode; }
+option<duration> target_options::timeout() const { return impl_->timeout; }
+option<enum target::expiry_policy> target_options::expiry_policy() const { return impl_->expiry_policy; }
+option<std::vector<symbol> > target_options::capabilities() const { return impl_->capabilities; }
 
 
 

@@ -77,7 +77,8 @@ sender session::open_sender(const std::string &addr) {
 }
 
 sender session::open_sender(const std::string &addr, const sender_options &so) {
-    std::string name = so.get_name() ? *so.get_name() : next_link_name(connection());
+    option<std::string> name_opt = so.name();
+    std::string name = name_opt.is_set() ? name_opt.get() : next_link_name(connection());
     pn_link_t *lnk = pn_sender(pn_object(), name.c_str());
     pn_terminus_set_address(pn_link_target(lnk), addr.c_str());
     sender snd(make_wrapper<sender>(lnk));
@@ -91,7 +92,8 @@ receiver session::open_receiver(const std::string &addr) {
 
 receiver session::open_receiver(const std::string &addr, const receiver_options &ro)
 {
-    std::string name = ro.get_name() ? *ro.get_name() : next_link_name(connection());
+    option<std::string> name_opt = ro.name();
+    std::string name = name_opt.is_set() ? name_opt.get() : next_link_name(connection());
     pn_link_t *lnk = pn_receiver(pn_object(), name.c_str());
     pn_terminus_set_address(pn_link_source(lnk), addr.c_str());
     receiver rcv(make_wrapper<receiver>(lnk));

@@ -25,6 +25,7 @@
 #include "./fwd.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
+#include "./option.hpp"
 
 /// @file
 /// @copybrief proton::session_options
@@ -54,6 +55,11 @@ class session_options {
     PN_CPP_EXTERN session_options& handler(class messaging_handler &);
 
     // Other useful session configuration TBD.
+
+    /// Get option values, see corresponding set function for details
+    /// {@
+    PN_CPP_EXTERN option<messaging_handler*> handler() const;
+    /// @}
 
     /// @cond INTERNAL
   private:

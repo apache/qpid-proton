@@ -23,6 +23,7 @@
 #include "proton/messaging_handler.hpp"
 #include "proton/source_options.hpp"
 #include "proton/target_options.hpp"
+#include "proton/option.hpp"
 
 #include <proton/link.h>
 
@@ -32,15 +33,6 @@
 #include "proton_bits.hpp"
 
 namespace proton {
-
-template <class T> struct option {
-    T value;
-    bool set;
-
-    option() : value(), set(false) {}
-    option& operator=(const T& x) { value = x;  set = true; return *this; }
-    void update(const option<T>& x) { if (x.set) *this = x.value; }
-};
 
 class receiver_options::impl {
     static link_context& get_context(receiver l) {
@@ -68,26 +60,26 @@ class receiver_options::impl {
     option<bool> auto_settle;
     option<int> credit_window;
     option<bool> dynamic_address;
-    option<source_options> source;
-    option<target_options> target;
+    option<class source_options> source;
+    option<class target_options> target;
     option<std::string> name;
 
 
     void apply(receiver& r) {
         if (r.uninitialized()) {
-            if (delivery_mode.set) set_delivery_mode(r, delivery_mode.value);
-            if (handler.set && handler.value) container::impl::set_handler(r, handler.value);
-            if (auto_settle.set) get_context(r).auto_settle = auto_settle.value;
-            if (auto_accept.set) get_context(r).auto_accept = auto_accept.value;
-            if (credit_window.set) get_context(r).credit_window = credit_window.value;
+            if (delivery_mode.is_set()) set_delivery_mode(r, delivery_mode.get());
+            if (handler.is_set() && handler.get()) container::impl::set_handler(r, handler.get());
+            if (auto_settle.is_set()) get_context(r).auto_settle = auto_settle.get();
+            if (auto_accept.is_set()) get_context(r).auto_accept = auto_accept.get();
+            if (credit_window.is_set()) get_context(r).credit_window = credit_window.get();
 
-            if (source.set) {
+            if (source.is_set()) {
                 proton::source local_s(make_wrapper<proton::source>(pn_link_source(unwrap(r))));
-                source.value.apply(local_s);
+                source.get().apply(local_s);
             }
-            if (target.set) {
+            if (target.is_set()) {
                 proton::target local_t(make_wrapper<proton::target>(pn_link_target(unwrap(r))));
-                target.value.apply(local_t);
+                target.get().apply(local_t);
             }
         }
     }
@@ -123,15 +115,19 @@ receiver_options& receiver_options::handler(class messaging_handler &h) { impl_-
 receiver_options& receiver_options::delivery_mode(proton::delivery_mode m) {impl_->delivery_mode = m; return *this; }
 receiver_options& receiver_options::auto_accept(bool b) {impl_->auto_accept = b; return *this; }
 receiver_options& receiver_options::credit_window(int w) {impl_->credit_window = w; return *this; }
-receiver_options& receiver_options::source(source_options &s) {impl_->source = s; return *this; }
-receiver_options& receiver_options::target(target_options &s) {impl_->target = s; return *this; }
+receiver_options& receiver_options::source(class source_options &s) {impl_->source = s; return *this; }
+receiver_options& receiver_options::target(class target_options &s) {impl_->target = s; return *this; }
 receiver_options& receiver_options::name(const std::string &s) {impl_->name = s; return *this; }
 
 void receiver_options::apply(receiver& r) const { impl_->apply(r); }
 
-const std::string* receiver_options::get_name() const {
-    return impl_->name.set ? &impl_->name.value : 0;
-}
+option<messaging_handler*> receiver_options::handler() const { return impl_->handler; }
+option<class delivery_mode> receiver_options::delivery_mode() const { return impl_->delivery_mode; }
+option<bool> receiver_options::auto_accept() const { return impl_->auto_accept; }
+option<class source_options> receiver_options::source() const { return impl_->source; }
+option<class target_options> receiver_options::target() const { return impl_->target; }
+option<int> receiver_options::credit_window() const { return impl_->credit_window; }
+option<std::string> receiver_options::name() const { return impl_->name; }
 
 // No-op, kept for binary compat but auto_settle is not relevant to receiver only sender.
 receiver_options& receiver_options::auto_settle(bool b) { return *this; }

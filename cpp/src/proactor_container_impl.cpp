@@ -181,7 +181,7 @@ pn_connection_t* container::impl::make_connection_lh(
 
     connection_options opts = client_connection_options_; // Defaults
     opts.update(user_opts);
-    messaging_handler* mh = opts.handler();
+    messaging_handler* mh = opts.handler().get(0);
 
     pn_connection_t *pnc = pn_connection();
     connection_context& cc(connection_context::get(pnc));
@@ -592,7 +592,7 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         connection_context& cc = connection_context::get(c);
         cc.container = &container_;
         cc.listener_context_ = lc;
-        cc.handler = opts.handler();
+        cc.handler = opts.handler().get(0);
         cc.work_queue_ = new container::impl::connection_work_queue(*container_.impl_, c);
         pn_transport_t* pnt = pn_transport();
         pn_transport_set_server(pnt);
