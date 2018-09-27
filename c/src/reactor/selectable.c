@@ -28,6 +28,26 @@
 #include <assert.h>
 #include <stdlib.h>
 
+/*
+ * These are totally unused (and unusable) but these definitions have been
+ * retained to maintain the external linkage symbols
+ */
+
+PNX_EXTERN pn_iterator_t *pn_selectables(void)
+{
+  return pn_iterator();
+}
+
+PNX_EXTERN void *pn_selectables_next(pn_iterator_t *selectables)
+{
+  return pn_iterator_next(selectables);
+}
+
+PNX_EXTERN void pn_selectables_free(pn_iterator_t *selectables)
+{
+  pn_free(selectables);
+}
+
 struct pn_selectable_t {
   pn_socket_t fd;
   int index;
