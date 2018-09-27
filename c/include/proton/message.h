@@ -737,6 +737,20 @@ PN_EXTERN int pn_message_decode(pn_message_t *msg, const char *bytes, size_t siz
  */
 PN_EXTERN int pn_message_encode(pn_message_t *msg, char *bytes, size_t *size);
 
+/**
+ * **Unsettled API**: Encode a message, allocating space if necessary
+ *
+ * @param[in] msg A message object.
+ * @param[inout] buf Used to encode msg.
+ *   If buf->start == NULL memory is allocated with malloc().
+ *   If buf->size is not large enough, buffer is expanded with realloc().
+ *   On return buf holds the address and size of the final buffer.
+ *   buf->size may be larger than the length of the encoded message.
+ * @return The length of the encoded message or an error code (<0).
+ * On error pn_message_error(msg) will provide more information.
+ */
+PN_EXTERN ssize_t pn_message_encode2(pn_message_t *msg, pn_rwbytes_t *buf);
+
 struct pn_link_t;
 
 /**
@@ -745,8 +759,7 @@ struct pn_link_t;
  * Encode and send a message on a sender link.
  *
  * Performs the following steps:
- * - create or expand the buffer @p buf as required
- * - call pn_message_encode() to encode the message to a buffer
+ * - call pn_message_encode2() to encode the message to a buffer
  * - call pn_link_send() to send the encoded message bytes
  * - call pn_link_advance() to indicate the message is complete
  *
@@ -755,18 +768,11 @@ struct pn_link_t;
  *
  * @param[in] msg A message object.
  * @param[in] sender A sending link.
- * The message will be encoded and sent with pn_link_send()
- * @param[inout] buf Used to encode the message.
- * - if buf == NULL, temporary space will be allocated and freed with malloc()/free()
- * - if buf->start != NULL and buf->size is large enough, the message is encoded to
- *   buf->start
- * - if buf->start == NULL or buf->size is not enough, the buffer will be extended like this:
+ * @param[inout] buf See pn_message_encode2. If buf == NULL then
+ * any memory needed for encoding will be allocated and freed by pn_message_send().
  *
- *       buf->size = new_size; buf->start = realloc(buf->start, new_size)
- *
- *   it is possible for the buffer to be extended more than once.
- * @return The number of bytes encoded and sent on success.
- * Returns an error code (< 0) on failure and sets pn_message_error() on msg
+ * @return The length of the encoded message or an error code (<0).
+ * On error pn_message_error(msg) will provide more information.
  */
 PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbytes_t *buf);
 

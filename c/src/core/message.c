@@ -897,13 +897,11 @@ pn_data_t *pn_message_body(pn_message_t *msg)
   return msg ? msg->body : NULL;
 }
 
-PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbytes_t *buffer) {
+ssize_t pn_message_encode2(pn_message_t *msg, pn_rwbytes_t *buffer) {
   static const size_t initial_size = 256;
-  pn_rwbytes_t local_buf = { 0 };
-  ssize_t err = 0;
+  int err = 0;
   size_t size = 0;
 
-  if (buffer == NULL) buffer = &local_buf;
   if (buffer->start == NULL) {
     buffer->start = (char*)malloc(initial_size);
     buffer->size = initial_size;
@@ -916,9 +914,18 @@ PN_EXTERN ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbyt
     if (buffer->start == NULL) return PN_OUT_OF_MEMORY;
     size = buffer->size;
   }
-  if (err >= 0) err = pn_link_send(sender, buffer->start, size);
-  if (err >= 0) err = pn_link_advance(sender);
-  if (err < 0) pn_error_copy(pn_message_error(msg), pn_link_error(sender));
-  free(local_buf.start);
-  return err;
+  return err == 0 ? (ssize_t)size : err;
+}
+
+ssize_t pn_message_send(pn_message_t *msg, pn_link_t *sender, pn_rwbytes_t *buffer) {
+  pn_rwbytes_t local_buf = { 0 };
+  if (!buffer) buffer = &local_buf;
+  ssize_t ret = pn_message_encode2(msg, buffer);
+  if (ret >= 0) {
+    ret = pn_link_send(sender, buffer->start, ret);
+    if (ret >= 0) ret = pn_link_advance(sender);
+    if (ret < 0) pn_error_copy(pn_message_error(msg), pn_link_error(sender));
+  }
+  if (local_buf.start) free(local_buf.start);
+  return ret;
 }
