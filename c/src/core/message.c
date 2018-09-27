@@ -737,7 +737,13 @@ int pn_message_decode(pn_message_t *msg, const char *bytes, size_t size)
       break;
     case DATA:
     case AMQP_SEQUENCE:
+      msg->inferred = true;
+      pn_data_narrow(msg->data);
+      err = pn_data_copy(msg->body, msg->data);
+      if (err) return err;
+      break;
     case AMQP_VALUE:
+      msg->inferred = false;
       pn_data_narrow(msg->data);
       err = pn_data_copy(msg->body, msg->data);
       if (err) return err;
