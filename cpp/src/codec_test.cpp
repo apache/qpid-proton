@@ -92,9 +92,9 @@ int main(int, char**) {
     RUN_TEST(failed, simple_type_test(static_cast<unsigned long>(42)));
 
 #if PN_CPP_HAS_LONG_LONG_TYPE
-    RUN_TEST(failed, simple_type_test(static_cast<long>(42)));
-    RUN_TEST(failed, simple_type_test(static_cast<signed long>(42)));
-    RUN_TEST(failed, simple_type_test(static_cast<unsigned long>(42)));
+    RUN_TEST(failed, simple_type_test(static_cast<long long>(42)));
+    RUN_TEST(failed, simple_type_test(static_cast<signed long long>(42)));
+    RUN_TEST(failed, simple_type_test(static_cast<unsigned long long>(42)));
 #endif
 
     // value and scalar types, more tests in value_test and scalar_test.
