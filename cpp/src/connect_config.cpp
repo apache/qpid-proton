@@ -156,7 +156,7 @@ std::string parse(std::istream& is, connection_options& opts) {
         raise(msg() << "'scheme' must be \"amqp\" or \"amqps\"");
     }
 
-    string host = get_string(root, "host", "");
+    string host = get_string(root, "host", "localhost");
     opts.virtual_host(host.c_str());
 
     Value port = root.get("port", scheme);

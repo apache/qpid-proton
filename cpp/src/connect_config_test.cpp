@@ -27,6 +27,8 @@
 #include "proton/listener.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/transport.hpp"
+#include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
 
 #include <sstream>
 #include <fstream>
@@ -68,14 +70,54 @@ void test_addr() {
     connection_options opts;
     ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", \"port\":\"bar\" }"));
     ASSERT_EQUAL("foo:1234", configure(opts, "{ \"host\":\"foo\", \"port\":\"1234\" }"));
-    ASSERT_EQUAL(":amqps", configure(opts, "{}"));
-    ASSERT_EQUAL(":amqp", configure(opts, "{\"scheme\":\"amqp\"}"));
+    ASSERT_EQUAL("localhost:amqps", configure(opts, "{}"));
+    ASSERT_EQUAL("localhost:amqp", configure(opts, "{\"scheme\":\"amqp\"}"));
     ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", /* inline comment */\"port\":\"bar\" // end of line comment\n}"));
 
     ASSERT_THROWS_MSG(error, "'scheme' must be", configure(opts, "{\"scheme\":\"bad\"}"));
     ASSERT_THROWS_MSG(error, "'scheme' expected string, found boolean", configure(opts, "{\"scheme\":true}"));
     ASSERT_THROWS_MSG(error, "'port' expected string or integer, found boolean", configure(opts, "{\"port\":true}"));
     ASSERT_THROWS_MSG(error, "'host' expected string, found boolean", configure(opts, "{\"host\":true}"));
+}
+
+// Hack to write long strings with embedded '"' and newlines
+#define LONG_STRING(...) #__VA_ARGS__
+
+const std::string& CONFIG_ALL = LONG_STRING(
+    {
+     "host": "foobar.org",
+     "port": 1234,
+     "user": "fred",
+     "password": "secret",
+     "sasl": {
+              "mechanisms": ["a", "b", "c"],
+              "allow_insecure": true
+     }
+    }
+);
+
+void test_all() {
+    connection_options opts;
+    ASSERT_EQUAL("foobar.org:1234", configure(opts, CONFIG_ALL));
+    ASSERT_EQUAL("foobar.org",  opts.virtual_host().get());
+    ASSERT_EQUAL(true,  opts.sasl_enabled().get());
+    ASSERT_EQUAL("fred", opts.user().get());
+    ASSERT_EQUAL("a b c", opts.sasl_allowed_mechs().get());
+    ASSERT(opts.sasl_allow_insecure_mechs().get());
+    // TODO aconway 2018-09-21: need to set up real credentials to
+    // test SSL settings, the ssl_domain is created immediately and
+    // there will be an exception if the credentials are not valid.
+}
+
+void test_defaults() {
+    connection_options opts;
+    ASSERT_EQUAL("localhost:amqps", configure(opts, "{}"));
+    ASSERT_EQUAL("localhost",  opts.virtual_host().get());
+    ASSERT_EQUAL(true,  opts.sasl_enabled().get());
+    ASSERT(opts.user().empty());
+    ASSERT(opts.sasl_allowed_mechs().empty());
+    ASSERT(opts.sasl_allow_insecure_mechs().empty());
+    ASSERT(opts.ssl_client_options().empty());
 }
 
 class test_handler : public messaging_handler {
@@ -137,6 +179,8 @@ int main(int argc, char** argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_default_file());
     RUN_ARGV_TEST(failed, test_addr());
+    RUN_ARGV_TEST(failed, test_all());
+    RUN_ARGV_TEST(failed, test_defaults());
     RUN_ARGV_TEST(failed, test_default_connect().run());
     return failed;
 }
