@@ -168,7 +168,7 @@ class ssl_server_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-  friend class connection_options;
+  friend class connection_options_impl;
     /// @endcond
 };
 
@@ -193,7 +193,7 @@ class ssl_client_options : private internal::ssl_domain {
     using internal::ssl_domain::pn_domain;
 
     /// @cond INTERNAL
-  friend class connection_options;
+  friend class connection_options_impl;
     /// @endcond
 };
 

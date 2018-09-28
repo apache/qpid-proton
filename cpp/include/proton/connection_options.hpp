@@ -23,12 +23,9 @@
  */
 
 #include "./duration.hpp"
-#include "./fwd.hpp"
-#include "./internal/config.hpp"
 #include "./internal/export.hpp"
 #include "./internal/pn_unique_ptr.hpp"
 #include "./symbol.hpp"
-#include "./types_fwd.hpp"
 
 #include <proton/type_compat.h>
 
@@ -42,6 +39,9 @@ struct pn_connection_t;
 struct pn_transport_t;
 
 namespace proton {
+class connection;
+class reconnect_options;
+class connection_options_impl;
 
 /// Options for creating a connection.
 ///
@@ -175,18 +175,10 @@ class connection_options {
     PN_CPP_EXTERN connection_options& update(const connection_options& other);
 
   private:
-    void apply_unbound(connection&) const;
-    void apply_unbound_client(pn_transport_t*) const;
-    void apply_unbound_server(pn_transport_t*) const;
-    messaging_handler* handler() const;
-
-    class impl;
-    internal::pn_unique_ptr<impl> impl_;
+    internal::pn_unique_ptr<connection_options_impl> impl_;
 
     /// @cond INTERNAL
-  friend class container;
-  friend class io::connection_driver;
-  friend class connection;
+  friend class connection_options_impl;
     /// @endcond
 };
 

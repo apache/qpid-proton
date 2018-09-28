@@ -20,10 +20,10 @@
  */
 
 #include "proton_bits.hpp"
+#include "connection_options_impl.hpp"
 
 #include "proton/codec/vector.hpp"
 #include "proton/connection.hpp"
-#include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/error.hpp"
 #include "proton/receiver_options.hpp"
@@ -56,7 +56,7 @@ void connection::open() {
 }
 
 void connection::open(const connection_options &opts) {
-    opts.apply_unbound(*this);
+    connection_options_impl::get(opts).apply_unbound(*this);
     pn_connection_open(pn_object());
 }
 
