@@ -61,6 +61,12 @@
 std::mutex out_lock;
 #define OUT(x) do { std::lock_guard<std::mutex> l(out_lock); x; } while (false)
 
+// Exception raised if a sender or receiver is closed when trying to send/receive
+class closed : public std::runtime_error {
+  public:
+    closed(const std::string& msg) : std::runtime_error(msg) {}
+};
+
 // A thread-safe sending connection that blocks sending threads when there
 // is no AMQP credit to send messages.
 class sender : private proton::messaging_handler {
@@ -151,12 +157,13 @@ class receiver : private proton::messaging_handler {
     proton::work_queue* work_queue_;
     std::queue<proton::message> buffer_; // Messages not yet returned by receive()
     std::condition_variable can_receive_; // Notify receivers of messages
+    bool closed_;
 
   public:
 
     // Connect to url
     receiver(proton::container& cont, const std::string& url, const std::string& address)
-        : work_queue_()
+        : work_queue_(0), closed_(false)
     {
         // NOTE:credit_window(0) disables automatic flow control.
         // We will use flow control to match AMQP credit to buffer capacity.
@@ -168,8 +175,10 @@ class receiver : private proton::messaging_handler {
     proton::message receive() {
         std::unique_lock<std::mutex> l(lock_);
         // Wait for buffered messages
-        while (!work_queue_ || buffer_.empty())
+        while (!closed_ && (!work_queue_ || buffer_.empty())) {
             can_receive_.wait(l);
+        }
+        if (closed_) throw closed("receiver closed");
         proton::message m = std::move(buffer_.front());
         buffer_.pop();
         // Add a lambda to the work queue to call receive_done().
@@ -178,9 +187,16 @@ class receiver : private proton::messaging_handler {
         return m;
     }
 
+    // Thread safe
     void close() {
         std::lock_guard<std::mutex> l(lock_);
-        if (work_queue_) work_queue_->add([this]() { this->receiver_.connection().close(); });
+        if (!closed_) {
+            closed_ = true;
+            can_receive_.notify_all();
+            if (work_queue_) {
+                work_queue_->add([this]() { this->receiver_.connection().close(); });
+            }
+        }
     }
 
   private:
@@ -229,24 +245,26 @@ void send_thread(sender& s, int n) {
 // Receive messages till atomic remaining count is 0.
 // remaining is shared among all receiving threads
 void receive_thread(receiver& r, std::atomic_int& remaining) {
-    auto id = std::this_thread::get_id();
-    int n = 0;
-    // atomically check and decrement remaining *before* receiving.
-    // If it is 0 or less then return, as there are no more
-    // messages to receive so calling r.receive() would block forever.
-    while (remaining-- > 0) {
-        auto m = r.receive();
-        ++n;
-        OUT(std::cout << id << " received \"" << m.body() << '"' << std::endl);
-    }
-    OUT(std::cout << id << " received " << n << " messages" << std::endl);
+    try {
+        auto id = std::this_thread::get_id();
+        int n = 0;
+        // atomically check and decrement remaining *before* receiving.
+        // If it is 0 or less then return, as there are no more
+        // messages to receive so calling r.receive() would block forever.
+        while (remaining-- > 0) {
+            auto m = r.receive();
+            ++n;
+            OUT(std::cout << id << " received \"" << m.body() << '"' << std::endl);
+        }
+        OUT(std::cout << id << " received " << n << " messages" << std::endl);
+    } catch (const closed&) {}
 }
 
 int main(int argc, const char **argv) {
     try {
         if (argc != 5) {
             std::cerr <<
-                "Usage: " << argv[0] << " MESSAGE-COUNT THREAD-COUNT URL\n"
+                "Usage: " << argv[0] << " CONNECTION-URL AMQP-ADDRESS MESSAGE-COUNT THREAD-COUNT\n"
                 "CONNECTION-URL: connection address, e.g.'amqp://127.0.0.1'\n"
                 "AMQP-ADDRESS: AMQP node address, e.g. 'examples'\n"
                 "MESSAGE-COUNT: number of messages to send\n"
