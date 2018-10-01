@@ -59,19 +59,19 @@ namespace connect_config {
 
 namespace {
 
-void raise(const string& message) {
-    throw proton::error("connection configuration: " + message);
+proton::error err(const string& message) {
+    return proton::error("connection configuration: " + message);
 }
 
 Value validate(ValueType t, const Value& v, const string& name) {
     if (v.type() != t)
-        raise(msg() << " '" << name << "' expected " << t << ", found " << v.type());
+        throw err(msg() << " '" << name << "' expected " << t << ", found " << v.type());
     return v;
 }
 
 Value get(ValueType t, const Value& obj, const char *key, const Value& dflt=Value()) {
-    Value v = (obj.type() != nullValue) ? obj.get(key, dflt) : dflt;
-    return validate(t, v, key);
+    Value v = obj.get(key, dflt);
+    return v.type() == nullValue ? dflt : validate(t, v, key);
 }
 
 bool get_bool(const Value& obj, const char *key, bool dflt) {
@@ -91,11 +91,10 @@ static const string ETC_FILE_NAME("/etc/messaging/" + FILE_NAME);
 bool exists(const string& name) { return std::ifstream(name.c_str()).good(); }
 
 void parse_sasl(Value root, connection_options& opts) {
-    Value sasl = root.get("sasl", Value());
+    Value sasl = get(objectValue, root, "sasl");
     opts.sasl_enabled(get_bool(sasl, "enable", true));
+    opts.sasl_allow_insecure_mechs(get_bool(sasl, "allow_insecure", false));
     if (sasl.type() != nullValue) {
-        validate(objectValue, sasl, "sasl");
-        opts.sasl_allow_insecure_mechs(get_bool(sasl, "allow_insecure", false));
         Value mechs = sasl.get("mechanisms", Value());
         switch (mechs.type()) {
           case nullValue:
@@ -108,7 +107,7 @@ void parse_sasl(Value root, connection_options& opts) {
               for (ArrayIndex i= 0; i < mechs.size(); ++i) {
                   Value v = mechs.get(i, Value());
                   if (v.type() != stringValue) {
-                      raise(msg() << "'sasl/mechanisms' expect string elements, found " << v.type());
+                      throw err(msg() << "'sasl/mechanisms' expect string elements, found " << v.type());
                   }
                   if (i > 0) s << " ";
                   s << v.asString();
@@ -117,61 +116,65 @@ void parse_sasl(Value root, connection_options& opts) {
               break;
           }
           default:
-            raise(msg() << "'mechanisms' expected string or array, found " << mechs.type());
+            throw err(msg() << "'mechanisms' expected string or array, found " << mechs.type());
         }
     }
 }
 
 void parse_tls(const string& scheme, Value root, connection_options& opts) {
-    Value tls = root.get("tls", Value());
-    if (tls.type() != nullValue) {
-        validate(objectValue, tls, "tls");
-        if (scheme != "amqps") {
-            raise(msg() << "'tls' object is not allowed unless scheme is \"amqps\"");
-        }
-        string ca = get_string(tls, "ca", "");
+    Value tls = get(objectValue, root, "tls");
+    if (scheme == "amqps") { // TLS is enabled
         bool verify = get_bool(tls, "verify", true);
-        Value cert = get(stringValue, tls, "cert");
         ssl::verify_mode mode = verify ? ssl::VERIFY_PEER_NAME : ssl::ANONYMOUS_PEER;
-        if (cert.type() != nullValue) {
-            Value key = get(stringValue, tls, "key");
-            ssl_certificate cert2 = (key.type() != nullValue) ?
-                ssl_certificate(cert.asString(), key.asString()) :
-                ssl_certificate(cert.asString());
-            opts.ssl_client_options(ssl_client_options(cert2, ca, mode));
-        } else {
-            ssl_client_options(ssl_client_options(ca, mode));
+        string ca = get_string(tls, "ca", "");
+        string cert = get_string(tls, "cert", "");
+        string key = get_string(tls, "key", "");
+        ssl_client_options ssl_opts;
+        if (!cert.empty()) {
+            ssl_certificate sc = key.empty() ? ssl_certificate(cert) : ssl_certificate(cert, key);
+            ssl_opts = ssl_client_options(sc, ca, mode);
+        } else if (!ca.empty()) {
+            ssl_opts = ssl_client_options(ca, mode);
         }
+        opts.ssl_client_options(ssl_opts);
+    } else if (tls.type() != nullValue) {
+        throw err(msg() << "'tls' object not allowed unless scheme is \"amqps\"");
     }
 }
 
 } // namespace
 
 std::string parse(std::istream& is, connection_options& opts) {
-    Value root;
-    is >> root;
+    try {
+        Value root;
+        is >> root;
 
-    string scheme = get_string(root, "scheme", "amqps");
-    if (scheme != "amqp" && scheme != "amqps") {
-        raise(msg() << "'scheme' must be \"amqp\" or \"amqps\"");
+        string scheme = get_string(root, "scheme", "amqps");
+        if (scheme != "amqp" && scheme != "amqps") {
+            throw err(msg() << "'scheme' must be \"amqp\" or \"amqps\"");
+        }
+
+        string host = get_string(root, "host", "localhost");
+        opts.virtual_host(host.c_str());
+
+        Value port = root.get("port", scheme);
+        if (!port.isIntegral() && !port.isString()) {
+            throw err(msg() << "'port' expected string or integer, found " << port.type());
+        }
+
+        Value user = get(stringValue, root, "user");
+        if (user.type() != nullValue) opts.user(user.asString());
+        Value password = get(stringValue, root, "password");
+        if (password.type() != nullValue) opts.password(password.asString());
+
+        parse_sasl(root, opts);
+        parse_tls(scheme, root, opts);
+        return host + ":" + port.asString();
+    } catch (const std::exception& e) {
+        throw err(e.what());
+    } catch (...) {
+        throw err("unknown error");
     }
-
-    string host = get_string(root, "host", "");
-    opts.virtual_host(host.c_str());
-
-    Value port = root.get("port", scheme);
-    if (!port.isIntegral() && !port.isString()) {
-        raise(msg() << "'port' expected string or integer, found " << port.type());
-    }
-
-    Value user = root.get("user", Value());
-    if (user.type() != nullValue) opts.user(validate(stringValue, user, "user").asString());
-    Value password = root.get("password", Value());
-    if (password.type() != nullValue) opts.password(validate(stringValue, password, "password").asString());
-
-    parse_sasl(root, opts);
-    parse_tls(scheme, root, opts);
-    return host + ":" + port.asString();
 }
 
 string default_file() {
@@ -193,8 +196,7 @@ string default_file() {
     }
     /* /etc/messaging/FILE_NAME */
     if (exists(ETC_FILE_NAME)) return ETC_FILE_NAME;
-    raise("no default configuration");
-    return "";                  // Never get here, keep compiler happy
+    throw err("no default configuration");
 }
 
 string parse_default(connection_options& opts) {
@@ -204,16 +206,15 @@ string parse_default(connection_options& opts) {
         f.exceptions(~std::ifstream::goodbit);
         f.open(name.c_str());
     } catch (const std::exception& e) {
-        raise(msg() << "error opening '" << name << "': " << e.what());
+        throw err(msg() << "error opening '" << name << "': " << e.what());
     }
     try {
         return parse(f, opts);
     } catch (const std::exception& e) {
-        raise(msg() << "error parsing '" << name << "': " << e.what());
+        throw err(msg() << "error parsing '" << name << "': " << e.what());
     } catch (...) {
-        raise(msg() << "error parsing '" << name);
+        throw err(msg() << "error parsing '" << name);
     }
-    return "";                  // Never get here, keep compiler happy
 }
 
 }} // namespace proton::connect_config

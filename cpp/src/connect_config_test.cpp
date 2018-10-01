@@ -27,6 +27,12 @@
 #include "proton/listener.hpp"
 #include "proton/messaging_handler.hpp"
 #include "proton/transport.hpp"
+#include "proton/ssl.hpp"
+#include "proton/sasl.hpp"
+
+// The C++ API lacks a way to test for presence of extended SASL or SSL support.
+#include "proton/sasl.h"
+#include "proton/ssl.h"
 
 #include <sstream>
 #include <fstream>
@@ -68,8 +74,8 @@ void test_addr() {
     connection_options opts;
     ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", \"port\":\"bar\" }"));
     ASSERT_EQUAL("foo:1234", configure(opts, "{ \"host\":\"foo\", \"port\":\"1234\" }"));
-    ASSERT_EQUAL(":amqps", configure(opts, "{}"));
-    ASSERT_EQUAL(":amqp", configure(opts, "{\"scheme\":\"amqp\"}"));
+    ASSERT_EQUAL("localhost:amqps", configure(opts, "{}"));
+    ASSERT_EQUAL("localhost:amqp", configure(opts, "{\"scheme\":\"amqp\"}"));
     ASSERT_EQUAL("foo:bar", configure(opts, "{ \"host\":\"foo\", /* inline comment */\"port\":\"bar\" // end of line comment\n}"));
 
     ASSERT_THROWS_MSG(error, "'scheme' must be", configure(opts, "{\"scheme\":\"bad\"}"));
@@ -78,17 +84,44 @@ void test_addr() {
     ASSERT_THROWS_MSG(error, "'host' expected string, found boolean", configure(opts, "{\"host\":true}"));
 }
 
+// Hack to write strings with embedded '"' and newlines
+#define RAW_STRING(...) #__VA_ARGS__
+
+void test_invalid() {
+    connection_options opts;
+    ASSERT_THROWS_MSG(proton::error, "Missing '}'", configure(opts, "{"));
+    ASSERT_THROWS_MSG(proton::error, "Syntax error", configure(opts, ""));
+    ASSERT_THROWS_MSG(proton::error, "Missing ','", configure(opts, RAW_STRING({ "user":"x" "host":"y"})));
+    ASSERT_THROWS_MSG(proton::error, "expected string", configure(opts, RAW_STRING({ "scheme":true})));
+    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "tls":""})));
+    ASSERT_THROWS_MSG(proton::error, "expected object", configure(opts, RAW_STRING({ "sasl":true})));
+    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "sasl": { "enable":""}})));
+    ASSERT_THROWS_MSG(proton::error, "expected boolean", configure(opts, RAW_STRING({ "tls": { "verify":""}})));
+}
+
 class test_handler : public messaging_handler {
   protected:
-    string config_;
-    listener listener_;
     bool opened_;
-    proton::error_condition error_;
+    connection_options listen_opts_;
+    listener listener_;
 
   public:
+    test_handler(const connection_options& listen_opts = connection_options()) :
+        opened_(false), listen_opts_(listen_opts) {}
+
+    string config_with_port(const string& bare_config) {
+        ostringstream ss;
+        ss << "{" << "\"port\":" << listener_.port() << ", " << bare_config << "}";
+        return ss.str();
+    }
+
+    void connect(container& c, const string& bare_config) {
+        connection_options opts;
+        c.connect(configure(opts, config_with_port(bare_config)), opts);
+    }
 
     void on_container_start(container& c) PN_CPP_OVERRIDE {
-        listener_ = c.listen("//:0");
+        listener_ = c.listen("//:0", listen_opts_);
     }
 
     virtual void check_connection(connection& c) {}
@@ -106,9 +139,9 @@ class test_handler : public messaging_handler {
         FAIL("unexpected error " << e);
     }
 
-    void run(const string& config) {
-        config_ = config;
+    void run() {
         container(*this).run();
+        ASSERT(opened_);
     }
 };
 
@@ -118,15 +151,113 @@ class test_default_connect : public test_handler {
     void on_container_start(container& c) PN_CPP_OVERRIDE {
         test_handler::on_container_start(c);
         ofstream os("connect.json");
-        ASSERT(os << "{ \"port\": " << listener_.port() << "}" << endl);
+        ASSERT(os << config_with_port(RAW_STRING("scheme":"amqp")));
         os.close();
         c.connect();
     }
 
-    void run() {
-        container(*this).run();
-        ASSERT(opened_);
-        ASSERT(!error_);
+    void check_connection(connection& c) PN_CPP_OVERRIDE {
+        ASSERT_EQUAL("localhost", c.virtual_host());
+    }
+};
+
+class test_host_user_pass : public test_handler {
+  public:
+
+    void on_container_start(container& c) PN_CPP_OVERRIDE {
+        test_handler::on_container_start(c);
+        connect(c, RAW_STRING("scheme":"amqp", "host":"127.0.0.1", "user":"user@proton", "password":"password"));
+    }
+
+    void check_connection(connection& c) PN_CPP_OVERRIDE {
+        ASSERT_EQUAL("127.0.0.1", c.virtual_host());
+        if (pn_sasl_extended()) {
+            ASSERT_EQUAL("user@proton", c.user());
+        } else {
+            ASSERT_EQUAL("anonymous", c.user());
+        }
+    }
+};
+
+class test_tls : public test_handler {
+    static connection_options make_opts() {
+        ssl_certificate cert("testdata/certs/server-certificate.pem",
+                             "testdata/certs/server-private-key.pem",
+                             "server-password");
+        connection_options opts;
+        opts.ssl_server_options(ssl_server_options(cert));
+        return opts;
+    }
+
+  public:
+
+    test_tls() : test_handler(make_opts()) {}
+
+    void on_container_start(container& c) PN_CPP_OVERRIDE {
+        test_handler::on_container_start(c);
+        connect(c, RAW_STRING("scheme":"amqps", "tls": { "verify":false }));
+    }
+};
+
+class test_tls_external : public test_handler {
+
+    static connection_options make_opts() {
+        ssl_certificate cert("testdata/certs/server-certificate-lh.pem",
+                             "testdata/certs/server-private-key-lh.pem",
+                             "server-password");
+        connection_options opts;
+        opts.ssl_server_options(ssl_server_options(cert,
+                                                   "testdata/certs/ca-certificate.pem",
+                                                   "testdata/certs/ca-certificate.pem",
+                                                   ssl::VERIFY_PEER));
+        return opts;
+    }
+
+  public:
+
+    test_tls_external() : test_handler(make_opts()) {}
+
+    void on_container_start(container& c) PN_CPP_OVERRIDE {
+        test_handler::on_container_start(c);
+        connect(c, RAW_STRING(
+                    "scheme":"amqps",
+                    "sasl":{ "mechanisms": "EXTERNAL" },
+                    "tls": {
+                            "cert":"testdata/certs/client-certificate.pem",
+                            "key":"testdata/certs/client-private-key-no-password.pem",
+                            "ca":"testdata/certs/ca-certificate.pem",
+                            "verify":true }));
+    }
+};
+
+class test_tls_plain : public test_handler {
+
+    static connection_options make_opts() {
+        ssl_certificate cert("testdata/certs/server-certificate-lh.pem",
+                             "testdata/certs/server-private-key-lh.pem",
+                             "server-password");
+        connection_options opts;
+        opts.ssl_server_options(ssl_server_options(cert,
+                                                   "testdata/certs/ca-certificate.pem",
+                                                   "testdata/certs/ca-certificate.pem",
+                                                   ssl::VERIFY_PEER));
+        return opts;
+    }
+
+  public:
+
+    test_tls_plain() : test_handler(make_opts()) {}
+
+    void on_container_start(container& c) PN_CPP_OVERRIDE {
+        test_handler::on_container_start(c);
+        connect(c, RAW_STRING(
+                    "scheme":"amqps", "user":"user@proton", "password": "password",
+                    "sasl":{ "mechanisms": "PLAIN" },
+                    "tls": {
+                            "cert":"testdata/certs/client-certificate.pem",
+                            "key":"testdata/certs/client-private-key-no-password.pem",
+                            "ca":"testdata/certs/ca-certificate.pem",
+                            "verify":true }));
     }
 };
 
@@ -137,6 +268,20 @@ int main(int argc, char** argv) {
     int failed = 0;
     RUN_ARGV_TEST(failed, test_default_file());
     RUN_ARGV_TEST(failed, test_addr());
+    RUN_ARGV_TEST(failed, test_invalid());
     RUN_ARGV_TEST(failed, test_default_connect().run());
+    RUN_ARGV_TEST(failed, test_host_user_pass().run());
+
+    pn_ssl_domain_t *have_ssl = pn_ssl_domain(PN_SSL_MODE_SERVER);
+    if (have_ssl) {
+        pn_ssl_domain_free(have_ssl);
+        RUN_ARGV_TEST(failed, test_tls().run());
+        RUN_ARGV_TEST(failed, test_tls_external().run());
+        if (pn_sasl_extended()) {
+            RUN_ARGV_TEST(failed, test_tls_plain().run());
+        }
+    } else {
+        std::cout << "SKIP: TLS tests, not available" << std::endl;
+    }
     return failed;
 }

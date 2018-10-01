@@ -1,0 +1,2 @@
+sasldb_path: ${CMAKE_BINARY_DIR}/cpp/testdata/sasl-conf/proton.sasldb
+mech_list: EXTERNAL DIGEST-MD5 SCRAM-SHA-1 CRAM-MD5 PLAIN ANONYMOUS

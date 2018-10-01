@@ -245,17 +245,17 @@ install (FILES
   ${CMAKE_CURRENT_BINARY_DIR}/ProtonCppConfigVersion.cmake
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 
+set(testdata "${CMAKE_CURRENT_BINARY_DIR}/testdata")
+set(test_env "PN_SASL_CONFIG_PATH=${testdata}/sasl-conf")
+if (CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set(test_env ${test_env} "PATH=$<TARGET_FILE_DIR:qpid-proton>")
+endif()
+
 macro(add_cpp_test test)
   add_executable (${test} src/${test}.cpp)
   target_link_libraries (${test} qpid-proton-cpp ${PLATFORM_LIBS})
-  if (CMAKE_SYSTEM_NAME STREQUAL Windows)
-    add_test (NAME cpp-${test}
-      COMMAND ${PN_ENV_SCRIPT}
-      "PATH=$<TARGET_FILE_DIR:qpid-proton>"
-      $<TARGET_FILE:${test}> ${ARGN})
-  else ()
-    add_test (NAME cpp-${test} COMMAND ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${ARGN})
-  endif ()
+  add_test (NAME cpp-${test}
+    COMMAND ${PN_ENV_SCRIPT} -- ${test_env}  ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}> ${ARGN})
 endmacro(add_cpp_test)
 
 add_cpp_test(codec_test)
@@ -270,9 +270,15 @@ add_cpp_test(url_test)
 add_cpp_test(reconnect_test)
 add_cpp_test(link_test)
 if (ENABLE_JSONCPP)
-  # Directories needed by connect_config tests
-  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/testdata/.config/messaging")
   add_cpp_test(connect_config_test)
-  set_tests_properties(cpp-connect_config_test PROPERTIES
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  target_link_libraries(connect_config_test qpid-proton-core) # For pn_sasl_enabled
+  set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+  # Test data and output directories for connect_config_test
+  file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+  if(CyrusSASL_Saslpasswd_EXECUTABLE)
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/testdata/sasl-conf/proton-server.conf.in"
+      "${testdata}/sasl-conf/proton-server.conf")
+    execute_process(COMMAND echo password
+      COMMAND ${CyrusSASL_Saslpasswd_EXECUTABLE} -c -p -f "${testdata}/sasl-conf/proton.sasldb" -u proton user)
+  endif()
 endif()
