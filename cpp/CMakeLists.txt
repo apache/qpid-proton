@@ -31,6 +31,7 @@ set (BUILD_CPP_03 OFF CACHE BOOL "Compile the C++ binding as C++03 even when C++
 find_package(JsonCpp)
 option(ENABLE_JSONCPP "Use jsoncpp parser for connection configuration" ${JsonCpp_FOUND})
 if (ENABLE_JSONCPP)
+  include_directories(${JsonCpp_INCLUDE_DIRS})
   set(CONNECT_CONFIG_SRC src/connect_config.cpp)
   set(CONNECT_CONFIG_LIBS ${JsonCpp_LIBRARY})
 else()
