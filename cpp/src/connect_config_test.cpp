@@ -38,8 +38,6 @@
 #include <fstream>
 #include <cstdio>
 
-#include <stdlib.h>
-
 namespace {
 
 using namespace std;
@@ -80,7 +78,7 @@ void test_addr() {
 
     ASSERT_THROWS_MSG(error, "'scheme' must be", configure(opts, "{\"scheme\":\"bad\"}"));
     ASSERT_THROWS_MSG(error, "'scheme' expected string, found boolean", configure(opts, "{\"scheme\":true}"));
-    ASSERT_THROWS_MSG(error, "'port' expected string or integer, found boolean", configure(opts, "{\"port\":true}"));
+    ASSERT_THROWS_MSG(error, "'port' expected string or uint, found boolean", configure(opts, "{\"port\":true}"));
     ASSERT_THROWS_MSG(error, "'host' expected string, found boolean", configure(opts, "{\"host\":true}"));
 }
 
@@ -270,14 +268,18 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_addr());
     RUN_ARGV_TEST(failed, test_invalid());
     RUN_ARGV_TEST(failed, test_default_connect().run());
-    RUN_ARGV_TEST(failed, test_host_user_pass().run());
 
+    bool have_sasl = pn_sasl_extended() && getenv("PN_SASL_CONFIG_PATH");
     pn_ssl_domain_t *have_ssl = pn_ssl_domain(PN_SSL_MODE_SERVER);
+
+    if (have_sasl) {
+        RUN_ARGV_TEST(failed, test_host_user_pass().run());
+    }
     if (have_ssl) {
         pn_ssl_domain_free(have_ssl);
         RUN_ARGV_TEST(failed, test_tls().run());
         RUN_ARGV_TEST(failed, test_tls_external().run());
-        if (pn_sasl_extended()) {
+        if (have_sasl) {
             RUN_ARGV_TEST(failed, test_tls_plain().run());
         }
     } else {

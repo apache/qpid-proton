@@ -27,9 +27,11 @@
 
 #include <json/value.h>
 #include <json/reader.h>
+#include <json/writer.h>
 
 #include <cstdlib>
 #include <fstream>
+#include <sstream>
 
 using namespace Json;
 using std::string;
@@ -71,7 +73,7 @@ Value validate(ValueType t, const Value& v, const string& name) {
 
 Value get(ValueType t, const Value& obj, const char *key, const Value& dflt=Value()) {
     Value v = obj.get(key, dflt);
-    return v.type() == nullValue ? dflt : validate(t, v, key);
+    return v.isNull() ? dflt : validate(t, v, key);
 }
 
 bool get_bool(const Value& obj, const char *key, bool dflt) {
@@ -94,7 +96,7 @@ void parse_sasl(Value root, connection_options& opts) {
     Value sasl = get(objectValue, root, "sasl");
     opts.sasl_enabled(get_bool(sasl, "enable", true));
     opts.sasl_allow_insecure_mechs(get_bool(sasl, "allow_insecure", false));
-    if (sasl.type() != nullValue) {
+    if (!sasl.isNull()) {
         Value mechs = sasl.get("mechanisms", Value());
         switch (mechs.type()) {
           case nullValue:
@@ -106,9 +108,7 @@ void parse_sasl(Value root, connection_options& opts) {
               std::ostringstream s;
               for (ArrayIndex i= 0; i < mechs.size(); ++i) {
                   Value v = mechs.get(i, Value());
-                  if (v.type() != stringValue) {
-                      throw err(msg() << "'sasl/mechanisms' expect string elements, found " << v.type());
-                  }
+                  validate(stringValue, v, "sasl/mechanisms");
                   if (i > 0) s << " ";
                   s << v.asString();
               }
@@ -137,7 +137,7 @@ void parse_tls(const string& scheme, Value root, connection_options& opts) {
             ssl_opts = ssl_client_options(ca, mode);
         }
         opts.ssl_client_options(ssl_opts);
-    } else if (tls.type() != nullValue) {
+    } else if (!tls.isNull()) {
         throw err(msg() << "'tls' object not allowed unless scheme is \"amqps\"");
     }
 }
@@ -146,8 +146,11 @@ void parse_tls(const string& scheme, Value root, connection_options& opts) {
 
 std::string parse(std::istream& is, connection_options& opts) {
     try {
+        std::ostringstream addr;
+
         Value root;
         is >> root;
+        validate(objectValue, root, "configuration");
 
         string scheme = get_string(root, "scheme", "amqps");
         if (scheme != "amqp" && scheme != "amqps") {
@@ -156,20 +159,28 @@ std::string parse(std::istream& is, connection_options& opts) {
 
         string host = get_string(root, "host", "localhost");
         opts.virtual_host(host.c_str());
+        addr << host << ":";
 
         Value port = root.get("port", scheme);
-        if (!port.isIntegral() && !port.isString()) {
-            throw err(msg() << "'port' expected string or integer, found " << port.type());
+        switch (port.type()) {
+          case stringValue:
+            addr << port.asString(); break;
+          case intValue:
+          case uintValue:
+            addr << port.asUInt(); break;
+          default:
+            throw err(msg() << "'port' expected string or uint, found " << port.type());
         }
 
         Value user = get(stringValue, root, "user");
-        if (user.type() != nullValue) opts.user(user.asString());
+        if (!user.isNull()) opts.user(user.asString());
         Value password = get(stringValue, root, "password");
-        if (password.type() != nullValue) opts.password(password.asString());
+        if (!password.isNull()) opts.password(password.asString());
 
         parse_sasl(root, opts);
         parse_tls(scheme, root, opts);
-        return host + ":" + port.asString();
+
+        return addr.str();
     } catch (const std::exception& e) {
         throw err(e.what());
     } catch (...) {
@@ -203,17 +214,19 @@ string parse_default(connection_options& opts) {
     string name = default_file();
     std::ifstream f;
     try {
-        f.exceptions(~std::ifstream::goodbit);
+        f.exceptions(std::ifstream::badbit|std::ifstream::failbit);
         f.open(name.c_str());
     } catch (const std::exception& e) {
         throw err(msg() << "error opening '" << name << "': " << e.what());
     }
     try {
         return parse(f, opts);
+    } catch (const std::ifstream::failure& e) {
+        throw err(msg() << "io error parsing '" << name << "': " << e.what());
     } catch (const std::exception& e) {
         throw err(msg() << "error parsing '" << name << "': " << e.what());
     } catch (...) {
-        throw err(msg() << "error parsing '" << name);
+        throw err(msg() << "error parsing '" << name << "'");
     }
 }
 

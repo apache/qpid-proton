@@ -247,7 +247,22 @@ install (FILES
   DESTINATION ${LIB_INSTALL_DIR}/cmake/ProtonCpp)
 
 set(testdata "${CMAKE_CURRENT_BINARY_DIR}/testdata")
-set(test_env "PN_SASL_CONFIG_PATH=${testdata}/sasl-conf")
+
+# SASL configuration for tests
+if(CyrusSASL_Saslpasswd_EXECUTABLE)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/testdata/sasl-conf/proton-server.conf.in"
+    "${testdata}/sasl-conf/proton-server.conf")
+  execute_process(
+    COMMAND echo password
+    COMMAND ${CyrusSASL_Saslpasswd_EXECUTABLE} -c -p -f "${testdata}/sasl-conf/proton.sasldb" -u proton user
+    RESULT_VARIABLE ret)
+  if(ret)
+    message(WARNING "${CyrusSASL_Saslpasswd_EXECUTABLE}: error ${ret} - some SASL tests will be skipped")
+  else()
+    set(test_env ${test_env} "PN_SASL_CONFIG_PATH=${testdata}/sasl-conf")
+  endif()
+endif()
+
 if (CMAKE_SYSTEM_NAME STREQUAL Windows)
   set(test_env ${test_env} "PATH=$<TARGET_FILE_DIR:qpid-proton>")
 endif()
@@ -276,10 +291,4 @@ if (ENABLE_JSONCPP)
   set_tests_properties(cpp-connect_config_test PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
   # Test data and output directories for connect_config_test
   file(COPY  "${CMAKE_CURRENT_SOURCE_DIR}/testdata" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-  if(CyrusSASL_Saslpasswd_EXECUTABLE)
-    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/testdata/sasl-conf/proton-server.conf.in"
-      "${testdata}/sasl-conf/proton-server.conf")
-    execute_process(COMMAND echo password
-      COMMAND ${CyrusSASL_Saslpasswd_EXECUTABLE} -c -p -f "${testdata}/sasl-conf/proton.sasldb" -u proton user)
-  endif()
 endif()
