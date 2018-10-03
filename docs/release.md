@@ -28,3 +28,4 @@
   - Status is visible at: https://www.apache.org/mirrors/
 4. Update the website with release content.
 5. Send release announcement email.
+6. Clean out older release(s) from release repo as appropriate.
