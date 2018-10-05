@@ -21,9 +21,10 @@ package electron
 
 import (
 	"net"
-	"qpid.apache.org/proton"
 	"strconv"
 	"sync/atomic"
+
+	"qpid.apache.org/proton"
 )
 
 // Container is an AMQP container, it represents a single AMQP "application"
@@ -99,7 +100,7 @@ func (cont *container) Dial(network, address string, opts ...ConnectionOption) (
 func (cont *container) Accept(l net.Listener, opts ...ConnectionOption) (c Connection, err error) {
 	conn, err := l.Accept()
 	if err == nil {
-		c, err = cont.Connection(conn, append(opts, Server())...)
+		c, err = cont.Connection(conn, append([]ConnectionOption{Server()}, opts...)...)
 	}
 	return
 }

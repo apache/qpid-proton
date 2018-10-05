@@ -25,6 +25,7 @@ import (
 	"path"
 	"reflect"
 	"runtime"
+	"sync"
 	"testing"
 )
 
@@ -69,16 +70,12 @@ type pair struct {
 	auth     connectionSettings
 }
 
-func newPair(t testing.TB, cli, srv net.Conn, clientOpts, serverOpts []ConnectionOption) *pair {
-	opts := append([]ConnectionOption{Server()}, serverOpts...)
-	sc, _ := NewConnection(srv, opts...)
-	opts = append([]ConnectionOption{}, clientOpts...)
-	cc, _ := NewConnection(cli, opts...)
-	cs, _ := cc.Session()
+func newPair(t testing.TB, cli, srv Connection) *pair {
+	cs, _ := cli.Session()
 	p := &pair{
 		t:        t,
 		client:   cs,
-		server:   sc,
+		server:   srv,
 		capacity: 100,
 		rchan:    make(chan Receiver),
 		schan:    make(chan Sender)}
@@ -107,26 +104,31 @@ func newPair(t testing.TB, cli, srv net.Conn, clientOpts, serverOpts []Connectio
 // AMQP pair linked by in-memory pipe
 func newPipe(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
 	cli, srv := net.Pipe()
-	return newPair(t, cli, srv, clientOpts, serverOpts)
+	opts := []ConnectionOption{Server(), ContainerId(t.Name() + "-server")}
+	sc, _ := NewConnection(srv, append(opts, serverOpts...)...)
+	opts = []ConnectionOption{ContainerId(t.Name() + "-client")}
+	cc, _ := NewConnection(cli, append(opts, clientOpts...)...)
+	return newPair(t, cc, sc)
 }
 
 // AMQP pair linked by TCP socket
 func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
 	l, err := net.Listen("tcp4", ":0") // For systems with ipv6 disabled
 	fatalIfN(t, err, 1)
-	srvCh := make(chan net.Conn)
+	var srv Connection
 	var srvErr error
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		var c net.Conn
-		c, srvErr = l.Accept()
-		srvCh <- c
+		defer wg.Done()
+		srv, srvErr = NewContainer(t.Name()+"-server").Accept(l, serverOpts...)
 	}()
 	addr := l.Addr()
-	cli, err := net.Dial(addr.Network(), addr.String())
+	cli, err := NewContainer(t.Name()+"-client").Dial(addr.Network(), addr.String(), clientOpts...)
 	fatalIfN(t, err, 1)
-	srv := <-srvCh
+	wg.Wait()
 	fatalIfN(t, srvErr, 1)
-	return newPair(t, cli, srv, clientOpts, serverOpts)
+	return newPair(t, cli, srv)
 }
 
 func (p *pair) close() { p.client.Connection().Close(nil); p.server.Close(nil) }

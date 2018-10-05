@@ -26,9 +26,10 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net"
-	"qpid.apache.org/proton"
 	"sync"
 	"time"
+
+	"qpid.apache.org/proton"
 )
 
 // Settings associated with a Connection.
@@ -147,7 +148,7 @@ func Password(password []byte) ConnectionOption {
 // net.Listener.Accept()
 //
 func Server() ConnectionOption {
-	return func(c *connection) { c.engine.Server(); c.server = true; AllowIncoming()(c) }
+	return func(c *connection) { c.setServer() }
 }
 
 // AllowIncoming returns a ConnectionOption to enable incoming endpoints, see
@@ -174,13 +175,13 @@ type connection struct {
 
 	defaultSessionOnce, closeOnce sync.Once
 
-	container   *container
-	conn        net.Conn
-	server      bool
-	incoming    chan Incoming
-	handler     *handler
-	engine      *proton.Engine
-	pConnection proton.Connection
+	container      *container
+	conn           net.Conn
+	server, client bool
+	incoming       chan Incoming
+	handler        *handler
+	engine         *proton.Engine
+	pConnection    proton.Connection
 
 	defaultSession Session
 }
@@ -198,8 +199,13 @@ func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error)
 		return nil, err
 	}
 	c.pConnection = c.engine.Connection()
-	for _, set := range opts {
-		set(c)
+	for _, opt := range opts {
+		opt(c)
+		// If the first option is not Server(), then we are a client.
+		// Applying Server() after other options is an error
+		if !c.server {
+			c.client = true
+		}
 	}
 	if c.container == nil {
 		// Generate a random container-id. Not an RFC4122-compliant UUID but probably-unique
@@ -214,6 +220,15 @@ func NewConnection(conn net.Conn, opts ...ConnectionOption) (*connection, error)
 	c.endpoint.init(c.engine.String())
 	go c.run()
 	return c, nil
+}
+
+func (c *connection) setServer() {
+	if c.client {
+		panic("electron.Server() must be first in the ConnectionOption list")
+	}
+	c.server = true
+	c.engine.Server()
+	AllowIncoming()(c)
 }
 
 func (c *connection) run() {
