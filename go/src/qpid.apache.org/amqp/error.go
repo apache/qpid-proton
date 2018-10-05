@@ -24,7 +24,6 @@ import "C"
 
 import (
 	"fmt"
-	"reflect"
 )
 
 // Error is an AMQP error condition. It has a name and a description.
@@ -46,10 +45,14 @@ func Errorf(name, format string, arg ...interface{}) Error {
 	return Error{name, fmt.Sprintf(format, arg...)}
 }
 
-// MakeError makes an AMQP error from a go error using the Go error type as the name
-// and the err.Error() string as the description.
+// MakeError makes an AMQP error from a go error: {Name: InternalError, Description: err.Error()}
+// If err is already an amqp.Error it is returned unchanged.
 func MakeError(err error) Error {
-	return Error{reflect.TypeOf(err).Name(), err.Error()}
+	if amqpErr, ok := err.(Error); ok {
+		return amqpErr
+	} else {
+		return Error{InternalError, err.Error()}
+	}
 }
 
 var (

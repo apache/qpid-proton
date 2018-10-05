@@ -37,10 +37,10 @@ import "C"
 
 import (
 	"fmt"
-	"qpid.apache.org/amqp"
-	"reflect"
 	"time"
 	"unsafe"
+
+	"qpid.apache.org/amqp"
 )
 
 // TODO aconway 2015-05-05: Documentation for generated types.
@@ -379,17 +379,12 @@ func (c Condition) Error() error {
 	return amqp.Error{Name: c.Name(), Description: c.Description()}
 }
 
-// Set a Go error into a condition.
-// If it is not an amqp.Condition use the error type as name, error string as description.
+// Set a Go error into a condition, converting to an amqp.Error using amqp.MakeError
 func (c Condition) SetError(err error) {
 	if err != nil {
-		if cond, ok := err.(amqp.Error); ok {
-			c.SetName(cond.Name)
-			c.SetDescription(cond.Description)
-		} else {
-			c.SetName(reflect.TypeOf(err).Name())
-			c.SetDescription(err.Error())
-		}
+		cond := amqp.MakeError(err)
+		c.SetName(cond.Name)
+		c.SetDescription(cond.Description)
 	}
 }
 
