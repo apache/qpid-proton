@@ -71,7 +71,7 @@ type ErrorHolder struct {
 	value atomic.Value
 }
 
-// Set the error if not already set, return the error in the Holder.
+// Set the error if not already set
 func (e *ErrorHolder) Set(err error) {
 	if err != nil {
 		e.once.Do(func() { e.value.Store(err) })
@@ -82,15 +82,4 @@ func (e *ErrorHolder) Set(err error) {
 func (e *ErrorHolder) Get() (err error) {
 	err, _ = e.value.Load().(error)
 	return
-}
-
-// assert panics if condition is false with optional formatted message
-func assert(condition bool, format ...interface{}) {
-	if !condition {
-		if len(format) > 0 {
-			panic(fmt.Errorf(format[0].(string), format[1:]...))
-		} else {
-			panic(fmt.Errorf("assertion failed"))
-		}
-	}
 }

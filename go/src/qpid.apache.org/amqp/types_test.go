@@ -44,7 +44,7 @@ func checkUnmarshal(marshaled []byte, v interface{}) error {
 	return nil
 }
 
-func ExampleKey() {
+func ExampleAnnotationKey() {
 	var k AnnotationKey = AnnotationKeySymbol(Symbol("foo"))
 	fmt.Println(k.Get().(Symbol))
 	k = AnnotationKeyUint64(42)

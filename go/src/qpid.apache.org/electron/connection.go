@@ -25,6 +25,7 @@ import "C"
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net"
 	"sync"
 	"time"
@@ -310,7 +311,9 @@ func (c *connection) WaitTimeout(timeout time.Duration) error {
 }
 
 func (c *connection) Incoming() <-chan Incoming {
-	assert(c.incoming != nil, "Incoming() is only allowed for a Connection created with the Server() option: %s", c)
+	if c.incoming == nil {
+		panic(fmt.Errorf("Incoming() only allowed on Connection created with the Server() option: %s", c))
+	}
 	return c.incoming
 }
 

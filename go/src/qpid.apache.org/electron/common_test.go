@@ -47,7 +47,7 @@ func fatalIf(t testing.TB, err error) {
 
 func errorIf(t testing.TB, err error) {
 	if err != nil {
-		t.Errorf(decorate(err, 1))
+		t.Error(decorate(err, 1))
 	}
 }
 
