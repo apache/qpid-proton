@@ -163,19 +163,29 @@ func (l List) GoString() string {
 }
 
 // pnTime converts Go time.Time to Proton millisecond Unix time.
+// Take care to convert zero values to zero values.
 func pnTime(t time.Time) C.pn_timestamp_t {
-	secs := t.Unix()
-	// Note: sub-second accuracy is not guaranteed if the Unix time in
-	// nanoseconds cannot be represented by an int64 (sometime around year 2260)
-	msecs := (t.UnixNano() % int64(time.Second)) / int64(time.Millisecond)
-	return C.pn_timestamp_t(secs*1000 + msecs)
+	if t.IsZero() {
+		return C.pn_timestamp_t(0)
+	}
+	return C.pn_timestamp_t(t.UnixNano() / int64(time.Millisecond))
 }
 
 // goTime converts a pn_timestamp_t to a Go time.Time.
+// Take care to convert zero values to zero values.
 func goTime(t C.pn_timestamp_t) time.Time {
-	secs := int64(t) / 1000
-	nsecs := (int64(t) % 1000) * int64(time.Millisecond)
-	return time.Unix(secs, nsecs)
+	if t == 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, int64(t)*int64(time.Millisecond))
+}
+
+func pnDuration(d time.Duration) C.pn_millis_t {
+	return (C.pn_millis_t)(d / (time.Millisecond))
+}
+
+func goDuration(d C.pn_millis_t) time.Duration {
+	return time.Duration(d) * time.Millisecond
 }
 
 func goBytes(cBytes C.pn_bytes_t) (bytes []byte) {

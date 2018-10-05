@@ -28,7 +28,7 @@ import (
 
 func checkEqual(want interface{}, got interface{}) error {
 	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("%#v != %#v", want, got)
+		return fmt.Errorf("(%T)%#v != (%T)%#v", want, want, got, got)
 	}
 	return nil
 }
@@ -197,6 +197,32 @@ func TestDescribed(t *testing.T) {
 		t.Error(err)
 	}
 	if err := checkEqual(want.Value, s); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestTimeConversion(t *testing.T) {
+	pt := pnTime(timeValue)
+	if err := checkEqual(timeValue, goTime(pt)); err != nil {
+		t.Error(err)
+	}
+	if err := checkEqual(pt, pnTime(goTime(pt))); err != nil {
+		t.Error(err)
+	}
+	ut := time.Unix(123, 456*1000000)
+	if err := checkEqual(123456, int(pnTime(ut))); err != nil {
+		t.Error(err)
+	}
+	if err := checkEqual(ut, goTime(123456)); err != nil {
+		t.Error(err)
+	}
+
+	// Preserve zero values
+	var tz time.Time
+	if err := checkEqual(0, int(pnTime(tz))); err != nil {
+		t.Error(err)
+	}
+	if err := checkEqual(tz, goTime(pnTime(tz))); err != nil {
 		t.Error(err)
 	}
 }
