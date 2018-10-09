@@ -21,9 +21,10 @@ package electron
 
 import (
 	"fmt"
-	"qpid.apache.org/amqp"
 	"testing"
 	"time"
+
+	"qpid.apache.org/amqp"
 )
 
 // Send a message one way with a client sender and server receiver, verify ack.
@@ -325,7 +326,7 @@ func TestHeartbeat(t *testing.T) {
 
 	unfreeze <- true // Unfreeze the server
 	<-p.server.Done()
-	if amqp.ResourceLimitExceeded != p.server.Error().(amqp.Error).Name {
-		t.Error("bad timeout error:", p.server.Error())
+	if p.server.Error() == nil {
+		t.Error("expected server side  time-out or connection abort error")
 	}
 }

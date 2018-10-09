@@ -25,7 +25,6 @@ import "fmt"
 type EventHandler interface {
 	// HandleEvent is called with an event.
 	// Typically HandleEvent() is implemented as a switch on e.Type()
-	// Returning an error will stop the Engine.
 	HandleEvent(e Event)
 }
 
@@ -38,7 +37,6 @@ type EventHandler interface {
 type MessagingHandler interface {
 	// HandleMessagingEvent is called with  MessagingEvent.
 	// Typically HandleEvent() is implemented as a switch on e.Type()
-	// Returning an error will stop the Engine.
 	HandleMessagingEvent(MessagingEvent, Event)
 }
 
@@ -349,6 +347,11 @@ func (d *MessagingAdapter) HandleEvent(e Event) {
 			d.incoming(e)
 		} else {
 			d.outgoing(e)
+		}
+
+	case ETransportTailClosed:
+		if !e.Connection().State().RemoteClosed() { // Unexpected transport closed
+			e.Transport().CloseHead() // Complete transport close, no connection close expected
 		}
 
 	case ETransportClosed:

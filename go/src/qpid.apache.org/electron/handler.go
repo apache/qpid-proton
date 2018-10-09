@@ -126,9 +126,13 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		h.shutdown(proton.EndpointError(e.Connection()))
 
 	case proton.MDisconnected:
-		err := e.Transport().Condition().Error()
-		if err == nil {
-			err = amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection)
+		var err error
+		if err = e.Connection().RemoteCondition().Error(); err == nil {
+			if err = e.Connection().Condition().Error(); err == nil {
+				if err = e.Transport().Condition().Error(); err == nil {
+					err = amqp.Errorf(amqp.IllegalState, "unexpected disconnect on %s", h.connection)
+				}
+			}
 		}
 		h.shutdown(err)
 	}
