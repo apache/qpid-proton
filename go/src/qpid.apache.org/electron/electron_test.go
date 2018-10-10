@@ -291,8 +291,8 @@ func TestConnectionCloseInterrupt2(t *testing.T) {
 
 func TestHeartbeat(t *testing.T) {
 	p := newSocketPair(t,
-		[]ConnectionOption{Heartbeat(12 * time.Millisecond)},
-		[]ConnectionOption{Heartbeat(11 * time.Millisecond)})
+		[]ConnectionOption{Heartbeat(102 * time.Millisecond)},
+		[]ConnectionOption{Heartbeat(101 * time.Millisecond)})
 	defer func() { p.close() }()
 
 	// Function to freeze the server to stop it sending heartbeats.
@@ -301,8 +301,8 @@ func TestHeartbeat(t *testing.T) {
 	freeze := func() error { return p.server.(*connection).engine.Inject(func() { <-unfreeze }) }
 
 	fatalIf(t, p.client.Sync())
-	errorIf(t, checkEqual(11*time.Millisecond, p.client.Connection().Heartbeat()))
-	errorIf(t, checkEqual(12*time.Millisecond, p.server.Heartbeat()))
+	errorIf(t, checkEqual(101*time.Millisecond, p.client.Connection().Heartbeat()))
+	errorIf(t, checkEqual(102*time.Millisecond, p.server.Heartbeat()))
 
 	// Freeze the server for less than a heartbeat
 	fatalIf(t, freeze())
