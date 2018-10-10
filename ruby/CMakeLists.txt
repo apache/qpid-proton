@@ -35,7 +35,7 @@ set(SWIG_OUTFILE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 include_directories(${PN_C_INCLUDE_DIR} ${RUBY_INCLUDE_PATH})
 
 swig_add_library(cproton-ruby LANGUAGE ruby SOURCES cproton.i)
-swig_link_libraries(cproton-ruby ${BINDING_DEPS} ${RUBY_LIBRARY})
+swig_link_libraries(cproton-ruby ${BINDING_DEPS_FULL} ${RUBY_LIBRARY})
 
 # Set version-dependent compile flags
 if (RUBY_VERSION VERSION_LESS 1.9.0)

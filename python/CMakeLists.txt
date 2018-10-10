@@ -190,7 +190,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/README.rst.in
 set (py_src "${CMAKE_CURRENT_SOURCE_DIR}")
 set (py_bin "${CMAKE_CURRENT_BINARY_DIR}")
 set (py_dll "$<TARGET_FILE_DIR:_cproton>")
-set (py_bld "$<TARGET_FILE_DIR:qpid-proton>") # For windows
+set (py_bld "$<TARGET_FILE_DIR:qpid-proton-core>") # For windows
 set (py_tests "${py_src}/tests")
 
 set (py_path ${CMAKE_BINARY_DIR}/c/tools ${py_bld} $ENV{PATH})

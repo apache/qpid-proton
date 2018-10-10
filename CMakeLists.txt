@@ -338,8 +338,9 @@ if(SWIG_FOUND)
 
   # All swig modules should include ${PROTON_HEADERS} in SWIG_MODULE_<name>_EXTRA_DEPS
   file(GLOB PROTON_HEADERS "${CMAKE_SOURCE_DIR}/c/include/proton/*.h")
-  # All swig modules should include ${BINDING_DEPS} in swig_link_libraries
-  set (BINDING_DEPS qpid-proton)
+  # All swig modules should include ${BINDING_DEPS} or ${BINDING_DEPS_FULL} in swig_link_libraries
+  set (BINDING_DEPS qpid-proton-core)
+  set (BINDING_DEPS_FULL qpid-proton)
 
   # Add a block here to detect the prerequisites to build each language binding:
   #
