@@ -44,7 +44,8 @@ func (d Delivery) HasMessage() bool { return !d.IsNil() && d.Readable() && !d.Pa
 // Will return an error if message is incomplete or not current.
 func (delivery Delivery) Message() (amqp.Message, error) {
 	var err error
-	if bytes, err := delivery.MessageBytes(); err == nil {
+	bytes, err := delivery.MessageBytes()
+	if err == nil {
 		m := amqp.NewMessage()
 		err = m.Decode(bytes)
 		return m, err
@@ -83,13 +84,12 @@ func nextTag() string {
 // Send sends a amqp.Message over a Link.
 // Returns a Delivery that can be use to determine the outcome of the message.
 func (link Link) Send(m amqp.Message) (Delivery, error) {
-	var err error
-	if bytes, err := m.Encode(nil); err == nil {
-		if d, err := link.SendMessageBytes(bytes); err == nil {
-			return d, err
-		}
+	bytes, err := m.Encode(nil)
+	if err != nil {
+		return Delivery{}, err
 	}
-	return Delivery{}, err
+	d, err := link.SendMessageBytes(bytes)
+	return d, err
 }
 
 // SendMessageBytes sends encoded bytes of an amqp.Message over a Link.

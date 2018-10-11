@@ -42,7 +42,7 @@ type bmCommon struct {
 	done sync.WaitGroup
 }
 
-func makeBmCommon(p *pair, waitCount int) bmCommon {
+func newBmCommon(p *pair, waitCount int) *bmCommon {
 	bm := bmCommon{p: p, b: p.t.(*testing.B)}
 	bm.p.capacity = *capacity
 	bm.p.prefetch = true
@@ -50,7 +50,7 @@ func makeBmCommon(p *pair, waitCount int) bmCommon {
 	bm.ack = make(chan Outcome, *capacity)
 	bm.done.Add(waitCount)
 	bm.b.ResetTimer()
-	return bm
+	return &bm
 }
 
 func (bm *bmCommon) receiveAccept() {
@@ -74,7 +74,7 @@ func (bm *bmCommon) outcomes() {
 var emptyMsg = amqp.NewMessage()
 
 func BenchmarkSendForget(b *testing.B) {
-	bm := makeBmCommon(newPipe(b, nil, nil), 1)
+	bm := newBmCommon(newPipe(b, nil, nil), 1)
 	defer bm.p.close()
 
 	go func() { // Receive, no ack
@@ -93,7 +93,7 @@ func BenchmarkSendForget(b *testing.B) {
 }
 
 func BenchmarkSendSync(b *testing.B) {
-	bm := makeBmCommon(newPipe(b, nil, nil), 1)
+	bm := newBmCommon(newPipe(b, nil, nil), 1)
 	defer bm.p.close()
 
 	go bm.receiveAccept()
@@ -104,7 +104,7 @@ func BenchmarkSendSync(b *testing.B) {
 }
 
 func BenchmarkSendAsync(b *testing.B) {
-	bm := makeBmCommon(newPipe(b, nil, nil), 2)
+	bm := newBmCommon(newPipe(b, nil, nil), 2)
 	defer bm.p.close()
 
 	go bm.outcomes()      // Handle outcomes
@@ -118,7 +118,7 @@ func BenchmarkSendAsync(b *testing.B) {
 // Create a new message for each send, with body and property.
 func BenchmarkSendAsyncNewMessage(b *testing.B) {
 	body := strings.Repeat("x", *bodySize)
-	bm := makeBmCommon(newPipe(b, nil, nil), 2)
+	bm := newBmCommon(newPipe(b, nil, nil), 2)
 	defer bm.p.close()
 
 	go bm.outcomes()      // Handle outcomes

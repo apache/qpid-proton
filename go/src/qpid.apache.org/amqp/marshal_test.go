@@ -125,7 +125,7 @@ func TestAnyMap(t *testing.T) {
 		t.Error(err)
 	}
 	var out AnyMap
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
 	if err = checkEqual(AnyMap(nil), out); err != nil {
@@ -137,7 +137,7 @@ func TestAnyMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
 	if err = checkEqual(AnyMap(nil), out); err != nil {
@@ -150,7 +150,7 @@ func TestAnyMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	}
 	if err = checkEqual(in, out); err != nil {
@@ -167,7 +167,7 @@ func TestBadMap(t *testing.T) {
 	}
 	m := Map{}
 	//  Should fail to unmarshal to a map
-	if _, err := Unmarshal(bytes, &m); err != nil {
+	if _, err = Unmarshal(bytes, &m); err != nil {
 		if !strings.Contains(err.Error(), "key []string{\"x\", \"y\"} is not comparable") {
 			t.Error(err)
 		}
@@ -176,14 +176,14 @@ func TestBadMap(t *testing.T) {
 	}
 	// Should unmarshal to an AnyMap
 	var out AnyMap
-	if _, err := Unmarshal(bytes, &out); err != nil {
+	if _, err = Unmarshal(bytes, &out); err != nil {
 		t.Error(err)
 	} else if err = checkEqual(in, out); err != nil {
 		t.Error(err)
 	}
 	// Should unmarshal to interface{} as AnyMap
 	var v interface{}
-	if _, err := Unmarshal(bytes, &v); err != nil {
+	if _, err = Unmarshal(bytes, &v); err != nil {
 		t.Error(err)
 	} else if err = checkEqual(in, v); err != nil {
 		t.Error(err)
@@ -195,7 +195,7 @@ func TestBadMap(t *testing.T) {
 		t.Error(err)
 	}
 	v = nil
-	if _, err := Unmarshal(bytes, &v); err != nil {
+	if _, err = Unmarshal(bytes, &v); err != nil {
 		t.Error(err)
 	} else if err = checkEqual(in, v); err != nil {
 		t.Error(err)

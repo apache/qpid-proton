@@ -70,7 +70,7 @@ func TestClientSender(t *testing.T) {
 			}
 
 			// Server send ack
-			if err := rm.Reject(); err != nil {
+			if err = rm.Reject(); err != nil {
 				t.Error(err)
 			}
 			// Client get ack.
@@ -139,7 +139,7 @@ func TestTimeouts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := rm.Accept(); err != nil {
+	if err = rm.Accept(); err != nil {
 		t.Fatal(err)
 	}
 	// Sender get ack

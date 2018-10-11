@@ -81,7 +81,8 @@ func checkDecode(d *Decoder, want interface{}, gotPtr interface{}, t *testing.T)
 		t.Error("Unmarshal failed", err)
 		return
 	}
-	if err := checkEqual(n, len(bytes)); err != nil {
+	err = checkEqual(n, len(bytes))
+	if err != nil {
 		t.Error("Bad unmarshal length", err)
 		return
 	}
@@ -246,8 +247,10 @@ func TestStrings(t *testing.T) {
 	if !strings.Contains(err.Error(), "cannot unmarshal") {
 		t.Error(err)
 	}
-	_, err = Unmarshal([]byte{}, nil)
-	if err := checkEqual(err, EndOfData); err != nil {
+	if _, err = Unmarshal([]byte{}, nil); err != nil {
+		t.Error(err)
+	}
+	if err = checkEqual(err, EndOfData); err != nil {
 		t.Error(err)
 	}
 	_, err = Unmarshal([]byte("foobar"), nil)
@@ -365,7 +368,7 @@ func TODO_TestMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else {
-		if err := checkEqual(m.Body(), "hello"); err != nil {
+		if err = checkEqual(m.Body(), "hello"); err != nil {
 			t.Error(err)
 		}
 	}

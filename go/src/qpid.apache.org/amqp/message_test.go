@@ -26,13 +26,15 @@ import (
 )
 
 func roundTrip(m Message) error {
-	var err error
-	if buffer, err := m.Encode(nil); err == nil {
-		if m2, err := DecodeMessage(buffer); err == nil {
-			err = checkEqual(m, m2)
-		}
+	buffer, err := m.Encode(nil)
+	if err != nil {
+		return err
 	}
-	return err
+	m2, err := DecodeMessage(buffer)
+	if err != nil {
+		return err
+	}
+	return checkEqual(m, m2)
 }
 
 func TestDefaultMessage(t *testing.T) {
@@ -265,10 +267,9 @@ func BenchmarkNewMessageAll(b *testing.B) {
 
 func BenchmarkEncode(b *testing.B) {
 	m := setMessageProperties(NewMessageWith("hello"))
-	var buf []byte
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		buf, err := m.Encode(buf)
+		buf, err := m.Encode(nil)
 		if err != nil {
 			b.Fatal(err)
 		}
