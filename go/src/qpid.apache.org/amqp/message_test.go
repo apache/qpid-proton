@@ -58,14 +58,14 @@ func TestDefaultMessage(t *testing.T) {
 		{"ReplyToGroupId", ""},
 		{"MessageId", nil},
 		{"CorrelationId", nil},
-		{"DeliveryAnnotations", map[AnnotationKey]interface{}(nil)},
-		{"MessageAnnotations", map[AnnotationKey]interface{}(nil)},
-		{"ApplicationProperties", map[string]interface{}(nil)},
+		{"DeliveryAnnotations", map[AnnotationKey]interface{}{}},
+		{"MessageAnnotations", map[AnnotationKey]interface{}{}},
+		{"ApplicationProperties", map[string]interface{}{}},
 
 		// Deprecated
 		{"Instructions", map[string]interface{}(nil)},
 		{"Annotations", map[string]interface{}(nil)},
-		{"Properties", map[string]interface{}(nil)},
+		{"Properties", map[string]interface{}{}},
 		{"Body", nil},
 	} {
 		ret := mv.MethodByName(x.method).Call(nil)
@@ -91,7 +91,7 @@ func TestMessageString(t *testing.T) {
 	if err := roundTrip(m); err != nil {
 		t.Error(err)
 	}
-	msgstr := `Message{user_id="user", instructions={:instructions="foo"}, annotations={:annotations="bar"}, properties={"int"=32}, body="hello"}`
+	msgstr := "Message{user-id: user, delivery-annotations: map[instructions:foo], message-annotations: map[annotations:bar], application-properties: map[int:32], body: hello}"
 	if err := checkEqual(msgstr, m.String()); err != nil {
 		t.Error(err)
 	}
