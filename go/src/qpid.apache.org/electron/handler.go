@@ -27,19 +27,19 @@ import (
 // NOTE: methods in this file are called only in the proton goroutine unless otherwise indicated.
 
 type handler struct {
-	delegator    *proton.MessagingAdapter
-	connection   *connection
-	links        map[proton.Link]Endpoint
-	sentMessages map[proton.Delivery]sentMessage
-	sessions     map[proton.Session]*session
+	delegator  *proton.MessagingAdapter
+	connection *connection
+	links      map[proton.Link]Endpoint
+	sent       map[proton.Delivery]*sendable // Waiting for outcome
+	sessions   map[proton.Session]*session
 }
 
 func newHandler(c *connection) *handler {
 	h := &handler{
-		connection:   c,
-		links:        make(map[proton.Link]Endpoint),
-		sentMessages: make(map[proton.Delivery]sentMessage),
-		sessions:     make(map[proton.Session]*session),
+		connection: c,
+		links:      make(map[proton.Link]Endpoint),
+		sent:       make(map[proton.Delivery]*sendable),
+		sessions:   make(map[proton.Session]*session),
 	}
 	h.delegator = proton.NewMessagingAdapter(h)
 	// Disable auto features of MessagingAdapter, we do these ourselves.
@@ -65,15 +65,15 @@ func (h *handler) HandleMessagingEvent(t proton.MessagingEvent, e proton.Event) 
 		}
 
 	case proton.MSettled:
-		if sm, ok := h.sentMessages[e.Delivery()]; ok {
+		if sm, ok := h.sent[e.Delivery()]; ok {
 			d := e.Delivery().Remote()
-			sm.ack <- Outcome{sentStatus(d.Type()), d.Condition().Error(), sm.value}
-			delete(h.sentMessages, e.Delivery())
+			sm.ack <- Outcome{sentStatus(d.Type()), d.Condition().Error(), sm.v}
+			delete(h.sent, e.Delivery())
 		}
 
 	case proton.MSendable:
 		if s, ok := h.links[e.Link()].(*sender); ok {
-			s.sendable()
+			s.trySend()
 		} else {
 			h.linkError(e.Link(), "no sender")
 		}
@@ -182,10 +182,10 @@ func (h *handler) sessionClosed(ps proton.Session, err error) {
 
 func (h *handler) shutdown(err error) {
 	err = h.connection.closed(err)
-	for _, sm := range h.sentMessages {
+	for _, sm := range h.sent {
 		// Don't block but ensure outcome is sent eventually.
 		if sm.ack != nil {
-			o := Outcome{Unacknowledged, err, sm.value}
+			o := Outcome{Unacknowledged, err, sm.v}
 			select {
 			case sm.ack <- o:
 			default:
@@ -193,7 +193,7 @@ func (h *handler) shutdown(err error) {
 			}
 		}
 	}
-	h.sentMessages = nil
+	h.sent = nil
 	for _, l := range h.links {
 		_ = l.closed(err)
 	}

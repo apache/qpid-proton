@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"qpid.apache.org/amqp"
 	"qpid.apache.org/proton"
 )
 
@@ -183,6 +184,7 @@ type connection struct {
 	handler        *handler
 	engine         *proton.Engine
 	pConnection    proton.Connection
+	mc             amqp.MessageCodec
 
 	defaultSession Session
 }
@@ -244,8 +246,12 @@ func (c *connection) run() {
 }
 
 func (c *connection) Close(err error) {
-	c.err.Set(err)
-	c.engine.Close(err)
+	c.closeOnce.Do(func() {
+		c.err.Set(err)
+		c.engine.Close(err)
+		c.mc.Close()
+	})
+
 }
 
 func (c *connection) Disconnect(err error) {

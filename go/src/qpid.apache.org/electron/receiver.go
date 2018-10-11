@@ -162,7 +162,12 @@ func (r *receiver) message(delivery proton.Delivery) {
 		return
 	}
 	if delivery.HasMessage() {
-		m, err := delivery.Message()
+		bytes, err := delivery.MessageBytes()
+		var m amqp.Message
+		if err == nil {
+			m = amqp.NewMessage()
+			err = r.session.connection.mc.Decode(m, bytes)
+		}
 		if err != nil {
 			localClose(r.pLink, err)
 			return

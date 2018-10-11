@@ -325,9 +325,6 @@ func (m *message) SetApplicationProperties(x map[string]interface{}) {
 func (m *message) Marshal(v interface{}) { m.body = v }
 
 func (m *message) Unmarshal(v interface{}) {
-	// FIXME aconway 2018-09-28: this is inefficient, replace with a
-	// reflective conversion from the existing body value that respects
-	// the Unmarshal() rules.
 	pnData := C.pn_data(2)
 	marshal(m.body, pnData)
 	unmarshal(v, pnData)
