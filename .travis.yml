@@ -40,6 +40,7 @@ matrix:
     - QPID_PROTON_CMAKE_ARGS='-DCMAKE_OSX_DEPLOYMENT_TARGET=10.11 -DBUILD_RUBY=NO'
     before_install:
     - brew update
+    - brew upgrade https://raw.githubusercontent.com/Homebrew/homebrew-core/6e3f70c43a0cdd02280a1cfc78693ce1bc7eb5e4/Formula/python.rb
     - brew upgrade cmake openssl
     - brew install libuv swig
 
