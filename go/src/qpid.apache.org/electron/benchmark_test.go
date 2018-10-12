@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"qpid.apache.org/amqp"
+	"qpid.apache.org/internal/test"
 )
 
 // To change capacity use
@@ -59,7 +60,7 @@ func (bm *bmCommon) receiveAccept() {
 		if rm, err := bm.r.Receive(); err != nil {
 			bm.b.Fatal(err)
 		} else {
-			fatalIf(bm.b, rm.Accept())
+			test.FatalIf(bm.b, rm.Accept())
 		}
 	}
 }
@@ -67,7 +68,7 @@ func (bm *bmCommon) receiveAccept() {
 func (bm *bmCommon) outcomes() {
 	defer bm.done.Done()
 	for n := 0; n < bm.b.N; n++ {
-		fatalIf(bm.b, (<-bm.ack).Error)
+		test.FatalIf(bm.b, (<-bm.ack).Error)
 	}
 }
 
@@ -98,7 +99,7 @@ func BenchmarkSendSync(b *testing.B) {
 
 	go bm.receiveAccept()
 	for n := 0; n < b.N; n++ {
-		fatalIf(b, bm.s.SendSync(emptyMsg).Error)
+		test.FatalIf(b, bm.s.SendSync(emptyMsg).Error)
 	}
 	bm.done.Wait()
 }

@@ -30,6 +30,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"qpid.apache.org/internal/test"
 )
 
 var skipped = false
@@ -65,7 +67,7 @@ func checkDecode(d *Decoder, want interface{}, gotPtr interface{}, t *testing.T)
 		return
 	}
 	got := reflect.ValueOf(gotPtr).Elem().Interface()
-	if err := checkEqual(want, got); err != nil {
+	if err := test.Differ(want, got); err != nil {
 		t.Error("Decode bad value:", err)
 		return
 	}
@@ -81,13 +83,13 @@ func checkDecode(d *Decoder, want interface{}, gotPtr interface{}, t *testing.T)
 		t.Error("Unmarshal failed", err)
 		return
 	}
-	err = checkEqual(n, len(bytes))
+	err = test.Differ(n, len(bytes))
 	if err != nil {
 		t.Error("Bad unmarshal length", err)
 		return
 	}
 	got = reflect.ValueOf(gotPtr).Elem().Interface()
-	if err = checkEqual(want, got); err != nil {
+	if err = test.Differ(want, got); err != nil {
 		t.Error("Bad unmarshal value", err)
 		return
 	}
@@ -165,7 +167,7 @@ func checkDecodeInterface(d *Decoder, want interface{}, t *testing.T) {
 		t.Error("Decode failed", err)
 		return
 	}
-	if err := checkEqual(want, got); err != nil {
+	if err := test.Differ(want, got); err != nil {
 		t.Error(err)
 		return
 	}
@@ -180,11 +182,11 @@ func checkDecodeInterface(d *Decoder, want interface{}, t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if err := checkEqual(n, len(bytes)); err != nil {
+	if err := test.Differ(n, len(bytes)); err != nil {
 		t.Error(err)
 		return
 	}
-	if err := checkEqual(want, got2); err != nil {
+	if err := test.Differ(want, got2); err != nil {
 		t.Error(err)
 		return
 	}
@@ -247,12 +249,8 @@ func TestStrings(t *testing.T) {
 	if !strings.Contains(err.Error(), "cannot unmarshal") {
 		t.Error(err)
 	}
-	if _, err = Unmarshal([]byte{}, nil); err != nil {
-		t.Error(err)
-	}
-	if err = checkEqual(err, EndOfData); err != nil {
-		t.Error(err)
-	}
+	_, err = Unmarshal([]byte{}, nil)
+	test.ErrorIf(t, test.Differ(err, EndOfData))
 	_, err = Unmarshal([]byte("foobar"), nil)
 	if !strings.Contains(err.Error(), "invalid-argument") {
 		t.Error(err)
@@ -313,7 +311,7 @@ func TestEncodeDecode(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := checkEqual(in, out); err != nil {
+	if err := test.Differ(in, out); err != nil {
 		t.Error(err)
 	}
 }
@@ -344,7 +342,7 @@ func TestMap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = checkEqual(m, i); err != nil {
+	if err = test.Differ(m, i); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -368,7 +366,7 @@ func TODO_TestMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	} else {
-		if err = checkEqual(m.Body(), "hello"); err != nil {
+		if err = test.Differ(m.Body(), "hello"); err != nil {
 			t.Error(err)
 		}
 	}
@@ -378,7 +376,7 @@ func TODO_TestMessage(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	} else {
-		if err = checkEqual(bytes, bytes2); err != nil {
+		if err = test.Differ(bytes, bytes2); err != nil {
 			t.Error(err)
 		}
 	}

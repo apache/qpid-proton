@@ -22,10 +22,12 @@ package electron
 
 import (
 	"net"
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/proton"
 	"testing"
 	"time"
+
+	"qpid.apache.org/amqp"
+	"qpid.apache.org/internal/test"
+	"qpid.apache.org/proton"
 )
 
 func TestLinkSettings(t *testing.T) {
@@ -37,27 +39,27 @@ func TestLinkSettings(t *testing.T) {
 		close(done)
 		defer sConn.Close()
 		c, err := NewConnection(sConn, Server())
-		fatalIf(t, err)
+		test.FatalIf(t, err)
 		for in := range c.Incoming() {
 			ep := in.Accept()
 			switch ep := ep.(type) {
 			case Receiver:
-				errorIf(t, checkEqual("one.source", ep.Source()))
-				errorIf(t, checkEqual(TerminusSettings{}, ep.SourceSettings()))
-				errorIf(t, checkEqual("one.target", ep.Target()))
-				errorIf(t, checkEqual(settings, ep.TargetSettings()))
+				test.ErrorIf(t, test.Differ("one.source", ep.Source()))
+				test.ErrorIf(t, test.Differ(TerminusSettings{}, ep.SourceSettings()))
+				test.ErrorIf(t, test.Differ("one.target", ep.Target()))
+				test.ErrorIf(t, test.Differ(settings, ep.TargetSettings()))
 			case Sender:
-				errorIf(t, checkEqual("two", ep.LinkName()))
-				errorIf(t, checkEqual("two.source", ep.Source()))
-				errorIf(t, checkEqual(TerminusSettings{Durability: proton.Deliveries, Expiry: proton.ExpireNever}, ep.SourceSettings()))
-				errorIf(t, checkEqual(filterMap, ep.Filter()))
+				test.ErrorIf(t, test.Differ("two", ep.LinkName()))
+				test.ErrorIf(t, test.Differ("two.source", ep.Source()))
+				test.ErrorIf(t, test.Differ(TerminusSettings{Durability: proton.Deliveries, Expiry: proton.ExpireNever}, ep.SourceSettings()))
+				test.ErrorIf(t, test.Differ(filterMap, ep.Filter()))
 			}
 		}
 	}()
 
 	// Client
 	c, err := NewConnection(cConn)
-	fatalIf(t, err)
+	test.FatalIf(t, err)
 	c.Sender(Source("one.source"), Target("one.target"), TargetSettings(settings))
 
 	c.Receiver(Source("two.source"), DurableSubscription("two"), Filter(filterMap))

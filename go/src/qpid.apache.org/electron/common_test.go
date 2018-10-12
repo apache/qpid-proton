@@ -20,43 +20,12 @@ under the License.
 package electron
 
 import (
-	"fmt"
 	"net"
-	"path"
-	"reflect"
-	"runtime"
 	"sync"
 	"testing"
+
+	"qpid.apache.org/internal/test"
 )
-
-func decorate(err error, callDepth int) string {
-	_, file, line, _ := runtime.Caller(callDepth + 1) // annotate with location of caller.
-	_, file = path.Split(file)
-	return fmt.Sprintf("\n%s:%d: %v", file, line, err)
-}
-
-func fatalIfN(t testing.TB, err error, callDepth int) {
-	if err != nil {
-		t.Fatal(decorate(err, callDepth+1))
-	}
-}
-
-func fatalIf(t testing.TB, err error) {
-	fatalIfN(t, err, 1)
-}
-
-func errorIf(t testing.TB, err error) {
-	if err != nil {
-		t.Error(decorate(err, 1))
-	}
-}
-
-func checkEqual(want interface{}, got interface{}) error {
-	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("(%#v != %#v)", want, got)
-	}
-	return nil
-}
 
 // AMQP client/server pair
 type pair struct {
@@ -113,8 +82,9 @@ func newPipe(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
 
 // AMQP pair linked by TCP socket
 func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
+	t.Helper()
 	l, err := net.Listen("tcp4", ":0") // For systems with ipv6 disabled
-	fatalIfN(t, err, 1)
+	test.FatalIf(t, err)
 	var srv Connection
 	var srvErr error
 	var wg sync.WaitGroup
@@ -125,9 +95,9 @@ func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pai
 	}()
 	addr := l.Addr()
 	cli, err := NewContainer("client").Dial(addr.Network(), addr.String(), clientOpts...)
-	fatalIfN(t, err, 1)
+	test.FatalIf(t, err)
 	wg.Wait()
-	fatalIfN(t, srvErr, 1)
+	test.FatalIf(t, srvErr)
 	return newPair(t, cli, srv)
 }
 
@@ -136,7 +106,7 @@ func (p *pair) close() { p.client.Connection().Close(nil); p.server.Close(nil) }
 // Return a client sender and server receiver
 func (p *pair) sender(opts ...LinkOption) (Sender, Receiver) {
 	snd, err := p.client.Sender(opts...)
-	fatalIfN(p.t, err, 2)
+	test.FatalIf(p.t, err)
 	rcv := <-p.rchan
 	return snd, rcv
 }
@@ -144,7 +114,7 @@ func (p *pair) sender(opts ...LinkOption) (Sender, Receiver) {
 // Return a client receiver and server sender
 func (p *pair) receiver(opts ...LinkOption) (Receiver, Sender) {
 	rcv, err := p.client.Receiver(opts...)
-	fatalIfN(p.t, err, 2)
+	test.FatalIf(p.t, err)
 	snd := <-p.schan
 	return rcv, snd
 }

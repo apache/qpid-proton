@@ -24,14 +24,9 @@ import (
 	"reflect"
 	"testing"
 	"time"
-)
 
-func checkEqual(want interface{}, got interface{}) error {
-	if !reflect.DeepEqual(want, got) {
-		return fmt.Errorf("(%T)%#v != (%T)%#v", want, want, got, got)
-	}
-	return nil
-}
+	"qpid.apache.org/internal/test"
+)
 
 func checkUnmarshal(marshaled []byte, v interface{}) error {
 	got, err := Unmarshal(marshaled, v)
@@ -130,7 +125,7 @@ func TestTypesRoundTrip(t *testing.T) {
 		if err := checkUnmarshal(marshalled, &v); err != nil {
 			t.Error(err)
 		}
-		if err := checkEqual(x, v); err != nil {
+		if err := test.Differ(x, v); err != nil {
 			t.Error(err)
 		}
 	}
@@ -151,7 +146,7 @@ func TestTypesRoundTripAll(t *testing.T) {
 			t.Error(err)
 		}
 		v := vp.Elem().Interface()
-		if err := checkEqual(x, v); err != nil {
+		if err := test.Differ(x, v); err != nil {
 			t.Error(err)
 		}
 	}
@@ -175,7 +170,7 @@ func TestDescribed(t *testing.T) {
 	if err := checkUnmarshal(marshaled, &d); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(want, d); err != nil {
+	if err := test.Differ(want, d); err != nil {
 		t.Error(err)
 	}
 
@@ -187,7 +182,7 @@ func TestDescribed(t *testing.T) {
 	if _, ok := i.(Described); !ok {
 		t.Errorf("Expected Described, got %T(%v)", i, i)
 	}
-	if err := checkEqual(want, i); err != nil {
+	if err := test.Differ(want, i); err != nil {
 		t.Error(err)
 	}
 
@@ -196,33 +191,33 @@ func TestDescribed(t *testing.T) {
 	if err := checkUnmarshal(marshaled, &s); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(want.Value, s); err != nil {
+	if err := test.Differ(want.Value, s); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestTimeConversion(t *testing.T) {
 	pt := pnTime(timeValue)
-	if err := checkEqual(timeValue, goTime(pt)); err != nil {
+	if err := test.Differ(timeValue, goTime(pt)); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(pt, pnTime(goTime(pt))); err != nil {
+	if err := test.Differ(pt, pnTime(goTime(pt))); err != nil {
 		t.Error(err)
 	}
 	ut := time.Unix(123, 456*1000000)
-	if err := checkEqual(123456, int(pnTime(ut))); err != nil {
+	if err := test.Differ(123456, int(pnTime(ut))); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(ut, goTime(123456)); err != nil {
+	if err := test.Differ(ut, goTime(123456)); err != nil {
 		t.Error(err)
 	}
 
 	// Preserve zero values
 	var tz time.Time
-	if err := checkEqual(0, int(pnTime(tz))); err != nil {
+	if err := test.Differ(0, int(pnTime(tz))); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(tz, goTime(pnTime(tz))); err != nil {
+	if err := test.Differ(tz, goTime(pnTime(tz))); err != nil {
 		t.Error(err)
 	}
 }

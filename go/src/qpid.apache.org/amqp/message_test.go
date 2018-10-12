@@ -23,6 +23,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"qpid.apache.org/internal/test"
 )
 
 func roundTrip(m Message) error {
@@ -34,7 +36,7 @@ func roundTrip(m Message) error {
 	if err != nil {
 		return err
 	}
-	return checkEqual(m, m2)
+	return test.Differ(m, m2)
 }
 
 func TestDefaultMessage(t *testing.T) {
@@ -74,11 +76,11 @@ func TestDefaultMessage(t *testing.T) {
 		{"Body", nil},
 	} {
 		ret := mv.MethodByName(x.method).Call(nil)
-		if err := checkEqual(x.want, ret[0].Interface()); err != nil {
+		if err := test.Differ(x.want, ret[0].Interface()); err != nil {
 			t.Errorf("%s: %s", x.method, err)
 		}
 	}
-	if err := checkEqual("Message{}", m.String()); err != nil {
+	if err := test.Differ("Message{}", m.String()); err != nil {
 		t.Error(err)
 	}
 }
@@ -94,7 +96,7 @@ func TestMessageString(t *testing.T) {
 		t.Error(err)
 	}
 	msgstr := "Message{user-id: user, delivery-annotations: map[instructions:foo], message-annotations: map[annotations:bar], application-properties: map[int:32], body: hello}"
-	if err := checkEqual(msgstr, m.String()); err != nil {
+	if err := test.Differ(msgstr, m.String()); err != nil {
 		t.Error(err)
 	}
 }
@@ -135,7 +137,7 @@ func TestMessageRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = checkEqual(m1, m); err != nil {
+	if err = test.Differ(m1, m); err != nil {
 		t.Error(err)
 	}
 
@@ -165,7 +167,7 @@ func TestMessageRoundTrip(t *testing.T) {
 		{m.Instructions(), map[string]interface{}{"instructions": "foo"}},
 		{m.Annotations(), map[string]interface{}{"annotations": "bar"}},
 	} {
-		if err := checkEqual(data[0], data[1]); err != nil {
+		if err := test.Differ(data[0], data[1]); err != nil {
 			t.Error(err)
 		}
 	}
@@ -190,7 +192,7 @@ func TestDeprecated(t *testing.T) {
 		{m.Annotations(), map[string]interface{}{"annotations": "bar"}},
 		{m.Properties(), map[string]interface{}{"int": int32(32), "bool": true}},
 	} {
-		if err := checkEqual(data[0], data[1]); err != nil {
+		if err := test.Differ(data[0], data[1]); err != nil {
 			t.Error(err)
 		}
 	}
@@ -207,20 +209,20 @@ func TestMessageBodyTypes(t *testing.T) {
 	m := NewMessageWith(int64(42))
 	m.Unmarshal(&body)
 	m.Unmarshal(&i)
-	if err := checkEqual(body.(int64), int64(42)); err != nil {
+	if err := test.Differ(body.(int64), int64(42)); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(i, int64(42)); err != nil {
+	if err := test.Differ(i, int64(42)); err != nil {
 		t.Error(err)
 	}
 
 	m = NewMessageWith("hello")
 	m.Unmarshal(&s)
 	m.Unmarshal(&body)
-	if err := checkEqual(s, "hello"); err != nil {
+	if err := test.Differ(s, "hello"); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(body.(string), "hello"); err != nil {
+	if err := test.Differ(body.(string), "hello"); err != nil {
 		t.Error(err)
 	}
 	if err := roundTrip(m); err != nil {
@@ -230,10 +232,10 @@ func TestMessageBodyTypes(t *testing.T) {
 	m = NewMessageWith(Binary("bin"))
 	m.Unmarshal(&s)
 	m.Unmarshal(&body)
-	if err := checkEqual(body.(Binary), Binary("bin")); err != nil {
+	if err := test.Differ(body.(Binary), Binary("bin")); err != nil {
 		t.Error(err)
 	}
-	if err := checkEqual(s, "bin"); err != nil {
+	if err := test.Differ(s, "bin"); err != nil {
 		t.Error(err)
 	}
 	if err := roundTrip(m); err != nil {

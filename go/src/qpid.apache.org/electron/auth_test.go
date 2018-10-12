@@ -27,15 +27,17 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"qpid.apache.org/internal/test"
 )
 
 func TestAuthAnonymous(t *testing.T) {
 	p := newPipe(t,
 		[]ConnectionOption{User("fred"), VirtualHost("vhost"), SASLAllowInsecure(true)},
 		[]ConnectionOption{SASLAllowedMechs("ANONYMOUS"), SASLAllowInsecure(true)})
-	fatalIf(t, p.server.Sync())
-	errorIf(t, checkEqual("anonymous", p.server.User()))
-	errorIf(t, checkEqual("vhost", p.server.VirtualHost()))
+	test.FatalIf(t, p.server.Sync())
+	test.ErrorIf(t, test.Differ("anonymous", p.server.User()))
+	test.ErrorIf(t, test.Differ("vhost", p.server.VirtualHost()))
 }
 
 func TestAuthPlain(t *testing.T) {
@@ -43,8 +45,8 @@ func TestAuthPlain(t *testing.T) {
 	p := newPipe(t,
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN"), User("fred@proton"), Password([]byte("xxx"))},
 		[]ConnectionOption{SASLAllowInsecure(true), SASLAllowedMechs("PLAIN")})
-	fatalIf(t, p.server.Sync())
-	errorIf(t, checkEqual("fred@proton", p.server.User()))
+	test.FatalIf(t, p.server.Sync())
+	test.ErrorIf(t, test.Differ("fred@proton", p.server.User()))
 }
 
 func TestAuthBadPass(t *testing.T) {

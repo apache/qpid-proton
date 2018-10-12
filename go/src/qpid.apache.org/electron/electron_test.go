@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"qpid.apache.org/amqp"
+	"qpid.apache.org/internal/test"
 )
 
 // Send a message one way with a client sender and server receiver, verify ack.
@@ -51,12 +52,12 @@ func TestClientSender(t *testing.T) {
 				m := amqp.NewMessageWith(fmt.Sprintf("foobar%v-%v", i, j))
 				var err error
 				s[i].SendAsync(m, ack, "testing")
-				fatalIf(t, err)
+				test.FatalIf(t, err)
 			}()
 
 			// Server receive
 			rm, err := r[i].Receive()
-			fatalIf(t, err)
+			test.FatalIf(t, err)
 			if want, got := interface{}(fmt.Sprintf("foobar%v-%v", i, j)), rm.Message.Body(); want != got {
 				t.Errorf("%#v != %#v", want, got)
 			}
@@ -89,14 +90,14 @@ func TestClientReceiver(t *testing.T) {
 	go func() {
 		for i := 0; i < nMessages; i++ { // Server sends
 			out := s.SendSync(amqp.NewMessageWith(int32(i)))
-			fatalIf(t, out.Error)
+			test.FatalIf(t, out.Error)
 		}
 	}()
 	for i := 0; i < nMessages; i++ { // Client receives
 		rm, err := r.Receive()
-		fatalIf(t, err)
-		errorIf(t, checkEqual(int32(i), rm.Message.Body()))
-		errorIf(t, rm.Accept())
+		test.FatalIf(t, err)
+		test.ErrorIf(t, test.Differ(int32(i), rm.Message.Body()))
+		test.ErrorIf(t, rm.Accept())
 	}
 }
 
@@ -301,20 +302,20 @@ func TestHeartbeat(t *testing.T) {
 	defer close(unfreeze)
 	freeze := func() error { return p.server.(*connection).engine.Inject(func() { <-unfreeze }) }
 
-	fatalIf(t, p.client.Sync())
-	errorIf(t, checkEqual(101*time.Millisecond, p.client.Connection().Heartbeat()))
-	errorIf(t, checkEqual(102*time.Millisecond, p.server.Heartbeat()))
+	test.FatalIf(t, p.client.Sync())
+	test.ErrorIf(t, test.Differ(101*time.Millisecond, p.client.Connection().Heartbeat()))
+	test.ErrorIf(t, test.Differ(102*time.Millisecond, p.server.Heartbeat()))
 
 	// Freeze the server for less than a heartbeat
-	fatalIf(t, freeze())
+	test.FatalIf(t, freeze())
 	time.Sleep(5 * time.Millisecond)
 	unfreeze <- true
 	// Make sure server is still responding.
 	s, _ := p.sender()
-	errorIf(t, s.Sync())
+	test.ErrorIf(t, s.Sync())
 
 	// Freeze the server till the p.client times out the connection
-	fatalIf(t, freeze())
+	test.FatalIf(t, freeze())
 	select {
 	case <-p.client.Done():
 		if amqp.ResourceLimitExceeded != p.client.Error().(amqp.Error).Name {
