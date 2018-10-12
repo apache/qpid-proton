@@ -39,6 +39,9 @@ func roundTrip(m Message) error {
 
 func TestDefaultMessage(t *testing.T) {
 	m := NewMessage()
+	if err := roundTrip(m); err != nil {
+		t.Error(err)
+	}
 	mv := reflect.ValueOf(m)
 	// Check defaults
 	for _, x := range []struct {
@@ -74,9 +77,6 @@ func TestDefaultMessage(t *testing.T) {
 		if err := checkEqual(x.want, ret[0].Interface()); err != nil {
 			t.Errorf("%s: %s", x.method, err)
 		}
-	}
-	if err := roundTrip(m); err != nil {
-		t.Error(err)
 	}
 	if err := checkEqual("Message{}", m.String()); err != nil {
 		t.Error(err)

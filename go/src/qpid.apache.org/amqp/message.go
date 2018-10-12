@@ -117,7 +117,7 @@ type Message interface {
 	ReplyToGroupId() string
 	SetReplyToGroupId(string)
 
-	// Property map set by the application to be carried with the message.
+	// Properties set by the application to be carried with the message.
 	// Values must be simple types (not maps, lists or sequences)
 	ApplicationProperties() map[string]interface{}
 	SetApplicationProperties(map[string]interface{})
@@ -151,7 +151,7 @@ type Message interface {
 	// Marshal a Go value into the message body, synonym for SetBody()
 	Marshal(interface{})
 
-	// Unmarshal the message body into the value pointed to by v. See amqp.Unmarshal()
+	// Unmarshal the message body, using amqp.Unmarshal()
 	Unmarshal(interface{})
 
 	// Encode encodes the message as AMQP data. If buffer is non-nil and is large enough
