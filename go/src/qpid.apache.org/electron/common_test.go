@@ -104,9 +104,9 @@ func newPair(t testing.TB, cli, srv Connection) *pair {
 // AMQP pair linked by in-memory pipe
 func newPipe(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
 	cli, srv := net.Pipe()
-	opts := []ConnectionOption{Server(), ContainerId(t.Name() + "-server")}
+	opts := []ConnectionOption{Server(), ContainerId("server")}
 	sc, _ := NewConnection(srv, append(opts, serverOpts...)...)
-	opts = []ConnectionOption{ContainerId(t.Name() + "-client")}
+	opts = []ConnectionOption{ContainerId("client")}
 	cc, _ := NewConnection(cli, append(opts, clientOpts...)...)
 	return newPair(t, cc, sc)
 }
@@ -121,10 +121,10 @@ func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pai
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		srv, srvErr = NewContainer(t.Name()+"-server").Accept(l, serverOpts...)
+		srv, srvErr = NewContainer("server").Accept(l, serverOpts...)
 	}()
 	addr := l.Addr()
-	cli, err := NewContainer(t.Name()+"-client").Dial(addr.Network(), addr.String(), clientOpts...)
+	cli, err := NewContainer("client").Dial(addr.Network(), addr.String(), clientOpts...)
 	fatalIfN(t, err, 1)
 	wg.Wait()
 	fatalIfN(t, srvErr, 1)
