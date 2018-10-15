@@ -5,7 +5,6 @@
 # For example to run C broker, Go sender and C++ receiver pass arguments: C GO CPP
 
 MESSAGES=100000
-CREDIT=100
 
 BLD=$(pwd)
 
@@ -17,7 +16,7 @@ C_RECV="$C/receive localhost amqp x $MESSAGES"
 GO=$BLD/go/examples/electron
 GO_BROKER="$GO/broker"
 GO_SEND="$GO/send -count $MESSAGES /x"
-GO_RECV="$GO/receive -count $MESSAGES /x"
+GO_RECV="$GO/receive -count $MESSAGES -prefetch 100 /x"
 
 CPP=$BLD/cpp/examples
 CPP_BROKER="$CPP/broker"
