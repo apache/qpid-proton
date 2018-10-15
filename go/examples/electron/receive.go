@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"qpid.apache.org/amqp"
-	"qpid.apache.org/electron"
 	"strings"
 	"sync"
+
+	"qpid.apache.org/amqp"
+	"qpid.apache.org/electron"
 )
 
 // Usage and command-line flags
@@ -39,8 +40,8 @@ URLs are of the form "amqp://<host>:<port>/<amqp-address>"
 	flag.PrintDefaults()
 }
 
-var count = flag.Uint64("count", 1, "Stop after receiving this many messages in total")
-var prefetch = flag.Int("prefetch", 0, "enable a pre-fetch window to improve throughput")
+var count = flag.Int("count", 1, "Stop after receiving this many messages in total")
+var prefetch = flag.Int("prefetch", 0, "enable a pre-fetch window for flow control")
 var debug = flag.Bool("debug", false, "Print detailed debug output")
 var debugf = func(format string, data ...interface{}) {} // Default no debugging output
 
@@ -80,8 +81,10 @@ func main() {
 			connections <- c // Save connection so we can Close() when main() ends
 			addr := strings.TrimPrefix(url.Path, "/")
 			opts := []electron.LinkOption{electron.Source(addr)}
-			if *prefetch > 0 {
+			if *prefetch > 0 { // Use a pre-fetch window
 				opts = append(opts, electron.Capacity(*prefetch), electron.Prefetch(true))
+			} else { // Grant credit for all expected messages at once
+				opts = append(opts, electron.Capacity(*count), electron.Prefetch(false))
 			}
 			r, err := c.Receiver(opts...)
 			fatalIf(err)
@@ -103,7 +106,7 @@ func main() {
 	fmt.Printf("Listening on %d connections\n", len(urls))
 
 	// print each message until the count is exceeded.
-	for i := uint64(0); i < *count; i++ {
+	for i := 0; i < *count; i++ {
 		m := <-messages
 		debugf("%v\n", m.Body())
 	}
