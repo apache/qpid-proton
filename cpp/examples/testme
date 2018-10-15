@@ -21,7 +21,8 @@
 # Run the C++ examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import unittest, sys, shutil, os, errno
+import sys, shutil, os, errno
+from test_unittest import  unittest
 from test_subprocess import Popen, TestProcessError, check_output
 import test_subprocess
 from os.path import dirname

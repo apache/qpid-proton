@@ -21,7 +21,7 @@
 # Run the C examples and verify that they behave as expected.
 # Example executables must be in PATH
 
-import unittest
+from test_unittest import unittest
 
 from test_subprocess import Popen, Server, TestProcessError, check_output
 
