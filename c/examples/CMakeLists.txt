@@ -51,6 +51,5 @@ if (PYTHON_EXECUTABLE)
   add_test(
     NAME c-example-tests
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${PYTHON_EXECUTABLE} testme -v)
-  set_tests_properties(c-example-tests PROPERTIES ENVIRONMENT "${test_env}")
+    COMMAND ${PN_ENV_SCRIPT} -- ${test_env} ${PYTHON_EXECUTABLE} testme -v)
 endif()

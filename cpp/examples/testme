@@ -23,7 +23,7 @@
 
 import sys, shutil, os, errno
 from test_unittest import  unittest
-from test_subprocess import Popen, TestProcessError, check_output
+from test_subprocess import Popen, TestProcessError, check_output, in_path
 import test_subprocess
 from os.path import dirname
 from string import Template
@@ -145,12 +145,11 @@ map{string(k1):int(42), symbol(k2):boolean(0)}
         self.assertEqual(["send"]*len(out), out)
 
     def test_scheduled_send(self):
-        try:
-            out = check_output(["scheduled_send", "-a", Broker.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).split()
-            self.assertTrue(len(out) > 0);
-            self.assertEqual(["send"]*len(out), out)
-        except OSError as e:
-            if e.errno != errno.ENOENT: raise
+        if not in_path("scheduled_send"):
+            return
+        out = check_output(["scheduled_send", "-a", Broker.addr+"scheduled_send", "-t", "0.1", "-i", "0.001"]).split()
+        self.assertTrue(len(out) > 0);
+        self.assertEqual(["send"]*len(out), out)
 
     def test_message_properties(self):
         expect="""using put/get: short=123 string=foo symbol=sym
@@ -165,15 +164,17 @@ expected conversion_error: "unexpected type, want: uint got: string"
         self.assertMultiLineEqual(expect, check_output(["message_properties"]))
 
     def test_multithreaded_client(self):
-        try:
-            got = check_output(["multithreaded_client", Broker.addr, "examples", "10"])
-            self.maxDiff = None
-            self.assertIn("10 messages sent and received", got);
-        except OSError as e:
-            if e.errno != errno.ENOENT: raise
+        if not in_path("multithreaded_client"):
+            return
+        got = check_output(["multithreaded_client", Broker.addr, "examples", "10"])
+        self.maxDiff = None
+        self.assertIn("10 messages sent and received", got);
+
 
     # Test is unstable, enable when fixed
     def skip_test_multithreaded_client_flow_control(self):
+        if not in_path("multithreaded_client_flow_control"):
+            return
         got = check_output(["multithreaded_client_flow_control", Broker.addr, "examples", "10", "2"])
         self.maxDiff = None
         self.assertIn("20 messages sent and received", got);
