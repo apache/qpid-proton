@@ -190,7 +190,10 @@ func (s *sender) trySend() {
 
 // Called in handler goroutine with credit > 0
 func (s *sender) send(sm *sendable) {
-	var err error
+	if err := s.Error(); err != nil {
+		sm.unsent(err)
+		return
+	}
 	bytes, err := s.session.connection.mc.Encode(sm.m, nil)
 	close(sm.sent) // Safe to re-use sm.m now
 	if err != nil {
