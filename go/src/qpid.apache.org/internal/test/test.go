@@ -28,46 +28,44 @@ import (
 	"testing"
 )
 
-// The testing.TB.Helper() function does not seem to work
-func decorate(msg string, callDepth int) string {
-	_, file, line, _ := runtime.Caller(callDepth + 1) // annotate with location of caller.
+// The testing.TB.Helper() is only available from Go 1.9.
+// Decorate messages with the correct file:line at callDepth before calling
+// before calling a testing.TB method.
+func decorate(method func(arg ...interface{}), callDepth int, msg string) {
+	_, file, line, _ := runtime.Caller(callDepth + 1)
 	_, file = path.Split(file)
-	return fmt.Sprintf("\n%s:%d: %v", file, line, msg)
+	method(fmt.Sprintf("\n%s:%d: %v", file, line, msg))
 }
 
-func message(err error, args ...interface{}) (msg string) {
-	if len(args) > 0 {
-		msg = fmt.Sprintf(args[0].(string), args[1:]...) + ": "
-	}
-	msg = msg + err.Error()
-	return
-}
-
-// ErrorIf calls t.Error() if err != nil, with optional format message
-func ErrorIf(t testing.TB, err error, format ...interface{}) error {
-	t.Helper()
+// Format a message and call method if err != nil
+func checkErr(method func(arg ...interface{}), callDepth int, err error, format ...interface{}) error {
 	if err != nil {
-		t.Error(message(err, format...))
+		var msg string
+		if len(format) > 0 {
+			msg = fmt.Sprintf("%v: %v", fmt.Sprintf(format[0].(string), format[1:]...), err)
+		} else {
+			msg = err.Error()
+		}
+		decorate(method, callDepth+1, msg)
 	}
 	return err
 }
 
-// ErrorIf calls t.Fatal() if err != nil, with optional format message
+func ErrorIfN(callDepth int, t testing.TB, err error, format ...interface{}) error {
+	return checkErr(t.Error, callDepth+1, err, format...)
+}
+
+func ErrorIf(t testing.TB, err error, format ...interface{}) error {
+	return ErrorIfN(1, t, err, format...)
+}
+
+func FatalIfN(callDepth int, t testing.TB, err error, format ...interface{}) {
+	checkErr(t.Fatal, callDepth+1, err, format...)
+}
+
 func FatalIf(t testing.TB, err error, format ...interface{}) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(message(err, format...))
-	}
+	FatalIfN(1, t, err, format...)
 }
-
-// Extend the methods on testing.TB
-type TB struct{ testing.TB }
-
-func (t *TB) ErrorIf(err error, format ...interface{}) error {
-	t.Helper()
-	return ErrorIf(t, err, format...)
-}
-func (t *TB) FatalIf(err error, format ...interface{}) { t.Helper(); FatalIf(t, err, format...) }
 
 // if reflect.DeepEqual(want, got) { return nil } else { return error("want != got" })
 func Differ(want interface{}, got interface{}) error {

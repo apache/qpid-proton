@@ -82,9 +82,8 @@ func newPipe(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
 
 // AMQP pair linked by TCP socket
 func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pair {
-	t.Helper()
 	l, err := net.Listen("tcp4", ":0") // For systems with ipv6 disabled
-	test.FatalIf(t, err)
+	test.FatalIfN(1, t, err)
 	var srv Connection
 	var srvErr error
 	var wg sync.WaitGroup
@@ -95,9 +94,9 @@ func newSocketPair(t testing.TB, clientOpts, serverOpts []ConnectionOption) *pai
 	}()
 	addr := l.Addr()
 	cli, err := NewContainer("client").Dial(addr.Network(), addr.String(), clientOpts...)
-	test.FatalIf(t, err)
+	test.FatalIfN(1, t, err)
 	wg.Wait()
-	test.FatalIf(t, srvErr)
+	test.FatalIfN(1, t, srvErr)
 	return newPair(t, cli, srv)
 }
 
@@ -106,7 +105,7 @@ func (p *pair) close() { p.client.Connection().Close(nil); p.server.Close(nil) }
 // Return a client sender and server receiver
 func (p *pair) sender(opts ...LinkOption) (Sender, Receiver) {
 	snd, err := p.client.Sender(opts...)
-	test.FatalIf(p.t, err)
+	test.FatalIfN(1, p.t, err)
 	rcv := <-p.rchan
 	return snd, rcv
 }
@@ -114,7 +113,7 @@ func (p *pair) sender(opts ...LinkOption) (Sender, Receiver) {
 // Return a client receiver and server sender
 func (p *pair) receiver(opts ...LinkOption) (Receiver, Sender) {
 	rcv, err := p.client.Receiver(opts...)
-	test.FatalIf(p.t, err)
+	test.FatalIfN(1, p.t, err)
 	snd := <-p.schan
 	return rcv, snd
 }
