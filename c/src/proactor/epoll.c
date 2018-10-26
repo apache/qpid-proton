@@ -936,8 +936,7 @@ static void pconnection_forced_shutdown(pconnection_t *pc) {
   // pconnection_process will never be called again.  Zero everything.
   pc->timer_armed = false;
   pc->context.wake_ops = 0;
-  pn_connection_t *c = pc->driver.connection;
-  pn_collector_release(pn_connection_collector(c));
+  pn_collector_release(pc->driver.collector);
   assert(pconnection_is_final(pc));
   pconnection_cleanup(pc);
 }
