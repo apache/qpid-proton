@@ -53,10 +53,12 @@ WARNINGS                = YES
 
 # Configuration options related to the input files
 
-INPUT                   = @CMAKE_SOURCE_DIR@/cpp/include \
+INPUT                   = @CMAKE_SOURCE_DIR@/cpp/docs/pages.dox \
                           @CMAKE_SOURCE_DIR@/cpp/docs \
+                          @CMAKE_SOURCE_DIR@/cpp/include \
                           @CMAKE_SOURCE_DIR@/cpp/examples \
                           @CMAKE_SOURCE_DIR@/docs/connect-config.md
+
 FILE_PATTERNS           = *.hpp *.md *.dox
 EXCLUDE_PATTERNS        = @CMAKE_SOURCE_DIR@/cpp/examples/*.?pp \
                           @CMAKE_SOURCE_DIR@/cpp/include/proton/internal/*.hpp

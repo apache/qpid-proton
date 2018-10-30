@@ -39,13 +39,13 @@ PN_CPP_CLASS_EXTERN endpoint {
     PN_CPP_EXTERN virtual ~endpoint();
 
     // XXX Add the container accessor here.
-    
+
     /// True if the local end is uninitialized.
     virtual bool uninitialized() const = 0;
-    
+
     /// True if the local end is active.
     virtual bool active() const = 0;
-    
+
     /// True if the local and remote ends are closed.
     virtual bool closed() const = 0;
 
@@ -53,15 +53,11 @@ PN_CPP_CLASS_EXTERN endpoint {
     virtual class error_condition error() const = 0;
 
     // XXX Add virtual open() and open(endpoint_options)
-    
+
     /// Close the endpoint.
-    ///
-    /// @see endpoint_lifecycle
     virtual void close() = 0;
 
     /// Close the endpoint with an error condition.
-    ///
-    /// @see endpoint_lifecycle
     virtual void close(const error_condition&) = 0;
 
 #if PN_CPP_HAS_DEFAULTED_FUNCTIONS && PN_CPP_HAS_DEFAULTED_MOVE_INITIALIZERS
@@ -88,7 +84,7 @@ template <class T, class D> class iter_base {
     D operator++(int) { D x(*this); ++(*this); return x; }
     bool operator==(const iter_base<T, D>& x) const { return obj_ == x.obj_; }
     bool operator!=(const iter_base<T, D>& x) const { return obj_ != x.obj_; }
-    
+
   protected:
     explicit iter_base(T p = 0) : obj_(p) {}
     T obj_;
@@ -102,7 +98,7 @@ template<class I> class iter_range {
     I begin() const { return begin_; }
     I end() const { return end_; }
     bool empty() const { return begin_ == end_; }
-    
+
   private:
     I begin_, end_;
 };

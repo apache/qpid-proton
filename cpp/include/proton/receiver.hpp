@@ -50,8 +50,6 @@ PN_CPP_CLASS_EXTERN receiver : public link {
     PN_CPP_EXTERN ~receiver();
 
     /// Open the receiver.
-    ///
-    /// @see endpoint_lifecycle
     PN_CPP_EXTERN void open();
 
     /// @copydoc open

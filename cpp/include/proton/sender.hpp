@@ -49,8 +49,6 @@ PN_CPP_CLASS_EXTERN sender : public link {
     PN_CPP_EXTERN ~sender();
 
     /// Open the sender.
-    ///
-    /// @see endpoint_lifecycle
     PN_CPP_EXTERN void open();
 
     /// @copydoc open

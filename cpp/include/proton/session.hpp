@@ -58,8 +58,6 @@ PN_CPP_CLASS_EXTERN session : public internal::object<pn_session_t>, public endp
     PN_CPP_EXTERN class error_condition error() const;
 
     /// Open the session.
-    ///
-    /// @see endpoint_lifecycle
     PN_CPP_EXTERN void open();
 
     /// @copydoc open

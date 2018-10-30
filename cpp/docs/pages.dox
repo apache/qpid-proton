@@ -1,0 +1,9 @@
+/// Order the pages in the documentations side-panel by declaring them here
+
+/// @page overview_page Overview
+/// @page tutorial_page Tutorial
+/// @page connect-config Connection Configuration
+/// @page types_page AMQP and C++ types
+/// @page mt_page Multi-threading
+/// @page io_page IO integration
+///
