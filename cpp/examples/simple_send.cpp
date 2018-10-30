@@ -56,6 +56,12 @@ class simple_send : public proton::messaging_handler {
         sender = c.open_sender(url, co);
     }
 
+    void on_connection_open(proton::connection& c) OVERRIDE {
+        if (c.reconnected()) {
+            sent = confirmed;   // Re-send unconfirmed messages after a reconnect
+        }
+    }
+
     void on_sendable(proton::sender &s) OVERRIDE {
         while (s.credit() && sent < total) {
             proton::message msg;
