@@ -17,18 +17,19 @@
  * under the License.
  */
 
-
 #include "test_bits.hpp"
-#include "proton/error_condition.hpp"
 #include "proton/connection.hpp"
 #include "proton/connection_options.hpp"
 #include "proton/container.hpp"
 #include "proton/delivery.hpp"
+#include "proton/error_condition.hpp"
+#include "proton/listen_handler.hpp"
+#include "proton/listener.hpp"
 #include "proton/message.hpp"
 #include "proton/messaging_handler.hpp"
-#include "proton/listener.hpp"
-#include "proton/listen_handler.hpp"
 #include "proton/reconnect_options.hpp"
+#include "proton/receiver_options.hpp"
+#include "proton/transport.hpp"
 #include "proton/work_queue.hpp"
 
 #include "proton/internal/pn_unique_ptr.hpp"
@@ -77,7 +78,6 @@ class server_connection_handler : public proton::messaging_handler {
     int messages_;
     int expect_;
     bool closing_;
-    bool done_;
     listen_handler listen_handler_;
 
     void close (proton::connection &c) {
@@ -89,7 +89,7 @@ class server_connection_handler : public proton::messaging_handler {
 
   public:
     server_connection_handler(proton::container& c, int e, waiter& w)
-        : messages_(0), expect_(e), closing_(false), done_(false), listen_handler_(*this, w)
+        : messages_(0), expect_(e), closing_(false), listen_handler_(*this, w)
     {
         listener_ = c.listen("//:0", listen_handler_);
     }
@@ -106,14 +106,19 @@ class server_connection_handler : public proton::messaging_handler {
         else c.open();
     }
 
+    void on_receiver_open(proton::receiver &r) PN_CPP_OVERRIDE {
+        // Reduce message noise in PN_TRACE output for debugging.
+        // Only the first message is relevant
+        // Control accepts, accepting the message tells the client to finally close.
+        r.open(proton::receiver_options().credit_window(0).auto_accept(false));
+        r.add_credit(1);
+    }
+
     void on_message(proton::delivery & d, proton::message & m) PN_CPP_OVERRIDE {
         ++messages_;
         proton::connection c = d.connection();
         if (messages_==expect_) close(c);
-    }
-
-    void on_connection_close(proton::connection & c) PN_CPP_OVERRIDE {
-        done_ = true;
+        else d.accept();
     }
 
     void on_transport_error(proton::transport & ) PN_CPP_OVERRIDE {
@@ -125,7 +130,9 @@ class server_connection_handler : public proton::messaging_handler {
 
 class tester : public proton::messaging_handler, public waiter {
   public:
-    tester() : waiter(3), container_(*this, "reconnect_server") {}
+    tester() : waiter(3), container_(*this, "reconnect_client"),
+               start_count(0), open_count(0), reconnecting_count(0),
+               link_open_count(0), transport_error_count(0), transport_close_count(0) {}
 
     void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
         // Server that fails upon connection
@@ -144,22 +151,53 @@ class tester : public proton::messaging_handler, public waiter {
         container_.connect(s1->url(), proton::connection_options().reconnect(proton::reconnect_options().failover_urls(urls)));
     }
 
-    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+    void on_connection_start(proton::connection& c) PN_CPP_OVERRIDE {
+        start_count++;
         c.open_sender("messages");
+        ASSERT(!c.reconnected());
+    }
+
+    void on_connection_open(proton::connection& c) PN_CPP_OVERRIDE {
+        ASSERT(bool(open_count) == c.reconnected());
+        open_count++;
+    }
+
+    void on_connection_reconnecting(proton::connection& c) PN_CPP_OVERRIDE {
+        reconnecting_count++;
+    }
+
+    void on_sender_open(proton::sender &s) PN_CPP_OVERRIDE {
+        ASSERT(bool(link_open_count) == s.connection().reconnected());
+        link_open_count++;
     }
 
     void on_sendable(proton::sender& s) PN_CPP_OVERRIDE {
-        proton::message m;
-        m.body("hello");
-        s.send(m);
+        s.send(proton::message("hello"));
     }
 
     void on_tracker_accept(proton::tracker& d) PN_CPP_OVERRIDE {
         d.connection().close();
     }
 
+    void on_transport_error(proton::transport& t) PN_CPP_OVERRIDE {
+        transport_error_count++;
+    }
+
+    void on_transport_close(proton::transport& t) PN_CPP_OVERRIDE {
+        transport_close_count++;
+    }
+
     void run() {
         container_.run();
+        ASSERT_EQUAL(1, start_count);
+        ASSERT_EQUAL(3, open_count);
+        ASSERT(2 < reconnecting_count);
+        // Last reconnect fails before opening links
+        ASSERT(link_open_count > 1);
+        // All transport errors should have been hidden
+        ASSERT_EQUAL(0, transport_error_count);
+        // One final transport close, not an error
+        ASSERT_EQUAL(1, transport_close_count);
     }
 
   private:
@@ -167,6 +205,7 @@ class tester : public proton::messaging_handler, public waiter {
     proton::internal::pn_unique_ptr<server_connection_handler> s2;
     proton::internal::pn_unique_ptr<server_connection_handler> s3;
     proton::container container_;
+    int start_count, open_count, reconnecting_count, link_open_count, transport_error_count, transport_close_count;
 };
 
 int test_failover_simple() {
@@ -245,6 +284,44 @@ class authfail_reconnect_tester : public proton::messaging_handler, public waite
     bool errored_;
 };
 
+// Verify we can stop reconnecting by calling close() in on_connection_reconnecting()
+class test_reconnecting_close : public proton::messaging_handler, public waiter {
+  public:
+    test_reconnecting_close() : waiter(1), container_(*this, "test_reconnecting_close"),
+                                reconnecting_called(false) {}
+
+    void on_container_start(proton::container &c) PN_CPP_OVERRIDE {
+        s1.reset(new server_connection_handler(c, 0, *this));
+    }
+
+    void ready() PN_CPP_OVERRIDE {
+        container_.connect(s1->url(), proton::connection_options().reconnect(proton::reconnect_options()));
+    }
+
+    void on_connection_reconnecting(proton::connection& c) PN_CPP_OVERRIDE {
+        reconnecting_called = true;
+        c.close();                        // Abort reconnection
+    }
+
+    void on_connection_close(proton::connection& c) PN_CPP_OVERRIDE {
+        ASSERT(0);              // Not expecting any clean close
+    }
+
+    void on_transport_error(proton::transport& t) PN_CPP_OVERRIDE {
+        // Expected, don't throw
+    }
+
+    void run() {
+        container_.run();
+    }
+
+  private:
+    proton::container container_;
+    std::string err_;
+    bool reconnecting_called;
+    proton::internal::pn_unique_ptr<server_connection_handler> s1;
+};
+
 int test_auth_fail_reconnect() {
     authfail_reconnect_tester().run();
     return 0;
@@ -255,6 +332,7 @@ int main(int argc, char** argv) {
     RUN_ARGV_TEST(failed, test_failover_simple());
     RUN_ARGV_TEST(failed, test_stop_reconnect());
     RUN_ARGV_TEST(failed, test_auth_fail_reconnect());
+    RUN_ARGV_TEST(failed, test_reconnecting_close().run());
     return failed;
 }
 

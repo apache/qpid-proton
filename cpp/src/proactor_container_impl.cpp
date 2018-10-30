@@ -22,10 +22,12 @@
 
 #include "proton/connect_config.hpp"
 #include "proton/error_condition.hpp"
-#include "proton/listener.hpp"
 #include "proton/listen_handler.hpp"
+#include "proton/listener.hpp"
 #include "proton/reconnect_options.hpp"
+#include "proton/transport.hpp"
 #include "proton/url.hpp"
+
 #include "proton/connection.h"
 #include "proton/listener.h"
 #include "proton/proactor.h"
@@ -294,7 +296,11 @@ void container::impl::reset_reconnect(pn_connection_t* pnc) {
     rc->current_url_ = -1;
 }
 
-bool container::impl::setup_reconnect(pn_connection_t* pnc) {
+bool container::impl::can_reconnect(pn_connection_t* pnc) {
+    // Don't reconnect if we are locally closed, the application will
+    // not expect a connection it closed to re-open.
+    if (pn_connection_state(pnc) & PN_LOCAL_CLOSED) return false;
+
     // If container stopping don't try to reconnect
     // - we pretend to have set up a reconnect attempt so
     //   that the proactor disconnect will finish and we will exit
@@ -322,6 +328,15 @@ bool container::impl::setup_reconnect(pn_connection_t* pnc) {
         pn_condition_format(condition, "proton:io", "Too many reconnect attempts (%d)", rc->retries_);
         return false;
     }
+    return true;
+}
+
+void container::impl::setup_reconnect(pn_connection_t* pnc) {
+    connection_context& cc = connection_context::get(pnc);
+    reconnect_context* rc = cc.reconnect_context_.get();
+    if (!rc) return;
+
+    rc->reconnected_ = true;
 
     // Recover connection from proactor
     pn_proactor_release_connection(pnc);
@@ -333,8 +348,6 @@ bool container::impl::setup_reconnect(pn_connection_t* pnc) {
     // now anyway
     schedule(delay, make_work(&container::impl::reconnect, this, pnc));
     ++reconnecting_;
-
-    return true;
 }
 
 returned<connection> container::impl::connect(
@@ -622,10 +635,6 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
     case PN_CONNECTION_INIT:
         return ContinueLoop;
 
-    // We've already applied options, so don't need to do it here
-    case PN_CONNECTION_BOUND:
-        return ContinueLoop;
-
     case PN_CONNECTION_REMOTE_OPEN: {
         // This is the only event that we get indicating that the connection succeeded so
         // it's the only place to reset the reconnection logic.
@@ -639,15 +648,17 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         pn_connection_t *c = pn_event_connection(event);
         pn_condition_t *cc = pn_connection_remote_condition(c);
 
-        // If we got a close with a condition of amqp:connection:forced then don't send
-        // any close/error events now. Just set the error condition on the transport and
-        // close the connection - This should act as though a transport error occurred
-        if (pn_condition_is_set(cc)
-            && !strcmp(pn_condition_get_name(cc), "amqp:connection:forced")) {
+        // amqp:connection:forced should be treated like a transport
+        // disconnect. Hide the connection error/close events from the
+        // application and generate a PN_TRANSPORT_CLOSE event.
+        if (pn_condition_is_set(cc) &&
+            !strcmp(pn_condition_get_name(cc), "amqp:connection:forced"))
+        {
             pn_transport_t* t = pn_event_transport(event);
             pn_condition_t* tc = pn_transport_condition(t);
             pn_condition_copy(tc, cc);
-            pn_connection_close(c);
+            pn_transport_close_head(t);
+            pn_transport_close_tail(t);
             return ContinueLoop;
         }
         break;
@@ -656,19 +667,35 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
         // If reconnect is turned on then handle closed on error here with reconnect attempt
         pn_connection_t* c = pn_event_connection(event);
         pn_transport_t* t = pn_event_transport(event);
-        // If we successfully schedule a re-connect then hide the event from
-        // user handlers by returning here.
-        if (pn_condition_is_set(pn_transport_condition(t)) && setup_reconnect(c)) return ContinueLoop;
+        if (pn_condition_is_set(pn_transport_condition(t)) && can_reconnect(c)) {
+            messaging_handler *mh = get_handler(event);
+            if (mh) {           // Notify handler of pending reconnect
+                connection conn = make_wrapper(c);
+                mh->on_connection_reconnecting(conn);
+            }
+            // on_connection_reconnecting() may have closed the connection, check again.
+            if (!(pn_connection_state(c) & PN_LOCAL_CLOSED)) {
+                setup_reconnect(c);
+                return ContinueLoop;
+            }
+        }
         // Otherwise, this connection will be freed by the proactor.
         // Mark its work_queue finished so it won't try to use the freed connection.
         connection_context::get(c).work_queue_.impl_.get()->finished();
+        break;
     }
     default:
         break;
     }
 
-    // Figure out the handler for the primary object for event
-    messaging_handler* mh = 0;
+    messaging_handler *mh = get_handler(event);
+    if (mh) messaging_adapter::dispatch(*mh, event);
+    return ContinueLoop;
+}
+
+// Figure out the handler for the primary object for event
+messaging_handler* container::impl::get_handler(pn_event_t *event) {
+    messaging_handler *mh = 0;
 
     // First try for a link (send/receiver) handler
     pn_link_t *link = pn_event_link(event);
@@ -683,14 +710,7 @@ container::impl::dispatch_result container::impl::dispatch(pn_event_t* event) {
     if (connection && !mh) mh = get_handler(connection);
 
     // Use container handler if nothing more specific (must be a container handler)
-    if (!mh) mh = handler_;
-
-    // If we still have no handler don't do anything!
-    // This is pretty unusual, but possible if we use the default constructor for container
-    if (!mh) return ContinueLoop;
-
-    messaging_adapter::dispatch(*mh, event);
-    return ContinueLoop;
+    return mh ? mh : handler_;
 }
 
 void container::impl::thread() {

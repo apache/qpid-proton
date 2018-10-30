@@ -72,7 +72,7 @@ connection_context::connection_context() :
 {}
 
 reconnect_context::reconnect_context(const reconnect_options& ro) :
-    reconnect_options_(new reconnect_options(ro)), retries_(0), current_url_(-1)
+    reconnect_options_(new reconnect_options(ro)), retries_(0), current_url_(-1), reconnected_(false)
 {}
 
 listener_context::listener_context() : listen_handler_(0) {}

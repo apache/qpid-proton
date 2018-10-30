@@ -192,4 +192,10 @@ std::vector<symbol> connection::desired_capabilities() const {
     return get_multiple<std::vector<symbol> >(caps);
 }
 
+bool connection::reconnected() const {
+    connection_context& cc = connection_context::get(pn_object());
+    reconnect_context* rc = cc.reconnect_context_.get();
+    return (rc && rc->reconnected_);
 }
+
+} // namespace proton

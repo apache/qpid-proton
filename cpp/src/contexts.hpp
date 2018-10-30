@@ -107,6 +107,7 @@ class reconnect_context {
     duration delay_;
     int retries_;
     int current_url_;
+    bool reconnected_;
 };
 
 class listener_context : public context {

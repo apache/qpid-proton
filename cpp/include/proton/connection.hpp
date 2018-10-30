@@ -82,14 +82,17 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     PN_CPP_EXTERN std::string user() const;
 
     /// Open the connection.
-    ///
-    /// @see endpoint_lifecycle
+    /// @see messaging_handler
     PN_CPP_EXTERN void open();
 
     /// @copydoc open
     PN_CPP_EXTERN void open(const connection_options&);
 
+    /// Close the connection.
+    /// @see messaging_handler
     PN_CPP_EXTERN void close();
+
+    /// @copydoc close
     PN_CPP_EXTERN void close(const error_condition&);
 
     /// Open a new session.
@@ -171,6 +174,12 @@ PN_CPP_CLASS_EXTERN connection : public internal::object<pn_connection_t>, publi
     /// The `proton::work_queue` interface provides an easier way
     /// execute code safely in the event-handler thread.
     PN_CPP_EXTERN void wake() const;
+
+    /// **Unsettled API** - true if this connection has been automatically
+    /// re-connected.
+    ///
+    /// @see reconnect_options, messaging_handler
+    PN_CPP_EXTERN bool reconnected() const;
 
     /// @cond INTERNAL
   friend class internal::factory<connection>;

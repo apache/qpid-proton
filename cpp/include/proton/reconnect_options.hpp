@@ -42,10 +42,10 @@ namespace proton {
 /// reconnection attempts.  They may be open-ended or limited in time.
 /// They may be evenly spaced or increasing at an exponential rate.
 ///
-/// Options can be "chained". See @ref proton::connection_options.
-///
 /// Normal value semantics: copy or assign creates a separate copy of
 /// the options.
+///
+/// @see messaging_handler, connection_options::reconnect()
 class reconnect_options {
   public:
     /// Create an empty set of options.

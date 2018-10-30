@@ -94,6 +94,7 @@ class container::impl {
     void schedule(duration, work);
     template <class T> static void set_handler(T s, messaging_handler* h);
     template <class T> static messaging_handler* get_handler(T s);
+    messaging_handler* get_handler(pn_event_t *event);
     static work_queue::impl* make_work_queue(container&);
 
   private:
@@ -106,7 +107,8 @@ class container::impl {
     void start_connection(const url& url, pn_connection_t* c);
     void reconnect(pn_connection_t* pnc);
     duration next_delay(reconnect_context& rc);
-    bool setup_reconnect(pn_connection_t* pnc);
+    bool can_reconnect(pn_connection_t* pnc);
+    void setup_reconnect(pn_connection_t* pnc);
     void reset_reconnect(pn_connection_t* pnc);
 
     // Event loop to run in each container thread
