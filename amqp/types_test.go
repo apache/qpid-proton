@@ -199,21 +199,4 @@ func TestDescribed(t *testing.T) {
 	if err := checkEqual(want.Value, s); err != nil {
 		t.Error(err)
 	}
-
-	// Nested described types
-	want = Described{Described{int64(123), true}, "foo"}
-	marshaled, _ = Marshal(want, nil)
-	if err := checkUnmarshal(marshaled, &d); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual(want, d); err != nil {
-		t.Error(err)
-	}
-	// Nested to interface
-	if err := checkUnmarshal(marshaled, &i); err != nil {
-		t.Error(err)
-	}
-	if err := checkEqual(want, i); err != nil {
-		t.Error(err)
-	}
 }

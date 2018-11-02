@@ -328,6 +328,15 @@ func SASLEnable() ConnectionOption { return func(c *connection) { sasl(c) } }
 // Can be used on the client or the server to restrict the SASL for a connection.
 // mechs is a space-separated list of mechanism names.
 //
+// The mechanisms allowed by default are determined by your SASL
+// library and system configuration, with two exceptions: GSSAPI
+// and GSS-SPNEGO are disabled by default.  To enable them, you
+// must explicitly add them using this option.
+//
+// Clients must set the allowed mechanisms before the the
+// outgoing connection is attempted.  Servers must set them
+// before the listening connection is setup.
+//
 func SASLAllowedMechs(mechs string) ConnectionOption {
 	return func(c *connection) { sasl(c).AllowedMechs(mechs) }
 }
