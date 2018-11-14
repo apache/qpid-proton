@@ -20,9 +20,13 @@
  * under the License.
  */
 
-#include <proton/type_compat.h>
-#include <proton/import_export.h>
 #include <proton/condition.h>
+#include <proton/import_export.h>
+#include <proton/type_compat.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* NOTE PNP_EXTERN is for use by proton-internal tests  */
 
@@ -47,5 +51,9 @@ extern const char *PNI_IO_CONDITION;
  */
 void pni_proactor_set_cond(
   pn_condition_t *cond, const char *what, const char *host, const char *port, const char *msg);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  /*!PROACTOR_PROACTOR_INTERNAL_H*/

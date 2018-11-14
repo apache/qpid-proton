@@ -19,74 +19,77 @@
  *
  */
 
-#include <proton/object.h>
+#include "./pn_test.hpp"
+
 #include <proton/event.h>
-#include <stdlib.h>
+#include <proton/object.h>
 
-#define assert(E) ((E) ? 0 : (abort(), 0))
-
-static void test_collector(void) {
+TEST_CASE("event_collector") {
   pn_collector_t *collector = pn_collector();
-  assert(collector);
+  REQUIRE(collector);
   pn_free(collector);
 }
 
-#define SETUP_COLLECTOR \
-  void *obj = pn_class_new(PN_OBJECT, 0); \
-  pn_collector_t *collector = pn_collector(); \
-  assert(collector); \
-  pn_event_t *event = pn_collector_put(collector, PN_OBJECT, obj, (pn_event_type_t) 0); \
-  pn_decref(obj); \
+#define SETUP_COLLECTOR                                                        \
+  void *obj = pn_class_new(PN_OBJECT, 0);                                      \
+  pn_collector_t *collector = pn_collector();                                  \
+  REQUIRE(collector);                                                          \
+  pn_event_t *event =                                                          \
+      pn_collector_put(collector, PN_OBJECT, obj, (pn_event_type_t)0);         \
+  pn_decref(obj);
 
-static void test_collector_put(void) {
+TEST_CASE("event_collector_put") {
   SETUP_COLLECTOR;
-  assert(event);
-  assert(pn_event_context(event) == obj);
+  REQUIRE(event);
+  REQUIRE(pn_event_context(event) == obj);
   pn_free(collector);
 }
 
-static void test_collector_peek(void) {
-  SETUP_COLLECTOR;
-  pn_event_t *head = pn_collector_peek(collector);
-  assert(head == event);
-  pn_free(collector);
-}
-
-static void test_collector_pop(void) {
+TEST_CASE("event_collector_peek") {
   SETUP_COLLECTOR;
   pn_event_t *head = pn_collector_peek(collector);
-  assert(head == event);
+  REQUIRE(head == event);
+  pn_free(collector);
+}
+
+TEST_CASE("event_collector_pop") {
+  SETUP_COLLECTOR;
+  pn_event_t *head = pn_collector_peek(collector);
+  REQUIRE(head == event);
   pn_collector_pop(collector);
   head = pn_collector_peek(collector);
-  assert(!head);
+  REQUIRE(!head);
   pn_free(collector);
 }
 
-static void test_collector_pool(void) {
+TEST_CASE("event_collector_pool") {
   SETUP_COLLECTOR;
   pn_event_t *head = pn_collector_peek(collector);
-  assert(head == event);
+  REQUIRE(head == event);
   pn_collector_pop(collector);
   head = pn_collector_peek(collector);
-  assert(!head);
+  REQUIRE(!head);
   void *obj2 = pn_class_new(PN_OBJECT, 0);
-  pn_event_t *event2 = pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t) 0);
+  pn_event_t *event2 =
+      pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t)0);
   pn_decref(obj2);
-  assert(event == event2);
+  REQUIRE(event == event2);
   pn_free(collector);
 }
 
-static void test_event_incref(bool eventfirst) {
+void test_event_incref(bool eventfirst) {
+  INFO("eventfirst = " << eventfirst);
   SETUP_COLLECTOR;
   pn_event_t *head = pn_collector_peek(collector);
-  assert(head == event);
+  REQUIRE(head == event);
   pn_incref(head);
   pn_collector_pop(collector);
-  assert(!pn_collector_peek(collector));
+  REQUIRE(!pn_collector_peek(collector));
   void *obj2 = pn_class_new(PN_OBJECT, 0);
-  pn_event_t *event2 = pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t) 0);
+  pn_event_t *event2 =
+      pn_collector_put(collector, PN_OBJECT, obj2, (pn_event_type_t)0);
   pn_decref(obj2);
-  assert(head != event2);
+  REQUIRE(head != event2);
   if (eventfirst) {
     pn_decref(head);
     pn_free(collector);
@@ -96,14 +99,7 @@ static void test_event_incref(bool eventfirst) {
   }
 }
 
-int main(int argc, char **argv)
-{
-  test_collector();
-  test_collector_put();
-  test_collector_peek();
-  test_collector_pop();
-  test_collector_pool();
+TEST_CASE("event_incref") {
   test_event_incref(true);
   test_event_incref(false);
-  return 0;
 }

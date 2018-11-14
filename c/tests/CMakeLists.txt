@@ -17,48 +17,56 @@
 # under the License.
 #
 
-add_definitions(${COMPILE_WARNING_FLAGS} ${COMPILE_PLATFORM_FLAGS})
-
 configure_file(test_config.h.in test_config.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
 
-set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+# NOTE: C library tests are written in C++ using the Catch2 framework.
+# The tests are more concise than with a native C framework and we can
+# use the same framework for C++ tests.
+# See https://github.com/catchorg/Catch2/blob/Catch1.x/docs/tutorial.md for more.
+# We will use the Catch2 1.x branch for as long as we must support C++03
+#
+# ${CMAKE_SOURCE_DIR}/include/tests/catch_extra.cpp has some general extensions to catch.
+# ./pn_test.hpp contains proton-C specific code to help with testing.
+#
+# Tests for each library are combined in a single executable.
 
-# Add test without any qpid-proton lib: allows choice of
-# qpid-proton-core or qpid-proton
-macro (pn_add_c_test_nolib test)
-  add_executable (${test} ${ARGN})
-  target_link_libraries (${test} ${PLATFORM_LIBS})
-  if (BUILD_WITH_CXX)
-    set_source_files_properties (${ARGN} PROPERTIES LANGUAGE CXX)
-  endif (BUILD_WITH_CXX)
-  add_test(NAME ${test} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${test}>)
-endmacro (pn_add_c_test_nolib)
+macro(add_c_test exe)
+  add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
+  set_target_properties(${exe} PROPERTIES
+    COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
+  add_test (NAME ${exe} COMMAND ${TEST_EXE_PREFIX_CMD} "$<TARGET_FILE:${exe}>")
+  if (WIN32)
+    set_tests_properties(${ctest} PROPERTIES
+      ENVIRONMENT PATH="$<TARGET_DIR:qpid-proton-core")
+  endif(WIN32)
+endmacro()
 
-# Add test with qpid-proton-core linked
-macro (pn_add_c_test test)
-  pn_add_c_test_nolib (${test} ${ARGN})
-  target_link_libraries (${test} qpid-proton-core ${PLATFORM_LIBS})
-endmacro (pn_add_c_test)
+## Tests that depend only on qpid-proton-core
+add_c_test(c-core-test
+  pn_test_test.cpp
+  object_test.cpp
+  condition_test.cpp
+  connection_driver_test.cpp
+  data_test.cpp
+  engine_test.cpp
+  refcount_test.cpp
+  ssl_test.cpp)
+target_link_libraries(c-core-test qpid-proton-core ${PLATFORM_LIBS})
 
-pn_add_c_test (c-object-tests object.c)
-pn_add_c_test (c-message-tests message.c)
-pn_add_c_test (c-engine-tests engine.c)
-pn_add_c_test (c-refcount-tests refcount.c)
-pn_add_c_test (c-event-tests event.c)
-pn_add_c_test (c-data-tests data.c)
-pn_add_c_test (c-condition-tests condition.c)
-pn_add_c_test (c-connection-driver-tests connection_driver.c)
-pn_add_c_test (c-ssl-tests ssl.c)
-
-pn_add_c_test_nolib (c-parse-url-tests parse-url.c)
-target_link_libraries (c-parse-url-tests qpid-proton)
+## Tests for the deprecated "extra" part of the qpid-proton library.
+add_c_test(c-extra-test url_test.cpp)
+target_link_libraries(c-extra-test qpid-proton ${PLATFORM_LIBS})
 
 if(HAS_PROACTOR)
-  pn_add_c_test (c-proactor-tests proactor.c)
-  target_link_libraries (c-proactor-tests qpid-proton-proactor)
+  # Tests for qpid-proton-proactor
+  add_c_test(c-proactor-test pn_test_proactor.cpp proactor_test.cpp)
+  target_link_libraries(c-proactor-test qpid-proton-core qpid-proton-proactor ${PLATFORM_LIBS})
 
-  # TODO Enable by default when races and xcode problems are cleared up
+  # Thread race test.
+  #
+  # TODO aconway 2018-11-14: enable by default when races and xcode
+  # problems are cleared up
   option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
   if (THREADERCISER)
     pn_add_c_test(c-threaderciser threaderciser.c)
