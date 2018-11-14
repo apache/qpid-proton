@@ -19,78 +19,66 @@
  *
  */
 
-#include "test_tools.h"
+#include "./pn_test.hpp"
 
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <proton/error.h>
 #include <proton/message.h>
+#include <stdarg.h>
 
-#define assert(E) ((E) ? 0 : (abort(), 0))
+using namespace pn_test;
 
-static void test_overflow_error(test_t *t)
-{
+TEST_CASE("message_overflow_error") {
   pn_message_t *message = pn_message();
   char buf[6];
   size_t size = 6;
 
   int err = pn_message_encode(message, buf, &size);
-  TEST_INT_EQUAL(t,PN_OVERFLOW, err);
-  TEST_INT_EQUAL(t, 0, pn_message_errno(message));
+  CHECK(PN_OVERFLOW == err);
+  CHECK(0 == pn_message_errno(message));
   pn_message_free(message);
 }
 
 static void recode(pn_message_t *dst, pn_message_t *src) {
-  pn_rwbytes_t buf = { 0 };
+  pn_rwbytes_t buf = {0};
   int size = pn_message_encode2(src, &buf);
-  assert(size > 0);
+  REQUIRE(size > 0);
   pn_message_decode(dst, buf.start, size);
   free(buf.start);
 }
 
-static void test_inferred(test_t *t) {
+TEST_CASE("message_inferred") {
   pn_message_t *src = pn_message();
   pn_message_t *dst = pn_message();
 
-  TEST_CHECK(t, !pn_message_is_inferred(src));
-  pn_data_put_binary(pn_message_body(src), PN_BYTES_LITERAL("hello"));
+  CHECK(!pn_message_is_inferred(src));
+  pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
   recode(dst, src);
-  TEST_CHECK(t, !pn_message_is_inferred(dst));
+  CHECK(!pn_message_is_inferred(dst));
   pn_message_set_inferred(src, true);
   recode(dst, src);
-  TEST_CHECK(t, pn_message_is_inferred(dst));
+  CHECK(pn_message_is_inferred(dst));
 
   pn_message_clear(src);
-  TEST_CHECK(t, !pn_message_is_inferred(src));
+  CHECK(!pn_message_is_inferred(src));
   pn_data_put_list(pn_message_body(src));
   pn_data_enter(pn_message_body(src));
-  pn_data_put_binary(pn_message_body(src), PN_BYTES_LITERAL("hello"));
+  pn_data_put_binary(pn_message_body(src), pn_bytes("hello"));
   recode(dst, src);
-  TEST_CHECK(t, !pn_message_is_inferred(dst));
+  CHECK(!pn_message_is_inferred(dst));
   pn_message_set_inferred(src, true);
   recode(dst, src);
-  TEST_CHECK(t, pn_message_is_inferred(dst));
+  CHECK(pn_message_is_inferred(dst));
 
   pn_message_clear(src);
-  TEST_CHECK(t, !pn_message_is_inferred(src));
-  pn_data_put_string(pn_message_body(src), PN_BYTES_LITERAL("hello"));
+  CHECK(!pn_message_is_inferred(src));
+  pn_data_put_string(pn_message_body(src), pn_bytes("hello"));
   recode(dst, src);
-  TEST_CHECK(t, !pn_message_is_inferred(dst));
+  CHECK(!pn_message_is_inferred(dst));
   pn_message_set_inferred(src, true);
   recode(dst, src);
   /* A value section is never considered to be inferred */
-  TEST_CHECK(t, !pn_message_is_inferred(dst));
+  CHECK(!pn_message_is_inferred(dst));
 
   pn_message_free(src);
   pn_message_free(dst);
-}
-
-int main(int argc, char **argv)
-{
-  int failed = 0;
-  RUN_ARGV_TEST(failed, t, test_overflow_error(&t));
-  RUN_ARGV_TEST(failed, t, test_inferred(&t));
-  return 0;
 }
