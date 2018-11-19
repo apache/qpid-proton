@@ -22,6 +22,10 @@
 #include "./pn_test.hpp"
 
 TEST_CASE("ssl_protocols") {
+  if (!pn_ssl_present()) {
+    WARN("SSL not available, skipping");
+    return;
+  }
   pn_test::auto_free<pn_ssl_domain_t, pn_ssl_domain_free> sd(
       pn_ssl_domain(PN_SSL_MODE_CLIENT));
 
