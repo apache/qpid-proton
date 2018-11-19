@@ -57,27 +57,34 @@ struct proactor : auto_free<pn_proactor_t, pn_proactor_free> {
   // Accept a connection, associate with optional connection handler.
   pn_connection_t *accept(pn_listener_t *l, struct handler *h = 0);
 
-  // Get and dispatch events till
-  // * a handler returns true.
-  // * the `stop` event type is handled.
-  // * there are no more events.
-  // If wait == true then wait for at least one event.
-  // Return the last event handled or PN_EVENT_NONE if none were.
-  pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE, bool wait = true);
+  // Wait for events and dispatch them until:
+  // * A handler returns true.
+  // * The `stop` event type is handled.
+  // Return the event-type of the last event handled or PN_EVENT_NONE
+  // if something went wrong.
+  pn_event_type_t run(pn_event_type_t stop = PN_EVENT_NONE);
 
-  // Alternate running this and other proactor till a handler returns true, the
-  // stop event is seen, or both proactors are idle.
-  // Return the last event handled or PN_EVENT_NONE if none were.
-  pn_event_type_t corun(proactor &other, pn_event_type_t stop = PN_EVENT_NONE,
-                        bool wait = true);
+  // Dispatch immediately-available events until:
+  // * A handler returns true.
+  // * The `stop` event type is handled.
+  // * All available events are flushed.
+  //
+  // Return PN_EVENT_NONE if all events were flushed, the event-type of the last
+  // event handled otherwise.
+  pn_event_type_t flush(pn_event_type_t stop = PN_EVENT_NONE);
+
+  // Alternate flushing this proactor and `other` until
+  // * A handler on this proactor returns true.
+  // * The `stop` event type is handled by this proactor.
+  // Return the event-type of the last event handled or PN_EVENT_NONE
+  // if something went wrong.
+  pn_event_type_t corun(proactor &other, pn_event_type_t stop = PN_EVENT_NONE);
 
   // Wait for and handle a single event, return it's type.
   pn_event_type_t wait_next();
 
 private:
   bool dispatch(pn_event_t *e);
-  std::pair<int, pn_event_type_t> dispatch(pn_event_batch_t *eb,
-                                           pn_event_type_t stop);
 };
 
 // CHECK/REQUIRE macros to run a proactor up to an expected event and

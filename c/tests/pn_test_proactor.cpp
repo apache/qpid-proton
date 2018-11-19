@@ -18,6 +18,7 @@
  */
 
 #include "./pn_test_proactor.hpp"
+#include "./thread.h"
 
 #include <proton/condition.h>
 #include <proton/connection.h>
@@ -60,63 +61,82 @@ bool proactor::dispatch(pn_event_t *e) {
   return ret;
 }
 
-// RAII event batch
-struct auto_batch {
+// RAII for event batches
+class auto_batch {
   pn_proactor_t *p_;
-  pn_event_batch_t *eb_;
+  pn_event_batch_t *b_;
 
-  auto_batch(pn_proactor_t *p, pn_event_batch_t *eb) : p_(p), eb_(eb) {}
+public:
+  auto_batch(pn_proactor_t *p, pn_event_batch_t *b) : p_(p), b_(b) {}
   ~auto_batch() {
-    if (eb_) pn_proactor_done(p_, eb_);
+    if (b_) pn_proactor_done(p_, b_);
   }
-  pn_event_t *next() { return eb_ ? pn_event_batch_next(eb_) : NULL; }
-  bool null() { return !eb_; }
+  pn_event_t *next() { return b_ ? pn_event_batch_next(b_) : NULL; }
+  pn_event_batch_t *get() { return b_; }
 };
 
-std::pair<int, pn_event_type_t> proactor::dispatch(pn_event_batch_t *eb,
-                                                   pn_event_type_t stop) {
-  auto_batch b(*this, eb);
-  pn_event_t *e;
-  int n = 0;
-  while ((e = b.next())) {
-    ++n;
-    pn_event_type_t et = pn_event_type(e);
-    if (dispatch(e) || et == stop) return std::make_pair(n, et);
+pn_event_type_t proactor::run(pn_event_type_t stop) {
+  // This will hang in the underlying poll if test expectations are never met.
+  // Not ideal, but easier to debug than race conditions caused by buggy
+  // test-harness code that attempts to detect the problem and recover early.
+  // The larger test or CI harness will kill us after some time limit
+  while (true) {
+    auto_batch b(*this, pn_proactor_wait(*this));
+    if (b.get()) {
+      pn_event_t *e;
+      while ((e = b.next())) {
+        pn_event_type_t et = pn_event_type(e);
+        if (dispatch(e) || et == stop) return et;
+      }
+    }
   }
-  return std::make_pair(n, PN_EVENT_NONE);
 }
 
-pn_event_type_t proactor::run(pn_event_type_t stop, bool wait) {
-  std::pair<int, pn_event_type_t> result;
-  if (wait) {
-    result = dispatch(pn_proactor_wait(*this), stop);
+pn_event_type_t proactor::flush(pn_event_type_t stop) {
+  auto_batch b(*this, pn_proactor_get(*this));
+  if (b.get()) {
+    pn_event_t *e;
+    while ((e = b.next())) {
+      pn_event_type_t et = pn_event_type(e);
+      if (dispatch(e) || et == stop) return et;
+    }
   }
-  // If we did something but we still don't have an event, try again.
-  while (result.first && !result.second) {
-    result = dispatch(pn_proactor_get(*this), stop);
-  }
-  return result.second;
+  return PN_EVENT_NONE;
 }
 
-pn_event_type_t proactor::corun(proactor &other, pn_event_type_t stop,
-                                bool wait) {
-  pn_event_type_t et = run(stop, wait);
-  int try_again = 100;
-  while (!et && try_again) {
-    pn_event_type_t ot = other.run(PN_EVENT_NONE, wait);
-    et = run(stop, wait);
+pn_event_type_t proactor::corun(proactor &other, pn_event_type_t stop) {
+  // We can't wait() on either proactor as it might be idle until
+  // something happens on the other, so spin between the two for a limited
+  // number of attempts that should be large enough if the test is going to
+  // past.
+  int spin_limit = 1000;
+  while (spin_limit > 0) {
+    pn_event_type_t et = flush(stop);
+    if (et) return et;
+    other.flush();
+    --spin_limit;
   }
-  return et;
+  return PN_EVENT_NONE;
 }
 
 pn_event_type_t proactor::wait_next() {
-  auto_batch b(*this, pn_proactor_wait(*this));
-  pn_event_t *e = b.next();
-  if (e) {
-    dispatch(e);
-    return pn_event_type(e);
-  } else {
-    return PN_EVENT_NONE;
+  // pn_proactor_wait() should never return an empty batch, so we shouldn't need
+  // a loop here. Due to bug https://issues.apache.org/jira/browse/PROTON-1964
+  // we need to re-wait if we get an empty batch.
+  //
+  // To reproduce PROTON-1964 remove the loop below and run
+  // TEST_CASE("proactor_proton_1586") from proactor_test.cpp
+  //
+  // You will pn_proactor_wait() return a non-NULL batch, but the
+  // first call to pn_event_batch_next() returns a NULL event.
+  //
+  while (true) {
+    auto_batch b(*this, pn_proactor_wait(*this));
+    pn_event_t *e = b.next();
+    if (e) {
+      dispatch(e);
+      return pn_event_type(e);
+    } // Try again on an empty batch.
   }
 }
 

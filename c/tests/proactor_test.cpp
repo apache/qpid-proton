@@ -377,14 +377,6 @@ TEST_CASE("proactor_proton_1586") {
   REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", ":yyy"));
 
-  // TODO aconway 2018-11-14: Bug! wait_next should not return
-  // an empty event. The connection_driver is hiding a CONNECTION_LOCAL_CLOSE
-  // event after TRANSPORT_CLOSED which creates an empty batch from the user
-  // perspective.
-  //
-  // This check should not be here:
-  CHECK(PN_EVENT_NONE == p.wait_next());
-
   // No events expected after PN_TRANSPORT_CLOSED, proactor is inactive.
   CHECK(PN_PROACTOR_INACTIVE == p.wait_next());
 }
