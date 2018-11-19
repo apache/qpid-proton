@@ -219,38 +219,41 @@ struct abort_handler : public common_handler {
 };
 } // namespace
 
-/* Verify that pn_transport_close_head/tail aborts a connection without an AMP
+/* Verify that pn_transport_close_head/tail aborts a connection without an AMQP
  * protocol close */
 TEST_CASE("proactor_abort") {
-  abort_handler h;
-  proactor p(&h);
+  abort_handler sh; // Handle listener and server side of connection
+  proactor p(&sh);
   pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
-  pn_connection_t *c = p.connect(l);
+  common_handler ch; // Handle client side of connection
+  pn_connection_t *c = p.connect(l, &ch);
 
   /* server transport closes */
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
-  CHECK_THAT(*h.last_condition,
+  CHECK_THAT(*sh.last_condition,
              cond_matches("amqp:connection:framing-error", "abort"));
+
   /* client transport closes */
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
-  CHECK_THAT(*h.last_condition,
+  CHECK_THAT(*ch.last_condition,
              cond_matches("amqp:connection:framing-error", "abort"));
   pn_listener_close(l);
   REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Verify expected event sequences, no unexpected events */
+  CHECK_THAT(ETYPES(PN_CONNECTION_INIT, PN_CONNECTION_LOCAL_OPEN,
+                    PN_CONNECTION_BOUND, PN_TRANSPORT_TAIL_CLOSED,
+                    PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
+                    PN_TRANSPORT_CLOSED),
+             Equals(ch.log_clear()));
   CHECK_THAT(ETYPES(PN_LISTENER_OPEN, PN_LISTENER_ACCEPT, PN_CONNECTION_INIT,
-                    PN_CONNECTION_LOCAL_OPEN, PN_CONNECTION_BOUND,
-                    PN_CONNECTION_INIT, PN_CONNECTION_BOUND,
-                    PN_CONNECTION_REMOTE_OPEN, PN_TRANSPORT_TAIL_CLOSED,
-                    PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
-                    PN_TRANSPORT_CLOSED, PN_TRANSPORT_TAIL_CLOSED,
-                    PN_TRANSPORT_ERROR, PN_TRANSPORT_HEAD_CLOSED,
-                    PN_TRANSPORT_CLOSED, PN_LISTENER_CLOSE,
-                    PN_PROACTOR_INACTIVE),
-             Equals(h.log_clear()));
+                    PN_CONNECTION_BOUND, PN_CONNECTION_REMOTE_OPEN,
+                    PN_TRANSPORT_TAIL_CLOSED, PN_TRANSPORT_ERROR,
+                    PN_TRANSPORT_HEAD_CLOSED, PN_TRANSPORT_CLOSED,
+                    PN_LISTENER_CLOSE, PN_PROACTOR_INACTIVE),
+             Equals(sh.log_clear()));
 }
 
 /* Test that INACTIVE event is generated when last connections/listeners closes.
@@ -434,7 +437,8 @@ TEST_CASE("proactor_ipv4_ipv6") {
   pn_listener_close(l4);
 }
 
-/* Make sure we clean up released connections and open sockets correctly */
+/* Make sure we clean up released connections and open sockets
+ * correctly */
 TEST_CASE("proactor_release_free") {
   common_handler h;
   proactor p(&h);
@@ -464,7 +468,8 @@ TEST_CASE("proactor_release_free") {
   REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
-  // OK to free a listener/connection that was never used by a proactor.
+  // OK to free a listener/connection that was never used by a
+  // proactor.
   pn_listener_free(pn_listener());
   pn_connection_free(pn_connection());
 }
@@ -601,8 +606,8 @@ TEST_CASE("proactor_netaddr") {
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
 
-  // client remote, client local, server remote and server local address
-  // strings
+  // client remote, client local, server remote and server
+  // local address strings
   char cr[1024], cl[1024], sr[1024], sl[1024];
 
   pn_transport_t *ct = pn_connection_transport(c);
@@ -626,8 +631,8 @@ TEST_CASE("proactor_netaddr") {
   CHECK_THAT("127.0.0.1", Equals(host));
   CHECK(listening_port(l) == serv);
 
-  /* Make sure you can use NULL, 0 to get length of address string without a
-   * crash */
+  /* Make sure you can use NULL, 0 to get length of address
+   * string without a crash */
   size_t len = pn_netaddr_str(pn_transport_local_addr(ct), NULL, 0);
   CHECK(strlen(cl) == len);
 }
@@ -779,7 +784,8 @@ struct message_stream_handler : public common_handler {
       return false;
     }
 
-    case PN_DELIVERY: { /* Receive a delivery - smaller than a chunk? */
+    case PN_DELIVERY: { /* Receive a delivery - smaller than a
+                           chunk? */
       pn_delivery_t *dlv = pn_event_delivery(e);
       if (pn_delivery_readable(dlv)) {
         ssize_t n = pn_delivery_pending(dlv);
