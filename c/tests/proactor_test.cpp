@@ -142,8 +142,8 @@ TEST_CASE("proactor_connect") {
   pn_listener_t *l = p.listen(":0", &h);
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   p.connect(l);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 }
 
 namespace {
@@ -171,17 +171,17 @@ TEST_CASE("proactor_connection_wake") {
   pn_connection_t *c = p.connect(l, &wh);
   pn_incref(c); /* Keep a reference for wake() after free */
 
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   CHECK(!pn_proactor_get(p)); /* Should be idle */
   pn_connection_wake(c);
-  CHECK_RUN(p, PN_CONNECTION_WAKE);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED); /* Both ends */
+  REQUIRE_RUN(p, PN_CONNECTION_WAKE);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED); /* Both ends */
 
   /* Verify we don't get a wake after close even if they happen together */
   pn_connection_t *c2 = p.connect(l, &wh);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   pn_connection_wake(c2);
   pn_proactor_disconnect(p, NULL);
   pn_connection_wake(c2);
@@ -229,16 +229,16 @@ TEST_CASE("proactor_abort") {
   pn_connection_t *c = p.connect(l);
 
   /* server transport closes */
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*h.last_condition,
              cond_matches("amqp:connection:framing-error", "abort"));
   /* client transport closes */
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*h.last_condition,
              cond_matches("amqp:connection:framing-error", "abort"));
   pn_listener_close(l);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Verify expected event sequences, no unexpected events */
   CHECK_THAT(ETYPES(PN_LISTENER_OPEN, PN_LISTENER_ACCEPT, PN_CONNECTION_INIT,
@@ -263,38 +263,38 @@ TEST_CASE("proactor_inactive") {
   pn_listener_t *l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   pn_connection_t *c = p.connect(l, &h);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   pn_connection_wake(c);
-  CHECK_RUN(p, PN_CONNECTION_WAKE);
+  REQUIRE_RUN(p, PN_CONNECTION_WAKE);
   /* Expect TRANSPORT_CLOSED both ends */
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
   pn_listener_close(l);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   /* Immediate timer generates INACTIVE (no connections) */
   pn_proactor_set_timeout(p, 0);
-  CHECK_RUN(p, PN_PROACTOR_TIMEOUT);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_PROACTOR_TIMEOUT);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Connect, set-timer, disconnect */
   l = p.listen();
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   c = p.connect(l, &h);
   pn_proactor_set_timeout(p, 1000000);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   pn_connection_wake(c);
-  CHECK_RUN(p, PN_CONNECTION_WAKE);
+  REQUIRE_RUN(p, PN_CONNECTION_WAKE);
   /* Expect TRANSPORT_CLOSED from client and server */
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
   pn_listener_close(l);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   /* No INACTIVE till timer is cancelled */
   CHECK(!pn_proactor_get(p)); // idle
   pn_proactor_cancel_timeout(p);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 }
 
 /* Tests for error handling */
@@ -303,44 +303,44 @@ TEST_CASE("proactor_errors") {
   proactor p(&h);
   /* Invalid connect/listen service name */
   p.connect("127.0.0.1:xxx");
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", "xxx"));
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   pn_listener_t *l = pn_listener();
   pn_proactor_listen(p, l, "127.0.0.1:xxx", 1);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", "xxx"));
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Invalid connect/listen host name */
   p.connect("nosuch.example.com:");
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", "nosuch"));
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   pn_proactor_listen(p, pn_listener(), "nosuch.example.com:", 1);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", "nosuch"));
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Listen on a port already in use */
   l = p.listen(":0");
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   std::string laddr = ":" + listening_port(l);
   p.listen(laddr);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io"));
 
   pn_listener_close(l);
-  CHECK_RUN(p, PN_LISTENER_CLOSE);
-  CHECK_RUN(p, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(p, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(p, PN_PROACTOR_INACTIVE);
 
   /* Connect with no listener */
   p.connect(laddr);
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", "refused"));
 }
 
@@ -370,8 +370,8 @@ TEST_CASE("proactor_proton_1586") {
   transport_close_connection_handler h;
   proactor p(&h);
   p.connect(":yyy");
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
   CHECK_THAT(*h.last_condition, cond_matches("proton:io", ":yyy"));
 
   // TODO aconway 2018-11-14: Bug! wait_next should not return
@@ -402,7 +402,7 @@ TEST_CASE("proactor_ipv4_ipv6") {
 #define EXPECT_CONNECT(LISTENER, HOST)                                         \
   do {                                                                         \
     p.connect(std::string(HOST) + ":" + listening_port(LISTENER));             \
-    CHECK_RUN(p, PN_TRANSPORT_CLOSED);                                         \
+    REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);                                       \
     CHECK_THAT(*h.last_condition, cond_empty());                               \
   } while (0)
 
@@ -443,26 +443,26 @@ TEST_CASE("proactor_release_free") {
   REQUIRE_RUN(p, PN_LISTENER_OPEN);
   /* leave one connection to the proactor  */
   pn_connection_t *c = p.connect(l);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
 
   {
     /* release c1 and free immediately */
     auto_free<pn_connection_t, pn_connection_free> c1(p.connect(l));
-    CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-    CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+    REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+    REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
     pn_proactor_release_connection(c1);
   }
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
   /* release c2 and but don't free till after proactor free */
   auto_free<pn_connection_t, pn_connection_free> c2(p.connect(l));
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   pn_proactor_release_connection(c2);
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
   // OK to free a listener/connection that was never used by a proactor.
   pn_listener_free(pn_listener());
@@ -537,12 +537,12 @@ TEST_CASE("proactor_ssl") {
   /* Basic SSL connection */
   p.connect(l, &client);
   /* Open ok at both ends */
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   CHECK_THAT(*server.last_condition, cond_empty());
   CHECK_THAT(*client.last_condition, cond_empty());
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
   /* Verify peer with good hostname */
   pn_ssl_domain_t *cd = client.ssl_domain;
@@ -552,18 +552,18 @@ TEST_CASE("proactor_ssl") {
   pn_connection_t *c = pn_connection();
   pn_connection_set_hostname(c, "test_server");
   p.connect(l, &client, c);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
-  CHECK_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
+  REQUIRE_RUN(p, PN_CONNECTION_REMOTE_OPEN);
   CHECK_THAT(*server.last_condition, cond_empty());
   CHECK_THAT(*client.last_condition, cond_empty());
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
-  CHECK_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
+  REQUIRE_RUN(p, PN_TRANSPORT_CLOSED);
 
   /* Verify peer with bad hostname */
   c = pn_connection();
   pn_connection_set_hostname(c, "wrongname");
   p.connect(l, &client, c);
-  CHECK_RUN(p, PN_TRANSPORT_ERROR);
+  REQUIRE_RUN(p, PN_TRANSPORT_ERROR);
   CHECK_THAT(*client.last_condition,
              cond_matches("amqp:connection:framing-error", "SSL"));
 }
@@ -700,7 +700,7 @@ TEST_CASE("proactor_disconnect") {
   CHECK_CORUN(client, server, PN_TRANSPORT_ERROR);
   CHECK_THAT(*client.handler->last_condition,
              cond_matches("test-name", "test-description"));
-  CHECK_RUN(client, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(client, PN_PROACTOR_INACTIVE);
 
   /* Now check server sees the disconnects */
   CHECK_CORUN(server, client, PN_TRANSPORT_ERROR);
@@ -712,9 +712,9 @@ TEST_CASE("proactor_disconnect") {
 
   /* Now disconnect the server end (the listeners) */
   pn_proactor_disconnect(server, NULL);
-  CHECK_RUN(server, PN_LISTENER_CLOSE);
-  CHECK_RUN(server, PN_LISTENER_CLOSE);
-  CHECK_RUN(server, PN_PROACTOR_INACTIVE);
+  REQUIRE_RUN(server, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(server, PN_LISTENER_CLOSE);
+  REQUIRE_RUN(server, PN_PROACTOR_INACTIVE);
 
   /* Make sure the proactors are still functional */
   pn_listener_t *l3 = server.listen(":0");
@@ -815,13 +815,13 @@ TEST_CASE("proactor_message_stream") {
   pn_session_open(ssn);
   pn_link_t *snd = pn_sender(ssn, "x");
   pn_link_open(snd);
-  CHECK_RUN(p, PN_LINK_FLOW);
+  REQUIRE_RUN(p, PN_LINK_FLOW);
 
   /* Send and receive the message in chunks */
   do {
     pn_connection_wake(c); /* Initiate send/receive of one chunk */
     do {                   /* May be multiple receives for one send */
-      CHECK_RUN(p, PN_DELIVERY);
+      REQUIRE_RUN(p, PN_DELIVERY);
     } while (h.received < h.sent);
   } while (!h.complete);
   CHECK(h.received == h.size);
