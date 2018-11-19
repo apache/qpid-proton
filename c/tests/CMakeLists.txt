@@ -19,6 +19,9 @@
 
 configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
+if (WIN32)
+  set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+endif()
 
 # NOTE: C library tests are written in C++ using the Catch2 framework.
 # The tests are more concise than with a native C framework and we can
@@ -35,11 +38,7 @@ macro(add_c_test exe)
   add_executable(${exe} test_main.cpp pn_test.cpp ${ARGN})
   set_target_properties(${exe} PROPERTIES
     COMPILE_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_WARNING_FLAGS}")
-  add_test (NAME ${exe} COMMAND ${TEST_EXE_PREFIX_CMD} "$<TARGET_FILE:${exe}>")
-  if (WIN32)
-    set_tests_properties(${ctest} PROPERTIES
-      ENVIRONMENT PATH="$<TARGET_DIR:qpid-proton-core")
-  endif(WIN32)
+  add_test(NAME ${exe} COMMAND ${test_env} ${TEST_EXE_PREFIX_CMD} $<TARGET_FILE:${exe}>)
 endmacro()
 
 ## Tests that depend only on qpid-proton-core
@@ -69,7 +68,7 @@ if(HAS_PROACTOR)
   # problems are cleared up
   option(THREADERCISER "Run the threaderciser concurrency tests" OFF)
   if (THREADERCISER)
-    pn_add_c_test(c-threaderciser threaderciser.c)
+    add_c_test(c-threaderciser threaderciser.c)
     target_link_libraries (c-threaderciser qpid-proton-proactor)
     find_library(Pthread_LIBRARY pthread)
     if (Pthread_LIBRARY)
