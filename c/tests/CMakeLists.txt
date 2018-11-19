@@ -21,6 +21,8 @@ configure_file(test_config.h.in test_config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR}/tests/include)
 if (WIN32)
   set(test_env ${PN_ENV_SCRIPT} -- "PATH=$<TARGET_FILE_DIR:qpid-proton-core>")
+else()
+  set(platform_test_src ssl_test.cpp)
 endif()
 
 # NOTE: C library tests are written in C++ using the Catch2 framework.
@@ -50,7 +52,8 @@ add_c_test(c-core-test
   data_test.cpp
   engine_test.cpp
   refcount_test.cpp
-  ssl_test.cpp)
+  ${platform_test_src})
+
 target_link_libraries(c-core-test qpid-proton-core ${PLATFORM_LIBS})
 
 ## Tests for the deprecated "extra" part of the qpid-proton library.
