@@ -310,7 +310,7 @@ void send_receive_message(const std::string &tag, pn_test::driver_pair &d) {
     pn_delivery_t *sd = pn_delivery(l, pn_dtag(tag.data(), tag.size()));
     d.server.handler.delivery = NULL;
     CHECK(pn_delivery_current(sd));
-    CHECK(tag.size() == pn_link_send(l, tag.data(), tag.size()));
+    CHECK(ssize_t(tag.size()) == pn_link_send(l, tag.data(), tag.size()));
     pn_delivery_settle(sd);
     d.run();
     pn_delivery_t *rd = d.server.handler.delivery;
@@ -318,7 +318,7 @@ void send_receive_message(const std::string &tag, pn_test::driver_pair &d) {
     CHECKED_IF(rd) {
       CHECK(pn_delivery_current(rd));
       std::string rbuf(tag.size() * 2, 'x');
-      CHECK(tag.size() ==
+      CHECK(ssize_t(tag.size()) ==
             pn_link_recv(pn_delivery_link(rd), &rbuf[0], rbuf.size()));
       rbuf.resize(tag.size());
       CHECK(tag == rbuf);
