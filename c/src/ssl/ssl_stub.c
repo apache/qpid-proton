@@ -48,7 +48,7 @@ int pn_ssl_init(pn_ssl_t *ssl, pn_ssl_domain_t *domain,
   return -1;
 }
 
-void pn_ssl_free( pn_ssl_t *ssl)
+void pn_ssl_free(pn_transport_t *transport)
 {
 }
 
