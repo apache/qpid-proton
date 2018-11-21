@@ -138,6 +138,8 @@ typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 
+#define INT32_MAX (2147483647)
+
 # else /* _MSC_VER */
 #  error stdint.h definitions not kown
 # endif
