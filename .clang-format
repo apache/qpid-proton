@@ -1,0 +1,5 @@
+Language: Cpp                   # also applies to C
+BasedOnStyle: LLVM
+IndentWidth:     4
+AllowShortIfStatementsOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
